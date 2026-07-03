@@ -2,14 +2,11 @@ package io.metersphere.system.service.impl;
 
 import io.metersphere.system.dto.sdk.LicenseDTO;
 import io.metersphere.system.service.LicenseService;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Service;
 
 /**
  * Community edition LicenseService: always reports a valid license.
+ * Registered via {@link io.metersphere.system.config.CommunityXpackConfiguration}.
  */
-@Service
-@ConditionalOnMissingBean(LicenseService.class)
 public class CommunityLicenseServiceImpl implements LicenseService {
 
     private static LicenseDTO validLicense() {

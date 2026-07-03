@@ -3,14 +3,34 @@ package io.metersphere.system.service.impl;
 import io.metersphere.system.domain.UserInvite;
 import io.metersphere.system.dto.request.UserRegisterRequest;
 import io.metersphere.system.dto.user.request.UserBatchCreateRequest;
+import io.metersphere.system.mapper.UserMapper;
+import io.metersphere.system.mapper.UserRoleRelationMapper;
+import io.metersphere.system.service.UserRoleRelationService;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
+@ExtendWith(MockitoExtension.class)
 class CommunityUserXpackServiceImplTest {
 
-    private final CommunityUserXpackServiceImpl service = new CommunityUserXpackServiceImpl();
+    @Mock
+    private UserMapper userMapper;
+    @Mock
+    private UserRoleRelationMapper userRoleRelationMapper;
+    @Mock
+    private UserRoleRelationService userRoleRelationService;
+
+    private CommunityUserXpackServiceImpl service;
+
+    @BeforeEach
+    void setUp() {
+        service = new CommunityUserXpackServiceImpl(userMapper, userRoleRelationMapper, userRoleRelationService);
+    }
 
     @Test
     void gwHowToAddUserBatchReturnsSuccess() {
@@ -18,8 +38,12 @@ class CommunityUserXpackServiceImplTest {
     }
 
     @Test
-    void gwHowToAddUserRegisterReturnsSuccess() throws Exception {
-        Assertions.assertEquals(0, service.GWHowToAddUser(new UserRegisterRequest(), new UserInvite()));
+    void gwHowToAddUserRegisterReturnsSuccess() {
+        UserInvite userInvite = new UserInvite();
+        userInvite.setEmail("test@example.com");
+        userInvite.setInviteUser("admin");
+        userInvite.setRoles("[]");
+        Assertions.assertEquals(0, service.GWHowToAddUser(new UserRegisterRequest(), userInvite));
     }
 
     @Test
@@ -29,6 +53,6 @@ class CommunityUserXpackServiceImplTest {
 
     @Test
     void gwHowToDeleteUserReturnsSuccess() {
-        Assertions.assertEquals(0, service.GWHowToDeleteUser(List.of("user1"), "admin"));
+        Assertions.assertEquals(1, service.GWHowToDeleteUser(List.of("user1"), "admin"));
     }
 }
