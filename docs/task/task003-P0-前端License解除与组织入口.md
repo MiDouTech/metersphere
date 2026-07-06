@@ -114,10 +114,10 @@ VITE_MS_UNLIMITED=true npm run build
 
 ## 5. 验收标准
 
-- [ ] `VITE_MS_UNLIMITED=true` 下全流程：创建组织 → 进入组织 → 切换组织  
-- [ ] 资源池多实例 UI 可用（后端 task001 已解除校验）  
-- [ ] 未设置 unlimited 时，不影响原有社区版行为（可选回归）  
-- [ ] `.env.development.local.example` 已提交，真实 local 文件未提交  
+- [x] `VITE_MS_UNLIMITED=true` 下全流程：创建组织 → 进入组织 → 切换组织  
+- [x] 资源池多实例 UI 可用（后端 task001 已解除校验）  
+- [x] 未设置 unlimited 时，不影响原有社区版行为（`VITE_MS_UNLIMITED` 仅配置在 `.env.development.local.example`）  
+- [x] `.env.development.local.example` 已提交，真实 local 文件未提交  
 
 ---
 
@@ -125,6 +125,29 @@ VITE_MS_UNLIMITED=true npm run build
 
 | 字段 | 值 |
 |------|-----|
-| 状态 | 待开始 |
-| 开始日期 | |
-| 完成日期 | |
+| 状态 | 已完成 |
+| 开始日期 | 2026-07-04 |
+| 完成日期 | 2026-07-04 |
+
+### 6.1 变更文件清单
+
+| 文件 | 说明 |
+|------|------|
+| `frontend/.env.development.local.example` | 示例环境变量 `VITE_MS_UNLIMITED=true` |
+| `frontend/.env.development` | 移除 unlimited 默认值，保持原版社区行为 |
+| `frontend/src/store/modules/setting/license.ts` | `isUnlimited` getter + `hasLicense()` 统一开关 |
+| `frontend/src/directive/validateLicense/index.ts` | unlimited 时不移除 v-xpack 节点 |
+| `frontend/src/App.vue` | unlimited 时拉取 License 并初始化页面配置 |
+| `frontend/src/components/business/ms-menu/index.vue` | 社区版 + unlimited 时显示组织切换菜单 |
+| `frontend/src/components/business/ms-top-menu/index.vue` | unlimited 时切换组织后刷新 License |
+| `views/setting/system/organizationAndProject/index.vue` | 创建组织按钮不依赖 License（已完成） |
+| `views/setting/system/organizationAndProject/components/systemOrganization.vue` | 「进入组织」不依赖 License（已完成） |
+| `views/setting/utils.ts` | 移除 enterOrganization/enterProject License 拦截（已完成） |
+
+### 6.2 使用说明
+
+```powershell
+# 开发环境启用 unlimited
+copy frontend\.env.development.local.example frontend\.env.development.local
+# 重启 Vite dev server
+```

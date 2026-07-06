@@ -121,7 +121,7 @@
     () => appStore.currentOrgId,
     async () => {
       await appStore.initSystemPackage();
-      if (appStore.getPackageType === 'enterprise') {
+      if (appStore.getPackageType === 'enterprise' || licenseStore.isUnlimited) {
         licenseStore.getValidateLicense();
       }
     },

@@ -429,7 +429,7 @@ public class TestPlanReportService {
         report.setCreateUser(currentUser);
         report.setCreateTime(System.currentTimeMillis());
         report.setDeleted(false);
-        report.setPassThreshold(config == null ? null : config.getPassThreshold());
+        report.setPassThreshold(config == null || config.getPassThreshold() == null ? 100.0 : config.getPassThreshold());
         report.setParentId(genParam.getGroupReportId());
         report.setTestPlanName(genParam.getTestPlanName());
         testPlanReportMapper.insertSelective(report);
@@ -731,11 +731,16 @@ public class TestPlanReportService {
         TestPlanReportSummaryExample example = new TestPlanReportSummaryExample();
         example.createCriteria().andTestPlanReportIdEqualTo(postParam.getReportId());
         TestPlanReportSummary reportSummary = testPlanReportSummaryMapper.selectByExampleWithBLOBs(example).getFirst();
+        if (reportSummary.getExecuteResult() == null) {
+            return;
+        }
         // 用例总数
         long caseTotal = reportSummary.getFunctionalCaseCount() + reportSummary.getApiCaseCount() + reportSummary.getApiScenarioCount();
         CaseCount summaryCount = JSON.parseObject(new String(reportSummary.getExecuteResult()), CaseCount.class);
-        planReport.setExecuteRate(RateCalculateUtils.divWithPrecision(((int) caseTotal - summaryCount.getPending()), (int) caseTotal, 2));
-        planReport.setPassRate(RateCalculateUtils.divWithPrecision(summaryCount.getSuccess(), (int) caseTotal, 2));
+        int pendingCount = summaryCount.getPending() != null ? summaryCount.getPending() : 0;
+        int successCount = summaryCount.getSuccess() != null ? summaryCount.getSuccess() : 0;
+        planReport.setExecuteRate(RateCalculateUtils.divWithPrecision(((int) caseTotal - pendingCount), (int) caseTotal, 2));
+        planReport.setPassRate(RateCalculateUtils.divWithPrecision(successCount, (int) caseTotal, 2));
         if (planReport.getIntegrated()) {
             // 计划组的(执行)结果状态: 子计划全部成功 ? 成功 : 失败
             TestPlanReportExample reportExample = new TestPlanReportExample();
@@ -743,7 +748,9 @@ public class TestPlanReportService {
             planReport.setResultStatus(testPlanReportMapper.countByExample(reportExample) == 0 ? ResultStatus.SUCCESS.name() : ResultStatus.ERROR.name());
         } else {
             // 计划的(执行)结果状态: 通过率 >= 阈值 ? 成功 : 失败
-            planReport.setResultStatus(planReport.getPassRate() >= planReport.getPassThreshold() ? ResultStatus.SUCCESS.name() : ResultStatus.ERROR.name());
+            double passRate = planReport.getPassRate() != null ? planReport.getPassRate() : 0.0;
+            double passThreshold = planReport.getPassThreshold() != null ? planReport.getPassThreshold() : 100.0;
+            planReport.setResultStatus(passRate >= passThreshold ? ResultStatus.SUCCESS.name() : ResultStatus.ERROR.name());
         }
 
         testPlanReportMapper.updateByPrimaryKeySelective(planReport);

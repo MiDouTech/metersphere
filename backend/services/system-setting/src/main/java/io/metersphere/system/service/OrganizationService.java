@@ -13,6 +13,7 @@ import io.metersphere.system.domain.*;
 import io.metersphere.system.dto.*;
 import io.metersphere.system.dto.request.*;
 import io.metersphere.system.dto.sdk.OptionDTO;
+import io.metersphere.system.dto.user.UserDTO;
 import io.metersphere.system.dto.user.UserExtendDTO;
 import io.metersphere.system.dto.user.UserRoleOptionDto;
 import io.metersphere.system.log.constants.OperationLogModule;
@@ -77,6 +78,8 @@ public class OrganizationService {
     private BaseTemplateService baseTemplateService;
     @Resource
     private BaseCustomFieldService baseCustomFieldService;
+    @Resource
+    private OrganizationInitService organizationInitService;
 
     private static final String ADD_MEMBER_PATH = "/system/organization/add-member";
     private static final String REMOVE_MEMBER_PATH = "/system/organization/remove-member";
@@ -108,6 +111,67 @@ public class OrganizationService {
     public List<OptionDTO> listAll() {
         List<OrganizationDTO> organizations = extOrganizationMapper.listAll();
         return organizations.stream().map(o -> new OptionDTO(o.getId(), o.getName())).toList();
+    }
+
+    /**
+     * 创建组织
+     *
+     * @param organizationDTO 组织信息
+     * @param createUser      创建人
+     * @return 组织信息
+     */
+    public OrganizationDTO add(OrganizationDTO organizationDTO, String createUser) {
+        organizationDTO.setId(IDGenerator.nextStr());
+        checkOrganizationExist(organizationDTO);
+        checkUserExist(organizationDTO.getUserIds());
+
+        long currentTime = System.currentTimeMillis();
+        organizationDTO.setNum(generateNextOrganizationNum());
+        organizationDTO.setCreateTime(currentTime);
+        organizationDTO.setUpdateTime(currentTime);
+        organizationDTO.setCreateUser(createUser);
+        organizationDTO.setUpdateUser(createUser);
+        organizationDTO.setDeleted(false);
+        organizationDTO.setEnable(true);
+
+        organizationMapper.insertSelective(organizationDTO);
+        organizationInitService.initOrganization(organizationDTO.getId(), createUser);
+        organizationDTO.getUserIds().forEach(userId -> createAdmin(userId, organizationDTO.getId(), createUser));
+        return organizationDTO;
+    }
+
+    /**
+     * 切换当前组织
+     *
+     * @param request       切换请求
+     * @param currentUserId 当前用户
+     * @return 切换后的用户信息
+     */
+    public UserDTO switchOrganization(OrganizationSwitchRequest request, String currentUserId) {
+        if (!StringUtils.equals(currentUserId, request.getUserId())) {
+            throw new MSException(Translator.get("not_authorized"));
+        }
+        Organization organization = organizationMapper.selectByPrimaryKey(request.getOrganizationId());
+        if (organization == null) {
+            throw new MSException(Translator.get("organization_not_exist"));
+        }
+        if (!baseUserMapper.isSuperUser(currentUserId)) {
+            List<String> relatedOrganizationIds = extOrganizationMapper.getRelatedOrganizationIds(currentUserId);
+            if (CollectionUtils.isEmpty(relatedOrganizationIds) || !relatedOrganizationIds.contains(request.getOrganizationId())) {
+                throw new MSException(Translator.get("not_authorized"));
+            }
+        }
+        UserDTO userDTO = userLoginService.getUserDTO(request.getUserId());
+        userLoginService.switchUserResource(request.getOrganizationId(), userDTO);
+        return userLoginService.getUserDTO(request.getUserId());
+    }
+
+    private Long generateNextOrganizationNum() {
+        Long maxNum = extOrganizationMapper.getMaxNum();
+        if (maxNum == null || maxNum < DEFAULT_ORGANIZATION_NUM) {
+            return DEFAULT_ORGANIZATION_NUM + 1;
+        }
+        return maxNum + 1;
     }
 
     /**

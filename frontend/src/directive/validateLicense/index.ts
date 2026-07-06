@@ -7,6 +7,9 @@ import useLicenseStore from '@/store/modules/setting/license';
 
 function checkHasLicense(el: HTMLElement) {
   const licenseStore = useLicenseStore();
+  if (licenseStore.isUnlimited) {
+    return;
+  }
   const isValid = licenseStore.hasLicense();
 
   if (!isValid && el.parentNode) {

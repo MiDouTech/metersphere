@@ -24,6 +24,13 @@ public interface ExtOrganizationMapper {
     List<OrganizationDTO> list(@Param("request") OrganizationRequest request);
 
     /**
+     * 获取组织最大编号
+     *
+     * @return 最大编号，无数据时返回 null
+     */
+    Long getMaxNum();
+
+    /**
      * 通过组织ID获取项目及成员数量
      *
      * @param ids 组织ID集合

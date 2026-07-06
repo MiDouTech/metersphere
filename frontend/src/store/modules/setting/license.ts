@@ -12,6 +12,11 @@ const useLicenseStore = defineStore('license', {
     expiredDuring: false,
     expiredDays: 0,
   }),
+  getters: {
+    isUnlimited(): boolean {
+      return import.meta.env.VITE_MS_UNLIMITED === 'true';
+    },
+  },
   actions: {
     setLicenseInfo(info: LicenseInfo) {
       this.licenseInfo = info;
@@ -22,6 +27,9 @@ const useLicenseStore = defineStore('license', {
       }
     },
     hasLicense() {
+      if (this.isUnlimited) {
+        return true;
+      }
       return this.licenseInfo?.status === 'valid';
     },
     getExpirationTime(resTime: string) {
@@ -43,12 +51,13 @@ const useLicenseStore = defineStore('license', {
     async getValidateLicense() {
       try {
         const result = await getLicenseInfo();
-        if (!result || !result.status || !result.license || !result.license.count) {
+        if (!result?.status) {
           return;
         }
         this.setLicenseInfo(result);
-        // 计算license时间
-        this.getExpirationTime(result.license.expired);
+        if (result.license?.expired) {
+          this.getExpirationTime(result.license.expired);
+        }
       } catch (error) {
         // eslint-disable-next-line no-console
         console.log(error);

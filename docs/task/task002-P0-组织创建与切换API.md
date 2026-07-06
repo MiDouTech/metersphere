@@ -18,9 +18,9 @@
 
 | API | 前端 | 后端 |
 |-----|------|------|
-| `POST /system/organization/add` | ✅ `postAddOrgUrl` | ❌ 不存在 |
-| `POST /system/organization/switch` | ✅ `api/requrls/system.ts` | ❌ 不存在 |
-| `GET /system/organization/switch-option` | ✅ | ❌ 仅有 `/user/platform/switch-option` |
+| `POST /system/organization/add` | ✅ `postAddOrgUrl` | ✅ 已实现 |
+| `POST /system/organization/switch` | ✅ `api/requrls/system.ts` | ✅ 已实现 |
+| `GET /system/organization/switch-option` | ✅ | ✅ 已实现 |
 
 `OrganizationService` 有 update/delete/成员管理，**无 add/create 方法**。
 
@@ -86,11 +86,11 @@ return organizationService.getSwitchOption(SessionUtils.getUserId());
 
 **路径**：`SystemOrganizationControllerTests.java`
 
-- [ ] 创建组织成功，返回组织 ID  
-- [ ] 创建后模板/状态流/自定义字段已初始化  
-- [ ] 管理员已绑定 org_admin  
-- [ ] switch 后 session 中 last_organization_id 更新  
-- [ ] switch-option 返回用户有权限的组织列表  
+- [x] 创建组织成功，返回组织 ID  
+- [x] 创建后模板/状态流/自定义字段已初始化  
+- [x] 管理员已绑定 org_admin  
+- [x] switch 后 session 中 last_organization_id 更新  
+- [x] switch-option 返回用户有权限的组织列表  
 
 ---
 
@@ -130,6 +130,6 @@ return organizationService.getSwitchOption(SessionUtils.getUserId());
 
 | 字段 | 值 |
 |------|-----|
-| 状态 | 待开始 |
-| 开始日期 | |
-| 完成日期 | |
+| 状态 | 已完成 |
+| 开始日期 | 2026-07-03 |
+| 完成日期 | 2026-07-03 |

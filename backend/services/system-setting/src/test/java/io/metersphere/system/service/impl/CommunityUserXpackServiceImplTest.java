@@ -6,11 +6,14 @@ import io.metersphere.system.dto.user.request.UserBatchCreateRequest;
 import io.metersphere.system.mapper.UserMapper;
 import io.metersphere.system.mapper.UserRoleRelationMapper;
 import io.metersphere.system.service.UserRoleRelationService;
+import io.metersphere.system.uid.IDGenerator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -34,16 +37,24 @@ class CommunityUserXpackServiceImplTest {
 
     @Test
     void gwHowToAddUserBatchReturnsSuccess() {
-        Assertions.assertEquals(0, service.GWHowToAddUser(new UserBatchCreateRequest(), "LOCAL", "admin"));
+        try (MockedStatic<IDGenerator> idGenerator = Mockito.mockStatic(IDGenerator.class)) {
+            idGenerator.when(IDGenerator::nextStr).thenReturn("mock-user-id");
+            Assertions.assertEquals(0, service.GWHowToAddUser(new UserBatchCreateRequest(), "LOCAL", "admin"));
+        }
     }
 
     @Test
     void gwHowToAddUserRegisterReturnsSuccess() {
-        UserInvite userInvite = new UserInvite();
-        userInvite.setEmail("test@example.com");
-        userInvite.setInviteUser("admin");
-        userInvite.setRoles("[]");
-        Assertions.assertEquals(0, service.GWHowToAddUser(new UserRegisterRequest(), userInvite));
+        try (MockedStatic<IDGenerator> idGenerator = Mockito.mockStatic(IDGenerator.class)) {
+            idGenerator.when(IDGenerator::nextStr).thenReturn("mock-user-id");
+            UserInvite userInvite = new UserInvite();
+            userInvite.setEmail("test@example.com");
+            userInvite.setInviteUser("admin");
+            userInvite.setRoles("[]");
+            UserRegisterRequest registerRequest = new UserRegisterRequest();
+            registerRequest.setPassword("password123");
+            Assertions.assertEquals(0, service.GWHowToAddUser(registerRequest, userInvite));
+        }
     }
 
     @Test

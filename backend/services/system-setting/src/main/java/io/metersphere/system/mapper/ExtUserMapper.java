@@ -59,4 +59,8 @@ public interface ExtUserMapper {
      * @return 用户列表
      */
     List<User> selectSimpleUser(@Param("ids") Set<String> ids);
+
+    User selectByWecomUserid(@Param("wecomUserid") String wecomUserid);
+
+    List<User> listWecomUsersByOrganizationId(@Param("organizationId") String organizationId);
 }

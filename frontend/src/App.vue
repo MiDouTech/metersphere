@@ -57,7 +57,7 @@
       }
       // 企业版才校验license
       await appStore.initSystemPackage();
-      if (appStore.getPackageType === 'enterprise') {
+      if (appStore.getPackageType === 'enterprise' || licenseStore.isUnlimited) {
         await licenseStore.getValidateLicense();
       }
       if (licenseStore.hasLicense()) {

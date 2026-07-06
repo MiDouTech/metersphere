@@ -300,10 +300,15 @@
   }
 
   async function initDefaultList() {
-    if (appStore.currentOrgId) {
+    let orgId = appStore.currentOrgId;
+    if (!orgId && userStore.lastOrganizationId) {
+      orgId = userStore.lastOrganizationId;
+      appStore.setCurrentOrgId(orgId);
+    }
+    if (orgId) {
       try {
         appStore.showLoading();
-        const result = await getDashboardLayout(appStore.currentOrgId);
+        const result = await getDashboardLayout(orgId);
         defaultWorkList.value = result;
         requestQueue();
       } catch (error) {

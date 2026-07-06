@@ -42,7 +42,6 @@
         >
           <a-select
             v-model="form.organizationId"
-            :disabled="!isXpack"
             allow-search
             :options="affiliatedOrgOption"
             :placeholder="t('system.project.affiliatedOrgPlaceholder')"
@@ -265,7 +264,7 @@
     try {
       const res = await getSystemOrgOption();
       affiliatedOrgOption.value = res;
-      if (!isXpack.value) {
+      if (!isXpack.value && !isEdit.value && affiliatedOrgOption.value.length > 0) {
         form.organizationId = affiliatedOrgOption.value[0].id;
       }
     } catch (error) {

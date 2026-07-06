@@ -19,6 +19,9 @@ import io.metersphere.system.service.SystemProjectService;
 import io.metersphere.system.utils.PageUtils;
 import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
+import io.metersphere.system.dto.OrganizationSwitchRequest;
+import io.metersphere.system.dto.user.UserDTO;
+import io.metersphere.validation.groups.Created;
 import io.metersphere.validation.groups.Updated;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,6 +52,28 @@ public class SystemOrganizationController {
     private SystemProjectService systemProjectService;
     @Resource
     private OrganizationService organizationService;
+
+    @PostMapping("/add")
+    @Operation(summary = "系统设置-系统-组织与项目-组织-创建组织")
+    @RequiresPermissions(PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_READ_ADD)
+    @Log(type = OperationLogType.ADD, expression = "#msClass.addLog(#organizationEditRequest)", msClass = SystemOrganizationLogService.class)
+    public OrganizationDTO add(@Validated({Created.class}) @RequestBody OrganizationEditRequest organizationEditRequest) {
+        OrganizationDTO organizationDTO = new OrganizationDTO();
+        BeanUtils.copyBean(organizationDTO, organizationEditRequest);
+        return organizationService.add(organizationDTO, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/switch")
+    @Operation(summary = "系统设置-系统-组织与项目-组织-切换组织")
+    public UserDTO switchOrganization(@Validated @RequestBody OrganizationSwitchRequest request) {
+        return organizationService.switchOrganization(request, SessionUtils.getUserId());
+    }
+
+    @GetMapping("/switch-option")
+    @Operation(summary = "系统设置-系统-组织与项目-组织-获取可切换组织列表")
+    public List<OptionDTO> getSwitchOption() {
+        return organizationService.getSwitchOption(SessionUtils.getUserId());
+    }
 
     @PostMapping("/list")
     @Operation(summary = "系统设置-系统-组织与项目-组织-获取组织列表")

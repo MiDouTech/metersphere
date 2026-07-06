@@ -80,6 +80,12 @@ const CaseManagement: AppRouteRecordRaw = {
         ],
       },
     },
+    // 兼容旧路由 caseReview
+    {
+      path: 'caseReview',
+      redirect: '/case-management/caseManagementReview',
+      component: null,
+    },
     // 用例评审
     {
       path: 'caseManagementReview',

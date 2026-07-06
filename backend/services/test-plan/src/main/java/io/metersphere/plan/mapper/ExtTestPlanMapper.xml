@@ -677,12 +677,25 @@
     </select>
 
     <select id="listHis" resultType="io.metersphere.plan.dto.TestPlanExecuteHisDTO">
-        select et.id, from_unixtime(et.create_time / 1000, '%Y%m%d%H%i%s') as num, et.trigger_mode triggerMode, et.status execStatus, et.result execResult,
-        et.create_user operationUser, et.start_time startTime, et.end_time endTime, arrt.report_id reportId
-        from exec_task et left join api_report_relate_task arrt on et.id = arrt.task_resource_id
-        where et.resource_id = #{request.testPlanId}
-        <include refid="filterTask"/>
-        order by et.create_time desc
+        select id, num, triggerMode, execStatus, execResult, operationUser, startTime, endTime, reportId from (
+            select et.id, from_unixtime(et.create_time / 1000, '%Y%m%d%H%i%s') as num, et.trigger_mode triggerMode, et.status execStatus, et.result execResult,
+            et.create_user operationUser, et.start_time startTime, et.end_time endTime, arrt.report_id reportId, et.create_time sortTime
+            from exec_task et left join api_report_relate_task arrt on et.id = arrt.task_resource_id
+            where et.resource_id = #{request.testPlanId} and et.deleted = 0
+            <include refid="filterTask"/>
+            union all
+            select tpr.id, from_unixtime(tpr.create_time / 1000, '%Y%m%d%H%i%s') as num, tpr.trigger_mode triggerMode, tpr.exec_status execStatus, tpr.result_status execResult,
+            tpr.create_user operationUser, tpr.start_time startTime, tpr.end_time endTime, tpr.id reportId, tpr.create_time sortTime
+            from test_plan_report tpr
+            where tpr.test_plan_id = #{request.testPlanId} and tpr.deleted = 0
+            and tpr.result_status in ('SUCCESS', 'ERROR', 'FAKE_ERROR')
+            and tpr.id not in (
+                select arrt2.report_id from exec_task et2
+                join api_report_relate_task arrt2 on et2.id = arrt2.task_resource_id
+                where et2.resource_id = #{request.testPlanId} and arrt2.report_id is not null
+            )
+        ) combined
+        order by sortTime desc
     </select>
 
     <select id="selectGroupIdByKeyword" resultType="java.lang.String">

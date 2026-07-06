@@ -128,4 +128,25 @@
         </foreach>
     </select>
 
+    <select id="selectByWecomUserid" resultType="io.metersphere.system.domain.User">
+        select id, name, email, phone, enable, create_time, update_time, language, last_organization_id,
+               source, last_project_id, create_user, update_user, deleted, cft_token, wecom_userid,
+               department_id, position, sync_status, sync_time
+        from user
+        where deleted = 0
+          and wecom_userid = #{wecomUserid}
+        limit 1
+    </select>
+
+    <select id="listWecomUsersByOrganizationId" resultType="io.metersphere.system.domain.User">
+        select u.id, u.name, u.email, u.phone, u.enable, u.create_time, u.update_time, u.language,
+               u.last_organization_id, u.source, u.last_project_id, u.create_user, u.update_user,
+               u.deleted, u.cft_token, u.wecom_userid, u.department_id, u.position, u.sync_status, u.sync_time
+        from user u
+                 inner join user_role_relation urr on u.id = urr.user_id and urr.source_id = #{organizationId}
+        where u.deleted = 0
+          and u.wecom_userid is not null
+          and u.wecom_userid != ''
+    </select>
+
 </mapper>

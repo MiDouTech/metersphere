@@ -1,6 +1,7 @@
 package io.metersphere.system.service.impl;
 
 import io.metersphere.system.dto.sdk.LicenseDTO;
+import io.metersphere.system.dto.sdk.LicenseInfoDTO;
 import io.metersphere.system.service.LicenseService;
 
 /**
@@ -12,6 +13,14 @@ public class CommunityLicenseServiceImpl implements LicenseService {
     private static LicenseDTO validLicense() {
         LicenseDTO licenseDTO = new LicenseDTO();
         licenseDTO.setStatus("valid");
+        LicenseInfoDTO licenseInfo = new LicenseInfoDTO();
+        licenseInfo.setCorporation("Community");
+        licenseInfo.setProduct("MeterSphere");
+        licenseInfo.setEdition("Community");
+        licenseInfo.setLicenseVersion("3.x");
+        licenseInfo.setExpired("2099-12-31");
+        licenseInfo.setCount(Integer.MAX_VALUE);
+        licenseDTO.setLicense(licenseInfo);
         return licenseDTO;
     }
 

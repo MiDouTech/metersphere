@@ -1,6 +1,5 @@
 <template>
   <MsCard simple>
-    <MsTrialAlert :tip-content="t('system.authorized.orgAndProTipContent')" />
     <div class="mb-4 flex items-center justify-between">
       <div class="flex items-center">
         <a-radio-group v-model="currentTable" size="medium" class="mr-[14px]" type="button">
@@ -10,7 +9,6 @@
           <a-radio value="project">{{ t('system.organization.projectCount', { count: projectCount }) }}</a-radio>
         </a-radio-group>
         <a-button
-          v-if="currentTable !== 'organization' || licenseStore.hasLicense()"
           v-permission="['SYSTEM_ORGANIZATION_PROJECT:READ+ADD']"
           type="primary"
           @click="handleAddOrganization"
@@ -47,7 +45,6 @@
   import { nextTick, onBeforeMount, ref, watch } from 'vue';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
-  import MsTrialAlert from '@/components/business/ms-trial-alert/index.vue';
   import AddOrganizationModal from './components/addOrganizationModal.vue';
   import AddProjectModal from './components/addProjectModal.vue';
   import SystemOrganization from './components/systemOrganization.vue';
@@ -55,7 +52,6 @@
 
   import { getOrgAndProjectCount } from '@/api/modules/setting/organizationAndProject';
   import { useI18n } from '@/hooks/useI18n';
-  import useLicenseStore from '@/store/modules/setting/license';
 
   const { t } = useI18n();
   const currentTable = ref('organization');
@@ -67,7 +63,6 @@
   const orgTableRef = ref();
   const projectTableRef = ref();
   const projectVisible = ref(false);
-  const licenseStore = useLicenseStore();
 
   // 初始化项目数量和组织数量
   const initOrgAndProjectCount = async () => {

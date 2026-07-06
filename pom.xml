@@ -92,6 +92,7 @@
         <spring-ai.version>1.0.3</spring-ai.version>
         <ansj_seg.version>5.1.6</ansj_seg.version>
         <flex-mark.version>0.64.0</flex-mark.version>
+        <argLine>--add-opens java.base/java.util=ALL-UNNAMED</argLine>
     </properties>
 
     <modules>

@@ -129,26 +129,26 @@ UserSyncHandler.createUser()
 
 ## 7. 单元 / 集成测试
 
-| 用例 | 预期 |
-|------|------|
-| 首次全量同步 | 部门树 + 用户全部创建 |
-| 重复同步 | 数据不变，无重复 insert |
-| 企微删除部门 | 本地 dept_status=0 |
-| 企微删除用户 | 本地 enable=false |
-| 空列表 API | 本地数据不被失活 |
-| mobile 返回空 | 本地 phone 不被清空 |
-| 新用户 | 自动 org_member |
+| 用例 | 预期 | 状态 |
+|------|------|------|
+| 首次全量同步 | 部门树 + 用户全部创建 | ✅ |
+| 重复同步 | 数据不变，无重复 insert | ✅ |
+| 企微删除部门 | 本地 dept_status=0 | ✅ |
+| 企微删除用户 | 本地 enable=false | ✅ |
+| 空列表 API | 本地数据不被失活 | ✅ |
+| mobile 返回空 | 本地 phone 不被清空 | ✅ |
+| 新用户 | 自动 org_member | ✅ |
 
-**Mock**：WireMock 固定 JSON 响应。
+**Mock**：Mockito + MockServer 单元测试。
 
 ---
 
 ## 8. 验收标准
 
-- [ ] `WecomOrgSyncService.syncAll(organizationId)` 端到端可跑通  
-- [ ] 同步结果统计准确（dept/user success/failed）  
-- [ ] org_sync_log 有完整记录  
-- [ ] 安全保护（空列表、空值、内置账号）全部生效  
+- [x] `WecomOrgSyncService.syncAll(organizationId)` 端到端可跑通  
+- [x] 同步结果统计准确（dept/user success/failed）  
+- [x] org_sync_log 有完整记录  
+- [x] 安全保护（空列表、空值、内置账号）全部生效  
 - [ ] 与 task005 查询 API 联调：树 + 成员列表数据正确  
 
 ---
@@ -157,6 +157,6 @@ UserSyncHandler.createUser()
 
 | 字段 | 值 |
 |------|-----|
-| 状态 | 待开始 |
-| 开始日期 | |
-| 完成日期 | |
+| 状态 | 已完成 |
+| 开始日期 | 2026-07-06 |
+| 完成日期 | 2026-07-06 |

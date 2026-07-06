@@ -277,6 +277,15 @@ public class CommonProjectService {
     }
 
     public ProjectDTO update(UpdateProjectRequest updateProjectDto, String updateUser, String path, String module) {
+        Project existingProject = projectMapper.selectByPrimaryKey(updateProjectDto.getId());
+        checkProjectNotExist(updateProjectDto.getId());
+        boolean organizationChanged = StringUtils.isNotBlank(updateProjectDto.getOrganizationId())
+                && existingProject != null
+                && !StringUtils.equals(existingProject.getOrganizationId(), updateProjectDto.getOrganizationId());
+        if (organizationChanged && organizationMapper.selectByPrimaryKey(updateProjectDto.getOrganizationId()) == null) {
+            throw new MSException(Translator.get("organization_not_exist"));
+        }
+
         Project project = new Project();
         ProjectDTO projectDTO = new ProjectDTO();
         project.setId(updateProjectDto.getId());
@@ -290,9 +299,17 @@ public class CommonProjectService {
         project.setCreateTime(null);
         project.setUpdateTime(System.currentTimeMillis());
         checkProjectExistByName(project);
-        checkProjectNotExist(project.getId());
         projectDTO.setOrganizationName(organizationMapper.selectByPrimaryKey(project.getOrganizationId()).getName());
         BeanUtils.copyBean(projectDTO, project);
+
+        if (organizationChanged) {
+            updateProjectUserRoleOrganizationId(project.getId(), updateProjectDto.getOrganizationId());
+            UserExample userExample = new UserExample();
+            userExample.createCriteria().andIdIn(updateProjectDto.getUserIds());
+            List<User> users = userMapper.selectByExample(userExample);
+            Map<String, String> nameMap = users.stream().collect(Collectors.toMap(User::getId, User::getName));
+            checkOrgRoleExit(updateProjectDto.getUserIds(), updateProjectDto.getOrganizationId(), updateUser, nameMap, path, module);
+        }
         //资源池
         if (CollectionUtils.isNotEmpty(updateProjectDto.getResourcePoolIds())) {
             checkResourcePoolExist(updateProjectDto.getResourcePoolIds());
@@ -359,9 +376,26 @@ public class CommonProjectService {
             project.setModuleSetting(JSON.toJSONString(new ArrayList<>()));
             projectDTO.setModuleIds(new ArrayList<>());
         }
-        project.setOrganizationId(null);
+        if (!organizationChanged) {
+            project.setOrganizationId(null);
+        }
         projectMapper.updateByPrimaryKeySelective(project);
         return projectDTO;
+    }
+
+    private void updateProjectUserRoleOrganizationId(String projectId, String organizationId) {
+        UserRoleRelationExample example = new UserRoleRelationExample();
+        example.createCriteria().andSourceIdEqualTo(projectId);
+        List<UserRoleRelation> userRoleRelations = userRoleRelationMapper.selectByExample(example);
+        if (CollectionUtils.isEmpty(userRoleRelations)) {
+            return;
+        }
+        userRoleRelations.forEach(relation -> {
+            UserRoleRelation updateRelation = new UserRoleRelation();
+            updateRelation.setId(relation.getId());
+            updateRelation.setOrganizationId(organizationId);
+            userRoleRelationMapper.updateByPrimaryKeySelective(updateRelation);
+        });
     }
 
     public void checkResourcePoolExist(List<String> poolIds) {

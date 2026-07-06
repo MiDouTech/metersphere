@@ -18,6 +18,11 @@
     <result column="update_user" jdbcType="VARCHAR" property="updateUser" />
     <result column="deleted" jdbcType="BIT" property="deleted" />
     <result column="cft_token" jdbcType="VARCHAR" property="cftToken" />
+    <result column="wecom_userid" jdbcType="VARCHAR" property="wecomUserid" />
+    <result column="department_id" jdbcType="VARCHAR" property="departmentId" />
+    <result column="position" jdbcType="VARCHAR" property="position" />
+    <result column="sync_status" jdbcType="TINYINT" property="syncStatus" />
+    <result column="sync_time" jdbcType="BIGINT" property="syncTime" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -79,7 +84,8 @@
   </sql>
   <sql id="Base_Column_List">
     id, `name`, email, `password`, `enable`, create_time, update_time, `language`, last_organization_id, 
-    phone, `source`, last_project_id, create_user, update_user, deleted, cft_token
+    phone, `source`, last_project_id, create_user, update_user, deleted, cft_token, wecom_userid, 
+    department_id, `position`, sync_status, sync_time
   </sql>
   <select id="selectByExample" parameterType="io.metersphere.system.domain.UserExample" resultMap="BaseResultMap">
     select
@@ -117,13 +123,15 @@
       update_time, `language`, last_organization_id, 
       phone, `source`, last_project_id, 
       create_user, update_user, deleted, 
-      cft_token)
+      cft_token, wecom_userid, department_id, 
+      `position`, sync_status, sync_time)
     values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{email,jdbcType=VARCHAR}, 
       #{password,jdbcType=VARCHAR}, #{enable,jdbcType=BIT}, #{createTime,jdbcType=BIGINT}, 
       #{updateTime,jdbcType=BIGINT}, #{language,jdbcType=VARCHAR}, #{lastOrganizationId,jdbcType=VARCHAR}, 
       #{phone,jdbcType=VARCHAR}, #{source,jdbcType=VARCHAR}, #{lastProjectId,jdbcType=VARCHAR}, 
       #{createUser,jdbcType=VARCHAR}, #{updateUser,jdbcType=VARCHAR}, #{deleted,jdbcType=BIT}, 
-      #{cftToken,jdbcType=VARCHAR})
+      #{cftToken,jdbcType=VARCHAR}, #{wecomUserid,jdbcType=VARCHAR}, #{departmentId,jdbcType=VARCHAR}, 
+      #{position,jdbcType=VARCHAR}, #{syncStatus,jdbcType=TINYINT}, #{syncTime,jdbcType=BIGINT})
   </insert>
   <insert id="insertSelective" parameterType="io.metersphere.system.domain.User">
     insert into user
@@ -176,6 +184,21 @@
       <if test="cftToken != null">
         cft_token,
       </if>
+      <if test="wecomUserid != null">
+        wecom_userid,
+      </if>
+      <if test="departmentId != null">
+        department_id,
+      </if>
+      <if test="position != null">
+        `position`,
+      </if>
+      <if test="syncStatus != null">
+        sync_status,
+      </if>
+      <if test="syncTime != null">
+        sync_time,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -225,6 +248,21 @@
       </if>
       <if test="cftToken != null">
         #{cftToken,jdbcType=VARCHAR},
+      </if>
+      <if test="wecomUserid != null">
+        #{wecomUserid,jdbcType=VARCHAR},
+      </if>
+      <if test="departmentId != null">
+        #{departmentId,jdbcType=VARCHAR},
+      </if>
+      <if test="position != null">
+        #{position,jdbcType=VARCHAR},
+      </if>
+      <if test="syncStatus != null">
+        #{syncStatus,jdbcType=TINYINT},
+      </if>
+      <if test="syncTime != null">
+        #{syncTime,jdbcType=BIGINT},
       </if>
     </trim>
   </insert>
@@ -285,6 +323,21 @@
       <if test="record.cftToken != null">
         cft_token = #{record.cftToken,jdbcType=VARCHAR},
       </if>
+      <if test="record.wecomUserid != null">
+        wecom_userid = #{record.wecomUserid,jdbcType=VARCHAR},
+      </if>
+      <if test="record.departmentId != null">
+        department_id = #{record.departmentId,jdbcType=VARCHAR},
+      </if>
+      <if test="record.position != null">
+        `position` = #{record.position,jdbcType=VARCHAR},
+      </if>
+      <if test="record.syncStatus != null">
+        sync_status = #{record.syncStatus,jdbcType=TINYINT},
+      </if>
+      <if test="record.syncTime != null">
+        sync_time = #{record.syncTime,jdbcType=BIGINT},
+      </if>
     </set>
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
@@ -307,7 +360,12 @@
       create_user = #{record.createUser,jdbcType=VARCHAR},
       update_user = #{record.updateUser,jdbcType=VARCHAR},
       deleted = #{record.deleted,jdbcType=BIT},
-      cft_token = #{record.cftToken,jdbcType=VARCHAR}
+      cft_token = #{record.cftToken,jdbcType=VARCHAR},
+      wecom_userid = #{record.wecomUserid,jdbcType=VARCHAR},
+      department_id = #{record.departmentId,jdbcType=VARCHAR},
+      `position` = #{record.position,jdbcType=VARCHAR},
+      sync_status = #{record.syncStatus,jdbcType=TINYINT},
+      sync_time = #{record.syncTime,jdbcType=BIGINT}
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -360,6 +418,21 @@
       <if test="cftToken != null">
         cft_token = #{cftToken,jdbcType=VARCHAR},
       </if>
+      <if test="wecomUserid != null">
+        wecom_userid = #{wecomUserid,jdbcType=VARCHAR},
+      </if>
+      <if test="departmentId != null">
+        department_id = #{departmentId,jdbcType=VARCHAR},
+      </if>
+      <if test="position != null">
+        `position` = #{position,jdbcType=VARCHAR},
+      </if>
+      <if test="syncStatus != null">
+        sync_status = #{syncStatus,jdbcType=TINYINT},
+      </if>
+      <if test="syncTime != null">
+        sync_time = #{syncTime,jdbcType=BIGINT},
+      </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
@@ -379,13 +452,19 @@
       create_user = #{createUser,jdbcType=VARCHAR},
       update_user = #{updateUser,jdbcType=VARCHAR},
       deleted = #{deleted,jdbcType=BIT},
-      cft_token = #{cftToken,jdbcType=VARCHAR}
+      cft_token = #{cftToken,jdbcType=VARCHAR},
+      wecom_userid = #{wecomUserid,jdbcType=VARCHAR},
+      department_id = #{departmentId,jdbcType=VARCHAR},
+      `position` = #{position,jdbcType=VARCHAR},
+      sync_status = #{syncStatus,jdbcType=TINYINT},
+      sync_time = #{syncTime,jdbcType=BIGINT}
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <insert id="batchInsert" parameterType="map">
     insert into user
     (id, `name`, email, `password`, `enable`, create_time, update_time, `language`, last_organization_id, 
-      phone, `source`, last_project_id, create_user, update_user, deleted, cft_token)
+      phone, `source`, last_project_id, create_user, update_user, deleted, cft_token, wecom_userid, 
+      department_id, `position`, sync_status, sync_time)
     values
     <foreach collection="list" item="item" separator=",">
       (#{item.id,jdbcType=VARCHAR}, #{item.name,jdbcType=VARCHAR}, #{item.email,jdbcType=VARCHAR}, 
@@ -393,7 +472,8 @@
         #{item.updateTime,jdbcType=BIGINT}, #{item.language,jdbcType=VARCHAR}, #{item.lastOrganizationId,jdbcType=VARCHAR}, 
         #{item.phone,jdbcType=VARCHAR}, #{item.source,jdbcType=VARCHAR}, #{item.lastProjectId,jdbcType=VARCHAR}, 
         #{item.createUser,jdbcType=VARCHAR}, #{item.updateUser,jdbcType=VARCHAR}, #{item.deleted,jdbcType=BIT}, 
-        #{item.cftToken,jdbcType=VARCHAR})
+        #{item.cftToken,jdbcType=VARCHAR}, #{item.wecomUserid,jdbcType=VARCHAR}, #{item.departmentId,jdbcType=VARCHAR}, 
+        #{item.position,jdbcType=VARCHAR}, #{item.syncStatus,jdbcType=TINYINT}, #{item.syncTime,jdbcType=BIGINT})
     </foreach>
   </insert>
   <insert id="batchInsertSelective" parameterType="map">
@@ -453,6 +533,21 @@
         </if>
         <if test="'cft_token'.toString() == column.value">
           #{item.cftToken,jdbcType=VARCHAR}
+        </if>
+        <if test="'wecom_userid'.toString() == column.value">
+          #{item.wecomUserid,jdbcType=VARCHAR}
+        </if>
+        <if test="'department_id'.toString() == column.value">
+          #{item.departmentId,jdbcType=VARCHAR}
+        </if>
+        <if test="'position'.toString() == column.value">
+          #{item.position,jdbcType=VARCHAR}
+        </if>
+        <if test="'sync_status'.toString() == column.value">
+          #{item.syncStatus,jdbcType=TINYINT}
+        </if>
+        <if test="'sync_time'.toString() == column.value">
+          #{item.syncTime,jdbcType=BIGINT}
         </if>
       </foreach>
       )

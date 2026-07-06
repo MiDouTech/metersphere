@@ -6,28 +6,19 @@ import { switchProject } from '@/api/modules/project-management/project';
 import { switchUserOrg } from '@/api/modules/system';
 import { useI18n } from '@/hooks/useI18n';
 import router from '@/router';
-import { NO_PROJECT_ROUTE_NAME } from '@/router/constants';
 import { useUserStore } from '@/store';
 import useAppStore from '@/store/modules/app';
-import useLicenseStore from '@/store/modules/setting/license';
 import { getFirstRouteNameByPermission, hasAnyPermission } from '@/utils/permission';
 
 const { t } = useI18n();
 const userStore = useUserStore();
 const appStore = useAppStore();
-const licenseStore = useLicenseStore();
 
 // 进入组织
 export async function enterOrganization(organizationId: string) {
   try {
     appStore.showLoading();
     if (appStore.currentOrgId !== organizationId) {
-      if (!licenseStore.hasLicense()) {
-        router.push({
-          name: NO_PROJECT_ROUTE_NAME,
-        });
-        return;
-      }
       await switchUserOrg(organizationId, userStore.id || '');
       await userStore.isLogin();
       await userStore.checkIsLogin(true);
@@ -44,12 +35,6 @@ export async function enterProject(projectId: string, organizationId?: string) {
     appStore.showLoading();
     // 切换组织
     if (organizationId && appStore.currentOrgId !== organizationId) {
-      if (!licenseStore.hasLicense()) {
-        router.push({
-          name: NO_PROJECT_ROUTE_NAME,
-        });
-        return;
-      }
       await switchUserOrg(organizationId, userStore.id || '');
     }
     await userStore.isLogin();

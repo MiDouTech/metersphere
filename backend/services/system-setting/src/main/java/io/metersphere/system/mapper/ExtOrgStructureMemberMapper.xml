@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.ExtOrgStructureMemberMapper">
+
+    <sql id="memberFromWhere">
+        from user u
+                 inner join user_role_relation urr on u.id = urr.user_id and urr.source_id = #{request.organizationId}
+                 left join department d on u.department_id = d.id and d.organization_id = #{request.organizationId}
+        where u.deleted = 0
+        <if test="request.departmentId != null and request.departmentId != ''">
+            and u.department_id = #{request.departmentId}
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            and (
+                u.name like concat('%', #{request.keyword}, '%')
+                    or u.email like concat('%', #{request.keyword}, '%')
+                    or u.phone like concat('%', #{request.keyword}, '%')
+                )
+        </if>
+        <if test="request.enable != null">
+            and u.enable = #{request.enable}
+        </if>
+        <if test="request.syncStatus != null">
+            and u.sync_status = #{request.syncStatus}
+        </if>
+    </sql>
+
+    <select id="pageMembers" resultType="io.metersphere.system.dto.department.OrgStructureMemberItemDTO">
+        select distinct u.id,
+                        u.name,
+                        u.department_id as departmentId,
+                        d.name as departmentName,
+                        u.position,
+                        u.enable,
+                        u.sync_status as syncStatus,
+                        u.sync_time as syncTime
+        <include refid="memberFromWhere"/>
+        order by u.create_time desc, u.id desc
+    </select>
+
+    <select id="getMemberDetail" resultType="io.metersphere.system.dto.department.OrgStructureMemberDetailDTO">
+        select u.id,
+               u.name,
+               u.email,
+               u.phone,
+               u.wecom_userid as wecomUserid,
+               u.department_id as departmentId,
+               d.name as departmentName,
+               u.position,
+               u.enable,
+               u.sync_status as syncStatus,
+               u.sync_time as syncTime
+        from user u
+                 inner join user_role_relation urr on u.id = urr.user_id and urr.source_id = #{organizationId}
+                 left join department d on u.department_id = d.id and d.organization_id = #{organizationId}
+        where u.deleted = 0
+          and u.id = #{userId}
+        limit 1
+    </select>
+
+</mapper>

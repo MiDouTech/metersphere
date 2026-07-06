@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.ExtDepartmentMapper">
+
+    <select id="listByOrganizationId" resultType="io.metersphere.system.domain.Department">
+        select id, organization_id, name, parent_id, wecom_dept_id, sort_order, dept_status,
+               sync_status, sync_time, leader_wecom_userid, create_time, update_time, create_user, update_user
+        from department
+        where organization_id = #{organizationId}
+        order by sort_order asc, create_time asc
+    </select>
+
+    <select id="selectByWecomDeptId" resultType="io.metersphere.system.domain.Department">
+        select id, organization_id, name, parent_id, wecom_dept_id, sort_order, dept_status,
+               sync_status, sync_time, leader_wecom_userid, create_time, update_time, create_user, update_user
+        from department
+        where organization_id = #{organizationId}
+          and wecom_dept_id = #{wecomDeptId}
+        limit 1
+    </select>
+
+    <select id="countEnabledByOrganizationId" resultType="long">
+        select count(*)
+        from department
+        where organization_id = #{organizationId}
+          and dept_status = 1
+    </select>
+
+    <select id="countDirectUsersByOrganizationId" resultType="io.metersphere.system.dto.department.DepartmentUserCountDTO">
+        select u.department_id as departmentId, count(distinct u.id) as userCount
+        from user u
+                 inner join user_role_relation urr on u.id = urr.user_id and urr.source_id = #{organizationId}
+        where u.deleted = 0
+          and u.department_id is not null
+        group by u.department_id
+    </select>
+
+</mapper>

@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.OrgWecomSyncConfigMapper">
+  <resultMap id="BaseResultMap" type="io.metersphere.system.domain.OrgWecomSyncConfig">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="organization_id" jdbcType="VARCHAR" property="organizationId" />
+    <result column="corp_id" jdbcType="VARCHAR" property="corpId" />
+    <result column="contact_secret" jdbcType="VARCHAR" property="contactSecret" />
+    <result column="agent_id" jdbcType="VARCHAR" property="agentId" />
+    <result column="schedule_enabled" jdbcType="TINYINT" property="scheduleEnabled" />
+    <result column="schedule_cron" jdbcType="VARCHAR" property="scheduleCron" />
+    <result column="retry_times" jdbcType="INTEGER" property="retryTimes" />
+    <result column="last_sync_time" jdbcType="BIGINT" property="lastSyncTime" />
+    <result column="create_time" jdbcType="BIGINT" property="createTime" />
+    <result column="update_time" jdbcType="BIGINT" property="updateTime" />
+    <result column="create_user" jdbcType="VARCHAR" property="createUser" />
+    <result column="update_user" jdbcType="VARCHAR" property="updateUser" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, organization_id, corp_id, contact_secret, agent_id, schedule_enabled, schedule_cron, retry_times, last_sync_time, create_time, update_time, create_user, update_user
+  </sql>
+  <select id="selectByExample" parameterType="io.metersphere.system.domain.OrgWecomSyncConfigExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    <include refid="Base_Column_List" />
+    from org_wecom_sync_config
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from org_wecom_sync_config
+    where id = #{id,jdbcType=VARCHAR}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String">
+    delete from org_wecom_sync_config
+    where id = #{id,jdbcType=VARCHAR}
+  </delete>
+  <delete id="deleteByExample" parameterType="io.metersphere.system.domain.OrgWecomSyncConfigExample">
+    delete from org_wecom_sync_config
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="io.metersphere.system.domain.OrgWecomSyncConfig">
+    insert into org_wecom_sync_config (id, organization_id, corp_id, contact_secret, agent_id, schedule_enabled, schedule_cron, retry_times, last_sync_time, create_time, update_time, create_user, update_user)
+    values (#{id,jdbcType=VARCHAR}, #{organizationId,jdbcType=VARCHAR}, #{corpId,jdbcType=VARCHAR}, #{contactSecret,jdbcType=VARCHAR}, #{agentId,jdbcType=VARCHAR}, #{scheduleEnabled,jdbcType=TINYINT}, #{scheduleCron,jdbcType=VARCHAR}, #{retryTimes,jdbcType=INTEGER}, #{lastSyncTime,jdbcType=BIGINT}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT}, #{createUser,jdbcType=VARCHAR}, #{updateUser,jdbcType=VARCHAR})
+  </insert>
+  <insert id="insertSelective" parameterType="io.metersphere.system.domain.OrgWecomSyncConfig">
+    insert into org_wecom_sync_config
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="organizationId != null">
+        organization_id,
+      </if>
+      <if test="corpId != null">
+        corp_id,
+      </if>
+      <if test="contactSecret != null">
+        contact_secret,
+      </if>
+      <if test="agentId != null">
+        agent_id,
+      </if>
+      <if test="scheduleEnabled != null">
+        schedule_enabled,
+      </if>
+      <if test="scheduleCron != null">
+        schedule_cron,
+      </if>
+      <if test="retryTimes != null">
+        retry_times,
+      </if>
+      <if test="lastSyncTime != null">
+        last_sync_time,
+      </if>
+      <if test="createTime != null">
+        create_time,
+      </if>
+      <if test="updateTime != null">
+        update_time,
+      </if>
+      <if test="createUser != null">
+        create_user,
+      </if>
+      <if test="updateUser != null">
+        update_user,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=VARCHAR},
+      </if>
+      <if test="organizationId != null">
+        #{organizationId,jdbcType=VARCHAR},
+      </if>
+      <if test="corpId != null">
+        #{corpId,jdbcType=VARCHAR},
+      </if>
+      <if test="contactSecret != null">
+        #{contactSecret,jdbcType=VARCHAR},
+      </if>
+      <if test="agentId != null">
+        #{agentId,jdbcType=VARCHAR},
+      </if>
+      <if test="scheduleEnabled != null">
+        #{scheduleEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="scheduleCron != null">
+        #{scheduleCron,jdbcType=VARCHAR},
+      </if>
+      <if test="retryTimes != null">
+        #{retryTimes,jdbcType=INTEGER},
+      </if>
+      <if test="lastSyncTime != null">
+        #{lastSyncTime,jdbcType=BIGINT},
+      </if>
+      <if test="createTime != null">
+        #{createTime,jdbcType=BIGINT},
+      </if>
+      <if test="updateTime != null">
+        #{updateTime,jdbcType=BIGINT},
+      </if>
+      <if test="createUser != null">
+        #{createUser,jdbcType=VARCHAR},
+      </if>
+      <if test="updateUser != null">
+        #{updateUser,jdbcType=VARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="io.metersphere.system.domain.OrgWecomSyncConfigExample" resultType="java.lang.Long">
+    select count(*) from org_wecom_sync_config
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update org_wecom_sync_config
+    <set>
+      <if test="record.id != null">
+        id = #{record.id,jdbcType=VARCHAR},
+      </if>
+      <if test="record.organizationId != null">
+        organization_id = #{record.organizationId,jdbcType=VARCHAR},
+      </if>
+      <if test="record.corpId != null">
+        corp_id = #{record.corpId,jdbcType=VARCHAR},
+      </if>
+      <if test="record.contactSecret != null">
+        contact_secret = #{record.contactSecret,jdbcType=VARCHAR},
+      </if>
+      <if test="record.agentId != null">
+        agent_id = #{record.agentId,jdbcType=VARCHAR},
+      </if>
+      <if test="record.scheduleEnabled != null">
+        schedule_enabled = #{record.scheduleEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="record.scheduleCron != null">
+        schedule_cron = #{record.scheduleCron,jdbcType=VARCHAR},
+      </if>
+      <if test="record.retryTimes != null">
+        retry_times = #{record.retryTimes,jdbcType=INTEGER},
+      </if>
+      <if test="record.lastSyncTime != null">
+        last_sync_time = #{record.lastSyncTime,jdbcType=BIGINT},
+      </if>
+      <if test="record.createTime != null">
+        create_time = #{record.createTime,jdbcType=BIGINT},
+      </if>
+      <if test="record.updateTime != null">
+        update_time = #{record.updateTime,jdbcType=BIGINT},
+      </if>
+      <if test="record.createUser != null">
+        create_user = #{record.createUser,jdbcType=VARCHAR},
+      </if>
+      <if test="record.updateUser != null">
+        update_user = #{record.updateUser,jdbcType=VARCHAR},
+      </if>
+    </set>
+    <if test="_parameter != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update org_wecom_sync_config
+    set id = #{record.id,jdbcType=VARCHAR},
+      organization_id = #{record.organizationId,jdbcType=VARCHAR},
+      corp_id = #{record.corpId,jdbcType=VARCHAR},
+      contact_secret = #{record.contactSecret,jdbcType=VARCHAR},
+      agent_id = #{record.agentId,jdbcType=VARCHAR},
+      schedule_enabled = #{record.scheduleEnabled,jdbcType=TINYINT},
+      schedule_cron = #{record.scheduleCron,jdbcType=VARCHAR},
+      retry_times = #{record.retryTimes,jdbcType=INTEGER},
+      last_sync_time = #{record.lastSyncTime,jdbcType=BIGINT},
+      create_time = #{record.createTime,jdbcType=BIGINT},
+      update_time = #{record.updateTime,jdbcType=BIGINT},
+      create_user = #{record.createUser,jdbcType=VARCHAR},
+      update_user = #{record.updateUser,jdbcType=VARCHAR}
+    <if test="_parameter != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="io.metersphere.system.domain.OrgWecomSyncConfig">
+    update org_wecom_sync_config
+    <set>
+      <if test="organizationId != null">
+        organization_id = #{organizationId,jdbcType=VARCHAR},
+      </if>
+      <if test="corpId != null">
+        corp_id = #{corpId,jdbcType=VARCHAR},
+      </if>
+      <if test="contactSecret != null">
+        contact_secret = #{contactSecret,jdbcType=VARCHAR},
+      </if>
+      <if test="agentId != null">
+        agent_id = #{agentId,jdbcType=VARCHAR},
+      </if>
+      <if test="scheduleEnabled != null">
+        schedule_enabled = #{scheduleEnabled,jdbcType=TINYINT},
+      </if>
+      <if test="scheduleCron != null">
+        schedule_cron = #{scheduleCron,jdbcType=VARCHAR},
+      </if>
+      <if test="retryTimes != null">
+        retry_times = #{retryTimes,jdbcType=INTEGER},
+      </if>
+      <if test="lastSyncTime != null">
+        last_sync_time = #{lastSyncTime,jdbcType=BIGINT},
+      </if>
+      <if test="createTime != null">
+        create_time = #{createTime,jdbcType=BIGINT},
+      </if>
+      <if test="updateTime != null">
+        update_time = #{updateTime,jdbcType=BIGINT},
+      </if>
+      <if test="createUser != null">
+        create_user = #{createUser,jdbcType=VARCHAR},
+      </if>
+      <if test="updateUser != null">
+        update_user = #{updateUser,jdbcType=VARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="io.metersphere.system.domain.OrgWecomSyncConfig">
+    update org_wecom_sync_config
+    set organization_id = #{organizationId,jdbcType=VARCHAR},
+      corp_id = #{corpId,jdbcType=VARCHAR},
+      contact_secret = #{contactSecret,jdbcType=VARCHAR},
+      agent_id = #{agentId,jdbcType=VARCHAR},
+      schedule_enabled = #{scheduleEnabled,jdbcType=TINYINT},
+      schedule_cron = #{scheduleCron,jdbcType=VARCHAR},
+      retry_times = #{retryTimes,jdbcType=INTEGER},
+      last_sync_time = #{lastSyncTime,jdbcType=BIGINT},
+      create_time = #{createTime,jdbcType=BIGINT},
+      update_time = #{updateTime,jdbcType=BIGINT},
+      create_user = #{createUser,jdbcType=VARCHAR},
+      update_user = #{updateUser,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=VARCHAR}
+  </update>
+  <insert id="batchInsert" parameterType="map">
+    insert into org_wecom_sync_config
+    (id, organization_id, corp_id, contact_secret, agent_id, schedule_enabled, schedule_cron, retry_times, last_sync_time, create_time, update_time, create_user, update_user)
+    values
+    <foreach collection="list" item="item" separator=",">
+      (#{item.id,jdbcType=VARCHAR},
+        #{item.organizationId,jdbcType=VARCHAR},
+        #{item.corpId,jdbcType=VARCHAR},
+        #{item.contactSecret,jdbcType=VARCHAR},
+        #{item.agentId,jdbcType=VARCHAR},
+        #{item.scheduleEnabled,jdbcType=TINYINT},
+        #{item.scheduleCron,jdbcType=VARCHAR},
+        #{item.retryTimes,jdbcType=INTEGER},
+        #{item.lastSyncTime,jdbcType=BIGINT},
+        #{item.createTime,jdbcType=BIGINT},
+        #{item.updateTime,jdbcType=BIGINT},
+        #{item.createUser,jdbcType=VARCHAR},
+        #{item.updateUser,jdbcType=VARCHAR})
+    </foreach>
+  </insert>
+  <insert id="batchInsertSelective" parameterType="map">
+    insert into org_wecom_sync_config (
+    <foreach collection="selective" item="column" separator=",">
+      ${column.escapedColumnName}
+    </foreach>
+    )
+    values
+    <foreach collection="list" item="item" separator=",">
+      (
+      <foreach collection="selective" item="column" separator=",">
+        <if test="'id'.toString() == column.value">
+          #{item.id,jdbcType=VARCHAR}
+        </if>
+        <if test="'organization_id'.toString() == column.value">
+          #{item.organizationId,jdbcType=VARCHAR}
+        </if>
+        <if test="'corp_id'.toString() == column.value">
+          #{item.corpId,jdbcType=VARCHAR}
+        </if>
+        <if test="'contact_secret'.toString() == column.value">
+          #{item.contactSecret,jdbcType=VARCHAR}
+        </if>
+        <if test="'agent_id'.toString() == column.value">
+          #{item.agentId,jdbcType=VARCHAR}
+        </if>
+        <if test="'schedule_enabled'.toString() == column.value">
+          #{item.scheduleEnabled,jdbcType=TINYINT}
+        </if>
+        <if test="'schedule_cron'.toString() == column.value">
+          #{item.scheduleCron,jdbcType=VARCHAR}
+        </if>
+        <if test="'retry_times'.toString() == column.value">
+          #{item.retryTimes,jdbcType=INTEGER}
+        </if>
+        <if test="'last_sync_time'.toString() == column.value">
+          #{item.lastSyncTime,jdbcType=BIGINT}
+        </if>
+        <if test="'create_time'.toString() == column.value">
+          #{item.createTime,jdbcType=BIGINT}
+        </if>
+        <if test="'update_time'.toString() == column.value">
+          #{item.updateTime,jdbcType=BIGINT}
+        </if>
+        <if test="'create_user'.toString() == column.value">
+          #{item.createUser,jdbcType=VARCHAR}
+        </if>
+        <if test="'update_user'.toString() == column.value">
+          #{item.updateUser,jdbcType=VARCHAR}
+        </if>
+      </foreach>
+      )
+    </foreach>
+  </insert>
+</mapper>

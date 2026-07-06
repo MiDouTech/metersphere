@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.ExtOrgSyncLogMapper">
+
+    <select id="selectLatestByOrganizationId" resultType="io.metersphere.system.domain.OrgSyncLog">
+        select id, organization_id, sync_mode, sync_status, dept_total, dept_success, dept_failed,
+               user_total, user_success, user_failed, duration_ms, error_message, create_time, create_user
+        from org_sync_log
+        where organization_id = #{organizationId}
+        order by create_time desc
+        limit 1
+    </select>
+
+    <select id="listByOrganizationId" resultType="io.metersphere.system.domain.OrgSyncLog">
+        select id, organization_id, sync_mode, sync_status, dept_total, dept_success, dept_failed,
+               user_total, user_success, user_failed, duration_ms, error_message, create_time, create_user
+        from org_sync_log
+        where organization_id = #{organizationId}
+        <if test="syncStatus != null and syncStatus != ''">
+            and sync_status = #{syncStatus}
+        </if>
+        order by create_time desc
+    </select>
+
+</mapper>

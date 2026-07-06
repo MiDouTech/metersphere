@@ -4,6 +4,7 @@ package io.metersphere.system.config;
 import io.metersphere.sdk.util.FilterChainUtils;
 import io.metersphere.system.security.ApiKeyFilter;
 import io.metersphere.system.security.CsrfFilter;
+import io.metersphere.system.security.MsAuthenticationFilter;
 import io.metersphere.system.security.MsPermissionAnnotationMethodInterceptor;
 import io.metersphere.system.security.realm.LocalRealm;
 import org.apache.shiro.aop.AnnotationResolver;
@@ -41,6 +42,7 @@ public class ShiroConfig {
 
         shiroFilterFactoryBean.getFilters().put("apikey", new ApiKeyFilter());
         shiroFilterFactoryBean.getFilters().put("csrf", new CsrfFilter());
+        shiroFilterFactoryBean.getFilters().put("authc", new MsAuthenticationFilter());
 
         Map<String, String> filterChainDefinitionMap = shiroFilterFactoryBean.getFilterChainDefinitionMap();
 

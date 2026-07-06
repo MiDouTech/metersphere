@@ -200,17 +200,13 @@ const useUserStore = defineStore('user', {
         if (!orgId) {
           orgId = getQueryVariable('_orgId') || '';
         }
-        // 1. forceSet是强制设置，需要设置res的，2.非force且地址栏有，则也设置 3.地址栏参数为空就不设置
-        // 如果访问页面的时候携带了组织 ID和项目 ID，则不设置
-        if (!forceSet && orgId) {
-          appStore.setCurrentOrgId(orgId);
-        }
-        if (!forceSet && pId) {
-          appStore.setCurrentProjectId(pId);
-        }
+        // 1. forceSet 强制使用用户最近组织/项目；2. 非 force 时 URL 参数优先；3. URL 为空则回退到最近组织/项目
         if (forceSet) {
           appStore.setCurrentOrgId(res.lastOrganizationId || '');
           appStore.setCurrentProjectId(res.lastProjectId || '');
+        } else {
+          appStore.setCurrentOrgId(orgId || res.lastOrganizationId || '');
+          appStore.setCurrentProjectId(pId || res.lastProjectId || '');
         }
         return true;
       } catch (err) {

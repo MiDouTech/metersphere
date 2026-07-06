@@ -31,6 +31,27 @@ public class SystemOrganizationLogService {
 	private OrganizationService organizationService;
 
 	/**
+	 * 创建组织
+	 *
+	 * @param request 接口请求参数
+	 * @return 日志详情
+	 */
+	public LogDTO addLog(OrganizationEditRequest request) {
+		LogDTO dto = new LogDTO(
+				OperationLogConstants.SYSTEM,
+				OperationLogConstants.SYSTEM,
+				null,
+				null,
+				OperationLogType.ADD.name(),
+				OperationLogModule.SETTING_SYSTEM_ORGANIZATION,
+				request.getName());
+		dto.setPath("/system/organization/add");
+		dto.setMethod(HttpMethodConstants.POST.name());
+		dto.setModifiedValue(JSON.toJSONBytes(request));
+		return dto;
+	}
+
+	/**
 	 * 更新组织
 	 *
 	 * @param request 接口请求参数

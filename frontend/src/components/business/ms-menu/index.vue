@@ -213,6 +213,9 @@
 
       const licenseStore = useLicenseStore();
       const xPack = computed(() => licenseStore.hasLicense());
+      const canSwitchOrg = computed(
+        () => xPack.value && (appStore.getPackageType === 'enterprise' || licenseStore.isUnlimited)
+      );
 
       const orgListLoading = ref(false);
       async function getOrgList() {
@@ -230,13 +233,13 @@
       }
 
       watch(
-        () => [xPack.value, appStore.getPackageType],
-        async ([val, packageType]) => {
-          if (!val) {
+        () => [canSwitchOrg.value],
+        async ([val]) => {
+          if (!xPack.value) {
             personalMenus.value = [...personalCenterMenus, ...logoutMenus];
             return;
           }
-          if (packageType === 'enterprise') {
+          if (val) {
             personalMenus.value = [...personalCenterMenus, ...switchOrgMenus, ...logoutMenus];
             await getOrgList();
           } else {
@@ -259,7 +262,7 @@
 
       watchEffect(() => {
         if (switchOrgVisible.value || menuSwitchOrgVisible.value) {
-          if (appStore.getPackageType === 'enterprise' && licenseStore.hasLicense()) {
+          if (canSwitchOrg.value) {
             getOrgList();
           }
           nextTick(() => {

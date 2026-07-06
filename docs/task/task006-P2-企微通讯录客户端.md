@@ -86,11 +86,11 @@
 
 使用 WireMock 或 MockServer：
 
-- [ ] gettoken 成功并缓存  
-- [ ] Token 过期后自动刷新  
-- [ ] department/list 解析正确  
-- [ ] user/list fetch_child=1 解析正确  
-- [ ] errcode 非 0 抛异常  
+- [x] gettoken 成功并缓存  
+- [x] Token 过期后自动刷新  
+- [x] department/list 解析正确  
+- [x] user/list fetch_child=1 解析正确  
+- [x] errcode 非 0 抛异常  
 
 **测试路径**：`WecomContactClientTest.java`
 
@@ -98,10 +98,10 @@
 
 ## 6. 验收标准
 
-- [ ] `WecomContactClient` 可独立调用企微沙箱/测试企业  
-- [ ] 与 `notice/utils/WeComClient` 无类名/Bean 冲突  
-- [ ] Token 缓存有效，不会每次请求都 gettoken  
-- [ ] 单元测试覆盖主要 API 路径  
+- [x] `WecomContactClient` 可独立调用企微沙箱/测试企业  
+- [x] 与 `notice/utils/WeComClient` 无类名/Bean 冲突  
+- [x] Token 缓存有效，不会每次请求都 gettoken  
+- [x] 单元测试覆盖主要 API 路径  
 
 ---
 
@@ -109,6 +109,6 @@
 
 | 字段 | 值 |
 |------|-----|
-| 状态 | 待开始 |
-| 开始日期 | |
-| 完成日期 | |
+| 状态 | 已完成 |
+| 开始日期 | 2026-07-06 |
+| 完成日期 | 2026-07-06 |

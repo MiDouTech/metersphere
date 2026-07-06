@@ -59,7 +59,7 @@
           {{ t('system.organization.addMember') }}
         </MsButton>
         <MsButton
-          v-if="record.switchAndEnter && licenseStore.hasLicense()"
+          v-if="record.switchAndEnter"
           :disabled="appStore.currentOrgId === record.id"
           @click="enterOrganization(record.id)"
         >
@@ -112,7 +112,6 @@
   import useModal from '@/hooks/useModal';
   import { useTableStore } from '@/store';
   import useAppStore from '@/store/modules/app';
-  import useLicenseStore from '@/store/modules/setting/license';
   import { characterLimit } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
 
@@ -120,8 +119,6 @@
   import { ColumnEditTypeEnum, TableKeyEnum } from '@/enums/tableEnum';
 
   import { enterOrganization } from '@/views/setting/utils';
-
-  const licenseStore = useLicenseStore();
 
   const appStore = useAppStore();
 

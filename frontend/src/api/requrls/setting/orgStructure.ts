@@ -1,0 +1,9 @@
+export const GetDepartmentTreeUrl = '/org-structure/departments/tree';
+export const GetMemberPageUrl = '/org-structure/members/page';
+export const GetMemberDetailUrl = '/org-structure/members';
+export const ManualSyncUrl = '/org-wecom/sync/manual';
+export const GetSyncStatusUrl = '/org-wecom/sync/status';
+export const GetSyncLogPageUrl = '/org-wecom/sync/log/page';
+export const GetSyncConfigUrl = '/org-wecom/config/get';
+export const SaveSyncConfigUrl = '/org-wecom/config/save';
+export const TestSyncConfigUrl = '/org-wecom/config/test';

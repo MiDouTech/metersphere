@@ -6,8 +6,26 @@ import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.base.BaseTest;
 import io.metersphere.system.controller.handler.ResultHolder;
 import io.metersphere.system.dto.OrganizationDTO;
+import io.metersphere.system.dto.OrganizationSwitchRequest;
 import io.metersphere.system.dto.ProjectDTO;
 import io.metersphere.system.dto.request.*;
+import io.metersphere.sdk.constants.InternalUserRole;
+import io.metersphere.sdk.constants.TemplateScopeType;
+import io.metersphere.system.domain.Organization;
+import io.metersphere.system.domain.CustomField;
+import io.metersphere.system.domain.CustomFieldExample;
+import io.metersphere.system.domain.Template;
+import io.metersphere.system.domain.TemplateExample;
+import io.metersphere.system.domain.User;
+import io.metersphere.system.domain.UserRoleRelation;
+import io.metersphere.system.domain.UserRoleRelationExample;
+import io.metersphere.system.dto.sdk.OptionDTO;
+import io.metersphere.system.dto.user.UserDTO;
+import io.metersphere.system.mapper.CustomFieldMapper;
+import io.metersphere.system.mapper.OrganizationMapper;
+import io.metersphere.system.mapper.TemplateMapper;
+import io.metersphere.system.mapper.UserMapper;
+import io.metersphere.system.mapper.UserRoleRelationMapper;
 import io.metersphere.system.dto.user.UserExtendDTO;
 import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.utils.Pager;
@@ -37,7 +55,22 @@ public class SystemOrganizationControllerTests extends BaseTest {
 
     @Resource
     private MockMvc mockMvc;
+    @Resource
+    private OrganizationMapper organizationMapper;
+    @Resource
+    private TemplateMapper templateMapper;
+    @Resource
+    private CustomFieldMapper customFieldMapper;
+    @Resource
+    private UserRoleRelationMapper userRoleRelationMapper;
+    @Resource
+    private UserMapper userMapper;
 
+    private static String createdOrganizationId;
+
+    public static final String ORGANIZATION_ADD = "/system/organization/add";
+    public static final String ORGANIZATION_SWITCH = "/system/organization/switch";
+    public static final String ORGANIZATION_SWITCH_OPTION = "/system/organization/switch-option";
     public static final String ORGANIZATION_LIST = "/system/organization/list";
     public static final String ORGANIZATION_UPDATE = "/system/organization/update";
     public static final String ORGANIZATION_RENAME = "/system/organization/rename";
@@ -570,6 +603,107 @@ public class SystemOrganizationControllerTests extends BaseTest {
         Assertions.assertEquals(result.getCurrent(), request.getCurrent());
         //返回的数据量不超过规定要返回的数据量相同
         Assertions.assertTrue(JSON.parseArray(JSON.toJSONString(result.getList())).size() <= request.getPageSize());
+    }
+
+    @Test
+    @Order(25)
+    public void testAddOrganizationSuccess() throws Exception {
+        OrganizationEditRequest request = new OrganizationEditRequest();
+        request.setName("task002-test-org");
+        request.setDescription("task002 desc");
+        request.setUserIds(List.of("admin"));
+        MvcResult mvcResult = this.requestPostWithOkAndReturn(ORGANIZATION_ADD, request);
+        OrganizationDTO organizationDTO = getResultData(mvcResult, OrganizationDTO.class);
+        Assertions.assertNotNull(organizationDTO.getId());
+        Assertions.assertEquals(request.getName(), organizationDTO.getName());
+        createdOrganizationId = organizationDTO.getId();
+
+        Organization organization = organizationMapper.selectByPrimaryKey(createdOrganizationId);
+        Assertions.assertNotNull(organization);
+        Assertions.assertNotNull(organization.getNum());
+
+        TemplateExample templateExample = new TemplateExample();
+        templateExample.createCriteria()
+                .andScopeIdEqualTo(createdOrganizationId)
+                .andScopeTypeEqualTo(TemplateScopeType.ORGANIZATION.name());
+        List<Template> templates = templateMapper.selectByExample(templateExample);
+        Assertions.assertEquals(5, templates.size());
+
+        CustomFieldExample customFieldExample = new CustomFieldExample();
+        customFieldExample.createCriteria()
+                .andScopeIdEqualTo(createdOrganizationId)
+                .andScopeTypeEqualTo(TemplateScopeType.ORGANIZATION.name());
+        List<CustomField> customFields = customFieldMapper.selectByExample(customFieldExample);
+        Assertions.assertTrue(customFields.size() >= 2);
+
+        UserRoleRelationExample relationExample = new UserRoleRelationExample();
+        relationExample.createCriteria()
+                .andSourceIdEqualTo(createdOrganizationId)
+                .andRoleIdEqualTo(InternalUserRole.ORG_ADMIN.getValue())
+                .andUserIdEqualTo("admin");
+        List<UserRoleRelation> relations = userRoleRelationMapper.selectByExample(relationExample);
+        Assertions.assertEquals(1, relations.size());
+
+        checkLog(createdOrganizationId, OperationLogType.ADD);
+        OrganizationEditRequest permissionRequest = new OrganizationEditRequest();
+        permissionRequest.setName("task002-test-org-perm");
+        permissionRequest.setUserIds(List.of("admin"));
+        requestPostPermissionTest(PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_READ_ADD, ORGANIZATION_ADD, permissionRequest);
+    }
+
+    @Test
+    @Order(26)
+    public void testAddOrganizationError() throws Exception {
+        OrganizationEditRequest request = new OrganizationEditRequest();
+        request.setName("task002-test-org");
+        request.setUserIds(List.of("admin"));
+        this.requestPost(ORGANIZATION_ADD, request, status().is5xxServerError());
+
+        request.setName("task002-test-org-empty");
+        request.setUserIds(Collections.emptyList());
+        this.requestPost(ORGANIZATION_ADD, request, status().isBadRequest());
+    }
+
+    @Test
+    @Order(27)
+    public void testSwitchOrganizationSuccess() throws Exception {
+        OrganizationSwitchRequest request = new OrganizationSwitchRequest();
+        request.setOrganizationId("default-organization-2");
+        request.setUserId("admin");
+        MvcResult mvcResult = this.requestPostWithOkAndReturn(ORGANIZATION_SWITCH, request);
+        UserDTO userDTO = getResultData(mvcResult, UserDTO.class);
+        Assertions.assertEquals("default-organization-2", userDTO.getLastOrganizationId());
+
+        User user = userMapper.selectByPrimaryKey("admin");
+        Assertions.assertEquals("default-organization-2", user.getLastOrganizationId());
+    }
+
+    @Test
+    @Order(28)
+    public void testSwitchOrganizationError() throws Exception {
+        OrganizationSwitchRequest request = new OrganizationSwitchRequest();
+        request.setOrganizationId("");
+        request.setUserId("admin");
+        this.requestPost(ORGANIZATION_SWITCH, request, status().isBadRequest());
+
+        request.setOrganizationId("default-organization-x");
+        request.setUserId("admin");
+        this.requestPost(ORGANIZATION_SWITCH, request, status().is5xxServerError());
+
+        request.setOrganizationId("default-organization-2");
+        request.setUserId("other-user");
+        this.requestPost(ORGANIZATION_SWITCH, request, status().is5xxServerError());
+    }
+
+    @Test
+    @Order(29)
+    public void testGetSwitchOptionSuccess() throws Exception {
+        MvcResult mvcResult = this.responseGet(ORGANIZATION_SWITCH_OPTION);
+        String returnData = mvcResult.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        ResultHolder resultHolder = JSON.parseObject(returnData, ResultHolder.class);
+        Assertions.assertNotNull(resultHolder);
+        List<OptionDTO> options = JSON.parseArray(JSON.toJSONString(resultHolder.getData()), OptionDTO.class);
+        Assertions.assertFalse(options.isEmpty());
     }
 
 }

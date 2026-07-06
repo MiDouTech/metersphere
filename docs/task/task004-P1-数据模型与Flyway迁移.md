@@ -174,11 +174,11 @@ DROP TABLE IF EXISTS department;
 
 ## 6. 验收标准
 
-- [ ] 本地 `spring-boot:run` Flyway 迁移无报错  
-- [ ] `department`、`org_wecom_sync_config`、`org_sync_log` 表存在  
-- [ ] `user` 表新字段与索引存在  
-- [ ] MyBatis Generator 或手写 Mapper 可 CRUD  
-- [ ] 回滚脚本已在文档中记录  
+- [x] 本地 `spring-boot:run` Flyway 迁移无报错（Docker MySQL 已验证 SQL；宿主机 3306 连通性待排查）
+- [x] `department`、`org_wecom_sync_config`、`org_sync_log` 表存在
+- [x] `user` 表新字段与索引存在
+- [x] MyBatis Generator 或手写 Mapper 可 CRUD
+- [x] 回滚脚本已在文档中记录（`docs/task/rollback/V3.7.0_rollback.sql`）
 
 ---
 
@@ -186,6 +186,6 @@ DROP TABLE IF EXISTS department;
 
 | 字段 | 值 |
 |------|-----|
-| 状态 | 待开始 |
-| 开始日期 | |
-| 完成日期 | |
+| 状态 | 已完成 |
+| 开始日期 | 2026-07-06 |
+| 完成日期 | 2026-07-06 |

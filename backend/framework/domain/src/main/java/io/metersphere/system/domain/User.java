@@ -69,6 +69,21 @@ public class User implements Serializable {
     @Size(min = 1, max = 255, message = "{user.cft_token.length_range}", groups = {Created.class, Updated.class})
     private String cftToken;
 
+    @Schema(description = "企微UserID")
+    private String wecomUserid;
+
+    @Schema(description = "主部门本地ID")
+    private String departmentId;
+
+    @Schema(description = "职位")
+    private String position;
+
+    @Schema(description = "同步状态")
+    private Integer syncStatus;
+
+    @Schema(description = "最近同步时间")
+    private Long syncTime;
+
     private static final long serialVersionUID = 1L;
 
     public enum Column {
@@ -87,7 +102,12 @@ public class User implements Serializable {
         createUser("create_user", "createUser", "VARCHAR", false),
         updateUser("update_user", "updateUser", "VARCHAR", false),
         deleted("deleted", "deleted", "BIT", false),
-        cftToken("cft_token", "cftToken", "VARCHAR", false);
+        cftToken("cft_token", "cftToken", "VARCHAR", false),
+        wecomUserid("wecom_userid", "wecomUserid", "VARCHAR", false),
+        departmentId("department_id", "departmentId", "VARCHAR", false),
+        position("position", "position", "VARCHAR", true),
+        syncStatus("sync_status", "syncStatus", "TINYINT", false),
+        syncTime("sync_time", "syncTime", "BIGINT", false);
 
         private static final String BEGINNING_DELIMITER = "`";
 

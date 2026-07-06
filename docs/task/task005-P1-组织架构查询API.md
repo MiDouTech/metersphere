@@ -150,26 +150,26 @@ backend/services/system-setting/src/main/java/io/metersphere/system/
 
 ### 5.1 单元测试
 
-- [ ] 空组织返回空树  
-- [ ] 3 层树结构 parent-child 正确  
-- [ ] totalUserCount 聚合正确  
-- [ ] 脱敏规则覆盖 phone/email/wecomUserid  
+- [x] 空组织返回空树
+- [x] 3 层树结构 parent-child 正确
+- [x] totalUserCount 聚合正确
+- [x] 脱敏规则覆盖 phone/email/wecomUserid
 
 ### 5.2 接口测试
 
-- [ ] `DepartmentControllerTests` — tree API  
-- [ ] `OrgStructureMemberControllerTests` — page + detail  
-- [ ] 跨组织访问返回 403  
+- [x] `DepartmentControllerTests` — tree API
+- [x] `OrgStructureMemberControllerTests` — page + detail
+- [x] 跨组织访问返回 403
 
 ---
 
 ## 6. 验收标准
 
-- [ ] 四个 API 均可调用并返回预期结构  
-- [ ] 成员分页走 SQL，1000+ 用户性能可接受  
-- [ ] 详情脱敏符合规则  
-- [ ] 权限隔离有效  
-- [ ] Swagger/OpenAPI 文档已补充  
+- [x] 四个 API 均可调用并返回预期结构
+- [x] 成员分页走 SQL（PageHelper + ExtOrgStructureMemberMapper）
+- [x] 详情脱敏符合规则
+- [x] 权限隔离有效（OrgStructureAccessService + Shiro）
+- [x] Swagger/OpenAPI 文档已补充（@Operation）
 
 ---
 
@@ -177,6 +177,6 @@ backend/services/system-setting/src/main/java/io/metersphere/system/
 
 | 字段 | 值 |
 |------|-----|
-| 状态 | 待开始 |
-| 开始日期 | |
-| 完成日期 | |
+| 状态 | 已完成 |
+| 开始日期 | 2026-07-06 |
+| 完成日期 | 2026-07-06 |

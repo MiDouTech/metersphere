@@ -8,6 +8,10 @@
         <include refid="queryWhereCondition"/>
     </select>
 
+    <select id="getMaxNum" resultType="java.lang.Long">
+        select max(num) from organization
+    </select>
+
     <select id="getCountByIds" resultType="io.metersphere.system.dto.OrganizationCountDTO">
         select o.id,
         coalesce(membercount, 0) as memberCount, coalesce(projectcount, 0) as projectCount

@@ -94,6 +94,16 @@ const Setting: AppRouteRecordRaw = {
           },
         },
         {
+          path: 'org-structure',
+          name: SettingRouteEnum.SETTING_SYSTEM_ORG_STRUCTURE,
+          component: () => import('@/views/setting/system/orgStructure/index.vue'),
+          meta: {
+            locale: 'menu.settings.system.orgStructure',
+            roles: ['SYSTEM_ORGANIZATION_PROJECT:READ'],
+            isTopMenu: true,
+          },
+        },
+        {
           path: 'parameter',
           name: SettingRouteEnum.SETTING_SYSTEM_PARAMETER,
           component: () => import('@/views/setting/system/config/index.vue'),
@@ -209,6 +219,16 @@ const Setting: AppRouteRecordRaw = {
           component: () => import('@/views/setting/organization/member/index.vue'),
           meta: {
             locale: 'menu.settings.organization.member',
+            roles: ['ORGANIZATION_MEMBER:READ'],
+            isTopMenu: true,
+          },
+        },
+        {
+          path: 'org-structure',
+          name: SettingRouteEnum.SETTING_ORGANIZATION_ORG_STRUCTURE,
+          component: () => import('@/views/setting/system/orgStructure/index.vue'),
+          meta: {
+            locale: 'menu.settings.organization.orgStructure',
             roles: ['ORGANIZATION_MEMBER:READ'],
             isTopMenu: true,
           },
