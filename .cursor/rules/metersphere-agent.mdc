@@ -1,0 +1,60 @@
+---
+description: MeterSphere Agent 功能测试工作流 - 用例提取、执行与回写
+alwaysApply: false
+---
+
+# MeterSphere Agent 工作流
+
+当用户提及 MeterSphere、功能用例、提取用例、执行测试、回写结果时，按以下流程操作。
+
+## 1. 提取用例
+
+1. 用户表述模糊（如「财务相关」「那个模块」）时，先调用 `list_modules` 展示模块列表，请用户确认。
+2. 调用 `search_functional_cases`：
+   - 传 `testPlanId`（环境变量 `MS_TEST_PLAN_ID` 或用户指定），确保返回 `testPlanCaseId`。
+   - 模块检索：`query` 填模块名；P0 过滤：`filters: { priority: ["P0"] }`。
+3. 检查响应：
+   - `matchedBy` / `matchedModules`：确认命中范围是否符合预期。
+   - `warnings`：如有 `MODULE_NOT_MATCHED_KEYWORD_FALLBACK`，告知用户并确认是否继续。
+   - `total > 20`：先用 `includeSteps: false` 摘要确认，再按需拉详情。
+
+## 2. 执行前检查
+
+- 每条用例必须有 `testPlanCaseId` 才能回写计划内执行历史。
+- 若无 `testPlanCaseId`，提示用户将用例关联到 **Agent 专用测试计划** 后重试。
+- 记住每条用例的 `caseId`、`testPlanCaseId`、`step.id`（回写时需要）。
+
+## 3. 外部执行
+
+- MeterSphere 不在平台内执行 UI 自动化；在外部按 `steps` 逐步执行（Playwright 等）。
+- 逐步记录 `actualResult`，判断每步 `executeResult`（SUCCESS / ERROR / BLOCKED）。
+- 汇总 `lastExecResult`：全部 SUCCESS → SUCCESS，否则 ERROR。
+
+## 4. 回写结果
+
+对每条已执行用例调用 `submit_functional_result`：
+
+- `testPlanCaseId` 是计划关联 ID，**不是** `caseId`。
+- `steps` 中保留 search 返回的 `step.id`。
+- `executedBy` 建议填 `cursor-agent`。
+- `projectId` / `testPlanId` 可省略（使用 MCP 环境变量默认值）。
+
+## 5. 回复用户
+
+汇总报告：总数、通过数、失败数、失败用例编号（`num`）与名称。
+
+## 关键字段对照
+
+| Agent 字段 | 说明 |
+|-----------|------|
+| `caseId` | 功能用例 ID |
+| `testPlanCaseId` | 计划关联 ID，映射 `TestPlanCaseRunRequest.id` |
+| `steps[].expected` | 预期结果（来自平台 `result` 字段） |
+
+## 故障排查
+
+| 现象 | 处理 |
+|------|------|
+| 401 | 检查 MCP 配置中 `MS_AGENT_TOKEN` |
+| 403 submit | Token 需要 FUNCTIONAL_SUBMIT 权限 |
+| 模块未命中 | `list_modules` 后使用 `filters.moduleIds` |

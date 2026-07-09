@@ -61,6 +61,11 @@
             <artifactId>metersphere-dashboard</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>io.metersphere</groupId>
+            <artifactId>metersphere-agent-integration</artifactId>
+            <version>${revision}</version>
+        </dependency>
 
     </dependencies>
 

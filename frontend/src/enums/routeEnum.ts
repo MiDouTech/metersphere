@@ -94,6 +94,7 @@ export enum SettingRouteEnum {
   SETTING_SYSTEM_LOG = 'settingSystemLog',
   SETTING_SYSTEM_TASK_CENTER = 'settingSystemTaskCenter',
   SETTING_SYSTEM_PLUGIN_MANAGEMENT = 'settingSystemPluginManagement',
+  SETTING_SYSTEM_AGENT_INTEGRATION = 'settingSystemAgentIntegration',
   SETTING_ORGANIZATION = 'settingOrganization',
   SETTING_ORGANIZATION_MEMBER = 'settingOrganizationMember',
   SETTING_ORGANIZATION_ORG_STRUCTURE = 'settingOrganizationOrgStructure',

@@ -100,7 +100,7 @@
     selectable: false,
     showSetting: false,
     heightUsed: 220,
-    scroll: { x: 1200 },
+    scroll: { x: '100%' },
   });
 
   function getSyncStatusLabel(status?: string) {

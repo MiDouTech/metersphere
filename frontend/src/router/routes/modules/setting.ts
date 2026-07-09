@@ -191,6 +191,16 @@ const Setting: AppRouteRecordRaw = {
             isTopMenu: true,
           },
         },
+        {
+          path: 'agent-integration',
+          name: SettingRouteEnum.SETTING_SYSTEM_AGENT_INTEGRATION,
+          component: () => import('@/views/setting/system/agentIntegration/index.vue'),
+          meta: {
+            locale: 'menu.settings.system.agentIntegration',
+            roles: ['SYSTEM_USER:READ'],
+            isTopMenu: true,
+          },
+        },
       ],
     },
     {

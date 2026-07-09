@@ -27,6 +27,7 @@
         <module>system-setting</module>
         <module>test-plan</module>
         <module>dashboard</module>
+        <module>agent-integration</module>
     </modules>
 
 </project>

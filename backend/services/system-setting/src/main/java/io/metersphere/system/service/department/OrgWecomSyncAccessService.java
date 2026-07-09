@@ -1,6 +1,7 @@
 package io.metersphere.system.service.department;
 
 import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.controller.handler.result.MsHttpResultCode;
 import io.metersphere.system.dto.user.UserDTO;
 import io.metersphere.system.mapper.ExtCheckOwnerMapper;
@@ -30,7 +31,7 @@ public class OrgWecomSyncAccessService {
 
     private void validateOrganizationAccess(String organizationId) {
         if (StringUtils.isBlank(organizationId)) {
-            throw new MSException("organization_id is required");
+            throw new MSException(Translator.get("organization.id.not_blank"));
         }
         UserDTO user = permissionCheckService.getUserDTO(SessionUtils.getUserId());
         if (user == null) {

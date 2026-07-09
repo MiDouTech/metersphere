@@ -31,8 +31,21 @@ export function getDepartmentTree(organizationId: string) {
   return MSR.get<DepartmentTreeNode[]>({ url: GetDepartmentTreeUrl, params: { organizationId } });
 }
 
-export function getMemberPage(params: MemberPageParams) {
-  return MSR.get<CommonList<OrgStructureMemberItem>>({ url: GetMemberPageUrl, params });
+export function getMemberPage(params: MemberPageParams & Record<string, unknown>) {
+  // useTable 会附带 combineSearch 等字段，GET 查询参数无法绑定到 BasePageRequest
+  const { organizationId, departmentId, keyword, enable, syncStatus, current, pageSize } = params;
+  return MSR.get<CommonList<OrgStructureMemberItem>>({
+    url: GetMemberPageUrl,
+    params: {
+      organizationId,
+      departmentId,
+      keyword,
+      enable,
+      syncStatus,
+      current,
+      pageSize,
+    },
+  });
 }
 
 export function getMemberDetail(id: string, organizationId: string) {
@@ -40,15 +53,28 @@ export function getMemberDetail(id: string, organizationId: string) {
 }
 
 export function manualSync(organizationId: string) {
-  return MSR.post<OrgWecomSyncManualResponse>({ url: ManualSyncUrl, params: { organizationId } });
+  // 后端使用 @RequestParam，需将 organizationId 拼到 URL 查询参数
+  return MSR.post<OrgWecomSyncManualResponse>(
+    { url: ManualSyncUrl, params: { organizationId } },
+    { joinParamsToUrl: true }
+  );
 }
 
 export function getSyncStatus(organizationId: string) {
   return MSR.get<OrgWecomSyncStatus>({ url: GetSyncStatusUrl, params: { organizationId } });
 }
 
-export function getSyncLogPage(params: SyncLogPageParams) {
-  return MSR.get<CommonList<OrgSyncLogItem>>({ url: GetSyncLogPageUrl, params });
+export function getSyncLogPage(params: SyncLogPageParams & Record<string, unknown>) {
+  const { organizationId, syncStatus, current, pageSize } = params;
+  return MSR.get<CommonList<OrgSyncLogItem>>({
+    url: GetSyncLogPageUrl,
+    params: {
+      organizationId,
+      syncStatus,
+      current,
+      pageSize,
+    },
+  });
 }
 
 export function getSyncConfig(organizationId: string) {

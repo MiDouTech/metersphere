@@ -46,7 +46,6 @@ export const memberTableColumns: MsTableColumn = [
   {
     title: 'orgStructure.member.department',
     dataIndex: 'departmentName',
-    width: 160,
     showTooltip: true,
   },
   {

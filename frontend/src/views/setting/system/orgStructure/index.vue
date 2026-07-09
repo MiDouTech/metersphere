@@ -1,5 +1,5 @@
 <template>
-  <MsCard simple no-content-padding>
+  <MsCard simple no-content-padding auto-width :min-width="0">
     <div class="flex items-center justify-between border-b border-[var(--color-text-n8)] px-[16px] py-[12px]">
       <div class="text-[16px] font-medium text-[var(--color-text-1)]">{{ t('orgStructure.title') }}</div>
       <div class="flex items-center gap-[12px]">
@@ -30,7 +30,7 @@
         </a-button>
       </div>
     </div>
-    <MsSplitBox :size="0.22" :min="0.15" :max="0.4">
+    <MsSplitBox class="org-structure-split" :size="0.22" :min="0.15" :max="0.4">
       <template #first>
         <div class="h-full p-[16px]">
           <DepartmentTree
@@ -121,3 +121,9 @@
     loadOrgOptions();
   });
 </script>
+
+<style scoped lang="less">
+  .org-structure-split {
+    height: calc(100vh - 88px);
+  }
+</style>

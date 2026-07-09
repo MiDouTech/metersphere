@@ -36,7 +36,7 @@
     </div>
     <ms-base-table
       v-bind="propsRes"
-      class="flex-1"
+      class="w-full flex-1"
       row-class="cursor-pointer"
       v-on="propsEvent"
       @row-click="handleRowClick"
@@ -101,7 +101,7 @@
     selectable: false,
     showSetting: false,
     heightUsed: 360,
-    scroll: { x: 1000 },
+    scroll: { x: '100%' },
   });
 
   function formatTime(time?: number) {

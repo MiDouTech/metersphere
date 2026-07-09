@@ -1,6 +1,7 @@
 package io.metersphere.system.service.department;
 
 import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.controller.handler.result.MsHttpResultCode;
 import io.metersphere.system.domain.OrgSyncLog;
 import io.metersphere.system.domain.OrgWecomSyncConfig;
@@ -50,7 +51,7 @@ public class WecomOrgSyncApplicationService {
                 .setIfAbsent(lockKey, operatorId, LOCK_TTL_SECONDS, TimeUnit.SECONDS);
         if (!Boolean.TRUE.equals(locked)) {
             throw new MSException(MsHttpResultCode.CONFLICT,
-                    "organization wecom sync is already running: " + organizationId);
+                    Translator.getWithArgs("org.wecom.sync.already_running", organizationId));
         }
         try {
             return doSync(organizationId, operatorId, syncMode);
@@ -72,7 +73,7 @@ public class WecomOrgSyncApplicationService {
         } catch (Exception ex) {
             SyncResult failed = buildFailedResult(organizationId, syncMode, startTime, ex.getMessage());
             saveSyncLog(organizationId, operatorId, syncMode, failed);
-            throw new MSException("wecom sync failed: " + ex.getMessage());
+            throw new MSException(Translator.getWithArgs("org.wecom.sync.failed", ex.getMessage()));
         }
     }
 

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.AgentExecLogMapper">
+    <resultMap id="BaseResultMap" type="io.metersphere.system.domain.AgentExecLog">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="case_id" jdbcType="VARCHAR" property="caseId"/>
+        <result column="test_plan_id" jdbcType="VARCHAR" property="testPlanId"/>
+        <result column="test_plan_case_id" jdbcType="VARCHAR" property="testPlanCaseId"/>
+        <result column="last_exec_result" jdbcType="VARCHAR" property="lastExecResult"/>
+        <result column="executed_by" jdbcType="VARCHAR" property="executedBy"/>
+        <result column="steps_snapshot" jdbcType="LONGVARCHAR" property="stepsSnapshot"/>
+        <result column="content" jdbcType="LONGVARCHAR" property="content"/>
+        <result column="create_time" jdbcType="BIGINT" property="createTime"/>
+        <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="io.metersphere.system.domain.AgentExecLog">
+        insert into agent_exec_log (id, case_id, test_plan_id, test_plan_case_id, last_exec_result,
+                                    executed_by, steps_snapshot, content, create_time, create_user)
+        values (#{id,jdbcType=VARCHAR}, #{caseId,jdbcType=VARCHAR}, #{testPlanId,jdbcType=VARCHAR},
+                #{testPlanCaseId,jdbcType=VARCHAR}, #{lastExecResult,jdbcType=VARCHAR},
+                #{executedBy,jdbcType=VARCHAR}, #{stepsSnapshot,jdbcType=LONGVARCHAR},
+                #{content,jdbcType=LONGVARCHAR}, #{createTime,jdbcType=BIGINT}, #{createUser,jdbcType=VARCHAR})
+    </insert>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        select *
+        from agent_exec_log
+        where id = #{id}
+        limit 1
+    </select>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        select *
+        from agent_exec_log
+        <where>
+            <if test="caseId != null and caseId != ''">
+                and case_id = #{caseId}
+            </if>
+            <if test="executedBy != null and executedBy != ''">
+                and executed_by = #{executedBy}
+            </if>
+        </where>
+        order by create_time desc
+        limit #{offset}, #{pageSize}
+    </select>
+
+    <select id="countPage" resultType="long">
+        select count(1)
+        from agent_exec_log
+        <where>
+            <if test="caseId != null and caseId != ''">
+                and case_id = #{caseId}
+            </if>
+            <if test="executedBy != null and executedBy != ''">
+                and executed_by = #{executedBy}
+            </if>
+        </where>
+    </select>
+</mapper>

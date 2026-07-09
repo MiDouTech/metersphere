@@ -3,6 +3,7 @@ package io.metersphere.system.service.department;
 import io.metersphere.sdk.constants.HttpMethodConstants;
 import io.metersphere.sdk.constants.OperationLogConstants;
 import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.util.Translator;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.domain.OrgWecomSyncConfig;
 import io.metersphere.system.domain.OrgWecomSyncConfigExample;
@@ -62,7 +63,7 @@ public class OrgWecomSyncConfigService {
         String corpId = StringUtils.defaultIfBlank(request.getCorpId(), existing == null ? null : existing.getCorpId());
         String contactSecret = resolveContactSecret(request.getContactSecret(), existing);
         if (StringUtils.isAnyBlank(corpId, contactSecret)) {
-            throw new MSException("corpId and contactSecret are required");
+            throw new MSException(Translator.get("org.wecom.sync.corp_id_and_secret.required"));
         }
         OrgWecomSyncConfigTestResponse response = new OrgWecomSyncConfigTestResponse();
         try {
@@ -90,7 +91,7 @@ public class OrgWecomSyncConfigService {
         validateSchedule(request);
         OrgWecomSyncConfig existing = getByOrganizationId(request.getOrganizationId());
         if (existing == null && shouldSkipSecretUpdate(request.getContactSecret())) {
-            throw new MSException("contactSecret is required");
+            throw new MSException(Translator.get("org.wecom.sync.contact_secret.required"));
         }
         long now = System.currentTimeMillis();
         OrgWecomSyncConfig config;
@@ -137,7 +138,7 @@ public class OrgWecomSyncConfigService {
     private OrgWecomSyncConfig loadConfig(String organizationId) {
         OrgWecomSyncConfig config = getByOrganizationId(organizationId);
         if (config == null) {
-            throw new MSException("org wecom sync config not found for organization: " + organizationId);
+            throw new MSException(Translator.getWithArgs("org.wecom.sync.config.not_found", organizationId));
         }
         return config;
     }
@@ -183,7 +184,7 @@ public class OrgWecomSyncConfigService {
     private String resolveContactSecret(String requestSecret, OrgWecomSyncConfig existing) {
         if (shouldSkipSecretUpdate(requestSecret)) {
             if (existing == null || StringUtils.isBlank(existing.getContactSecret())) {
-                throw new MSException("contactSecret is required");
+                throw new MSException(Translator.get("org.wecom.sync.contact_secret.required"));
             }
             return existing.getContactSecret();
         }
@@ -196,7 +197,7 @@ public class OrgWecomSyncConfigService {
 
     private void validateSchedule(OrgWecomSyncConfigSaveRequest request) {
         if (Boolean.TRUE.equals(request.getScheduleEnabled()) && StringUtils.isBlank(request.getScheduleCron())) {
-            throw new MSException("scheduleCron is required when scheduleEnabled is true");
+            throw new MSException(Translator.get("org.wecom.sync.schedule_cron.required"));
         }
     }
 

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.AgentExecAttachmentMapper">
+    <resultMap id="BaseResultMap" type="io.metersphere.system.domain.AgentExecAttachment">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="exec_history_id" jdbcType="VARCHAR" property="execHistoryId"/>
+        <result column="exec_log_id" jdbcType="VARCHAR" property="execLogId"/>
+        <result column="file_id" jdbcType="VARCHAR" property="fileId"/>
+        <result column="file_name" jdbcType="VARCHAR" property="fileName"/>
+        <result column="step_num" jdbcType="INTEGER" property="stepNum"/>
+        <result column="create_time" jdbcType="BIGINT" property="createTime"/>
+        <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="io.metersphere.system.domain.AgentExecAttachment">
+        insert into agent_exec_attachment (id, exec_history_id, exec_log_id, file_id, file_name, step_num,
+                                           create_time, create_user)
+        values (#{id,jdbcType=VARCHAR}, #{execHistoryId,jdbcType=VARCHAR}, #{execLogId,jdbcType=VARCHAR},
+                #{fileId,jdbcType=VARCHAR}, #{fileName,jdbcType=VARCHAR}, #{stepNum,jdbcType=INTEGER},
+                #{createTime,jdbcType=BIGINT}, #{createUser,jdbcType=VARCHAR})
+    </insert>
+
+    <update id="updateByPrimaryKeySelective" parameterType="io.metersphere.system.domain.AgentExecAttachment">
+        update agent_exec_attachment
+        <set>
+            <if test="execHistoryId != null">exec_history_id = #{execHistoryId,jdbcType=VARCHAR},</if>
+            <if test="execLogId != null">exec_log_id = #{execLogId,jdbcType=VARCHAR},</if>
+            <if test="fileName != null">file_name = #{fileName,jdbcType=VARCHAR},</if>
+            <if test="stepNum != null">step_num = #{stepNum,jdbcType=INTEGER},</if>
+        </set>
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <select id="selectByExecHistoryId" resultMap="BaseResultMap">
+        select *
+        from agent_exec_attachment
+        where exec_history_id = #{execHistoryId}
+        order by step_num asc, create_time asc
+    </select>
+
+    <select id="selectByExecLogId" resultMap="BaseResultMap">
+        select *
+        from agent_exec_attachment
+        where exec_log_id = #{execLogId}
+        order by step_num asc, create_time asc
+    </select>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        select *
+        from agent_exec_attachment
+        where id = #{id}
+        limit 1
+    </select>
+</mapper>

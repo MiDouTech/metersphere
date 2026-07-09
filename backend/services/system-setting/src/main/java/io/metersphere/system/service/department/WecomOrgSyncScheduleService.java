@@ -1,6 +1,7 @@
 package io.metersphere.system.service.department;
 
 import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.util.Translator;
 import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.domain.OrgWecomSyncConfig;
 import io.metersphere.system.domain.OrgWecomSyncConfigExample;
@@ -60,7 +61,7 @@ public class WecomOrgSyncScheduleService implements ApplicationRunner {
                 scheduleManager.addOrUpdateCronJob(jobKey, triggerKey, WecomOrgSyncJob.class,
                         config.getScheduleCron(), buildJobDataMap(config));
             } catch (SchedulerException e) {
-                throw new MSException("refresh wecom org sync schedule failed: " + e.getMessage());
+                throw new MSException(Translator.getWithArgs("org.wecom.sync.schedule.refresh_failed", e.getMessage()));
             }
         } else {
             scheduleManager.removeJob(jobKey, triggerKey);

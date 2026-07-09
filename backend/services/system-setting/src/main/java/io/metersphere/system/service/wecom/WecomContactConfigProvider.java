@@ -1,6 +1,7 @@
 package io.metersphere.system.service.wecom;
 
 import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.domain.OrgWecomSyncConfig;
 import io.metersphere.system.domain.OrgWecomSyncConfigExample;
 import io.metersphere.system.mapper.OrgWecomSyncConfigMapper;
@@ -19,13 +20,13 @@ public class WecomContactConfigProvider {
 
     public OrgWecomSyncConfig getByOrganizationId(String organizationId) {
         if (StringUtils.isBlank(organizationId)) {
-            throw new MSException("organization_id is required");
+            throw new MSException(Translator.get("organization.id.not_blank"));
         }
         OrgWecomSyncConfigExample example = new OrgWecomSyncConfigExample();
         example.createCriteria().andOrganizationIdEqualTo(organizationId);
         List<OrgWecomSyncConfig> configs = orgWecomSyncConfigMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(configs)) {
-            throw new MSException("org wecom sync config not found for organization: " + organizationId);
+            throw new MSException(Translator.getWithArgs("org.wecom.sync.config.not_found", organizationId));
         }
         return configs.getFirst();
     }

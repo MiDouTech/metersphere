@@ -13,48 +13,50 @@
       </a-space>
     </div>
     <div v-if="!props.isPreview" class="center-side">
-      <template v-if="showProjectSelect">
-        <a-select
-          v-model:model-value="appStore.currentProjectId"
-          class="mr-[8px] w-[200px] focus-within:!bg-[var(--color-text-n8)] hover:!bg-[var(--color-text-n8)]"
-          :bordered="false"
-          :fallback-option="false"
-          allow-search
-          @change="selectProject"
-        >
-          <template #arrow-icon>
-            <icon-caret-down />
-          </template>
-          <template v-if="hasAnyPermission(['ORGANIZATION_PROJECT:READ+ADD'])" #header>
-            <a-button
-              class="select-header-button mb-[4px] h-[28px] w-full justify-start pl-[7px] pr-0"
-              type="text"
-              @click="projectVisible = true"
-            >
-              <template #icon>
-                <MsIcon type="icon-icon_add_outlined" />
-              </template>
-              {{ t('settings.navbar.createProject') }}
-            </a-button>
-          </template>
-          <a-tooltip
-            v-for="project of appStore.projectList"
-            :key="project.id"
-            :mouse-enter-delay="500"
-            :content="project.name"
-          >
-            <a-option
-              :value="project.id"
-              :class="project.id === appStore.currentProjectId ? 'arco-select-option-selected' : ''"
-            >
-              {{ project.name }}
-            </a-option>
-          </a-tooltip>
-        </a-select>
-      </template>
       <TopMenu />
     </div>
     <ul v-if="!props.isPreview && !props.hideRight" class="right-side">
+      <li v-if="showProjectSelect">
+        <a-tooltip :content="currentProjectName">
+          <a-select
+            v-model:model-value="appStore.currentProjectId"
+            class="project-switch-select w-[50px] focus-within:!bg-[var(--color-text-n8)] hover:!bg-[var(--color-text-n8)]"
+            :bordered="false"
+            :fallback-option="false"
+            allow-search
+            @change="selectProject"
+          >
+            <template #arrow-icon>
+              <icon-caret-down />
+            </template>
+            <template v-if="hasAnyPermission(['ORGANIZATION_PROJECT:READ+ADD'])" #header>
+              <a-button
+                class="select-header-button mb-[4px] h-[28px] w-full justify-start pl-[7px] pr-0"
+                type="text"
+                @click="projectVisible = true"
+              >
+                <template #icon>
+                  <MsIcon type="icon-icon_add_outlined" />
+                </template>
+                {{ t('settings.navbar.createProject') }}
+              </a-button>
+            </template>
+            <a-tooltip
+              v-for="project of appStore.projectList"
+              :key="project.id"
+              :mouse-enter-delay="500"
+              :content="project.name"
+            >
+              <a-option
+                :value="project.id"
+                :class="project.id === appStore.currentProjectId ? 'arco-select-option-selected' : ''"
+              >
+                {{ project.name }}
+              </a-option>
+            </a-tooltip>
+          </a-select>
+        </a-tooltip>
+      </li>
       <li>
         <a-tooltip :content="t('settings.navbar.ai')" position="br">
           <a-button v-if="aiStore.aiSourceNameList.length > 0" type="secondary" @click="openAI">
@@ -207,9 +209,7 @@
   import { getMessageUnReadCount } from '@/api/modules/message';
   import { switchProject } from '@/api/modules/project-management/project';
   import { updateLanguage } from '@/api/modules/user';
-  import { MENU_LEVEL, type PathMapRoute } from '@/config/pathMap';
   import { useI18n } from '@/hooks/useI18n';
-  import usePathMap from '@/hooks/usePathMap';
   import { LOCALE_OPTIONS } from '@/locale';
   import useLocale from '@/locale/useLocale';
   import useAppStore from '@/store/modules/app';
@@ -272,11 +272,10 @@
   );
 
   const projectVisible = ref(false);
-  const showProjectSelect = computed(() => {
-    const { getRouteLevelByKey } = usePathMap();
-    // 非项目级别页面不需要展示项目选择器
-    const level = getRouteLevelByKey(route.name as PathMapRoute);
-    return level === MENU_LEVEL[2] || level === null;
+  const showProjectSelect = computed(() => !props.isPreview && appStore.projectList.length > 0);
+  const currentProjectName = computed(() => {
+    const current = appStore.projectList.find((project) => project.id === appStore.currentProjectId);
+    return current?.name || '';
   });
 
   async function selectProject(
@@ -406,7 +405,15 @@
     background-color: rgb(var(--primary-1)) !important;
   }
   .center-side {
-    @apply flex flex-1 items-center;
+    @apply flex min-w-0 flex-1 items-center;
+  }
+  .project-switch-select {
+    :deep(.arco-select-view-value) {
+      @apply hidden;
+    }
+    :deep(.arco-select-view-suffix) {
+      margin-left: 0;
+    }
   }
   .right-side {
     @apply flex list-none;

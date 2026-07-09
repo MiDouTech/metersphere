@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.AgentTokenMapper">
+    <resultMap id="BaseResultMap" type="io.metersphere.system.domain.AgentToken">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="name" jdbcType="VARCHAR" property="name"/>
+        <result column="token_prefix" jdbcType="VARCHAR" property="tokenPrefix"/>
+        <result column="token_hash" jdbcType="VARCHAR" property="tokenHash"/>
+        <result column="user_id" jdbcType="VARCHAR" property="userId"/>
+        <result column="project_id" jdbcType="VARCHAR" property="projectId"/>
+        <result column="scopes" jdbcType="VARCHAR" property="scopes"/>
+        <result column="expire_time" jdbcType="BIGINT" property="expireTime"/>
+        <result column="enable" jdbcType="BIT" property="enable"/>
+        <result column="create_time" jdbcType="BIGINT" property="createTime"/>
+        <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, token_prefix, token_hash, user_id, project_id, scopes, expire_time, enable, create_time, create_user
+    </sql>
+
+    <select id="selectByTokenHash" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/>
+        from agent_token
+        where token_hash = #{tokenHash}
+          and enable = 1
+        limit 1
+    </select>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/>
+        from agent_token
+        where id = #{id}
+        limit 1
+    </select>
+
+    <insert id="insert" parameterType="io.metersphere.system.domain.AgentToken">
+        insert into agent_token (id, name, token_prefix, token_hash, user_id, project_id, scopes, expire_time, enable,
+                                 create_time, create_user)
+        values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{tokenPrefix,jdbcType=VARCHAR},
+                #{tokenHash,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR},
+                #{scopes,jdbcType=VARCHAR}, #{expireTime,jdbcType=BIGINT}, #{enable,jdbcType=BIT},
+                #{createTime,jdbcType=BIGINT}, #{createUser,jdbcType=VARCHAR})
+    </insert>
+
+    <update id="updateByPrimaryKeySelective" parameterType="io.metersphere.system.domain.AgentToken">
+        update agent_token
+        <set>
+            <if test="name != null">name = #{name,jdbcType=VARCHAR},</if>
+            <if test="projectId != null">project_id = #{projectId,jdbcType=VARCHAR},</if>
+            <if test="scopes != null">scopes = #{scopes,jdbcType=VARCHAR},</if>
+            <if test="expireTime != null">expire_time = #{expireTime,jdbcType=BIGINT},</if>
+            <if test="enable != null">enable = #{enable,jdbcType=BIT},</if>
+        </set>
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <delete id="deleteByPrimaryKey">
+        delete from agent_token where id = #{id}
+    </delete>
+
+    <select id="selectPage" resultMap="BaseResultMap">
+        select id, name, token_prefix, user_id, project_id, scopes, expire_time, enable, create_time, create_user
+        from agent_token
+        <where>
+            <if test="keyword != null and keyword != ''">
+                and (name like concat('%', #{keyword}, '%')
+                or user_id like concat('%', #{keyword}, '%'))
+            </if>
+        </where>
+        order by create_time desc
+        limit #{offset}, #{pageSize}
+    </select>
+
+    <select id="countPage" resultType="long">
+        select count(1)
+        from agent_token
+        <where>
+            <if test="keyword != null and keyword != ''">
+                and (name like concat('%', #{keyword}, '%')
+                or user_id like concat('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </select>
+</mapper>
