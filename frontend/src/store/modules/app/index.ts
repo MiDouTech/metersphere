@@ -50,11 +50,12 @@ const defaultPlatformConfig = {
   helpDoc: 'https://metersphere.io/docs/v3.x/',
 };
 
-const displayFileKeys = ['icon', 'loginLogo', 'loginImage', 'logoPlatform'] as PageConfigKeys[];
+type DisplayFileKey = 'icon' | 'loginLogo' | 'loginImage' | 'logoPlatform';
+type DisplayFileConfig = { uid: string; url: string; name: string; fileNames: string[]; backendPaths: string[] };
 
-const defaultDisplayFiles: Partial<
-  Record<PageConfigKeys, { uid: string; url: string; name: string; fileNames: string[]; backendPaths: string[] }>
-> = {
+const displayFileKeys: DisplayFileKey[] = ['icon', 'loginLogo', 'loginImage', 'logoPlatform'];
+
+const defaultDisplayFiles: Record<DisplayFileKey, DisplayFileConfig> = {
   icon: {
     uid: 'default-icon',
     url: GetPlatformIconUrl,
@@ -85,16 +86,12 @@ const defaultDisplayFiles: Partial<
   },
 };
 
-function getDisplayFileConfig(key: PageConfigKeys, fileName = '', paramValue = '') {
-  const defaultFile = defaultDisplayFiles[key];
-  if (!defaultFile) {
-    return {
-      uid: `${key}-${fileName || paramValue || 'file'}`,
-      url: fileName,
-      name: paramValue,
-    };
-  }
+function isDisplayFileKey(key: PageConfigKeys): key is DisplayFileKey {
+  return displayFileKeys.includes(key as DisplayFileKey);
+}
 
+function getDisplayFileConfig(key: DisplayFileKey, fileName = '', paramValue = '') {
+  const defaultFile = defaultDisplayFiles[key];
   const source = `${fileName} ${paramValue}`;
   const isBackendDefaultFile =
     defaultFile.fileNames.some((name) => source.includes(name)) ||
@@ -377,7 +374,7 @@ const useAppStore = defineStore('app', {
     normalizePageConfigDisplayAssets() {
       displayFileKeys.forEach((key) => {
         const file = this.pageConfig[key]?.[0];
-        this.pageConfig[key] = [getDisplayFileConfig(key, file?.url, file?.name)] as any;
+        this.pageConfig[key] = [getDisplayFileConfig(key, file?.url || '', file?.name || '')] as any;
       });
     },
     async initPageConfig() {
@@ -389,7 +386,7 @@ const useAppStore = defineStore('app', {
           let hasThemeChange = false;
           res.forEach((e) => {
             const key = e.paramKey.split('ui.')[1] as PageConfigKeys; // 参数名前缀ui.去掉
-            if (displayFileKeys.includes(key)) {
+            if (isDisplayFileKey(key)) {
               // 四个属性值为文件类型，单独处理
               this.pageConfig[key] = [getDisplayFileConfig(key, e.fileName, e.paramValue)] as any;
             } else {
