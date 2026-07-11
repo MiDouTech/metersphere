@@ -156,21 +156,22 @@ jobs:
             git checkout -B "${default_branch}"
           fi
 
+          git switch --orphan latest-static
+          git rm -rf --cached . || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+
           dest_dir="${STATIC_REPO_PATH}/${VERSION}"
           mkdir -p "${dest_dir}"
           cp "${GITHUB_WORKSPACE}/${ZIP_NAME}" "${dest_dir}/${ARTIFACT}.zip"
 
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add "${dest_dir}/${ARTIFACT}.zip"
+          git add "${STATIC_REPO_PATH}"
 
-          if git diff --cached --quiet; then
-            echo "Frontend zip already exists with the same content."
-          else
-            git commit -m "chore: store frontend ${VERSION} [skip ci]"
-            git -c "http.https://cnb.cool/.extraheader=AUTHORIZATION: basic ${basic}" \
-              push origin "HEAD:${default_branch}"
-          fi
+          git commit -m "chore: store frontend ${VERSION} [skip ci]"
+          git branch -M "${default_branch}"
+          git -c "http.https://cnb.cool/.extraheader=AUTHORIZATION: basic ${basic}" \
+            push --force origin "HEAD:${default_branch}"
 
           download_url="${STATIC_REPO_URL}/-/git/raw/${default_branch}/${dest_dir}/${ARTIFACT}.zip?download=true"
           echo "download_url=${download_url}" >> "$GITHUB_OUTPUT"
