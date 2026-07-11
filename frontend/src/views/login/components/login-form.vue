@@ -291,13 +291,13 @@
         showQrCodeTab.value = true;
         activeName.value = getLongType() || 'WE_COM';
       }
-      orgOptions.value = res.map((e) => ({
+      orgOptions.value = (Array.isArray(res) ? res : []).map((e) => ({
         label: e.name,
         value: e.id,
       }));
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+    } catch {
+      orgOptions.value = [];
+      showQrCodeTab.value = false;
     }
   }
 
@@ -362,13 +362,13 @@
     if (!props.isPreview) {
       userStore.getAuthentication();
       initPlatformInfo();
-      try {
-        isLogin().then((res) => {
+      isLogin()
+        .then((res) => {
           preheat.value = res;
+        })
+        .catch(() => {
+          preheat.value = false;
         });
-      } catch (e) {
-        preheat.value = false;
-      }
     }
   });
 </script>

@@ -149,10 +149,9 @@ const useUserStore = defineStore('user', {
     async getAuthentication() {
       try {
         const res = await getAuthenticationList();
-        this.loginType = res;
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log(error);
+        this.loginType = Array.isArray(res) && res.length > 0 ? res : ['LOCAL'];
+      } catch {
+        this.loginType = ['LOCAL'];
       }
     },
     // 登出回调
