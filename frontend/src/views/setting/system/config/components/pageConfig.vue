@@ -368,7 +368,7 @@
 
   import type { FormInstance, ValidatedError } from '@arco-design/web-vue';
 
-  const defaultLoginImage = `${import.meta.env.BASE_URL}images/login-banner.jpg`;
+  const defaultLoginImage = `${import.meta.env.BASE_URL}images/login-banner.svg`;
   const defaultLoginLogo = `${import.meta.env.BASE_URL}images/login-logo.svg`;
   const defaultPlatformLogo = `${import.meta.env.BASE_URL}images/MeterSphere-logo.svg`;
   const { t } = useI18n();

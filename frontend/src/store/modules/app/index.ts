@@ -10,6 +10,12 @@ import { getProjectList } from '@/api/modules/project-management/project';
 import { getBaseInfo, getPageConfig } from '@/api/modules/setting/config';
 import { getPackageType, getSystemVersion } from '@/api/modules/system';
 import { getMenuList } from '@/api/modules/user';
+import {
+  GetLoginImageUrl,
+  GetLoginLogoUrl,
+  GetPlatformIconUrl,
+  GetTitleImgUrl,
+} from '@/api/requrls/setting/config';
 import defaultSettings from '@/config/settings.json';
 import { useI18n } from '@/hooks/useI18n';
 import useUser from '@/hooks/useUser';
@@ -33,16 +39,46 @@ const defaultThemeConfig = {
 };
 const defaultLoginConfig = {
   title: 'MeterSphere',
-  icon: [],
-  loginLogo: [],
-  loginImage: [],
+  icon: [{ url: GetPlatformIconUrl, name: 'favicon.ico' }],
+  loginLogo: [{ url: GetLoginLogoUrl, name: 'login-logo.svg' }],
+  loginImage: [{ url: GetLoginImageUrl, name: 'login-banner.svg' }],
   slogan: 'login.form.title',
 };
 const defaultPlatformConfig = {
-  logoPlatform: [],
+  logoPlatform: [{ url: GetTitleImgUrl, name: 'MeterSphere-logo.svg' }],
   platformName: 'MeterSphere',
   helpDoc: 'https://metersphere.io/docs/v3.x/',
 };
+
+const defaultDisplayFiles: Partial<Record<PageConfigKeys, { url: string; name: string; fileNames: string[] }>> = {
+  icon: { url: GetPlatformIconUrl, name: 'favicon.ico', fileNames: ['favicon.ico'] },
+  loginLogo: { url: GetLoginLogoUrl, name: 'login-logo.svg', fileNames: ['login-logo.svg'] },
+  loginImage: { url: GetLoginImageUrl, name: 'login-banner.svg', fileNames: ['login-banner.jpg', 'login-banner.svg'] },
+  logoPlatform: { url: GetTitleImgUrl, name: 'MeterSphere-logo.svg', fileNames: ['MeterSphere-logo.svg', 'MS-full-logo.svg'] },
+};
+
+function getDisplayFileConfig(key: PageConfigKeys, fileName: string, paramValue: string) {
+  const defaultFile = defaultDisplayFiles[key];
+  if (!defaultFile) {
+    return {
+      url: fileName,
+      name: paramValue,
+    };
+  }
+
+  const isBackendDefaultFile = defaultFile.fileNames.some((name) => paramValue?.endsWith(name));
+  if (!fileName || isBackendDefaultFile) {
+    return {
+      url: defaultFile.url,
+      name: defaultFile.name,
+    };
+  }
+
+  return {
+    url: fileName,
+    name: paramValue,
+  };
+}
 
 const useAppStore = defineStore('app', {
   state: (): AppState => ({
@@ -314,12 +350,7 @@ const useAppStore = defineStore('app', {
             const key = e.paramKey.split('ui.')[1] as PageConfigKeys; // 参数名前缀ui.去掉
             if (['icon', 'loginLogo', 'loginImage', 'logoPlatform'].includes(key)) {
               // 四个属性值为文件类型，单独处理
-              this.pageConfig[key] = [
-                {
-                  url: e.fileName,
-                  name: e.paramValue,
-                },
-              ] as any;
+              this.pageConfig[key] = [getDisplayFileConfig(key, e.fileName, e.paramValue)] as any;
             } else {
               if (key === 'style') {
                 // 风格是否更改，先判断自定义风格的值是否相等，再判断非自定义的俩值是否相等
