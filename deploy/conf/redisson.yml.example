@@ -1,0 +1,9 @@
+# Copy to server: /opt/metersphere/conf/redisson.yml
+# Adjust address / password / database for your Redis instance.
+
+singleServerConfig:
+  address: "redis://10.0.1.1:6379"
+  password: "your-redis-password"
+  database: 0
+  connectionMinimumIdleSize: 8
+  connectionPoolSize: 32

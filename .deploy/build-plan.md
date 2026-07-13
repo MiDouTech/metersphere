@@ -172,6 +172,23 @@ curl -X POST "http://127.0.0.1:8000/api/cnb/static-repositories" \
 https://cnb.cool/miduoyanfa/MD_static/metersphere
 ```
 
+## 发布平台运行时参数（需在独立发布平台配置）
+
+CNB / GitHub Actions 只构建镜像，不注入容器运行参数。  
+后端容器需在**独立发布平台**配置以下环境变量，否则启动会报 `No spring.config.import property has been defined`：
+
+```env
+SPRING_PROFILES_ACTIVE=nacos
+NACOS_SERVER_ADDR=<线上 Nacos 地址>
+NACOS_NAMESPACE=prod
+NACOS_GROUP=METERSPHERE
+NACOS_USERNAME=<若开启认证>
+NACOS_PASSWORD=<若开启认证>
+```
+
+完整说明见 `deploy/publish-platform.md`。  
+**不要**用仓库内 `deploy/nacos/prod/metersphere.properties` 模板覆盖线上 Nacos 已有配置。
+
 ## 不再需要的发布配置
 
 因为 CNB 不负责发布，本计划不需要确认或维护以下配置：
