@@ -1,5 +1,6 @@
 $ErrorActionPreference = "Continue"
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ArchiveRoot = Split-Path -Parent $PSScriptRoot
+$ProjectRoot = Split-Path -Parent $ArchiveRoot
 $ok = $true
 
 function Test-Port {
@@ -52,11 +53,15 @@ Write-Host "=== Local files ==="
 $files = @(
     (Join-Path $ProjectRoot "local-runtime\conf\metersphere.properties"),
     (Join-Path $ProjectRoot "local-runtime\conf\redisson.yml"),
-    (Join-Path $ProjectRoot "deploy\nacos\dev\metersphere.properties")
+    (Join-Path $ArchiveRoot "nacos\metersphere.properties")
 )
 foreach ($f in $files) {
     if (Test-Path $f) { Write-Host "[OK]   $f" } else { Write-Host "[MISS] $f"; $ok = $false }
 }
 
 Write-Host ""
-if ($ok) { Write-Host "Environment check passed." } else { Write-Host "Some checks failed. Run scripts\setup-local-env.ps1 and scripts\start-local-deps.ps1" }
+if ($ok) {
+    Write-Host "Environment check passed."
+} else {
+    Write-Host "Some checks failed. Run legacy\local-dev\scripts\setup-local-env.ps1 and start-local-deps.ps1"
+}

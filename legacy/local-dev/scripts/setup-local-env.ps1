@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
-$ConfigTemplate = Join-Path $ProjectRoot "deploy\nacos\dev\metersphere.properties"
+$ArchiveRoot = Split-Path -Parent $PSScriptRoot
+$ProjectRoot = Split-Path -Parent $ArchiveRoot
+$ConfigTemplate = Join-Path $ArchiveRoot "nacos\metersphere.properties"
 $RedissonTemplate = Join-Path $ProjectRoot "local-runtime\conf\redisson.yml"
 $RuntimeConfDir = Join-Path $ProjectRoot "local-runtime\conf"
 $RuntimeLogDir = Join-Path $ProjectRoot "local-runtime\logs\metersphere"

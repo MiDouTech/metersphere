@@ -1,6 +1,8 @@
-# Load before starting backend (PowerShell: . .\dev\env.ps1)
+# Load before starting backend (from archive):
+#   . .\legacy\local-dev\dev\env.ps1
 
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ArchiveRoot = Split-Path -Parent $PSScriptRoot
+$ProjectRoot = Split-Path -Parent $ArchiveRoot
 $env:MS_CONFIG_DIR = Join-Path $ProjectRoot "local-runtime\conf"
 $env:MS_LOG_PATH = Join-Path $ProjectRoot "local-runtime\logs\metersphere"
 $env:MS_REDISSON_CONFIG = "file:$($env:MS_CONFIG_DIR -replace '\\','/')/redisson.yml"
@@ -11,6 +13,6 @@ $env:JMETER_HOME = Join-Path $ProjectRoot "local-runtime\jmeter"
 # $env:NACOS_NAMESPACE = "dev"
 # $env:NACOS_GROUP = "METERSPHERE"
 
-Write-Host "MeterSphere local env loaded."
+Write-Host "MeterSphere local env loaded (archived toolkit)."
 Write-Host "  MS_CONFIG_DIR = $env:MS_CONFIG_DIR"
 Write-Host "  Config source = local-runtime/conf (use start.ps1 -UseNacos for Nacos)"

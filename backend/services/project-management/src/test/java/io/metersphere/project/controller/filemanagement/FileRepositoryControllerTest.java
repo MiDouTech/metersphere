@@ -51,7 +51,7 @@ public class FileRepositoryControllerTest extends BaseTest {
     private static ProjectDTO project;
 
     private static final String GITEA_URL = "https://gitea.com/meterspherecodetest/code-test.git";
-    private static final String GITEA_TOKEN = "f5e34c45e998291909e0897a76a1f1ae42095e3f";
+    private static final String GITEA_TOKEN = "gitea-token-for-unit-test-only";
 
     private static final List<String> fileList = new ArrayList<>();
 
