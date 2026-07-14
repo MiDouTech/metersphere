@@ -1,4 +1,2 @@
 @echo off
-REM Local start archived. See legacy\local-dev\README.md
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0start.ps1" %*
-exit /b %ERRORLEVEL%

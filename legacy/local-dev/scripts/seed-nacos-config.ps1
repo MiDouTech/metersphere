@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
-$ConfigFile = Join-Path $ProjectRoot "deploy\nacos\dev\metersphere.properties"
+$ArchiveRoot = Split-Path -Parent $PSScriptRoot
+$ProjectRoot = Split-Path -Parent $ArchiveRoot
+$ConfigFile = Join-Path $ArchiveRoot "nacos\metersphere.properties"
 $NacosAddr = if ($env:NACOS_SERVER_ADDR) { $env:NACOS_SERVER_ADDR } else { "127.0.0.1:8848" }
 $Namespace = if ($env:NACOS_NAMESPACE) { $env:NACOS_NAMESPACE } else { "dev" }
 $Group = if ($env:NACOS_GROUP) { $env:NACOS_GROUP } else { "METERSPHERE" }

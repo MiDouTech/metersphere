@@ -105,7 +105,7 @@ class TestResourcePoolControllerTests extends BaseTest {
             "  \"loadTestHeap\": \"123\",\n" +
             "  \"nodesList\": [\n" +
             "    {\n" +
-            "      \"ip\": \"172.16.200.8\",\n" +
+            "      \"ip\": \"192.0.2.8\",\n" +
             "      \"port\": \"8082\",\n" +
             "      \"monitor\": \"9100\",\n" +
             "      \"concurrentNumber\": \"100\",\n" +
@@ -654,7 +654,7 @@ class TestResourcePoolControllerTests extends BaseTest {
         testResourcePoolMapper.insert(testResourcePool);
         TestResourcePoolCapacityRequest  request = new TestResourcePoolCapacityRequest();
         request.setPoolId("test_pool_1");
-        request.setIp("172.16.200.8");
+        request.setIp("192.0.2.8");
         request.setPort("8082");
         this.requestPost(TEST_RESOURCE_POOL_CAPACITY_DETAIL, request);
         request.setCurrent(1);
@@ -701,7 +701,7 @@ class TestResourcePoolControllerTests extends BaseTest {
     public void getSystemTaskItemPage() throws Exception {
         TestResourcePoolCapacityRequest  request = new TestResourcePoolCapacityRequest();
         request.setPoolId("test_pool_1");
-        request.setIp("172.16.200.8");
+        request.setIp("192.0.2.8");
         request.setPort("8082");
         request.setCurrent(1);
         request.setPageSize(10);

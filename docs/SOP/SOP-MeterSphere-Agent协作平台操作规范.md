@@ -118,7 +118,7 @@ VALUES (
     'tok-001',
     'Cursor-张三-自测',
     'msat',
-    SHA2('msat_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6', 256),
+    SHA2('msat_YOUR_TOKEN_HERE', 256),
     'admin',
     '100001100001',
     'FUNCTIONAL_READ,FUNCTIONAL_SUBMIT',
@@ -127,11 +127,11 @@ VALUES (
 );
 ```
 
-> ⚠️ **重要**：Token 明文（`msat_a1b2c3...`）仅创建时展示一次，请妥善保管。平台只存储 SHA-256 哈希，无法找回。
+> ⚠️ **重要**：将 `msat_YOUR_TOKEN_HERE` 换成平台创建时展示的真实 Token；明文仅创建时展示一次，请妥善保管。平台只存储 SHA-256 哈希，无法找回。**切勿把真实 Token 写回仓库文档。**
 
 ### 4.3 第二步：配置 MCP（以 Cursor 为例）
 
-在项目根目录创建 `.cursor/mcp.json`：
+在项目根目录创建 `.cursor/mcp.json`（该文件已列入 `.gitignore`，勿提交）：
 
 ```json
 {
@@ -141,7 +141,7 @@ VALUES (
       "args": ["-y", "@midoo/metersphere-mcp"],
       "env": {
         "MS_BASE_URL": "http://localhost:8081",
-        "MS_AGENT_TOKEN": "msat_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+        "MS_AGENT_TOKEN": "msat_YOUR_TOKEN_HERE",
         "MS_PROJECT_ID": "100001100001"
       }
     }
