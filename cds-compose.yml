@@ -1,0 +1,224 @@
+# CDS Compose — MeterSphere V3（冷路径手工校正 + 二次修复）
+# 修复点（相对暂停版）：
+# 1) app/frontend 启动脚本改为 set -eu（CDS 入口为 sh，不支持 pipefail）
+# 2) frontend working_dir=/repo + cd frontend（避免 No package.json in /repo/frontend）
+# 导入：Dashboard 审批 pending-import，或 cdscli scan --apply-to-cds <projectId>
+
+x-cds-project:
+  name: metersphere
+  description: "MeterSphere V3 自研（Spring Boot 3 / Java 21 + Vue3/Vite）"
+  repo: https://github.com/chenqifen-miduo/metersphere.git
+
+# 灰度环境结构默认值（非生产密钥）。真实敏感项可在 CDS env scope 覆盖。
+x-cds-env:
+  MYSQL_DATABASE: metersphere
+  MYSQL_USER: root
+  MYSQL_PASSWORD: Password123@mysql
+  MYSQL_ROOT_PASSWORD: Password123@mysql
+  REDIS_PASSWORD: Password123@redis
+  MINIO_ROOT_USER: admin
+  MINIO_ROOT_PASSWORD: Password123@minio
+  MINIO_ACCESS_KEY: admin
+  MINIO_SECRET_KEY: Password123@minio
+
+services:
+  app:
+    image: maven:3.9.9-eclipse-temurin-21
+    working_dir: /repo
+    volumes:
+      - .:/repo
+      - ms-m2-cache:/root/.m2
+    ports:
+      - "8081"
+    depends_on:
+      - mysql
+      - redis
+      - kafka
+      - minio
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      MS_CONFIG_DIR: /repo/local-runtime/conf
+      MS_LOG_PATH: /repo/local-runtime/logs/metersphere
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: Password123@mysql
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: Password123@minio
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: Password123@redis
+    # CDS 会把 command 数组拼成「bash -lc set ...」且不转义 $$；必须用单段字符串 + 单 $
+    # 实际执行壳可能是 sh：勿用 pipefail
+    command: |
+      set -eu
+      mkdir -p /repo/local-runtime/conf /repo/local-runtime/logs/metersphere /repo/local-runtime/jmeter
+      # 初始化 JMeter home（ApiExecuteService @PostConstruct 需要 bin/jmeter.properties）
+      if [ ! -f /repo/local-runtime/jmeter/bin/jmeter.properties ]; then
+        if [ -d /repo/backend/app/src/main/resources/jmeter ]; then
+          cp -a /repo/backend/app/src/main/resources/jmeter/. /repo/local-runtime/jmeter/
+        else
+          echo "ERROR: jmeter resources missing under backend/app/src/main/resources/jmeter" >&2
+          exit 1
+        fi
+      fi
+      cat > /repo/local-runtime/conf/metersphere.properties <<'EOF'
+      spring.datasource.url=jdbc:mysql://mysql:3306/metersphere?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai
+      spring.datasource.username=root
+      spring.datasource.password=Password123@mysql
+      kafka.bootstrap-servers=kafka:9092
+      minio.endpoint=http://minio:9000
+      minio.access-key=admin
+      minio.secret-key=Password123@minio
+      logging.file.path=/repo/local-runtime/logs/metersphere
+      spring.redis.redisson.file=file:/repo/local-runtime/conf/redisson.yml
+      jmeter.home=/repo/local-runtime/jmeter
+      run.mode=standalone
+      logger.level=INFO
+      logger.sql.level=info
+      EOF
+      sed -i 's/^[[:space:]]\+//' /repo/local-runtime/conf/metersphere.properties
+      # 勿对 YAML 做「去掉全部前导空白」：会把嵌套 key 顶到根级导致 Redisson Can't parse config
+      printf '%s\n' \
+        'singleServerConfig:' \
+        '  address: "redis://redis:6379"' \
+        '  password: "Password123@redis"' \
+        '  database: 0' \
+        '  connectionMinimumIdleSize: 4' \
+        '  connectionPoolSize: 16' \
+        > /repo/local-runtime/conf/redisson.yml
+      # 若 target 已有 jar（m2 缓存命中后的二次部署），跳过全量 package 以缩短就绪时间
+      JAR=$(find /repo/backend/app/target -maxdepth 1 -type f -name 'app-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' 2>/dev/null | head -n 1 || true)
+      if [ -z "$JAR" ]; then
+        # 前后端分离：跳过 antrun 拷贝 frontend/dist（与 local-dev / CNB 一致）
+        mvn -pl backend/app -am package -DskipTests -DskipAntRunForJenkins=true
+        JAR=$(find /repo/backend/app/target -maxdepth 1 -type f -name 'app-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | head -n 1)
+      fi
+      if [ -z "$JAR" ]; then
+        echo "ERROR: app jar not found under /repo/backend/app/target" >&2
+        ls -la /repo/backend/app/target >&2 || true
+        exit 1
+      fi
+      exec java -Dspring.profiles.active=local -jar "$JAR"
+    labels:
+      cds.path-prefix: "/organization"
+      cds.path-prefixes: "/organization/,/project/,/system/,/login,/sign/,/api/,/ws/,/file/,/attachment/,/bug/,/test-plan/,/plugin/,/base-display/,/front/"
+      cds.readiness-path: "/api/agent/v1/functional/health"
+      cds.readiness-timeout: "1800"
+      cds.readiness-interval: "10"
+
+  frontend:
+    image: node:20-slim
+    working_dir: /repo
+    volumes:
+      - .:/repo
+      - ms-pnpm-store:/pnpm/store
+    ports:
+      - "5173"
+    depends_on:
+      - app
+    environment:
+      VITE_API_BASE_URL: front
+      VITE_DEV_DOMAIN: http://app:8081/
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    command: |
+      set -eu
+      cd /repo/frontend
+      if [ ! -f package.json ]; then
+        echo "ERROR: /repo/frontend/package.json missing" >&2
+        ls -la /repo /repo/frontend >&2 || true
+        exit 1
+      fi
+      corepack enable
+      corepack prepare pnpm@8.4.0 --activate
+      pnpm config set store-dir /pnpm/store
+      pnpm install --no-frozen-lockfile
+      exec pnpm exec vite --config ./config/vite.config.dev.ts --host 0.0.0.0 --port 5173 --open false
+    labels:
+      cds.path-prefix: "/"
+      cds.readiness-path: "/"
+      cds.readiness-timeout: "900"
+      cds.readiness-interval: "5"
+
+  mysql:
+    image: mysql:8.0.35
+    environment:
+      MYSQL_ROOT_PASSWORD: Password123@mysql
+      MYSQL_DATABASE: metersphere
+      TZ: Asia/Shanghai
+    ports:
+      - "3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --lower_case_table_names=1
+      - --max_connections=1000
+      - --sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
+    volumes:
+      - ms-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pPassword123@mysql"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.2-alpine
+    command: redis-server --requirepass Password123@redis
+    ports:
+      - "6379"
+    volumes:
+      - ms-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "Password123@redis", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: Password123@minio
+    ports:
+      - "9000"
+    volumes:
+      - ms-minio-data:/data
+
+  kafka:
+    image: apache/kafka:3.8.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      - "9092"
+
+volumes:
+  ms-m2-cache:
+  ms-pnpm-store:
+  ms-mysql-data:
+  ms-redis-data:
+  ms-minio-data:
+
+x-cds-signals:
+  status: "corrected"
+  source: "manual-from-local-dev+deploy"
+  notes:
+    - "auto-scan 将 frontend 误判为 Java，且未读取 legacy/local-dev/dev/docker-compose.yml"
+    - "灰度默认使用 local profile + 文件配置，不启 Nacos"
+    - "未纳入 metersphere-mcp（Cursor 工具链，非产品预览必需）"
+    - "2026-07-15 二次接入：set -eu + frontend cd /repo/frontend"
+    - "2026-07-15 Redisson：改用 printf 生成合法 YAML（勿 sed 剥全部缩进）"
+    - "2026-07-15 JMeter：启动前复制 resources/jmeter 到 local-runtime/jmeter"
