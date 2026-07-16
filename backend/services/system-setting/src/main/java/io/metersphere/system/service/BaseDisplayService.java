@@ -58,8 +58,11 @@ public class BaseDisplayService {
                 }
                 case "loginImage" -> {
                     try {
-                        bytes = readStaticResource(resolver, "/static/images/login-banner.jpg");
-                        contentType = MediaType.IMAGE_JPEG;
+                        bytes = readStaticResource(resolver,
+                                "/static/images/login-banner.svg",
+                                "/static/images/login-banner.jpg",
+                                "/static/images/MeterSphere-logo.svg");
+                        contentType = MediaType.valueOf("image/svg+xml");
                     } catch (IOException e) {
                         bytes = readStaticResource(resolver, "/static/images/MeterSphere-logo.svg");
                         contentType = MediaType.valueOf("image/svg+xml");

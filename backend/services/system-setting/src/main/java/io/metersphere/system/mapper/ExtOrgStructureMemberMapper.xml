@@ -33,7 +33,8 @@
                         u.position,
                         u.enable,
                         u.sync_status as syncStatus,
-                        u.sync_time as syncTime
+                        u.sync_time as syncTime,
+                        u.create_time
         <include refid="memberFromWhere"/>
         order by u.create_time desc, u.id desc
     </select>

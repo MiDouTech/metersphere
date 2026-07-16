@@ -721,32 +721,36 @@
     </select>
 
     <select id="getCaseCustomFieldListByCollection" resultType="io.metersphere.functional.domain.FunctionalCaseCustomField">
-        SELECT distinct
-        fccf.case_id, fccf.field_id, fccf.value
-        FROM
-        functional_case_custom_field fccf
-        LEFT JOIN functional_case fc ON fccf.case_id = fc.id
-        LEFT JOIN test_plan_functional_case tpfc ON tpfc.functional_case_id = fc.id
-        LEFT JOIN custom_field cf ON cf.id = fccf.field_id
-        WHERE
-        fc.deleted = false
-        AND
-        fc.project_Id = #{request.projectId}
-        AND
-        tpfc.test_plan_collection_id = #{request.collectionId}
-        AND
-        tpfc.test_plan_id = #{request.planId}
-        AND
-        cf.name = 'functional_priority'
-        AND cf.scene = 'FUNCTIONAL'
-        AND cf.internal= true
-        <if test="fieldIds != null and fieldIds.size() > 0">
-            and fccf.field_id in
-            <foreach collection="fieldIds" item="fieldId" open="(" separator="," close=")">
-                #{fieldId}
-            </foreach>
-        </if>
-        order by fc.pos desc
+        SELECT
+        t.case_id, t.field_id, t.value
+        FROM (
+            SELECT distinct
+            fccf.case_id, fccf.field_id, fccf.value, fc.pos
+            FROM
+            functional_case_custom_field fccf
+            LEFT JOIN functional_case fc ON fccf.case_id = fc.id
+            LEFT JOIN test_plan_functional_case tpfc ON tpfc.functional_case_id = fc.id
+            LEFT JOIN custom_field cf ON cf.id = fccf.field_id
+            WHERE
+            fc.deleted = false
+            AND
+            fc.project_Id = #{request.projectId}
+            AND
+            tpfc.test_plan_collection_id = #{request.collectionId}
+            AND
+            tpfc.test_plan_id = #{request.planId}
+            AND
+            cf.name = 'functional_priority'
+            AND cf.scene = 'FUNCTIONAL'
+            AND cf.internal= true
+            <if test="fieldIds != null and fieldIds.size() > 0">
+                and fccf.field_id in
+                <foreach collection="fieldIds" item="fieldId" open="(" separator="," close=")">
+                    #{fieldId}
+                </foreach>
+            </if>
+        ) t
+        order by t.pos desc
     </select>
 
 
