@@ -119,8 +119,7 @@
         select distinct
         u.id,
         u.NAME,
-        u.email,
-        u.create_time
+        u.email
         from `user` u left join user_role_relation urr on urr.user_id = u.id
         where u.deleted = 0 and urr.source_id = #{organizationId}
         <if test="keyword != null and keyword != ''">
@@ -134,9 +133,7 @@
     <select id="getUserMemberList" resultType="io.metersphere.system.dto.user.UserExtendDTO">
         select distinct   u.id,
         u.NAME,
-        u.email,
-        u.create_time,
-        count(temp.id) > 0 as memberFlag from
+        u.email, count(temp.id) > 0 as memberFlag from
         user u left join (select * from user_role_relation urr where urr.source_id = #{projectId}) temp on temp.user_id = u.id
         <where>
             u.deleted = 0
@@ -259,9 +256,7 @@
     <select id="getUserList" resultType="io.metersphere.system.dto.user.UserExtendDTO">
         select distinct   u.id,
         u.NAME,
-        u.email,
-        u.create_time,
-        count(temp.id) > 0 as memberFlag from
+        u.email, count(temp.id) > 0 as memberFlag from
         user u left join (select * from user_role_relation urr where urr.source_id = #{projectId}) temp on temp.user_id = u.id
         <where>
             u.deleted = 0

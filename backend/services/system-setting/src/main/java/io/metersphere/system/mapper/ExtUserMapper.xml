@@ -16,8 +16,7 @@
         SELECT DISTINCT
             u.id,
             u.NAME,
-            u.email,
-            u.create_time
+            u.email
         FROM
             `user` u
                 LEFT JOIN user_role_relation urr ON u.id = urr.user_id
@@ -31,7 +30,7 @@
     </select>
 
     <select id="selectUserList" resultType="io.metersphere.system.domain.User">
-        SELECT
+        SELECT DISTINCT
             u.id,
             u.NAME,
             u.email,

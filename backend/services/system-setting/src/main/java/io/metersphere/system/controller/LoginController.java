@@ -15,7 +15,6 @@ import io.metersphere.system.dto.sdk.LoginRequest;
 import io.metersphere.system.dto.sdk.SessionUser;
 import io.metersphere.system.dto.user.UserDTO;
 import io.metersphere.system.log.constants.OperationLogType;
-import io.metersphere.system.service.AuthSourceService;
 import io.metersphere.system.service.UserLoginService;
 import io.metersphere.system.utils.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,8 +38,6 @@ public class LoginController {
     private UserLoginService userLoginService;
     @Resource
     private ProjectMapper projectMapper;
-    @Resource
-    private AuthSourceService authSourceService;
     @Value("${spring.messages.default-locale}")
     private String defaultLocale;
 
@@ -91,14 +88,6 @@ public class LoginController {
         boolean changePassword = userLoginService.checkWhetherChangePasswordOrNot(request);
         result.setMessage(BooleanUtils.toStringTrueFalse(changePassword));
         return result;
-    }
-
-    @PostMapping(value = "/ldap/login")
-    @Operation(summary = "LDAP 登录")
-    public ResultHolder ldapLogin(@Validated @RequestBody LoginRequest request) {
-        authSourceService.authenticateLdapLogin(request.getUsername(), request.getPassword());
-        SecurityUtils.getSubject().getSession().setAttribute("authenticate", UserSource.LDAP.name());
-        return userLoginService.login(request);
     }
 
     @GetMapping(value = "/signout")

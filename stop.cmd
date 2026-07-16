@@ -1,4 +1,2 @@
 @echo off
-REM Local stop archived. See legacy\local-dev\README.md
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0stop.ps1" %*
-exit /b %ERRORLEVEL%

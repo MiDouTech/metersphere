@@ -3,8 +3,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ArchiveRoot = Split-Path -Parent $PSScriptRoot
-$ComposeFile = Join-Path $ArchiveRoot "dev\docker-compose.yml"
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ComposeFile = Join-Path $ProjectRoot "dev\docker-compose.yml"
 
 if ($Stop) {
     Write-Host "Stopping local dependencies..."

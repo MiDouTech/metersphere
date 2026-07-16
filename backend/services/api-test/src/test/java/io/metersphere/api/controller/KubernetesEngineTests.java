@@ -39,13 +39,13 @@ public class KubernetesEngineTests extends BaseTest {
             "  \"loadTestImage\": \"123\",\n" +
             "  \"loadTestHeap\": \"123\",\n" +
             "  \"nodesList\":[{\n" +
-            "       \"ip\":\"192.0.2.17\",\n" +
+            "       \"ip\":\"192.168.20.17\",\n" +
             "       \"port\": \"1194\",\n" +
             "       \"monitor\": \"9100\",\n" +
             "       \"concurrentNumber\": 100\n" +
             "   }],\n" +
-            "\"ip\":\"192.0.2.130\",\n" +
-            "\"token\":\"k8s-token-for-unit-test-only\",\n" +
+            "\"ip\":\"172.2.130.1\",\n" +
+            "\"token\":\"dsdfssdsvgsd\",\n" +
             "\"namespace\":\"测试\",\n" +
             "\"concurrentNumber\":3,\n" +
             "\"podThreads\":2,\n" +
@@ -60,15 +60,15 @@ public class KubernetesEngineTests extends BaseTest {
             "  \"loadTestHeap\": \"123\",\n" +
             "  \"nodesList\": [\n" +
             "    {\n" +
-            "      \"ip\": \"192.0.2.8\",\n" +
+            "      \"ip\": \"172.16.200.8\",\n" +
             "      \"port\": \"8082\",\n" +
             "      \"monitor\": \"9100\",\n" +
             "      \"concurrentNumber\": 100\n" +
             "    }\n" +
             "  ],\n" +
             "  \"orgIds\": [\"sys_default_organization_2\",\"sys_default_organization_3\"],\n" +
-            "  \"ip\": \"192.0.2.130\",\n" +
-            "  \"token\": \"k8s-token-for-unit-test-only\",\n" +
+            "  \"ip\": \"172.2.130.1\",\n" +
+            "  \"token\": \"test\",\n" +
             "  \"namespace\": \"test\",\n" +
             "  \"concurrentNumber\": 3,\n" +
             "  \"podThreads\": 2,\n" +

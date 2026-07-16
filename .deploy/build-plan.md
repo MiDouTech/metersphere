@@ -175,16 +175,19 @@ https://cnb.cool/miduoyanfa/MD_static/metersphere
 ## 发布平台运行时参数（需在独立发布平台配置）
 
 CNB / GitHub Actions 只构建镜像，不注入容器运行参数。  
-后端容器需在**独立发布平台**配置（当前默认**无 Nacos**）：
+后端容器需在**独立发布平台**配置以下环境变量，否则启动会报 `No spring.config.import property has been defined`：
 
 ```env
-SPRING_PROFILES_ACTIVE=local
+SPRING_PROFILES_ACTIVE=nacos
+NACOS_SERVER_ADDR=<线上 Nacos 地址>
+NACOS_NAMESPACE=prod
+NACOS_GROUP=METERSPHERE
+NACOS_USERNAME=<若开启认证>
+NACOS_PASSWORD=<若开启认证>
 ```
 
-并挂载宿主机 conf（`metersphere.properties` + `redisson.yml`）与 logs。  
-完整说明见 `deploy/publish-platform.md`、`deploy/README.md`。
-
-（遗留 Nacos 模式才需要 `NACOS_*` 与 `SPRING_PROFILES_ACTIVE=nacos`，默认不再推荐。）
+完整说明见 `deploy/publish-platform.md`。  
+**不要**用仓库内 `deploy/nacos/prod/metersphere.properties` 模板覆盖线上 Nacos 已有配置。
 
 ## 不再需要的发布配置
 

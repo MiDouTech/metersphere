@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Publish production metersphere.properties to Nacos.
 # Usage:
-#   export NACOS_SERVER_ADDR=<nacos-host>:8848
+#   export NACOS_SERVER_ADDR=10.0.1.1:8848
 #   export NACOS_NAMESPACE=prod
 #   export NACOS_USERNAME=nacos
-#   export NACOS_PASSWORD=<change-me>
+#   export NACOS_PASSWORD=your-password
 #   ./deploy/seed-nacos-prod.sh /path/to/metersphere.properties
 
 set -euo pipefail

@@ -5,8 +5,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ArchiveRoot = Split-Path -Parent $PSScriptRoot
-$ProjectRoot = Split-Path -Parent $ArchiveRoot
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
 $PidFile = Join-Path $ProjectRoot "local-runtime\dev.pids"
 
 function Stop-DevProcesses {
@@ -32,7 +31,7 @@ if ($Stop) {
     exit 0
 }
 
-. (Join-Path $ArchiveRoot "dev\env.ps1")
+. (Join-Path $ProjectRoot "dev\env.ps1")
 
 $staticDir = Join-Path $ProjectRoot "backend\app\src\main\resources\static"
 $publicDir = Join-Path $ProjectRoot "frontend\public"
@@ -65,6 +64,6 @@ if (-not $BackendOnly) {
 
 $pids | Set-Content $PidFile
 Write-Host ""
-Write-Host "Dev servers started. Stop with: legacy\local-dev\scripts\start-dev.ps1 -Stop"
+Write-Host "Dev servers started. Stop with: scripts\start-dev.ps1 -Stop"
 Write-Host "  Backend : http://localhost:8081"
 Write-Host "  Frontend: http://127.0.0.1:5173"

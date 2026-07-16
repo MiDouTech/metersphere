@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# [LEGACY] Start MeterSphere with Nacos profile.
-# Team default is file mode (no Nacos): use ./deploy/docker-run-file.sh instead.
-# Usage:
+# Start MeterSphere backend with Nacos profile (Solution A).
+# Usage on server:
+#   cp deploy/env.prod.example /opt/metersphere/env.prod
+#   vim /opt/metersphere/env.prod
+#   cp deploy/conf/redisson.yml.example /opt/metersphere/conf/redisson.yml
+#   vim /opt/metersphere/conf/redisson.yml
 #   ./deploy/docker-run.sh /opt/metersphere/env.prod
 
 set -euo pipefail

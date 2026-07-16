@@ -1,10 +1,9 @@
 # Copy to server: /opt/metersphere/conf/redisson.yml
 # Adjust address / password / database for your Redis instance.
-# NEVER commit redisson.yml (non-example) with real credentials to git.
 
 singleServerConfig:
-  address: "redis://<redis-host>:6379"
-  password: "<change-me>"
+  address: "redis://10.0.1.1:6379"
+  password: "your-redis-password"
   database: 0
   connectionMinimumIdleSize: 8
   connectionPoolSize: 32

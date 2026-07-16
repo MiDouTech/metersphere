@@ -157,7 +157,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         projectRobotDTO.setProjectId(projectId);
         projectRobotDTO.setEnable(true);
         projectRobotDTO.setType(NoticeConstants.DingType.CUSTOM);
-        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=dingtalk-token-for-unit-test-only");
+        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=fd963136a4d7eebaaa68de261223089148e62d7519fbaf426626fe3157725b8a");
         ProjectRobot postResult = getPostResult(projectRobotDTO, ROBOT_ADD, status().isOk());
         Assertions.assertTrue(StringUtils.equalsIgnoreCase(postResult.getPlatform(),NoticeConstants.Type.DING_TALK));
 
@@ -176,9 +176,9 @@ public class ProjectRobotControllerTests extends BaseTest {
         projectRobotDTO.setPlatform(NoticeConstants.Type.DING_TALK);
         projectRobotDTO.setProjectId("test_project");
         projectRobotDTO.setType(NoticeConstants.DingType.ENTERPRISE);
-        projectRobotDTO.setAppKey("ding-appkey-for-unit-test-only");
-        projectRobotDTO.setAppSecret("ding-appsecret-for-unit-test-only");
-        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=dingtalk-token-for-unit-test-only");
+        projectRobotDTO.setAppKey("dingxwd71o7kj4qoixo7");
+        projectRobotDTO.setAppSecret("szmOD9bjGgKtfYk09-Xx2rPdX-xkW4R8Iic0eig_k1D3k95nG4TLKRSpUKUD_f0G");
+        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=e971f376669334cd44c585d419f0fdfa1600f97f906109b377999d8a0986b11e");
         ProjectRobot postResult = getPostResult(projectRobotDTO, ROBOT_ADD, status().isOk());
         Assertions.assertTrue(StringUtils.equalsIgnoreCase(postResult.getPlatform(),NoticeConstants.Type.DING_TALK));
     }
@@ -190,7 +190,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         projectRobotDTO.setName("钉钉自定义机器人");
         projectRobotDTO.setPlatform(NoticeConstants.Type.DING_TALK);
         projectRobotDTO.setProjectId("test_project");
-        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=dingtalk-token-for-unit-test-only");
+        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=e971f376669334cd44c585d419f0fdfa1600f97f906109b377999d8a0986b11e");
         getPostResult(projectRobotDTO, ROBOT_ADD, status().is5xxServerError());
     }
 
@@ -202,7 +202,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         projectRobotDTO.setPlatform(NoticeConstants.Type.DING_TALK);
         projectRobotDTO.setProjectId("test_project");
         projectRobotDTO.setType(NoticeConstants.DingType.ENTERPRISE);
-        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=dingtalk-token-for-unit-test-only");
+        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=e971f376669334cd44c585d419f0fdfa1600f97f906109b377999d8a0986b11e");
         getPostResult(projectRobotDTO, ROBOT_ADD, status().is5xxServerError());
     }
 
@@ -214,8 +214,8 @@ public class ProjectRobotControllerTests extends BaseTest {
         projectRobotDTO.setPlatform(NoticeConstants.Type.DING_TALK);
         projectRobotDTO.setProjectId("test_project");
         projectRobotDTO.setType(NoticeConstants.DingType.ENTERPRISE);
-        projectRobotDTO.setAppKey("ding-appkey-for-unit-test-only");
-        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=dingtalk-token-for-unit-test-only");
+        projectRobotDTO.setAppKey("dingxwd71o7kj4qoixo7");
+        projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=e971f376669334cd44c585d419f0fdfa1600f97f906109b377999d8a0986b11e");
         getPostResult(projectRobotDTO, ROBOT_ADD, status().is5xxServerError());
     }
 

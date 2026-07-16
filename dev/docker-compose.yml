@@ -1,5 +1,3 @@
-# Local development middleware ONLY.
-# Passwords (Password123@*) are weak and intended for localhost. Never reuse in production.
 services:
   mysql:
     image: mysql:8.0.35

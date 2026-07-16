@@ -1,8 +1,5 @@
 # MeterSphere 本地开发与 Nacos 改造摘要
 
-> **【已归档】2026-07**：本地一键启动已迁至 [`legacy/local-dev/`](../../legacy/local-dev/README.md)；日常请云开发 / 对接线上，部署见 [`deploy/README.md`](../../deploy/README.md)。  
-> 下文路径（如根目录 `start.ps1`、`dev/`）为历史记录，现行位置以后缀归档目录为准。
-
 > 分支：`chenqifen`（不与主分支合并）  
 > 文档生成自开发对话记录，便于后续本地运行与维护。
 
