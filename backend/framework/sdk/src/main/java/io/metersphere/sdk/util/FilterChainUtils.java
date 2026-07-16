@@ -10,6 +10,8 @@ public class FilterChainUtils {
         filterChainDefinitionMap.put("/*.html", "anon");
         filterChainDefinitionMap.put("/login", "anon");
         filterChainDefinitionMap.put("/ldap/login", "anon");
+        // 米多 SSO（与 MiduoSsoShiroFilterChainExtender 双保险，避免灰度未加载 Extender 时 401）
+        filterChainDefinitionMap.put("/auth/miduo/**", "anon");
         filterChainDefinitionMap.put("/authentication/get-list", "anon");
         filterChainDefinitionMap.put("/authentication/get/by/type/**", "anon");
         filterChainDefinitionMap.put("/we_com/info", "anon");
