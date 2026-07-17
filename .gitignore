@@ -1,4 +1,7 @@
 # local env files (personal overrides; keep *.example templates tracked)
+.env
+.env.*
+!.env.example
 .env.local
 .env.*.local
 frontend/.env.development.local
@@ -8,6 +11,36 @@ local-runtime/
 
 # Backend spring-boot:run output when cwd is backend/app
 backend/app/local-runtime/
+
+# CDS / compose WIP snapshots（常含默认口令，勿提交）
+cds-compose.yml.wip*
+cds-compose.yml.bak*
+*.wip-paused-*
+
+# Miduo SSO / 本地实配：仅跟踪 *.example
+**/miduo-sso.properties
+!**/miduo-sso.properties.example
+**/metersphere.properties.local
+
+# 依赖与本地脚本产物
+**/node_modules/
+scripts/edge-keepalive/node_modules/
+scripts/edge-keepalive/*.png
+scripts/edge-keepalive/*-report.json
+scripts/edge-keepalive/.auth/
+
+# 本地浏览器/调试产物
+.playwright-cli/
+output/
+tmp/
+*.log
+
+# 常见密钥/证书误提交防护
+*.pem
+*.p12
+*.pfx
+credentials.json
+**/secrets/**
 
 # Synced from frontend/public by local setup scripts
 backend/app/src/main/resources/static

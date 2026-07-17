@@ -7,6 +7,10 @@ import {
   MiduoSsoStatusUrl,
 } from '@/api/requrls/sso/miduo';
 
+/**
+ * 米多星球 SSO（浏览器只中转 exchange token；sessionToken 不下发）。
+ */
+
 export interface MiduoSsoStatus {
   enabled: boolean;
   ready: boolean;
@@ -36,5 +40,5 @@ export function postMiduoSsoLogout() {
 }
 
 export function getMiduoBridgeUrl() {
-  return MSR.get<{ url: string }>({ url: MiduoSsoBridgeUrl });
+  return MSR.get<{ url: string; state?: string }>({ url: MiduoSsoBridgeUrl });
 }

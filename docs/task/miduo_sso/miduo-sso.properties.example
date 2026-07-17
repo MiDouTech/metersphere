@@ -1,4 +1,13 @@
-# miduo SSO 配置示例（复制到 local-runtime/conf/metersphere.properties，勿提交 Secret）
+# miduo SSO 配置示例（【可入库】仅占位，无真实 Secret）
+#
+# 用法：
+#   1) 复制到 local-runtime/conf/metersphere.properties（该目录已被 .gitignore）
+#   2) 或用环境变量注入（推荐生产/灰度）
+#   3) 禁止把填好 Secret 的文件 git add
+#
+# 对应环境变量：
+#   MIDUO_SSO_ENABLED / MIDUO_SSO_BASE_URL / MIDUO_SSO_APP_CODE / MIDUO_SSO_APP_SECRET
+#   MIDUO_SSO_REDIRECT_URI / MIDUO_SSO_SHORTCUT_ID / MIDUO_SSO_ORGANIZATION_ID
 #
 # miduo.sso.enabled=false
 # miduo.sso.base-url=https://your-miduo-host
@@ -10,3 +19,9 @@
 # miduo.sso.state-ttl-seconds=600
 # miduo.sso.session-ttl-seconds=86400
 # miduo.sso.refresh-ahead-seconds=1800
+#
+# 硬约束：
+# - appSecret 仅后端；浏览器只中转 exchange token
+# - X-App-Timestamp 为 Unix 秒；签名 HMAC-SHA256 Base64
+# - redirectUri 须命中米多白名单；生产 HTTPS
+# - 身份权威字段：validate 返回的 wework_userid → user.wecom_userid

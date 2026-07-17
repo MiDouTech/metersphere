@@ -32,7 +32,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 米多 SSO 应用服务：status / callback / logout / bridge。
+ * 米多 SSO 应用服务：status / state / callback / logout / bridge。
+ * <p>
+ * 流程：浏览器中转 exchange token → 后端 validate → 按 wework_userid 匹配本地用户
+ * → 建立 Shiro Session，sessionToken 仅存 Redis → refresh / revoke / 登录桥。
+ * SSO 不自动建号；成员须先经企微通讯录同步。
  */
 @Service
 @Transactional(rollbackFor = Exception.class)
@@ -90,10 +94,13 @@ public class MiduoSsoApplicationService {
 
     public Map<String, String> createState() {
         ensureEnabled();
-        String state = miduoSsoStateService.generateState();
-        return Map.of("state", state);
+        return Map.of("state", miduoSsoStateService.generateState());
     }
 
+    /**
+     * 回调：校验 state（一次性）→ validate exchange token → 匹配用户 → Shiro Session。
+     * 禁止信任 URL 上的 mobile/name 等 PII。
+     */
     public SessionUser handleCallback(String token, String state) {
         ensureEnabled();
         MiduoSsoStatusDTO status = getStatus();
@@ -137,6 +144,9 @@ public class MiduoSsoApplicationService {
         }
     }
 
+    /**
+     * 生成 state 并返回登录桥 URL（refresh 失败或默认登录入口使用）。
+     */
     public Map<String, String> bridgeUrl() {
         ensureEnabled();
         String state = miduoSsoStateService.generateState();
@@ -207,7 +217,6 @@ public class MiduoSsoApplicationService {
             return CollectionUtils.isNotEmpty(users)
                     && users.stream().anyMatch(u -> BooleanUtils.isNotFalse(u.getEnable()));
         }
-        // 全局：任意一条带 wecom_userid 的启用用户
         OrgWecomSyncConfigExample example = new OrgWecomSyncConfigExample();
         List<OrgWecomSyncConfig> configs = orgWecomSyncConfigMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(configs)) {

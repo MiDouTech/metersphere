@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 米多 sessionToken 服务端存储（仅 Redis）。
+ * 米多 sessionToken 服务端存储（仅 Redis，禁止下发浏览器）。
  */
 @Service
 public class MiduoSsoSessionStore {
@@ -24,15 +24,15 @@ public class MiduoSsoSessionStore {
     @Resource
     private MiduoSsoProperties properties;
 
-    public void save(String userId, String sessionToken, Long expiresAt) {
+    public void save(String userId, String sessionToken, Long expiresAtMillis) {
         if (StringUtils.isAnyBlank(userId, sessionToken)) {
             return;
         }
         Map<String, Object> value = new HashMap<>();
         value.put("sessionToken", sessionToken);
-        value.put("expiresAt", expiresAt);
+        value.put("expiresAt", expiresAtMillis);
         value.put("needReauth", false);
-        long ttl = resolveTtlSeconds(expiresAt);
+        long ttl = resolveTtlSeconds(expiresAtMillis);
         stringRedisTemplate.opsForValue().set(KEY_PREFIX + userId, JSON.toJSONString(value), Duration.ofSeconds(ttl));
     }
 
@@ -50,15 +50,7 @@ public class MiduoSsoSessionStore {
         if (data == null || data.get("expiresAt") == null) {
             return null;
         }
-        Object v = data.get("expiresAt");
-        if (v instanceof Number n) {
-            return n.longValue();
-        }
-        try {
-            return Long.parseLong(String.valueOf(v));
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        return MiduoSsoClient.asEpochMillis(data.get("expiresAt"));
     }
 
     public boolean isNeedReauth(String userId) {
@@ -99,12 +91,12 @@ public class MiduoSsoSessionStore {
         return JSON.parseObject(json, Map.class);
     }
 
-    private long resolveTtlSeconds(Long expiresAt) {
+    private long resolveTtlSeconds(Long expiresAtMillis) {
         long defaultTtl = Math.max(60, properties.getSessionTtlSeconds());
-        if (expiresAt == null || expiresAt <= 0) {
+        if (expiresAtMillis == null || expiresAtMillis <= 0) {
             return defaultTtl;
         }
-        long remain = (expiresAt - System.currentTimeMillis()) / 1000;
+        long remain = (expiresAtMillis - System.currentTimeMillis()) / 1000;
         if (remain <= 0) {
             return 60;
         }

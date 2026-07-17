@@ -9,7 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * 米多 sessionToken refresh（后端触发，失败标记 needReauth）。
+ * 米多 sessionToken 续期（后端触发）。
+ * success=false 或异常时标记 needReauth，前端跳登录桥。
  */
 @Service
 public class MiduoSsoRefreshService {

@@ -9,7 +9,8 @@ x-cds-project:
   description: "MeterSphere V3 自研（Spring Boot 3 / Java 21 + Vue3/Vite）"
   repo: https://github.com/chenqifen-miduo/metersphere.git
 
-# 灰度环境结构默认值（非生产密钥）。真实敏感项可在 CDS env scope 覆盖。
+# 灰度/本地结构默认口令（非生产）。公开仓可见，禁止当作生产密钥。
+# 生产与正式灰度请在 CDS env scope 覆盖 MYSQL_* / REDIS_* / MINIO_*，勿把真实口令写回本文件。
 x-cds-env:
   MYSQL_DATABASE: metersphere
   MYSQL_USER: root

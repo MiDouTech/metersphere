@@ -19,6 +19,11 @@ import java.util.Map;
 
 /**
  * 米多 SSO 公开接口（Shiro anon）。
+ * <ul>
+ *   <li>POST /auth/miduo/callback — 浏览器提交 {token, state}</li>
+ *   <li>GET  /auth/miduo/bridge-url — 登录桥（含新 state）</li>
+ *   <li>POST /auth/miduo/logout — revoke + 销毁本地会话</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/auth/miduo")
@@ -36,13 +41,13 @@ public class MiduoSsoAuthController {
     }
 
     @GetMapping("/state")
-    @Operation(summary = "生成 state")
+    @Operation(summary = "生成 state（CSRF）")
     public Map<String, String> state() {
         return miduoSsoApplicationService.createState();
     }
 
     @PostMapping("/callback")
-    @Operation(summary = "米多 SSO 回调登录")
+    @Operation(summary = "米多 SSO 回调登录（校验 exchange token）")
     public ResultHolder callback(@RequestBody MiduoSsoCallbackRequest request) {
         if (request == null || StringUtils.isAnyBlank(request.getToken(), request.getState())) {
             throw new MiduoSsoException("token / state 不能为空");
@@ -52,14 +57,14 @@ public class MiduoSsoAuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "米多 SSO 登出并 revoke")
+    @Operation(summary = "米多 SSO 登出并 revoke sessionToken")
     public ResultHolder logout() {
         miduoSsoApplicationService.logout();
         return ResultHolder.success("logout success");
     }
 
     @GetMapping("/bridge-url")
-    @Operation(summary = "获取米多登录桥 URL")
+    @Operation(summary = "获取米多登录桥 URL（含 state）")
     public Map<String, String> bridgeUrl() {
         return miduoSsoApplicationService.bridgeUrl();
     }

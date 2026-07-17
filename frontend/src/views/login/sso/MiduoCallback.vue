@@ -11,6 +11,10 @@
 </template>
 
 <script lang="ts" setup>
+  /**
+   * 米多 SSO 落地页（QUERY）：只中转 exchange token，立即 POST 后端。
+   * 禁止把 token / sessionToken 写入 localStorage。
+   */
   import { onMounted, ref } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
@@ -34,6 +38,14 @@
     router.replace({ name: 'login' });
   }
 
+  /** 读完后去掉 URL 中的 token，避免停留在地址栏 */
+  function stripSensitiveQuery() {
+    const q = { ...route.query } as Record<string, string | string[] | undefined>;
+    delete q.token;
+    delete q.app_code;
+    router.replace({ path: route.path, query: q }).catch(() => undefined);
+  }
+
   onMounted(async () => {
     const token = String(route.query.token || '');
     const state = String(route.query.state || '');
@@ -42,6 +54,7 @@
       errorMessage.value = t('login.miduo.callback.missingParams');
       return;
     }
+    stripSensitiveQuery();
     try {
       const res = (await postMiduoSsoCallback({ token, state })) as LoginRes;
       if (!res?.sessionId) {

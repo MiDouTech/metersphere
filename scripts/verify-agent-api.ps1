@@ -13,8 +13,9 @@
 param(
     [string]$BaseUrl = "http://127.0.0.1:8081",
     [string]$ProjectId = "100001100001",
-    [string]$Token = "msat_demo_token_for_local_testing_01",
-    [string]$ReadOnlyToken = "msat_demo_readonly_token_01"
+    # 优先环境变量；默认仅为本地 fixture 演示值，禁止用于生产
+    [string]$Token = $(if ($env:MS_AGENT_TOKEN) { $env:MS_AGENT_TOKEN } else { "msat_demo_token_for_local_testing_01" }),
+    [string]$ReadOnlyToken = $(if ($env:MS_AGENT_TOKEN_READONLY) { $env:MS_AGENT_TOKEN_READONLY } else { "msat_demo_readonly_token_01" })
 )
 
 $ErrorActionPreference = "Continue"
