@@ -33,4 +33,5 @@ export default {
   'settings.close': 'Close',
   'settings.color.tooltip': '10 gradient colors generated according to the theme color',
   'settings.navbar.createProject': 'Create project',
+  'settings.navbar.currentOrg': 'Current org',
 };

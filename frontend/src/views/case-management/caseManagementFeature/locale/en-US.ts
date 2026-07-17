@@ -3,6 +3,12 @@ export default {
   'caseManagement.featureCase.importCase': 'Import Case',
   'caseManagement.featureCase.importExcel': 'Import Excel',
   'caseManagement.featureCase.importXmind': 'Import Xmind',
+  'caseManagement.featureCase.uploadXmind': 'Upload Xmind',
+  'caseManagement.featureCase.xmindCaseTip':
+    'Upload Xmind files as assets. They will not be parsed into execute cases automatically',
+  'caseManagement.featureCase.xmindCaseEmpty': 'No Xmind files yet. Click the button above to upload',
+  'caseManagement.featureCase.xmindFileName': 'File Name',
+  'caseManagement.featureCase.xmindUploadTodo': 'Upload API is not ready yet. Please try again later',
   'caseManagement.featureCase.importSuccess': 'Import successfully',
   'caseManagement.featureCase.publicCase': 'Public of Cases',
   'caseManagement.featureCase.allCase': 'All of Cases',

@@ -75,6 +75,10 @@
         <apiStatus v-else :status="record.status" />
       </template>
       <template #action="{ record }">
+        <MsButton v-permission="['PROJECT_API_DEFINITION:READ']" type="text" class="!mr-0" @click="openApiTab(record)">
+          {{ t('common.detail') }}
+        </MsButton>
+        <a-divider v-permission="['PROJECT_API_DEFINITION:READ']" direction="vertical" :margin="8"></a-divider>
         <MsButton
           v-permission="['PROJECT_API_DEFINITION:READ+UPDATE']"
           type="text"

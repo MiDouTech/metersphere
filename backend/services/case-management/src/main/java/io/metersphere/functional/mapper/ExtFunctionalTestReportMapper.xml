@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.functional.mapper.ExtFunctionalTestReportMapper">
+
+    <select id="list" resultType="io.metersphere.functional.domain.FunctionalTestReport">
+        select id, project_id as projectId, name, plan_id as planId, content, stats_snapshot as statsSnapshot,
+               create_time as createTime, update_time as updateTime, create_user as createUser, update_user as updateUser
+        from functional_test_report
+        where project_id = #{request.projectId}
+        <if test="request.keyword != null and request.keyword != ''">
+            and name like concat('%', #{request.keyword}, '%')
+        </if>
+        <if test="request.planId != null and request.planId != ''">
+            and plan_id = #{request.planId}
+        </if>
+    </select>
+
+    <select id="countExecByProject" resultType="io.metersphere.functional.dto.FunctionalTestReportResultCountDTO">
+        select last_execute_result as result, count(1) as cnt
+        from functional_case
+        where project_id = #{projectId}
+          and deleted = 0
+          and latest = 1
+        group by last_execute_result
+    </select>
+
+    <select id="countExecByPlan" resultType="io.metersphere.functional.dto.FunctionalTestReportResultCountDTO">
+        select last_exec_result as result, count(1) as cnt
+        from test_plan_functional_case
+        where test_plan_id = #{planId}
+        group by last_exec_result
+    </select>
+
+    <select id="listRiskCasesByProject" resultType="io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO">
+        select id as caseId, num, name, last_execute_result as lastExecResult
+        from functional_case
+        where project_id = #{projectId}
+          and deleted = 0
+          and latest = 1
+          and last_execute_result in ('ERROR', 'BLOCKED', 'FAKE_ERROR')
+        order by update_time desc
+        limit 200
+    </select>
+
+    <select id="listRiskCasesByPlan" resultType="io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO">
+        select fc.id as caseId, fc.num, fc.name, tpf.last_exec_result as lastExecResult
+        from test_plan_functional_case tpf
+                 inner join functional_case fc on fc.id = tpf.functional_case_id
+        where tpf.test_plan_id = #{planId}
+          and tpf.last_exec_result in ('ERROR', 'BLOCKED', 'FAKE_ERROR')
+        order by tpf.last_exec_time desc
+        limit 200
+    </select>
+</mapper>

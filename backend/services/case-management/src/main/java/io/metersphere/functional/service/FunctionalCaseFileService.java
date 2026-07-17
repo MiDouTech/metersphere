@@ -130,10 +130,10 @@ public class FunctionalCaseFileService {
      * @param response
      */
     public void downloadExcelTemplate(String projectId, HttpServletResponse response) {
-        //获取当前项目下默认模板的自定义字段属性
+        //获取当前项目下默认模板的自定义字段属性（导入校验用；下载模板仅展示固定 8 列含用例等级）
         List<TemplateCustomFieldDTO> customFields = getCustomFields(projectId);
 
-        //获取表头字段 当前项目下默认模板的自定义字段  heads:默认表头名称+自定义字段名称
+        // 固定表头：用例ID|用例名称|所属模块|前置条件|步骤描述|预期结果|用例等级|备注
         List<List<String>> heads = getTemplateHead(projectId, customFields);
 
         FunctionalCaseExcelData caseExcelData = new FunctionalCaseExcelDataFactory().getFunctionalCaseExcelDataLocal();

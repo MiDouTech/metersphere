@@ -27,6 +27,8 @@ export enum CaseManagementRouteEnum {
   CASE_MANAGEMENT_REVIEW_CREATE = 'caseManagementReviewCreate',
   CASE_MANAGEMENT_REVIEW_DETAIL = 'caseManagementReviewDetail',
   CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL = 'caseManagementReviewDetailCaseDetail',
+  CASE_MANAGEMENT_TEST_REPORT = 'caseManagementTestReport',
+  CASE_MANAGEMENT_TEST_REPORT_DETAIL = 'caseManagementTestReportDetail',
 }
 
 export enum PerformanceTestRouteEnum {

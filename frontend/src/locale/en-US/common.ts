@@ -185,7 +185,7 @@ export default {
   'common.fakeError': 'Fake error',
   'common.belongModule': 'Belong module',
   'common.moreSetting': 'More settings',
-  'common.detail': 'detail',
+  'common.detail': 'Detail',
   'common.baseInfo': 'Basic info',
   'common.remark': 'Remark',
   'common.case': 'Case',
