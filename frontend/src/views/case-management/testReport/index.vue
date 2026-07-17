@@ -22,7 +22,7 @@
           </a-button>
         </template>
         <template #planName="{ record }">
-          <span>{{ record.planName || t('caseManagement.testReport.projectScope') }}</span>
+          <span>{{ record.planName || t('caseManagement.testReport.noPlan') }}</span>
         </template>
         <template #action="{ record }">
           <MsButton
@@ -88,10 +88,13 @@
             allow-clear
           />
         </a-form-item>
-        <a-form-item field="planId" :label="t('caseManagement.testReport.plan')">
+        <a-form-item
+          field="planId"
+          :label="t('caseManagement.testReport.plan')"
+          :rules="[{ required: true, message: t('caseManagement.testReport.planRequired') }]"
+        >
           <a-select
             v-model:model-value="generateForm.planId"
-            allow-clear
             allow-search
             :placeholder="t('caseManagement.testReport.planPlaceholder')"
             :loading="planLoading"
@@ -100,9 +103,6 @@
               {{ item.name }}
             </a-option>
           </a-select>
-          <div class="mt-[4px] text-[12px] text-[var(--color-text-4)]">
-            {{ t('caseManagement.testReport.planOptional') }}
-          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -273,10 +273,15 @@
     }
     generateLoading.value = true;
     try {
+      if (!generateForm.planId) {
+        Message.warning(t('caseManagement.testReport.planRequired'));
+        done(false);
+        return;
+      }
       const res = await generateTestReport({
         projectId: appStore.currentProjectId,
         name: generateForm.name.trim(),
-        planId: generateForm.planId || undefined,
+        planId: generateForm.planId,
       });
       Message.success(t('caseManagement.testReport.generateSuccess'));
       done(true);

@@ -156,6 +156,8 @@ export default {
   'testPlan.planAutomaticGeneration': 'Automatic generation',
   'testPlan.caseType': 'Use Case types',
   'testPlan.document.preview': 'Preview',
+  'testPlan.document.export': 'Export',
+  'testPlan.document.exportSuccess': 'Exported',
   'testPlan.document.resetTemplate': 'Reset to template',
   'testPlan.document.resetTip': 'Reset only overwrites the editor; click Save to persist',
   'testPlan.document.resetConfirm':

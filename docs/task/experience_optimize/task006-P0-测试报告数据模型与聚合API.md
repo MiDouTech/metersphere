@@ -24,9 +24,9 @@
 | id | 主键 |
 | project_id | 项目 |
 | name | 报告名称 |
-| plan_id | 可选关联测试计划 |
-| content | 可编辑正文（HTML/JSON 分节，二选一；建议 **JSON 分节 + 快照统计**） |
-| stats_snapshot | 执行统计/图表原始 JSON（只读刷新用） |
+| plan_id | **必选**关联测试计划 |
+| content | 可编辑正文（建议 **JSON 分节**，含可改统计数字） |
+| stats_snapshot | 最近一次系统聚合快照（供「刷新统计」对比/覆盖） |
 | create_user / update_user / time | 审计字段 |
 
 > SQL 须人工审查；Flyway 版本递增。
@@ -52,23 +52,21 @@
 {
   "projectId": "...",
   "name": "可选，默认带日期",
-  "planId": "可选，空表示项目范围按约定汇总",
-  "startTime": null,
-  "endTime": null
+  "planId": "必选，所绑定测试计划 ID"
 }
 ```
 
-范围默认：见 task000「当前项目 + 可选测试计划」。
+> **✅ 产品确认**：`planId` **必选**；统计均基于该计划。统计数字生成后**可改**（见 update 接口）。
 
 ### 3.2 聚合规则（对齐方案）
 
 | 块 | 规则 |
 |----|------|
-| 3.1 执行统计 | 功能用例最新执行（或计划内）：总数/通过/失败/阻塞/执行率/通过率 |
+| 3.1 执行统计 | **所绑定计划内**功能用例：总数/通过/失败/阻塞/执行率/通过率 |
 | 通过率 | `(通过 / (总数 - 阻塞 - 失败)) * 100%`；分母 0 → `-`；响应中带 `passRateFormulaNote` |
-| 图1 | 缺陷：处理人（`handleUser`）× 处理状态 计数 → 柱状数据 |
-| 图2 | 缺陷：类型字段计数 → 饼图数据（字段解析见 task000；找不到则空数组 + message） |
-| 遗留风险 | `lastExecResult ∈ {BLOCKED, ERROR/FAILED}` 用例：编号+名称+结果 |
+| 图1 | 计划关联缺陷：处理人（**`handleUser`**）× 处理状态 计数 → 柱状数据 |
+| 图2 | 计划关联缺陷：按 **「缺陷类型」** 字段计数 → 饼图（依赖 task008；无值归「未分类」） |
+| 遗留风险 | 计划内 `lastExecResult ∈ {BLOCKED, ERROR/FAILED}` 用例：编号+名称+结果 |
 | 不生成 | 「测试依据」；「六、附件」 |
 
 ### 3.3 生成响应
@@ -144,18 +142,18 @@
 }
 ```
 
-### 统计实现口径（MVP）
+### 统计实现口径
 
 | 块 | 实现 | 说明 |
 |----|------|------|
-| exec | **真聚合** | 无 `planId`：`functional_case`（`deleted=0 AND latest=1`）按 `last_execute_result` 分组；有 `planId`：`test_plan_functional_case` 按 `last_exec_result` |
+| exec | **真聚合** | 必选 `planId`：`test_plan_functional_case` 按 `last_exec_result` |
 | pass/fail/block | **真聚合** | SUCCESS→pass；ERROR/FAKE_ERROR→fail；BLOCKED→block |
 | execRate | **真聚合** | `(pass+fail+block)/total` |
 | passRate | **真聚合** | `pass/(total-block-fail)`，分母≤0 为 `-`；附 `passRateFormulaNote` |
 | riskCases | **真聚合** | ERROR/BLOCKED/FAKE_ERROR，最多 200 条 |
-| bugHandlerStatus | **占位** | 空数组 `[]` |
-| bugType | **占位** | 空数组 `[]` + `bugTypeMessage`；缺陷类型字段 key 二期再定 |
+| bugHandlerStatus | **真聚合** | 计划关联缺陷：`handleUser` × 状态（`status_item.name`） |
+| bugType | **真聚合** | 自定义字段 key=`bug_type`；空值归「未分类」 |
 
-`startTime` / `endTime` 入参已预留，MVP 未参与过滤。
+**缺陷类型字段 key**：`bug_type`（见 task008 / `DefaultBugCustomField.TYPE`）
 
 **【注意】** SQL 与权限须人工审查后再上生产。

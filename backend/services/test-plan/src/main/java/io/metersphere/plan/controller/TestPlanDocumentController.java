@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotBlank;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,6 +36,16 @@ public class TestPlanDocumentController {
         testPlanManagementService.checkModuleIsOpen(id, TestPlanResourceConfig.CHECK_TYPE_TEST_PLAN,
                 Collections.singletonList(TestPlanResourceConfig.CONFIG_TEST_PLAN));
         return testPlanDocumentService.getDocument(id);
+    }
+
+    @GetMapping("/{id}/document/export")
+    @Operation(summary = "测试计划-导出文档(HTML)")
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_READ)
+    @CheckOwner(resourceId = "#id", resourceType = "test_plan")
+    public ResponseEntity<byte[]> exportDocument(@NotBlank @PathVariable String id) {
+        testPlanManagementService.checkModuleIsOpen(id, TestPlanResourceConfig.CHECK_TYPE_TEST_PLAN,
+                Collections.singletonList(TestPlanResourceConfig.CONFIG_TEST_PLAN));
+        return testPlanDocumentService.exportDocumentHtml(id);
     }
 
     @PostMapping("/{id}/document")

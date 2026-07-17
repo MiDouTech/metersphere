@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -62,20 +63,49 @@ public class XMindParser {
 
     public static List<JsonRootBean> parseObject(MultipartFile multipartFile) throws DocumentException, ArchiveException, IOException {
         List<String> contents = parseJson(multipartFile);
+        return contentsToBeans(contents);
+    }
+
+    /**
+     * 从本地临时文件解析（预览下载后使用，不走 MultipartFile）
+     */
+    public static List<JsonRootBean> parseObject(File file) throws DocumentException, ArchiveException, IOException {
+        if (file == null || !file.exists()) {
+            throw new MSException(Translator.get("incorrect_format"));
+        }
+        List<String> contents;
+        String res = null;
+        try {
+            res = ZipUtils.extract(file);
+            if (isXMindZen(res)) {
+                contents = getXMindZenContent(res);
+            } else {
+                contents = getXMindLegacyContent(res);
+            }
+        } catch (Exception e) {
+            throw new MSException(e.getMessage());
+        } finally {
+            if (res != null) {
+                FileUtils.deleteDirectory(new File(res));
+            }
+        }
+        return contentsToBeans(contents);
+    }
+
+    private static List<JsonRootBean> contentsToBeans(List<String> contents) {
         int caseCount = 0;
         List<JsonRootBean> jsonRootBeans = new ArrayList<>();
         if (contents != null) {
             for (String content : contents) {
-                caseCount += content.split("((?i)case)").length;
+                caseCount += content.toLowerCase(Locale.ROOT).split("case").length;
                 JsonRootBean jsonRootBean = JSON.parseObject(content, JsonRootBean.class);
                 jsonRootBeans.add(jsonRootBean);
             }
             if (caseCount > 800) {
-                throw new MSException (Translator.get("import_xmind_count_error"));
+                throw new MSException(Translator.get("import_xmind_count_error"));
             }
         }
         return jsonRootBeans;
-
     }
 
 

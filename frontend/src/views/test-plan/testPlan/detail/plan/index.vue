@@ -1,16 +1,21 @@
 <template>
   <div v-loading="loading" class="flex h-full min-h-[480px] flex-col p-[16px]">
-    <div v-if="canEdit" class="mb-[12px] flex flex-shrink-0 items-center gap-[12px]">
-      <a-button type="primary" :loading="saving" @click="handleSave">
-        {{ t('common.save') }}
+    <div class="mb-[12px] flex flex-shrink-0 items-center gap-[12px]">
+      <template v-if="canEdit">
+        <a-button type="primary" :loading="saving" @click="handleSave">
+          {{ t('common.save') }}
+        </a-button>
+        <a-button type="secondary" @click="previewVisible = true">
+          {{ t('testPlan.document.preview') }}
+        </a-button>
+        <a-button type="secondary" :disabled="saving" @click="handleResetTemplate">
+          {{ t('testPlan.document.resetTemplate') }}
+        </a-button>
+      </template>
+      <a-button v-permission="['PROJECT_TEST_PLAN:READ']" type="secondary" :loading="exporting" @click="handleExport">
+        {{ t('testPlan.document.export') }}
       </a-button>
-      <a-button type="secondary" @click="previewVisible = true">
-        {{ t('testPlan.document.preview') }}
-      </a-button>
-      <a-button type="secondary" :disabled="saving" @click="handleResetTemplate">
-        {{ t('testPlan.document.resetTemplate') }}
-      </a-button>
-      <span class="text-[12px] text-[var(--color-text-4)]">{{ t('testPlan.document.resetTip') }}</span>
+      <span v-if="canEdit" class="text-[12px] text-[var(--color-text-4)]">{{ t('testPlan.document.resetTip') }}</span>
     </div>
     <div
       class="document-editor flex-1 overflow-auto rounded-[var(--border-radius-small)] border border-[var(--color-text-n8)] p-[12px]"
@@ -44,7 +49,7 @@
   import MsRichText from '@/components/pure/ms-rich-text/MsRichText.vue';
 
   import { editorUploadFile } from '@/api/modules/case-management/featureCase';
-  import { getTestPlanDocument, saveTestPlanDocument } from '@/api/modules/test-plan/document';
+  import { exportTestPlanDocument, getTestPlanDocument, saveTestPlanDocument } from '@/api/modules/test-plan/document';
   import { PreviewEditorImageUrl } from '@/api/requrls/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
@@ -70,6 +75,7 @@
 
   const loading = ref(false);
   const saving = ref(false);
+  const exporting = ref(false);
   const content = ref('');
   const fileIds = ref<string[]>([]);
   const templateMeta = ref<TestPlanDocumentTemplateMeta | undefined>();
@@ -124,6 +130,29 @@
       console.log(error);
     } finally {
       saving.value = false;
+    }
+  }
+
+  async function handleExport() {
+    if (!props.planId) {
+      return;
+    }
+    try {
+      exporting.value = true;
+      const res = (await exportTestPlanDocument(props.planId)) as any;
+      const blob = res?.data instanceof Blob ? res.data : new Blob([res], { type: 'text/html;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `test-plan-${props.planId}.html`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      Message.success(t('testPlan.document.exportSuccess'));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    } finally {
+      exporting.value = false;
     }
   }
 

@@ -15,9 +15,14 @@ import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -96,6 +101,40 @@ public class TestPlanDocumentService {
         response.setUpdateUser(existing.getUpdateUser());
         response.setTemplateMeta(buildTemplateMeta(testPlan));
         return response;
+    }
+
+    /**
+     * 导出 HTML 文档（产品确认可导出；本期 HTML，Word/PDF 二期）
+     */
+    public ResponseEntity<byte[]> exportDocumentHtml(String testPlanId) {
+        TestPlan testPlan = checkAndGetTestPlan(testPlanId);
+        TestPlanDocument document = testPlanDocumentMapper.selectByTestPlanId(testPlanId);
+        String body = document == null ? StringUtils.EMPTY : StringUtils.defaultString(document.getContent());
+        String title = StringUtils.defaultIfBlank(testPlan.getName(), "test-plan-document");
+        String html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/><title>"
+                + escapeHtml(title)
+                + "</title><style>body{font-family:sans-serif;padding:24px;line-height:1.6}"
+                + "table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}</style>"
+                + "</head><body>"
+                + body
+                + "</body></html>";
+        byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
+        String filename = "test-plan-" + testPlanId + "-" + LocalDate.now().format(DOC_DATE_FMT) + ".html";
+        String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.TEXT_HTML);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded);
+        return ResponseEntity.ok().headers(headers).body(bytes);
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 
     private TestPlan checkAndGetTestPlan(String testPlanId) {

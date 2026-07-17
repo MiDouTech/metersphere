@@ -1,5 +1,14 @@
 import { TableQueryParams } from '@/models/common';
 
+export interface TestReportExecStats {
+  total: number;
+  pass: number;
+  fail: number;
+  block: number;
+  execRate: string;
+  passRate: string;
+}
+
 /** 报告正文 JSON 分节 */
 export interface TestReportContent {
   versionOverview?: string | Record<string, any>;
@@ -11,20 +20,13 @@ export interface TestReportContent {
     suggestion?: string;
   };
   riskNote?: string;
+  /** 可编辑的执行统计数字（刷新统计会覆盖） */
+  execStats?: Partial<TestReportExecStats>;
   /** 页脚：撰写人、日期等 */
   footer?: {
     author?: string;
     date?: string;
   };
-}
-
-export interface TestReportExecStats {
-  total: number;
-  pass: number;
-  fail: number;
-  block: number;
-  execRate: string;
-  passRate: string;
 }
 
 export interface TestReportRiskCase {
@@ -67,7 +69,8 @@ export interface TestReportPageRequest extends TableQueryParams {
 export interface TestReportGenerateRequest {
   projectId: string;
   name?: string;
-  planId?: string;
+  /** 必选：绑定的测试计划 */
+  planId: string;
   startTime?: number;
   endTime?: number;
 }

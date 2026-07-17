@@ -11,7 +11,7 @@
 
 ## 1. 任务目标
 
-为测试计划详情「测试计划」文档提供持久化与读写 API；与 minder 数据解耦，不迁移旧脑图内容。
+为测试计划详情「测试计划」文档提供持久化与读写/导出 API；旧 minder 数据**直接删除**（产品确认无有效业务数据），不做迁移。
 
 ---
 
@@ -47,6 +47,7 @@ CREATE TABLE test_plan_document (
 |------|------|------|----------|
 | GET | `/test-plan/{id}/document` | 无记录时返回空 content + `exists=false` | `PROJECT_TEST_PLAN:READ` |
 | POST | `/test-plan/{id}/document` | 保存/覆盖内容 | `PROJECT_TEST_PLAN:READ+UPDATE` |
+| GET | `/test-plan/{id}/document/export` | 导出（Word/HTML/PDF 择一，实现阶段定） | `PROJECT_TEST_PLAN:READ` |
 
 **响应建议**：
 
@@ -77,10 +78,11 @@ CREATE TABLE test_plan_document (
 
 可增加：`GET /test-plan/{id}/document/template-meta`，或在 GET document 中附带 `templateMeta`。
 
-### 3.2 兼容
+### 3.2 兼容与清理
 
-- `getPlanMinder` / `editPlanMinder`：**保留**但前端不再调用（task005）。  
-- 不做 minder → document 迁移。  
+- **✅ 产品确认**：旧 minder 业务数据**直接删除**（无有效数据）；不做 minder → document 迁移、不做只读回看提示。  
+- 实施：清理 minder 相关表数据；废弃/下线 `getPlanMinder` / `editPlanMinder`（或保留空实现一段时间后删除）。  
+- 首次进入文档接口一律返回空，由前端套用富文本模板。 
 
 ---
 

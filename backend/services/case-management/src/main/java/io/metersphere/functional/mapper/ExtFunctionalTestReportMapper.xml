@@ -51,4 +51,40 @@
         order by tpf.last_exec_time desc
         limit 200
     </select>
+
+    <!-- 图1：计划关联缺陷，处理人 handleUser × 状态 -->
+    <select id="countBugHandlerStatusByPlan"
+            resultType="io.metersphere.functional.dto.FunctionalTestReportBugCountDTO">
+        select ifnull(nullif(b.handle_user, ''), '-') as handleUser,
+               ifnull(u.name, ifnull(nullif(b.handle_user, ''), '-')) as handleUserName,
+               ifnull(b.status, '-') as status,
+               ifnull(si.name, ifnull(b.status, '-')) as statusName,
+               count(distinct b.id) as count
+        from bug_relation_case brc
+                 inner join bug b on b.id = brc.bug_id and b.deleted = 0
+                 left join user u on u.id = b.handle_user
+                 left join status_item si on si.id = b.status
+        where brc.test_plan_id = #{planId}
+        group by b.handle_user, u.name, b.status, si.name
+        order by count desc
+        limit 200
+    </select>
+
+    <!-- 图2：计划关联缺陷，按自定义字段 bug_type 聚合；无值归「未分类」 -->
+    <select id="countBugTypeByPlan"
+            resultType="io.metersphere.functional.dto.FunctionalTestReportBugCountDTO">
+        select ifnull(nullif(t.type_value, ''), '未分类') as type,
+               count(distinct b.id) as count
+        from bug_relation_case brc
+                 inner join bug b on b.id = brc.bug_id and b.deleted = 0
+                 left join (
+            select bcf.bug_id, bcf.value as type_value
+            from bug_custom_field bcf
+                     inner join custom_field cf on cf.id = bcf.field_id and cf.name = 'bug_type'
+        ) t on t.bug_id = b.id
+        where brc.test_plan_id = #{planId}
+        group by ifnull(nullif(t.type_value, ''), '未分类')
+        order by count desc
+        limit 100
+    </select>
 </mapper>

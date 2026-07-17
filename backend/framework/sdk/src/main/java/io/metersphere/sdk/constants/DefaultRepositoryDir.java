@@ -77,6 +77,7 @@ public class DefaultRepositoryDir {
     private static final String PROJECT_API_MOCK_DIR = PROJECT_DIR + "/api-mock/%s";
     private static final String PROJECT_ENV_SSL_DIR = PROJECT_DIR + "/environment/%s";
     private static final String PROJECT_FUNCTIONAL_CASE_DIR = PROJECT_DIR + "/functional-case/%s";
+    private static final String PROJECT_FUNCTIONAL_CASE_XMIND_FILE_DIR = PROJECT_DIR + "/functional-case/xmind-file/%s";
     private static final String PROJECT_FUNCTIONAL_CASE_PREVIEW_DIR = PROJECT_DIR + "/functional-case/preview/%s";
     private static final String PROJECT_BUG_PREVIEW_DIR = PROJECT_DIR + "/bug/preview/%s";
     private static final String PROJECT_FILE_MANAGEMENT_DIR = PROJECT_DIR + "/file-management";
@@ -122,6 +123,10 @@ public class DefaultRepositoryDir {
 
     public static String getFunctionalCaseDir(String projectId, String functionalCaseId) {
         return String.format(PROJECT_FUNCTIONAL_CASE_DIR, projectId, functionalCaseId);
+    }
+
+    public static String getFunctionalCaseXmindFileDir(String projectId, String fileId) {
+        return String.format(PROJECT_FUNCTIONAL_CASE_XMIND_FILE_DIR, projectId, fileId);
     }
 
     public static String getFunctionalCasePreviewDir(String projectId, String functionalCaseId) {

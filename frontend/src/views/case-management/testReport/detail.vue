@@ -71,10 +71,71 @@
             <icon-question-circle class="text-[var(--color-text-4)]" />
           </a-tooltip>
         </div>
+        <div v-if="isEdit" class="mb-[8px] text-[12px] text-[var(--color-text-4)]">
+          {{ t('caseManagement.testReport.execStatsEditableTip') }}
+        </div>
         <a-table :data="execStatsRows" :pagination="false" :bordered="{ cell: true }" size="small">
           <template #columns>
             <a-table-column :title="t('caseManagement.testReport.metric')" data-index="label" />
-            <a-table-column :title="t('caseManagement.testReport.value')" data-index="value" />
+            <a-table-column :title="t('caseManagement.testReport.value')">
+              <template #cell="{ record }">
+                <a-input
+                  v-if="isEdit && record.field === 'total'"
+                  :model-value="String(editableExec.total)"
+                  allow-clear
+                  @update:model-value="
+                    (v) => {
+                      editableExec.total = Number(v) || 0;
+                      recalcRates();
+                    }
+                  "
+                />
+                <a-input
+                  v-else-if="isEdit && record.field === 'pass'"
+                  :model-value="String(editableExec.pass)"
+                  allow-clear
+                  @update:model-value="
+                    (v) => {
+                      editableExec.pass = Number(v) || 0;
+                      recalcRates();
+                    }
+                  "
+                />
+                <a-input
+                  v-else-if="isEdit && record.field === 'fail'"
+                  :model-value="String(editableExec.fail)"
+                  allow-clear
+                  @update:model-value="
+                    (v) => {
+                      editableExec.fail = Number(v) || 0;
+                      recalcRates();
+                    }
+                  "
+                />
+                <a-input
+                  v-else-if="isEdit && record.field === 'block'"
+                  :model-value="String(editableExec.block)"
+                  allow-clear
+                  @update:model-value="
+                    (v) => {
+                      editableExec.block = Number(v) || 0;
+                      recalcRates();
+                    }
+                  "
+                />
+                <a-input
+                  v-else-if="isEdit && record.field === 'execRate'"
+                  v-model:model-value="editableExec.execRate"
+                  allow-clear
+                />
+                <a-input
+                  v-else-if="isEdit && record.field === 'passRate'"
+                  v-model:model-value="editableExec.passRate"
+                  allow-clear
+                />
+                <span v-else>{{ record.value }}</span>
+              </template>
+            </a-table-column>
           </template>
         </a-table>
 
@@ -217,7 +278,12 @@
   import useAppStore from '@/store/modules/app';
   import useUserStore from '@/store/modules/user';
 
-  import { TestReportContent, TestReportItem, TestReportStats } from '@/models/caseManagement/testReport';
+  import {
+    TestReportContent,
+    TestReportExecStats,
+    TestReportItem,
+    TestReportStats,
+  } from '@/models/caseManagement/testReport';
   import { CaseManagementRouteEnum } from '@/enums/routeEnum';
 
   defineOptions({
@@ -251,24 +317,34 @@
     date: '',
   });
 
+  const defaultExec = (): TestReportExecStats => ({
+    total: 0,
+    pass: 0,
+    fail: 0,
+    block: 0,
+    execRate: '-',
+    passRate: '-',
+  });
+
   const defaultStats = (): TestReportStats => ({
-    exec: { total: 0, pass: 0, fail: 0, block: 0, execRate: '-', passRate: '-' },
+    exec: defaultExec(),
     bugHandlerStatus: [],
     bugType: [],
     riskCases: [],
   });
 
   const stats = ref<TestReportStats>(defaultStats());
+  const editableExec = reactive<TestReportExecStats>(defaultExec());
 
   const execStatsRows = computed(() => {
-    const exec = stats.value.exec || defaultStats().exec;
+    const exec = isEdit.value ? editableExec : stats.value.exec || defaultExec();
     return [
-      { label: t('caseManagement.testReport.exec.total'), value: exec.total },
-      { label: t('caseManagement.testReport.exec.pass'), value: exec.pass },
-      { label: t('caseManagement.testReport.exec.fail'), value: exec.fail },
-      { label: t('caseManagement.testReport.exec.block'), value: exec.block },
-      { label: t('caseManagement.testReport.exec.execRate'), value: exec.execRate },
-      { label: t('caseManagement.testReport.exec.passRate'), value: exec.passRate },
+      { field: 'total', label: t('caseManagement.testReport.exec.total'), value: exec.total, editable: true },
+      { field: 'pass', label: t('caseManagement.testReport.exec.pass'), value: exec.pass, editable: true },
+      { field: 'fail', label: t('caseManagement.testReport.exec.fail'), value: exec.fail, editable: true },
+      { field: 'block', label: t('caseManagement.testReport.exec.block'), value: exec.block, editable: true },
+      { field: 'execRate', label: t('caseManagement.testReport.exec.execRate'), value: exec.execRate, editable: true },
+      { field: 'passRate', label: t('caseManagement.testReport.exec.passRate'), value: exec.passRate, editable: true },
     ];
   });
 
@@ -298,6 +374,27 @@
     }
   }
 
+  function formatRate(numerator: number, denominator: number): string {
+    if (denominator <= 0) return '-';
+    return `${((numerator / denominator) * 100).toFixed(2)}%`;
+  }
+
+  function recalcRates() {
+    const { total, pass, fail, block } = editableExec;
+    editableExec.execRate = formatRate(pass + fail + block, total);
+    editableExec.passRate = formatRate(pass, total - block - fail);
+  }
+
+  function applyExecToEditable(exec: Partial<TestReportExecStats> | undefined) {
+    const base = { ...defaultExec(), ...(exec || {}) };
+    editableExec.total = Number(base.total) || 0;
+    editableExec.pass = Number(base.pass) || 0;
+    editableExec.fail = Number(base.fail) || 0;
+    editableExec.block = Number(base.block) || 0;
+    editableExec.execRate = base.execRate || '-';
+    editableExec.passRate = base.passRate || '-';
+  }
+
   function versionOverviewToText(value: TestReportContent['versionOverview']): string {
     if (value == null) return '';
     if (typeof value === 'string') return value;
@@ -323,14 +420,18 @@
     form.conclusionSuggestion = content.conclusion?.suggestion || '';
     form.author = content.footer?.author || report.createUser || userStore.name || '';
     form.date = content.footer?.date || dayjs(report.createTime || undefined).format('YYYY-MM-DD');
+    const snapshot = parseJson<Partial<TestReportStats>>(report.statsSnapshot, {});
     stats.value = {
       ...defaultStats(),
-      ...parseJson<Partial<TestReportStats>>(report.statsSnapshot, {}),
+      ...snapshot,
       exec: {
-        ...defaultStats().exec,
-        ...(parseJson<Partial<TestReportStats>>(report.statsSnapshot, {}).exec || {}),
+        ...defaultExec(),
+        ...(snapshot.exec || {}),
       },
     };
+    // 可编辑数字优先取 content.execStats，否则用快照
+    applyExecToEditable(content.execStats || snapshot.exec);
+    stats.value.exec = { ...editableExec };
   }
 
   function buildContentPayload(): string {
@@ -347,18 +448,18 @@
         suggestion: form.conclusionSuggestion,
       },
       riskNote: form.riskNote,
+      execStats: { ...editableExec },
       footer: {
         author: form.author,
         date: form.date,
       },
     };
-    // 不写入「测试依据」「附件」
     return JSON.stringify(content);
   }
 
   async function resolvePlanLabel() {
     if (!planId.value) {
-      planLabel.value = t('caseManagement.testReport.projectScope');
+      planLabel.value = t('caseManagement.testReport.noPlan');
       return;
     }
     try {
@@ -420,10 +521,22 @@
   async function handleRefresh() {
     refreshLoading.value = true;
     try {
+      // 先保留本地未保存文字，刷新后由服务端覆盖 execStats
+      const localTextContent = buildContentPayload();
+      const localParsed = parseJson<TestReportContent>(localTextContent, {});
       const report = await refreshTestReportStats(reportId.value);
-      // 刷新统计后保留当前表单文字（若尚未保存，仍用本地 form）
-      const localContent = buildContentPayload();
-      applyReport({ ...report, content: localContent });
+      const serverContent = parseJson<TestReportContent>(report.content, {});
+      // 用本地文字覆盖服务端 content 中除 execStats 外的字段后再展示；保存时再落库
+      const merged: TestReportContent = {
+        ...serverContent,
+        versionOverview: localParsed.versionOverview,
+        testScope: localParsed.testScope,
+        conclusion: localParsed.conclusion,
+        riskNote: localParsed.riskNote,
+        footer: localParsed.footer,
+        execStats: serverContent.execStats,
+      };
+      applyReport({ ...report, content: JSON.stringify(merged) });
       Message.success(t('caseManagement.testReport.refreshSuccess'));
     } catch (error) {
       // eslint-disable-next-line no-console

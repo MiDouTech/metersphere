@@ -31,6 +31,9 @@
           <div>{{ record.type === 'OAUTH2' ? 'OAuth 2.0' : record.type }}</div>
         </template>
         <template #action="{ record }">
+          <MsButton v-permission="['SYSTEM_PARAMETER_SETTING_AUTH:READ']" @click="openAuthDetail(record.id)">
+            {{ t('common.detail') }}
+          </MsButton>
           <MsButton v-permission="['SYSTEM_PARAMETER_SETTING_AUTH:READ+UPDATE']" @click="editAuth(record)">
             {{ t('system.config.auth.edit') }}
           </MsButton>
@@ -655,7 +658,11 @@
   const loading = ref(false);
 
   const hasOperationPermission = computed(() =>
-    hasAnyPermission(['SYSTEM_PARAMETER_SETTING_AUTH:READ+UPDATE', 'SYSTEM_PARAMETER_SETTING_AUTH:READ+DELETE'])
+    hasAnyPermission([
+      'SYSTEM_PARAMETER_SETTING_AUTH:READ',
+      'SYSTEM_PARAMETER_SETTING_AUTH:READ+UPDATE',
+      'SYSTEM_PARAMETER_SETTING_AUTH:READ+DELETE',
+    ])
   );
 
   const tableActions: ActionsItem[] = [
@@ -703,7 +710,7 @@
       title: hasOperationPermission.value ? 'system.config.auth.action' : '',
       slotName: 'action',
       fixed: 'right',
-      width: hasOperationPermission.value ? 140 : 50,
+      width: hasOperationPermission.value ? 200 : 80,
       dataIndex: 'operation',
       showInTable: true,
     },

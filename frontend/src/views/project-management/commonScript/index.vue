@@ -65,6 +65,9 @@
         <CommonScriptStatus :status="filterContent.value" />
       </template>
       <template #operation="{ record }">
+        <MsButton v-permission="['PROJECT_CUSTOM_FUNCTION:READ']" status="primary" @click="showDetail(record)">
+          {{ t('common.detail') }}
+        </MsButton>
         <MsButton v-permission="['PROJECT_CUSTOM_FUNCTION:READ+UPDATE']" status="primary" @click="editHandler(record)">
           {{ t('common.edit') }}
         </MsButton>
@@ -148,7 +151,11 @@
   const keyword = ref<string>('');
 
   const hasOperationPermission = computed(() =>
-    hasAnyPermission(['PROJECT_CUSTOM_FUNCTION:READ+UPDATE', 'PROJECT_CUSTOM_FUNCTION:READ+DELETE'])
+    hasAnyPermission([
+      'PROJECT_CUSTOM_FUNCTION:READ',
+      'PROJECT_CUSTOM_FUNCTION:READ+UPDATE',
+      'PROJECT_CUSTOM_FUNCTION:READ+DELETE',
+    ])
   );
 
   const statusFilterOptions = computed(() => {
@@ -234,7 +241,7 @@
       slotName: 'operation',
       dataIndex: 'operation',
       fixed: 'right',
-      width: hasOperationPermission.value ? 140 : 50,
+      width: hasOperationPermission.value ? 200 : 80,
       showInTable: true,
       showDrag: false,
     },

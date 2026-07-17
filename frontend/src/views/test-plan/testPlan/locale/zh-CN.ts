@@ -146,6 +146,8 @@ export default {
   'testPlan.planAutomaticGeneration': '自动生成',
   'testPlan.caseType': '用例类型',
   'testPlan.document.preview': '预览',
+  'testPlan.document.export': '导出',
+  'testPlan.document.exportSuccess': '导出成功',
   'testPlan.document.resetTemplate': '重置为模板',
   'testPlan.document.resetTip': '重置仅覆盖编辑器内容，需再点保存才会写入服务器',
   'testPlan.document.resetConfirm': '确认用标准模板覆盖当前文档内容？覆盖后需点击保存才会生效。',

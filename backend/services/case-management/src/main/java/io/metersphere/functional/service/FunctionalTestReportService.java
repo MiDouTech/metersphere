@@ -1,6 +1,7 @@
 package io.metersphere.functional.service;
 
 import io.metersphere.functional.domain.FunctionalTestReport;
+import io.metersphere.functional.dto.FunctionalTestReportBugCountDTO;
 import io.metersphere.functional.dto.FunctionalTestReportDTO;
 import io.metersphere.functional.dto.FunctionalTestReportResultCountDTO;
 import io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO;
@@ -61,6 +62,9 @@ public class FunctionalTestReportService {
     }
 
     public FunctionalTestReportDTO generate(FunctionalTestReportGenerateRequest request) {
+        if (StringUtils.isBlank(request.getPlanId())) {
+            throw new MSException(Translator.get("functional_test_report.plan_id.not_blank"));
+        }
         String userId = SessionUtils.getUserId();
         long now = System.currentTimeMillis();
         String name = StringUtils.defaultIfBlank(request.getName(),
@@ -72,8 +76,8 @@ public class FunctionalTestReportService {
         report.setId(IDGenerator.nextStr());
         report.setProjectId(request.getProjectId());
         report.setName(name);
-        report.setPlanId(StringUtils.trimToNull(request.getPlanId()));
-        report.setContent(JSON.toJSONString(buildDefaultContent()));
+        report.setPlanId(request.getPlanId());
+        report.setContent(JSON.toJSONString(buildDefaultContent(stats.getExec())));
         report.setStatsSnapshot(JSON.toJSONString(stats));
         report.setCreateTime(now);
         report.setUpdateTime(now);
@@ -97,10 +101,17 @@ public class FunctionalTestReportService {
         return toDTO(functionalTestReportMapper.selectByPrimaryKey(existing.getId()));
     }
 
+    /**
+     * 刷新系统聚合快照，并覆盖 content.execStats；保留其余文字章节。
+     */
     public FunctionalTestReportDTO refreshStats(String id) {
         FunctionalTestReport existing = checkAndGet(id);
+        if (StringUtils.isBlank(existing.getPlanId())) {
+            throw new MSException(Translator.get("functional_test_report.plan_id.not_blank"));
+        }
         FunctionalTestReportStatsDTO stats = buildStats(existing.getProjectId(), existing.getPlanId());
         existing.setStatsSnapshot(JSON.toJSONString(stats));
+        existing.setContent(mergeExecStatsIntoContent(existing.getContent(), stats.getExec()));
         existing.setUpdateTime(System.currentTimeMillis());
         existing.setUpdateUser(SessionUtils.getUserId());
         functionalTestReportMapper.updateByPrimaryKeySelective(existing);
@@ -113,15 +124,11 @@ public class FunctionalTestReportService {
     }
 
     public FunctionalTestReportStatsDTO buildStats(String projectId, String planId) {
-        List<FunctionalTestReportResultCountDTO> counts;
-        List<FunctionalTestReportRiskCaseDTO> riskCases;
-        if (StringUtils.isNotBlank(planId)) {
-            counts = extFunctionalTestReportMapper.countExecByPlan(planId);
-            riskCases = extFunctionalTestReportMapper.listRiskCasesByPlan(planId);
-        } else {
-            counts = extFunctionalTestReportMapper.countExecByProject(projectId);
-            riskCases = extFunctionalTestReportMapper.listRiskCasesByProject(projectId);
+        if (StringUtils.isBlank(planId)) {
+            throw new MSException(Translator.get("functional_test_report.plan_id.not_blank"));
         }
+        List<FunctionalTestReportResultCountDTO> counts = extFunctionalTestReportMapper.countExecByPlan(planId);
+        List<FunctionalTestReportRiskCaseDTO> riskCases = extFunctionalTestReportMapper.listRiskCasesByPlan(planId);
 
         long pass = 0;
         long fail = 0;
@@ -154,15 +161,50 @@ public class FunctionalTestReportService {
 
         FunctionalTestReportStatsDTO stats = new FunctionalTestReportStatsDTO();
         stats.setExec(exec);
-        stats.setBugHandlerStatus(new ArrayList<>());
-        stats.setBugType(new ArrayList<>());
+        stats.setBugHandlerStatus(buildBugHandlerStatusRows(planId));
+        stats.setBugType(buildBugTypeRows(planId));
         stats.setRiskCases(riskCases == null ? new ArrayList<>() : riskCases);
         stats.setPassRateFormulaNote(PASS_RATE_FORMULA_NOTE);
-        stats.setBugTypeMessage("MVP: bug type aggregation not enabled; return empty array");
+        stats.setBugTypeMessage(null);
         return stats;
     }
 
-    private Map<String, Object> buildDefaultContent() {
+    private List<Object> buildBugHandlerStatusRows(String planId) {
+        List<FunctionalTestReportBugCountDTO> rows =
+                extFunctionalTestReportMapper.countBugHandlerStatusByPlan(planId);
+        List<Object> result = new ArrayList<>();
+        if (CollectionUtils.isEmpty(rows)) {
+            return result;
+        }
+        for (FunctionalTestReportBugCountDTO row : rows) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("handler", StringUtils.defaultIfBlank(row.getHandleUserName(), row.getHandleUser()));
+            item.put("handleUser", row.getHandleUser());
+            item.put("status", StringUtils.defaultIfBlank(row.getStatusName(), row.getStatus()));
+            item.put("count", row.getCount() == null ? 0L : row.getCount());
+            result.add(item);
+        }
+        return result;
+    }
+
+    private List<Object> buildBugTypeRows(String planId) {
+        List<FunctionalTestReportBugCountDTO> rows = extFunctionalTestReportMapper.countBugTypeByPlan(planId);
+        List<Object> result = new ArrayList<>();
+        if (CollectionUtils.isEmpty(rows)) {
+            return result;
+        }
+        for (FunctionalTestReportBugCountDTO row : rows) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            String type = StringUtils.defaultIfBlank(row.getType(), "未分类");
+            item.put("type", type);
+            item.put("name", type);
+            item.put("count", row.getCount() == null ? 0L : row.getCount());
+            result.add(item);
+        }
+        return result;
+    }
+
+    private Map<String, Object> buildDefaultContent(FunctionalTestReportStatsDTO.ExecStats exec) {
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("versionOverview", new LinkedHashMap<>());
 
@@ -176,7 +218,45 @@ public class FunctionalTestReportService {
         content.put("conclusion", conclusion);
 
         content.put("riskNote", "");
+        content.put("execStats", execToMap(exec));
         return content;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String mergeExecStatsIntoContent(String contentJson, FunctionalTestReportStatsDTO.ExecStats exec) {
+        Map<String, Object> content;
+        try {
+            content = StringUtils.isBlank(contentJson)
+                    ? new LinkedHashMap<>()
+                    : JSON.parseObject(contentJson, Map.class);
+            if (content == null) {
+                content = new LinkedHashMap<>();
+            }
+        } catch (Exception e) {
+            content = new LinkedHashMap<>();
+        }
+        content.put("execStats", execToMap(exec));
+        return JSON.toJSONString(content);
+    }
+
+    private Map<String, Object> execToMap(FunctionalTestReportStatsDTO.ExecStats exec) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        if (exec == null) {
+            map.put("total", 0);
+            map.put("pass", 0);
+            map.put("fail", 0);
+            map.put("block", 0);
+            map.put("execRate", "-");
+            map.put("passRate", "-");
+            return map;
+        }
+        map.put("total", exec.getTotal());
+        map.put("pass", exec.getPass());
+        map.put("fail", exec.getFail());
+        map.put("block", exec.getBlock());
+        map.put("execRate", exec.getExecRate());
+        map.put("passRate", exec.getPassRate());
+        return map;
     }
 
     private String formatRate(long numerator, long denominator) {

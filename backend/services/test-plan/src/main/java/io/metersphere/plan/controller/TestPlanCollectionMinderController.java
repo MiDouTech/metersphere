@@ -16,7 +16,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "测试规划脑图")
+@Tag(name = "测试规划脑图(已废弃-请使用测试计划文档)")
+@Deprecated
 @RestController
 @RequestMapping("/test-plan/mind")
 public class TestPlanCollectionMinderController {

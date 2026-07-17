@@ -17,7 +17,8 @@ public class FunctionalTestReportGenerateRequest {
     @Size(max = 255)
     private String name;
 
-    @Schema(description = "测试计划ID，可选")
+    @Schema(description = "测试计划ID，必选", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "{functional_test_report.plan_id.not_blank}")
     @Size(max = 50)
     private String planId;
 
