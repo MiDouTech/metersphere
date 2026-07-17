@@ -24,15 +24,7 @@ export function getXmindFilePage(data: XmindFilePageRequest) {
 
 /** 上传（仅存文件资产） */
 export function uploadXmindFile(request: XmindFileUploadRequest, file: File) {
-  const form = new FormData();
-  form.append(
-    'request',
-    new Blob([JSON.stringify(request)], {
-      type: 'application/json',
-    })
-  );
-  form.append('file', file);
-  return MSR.post<XmindFileItem>({ url: XmindFileUploadUrl, data: form });
+  return MSR.uploadFile({ url: XmindFileUploadUrl }, { request, fileList: [file] }, 'file');
 }
 
 /** 重命名 */

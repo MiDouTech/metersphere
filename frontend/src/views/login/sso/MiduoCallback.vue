@@ -21,8 +21,8 @@
 
   import { postMiduoSsoCallback } from '@/api/modules/sso/miduo';
   import { useI18n } from '@/hooks/useI18n';
-  import { DEFAULT_ROUTE_NAME } from '@/router/constants';
   import { useUserStore } from '@/store';
+  import { getFirstRouteNameByPermission, routerNameHasPermission } from '@/utils/permission';
 
   import type { LoginRes } from '@/models/user';
 
@@ -34,8 +34,23 @@
   const loading = ref(true);
   const errorMessage = ref('');
 
-  function goLogin() {
-    router.replace({ name: 'login' });
+  function getLoginTarget() {
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '';
+    const routes = router.getRoutes();
+    return redirect && routerNameHasPermission(redirect, routes) ? redirect : getFirstRouteNameByPermission(routes);
+  }
+
+  async function goLogin() {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const loggedIn = await userStore.isLogin();
+      await router.replace({ name: loggedIn ? getLoginTarget() : 'login' });
+    } catch (e) {
+      errorMessage.value = (e as Error)?.message || t('login.miduo.callback.error');
+    } finally {
+      loading.value = false;
+    }
   }
 
   /**
@@ -80,8 +95,7 @@
       }
       userStore.qrCodeLogin(res);
       Message.success(t('login.form.login.success'));
-      const redirect = (route.query.redirect as string) || DEFAULT_ROUTE_NAME;
-      await router.replace({ name: redirect });
+      await router.replace({ name: getLoginTarget() });
     } catch (e) {
       stripSensitiveQueryQuietly();
       errorMessage.value = (e as Error)?.message || t('login.miduo.callback.error');

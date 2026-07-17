@@ -1916,18 +1916,17 @@
   });
 
   onMounted(() => {
-    if (!isActivated.value) {
-      // 切换菜单默认还是列表；已经在脑图的时候，刷新浏览器，保持脑图状态
-      showType.value = minderStore.getShowType(MinderKeyEnum.FEATURE_CASE_MINDER);
-      if (route.query.showType) {
-        showType.value = route.query.showType as ShowType;
-      }
-      if (route.query.view) {
-        setAdvanceFilter({ conditions: [], searchMode: 'AND' }, route.query.view as string);
-        viewName.value = route.query.view as string;
-      }
-      mountedLoad();
+    // 切换菜单默认还是列表；已经在脑图的时候，刷新浏览器，保持脑图状态
+    showType.value = minderStore.getShowType(MinderKeyEnum.FEATURE_CASE_MINDER);
+    if (route.query.showType) {
+      showType.value = route.query.showType as ShowType;
     }
+    if (route.query.view) {
+      setAdvanceFilter({ conditions: [], searchMode: 'AND' }, route.query.view as string);
+      viewName.value = route.query.view as string;
+    }
+    // 父级 keep-alive 时，子组件经 v-if 销毁重建只会走 onMounted，不会走 onActivated；必须始终加载
+    mountedLoad();
   });
 
   onActivated(() => {

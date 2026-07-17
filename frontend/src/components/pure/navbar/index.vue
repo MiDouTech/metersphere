@@ -57,7 +57,7 @@
           </a-select>
         </a-tooltip>
       </li>
-      <li v-if="showProjectSelect" class="current-org-name">
+      <li v-if="showProjectSelect || currentOrgName" class="current-org-name">
         <a-tooltip :content="currentOrgName">
           <span class="one-line-text max-w-[180px] text-[13px] text-[var(--color-text-2)]">
             {{ t('settings.navbar.currentOrg') }}：{{ currentOrgName || '-' }}
@@ -215,6 +215,7 @@
 
   import { getMessageUnReadCount } from '@/api/modules/message';
   import { switchProject } from '@/api/modules/project-management/project';
+  import { getOrgOptions } from '@/api/modules/system';
   import { updateLanguage } from '@/api/modules/user';
   import { useI18n } from '@/hooks/useI18n';
   import { LOCALE_OPTIONS } from '@/locale';
@@ -258,9 +259,21 @@
       unReadCount.value = await getMessageUnReadCount(appStore.currentProjectId);
     }
   }
+  /** 拉取登录用户可访问组织列表，供「当前组织」展示（不依赖企业版切换组织入口） */
+  async function ensureOrgList() {
+    try {
+      const res = await getOrgOptions();
+      appStore.setOrgList(res || []);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+
   watch(
     () => appStore.currentOrgId,
     async () => {
+      await ensureOrgList();
       appStore.initProjectList();
     },
     {
@@ -285,7 +298,11 @@
     return current?.name || '';
   });
   const currentOrgName = computed(() => {
-    const current = appStore.orgList.find((org) => org.id === appStore.currentOrgId);
+    const orgId = appStore.currentOrgId || userStore.lastOrganizationId;
+    if (!orgId) {
+      return '';
+    }
+    const current = appStore.orgList.find((org) => org.id === orgId);
     return current?.name || '';
   });
 

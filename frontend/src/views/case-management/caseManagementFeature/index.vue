@@ -5,102 +5,105 @@
       <a-tab-pane key="xmind" :title="t('menu.caseManagement.xmindCase')" />
     </a-tabs>
     <a-divider margin="0" />
-    <XmindCasePage v-if="activeTab === 'xmind'" />
-    <MsSplitBox v-else :not-show-first="isAdvancedSearchMode">
-      <template #first>
-        <div class="p-[16px] pb-0">
-          <div class="feature-case h-[100%] min-w-0 overflow-x-hidden">
-            <a-input
-              v-model:model-value="groupKeyword"
-              :placeholder="t('caseManagement.caseReview.folderSearchPlaceholder')"
-              allow-clear
-              class="mb-[16px]"
-              :max-length="255"
-            />
-            <div class="case h-[38px] min-w-0">
-              <div
-                class="flex min-w-0 flex-1 items-center"
-                :class="getActiveClass('all')"
-                @click="setActiveFolder('all')"
-              >
-                <MsIcon type="icon-icon_folder_filled1" class="folder-icon shrink-0" />
-                <div class="folder-name mx-[4px] truncate">{{ t('caseManagement.featureCase.allCase') }}</div>
-                <div class="folder-count shrink-0">({{ modulesCount.all || 0 }})</div>
-              </div>
-              <div class="ml-auto flex shrink-0 items-center">
-                <a-tooltip :content="isExpandAll ? t('common.expandAllSubModule') : t('common.collapseAllSubModule')">
-                  <MsButton type="icon" status="secondary" class="!mr-0 p-[4px]" @click="expandHandler">
-                    <MsIcon :type="isExpandAll ? 'icon-icon_folder_collapse1' : 'icon-icon_folder_expansion1'" />
-                  </MsButton>
-                </a-tooltip>
-                <MsPopConfirm
-                  v-if="hasAnyPermission(['FUNCTIONAL_CASE:READ+ADD'])"
-                  v-model:visible="addSubVisible"
-                  :is-delete="false"
-                  :title="t('caseManagement.featureCase.addSubModule')"
-                  :all-names="rootModulesName"
-                  :loading="confirmLoading"
-                  :ok-text="t('common.confirm')"
-                  :field-config="{
-                    placeholder: t('caseManagement.featureCase.addGroupTip'),
-                    nameExistTipText: t('project.fileManagement.nameExist'),
-                  }"
-                  @confirm="confirmHandler"
-                >
-                  <MsButton type="icon" class="!mr-0 p-[2px]">
-                    <MsIcon
-                      type="icon-icon_create_planarity"
-                      size="18"
-                      class="text-[rgb(var(--primary-5))] hover:text-[rgb(var(--primary-4))]"
-                    />
-                  </MsButton>
-                </MsPopConfirm>
-              </div>
-            </div>
-            <div class="h-[calc(100vh-220px)]">
-              <FeatureCaseTree
-                ref="caseTreeRef"
-                v-model:selected-keys="selectedKeys"
-                v-model:group-keyword="groupKeyword"
-                :all-names="rootModulesName"
-                :active-folder="activeFolder"
-                :is-expand-all="isExpandAll"
-                :modules-count="modulesCount"
-                :is-modal="false"
-                @case-node-select="caseNodeSelect"
-                @init="setRootModules"
-                @drag-update="dragUpdate"
-                @delete-node="deleteNode"
+    <!-- 用 v-show 保留执行用例树/表状态，避免切到 Xmind 再回来时因 keep-alive 缓存跳过 mountedLoad 导致无数据 -->
+    <div v-show="activeTab === 'execute'" class="h-full">
+      <MsSplitBox :not-show-first="isAdvancedSearchMode">
+        <template #first>
+          <div class="p-[16px] pb-0">
+            <div class="feature-case h-[100%] min-w-0 overflow-x-hidden">
+              <a-input
+                v-model:model-value="groupKeyword"
+                :placeholder="t('caseManagement.caseReview.folderSearchPlaceholder')"
+                allow-clear
+                class="mb-[16px]"
+                :max-length="255"
               />
+              <div class="case h-[38px] min-w-0">
+                <div
+                  class="flex min-w-0 flex-1 items-center"
+                  :class="getActiveClass('all')"
+                  @click="setActiveFolder('all')"
+                >
+                  <MsIcon type="icon-icon_folder_filled1" class="folder-icon shrink-0" />
+                  <div class="folder-name mx-[4px] truncate">{{ t('caseManagement.featureCase.allCase') }}</div>
+                  <div class="folder-count shrink-0">({{ modulesCount.all || 0 }})</div>
+                </div>
+                <div class="ml-auto flex shrink-0 items-center">
+                  <a-tooltip :content="isExpandAll ? t('common.expandAllSubModule') : t('common.collapseAllSubModule')">
+                    <MsButton type="icon" status="secondary" class="!mr-0 p-[4px]" @click="expandHandler">
+                      <MsIcon :type="isExpandAll ? 'icon-icon_folder_collapse1' : 'icon-icon_folder_expansion1'" />
+                    </MsButton>
+                  </a-tooltip>
+                  <MsPopConfirm
+                    v-if="hasAnyPermission(['FUNCTIONAL_CASE:READ+ADD'])"
+                    v-model:visible="addSubVisible"
+                    :is-delete="false"
+                    :title="t('caseManagement.featureCase.addSubModule')"
+                    :all-names="rootModulesName"
+                    :loading="confirmLoading"
+                    :ok-text="t('common.confirm')"
+                    :field-config="{
+                      placeholder: t('caseManagement.featureCase.addGroupTip'),
+                      nameExistTipText: t('project.fileManagement.nameExist'),
+                    }"
+                    @confirm="confirmHandler"
+                  >
+                    <MsButton type="icon" class="!mr-0 p-[2px]">
+                      <MsIcon
+                        type="icon-icon_create_planarity"
+                        size="18"
+                        class="text-[rgb(var(--primary-5))] hover:text-[rgb(var(--primary-4))]"
+                      />
+                    </MsButton>
+                  </MsPopConfirm>
+                </div>
+              </div>
+              <div class="h-[calc(100vh-220px)]">
+                <FeatureCaseTree
+                  ref="caseTreeRef"
+                  v-model:selected-keys="selectedKeys"
+                  v-model:group-keyword="groupKeyword"
+                  :all-names="rootModulesName"
+                  :active-folder="activeFolder"
+                  :is-expand-all="isExpandAll"
+                  :modules-count="modulesCount"
+                  :is-modal="false"
+                  @case-node-select="caseNodeSelect"
+                  @init="setRootModules"
+                  @drag-update="dragUpdate"
+                  @delete-node="deleteNode"
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <div class="flex-1">
-          <a-divider class="!my-0 !mb-0" />
-          <div class="case h-[40px] !px-[24px]" @click="setActiveFolder('recycle')">
-            <div class="flex items-center" :class="getActiveClass('recycle')">
-              <MsIcon type="icon-icon_delete-trash_outlined1" class="folder-icon" />
-              <div class="folder-name mx-[4px]">{{ t('common.recycle') }}</div>
+          <div class="flex-1">
+            <a-divider class="!my-0 !mb-0" />
+            <div class="case h-[40px] !px-[24px]" @click="setActiveFolder('recycle')">
+              <div class="flex items-center" :class="getActiveClass('recycle')">
+                <MsIcon type="icon-icon_delete-trash_outlined1" class="folder-icon" />
+                <div class="folder-name mx-[4px]">{{ t('common.recycle') }}</div>
+              </div>
+              <div class="folder-count">{{ recycleModulesCount.all || 0 }}</div>
             </div>
-            <div class="folder-count">{{ recycleModulesCount.all || 0 }}</div>
           </div>
-        </div>
-      </template>
-      <template #second>
-        <div class="h-full p-[16px_16px]">
-          <CaseTable
-            ref="caseTableRef"
-            :active-folder="activeFolder"
-            :offspring-ids="offspringIds"
-            :module-name="activeFolderName"
-            :module-count-is-init="moduleCountIsInit"
-            @init="initModulesCount"
-            @init-modules="initModules"
-            @set-active-folder="setActiveFolder('all')"
-          />
-        </div>
-      </template>
-    </MsSplitBox>
+        </template>
+        <template #second>
+          <div class="h-full p-[16px_16px]">
+            <CaseTable
+              ref="caseTableRef"
+              :active-folder="activeFolder"
+              :offspring-ids="offspringIds"
+              :module-name="activeFolderName"
+              :module-count-is-init="moduleCountIsInit"
+              @init="initModulesCount"
+              @init-modules="initModules"
+              @set-active-folder="setActiveFolder('all')"
+            />
+          </div>
+        </template>
+      </MsSplitBox>
+    </div>
+    <XmindCasePage v-if="activeTab === 'xmind'" />
   </MsCard>
 </template>
 
