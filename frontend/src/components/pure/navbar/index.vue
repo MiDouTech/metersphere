@@ -420,11 +420,14 @@
   }
   .project-switch-select {
     :deep(.arco-select-view-value) {
-      @apply one-line-text max-w-[380px];
+      overflow: hidden;
+      max-width: 380px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
   .current-org-name {
-    @apply max-w-[200px];
+    max-width: 200px;
   }
   .right-side {
     @apply flex list-none;
