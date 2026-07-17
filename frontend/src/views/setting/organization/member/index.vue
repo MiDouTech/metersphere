@@ -19,7 +19,7 @@
           {{ t('system.user.emailInvite') }}
         </a-button>
         <a-button
-          v-permission="['ORGANIZATION_MEMBER:READ+UPDATE']"
+          v-permission="['ORGANIZATION_MEMBER:READ+INVITE']"
           type="outline"
           class="mr-3"
           :loading="wecomSyncing"

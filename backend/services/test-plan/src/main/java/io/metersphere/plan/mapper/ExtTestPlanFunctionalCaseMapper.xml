@@ -592,7 +592,7 @@
         WHERE test_plan_functional_case.test_plan_id = #{request.testPlanId}
         AND functional_case.deleted = #{deleted}
         <include refid="queryWhereCondition"/>
-        GROUP BY moduleId
+        GROUP BY moduleId, functional_case.project_id, project.name
     </select>
 
     <select id="caseCount"

@@ -37,12 +37,29 @@ SELECT DISTINCT u.id, u.NAME, u.email
 ORDER BY u.create_time DESC
 ```
 
+```sql
+SELECT module_id, count(id), project_id, project.name
+...
+GROUP BY module_id   -- project_id / name 未进 GROUP BY → MySQL 1055
+```
+
+```sql
+SELECT u.id, u.name, u.email, ue.avatar
+...
+GROUP BY urr.user_id   -- 非聚合列未进 GROUP BY → MySQL 1055
+```
+
 对照正确写法（同文件常已有）：
 
 ```sql
 SELECT DISTINCT u.id, u.NAME, u.email, u.create_time
 ...
 ORDER BY u.create_time DESC
+```
+
+```sql
+GROUP BY module_id, project_id, project.name
+-- 或 GROUP BY u.id, u.name, u.email, ue.avatar
 ```
 
 ## 标准排查流程
@@ -78,9 +95,19 @@ ORDER BY u.create_time DESC
 rg -n --glob "*.xml" "order by u\\.create_time" backend
 rg -n --glob "*.xml" -U "(?is)select\\s+distinct[^;]{0,400}?order\\s+by\\s+u\\.create_time" backend
 rg -n --glob "*.xml" "group by u\\.id" -A3 backend
+rg -n --glob "*.xml" "GROUP BY module_id|GROUP BY moduleId" -B8 backend
+rg -n --glob "*.xml" "GROUP BY urr\\.user_id" -B10 backend
+```
+
+**同时扫社区版缺失接口**（No static resource）：
+
+```bash
+rg -n "setting/get/platform|/display/info|authsource/list" frontend/src/api
+# 对照 backend 是否存在同路径 @RestController；社区版常因 revert xpack stub 而 404
 ```
 
 对每个命中点打开前后文，按上一节清单勾选；**不要**只修缺陷单上的两处。
+**也不要**只扫 `ORDER BY create_time`——`GROUP BY` 缺列（1055）与「No static resource」是同批回归必查项。
 
 ### 4) 修复策略（优先统一）
 
@@ -120,6 +147,18 @@ rg -n --glob "*.xml" "group by u\\.id" -A3 backend
 | 自检 | `ExtSystemProjectMapper.xml` | `getUserMemberList` / `getUserList` | GROUP BY 补齐 create_time |
 | 自检 | `ExtProjectUserRoleMapper.xml` | `getProjectUserList` | 加 `u.create_time` |
 | BUG-ORG-003 | 组织架构页 | `not found` 文案 | 待 Network 确认；详情用 checkResourceExist |
+
+## 已知历史命中点（2026-07-17 第二轮：评审/计划模块计数 + 扫码）
+
+| ID | 位置 | 问题 | 状态 |
+|----|------|------|------|
+| BUG-SQL-1055-R1 | `ExtCaseReviewFunctionalCaseMapper.countModuleIdByRequest` | GROUP BY 仅 module_id | GROUP BY 补 project_id, name |
+| BUG-SQL-1055-R2 | `ExtTestPlanFunctionalCaseMapper` / ApiCase / ApiScenario `countModuleIdByRequest` | 同上 | 同上 |
+| BUG-SQL-1055-R3 | `ExtUserMapper.getUserByKeyword` / `getUserByPermission` | GROUP BY 仅 urr.user_id | GROUP BY 补全选中列 |
+| BUG-SQL-3065-R4 | `ExtProjectMapper.getProjectByOrgId` | DISTINCT 缺 create_time | SELECT 加 create_time |
+| BUG-STUB-QR | `PlatformSettingController` 等 | revert 后缺失 → No static resource | 从 fdd5227bac 恢复社区 stub |
+
+**注意**：源码已修但灰度未重新部署时，截图仍会显示旧 SQL（无 create_time）。自检必须对照 **运行中容器** 的 Mapper 或接口响应，不能只看本地 git。
 
 ## 输出要求
 
