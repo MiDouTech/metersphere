@@ -8,7 +8,7 @@
     "npm_install_command": "pnpm install --no-frozen-lockfile",
     "npm_build_command": "pnpm run build",
     "manual_only": false,
-    "build_on_any_path": false,
+    "build_on_any_path": true,
     "watch_paths": [
       "frontend",
       "pom.xml"
