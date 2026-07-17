@@ -20,7 +20,8 @@ export interface MiduoSsoStatus {
 
 export interface MiduoSsoCallbackBody {
   token: string;
-  state: string;
+  /** 登录桥场景必填；工作台快捷入口回跳可为空 */
+  state?: string;
 }
 
 export function getMiduoSsoStatus() {

@@ -47,16 +47,18 @@
   }
 
   onMounted(async () => {
-    const token = String(route.query.token || '');
-    const state = String(route.query.state || '');
-    if (!token || !state) {
+    // Hash 路由下，米多白名单回跳常为 /?token=...（search），需兼容；hash query 优先
+    const search = new URLSearchParams(window.location.search);
+    const token = String(route.query.token || search.get('token') || '');
+    const state = String(route.query.state || search.get('state') || '');
+    if (!token) {
       loading.value = false;
       errorMessage.value = t('login.miduo.callback.missingParams');
       return;
     }
     stripSensitiveQuery();
     try {
-      const res = (await postMiduoSsoCallback({ token, state })) as LoginRes;
+      const res = (await postMiduoSsoCallback({ token, state: state || undefined })) as LoginRes;
       if (!res?.sessionId) {
         throw new Error(t('login.miduo.callback.error'));
       }

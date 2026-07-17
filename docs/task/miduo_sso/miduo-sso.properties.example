@@ -9,6 +9,16 @@
 #   MIDUO_SSO_ENABLED / MIDUO_SSO_BASE_URL / MIDUO_SSO_APP_CODE / MIDUO_SSO_APP_SECRET
 #   MIDUO_SSO_REDIRECT_URI / MIDUO_SSO_SHORTCUT_ID / MIDUO_SSO_ORGANIZATION_ID
 #
+# APP00016（测试云平台）正式启用参考：
+# miduo.sso.enabled=true
+# miduo.sso.base-url=https://admin.t.ebcone.cn
+# miduo.sso.app-code=APP00016
+# miduo.sso.app-secret=
+# miduo.sso.redirect-uri=https://msp.ebcone.net
+# miduo.sso.shortcut-id=81
+# miduo.sso.organization-id=100001
+# miduo.sso.session-ttl-seconds=28800
+#
 # miduo.sso.enabled=false
 # miduo.sso.base-url=https://your-miduo-host
 # miduo.sso.app-code=
@@ -17,11 +27,12 @@
 # miduo.sso.shortcut-id=
 # miduo.sso.organization-id=
 # miduo.sso.state-ttl-seconds=600
-# miduo.sso.session-ttl-seconds=86400
+# miduo.sso.session-ttl-seconds=28800
 # miduo.sso.refresh-ahead-seconds=1800
 #
 # 硬约束：
 # - appSecret 仅后端；浏览器只中转 exchange token
 # - X-App-Timestamp 为 Unix 秒；签名 HMAC-SHA256 Base64
-# - redirectUri 须命中米多白名单；生产 HTTPS
+# - redirectUri 须命中米多白名单；生产 HTTPS（APP00016 白名单为 https://msp.ebcone.net）
 # - 身份权威字段：validate 返回的 wework_userid → user.wecom_userid
+# - 交付单 baseUrl=/ 无效，必须换成真实米多 API 根地址

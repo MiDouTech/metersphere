@@ -21,7 +21,7 @@ export default {
   'login.form.loading': 'Logging in',
   'login.miduo.callback.loading': 'Signing in with Miduo…',
   'login.miduo.callback.error': 'Miduo SSO login failed',
-  'login.miduo.callback.missingParams': 'Missing token or state. Please re-enter from Miduo.',
+  'login.miduo.callback.missingParams': 'Missing token. Please re-enter from Miduo.',
   'login.miduo.callback.noUser': 'No matched member. Ask admin to sync WeCom contacts.',
   'login.miduo.entry': 'Sign in with Miduo',
   'login.miduo.notReady': 'Miduo SSO is not ready',

@@ -24,6 +24,31 @@ import applyPolyfills from '@/utils/polyfill';
 // 局部兼容未生效，解决全局兼容富文本js源码报错导致，safari浏览器对富文本0bject.has0wn兼容引发空白问题
 applyPolyfills();
 
+/**
+ * 米多 SSO 白名单常配置为 https://host（无 hash）。
+ * QUERY 回跳形如 https://host/?token=...&state=...，Hash 路由读不到 search，
+ * 启动前转到 #/sso/miduo/callback?...
+ */
+function relocateMiduoLandingToken() {
+  const search = new URLSearchParams(window.location.search);
+  const token = search.get('token');
+  if (!token) {
+    return;
+  }
+  const next = new URLSearchParams();
+  next.set('token', token);
+  ['state', 'app_code', 'source'].forEach((key) => {
+    const value = search.get(key);
+    if (value) {
+      next.set(key, value);
+    }
+  });
+  const target = `${window.location.origin}${window.location.pathname}#/sso/miduo/callback?${next.toString()}`;
+  window.location.replace(target);
+}
+
+relocateMiduoLandingToken();
+
 async function bootstrap() {
   const app = createApp(App);
 

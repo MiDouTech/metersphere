@@ -51,6 +51,16 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: Password123@redis
+      # 米多 SSO：正式启用时在 CDS Dashboard / cdscli env 覆盖下列键（勿把 Secret 写死进本文件）
+      # MIDUO_SSO_ENABLED / MIDUO_SSO_BASE_URL / MIDUO_SSO_APP_CODE / MIDUO_SSO_APP_SECRET
+      # MIDUO_SSO_REDIRECT_URI / MIDUO_SSO_SHORTCUT_ID / MIDUO_SSO_ORGANIZATION_ID
+      MIDUO_SSO_ENABLED: "false"
+      MIDUO_SSO_BASE_URL: ""
+      MIDUO_SSO_APP_CODE: ""
+      MIDUO_SSO_APP_SECRET: ""
+      MIDUO_SSO_REDIRECT_URI: ""
+      MIDUO_SSO_SHORTCUT_ID: ""
+      MIDUO_SSO_ORGANIZATION_ID: ""
     # CDS 会把 command 数组拼成「bash -lc set ...」且不转义 $$；必须用单段字符串 + 单 $
     # 实际执行壳可能是 sh：勿用 pipefail
     command: |
