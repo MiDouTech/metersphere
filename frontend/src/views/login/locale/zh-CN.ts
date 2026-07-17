@@ -21,7 +21,7 @@ export default {
   'login.form.loading': '登录中',
   'login.miduo.callback.loading': '正在通过米多星球登录…',
   'login.miduo.callback.error': '米多登录失败',
-  'login.miduo.callback.missingParams': '缺少 token 或 state，请从米多工作台重新进入',
+  'login.miduo.callback.missingParams': '缺少 token，请从米多工作台重新进入',
   'login.miduo.callback.noUser': '未找到对应成员，请联系管理员同步企微通讯录',
   'login.miduo.entry': '通过米多星球登录',
   'login.miduo.notReady': '米多登录暂不可用',

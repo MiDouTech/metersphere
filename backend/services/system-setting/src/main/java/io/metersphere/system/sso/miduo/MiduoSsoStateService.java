@@ -34,8 +34,9 @@ public class MiduoSsoStateService {
     }
 
     public void consumeState(String state) {
+        // 工作台快捷入口回跳通常不带第三方 state；有 state 时必须一次性校验（登录桥场景）
         if (StringUtils.isBlank(state)) {
-            throw new MiduoSsoException("state 不能为空");
+            return;
         }
         String key = KEY_PREFIX + state;
         Boolean deleted = stringRedisTemplate.delete(key);

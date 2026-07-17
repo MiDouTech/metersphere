@@ -34,8 +34,8 @@ public class MiduoSsoProperties {
     private String organizationId = "";
     /** state TTL（秒），建议 5～10 分钟 */
     private long stateTtlSeconds = 600;
-    /** sessionToken Redis TTL（秒） */
-    private long sessionTtlSeconds = 86400;
+    /** sessionToken Redis TTL（秒）；对齐米多 sessionToken TTL（交付单常见 28800） */
+    private long sessionTtlSeconds = 28800;
     /** refresh 提前量（秒）：距过期少于此值则 refresh */
     private long refreshAheadSeconds = 1800;
 

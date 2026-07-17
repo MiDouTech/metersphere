@@ -49,8 +49,8 @@ public class MiduoSsoAuthController {
     @PostMapping("/callback")
     @Operation(summary = "米多 SSO 回调登录（校验 exchange token）")
     public ResultHolder callback(@RequestBody MiduoSsoCallbackRequest request) {
-        if (request == null || StringUtils.isAnyBlank(request.getToken(), request.getState())) {
-            throw new MiduoSsoException("token / state 不能为空");
+        if (request == null || StringUtils.isBlank(request.getToken())) {
+            throw new MiduoSsoException("token 不能为空");
         }
         SessionUser sessionUser = miduoSsoApplicationService.handleCallback(request.getToken(), request.getState());
         return ResultHolder.success(sessionUser);
