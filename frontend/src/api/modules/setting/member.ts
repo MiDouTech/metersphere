@@ -3,6 +3,7 @@ import {
   AddMemberUrl,
   BatchAddProjectUrl,
   BatchAddUserGroupUrl,
+  BatchRemoveMemberUrl,
   DeleteMemberUrl,
   GetMemberListUrl,
   GetOrganizationMemberListPageUrl,
@@ -48,6 +49,10 @@ export function batchAddUserGroup(data: BatchAddProjectModel) {
 // 移除成员
 export function deleteMemberReq(organizationId: string, userId: string) {
   return MSR.get({ url: DeleteMemberUrl, params: `${organizationId}/${userId}` });
+}
+// 批量移出组织
+export function batchRemoveMember(data: TableQueryParams) {
+  return MSR.post({ url: BatchRemoveMemberUrl, data });
 }
 // 获取用户组下拉
 export function getGlobalUserGroup(organizationId: string) {

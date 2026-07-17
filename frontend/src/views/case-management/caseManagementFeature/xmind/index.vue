@@ -98,13 +98,20 @@
       <div v-if="previewLoading" class="flex min-h-[400px] items-center justify-center">
         <a-spin />
       </div>
-      <MsMinderEditor v-else-if="previewJson" v-model:import-json="previewJson" :disabled="true" :height="560" />
+      <MsMinderEditor
+        v-else-if="previewJson"
+        v-model:import-json="previewJson"
+        :disabled="true"
+        :can-show-float-menu="false"
+        :xmind-interaction="true"
+        :height="560"
+      />
     </a-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { onBeforeMount, reactive, ref } from 'vue';
+  import { nextTick, onActivated, onBeforeMount, reactive, ref, watch } from 'vue';
   import { FileItem, Message } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
@@ -128,6 +135,11 @@
 
   import type { XmindFileItem } from '@/models/caseManagement/xmindFile';
 
+  const props = defineProps<{
+    /** 父级 Tab 是否处于 Xmind；切回时补一次加载，避免空列表 */
+    active?: boolean;
+  }>();
+
   const { t } = useI18n();
   const { openModal } = useModal();
   const appStore = useAppStore();
@@ -135,6 +147,7 @@
   const loading = ref(false);
   const keyword = ref('');
   const fileList = ref<(XmindFileItem & { updateTimeText: string })[]>([]);
+  const loadedOnce = ref(false);
   const pagination = reactive({
     current: 1,
     pageSize: 20,
@@ -144,6 +157,12 @@
     onChange: undefined as ((page: number) => void) | undefined,
     onPageSizeChange: undefined as ((size: number) => void) | undefined,
   });
+
+  function normalizePageResult(res: any): { list: XmindFileItem[]; total: number } {
+    const list = res?.list ?? res?.data?.list ?? (Array.isArray(res) ? res : []) ?? [];
+    const total = res?.total ?? res?.data?.total ?? list.length ?? 0;
+    return { list: Array.isArray(list) ? list : [], total: Number(total) || 0 };
+  }
 
   async function loadList() {
     if (!appStore.currentProjectId) return;
@@ -155,13 +174,13 @@
         pageSize: pagination.pageSize,
         keyword: keyword.value.trim(),
       });
-      const list = (res as any)?.list || (res as any)?.data?.list || [];
-      const total = (res as any)?.total ?? (res as any)?.data?.total ?? 0;
+      const { list, total } = normalizePageResult(res);
       fileList.value = list.map((item: XmindFileItem) => ({
         ...item,
         updateTimeText: item.updateTime ? dayjs(item.updateTime).format('YYYY-MM-DD HH:mm:ss') : '-',
       }));
       pagination.total = total;
+      loadedOnce.value = true;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -299,7 +318,32 @@
     });
   }
 
+  watch(
+    () => props.active,
+    (active) => {
+      if (active && (!loadedOnce.value || fileList.value.length === 0)) {
+        nextTick(() => loadList());
+      }
+    }
+  );
+
+  watch(
+    () => appStore.currentProjectId,
+    (projectId) => {
+      if (projectId && props.active !== false) {
+        pagination.current = 1;
+        loadList();
+      }
+    }
+  );
+
   onBeforeMount(() => {
     loadList();
+  });
+
+  onActivated(() => {
+    if (props.active !== false) {
+      loadList();
+    }
   });
 </script>

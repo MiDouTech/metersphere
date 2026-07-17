@@ -6,6 +6,8 @@ export const BatchAddProjectUrl = '/organization/project/add-member';
 // 添加至用户组
 export const BatchAddUserGroupUrl = '/organization/role/update-member';
 export const DeleteMemberUrl = '/organization/remove-member';
+// 批量移出组织
+export const BatchRemoveMemberUrl = '/organization/member/batch/remove';
 // 获取组织下边的用户组列表
 export const getUserGroupList = '/organization/user/role/list';
 // 获取当前组织内不存在成员

@@ -103,7 +103,10 @@
         </template>
       </MsSplitBox>
     </div>
-    <XmindCasePage v-if="activeTab === 'xmind'" />
+    <!-- Xmind 同样用 v-show，避免切 Tab 销毁重建后列表请求被路由守卫取消 -->
+    <div v-show="activeTab === 'xmind'" class="h-full">
+      <XmindCasePage :active="activeTab === 'xmind'" />
+    </div>
   </MsCard>
 </template>
 
@@ -111,7 +114,7 @@
   /**
    * @description 功能测试-功能用例
    */
-  import { computed, ref } from 'vue';
+  import { computed, nextTick, ref } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
@@ -154,13 +157,16 @@
 
   function handleTabChange(key: string | number) {
     activeTab.value = key as CaseSubTab;
-    const query = { ...route.query };
-    if (key === 'execute') {
-      delete query.tab;
-    } else {
-      query.tab = String(key);
-    }
-    router.replace({ query });
+    // 延后改 query，降低与列表请求并发被守卫取消的概率（列表侧已 ignoreCancelToken）
+    nextTick(() => {
+      const query = { ...route.query };
+      if (key === 'execute') {
+        delete query.tab;
+      } else {
+        query.tab = String(key);
+      }
+      router.replace({ query });
+    });
   }
 
   const isExpandAll = ref(false);
