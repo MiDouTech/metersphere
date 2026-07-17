@@ -119,7 +119,8 @@
         select distinct
         u.id,
         u.NAME,
-        u.email
+        u.email,
+        u.create_time
         from `user` u left join user_role_relation urr on urr.user_id = u.id
         where u.deleted = 0 and urr.source_id = #{organizationId}
         <if test="keyword != null and keyword != ''">
@@ -131,9 +132,11 @@
     </select>
 
     <select id="getUserMemberList" resultType="io.metersphere.system.dto.user.UserExtendDTO">
-        select distinct   u.id,
+        select u.id,
         u.NAME,
-        u.email, count(temp.id) > 0 as memberFlag from
+        u.email,
+        u.create_time,
+        count(temp.id) > 0 as memberFlag from
         user u left join (select * from user_role_relation urr where urr.source_id = #{projectId}) temp on temp.user_id = u.id
         <where>
             u.deleted = 0
@@ -147,7 +150,7 @@
                 and (LOCATE(#{keyword},u.name)>0 or LOCATE(#{keyword},u.email)>0)
             </if>
         </where>
-        group by u.id
+        group by u.id, u.NAME, u.email, u.create_time
         order by u.create_time desc
         limit 1000
     </select>
@@ -254,9 +257,11 @@
 
 
     <select id="getUserList" resultType="io.metersphere.system.dto.user.UserExtendDTO">
-        select distinct   u.id,
+        select u.id,
         u.NAME,
-        u.email, count(temp.id) > 0 as memberFlag from
+        u.email,
+        u.create_time,
+        count(temp.id) > 0 as memberFlag from
         user u left join (select * from user_role_relation urr where urr.source_id = #{projectId}) temp on temp.user_id = u.id
         <where>
             u.deleted = 0
@@ -270,7 +275,7 @@
                 and (LOCATE(#{keyword},u.name)>0 or LOCATE(#{keyword},u.email)>0)
             </if>
         </where>
-        group by u.id
+        group by u.id, u.NAME, u.email, u.create_time
         order by u.create_time desc
     </select>
 </mapper>

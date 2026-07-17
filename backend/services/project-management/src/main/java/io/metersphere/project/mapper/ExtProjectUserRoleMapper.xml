@@ -42,7 +42,8 @@
         SELECT distinct
                u.id,
                u.NAME,
-               u.email
+               u.email,
+               u.create_time
         FROM `user` u
                  LEFT JOIN user_role_relation urr ON u.id = urr.user_id
         WHERE urr.source_id = #{sourceId}

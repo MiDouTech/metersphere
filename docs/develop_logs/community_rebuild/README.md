@@ -36,7 +36,7 @@
 
 ## 缺陷修复（buglist/）
 
-见 [buglist/README.md](../buglist/README.md)。全系统汇总：[MeterSphere-全系统-缺陷清单-2026-07-04.md](../../task/destination/MeterSphere-全系统-缺陷清单-2026-07-04.md)
+见 [buglist/README.md](../buglist/README.md)。全系统汇总：[MeterSphere-全系统-缺陷清单-2026-07-04.md](../../task/bugs/MeterSphere-全系统-缺陷清单-2026-07-04.md)
 
 ## 编写约定
 

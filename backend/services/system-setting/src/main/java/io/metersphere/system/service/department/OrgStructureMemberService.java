@@ -1,11 +1,10 @@
 package io.metersphere.system.service.department;
 
-import io.metersphere.sdk.exception.MSException;
-import io.metersphere.system.controller.handler.result.MsHttpResultCode;
 import io.metersphere.system.dto.department.OrgStructureMemberDetailDTO;
 import io.metersphere.system.dto.department.OrgStructureMemberItemDTO;
 import io.metersphere.system.dto.department.OrgStructureMemberPageRequest;
 import io.metersphere.system.mapper.ExtOrgStructureMemberMapper;
+import io.metersphere.system.utils.ServiceUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -30,10 +29,8 @@ public class OrgStructureMemberService {
     public OrgStructureMemberDetailDTO detail(String userId, String organizationId) {
         orgStructureAccessService.validateReadable(organizationId);
         OrgStructureMemberDetailDTO detail = extOrgStructureMemberMapper.getMemberDetail(userId, organizationId);
-        if (detail == null) {
-            throw new MSException(MsHttpResultCode.NOT_FOUND);
-        }
-        return maskSensitive(detail);
+        // 使用 ServiceUtils 设置资源名，前端展示「成员不存在」而非裸 "not found"/「资源不存在」
+        return maskSensitive(ServiceUtils.checkResourceExist(detail, "成员"));
     }
 
     public OrgStructureMemberDetailDTO maskSensitive(OrgStructureMemberDetailDTO dto) {

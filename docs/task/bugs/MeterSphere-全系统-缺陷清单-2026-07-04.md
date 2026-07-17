@@ -1,7 +1,7 @@
 # MeterSphere 全系统缺陷清单
 
 > **文档类型**：缺陷汇总 / 测试输出  
-> **关联策略**：[MeterSphere-全系统-测试策略-2026-07-04.md](MeterSphere-全系统-测试策略-2026-07-04.md)  
+> **关联策略**：[MeterSphere-全系统-测试策略-2026-07-04.md](../destination/MeterSphere-全系统-测试策略-2026-07-04.md)  
 > **汇总日期**：2026-07-04  
 > **版本**：v1.1  
 > **测试环境**：前端 `http://localhost:5173`（Vite dev，`VITE_MS_UNLIMITED=true`），后端 `http://localhost:8081`，账号 `admin/metersphere`
