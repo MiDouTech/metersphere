@@ -19,7 +19,11 @@ import type {
 
 /** 分页列表 */
 export function getXmindFilePage(data: XmindFilePageRequest) {
-  return MSR.post<{ list: XmindFileItem[]; total: number }>({ url: XmindFilePageUrl, data });
+  // Tab 切换会改 query 并触发 removeAllPending，忽略取消以免列表被中断成空
+  return MSR.post<{ list: XmindFileItem[]; total: number }>(
+    { url: XmindFilePageUrl, data },
+    { ignoreCancelToken: true }
+  );
 }
 
 /** 上传（仅存文件资产） */

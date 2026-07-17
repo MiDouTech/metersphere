@@ -184,6 +184,7 @@
     addOrUpdate,
     batchAddProject,
     batchAddUserGroup,
+    batchRemoveMember,
     deleteMemberReq,
     getGlobalUserGroup,
     getMemberList,
@@ -191,6 +192,7 @@
   } from '@/api/modules/setting/member';
   import { manualSync } from '@/api/modules/setting/orgStructure';
   import { useI18n } from '@/hooks/useI18n';
+  import useModal from '@/hooks/useModal';
   import { useAppStore, useTableStore } from '@/store';
   import { characterLimit, formatPhoneNumber } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
@@ -204,6 +206,7 @@
   const tableStore = useTableStore();
   const appStore = useAppStore();
   const { t } = useI18n();
+  const { openModal } = useModal();
   const lastOrganizationId = computed(() => appStore.currentOrgId);
   const wecomSyncing = ref(false);
 
@@ -295,6 +298,11 @@
         eventTag: 'batchAddUserGroup',
         permission: ['ORGANIZATION_MEMBER:READ+UPDATE'],
       },
+      {
+        label: 'organization.member.batchActionRemove',
+        eventTag: 'batchActionRemove',
+        permission: ['ORGANIZATION_MEMBER:READ+DELETE'],
+      },
     ],
   };
   const { propsRes, propsEvent, loadList, setLoadListParams, resetSelector } = useTable(
@@ -302,7 +310,11 @@
     {
       tableKey: TableKeyEnum.ORGANIZATION_MEMBER,
       scroll: { x: '100%' },
-      selectable: hasAnyPermission(['ORGANIZATION_MEMBER:READ+ADD', 'ORGANIZATION_MEMBER:READ+UPDATE']),
+      selectable: hasAnyPermission([
+        'ORGANIZATION_MEMBER:READ+ADD',
+        'ORGANIZATION_MEMBER:READ+UPDATE',
+        'ORGANIZATION_MEMBER:READ+DELETE',
+      ]),
       heightUsed: 288,
       showSetting: true,
       size: 'default',
@@ -413,11 +425,54 @@
     initData();
   };
 
+  // 批量移出组织
+  const batchRemoveHandler = () => {
+    const { selectedIds, excludeIds, selectAll } = batchParams.value;
+    openModal({
+      type: 'error',
+      title: t('organization.member.batchRemoveTip', { number: batchParams.value.currentSelectCount }),
+      content: t('organization.member.batchRemoveContent'),
+      okText: t('organization.member.deleteMemberConfirm'),
+      cancelText: t('organization.member.Cancel'),
+      okButtonProps: {
+        status: 'danger',
+      },
+      onBeforeOk: async () => {
+        try {
+          const params: TableQueryParams = {
+            selectAll: !!selectAll,
+            excludeIds: excludeIds || [],
+            selectIds: selectedIds || [],
+            organizationId: lastOrganizationId.value,
+            keyword: keyword.value,
+            condition: {
+              keyword: keyword.value,
+              filter: propsRes.value.filter,
+              combine: batchParams.value.condition,
+            },
+          };
+          await batchRemoveMember(params);
+          Message.success(t('organization.member.deleteMemberSuccess'));
+          initData();
+          resetSelector();
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.log(error);
+        }
+      },
+      hideCancel: false,
+    });
+  };
+
   // 批量操作
   const handleTableBatch = (event: BatchActionParams, params: BatchActionQueryParams) => {
-    showBatchModal.value = true;
     batchParams.value = params;
     selectedData.value = params.selectedIds;
+    if (event.eventTag === 'batchActionRemove') {
+      batchRemoveHandler();
+      return;
+    }
+    showBatchModal.value = true;
     if (event.eventTag) batchAction.value = event.eventTag;
     if (event.eventTag === 'batchAddProject') getData(getProjectList);
     if (event.eventTag === 'batchAddUserGroup') getData(getGlobalUserGroup);

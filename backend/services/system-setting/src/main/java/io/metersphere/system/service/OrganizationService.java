@@ -456,6 +456,69 @@ public class OrganizationService {
     }
 
     /**
+     * 批量移出组织成员
+     *
+     * @param request     请求参数
+     * @param currentUser 当前用户
+     */
+    public void batchRemoveMember(OrganizationMemberBatchDeleteRequest request, String currentUser) {
+        String organizationId = request.getOrganizationId();
+        checkOrgExistById(organizationId);
+        if (!request.isSelectAll() && CollectionUtils.isEmpty(request.getSelectIds())) {
+            throw new MSException(Translator.get("user.not.empty"));
+        }
+        List<String> userIds = resolveBatchRemoveUserIds(request);
+        if (CollectionUtils.isEmpty(userIds)) {
+            throw new MSException(Translator.get("user.not.empty"));
+        }
+        // 移出后须至少保留一名组织管理员
+        UserRoleRelationExample adminExample = new UserRoleRelationExample();
+        adminExample.createCriteria().andUserIdNotIn(userIds)
+                .andSourceIdEqualTo(organizationId)
+                .andRoleIdEqualTo(InternalUserRole.ORG_ADMIN.getValue());
+        if (userRoleRelationMapper.countByExample(adminExample) == 0) {
+            throw new MSException(Translator.get("keep_at_least_one_administrator"));
+        }
+        List<String> projectIds = getProjectIds(organizationId);
+        if (CollectionUtils.isNotEmpty(projectIds)) {
+            UserRoleRelationExample projectRelationExample = new UserRoleRelationExample();
+            projectRelationExample.createCriteria().andUserIdIn(userIds).andSourceIdIn(projectIds);
+            userRoleRelationMapper.deleteByExample(projectRelationExample);
+        }
+        UserRoleRelationExample orgRelationExample = new UserRoleRelationExample();
+        orgRelationExample.createCriteria().andUserIdIn(userIds).andSourceIdEqualTo(organizationId);
+        userRoleRelationMapper.deleteByExample(orgRelationExample);
+
+        List<LogDTO> logs = new ArrayList<>();
+        UserExample userExample = new UserExample();
+        userExample.createCriteria().andIdIn(userIds);
+        List<User> users = userMapper.selectByExample(userExample);
+        for (User user : users) {
+            setLog(organizationId, currentUser, OperationLogType.DELETE.name(),
+                    Translator.get("delete") + Translator.get("organization_member_log") + ": " + user.getName(),
+                    "/organization/member/batch/remove", user, null, logs);
+        }
+        operationLogService.batchAdd(logs);
+    }
+
+    private List<String> resolveBatchRemoveUserIds(OrganizationMemberBatchDeleteRequest request) {
+        if (request.isSelectAll()) {
+            OrganizationRequest listReq = new OrganizationRequest();
+            listReq.setOrganizationId(request.getOrganizationId());
+            if (request.getCondition() != null) {
+                listReq.setKeyword(request.getCondition().getKeyword());
+            }
+            List<OrgUserExtend> members = extOrganizationMapper.listMemberByOrg(listReq);
+            List<String> userIds = members.stream().map(OrgUserExtend::getId).collect(Collectors.toList());
+            if (CollectionUtils.isNotEmpty(request.getExcludeIds())) {
+                userIds.removeAll(request.getExcludeIds());
+            }
+            return userIds;
+        }
+        return request.getSelectIds() == null ? new ArrayList<>() : new ArrayList<>(request.getSelectIds());
+    }
+
+    /**
      * 获取系统默认组织
      *
      * @return 组织信息

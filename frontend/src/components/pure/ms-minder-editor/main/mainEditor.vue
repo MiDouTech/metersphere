@@ -59,6 +59,7 @@
   import { MinderEventName } from '@/enums/minderEnum';
 
   import useEventListener from '../hooks/useMinderEventListener';
+  import bindMinderXmindInteraction from '../hooks/useMinderXmindInteraction';
   import {
     batchMenuProps,
     dropdownMenuProps,
@@ -112,6 +113,7 @@
   const currentTreePath = ref<MinderJsonNodeData[]>([]);
 
   const floatMenuVisible = ref(false);
+  let unbindXmindInteraction: (() => void) | undefined;
 
   async function init() {
     window.editor = new Editor(mec.value, {
@@ -142,6 +144,10 @@
       markDeleteNode(window.minder);
       window.minder.execCommand('RemoveNode');
     };
+    if (props.xmindInteraction) {
+      unbindXmindInteraction?.();
+      unbindXmindInteraction = bindMinderXmindInteraction(window.minder);
+    }
     emit('afterMount');
   }
 
@@ -332,6 +338,8 @@
   );
 
   onBeforeUnmount(() => {
+    unbindXmindInteraction?.();
+    unbindXmindInteraction = undefined;
     minderStore.setMinderUnsaved(false);
   });
 </script>

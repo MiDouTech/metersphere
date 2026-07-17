@@ -1,43 +1,63 @@
 <template>
-  <div v-loading="loading" class="flex h-full min-h-[480px] flex-col p-[16px]">
-    <div class="mb-[12px] flex flex-shrink-0 items-center gap-[12px]">
-      <template v-if="canEdit">
-        <a-button type="primary" :loading="saving" @click="handleSave">
-          {{ t('common.save') }}
+  <div v-loading="loading" class="plan-document p-[16px]">
+    <div class="mb-[16px] flex flex-wrap items-center justify-between gap-[12px]">
+      <div class="min-w-0 flex-1">
+        <div class="truncate text-[16px] font-medium text-[var(--color-text-1)]">
+          {{ t('testPlan.document.title') }}
+        </div>
+        <div class="mt-[4px] text-[12px] text-[var(--color-text-4)]">
+          {{ canEdit ? t('testPlan.document.editTip') : t('testPlan.document.readonlyTip') }}
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-[8px]">
+        <template v-if="canEdit">
+          <a-button type="primary" :loading="saving" @click="handleSave">
+            {{ t('common.save') }}
+          </a-button>
+          <a-button type="secondary" @click="previewVisible = true">
+            {{ t('testPlan.document.preview') }}
+          </a-button>
+          <a-button type="secondary" :disabled="saving" @click="handleResetTemplate">
+            {{ t('testPlan.document.resetTemplate') }}
+          </a-button>
+        </template>
+        <a-button v-permission="['PROJECT_TEST_PLAN:READ']" type="secondary" :loading="exporting" @click="handleExport">
+          {{ t('testPlan.document.export') }}
         </a-button>
-        <a-button type="secondary" @click="previewVisible = true">
-          {{ t('testPlan.document.preview') }}
-        </a-button>
-        <a-button type="secondary" :disabled="saving" @click="handleResetTemplate">
-          {{ t('testPlan.document.resetTemplate') }}
-        </a-button>
-      </template>
-      <a-button v-permission="['PROJECT_TEST_PLAN:READ']" type="secondary" :loading="exporting" @click="handleExport">
-        {{ t('testPlan.document.export') }}
-      </a-button>
-      <span v-if="canEdit" class="text-[12px] text-[var(--color-text-4)]">{{ t('testPlan.document.resetTip') }}</span>
+      </div>
     </div>
-    <div
-      class="document-editor flex-1 overflow-auto rounded-[var(--border-radius-small)] border border-[var(--color-text-n8)] p-[12px]"
-    >
-      <MsRichText
-        v-model:raw="content"
-        v-model:filedIds="fileIds"
-        :upload-image="handleUploadImage"
-        :preview-url="`${PreviewEditorImageUrl}/${appStore.currentProjectId}`"
-        :editable="canEdit"
-        :auto-height="false"
-        class="min-h-[400px] w-full"
-      />
-    </div>
+
+    <section class="document-section">
+      <h3 class="section-title">{{ t('testPlan.document.contentSection') }}</h3>
+      <div v-if="canEdit" class="mb-[8px] text-[12px] text-[var(--color-text-4)]">
+        {{ t('testPlan.document.resetTip') }}
+      </div>
+      <div
+        class="document-editor overflow-hidden rounded-[var(--border-radius-small)] border border-[var(--color-text-n8)] bg-[var(--color-bg-1)]"
+      >
+        <MsRichText
+          v-model:raw="content"
+          v-model:filedIds="fileIds"
+          :upload-image="handleUploadImage"
+          :preview-url="`${PreviewEditorImageUrl}/${appStore.currentProjectId}`"
+          :editable="canEdit"
+          :auto-height="false"
+          class="min-h-[520px] w-full"
+        />
+      </div>
+    </section>
+
     <a-modal
       v-model:visible="previewVisible"
       :title="t('testPlan.document.preview')"
-      :width="900"
+      :width="960"
       :footer="false"
       unmount-on-close
+      title-align="start"
     >
-      <MsRichText :raw="content" :editable="false" class="w-full" />
+      <div class="preview-body max-h-[70vh] overflow-auto p-[8px]">
+        <MsRichText :raw="content" :editable="false" class="w-full" />
+      </div>
     </a-modal>
   </div>
 </template>
@@ -190,9 +210,23 @@
 </script>
 
 <style lang="less" scoped>
+  .document-section {
+    margin-bottom: 8px;
+  }
+  .section-title {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text-1);
+  }
   .document-editor {
     :deep(.halo-rich-text-editor) {
-      min-height: 400px;
+      min-height: 520px;
+    }
+  }
+  .preview-body {
+    :deep(.halo-rich-text-editor) {
+      border: none;
     }
   }
 </style>

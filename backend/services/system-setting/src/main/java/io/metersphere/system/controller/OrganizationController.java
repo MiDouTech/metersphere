@@ -98,6 +98,13 @@ public class OrganizationController {
         organizationService.removeMember(organizationId, userId, SessionUtils.getUserId());
     }
 
+    @PostMapping("/member/batch/remove")
+    @Operation(summary = "系统设置-组织-成员-批量移出组织")
+    @RequiresPermissions(PermissionConstants.ORGANIZATION_MEMBER_DELETE)
+    public void batchRemoveMember(@Validated @RequestBody OrganizationMemberBatchDeleteRequest request) {
+        organizationService.batchRemoveMember(request, SessionUtils.getUserId());
+    }
+
     @GetMapping("/project/list/{organizationId}")
     @Operation(summary = "系统设置-组织-成员-获取当前组织下的所有项目")
     @RequiresPermissions(PermissionConstants.ORGANIZATION_PROJECT_READ)
