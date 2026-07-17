@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - v3.x
+      - main
 
 permissions:
   contents: read
