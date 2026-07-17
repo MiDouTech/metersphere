@@ -30,4 +30,10 @@ public class AuthSourceDTO implements Serializable {
 
     @Schema(description =  "是否启用")
     private Boolean enable;
+
+    @Schema(description = "创建时间")
+    private Long createTime;
+
+    @Schema(description = "更新时间")
+    private Long updateTime;
 }

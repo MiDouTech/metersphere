@@ -352,7 +352,7 @@
         WHERE crfc.review_id = #{request.reviewId}
         AND functional_case.deleted = #{deleted}
         <include refid="queryWhereCondition"/>
-        GROUP BY module_id
+        GROUP BY functional_case.module_id, functional_case.project_id, project.name
     </select>
 
     <select id="caseCount"

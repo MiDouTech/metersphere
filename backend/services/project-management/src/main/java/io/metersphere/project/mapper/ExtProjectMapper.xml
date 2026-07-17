@@ -41,7 +41,7 @@
 
     </select>
     <select id="getProjectByOrgId" resultType="io.metersphere.project.domain.Project">
-        SELECT DISTINCT p.id, p.name, p.organization_id
+        SELECT DISTINCT p.id, p.name, p.organization_id, p.create_time
         FROM user_role u
                  JOIN user_role_relation urr ON u.id = urr.role_id
                  JOIN project p ON p.id = urr.source_id

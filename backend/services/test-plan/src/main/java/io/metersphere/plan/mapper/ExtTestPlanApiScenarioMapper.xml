@@ -449,7 +449,7 @@
         WHERE test_plan_api_scenario.test_plan_id = #{request.testPlanId}
         AND api_scenario.deleted = #{deleted}
         <include refid="queryApiScenarioWhereCondition"/>
-        GROUP BY moduleId
+        GROUP BY moduleId, api_scenario.project_id, project.name
     </select>
 
     <select id="caseCount"
