@@ -147,6 +147,15 @@
       </template>
       <template #operation="{ record }">
         <MsButton
+          v-permission="['PROJECT_API_DEFINITION_CASE:READ']"
+          type="text"
+          class="!mr-0"
+          @click="openCaseTab(record)"
+        >
+          {{ t('common.detail') }}
+        </MsButton>
+        <a-divider v-permission="['PROJECT_API_DEFINITION_CASE:READ']" direction="vertical" :margin="8"></a-divider>
+        <MsButton
           v-permission="['PROJECT_API_DEFINITION_CASE:READ+UPDATE']"
           type="text"
           class="!mr-0"

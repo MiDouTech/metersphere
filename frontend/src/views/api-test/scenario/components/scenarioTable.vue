@@ -136,6 +136,15 @@
       </template>
       <template #operation="{ record }">
         <MsButton
+          v-permission="['PROJECT_API_SCENARIO:READ']"
+          type="text"
+          class="!mr-0"
+          @click="openScenarioTab(record)"
+        >
+          {{ t('common.detail') }}
+        </MsButton>
+        <a-divider v-permission="['PROJECT_API_SCENARIO:READ']" direction="vertical" :margin="8"></a-divider>
+        <MsButton
           v-permission="['PROJECT_API_SCENARIO:READ+UPDATE']"
           type="text"
           class="!mr-0"

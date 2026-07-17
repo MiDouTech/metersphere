@@ -165,6 +165,39 @@ const CaseManagement: AppRouteRecordRaw = {
         ],
       },
     },
+    // 测试报告
+    {
+      path: 'testReport',
+      name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT,
+      component: () => import('@/views/case-management/testReport/index.vue'),
+      meta: {
+        locale: 'menu.caseManagement.testReport',
+        roles: ['FUNCTIONAL_CASE:READ'],
+        isTopMenu: true,
+      },
+    },
+    // 测试报告详情/编辑
+    {
+      path: 'testReportDetail',
+      name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
+      component: () => import('@/views/case-management/testReport/detail.vue'),
+      meta: {
+        locale: 'menu.caseManagement.testReportDetail',
+        roles: ['FUNCTIONAL_CASE:READ'],
+        breadcrumbs: [
+          {
+            name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT,
+            locale: 'menu.caseManagement.testReport',
+          },
+          {
+            name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
+            locale: 'menu.caseManagement.testReportDetail',
+            editTag: 'id',
+            editLocale: 'menu.caseManagement.testReportEdit',
+          },
+        ],
+      },
+    },
   ],
 };
 

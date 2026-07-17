@@ -377,6 +377,8 @@ public class SimpleUserService {
             updateModel.setId(user.getId());
             if (StringUtils.equalsIgnoreCase("admin", user.getId())) {
                 updateModel.setPassword(CodingUtils.md5("metersphere"));
+            } else if (StringUtils.isNotBlank(user.getWecomUserid())) {
+                updateModel.setPassword(StringUtils.EMPTY);
             } else {
                 updateModel.setPassword(CodingUtils.md5(user.getEmail()));
             }

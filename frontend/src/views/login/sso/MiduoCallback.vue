@@ -38,12 +38,26 @@
     router.replace({ name: 'login' });
   }
 
-  /** 读完后去掉 URL 中的 token，避免停留在地址栏 */
-  function stripSensitiveQuery() {
-    const q = { ...route.query } as Record<string, string | string[] | undefined>;
-    delete q.token;
-    delete q.app_code;
-    router.replace({ path: route.path, query: q }).catch(() => undefined);
+  /**
+   * 用 history.replaceState 清掉地址栏 token，避免触发 Vue Router beforeEach →
+   * removeAllPending，把进行中的 callback 请求取消成 canceled。
+   */
+  function stripSensitiveQueryQuietly() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('token');
+    url.searchParams.delete('app_code');
+    // Hash 路由：#/sso/miduo/callback?token=...
+    const hash = url.hash || '';
+    const hashQ = hash.indexOf('?');
+    if (hashQ >= 0) {
+      const pathPart = hash.slice(0, hashQ);
+      const params = new URLSearchParams(hash.slice(hashQ + 1));
+      params.delete('token');
+      params.delete('app_code');
+      const rest = params.toString();
+      url.hash = rest ? `${pathPart}?${rest}` : pathPart;
+    }
+    window.history.replaceState(window.history.state, '', url.toString());
   }
 
   onMounted(async () => {
@@ -56,9 +70,11 @@
       errorMessage.value = t('login.miduo.callback.missingParams');
       return;
     }
-    stripSensitiveQuery();
     try {
+      // ① 先完成 callback，再清 URL（避免路由取消请求）
       const res = (await postMiduoSsoCallback({ token, state: state || undefined })) as LoginRes;
+      // ② 不走 router.replace，用 history API 静默去敏
+      stripSensitiveQueryQuietly();
       if (!res?.sessionId) {
         throw new Error(t('login.miduo.callback.error'));
       }
@@ -67,6 +83,7 @@
       const redirect = (route.query.redirect as string) || DEFAULT_ROUTE_NAME;
       await router.replace({ name: redirect });
     } catch (e) {
+      stripSensitiveQueryQuietly();
       errorMessage.value = (e as Error)?.message || t('login.miduo.callback.error');
     } finally {
       loading.value = false;

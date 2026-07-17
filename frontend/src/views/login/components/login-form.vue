@@ -23,6 +23,9 @@
     </div>
 
     <div class="form mt-[32px] min-w-[480px]">
+      <a-alert v-if="isAdminLogin && !localLoginEnabled" class="mb-4" type="warning">
+        {{ t('login.form.localLoginDisabledTip') }}
+      </a-alert>
       <div v-if="userInfo.authenticate === 'LOCAL'" class="mb-7 text-[18px] font-medium text-[rgb(var(--primary-5))]">
         {{ t('login.form.accountLogin') }}
       </div>
@@ -167,6 +170,7 @@
   const miduoRedirecting = ref(false);
   /** SSO 不可用时保持加载态，不暴露管理员入口 */
   const miduoPending = ref(false);
+  const localLoginEnabled = ref(true);
 
   const preheat = ref(true);
 
@@ -315,6 +319,7 @@
   async function tryRedirectMiduoBridge(): Promise<boolean> {
     try {
       const status = await getMiduoSsoStatus();
+      localLoginEnabled.value = status.localLoginEnabled !== false;
       if (!status?.enabled || !status?.ready) {
         return false;
       }
@@ -330,7 +335,17 @@
     }
   }
 
+  async function refreshLocalLoginConfig() {
+    try {
+      const status = await getMiduoSsoStatus();
+      localLoginEnabled.value = status.localLoginEnabled !== false;
+    } catch {
+      localLoginEnabled.value = true;
+    }
+  }
+
   async function initAdminLoginPage() {
+    refreshLocalLoginConfig();
     userStore.getAuthentication();
     initPlatformInfo();
     isLogin()

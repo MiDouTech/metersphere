@@ -1,6 +1,12 @@
 <template>
   <MsCard simple no-content-padding>
-    <MsSplitBox :not-show-first="isAdvancedSearchMode">
+    <a-tabs v-model:active-key="activeTab" class="no-content" @change="handleTabChange">
+      <a-tab-pane key="execute" :title="t('menu.caseManagement.executeCase')" />
+      <a-tab-pane key="xmind" :title="t('menu.caseManagement.xmindCase')" />
+    </a-tabs>
+    <a-divider margin="0" />
+    <XmindCasePage v-if="activeTab === 'xmind'" />
+    <MsSplitBox v-else :not-show-first="isAdvancedSearchMode">
       <template #first>
         <div class="p-[16px] pb-0">
           <div class="feature-case h-[100%] min-w-0 overflow-x-hidden">
@@ -113,6 +119,7 @@
   import { MsTreeNodeData } from '@/components/business/ms-tree/types';
   import CaseTable from './components/caseTable.vue';
   import FeatureCaseTree from './components/caseTree.vue';
+  import XmindCasePage from './xmind/index.vue';
 
   import { createCaseModuleTree } from '@/api/modules/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
@@ -138,6 +145,20 @@
   const { t } = useI18n();
   const currentProjectId = computed(() => appStore.currentProjectId);
   const featureCaseStore = useFeatureCaseStore();
+
+  type CaseSubTab = 'execute' | 'xmind';
+  const activeTab = ref<CaseSubTab>((route.query.tab as CaseSubTab) === 'xmind' ? 'xmind' : 'execute');
+
+  function handleTabChange(key: string | number) {
+    activeTab.value = key as CaseSubTab;
+    const query = { ...route.query };
+    if (key === 'execute') {
+      delete query.tab;
+    } else {
+      query.tab = String(key);
+    }
+    router.replace({ query });
+  }
 
   const isExpandAll = ref(false);
   const activeCaseType = ref<'folder' | 'module'>('folder'); // 激活用例类型

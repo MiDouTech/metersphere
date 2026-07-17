@@ -199,6 +199,11 @@
           :margin="8"
         />
 
+        <MsButton v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ'])" class="!mx-0" @click="openDetail(record.id)">
+          {{ t('common.detail') }}
+        </MsButton>
+        <a-divider v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ'])" direction="vertical" :margin="8" />
+
         <MsButton
           v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+UPDATE']) && getStatus(record.id) !== 'ARCHIVED'"
           class="!mx-0"
@@ -441,6 +446,14 @@
   const hasOperationPermission = computed(() =>
     hasAnyPermission(['PROJECT_TEST_PLAN:READ+UPDATE', 'PROJECT_TEST_PLAN:READ+EXECUTE', 'PROJECT_TEST_PLAN:READ+ADD'])
   );
+  const showOperationColumn = computed(() =>
+    hasAnyPermission([
+      'PROJECT_TEST_PLAN:READ',
+      'PROJECT_TEST_PLAN:READ+UPDATE',
+      'PROJECT_TEST_PLAN:READ+EXECUTE',
+      'PROJECT_TEST_PLAN:READ+ADD',
+    ])
+  );
   const showType = ref<keyof typeof testPlanTypeEnum>(testPlanTypeEnum.ALL);
 
   const columns: MsTableColumn = [
@@ -581,11 +594,11 @@
       showDrag: true,
     },
     {
-      title: hasOperationPermission.value ? 'testPlan.testPlanIndex.operation' : '',
+      title: showOperationColumn.value ? 'testPlan.testPlanIndex.operation' : '',
       slotName: 'operation',
       dataIndex: 'operation',
       fixed: 'right',
-      width: hasOperationPermission.value ? 200 : 50,
+      width: showOperationColumn.value ? 260 : 50,
       showInTable: true,
       showDrag: false,
     },

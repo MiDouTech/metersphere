@@ -1,6 +1,7 @@
 package io.metersphere;
 
 import io.metersphere.api.config.JmeterProperties;
+import io.metersphere.system.config.LocalLoginProperties;
 import io.metersphere.system.config.MiduoSsoProperties;
 import io.metersphere.system.config.MinioProperties;
 import org.springframework.boot.SpringApplication;
@@ -26,6 +27,7 @@ import org.springframework.context.annotation.PropertySource;
 @EnableConfigurationProperties({
         MinioProperties.class,
         JmeterProperties.class,
+        LocalLoginProperties.class,
         MiduoSsoProperties.class
 })
 public class Application {

@@ -68,6 +68,9 @@
         </div>
       </template>
       <template #action="{ record }">
+        <MsButton v-permission="['SYSTEM_TEST_RESOURCE_POOL:READ']" @click="showPoolDetail(record.id)">
+          {{ t('common.detail') }}
+        </MsButton>
         <MsButton v-permission="['SYSTEM_TEST_RESOURCE_POOL:READ+UPDATE']" @click="editPool(record)">
           {{ t('system.resourcePool.editPool') }}
         </MsButton>
@@ -159,7 +162,11 @@
   const route = useRoute();
 
   const hasOperationPoolPermission = computed(() =>
-    hasAnyPermission(['SYSTEM_TEST_RESOURCE_POOL:READ+UPDATE', 'SYSTEM_TEST_RESOURCE_POOL:READ+DELETE'])
+    hasAnyPermission([
+      'SYSTEM_TEST_RESOURCE_POOL:READ',
+      'SYSTEM_TEST_RESOURCE_POOL:READ+UPDATE',
+      'SYSTEM_TEST_RESOURCE_POOL:READ+DELETE',
+    ])
   );
 
   const filterConfig = computed<MsTableColumnFilterConfig>(() => {
@@ -238,7 +245,7 @@
       slotName: 'action',
       dataIndex: 'operation',
       fixed: 'right',
-      width: 120,
+      width: 180,
     },
   ];
   const tableStore = useTableStore();

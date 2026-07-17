@@ -54,6 +54,7 @@ services:
       # 米多 SSO：正式启用时在 CDS Dashboard / cdscli env 覆盖下列键（勿把 Secret 写死进本文件）
       # MIDUO_SSO_ENABLED / MIDUO_SSO_BASE_URL / MIDUO_SSO_APP_CODE / MIDUO_SSO_APP_SECRET
       # MIDUO_SSO_REDIRECT_URI / MIDUO_SSO_SHORTCUT_ID / MIDUO_SSO_ORGANIZATION_ID
+      # LOCAL 账密开关：MS_LOCAL_LOGIN_ENABLED=false 时普通用户禁用账密，仅 admin 保留运维登录
       MIDUO_SSO_ENABLED: "false"
       MIDUO_SSO_BASE_URL: ""
       MIDUO_SSO_APP_CODE: ""
@@ -61,6 +62,7 @@ services:
       MIDUO_SSO_REDIRECT_URI: ""
       MIDUO_SSO_SHORTCUT_ID: ""
       MIDUO_SSO_ORGANIZATION_ID: ""
+      MS_LOCAL_LOGIN_ENABLED: "true"
     # CDS 会把 command 数组拼成「bash -lc set ...」且不转义 $$；必须用单段字符串 + 单 $
     # 实际执行壳可能是 sh：勿用 pipefail
     command: |
@@ -89,6 +91,8 @@ services:
       run.mode=standalone
       logger.level=INFO
       logger.sql.level=info
+      # 普通用户 LOCAL 账密登录开关；false 时仅 admin 可用于运维登录
+      metersphere.local-login.enabled=${MS_LOCAL_LOGIN_ENABLED}
       EOF
       sed -i 's/^[[:space:]]\+//' /repo/local-runtime/conf/metersphere.properties
       # 勿对 YAML 做「去掉全部前导空白」：会把嵌套 key 顶到根级导致 Redisson Can't parse config

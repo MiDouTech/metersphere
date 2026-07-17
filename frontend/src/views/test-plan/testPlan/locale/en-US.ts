@@ -149,11 +149,18 @@ export default {
   'testPlan.testPlanGroup.deleteScheduleTaskSuccess': 'Delete the scheduled task successfully',
   'testPlan.testPlanGroup.enableScheduleTaskSuccess': 'Start the scheduled task successfully',
   'testPlan.testPlanGroup.closeScheduleTaskSuccess': 'Scheduled mission closed successfully',
-  'testPlan.plan': 'Test plan',
-  'testPlan.planTip':
-    '1. Create a test set for business classification testing; 2. Select the test set associated use case',
+  'testPlan.plan': 'Test Plan',
+  'testPlan.planTip': 'Edit and save the test plan document; you can reset to the standard section template',
   'testPlan.planStartToEndTimeTip': 'The test plan timed out',
   'testPlan.planConfigReport': 'Configuration Report',
   'testPlan.planAutomaticGeneration': 'Automatic generation',
   'testPlan.caseType': 'Use Case types',
+  'testPlan.document.preview': 'Preview',
+  'testPlan.document.export': 'Export',
+  'testPlan.document.exportSuccess': 'Exported',
+  'testPlan.document.resetTemplate': 'Reset to template',
+  'testPlan.document.resetTip': 'Reset only overwrites the editor; click Save to persist',
+  'testPlan.document.resetConfirm':
+    'Overwrite the current document with the standard template? You still need to click Save to persist.',
+  'testPlan.document.resetDone': 'Template restored. Click Save to write to the server.',
 };

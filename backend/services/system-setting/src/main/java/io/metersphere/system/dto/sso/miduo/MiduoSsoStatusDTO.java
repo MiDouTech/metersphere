@@ -8,6 +8,7 @@ import java.io.Serializable;
 public class MiduoSsoStatusDTO implements Serializable {
     private boolean enabled;
     private boolean ready;
+    private boolean localLoginEnabled;
     private String reason;
     private String message;
 }

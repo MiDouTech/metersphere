@@ -359,7 +359,7 @@
     return [
       {
         value: 'plan',
-        label: t('testPlan.plan'), // 测试规划
+        label: t('testPlan.plan'), // 测试计划
         show: true,
       },
       {

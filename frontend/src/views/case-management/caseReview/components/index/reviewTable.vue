@@ -93,6 +93,10 @@
         </a-tooltip>
       </template>
       <template #action="{ record }">
+        <MsButton v-permission="['CASE_REVIEW:READ']" type="text" class="!mr-0" @click="openDetail(record.id)">
+          {{ t('common.detail') }}
+        </MsButton>
+        <a-divider v-permission="['CASE_REVIEW:READ']" direction="vertical" :margin="8"></a-divider>
         <MsButton
           v-permission="['CASE_REVIEW:READ+UPDATE']"
           type="text"
@@ -101,10 +105,6 @@
         >
           {{ t('common.edit') }}
         </MsButton>
-        <!-- <a-divider direction="vertical" :margin="8"></a-divider>
-        <MsButton type="text" class="!mr-0">
-          {{ t('common.export') }}
-        </MsButton> -->
         <a-divider direction="vertical" :margin="8"></a-divider>
         <MsTableMoreAction
           v-permission="['CASE_REVIEW:READ+DELETE']"
@@ -375,7 +375,7 @@
   }
 
   const hasOperationPermission = computed(() =>
-    hasAnyPermission(['CASE_REVIEW:READ+UPDATE', 'CASE_REVIEW:READ+DELETE'])
+    hasAnyPermission(['CASE_REVIEW:READ', 'CASE_REVIEW:READ+UPDATE', 'CASE_REVIEW:READ+DELETE'])
   );
   const columns: MsTableColumn = [
     {
@@ -494,7 +494,7 @@
       slotName: 'action',
       dataIndex: 'operation',
       fixed: 'right',
-      width: hasOperationPermission.value ? 110 : 50,
+      width: 190,
     },
   ];
   const selectedModuleKeys = ref<string[]>([]);

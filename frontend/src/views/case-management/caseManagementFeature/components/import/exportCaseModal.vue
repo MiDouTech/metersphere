@@ -9,12 +9,12 @@
     @close="handleCancel"
   >
     <div>
-      <MsSeparateRadioButton v-model:value="validateType" :options="validateTypeOptions" />
+      <!-- Xmind 导入已迁移至「Xmind用例」Tab，执行用例仅保留 Excel -->
       <a-alert class="my-4">
         <div class="flex items-center">
           {{ t('caseManagement.featureCase.beforeUploadTip', { type: validateType }) }}
           <MsIcon
-            :type="validateType === 'Excel' ? 'icon-icon_file-excel_colorful1' : 'icon-icon_file-xmind_colorful1'"
+            type="icon-icon_file-excel_colorful1"
             class="mx-1 cursor-pointer text-[rgb(var(--primary-6))]"
           ></MsIcon>
           <MsButton @click="downloadExcelTemplate">
@@ -25,14 +25,10 @@
       <MsUpload
         v-model:file-list="fileList"
         class="mb-6 w-full"
-        :accept="validateType === 'Excel' ? 'excel' : 'xmind'"
+        accept="excel"
         size-unit="MB"
         main-text="caseManagement.featureCase.dragOrClick"
-        :sub-text="
-          validateType === 'Excel'
-            ? t('caseManagement.featureCase.onlyEXcelTip', { size: appStore.getFileMaxSize })
-            : t('caseManagement.featureCase.onlyXmindTip', { size: appStore.getFileMaxSize })
-        "
+        :sub-text="t('caseManagement.featureCase.onlyEXcelTip', { size: appStore.getFileMaxSize })"
         :show-file-list="false"
         :auto-upload="false"
         :allow-repeat="true"
@@ -73,11 +69,7 @@
             :disabled="fileList.length < 1"
             @click="saveConfirm"
           >
-            {{
-              validateType === 'Excel'
-                ? t('caseManagement.featureCase.checkImportFile')
-                : t('caseManagement.featureCase.checkTemplate')
-            }}
+            {{ t('caseManagement.featureCase.checkImportFile') }}
           </a-button>
         </div>
       </div>
@@ -90,7 +82,6 @@
   import { FileItem } from '@arco-design/web-vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
-  import MsSeparateRadioButton from '@/components/pure/ms-separate-radio-button/index.vue';
   import MsUpload from '@/components/pure/ms-upload/index.vue';
 
   import { downloadTemplate } from '@/api/modules/case-management/featureCase';
@@ -112,10 +103,6 @@
   }>();
 
   const validateType = defineModel<'Excel' | 'Xmind'>('validateType', { required: true });
-  const validateTypeOptions = [
-    { value: 'Excel', label: t('caseManagement.featureCase.importExcel') },
-    { value: 'Xmind', label: t('caseManagement.featureCase.importXmind') },
-  ];
   const fileList = ref<FileItem[]>([]);
   watch(
     () => validateType.value,
@@ -138,19 +125,15 @@
     emit('close');
   };
 
-  const fileTypeTip = computed(() => {
-    return validateType.value === 'Excel'
-      ? t('caseManagement.featureCase.excelImportTip')
-      : t('caseManagement.featureCase.xmindImportTip');
-  });
+  const fileTypeTip = computed(() => t('caseManagement.featureCase.excelImportTip'));
 
   const isRecover = ref<boolean>(false);
 
-  // 下载excel|| xmind模板
+  // 下载 Excel 模板
   async function downloadExcelTemplate() {
     try {
-      const res = await downloadTemplate(currentProjectId.value, validateType.value);
-      downloadByteFile(res, validateType.value === 'Excel' ? 'excel_case.xlsx' : 'xmind_case.xmind');
+      const res = await downloadTemplate(currentProjectId.value, 'Excel');
+      downloadByteFile(res, 'excel_case.xlsx');
     } catch (error) {
       console.log(error);
     }

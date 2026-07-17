@@ -19,6 +19,8 @@ export default {
   'login.form.username': 'Username',
   'login.form.password': 'Password',
   'login.form.loading': 'Logging in',
+  'login.form.localLoginDisabledTip':
+    'Password login is disabled. Only admin keeps the operations login; regular users should use Miduo Planet.',
   'login.miduo.callback.loading': 'Signing in with Miduo…',
   'login.miduo.callback.error': 'Miduo SSO login failed',
   'login.miduo.callback.missingParams': 'Missing token. Please re-enter from Miduo.',

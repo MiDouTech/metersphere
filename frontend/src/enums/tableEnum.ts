@@ -50,6 +50,7 @@ export enum TableKeyEnum {
   BUG_MANAGEMENT = 'bugManagement',
   BUG_MANAGEMENT_RECYCLE = 'bugManagementRecycle',
   CASE_MANAGEMENT_REVIEW = 'caseManagementReview',
+  CASE_MANAGEMENT_TEST_REPORT = 'caseManagementTestReport',
   CASE_MANAGEMENT_REVIEW_CASE = 'caseManagementReviewCase',
   CASE_MANAGEMENT_TAB_DEFECT = 'caseManagementTabDefect',
   // CASE_MANAGEMENT_TAB_DEFECT_TEST_PLAN = 'caseManagementTabTestPlan',

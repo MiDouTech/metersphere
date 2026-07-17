@@ -4,9 +4,11 @@ package io.metersphere.system.security.realm;
 import io.metersphere.sdk.constants.SessionConstants;
 import io.metersphere.sdk.constants.UserSource;
 import io.metersphere.sdk.util.Translator;
+import io.metersphere.system.config.LocalLoginProperties;
 import io.metersphere.system.dto.sdk.SessionUser;
 import io.metersphere.system.dto.user.UserDTO;
 import io.metersphere.system.service.UserLoginService;
+import io.metersphere.system.service.department.OrgSyncConstants;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
@@ -34,6 +36,8 @@ public class LocalRealm extends AuthorizingRealm {
     private Logger logger = LoggerFactory.getLogger(LocalRealm.class);
     @Resource
     private UserLoginService userLoginService;
+    @Resource
+    private LocalLoginProperties localLoginProperties;
 
     @Override
     public String getName() {
@@ -103,6 +107,12 @@ public class LocalRealm extends AuthorizingRealm {
             }
             userId = user.getId();
         }
+        if (!isAdmin(userId) && !localLoginProperties.isEnabled()) {
+            throw new AuthenticationException(Translator.get("local_login_disabled"));
+        }
+        if (!isAdmin(userId) && StringUtils.isNotBlank(user.getWecomUserid())) {
+            throw new AuthenticationException(Translator.get("wecom_user_login_forbidden"));
+        }
         // 密码验证
         if (!userLoginService.checkUserPassword(userId, password)) {
             throw new IncorrectCredentialsException(Translator.get("password_is_incorrect"));
@@ -110,6 +120,10 @@ public class LocalRealm extends AuthorizingRealm {
         SessionUser sessionUser = SessionUser.fromUser(user, SessionUtils.getSessionId());
         SessionUtils.putUser(sessionUser);
         return new SimpleAuthenticationInfo(userId, password, getName());
+    }
+
+    private boolean isAdmin(String userId) {
+        return StringUtils.equals(OrgSyncConstants.PROTECTED_USER_ID, userId);
     }
 
 }

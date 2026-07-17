@@ -20,7 +20,7 @@
         <a-tooltip :content="currentProjectName">
           <a-select
             v-model:model-value="appStore.currentProjectId"
-            class="project-switch-select w-[50px] focus-within:!bg-[var(--color-text-n8)] hover:!bg-[var(--color-text-n8)]"
+            class="project-switch-select min-w-[200px] max-w-[420px] focus-within:!bg-[var(--color-text-n8)] hover:!bg-[var(--color-text-n8)]"
             :bordered="false"
             :fallback-option="false"
             allow-search
@@ -55,6 +55,13 @@
               </a-option>
             </a-tooltip>
           </a-select>
+        </a-tooltip>
+      </li>
+      <li v-if="showProjectSelect" class="current-org-name">
+        <a-tooltip :content="currentOrgName">
+          <span class="one-line-text max-w-[180px] text-[13px] text-[var(--color-text-2)]">
+            {{ t('settings.navbar.currentOrg') }}：{{ currentOrgName || '-' }}
+          </span>
         </a-tooltip>
       </li>
       <li>
@@ -277,6 +284,10 @@
     const current = appStore.projectList.find((project) => project.id === appStore.currentProjectId);
     return current?.name || '';
   });
+  const currentOrgName = computed(() => {
+    const current = appStore.orgList.find((org) => org.id === appStore.currentOrgId);
+    return current?.name || '';
+  });
 
   async function selectProject(
     value: string | number | boolean | Record<string, any> | (string | number | boolean | Record<string, any>)[]
@@ -409,11 +420,11 @@
   }
   .project-switch-select {
     :deep(.arco-select-view-value) {
-      @apply hidden;
+      @apply one-line-text max-w-[380px];
     }
-    :deep(.arco-select-view-suffix) {
-      margin-left: 0;
-    }
+  }
+  .current-org-name {
+    @apply max-w-[200px];
   }
   .right-side {
     @apply flex list-none;

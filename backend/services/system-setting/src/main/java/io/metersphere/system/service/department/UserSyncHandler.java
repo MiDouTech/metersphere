@@ -151,6 +151,7 @@ public class UserSyncHandler {
 
         User update = new User();
         update.setId(userId);
+        update.setPassword(StringUtils.EMPTY);
         update.setWecomUserid(wecomUser.getUserid().trim());
         update.setDepartmentId(departmentId);
         update.setPosition(trimToNull(wecomUser.getPosition()));

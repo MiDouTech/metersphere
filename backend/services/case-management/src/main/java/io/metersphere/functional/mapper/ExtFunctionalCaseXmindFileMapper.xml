@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.functional.mapper.ExtFunctionalCaseXmindFileMapper">
+
+    <select id="list" resultType="io.metersphere.functional.domain.FunctionalCaseXmindFile">
+        select id, project_id as projectId, name, original_name as originalName, file_id as fileId,
+               size, storage, create_time as createTime, update_time as updateTime,
+               create_user as createUser, update_user as updateUser
+        from functional_case_xmind_file
+        where project_id = #{request.projectId}
+        <if test="request.keyword != null and request.keyword != ''">
+            and (name like concat('%', #{request.keyword}, '%')
+              or original_name like concat('%', #{request.keyword}, '%'))
+        </if>
+    </select>
+</mapper>

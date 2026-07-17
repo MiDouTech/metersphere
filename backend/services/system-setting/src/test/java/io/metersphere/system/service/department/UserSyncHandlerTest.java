@@ -74,7 +74,10 @@ class UserSyncHandlerTest {
         Assertions.assertEquals(1, result.getCreated());
         verify(simpleUserService).addUser(any(UserBatchCreateRequest.class), anyString(), eq("admin"));
         verify(organizationService).addMemberBySystem(any(OrganizationMemberRequest.class), eq("admin"));
-        verify(userMapper).updateByPrimaryKeySelective(any(User.class));
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).updateByPrimaryKeySelective(captor.capture());
+        Assertions.assertEquals("", captor.getValue().getPassword());
+        Assertions.assertEquals("zhangsan", captor.getValue().getWecomUserid());
     }
 
     @Test

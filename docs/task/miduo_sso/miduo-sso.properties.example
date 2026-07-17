@@ -8,6 +8,7 @@
 # 对应环境变量：
 #   MIDUO_SSO_ENABLED / MIDUO_SSO_BASE_URL / MIDUO_SSO_APP_CODE / MIDUO_SSO_APP_SECRET
 #   MIDUO_SSO_REDIRECT_URI / MIDUO_SSO_SHORTCUT_ID / MIDUO_SSO_ORGANIZATION_ID
+#   MS_LOCAL_LOGIN_ENABLED
 #
 # APP00016（测试云平台）正式启用参考：
 # miduo.sso.enabled=true
@@ -30,9 +31,13 @@
 # miduo.sso.session-ttl-seconds=28800
 # miduo.sso.refresh-ahead-seconds=1800
 #
+# LOCAL 账密登录开关（默认 true）：false 时普通本地用户禁止账密登录，仅 admin 保留运维登录。
+# metersphere.local-login.enabled=true
+#
 # 硬约束：
 # - appSecret 仅后端；浏览器只中转 exchange token
 # - X-App-Timestamp 为 Unix 秒；签名 HMAC-SHA256 Base64
 # - redirectUri 须命中米多白名单；生产 HTTPS（APP00016 白名单为 https://msp.ebcone.net）
 # - 身份权威字段：validate 返回的 wework_userid → user.wecom_userid
+# - 企微同步用户禁止 LOCAL 账密登录，请通过米多星球登录
 # - 交付单 baseUrl=/ 无效，必须换成真实米多 API 根地址

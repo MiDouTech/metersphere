@@ -67,6 +67,12 @@
       <template #updateTime="{ record }"> {{ dayjs(record.updateTime).format('YYYY-MM-DD HH:mm:ss') }} </template>
       <template v-if="isEnableTemplate" #operation="{ record }">
         <div class="flex flex-row flex-nowrap items-center">
+          <MsButton class="!mr-0" @click="showDetail(record)">{{ t('common.detail') }}</MsButton>
+          <a-divider
+            v-if="isOptionEditableField(record) && hasAnyPermission(props.updatePermission)"
+            class="h-[12px]"
+            direction="vertical"
+          />
           <MsPopConfirm
             type="error"
             :title="t('system.orgTemplate.updateTip', { name: characterLimit(record.name) })"
@@ -74,11 +80,7 @@
             :ok-text="t('system.orgTemplate.confirm')"
             @confirm="handleOk(record)"
           >
-            <MsButton
-              v-if="!record.internal && hasAnyPermission(props.updatePermission)"
-              :disabled="record.internal"
-              class="!mr-0"
-            >
+            <MsButton v-if="isOptionEditableField(record) && hasAnyPermission(props.updatePermission)" class="!mr-0">
               {{ t('system.orgTemplate.edit') }}
             </MsButton>
           </MsPopConfirm>
@@ -383,6 +385,10 @@
       handlerDelete(record);
     }
   };
+
+  function isOptionEditableField(record: AddOrUpdateField) {
+    return !record.internal || ['bug_degree', 'bug_type'].includes(record.name || '');
+  }
 
   const showDetailVisible = ref<boolean>(false);
   const detailInfo = ref<AddOrUpdateField>();

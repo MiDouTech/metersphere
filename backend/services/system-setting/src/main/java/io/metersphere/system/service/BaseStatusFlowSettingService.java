@@ -1,5 +1,7 @@
 package io.metersphere.system.service;
 
+import io.metersphere.bug.domain.BugExample;
+import io.metersphere.bug.mapper.BugMapper;
 import io.metersphere.plugin.platform.dto.SelectOption;
 import io.metersphere.sdk.constants.BugStatusDefinitionType;
 import io.metersphere.sdk.constants.DefaultBugStatusItem;
@@ -7,6 +9,7 @@ import io.metersphere.sdk.constants.TemplateScene;
 import io.metersphere.sdk.constants.TemplateScopeType;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.BeanUtils;
+import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.controller.handler.result.CommonResultCode;
 import io.metersphere.system.domain.StatusDefinition;
 import io.metersphere.system.domain.StatusDefinitionExample;
@@ -48,6 +51,8 @@ public class BaseStatusFlowSettingService {
     protected StatusDefinitionMapper statusDefinitionMapper;
     @Resource
     protected BaseStatusDefinitionService baseStatusDefinitionService;
+    @Resource
+    private BugMapper bugMapper;
     @Resource
     protected BaseStatusItemService baseStatusItemService;
     @Resource
@@ -154,9 +159,31 @@ public class BaseStatusFlowSettingService {
     }
 
     protected void deleteStatusItem(String id) {
+        StatusItem statusItem = baseStatusItemService.getWithCheck(id);
+        assertBugStatusNotInUse(statusItem);
         baseStatusItemService.delete(id);
         baseStatusDefinitionService.deleteByStatusId(id);
         baseStatusFlowService.deleteByStatusId(id);
+    }
+
+    /**
+     * 缺陷状态若已被缺陷引用则禁止删除（task008）
+     */
+    protected void assertBugStatusNotInUse(StatusItem statusItem) {
+        if (statusItem == null || !StringUtils.equals(statusItem.getScene(), TemplateScene.BUG.name())) {
+            return;
+        }
+        List<String> statusIds = new ArrayList<>();
+        statusIds.add(statusItem.getId());
+        List<String> refIds = baseStatusItemService.getStatusItemIdByRefId(statusItem.getId());
+        if (CollectionUtils.isNotEmpty(refIds)) {
+            statusIds.addAll(refIds);
+        }
+        BugExample example = new BugExample();
+        example.createCriteria().andStatusIn(statusIds).andDeletedEqualTo(false);
+        if (bugMapper.countByExample(example) > 0) {
+            throw new MSException(Translator.get("bug_status_in_use"));
+        }
     }
 
     /**

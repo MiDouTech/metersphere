@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.plan.mapper.TestPlanDocumentMapper">
+    <resultMap id="BaseResultMap" type="io.metersphere.plan.domain.TestPlanDocument">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="test_plan_id" jdbcType="VARCHAR" property="testPlanId"/>
+        <result column="project_id" jdbcType="VARCHAR" property="projectId"/>
+        <result column="content" jdbcType="LONGVARCHAR" property="content"/>
+        <result column="content_type" jdbcType="VARCHAR" property="contentType"/>
+        <result column="create_time" jdbcType="BIGINT" property="createTime"/>
+        <result column="update_time" jdbcType="BIGINT" property="updateTime"/>
+        <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
+        <result column="update_user" jdbcType="VARCHAR" property="updateUser"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, test_plan_id, project_id, content, content_type, create_time, update_time, create_user, update_user
+    </sql>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from test_plan_document
+        where id = #{id}
+        limit 1
+    </select>
+
+    <select id="selectByTestPlanId" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from test_plan_document
+        where test_plan_id = #{testPlanId}
+        limit 1
+    </select>
+
+    <insert id="insert" parameterType="io.metersphere.plan.domain.TestPlanDocument">
+        insert into test_plan_document (id, test_plan_id, project_id, content, content_type,
+                                        create_time, update_time, create_user, update_user)
+        values (#{id,jdbcType=VARCHAR}, #{testPlanId,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR},
+                #{content,jdbcType=LONGVARCHAR}, #{contentType,jdbcType=VARCHAR},
+                #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT},
+                #{createUser,jdbcType=VARCHAR}, #{updateUser,jdbcType=VARCHAR})
+    </insert>
+
+    <update id="updateByPrimaryKeySelective" parameterType="io.metersphere.plan.domain.TestPlanDocument">
+        update test_plan_document
+        <set>
+            <if test="content != null">content = #{content,jdbcType=LONGVARCHAR},</if>
+            <if test="contentType != null">content_type = #{contentType,jdbcType=VARCHAR},</if>
+            <if test="updateTime != null">update_time = #{updateTime,jdbcType=BIGINT},</if>
+            <if test="updateUser != null">update_user = #{updateUser,jdbcType=VARCHAR},</if>
+        </set>
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <delete id="deleteByTestPlanId">
+        delete from test_plan_document where test_plan_id = #{testPlanId}
+    </delete>
+</mapper>

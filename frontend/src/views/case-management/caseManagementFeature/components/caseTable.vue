@@ -181,6 +181,15 @@
           </template>
           <!-- 渲染自定义字段结束 -->
           <template #operation="{ record }">
+            <MsButton v-permission="['FUNCTIONAL_CASE:READ']" class="!mr-0" @click="handleCellClick(record)">
+              {{ t('common.detail') }}
+            </MsButton>
+            <a-divider
+              v-permission="['FUNCTIONAL_CASE:READ']"
+              class="!mx-2 h-[12px]"
+              direction="vertical"
+              :margin="8"
+            ></a-divider>
             <MsButton v-permission="['FUNCTIONAL_CASE:READ+UPDATE']" class="!mr-0" @click="operateCase(record, true)">
               {{ t('common.edit') }}
             </MsButton>
@@ -599,7 +608,7 @@
   const nodeData = ref<any>({});
 
   const hasOperationPermission = computed(() =>
-    hasAnyPermission(['FUNCTIONAL_CASE:READ+UPDATE', 'FUNCTIONAL_CASE:READ+DELETE'])
+    hasAnyPermission(['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE:READ+UPDATE', 'FUNCTIONAL_CASE:READ+DELETE'])
   );
 
   const executeResultOptions = computed(() => {
@@ -673,7 +682,7 @@
       fixed: 'right',
       showInTable: true,
       showDrag: false,
-      width: hasOperationPermission.value ? 140 : 50,
+      width: hasOperationPermission.value ? 190 : 50,
     },
   ];
 

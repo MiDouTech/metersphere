@@ -19,6 +19,7 @@ export default {
   'login.form.username': '用户名',
   'login.form.password': '密码',
   'login.form.loading': '登录中',
+  'login.form.localLoginDisabledTip': '账密登录已关闭，仅 admin 保留运维登录；普通用户请使用米多星球登录。',
   'login.miduo.callback.loading': '正在通过米多星球登录…',
   'login.miduo.callback.error': '米多登录失败',
   'login.miduo.callback.missingParams': '缺少 token，请从米多工作台重新进入',

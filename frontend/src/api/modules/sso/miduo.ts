@@ -14,6 +14,7 @@ import {
 export interface MiduoSsoStatus {
   enabled: boolean;
   ready: boolean;
+  localLoginEnabled: boolean;
   reason?: string;
   message?: string;
 }
@@ -33,7 +34,8 @@ export function getMiduoSsoState() {
 }
 
 export function postMiduoSsoCallback(data: MiduoSsoCallbackBody) {
-  return MSR.post({ url: MiduoSsoCallbackUrl, data });
+  // 落地页会改 URL；勿被路由守卫 removeAllPending 取消
+  return MSR.post({ url: MiduoSsoCallbackUrl, data }, { ignoreCancelToken: true });
 }
 
 export function postMiduoSsoLogout() {

@@ -22,6 +22,18 @@ public enum DefaultBugCustomField {
                     getNewOption("severity", "严重", 3),
                     getNewOption("deadly", "致命", 4)
             )
+    ),
+    /**
+     * 缺陷类型（task008）
+     */
+    TYPE("bug_type", CustomFieldType.SELECT,
+            Arrays.asList(
+                    getNewOption("functional", "功能", 1),
+                    getNewOption("performance", "性能", 2),
+                    getNewOption("compatibility", "兼容性", 3),
+                    getNewOption("security", "安全", 4),
+                    getNewOption("other", "其他", 5)
+            )
     );
 
     private final String name;
