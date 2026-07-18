@@ -13,6 +13,17 @@
         @refresh="handleRefreshAll()"
       >
         <template #right>
+          <MsButton
+            v-if="props.canEdit"
+            v-permission="['PROJECT_TEST_PLAN:READ+ASSOCIATION']"
+            type="button"
+            status="default"
+            class="mr-[12px]"
+            @click="emit('link')"
+          >
+            <MsIcon type="icon-icon_link-record_outlined" class="mr-[4px]" />
+            {{ t('ms.case.associate.title') }}
+          </MsButton>
           <a-radio-group
             v-model:model-value="showType"
             type="button"
@@ -118,6 +129,19 @@
             </MsButton>
           </MsPopconfirm>
         </template>
+        <template v-if="keyword.trim() === ''" #empty>
+          <div class="flex w-full items-center justify-center p-[8px] text-[var(--color-text-4)]">
+            {{ t('common.noData') }}
+            <MsButton
+              v-if="props.canEdit"
+              v-permission="['PROJECT_TEST_PLAN:READ+ASSOCIATION']"
+              class="ml-[8px]"
+              @click="emit('link')"
+            >
+              {{ t('caseManagement.featureCase.linkCase') }}
+            </MsButton>
+          </div>
+        </template>
       </MsBaseTable>
     </template>
     <!-- 脑图 -->
@@ -209,6 +233,7 @@
   import { getFilterCustomFields, MsAdvanceFilter } from '@/components/pure/ms-advance-filter';
   import { FilterFormItem, FilterResult } from '@/components/pure/ms-advance-filter/type';
   import MsButton from '@/components/pure/ms-button/index.vue';
+  import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import type { MinderJsonNode, MinderJsonNodeData } from '@/components/pure/ms-minder-editor/props';
   import MsPopconfirm from '@/components/pure/ms-popconfirm/index.vue';
   import MsBaseTable from '@/components/pure/ms-table/base-table.vue';
@@ -281,6 +306,7 @@
 
   const emit = defineEmits<{
     (e: 'refresh'): void;
+    (e: 'link'): void;
     (e: 'handleAdvSearch', isStartAdvance: boolean): void;
     (e: 'selectParentNode', tree: ModuleTreeNode[]): void;
   }>();

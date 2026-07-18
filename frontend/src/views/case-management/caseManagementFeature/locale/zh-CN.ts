@@ -9,6 +9,8 @@ export default {
   'caseManagement.featureCase.xmindFileName': '文件名称',
   'caseManagement.featureCase.xmindUploader': '上传人',
   'caseManagement.featureCase.xmindView': '在线浏览',
+  'caseManagement.featureCase.xmindBackToList': '返回列表',
+  'caseManagement.featureCase.xmindPreviewTip': '右键拖拽可平移画布；Ctrl + 滚轮缩放',
   'caseManagement.featureCase.xmindSearchPlaceholder': '按名称搜索',
   'caseManagement.featureCase.xmindSelectFile': '请选择 Xmind 文件',
   'caseManagement.featureCase.xmindPreviewFailed': '预览失败，请检查文件格式',

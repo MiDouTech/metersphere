@@ -27,20 +27,29 @@
         @select-parent-node="selectParentNode"
         @handle-adv-search="handleAdvSearch"
         @refresh="emit('refresh')"
+        @link="associateDrawerVisible = true"
       ></CaseTable>
     </template>
   </MsSplitBox>
+  <AssociateDrawer
+    v-model:visible="associateDrawerVisible"
+    v-model:project="associateDrawerProject"
+    :test-plan-id="planId"
+    @success="handleAssociateSuccess"
+  />
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
+  import { computed, nextTick, ref, watch } from 'vue';
   import { useRoute } from 'vue-router';
 
   import MsSplitBox from '@/components/pure/ms-split-box/index.vue';
+  import AssociateDrawer from './components/associateDrawer.vue';
   import CaseTable from './components/caseTable.vue';
   import CaseTree from './components/caseTree.vue';
 
   import { useI18n } from '@/hooks/useI18n';
+  import useAppStore from '@/store/modules/app';
   import useTestPlanFeatureCaseStore from '@/store/modules/testPlan/testPlanFeatureCase';
 
   import { ModuleTreeNode } from '@/models/common';
@@ -55,6 +64,7 @@
 
   const { t } = useI18n();
   const route = useRoute();
+  const appStore = useAppStore();
   const testPlanFeatureCaseStore = useTestPlanFeatureCaseStore();
 
   const planId = ref(route.query.id as string);
@@ -103,6 +113,15 @@
       getCaseTableList();
     }
   );
+
+  const associateDrawerVisible = ref(false);
+  const associateDrawerProject = ref(appStore.currentProjectId);
+
+  function handleAssociateSuccess() {
+    emit('refresh');
+    caseTreeRef.value?.initModules();
+    caseTableRef.value?.refresh();
+  }
 </script>
 
 <style lang="less" scoped>

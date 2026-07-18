@@ -9,6 +9,7 @@ import {
   archivedPlanUrl,
   AssociatedBugToApiCaseUrl,
   AssociatedBugToScenarioCaseUrl,
+  AssociateFunctionalCaseUrl,
   BatchAddBugToApiCaseUrl,
   BatchAddBugToFunctionalCaseUrl,
   BatchAddBugToMinderCaseUrl,
@@ -268,6 +269,10 @@ export function getFeatureCaseModule(data: PlanDetailApiCaseTreeParams) {
 // 计划详情-功能用例列表-取消关联用例
 export function disassociateCase(data: DisassociateCaseParams) {
   return MSR.post({ url: DisassociateCaseUrl, data });
+}
+// 计划详情-功能用例列表-关联用例
+export function associateFunctionalCase(data: TableQueryParams) {
+  return MSR.post({ url: AssociateFunctionalCaseUrl, data });
 }
 // 计划详情-功能用例列表-拖拽排序
 export const sortFeatureCase = (data: SortApiCaseParams) => {

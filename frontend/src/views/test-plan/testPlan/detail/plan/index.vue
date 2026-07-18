@@ -32,17 +32,15 @@
       <div v-if="canEdit" class="mb-[8px] text-[12px] text-[var(--color-text-4)]">
         {{ t('testPlan.document.resetTip') }}
       </div>
-      <div
-        class="document-editor overflow-hidden rounded-[var(--border-radius-small)] border border-[var(--color-text-n8)] bg-[var(--color-bg-1)]"
-      >
+      <div class="document-editor rounded-[var(--border-radius-small)] bg-[var(--color-bg-1)]">
         <MsRichText
           v-model:raw="content"
           v-model:filedIds="fileIds"
           :upload-image="handleUploadImage"
           :preview-url="`${PreviewEditorImageUrl}/${appStore.currentProjectId}`"
           :editable="canEdit"
-          :auto-height="false"
-          class="min-h-[520px] w-full"
+          :auto-height="true"
+          class="w-full"
         />
       </div>
     </section>
@@ -220,8 +218,14 @@
     color: var(--color-text-1);
   }
   .document-editor {
-    :deep(.halo-rich-text-editor) {
-      min-height: 520px;
+    /* 正文随内容撑开，由页面全局滚动，避免编辑器内部滚动条 */
+    :deep(.rich-wrapper) {
+      overflow: visible;
+    }
+    :deep(.editor-content),
+    :deep(.halo-rich-text-editor .ProseMirror) {
+      overflow: visible !important;
+      max-height: none !important;
     }
   }
   .preview-body {

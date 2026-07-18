@@ -63,7 +63,7 @@ export const mainEditorProps = {
   },
   minderKey: String as PropType<MinderKeyEnum>,
   disabled: Boolean,
-  /** 预览增强：右键拖拽平移；滚轮平移、Ctrl+滚轮缩放 */
+  /** 预览增强：右键拖拽平移；禁用 Alt/根节点等鼠标快捷手势；滚轮平移、Ctrl+滚轮缩放 */
   xmindInteraction: {
     type: Boolean,
     default: false,

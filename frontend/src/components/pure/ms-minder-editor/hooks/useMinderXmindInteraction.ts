@@ -3,6 +3,7 @@
  * - 右键拖拽平移
  * - 滚轮平移（沿用 kityminder 默认）
  * - Ctrl/⌘ + 滚轮缩放（沿用 kityminder 默认，并细化缩放档位）
+ * - 禁用内置鼠标快捷手势（Alt 拖拽、点根节点临时抓手等）
  */
 
 const WHEEL_ZOOM_LEVELS = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200];
@@ -25,12 +26,40 @@ export default function bindMinderXmindInteraction(minder: any) {
   let rightPanning = false;
 
   const paperContainer = minder.getPaper?.()?.container || minder.getRenderTarget?.() || null;
+  if (paperContainer) {
+    // 禁用浏览器触控板后退/前进等手势干扰画布
+    paperContainer.style.touchAction = 'none';
+    paperContainer.style.overscrollBehavior = 'none';
+  }
+
+  // 禁用内置 hand 状态（含 Alt/根节点临时抓手）；平移仅使用下方右键逻辑
+  const originalSetStatus = typeof minder.setStatus === 'function' ? minder.setStatus.bind(minder) : null;
+  if (originalSetStatus) {
+    minder.setStatus = function patchedSetStatus(status: string, ...args: any[]) {
+      if (status === 'hand') {
+        return this;
+      }
+      return originalSetStatus(status, ...args);
+    };
+  }
 
   const handleBeforeMouseDown = (e: any) => {
-    // 右键交给自定义平移，避免与内置 hand 临时拖拽叠加
-    if (e.originEvent?.button === 2) {
+    const originEvent = e.originEvent as MouseEvent | undefined;
+    if (!originEvent) {
+      return;
+    }
+    // 中键 / Alt：拦截，避免触发内置临时拖拽手势
+    if (originEvent.button === 1 || originEvent.altKey) {
       e.stopPropagation();
       e.preventDefault?.();
+      originEvent.preventDefault?.();
+      return;
+    }
+    // 右键交给自定义平移，避免与内置 hand 临时拖拽叠加
+    if (originEvent.button === 2) {
+      e.stopPropagation();
+      e.preventDefault?.();
+      originEvent.preventDefault?.();
       const pos = e.getPosition?.('view');
       rightPanLastPos = pos ? { x: pos.x, y: pos.y } : null;
       rightPanning = false;
@@ -78,6 +107,9 @@ export default function bindMinderXmindInteraction(minder: any) {
   window.addEventListener('mouseup', handleMouseUp);
 
   return () => {
+    if (originalSetStatus) {
+      minder.setStatus = originalSetStatus;
+    }
     minder.off('beforemousedown', handleBeforeMouseDown);
     minder.off('mousemove', handleMouseMove);
     minder.off('mouseup', handleMouseUp);

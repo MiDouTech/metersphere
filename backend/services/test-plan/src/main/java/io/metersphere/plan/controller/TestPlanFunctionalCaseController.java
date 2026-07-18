@@ -95,6 +95,16 @@ public class TestPlanFunctionalCaseController {
         return testPlanFunctionalCaseService.moduleCount(request);
     }
 
+    @PostMapping("/associate")
+    @Operation(summary = "测试计划-计划详情-列表-关联功能用例")
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_READ_ASSOCIATION)
+    @CheckOwner(resourceId = "#request.getTestPlanId()", resourceType = "test_plan")
+    public void associate(@Validated @RequestBody TestPlanFunctionalCaseAssociateRequest request) {
+        testPlanManagementService.checkModuleIsOpen(request.getTestPlanId(), TestPlanResourceConfig.CHECK_TYPE_TEST_PLAN,
+                Collections.singletonList(TestPlanResourceConfig.CONFIG_TEST_PLAN_FUNCTIONAL_CASE));
+        testPlanFunctionalCaseService.associateCases(request, SessionUtils.getUser());
+    }
+
     @PostMapping("/disassociate")
     @Operation(summary = "测试计划-计划详情-列表-取消关联用例")
     @RequiresPermissions(PermissionConstants.TEST_PLAN_READ_ASSOCIATION)
