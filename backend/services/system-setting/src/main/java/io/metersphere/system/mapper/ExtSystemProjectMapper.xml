@@ -4,23 +4,24 @@
 
 
     <select id="getProjectMemberList" resultType="io.metersphere.system.dto.user.UserExtendDTO">
-        SELECT temp.* , MAX( if (temp.role_id = 'project_admin', true, false)) as adminFlag, MIN(temp.memberTime) as groupTime
-        FROM (
-                 SELECT `user`.* , user_role_relation.role_id, user_role_relation.create_time as memberTime
-                 FROM user_role_relation
-                        LEFT JOIN `user` ON user_role_relation.user_id = `user`.id
+        SELECT u.*,
+               MAX(IF(urr.role_id = 'project_admin', true, false)) AS adminFlag,
+               MIN(urr.create_time) AS groupTime
+        FROM user_role_relation urr
+                 LEFT JOIN `user` u ON urr.user_id = u.id
         <where>
-            `user`.deleted = 0
+            u.deleted = 0
             <if test="request.projectId != null">
-                and user_role_relation.source_id = #{request.projectId}
+                AND urr.source_id = #{request.projectId}
             </if>
             <if test="request.keyword != null and request.keyword !='' ">
-                and (user.name like CONCAT('%', #{request.keyword},'%')
-                or user.email like CONCAT('%', #{request.keyword},'%')
-                or user.phone like CONCAT('%', #{request.keyword},'%'))
+                AND (u.name LIKE CONCAT('%', #{request.keyword},'%')
+                OR u.email LIKE CONCAT('%', #{request.keyword},'%')
+                OR u.phone LIKE CONCAT('%', #{request.keyword},'%'))
             </if>
         </where>
-                 ORDER BY `user_role_relation`.create_time DESC) temp GROUP BY temp.id ORDER BY adminFlag DESC, groupTime DESC
+        GROUP BY u.id
+        ORDER BY adminFlag DESC, groupTime DESC
     </select>
     <select id="getProjectList" resultType="io.metersphere.system.dto.ProjectDTO">
         select p.id,
