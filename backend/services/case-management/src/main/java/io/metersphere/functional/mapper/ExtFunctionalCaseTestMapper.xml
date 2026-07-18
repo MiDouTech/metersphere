@@ -77,16 +77,38 @@
     </select>
 
     <select id="getPlanList" parameterType="io.metersphere.functional.request.AssociatePlanPageRequest" resultType="io.metersphere.functional.dto.FunctionalCaseTestPlanDTO">
-        SELECT r.* from (
-        SELECT distinct tpfc.test_plan_id as testPlanId,
-        tpfc.*, tp.name as testPlanName, tp.num as testPlanNum, tp.status as planStatus, p.name as projectName
-        FROM
-        test_plan_functional_case tpfc
+        SELECT
+            tpfc.id,
+            tpfc.test_plan_id,
+            tpfc.functional_case_id,
+            tpfc.create_time,
+            tpfc.create_user,
+            tpfc.execute_user,
+            tpfc.last_exec_time,
+            tpfc.last_exec_result,
+            tpfc.pos,
+            tpfc.test_plan_collection_id,
+            tp.name AS testPlanName,
+            tp.num AS testPlanNum,
+            tp.status AS planStatus,
+            p.name AS projectName
+        FROM test_plan_functional_case tpfc
+        INNER JOIN (
+            SELECT
+                t1.test_plan_id,
+                SUBSTRING_INDEX(
+                    GROUP_CONCAT(t1.id ORDER BY IFNULL(t1.last_exec_time, 0) DESC, t1.id DESC),
+                    ',',
+                    1
+                ) AS pick_id
+            FROM test_plan_functional_case t1
+            WHERE t1.functional_case_id = #{request.caseId}
+            GROUP BY t1.test_plan_id
+        ) latest ON latest.pick_id = tpfc.id
         LEFT JOIN test_plan tp ON tpfc.test_plan_id = tp.id
         LEFT JOIN project p ON tp.project_id = p.id
         <where>
             tpfc.functional_case_id = #{request.caseId}
-
             <if test="request.keyword != null">
                 AND
                 (
@@ -98,9 +120,7 @@
                 <property name="filter" value="request.filter"/>
             </include>
         </where>
-
-        order by tpfc.last_exec_time desc) as r
-        group by r.test_plan_id
+        ORDER BY tpfc.last_exec_time DESC
     </select>
 
     <select id="getPlanExecuteHistoryList" resultType="io.metersphere.functional.dto.TestPlanCaseExecuteHistoryDTO">

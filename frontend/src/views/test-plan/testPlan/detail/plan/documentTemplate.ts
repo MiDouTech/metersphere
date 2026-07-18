@@ -4,8 +4,8 @@ function cell(text: string) {
   return text || '待填写';
 }
 
-function infoRow(label: string, value: string) {
-  return `<tr><th colspan="1"><p>${label}</p></th><td colspan="1"><p>${cell(value)}</p></td></tr>`;
+function infoLine(label: string, value: string) {
+  return `<p>${label}：${cell(value)}</p>`;
 }
 
 function emptyParagraph() {
@@ -16,16 +16,8 @@ function sectionTitle(title: string) {
   return `<h2>${title}</h2>`;
 }
 
-function simpleTable(headers: string[], rows: string[][]) {
-  const head = `<tr>${headers.map((h) => `<th colspan="1"><p>${h}</p></th>`).join('')}</tr>`;
-  const body = rows
-    .map((row) => `<tr>${row.map((c) => `<td colspan="1"><p>${cell(c)}</p></td>`).join('')}</tr>`)
-    .join('');
-  return `<table><tbody>${head}${body}</tbody></table>`;
-}
-
 /**
- * 生成标准 14 节测试计划文档 HTML 模板（富文本）
+ * 生成标准 14 节测试计划文档 HTML 模板（富文本，纯文本行，不含表格）
  * 重置为模板 / 首次无文档时使用；templateMeta 自动填充文档信息
  */
 export default function buildTestPlanDocumentTemplate(meta?: TestPlanDocumentTemplateMeta): string {
@@ -37,15 +29,13 @@ export default function buildTestPlanDocumentTemplate(meta?: TestPlanDocumentTem
 
   const parts: string[] = [
     sectionTitle('1. 文档信息'),
-    `<table><tbody>${[
-      infoRow('编号', docNo),
-      infoRow('版本', 'V1.0'),
-      infoRow('所属项目', projectName),
-      infoRow('测试模块', planName),
-      infoRow('编制日期', date),
-      infoRow('编制人', author),
-      infoRow('审核人', ''),
-    ].join('')}</tbody></table>`,
+    infoLine('编号', docNo),
+    infoLine('版本', 'V1.0'),
+    infoLine('所属项目', projectName),
+    infoLine('测试模块', planName),
+    infoLine('编制日期', date),
+    infoLine('编制人', author),
+    infoLine('审核人', ''),
 
     sectionTitle('2. 项目背景'),
     emptyParagraph(),
@@ -71,60 +61,35 @@ export default function buildTestPlanDocumentTemplate(meta?: TestPlanDocumentTem
     emptyParagraph(),
 
     sectionTitle('7. 测试环境与数据'),
-    simpleTable(
-      ['环境', '说明', '备注'],
-      [
-        ['测试环境', '', ''],
-        ['测试数据', '', ''],
-      ]
-    ),
+    '<p>测试环境：说明 待填写；备注 待填写</p>',
+    '<p>测试数据：说明 待填写；备注 待填写</p>',
 
     sectionTitle('8. 准入、暂停与退出标准'),
-    simpleTable(
-      ['类型', '标准说明'],
-      [
-        ['准入标准', ''],
-        ['暂停标准', ''],
-        ['退出标准', ''],
-      ]
-    ),
+    infoLine('准入标准', ''),
+    infoLine('暂停标准', ''),
+    infoLine('退出标准', ''),
 
     sectionTitle('9. 测试进度'),
-    simpleTable(
-      ['阶段', '计划开始', '计划结束', '说明'],
-      [
-        ['准备', '', '', ''],
-        ['执行', '', '', ''],
-        ['收尾', '', '', ''],
-      ]
-    ),
+    '<p>准备：计划开始 待填写；计划结束 待填写；说明 待填写</p>',
+    '<p>执行：计划开始 待填写；计划结束 待填写；说明 待填写</p>',
+    '<p>收尾：计划开始 待填写；计划结束 待填写；说明 待填写</p>',
 
     sectionTitle('10. 人员与职责'),
-    simpleTable(
-      ['角色', '人员', '职责'],
-      [
-        ['测试负责人', author, ''],
-        ['测试执行', '', ''],
-      ]
-    ),
+    `<p>测试负责人：人员 ${cell(author)}；职责 待填写</p>`,
+    '<p>测试执行：人员 待填写；职责 待填写</p>',
 
     sectionTitle('11. 缺陷管理'),
     emptyParagraph(),
 
     sectionTitle('12. 风险与应对'),
-    simpleTable(['风险', '影响', '应对措施'], [['', '', '']]),
+    '<p>风险：待填写；影响：待填写；应对措施：待填写</p>',
 
     sectionTitle('13. 测试交付物'),
-    simpleTable(
-      ['交付物', '说明', '负责人'],
-      [
-        ['测试计划', planName, author],
-        ['测试报告', '', ''],
-      ]
-    ),
+    `<p>测试计划：说明 ${cell(planName)}；负责人 ${cell(author)}</p>`,
+    '<p>测试报告：说明 待填写；负责人 待填写</p>',
 
     sectionTitle('14. 审批记录'),
-    simpleTable(['审批人', '角色', '意见', '日期'], [['', '', '', '']]),
+    '<p>审批人：待填写；角色：待填写；意见：待填写；日期：待填写</p>',
   ];
 
   return parts.join('');

@@ -10,6 +10,8 @@ export default {
   'caseManagement.featureCase.xmindFileName': 'File Name',
   'caseManagement.featureCase.xmindUploader': 'Uploader',
   'caseManagement.featureCase.xmindView': 'View Online',
+  'caseManagement.featureCase.xmindBackToList': 'Back to list',
+  'caseManagement.featureCase.xmindPreviewTip': 'Right-drag to pan; Ctrl + wheel to zoom',
   'caseManagement.featureCase.xmindSearchPlaceholder': 'Search by name',
   'caseManagement.featureCase.xmindSelectFile': 'Please select an Xmind file',
   'caseManagement.featureCase.xmindPreviewFailed': 'Preview failed. Please check the file format',

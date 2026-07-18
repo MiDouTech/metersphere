@@ -1,103 +1,113 @@
 <template>
+  <!-- 详情头 + Tab 冻结，正文走页面全局滚动 -->
+  <div class="plan-detail-sticky sticky top-0 z-[10] bg-[var(--color-bg-3)] pb-[16px]">
+    <MsCard
+      :loading="loading"
+      :header-min-width="1100"
+      :min-width="150"
+      auto-height
+      hide-footer
+      no-content-padding
+      hide-divider
+      hide-back
+    >
+      <template #headerLeft>
+        <MsStatusTag :status="countDetail.status" />
+        <a-tooltip :content="`[${detail.num}]${detail.name}`">
+          <div class="one-line-text ml-[8px] max-w-[360px] gap-[4px] font-medium text-[var(--color-text-1)]">
+            <span>[{{ detail.num }}]</span>
+            {{ detail.name }}
+          </div>
+        </a-tooltip>
+      </template>
+      <template #headerRight>
+        <MsButton v-if="isEnableEdit" type="button" status="default" @click="editorCopyHandler(false)">
+          <MsIcon type="icon-icon_edit_outlined" class="mr-[8px]" />
+          {{ t('common.edit') }}
+        </MsButton>
+        <MsTableMoreAction
+          v-if="countDetail.status !== 'ARCHIVED'"
+          :list="reportMoreAction"
+          @select="handleMoreReportSelect"
+        >
+          <MsButton v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE'])" type="button" status="default">
+            <MsIcon type="icon-icon_generate_report" class="mr-[8px]" />
+            {{ t('testPlan.testPlanDetail.generateReport') }}
+          </MsButton>
+        </MsTableMoreAction>
+        <MsButton
+          v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+ADD']) && countDetail.status !== 'ARCHIVED'"
+          type="button"
+          status="default"
+          :loading="copyLoading"
+          @click="copyHandler"
+        >
+          <MsIcon type="icon-icon_copy_outlined" class="mr-[8px]" />
+          {{ t('common.copy') }}
+        </MsButton>
+        <MsButton v-if="isEnableEdit" type="button" status="default" :loading="followLoading" @click="followHandler">
+          <MsIcon
+            :type="detail.followFlag ? 'icon-icon_collect_filled' : 'icon-icon_collection_outlined'"
+            :class="`mr-[8px] ${detail.followFlag ? 'text-[rgb(var(--warning-6))]' : ''}`"
+          />
+          {{ t(detail.followFlag ? 'common.forked' : 'common.fork') }}
+        </MsButton>
+        <MsButton v-if="countDetail.status === 'ARCHIVED'" status="danger" type="button" @click="deleteHandler">
+          <MsIcon type="icon-icon_delete-trash_outlined1" class="mr-[8px] text-[rgb(var(--danger-6))]" />
+          <span class="text-[rgb(var(--danger-6))]"> {{ t('common.delete') }}</span>
+        </MsButton>
+        <MsTableMoreAction v-else :list="moreAction" @select="handleMoreSelect">
+          <MsButton v-permission="['PROJECT_TEST_PLAN:READ+DELETE']" type="button" status="default">
+            <MsIcon type="icon-icon_more_outlined" class="mr-[8px]" />
+            {{ t('common.more') }}
+          </MsButton>
+        </MsTableMoreAction>
+      </template>
+      <template #subHeader>
+        <div class="mt-[16px] w-[476px]">
+          <div class="mb-[8px] flex items-center gap-[24px] text-[12px]">
+            <div class="text-[var(--color-text-4)]">
+              <span class="mr-[8px]">{{ t('testPlan.testPlanDetail.executed') }}</span>
+              <span>
+                <span class="mr-1 font-medium text-[var(--color-text-1)]"> {{ hasExecutedCount }} </span>/<span
+                  class="ml-1"
+                  >{{ countDetail.caseTotal }}</span
+                >
+              </span>
+            </div>
+            <div class="text-[var(--color-text-4)]">
+              <span class="mr-[8px]">{{ t('caseManagement.caseReview.passRate') }}</span>
+              <span>
+                <span class="font-medium text-[var(--color-text-1)]"> {{ countDetail.passRate }}% </span>
+              </span>
+            </div>
+          </div>
+          <StatusProgress
+            :type="testPlanTypeEnum.TEST_PLAN"
+            :status-detail="countDetail"
+            height="8px"
+            radius="var(--border-radius-mini)"
+          />
+        </div>
+      </template>
+      <MsTab
+        v-model:active-key="activeTab"
+        :get-text-func="getTabBadge"
+        :content-tab-list="tabList"
+        :change-interceptor="changeTabInterceptor"
+        no-content
+        class="relative mx-[16px]"
+      />
+    </MsCard>
+  </div>
   <MsCard
-    :loading="loading"
-    :header-min-width="1100"
-    :min-width="150"
-    auto-height
-    hide-footer
+    class="plan-detail-content"
+    :class="{ 'plan-detail-content--doc': activeTab === 'plan' }"
+    simple
+    has-breadcrumb
     no-content-padding
-    hide-divider
-    hide-back
+    :auto-height="activeTab === 'plan'"
   >
-    <template #headerLeft>
-      <MsStatusTag :status="countDetail.status" />
-      <a-tooltip :content="`[${detail.num}]${detail.name}`">
-        <div class="one-line-text ml-[8px] max-w-[360px] gap-[4px] font-medium text-[var(--color-text-1)]">
-          <span>[{{ detail.num }}]</span>
-          {{ detail.name }}
-        </div>
-      </a-tooltip>
-    </template>
-    <template #headerRight>
-      <MsButton v-if="isEnableEdit" type="button" status="default" @click="editorCopyHandler(false)">
-        <MsIcon type="icon-icon_edit_outlined" class="mr-[8px]" />
-        {{ t('common.edit') }}
-      </MsButton>
-      <MsTableMoreAction
-        v-if="countDetail.status !== 'ARCHIVED'"
-        :list="reportMoreAction"
-        @select="handleMoreReportSelect"
-      >
-        <MsButton v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE'])" type="button" status="default">
-          <MsIcon type="icon-icon_generate_report" class="mr-[8px]" />
-          {{ t('testPlan.testPlanDetail.generateReport') }}
-        </MsButton>
-      </MsTableMoreAction>
-      <MsButton
-        v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+ADD']) && countDetail.status !== 'ARCHIVED'"
-        type="button"
-        status="default"
-        :loading="copyLoading"
-        @click="copyHandler"
-      >
-        <MsIcon type="icon-icon_copy_outlined" class="mr-[8px]" />
-        {{ t('common.copy') }}
-      </MsButton>
-      <MsButton v-if="isEnableEdit" type="button" status="default" :loading="followLoading" @click="followHandler">
-        <MsIcon
-          :type="detail.followFlag ? 'icon-icon_collect_filled' : 'icon-icon_collection_outlined'"
-          :class="`mr-[8px] ${detail.followFlag ? 'text-[rgb(var(--warning-6))]' : ''}`"
-        />
-        {{ t(detail.followFlag ? 'common.forked' : 'common.fork') }}
-      </MsButton>
-      <MsButton v-if="countDetail.status === 'ARCHIVED'" status="danger" type="button" @click="deleteHandler">
-        <MsIcon type="icon-icon_delete-trash_outlined1" class="mr-[8px] text-[rgb(var(--danger-6))]" />
-        <span class="text-[rgb(var(--danger-6))]"> {{ t('common.delete') }}</span>
-      </MsButton>
-      <MsTableMoreAction v-else :list="moreAction" @select="handleMoreSelect">
-        <MsButton v-permission="['PROJECT_TEST_PLAN:READ+DELETE']" type="button" status="default">
-          <MsIcon type="icon-icon_more_outlined" class="mr-[8px]" />
-          {{ t('common.more') }}
-        </MsButton>
-      </MsTableMoreAction>
-    </template>
-    <template #subHeader>
-      <div class="mt-[16px] w-[476px]">
-        <div class="mb-[8px] flex items-center gap-[24px] text-[12px]">
-          <div class="text-[var(--color-text-4)]">
-            <span class="mr-[8px]">{{ t('testPlan.testPlanDetail.executed') }}</span>
-            <span>
-              <span class="mr-1 font-medium text-[var(--color-text-1)]"> {{ hasExecutedCount }} </span>/<span
-                class="ml-1"
-                >{{ countDetail.caseTotal }}</span
-              >
-            </span>
-          </div>
-          <div class="text-[var(--color-text-4)]">
-            <span class="mr-[8px]">{{ t('caseManagement.caseReview.passRate') }}</span>
-            <span>
-              <span class="font-medium text-[var(--color-text-1)]"> {{ countDetail.passRate }}% </span>
-            </span>
-          </div>
-        </div>
-        <StatusProgress
-          :type="testPlanTypeEnum.TEST_PLAN"
-          :status-detail="countDetail"
-          height="8px"
-          radius="var(--border-radius-mini)"
-        />
-      </div>
-    </template>
-    <MsTab
-      v-model:active-key="activeTab"
-      :get-text-func="getTabBadge"
-      :content-tab-list="tabList"
-      :change-interceptor="changeTabInterceptor"
-      no-content
-      class="relative mx-[16px]"
-    />
-  </MsCard>
-  <MsCard class="mt-[16px]" simple has-breadcrumb no-content-padding>
     <Plan
       v-if="activeTab === 'plan'"
       :plan-id="planId"
@@ -595,6 +605,26 @@
 </script>
 
 <style lang="less" scoped>
+  .plan-detail-sticky {
+    /* 滚动时与正文分隔，避免内容透出 */
+    box-shadow: 0 1px 0 transparent;
+  }
+  .plan-detail-content--doc {
+    /* 文档 Tab：正文随内容增高，交给页面滚动，禁止卡片内滚动 */
+    :deep(.ms-card) {
+      overflow: visible;
+    }
+    :deep(.arco-scrollbar) {
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
+    }
+    :deep(.arco-scrollbar-container) {
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
+    }
+  }
   :deep(.arco-tabs-content) {
     @apply hidden;
   }

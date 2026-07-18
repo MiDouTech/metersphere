@@ -58,6 +58,8 @@ export const GetFeatureCaseModuleUrl = '/test-plan/functional/case/tree';
 export const SortFeatureCaseUrl = '/test-plan/functional/case/sort';
 // 计划详情-功能用例-取消关联用例
 export const DisassociateCaseUrl = '/test-plan/functional/case/disassociate';
+// 计划详情-功能用例-关联用例
+export const AssociateFunctionalCaseUrl = '/test-plan/functional/case/associate';
 // 计划详情-功能用例-批量取消关联用例
 export const BatchDisassociateCaseUrl = '/test-plan/functional/case/batch/disassociate';
 // 计划详情-功能用例-执行

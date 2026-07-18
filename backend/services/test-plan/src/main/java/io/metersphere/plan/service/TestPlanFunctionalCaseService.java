@@ -787,6 +787,69 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     }
 
     /**
+     * 计划详情列表关联功能用例（参考用例评审关联）
+     */
+    public void associateCases(TestPlanFunctionalCaseAssociateRequest request, SessionUser user) {
+        TestPlan testPlan = testPlanMapper.selectByPrimaryKey(request.getTestPlanId());
+        if (testPlan == null) {
+            throw new MSException(Translator.get("test_plan_not_exist"));
+        }
+        String collectionId = request.getCollectionId();
+        if (StringUtils.isBlank(collectionId)) {
+            collectionId = extTestPlanCollectionMapper.selectDefaultCollectionId(request.getTestPlanId(), CaseType.FUNCTIONAL_CASE.getKey());
+        }
+        if (StringUtils.isBlank(collectionId)) {
+            throw new MSException(Translator.get("resource_not_exist"));
+        }
+        super.checkCollection(request.getTestPlanId(), collectionId, CaseType.FUNCTIONAL_CASE.getKey());
+
+        List<String> caseIds;
+        if (request.isSelectAll()) {
+            caseIds = new ArrayList<>(extFunctionalCaseMapper.getIds(request, request.getProjectId(), false));
+            if (CollectionUtils.isNotEmpty(request.getExcludeIds())) {
+                caseIds.removeAll(request.getExcludeIds());
+            }
+        } else {
+            caseIds = request.getSelectIds() == null ? new ArrayList<>() : new ArrayList<>(request.getSelectIds());
+        }
+        if (CollectionUtils.isEmpty(caseIds)) {
+            return;
+        }
+
+        boolean isRepeat = testPlanConfigService.isRepeatCase(testPlan.getId());
+        if (!isRepeat) {
+            TestPlanFunctionalCaseExample example = new TestPlanFunctionalCaseExample();
+            example.createCriteria().andTestPlanIdEqualTo(testPlan.getId()).andFunctionalCaseIdIn(caseIds);
+            Set<String> existedIds = testPlanFunctionalCaseMapper.selectByExample(example).stream()
+                    .map(TestPlanFunctionalCase::getFunctionalCaseId)
+                    .collect(Collectors.toSet());
+            caseIds = caseIds.stream().filter(id -> !existedIds.contains(id)).toList();
+        }
+        if (CollectionUtils.isEmpty(caseIds)) {
+            return;
+        }
+
+        List<FunctionalCase> functionalCaseList = extFunctionalCaseMapper.getListBySelectIds(request.getProjectId(), caseIds, testPlan.getId());
+        if (CollectionUtils.isEmpty(functionalCaseList)) {
+            return;
+        }
+        List<FunctionalCase> sortedList = functionalCaseList.stream()
+                .sorted(Comparator.comparing(FunctionalCase::getPos, Comparator.nullsLast(Long::compareTo)))
+                .toList();
+        List<TestPlanFunctionalCase> insertList = new ArrayList<>();
+        BaseCollectionAssociateRequest collectionAssociateRequest = new BaseCollectionAssociateRequest();
+        collectionAssociateRequest.setCollectionId(collectionId);
+        buildTestPlanFunctionalCaseDTO(collectionAssociateRequest, sortedList, testPlan, user, insertList);
+        if (CollectionUtils.isNotEmpty(insertList)) {
+            testPlanFunctionalCaseMapper.batchInsert(insertList);
+            LogInsertModule logInsertModule = new LogInsertModule(user.getId(), "/test-plan/functional/case/associate",
+                    HttpMethodConstants.POST.name());
+            testPlanResourceLogService.saveAssociateLog(testPlan,
+                    new ResourceLogInsertModule(TestPlanResourceConstants.RESOURCE_FUNCTIONAL_CASE, logInsertModule));
+        }
+    }
+
+    /**
      * 构建测试计划功能用例对象
      *
      * @param testPlan
