@@ -10,7 +10,7 @@ export default {
   'caseManagement.featureCase.xmindUploader': '上传人',
   'caseManagement.featureCase.xmindView': '在线浏览',
   'caseManagement.featureCase.xmindBackToList': '返回列表',
-  'caseManagement.featureCase.xmindPreviewTip': '已禁用浏览器手势；请使用工具栏切换左键功能；Ctrl + 滚轮缩放',
+  'caseManagement.featureCase.xmindPreviewTip': '请用顶栏工具切换左键功能；勿用右键拖拽（浏览器手势）；Ctrl+滚轮缩放',
   'caseManagement.featureCase.xmindToolSelect': '选择',
   'caseManagement.featureCase.xmindToolPan': '拖拽',
   'caseManagement.featureCase.xmindToolZoomIn': '放大',

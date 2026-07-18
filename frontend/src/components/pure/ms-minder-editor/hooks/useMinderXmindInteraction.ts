@@ -1,7 +1,7 @@
 /**
  * Xmind 预览画布交互：
  * - 工具模式：选择 / 拖拽(左键平移) / 放大 / 缩小
- * - 拦截浏览器鼠标手势（右键拖拽触发的「返回/前进」）
+ * - 预览期间 window/document 捕获阶段拦截右键（尽量抑制浏览器/扩展手势）
  * - 禁用内置 Alt/根节点临时抓手等快捷手势
  * - 滚轮平移、Ctrl/⌘ + 滚轮缩放
  */
@@ -16,11 +16,53 @@ export interface XmindInteractionController {
 
 const WHEEL_ZOOM_LEVELS = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200];
 
+const GESTURE_EVENT_TYPES = [
+  'mousedown',
+  'mouseup',
+  'mousemove',
+  'pointerdown',
+  'pointerup',
+  'pointermove',
+  'contextmenu',
+  'auxclick',
+] as const;
+
 function applyCanvasAntiGestureStyle(el: HTMLElement) {
   el.style.touchAction = 'none';
   el.style.overscrollBehavior = 'none';
   // @ts-expect-error vendor prefix
   el.style.msTouchAction = 'none';
+}
+
+function isRightMouseEvent(e: MouseEvent) {
+  // buttons 中 bit1=右键；用 %4 避免 eslint no-bitwise
+  const rightHeld = typeof e.buttons === 'number' && e.buttons % 4 >= 2;
+  return e.button === 2 || e.type === 'contextmenu' || e.type === 'auxclick' || rightHeld;
+}
+
+/**
+ * 预览页级右键手势拦截（不依赖 minder 画布是否已就绪）
+ */
+export function bindPreviewGestureGuard(): () => void {
+  const block = (event: Event) => {
+    const e = event as MouseEvent;
+    if (!isRightMouseEvent(e)) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    (e as any).stopImmediatePropagation?.();
+  };
+  GESTURE_EVENT_TYPES.forEach((name) => {
+    window.addEventListener(name, block, true);
+    document.addEventListener(name, block, true);
+  });
+  return () => {
+    GESTURE_EVENT_TYPES.forEach((name) => {
+      window.removeEventListener(name, block, true);
+      document.removeEventListener(name, block, true);
+    });
+  };
 }
 
 /**
@@ -47,12 +89,12 @@ export default function bindMinderXmindInteraction(minder: any): XmindInteractio
 
   const paperContainer = (minder.getPaper?.()?.container || minder.getRenderTarget?.() || null) as HTMLElement | null;
   const renderTarget = (minder.getRenderTarget?.() || null) as HTMLElement | null;
-  const gestureRoots = [paperContainer, renderTarget].filter(Boolean) as HTMLElement[];
+  const gestureRoots = Array.from(new Set([paperContainer, renderTarget].filter(Boolean))) as HTMLElement[];
   gestureRoots.forEach(applyCanvasAntiGestureStyle);
 
   const originalSetStatus = typeof minder.setStatus === 'function' ? minder.setStatus.bind(minder) : null;
   if (originalSetStatus) {
-    // 禁用内置 hand（Alt/根节点临时抓手、导航器抓手）；拖拽由工具栏左键平移接管
+    // 禁用内置 hand；拖拽由工具栏左键平移接管
     minder.setStatus = function patchedSetStatus(status: string, ...args: any[]) {
       if (status === 'hand') {
         return this;
@@ -74,19 +116,10 @@ export default function bindMinderXmindInteraction(minder: any): XmindInteractio
     minder.getPaper?.()?.setStyle?.('cursor', cursorMap[next]);
   }
 
-  /** 捕获阶段拦截右键，避免浏览器鼠标手势（返回/前进） */
+  /** 画布内再拦一层右键（window 级 guard 已覆盖，此处兜底） */
   const blockBrowserGesture = (event: Event) => {
     const e = event as MouseEvent;
-    const target = e.target as Node | null;
-    const inCanvas = !target || gestureRoots.some((el) => el === target || el.contains(target));
-    // document 级监听只处理画布内事件，避免影响页面其它区域
-    if (event.currentTarget === document && !inCanvas) {
-      return;
-    }
-    // buttons 中 bit1=右键；用 %4 避免 eslint no-bitwise
-    const rightHeld = typeof e.buttons === 'number' && e.buttons % 4 >= 2;
-    const isRight = e.button === 2 || e.type === 'contextmenu' || e.type === 'auxclick' || rightHeld;
-    if (!isRight) {
+    if (!isRightMouseEvent(e)) {
       return;
     }
     e.preventDefault();
@@ -94,24 +127,10 @@ export default function bindMinderXmindInteraction(minder: any): XmindInteractio
     (e as any).stopImmediatePropagation?.();
   };
 
-  const gestureEvents: Array<keyof HTMLElementEventMap> = [
-    'mousedown',
-    'mouseup',
-    'mousemove',
-    'pointerdown',
-    'pointerup',
-    'pointermove',
-    'contextmenu',
-    'auxclick',
-  ];
   gestureRoots.forEach((el) => {
-    gestureEvents.forEach((name) => {
+    GESTURE_EVENT_TYPES.forEach((name) => {
       el.addEventListener(name, blockBrowserGesture, true);
     });
-  });
-  // 部分浏览器手势扩展挂在 document，需同步拦截
-  gestureEvents.forEach((name) => {
-    document.addEventListener(name, blockBrowserGesture, true);
   });
 
   const handleBeforeMouseDown = (e: any) => {
@@ -120,7 +139,6 @@ export default function bindMinderXmindInteraction(minder: any): XmindInteractio
       return;
     }
 
-    // 彻底吃掉右键，不用于平移，避免触发浏览器手势
     if (originEvent.button === 2 || originEvent.button === 1 || originEvent.altKey) {
       e.stopPropagation();
       e.preventDefault?.();
@@ -148,7 +166,6 @@ export default function bindMinderXmindInteraction(minder: any): XmindInteractio
       originEvent.preventDefault?.();
       minder.execCommand?.(mode === 'zoomIn' ? 'zoomin' : 'zoomout');
     }
-    // select：默认选中节点
   };
 
   const handleMouseMove = (e: any) => {
@@ -156,7 +173,6 @@ export default function bindMinderXmindInteraction(minder: any): XmindInteractio
       return;
     }
     const originEvent = e.originEvent as MouseEvent | undefined;
-    // 仅左键拖拽平移；右键一律忽略
     if (!originEvent || originEvent.buttons !== 1 || !leftPanLastPos) {
       return;
     }
@@ -202,12 +218,9 @@ export default function bindMinderXmindInteraction(minder: any): XmindInteractio
       minder.off('mouseup', handleMouseUp);
       window.removeEventListener('mouseup', handleMouseUp);
       gestureRoots.forEach((el) => {
-        gestureEvents.forEach((name) => {
+        GESTURE_EVENT_TYPES.forEach((name) => {
           el.removeEventListener(name, blockBrowserGesture, true);
         });
-      });
-      gestureEvents.forEach((name) => {
-        document.removeEventListener(name, blockBrowserGesture, true);
       });
       if (minder.__xmindTool === controller) {
         delete minder.__xmindTool;
@@ -216,6 +229,6 @@ export default function bindMinderXmindInteraction(minder: any): XmindInteractio
   };
 
   minder.__xmindTool = controller;
-  applyMode('select');
+  applyMode('pan');
   return controller;
 }

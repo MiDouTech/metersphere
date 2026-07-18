@@ -12,7 +12,7 @@ export default {
   'caseManagement.featureCase.xmindView': 'View Online',
   'caseManagement.featureCase.xmindBackToList': 'Back to list',
   'caseManagement.featureCase.xmindPreviewTip':
-    'Browser gestures disabled; use the toolbar to switch left-click actions; Ctrl + wheel to zoom',
+    'Use top toolbar for left-click tools; avoid right-drag (browser gestures); Ctrl+wheel to zoom',
   'caseManagement.featureCase.xmindToolSelect': 'Select',
   'caseManagement.featureCase.xmindToolPan': 'Pan',
   'caseManagement.featureCase.xmindToolZoomIn': 'Zoom in',
