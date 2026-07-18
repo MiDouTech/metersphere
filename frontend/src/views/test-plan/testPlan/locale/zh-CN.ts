@@ -93,6 +93,7 @@ export default {
   'testPlan.planForm.passThresholdTip': '通过率达到设置的通过阈值时，报告结果为通过',
   'testPlan.planForm.pickCases': '选择用例',
   'testPlan.testPlanDetail.executed': '已执行',
+  'testPlan.testPlanDetail.testCase': '测试用例',
   'testPlan.testPlanDetail.generateReport': '生成报告',
   'testPlan.testPlanDetail.successfullyGenerated': '生成成功',
   'testPlan.testPlanDetail.reportLink': '报告链接',

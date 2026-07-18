@@ -352,12 +352,12 @@
   }
 
   const activeTab = ref('plan');
+  // 接口/场景 Tab 仍按数量显隐；切到已隐藏 Tab 时回落到计划文档
   watch(
     () => detail.value,
     () => {
-      const { functionalCaseCount, apiCaseCount, apiScenarioCount } = detail.value || {};
+      const { apiCaseCount, apiScenarioCount } = detail.value || {};
       if (
-        (!functionalCaseCount && activeTab.value === 'featureCase') ||
         (!apiCaseCount && activeTab.value === 'apiCase') ||
         (!apiScenarioCount && activeTab.value === 'apiScenario')
       ) {
@@ -374,8 +374,8 @@
       },
       {
         value: 'featureCase',
-        label: t('menu.caseManagement.featureCase'), // 功能用例
-        show: detail.value.functionalCaseCount,
+        label: t('testPlan.testPlanDetail.testCase'), // 测试用例（始终展示，便于无用例时关联）
+        show: true,
       },
       {
         value: 'apiCase',

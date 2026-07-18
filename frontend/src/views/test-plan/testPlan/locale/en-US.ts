@@ -98,6 +98,7 @@ export default {
   'testPlan.planForm.passThresholdTip': 'If the pass rate reaches the specified pass threshold, the result is passed',
   'testPlan.planForm.pickCases': 'Select cases',
   'testPlan.testPlanDetail.executed': 'Executed',
+  'testPlan.testPlanDetail.testCase': 'Test Cases',
   'testPlan.testPlanDetail.generateReport': 'Generate report',
   'testPlan.testPlanDetail.successfullyGenerated': 'Successfully generated',
   'testPlan.testPlanDetail.reportLink': 'The report link',
