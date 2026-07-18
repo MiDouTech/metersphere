@@ -11,7 +11,12 @@ export default {
   'caseManagement.featureCase.xmindUploader': 'Uploader',
   'caseManagement.featureCase.xmindView': 'View Online',
   'caseManagement.featureCase.xmindBackToList': 'Back to list',
-  'caseManagement.featureCase.xmindPreviewTip': 'Right-drag to pan; Ctrl + wheel to zoom',
+  'caseManagement.featureCase.xmindPreviewTip':
+    'Browser gestures disabled; use the toolbar to switch left-click actions; Ctrl + wheel to zoom',
+  'caseManagement.featureCase.xmindToolSelect': 'Select',
+  'caseManagement.featureCase.xmindToolPan': 'Pan',
+  'caseManagement.featureCase.xmindToolZoomIn': 'Zoom in',
+  'caseManagement.featureCase.xmindToolZoomOut': 'Zoom out',
   'caseManagement.featureCase.xmindSearchPlaceholder': 'Search by name',
   'caseManagement.featureCase.xmindSelectFile': 'Please select an Xmind file',
   'caseManagement.featureCase.xmindPreviewFailed': 'Preview failed. Please check the file format',

@@ -73,12 +73,35 @@
           {{ t('caseManagement.featureCase.xmindPreviewTip') }}
         </div>
       </div>
-      <div class="xmind-preview-body relative min-h-0 flex-1">
+      <div
+        class="xmind-preview-body relative min-h-0 flex-1"
+        @contextmenu.prevent
+        @mousedown.capture="blockPreviewGesture"
+        @mousemove.capture="blockPreviewGesture"
+        @mouseup.capture="blockPreviewGesture"
+        @auxclick.prevent
+      >
         <div
           v-if="previewLoading"
           class="absolute inset-0 z-[1] flex items-center justify-center bg-[var(--color-text-fff)]"
         >
           <a-spin />
+        </div>
+        <!-- 左键工具：选择 / 拖拽 / 放大 / 缩小（补偿禁用浏览器手势） -->
+        <div
+          v-if="previewJson && !previewLoading"
+          class="xmind-preview-toolbar absolute right-[16px] top-[16px] z-[2] flex items-center gap-[4px]"
+        >
+          <a-tooltip v-for="item in toolItems" :key="item.mode" :content="t(item.labelKey)">
+            <MsButton
+              type="icon"
+              class="xmind-preview-toolbar-btn"
+              :class="{ 'xmind-preview-toolbar-btn--active': toolMode === item.mode }"
+              @click="setToolMode(item.mode)"
+            >
+              <MsIcon :type="item.icon" class="text-[var(--color-text-4)]" />
+            </MsButton>
+          </a-tooltip>
         </div>
         <MsMinderEditor
           v-if="previewJson"
@@ -138,6 +161,7 @@
 
   import MsButton from '@/components/pure/ms-button/index.vue';
   import MsIcon from '@/components/pure/ms-icon-font/index.vue';
+  import type { XmindToolMode } from '@/components/pure/ms-minder-editor/hooks/useMinderXmindInteraction';
   import MsMinderEditor from '@/components/pure/ms-minder-editor/minderEditor.vue';
   import type { MinderJson } from '@/components/pure/ms-minder-editor/props';
   import MsUpload from '@/components/pure/ms-upload/index.vue';
@@ -235,6 +259,41 @@
   const previewTitle = ref('');
   const previewJson = ref<MinderJson | null>(null);
   const previewFileId = ref('');
+  const toolMode = ref<XmindToolMode>('select');
+  const toolItems: { mode: XmindToolMode; icon: string; labelKey: string }[] = [
+    { mode: 'select', icon: 'icon-icon_frame_select', labelKey: 'caseManagement.featureCase.xmindToolSelect' },
+    { mode: 'pan', icon: 'icon-icon_drag_outlined', labelKey: 'caseManagement.featureCase.xmindToolPan' },
+    { mode: 'zoomIn', icon: 'icon-icon_zoom-in_outlined', labelKey: 'caseManagement.featureCase.xmindToolZoomIn' },
+    { mode: 'zoomOut', icon: 'icon-icon_zoom-out_outlined', labelKey: 'caseManagement.featureCase.xmindToolZoomOut' },
+  ];
+
+  function blockPreviewGesture(e: MouseEvent) {
+    // buttons 中 bit1=右键；用 %4 避免 eslint no-bitwise
+    const rightHeld = typeof e.buttons === 'number' && e.buttons % 4 >= 2;
+    if (e.button === 2 || rightHeld) {
+      e.preventDefault();
+    }
+  }
+
+  function applyToolModeToMinder(mode: XmindToolMode) {
+    try {
+      (window as any).minder?.__xmindTool?.setMode?.(mode);
+    } catch {
+      // ignore
+    }
+  }
+
+  function setToolMode(mode: XmindToolMode) {
+    toolMode.value = mode;
+    applyToolModeToMinder(mode);
+  }
+
+  function syncToolModeAfterMount() {
+    nextTick(() => {
+      // 等待 MsMinderEditor 完成 bind
+      setTimeout(() => applyToolModeToMinder(toolMode.value), 50);
+    });
+  }
 
   function handleUploadCancel() {
     uploadFileList.value = [];
@@ -319,14 +378,17 @@
     // 同一文件再次进入且已有数据：直接展示，保留视野
     if (previewFileId.value === record.id && previewJson.value) {
       refreshMinderSize();
+      syncToolModeAfterMount();
       return;
     }
     previewFileId.value = record.id;
     previewLoading.value = true;
     previewJson.value = null;
+    toolMode.value = 'select';
     try {
       previewJson.value = await previewXmindFile(record.id);
       refreshMinderSize();
+      syncToolModeAfterMount();
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -379,6 +441,7 @@
       }
       if (previewMode.value && previewJson.value) {
         refreshMinderSize();
+        syncToolModeAfterMount();
         return;
       }
       if (!loadedOnce.value || fileList.value.length === 0) {
@@ -408,6 +471,7 @@
     if (props.active !== false) {
       if (previewMode.value && previewJson.value) {
         refreshMinderSize();
+        syncToolModeAfterMount();
       } else {
         loadList();
       }
@@ -434,5 +498,22 @@
     :deep(.ms-minder-container) {
       height: 100%;
     }
+  }
+  .xmind-preview-toolbar {
+    padding: 4px;
+    border-radius: var(--border-radius-small);
+    background-color: var(--color-text-fff);
+    box-shadow: 0 4px 10px -1px rgb(100 100 102 / 15%);
+  }
+  .xmind-preview-toolbar-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--border-radius-small);
+  }
+  .xmind-preview-toolbar-btn--active {
+    background-color: var(--color-text-n9);
   }
 </style>

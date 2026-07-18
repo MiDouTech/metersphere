@@ -146,7 +146,8 @@
     };
     if (props.xmindInteraction) {
       unbindXmindInteraction?.();
-      unbindXmindInteraction = bindMinderXmindInteraction(window.minder);
+      const xmindTool = bindMinderXmindInteraction(window.minder);
+      unbindXmindInteraction = () => xmindTool.destroy();
     }
     emit('afterMount');
   }
