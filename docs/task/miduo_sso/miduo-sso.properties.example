@@ -10,7 +10,7 @@
 #   MIDUO_SSO_REDIRECT_URI / MIDUO_SSO_SHORTCUT_ID / MIDUO_SSO_ORGANIZATION_ID
 #   MS_LOCAL_LOGIN_ENABLED
 #
-# APP00016（测试云平台）正式启用参考：
+# APP00016（测试云平台）正式启用参考（测试米多）：
 # miduo.sso.enabled=true
 # miduo.sso.base-url=https://admin.t.ebcone.cn
 # miduo.sso.app-code=APP00016
@@ -18,6 +18,16 @@
 # miduo.sso.redirect-uri=https://msp.ebcone.net
 # miduo.sso.shortcut-id=81
 # miduo.sso.organization-id=100001
+# miduo.sso.session-ttl-seconds=28800
+#
+# 正式环境（msp.ebcone.cn）参考：docs/task/miduo_sso/MeterSphere-米多SSO-正式环境运维配置清单-2026-07-20.md
+# miduo.sso.enabled=true
+# miduo.sso.base-url=https://admin.ebcone.cn
+# miduo.sso.app-code=<正式appCode>
+# miduo.sso.app-secret=
+# miduo.sso.redirect-uri=https://msp.ebcone.cn
+# miduo.sso.shortcut-id=<正式shortcutId>
+# miduo.sso.organization-id=<现网组织ID>
 # miduo.sso.session-ttl-seconds=28800
 #
 # miduo.sso.enabled=false
@@ -30,6 +40,7 @@
 # miduo.sso.state-ttl-seconds=600
 # miduo.sso.session-ttl-seconds=28800
 # miduo.sso.refresh-ahead-seconds=1800
+# miduo.sso.login-grace-seconds=300
 #
 # LOCAL 账密登录开关（默认 true）：false 时普通本地用户禁止账密登录，仅 admin 保留运维登录。
 # metersphere.local-login.enabled=true

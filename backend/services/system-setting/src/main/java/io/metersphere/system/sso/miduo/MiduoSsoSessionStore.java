@@ -31,6 +31,7 @@ public class MiduoSsoSessionStore {
         Map<String, Object> value = new HashMap<>();
         value.put("sessionToken", sessionToken);
         value.put("expiresAt", expiresAtMillis);
+        value.put("savedAt", System.currentTimeMillis());
         value.put("needReauth", false);
         long ttl = resolveTtlSeconds(expiresAtMillis);
         stringRedisTemplate.opsForValue().set(KEY_PREFIX + userId, JSON.toJSONString(value), Duration.ofSeconds(ttl));
@@ -53,6 +54,22 @@ public class MiduoSsoSessionStore {
         return MiduoSsoClient.asEpochMillis(data.get("expiresAt"));
     }
 
+    public Long getSavedAt(String userId) {
+        Map<String, Object> data = load(userId);
+        if (data == null || data.get("savedAt") == null) {
+            return null;
+        }
+        try {
+            Object v = data.get("savedAt");
+            if (v instanceof Number num) {
+                return num.longValue();
+            }
+            return Long.parseLong(String.valueOf(v).trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public boolean isNeedReauth(String userId) {
         Map<String, Object> data = load(userId);
         if (data == null) {
@@ -69,6 +86,16 @@ public class MiduoSsoSessionStore {
         }
         data.put("needReauth", true);
         long ttl = Math.max(60, properties.getSessionTtlSeconds());
+        stringRedisTemplate.opsForValue().set(KEY_PREFIX + userId, JSON.toJSONString(data), Duration.ofSeconds(ttl));
+    }
+
+    public void clearNeedReauth(String userId) {
+        Map<String, Object> data = load(userId);
+        if (data == null) {
+            return;
+        }
+        data.put("needReauth", false);
+        long ttl = resolveTtlSeconds(getExpiresAt(userId));
         stringRedisTemplate.opsForValue().set(KEY_PREFIX + userId, JSON.toJSONString(data), Duration.ofSeconds(ttl));
     }
 
