@@ -117,8 +117,11 @@ export class MSAxios {
           ...config,
           method: 'POST',
           data: formData,
+          // 不手动指定 Content-Type，由浏览器自动带 boundary；
+          // 避免出现 multipart/form-data;charset=UTF-8 导致后端 consumes 校验失败
           headers: {
-            'Content-type': ContentTypeEnum.FORM_DATA,
+            ...(config.headers || {}),
+            'Content-Type': false as unknown as string,
           },
           // @ts-ignore
           requestOptions: {

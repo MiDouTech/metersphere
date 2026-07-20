@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,13 +31,16 @@ public class DisplayController {
         return displayService.uiInfo();
     }
 
-    @PostMapping(value = "/save", consumes = {"multipart/form-data", "application/json"})
+    /**
+     * 前端 savePageConfig 固定走 FormData（request + files）。
+     * 不可再混用 @RequestBody：multipart 请求时 Spring 会用 JSON 转换器解析 body，
+     * 从而报 Content-Type 'multipart/form-data;...;charset=UTF-8' is not supported。
+     */
+    @PostMapping(value = "/save", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "保存界面配置")
     @RequiresPermissions(PermissionConstants.SYSTEM_PARAMETER_SETTING_DISPLAY_READ_UPDATE)
     public void save(@RequestPart(value = "request", required = false) String requestJson,
-                     @RequestPart(value = "files", required = false) List<MultipartFile> files,
-                     @RequestBody(required = false) List<DisplayDTO> body) {
-        List<DisplayDTO> requests = body != null ? body : displayService.parseRequest(requestJson);
-        displayService.save(requests, files);
+                     @RequestPart(value = "files", required = false) List<MultipartFile> files) {
+        displayService.save(displayService.parseRequest(requestJson), files);
     }
 }
