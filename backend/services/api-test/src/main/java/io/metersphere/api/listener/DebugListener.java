@@ -1,7 +1,6 @@
 package io.metersphere.api.listener;
 
 import io.metersphere.api.service.ApiEnvironmentService;
-import io.metersphere.sdk.constants.KafkaTopicConstants;
 import io.metersphere.sdk.dto.SocketMsgDTO;
 import io.metersphere.sdk.util.CommonBeanFactory;
 import io.metersphere.sdk.util.JSON;
@@ -23,7 +22,10 @@ public class DebugListener {
 
     private ApiEnvironmentService apiEnvironmentService;
 
-    @KafkaListener(id = DEBUG_CONSUME_ID, topics = KafkaTopicConstants.API_REPORT_DEBUG_TOPIC, groupId = DEBUG_CONSUME_ID + "_" + "${random.uuid}")
+    @KafkaListener(
+            id = DEBUG_CONSUME_ID,
+            topics = "#{@kafkaTopicService.apiReportDebugTopic()}",
+            groupId = "#{@kafkaTopicService.consumerGroup(T(io.metersphere.api.listener.DebugListener).DEBUG_CONSUME_ID) + '_' + '${random.uuid}'}")
     public void debugConsume(ConsumerRecord<?, String> record) {
         try {
             if (apiEnvironmentService == null) {

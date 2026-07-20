@@ -10,6 +10,7 @@ import io.metersphere.engine.EngineFactory;
 import io.metersphere.engine.MsHttpClient;
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.mapper.ProjectMapper;
+import io.metersphere.sdk.config.KafkaTopicService;
 import io.metersphere.sdk.constants.*;
 import io.metersphere.sdk.dto.api.result.ProcessResultDTO;
 import io.metersphere.sdk.dto.api.result.TaskResultDTO;
@@ -90,6 +91,8 @@ public class ApiTaskCenterService {
     OperationLogService operationLogService;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Resource
+    private KafkaTopicService kafkaTopicService;
     private static final String DEFAULT_SORT = "start_time desc";
     private static final String ORG = "org";
     private static final String SYSTEM = "system";
@@ -362,7 +365,7 @@ public class ApiTaskCenterService {
 
             taskRequestDTO.setTaskItem(taskItem);
             result.setRequest(taskRequestDTO);
-            kafkaTemplate.send(KafkaTopicConstants.API_REPORT_TOPIC, JSON.toJSONString(result));
+            kafkaTemplate.send(kafkaTopicService.apiReportTopic(), JSON.toJSONString(result));
         });
     }
 

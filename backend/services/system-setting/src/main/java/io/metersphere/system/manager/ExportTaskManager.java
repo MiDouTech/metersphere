@@ -3,7 +3,7 @@ package io.metersphere.system.manager;
 import io.metersphere.functional.domain.ExportTask;
 import io.metersphere.functional.domain.ExportTaskExample;
 import io.metersphere.functional.mapper.ExportTaskMapper;
-import io.metersphere.sdk.constants.KafkaTopicConstants;
+import io.metersphere.sdk.config.KafkaTopicService;
 import io.metersphere.sdk.constants.MsgType;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
@@ -33,6 +33,8 @@ public class ExportTaskManager {
 
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Resource
+    private KafkaTopicService kafkaTopicService;
     @Resource
     private ExportTaskMapper exportTaskMapper;
 
@@ -77,10 +79,13 @@ public class ExportTaskManager {
         exportTask.setState(ExportConstants.ExportState.STOP.toString());
         exportTask.setUpdateUser(userId);
         exportTask.setUpdateTime(System.currentTimeMillis());
-        kafkaTemplate.send(KafkaTopicConstants.EXPORT, JSON.toJSONString(exportTask));
+        kafkaTemplate.send(kafkaTopicService.exportTopic(), JSON.toJSONString(exportTask));
     }
 
-    @KafkaListener(id = EXPORT_CONSUME, topics = KafkaTopicConstants.EXPORT, groupId = EXPORT_CONSUME + "_" + "${random.uuid}")
+    @KafkaListener(
+            id = EXPORT_CONSUME,
+            topics = "#{@kafkaTopicService.exportTopic()}",
+            groupId = "#{@kafkaTopicService.consumerGroup(T(io.metersphere.system.manager.ExportTaskManager).EXPORT_CONSUME) + '_' + '${random.uuid}'}")
     public void stop(ConsumerRecord<?, String> record) {
         LogUtils.info("Service consume platform_plugin message: " + record.value());
         ExportTask exportTask = JSON.parseObject(record.value(), ExportTask.class);

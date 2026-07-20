@@ -20,7 +20,10 @@ public class PluginListener {
     private PluginLoadService pluginLoadService;
 
     // groupId 必须是每个实例唯一
-    @KafkaListener(id = PLUGIN_CONSUMER, topics = KafkaTopicConstants.PLUGIN, groupId = PLUGIN_CONSUMER + "_" + "${random.uuid}")
+    @KafkaListener(
+            id = PLUGIN_CONSUMER,
+            topics = "#{@kafkaTopicService.pluginTopic()}",
+            groupId = "#{@kafkaTopicService.consumerGroup(T(io.metersphere.system.listener.PluginListener).PLUGIN_CONSUMER) + '_' + '${random.uuid}'}")
     public void handlePluginChange(ConsumerRecord<?, String> record) {
         LogUtils.info("Service consume platform_plugin message: " + record.value());
         PluginNotifiedDTO pluginNotifiedDTO = JSON.parseObject(record.value(), PluginNotifiedDTO.class);

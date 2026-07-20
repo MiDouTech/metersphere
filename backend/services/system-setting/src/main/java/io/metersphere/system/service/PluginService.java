@@ -8,6 +8,7 @@ import io.metersphere.plugin.platform.spi.AbstractPlatformPlugin;
 import io.metersphere.plugin.platform.spi.Platform;
 import io.metersphere.plugin.sdk.spi.MsPlugin;
 import io.metersphere.plugin.sdk.spi.QuotaPlugin;
+import io.metersphere.sdk.config.KafkaTopicService;
 import io.metersphere.sdk.constants.KafkaTopicConstants;
 import io.metersphere.sdk.constants.PluginScenarioType;
 import io.metersphere.sdk.exception.MSException;
@@ -67,6 +68,8 @@ public class PluginService {
     private JdbcDriverPluginService jdbcDriverPluginService;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Resource
+    private KafkaTopicService kafkaTopicService;
     @Resource
     private UserLoginService userLoginService;
     @Resource
@@ -205,7 +208,7 @@ public class PluginService {
         pluginNotifiedDTO.setOperate(operate);
         pluginNotifiedDTO.setPluginId(pluginId);
         pluginNotifiedDTO.setFileName(fileName);
-        kafkaTemplate.send(KafkaTopicConstants.PLUGIN, JSON.toJSONString(pluginNotifiedDTO));
+        kafkaTemplate.send(kafkaTopicService.pluginTopic(), JSON.toJSONString(pluginNotifiedDTO));
     }
 
     /**

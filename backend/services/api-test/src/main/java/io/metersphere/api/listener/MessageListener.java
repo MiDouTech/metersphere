@@ -44,7 +44,10 @@ public class MessageListener {
     @Resource
     private ApiScenarioReportMapper apiScenarioReportMapper;
 
-    @KafkaListener(id = MESSAGE_CONSUME_ID, topics = KafkaTopicConstants.API_REPORT_TASK_TOPIC, groupId = MESSAGE_CONSUME_ID)
+    @KafkaListener(
+            id = MESSAGE_CONSUME_ID,
+            topics = "#{@kafkaTopicService.apiReportTaskTopic()}",
+            groupId = "#{@kafkaTopicService.consumerGroup(T(io.metersphere.api.listener.MessageListener).MESSAGE_CONSUME_ID)}")
     public void messageConsume(ConsumerRecord<?, String> record) {
         try {
             if (ObjectUtils.isNotEmpty(record.value())) {

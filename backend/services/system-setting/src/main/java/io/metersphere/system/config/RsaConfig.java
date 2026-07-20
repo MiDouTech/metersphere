@@ -9,6 +9,7 @@ import io.metersphere.sdk.file.MinioRepository;
 import io.metersphere.sdk.util.RsaKey;
 import io.metersphere.sdk.util.RsaUtils;
 import io.minio.MinioClient;
+import io.metersphere.system.config.MinioProperties;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.SerializationUtils;
 import org.springframework.boot.ApplicationArguments;
@@ -19,6 +20,8 @@ import org.springframework.context.annotation.Configuration;
 public class RsaConfig implements ApplicationRunner {
     @Resource
     private MinioClient client;
+    @Resource
+    private MinioProperties minioProperties;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -27,7 +30,7 @@ public class RsaConfig implements ApplicationRunner {
         request.setFolder(DefaultRepositoryDir.getSystemRootDir());
         FileRepository fileRepository = FileCenter.getDefaultRepository();
         // 初始化MinIO配置
-        ((MinioRepository) fileRepository).init(client);
+        ((MinioRepository) fileRepository).init(client, minioProperties.getBucket());
 
         try {
             byte[] file = fileRepository.getFile(request);
