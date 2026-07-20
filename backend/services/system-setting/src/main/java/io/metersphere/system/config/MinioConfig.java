@@ -16,8 +16,6 @@ import java.util.List;
 @Configuration
 public class MinioConfig {
 
-    public static final String BUCKET = "metersphere";
-
     @Bean
     public MinioClient minioClient(MinioProperties minioProperties) throws Exception {
         // 创建 MinioClient 客户端
@@ -27,13 +25,13 @@ public class MinioConfig {
                 .build();
 
         // 设置临时目录下文件的过期时间
-        setBucketLifecycle(minioClient);
-        setBucketLifecycleByExcel(minioClient);
-
-        boolean exist = minioClient.bucketExists(BucketExistsArgs.builder().bucket(BUCKET).build());
+        String bucket = minioProperties.getBucket();
+        boolean exist = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
         if (!exist) {
-            minioClient.makeBucket(MakeBucketArgs.builder().bucket(BUCKET).build());
+            minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
         }
+        setBucketLifecycle(minioClient, bucket);
+        setBucketLifecycleByExcel(minioClient, bucket);
         return minioClient;
     }
 
@@ -43,7 +41,7 @@ public class MinioConfig {
      * 参考 minio 8.5.2 版本的示例代码
      * https://github.com/minio/minio-java/blob/8.5.2/examples/SetBucketLifecycle.java
      */
-    private static void setBucketLifecycle(MinioClient minioClient) {
+    private static void setBucketLifecycle(MinioClient minioClient, String bucket) {
         List<LifecycleRule> rules = new LinkedList<>();
         rules.add(
                 new LifecycleRule(
@@ -59,7 +57,7 @@ public class MinioConfig {
         try {
             minioClient.setBucketLifecycle(
                     SetBucketLifecycleArgs.builder()
-                            .bucket(BUCKET)
+                            .bucket(bucket)
                             .config(config)
                             .build());
         } catch (Exception e) {
@@ -75,7 +73,7 @@ public class MinioConfig {
      * 参考 minio 8.5.2 版本的示例代码
      * https://github.com/minio/minio-java/blob/8.5.2/examples/SetBucketLifecycle.java
      */
-    private static void setBucketLifecycleByExcel(MinioClient minioClient) {
+    private static void setBucketLifecycleByExcel(MinioClient minioClient, String bucket) {
         List<LifecycleRule> rules = new LinkedList<>();
         rules.add(
                 new LifecycleRule(
@@ -101,7 +99,7 @@ public class MinioConfig {
         try {
             minioClient.setBucketLifecycle(
                     SetBucketLifecycleArgs.builder()
-                            .bucket(BUCKET)
+                            .bucket(bucket)
                             .config(config)
                             .build());
         } catch (Exception e) {

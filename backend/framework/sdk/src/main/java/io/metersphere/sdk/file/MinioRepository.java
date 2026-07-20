@@ -6,6 +6,7 @@ import io.minio.*;
 import io.minio.messages.Item;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,10 +24,13 @@ public class MinioRepository implements FileRepository {
     private MinioClient client;
     // 缓冲区大小
     private static final int BUFFER_SIZE = 8192;
-    public static final String BUCKET = "metersphere";
+    public static final String BUCKET = "bucket";
     public static final String ENDPOINT = "endpoint";
     public static final String ACCESS_KEY = "accessKey";
     public static final String SECRET_KEY = "secretKey";
+
+    @Value("${minio.bucket:metersphere}")
+    private String bucket;
 
     /**
      * 初始化
@@ -54,9 +58,13 @@ public class MinioRepository implements FileRepository {
                         .endpoint(minioConfig.get(ENDPOINT).toString())
                         .credentials(minioConfig.get(ACCESS_KEY).toString(), minioConfig.get(SECRET_KEY).toString())
                         .build();
-                boolean exist = client.bucketExists(BucketExistsArgs.builder().bucket(BUCKET).build());
+                Object configuredBucket = minioConfig.get(BUCKET);
+                if (configuredBucket != null && StringUtils.isNotBlank(configuredBucket.toString())) {
+                    bucket = configuredBucket.toString();
+                }
+                boolean exist = client.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
                 if (!exist) {
-                    client.makeBucket(MakeBucketArgs.builder().bucket(BUCKET).build());
+                    client.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
                 }
             }
         } catch (Exception e) {
@@ -78,7 +86,7 @@ public class MinioRepository implements FileRepository {
         // 文件存储路径
         String filePath = getPath(request);
         client.putObject(PutObjectArgs.builder()
-                .bucket(BUCKET)
+                .bucket(bucket)
                 .object(filePath)
                 .stream(file.getInputStream(), file.getSize(), -1) // 文件内容
                 .build());
@@ -90,7 +98,7 @@ public class MinioRepository implements FileRepository {
         String filePath = getPath(request);
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
             client.putObject(PutObjectArgs.builder()
-                    .bucket(BUCKET)
+                    .bucket(bucket)
                     .object(filePath)
                     .stream(inputStream, bytes.length, -1)
                     .build());
@@ -102,7 +110,7 @@ public class MinioRepository implements FileRepository {
     public String saveFile(InputStream inputStream, FileRequest request) throws Exception {
         String filePath = getPath(request);
         client.putObject(PutObjectArgs.builder()
-                .bucket(BUCKET)
+                .bucket(bucket)
                 .object(filePath)
                 .stream(inputStream, -1, 5242880) // 文件内容
                 .build());
@@ -113,19 +121,19 @@ public class MinioRepository implements FileRepository {
     public void delete(FileRequest request) throws Exception {
         String filePath = getPath(request);
         // 删除单个文件
-        removeObject(BUCKET, filePath);
+        removeObject(bucket, filePath);
     }
 
     @Override
     public void deleteFolder(FileRequest request) throws Exception {
         String filePath = getPath(request);
         // 删除文件夹
-        removeObjects(BUCKET, filePath);
+        removeObjects(bucket, filePath);
     }
 
     @Override
     public List<String> getFolderFileNames(FileRequest request) throws Exception {
-        return listObjects(BUCKET, getPath(request));
+        return listObjects(bucket, getPath(request));
     }
 
     @Override
@@ -133,10 +141,10 @@ public class MinioRepository implements FileRepository {
         String sourcePath = StringUtils.join(request.getCopyFolder(), "/", request.getCopyfileName());
         String targetPath = getPath(request);
         client.copyObject(CopyObjectArgs.builder()
-                .bucket(BUCKET)
+                .bucket(bucket)
                 .object(targetPath)
                 .source(CopySource.builder()
-                        .bucket(BUCKET)
+                        .bucket(bucket)
                         .object(sourcePath)
                         .build())
                 .build());
@@ -189,7 +197,7 @@ public class MinioRepository implements FileRepository {
         // 下载对象到本地文件
         try (InputStream inputStream = client.getObject(
                 GetObjectArgs.builder()
-                        .bucket(BUCKET)
+                        .bucket(bucket)
                         .object(fileName)
                         .build());
              BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(fullPath))) {
@@ -205,7 +213,7 @@ public class MinioRepository implements FileRepository {
     public InputStream getFileAsStream(FileRequest request) throws Exception {
         String fileName = getPath(request);
         return client.getObject(GetObjectArgs.builder()
-                .bucket(BUCKET) // 存储桶
+                .bucket(bucket) // 存储桶
                 .object(fileName) // 文件名
                 .build());
     }
@@ -215,7 +223,7 @@ public class MinioRepository implements FileRepository {
     public long getFileSize(FileRequest request) throws Exception {
         String fileName = getPath(request);
         return client.statObject(StatObjectArgs.builder()
-                .bucket(BUCKET) // 存储桶
+                .bucket(bucket) // 存储桶
                 .object(fileName) // 文件名
                 .build()).size();
     }
