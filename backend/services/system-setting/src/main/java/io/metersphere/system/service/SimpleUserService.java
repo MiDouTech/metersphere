@@ -219,6 +219,14 @@ public class SimpleUserService {
         return userEditRequest;
     }
 
+    /**
+     * 将企微 userid 写入用户手机号（有 wecom_userid 且手机号不一致时更新）
+     */
+    public TableBatchProcessResponse syncWecomUseridToPhone(String operator) {
+        int updated = extUserMapper.syncWecomUseridToPhone(System.currentTimeMillis(), operator);
+        return new TableBatchProcessResponse(updated, updated);
+    }
+
     public TableBatchProcessResponse updateUserEnable(UserChangeEnableRequest request, String operatorId, String operatorName) {
         request.setSelectIds(userToolService.getBatchUserIds(request));
         this.checkUserInDb(request.getSelectIds());

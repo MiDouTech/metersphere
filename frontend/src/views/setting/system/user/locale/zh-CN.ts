@@ -2,6 +2,11 @@ export default {
   'system.user.createUser': '创建用户',
   'system.user.emailInvite': '邮箱邀请',
   'system.user.importUser': '导入用户',
+  'system.user.syncWecomUseridToPhone': '同步企微userid为用户手机号',
+  'system.user.syncWecomUseridToPhoneTip':
+    '将所有已同步企微成员的 userid 写入手机号字段（手机号为空或不一致时更新），是否继续？',
+  'system.user.syncWecomUseridToPhoneConfirm': '确认同步',
+  'system.user.syncWecomUseridToPhoneSuccess': '同步完成，已更新 {count} 个用户手机号',
   'system.user.searchUser': '通过姓名/邮箱/手机搜索',
   'system.user.editUser': '编辑',
   'system.user.resetPassword': '重置密码',

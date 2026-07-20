@@ -63,4 +63,9 @@ public interface ExtUserMapper {
     User selectByWecomUserid(@Param("wecomUserid") String wecomUserid);
 
     List<User> listWecomUsersByOrganizationId(@Param("organizationId") String organizationId);
+
+    /**
+     * 将企微 userid 同步到用户手机号字段（仅更新有 wecom_userid 的用户）
+     */
+    int syncWecomUseridToPhone(@Param("updateTime") long updateTime, @Param("updateUser") String updateUser);
 }

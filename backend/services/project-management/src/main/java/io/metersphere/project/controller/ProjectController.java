@@ -56,7 +56,8 @@ public class ProjectController {
 
     @PostMapping("/switch")
     @Operation(summary = "切换项目")
-    @RequiresPermissions(PermissionConstants.PROJECT_BASE_INFO_READ)
+    // 切换目标项目权限由 CheckOwner 校验；勿用当前 PROJECT 请求头上的 PROJECT_BASE_INFO:READ，
+    // 否则从系统设置新建项目后进入新项目会因「当前上下文无项目权限」失败。
     @CheckOwner(resourceId = "#request.projectId", resourceType = "project")
     public UserDTO switchProject(@RequestBody ProjectSwitchRequest request) {
         return projectService.switchProject(request, SessionUtils.getUserId());

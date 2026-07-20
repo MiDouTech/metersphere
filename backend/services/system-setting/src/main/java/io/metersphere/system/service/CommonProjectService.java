@@ -137,7 +137,15 @@ public class CommonProjectService {
 
         ProjectAddMemberBatchRequest memberRequest = new ProjectAddMemberBatchRequest();
         memberRequest.setProjectIds(List.of(project.getId()));
-        memberRequest.setUserIds(addProjectDTO.getUserIds());
+        // 未指定管理员时默认创建人为管理员；已指定时也确保创建人在管理员列表中，便于创建后立即进入项目
+        List<String> adminUserIds = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(addProjectDTO.getUserIds())) {
+            adminUserIds.addAll(addProjectDTO.getUserIds());
+        }
+        if (!adminUserIds.contains(createUser)) {
+            adminUserIds.add(createUser);
+        }
+        memberRequest.setUserIds(adminUserIds);
         //资源池
         if (CollectionUtils.isNotEmpty(addProjectDTO.getResourcePoolIds())) {
             checkResourcePoolExist(addProjectDTO.getResourcePoolIds());

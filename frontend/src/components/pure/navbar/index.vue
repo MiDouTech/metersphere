@@ -1,11 +1,13 @@
 <template>
   <div class="navbar">
-    <div class="flex w-[200px] items-center px-[16px]">
+    <div class="flex min-w-[200px] max-w-[280px] items-center px-[16px]">
       <a-space>
-        <div class="one-line-text flex max-w-[145px] items-center">
-          <img :src="props.logo" class="mr-[4px] h-[34px] w-[32px]" />
+        <div class="flex min-w-0 items-center">
+          <img :src="props.logo" class="mr-[4px] h-[34px] w-[32px] shrink-0" />
           <a-tooltip :content="props.name">
-            <div class="one-line-text font-['Helvetica_Neue'] text-[16px] font-bold text-[rgb(var(--primary-5))]">
+            <div
+              class="one-line-text max-w-[200px] font-['Helvetica_Neue'] text-[16px] font-bold text-[rgb(var(--primary-5))]"
+            >
               {{ props.name }}
             </div>
           </a-tooltip>
@@ -214,7 +216,7 @@
   import AddProjectModal from '@/views/setting/organization/project/components/addProjectModal.vue';
 
   import { getMessageUnReadCount } from '@/api/modules/message';
-  import { switchProject } from '@/api/modules/project-management/project';
+  import { getProjectInfo, switchProject } from '@/api/modules/project-management/project';
   import { getOrgOptions } from '@/api/modules/system';
   import { updateLanguage } from '@/api/modules/user';
   import { useI18n } from '@/hooks/useI18n';
@@ -311,16 +313,34 @@
   ) {
     try {
       appStore.showLoading();
-      await switchProject({
-        projectId: value as string,
+      const projectId = value as string;
+      const switchedUser = await switchProject({
+        projectId,
         userId: userStore.id || '',
       });
+      if (switchedUser) {
+        userStore.setInfo(switchedUser);
+        if (switchedUser.lastOrganizationId) {
+          appStore.setCurrentOrgId(switchedUser.lastOrganizationId);
+        }
+      }
+      appStore.setCurrentProjectId(projectId);
       await userStore.checkIsLogin(true);
+      appStore.setCurrentProjectId(projectId);
+      try {
+        const project = await getProjectInfo(projectId);
+        if (project) {
+          appStore.setCurrentMenuConfig(project.moduleIds || []);
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.log(e);
+      }
       router.replace({
         name: getFirstRouteNameByPermission(router.getRoutes()),
         query: {
           orgId: appStore.currentOrgId,
-          pId: value as string,
+          pId: projectId,
         },
       });
     } catch (error) {

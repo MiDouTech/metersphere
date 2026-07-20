@@ -32,3 +32,5 @@ export const RegisterByInviteUrl = '/system/user/register-by-invite';
 export const InviteUserUrl = '/system/user/invite';
 // 检查邀请链接是否过期
 export const ValidInviteUrl = '/system/user/check-invite';
+// 同步企微 userid 为用户手机号
+export const SyncWecomUseridToPhoneUrl = '/system/user/sync-wecom-userid-to-phone';

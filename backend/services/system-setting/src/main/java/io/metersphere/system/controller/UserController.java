@@ -161,12 +161,21 @@ public class UserController {
     @Operation(summary = "系统设置-系统-用户-批量添加用户到项目")
     @RequiresPermissions(value = {PermissionConstants.SYSTEM_USER_UPDATE, PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_MEMBER_ADD}, logical = Logical.AND)
     public TableBatchProcessResponse addProjectMember(@Validated @RequestBody UserRoleBatchRelationRequest userRoleBatchRelationRequest) {
+        // 与 add-org-member 一致：全选时需展开为实际用户 ID，否则 selectIds 为空/不全导致添加失败
+        userRoleBatchRelationRequest.setSelectIds(userToolService.getBatchUserIds(userRoleBatchRelationRequest));
         ProjectAddMemberBatchRequest request = new ProjectAddMemberBatchRequest();
         request.setProjectIds(userRoleBatchRelationRequest.getRoleIds());
         request.setUserIds(userRoleBatchRelationRequest.getSelectIds());
         systemProjectService.addProjectMember(request, SessionUtils.getUserId());
         userLogService.batchAddProjectLog(userRoleBatchRelationRequest, SessionUtils.getUserId());
         return new TableBatchProcessResponse(userRoleBatchRelationRequest.getSelectIds().size(), userRoleBatchRelationRequest.getSelectIds().size());
+    }
+
+    @PostMapping("/sync-wecom-userid-to-phone")
+    @Operation(summary = "系统设置-系统-用户-同步企微userid为用户手机号")
+    @RequiresPermissions(PermissionConstants.SYSTEM_USER_UPDATE)
+    public TableBatchProcessResponse syncWecomUseridToPhone() {
+        return simpleUserService.syncWecomUseridToPhone(SessionUtils.getUserId());
     }
 
     @PostMapping("/add-org-member")
