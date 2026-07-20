@@ -269,8 +269,8 @@
   const previewFileId = ref('');
   const toolMode = ref<XmindToolMode>('pan');
   const toolItems: { mode: XmindToolMode; icon: string; labelKey: string }[] = [
-    { mode: 'select', icon: 'icon-icon_frame_select', labelKey: 'caseManagement.featureCase.xmindToolSelect' },
     { mode: 'pan', icon: 'icon-icon_drag_outlined', labelKey: 'caseManagement.featureCase.xmindToolPan' },
+    { mode: 'select', icon: 'icon-icon_frame_select', labelKey: 'caseManagement.featureCase.xmindToolSelect' },
     { mode: 'zoomIn', icon: 'icon-icon_zoom-in_outlined', labelKey: 'caseManagement.featureCase.xmindToolZoomIn' },
     { mode: 'zoomOut', icon: 'icon-icon_zoom-out_outlined', labelKey: 'caseManagement.featureCase.xmindToolZoomOut' },
   ];
@@ -296,7 +296,10 @@
 
   function syncToolModeAfterMount() {
     nextTick(() => {
-      setTimeout(() => applyToolModeToMinder(toolMode.value), 50);
+      // minder 挂载略晚，多次同步确保默认拖拽生效
+      [50, 200, 500].forEach((delay) => {
+        setTimeout(() => applyToolModeToMinder(toolMode.value), delay);
+      });
     });
   }
 

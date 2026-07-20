@@ -15,6 +15,7 @@ import {
   InviteUserUrl,
   RegisterByInviteUrl,
   ResetPasswordUrl,
+  SyncWecomUseridToPhoneUrl,
   UpdateUserUrl,
   ValidInviteUrl,
 } from '@/api/requrls/setting/user';
@@ -123,4 +124,9 @@ export function registerByInvite(data: RegisterByInviteParams) {
 // 检查邀请链接是否过期
 export function validInvite(id: string) {
   return MSR.get({ url: ValidInviteUrl, params: id });
+}
+
+// 同步企微 userid 为用户手机号
+export function syncWecomUseridToPhone() {
+  return MSR.post<{ totalCount: number; successCount: number }>({ url: SyncWecomUseridToPhoneUrl });
 }

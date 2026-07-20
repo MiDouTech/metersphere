@@ -82,7 +82,7 @@ export default {
   'system.config.page.platformName': '平台名称',
   'system.config.page.platformNamePlaceholder': '请输入平台名称',
   'system.config.page.platformNameRequired': '平台名称不能为空',
-  'system.config.page.platformNameTip': '全站通用产品名称，建议字数 7',
+  'system.config.page.platformNameTip': '全站通用产品名称，建议字数不超过 10 个汉字',
   'system.config.page.helpDoc': '帮助文档',
   'system.config.page.helpDocPlaceholder': '请输入帮助文档地址',
   'system.config.page.helpDocTip': '可设置帮助文档跳转链接，默认为官方帮助文档',

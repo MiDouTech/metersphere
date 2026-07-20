@@ -151,4 +151,15 @@
           and u.wecom_userid != ''
     </select>
 
+    <update id="syncWecomUseridToPhone">
+        update user
+        set phone       = wecom_userid,
+            update_time = #{updateTime},
+            update_user = #{updateUser}
+        where deleted = 0
+          and wecom_userid is not null
+          and wecom_userid != ''
+          and (phone is null or phone = '' or phone != wecom_userid)
+    </update>
+
 </mapper>

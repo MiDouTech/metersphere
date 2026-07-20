@@ -10,12 +10,19 @@ export default function setupPermissionGuard(router: Router) {
     const appStore = useAppStore();
     const Permission = usePermission();
     const permissionsAllow = Permission.accessRouter(to);
-    // 如果是隐藏的模块，则跳转到无权限页面
+    // 模块未启用：仅在菜单配置已加载时拦截（空配置表示尚未拉取，避免误跳无权限页）
     const moduleId = Object.keys(featureRouteMap).find((key) => (to.name as string)?.includes(key));
-    if (moduleId && featureRouteMap[moduleId] && !appStore.currentMenuConfig.includes(featureRouteMap[moduleId])) {
+    if (
+      appStore.currentMenuConfig.length > 0 &&
+      moduleId &&
+      featureRouteMap[moduleId] &&
+      !appStore.currentMenuConfig.includes(featureRouteMap[moduleId])
+    ) {
       next({
         name: NO_RESOURCE_ROUTE_NAME,
       });
+      NProgress.done();
+      return;
     }
     const exist = WHITE_LIST.find((el) => el.name === to.name);
     if (exist || permissionsAllow) {

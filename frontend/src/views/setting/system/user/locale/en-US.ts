@@ -2,6 +2,11 @@ export default {
   'system.user.createUser': 'Create User',
   'system.user.emailInvite': 'Email Invite',
   'system.user.importUser': 'Import User',
+  'system.user.syncWecomUseridToPhone': 'Sync WeCom UserID to phone',
+  'system.user.syncWecomUseridToPhoneTip':
+    'Write WeCom userid into the phone field for all synced WeCom members (when phone is empty or different). Continue?',
+  'system.user.syncWecomUseridToPhoneConfirm': 'Confirm',
+  'system.user.syncWecomUseridToPhoneSuccess': 'Synced successfully. Updated {count} user phone numbers',
   'system.user.searchUser': 'Search by name/email/phone',
   'system.user.editUser': 'Edit',
   'system.user.resetPassword': 'Reset PSW',

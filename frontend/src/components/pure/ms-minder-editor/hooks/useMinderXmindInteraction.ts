@@ -71,14 +71,14 @@ export function bindPreviewGestureGuard(): () => void {
 export default function bindMinderXmindInteraction(minder: any): XmindInteractionController {
   const noopController: XmindInteractionController = {
     setMode: () => undefined,
-    getMode: () => 'select',
+    getMode: () => 'pan',
     destroy: () => undefined,
   };
   if (!minder?.on) {
     return noopController;
   }
 
-  let mode: XmindToolMode = 'select';
+  let mode: XmindToolMode = 'pan';
   let leftPanLastPos: { x: number; y: number } | null = null;
   let leftPanning = false;
 

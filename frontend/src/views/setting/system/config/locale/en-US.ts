@@ -86,7 +86,7 @@ export default {
   'system.config.page.platformNamePlaceholder': 'Please enter a platform name',
   'system.config.page.platformNameRequired': 'Platform name cannot be empty',
   'system.config.page.platformNameTip':
-    'The general product name of the whole site, the recommended number of words is 7',
+    'Site-wide product name; recommend no more than 10 Chinese characters (or equivalent width)',
   'system.config.page.helpDoc': 'Help document',
   'system.config.page.helpDocPlaceholder': 'Please enter the address of the help document',
   'system.config.page.helpDocTip': 'Help document jump link can be set, the default is official help document',

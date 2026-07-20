@@ -11,14 +11,14 @@
                 <template #header="{ projectName }">
                   <div class="mb-[12px] flex w-full items-center px-[16px]">
                     <a-space>
-                      <div class="one-line-text flex max-w-[145px] items-center">
+                      <div class="flex min-w-0 items-center">
                         <img
                           :src="pageConfig.logoPlatform[0]?.url || defaultPlatformLogo"
-                          class="mr-[4px] h-[34px] w-[32px]"
+                          class="mr-[4px] h-[34px] w-[32px] shrink-0"
                         />
                         <a-tooltip :content="pageConfig.platformName">
                           <div
-                            class="one-line-text font-['Helvetica_Neue'] text-[16px] font-bold text-[rgb(var(--primary-5))]"
+                            class="one-line-text max-w-[200px] font-['Helvetica_Neue'] text-[16px] font-bold text-[rgb(var(--primary-5))]"
                           >
                             {{ pageConfig.platformName }}
                           </div>
