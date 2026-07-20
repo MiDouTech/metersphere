@@ -192,8 +192,14 @@ const useUserStore = defineStore('user', {
         }
         if (res.needMiduoReauth) {
           try {
+            // 防止并发 is-login / 路由守卫重复跳桥形成闪退循环
+            const redirectKey = 'miduo_reauth_redirecting';
+            if (sessionStorage.getItem(redirectKey) === '1') {
+              return false;
+            }
             const bridge = await getMiduoBridgeUrl();
             if (bridge?.url) {
+              sessionStorage.setItem(redirectKey, '1');
               clearToken();
               window.location.href = bridge.url;
               return false;
@@ -202,6 +208,8 @@ const useUserStore = defineStore('user', {
             // eslint-disable-next-line no-console
             console.log(e);
           }
+        } else {
+          sessionStorage.removeItem('miduo_reauth_redirecting');
         }
         const appStore = useAppStore();
         setToken(res.sessionId, res.csrfToken);

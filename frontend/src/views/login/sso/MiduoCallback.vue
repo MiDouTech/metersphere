@@ -94,6 +94,8 @@
         throw new Error(t('login.miduo.callback.error'));
       }
       userStore.qrCodeLogin(res);
+      // 登录成功后清掉重认证跳转标记，避免上次失败残留导致再次被踢
+      sessionStorage.removeItem('miduo_reauth_redirecting');
       Message.success(t('login.form.login.success'));
       await router.replace({ name: getLoginTarget() });
     } catch (e) {

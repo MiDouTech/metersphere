@@ -38,6 +38,11 @@ public class MiduoSsoProperties {
     private long sessionTtlSeconds = 28800;
     /** refresh 提前量（秒）：距过期少于此值则 refresh */
     private long refreshAheadSeconds = 1800;
+    /**
+     * 登录后宽限期（秒）：callback 写入 Redis 后该时间内不触发 refresh / needReauth，
+     * 避免并发 is-login 在续期失败时把用户立刻踢回登录桥。
+     */
+    private long loginGraceSeconds = 300;
 
     public boolean isConfigured() {
         return enabled
