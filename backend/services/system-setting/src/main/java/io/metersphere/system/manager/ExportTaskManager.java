@@ -3,7 +3,6 @@ package io.metersphere.system.manager;
 import io.metersphere.functional.domain.ExportTask;
 import io.metersphere.functional.domain.ExportTaskExample;
 import io.metersphere.functional.mapper.ExportTaskMapper;
-import io.metersphere.sdk.constants.KafkaTopicConstants;
 import io.metersphere.sdk.constants.MsgType;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
@@ -15,6 +14,7 @@ import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -33,6 +33,8 @@ public class ExportTaskManager {
 
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Value("${kafka.topic.export:EXPORT}")
+    private String exportTopic;
     @Resource
     private ExportTaskMapper exportTaskMapper;
 
@@ -77,10 +79,10 @@ public class ExportTaskManager {
         exportTask.setState(ExportConstants.ExportState.STOP.toString());
         exportTask.setUpdateUser(userId);
         exportTask.setUpdateTime(System.currentTimeMillis());
-        kafkaTemplate.send(KafkaTopicConstants.EXPORT, JSON.toJSONString(exportTask));
+        kafkaTemplate.send(exportTopic, JSON.toJSONString(exportTask));
     }
 
-    @KafkaListener(id = EXPORT_CONSUME, topics = KafkaTopicConstants.EXPORT, groupId = EXPORT_CONSUME + "_" + "${random.uuid}")
+    @KafkaListener(id = EXPORT_CONSUME, topics = "${kafka.topic.export:EXPORT}", groupId = EXPORT_CONSUME + "_" + "${random.uuid}")
     public void stop(ConsumerRecord<?, String> record) {
         LogUtils.info("Service consume platform_plugin message: " + record.value());
         ExportTask exportTask = JSON.parseObject(record.value(), ExportTask.class);

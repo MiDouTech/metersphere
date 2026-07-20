@@ -44,6 +44,7 @@ import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,6 +91,8 @@ public class ApiTaskCenterService {
     OperationLogService operationLogService;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Value("${kafka.topic.api-report:API_REPORT_TOPIC}")
+    private String apiReportTopic;
     private static final String DEFAULT_SORT = "start_time desc";
     private static final String ORG = "org";
     private static final String SYSTEM = "system";
@@ -362,7 +365,7 @@ public class ApiTaskCenterService {
 
             taskRequestDTO.setTaskItem(taskItem);
             result.setRequest(taskRequestDTO);
-            kafkaTemplate.send(KafkaTopicConstants.API_REPORT_TOPIC, JSON.toJSONString(result));
+            kafkaTemplate.send(apiReportTopic, JSON.toJSONString(result));
         });
     }
 

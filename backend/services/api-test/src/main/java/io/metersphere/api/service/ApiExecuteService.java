@@ -808,6 +808,7 @@ public class ApiExecuteService {
         minioPros.put("endpoint", minioProperties.getEndpoint());
         minioPros.put("accessKey", minioProperties.getAccessKey());
         minioPros.put("secretKey", minioProperties.getSecretKey());
+        minioPros.put("bucket", minioProperties.getBucket());
         return minioPros;
     }
 
