@@ -22,6 +22,7 @@
   import { postMiduoSsoCallback } from '@/api/modules/sso/miduo';
   import { useI18n } from '@/hooks/useI18n';
   import { useUserStore } from '@/store';
+  import { setLoginExpires, setLongType } from '@/utils/auth';
   import { getFirstRouteNameByPermission, routerNameHasPermission } from '@/utils/permission';
 
   import type { LoginRes } from '@/models/user';
@@ -94,6 +95,9 @@
         throw new Error(t('login.miduo.callback.error'));
       }
       userStore.qrCodeLogin(res);
+      // 与企微/钉钉/账密登录对齐：写入 loginExpires，避免路由守卫把刚写入的 session 清掉
+      setLoginExpires();
+      setLongType('MIDUO');
       // 登录成功后清掉重认证跳转标记，避免上次失败残留导致再次被踢
       sessionStorage.removeItem('miduo_reauth_redirecting');
       Message.success(t('login.form.login.success'));

@@ -48,11 +48,17 @@ const setLoginExpires = () => {
 };
 
 const isLoginExpires = () => {
-  const lastLoginTime = Number(localStorage.getItem('loginExpires'));
-  const now = Date.now();
-  const diff = now - lastLoginTime;
+  const raw = localStorage.getItem('loginExpires');
+  // 未写入时不能当「已过期」：Number(null)===0 会导致每次导航 clearToken（米多 SSO 曾因此闪退后连环 401）
+  if (!raw) {
+    return false;
+  }
+  const lastLoginTime = Number(raw);
+  if (!Number.isFinite(lastLoginTime) || lastLoginTime <= 0) {
+    return false;
+  }
   const thirtyDay = 24 * 60 * 60 * 1000 * 30;
-  return diff > thirtyDay;
+  return Date.now() - lastLoginTime > thirtyDay;
 };
 
 export { clearToken, getLongType, getToken, hasToken, isLogin, isLoginExpires, setLoginExpires, setLongType, setToken };
