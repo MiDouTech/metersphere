@@ -173,7 +173,12 @@
                 :form-rules="formItem"
                 enable-execute
                 auto-save
+                :show-case-nav="!!props.embed"
+                :can-go-prev="canGoPrev"
+                :can-go-next="canGoNext"
                 @update-success="updateSuccess"
+                @prev-case="goPrevCase"
+                @next-case="goNextCase"
               />
             </template>
             <template v-else-if="activeTab === 'detail'">
@@ -224,16 +229,6 @@
           @publish="publishHandler"
           @cancel="cancelPublish"
         />
-      </div>
-    </template>
-    <template v-if="props.embed" #footer>
-      <div class="flex items-center justify-end gap-3">
-        <a-button :disabled="!canGoPrev" @click="goPrevCase">
-          {{ t('caseManagement.featureCase.prevCase') }}
-        </a-button>
-        <a-button type="primary" :disabled="!canGoNext" @click="goNextCase">
-          {{ t('caseManagement.featureCase.saveAndNextCase') }}
-        </a-button>
       </div>
     </template>
   </MsDetailDrawer>

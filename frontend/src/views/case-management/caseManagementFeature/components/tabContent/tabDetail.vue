@@ -46,7 +46,10 @@
           :is-disabled-test-plan="props.isDisabledTestPlan"
           :is-disabled="!isEditPreposition && !props.enableExecute && !props.autoSave"
           :enable-execute="props.enableExecute || props.isTestPlan"
+          :case-result="detailForm.lastExecuteResult"
           @change="handleStepChange"
+          @set-case-result="handleSetCaseResult"
+          @report-defect="handleReportDefect"
         />
       </div>
       <!-- 文本描述 -->
@@ -99,7 +102,18 @@
         </a-button>
       </div>
       <div v-if="!props.isTestPlan" v-permission="['FUNCTIONAL_CASE:READ+UPDATE']">
-        <AddAttachment v-model:file-list="fileList" multiple @change="handleChange" @link-file="associatedFile" />
+        <AddAttachment v-model:file-list="fileList" multiple @change="handleChange" @link-file="associatedFile">
+          <template v-if="props.showCaseNav" #labelRight>
+            <div class="flex items-center gap-2 font-normal">
+              <a-button size="small" :disabled="!props.canGoPrev" @click="emit('prevCase')">
+                {{ t('caseManagement.featureCase.prevCase') }}
+              </a-button>
+              <a-button size="small" type="primary" :disabled="!props.canGoNext" @click="emit('nextCase')">
+                {{ t('caseManagement.featureCase.nextCase') }}
+              </a-button>
+            </div>
+          </template>
+        </AddAttachment>
       </div>
     </a-form>
     <!-- 文件列表开始 -->
@@ -284,6 +298,11 @@
     />
   </div>
   <a-image-preview v-model:visible="previewVisible" :src="imageUrl" />
+  <AddDefectDrawer
+    v-model:visible="showDefectDrawer"
+    :extra-params="{ caseId: detailForm.id }"
+    @success="emit('updateSuccess')"
+  />
 </template>
 
 <script setup lang="ts">
@@ -301,6 +320,7 @@
   import LinkFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
   import AddStep from '../addStep.vue';
   import StepDescription from '@/views/case-management/caseManagementFeature/components/tabContent/stepDescription.vue';
+  import AddDefectDrawer from '@/views/case-management/components/addDefectDrawer/index.vue';
 
   import {
     checkFileIsUpdateRequest,
@@ -350,17 +370,26 @@
       enableExecute?: boolean;
       /** 步骤等变更自动保存（无需点保存） */
       autoSave?: boolean;
+      /** 展示用例上下条切换 */
+      showCaseNav?: boolean;
+      canGoPrev?: boolean;
+      canGoNext?: boolean;
     }>(),
     {
       allowEdit: true, // 是否允许编辑
       isEdit: false,
       enableExecute: false,
       autoSave: false,
+      showCaseNav: false,
+      canGoPrev: false,
+      canGoNext: false,
     }
   );
 
   const emit = defineEmits<{
     (e: 'updateSuccess'): void;
+    (e: 'prevCase'): void;
+    (e: 'nextCase'): void;
   }>();
 
   const detailForm = ref<Record<string, any>>({
@@ -516,7 +545,7 @@
       };
     });
 
-    // 汇总用例级执行结果：有失败→失败；否则有阻塞→阻塞；否则全跳过/通过→通过；无结果则不改
+    // 汇总用例级执行结果：有失败→失败；否则有阻塞→阻塞；否则全跳过/通过→通过；无结果则保留已标记值
     const execList = steps.map((s) => s.executeResult).filter(Boolean) as string[];
     let { lastExecuteResult } = detailForm.value;
     if (execList.length) {
@@ -525,6 +554,7 @@
       else if (execList.every((r) => r === 'SKIP')) lastExecuteResult = 'SKIP';
       else if (execList.every((r) => r === 'SUCCESS' || r === 'SKIP')) lastExecuteResult = 'SUCCESS';
     }
+    detailForm.value.lastExecuteResult = lastExecuteResult;
 
     const pendingFiles = stepData.value.flatMap((item: any) => item._pendingFiles || []);
 
@@ -573,6 +603,27 @@
     autoSaveTimer = setTimeout(() => {
       persistCase(true);
     }, 600);
+  }
+
+  function handleSetCaseResult(result: string) {
+    detailForm.value.lastExecuteResult = result;
+    stepData.value.forEach((item) => {
+      item.executeResult = result;
+    });
+    // 触发步骤列表响应，保证表格展示即时刷新
+    stepData.value = [...stepData.value];
+    if (props.autoSave || props.enableExecute) {
+      if (autoSaveTimer) clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        persistCase(true);
+      }, 300);
+    }
+  }
+
+  const showDefectDrawer = ref(false);
+  function handleReportDefect() {
+    if (!detailForm.value.id) return;
+    showDefectDrawer.value = true;
   }
 
   function handleOK() {
