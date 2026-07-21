@@ -601,10 +601,12 @@
         activeTab.value = 'detail';
         featureCaseStore.setActiveTab(activeTab.value);
       } else {
+        showDrawerVisible.value = false;
         activeTab.value = '';
         isEditTitle.value = false;
       }
-    }
+    },
+    { immediate: true }
   );
 
   watch(
