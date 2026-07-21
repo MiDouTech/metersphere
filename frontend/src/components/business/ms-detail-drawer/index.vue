@@ -32,7 +32,7 @@
         <slot name="titleRight" :loading="loading" :detail="detail"></slot>
       </div>
     </div>
-    <div class="min-h-0 flex-1 overflow-hidden">
+    <div class="min-h-0 flex-1 overflow-auto">
       <slot :loading="loading" :detail="detail"></slot>
     </div>
     <div v-if="$slots.footer" class="shrink-0 border-t border-[var(--color-text-n8)] px-4 py-3">
@@ -87,6 +87,8 @@
 </template>
 
 <script setup lang="ts">
+  import { nextTick, onMounted, ref, watch } from 'vue';
+
   import MsDrawer from '@/components/pure/ms-drawer/index.vue';
   import type { MsPaginationI } from '@/components/pure/ms-table/type';
   import MsPrevNextButton from '@/components/business/ms-prev-next-button/index.vue';
@@ -116,28 +118,65 @@
 
   const prevNextButtonRef = ref<InstanceType<typeof MsPrevNextButton>>();
 
-  const innerVisible = ref(false);
+  const innerVisible = ref(!!props.visible);
+  const loading = ref(false);
+  const detail = ref<any>({});
+  let loadingDetail = false;
 
   watch(
     () => props.visible,
     (val) => {
-      innerVisible.value = val;
-    },
-    { immediate: true }
+      if (innerVisible.value !== val) {
+        innerVisible.value = val;
+      }
+    }
   );
 
   watch(
     () => innerVisible.value,
     (val) => {
-      emit('update:visible', val);
+      // 避免挂载时 false→emit 把父级 v-model 打回 false
+      if (val !== props.visible) {
+        emit('update:visible', val);
+      }
     }
   );
 
-  const loading = ref(false);
-  const detail = ref<any>({});
+  function handleDetailLoaded(val: any) {
+    detail.value = val || {};
+    emit('loaded', val);
+  }
+
+  function setDetailLoading() {
+    emit('loadingDetail');
+  }
+
+  async function loadDetailDirect(id?: string) {
+    const targetId = id || props.detailId;
+    if (!targetId || !props.getDetailFunc || loadingDetail) {
+      return;
+    }
+    loadingDetail = true;
+    loading.value = true;
+    emit('loadingDetail');
+    try {
+      const res = await props.getDetailFunc(targetId);
+      handleDetailLoaded(res);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    } finally {
+      loading.value = false;
+      loadingDetail = false;
+    }
+  }
 
   function initDetail(id?: string) {
-    prevNextButtonRef.value?.initDetail(id);
+    if (prevNextButtonRef.value) {
+      prevNextButtonRef.value.initDetail(id);
+    } else {
+      loadDetailDirect(id);
+    }
   }
 
   function openPrevDetail() {
@@ -148,25 +187,31 @@
     prevNextButtonRef.value?.openNextDetail();
   }
 
-  function handleDetailLoaded(val: any) {
-    detail.value = val;
-    emit('loaded', val);
-  }
-
-  function setDetailLoading() {
-    emit('loadingDetail');
-  }
-
-  watch([() => innerVisible.value, () => props.detailId], () => {
-    if (innerVisible.value) {
-      nextTick(() => {
-        if (props.tableData && props.pagination && props.pageChange) {
-          initDetail();
-        } else {
-          emit('getDetail');
-        }
-      });
+  async function tryLoadDetail() {
+    if (!innerVisible.value || !props.detailId) {
+      return;
     }
+    await nextTick();
+    if (props.tableData && props.pagination && props.pageChange && prevNextButtonRef.value) {
+      initDetail();
+    } else if (props.tableData && props.pagination && props.pageChange) {
+      // PrevNext 尚未挂载完成时直接拉详情
+      await loadDetailDirect();
+    } else {
+      emit('getDetail');
+    }
+  }
+
+  watch(
+    [() => innerVisible.value, () => props.detailId],
+    () => {
+      tryLoadDetail();
+    },
+    { immediate: true }
+  );
+
+  onMounted(() => {
+    tryLoadDetail();
   });
 
   defineExpose({
