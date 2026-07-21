@@ -137,7 +137,7 @@
         </MsButton>
       </div>
     </template>
-    <template #default="{ detail, loading }">
+    <template #default="{ loading }">
       <div ref="wrapperRef" class="bg-[var(--color-text-fff)]">
         <div class="header relative h-[48px] border-b border-[var(--color-text-n8)] pl-2">
           <div class="max-w-[calc(100%-100px)]">
@@ -165,7 +165,7 @@
                 : 'h-[calc(100vh-378px)]'
             } content-wrapper w-full p-[16px] pt-4`"
           >
-            <template v-if="activeTab === 'detail'">
+            <template v-if="activeTab === 'detail' && detailInfo.id">
               <TabDetail
                 :form="detailInfo"
                 :allow-edit="true"
@@ -176,32 +176,37 @@
                 @update-success="updateSuccess"
               />
             </template>
-            <template v-if="activeTab === 'basicInfo'">
-              <BasicInfo :loading="loading" :detail="detail" @update-success="updateSuccess" />
+            <template v-else-if="activeTab === 'detail'">
+              <div class="flex h-[200px] items-center justify-center text-[var(--color-text-4)]">
+                {{ t('message.loadingDefaultTip') }}
+              </div>
             </template>
-            <template v-if="activeTab === 'requirement'">
-              <TabDemand :case-id="detail.id" />
+            <template v-if="activeTab === 'basicInfo' && detailInfo.id">
+              <BasicInfo :loading="loading" :detail="detailInfo" @update-success="updateSuccess" />
             </template>
-            <template v-if="activeTab === 'case'">
-              <TabCaseTable :case-id="detail.id" />
+            <template v-if="activeTab === 'requirement' && detailInfo.id">
+              <TabDemand :case-id="detailInfo.id" />
             </template>
-            <template v-if="activeTab === 'bug'">
-              <TabDefect :case-id="detail.id" />
+            <template v-if="activeTab === 'case' && detailInfo.id">
+              <TabCaseTable :case-id="detailInfo.id" />
             </template>
-            <template v-if="activeTab === 'dependency'">
-              <TabDependency :case-id="detail.id" @create="handleCreate" />
+            <template v-if="activeTab === 'bug' && detailInfo.id">
+              <TabDefect :case-id="detailInfo.id" />
             </template>
-            <template v-if="activeTab === 'caseReview'">
-              <TabCaseReview :case-id="detail.id" />
+            <template v-if="activeTab === 'dependency' && detailInfo.id">
+              <TabDependency :case-id="detailInfo.id" @create="handleCreate" />
             </template>
-            <template v-if="activeTab === 'testPlan'">
-              <TabTestPlan :case-id="detail.id" />
+            <template v-if="activeTab === 'caseReview' && detailInfo.id">
+              <TabCaseReview :case-id="detailInfo.id" />
             </template>
-            <template v-if="activeTab === 'comments'">
-              <TabComment ref="commentRef" :case-id="detail.id" :comment-value="detail.commentList" />
+            <template v-if="activeTab === 'testPlan' && detailInfo.id">
+              <TabTestPlan :case-id="detailInfo.id" />
             </template>
-            <template v-if="activeTab === 'changeHistory'">
-              <TabChangeHistory :case-id="detail.id" />
+            <template v-if="activeTab === 'comments' && detailInfo.id">
+              <TabComment ref="commentRef" :case-id="detailInfo.id" :comment-value="detailInfo.commentList" />
+            </template>
+            <template v-if="activeTab === 'changeHistory' && detailInfo.id">
+              <TabChangeHistory :case-id="detailInfo.id" />
             </template>
           </div>
         </div>
@@ -341,7 +346,7 @@
 
   const currentProjectId = computed(() => appStore.currentProjectId);
 
-  const showDrawerVisible = ref<boolean>(false);
+  const showDrawerVisible = ref<boolean>(!!props.visible);
 
   const showSettingDrawer = ref<boolean>(false);
   function showMenuSetting() {
@@ -597,11 +602,15 @@
     () => props.visible,
     (val) => {
       if (val) {
-        showDrawerVisible.value = val;
+        if (!showDrawerVisible.value) {
+          showDrawerVisible.value = true;
+        }
         activeTab.value = 'detail';
         featureCaseStore.setActiveTab(activeTab.value);
       } else {
-        showDrawerVisible.value = false;
+        if (showDrawerVisible.value) {
+          showDrawerVisible.value = false;
+        }
         activeTab.value = '';
         isEditTitle.value = false;
       }
@@ -612,7 +621,9 @@
   watch(
     () => showDrawerVisible.value,
     (val) => {
-      emit('update:visible', val);
+      if (val !== props.visible) {
+        emit('update:visible', val);
+      }
     }
   );
 

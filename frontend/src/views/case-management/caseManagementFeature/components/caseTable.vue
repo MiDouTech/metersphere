@@ -1203,7 +1203,8 @@
   }
 
   function onDetailVisibleChange(detailVisible: boolean) {
-    if (!detailVisible) {
+    // 仅在嵌入详情主动关闭时回列表，避免挂载期 v-model 抖动误切 Tab
+    if (!detailVisible && caseViewTab.value === 'detail') {
       caseViewTab.value = 'list';
     }
   }
