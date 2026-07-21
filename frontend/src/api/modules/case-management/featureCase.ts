@@ -13,6 +13,7 @@ import {
   BatchDeleteRecycleCaseListUrl,
   BatchEditCaseUrl,
   BatchMoveCaseUrl,
+  BatchUpdateExecutorUrl,
   CancelAssociatedDebuggerUrl,
   CancelAssociationDemandUrl,
   cancelDisassociate,
@@ -98,6 +99,7 @@ import type { BugListItem } from '@/models/bug-management';
 import type {
   AssociatedList,
   BatchMoveOrCopyType,
+  BatchUpdateExecutorParams,
   CaseManagementTable,
   ChangeHistoryItem,
   CreateOrUpdateDemand,
@@ -188,6 +190,10 @@ export function batchDeleteCase(data: TableQueryParams) {
 // 批量编辑属性
 export function batchEditAttrs(data: TableQueryParams) {
   return MSR.post({ url: `${BatchEditCaseUrl}`, data });
+}
+// 批量更新执行人
+export function batchUpdateExecutor(data: BatchUpdateExecutorParams) {
+  return MSR.post({ url: BatchUpdateExecutorUrl, data });
 }
 // 批量移动到模块
 export function batchMoveToModules(data: BatchMoveOrCopyType) {

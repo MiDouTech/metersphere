@@ -136,6 +136,9 @@
               <ExecuteStatusTag v-if="record.lastExecuteResult" :execute-result="record.lastExecuteResult" />
               <span v-else>-</span>
             </template>
+            <template #executeUserName="{ record }">
+              <span>{{ record.executeUserName || '-' }}</span>
+            </template>
             <template #moduleId="{ record }">
               <a-tree-select
                 v-if="record.showModuleTree"
@@ -303,6 +306,7 @@
         :pagination="propsRes.msPagination!"
         :is-edit="isEdit"
         @success="initData()"
+        @nav-change="onDetailNavChange"
         @update:visible="onDetailVisibleChange"
       />
     </div>
@@ -414,6 +418,14 @@
       :condition="conditionParams"
       @success="successHandler"
     />
+    <BatchUpdateExecutorModal
+      v-model:visible="showBatchExecutorModal"
+      :count="batchParams?.currentSelectCount || batchParams?.selectedIds?.length || 0"
+      :params="(batchExecutorParams as any)"
+      :batch-update-executor="batchUpdateExecutor"
+      :show-title-count="true"
+      @load-list="successHandler"
+    />
     <AddDemandModal
       ref="demandRef"
       v-model:visible="showDemandModel"
@@ -478,12 +490,14 @@
   import ImportCase from './import/index.vue';
   import AddDemandModal from './tabContent/tabDemand/addDemandModal.vue';
   import ThirdDemandDrawer from './tabContent/tabDemand/thirdDemandDrawer.vue';
+  import BatchUpdateExecutorModal from '@/views/test-plan/testPlan/components/batchUpdateExecutorModal.vue';
 
   import {
     batchAssociationDemand,
     batchCopyToModules,
     batchDeleteCase,
     batchMoveToModules,
+    batchUpdateExecutor,
     checkCaseExportTask,
     deleteCaseRequest,
     dragSort,
@@ -741,6 +755,15 @@
       width: 150,
       showDrag: true,
     },
+    {
+      title: 'caseManagement.featureCase.tableColumnExecutor',
+      dataIndex: 'executeUserName',
+      slotName: 'executeUserName',
+      showInTable: true,
+      width: 120,
+      showDrag: true,
+      showTooltip: true,
+    },
     // {
     //   title: 'caseManagement.featureCase.tableColumnVersion',
     //   slotName: 'versionName',
@@ -882,6 +905,11 @@
       {
         label: 'caseManagement.featureCase.batchEditExecResult',
         eventTag: 'batchEditExecResult',
+        permission: ['FUNCTIONAL_CASE:READ+UPDATE'],
+      },
+      {
+        label: 'caseManagement.featureCase.batchChangeExecutor',
+        eventTag: 'batchChangeExecutor',
         permission: ['FUNCTIONAL_CASE:READ+UPDATE'],
       },
       {
@@ -1209,6 +1237,11 @@
     }
   }
 
+  function onDetailNavChange(payload: { id: string; index: number }) {
+    activeDetailId.value = payload.id;
+    activeCaseIndex.value = payload.index;
+  }
+
   // 打开用例详情（同页 Tab，不再使用抽屉）
   function showCaseDetail(id: string, index: number) {
     activeDetailId.value = id;
@@ -1470,6 +1503,7 @@
 
   const showEditModel = ref<boolean>(false);
   const showBatchExecResultModal = ref(false);
+  const showBatchExecutorModal = ref(false);
   // 批量编辑
   function batchEdit() {
     showEditModel.value = true;
@@ -1477,6 +1511,19 @@
   function batchEditExecResult() {
     showBatchExecResultModal.value = true;
   }
+  function batchChangeExecutor() {
+    showBatchExecutorModal.value = true;
+  }
+
+  const batchExecutorParams = computed(() => ({
+    selectIds: batchParams.value.selectedIds || [],
+    selectAll: !!batchParams.value?.selectAll,
+    excludeIds: batchParams.value?.excludeIds || [],
+    condition: conditionParams.value,
+    projectId: currentProjectId.value,
+    moduleIds: props.activeFolder === 'all' ? [] : [props.activeFolder, ...props.offspringIds],
+    userId: '',
+  }));
 
   const showBatchMoveDrawer = ref<boolean>(false);
 
@@ -1627,6 +1674,9 @@
         break;
       case 'batchEditExecResult':
         batchEditExecResult();
+        break;
+      case 'batchChangeExecutor':
+        batchChangeExecutor();
         break;
       case 'delete':
         batchDelete();

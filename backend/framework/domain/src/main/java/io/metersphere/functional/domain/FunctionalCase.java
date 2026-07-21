@@ -71,6 +71,10 @@ public class FunctionalCase implements Serializable {
     @Size(min = 1, max = 64, message = "{functional_case.last_execute_result.length_range}", groups = {Created.class, Updated.class})
     private String lastExecuteResult;
 
+    @Schema(description = "执行人用户ID")
+    @Size(min = 0, max = 50, message = "{functional_case.execute_user.length_range}", groups = {Created.class, Updated.class})
+    private String executeUser;
+
     @Schema(description = "是否在回收站：0-否，1-是", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "{functional_case.deleted.not_blank}", groups = {Created.class})
     private Boolean deleted;
@@ -121,6 +125,7 @@ public class FunctionalCase implements Serializable {
         versionId("version_id", "versionId", "VARCHAR", false),
         refId("ref_id", "refId", "VARCHAR", false),
         lastExecuteResult("last_execute_result", "lastExecuteResult", "VARCHAR", false),
+        executeUser("execute_user", "executeUser", "VARCHAR", false),
         deleted("deleted", "deleted", "BIT", false),
         aiCreate("ai_create", "aiCreate", "BIT", false),
         publicCase("public_case", "publicCase", "BIT", false),

@@ -27,5 +27,8 @@ public class FunctionalCasePageDTO extends FunctionalCase {
     @Schema(description = "删除人名称")
     private String deleteUserName;
 
+    @Schema(description = "执行人姓名")
+    private String executeUserName;
+
 
 }

@@ -407,6 +407,12 @@ public class FunctionalCaseService {
 
         User user = userMapper.selectByPrimaryKey(functionalCaseDetailDTO.getCreateUser());
         functionalCaseDetailDTO.setCreateUserName(user.getName());
+        if (StringUtils.isNotBlank(functionalCaseDetailDTO.getExecuteUser())) {
+            User executeUser = userMapper.selectByPrimaryKey(functionalCaseDetailDTO.getExecuteUser());
+            if (executeUser != null) {
+                functionalCaseDetailDTO.setExecuteUserName(executeUser.getName());
+            }
+        }
     }
 
     private void handleCount(FunctionalCaseDetailDTO functionalCaseDetailDTO) {
@@ -560,7 +566,7 @@ public class FunctionalCaseService {
         //基本信息
         FunctionalCase functionalCase = new FunctionalCase();
         BeanUtils.copyBean(functionalCase, request);
-        updateCase(request, userId, functionalCase);
+        updateCase(request, userId, functionalCase, checked);
 
         //处理删除文件id
         if (CollectionUtils.isNotEmpty(request.getDeleteFileMetaIds())) {
@@ -606,9 +612,13 @@ public class FunctionalCaseService {
     }
 
 
-    private void updateCase(FunctionalCaseEditRequest request, String userId, FunctionalCase functionalCase) {
+    private void updateCase(FunctionalCaseEditRequest request, String userId, FunctionalCase functionalCase, FunctionalCase oldCase) {
         functionalCase.setUpdateUser(userId);
         functionalCase.setUpdateTime(System.currentTimeMillis());
+        if (StringUtils.isNotBlank(request.getLastExecuteResult())
+                && !StringUtils.equals(request.getLastExecuteResult(), oldCase.getLastExecuteResult())) {
+            functionalCase.setExecuteUser(userId);
+        }
         //更新用例
         functionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
         //更新附属表信息
@@ -753,6 +763,7 @@ public class FunctionalCaseService {
             functionalCasePageDTO.setCreateUserName(userMap.get(functionalCasePageDTO.getCreateUser()));
             functionalCasePageDTO.setUpdateUserName(userMap.get(functionalCasePageDTO.getUpdateUser()));
             functionalCasePageDTO.setDeleteUserName(userMap.get(functionalCasePageDTO.getDeleteUser()));
+            functionalCasePageDTO.setExecuteUserName(userMap.get(functionalCasePageDTO.getExecuteUser()));
         });
         return functionalCaseLists;
 
@@ -760,7 +771,7 @@ public class FunctionalCaseService {
 
     private Set<String> extractUserIds(List<FunctionalCasePageDTO> list) {
         return list.stream()
-                .flatMap(functionalCasePageDTO -> Stream.of(functionalCasePageDTO.getUpdateUser(), functionalCasePageDTO.getDeleteUser(), functionalCasePageDTO.getCreateUser()))
+                .flatMap(functionalCasePageDTO -> Stream.of(functionalCasePageDTO.getUpdateUser(), functionalCasePageDTO.getDeleteUser(), functionalCasePageDTO.getCreateUser(), functionalCasePageDTO.getExecuteUser()))
                 .collect(Collectors.toSet());
     }
 
@@ -1005,10 +1016,23 @@ public class FunctionalCaseService {
         }
         FunctionalCase functionalCase = new FunctionalCase();
         functionalCase.setLastExecuteResult(request.getLastExecuteResult());
+        functionalCase.setExecuteUser(userId);
         functionalCase.setProjectId(request.getProjectId());
         functionalCase.setUpdateTime(System.currentTimeMillis());
         functionalCase.setUpdateUser(userId);
         extFunctionalCaseMapper.batchUpdate(functionalCase, ids);
+    }
+
+    /**
+     * 批量更新执行人
+     *
+     * @param request request
+     */
+    public void batchUpdateExecutor(FunctionalCaseBatchUpdateExecutorRequest request) {
+        List<String> ids = doSelectIds(request, request.getProjectId());
+        if (CollectionUtils.isNotEmpty(ids)) {
+            extFunctionalCaseMapper.batchUpdateExecutor(ids, request.getUserId());
+        }
     }
 
     private void handleCustomFields(FunctionalCaseBatchEditRequest request, String userId, List<String> ids) {

@@ -15,6 +15,7 @@
         <result column="version_id" jdbcType="VARCHAR" property="versionId" />
         <result column="ref_id" jdbcType="VARCHAR" property="refId" />
         <result column="last_execute_result" jdbcType="VARCHAR" property="lastExecuteResult" />
+        <result column="execute_user" jdbcType="VARCHAR" property="executeUser" />
         <result column="deleted" jdbcType="BIT" property="deleted" />
         <result column="public_case" jdbcType="BIT" property="publicCase" />
         <result column="latest" jdbcType="BIT" property="latest" />
@@ -113,6 +114,7 @@
         functional_case.update_time,
         functional_case.review_status,
         functional_case.last_execute_result,
+        functional_case.execute_user,
         functional_case.delete_user,
         functional_case.delete_time,
         functional_case.tags,
@@ -530,6 +532,9 @@
             <if test="functionalCase.lastExecuteResult != null and functionalCase.lastExecuteResult != ''">
                 last_execute_result = #{functionalCase.lastExecuteResult},
             </if>
+            <if test="functionalCase.executeUser != null and functionalCase.executeUser != ''">
+                execute_user = #{functionalCase.executeUser},
+            </if>
             <if test="functionalCase.updateUser != null and functionalCase.updateUser != ''">
                 update_user = #{functionalCase.updateUser},
             </if>
@@ -543,6 +548,16 @@
         </foreach>
         and deleted = false
         and project_id = #{functionalCase.projectId}
+    </update>
+
+    <update id="batchUpdateExecutor">
+        update functional_case
+        set execute_user = #{userId}
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and deleted = false
     </update>
 
     <select id="countModuleIdByRequest"  resultType="io.metersphere.project.dto.ModuleCountDTO">

@@ -4,6 +4,7 @@
     :class="props.class || 'w-[260px]'"
     allow-search
     :allow-create="false"
+    :popup-max-height="360"
     @change="selectProject"
   >
     <template v-if="!props.useDefaultArrowIcon" #arrow-icon>
@@ -12,11 +13,15 @@
     <template v-if="$slots.prefix" #prefix>
       <slot name="prefix"></slot>
     </template>
-    <a-tooltip v-for="item of projectList" :key="item.id" :mouse-enter-delay="500" :content="item.name">
-      <a-option :value="item.id" :class="item.id === project ? 'arco-select-option-selected' : ''">
-        {{ item.name }}
-      </a-option>
-    </a-tooltip>
+    <a-option
+      v-for="item of projectList"
+      :key="item.id"
+      :value="item.id"
+      :title="item.name"
+      :class="item.id === project ? 'arco-select-option-selected' : ''"
+    >
+      {{ item.name }}
+    </a-option>
   </a-select>
 </template>
 

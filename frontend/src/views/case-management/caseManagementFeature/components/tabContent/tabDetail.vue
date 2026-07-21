@@ -104,7 +104,7 @@
       <div v-if="!props.isTestPlan" v-permission="['FUNCTIONAL_CASE:READ+UPDATE']">
         <AddAttachment v-model:file-list="fileList" multiple @change="handleChange" @link-file="associatedFile">
           <template v-if="props.showCaseNav" #labelRight>
-            <div class="flex items-center gap-2 font-normal">
+            <div class="case-nav-actions inline-flex items-center gap-2 font-normal">
               <a-button size="small" :disabled="!props.canGoPrev" @click="emit('prevCase')">
                 {{ t('caseManagement.featureCase.prevCase') }}
               </a-button>
@@ -272,6 +272,29 @@
         </template>
       </MsFileList>
     </div>
+    <!-- 详情内嵌评论（非底部悬浮） -->
+    <div
+      v-if="!props.isTestPlan"
+      v-permission="['FUNCTIONAL_CASE:READ+COMMENT']"
+      class="mt-6 border-t border-[var(--color-text-n8)] pt-4"
+    >
+      <div class="mb-3 flex items-center justify-between">
+        <div class="font-medium text-[var(--color-text-1)]">{{ t('caseManagement.featureCase.inlineComment') }}</div>
+        <MsButton type="button" status="primary" class="!mr-0" @click="emit('gotoComments')">
+          {{ t('caseManagement.featureCase.viewAllComments') }}
+        </MsButton>
+      </div>
+      <inputComment
+        v-model:content="inlineCommentContent"
+        v-model:notice-user-ids="inlineNoticeUserIds"
+        v-model:filed-ids="inlineUploadFileIds"
+        :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
+        is-show-avatar
+        :is-use-bottom="false"
+        :upload-image="handleUploadImage"
+        @publish="handleInlinePublish"
+      />
+    </div>
     <div>
       <MsUpload
         v-model:file-list="fileList"
@@ -317,6 +340,8 @@
   import type { MsFileItem } from '@/components/pure/ms-upload/types';
   import AddAttachment from '@/components/business/ms-add-attachment/index.vue';
   import SaveAsFilePopover from '@/components/business/ms-add-attachment/saveAsFilePopover.vue';
+  import inputComment from '@/components/business/ms-comment/input.vue';
+  import type { CommentParams } from '@/components/business/ms-comment/types';
   import LinkFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
   import AddStep from '../addStep.vue';
   import StepDescription from '@/views/case-management/caseManagementFeature/components/tabContent/stepDescription.vue';
@@ -324,6 +349,7 @@
 
   import {
     checkFileIsUpdateRequest,
+    createCommentList,
     deleteFileOrCancelAssociation,
     downloadFileRequest,
     editorUploadFile,
@@ -390,6 +416,7 @@
     (e: 'updateSuccess'): void;
     (e: 'prevCase'): void;
     (e: 'nextCase'): void;
+    (e: 'gotoComments'): void;
   }>();
 
   const detailForm = ref<Record<string, any>>({
@@ -589,9 +616,11 @@
         isEditPreposition.value = false;
       }
       emit('updateSuccess');
+      return true;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
+      return false;
     } finally {
       confirmLoading.value = false;
     }
@@ -605,18 +634,20 @@
     }, 600);
   }
 
-  function handleSetCaseResult(result: string) {
+  async function handleSetCaseResult(result: string) {
     detailForm.value.lastExecuteResult = result;
     stepData.value.forEach((item) => {
       item.executeResult = result;
     });
     // 触发步骤列表响应，保证表格展示即时刷新
     stepData.value = [...stepData.value];
-    if (props.autoSave || props.enableExecute) {
-      if (autoSaveTimer) clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(() => {
-        persistCase(true);
-      }, 300);
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    const ok = await persistCase(true);
+    if (!ok) return;
+    if (props.canGoNext) {
+      emit('nextCase');
+    } else {
+      Message.info(t('caseManagement.featureCase.lastCaseTip'));
     }
   }
 
@@ -624,6 +655,33 @@
   function handleReportDefect() {
     if (!detailForm.value.id) return;
     showDefectDrawer.value = true;
+  }
+
+  const inlineCommentContent = ref('');
+  const inlineNoticeUserIds = ref<string[]>([]);
+  const inlineUploadFileIds = ref<string[]>([]);
+  async function handleInlinePublish(currentContent: string) {
+    if (!detailForm.value.id || !currentContent) return;
+    try {
+      const params: CommentParams = {
+        caseId: detailForm.value.id,
+        notifier: inlineNoticeUserIds.value.join(';'),
+        replyUser: '',
+        parentId: '',
+        content: currentContent,
+        event: inlineNoticeUserIds.value.length ? 'AT' : 'COMMENT',
+        uploadFileIds: inlineUploadFileIds.value,
+      };
+      await createCommentList(params);
+      inlineCommentContent.value = '';
+      inlineNoticeUserIds.value = [];
+      inlineUploadFileIds.value = [];
+      Message.success(t('common.publishSuccessfully'));
+      emit('updateSuccess');
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
   }
 
   function handleOK() {

@@ -10,10 +10,12 @@
     <div
       class="attach-drop-zone flex flex-col rounded border border-dashed border-transparent p-1 transition-colors"
       :class="{ 'attach-drop-zone--active': isDragOver }"
+      tabindex="0"
       @dragenter.prevent="onDragEnter"
       @dragover.prevent="onDragOver"
       @dragleave.prevent="onDragLeave"
       @drop.prevent="onDropFiles"
+      @paste="onPasteFiles"
     >
       <div class="mb-1" :class="props.onlyButton ? 'mb-[12px]' : ''">
         <a-dropdown
@@ -162,7 +164,7 @@
 </template>
 
 <script setup lang="ts">
-  import { TagData } from '@arco-design/web-vue';
+  import { Message, TagData } from '@arco-design/web-vue';
 
   import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsTag, { Size } from '@/components/pure/ms-tag/ms-tag.vue';
@@ -316,17 +318,47 @@
     });
   }
 
+  function acceptLocalFiles(files: File[]) {
+    const maxSize = appStore.getFileMaxSize * 1024 * 1024;
+    const acceptFiles = (props.multiple ? files : files.slice(0, 1)).filter((file) => {
+      if (file.size > maxSize) {
+        Message.warning(t('ms.upload.overSize', { size: appStore.getFileMaxSize, unit: 'MB' }));
+        return false;
+      }
+      return true;
+    });
+    acceptFiles.forEach((file) => {
+      const fileItem = buildFileItem(file);
+      handleChange([...(fileList.value || []), fileItem], fileItem);
+    });
+  }
+
   function onDropFiles(e: DragEvent) {
     dragEnterCount = 0;
     isDragOver.value = false;
     if (props.disabled) return;
     const files = Array.from(e.dataTransfer?.files || []);
     if (!files.length) return;
-    const acceptFiles = props.multiple ? files : files.slice(0, 1);
-    acceptFiles.forEach((file) => {
-      const fileItem = buildFileItem(file);
-      handleChange([...(fileList.value || []), fileItem], fileItem);
+    acceptLocalFiles(files);
+  }
+
+  function onPasteFiles(e: ClipboardEvent) {
+    if (props.disabled) return;
+    const files: File[] = [];
+    const clipFiles = Array.from(e.clipboardData?.files || []);
+    files.push(...clipFiles);
+    const items = Array.from(e.clipboardData?.items || []);
+    items.forEach((item) => {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file && !files.some((f) => f.name === file.name && f.size === file.size)) {
+          files.push(file);
+        }
+      }
     });
+    if (!files.length) return;
+    e.preventDefault();
+    acceptLocalFiles(files);
   }
 
   function associatedFile() {

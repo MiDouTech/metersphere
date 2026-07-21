@@ -17,6 +17,7 @@
     show-full-screen
     :unmount-on-close="true"
     @loaded="loadedCase"
+    @change="handleNavChange"
   >
     <template #titleName>
       <div :class="`case-title flex flex-1 items-center gap-[8px] overflow-hidden ${isEditTitle ? 'w-full' : ''}`">
@@ -156,14 +157,12 @@
         <div>
           <div
             :class="`${
-              !commentInputIsActive
-                ? props.embed
-                  ? 'h-[calc(100vh-280px)]'
-                  : 'h-[calc(100vh-174px)]'
-                : props.embed
-                ? 'h-[calc(100vh-484px)]'
-                : 'h-[calc(100vh-378px)]'
-            } content-wrapper w-full p-[16px] pt-4`"
+              props.embed
+                ? 'h-[calc(100vh-280px)]'
+                : commentInputIsActive
+                ? 'h-[calc(100vh-378px)]'
+                : 'h-[calc(100vh-174px)]'
+            } content-wrapper w-full overflow-auto p-[16px] pt-4`"
           >
             <template v-if="activeTab === 'detail' && detailInfo.id">
               <TabDetail
@@ -179,6 +178,7 @@
                 @update-success="updateSuccess"
                 @prev-case="goPrevCase"
                 @next-case="goNextCase"
+                @goto-comments="gotoCommentsTab"
               />
             </template>
             <template v-else-if="activeTab === 'detail'">
@@ -216,6 +216,7 @@
           </div>
         </div>
         <inputComment
+          v-if="activeTab !== 'detail'"
           ref="commentInputRef"
           v-model:content="content"
           v-model:notice-user-ids="noticeUserIds"
@@ -317,15 +318,27 @@
     }
   );
 
+  const emit = defineEmits(['update:visible', 'success', 'navChange']);
+
+  const currentDetailIndex = ref(props.detailIndex || 0);
+
+  watch(
+    () => props.detailIndex,
+    (val) => {
+      currentDetailIndex.value = val || 0;
+    }
+  );
+
   const canGoPrev = computed(() => {
     if (!props.pagination) return false;
-    return !(props.detailIndex === 0 && props.pagination.current === 1);
+    return !(currentDetailIndex.value === 0 && props.pagination.current === 1);
   });
   const canGoNext = computed(() => {
     if (!props.pagination || !props.tableData?.length) return false;
     return !(
-      props.detailIndex === props.tableData.length - 1 &&
-      (props.pagination.current - 1) * props.pagination.pageSize + (props.detailIndex + 1) >= props.pagination.total
+      currentDetailIndex.value === props.tableData.length - 1 &&
+      (props.pagination.current - 1) * props.pagination.pageSize + (currentDetailIndex.value + 1) >=
+        props.pagination.total
     );
   });
 
@@ -336,7 +349,11 @@
     detailDrawerRef.value?.openNextDetail();
   }
 
-  const emit = defineEmits(['update:visible', 'success']);
+  function handleNavChange(payload: { id: string; index: number }) {
+    currentDetailIndex.value = payload.index;
+    emit('navChange', payload);
+  }
+
   const appStore = useAppStore();
 
   const currentProjectId = computed(() => appStore.currentProjectId);
@@ -643,7 +660,7 @@
       if (activeTab.value === 'comments') {
         commentRef.value.getAllCommentList();
       }
-
+      emit('success');
       Message.success(t('common.publishSuccessfully'));
     } catch (error) {
       console.log(error);
@@ -652,6 +669,11 @@
 
   function cancelPublish() {
     isActive.value = !isActive.value;
+  }
+
+  function gotoCommentsTab() {
+    activeTab.value = 'comments';
+    featureCaseStore.setActiveTab('comments');
   }
 
   const tabDefaultSettingList: TabItemType[] = [

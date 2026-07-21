@@ -128,4 +128,10 @@ public class FunctionalCaseDetailDTO implements Serializable {
 
     @Schema(description = "执行结果")
     private String lastExecuteResult;
+
+    @Schema(description = "执行人用户ID")
+    private String executeUser;
+
+    @Schema(description = "执行人姓名")
+    private String executeUserName;
 }

@@ -15,6 +15,7 @@
     <result column="version_id" jdbcType="VARCHAR" property="versionId" />
     <result column="ref_id" jdbcType="VARCHAR" property="refId" />
     <result column="last_execute_result" jdbcType="VARCHAR" property="lastExecuteResult" />
+    <result column="execute_user" jdbcType="VARCHAR" property="executeUser" />
     <result column="deleted" jdbcType="BIT" property="deleted" />
     <result column="ai_create" jdbcType="BIT" property="aiCreate" />
     <result column="public_case" jdbcType="BIT" property="publicCase" />
@@ -124,7 +125,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, num, module_id, project_id, template_id, `name`, review_status, tags, case_edit_type, 
-    pos, version_id, ref_id, last_execute_result, deleted, ai_create, public_case, latest, 
+    pos, version_id, ref_id, last_execute_result, execute_user, deleted, ai_create, public_case, latest, 
     create_user, update_user, delete_user, create_time, update_time, delete_time
   </sql>
   <select id="selectByExample" parameterType="io.metersphere.functional.domain.FunctionalCaseExample" resultMap="BaseResultMap">
@@ -162,7 +163,7 @@
       project_id, template_id, `name`, 
       review_status, tags, 
       case_edit_type, pos, version_id, 
-      ref_id, last_execute_result, deleted, 
+      ref_id, last_execute_result, execute_user, deleted, 
       ai_create, public_case, latest, create_user, 
       update_user, delete_user, create_time, 
       update_time, delete_time)
@@ -170,7 +171,7 @@
       #{projectId,jdbcType=VARCHAR}, #{templateId,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, 
       #{reviewStatus,jdbcType=VARCHAR}, #{tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler}, 
       #{caseEditType,jdbcType=VARCHAR}, #{pos,jdbcType=BIGINT}, #{versionId,jdbcType=VARCHAR}, 
-      #{refId,jdbcType=VARCHAR}, #{lastExecuteResult,jdbcType=VARCHAR}, #{deleted,jdbcType=BIT}, 
+      #{refId,jdbcType=VARCHAR}, #{lastExecuteResult,jdbcType=VARCHAR}, #{executeUser,jdbcType=VARCHAR}, #{deleted,jdbcType=BIT}, 
       #{aiCreate,jdbcType=BIT}, #{publicCase,jdbcType=BIT}, #{latest,jdbcType=BIT}, #{createUser,jdbcType=VARCHAR}, 
       #{updateUser,jdbcType=VARCHAR}, #{deleteUser,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, 
       #{updateTime,jdbcType=BIGINT}, #{deleteTime,jdbcType=BIGINT})
@@ -216,6 +217,9 @@
       </if>
       <if test="lastExecuteResult != null">
         last_execute_result,
+      </if>
+      <if test="executeUser != null">
+        execute_user,
       </if>
       <if test="deleted != null">
         deleted,
@@ -287,6 +291,9 @@
       </if>
       <if test="lastExecuteResult != null">
         #{lastExecuteResult,jdbcType=VARCHAR},
+      </if>
+      <if test="executeUser != null">
+        #{executeUser,jdbcType=VARCHAR},
       </if>
       <if test="deleted != null">
         #{deleted,jdbcType=BIT},
@@ -471,6 +478,9 @@
       <if test="lastExecuteResult != null">
         last_execute_result = #{lastExecuteResult,jdbcType=VARCHAR},
       </if>
+      <if test="executeUser != null">
+        execute_user = #{executeUser,jdbcType=VARCHAR},
+      </if>
       <if test="deleted != null">
         deleted = #{deleted,jdbcType=BIT},
       </if>
@@ -518,6 +528,7 @@
       version_id = #{versionId,jdbcType=VARCHAR},
       ref_id = #{refId,jdbcType=VARCHAR},
       last_execute_result = #{lastExecuteResult,jdbcType=VARCHAR},
+      execute_user = #{executeUser,jdbcType=VARCHAR},
       deleted = #{deleted,jdbcType=BIT},
       ai_create = #{aiCreate,jdbcType=BIT},
       public_case = #{publicCase,jdbcType=BIT},
@@ -533,7 +544,7 @@
   <insert id="batchInsert" parameterType="map">
     insert into functional_case
     (id, num, module_id, project_id, template_id, `name`, review_status, tags, case_edit_type, 
-      pos, version_id, ref_id, last_execute_result, deleted, ai_create, public_case, 
+      pos, version_id, ref_id, last_execute_result, execute_user, deleted, ai_create, public_case, 
       latest, create_user, update_user, delete_user, create_time, update_time, delete_time
       )
     values
@@ -542,7 +553,7 @@
         #{item.projectId,jdbcType=VARCHAR}, #{item.templateId,jdbcType=VARCHAR}, #{item.name,jdbcType=VARCHAR}, 
         #{item.reviewStatus,jdbcType=VARCHAR}, #{item.tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler}, 
         #{item.caseEditType,jdbcType=VARCHAR}, #{item.pos,jdbcType=BIGINT}, #{item.versionId,jdbcType=VARCHAR}, 
-        #{item.refId,jdbcType=VARCHAR}, #{item.lastExecuteResult,jdbcType=VARCHAR}, #{item.deleted,jdbcType=BIT}, 
+        #{item.refId,jdbcType=VARCHAR}, #{item.lastExecuteResult,jdbcType=VARCHAR}, #{item.executeUser,jdbcType=VARCHAR}, #{item.deleted,jdbcType=BIT}, 
         #{item.aiCreate,jdbcType=BIT}, #{item.publicCase,jdbcType=BIT}, #{item.latest,jdbcType=BIT}, 
         #{item.createUser,jdbcType=VARCHAR}, #{item.updateUser,jdbcType=VARCHAR}, #{item.deleteUser,jdbcType=VARCHAR}, 
         #{item.createTime,jdbcType=BIGINT}, #{item.updateTime,jdbcType=BIGINT}, #{item.deleteTime,jdbcType=BIGINT}
@@ -597,6 +608,9 @@
         </if>
         <if test="'last_execute_result'.toString() == column.value">
           #{item.lastExecuteResult,jdbcType=VARCHAR}
+        </if>
+        <if test="'execute_user'.toString() == column.value">
+          #{item.executeUser,jdbcType=VARCHAR}
         </if>
         <if test="'deleted'.toString() == column.value">
           #{item.deleted,jdbcType=BIT}

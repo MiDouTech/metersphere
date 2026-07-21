@@ -1,5 +1,5 @@
 <template>
-  <div v-show="props.pagination?.total > 1" class="flex items-center">
+  <div v-show="props.pagination?.total > 1" class="ms-prev-next-button inline-flex items-center">
     <a-tooltip
       :content="activeDetailIsFirst ? t('ms.prevNextButton.noPrev') : t('ms.prevNextButton.prev')"
       :mouse-enter-delay="300"
@@ -52,7 +52,12 @@
     getDetailFunc: (id: string) => Promise<any>; // 获取详情的请求函数
   }>();
 
-  const emit = defineEmits(['update:loading', 'loaded', 'loadingDetail']);
+  const emit = defineEmits<{
+    (e: 'update:loading', val: boolean): void;
+    (e: 'loaded', val: any): void;
+    (e: 'loadingDetail'): void;
+    (e: 'change', payload: { id: string; index: number }): void;
+  }>();
 
   const { t } = useI18n();
 
@@ -90,6 +95,10 @@
       activeDetailIndex.value = val as number;
     }
   );
+
+  function emitNavChange() {
+    emit('change', { id: activeDetailId.value, index: activeDetailIndex.value });
+  }
 
   async function initDetail(id?: string) {
     try {
@@ -137,6 +146,7 @@
         activeDetailId.value = props.tableData[activeDetailIndex.value - 1].id;
         activeDetailIndex.value -= 1;
       }
+      emitNavChange();
       initDetail();
     }
   }
@@ -161,6 +171,7 @@
         activeDetailId.value = props.tableData[activeDetailIndex.value + 1].id;
         activeDetailIndex.value += 1;
       }
+      emitNavChange();
       initDetail();
     }
   }

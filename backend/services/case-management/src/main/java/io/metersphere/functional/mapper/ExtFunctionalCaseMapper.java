@@ -56,6 +56,8 @@ public interface ExtFunctionalCaseMapper {
 
     void batchUpdate(@Param("functionalCase") FunctionalCase functionalCase, @Param("ids") List<String> ids);
 
+    void batchUpdateExecutor(@Param("ids") List<String> ids, @Param("userId") String userId);
+
     void recoverCaseByRefIds(@Param("refIds") List<String> refIds, @Param("userId") String userId, @Param("time") long time);
 
     @BaseConditionFilter

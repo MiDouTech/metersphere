@@ -28,6 +28,7 @@
           :table-data="props.tableData"
           @loading-detail="setDetailLoading"
           @loaded="handleDetailLoaded"
+          @change="handleNavChange"
         />
         <slot name="titleRight" :loading="loading" :detail="detail"></slot>
       </div>
@@ -77,6 +78,7 @@
             :table-data="props.tableData"
             @loading-detail="setDetailLoading"
             @loaded="handleDetailLoaded"
+            @change="handleNavChange"
           />
           <slot name="titleRight" :loading="loading" :detail="detail"></slot>
         </div>
@@ -114,7 +116,7 @@
     }
   );
 
-  const emit = defineEmits(['update:visible', 'loaded', 'loadingDetail', 'getDetail']);
+  const emit = defineEmits(['update:visible', 'loaded', 'loadingDetail', 'getDetail', 'change']);
 
   const prevNextButtonRef = ref<InstanceType<typeof MsPrevNextButton>>();
 
@@ -145,6 +147,10 @@
   function handleDetailLoaded(val: any) {
     detail.value = val || {};
     emit('loaded', val);
+  }
+
+  function handleNavChange(payload: { id: string; index: number }) {
+    emit('change', payload);
   }
 
   function setDetailLoading() {

@@ -65,6 +65,8 @@ export interface CaseManagementTable {
   versionId: string; // 版本ID
   refId: string; // 指向初始版本ID
   lastExecuteResult: string; // 最近的执行结果：未执行/通过/失败/阻塞/跳过
+  executeUser?: string;
+  executeUserName?: string;
   deleted: boolean; // 是否在回收站：0-否，1-是
   publicCase: boolean; // 是否是公共用例：0-否，1-是
   latest: boolean; // 是否为最新版本：0-否，1-是
@@ -163,6 +165,10 @@ export interface BatchMoveOrCopyType {
   excludeIds: string[] | undefined;
   condition: Record<string, any>;
 }
+export interface BatchUpdateExecutorParams extends BatchMoveOrCopyType {
+  projectId: string;
+  userId: string;
+}
 export type CaseEditType = 'STEP' | 'TEXT';
 // 创建或者更新
 export interface CreateOrUpdateCase {
@@ -222,6 +228,8 @@ export interface DetailCase {
   attachments?: AttachFileInfo[];
   followFlag?: boolean;
   functionalPriority: string;
+  executeUser?: string;
+  executeUserName?: string;
   [key: string]: any;
 }
 

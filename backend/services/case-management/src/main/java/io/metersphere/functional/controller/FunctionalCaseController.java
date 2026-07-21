@@ -207,6 +207,14 @@ public class FunctionalCaseController {
         functionalCaseService.batchEditFunctionalCase(request, userId);
     }
 
+    @PostMapping("/batch/update/executor")
+    @Operation(summary = "用例管理-功能用例-批量更新执行人")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE)
+    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
+    public void batchUpdateExecutor(@Validated @RequestBody FunctionalCaseBatchUpdateExecutorRequest request) {
+        functionalCaseService.batchUpdateExecutor(request);
+    }
+
 
     @PostMapping("edit/pos")
     @Operation(summary = "用例管理-功能用例-拖拽排序")

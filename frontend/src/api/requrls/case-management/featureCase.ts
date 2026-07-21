@@ -14,6 +14,7 @@ export const BatchMoveCaseUrl = '/functional/case/batch/move';
 export const BatchDeleteCaseUrl = '/functional/case/batch/delete-to-gc';
 // 用例管理-批量删除用例
 export const BatchEditCaseUrl = '/functional/case/batch/edit';
+export const BatchUpdateExecutorUrl = '/functional/case/batch/update/executor';
 // 用例管理-批量复制
 export const BatchCopyCaseUrl = '/functional/case/batch/copy';
 // 用例管理-关注/取消关注用例

@@ -25,6 +25,7 @@
             class="project-switch-select min-w-[200px] max-w-[420px] focus-within:!bg-[var(--color-text-n8)] hover:!bg-[var(--color-text-n8)]"
             :bordered="false"
             :fallback-option="false"
+            :popup-max-height="360"
             allow-search
             @change="selectProject"
           >
@@ -43,19 +44,15 @@
                 {{ t('settings.navbar.createProject') }}
               </a-button>
             </template>
-            <a-tooltip
+            <a-option
               v-for="project of appStore.projectList"
               :key="project.id"
-              :mouse-enter-delay="500"
-              :content="project.name"
+              :value="project.id"
+              :title="project.name"
+              :class="project.id === appStore.currentProjectId ? 'arco-select-option-selected' : ''"
             >
-              <a-option
-                :value="project.id"
-                :class="project.id === appStore.currentProjectId ? 'arco-select-option-selected' : ''"
-              >
-                {{ project.name }}
-              </a-option>
-            </a-tooltip>
+              {{ project.name }}
+            </a-option>
           </a-select>
         </a-tooltip>
       </li>

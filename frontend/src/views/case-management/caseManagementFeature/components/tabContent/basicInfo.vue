@@ -49,6 +49,10 @@
           <span v-else class="value">{{ detailInfo?.createUserName }}</span>
         </div>
         <div class="baseItem">
+          <span class="label"> {{ t('caseManagement.featureCase.tableColumnExecutor') }}</span>
+          <span class="value">{{ detailInfo?.executeUserName || '-' }}</span>
+        </div>
+        <div class="baseItem">
           <span class="label"> {{ t('caseManagement.featureCase.tableColumnCreateTime') }}</span>
           <span class="value">{{ dayjs(detailInfo?.createTime).format('YYYY-MM-DD HH:mm:ss') }}</span>
         </div>
