@@ -1,5 +1,46 @@
 <template>
+  <!-- 嵌入模式：同页 Tab 详情，不使用抽屉 -->
+  <div v-if="props.embed" v-show="innerVisible" class="ms-detail-embed flex h-full flex-col bg-[var(--color-text-fff)]">
+    <div class="flex h-[56px] shrink-0 items-center overflow-hidden border-b border-[var(--color-text-n8)] px-4">
+      <div class="flex flex-1 items-center overflow-hidden">
+        <a-tooltip :content="props.tooltipText ? props.tooltipText : props.title" position="bottom">
+          <slot name="titleName">
+            <div class="one-line-text">
+              {{ props.title }}
+            </div>
+          </slot>
+        </a-tooltip>
+        <div class="mx-4 flex items-center">
+          <slot name="titleLeft" :loading="loading" :detail="detail"></slot>
+        </div>
+      </div>
+      <div class="ml-auto flex items-center">
+        <MsPrevNextButton
+          v-if="props.tableData && props.pagination && props.pageChange"
+          ref="prevNextButtonRef"
+          v-model:loading="loading"
+          class="mr-[16px]"
+          :page-change="props.pageChange"
+          :pagination="props.pagination"
+          :get-detail-func="props.getDetailFunc"
+          :detail-id="props.detailId"
+          :detail-index="props.detailIndex"
+          :table-data="props.tableData"
+          @loading-detail="setDetailLoading"
+          @loaded="handleDetailLoaded"
+        />
+        <slot name="titleRight" :loading="loading" :detail="detail"></slot>
+      </div>
+    </div>
+    <div class="min-h-0 flex-1 overflow-hidden">
+      <slot :loading="loading" :detail="detail"></slot>
+    </div>
+    <div v-if="$slots.footer" class="shrink-0 border-t border-[var(--color-text-n8)] px-4 py-3">
+      <slot name="footer" :loading="loading" :detail="detail"></slot>
+    </div>
+  </div>
   <MsDrawer
+    v-else
     v-model:visible="innerVisible"
     :width="props.width"
     :footer="false"
@@ -10,7 +51,6 @@
   >
     <template #title>
       <div class="flex flex-1 items-center overflow-hidden">
-        <!-- 如果设置了tooltipText，则优先展示-->
         <div class="flex flex-1 items-center overflow-hidden">
           <a-tooltip :content="props.tooltipText ? props.tooltipText : props.title" position="bottom">
             <slot name="titleName">
@@ -51,19 +91,26 @@
   import type { MsPaginationI } from '@/components/pure/ms-table/type';
   import MsPrevNextButton from '@/components/business/ms-prev-next-button/index.vue';
 
-  const props = defineProps<{
-    visible: boolean;
-    title: string;
-    width: number;
-    detailId: string; // 详情 id
-    tooltipText?: string; // tooltip内容
-    detailIndex?: number; // 详情 下标
-    tableData?: any[]; // 表格数据
-    pagination?: MsPaginationI; // 分页器对象
-    showFullScreen?: boolean; // 是否显示全屏按钮
-    pageChange?: (page: number) => Promise<void>; // 分页变更函数
-    getDetailFunc: (id: string) => Promise<any>; // 获取详情的请求函数
-  }>();
+  const props = withDefaults(
+    defineProps<{
+      visible: boolean;
+      title: string;
+      width: number;
+      detailId: string;
+      tooltipText?: string;
+      detailIndex?: number;
+      tableData?: any[];
+      pagination?: MsPaginationI;
+      showFullScreen?: boolean;
+      pageChange?: (page: number) => Promise<void>;
+      getDetailFunc: (id: string) => Promise<any>;
+      /** 同页嵌入（Tab 详情），不渲染抽屉 */
+      embed?: boolean;
+    }>(),
+    {
+      embed: false,
+    }
+  );
 
   const emit = defineEmits(['update:visible', 'loaded', 'loadingDetail', 'getDetail']);
 
@@ -75,7 +122,8 @@
     () => props.visible,
     (val) => {
       innerVisible.value = val;
-    }
+    },
+    { immediate: true }
   );
 
   watch(
@@ -112,7 +160,6 @@
   watch([() => innerVisible.value, () => props.detailId], () => {
     if (innerVisible.value) {
       nextTick(() => {
-        // 为了确保 prevNextButtonRef 已渲染
         if (props.tableData && props.pagination && props.pageChange) {
           initDetail();
         } else {

@@ -44,7 +44,9 @@
           :is-scroll-y="false"
           :is-test-plan="props.isTestPlan"
           :is-disabled-test-plan="props.isDisabledTestPlan"
-          :is-disabled="!isEditPreposition"
+          :is-disabled="!isEditPreposition && !props.enableExecute && !props.autoSave"
+          :enable-execute="props.enableExecute || props.isTestPlan"
+          @change="handleStepChange"
         />
       </div>
       <!-- 文本描述 -->
@@ -285,7 +287,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
+  import { computed, ref } from 'vue';
   import { FormInstance, Message } from '@arco-design/web-vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
@@ -344,10 +346,16 @@
       isTestPlan?: boolean; // 测试计划页面的
       isDisabledTestPlan?: boolean; // 测试计划页面-已归档
       isEdit?: boolean; // 是否为编辑状态
+      /** 启用步骤实际结果/执行结果/附件 */
+      enableExecute?: boolean;
+      /** 步骤等变更自动保存（无需点保存） */
+      autoSave?: boolean;
     }>(),
     {
       allowEdit: true, // 是否允许编辑
       isEdit: false,
+      enableExecute: false,
+      autoSave: false,
     }
   );
 
@@ -494,6 +502,10 @@
         num: index,
         desc: item.step,
         result: item.expected,
+        actualResult: item.actualResult,
+        executeResult: item.executeResult,
+        attachmentIds: item.attachmentIds || [],
+        attachmentNames: item.attachmentNames || [],
       };
     });
 
@@ -504,37 +516,69 @@
       };
     });
 
+    // 汇总用例级执行结果：有失败→失败；否则有阻塞→阻塞；否则全跳过/通过→通过；无结果则不改
+    const execList = steps.map((s) => s.executeResult).filter(Boolean) as string[];
+    let { lastExecuteResult } = detailForm.value;
+    if (execList.length) {
+      if (execList.includes('ERROR')) lastExecuteResult = 'ERROR';
+      else if (execList.includes('BLOCKED')) lastExecuteResult = 'BLOCKED';
+      else if (execList.every((r) => r === 'SKIP')) lastExecuteResult = 'SKIP';
+      else if (execList.every((r) => r === 'SUCCESS' || r === 'SKIP')) lastExecuteResult = 'SUCCESS';
+    }
+
+    const pendingFiles = stepData.value.flatMap((item: any) => item._pendingFiles || []);
+
     return {
       request: {
         ...detailForm.value,
         steps: JSON.stringify(steps),
+        lastExecuteResult,
         deleteFileMetaIds: deleteFileMetaIds.value,
         unLinkFilesIds: unLinkFilesIds.value,
         newAssociateFileListIds: newAssociateFileListIds.value,
         customFields: customFieldsArr,
         caseDetailFileIds: allAttachmentsFileIds.value,
       },
-      fileList: fileList.value.filter((item: any) => item.status === 'init'), // 总文件列表
+      fileList: [...fileList.value.filter((item: any) => item.status === 'init'), ...pendingFiles],
     };
   }
 
   const confirmLoading = ref<boolean>(false);
+  let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  async function persistCase(silent = false) {
+    try {
+      confirmLoading.value = true;
+      await updateCaseRequest(getParams());
+      // 清掉已提交的临时步骤文件
+      stepData.value.forEach((item: any) => {
+        item._pendingFiles = [];
+      });
+      if (!silent) {
+        Message.success(t('caseManagement.featureCase.editSuccess'));
+        isEditPreposition.value = false;
+      }
+      emit('updateSuccess');
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    } finally {
+      confirmLoading.value = false;
+    }
+  }
+
+  function handleStepChange() {
+    if (!props.autoSave) return;
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      persistCase(true);
+    }, 600);
+  }
 
   function handleOK() {
     caseFormRef.value?.validate().then(async (res: any) => {
       if (!res) {
-        try {
-          confirmLoading.value = true;
-          await updateCaseRequest(getParams());
-          confirmLoading.value = false;
-          Message.success(t('caseManagement.featureCase.editSuccess'));
-          isEditPreposition.value = false;
-          emit('updateSuccess');
-        } catch (error) {
-          console.log(error);
-        } finally {
-          confirmLoading.value = false;
-        }
+        await persistCase(false);
       }
       return scrollIntoView(document.querySelector('.arco-form-item-message'), { block: 'center' });
     });
@@ -549,6 +593,8 @@
           expected: item.result,
           actualResult: item.actualResult,
           executeResult: item.executeResult,
+          attachmentIds: item.attachmentIds || [],
+          attachmentNames: item.attachmentNames || [],
         };
       });
     } else {

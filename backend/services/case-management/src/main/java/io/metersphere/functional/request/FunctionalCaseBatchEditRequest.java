@@ -31,4 +31,7 @@ public class FunctionalCaseBatchEditRequest extends BaseFunctionalCaseBatchDTO {
 
     @Schema(description = "自定义字段")
     private CaseCustomFieldDTO customField;
+
+    @Schema(description = "批量修改执行结果：SUCCESS/BLOCKED/ERROR/SKIP/PENDING")
+    private String lastExecuteResult;
 }

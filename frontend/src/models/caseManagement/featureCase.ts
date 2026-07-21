@@ -91,6 +91,9 @@ export interface StepList {
   actualResult?: string; // 实际
   executeResult?: string; // 步骤执行结果
   status?: string;
+  /** 步骤附件文件 ID 列表（本地临时上传或关联附件） */
+  attachmentIds?: string[];
+  attachmentNames?: string[];
 }
 
 export type StepExecutionResult = Pick<StepList, 'actualResult' | 'executeResult'>;

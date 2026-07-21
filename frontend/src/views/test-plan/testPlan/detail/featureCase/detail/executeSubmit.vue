@@ -133,6 +133,8 @@
         form.value.lastExecResult = LastExecuteResults.ERROR;
       } else if (executionResultList?.includes(LastExecuteResults.BLOCKED)) {
         form.value.lastExecResult = LastExecuteResults.BLOCKED;
+      } else if (executionResultList?.length && executionResultList.every((r) => r === LastExecuteResults.SKIP)) {
+        form.value.lastExecResult = LastExecuteResults.SKIP;
       } else {
         form.value.lastExecResult = LastExecuteResults.SUCCESS;
       }

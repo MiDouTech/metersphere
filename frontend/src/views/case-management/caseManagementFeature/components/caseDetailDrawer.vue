@@ -5,6 +5,7 @@
     :width="860"
     :footer="false"
     :mask="false"
+    :embed="props.embed"
     :title="t('caseManagement.featureCase.caseDetailTitle', { id: detailInfo?.num, name: detailInfo?.name })"
     :detail-id="props.detailId"
     :detail-index="props.detailIndex"
@@ -155,7 +156,13 @@
         <div>
           <div
             :class="`${
-              !commentInputIsActive ? 'h-[calc(100vh-174px)]' : 'h-[calc(100vh-378px)]'
+              !commentInputIsActive
+                ? props.embed
+                  ? 'h-[calc(100vh-280px)]'
+                  : 'h-[calc(100vh-174px)]'
+                : props.embed
+                ? 'h-[calc(100vh-484px)]'
+                : 'h-[calc(100vh-378px)]'
             } content-wrapper w-full p-[16px] pt-4`"
           >
             <template v-if="activeTab === 'detail'">
@@ -164,6 +171,8 @@
                 :allow-edit="true"
                 :is-edit="props.isEdit"
                 :form-rules="formItem"
+                enable-execute
+                auto-save
                 @update-success="updateSuccess"
               />
             </template>
@@ -210,6 +219,16 @@
           @publish="publishHandler"
           @cancel="cancelPublish"
         />
+      </div>
+    </template>
+    <template v-if="props.embed" #footer>
+      <div class="flex items-center justify-end gap-3">
+        <a-button :disabled="!canGoPrev" @click="goPrevCase">
+          {{ t('caseManagement.featureCase.prevCase') }}
+        </a-button>
+        <a-button type="primary" :disabled="!canGoNext" @click="goNextCase">
+          {{ t('caseManagement.featureCase.saveAndNextCase') }}
+        </a-button>
       </div>
     </template>
   </MsDetailDrawer>
@@ -281,15 +300,41 @@
   const { openModal } = useModal();
   const { copy, isSupported } = useClipboard({ legacy: true });
 
-  const props = defineProps<{
-    visible: boolean;
-    detailId: string; // 详情 id
-    detailIndex: number; // 详情 下标
-    tableData: any[]; // 表格数据
-    pagination: MsPaginationI; // 分页器对象
-    pageChange: (page: number) => Promise<void>; // 分页变更函数
-    isEdit?: boolean; // 编辑状态
-  }>();
+  const props = withDefaults(
+    defineProps<{
+      visible: boolean;
+      detailId: string; // 详情 id
+      detailIndex: number; // 详情 下标
+      tableData: any[]; // 表格数据
+      pagination: MsPaginationI; // 分页器对象
+      pageChange: (page: number) => Promise<void>; // 分页变更函数
+      isEdit?: boolean; // 编辑状态
+      /** 同页 Tab 嵌入详情，不使用抽屉 */
+      embed?: boolean;
+    }>(),
+    {
+      embed: false,
+    }
+  );
+
+  const canGoPrev = computed(() => {
+    if (!props.pagination) return false;
+    return !(props.detailIndex === 0 && props.pagination.current === 1);
+  });
+  const canGoNext = computed(() => {
+    if (!props.pagination || !props.tableData?.length) return false;
+    return !(
+      props.detailIndex === props.tableData.length - 1 &&
+      (props.pagination.current - 1) * props.pagination.pageSize + (props.detailIndex + 1) >= props.pagination.total
+    );
+  });
+
+  function goPrevCase() {
+    detailDrawerRef.value?.openPrevDetail();
+  }
+  function goNextCase() {
+    detailDrawerRef.value?.openNextDetail();
+  }
 
   const emit = defineEmits(['update:visible', 'success']);
   const appStore = useAppStore();

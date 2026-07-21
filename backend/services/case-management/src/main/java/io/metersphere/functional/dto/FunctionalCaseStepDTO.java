@@ -21,7 +21,13 @@ public class FunctionalCaseStepDTO {
     @Schema(description = "实际结果")
     private String actualResult;
 
-    @Schema(description = "执行结果（失败/成功/阻塞）")
+    @Schema(description = "执行结果（失败/成功/阻塞/跳过）")
     private String executeResult;
+
+    @Schema(description = "步骤附件 ID 列表")
+    private java.util.List<String> attachmentIds;
+
+    @Schema(description = "步骤附件名称列表")
+    private java.util.List<String> attachmentNames;
 
 }

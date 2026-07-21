@@ -527,6 +527,9 @@
             <if test="functionalCase.tags != null and functionalCase.tags != ''">
                 tags = #{functionalCase.tags,typeHandler=io.metersphere.handler.ListTypeHandler},
             </if>
+            <if test="functionalCase.lastExecuteResult != null and functionalCase.lastExecuteResult != ''">
+                last_execute_result = #{functionalCase.lastExecuteResult},
+            </if>
             <if test="functionalCase.updateUser != null and functionalCase.updateUser != ''">
                 update_user = #{functionalCase.updateUser},
             </if>

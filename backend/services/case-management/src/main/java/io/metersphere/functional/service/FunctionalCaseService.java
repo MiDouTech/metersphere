@@ -986,6 +986,8 @@ public class FunctionalCaseService {
             handleTags(request, userId, ids);
             //自定义字段处理
             handleCustomFields(request, userId, ids);
+            //执行结果
+            handleLastExecuteResult(request, userId, ids);
             //基本信息
             FunctionalCase functionalCase = new FunctionalCase();
             functionalCase.setProjectId(request.getProjectId());
@@ -995,6 +997,18 @@ public class FunctionalCaseService {
             functionalCaseNoticeService.batchSendNotice(request.getProjectId(), ids, user, NoticeConstants.Event.UPDATE);
         }
 
+    }
+
+    private void handleLastExecuteResult(FunctionalCaseBatchEditRequest request, String userId, List<String> ids) {
+        if (StringUtils.isBlank(request.getLastExecuteResult())) {
+            return;
+        }
+        FunctionalCase functionalCase = new FunctionalCase();
+        functionalCase.setLastExecuteResult(request.getLastExecuteResult());
+        functionalCase.setProjectId(request.getProjectId());
+        functionalCase.setUpdateTime(System.currentTimeMillis());
+        functionalCase.setUpdateUser(userId);
+        extFunctionalCaseMapper.batchUpdate(functionalCase, ids);
     }
 
     private void handleCustomFields(FunctionalCaseBatchEditRequest request, String userId, List<String> ids) {

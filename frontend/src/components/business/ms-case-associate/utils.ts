@@ -48,6 +48,12 @@ export const lastExecuteResultMap: Record<string, any> = {
     statusText: 'common.fail',
     color: '',
   },
+  SKIP: {
+    label: 'SKIP',
+    icon: StatusType.SKIP,
+    statusText: 'caseManagement.featureCase.skip',
+    color: 'var(--color-text-4)',
+  },
   FAKE_ERROR: {
     icon: 'icon-icon_warning_colorful',
     statusText: 'common.fakeError',

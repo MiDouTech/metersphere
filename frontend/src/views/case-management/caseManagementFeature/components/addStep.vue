@@ -30,7 +30,11 @@
       />
     </template>
     <template
-      v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE']) && !props.isDisabledTestPlan"
+      v-if="
+        showExecuteColumns &&
+        hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE', 'FUNCTIONAL_CASE:READ+UPDATE']) &&
+        !props.isDisabledTestPlan
+      "
       #actualResult="{ record }"
     >
       <div v-if="props.isPreview">{{ record.actualResult }}</div>
@@ -42,24 +46,55 @@
         :auto-size="true"
         class="w-max-[267px] param-input"
         :placeholder="t('system.orgTemplate.actualResultTip')"
+        @change="emitStepChange"
       />
     </template>
     <template #lastExecResult="{ record }">
-      <a-select
-        v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE']) && !props.isDisabledTestPlan && !props.isPreview"
-        v-model:model-value="record.executeResult"
-        :placeholder="t('common.pleaseSelect')"
-        class="param-input w-full"
-        allow-clear
+      <a-radio-group
+        v-if="
+          showExecuteColumns &&
+          hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE', 'FUNCTIONAL_CASE:READ+UPDATE']) &&
+          !props.isDisabledTestPlan &&
+          !props.isPreview
+        "
+        v-model="record.executeResult"
+        direction="vertical"
+        size="mini"
+        @change="emitStepChange"
       >
-        <template #label>
-          <span class="text-[var(--color-text-2)]"><ExecuteResult :execute-result="record.executeResult" /></span>
-        </template>
-        <a-option v-for="item in executionResultList" :key="item.key" :value="item.key">
+        <a-radio v-for="item in executionResultList" :key="item.key" :value="item.key">
           <ExecuteResult :execute-result="item.key" />
-        </a-option>
-      </a-select>
+        </a-radio>
+      </a-radio-group>
       <span v-else class="text-[var(--color-text-2)]"><ExecuteResult :execute-result="record.executeResult" /></span>
+    </template>
+    <template v-if="showExecuteColumns" #stepAttachment="{ record }">
+      <div
+        class="step-attach-drop rounded border border-dashed border-[var(--color-text-n8)] p-2"
+        @dragover.prevent
+        @drop.prevent="(e) => onStepFileDrop(e, record)"
+      >
+        <a-upload
+          v-if="!props.isPreview && !props.isDisabledTestPlan"
+          :auto-upload="false"
+          :show-file-list="false"
+          multiple
+          @change="(_, fileItem) => onStepFileSelect(fileItem, record)"
+        >
+          <template #upload-button>
+            <div class="cursor-pointer text-center text-[12px] text-[var(--color-text-4)]">
+              {{ t('caseManagement.featureCase.stepAttachTip') }}
+            </div>
+          </template>
+        </a-upload>
+        <div
+          v-for="(name, idx) in record.attachmentNames || []"
+          :key="`${record.id}-${idx}`"
+          class="one-line-text text-[12px]"
+        >
+          {{ name }}
+        </div>
+      </div>
     </template>
     <template #operation="{ record }">
       <MsTableMoreAction
@@ -78,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
+  import { computed, ref } from 'vue';
   import { TableChangeExtra, TableData } from '@arco-design/web-vue';
 
   import MsBaseTable from '@/components/pure/ms-table/base-table.vue';
@@ -109,14 +144,19 @@
       isTestPlan?: boolean;
       isDisabledTestPlan?: boolean;
       isPreview?: boolean; // 仅预览不展示状态可操作下拉和文本框
+      /** 展示实际结果 / 执行结果 / 步骤附件（功能用例详情与测试计划执行） */
+      enableExecute?: boolean;
     }>(),
     {
       isDisabled: false,
       isScrollY: true,
+      enableExecute: false,
     }
   );
 
-  const emit = defineEmits(['update:stepList']);
+  const emit = defineEmits(['update:stepList', 'change']);
+
+  const showExecuteColumns = computed(() => props.isTestPlan || props.enableExecute);
 
   const executionResultList = computed(() =>
     Object.values(executionResultMap).filter((item) => item.key !== LastExecuteResults.PENDING)
@@ -132,6 +172,39 @@
       showExpected: false,
     },
   ]);
+
+  function emitStepChange() {
+    emit('update:stepList', stepData.value);
+    emit('change', stepData.value);
+  }
+
+  function ensureAttachArrays(record: StepList) {
+    if (!record.attachmentIds) record.attachmentIds = [];
+    if (!record.attachmentNames) record.attachmentNames = [];
+  }
+
+  function appendStepFiles(record: StepList, files: File[]) {
+    ensureAttachArrays(record);
+    files.forEach((file) => {
+      const tempId = getGenerateId();
+      record.attachmentIds!.push(tempId);
+      record.attachmentNames!.push(file.name);
+      // 临时文件挂到 record 上，由外层 autosave 时随用例更新一并提交
+      if (!(record as any)._pendingFiles) (record as any)._pendingFiles = [];
+      (record as any)._pendingFiles.push(file);
+    });
+    emitStepChange();
+  }
+
+  function onStepFileSelect(fileItem: any, record: StepList) {
+    const file = fileItem?.file as File | undefined;
+    if (file) appendStepFiles(record, [file]);
+  }
+
+  function onStepFileDrop(e: DragEvent, record: StepList) {
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (files.length) appendStepFiles(record, files);
+  }
 
   const templateFieldColumns = ref<MsTableColumn>([
     {
@@ -156,7 +229,7 @@
       showDrag: true,
       showInTable: true,
     },
-    ...(!props.isTestPlan
+    ...(!showExecuteColumns.value
       ? []
       : [
           {
@@ -165,6 +238,7 @@
             slotName: 'actualResult',
             showDrag: true,
             showInTable: true,
+            width: 180,
           },
           {
             title: 'system.orgTemplate.stepExecutionResult',
@@ -172,6 +246,15 @@
             slotName: 'lastExecResult',
             showDrag: true,
             showInTable: true,
+            width: 140,
+          },
+          {
+            title: 'caseManagement.featureCase.stepAttachment',
+            dataIndex: 'attachmentIds',
+            slotName: 'stepAttachment',
+            showDrag: true,
+            showInTable: true,
+            width: 160,
           },
         ]),
     {
