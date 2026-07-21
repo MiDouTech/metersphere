@@ -50,26 +50,49 @@
       />
     </template>
     <template #lastExecResult="{ record }">
-      <a-radio-group
+      <a-dropdown
         v-if="
           showExecuteColumns &&
           hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE', 'FUNCTIONAL_CASE:READ+UPDATE']) &&
           !props.isDisabledTestPlan &&
           !props.isPreview
         "
-        v-model="record.executeResult"
-        direction="vertical"
-        size="mini"
-        @change="emitStepChange"
+        trigger="click"
+        @select="(val) => onStepResultSelect(record, val)"
       >
-        <a-radio v-for="item in executionResultList" :key="item.key" :value="item.key">
-          <ExecuteResult :execute-result="item.key" />
-        </a-radio>
-      </a-radio-group>
-      <span v-else class="text-[var(--color-text-2)]"><ExecuteResult :execute-result="record.executeResult" /></span>
+        <a-button type="outline" size="mini" class="exec-result-dropdown arco-btn-outline--secondary">
+          <ExecuteResult :execute-result="record.executeResult || LastExecuteResults.PENDING" />
+          <icon-down class="ml-1 text-[12px] text-[var(--color-text-4)]" />
+        </a-button>
+        <template #content>
+          <a-doption v-for="item in executionResultList" :key="item.key" :value="item.key">
+            <ExecuteResult :execute-result="item.key" />
+          </a-doption>
+        </template>
+      </a-dropdown>
+      <span v-else class="text-[var(--color-text-2)]">
+        <ExecuteResult :execute-result="record.executeResult || LastExecuteResults.PENDING" />
+      </span>
     </template>
     <template v-if="showExecuteColumns" #stepAttachment="{ record }">
+      <template v-if="isFeatureCaseExecute">
+        <a-button
+          v-if="!props.isPreview && !props.isDisabledTestPlan"
+          v-permission="['PROJECT_BUG:READ+ADD']"
+          type="outline"
+          size="mini"
+          class="arco-btn-outline--secondary !px-2"
+          @click="emit('reportDefect', record)"
+        >
+          <template #icon>
+            <icon-plus class="text-[14px]" />
+          </template>
+          {{ t('caseManagement.featureCase.reportDefect') }}
+        </a-button>
+        <span v-else class="text-[var(--color-text-4)]">-</span>
+      </template>
       <div
+        v-else
         class="step-attach-drop rounded border border-dashed border-[var(--color-text-n8)] p-2"
         @dragover.prevent
         @drop.prevent="(e) => onStepFileDrop(e, record)"
@@ -104,18 +127,43 @@
       />
     </template>
   </MsBaseTable>
-  <a-button v-if="!props.isDisabled" class="mt-2 px-0" type="text" @click="addStep">
-    <template #icon>
-      <icon-plus class="text-[14px]" />
-    </template>
-    {{ t('system.orgTemplate.addStep') }}
-  </a-button>
+  <div class="mt-2 flex items-center justify-between gap-3">
+    <a-button v-if="!props.isDisabled" class="px-0" type="text" @click="addStep">
+      <template #icon>
+        <icon-plus class="text-[14px]" />
+      </template>
+      {{ t('system.orgTemplate.addStep') }}
+    </a-button>
+    <div v-else></div>
+    <div
+      v-if="
+        isFeatureCaseExecute &&
+        hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE', 'FUNCTIONAL_CASE:READ+UPDATE']) &&
+        !props.isDisabledTestPlan &&
+        !props.isPreview
+      "
+      class="flex flex-wrap items-center gap-2"
+    >
+      <button
+        v-for="item in caseResultButtons"
+        :key="item.key"
+        type="button"
+        class="case-result-btn"
+        :class="[`case-result-btn--${item.theme}`, { 'is-active': props.caseResult === item.key }]"
+        @click="emit('setCaseResult', item.key)"
+      >
+        <MsIcon :type="item.icon" :size="16" class="mr-1" />
+        {{ t(item.label) }}
+      </button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
   import { computed, ref } from 'vue';
   import { TableChangeExtra, TableData } from '@arco-design/web-vue';
 
+  import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsBaseTable from '@/components/pure/ms-table/base-table.vue';
   import { MsTableColumn, MsTableProps } from '@/components/pure/ms-table/type';
   import useTable from '@/components/pure/ms-table/useTable';
@@ -128,7 +176,7 @@
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { StepList } from '@/models/caseManagement/featureCase';
-  import { LastExecuteResults } from '@/enums/caseEnum';
+  import { LastExecuteResults, StatusType } from '@/enums/caseEnum';
 
   import { executionResultMap } from '@/views/case-management/caseManagementFeature/components/utils';
 
@@ -144,23 +192,60 @@
       isTestPlan?: boolean;
       isDisabledTestPlan?: boolean;
       isPreview?: boolean; // 仅预览不展示状态可操作下拉和文本框
-      /** 展示实际结果 / 执行结果 / 步骤附件（功能用例详情与测试计划执行） */
+      /** 展示实际结果 / 执行结果 / 提缺陷（功能用例详情与测试计划执行） */
       enableExecute?: boolean;
+      /** 用例级执行结果，用于右侧标记按钮高亮 */
+      caseResult?: string;
     }>(),
     {
       isDisabled: false,
       isScrollY: true,
       enableExecute: false,
+      caseResult: '',
     }
   );
 
-  const emit = defineEmits(['update:stepList', 'change']);
+  const emit = defineEmits<{
+    (e: 'update:stepList', val: StepList[]): void;
+    (e: 'change', val: StepList[]): void;
+    (e: 'setCaseResult', result: string): void;
+    (e: 'reportDefect', record: StepList): void;
+  }>();
 
   const showExecuteColumns = computed(() => props.isTestPlan || props.enableExecute);
+  /** 功能用例详情：用例级结果按钮 + 提缺陷（测试计划仍用步骤附件） */
+  const isFeatureCaseExecute = computed(() => props.enableExecute && !props.isTestPlan);
 
   const executionResultList = computed(() =>
     Object.values(executionResultMap).filter((item) => item.key !== LastExecuteResults.PENDING)
   );
+
+  const caseResultButtons = [
+    {
+      key: LastExecuteResults.SUCCESS,
+      label: 'common.pass',
+      icon: StatusType.SUCCESS,
+      theme: 'pass',
+    },
+    {
+      key: LastExecuteResults.ERROR,
+      label: 'common.fail',
+      icon: StatusType.ERROR,
+      theme: 'fail',
+    },
+    {
+      key: LastExecuteResults.BLOCKED,
+      label: 'common.block',
+      icon: StatusType.BLOCKED,
+      theme: 'block',
+    },
+    {
+      key: LastExecuteResults.SKIP,
+      label: 'caseManagement.featureCase.skip',
+      icon: StatusType.SKIP,
+      theme: 'skip',
+    },
+  ];
 
   // 步骤描述
   const stepData = ref<StepList[]>([
@@ -178,6 +263,11 @@
     emit('change', stepData.value);
   }
 
+  function onStepResultSelect(record: StepList, val: string | number | Record<string, any> | undefined) {
+    record.executeResult = String(val || '');
+    emitStepChange();
+  }
+
   function ensureAttachArrays(record: StepList) {
     if (!record.attachmentIds) record.attachmentIds = [];
     if (!record.attachmentNames) record.attachmentNames = [];
@@ -189,7 +279,6 @@
       const tempId = getGenerateId();
       record.attachmentIds!.push(tempId);
       record.attachmentNames!.push(file.name);
-      // 临时文件挂到 record 上，由外层 autosave 时随用例更新一并提交
       if (!(record as any)._pendingFiles) (record as any)._pendingFiles = [];
       (record as any)._pendingFiles.push(file);
     });
@@ -205,6 +294,37 @@
     const files = Array.from(e.dataTransfer?.files || []);
     if (files.length) appendStepFiles(record, files);
   }
+
+  const executeExtraColumns: MsTableColumn = !showExecuteColumns.value
+    ? []
+    : [
+        {
+          title: 'system.orgTemplate.actualResult',
+          dataIndex: 'actualResult',
+          slotName: 'actualResult',
+          showDrag: true,
+          showInTable: true,
+          width: 180,
+        },
+        {
+          title: 'system.orgTemplate.stepExecutionResult',
+          dataIndex: 'executeResult',
+          slotName: 'lastExecResult',
+          showDrag: true,
+          showInTable: true,
+          width: 150,
+        },
+        {
+          title: isFeatureCaseExecute.value
+            ? 'caseManagement.featureCase.reportDefect'
+            : 'caseManagement.featureCase.stepAttachment',
+          dataIndex: 'attachmentIds',
+          slotName: 'stepAttachment',
+          showDrag: true,
+          showInTable: true,
+          width: isFeatureCaseExecute.value ? 120 : 160,
+        },
+      ];
 
   const templateFieldColumns = ref<MsTableColumn>([
     {
@@ -229,34 +349,7 @@
       showDrag: true,
       showInTable: true,
     },
-    ...(!showExecuteColumns.value
-      ? []
-      : [
-          {
-            title: 'system.orgTemplate.actualResult',
-            dataIndex: 'actualResult',
-            slotName: 'actualResult',
-            showDrag: true,
-            showInTable: true,
-            width: 180,
-          },
-          {
-            title: 'system.orgTemplate.stepExecutionResult',
-            dataIndex: 'executeResult',
-            slotName: 'lastExecResult',
-            showDrag: true,
-            showInTable: true,
-            width: 140,
-          },
-          {
-            title: 'caseManagement.featureCase.stepAttachment',
-            dataIndex: 'attachmentIds',
-            slotName: 'stepAttachment',
-            showDrag: true,
-            showInTable: true,
-            width: 160,
-          },
-        ]),
+    ...executeExtraColumns,
     {
       title: 'system.orgTemplate.operation',
       slotName: 'operation',
@@ -401,21 +494,6 @@
       expectedRefMap[`${record.id}`] = el;
     }
   }
-  // 编辑步骤
-  function edit(record: StepList, type: string) {
-    if (props.isDisabled) return;
-    if (type === 'step') {
-      record.showStep = true;
-      nextTick(() => {
-        refStepMap[record.id]?.focus();
-      });
-    } else {
-      record.showExpected = true;
-      nextTick(() => {
-        expectedRefMap[record.id]?.focus();
-      });
-    }
-  }
 
   // 失去焦点回调
   function blurHandler(record: StepList, type: string) {
@@ -477,6 +555,60 @@
     text-align: center;
     color: var(--color-text-4);
     background: var(--color-text-n8);
+  }
+  .exec-result-dropdown {
+    @apply inline-flex items-center;
+
+    justify-content: space-between;
+    min-width: 110px;
+  }
+  .case-result-btn {
+    @apply inline-flex items-center;
+
+    padding: 0 14px;
+    height: 32px;
+    font-size: 13px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    background: #ffffff;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    line-height: 1;
+    &:hover {
+      opacity: 0.9;
+    }
+    &--pass {
+      border-color: rgb(var(--success-6));
+      color: rgb(var(--success-6));
+      &.is-active {
+        color: #ffffff;
+        background: rgb(var(--success-6));
+      }
+    }
+    &--fail {
+      border-color: rgb(var(--danger-6));
+      color: rgb(var(--danger-6));
+      &.is-active {
+        color: #ffffff;
+        background: rgb(var(--danger-6));
+      }
+    }
+    &--block {
+      border-color: rgb(var(--warning-6));
+      color: rgb(var(--warning-6));
+      &.is-active {
+        color: #ffffff;
+        background: rgb(var(--warning-6));
+      }
+    }
+    &--skip {
+      border-color: var(--color-text-n8);
+      color: var(--color-text-4);
+      &.is-active {
+        color: #ffffff;
+        background: var(--color-text-4);
+      }
+    }
   }
   :deep(.param-input:not(.arco-input-focus, .arco-select-view-focus)) {
     &:not(:hover) {

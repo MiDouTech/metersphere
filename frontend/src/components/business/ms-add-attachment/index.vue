@@ -1,12 +1,20 @@
 <template>
-  <a-form-item
-    v-if="props.mode === 'button'"
-    field="attachment"
-    :class="props.onlyButton ? 'hidden-item' : ''"
-    :label="t('caseManagement.featureCase.addAttachment')"
-  >
+  <a-form-item v-if="props.mode === 'button'" field="attachment" :class="props.onlyButton ? 'hidden-item' : ''">
+    <template #label>
+      <div class="flex w-full items-center justify-between gap-3">
+        <span>{{ t('caseManagement.featureCase.addAttachment') }}</span>
+        <slot name="labelRight"></slot>
+      </div>
+    </template>
     <!-- TODO:跟下面统一样式 -->
-    <div class="flex flex-col">
+    <div
+      class="attach-drop-zone flex flex-col rounded border border-dashed border-transparent p-1 transition-colors"
+      :class="{ 'attach-drop-zone--active': isDragOver }"
+      @dragenter.prevent="onDragEnter"
+      @dragover.prevent="onDragOver"
+      @dragleave.prevent="onDragLeave"
+      @drop.prevent="onDropFiles"
+    >
       <div class="mb-1" :class="props.onlyButton ? 'mb-[12px]' : ''">
         <a-dropdown
           v-model:popup-visible="buttonDropDownVisible"
@@ -48,6 +56,7 @@
       </div>
       <div v-if="!props.onlyButton" class="!hover:bg-[rgb(var(--primary-1))] !text-[var(--color-text-4)]">
         {{ t('system.orgTemplate.addAttachmentTip', { size: appStore.getFileMaxSize }) }}
+        <span class="ml-1">{{ t('caseManagement.featureCase.dragUploadTip') }}</span>
       </div>
     </div>
   </a-form-item>
@@ -225,6 +234,37 @@
     },
   });
   const buttonDropDownVisible = ref(false);
+  const isDragOver = ref(false);
+  let dragEnterCount = 0;
+
+  function onDragEnter() {
+    if (props.disabled) return;
+    dragEnterCount += 1;
+    isDragOver.value = true;
+  }
+
+  function onDragOver() {
+    if (props.disabled) return;
+    isDragOver.value = true;
+  }
+
+  function onDragLeave() {
+    dragEnterCount = Math.max(0, dragEnterCount - 1);
+    if (dragEnterCount === 0) {
+      isDragOver.value = false;
+    }
+  }
+
+  function buildFileItem(file: File): MsFileItem {
+    return {
+      uid: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      name: file.name,
+      file,
+      status: 'init',
+      percent: 0,
+      local: true,
+    } as MsFileItem;
+  }
 
   watch(
     () => fileList.value,
@@ -273,6 +313,19 @@
     nextTick(() => {
       // 在 emit 文件上去之后再关闭菜单
       buttonDropDownVisible.value = false;
+    });
+  }
+
+  function onDropFiles(e: DragEvent) {
+    dragEnterCount = 0;
+    isDragOver.value = false;
+    if (props.disabled) return;
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files.length) return;
+    const acceptFiles = props.multiple ? files : files.slice(0, 1);
+    acceptFiles.forEach((file) => {
+      const fileItem = buildFileItem(file);
+      handleChange([...(fileList.value || []), fileItem], fileItem);
     });
   }
 
@@ -377,6 +430,16 @@
 </script>
 
 <style lang="less" scoped>
+  .attach-drop-zone--active {
+    border-color: rgb(var(--primary-5)) !important;
+    background: rgb(var(--primary-1));
+  }
+  :deep(.arco-form-item-label-col) {
+    width: 100%;
+  }
+  :deep(.arco-form-item-label) {
+    width: 100%;
+  }
   :deep(.arco-input-tag-has-prefix) {
     padding-left: 4px;
   }
