@@ -345,17 +345,30 @@
   function onPasteFiles(e: ClipboardEvent) {
     if (props.disabled) return;
     const files: File[] = [];
-    const clipFiles = Array.from(e.clipboardData?.files || []);
-    files.push(...clipFiles);
-    const items = Array.from(e.clipboardData?.items || []);
-    items.forEach((item) => {
-      if (item.kind === 'file') {
-        const file = item.getAsFile();
-        if (file && !files.some((f) => f.name === file.name && f.size === file.size)) {
-          files.push(file);
-        }
+    const seen = new Set<string>();
+    const push = (file: File | null, index: number) => {
+      if (!file || file.size <= 0) return;
+      const key = `${file.size}-${file.type}-${file.lastModified}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const mime = file.type || 'image/png';
+      let ext = '.png';
+      if (mime.includes('jpeg') || mime.includes('jpg')) ext = '.jpg';
+      else if (mime.includes('gif')) ext = '.gif';
+      else if (mime.includes('webp')) ext = '.webp';
+      else if (mime.includes('png')) ext = '.png';
+      else if (file.name.includes('.')) ext = `.${file.name.split('.').pop()}`;
+      // 截图常为 image.png，重命名避免与已有附件重名被上层吞掉
+      files.push(new File([file], `screenshot-${Date.now()}-${index}${ext}`, { type: mime }));
+    };
+    Array.from(e.clipboardData?.items || []).forEach((item, index) => {
+      if (item.kind === 'file' || (item.type || '').startsWith('image/')) {
+        push(item.getAsFile(), index);
       }
     });
+    if (!files.length) {
+      Array.from(e.clipboardData?.files || []).forEach((file, index) => push(file, index));
+    }
     if (!files.length) return;
     e.preventDefault();
     acceptLocalFiles(files);

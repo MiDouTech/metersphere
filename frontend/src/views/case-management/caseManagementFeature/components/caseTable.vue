@@ -1249,6 +1249,12 @@
     showDetailDrawer.value = true;
     caseViewTab.value = 'detail';
   }
+
+  /** 左侧模块树切换时回到用例列表 Tab */
+  function switchToListTab() {
+    caseViewTab.value = 'list';
+    showDetailDrawer.value = false;
+  }
   const isEdit = ref<boolean>(false);
   // 编辑&复制
   function operateCase(record: CaseManagementTable, operateType: boolean) {
@@ -2063,6 +2069,7 @@
     emitTableParams,
     initData,
     exitAdvancedSearchAndRefresh,
+    switchToListTab,
   });
   await getDefaultFields();
 </script>

@@ -209,8 +209,9 @@
         name: CaseManagementRouteEnum.CASE_MANAGEMENT_CASE_RECYCLE,
       });
     }
-    // 点「全部/回收站」时若处于高级搜索则退出并刷新
+    // 点「全部/回收站」时切回列表 Tab；若处于高级搜索则退出并刷新
     nextTick(() => {
+      caseTableRef.value?.switchToListTab?.();
       if (caseTableRef.value?.isAdvancedSearchMode) {
         caseTableRef.value?.exitAdvancedSearchAndRefresh?.();
       }
@@ -225,7 +226,7 @@
   const confirmLoading = ref(false);
   const addSubVisible = ref(false);
 
-  // 处理用例树节点选中：退出高级搜索并按模块刷新列表
+  // 处理用例树节点选中：切回列表 Tab、退出高级搜索并按模块刷新列表
   function caseNodeSelect(keys: string[], _offspringIds: string[], node: MsTreeNodeData) {
     const nextId = keys?.[0] != null ? String(keys[0]) : '';
     if (!nextId) return;
@@ -235,6 +236,7 @@
     featureCaseStore.setModuleId([nextId]);
     activeFolderName.value = node?.title || node?.name;
     nextTick(() => {
+      caseTableRef.value?.switchToListTab?.();
       if (caseTableRef.value?.isAdvancedSearchMode) {
         caseTableRef.value?.exitAdvancedSearchAndRefresh?.();
       }

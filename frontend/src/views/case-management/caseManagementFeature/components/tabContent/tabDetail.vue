@@ -146,7 +146,7 @@
           </a-button>
         </div>
       </div>
-      <!-- 附件：外扩热区仅包详情侧 -->
+      <!-- 附件粘贴热区：仅「添加附件」整块（标题/按钮/提示 + 文件列表），不外扩、不遮挡操作区 -->
       <div
         v-if="!props.isTestPlan"
         v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
@@ -157,13 +157,164 @@
         @mouseleave="isHoverPasteZone = false"
         @focusin="isPasteZoneFocused = true"
         @focusout="isPasteZoneFocused = false"
+        @paste="onAttachmentPaste"
       >
         <AddAttachment v-model:file-list="fileList" multiple @change="handleChange" @link-file="associatedFile" />
+        <MsFileList
+          ref="fileListRef"
+          v-model:file-list="fileList"
+          :show-tab="false"
+          :request-params="{
+            caseId: detailForm.id,
+            projectId: currentProjectId,
+          }"
+          :upload-func="uploadOrAssociationFile"
+          :show-delete="false"
+          @finish="uploadFileOver"
+        >
+          <template #actions="{ item }">
+            <div v-if="props.allowEdit">
+              <!-- 本地文件 -->
+              <div v-if="item.local || item.status === 'init'" class="flex items-center font-normal">
+                <MsButton
+                  v-if="item.file.type.includes('/image')"
+                  type="button"
+                  status="primary"
+                  class="!mr-0"
+                  @click="handlePreview(item)"
+                >
+                  {{ t('ms.upload.preview') }}
+                </MsButton>
+                <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
+                <SaveAsFilePopover
+                  v-if="!props.isTestPlan && item.uid === activeTransferFileParams?.uid"
+                  v-model:visible="transferVisible"
+                  :saving-file="activeTransferFileParams"
+                  :file-save-as-source-id="(form.id as string)"
+                  :file-save-as-api="transferFileRequest"
+                  :file-module-options-api="getTransferFileTree"
+                  source-id-key="caseId"
+                  @finish="emit('updateSuccess')"
+                />
+                <MsButton
+                  v-if="props.allowEdit && !props.isTestPlan && hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])"
+                  type="button"
+                  status="primary"
+                  class="!mr-0"
+                  @click="transferFileHandler(item)"
+                >
+                  {{ t('caseManagement.featureCase.storage') }}
+                </MsButton>
+                <a-divider
+                  v-if="props.allowEdit && !props.isTestPlan && hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])"
+                  direction="vertical"
+                />
+                <MsButton
+                  v-if="
+                    item.status === 'done' &&
+                    props.allowEdit &&
+                    !props.isTestPlan &&
+                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                  "
+                  type="button"
+                  status="primary"
+                  class="!mr-0"
+                  @click="downloadFile(item)"
+                >
+                  {{ t('caseManagement.featureCase.download') }}
+                </MsButton>
+                <a-divider
+                  v-if="
+                    item.status === 'done' &&
+                    props.allowEdit &&
+                    !props.isTestPlan &&
+                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                  "
+                  direction="vertical"
+                />
+                <MsButton
+                  v-if="item.status !== 'uploading' && props.allowEdit && !props.isTestPlan"
+                  type="button"
+                  :status="item.deleteContent ? 'primary' : 'danger'"
+                  class="!mr-0"
+                  @click="deleteFileHandler(item)"
+                >
+                  {{ t(item.deleteContent) || t('ms.upload.delete') }}
+                </MsButton>
+              </div>
+              <!-- 关联文件 -->
+              <div v-else class="flex items-center font-normal">
+                <MsButton
+                  v-if="item.file.type.includes('/image')"
+                  type="button"
+                  status="primary"
+                  class="!mr-0"
+                  @click="handlePreview(item)"
+                >
+                  {{ t('ms.upload.preview') }}
+                </MsButton>
+                <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
+                <MsButton
+                  v-if="item.status === 'done'"
+                  type="button"
+                  status="primary"
+                  class="!mr-0"
+                  @click="downloadFile(item)"
+                >
+                  {{ t('caseManagement.featureCase.download') }}
+                </MsButton>
+                <a-divider v-if="item.status === 'done'" direction="vertical" />
+                <MsButton
+                  v-if="
+                    item.isUpdateFlag &&
+                    props.allowEdit &&
+                    !props.isTestPlan &&
+                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                  "
+                  type="button"
+                  status="primary"
+                  class="!mr-0"
+                  @click="handleUpdateFile(item)"
+                >
+                  {{ t('common.update') }}
+                </MsButton>
+                <a-divider
+                  v-if="
+                    item.isUpdateFlag &&
+                    props.allowEdit &&
+                    !props.isTestPlan &&
+                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                  "
+                  direction="vertical"
+                />
+                <MsButton
+                  v-if="
+                    item.status !== 'uploading' &&
+                    props.allowEdit &&
+                    !props.isTestPlan &&
+                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                  "
+                  type="button"
+                  :status="item.deleteContent ? 'primary' : 'danger'"
+                  class="!mr-0"
+                  @click="deleteFileHandler(item)"
+                >
+                  {{ t(item.deleteContent) }}
+                </MsButton>
+              </div>
+            </div>
+          </template>
+          <template #title="{ item }">
+            <span v-if="item.isUpdateFlag" class="ml-4 flex items-center font-normal text-[rgb(var(--warning-6))]"
+              ><icon-exclamation-circle-fill /> <span>{{ t('caseManagement.featureCase.fileIsUpdated') }}</span>
+            </span>
+          </template>
+        </MsFileList>
       </div>
     </a-form>
-    <!-- 文件列表开始 -->
-    <div class="w-[90%]">
-      <div v-if="!props.allowEdit || props.isTestPlan" class="mb-[16px] font-medium text-[var(--color-text-1)]">
+    <!-- 测试计划等只读场景：仅展示附件列表 -->
+    <div v-if="props.isTestPlan" class="w-[90%]">
+      <div class="mb-[16px] font-medium text-[var(--color-text-1)]">
         {{ t('caseManagement.featureCase.attachment') }}
       </div>
       <MsFileList
@@ -179,141 +330,27 @@
         @finish="uploadFileOver"
       >
         <template #actions="{ item }">
-          <div v-if="props.allowEdit">
-            <!-- 本地文件 -->
-            <div v-if="item.local || item.status === 'init'" class="flex items-center font-normal">
-              <MsButton
-                v-if="item.file.type.includes('/image')"
-                type="button"
-                status="primary"
-                class="!mr-0"
-                @click="handlePreview(item)"
-              >
-                {{ t('ms.upload.preview') }}
-              </MsButton>
-              <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
-              <SaveAsFilePopover
-                v-if="!props.isTestPlan && item.uid === activeTransferFileParams?.uid"
-                v-model:visible="transferVisible"
-                :saving-file="activeTransferFileParams"
-                :file-save-as-source-id="(form.id as string)"
-                :file-save-as-api="transferFileRequest"
-                :file-module-options-api="getTransferFileTree"
-                source-id-key="caseId"
-                @finish="emit('updateSuccess')"
-              />
-              <MsButton
-                v-if="props.allowEdit && !props.isTestPlan && hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])"
-                type="button"
-                status="primary"
-                class="!mr-0"
-                @click="transferFileHandler(item)"
-              >
-                {{ t('caseManagement.featureCase.storage') }}
-              </MsButton>
-              <a-divider
-                v-if="props.allowEdit && !props.isTestPlan && hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])"
-                direction="vertical"
-              />
-              <MsButton
-                v-if="
-                  item.status === 'done' &&
-                  props.allowEdit &&
-                  !props.isTestPlan &&
-                  hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                "
-                type="button"
-                status="primary"
-                class="!mr-0"
-                @click="downloadFile(item)"
-              >
-                {{ t('caseManagement.featureCase.download') }}
-              </MsButton>
-              <a-divider
-                v-if="
-                  item.status === 'done' &&
-                  props.allowEdit &&
-                  !props.isTestPlan &&
-                  hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                "
-                direction="vertical"
-              />
-              <MsButton
-                v-if="item.status !== 'uploading' && props.allowEdit && !props.isTestPlan"
-                type="button"
-                :status="item.deleteContent ? 'primary' : 'danger'"
-                class="!mr-0"
-                @click="deleteFileHandler(item)"
-              >
-                {{ t(item.deleteContent) || t('ms.upload.delete') }}
-              </MsButton>
-            </div>
-            <!-- 关联文件 -->
-            <div v-else class="flex items-center font-normal">
-              <MsButton
-                v-if="item.file.type.includes('/image')"
-                type="button"
-                status="primary"
-                class="!mr-0"
-                @click="handlePreview(item)"
-              >
-                {{ t('ms.upload.preview') }}
-              </MsButton>
-              <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
-              <MsButton
-                v-if="item.status === 'done'"
-                type="button"
-                status="primary"
-                class="!mr-0"
-                @click="downloadFile(item)"
-              >
-                {{ t('caseManagement.featureCase.download') }}
-              </MsButton>
-              <a-divider v-if="item.status === 'done'" direction="vertical" />
-              <MsButton
-                v-if="
-                  item.isUpdateFlag &&
-                  props.allowEdit &&
-                  !props.isTestPlan &&
-                  hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                "
-                type="button"
-                status="primary"
-                class="!mr-0"
-                @click="handleUpdateFile(item)"
-              >
-                {{ t('common.update') }}
-              </MsButton>
-              <a-divider
-                v-if="
-                  item.isUpdateFlag &&
-                  props.allowEdit &&
-                  !props.isTestPlan &&
-                  hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                "
-                direction="vertical"
-              />
-              <MsButton
-                v-if="
-                  item.status !== 'uploading' &&
-                  props.allowEdit &&
-                  !props.isTestPlan &&
-                  hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                "
-                type="button"
-                :status="item.deleteContent ? 'primary' : 'danger'"
-                class="!mr-0"
-                @click="deleteFileHandler(item)"
-              >
-                {{ t(item.deleteContent) }}
-              </MsButton>
-            </div>
+          <div class="flex items-center font-normal">
+            <MsButton
+              v-if="item.file.type.includes('/image')"
+              type="button"
+              status="primary"
+              class="!mr-0"
+              @click="handlePreview(item)"
+            >
+              {{ t('ms.upload.preview') }}
+            </MsButton>
+            <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
+            <MsButton
+              v-if="item.status === 'done'"
+              type="button"
+              status="primary"
+              class="!mr-0"
+              @click="downloadFile(item)"
+            >
+              {{ t('caseManagement.featureCase.download') }}
+            </MsButton>
           </div>
-        </template>
-        <template #title="{ item }">
-          <span v-if="item.isUpdateFlag" class="ml-4 flex items-center font-normal text-[rgb(var(--warning-6))]"
-            ><icon-exclamation-circle-fill /> <span>{{ t('caseManagement.featureCase.fileIsUpdated') }}</span>
-          </span>
         </template>
       </MsFileList>
     </div>
@@ -1055,21 +1092,59 @@
     }
   }
 
-  // —— 附件粘贴热区（仅详情外包，~200px）——
+  // —— 附件粘贴热区（仅添加附件区块，不外扩）——
   const isHoverPasteZone = ref(false);
   const isPasteZoneFocused = ref(false);
 
+  function guessPasteExt(file: File): string {
+    const mime = (file.type || '').toLowerCase();
+    if (mime.includes('png')) return '.png';
+    if (mime.includes('jpeg') || mime.includes('jpg')) return '.jpg';
+    if (mime.includes('gif')) return '.gif';
+    if (mime.includes('webp')) return '.webp';
+    if (mime.includes('bmp')) return '.bmp';
+    const name = file.name || '';
+    const idx = name.lastIndexOf('.');
+    if (idx > -1) return name.slice(idx);
+    return '.png';
+  }
+
+  /** 截图/粘贴文件统一唯一命名，避免与已有 image.png 等重名被吞掉 */
+  function uniquePasteFile(file: File, index: number): File {
+    const mime = file.type || 'image/png';
+    const ext = guessPasteExt(file);
+    const name = `screenshot-${Date.now()}-${index}${ext}`;
+    return new File([file], name, { type: mime === 'application/octet-stream' ? 'image/png' : mime });
+  }
+
+  function extractClipboardFiles(clipboardData: DataTransfer | null | undefined): File[] {
+    if (!clipboardData) return [];
+    const result: File[] = [];
+    const seen = new Set<string>();
+    const pushFile = (file: File | null, index: number) => {
+      if (!file || file.size <= 0) return;
+      const key = `${file.size}-${file.type}-${file.lastModified}-${index}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      result.push(uniquePasteFile(file, result.length));
+    };
+
+    Array.from(clipboardData.items || []).forEach((item, index) => {
+      if (item.kind === 'file' || (item.type || '').startsWith('image/')) {
+        pushFile(item.getAsFile(), index);
+      }
+    });
+    if (!result.length) {
+      Array.from(clipboardData.files || []).forEach((file, index) => pushFile(file, index));
+    }
+    return result;
+  }
+
   function buildPasteFileItem(file: File): MsFileItem {
-    const name =
-      file.name ||
-      `screenshot-${new Date()
-        .toISOString()
-        .replace(/[-:TZ.]/g, '')
-        .slice(0, 14)}.png`;
     return {
       uid: getGenerateId(),
-      name,
-      file: new File([file], name, { type: file.type || 'image/png' }),
+      name: file.name,
+      file,
       size: file.size,
       status: 'init',
       percent: 0,
@@ -1081,39 +1156,39 @@
   function acceptPasteFiles(files: File[]) {
     if (!files.length) return;
     const maxSize = (appStore.getFileMaxSize || 50) * 1024 * 1024;
-    const next = [...(fileList.value || [])];
+    let next = [...(fileList.value || [])];
     files.forEach((file) => {
       if (file.size > maxSize) {
         Message.warning(t('project.fileManagement.normalFileSubText', { size: appStore.getFileMaxSize }));
         return;
       }
       const item = buildPasteFileItem(file);
-      next.push(item);
+      next = [...next, item];
       handleChange(next, item);
     });
   }
 
-  function onDocumentPaste(e: ClipboardEvent) {
+  function handlePasteEvent(e: ClipboardEvent) {
     if (!isHoverPasteZone.value && !isPasteZoneFocused.value) return;
-    const files: File[] = [];
-    const clipFiles = Array.from(e.clipboardData?.files || []);
-    files.push(...clipFiles);
-    Array.from(e.clipboardData?.items || []).forEach((item) => {
-      if (item.kind === 'file') {
-        const file = item.getAsFile();
-        if (file && !files.some((f) => f.name === file.name && f.size === file.size)) {
-          files.push(file);
-        }
-      }
-    });
+    const files = extractClipboardFiles(e.clipboardData);
     if (!files.length) return;
     e.preventDefault();
+    e.stopPropagation();
     acceptPasteFiles(files);
+  }
+
+  function onAttachmentPaste(e: ClipboardEvent) {
+    handlePasteEvent(e);
+  }
+
+  function onDocumentPaste(e: ClipboardEvent) {
+    handlePasteEvent(e);
   }
 
   const { registerCatchSaveShortcut, removeCatchSaveShortcut } = useShortcutSave(handleOK);
   onMounted(async () => {
-    document.addEventListener('paste', onDocumentPaste);
+    // capture：悬停附件区时优先截获截图粘贴，避免富文本编辑器抢走
+    document.addEventListener('paste', onDocumentPaste, true);
     detailForm.value = { ...props.form };
     await getDetails();
     if (isEditPreposition.value) {
@@ -1122,7 +1197,7 @@
   });
 
   onBeforeUnmount(() => {
-    document.removeEventListener('paste', onDocumentPaste);
+    document.removeEventListener('paste', onDocumentPaste, true);
     removeCatchSaveShortcut();
   });
 
@@ -1163,16 +1238,6 @@
     position: relative;
     border-radius: 4px;
     outline: none;
-    &::before {
-      content: '';
-      position: absolute;
-      inset: -200px;
-      z-index: 0;
-    }
-    > * {
-      position: relative;
-      z-index: 1;
-    }
     &--active {
       box-shadow: 0 0 0 1px dashed rgb(var(--primary-5));
     }
