@@ -1,12 +1,14 @@
 <template>
   <a-spin :loading="selectLoading" class="block w-full">
     <a-select
+      v-bind="attrs"
       v-model:model-value="selectValue"
       :placeholder="t(props.placeholder || 'common.pleaseSelect')"
-      allow-search
-      allow-clear
+      :allow-search="props.allowSearch !== false"
+      :allow-clear="props.allowClear !== false"
       :multiple="props.multiple"
       :disabled="props.disabled"
+      :class="props.selectClass || props.class"
       @search="searchHandler"
     >
       <a-option v-for="opt of optionsList" :key="opt.value" :value="opt.value">{{ opt.label }}</a-option>
@@ -15,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
+  import { ref, useAttrs } from 'vue';
   import { debounce } from 'lodash-es';
 
   import { getPluginOptions } from '@/api/modules/setting/pluginManger';
@@ -23,6 +25,9 @@
   import { useAppStore } from '@/store';
 
   import type { OptionsParams } from '@/models/setting/plugin';
+
+  defineOptions({ inheritAttrs: false });
+  const attrs = useAttrs();
 
   const appStore = useAppStore();
   const organizationId = computed(() => appStore.currentOrgId);
@@ -39,10 +44,16 @@
       multiple?: boolean; // 是否多选
       placeholder?: string;
       disabled?: boolean;
+      allowSearch?: boolean;
+      allowClear?: boolean;
+      selectClass?: string;
+      class?: string;
     }>(),
     {
       inputSearch: false,
       multiple: false,
+      allowSearch: true,
+      allowClear: true,
     }
   );
 

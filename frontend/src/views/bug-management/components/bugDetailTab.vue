@@ -35,7 +35,11 @@
             :preview-url="`${EditorPreviewFileUrl}/${appStore.currentProjectId}`"
             auto-height
           />
-          <div v-else v-dompurify-html="form?.description || '-'" class="markdown-body"></div>
+          <div
+            v-else
+            v-dompurify-html="normalizeRichTextImages(form?.description || '-')"
+            class="markdown-body bug-rich-content"
+          ></div>
         </div>
         <div v-if="contentEditAble" class="mt-[8px] flex justify-end">
           <a-button type="secondary" @click="handleCancel">{{ t('common.cancel') }}</a-button>
@@ -62,7 +66,11 @@
                 :upload-image="handleUploadImage"
                 :preview-url="`${EditorPreviewFileUrl}/${appStore.currentProjectId}`"
               />
-              <div v-else v-dompurify-html="item?.defaultValue || '-'" class="markdown-body"></div>
+              <div
+                v-else
+                v-dompurify-html="normalizeRichTextImages(item?.defaultValue || '-')"
+                class="markdown-body bug-rich-content"
+              ></div>
             </div>
           </div>
         </div>
@@ -92,6 +100,8 @@
       }"
       :upload-func="uploadOrAssociationFile"
       :handle-delete="deleteFileHandler"
+      :handle-view="handlePreview"
+      :get-thumbnail="getAttachmentThumbnail"
       :init-file-save-tips="t('ms.upload.waiting_save')"
       :show-delete="false"
       @finish="uploadFileOver"
@@ -421,6 +431,28 @@
     }
   }
 
+  /** 列表缩略图：走鉴权预览接口 */
+  async function getAttachmentThumbnail(item: MsFileItem) {
+    if (item.status === 'init') {
+      return item.url || '';
+    }
+    const res = await previewFile({
+      projectId: currentProjectId.value,
+      bugId: bugId.value as string,
+      fileId: item.uid,
+      associated: !item.local,
+    });
+    return URL.createObjectURL(new Blob([res], { type: item.file?.type || 'image/png' }));
+  }
+
+  /** 富文本只读：原图预览（compressed=false），避免缩略图裂图 */
+  function normalizeRichTextImages(html: string) {
+    if (!html || html === '-') return html;
+    return html
+      .replace(/(\/bug\/attachment\/preview\/md\/[^/"'\s]+\/)true/gi, '$1false')
+      .replace(/(\/attachment\/download\/file\/[^/"'\s]+\/)true/gi, '$1false');
+  }
+
   // 下载
   async function downloadFile(item: MsFileItem) {
     try {
@@ -624,5 +656,12 @@
 <style scoped lang="less">
   :deep(.arco-form-item-label) {
     font-weight: bold !important;
+  }
+  .bug-rich-content {
+    :deep(img) {
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
   }
 </style>

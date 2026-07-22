@@ -249,7 +249,27 @@
     color: var(--color-text-3) !important;
   }
 
-  /* 状态按钮组样式 */
+  /* 状态：按钮式下拉 */
+  :deep(.bug-status-select .arco-select-view-single) {
+    padding: 0 12px;
+    min-width: 120px;
+    font-weight: 500;
+    border: 1px solid rgb(var(--primary-5)) !important;
+    border-radius: 4px !important;
+    color: rgb(var(--primary-6)) !important;
+    background: rgb(var(--primary-1)) !important;
+    .arco-select-view-suffix {
+      color: rgb(var(--primary-6));
+      visibility: visible !important;
+    }
+    & > .arco-input {
+      font-weight: 500;
+      text-decoration: none;
+      color: rgb(var(--primary-6)) !important;
+    }
+  }
+
+  /* 兼容旧 RADIO 按钮组 */
   :deep(.arco-radio-group-button) {
     display: flex;
     flex-wrap: wrap;
