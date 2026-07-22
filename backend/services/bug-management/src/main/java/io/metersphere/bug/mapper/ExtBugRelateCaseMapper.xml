@@ -65,8 +65,8 @@
 
     <select id="list" resultType="io.metersphere.bug.dto.response.BugRelateCaseDTO">
         select * from (
-            <!-- 功能用例 -->
-            select brc.id relateId, brc.create_time, brc.case_id relateCaseId,
+            <!-- 功能用例：聚合字段兼容 only_full_group_by -->
+            select max(brc.id) relateId, max(brc.create_time) create_time, brc.case_id relateCaseId,
             fc.num relateCaseNum, fc.name relateCaseName, fc.project_id projectId, fc.version_id versionId,
             brc.case_type relateCaseType, max(brc.test_plan_id) is not null relatePlanCase
             from bug_relation_case brc
@@ -78,10 +78,10 @@
                     or fc.num like concat('%', #{request.keyword}, '%')
                 )
             </if>
-            group by brc.case_id
+            group by brc.case_id, brc.case_type, fc.num, fc.name, fc.project_id, fc.version_id
             union all
             <!-- 接口用例 -->
-            select brc.id relateId, brc.create_time, brc.case_id relateCaseId,
+            select max(brc.id) relateId, max(brc.create_time) create_time, brc.case_id relateCaseId,
             atc.num relateCaseNum, atc.name relateCaseName, atc.project_id projectId, atc.version_id versionId,
             brc.case_type relateCaseType, max(brc.test_plan_id) is not null relatePlanCase
             from bug_relation_case brc
@@ -93,10 +93,10 @@
                     or atc.num like concat('%', #{request.keyword}, '%')
                 )
             </if>
-            group by brc.case_id
+            group by brc.case_id, brc.case_type, atc.num, atc.name, atc.project_id, atc.version_id
             union all
             <!-- 接口场景用例 -->
-            select brc.id relateId, brc.create_time, brc.case_id relateCaseId,
+            select max(brc.id) relateId, max(brc.create_time) create_time, brc.case_id relateCaseId,
             ao.num relateCaseNum, ao.name relateCaseName, ao.project_id projectId, ao.version_id versionId,
             brc.case_type relateCaseType, max(brc.test_plan_id) is not null relatePlanCase
             from bug_relation_case brc
@@ -108,7 +108,7 @@
                     or ao.num like concat('%', #{request.keyword}, '%')
                 )
             </if>
-            group by brc.case_id
+            group by brc.case_id, brc.case_type, ao.num, ao.name, ao.project_id, ao.version_id
         ) tmp
         order by tmp.create_time desc
     </select>

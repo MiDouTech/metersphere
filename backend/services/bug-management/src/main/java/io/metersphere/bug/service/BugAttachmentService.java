@@ -99,7 +99,9 @@ public class BugAttachmentService {
     public List<BugFileDTO> getAllBugFiles(String bugId) {
         List<BugFileDTO> bugFiles = new ArrayList<>();
         BugLocalAttachmentExample localAttachmentExample = new BugLocalAttachmentExample();
-        localAttachmentExample.createCriteria().andBugIdEqualTo(bugId).andSourceEqualTo(BugAttachmentSourceType.ATTACHMENT.name());
+        // 附件区同时展示手动上传附件与缺陷内容中的富文本图片
+        localAttachmentExample.createCriteria().andBugIdEqualTo(bugId)
+                .andSourceIn(List.of(BugAttachmentSourceType.ATTACHMENT.name(), BugAttachmentSourceType.RICH_TEXT.name()));
         List<BugLocalAttachment> bugLocalAttachments = bugLocalAttachmentMapper.selectByExample(localAttachmentExample);
         if (!CollectionUtils.isEmpty(bugLocalAttachments)) {
             bugLocalAttachments.forEach(localFile -> {

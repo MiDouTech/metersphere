@@ -4,6 +4,7 @@ import io.metersphere.bug.domain.Bug;
 import io.metersphere.bug.dto.request.BugBatchUpdateRequest;
 import io.metersphere.bug.dto.request.BugPageRequest;
 import io.metersphere.bug.dto.response.BugDTO;
+import io.metersphere.bug.dto.response.BugDetailDTO;
 import io.metersphere.bug.dto.response.BugTagEditDTO;
 import io.metersphere.dto.BugProviderDTO;
 import io.metersphere.project.dto.ProjectCountDTO;
@@ -141,5 +142,15 @@ public interface ExtBugMapper {
     List<Bug>getByHandleUser(@Param("projectId") String projectId, @Param("startTime") Long startTime, @Param("endTime") Long endTime,@Param("localHandleUser") String localHandleUser,@Param("createUser") String createUser,@Param("thirdHandleUser") String thirdHandleUser, @Param("thirdPlatform") String thirdPlatform);
 
     long localBugCount(@Param("projectId") String projectId);
+
+    /**
+     * 查询缺陷处理/关闭时间
+     */
+    BugDetailDTO getBugExtraTimes(@Param("id") String id);
+
+    /**
+     * 更新缺陷处理/关闭时间
+     */
+    void updateBugExtraTimes(@Param("id") String id, @Param("handleTime") Long handleTime, @Param("closeTime") Long closeTime);
 
 }

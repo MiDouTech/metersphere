@@ -1,0 +1,1 @@
+ALTER TABLE bug MODIFY COLUMN handle_user VARCHAR(1000) NOT NULL COMMENT '处理人(多个以逗号分隔)';

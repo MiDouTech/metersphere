@@ -1,0 +1,3 @@
+ALTER TABLE bug
+  ADD COLUMN handle_time BIGINT DEFAULT NULL COMMENT '处理人变更时间',
+  ADD COLUMN close_time BIGINT DEFAULT NULL COMMENT '缺陷关闭时间';

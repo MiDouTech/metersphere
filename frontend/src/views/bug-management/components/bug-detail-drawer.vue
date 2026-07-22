@@ -2,7 +2,7 @@
   <MsDetailDrawer
     ref="detailDrawerRef"
     v-model:visible="showDrawerVisible"
-    :width="850"
+    :width="1100"
     :footer="false"
     :title="t('bugManagement.detail.title', { id: detailInfo?.num, name: detailInfo?.title })"
     :tooltip-text="(detailInfo && detailInfo.title) || null"
@@ -118,30 +118,39 @@
           :class="`${!commentInputIsActive ? 'h-[calc(100vh-174px)]' : 'h-[calc(100vh-378px)]'} content-wrapper w-full`"
         >
           <a-spin :loading="detailLoading" class="h-full w-full">
-            <div class="tab-pane-container">
-              <BugDetailTab
-                v-if="activeTab === 'detail'"
-                ref="bugDetailTabRef"
-                :allow-edit="hasAnyPermission(['PROJECT_BUG:READ+UPDATE'])"
-                :detail-info="detailInfo"
-                :current-custom-fields="currentCustomFields"
-                :is-platform-default-template="isPlatformDefaultTemplate"
-                :platform-system-fields="platformSystemFields"
-                :current-platform="props.currentPlatform"
-                @update-success="updateSuccessHandler"
-              />
-              <BasicInfo
-                v-if="activeTab === 'basicInfo'"
-                v-model:tags="tags"
-                :form-rule="formRules"
-                :detail="detailInfo"
-                :current-custom-fields="currentCustomFields"
-                :current-platform="props.currentPlatform"
-                :is-platform-default-template="isPlatformDefaultTemplate"
-                :loading="rightLoading"
-                :platform-system-fields="platformSystemFields"
-                @update-success="loadList"
-              />
+            <div class="tab-pane-container h-full">
+              <div v-if="activeTab === 'detail'" class="detail-merge-layout flex h-full min-h-0">
+                <div class="leftWrapper min-w-0 flex-1 overflow-y-auto pr-4">
+                  <BugDetailTab
+                    ref="bugDetailTabRef"
+                    :allow-edit="hasAnyPermission(['PROJECT_BUG:READ+UPDATE'])"
+                    :detail-info="detailInfo"
+                    :current-custom-fields="currentCustomFields"
+                    :is-platform-default-template="isPlatformDefaultTemplate"
+                    :platform-system-fields="platformSystemFields"
+                    :current-platform="props.currentPlatform"
+                    @update-success="updateSuccessHandler"
+                  />
+                </div>
+                <a-divider direction="vertical" class="!mx-0 !h-auto" />
+                <div class="rightWrapper w-[332px] shrink-0 overflow-y-auto pl-4">
+                  <div class="mb-3 font-medium text-[var(--color-text-1)]">
+                    {{ t('bugManagement.detail.baseInfo') }}
+                  </div>
+                  <BasicInfo
+                    v-model:tags="tags"
+                    sidebar
+                    :form-rule="formRules"
+                    :detail="detailInfo"
+                    :current-custom-fields="currentCustomFields"
+                    :current-platform="props.currentPlatform"
+                    :is-platform-default-template="isPlatformDefaultTemplate"
+                    :loading="rightLoading"
+                    :platform-system-fields="platformSystemFields"
+                    @update-success="loadList"
+                  />
+                </div>
+              </div>
 
               <BugCaseTab
                 v-else-if="activeTab === 'case'"
@@ -284,18 +293,27 @@
             initValue = item.type === 'MEMBER' ? userStore.id : [userStore.id];
           }
         }
+        let fieldType = item.type;
+        if (item.fieldId === 'status') {
+          fieldType = 'RADIO';
+        } else if (item.fieldId === 'handleUser') {
+          fieldType = 'MULTIPLE_MEMBER';
+        }
         return {
-          type: item.type,
+          type: fieldType,
           name: item.fieldId,
           label: item.fieldName,
           value: initValue,
           options: initOptions,
           required: item.required as boolean,
           platformPlaceHolder: item.platformPlaceHolder,
+          // status 使用按钮样式单选（ms-form-create：RADIO + control 触发 type=button）
+          control: item.fieldId === 'status' ? [{ value: '__status_btn__', rule: [] }] : undefined,
           props: {
             modelValue: initValue,
             options: initOptions,
             disabled: !hasAnyPermission(['PROJECT_BUG:READ+UPDATE']),
+            multiple: item.fieldId === 'handleUser' ? true : undefined,
           },
         };
       });
@@ -365,7 +383,25 @@
           );
           // 如果该值在选项中已经被删除掉
           const optionsIds = (multipleOptions || []).map((e: any) => e.value);
-          tmpObj[item.id] = optionsIds.find((e: any) => item.value === e) || '';
+          // 处理人兼容历史单值 / 逗号分隔，统一转为数组供多选
+          if (item.id === 'handleUser') {
+            let ids: string[] = [];
+            try {
+              if (typeof item.value === 'string' && item.value.startsWith('[')) {
+                ids = JSON.parse(item.value);
+              } else if (typeof item.value === 'string' && item.value) {
+                ids = item.value
+                  .split(',')
+                  .map((e: string) => e.trim())
+                  .filter(Boolean);
+              }
+            } catch {
+              ids = item.value ? [item.value] : [];
+            }
+            tmpObj[item.id] = optionsIds.filter((e: any) => ids.includes(e));
+          } else {
+            tmpObj[item.id] = optionsIds.find((e: any) => item.value === e) || '';
+          }
         } else {
           tmpObj[item.id] = item.value;
         }
@@ -420,10 +456,6 @@
   }
 
   const tabList = [
-    {
-      value: 'basicInfo',
-      label: t('bugManagement.detail.basicInfo'),
-    },
     {
       value: 'detail',
       label: t('bugManagement.detail.detail'),
@@ -571,7 +603,7 @@
     () => showDrawerVisible.value,
     (val) => {
       if (val) {
-        if (props.detailDefaultTab) {
+        if (props.detailDefaultTab && props.detailDefaultTab !== 'basicInfo') {
           activeTab.value = props.detailDefaultTab;
         } else {
           activeTab.value = 'detail';
@@ -582,7 +614,11 @@
 </script>
 
 <style scoped lang="less">
+  .detail-merge-layout {
+    .ms-scroll-bar();
+  }
   .leftWrapper {
+    .ms-scroll-bar();
     .header {
       padding: 0 16px;
       border-bottom: 1px solid var(--color-text-n8);
@@ -593,6 +629,7 @@
     .ms-scroll-bar();
   }
   .rightWrapper {
+    .ms-scroll-bar();
     .baseItem {
       margin-bottom: 16px;
       height: 32px;

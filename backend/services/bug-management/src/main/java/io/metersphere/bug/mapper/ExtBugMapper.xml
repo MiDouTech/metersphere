@@ -526,5 +526,18 @@
         AND bug.platform = 'Local'
     </select>
 
+    <select id="getBugExtraTimes" resultType="io.metersphere.bug.dto.response.BugDetailDTO">
+        SELECT handle_time AS handleTime, close_time AS closeTime
+        FROM bug
+        WHERE id = #{id}
+    </select>
+
+    <update id="updateBugExtraTimes">
+        UPDATE bug
+        SET handle_time = #{handleTime},
+            close_time = #{closeTime}
+        WHERE id = #{id}
+    </update>
+
 </mapper>
 

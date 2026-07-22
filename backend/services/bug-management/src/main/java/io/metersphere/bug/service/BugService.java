@@ -281,13 +281,13 @@ public class BugService {
                     status.setValue(bug.getStatus());
                     allCustomFields.addFirst(status);
                 }
-                // 处理人
+                // 处理人（支持多人，值存 JSON 数组字符串供前端多选回显）
                 if (StringUtils.equals(field.getFieldKey(), BugTemplateCustomField.HANDLE_USER.getId())) {
                     BugCustomFieldDTO handleUser = new BugCustomFieldDTO();
                     handleUser.setId(field.getFieldId());
                     handleUser.setName(field.getFieldName());
-                    handleUser.setType(field.getType());
-                    handleUser.setValue(bug.getHandleUser());
+                    handleUser.setType(CustomFieldType.MULTIPLE_MEMBER.name());
+                    handleUser.setValue(toHandleUserJsonValue(bug.getHandleUser()));
                     allCustomFields.addFirst(handleUser);
                 }
             });
@@ -307,6 +307,31 @@ public class BugService {
         example.createCriteria().andBugIdEqualTo(id).andUserIdEqualTo(currentUser);
         detail.setFollowFlag(bugFollowerMapper.countByExample(example) > 0);
         detail.setLinkCaseCount(extBugRelateCaseMapper.countByCaseId(id));
+        // 创建人/处理人及时间元数据
+        detail.setCreateUser(bug.getCreateUser());
+        detail.setCreateTime(bug.getCreateTime());
+        detail.setHandleUser(bug.getHandleUser());
+        List<String> handleUserIds = parseHandleUserIds(bug.getHandleUser());
+        List<String> userIds = Stream.concat(Stream.of(bug.getCreateUser()), handleUserIds.stream())
+                .filter(StringUtils::isNotBlank).distinct().toList();
+        if (CollectionUtils.isNotEmpty(userIds)) {
+            List<OptionDTO> userOptions = baseUserMapper.selectUserOptionByIds(userIds);
+            Map<String, String> userNameMap = userOptions.stream()
+                    .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
+            detail.setCreateUserName(userNameMap.getOrDefault(bug.getCreateUser(), bug.getCreateUser()));
+            detail.setHandleUserName(handleUserIds.stream()
+                    .map(id -> userNameMap.getOrDefault(id, id))
+                    .filter(StringUtils::isNotBlank)
+                    .collect(Collectors.joining(",")));
+        } else {
+            detail.setCreateUserName(bug.getCreateUser());
+            detail.setHandleUserName(bug.getHandleUser());
+        }
+        BugDetailDTO extraTimes = extBugMapper.getBugExtraTimes(id);
+        if (extraTimes != null) {
+            detail.setHandleTime(extraTimes.getHandleTime());
+            detail.setCloseTime(extraTimes.getCloseTime());
+        }
         return detail;
     }
 
@@ -914,7 +939,7 @@ public class BugService {
             handleUserField.setFieldId(BugTemplateCustomField.HANDLE_USER.getId());
             handleUserField.setFieldName(BugTemplateCustomField.HANDLE_USER.getName(language));
             handleUserField.setFieldKey(BugTemplateCustomField.HANDLE_USER.getId());
-            handleUserField.setType(CustomFieldType.SELECT.name());
+            handleUserField.setType(CustomFieldType.MULTIPLE_MEMBER.name());
             handleUserField.setOptions(getMemberOption(projectId));
             handleUserField.setRequired(true);
             templateDTO.getCustomFields().addFirst(handleUserField);
@@ -1022,10 +1047,14 @@ public class BugService {
         // 设置基础字段
         if (StringUtils.equalsIgnoreCase(BugPlatform.LOCAL.getName(), platformName)) {
             bug.setPlatformBugId(null);
-            // Local缺陷处理人从自定义字段中获取
+            // Local缺陷处理人从自定义字段中获取（支持多人 JSON 数组 / 逗号分隔 / 单值）
             Optional<BugCustomFieldDTO> handleUserField = request.getCustomFields().stream().filter(field -> StringUtils.equals(field.getId(), BugTemplateCustomField.HANDLE_USER.getId())).findFirst();
             if (handleUserField.isPresent()) {
-                bug.setHandleUser(handleUserField.get().getValue());
+                String normalized = normalizeHandleUserValue(handleUserField.get().getValue());
+                if (StringUtils.isBlank(normalized)) {
+                    throw new MSException(Translator.get("handle_user_can_not_be_empty"));
+                }
+                bug.setHandleUser(normalized);
             } else {
                 throw new MSException(Translator.get("handle_user_can_not_be_empty"));
             }
@@ -1052,6 +1081,8 @@ public class BugService {
         }
 
         boolean noticeHandler = false;
+        Long handleTimeToSet = null;
+        Long closeTimeToSet = null;
         // 保存基础信息
         if (StringUtils.isEmpty(bug.getId())) {
             bug.setId(IDGenerator.nextStr());
@@ -1070,12 +1101,31 @@ public class BugService {
             bugContent.setDescription(StringUtils.isEmpty(request.getDescription()) ? StringUtils.EMPTY : request.getDescription());
             bugContentMapper.insert(bugContent);
             noticeHandler = true;
+            handleTimeToSet = System.currentTimeMillis();
+            if (isEndStatus(request.getProjectId(), bug.getStatus())) {
+                closeTimeToSet = System.currentTimeMillis();
+            }
+            extBugMapper.updateBugExtraTimes(bug.getId(), handleTimeToSet, closeTimeToSet);
         } else {
             Bug originalBug = checkBugExist(request.getId());
-            // 追加处理人
+            BugDetailDTO originalExtra = extBugMapper.getBugExtraTimes(request.getId());
+            handleTimeToSet = originalExtra != null ? originalExtra.getHandleTime() : null;
+            closeTimeToSet = originalExtra != null ? originalExtra.getCloseTime() : null;
+            // 追加处理人（历史累积）
             if (!StringUtils.equals(originalBug.getHandleUser(), bug.getHandleUser())) {
-                bug.setHandleUsers(originalBug.getHandleUsers() + "," + bug.getHandleUser());
+                Set<String> history = new LinkedHashSet<>(parseHandleUserIds(originalBug.getHandleUsers()));
+                history.addAll(parseHandleUserIds(bug.getHandleUser()));
+                bug.setHandleUsers(String.join(",", history));
                 noticeHandler = true;
+                handleTimeToSet = System.currentTimeMillis();
+            }
+            if (!StringUtils.equals(originalBug.getStatus(), bug.getStatus())) {
+                if (isEndStatus(request.getProjectId(), bug.getStatus())) {
+                    closeTimeToSet = System.currentTimeMillis();
+                } else {
+                    // 从结束态重新打开时清空关闭时间
+                    closeTimeToSet = null;
+                }
             }
             bug.setCreateUser(originalBug.getCreateUser());
             bug.setCreateTime(originalBug.getCreateTime());
@@ -1086,6 +1136,7 @@ public class BugService {
             bugContent.setBugId(bug.getId());
             bugContent.setDescription(StringUtils.isEmpty(request.getDescription()) ? StringUtils.EMPTY : request.getDescription());
             bugContentMapper.updateByPrimaryKeySelective(bugContent);
+            extBugMapper.updateBugExtraTimes(bug.getId(), handleTimeToSet, closeTimeToSet);
         }
 
         // 异步发送处理人通知 (第三方不通知 && 处理人没更改不通知)
@@ -1093,6 +1144,58 @@ public class BugService {
             bugSyncNoticeService.sendHandleUserNotice(bug, currentUser);
         }
         return bug;
+    }
+
+    /**
+     * 判断缺陷状态是否为项目状态流结束态
+     */
+    private boolean isEndStatus(String projectId, String statusId) {
+        if (StringUtils.isBlank(statusId)) {
+            return false;
+        }
+        List<String> endStatusIds = extBugMapper.getLocalLastStepStatusIds(projectId);
+        return CollectionUtils.isNotEmpty(endStatusIds) && endStatusIds.contains(statusId);
+    }
+
+    /**
+     * 解析处理人：兼容单值、逗号分隔、JSON 数组
+     */
+    private List<String> parseHandleUserIds(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return List.of();
+        }
+        String value = raw.trim();
+        try {
+            if (StringUtils.startsWith(value, "[")) {
+                List<String> ids = JSON.parseArray(value, String.class);
+                if (ids == null) {
+                    return List.of();
+                }
+                return ids.stream().filter(StringUtils::isNotBlank).distinct().toList();
+            }
+        } catch (Exception e) {
+            LogUtils.warn("parse handleUser json failed: " + value);
+        }
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .toList();
+    }
+
+    /**
+     * 归一化为逗号分隔存储
+     */
+    private String normalizeHandleUserValue(String raw) {
+        return String.join(",", parseHandleUserIds(raw));
+    }
+
+    /**
+     * 转为前端 MULTIPLE_MEMBER 回显用的 JSON 数组字符串
+     */
+    private String toHandleUserJsonValue(String raw) {
+        List<String> ids = parseHandleUserIds(raw);
+        return JSON.toJSONString(ids);
     }
 
     /**
@@ -1397,7 +1500,8 @@ public class BugService {
      */
     private void handleRichTextTmpFile(BugEditRequest request, String bugId, String currentUser) {
         filterRichTextTmpFile(request);
-        bugAttachmentService.transferTmpFile(bugId, request.getProjectId(), request.getRichTextTmpFileIds(), currentUser, BugAttachmentSourceType.RICH_TEXT.name());
+        // 富文本图片同时落入附件区（ATTACHMENT），便于详情页附件列表展示
+        bugAttachmentService.transferTmpFile(bugId, request.getProjectId(), request.getRichTextTmpFileIds(), currentUser, BugAttachmentSourceType.ATTACHMENT.name());
     }
 
     /**
@@ -1547,9 +1651,18 @@ public class BugService {
         final Map<String, String> tmpHandleUserMap = headerHandleUserMap;
         bugs.forEach(bug -> {
             bug.setCustomFields(customFieldMap.get(bug.getId()));
-            // 解析处理人, 状态
-            bug.setHandleUserName(tmpHandleUserMap.containsKey(bug.getHandleUser()) ?
-                    tmpHandleUserMap.get(bug.getHandleUser()) : localHandleUserMap.get(bug.getHandleUser()));
+            // 解析处理人（支持多人）, 状态
+            List<String> handleIds = parseHandleUserIds(bug.getHandleUser());
+            String handleNames = handleIds.stream()
+                    .map(id -> {
+                        if (tmpHandleUserMap.containsKey(id)) {
+                            return tmpHandleUserMap.get(id);
+                        }
+                        return localHandleUserMap.getOrDefault(id, id);
+                    })
+                    .filter(StringUtils::isNotBlank)
+                    .collect(Collectors.joining(","));
+            bug.setHandleUserName(StringUtils.isNotBlank(handleNames) ? handleNames : bug.getHandleUser());
             bug.setStatusName(allStatusMap.get(bug.getStatus()));
         });
         return bugs;

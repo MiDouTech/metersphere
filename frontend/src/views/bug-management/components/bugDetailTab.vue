@@ -558,6 +558,9 @@
         Message.success(t('common.updateSuccess'));
         defaultContentValue.value = form.value.description;
         handleCancel();
+        // 富文本图片转附件后刷新列表
+        const attachments = await getAttachmentList(bugId.value);
+        await handleFileFunc(attachments);
         emit('updateSuccess');
       }
     } catch (error) {

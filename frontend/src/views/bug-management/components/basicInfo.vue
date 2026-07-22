@@ -1,6 +1,6 @@
 <template>
   <a-spin :loading="loading" class="w-full">
-    <div class="form-item-container">
+    <div class="form-item-container" :class="{ 'form-item-container--sidebar': props.sidebar }">
       <!-- 所属平台一致, 详情展示 -->
       <div
         v-if="detailInfo.platform === 'Local' || props.currentPlatform === detailInfo.platform"
@@ -43,6 +43,25 @@
               </a-form-item>
             </a-form>
           </div>
+          <!-- 只读元数据：创建人/时间、处理时间、关闭时间（处理人已在表单字段中可编辑） -->
+          <div class="meta-block">
+            <div class="baseItem">
+              <span class="label">{{ t('bugManagement.detail.creator') }}</span>
+              <span class="value">{{ detailInfo.createUserName || '-' }}</span>
+            </div>
+            <div class="baseItem">
+              <span class="label">{{ t('bugManagement.detail.createTime') }}</span>
+              <span class="value">{{ formatTime(detailInfo.createTime) }}</span>
+            </div>
+            <div class="baseItem">
+              <span class="label">{{ t('bugManagement.detail.handleTime') }}</span>
+              <span class="value">{{ formatTime(detailInfo.handleTime) }}</span>
+            </div>
+            <div class="baseItem">
+              <span class="label">{{ t('bugManagement.detail.closeTime') }}</span>
+              <span class="value">{{ formatTime(detailInfo.closeTime) }}</span>
+            </div>
+          </div>
         </div>
 
         <!-- 内置基础信息结束 -->
@@ -58,6 +77,7 @@
 <script setup lang="ts">
   import { Message } from '@arco-design/web-vue';
   import { cloneDeep, debounce } from 'lodash-es';
+  import dayjs from 'dayjs';
 
   import MsFormCreate from '@/components/pure/ms-form-create/ms-form-create.vue';
   import type { FormItem, FormRuleItem } from '@/components/pure/ms-form-create/types';
@@ -83,6 +103,7 @@
     isPlatformDefaultTemplate: boolean;
     platformSystemFields: BugEditCustomField[]; // 平台系统字段
     currentCustomFields: CustomFieldItem[];
+    sidebar?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -122,6 +143,13 @@
       'validate-trigger': ['change'],
     },
   };
+
+  function formatTime(val?: number | string) {
+    if (val == null || val === '') return '-';
+    const num = Number(val);
+    if (!num) return '-';
+    return dayjs(num).format('YYYY-MM-DD HH:mm:ss');
+  }
 
   async function makeParams() {
     const customFields = await makeCustomFieldsParams(innerFormItem.value, props.currentCustomFields);
@@ -190,105 +218,123 @@
 <style scoped lang="less">
   .form-item-container {
     max-width: 50%;
+    &--sidebar {
+      max-width: 100%;
+    }
     .baseItem {
       margin-bottom: 16px;
       height: 32px;
       line-height: 32px;
-      @apply flex;
+      @apply flex items-center;
       .label {
+        flex-shrink: 0;
         width: 84px;
         color: var(--color-text-3);
       }
-    }
-    :deep(.arco-form-item-layout-horizontal) {
-      margin-bottom: 16px !important;
-    }
-    :deep(.arco-form-item-label-col) {
-      padding-right: 0;
-    }
-    :deep(.arco-col-9) {
-      flex: 0 0 84px;
-      width: 84px;
-    }
-    :deep(.arco-col-15) {
-      flex: 0 0 calc(100% - 84px);
-      width: calc(100% - 84px);
-    }
-    :deep(.arco-form-item-label::after) {
-      color: red !important;
-    }
-    :deep(.arco-form-item-label-col > .arco-form-item-label) {
-      color: var(--color-text-3) !important;
-    }
-    :deep(.arco-select-view-single) {
-      border-color: transparent !important;
-      .arco-select-view-suffix {
-        visibility: hidden;
-      }
-      &:hover {
-        border-color: rgb(var(--primary-5)) !important;
-        .arco-select-view-suffix {
-          visibility: visible !important;
-        }
-      }
-      &:hover > .arco-input {
-        font-weight: normal;
-        text-decoration: none;
+      .value {
         color: var(--color-text-1);
-      }
-      & > .arco-input {
-        font-weight: 500;
-        text-decoration: underline;
-        color: var(--color-text-1);
+        word-break: break-all;
       }
     }
-    :deep(.arco-input-tag) {
-      border-color: transparent !important;
-      &:hover {
-        border-color: rgb(var(--primary-5)) !important;
+    .meta-block {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--color-text-n8);
+    }
+  }
+  :deep(.arco-form-item-layout-horizontal) {
+    margin-bottom: 16px !important;
+  }
+  :deep(.arco-form-item-label-col > .arco-form-item-label) {
+    color: var(--color-text-3) !important;
+  }
+
+  /* 状态按钮组样式 */
+  :deep(.arco-radio-group-button) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    .arco-radio-button {
+      margin-right: 0;
+      border-radius: 16px !important;
+      &::before {
+        display: none !important;
       }
     }
-    :deep(.arco-input-wrapper) {
-      border-color: transparent !important;
-      &:hover {
-        border-color: rgb(var(--primary-5)) !important;
-      }
+  }
+  :deep(.arco-select-view-single) {
+    border-color: transparent !important;
+    .arco-select-view-suffix {
+      visibility: hidden;
     }
-    :deep(.arco-select-view-multiple) {
-      border-color: transparent !important;
+    &:hover {
+      border-color: rgb(var(--primary-5)) !important;
       .arco-select-view-suffix {
-        visibility: hidden;
-      }
-      &:hover {
-        border-color: rgb(var(--primary-5)) !important;
-        .arco-select-view-suffix {
-          visibility: visible !important;
-        }
+        visibility: visible !important;
       }
     }
-    :deep(.arco-textarea-wrapper) {
-      border-color: transparent !important;
-      &:hover {
-        border-color: rgb(var(--primary-5)) !important;
+    &:hover > .arco-input {
+      font-weight: normal;
+      text-decoration: none;
+      color: var(--color-text-1);
+    }
+    & > .arco-input {
+      font-weight: 500;
+      text-decoration: underline;
+      color: var(--color-text-1);
+    }
+  }
+  :deep(.arco-input-tag) {
+    border-color: transparent !important;
+    &:hover {
+      border-color: rgb(var(--primary-5)) !important;
+    }
+  }
+  :deep(.arco-input-wrapper) {
+    border-color: transparent !important;
+    &:hover {
+      border-color: rgb(var(--primary-5)) !important;
+    }
+  }
+  :deep(.arco-select-view-multiple) {
+    border-color: transparent !important;
+    .arco-select-view-suffix {
+      visibility: hidden;
+    }
+    &:hover {
+      border-color: rgb(var(--primary-5)) !important;
+      .arco-select-view-suffix {
+        visibility: visible !important;
       }
     }
-    :deep(.arco-input-number) {
-      border-color: transparent !important;
-      &:hover {
-        border-color: rgb(var(--primary-5)) !important;
-      }
+  }
+  :deep(.arco-textarea-wrapper) {
+    border-color: transparent !important;
+    &:hover {
+      border-color: rgb(var(--primary-5)) !important;
     }
-    :deep(.arco-picker) {
-      border-color: transparent !important;
+  }
+  :deep(.arco-input-number) {
+    border-color: transparent !important;
+    &:hover {
+      border-color: rgb(var(--primary-5)) !important;
+    }
+  }
+  :deep(.arco-picker) {
+    border-color: transparent !important;
+    .arco-picker-suffix {
+      visibility: hidden;
+    }
+    &:hover {
+      border-color: rgb(var(--primary-5)) !important;
       .arco-picker-suffix {
-        visibility: hidden;
+        visibility: visible !important;
       }
-      &:hover {
-        border-color: rgb(var(--primary-5)) !important;
-        arco-picker-suffix {
-          visibility: visible !important;
-        }
-      }
+    }
+  }
+  :deep(.tags-class) {
+    .arco-form-item-content {
+      max-width: 100%;
     }
   }
 </style>

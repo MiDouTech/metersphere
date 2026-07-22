@@ -32,7 +32,7 @@ public class Bug implements Serializable {
 
     @Schema(description = "处理人", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{bug.handle_user.not_blank}", groups = {Created.class})
-    @Size(min = 1, max = 50, message = "{bug.handle_user.length_range}", groups = {Created.class, Updated.class})
+    @Size(min = 1, max = 1000, message = "{bug.handle_user.length_range}", groups = {Created.class, Updated.class})
     private String handleUser;
 
     @Schema(description = "创建人")

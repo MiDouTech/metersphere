@@ -64,4 +64,25 @@ public class BugDetailDTO {
     @Schema(description = "缺陷关联的用例数")
     private long linkCaseCount;
 
+    @Schema(description = "创建人ID")
+    private String createUser;
+
+    @Schema(description = "创建人名称")
+    private String createUserName;
+
+    @Schema(description = "创建时间")
+    private Long createTime;
+
+    @Schema(description = "处理人ID")
+    private String handleUser;
+
+    @Schema(description = "处理人名称")
+    private String handleUserName;
+
+    @Schema(description = "处理时间")
+    private Long handleTime;
+
+    @Schema(description = "缺陷关闭时间")
+    private Long closeTime;
+
 }

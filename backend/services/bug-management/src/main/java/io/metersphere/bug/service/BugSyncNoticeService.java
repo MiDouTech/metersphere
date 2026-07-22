@@ -20,6 +20,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -82,7 +83,16 @@ public class BugSyncNoticeService {
         MessageDetail messageDetail = new MessageDetail();
         messageDetail.setProjectId(bug.getProjectId());
         messageDetail.setTaskType(NoticeConstants.TaskType.BUG_TASK);
-        NoticeModel noticeModel = NoticeModel.builder().operator(currentUser).excludeSelf(true).receivers(List.of(new Receiver(bug.getHandleUser(), NotificationConstants.Type.SYSTEM_NOTICE.name())))
+        List<Receiver> receivers = Arrays.stream(StringUtils.defaultString(bug.getHandleUser()).split(","))
+                .map(String::trim)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .map(userId -> new Receiver(userId, NotificationConstants.Type.SYSTEM_NOTICE.name()))
+                .toList();
+        if (receivers.isEmpty()) {
+            return;
+        }
+        NoticeModel noticeModel = NoticeModel.builder().operator(currentUser).excludeSelf(true).receivers(receivers)
                 .context(context).subject(subject).paramMap(paramMap).event(NoticeConstants.Event.ASSIGN).build();
         inSiteNoticeSender.sendAnnouncement(messageDetail, noticeModel, MessageTemplateUtils.getContent(context, paramMap), subject);
     }
