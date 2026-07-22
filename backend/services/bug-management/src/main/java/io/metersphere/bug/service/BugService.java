@@ -320,7 +320,7 @@ public class BugService {
                     .collect(Collectors.toMap(OptionDTO::getId, OptionDTO::getName, (a, b) -> a));
             detail.setCreateUserName(userNameMap.getOrDefault(bug.getCreateUser(), bug.getCreateUser()));
             detail.setHandleUserName(handleUserIds.stream()
-                    .map(id -> userNameMap.getOrDefault(id, id))
+                    .map(uid -> userNameMap.getOrDefault(uid, uid))
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.joining(",")));
         } else {
