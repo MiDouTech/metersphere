@@ -20,6 +20,7 @@
   import { editorUploadFile } from '@/api/modules/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
   import useLocale from '@/locale/useLocale';
+  import { rewriteRichTextMediaHtml, withApiPrefix } from '@/utils/mediaUrl';
 
   import '@halo-dev/richtext-editor/dist/style.css';
   import ExtensionImage from './extensions/image/index';
@@ -122,8 +123,8 @@
     }
     const uploadFileId = await props.uploadImage(arg.file);
     if (uploadFileId) {
-      // compressed=false：内容区按原图展示，避免缩略图裂图/失真
-      const permanentUrl = `${props.previewUrl}/${uploadFileId}/${false}`;
+      // compressed=false：原图；withApiPrefix：与 Axios 一致，避免生产裂图
+      const permanentUrl = withApiPrefix(`${props.previewUrl}/${uploadFileId}/${false}`);
       arg.process(permanentUrl, uploadFileId);
     }
   }
@@ -135,8 +136,9 @@
   watch(
     () => props.raw,
     () => {
-      if (props.raw !== editor.value?.getHTML()) {
-        editor.value?.commands.setContent(props.raw);
+      const next = rewriteRichTextMediaHtml(props.raw);
+      if (next !== editor.value?.getHTML()) {
+        editor.value?.commands.setContent(next);
       }
     }
   );
@@ -183,7 +185,7 @@
     }, 250);
 
     editor.value = new Editor({
-      content: props.raw,
+      content: rewriteRichTextMediaHtml(props.raw),
       extensions: [
         ExtensionBlockquote,
         ExtensionBold,

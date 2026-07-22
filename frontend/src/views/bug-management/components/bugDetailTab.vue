@@ -37,7 +37,7 @@
           />
           <div
             v-else
-            v-dompurify-html="normalizeRichTextImages(form?.description || '-')"
+            v-dompurify-html="rewriteRichTextMediaHtml(form?.description || '-')"
             class="markdown-body bug-rich-content"
           ></div>
         </div>
@@ -68,7 +68,7 @@
               />
               <div
                 v-else
-                v-dompurify-html="normalizeRichTextImages(item?.defaultValue || '-')"
+                v-dompurify-html="rewriteRichTextMediaHtml(item?.defaultValue || '-')"
                 class="markdown-body bug-rich-content"
               ></div>
             </div>
@@ -282,6 +282,7 @@
   import { useI18n } from '@/hooks/useI18n';
   import { useAppStore } from '@/store';
   import { downloadByteFile, sleep } from '@/utils';
+  import { rewriteRichTextMediaHtml } from '@/utils/mediaUrl';
   import { hasAnyPermission } from '@/utils/permission';
 
   import {
@@ -443,14 +444,6 @@
       associated: !item.local,
     });
     return URL.createObjectURL(new Blob([res], { type: item.file?.type || 'image/png' }));
-  }
-
-  /** 富文本只读：原图预览（compressed=false），避免缩略图裂图 */
-  function normalizeRichTextImages(html: string) {
-    if (!html || html === '-') return html;
-    return html
-      .replace(/(\/bug\/attachment\/preview\/md\/[^/"'\s]+\/)true/gi, '$1false')
-      .replace(/(\/attachment\/download\/file\/[^/"'\s]+\/)true/gi, '$1false');
   }
 
   // 下载

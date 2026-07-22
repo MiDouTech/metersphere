@@ -693,8 +693,22 @@ public class BugAttachmentService {
                 throw new MSException("get file error");
             }
         }
+        // 尝试按图片类型返回，便于浏览器 <img> 直接渲染
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (StringUtils.isNotBlank(fileName)) {
+            String lower = fileName.toLowerCase();
+            if (lower.endsWith(".png")) {
+                mediaType = MediaType.IMAGE_PNG;
+            } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+                mediaType = MediaType.IMAGE_JPEG;
+            } else if (lower.endsWith(".gif")) {
+                mediaType = MediaType.IMAGE_GIF;
+            } else if (lower.endsWith(".webp")) {
+                mediaType = MediaType.parseMediaType("image/webp");
+            }
+        }
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("application/octet-stream"))
+                .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
                 .body(bytes);
     }
