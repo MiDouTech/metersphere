@@ -196,6 +196,8 @@ export default {
   'caseManagement.featureCase.stepAttachTip': '点击或拖拽上传',
   'caseManagement.featureCase.reportDefect': '提缺陷',
   'caseManagement.featureCase.dragUploadTip': '支持拖拽文件到此处上传，支持粘贴上传',
+  'caseManagement.featureCase.autoNext': '自动下一条',
+  'caseManagement.featureCase.autoNextNeedAttachment': '需有附件才跳',
   'caseManagement.featureCase.viewAllComments': '查看全部评论',
   'caseManagement.featureCase.inlineComment': '评论',
   'caseManagement.featureCase.share': '分享',

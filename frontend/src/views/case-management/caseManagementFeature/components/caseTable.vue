@@ -1826,15 +1826,27 @@
       console.log(error);
     }
   }
-  // 高级检索
-  const handleAdvSearch = async (filter: FilterResult, id: string) => {
+  // 高级检索；进入高级搜索时回到「全部」，退出时保留当前模块以便树点击切列表
+  const handleAdvSearch = async (filter: FilterResult, id: string, isAdvanced = false) => {
     resetSelector();
-    emit('setActiveFolder');
+    if (isAdvanced) {
+      emit('setActiveFolder');
+    }
     keyword.value = '';
     await getLoadListParams(); // 基础筛选都清空
     setAdvanceFilter(filter, id);
     loadList();
   };
+
+  /** 点树/全部用例时：退出高级搜索并按当前模块刷新 */
+  async function exitAdvancedSearchAndRefresh() {
+    if (isAdvancedSearchMode.value) {
+      msAdvanceFilterRef.value?.clearFilter();
+      return;
+    }
+    await initData();
+    resetSelector();
+  }
   // 更新用例等级
   async function handleStatusChange(record: any) {
     try {
@@ -2009,12 +2021,13 @@
   );
 
   watch(
-    () => props.activeFolder,
-    (val) => {
-      if (props.activeFolder !== 'recycle' && val && !isAdvancedSearchMode.value) {
-        initData();
-        resetSelector();
-      }
+    () => [props.activeFolder, props.offspringIds.join(',')] as const,
+    ([val]) => {
+      if (props.activeFolder === 'recycle' || !val) return;
+      // 高级搜索中由 exitAdvancedSearchAndRefresh / clearFilter 驱动刷新，避免与树选择抢状态
+      if (isAdvancedSearchMode.value) return;
+      initData();
+      resetSelector();
     }
   );
 
@@ -2049,6 +2062,7 @@
     isAdvancedSearchMode,
     emitTableParams,
     initData,
+    exitAdvancedSearchAndRefresh,
   });
   await getDefaultFields();
 </script>

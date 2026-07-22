@@ -2,8 +2,10 @@
 <template>
   <div class="caseDetailWrapper ml-1 !break-words break-all">
     <a-form ref="caseFormRef" class="rounded-[4px]" :model="detailForm" layout="vertical">
+      <!-- 前置：只读行式；编辑纵向富文本 -->
       <a-form-item
-        class="relative"
+        class="case-inline-field relative"
+        :class="{ 'is-editing': isEditPreposition }"
         field="precondition"
         :label="t('system.orgTemplate.precondition')"
         asterisk-position="end"
@@ -28,12 +30,34 @@
           :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
           class="mt-2"
         />
-
-        <div
-          v-else
-          v-dompurify-html="detailForm?.prerequisite || '-'"
-          class="markdown-body list-item-css !break-words break-all"
-        >
+        <div v-else class="case-inline-row">
+          <span class="case-inline-label">{{ t('system.orgTemplate.precondition') }}：</span>
+          <div
+            v-dompurify-html="detailForm?.prerequisite || '-'"
+            class="case-inline-value markdown-body list-item-css !break-words break-all"
+          ></div>
+        </div>
+      </a-form-item>
+      <!-- 备注：前置下方 -->
+      <a-form-item
+        field="description"
+        class="case-inline-field"
+        :class="{ 'is-editing': isEditPreposition }"
+        :label="t('caseManagement.featureCase.remark')"
+      >
+        <MsRichText
+          v-if="isEditPreposition"
+          v-model:filed-ids="descriptionFileIds"
+          v-model:raw="detailForm.description"
+          :upload-image="handleUploadImage"
+          :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
+        />
+        <div v-else class="case-inline-row">
+          <span class="case-inline-label">{{ t('caseManagement.featureCase.remark') }}：</span>
+          <div
+            v-dompurify-html="detailForm.description || '-'"
+            class="case-inline-value markdown-body !break-words break-all"
+          ></div>
         </div>
       </a-form-item>
       <StepDescription v-model:caseEditType="detailForm.caseEditType" :is-test-plan="props.isTestPlan" />
@@ -53,67 +77,88 @@
         />
       </div>
       <!-- 文本描述 -->
-      <MsRichText
-        v-if="detailForm.caseEditType === 'TEXT' && isEditPreposition"
-        v-model:raw="detailForm.textDescription"
-        v-model:filed-ids="textDescriptionFileIds"
-        :upload-image="handleUploadImage"
-        :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
-      />
-      <div
-        v-if="detailForm.caseEditType === 'TEXT' && !isEditPreposition"
-        v-dompurify-html="detailForm.textDescription || '-'"
-        class="markdown-body !break-words break-all"
-      >
-      </div>
-      <a-form-item
-        v-if="detailForm.caseEditType === 'TEXT'"
-        field="remark"
-        class="mt-[20px]"
-        :label="t('caseManagement.featureCase.expectedResult')"
-      >
+      <template v-if="detailForm.caseEditType === 'TEXT'">
         <MsRichText
-          v-if="detailForm.caseEditType === 'TEXT' && isEditPreposition"
-          v-model:raw="detailForm.expectedResult"
-          v-model:filed-ids="expectedResultFileIds"
+          v-if="isEditPreposition"
+          v-model:raw="detailForm.textDescription"
+          v-model:filed-ids="textDescriptionFileIds"
           :upload-image="handleUploadImage"
           :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
         />
         <div
           v-else
-          v-dompurify-html="detailForm.expectedResult || '-'"
+          v-dompurify-html="detailForm.textDescription || '-'"
           class="markdown-body !break-words break-all"
         ></div>
-      </a-form-item>
-      <a-form-item field="description" :label="t('caseManagement.featureCase.remark')">
-        <MsRichText
-          v-if="isEditPreposition"
-          v-model:filed-ids="descriptionFileIds"
-          v-model:raw="detailForm.description"
-          :upload-image="handleUploadImage"
-          :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
-        />
-        <div v-else v-dompurify-html="detailForm.description || '-'" class="markdown-body !break-words break-all"></div>
-      </a-form-item>
+        <a-form-item field="remark" class="mt-[20px]" :label="t('caseManagement.featureCase.expectedResult')">
+          <MsRichText
+            v-if="isEditPreposition"
+            v-model:raw="detailForm.expectedResult"
+            v-model:filed-ids="expectedResultFileIds"
+            :upload-image="handleUploadImage"
+            :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
+          />
+          <div
+            v-else
+            v-dompurify-html="detailForm.expectedResult || '-'"
+            class="markdown-body !break-words break-all"
+          ></div>
+        </a-form-item>
+        <!-- TEXT 模式用例级四按钮 -->
+        <div v-if="showTextCaseResultButtons" class="mb-2 mt-2 flex flex-wrap items-center justify-end gap-2">
+          <button
+            v-for="item in caseResultButtons"
+            :key="item.key"
+            type="button"
+            class="case-result-btn"
+            :class="[`case-result-btn--${item.theme}`, { 'is-active': detailForm.lastExecuteResult === item.key }]"
+            @click="handleSetCaseResult(item.key)"
+          >
+            <MsIcon :type="item.icon" :size="16" class="mr-1" />
+            {{ t(item.label) }}
+          </button>
+        </div>
+      </template>
       <div v-if="isEditPreposition" class="flex justify-end">
         <a-button type="secondary" @click="handleCancel">{{ t('common.cancel') }}</a-button>
         <a-button class="ml-[12px]" type="primary" :loading="confirmLoading" @click="handleOK">
           {{ t('common.save') }}
         </a-button>
       </div>
-      <div v-if="!props.isTestPlan" v-permission="['FUNCTIONAL_CASE:READ+UPDATE']">
-        <AddAttachment v-model:file-list="fileList" multiple @change="handleChange" @link-file="associatedFile">
-          <template v-if="props.showCaseNav" #labelRight>
-            <div class="case-nav-actions inline-flex items-center gap-2 font-normal">
-              <a-button size="small" :disabled="!props.canGoPrev" @click="emit('prevCase')">
-                {{ t('caseManagement.featureCase.prevCase') }}
-              </a-button>
-              <a-button size="small" type="primary" :disabled="!props.canGoNext" @click="emit('nextCase')">
-                {{ t('caseManagement.featureCase.nextCase') }}
-              </a-button>
-            </div>
-          </template>
-        </AddAttachment>
+      <!-- 四按钮下方：自动下一条 + 上下条 -->
+      <div
+        v-if="props.showCaseNav && !props.isTestPlan"
+        class="case-nav-bar mb-3 mt-1 flex items-center justify-between gap-3"
+      >
+        <div class="inline-flex items-center gap-2">
+          <a-switch v-model:model-value="autoNext" size="small" />
+          <span class="text-[13px] text-[var(--color-text-1)]">{{ t('caseManagement.featureCase.autoNext') }}</span>
+          <span class="text-[12px] text-[var(--color-text-4)]">{{
+            t('caseManagement.featureCase.autoNextNeedAttachment')
+          }}</span>
+        </div>
+        <div class="case-nav-actions inline-flex items-center gap-2">
+          <a-button size="small" :disabled="!props.canGoPrev" @click="emit('prevCase')">
+            {{ t('caseManagement.featureCase.prevCase') }}
+          </a-button>
+          <a-button size="small" type="primary" :disabled="!props.canGoNext" @click="emit('nextCase')">
+            {{ t('caseManagement.featureCase.nextCase') }}
+          </a-button>
+        </div>
+      </div>
+      <!-- 附件：外扩热区仅包详情侧 -->
+      <div
+        v-if="!props.isTestPlan"
+        v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
+        class="attachment-paste-region"
+        :class="{ 'attachment-paste-region--active': isHoverPasteZone }"
+        tabindex="0"
+        @mouseenter="isHoverPasteZone = true"
+        @mouseleave="isHoverPasteZone = false"
+        @focusin="isPasteZoneFocused = true"
+        @focusout="isPasteZoneFocused = false"
+      >
+        <AddAttachment v-model:file-list="fileList" multiple @change="handleChange" @link-file="associatedFile" />
       </div>
     </a-form>
     <!-- 文件列表开始 -->
@@ -329,11 +374,12 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
+  import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
   import { FormInstance, Message } from '@arco-design/web-vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
   import type { FormRuleItem } from '@/components/pure/ms-form-create/types';
+  import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsRichText from '@/components/pure/ms-rich-text/MsRichText.vue';
   import MsFileList from '@/components/pure/ms-upload/fileList.vue';
   import MsUpload from '@/components/pure/ms-upload/index.vue';
@@ -363,18 +409,21 @@
   } from '@/api/modules/case-management/featureCase';
   import { getModules, getModulesCount } from '@/api/modules/project-management/fileManagement';
   import { PreviewEditorImageUrl } from '@/api/requrls/case-management/featureCase';
+  import useFeatureCaseAutoNext from '@/hooks/useFeatureCaseAutoNext';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import useShortcutSave from '@/hooks/useShortcutSave';
   import useAppStore from '@/store/modules/app';
   import { characterLimit, downloadByteFile, getGenerateId, sleep } from '@/utils';
   import { scrollIntoView } from '@/utils/dom';
-  import { hasAllPermission } from '@/utils/permission';
+  import { hasAllPermission, hasAnyPermission } from '@/utils/permission';
 
   import type { AssociatedList, DetailCase, StepList } from '@/models/caseManagement/featureCase';
   import type { TableQueryParams } from '@/models/common';
+  import { LastExecuteResults, StatusType } from '@/enums/caseEnum';
 
   import { convertToFile } from '../utils';
+  import { stepsToTextFields, textFieldsToSteps } from '../utils/caseStepSync';
 
   const caseFormRef = ref<FormInstance>();
 
@@ -450,17 +499,22 @@
 
   const isEditPreposition = ref<boolean>(props.isEdit); // 非编辑状态
 
-  // 更改类型
-  const handleSelectType = (value: string | number | Record<string, any> | undefined) => {
-    detailForm.value.caseEditType = value as string;
-  };
-
-  // 获取类型样式
-  function getSelectTypeClass(type: string) {
-    return detailForm.value.caseEditType === type
-      ? ['bg-[rgb(var(--primary-1))]', '!text-[rgb(var(--primary-5))]']
-      : [];
-  }
+  // StepDescription 通过 v-model 切换类型；同步逻辑见上方 watch
+  let lastCaseEditType = detailForm.value.caseEditType || 'STEP';
+  watch(
+    () => detailForm.value.caseEditType,
+    (next) => {
+      if (!next || next === lastCaseEditType) return;
+      if (lastCaseEditType === 'STEP' && next === 'TEXT') {
+        const synced = stepsToTextFields(stepData.value);
+        detailForm.value.textDescription = synced.textDescription;
+        detailForm.value.expectedResult = synced.expectedResult;
+      } else if (lastCaseEditType === 'TEXT' && next === 'STEP') {
+        stepData.value = textFieldsToSteps(detailForm.value.textDescription, detailForm.value.expectedResult);
+      }
+      lastCaseEditType = next;
+    }
+  );
 
   // 编辑前置操作
   function prepositionEdit() {
@@ -552,6 +606,15 @@
 
   // 处理编辑详情参数
   function getParams() {
+    // 保存前双向同步：当前 UI 侧写入另一侧
+    if (detailForm.value.caseEditType === 'TEXT') {
+      stepData.value = textFieldsToSteps(detailForm.value.textDescription, detailForm.value.expectedResult);
+    } else {
+      const synced = stepsToTextFields(stepData.value);
+      detailForm.value.textDescription = synced.textDescription;
+      detailForm.value.expectedResult = synced.expectedResult;
+    }
+
     const steps = stepData.value.map((item, index) => {
       return {
         id: item.id,
@@ -634,6 +697,16 @@
     }, 600);
   }
 
+  const { autoNext } = useFeatureCaseAutoNext();
+
+  /** done / 已关联；init/uploading/error 不计 */
+  const hasValidAttachment = computed(() =>
+    fileList.value.some((item) => {
+      if (item.status === 'init' || item.status === 'uploading' || item.status === 'error') return false;
+      return true;
+    })
+  );
+
   async function handleSetCaseResult(result: string) {
     detailForm.value.lastExecuteResult = result;
     stepData.value.forEach((item) => {
@@ -644,12 +717,50 @@
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     const ok = await persistCase(true);
     if (!ok) return;
+    // 仅四按钮触发；开关开 + 有效附件 + 可下一条 才跳
+    if (!autoNext.value) return;
+    if (!hasValidAttachment.value) return;
     if (props.canGoNext) {
       emit('nextCase');
     } else {
       Message.info(t('caseManagement.featureCase.lastCaseTip'));
     }
   }
+
+  const caseResultButtons = [
+    {
+      key: LastExecuteResults.SUCCESS,
+      label: 'common.pass',
+      icon: StatusType.SUCCESS,
+      theme: 'pass',
+    },
+    {
+      key: LastExecuteResults.ERROR,
+      label: 'common.fail',
+      icon: StatusType.ERROR,
+      theme: 'fail',
+    },
+    {
+      key: LastExecuteResults.BLOCKED,
+      label: 'common.block',
+      icon: StatusType.BLOCKED,
+      theme: 'block',
+    },
+    {
+      key: LastExecuteResults.SKIP,
+      label: 'caseManagement.featureCase.skip',
+      icon: StatusType.SKIP,
+      theme: 'skip',
+    },
+  ];
+
+  const showTextCaseResultButtons = computed(
+    () =>
+      props.enableExecute &&
+      !props.isTestPlan &&
+      !props.isDisabledTestPlan &&
+      hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE', 'FUNCTIONAL_CASE:READ+UPDATE'])
+  );
 
   const showDefectDrawer = ref(false);
   function handleReportDefect() {
@@ -944,8 +1055,65 @@
     }
   }
 
+  // —— 附件粘贴热区（仅详情外包，~200px）——
+  const isHoverPasteZone = ref(false);
+  const isPasteZoneFocused = ref(false);
+
+  function buildPasteFileItem(file: File): MsFileItem {
+    const name =
+      file.name ||
+      `screenshot-${new Date()
+        .toISOString()
+        .replace(/[-:TZ.]/g, '')
+        .slice(0, 14)}.png`;
+    return {
+      uid: getGenerateId(),
+      name,
+      file: new File([file], name, { type: file.type || 'image/png' }),
+      size: file.size,
+      status: 'init',
+      percent: 0,
+      local: true,
+      enable: true,
+    } as MsFileItem;
+  }
+
+  function acceptPasteFiles(files: File[]) {
+    if (!files.length) return;
+    const maxSize = (appStore.getFileMaxSize || 50) * 1024 * 1024;
+    const next = [...(fileList.value || [])];
+    files.forEach((file) => {
+      if (file.size > maxSize) {
+        Message.warning(t('project.fileManagement.normalFileSubText', { size: appStore.getFileMaxSize }));
+        return;
+      }
+      const item = buildPasteFileItem(file);
+      next.push(item);
+      handleChange(next, item);
+    });
+  }
+
+  function onDocumentPaste(e: ClipboardEvent) {
+    if (!isHoverPasteZone.value && !isPasteZoneFocused.value) return;
+    const files: File[] = [];
+    const clipFiles = Array.from(e.clipboardData?.files || []);
+    files.push(...clipFiles);
+    Array.from(e.clipboardData?.items || []).forEach((item) => {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file && !files.some((f) => f.name === file.name && f.size === file.size)) {
+          files.push(file);
+        }
+      }
+    });
+    if (!files.length) return;
+    e.preventDefault();
+    acceptPasteFiles(files);
+  }
+
   const { registerCatchSaveShortcut, removeCatchSaveShortcut } = useShortcutSave(handleOK);
   onMounted(async () => {
+    document.addEventListener('paste', onDocumentPaste);
     detailForm.value = { ...props.form };
     await getDetails();
     if (isEditPreposition.value) {
@@ -954,6 +1122,7 @@
   });
 
   onBeforeUnmount(() => {
+    document.removeEventListener('paste', onDocumentPaste);
     removeCatchSaveShortcut();
   });
 
@@ -961,11 +1130,99 @@
     handleOK,
     getParams,
     stepData,
+    fileList,
+    hasValidAttachment,
   });
 </script>
 
 <style scoped lang="less">
   :deep(.arco-form-item-label) {
     font-weight: bold !important;
+  }
+  .case-inline-field:not(.is-editing) {
+    :deep(.arco-form-item-label-col) {
+      display: none;
+    }
+  }
+  .case-inline-row {
+    @apply flex items-start gap-1;
+
+    width: 100%;
+    min-height: 22px;
+  }
+  .case-inline-label {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: var(--color-text-1);
+  }
+  .case-inline-value {
+    flex: 1;
+    min-width: 0;
+  }
+  .attachment-paste-region {
+    position: relative;
+    border-radius: 4px;
+    outline: none;
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -200px;
+      z-index: 0;
+    }
+    > * {
+      position: relative;
+      z-index: 1;
+    }
+    &--active {
+      box-shadow: 0 0 0 1px dashed rgb(var(--primary-5));
+    }
+  }
+  .case-result-btn {
+    @apply inline-flex items-center;
+
+    padding: 0 14px;
+    height: 32px;
+    font-size: 13px;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    background: #ffffff;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    line-height: 1;
+    &:hover {
+      opacity: 0.9;
+    }
+    &--pass {
+      border-color: rgb(var(--success-6));
+      color: rgb(var(--success-6));
+      &.is-active {
+        color: #ffffff;
+        background: rgb(var(--success-6));
+      }
+    }
+    &--fail {
+      border-color: rgb(var(--danger-6));
+      color: rgb(var(--danger-6));
+      &.is-active {
+        color: #ffffff;
+        background: rgb(var(--danger-6));
+      }
+    }
+    &--block {
+      border-color: rgb(var(--warning-6));
+      color: rgb(var(--warning-6));
+      &.is-active {
+        color: #ffffff;
+        background: rgb(var(--warning-6));
+      }
+    }
+    &--skip {
+      border-color: var(--color-text-4);
+      color: var(--color-text-2);
+      &.is-active {
+        color: #ffffff;
+        background: var(--color-text-4);
+      }
+    }
   }
 </style>

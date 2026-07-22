@@ -7,7 +7,8 @@
     <a-divider margin="0" />
     <!-- 用 v-show 保留执行用例树/表状态，避免切到 Xmind 再回来时因 keep-alive 缓存跳过 mountedLoad 导致无数据 -->
     <div v-show="activeTab === 'execute'" class="h-full">
-      <MsSplitBox :not-show-first="isAdvancedSearchMode">
+      <!-- 高级搜索时仍展示左侧树，便于点模块退出高级搜索并刷新列表 -->
+      <MsSplitBox :not-show-first="false">
         <template #first>
           <div class="p-[16px] pb-0">
             <div class="feature-case h-[100%] min-w-0 overflow-x-hidden">
@@ -181,17 +182,25 @@
   const activeFolder = ref<string>(featureCaseStore.moduleId[0] || 'all');
   const activeFolderName = ref('');
 
-  // 选中节点
+  // 选中节点（与树 v-model 双向同步）
   const selectedKeys = computed({
     get: () => [activeFolder.value],
-    set: (val) => val,
+    set: (val) => {
+      const key = val?.[0];
+      if (key !== undefined && key !== null && String(key) !== activeFolder.value) {
+        activeFolder.value = String(key);
+      }
+    },
   });
 
   const offspringIds = ref<string[]>([]);
+  const caseTreeRef = ref();
+  const caseTableRef = ref();
 
   // 设置当前激活用例类型公共用例|全部用例|回收站
   const setActiveFolder = (type: string) => {
     activeFolder.value = type;
+    offspringIds.value = [];
     if (['public', 'all', 'recycle'].includes(type)) {
       activeCaseType.value = 'folder';
     }
@@ -200,6 +209,12 @@
         name: CaseManagementRouteEnum.CASE_MANAGEMENT_CASE_RECYCLE,
       });
     }
+    // 点「全部/回收站」时若处于高级搜索则退出并刷新
+    nextTick(() => {
+      if (caseTableRef.value?.isAdvancedSearchMode) {
+        caseTableRef.value?.exitAdvancedSearchAndRefresh?.();
+      }
+    });
   };
 
   // 获取激活用例类型样式
@@ -207,21 +222,24 @@
     return activeFolder.value === type ? 'folder-text case-active' : 'folder-text';
   };
 
-  // 处理用例树节点选中
-  function caseNodeSelect(keys: string[], _offspringIds: string[], node: MsTreeNodeData) {
-    [activeFolder.value] = keys;
-    activeCaseType.value = 'module';
-    offspringIds.value = [..._offspringIds];
-    featureCaseStore.setModuleId(keys);
-    activeFolderName.value = node?.title || node?.name;
-  }
-
   const confirmLoading = ref(false);
   const addSubVisible = ref(false);
-  const caseTreeRef = ref();
-  const caseTableRef = ref();
 
-  const isAdvancedSearchMode = computed(() => caseTableRef.value?.isAdvancedSearchMode);
+  // 处理用例树节点选中：退出高级搜索并按模块刷新列表
+  function caseNodeSelect(keys: string[], _offspringIds: string[], node: MsTreeNodeData) {
+    const nextId = keys?.[0] != null ? String(keys[0]) : '';
+    if (!nextId) return;
+    activeFolder.value = nextId;
+    activeCaseType.value = 'module';
+    offspringIds.value = [..._offspringIds];
+    featureCaseStore.setModuleId([nextId]);
+    activeFolderName.value = node?.title || node?.name;
+    nextTick(() => {
+      if (caseTableRef.value?.isAdvancedSearchMode) {
+        caseTableRef.value?.exitAdvancedSearchAndRefresh?.();
+      }
+    });
+  }
 
   // 添加子模块
   async function confirmHandler(formValue: ConfirmValue) {

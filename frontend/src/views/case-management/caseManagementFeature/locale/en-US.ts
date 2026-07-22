@@ -199,6 +199,8 @@ export default {
   'caseManagement.featureCase.stepAttachTip': 'Click or drag to upload',
   'caseManagement.featureCase.reportDefect': 'Report defect',
   'caseManagement.featureCase.dragUploadTip': 'Drag and drop or paste files here to upload',
+  'caseManagement.featureCase.autoNext': 'Auto next',
+  'caseManagement.featureCase.autoNextNeedAttachment': 'Attachment required to auto-next',
   'caseManagement.featureCase.viewAllComments': 'View all comments',
   'caseManagement.featureCase.inlineComment': 'Comments',
   'caseManagement.featureCase.share': 'share',

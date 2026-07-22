@@ -128,10 +128,14 @@
                       <div class="flex items-center">
                         <a-switch v-model:model-value="autoNext" size="small" />
                         <div class="mx-[8px]">{{ t('caseManagement.caseReview.autoNext') }}</div>
+                        <span class="mr-[8px] text-[12px] text-[var(--color-text-4)]">{{
+                          t('caseManagement.featureCase.autoNextNeedAttachment')
+                        }}</span>
                         <a-tooltip position="tr">
                           <template #content>
                             <div>{{ t('testPlan.featureCase.autoNextTip1') }}</div>
                             <div>{{ t('testPlan.featureCase.autoNextTip2') }}</div>
+                            <div>{{ t('caseManagement.featureCase.autoNextNeedAttachment') }}</div>
                           </template>
                           <icon-question-circle
                             class="text-[var(--color-text-brand)] hover:text-[rgb(var(--primary-4))]"
@@ -274,6 +278,7 @@
     getTestPlanDetail,
   } from '@/api/modules/test-plan/testPlan';
   import { testPlanDefaultDetail } from '@/config/testPlan';
+  import useFeatureCaseAutoNext from '@/hooks/useFeatureCaseAutoNext';
   import { useI18n } from '@/hooks/useI18n';
   import useOpenNewPage from '@/hooks/useOpenNewPage';
   import useAppStore from '@/store/modules/app';
@@ -487,9 +492,10 @@
       };
     });
   });
-  const autoNext = ref(true);
+  const { autoNext } = useFeatureCaseAutoNext();
   async function executeDone(status: LastExecuteResults) {
     caseDetail.value.lastExecuteResult = status;
+    // 计划执行页详情不展示功能用例「添加附件」模块，附件门禁仅功能用例详情生效；此处同步 B1 开关默认关
     if (autoNext.value) {
       // 自动下一个，更改激活的 id会刷新详情
       const index = caseList.value.findIndex((e) => e.id === activeId.value);

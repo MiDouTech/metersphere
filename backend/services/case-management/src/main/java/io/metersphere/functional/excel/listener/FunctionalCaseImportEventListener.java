@@ -11,6 +11,7 @@ import io.metersphere.functional.excel.domain.FunctionalCaseExcelDataFactory;
 import io.metersphere.functional.excel.exception.CustomFieldValidateException;
 import io.metersphere.functional.excel.validate.AbstractCustomFieldValidator;
 import io.metersphere.functional.excel.validate.CustomFieldValidatorFactory;
+import io.metersphere.functional.excel.util.CaseStepSplitUtils;
 import io.metersphere.functional.request.FunctionalCaseImportRequest;
 import io.metersphere.functional.service.FunctionalCaseModuleService;
 import io.metersphere.functional.service.FunctionalCaseService;
@@ -274,22 +275,49 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
     }
 
     /**
-     * 处理步骤描述和预期结果
-     *
-     * @param functionalCaseExcelData
+     * 处理步骤描述和预期结果：始终按规则拆分双写 steps + TEXT 全文
      */
     private void handleSteps(FunctionalCaseExcelData functionalCaseExcelData) {
+        String stepsJson = getSteps(functionalCaseExcelData);
+        functionalCaseExcelData.setSteps(stepsJson);
 
-        if (StringUtils.isNotBlank(functionalCaseExcelData.getCaseEditType()) && StringUtils.equalsIgnoreCase(functionalCaseExcelData.getCaseEditType(), FunctionalCaseTypeConstants.CaseEditType.STEP.name())) {
-            String steps = getSteps(functionalCaseExcelData);
-            functionalCaseExcelData.setSteps(steps);
-            functionalCaseExcelData.setTextDescription(StringUtils.EMPTY);
-            functionalCaseExcelData.setExpectedResult(StringUtils.EMPTY);
+        // TEXT 全文：由拆分段拼接，保留换行；若原单元格无编号且按行拆，join 后与按行一致
+        List<String> descParts;
+        List<String> resParts;
+        if (CollectionUtils.isNotEmpty(functionalCaseExcelData.getMergeTextDescription())
+                || CollectionUtils.isNotEmpty(functionalCaseExcelData.getMergeExpectedResult())) {
+            descParts = new ArrayList<>();
+            resParts = new ArrayList<>();
+            int size = Math.max(
+                    functionalCaseExcelData.getMergeTextDescription() == null ? 0 : functionalCaseExcelData.getMergeTextDescription().size(),
+                    functionalCaseExcelData.getMergeExpectedResult() == null ? 0 : functionalCaseExcelData.getMergeExpectedResult().size());
+            for (int i = 0; i < size; i++) {
+                String d = functionalCaseExcelData.getMergeTextDescription() != null && i < functionalCaseExcelData.getMergeTextDescription().size()
+                        ? functionalCaseExcelData.getMergeTextDescription().get(i) : StringUtils.EMPTY;
+                String r = functionalCaseExcelData.getMergeExpectedResult() != null && i < functionalCaseExcelData.getMergeExpectedResult().size()
+                        ? functionalCaseExcelData.getMergeExpectedResult().get(i) : StringUtils.EMPTY;
+                descParts.addAll(CaseStepSplitUtils.splitCell(d));
+                resParts.addAll(CaseStepSplitUtils.splitCell(r));
+            }
         } else {
-            functionalCaseExcelData.setTextDescription(functionalCaseExcelData.getTextDescription());
-            functionalCaseExcelData.setExpectedResult(functionalCaseExcelData.getExpectedResult());
+            descParts = CaseStepSplitUtils.splitCell(functionalCaseExcelData.getTextDescription());
+            resParts = CaseStepSplitUtils.splitCell(functionalCaseExcelData.getExpectedResult());
         }
+        // 富文本换行
+        String textDesc = CaseStepSplitUtils.joinAsText(descParts).replace("\n", "<br/>");
+        String expected = CaseStepSplitUtils.joinAsText(resParts).replace("\n", "<br/>");
+        functionalCaseExcelData.setTextDescription(textDesc);
+        functionalCaseExcelData.setExpectedResult(expected);
 
+        // 默认可拆则 STEP，否则 TEXT（仅展示默认；数据已双写）
+        if (StringUtils.isBlank(functionalCaseExcelData.getCaseEditType())) {
+            boolean multi = descParts.size() > 1 || resParts.size() > 1
+                    || (descParts.size() == 1 && StringUtils.isNotBlank(descParts.get(0)));
+            // 有内容时默认 STEP，便于详情步骤表展示
+            functionalCaseExcelData.setCaseEditType(
+                    multi ? FunctionalCaseTypeConstants.CaseEditType.STEP.name()
+                            : FunctionalCaseTypeConstants.CaseEditType.TEXT.name());
+        }
     }
 
     private String getSteps(FunctionalCaseExcelData data) {
@@ -354,20 +382,7 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
      * @return 解析后的字符文本
      */
     private List<String> parseStepCell(String cellContent) {
-        List<String> cellStepContentList = new ArrayList<>();
-        if (StringUtils.isNotEmpty(cellContent)) {
-            // 根据[1], [2]...分割步骤描述, 开头空字符去掉, 末尾保留
-            String[] cellContentArr = cellContent.split("\\[\\d+]", -1);
-            if (StringUtils.isEmpty(cellContentArr[0])) {
-                cellContentArr = Arrays.copyOfRange(cellContentArr, 1, cellContentArr.length);
-            }
-            for (String stepContent : cellContentArr) {
-                cellStepContentList.add(stepContent.replaceAll("(?m)^\\s*|\\s*$", StringUtils.EMPTY));
-            }
-        } else {
-            cellStepContentList.add(StringUtils.EMPTY);
-        }
-        return cellStepContentList;
+        return CaseStepSplitUtils.splitCell(cellContent);
     }
 
 
