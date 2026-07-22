@@ -109,10 +109,12 @@ export function convertToFile(fileInfo: AssociatedList): MsFileItem {
   const fileFormatMatch = fileName.match(/\.([a-zA-Z0-9]+)$/);
   const fileFormatType = fileFormatMatch ? fileFormatMatch[1] : 'none';
   const type = getFileEnum(fileFormatType);
+  const mimeType = type === 'image' ? `image/${fileFormatType || 'png'}` : `application/${type}`;
   const file = new File([new Blob()], `${fileName}`, {
-    type: `application/${type}`,
+    type: mimeType,
   });
   Object.defineProperty(file, 'size', { value: fileInfo.size });
+  Object.defineProperty(file, 'type', { value: mimeType });
   const { id, createUserName, createTime, local, isUpdateFlag, associationId } = fileInfo;
   return {
     enable: fileInfo.enable || false,
@@ -122,7 +124,7 @@ export function convertToFile(fileInfo: AssociatedList): MsFileItem {
     percent: 0,
     status: 'done',
     uid: id,
-    url: `${gatewayAddress}/${fileInfo.filePath || ''}`,
+    url: fileInfo.filePath ? `${gatewayAddress}/${fileInfo.filePath}` : '',
     createUserName,
     createTime,
     local: !!local,

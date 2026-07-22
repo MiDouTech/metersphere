@@ -122,7 +122,8 @@
     }
     const uploadFileId = await props.uploadImage(arg.file);
     if (uploadFileId) {
-      const permanentUrl = `${props.previewUrl}/${uploadFileId}/${true}`;
+      // compressed=false：内容区按原图展示，避免缩略图裂图/失真
+      const permanentUrl = `${props.previewUrl}/${uploadFileId}/${false}`;
       arg.process(permanentUrl, uploadFileId);
     }
   }

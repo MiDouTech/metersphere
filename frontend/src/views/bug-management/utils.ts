@@ -23,11 +23,12 @@ export function convertToFileByBug(fileInfo: AssociatedList): MsFileItem {
   const fileFormatMatch = fileName.match(/\.([a-zA-Z0-9]+)$/);
   const fileFormatType = fileFormatMatch ? fileFormatMatch[1] : 'none';
   const type = getFileEnum(fileFormatType);
+  const mimeType = type === 'image' ? `image/${fileFormatType || 'png'}` : `application/${type}`;
   const file = new File([new Blob()], `${fileName}`, {
-    type: `application/${type}`,
+    type: mimeType,
   });
   Object.defineProperty(file, 'size', { value: fileInfo.fileSize });
-  Object.defineProperty(file, 'type', { value: type });
+  Object.defineProperty(file, 'type', { value: mimeType });
   const { fileId, local, isUpdateFlag, isCopyFlag, refId, createUserName, createTime } = fileInfo;
   return {
     enable: fileInfo.enable || false,
@@ -36,7 +37,7 @@ export function convertToFileByBug(fileInfo: AssociatedList): MsFileItem {
     percent: 0,
     status: 'done',
     uid: fileId,
-    url: `${gatewayAddress}/${fileInfo.filePath || ''}`,
+    url: fileInfo.filePath ? `${gatewayAddress}/${fileInfo.filePath}` : '',
     local,
     deleteContent: !local ? 'caseManagement.featureCase.cancelLink' : '',
     isUpdateFlag,

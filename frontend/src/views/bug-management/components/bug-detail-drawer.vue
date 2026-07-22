@@ -294,8 +294,9 @@
           }
         }
         let fieldType = item.type;
+        // 状态：按钮触发的下拉选择（SELECT）
         if (item.fieldId === 'status') {
-          fieldType = 'RADIO';
+          fieldType = 'SELECT';
         } else if (item.fieldId === 'handleUser') {
           fieldType = 'MULTIPLE_MEMBER';
         }
@@ -307,13 +308,18 @@
           options: initOptions,
           required: item.required as boolean,
           platformPlaceHolder: item.platformPlaceHolder,
-          // status 使用按钮样式单选（ms-form-create：RADIO + control 触发 type=button）
-          control: item.fieldId === 'status' ? [{ value: '__status_btn__', rule: [] }] : undefined,
           props: {
             modelValue: initValue,
             options: initOptions,
             disabled: !hasAnyPermission(['PROJECT_BUG:READ+UPDATE']),
             multiple: item.fieldId === 'handleUser' ? true : undefined,
+            ...(item.fieldId === 'status'
+              ? {
+                  allowClear: false,
+                  allowSearch: false,
+                  selectClass: 'bug-status-select',
+                }
+              : {}),
           },
         };
       });

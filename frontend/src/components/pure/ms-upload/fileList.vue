@@ -29,8 +29,21 @@
         >
           <a-list-item-meta>
             <template #avatar>
-              <a-avatar shape="square" class="rounded-[var(--border-radius-mini)] bg-[var(--color-text-n9)]">
-                <a-image v-if="item.file.type.includes('image/')" :src="item.url" width="40" height="40" hide-footer />
+              <a-avatar
+                shape="square"
+                class="cursor-pointer rounded-[var(--border-radius-mini)] bg-[var(--color-text-n9)]"
+                @click="isImageFile(item) ? handlePreview(item) : undefined"
+              >
+                <a-image
+                  v-if="isImageFile(item) && getThumbSrc(item)"
+                  :src="getThumbSrc(item)"
+                  width="40"
+                  height="40"
+                  fit="cover"
+                  hide-footer
+                  :preview="false"
+                  @click.stop="handlePreview(item)"
+                />
                 <MsIcon v-else :type="getFileIcon(item)" size="24" :class="'text-[var(--color-text-4)]'" />
               </a-avatar>
             </template>
@@ -54,7 +67,7 @@
                 <div v-if="props.buttonInTitle" class="ml-auto flex items-center font-normal">
                   <slot name="titleAction" :item="item">
                     <MsButton
-                      v-if="item.file.type.includes('image/')"
+                      v-if="isImageFile(item)"
                       type="button"
                       status="primary"
                       class="!mr-0"
@@ -62,7 +75,7 @@
                     >
                       {{ t('ms.upload.preview') }}
                     </MsButton>
-                    <a-divider v-if="item.file.type.includes('image/')" direction="vertical" />
+                    <a-divider v-if="isImageFile(item)" direction="vertical" />
                     <MsButton
                       v-if="item.status === UploadStatus.error"
                       type="button"
@@ -135,7 +148,7 @@
           <template v-if="!props.buttonInTitle" #actions>
             <div class="flex items-center">
               <MsButton
-                v-if="item.file.type.includes('image/')"
+                v-if="isImageFile(item)"
                 type="button"
                 status="primary"
                 class="!mr-0"
@@ -143,7 +156,7 @@
               >
                 {{ t('ms.upload.preview') }}
               </MsButton>
-              <a-divider v-if="item.file.type.includes('image/')" direction="vertical" />
+              <a-divider v-if="isImageFile(item)" direction="vertical" />
               <MsButton
                 v-if="item.status === UploadStatus.error"
                 type="button"
@@ -222,6 +235,8 @@
       handleReupload?: (item: MsFileItem) => void;
       showDelete?: boolean; // 是否展示删除按钮
       handleView?: (item: MsFileItem) => void; // 是否自定义预览
+      /** 加载图片缩略图（需鉴权时由业务侧拉 blob URL） */
+      getThumbnail?: (item: MsFileItem) => Promise<string>;
       showUploadTypeDesc?: boolean; // 自定义上传类型关联于&上传于
       initFileSaveTips?: string; // 上传初始文件时的提示
       buttonInTitle?: boolean; // 按钮是否在标题中
@@ -247,6 +262,42 @@
   const asyncTaskStore = useAsyncTaskStore();
   const { t } = useI18n();
 
+  /** 兼容 file.type 为 image / image/png / application/image 等 */
+  function isImageFile(item: MsFileItem) {
+    const mime = item.file?.type || '';
+    if (mime.includes('image')) return true;
+    const name = item.name || item.file?.name || '';
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
+  }
+
+  const thumbSrcMap = ref<Record<string, string>>({});
+
+  function getThumbSrc(item: MsFileItem) {
+    return thumbSrcMap.value[item.uid] || item.url || '';
+  }
+
+  async function loadThumbnails(list: MsFileItem[]) {
+    await Promise.all(
+      list.filter(isImageFile).map(async (item) => {
+        if (thumbSrcMap.value[item.uid]) return;
+        if (typeof props.getThumbnail === 'function') {
+          try {
+            const src = await props.getThumbnail(item);
+            if (src) {
+              thumbSrcMap.value = { ...thumbSrcMap.value, [item.uid]: src };
+            }
+          } catch {
+            // ignore
+          }
+          return;
+        }
+        if (item.url) {
+          thumbSrcMap.value = { ...thumbSrcMap.value, [item.uid]: item.url };
+        }
+      })
+    );
+  }
+
   const fileListTab = ref('all');
   const innerFileList = ref<MsFileItem[]>(props.fileList);
 
@@ -262,7 +313,9 @@
         }
         return 0; // 保持原始顺序
       });
-    }
+      loadThumbnails(innerFileList.value);
+    },
+    { immediate: true }
   );
 
   watch(
@@ -345,7 +398,9 @@
   const previewCurrent = ref(0);
 
   const previewList = computed(() => {
-    return innerFileList.value.filter((item: any) => item.file?.type.includes('image/')).map((item: any) => item.url);
+    return innerFileList.value
+      .filter((item: any) => isImageFile(item))
+      .map((item: any) => getThumbSrc(item) || item.url);
   });
 
   function handlePreview(item: MsFileItem) {

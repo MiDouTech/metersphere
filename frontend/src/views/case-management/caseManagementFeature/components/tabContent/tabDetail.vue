@@ -169,6 +169,8 @@
             projectId: currentProjectId,
           }"
           :upload-func="uploadOrAssociationFile"
+          :handle-view="handlePreview"
+          :get-thumbnail="getAttachmentThumbnail"
           :show-delete="false"
           @finish="uploadFileOver"
         >
@@ -326,6 +328,8 @@
           projectId: currentProjectId,
         }"
         :upload-func="uploadOrAssociationFile"
+        :handle-view="handlePreview"
+        :get-thumbnail="getAttachmentThumbnail"
         :show-delete="false"
         @finish="uploadFileOver"
       >
@@ -989,6 +993,19 @@
     } catch (error) {
       console.log(error);
     }
+  }
+
+  async function getAttachmentThumbnail(item: MsFileItem) {
+    if (item.status === 'init') {
+      return item.url || '';
+    }
+    const res = await previewFile({
+      projectId: currentProjectId.value,
+      caseId: detailForm.value.id,
+      fileId: item.uid,
+      local: item.local,
+    });
+    return URL.createObjectURL(new Blob([res], { type: item.file?.type || 'image/png' }));
   }
 
   async function restartUpload() {
