@@ -37,6 +37,12 @@
                 <property name="column" value="${tablePrefix}.update_user"/>
             </include>
         </if>
+        <if test="condition.name == 'executeUser'">
+            <include refid="io.metersphere.system.mapper.BaseMapper.condition">
+                <property name="condition" value="condition"/>
+                <property name="column" value="${tablePrefix}.execute_user"/>
+            </include>
+        </if>
         <if test="condition.name == 'updateTime'">
             <include refid="io.metersphere.system.mapper.BaseMapper.condition">
                 <property name="condition" value="condition"/>

@@ -34,7 +34,7 @@
           <span class="case-inline-label">{{ t('system.orgTemplate.precondition') }}：</span>
           <div
             v-dompurify-html="detailForm?.prerequisite || '-'"
-            class="case-inline-value markdown-body list-item-css !break-words break-all"
+            class="case-inline-value case-prerequisite-value markdown-body list-item-css !break-words break-all"
           ></div>
         </div>
       </a-form-item>
@@ -1250,6 +1250,21 @@
   .case-inline-value {
     flex: 1;
     min-width: 0;
+  }
+
+  /* 前置条件内容：黑色加粗，字号 +1 */
+  .case-prerequisite-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: #000000;
+    :deep(p),
+    :deep(span),
+    :deep(li),
+    :deep(div) {
+      font-size: inherit;
+      font-weight: inherit;
+      color: inherit;
+    }
   }
   .attachment-paste-region {
     position: relative;

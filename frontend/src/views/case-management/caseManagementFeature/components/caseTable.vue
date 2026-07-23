@@ -987,6 +987,11 @@
       type: FilterType.MEMBER,
     },
     {
+      title: 'caseManagement.featureCase.tableColumnExecutor',
+      dataIndex: 'executeUser',
+      type: FilterType.MEMBER,
+    },
+    {
       title: 'common.createTime',
       dataIndex: 'createTime',
       type: FilterType.DATE_PICKER,
