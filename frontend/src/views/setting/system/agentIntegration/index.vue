@@ -65,9 +65,15 @@
         :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
       >
         <a-select v-model="createForm.scopes">
-          <a-option value="FUNCTIONAL_ALL">FUNCTIONAL_ALL</a-option>
+          <a-option value="AGENT_ALL">AGENT_ALL（闭环全能力）</a-option>
+          <a-option value="FUNCTIONAL_ALL">FUNCTIONAL_ALL（仅读/回写）</a-option>
           <a-option value="FUNCTIONAL_READ">FUNCTIONAL_READ</a-option>
           <a-option value="FUNCTIONAL_SUBMIT">FUNCTIONAL_SUBMIT</a-option>
+          <a-option value="PROJECT_WRITE">PROJECT_WRITE</a-option>
+          <a-option value="CASE_WRITE">CASE_WRITE</a-option>
+          <a-option value="PLAN_WRITE">PLAN_WRITE</a-option>
+          <a-option value="REVIEW_WRITE">REVIEW_WRITE</a-option>
+          <a-option value="BUG_WRITE">BUG_WRITE</a-option>
         </a-select>
       </a-form-item>
     </a-form>
@@ -123,7 +129,7 @@
     name: '',
     userId: '',
     projectId: '',
-    scopes: 'FUNCTIONAL_ALL',
+    scopes: 'AGENT_ALL',
   });
 
   const columns: MsTableColumn = [
@@ -155,7 +161,7 @@
     createForm.name = '';
     createForm.userId = '';
     createForm.projectId = '';
-    createForm.scopes = 'FUNCTIONAL_ALL';
+    createForm.scopes = 'AGENT_ALL';
   }
 
   async function handleCreate() {

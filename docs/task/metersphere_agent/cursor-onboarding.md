@@ -1,7 +1,7 @@
 # MeterSphere Agent Cursor 接入指南
 
-> 关联任务：task012  
-> 前置：P0 Agent API 已部署（task001–010），MCP 包已构建（task011）
+> 关联任务：task012 / 对话闭环扩展  
+> 前置：Agent API 已部署，MCP 包已构建
 
 ---
 
@@ -9,15 +9,15 @@
 
 | 项 | 说明 |
 |----|------|
-| MeterSphere 后端 | 已启动，如 `http://localhost:8081` |
+| MeterSphere 后端 | 已启动，如 `http://localhost:8081` 或 `https://msp.ebcone.cn` |
 | Flyway | `agent_token`、`agent_exec_log` 表已迁移 |
-| Agent Token | 已创建，`scope` 含 `FUNCTIONAL_ALL` 或 `FUNCTIONAL_READ` + `FUNCTIONAL_SUBMIT` |
-| 专用测试计划 | 建议创建「Agent-功能测试-2026」，用例预先关联 |
+| Agent Token | 闭环全能力建议 `AGENT_ALL`，或按需组合 READ/SUBMIT + 各 WRITE scope |
+| 专用测试计划 | 可用对话 `create_test_plan` 创建并关联，或预先创建 |
 | Node.js | >= 18（运行 MCP Server） |
 
 ### 创建 Agent Token
 
-参考 `docs/task/fixtures/agent_integration_test_data.sql`，向 `agent_token` 表插入记录（明文 Token 仅保存一次）。
+参考 `docs/task/fixtures/agent_integration_test_data.sql`，向 `agent_token` 表插入记录（明文 Token 仅保存一次）。scopes 示例：`AGENT_ALL`。
 
 ---
 
@@ -98,15 +98,25 @@ npm start
 
 期望：`submit_functional_result` 成功；平台「测试计划 → 执行历史」可见记录。
 
+### 5.4 对话闭环（一期扩展）
+
+> 在组织 X 创建项目「Agent演示」，成员含我自己；生成 5 条登录用例并导入；创建测试计划与评审并关联；执行后回写并给失败用例提缺陷
+
+期望依次调用：`create_project` → `batch_create_functional_cases` → `create_test_plan` / `create_case_review` → search/upload/submit → `create_bug`。
+
 ---
 
 ## 6. 自然语言示例
 
 | 场景 | 示例输入 |
 |------|---------|
+| 创建项目 | 「在组织 xxx 创建项目 Demo，成员加上 userA」 |
+| 生成导入 | 「根据登录需求生成并导入 P0 用例到 Demo」 |
+| 计划/评审 | 「创建测试计划并关联刚导入的用例；再建评审」 |
 | 模块检索 | 「提取订单模块 P0 未执行用例」 |
 | 消歧 | 「提取财务相关用例」（Agent 应先 list_modules） |
-| 执行回写 | 「执行完成后把结果回写 MeterSphere」 |
+| 执行回写 | 「执行完成后把结果回写 MeterSphere，并上传截图」 |
+| 提缺陷 | 「给失败用例创建缺陷并关联」 |
 | 单条详情 | 「查看用例 1001 的详细步骤」 |
 
 ---
@@ -117,9 +127,10 @@ npm start
 |------|------|------|
 | MCP 服务未连接 | 路径或 Node 错误 | 检查 `mcp.json` 中 `args` 路径、`node -v` |
 | 401 | Token 无效 | 重新生成 Token，更新 `MS_AGENT_TOKEN` |
-| 403 submit | Scope 不足 | Token 增加 `FUNCTIONAL_SUBMIT` |
-| 缺 testPlanCaseId | 未传 testPlanId 或用例未关联计划 | 配置 `MS_TEST_PLAN_ID` 并关联用例 |
+| 403 submit/write | Scope 不足 | 增加对应 WRITE / SUBMIT 或 `AGENT_ALL` |
+| 缺 testPlanCaseId | 未传 testPlanId 或用例未关联计划 | 先 `create_test_plan` 关联或配置 `MS_TEST_PLAN_ID` |
 | 模块未命中 | 模块名不匹配 | 先 `list_modules`，用 `filters.moduleIds` |
+| 缺陷必填字段 | 模板自定义字段 | 传 `customFields` |
 | MODULE_NOT_MATCHED_KEYWORD_FALLBACK | 降级为 keyword 搜索 | 确认 `matchedModules`，必要时缩小范围 |
 
 ---
@@ -129,14 +140,16 @@ npm start
 | 规范 | 做法 |
 |------|------|
 | 模块树 | 按业务域划分：财务/、订单/、用户中心/ |
-| 标签 | 统一打 `P0`、`smoke` 等 |
+| 标签 | 统一打 `P0`、`smoke`、`agent` 等 |
 | 优先级 | 使用自定义字段 `functional_priority` |
-| 回写计划 | 固定 Agent 专用测试计划，用例预先关联 |
+| 回写计划 | 可用 Agent 创建的测试计划，或固定专用计划 |
 
 ---
 
 ## 9. 相关文档
 
 - [metersphere-mcp README](../../metersphere-mcp/README.md)
+- [对话闭环扩展方案](../../summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)
 - [curl 联调示例](./curl-examples.md)
 - [改造方案 v2.0](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md)
+- [工作流规则](../../../.cursor/rules/metersphere-agent.mdc)

@@ -2,8 +2,9 @@ package io.metersphere.functional.mapper;
 
 import io.metersphere.functional.domain.FunctionalTestReport;
 import io.metersphere.functional.dto.FunctionalTestReportBugCountDTO;
-import io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO;
+import io.metersphere.functional.dto.FunctionalTestReportOpenBugDTO;
 import io.metersphere.functional.dto.FunctionalTestReportResultCountDTO;
+import io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO;
 import io.metersphere.functional.request.FunctionalTestReportPageRequest;
 import org.apache.ibatis.annotations.Param;
 
@@ -24,4 +25,6 @@ public interface ExtFunctionalTestReportMapper {
     List<FunctionalTestReportBugCountDTO> countBugHandlerStatusByPlan(@Param("planId") String planId);
 
     List<FunctionalTestReportBugCountDTO> countBugTypeByPlan(@Param("planId") String planId);
+
+    List<FunctionalTestReportOpenBugDTO> listOpenBugsByPlan(@Param("planId") String planId);
 }

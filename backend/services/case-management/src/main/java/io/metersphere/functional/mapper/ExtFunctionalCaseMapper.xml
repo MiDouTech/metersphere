@@ -273,6 +273,11 @@
                             and functional_case.create_user in
                             <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
                         </when>
+                        <!-- 执行人 -->
+                        <when test="key=='executeUser'">
+                            and functional_case.execute_user in
+                            <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                        </when>
                         <!-- 删除人 -->
                         <when test="key=='deleteUser'">
                             and functional_case.delete_user in

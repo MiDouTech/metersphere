@@ -4,10 +4,10 @@
       "command": "node",
       "args": ["metersphere-mcp/dist/index.js"],
       "env": {
-        "MS_BASE_URL": "http://localhost:8081",
+        "MS_BASE_URL": "https://msp.ebcone.cn",
         "MS_AGENT_TOKEN": "msat_replace_with_your_token",
         "MS_PROJECT_ID": "your-project-id",
-        "MS_TEST_PLAN_ID": "agent-plan-2026"
+        "MS_TEST_PLAN_ID": "optional-plan-id"
       }
     }
   }

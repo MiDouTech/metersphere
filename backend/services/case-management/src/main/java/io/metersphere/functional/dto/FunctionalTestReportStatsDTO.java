@@ -21,6 +21,9 @@ public class FunctionalTestReportStatsDTO {
     @Schema(description = "遗留风险用例（失败/阻塞）")
     private List<FunctionalTestReportRiskCaseDTO> riskCases = new ArrayList<>();
 
+    @Schema(description = "未关闭缺陷")
+    private List<FunctionalTestReportOpenBugDTO> openBugs = new ArrayList<>();
+
     @Schema(description = "通过率公式说明")
     private String passRateFormulaNote;
 

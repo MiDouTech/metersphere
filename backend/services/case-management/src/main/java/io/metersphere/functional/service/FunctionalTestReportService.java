@@ -3,6 +3,7 @@ package io.metersphere.functional.service;
 import io.metersphere.functional.domain.FunctionalTestReport;
 import io.metersphere.functional.dto.FunctionalTestReportBugCountDTO;
 import io.metersphere.functional.dto.FunctionalTestReportDTO;
+import io.metersphere.functional.dto.FunctionalTestReportOpenBugDTO;
 import io.metersphere.functional.dto.FunctionalTestReportResultCountDTO;
 import io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO;
 import io.metersphere.functional.dto.FunctionalTestReportStatsDTO;
@@ -15,6 +16,8 @@ import io.metersphere.sdk.constants.ResultStatus;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.sdk.util.Translator;
+import io.metersphere.system.domain.User;
+import io.metersphere.system.mapper.UserMapper;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
@@ -31,19 +34,25 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class FunctionalTestReportService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter FOOTER_DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final String PASS_RATE_FORMULA_NOTE =
             "passRate = pass / (total - block - fail) * 100%; denominator 0 => '-'";
+    private static final String DEFAULT_CONCLUSION = "测试通过";
+    private static final String DEFAULT_EMPTY = "无";
 
     @Resource
     private FunctionalTestReportMapper functionalTestReportMapper;
     @Resource
     private ExtFunctionalTestReportMapper extFunctionalTestReportMapper;
+    @Resource
+    private UserMapper userMapper;
 
     public List<FunctionalTestReportDTO> list(FunctionalTestReportPageRequest request) {
         List<FunctionalTestReport> reports = extFunctionalTestReportMapper.list(request);
@@ -77,7 +86,7 @@ public class FunctionalTestReportService {
         report.setProjectId(request.getProjectId());
         report.setName(name);
         report.setPlanId(request.getPlanId());
-        report.setContent(JSON.toJSONString(buildDefaultContent(stats.getExec())));
+        report.setContent(JSON.toJSONString(buildDefaultContent(stats, resolveUserName(userId))));
         report.setStatsSnapshot(JSON.toJSONString(stats));
         report.setCreateTime(now);
         report.setUpdateTime(now);
@@ -129,6 +138,7 @@ public class FunctionalTestReportService {
         }
         List<FunctionalTestReportResultCountDTO> counts = extFunctionalTestReportMapper.countExecByPlan(planId);
         List<FunctionalTestReportRiskCaseDTO> riskCases = extFunctionalTestReportMapper.listRiskCasesByPlan(planId);
+        List<FunctionalTestReportOpenBugDTO> openBugs = extFunctionalTestReportMapper.listOpenBugsByPlan(planId);
 
         long pass = 0;
         long fail = 0;
@@ -156,7 +166,6 @@ public class FunctionalTestReportService {
         exec.setFail(fail);
         exec.setBlock(block);
         exec.setExecRate(formatRate(pass + fail + block, total));
-        // 产品公式：pass / (total - block - fail)；分母 0 → "-"
         exec.setPassRate(formatRate(pass, total - block - fail));
 
         FunctionalTestReportStatsDTO stats = new FunctionalTestReportStatsDTO();
@@ -164,6 +173,7 @@ public class FunctionalTestReportService {
         stats.setBugHandlerStatus(buildBugHandlerStatusRows(planId));
         stats.setBugType(buildBugTypeRows(planId));
         stats.setRiskCases(riskCases == null ? new ArrayList<>() : riskCases);
+        stats.setOpenBugs(openBugs == null ? new ArrayList<>() : openBugs);
         stats.setPassRateFormulaNote(PASS_RATE_FORMULA_NOTE);
         stats.setBugTypeMessage(null);
         return stats;
@@ -204,7 +214,7 @@ public class FunctionalTestReportService {
         return result;
     }
 
-    private Map<String, Object> buildDefaultContent(FunctionalTestReportStatsDTO.ExecStats exec) {
+    private Map<String, Object> buildDefaultContent(FunctionalTestReportStatsDTO stats, String authorName) {
         Map<String, Object> content = new LinkedHashMap<>();
         content.put("versionOverview", new LinkedHashMap<>());
 
@@ -213,13 +223,54 @@ public class FunctionalTestReportService {
         content.put("testScope", testScope);
 
         Map<String, Object> conclusion = new LinkedHashMap<>();
-        conclusion.put("result", "");
-        conclusion.put("suggestion", "");
+        conclusion.put("result", DEFAULT_CONCLUSION);
+        conclusion.put("suggestion", DEFAULT_EMPTY);
         content.put("conclusion", conclusion);
 
-        content.put("riskNote", "");
-        content.put("execStats", execToMap(exec));
+        content.put("riskNote", buildDefaultRiskNote(stats));
+        content.put("execStats", execToMap(stats == null ? null : stats.getExec()));
+
+        Map<String, Object> footer = new LinkedHashMap<>();
+        footer.put("author", StringUtils.defaultIfBlank(authorName, SessionUtils.getUserId()));
+        footer.put("date", LocalDate.now().format(FOOTER_DATE_FMT));
+        content.put("footer", footer);
         return content;
+    }
+
+    private String buildDefaultRiskNote(FunctionalTestReportStatsDTO stats) {
+        boolean noRiskCases = stats == null || CollectionUtils.isEmpty(stats.getRiskCases());
+        boolean noOpenBugs = stats == null || CollectionUtils.isEmpty(stats.getOpenBugs());
+        if (noRiskCases && noOpenBugs) {
+            return DEFAULT_EMPTY;
+        }
+        StringBuilder sb = new StringBuilder();
+        if (!noRiskCases) {
+            sb.append("未通过用例：");
+            sb.append(stats.getRiskCases().stream()
+                    .map(c -> "#" + c.getNum() + " " + StringUtils.defaultString(c.getName()))
+                    .collect(Collectors.joining("；")));
+        }
+        if (!noOpenBugs) {
+            if (sb.length() > 0) {
+                sb.append('\n');
+            }
+            sb.append("未关闭缺陷：");
+            sb.append(stats.getOpenBugs().stream()
+                    .map(b -> "#" + b.getNum() + " " + StringUtils.defaultString(b.getTitle()))
+                    .collect(Collectors.joining("；")));
+        }
+        return sb.toString();
+    }
+
+    private String resolveUserName(String userId) {
+        if (StringUtils.isBlank(userId)) {
+            return "";
+        }
+        User user = userMapper.selectByPrimaryKey(userId);
+        if (user != null && StringUtils.isNotBlank(user.getName())) {
+            return user.getName();
+        }
+        return userId;
     }
 
     @SuppressWarnings("unchecked")

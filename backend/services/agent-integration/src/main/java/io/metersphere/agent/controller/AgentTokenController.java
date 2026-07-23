@@ -24,7 +24,7 @@ import java.util.List;
 
 @Tag(name = "Agent Token Management")
 @RestController
-@RequestMapping("/api/agent/token")
+@RequestMapping({"/agent/token", "/api/agent/token"})
 public class AgentTokenController {
     @Resource
     private AgentTokenManagementService agentTokenManagementService;

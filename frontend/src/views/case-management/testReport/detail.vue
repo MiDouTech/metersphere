@@ -147,6 +147,9 @@
             <div class="mb-[8px] text-[13px] text-[var(--color-text-3)]">
               {{ t('caseManagement.testReport.bugHandlerStatus') }}
             </div>
+            <div v-if="bugHandlerRows.length" class="mb-[8px] rounded border border-[var(--color-border-2)] p-[8px]">
+              <MsChart height="260px" :options="bugHandlerBarOptions" />
+            </div>
             <a-table :data="bugHandlerRows" :pagination="false" :bordered="{ cell: true }" size="small">
               <template #columns>
                 <a-table-column :title="t('caseManagement.testReport.handler')" data-index="handler" />
@@ -165,6 +168,9 @@
                 ({{ stats.bugTypeMessage }})
               </span>
             </div>
+            <div v-if="bugTypeRows.length" class="mb-[8px] rounded border border-[var(--color-border-2)] p-[8px]">
+              <MsChart height="260px" :options="bugTypePieOptions" />
+            </div>
             <a-table :data="bugTypeRows" :pagination="false" :bordered="{ cell: true }" size="small">
               <template #columns>
                 <a-table-column :title="t('caseManagement.testReport.type')" data-index="type" />
@@ -181,6 +187,9 @@
       <!-- 四、遗留问题与风险 -->
       <section class="report-section">
         <h3 class="section-title">{{ t('caseManagement.testReport.section.risk') }}</h3>
+        <div class="mb-[8px] text-[13px] text-[var(--color-text-3)]">
+          {{ t('caseManagement.testReport.riskCaseTitle') }}
+        </div>
         <a-table
           :data="stats.riskCases || []"
           :pagination="false"
@@ -199,6 +208,34 @@
           </template>
           <template #empty>
             {{ t('caseManagement.testReport.riskEmpty') }}
+          </template>
+        </a-table>
+        <div class="mb-[8px] text-[13px] text-[var(--color-text-3)]">
+          {{ t('caseManagement.testReport.openBug.title') }}
+        </div>
+        <a-table
+          :data="stats.openBugs || []"
+          :pagination="false"
+          :bordered="{ cell: true }"
+          size="small"
+          class="mb-[12px]"
+        >
+          <template #columns>
+            <a-table-column :title="t('caseManagement.testReport.openBug.num')" data-index="num" :width="120" />
+            <a-table-column :title="t('caseManagement.testReport.openBug.name')" data-index="title" />
+            <a-table-column
+              :title="t('caseManagement.testReport.openBug.status')"
+              data-index="statusName"
+              :width="120"
+            />
+            <a-table-column
+              :title="t('caseManagement.testReport.openBug.handler')"
+              data-index="handleUserName"
+              :width="140"
+            />
+          </template>
+          <template #empty>
+            {{ t('caseManagement.testReport.openBugEmpty') }}
           </template>
         </a-table>
         <div class="mb-[8px] text-[13px] text-[var(--color-text-3)]">
@@ -265,6 +302,7 @@
   import { Message } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
+  import MsChart from '@/components/pure/chart/index.vue';
   import MsButton from '@/components/pure/ms-button/index.vue';
   import MsCard from '@/components/pure/ms-card/index.vue';
 
@@ -331,6 +369,7 @@
     bugHandlerStatus: [],
     bugType: [],
     riskCases: [],
+    openBugs: [],
   });
 
   const stats = ref<TestReportStats>(defaultStats());
@@ -363,6 +402,58 @@
       type: item.type || item.name || item.label || '-',
       count: item.count ?? item.value ?? 0,
     })) as any[];
+  });
+
+  const chartColors = ['#3370FF', '#F77234', '#00B42A', '#F53F3F', '#811FA3', '#14C9C9', '#FADC19', '#D91AD9'];
+
+  const bugHandlerBarOptions = computed(() => {
+    const rows = bugHandlerRows.value;
+    const handlers = [...new Set(rows.map((r) => r.handler))];
+    const statuses = [...new Set(rows.map((r) => r.status))];
+    const series = statuses.map((status, idx) => ({
+      name: status,
+      type: 'bar',
+      stack: 'total',
+      barMaxWidth: 36,
+      itemStyle: { color: chartColors[idx % chartColors.length] },
+      data: handlers.map((handler) => {
+        const hit = rows.find((r) => r.handler === handler && r.status === status);
+        return hit ? Number(hit.count) || 0 : 0;
+      }),
+    }));
+    return {
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { type: 'scroll', bottom: 0 },
+      grid: { left: 40, right: 16, top: 24, bottom: 48 },
+      xAxis: {
+        type: 'category',
+        data: handlers,
+        axisLabel: { interval: 0, rotate: handlers.length > 4 ? 30 : 0 },
+      },
+      yAxis: { type: 'value', minInterval: 1 },
+      series,
+    };
+  });
+
+  const bugTypePieOptions = computed(() => {
+    const data = bugTypeRows.value.map((r, idx) => ({
+      name: r.type,
+      value: Number(r.count) || 0,
+      itemStyle: { color: chartColors[idx % chartColors.length] },
+    }));
+    return {
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { type: 'scroll', bottom: 0 },
+      series: [
+        {
+          type: 'pie',
+          radius: ['35%', '65%'],
+          center: ['50%', '45%'],
+          data,
+          label: { formatter: '{b}\n{c}' },
+        },
+      ],
+    };
   });
 
   function parseJson<T>(raw: string | undefined | null, fallback: T): T {
@@ -418,7 +509,7 @@
     form.riskNote = content.riskNote || '';
     form.conclusionResult = content.conclusion?.result || '';
     form.conclusionSuggestion = content.conclusion?.suggestion || '';
-    form.author = content.footer?.author || report.createUser || userStore.name || '';
+    form.author = content.footer?.author || userStore.name || report.createUser || '';
     form.date = content.footer?.date || dayjs(report.createTime || undefined).format('YYYY-MM-DD');
     const snapshot = parseJson<Partial<TestReportStats>>(report.statsSnapshot, {});
     stats.value = {

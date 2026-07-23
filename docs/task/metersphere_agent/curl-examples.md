@@ -105,7 +105,92 @@ curl -X POST "$MS_BASE_URL/api/agent/v1/functional/submit" \
 
 ---
 
-## 6. OpenAPI Spec
+## 6. 创建项目（需 PROJECT_WRITE）
+
+```bash
+curl -X POST "$MS_BASE_URL/api/agent/v1/project/create" \
+  -H "Authorization: Bearer $MS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"organizationId\": \"$MS_ORG\",
+    \"name\": \"Agent-Demo\",
+    \"userIds\": [\"admin\"]
+  }"
+```
+
+---
+
+## 7. 批量导入用例（需 CASE_WRITE）
+
+```bash
+curl -X POST "$MS_BASE_URL/api/agent/v1/functional/case/batch-create" \
+  -H "Authorization: Bearer $MS_TOKEN" \
+  -H "X-MS-PROJECT: $MS_PROJECT" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"projectId\": \"$MS_PROJECT\",
+    \"modulePath\": \"登录/短信登录\",
+    \"cases\": [{
+      \"name\": \"短信登录成功\",
+      \"priority\": \"P0\",
+      \"steps\": [{\"num\": 1, \"desc\": \"输入手机号\", \"expected\": \"发送成功\"}]
+    }]
+  }"
+```
+
+---
+
+## 8. 创建测试计划并关联（需 PLAN_WRITE）
+
+```bash
+curl -X POST "$MS_BASE_URL/api/agent/v1/test-plan/create" \
+  -H "Authorization: Bearer $MS_TOKEN" \
+  -H "X-MS-PROJECT: $MS_PROJECT" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"projectId\": \"$MS_PROJECT\",
+    \"name\": \"Agent计划\",
+    \"caseIds\": [\"case-id-1\"]
+  }"
+```
+
+---
+
+## 9. 创建评审（需 REVIEW_WRITE）
+
+```bash
+curl -X POST "$MS_BASE_URL/api/agent/v1/case-review/create" \
+  -H "Authorization: Bearer $MS_TOKEN" \
+  -H "X-MS-PROJECT: $MS_PROJECT" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"projectId\": \"$MS_PROJECT\",
+    \"name\": \"Agent评审\",
+    \"caseIds\": [\"case-id-1\"]
+  }"
+```
+
+---
+
+## 10. 创建缺陷（需 BUG_WRITE）
+
+```bash
+curl -X POST "$MS_BASE_URL/api/agent/v1/bug/create" \
+  -H "Authorization: Bearer $MS_TOKEN" \
+  -H "X-MS-PROJECT: $MS_PROJECT" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"projectId\": \"$MS_PROJECT\",
+    \"title\": \"登录失败\",
+    \"description\": \"实际：报错；期望：成功\",
+    \"caseId\": \"case-id-1\",
+    \"caseType\": \"FUNCTIONAL\"
+  }"
+```
+
+---
+
+## 11. OpenAPI Spec
 
 ```bash
 curl "$MS_BASE_URL/v3/api-docs/agent"
@@ -113,11 +198,12 @@ curl "$MS_BASE_URL/v3/api-docs/agent"
 
 ---
 
-## 7. 常见错误
+## 12. 常见错误
 
 | HTTP | 原因 | 处理 |
 |------|------|------|
 | 401 | Token 无效/过期 | 检查 Authorization |
-| 403 | Scope 不足 | submit 需 FUNCTIONAL_SUBMIT |
+| 403 | Scope 不足 | 对应 WRITE/SUBMIT 或 AGENT_ALL |
 | 400 | 缺 X-MS-PROJECT | 添加 Header 或 Token 绑定默认项目 |
 | 400 | testPlanCaseId 错误 | 先 search 获取正确 ID |
+| 400 | 缺陷必填字段 | 传 customFields |

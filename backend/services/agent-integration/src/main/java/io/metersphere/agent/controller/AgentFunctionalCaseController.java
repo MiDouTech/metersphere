@@ -12,21 +12,17 @@ import io.metersphere.agent.dto.AgentCaseSubmitRequest;
 import io.metersphere.agent.dto.AgentExecLogDTO;
 import io.metersphere.agent.dto.AgentExecLogPageRequest;
 import io.metersphere.agent.dto.AgentModuleDTO;
-import io.metersphere.agent.security.AgentTokenContext;
+import io.metersphere.agent.security.AgentScopeAssert;
 import io.metersphere.agent.service.AgentAttachmentService;
 import io.metersphere.agent.service.AgentBatchSubmitService;
 import io.metersphere.agent.service.AgentExecLogService;
 import io.metersphere.agent.service.AgentFunctionalCaseSearchService;
 import io.metersphere.agent.service.AgentFunctionalCaseSubmitService;
-import io.metersphere.system.domain.AgentToken;
 import io.metersphere.system.utils.Pager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import io.metersphere.sdk.exception.MSException;
-import io.metersphere.system.controller.handler.result.MsHttpResultCode;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,7 +37,7 @@ import java.util.List;
 
 @Tag(name = "Agent Functional Case")
 @RestController
-@RequestMapping("/api/agent/v1/functional")
+@RequestMapping({"/agent/v1/functional", "/api/agent/v1/functional"})
 public class AgentFunctionalCaseController {
     @Resource
     private AgentFunctionalCaseSearchService agentFunctionalCaseSearchService;
@@ -63,7 +59,7 @@ public class AgentFunctionalCaseController {
     @PostMapping("/search")
     @Operation(summary = "检索功能用例")
     public AgentCaseSearchResponse search(@RequestBody AgentCaseSearchRequest request) {
-        assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
         return agentFunctionalCaseSearchService.search(request);
     }
 
@@ -72,42 +68,42 @@ public class AgentFunctionalCaseController {
     public AgentCaseDTO get(@PathVariable String caseId,
                             @RequestParam(defaultValue = "true") boolean includeSteps,
                             @RequestParam(required = false) String testPlanId) {
-        assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
         return agentFunctionalCaseSearchService.getById(caseId, includeSteps, testPlanId);
     }
 
     @GetMapping("/modules")
     @Operation(summary = "模块列表")
     public List<AgentModuleDTO> modules(@RequestParam String projectId) {
-        assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
         return agentFunctionalCaseSearchService.listModules(projectId);
     }
 
     @PostMapping("/submit")
     @Operation(summary = "回写执行结果")
     public void submit(@RequestBody @Valid AgentCaseSubmitRequest request) {
-        assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
         agentFunctionalCaseSubmitService.submit(request);
     }
 
     @PostMapping("/submit/batch")
     @Operation(summary = "批量回写执行结果")
     public AgentBatchSubmitResponse batchSubmit(@RequestBody @Valid AgentBatchSubmitRequest request) {
-        assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
         return agentBatchSubmitService.batchSubmit(request);
     }
 
     @GetMapping("/exec-log/page")
     @Operation(summary = "审计日志分页")
     public Pager<List<AgentExecLogDTO>> execLogPage(AgentExecLogPageRequest request) {
-        assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
         return agentExecLogService.page(request);
     }
 
     @GetMapping("/exec-log/{id}")
     @Operation(summary = "审计日志详情")
     public AgentExecLogDTO execLogDetail(@PathVariable String id) {
-        assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
         return agentExecLogService.get(id);
     }
 
@@ -116,7 +112,7 @@ public class AgentFunctionalCaseController {
     public AgentAttachmentUploadResponse uploadAttachment(@RequestParam("file") MultipartFile file,
                                                           @RequestParam String projectId,
                                                           @RequestParam(required = false) Integer stepNum) {
-        assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
         return agentAttachmentService.upload(file, projectId, stepNum);
     }
 
@@ -124,27 +120,14 @@ public class AgentFunctionalCaseController {
     @Operation(summary = "获取附件信息")
     public AgentAttachmentDTO getAttachment(@PathVariable String id,
                                             @RequestParam(required = false) String projectId) {
-        assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
         return agentAttachmentService.get(id);
     }
 
     @GetMapping("/attachment/download/{projectId}/{fileId}")
     @Operation(summary = "下载附件")
     public ResponseEntity<byte[]> downloadAttachment(@PathVariable String projectId, @PathVariable String fileId) {
-        assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
         return agentAttachmentService.download(projectId, fileId);
-    }
-
-    private void assertScope(String requiredScope) {
-        AgentToken token = AgentTokenContext.get();
-        if (token == null || StringUtils.isBlank(token.getScopes())) {
-            return;
-        }
-        String scopes = token.getScopes();
-        if (StringUtils.contains(scopes, AgentTokenScope.FUNCTIONAL_ALL)
-                || StringUtils.contains(scopes, requiredScope)) {
-            return;
-        }
-        throw new MSException(MsHttpResultCode.FORBIDDEN, "Agent token scope 不足: " + requiredScope);
     }
 }

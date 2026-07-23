@@ -36,12 +36,21 @@ export interface TestReportRiskCase {
   lastExecResult: string;
 }
 
+export interface TestReportOpenBug {
+  bugId: string;
+  num: number;
+  title: string;
+  statusName: string;
+  handleUserName: string;
+}
+
 /** 统计快照 */
 export interface TestReportStats {
   exec: TestReportExecStats;
   bugHandlerStatus: Record<string, any>[];
   bugType: Record<string, any>[];
   riskCases: TestReportRiskCase[];
+  openBugs?: TestReportOpenBug[];
   passRateFormulaNote?: string;
   bugTypeMessage?: string;
 }

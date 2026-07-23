@@ -10,7 +10,11 @@ public class AgentOpenApiConfig {
     public GroupedOpenApi agentApi() {
         return GroupedOpenApi.builder()
                 .group("agent")
-                .pathsToMatch("/api/agent/v1/**", "/api/agent/token/**")
+                .pathsToMatch(
+                        "/agent/v1/**",
+                        "/api/agent/v1/**",
+                        "/agent/token/**",
+                        "/api/agent/token/**")
                 .build();
     }
 }

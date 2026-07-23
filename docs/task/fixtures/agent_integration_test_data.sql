@@ -1,13 +1,17 @@
 -- Agent 集成测试 Fixture
--- 明文 Token: msat_demo_token_for_local_testing_01
+-- 明文 Token: msat_demo_token_for_local_testing_01  (FUNCTIONAL_ALL，仅读/回写)
 -- 只读 Token: msat_demo_readonly_token_01
+-- 闭环写 Token: msat_demo_agent_all_token_01       (AGENT_ALL，对话闭环联调)
 --
 -- 导入方式（将 REPLACE_PROJECT_ID 替换为实际项目 ID，默认 100001100001）:
 --   Get-Content docs/task/fixtures/agent_integration_test_data.sql `
 --     -replace 'REPLACE_PROJECT_ID','100001100001' |
 --     docker exec -i ms-dev-mysql mysql -uroot -pPassword123@mysql metersphere
 --
--- 验证: .\scripts\verify-agent-api.ps1 -ProjectId 100001100001
+-- 验证:
+--   .\scripts\verify-agent-api.ps1 -ProjectId 100001100001
+--   $env:MS_AGENT_TOKEN='msat_demo_agent_all_token_01'
+--   .\scripts\verify-agent-conversation-loop.ps1 -ProjectId 100001100001 -SkipProjectCreate
 
 INSERT INTO agent_token (
     id, name, token_prefix, token_hash, user_id, project_id, scopes, enable, create_time, create_user
@@ -42,6 +46,26 @@ INSERT INTO agent_token (
     UNIX_TIMESTAMP() * 1000,
     'admin'
 ) ON DUPLICATE KEY UPDATE
+    scopes = VALUES(scopes),
+    enable = VALUES(enable);
+
+-- 对话闭环 AGENT_ALL（明文: msat_demo_agent_all_token_01）
+-- hash = SHA-256(UTF-8 plaintext) hex
+INSERT INTO agent_token (
+    id, name, token_prefix, token_hash, user_id, project_id, scopes, enable, create_time, create_user
+) VALUES (
+    'agent-token-demo-all',
+    'Local Dev Agent ALL',
+    'msat',
+    '4c36a64cf381f37e6941999f27112347500147cf817ebb4fa12ebbc5ff1859d4',
+    'admin',
+    'REPLACE_PROJECT_ID',
+    'AGENT_ALL',
+    1,
+    UNIX_TIMESTAMP() * 1000,
+    'admin'
+) ON DUPLICATE KEY UPDATE
+    token_hash = VALUES(token_hash),
     scopes = VALUES(scopes),
     enable = VALUES(enable);
 

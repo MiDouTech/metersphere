@@ -204,4 +204,159 @@ export class MeterSphereClient {
     }
     return parsed;
   }
+
+  createProject(payload: {
+    organizationId: string;
+    name: string;
+    description?: string;
+    userIds: string[];
+    moduleIds?: string[];
+    resourcePoolIds?: string[];
+    allResourcePool?: boolean;
+  }) {
+    return this.request("POST", "/api/agent/v1/project/create", payload);
+  }
+
+  addProjectMembers(payload: {
+    projectId: string;
+    userIds: string[];
+    userRoleIds?: string[];
+  }) {
+    return this.request("POST", "/api/agent/v1/project/members/add", payload);
+  }
+
+  getProject(projectId: string) {
+    return this.request("GET", `/api/agent/v1/project/${encodeURIComponent(projectId)}`);
+  }
+
+  createFunctionalModule(payload: {
+    projectId?: string;
+    name?: string;
+    parentId?: string;
+    modulePath?: string;
+  }) {
+    return this.request("POST", "/api/agent/v1/functional/module/create", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  createFunctionalCase(payload: Record<string, unknown>) {
+    return this.request("POST", "/api/agent/v1/functional/case/create", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  batchCreateFunctionalCases(payload: {
+    projectId?: string;
+    moduleId?: string;
+    modulePath?: string;
+    templateId?: string;
+    cases: Array<Record<string, unknown>>;
+    failFast?: boolean;
+  }) {
+    return this.request("POST", "/api/agent/v1/functional/case/batch-create", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  createTestPlan(payload: {
+    projectId?: string;
+    name: string;
+    description?: string;
+    moduleId?: string;
+    caseIds?: string[];
+    automaticStatusUpdate?: boolean;
+    repeatCase?: boolean;
+    passThreshold?: number;
+  }) {
+    return this.request("POST", "/api/agent/v1/test-plan/create", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  associateTestPlanCases(payload: {
+    projectId?: string;
+    testPlanId: string;
+    caseIds: string[];
+    collectionId?: string;
+  }) {
+    return this.request("POST", "/api/agent/v1/test-plan/associate-cases", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  getTestPlan(testPlanId: string) {
+    return this.request("GET", `/api/agent/v1/test-plan/${encodeURIComponent(testPlanId)}`);
+  }
+
+  createCaseReview(payload: {
+    projectId?: string;
+    name: string;
+    moduleId?: string;
+    reviewPassRule?: string;
+    reviewers?: string[];
+    description?: string;
+    caseIds?: string[];
+    tags?: string[];
+  }) {
+    return this.request("POST", "/api/agent/v1/case-review/create", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  associateCaseReviewCases(payload: {
+    projectId?: string;
+    reviewId: string;
+    caseIds: string[];
+    reviewers?: string[];
+  }) {
+    return this.request("POST", "/api/agent/v1/case-review/associate-cases", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  getCaseReview(reviewId: string) {
+    return this.request("GET", `/api/agent/v1/case-review/${encodeURIComponent(reviewId)}`);
+  }
+
+  createBug(payload: {
+    projectId?: string;
+    title: string;
+    description?: string;
+    templateId?: string;
+    tags?: string[];
+    caseId?: string;
+    caseType?: string;
+    testPlanId?: string;
+    testPlanCaseId?: string;
+    customFields?: Record<string, string>;
+  }) {
+    return this.request("POST", "/api/agent/v1/bug/create", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  relateBugCase(payload: {
+    projectId?: string;
+    bugId: string;
+    caseIds: string[];
+    caseType?: string;
+  }) {
+    return this.request("POST", "/api/agent/v1/bug/relate-case", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  getExecLog(id: string) {
+    return this.request("GET", `/api/agent/v1/functional/exec-log/${encodeURIComponent(id)}`);
+  }
 }

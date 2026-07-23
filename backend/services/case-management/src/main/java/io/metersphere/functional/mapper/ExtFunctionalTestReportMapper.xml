@@ -2,6 +2,17 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="io.metersphere.functional.mapper.ExtFunctionalTestReportMapper">
 
+    <sql id="planRelatedBug">
+        from bug_relation_case brc
+                 inner join bug b on b.id = brc.bug_id and b.deleted = 0
+        where (
+            brc.test_plan_id = #{planId}
+                or brc.case_id in (
+                select functional_case_id from test_plan_functional_case where test_plan_id = #{planId}
+            )
+            )
+    </sql>
+
     <select id="list" resultType="io.metersphere.functional.domain.FunctionalTestReport">
         select id, project_id as projectId, name, plan_id as planId, content, stats_snapshot as statsSnapshot,
                create_time as createTime, update_time as updateTime, create_user as createUser, update_user as updateUser
@@ -52,39 +63,67 @@
         limit 200
     </select>
 
-    <!-- 图1：计划关联缺陷，处理人 handleUser × 状态 -->
+    <!-- 图1：计划关联缺陷（计划ID 或计划内用例），处理人支持逗号多选 -->
     <select id="countBugHandlerStatusByPlan"
             resultType="io.metersphere.functional.dto.FunctionalTestReportBugCountDTO">
-        select ifnull(nullif(b.handle_user, ''), '-') as handleUser,
-               ifnull(u.name, ifnull(nullif(b.handle_user, ''), '-')) as handleUserName,
+        select ifnull(u.id, '-') as handleUser,
+               ifnull(u.name, '-') as handleUserName,
                ifnull(b.status, '-') as status,
                ifnull(si.name, ifnull(b.status, '-')) as statusName,
                count(distinct b.id) as count
-        from bug_relation_case brc
-                 inner join bug b on b.id = brc.bug_id and b.deleted = 0
-                 left join user u on u.id = b.handle_user
+        from (
+                 select distinct b.id, b.handle_user, b.status
+                 <include refid="planRelatedBug"/>
+             ) b
+                 left join user u on u.id is not null
+            and (
+                     u.id = b.handle_user
+                         or find_in_set(u.id, b.handle_user) > 0
+                     )
                  left join status_item si on si.id = b.status
-        where brc.test_plan_id = #{planId}
-        group by b.handle_user, u.name, b.status, si.name
+        group by u.id, u.name, b.status, si.name
         order by count desc
         limit 200
     </select>
 
-    <!-- 图2：计划关联缺陷，按自定义字段 bug_type 聚合；无值归「未分类」 -->
+    <!-- 图2：缺陷类型 bug_type；value 可能是选项值，优先取 option.text -->
     <select id="countBugTypeByPlan"
             resultType="io.metersphere.functional.dto.FunctionalTestReportBugCountDTO">
-        select ifnull(nullif(t.type_value, ''), '未分类') as type,
+        select ifnull(nullif(ifnull(cfo.text, t.type_value), ''), '未分类') as type,
                count(distinct b.id) as count
-        from bug_relation_case brc
-                 inner join bug b on b.id = brc.bug_id and b.deleted = 0
+        from (
+                 select distinct b.id
+                 <include refid="planRelatedBug"/>
+             ) b
                  left join (
-            select bcf.bug_id, bcf.value as type_value
+            select bcf.bug_id, bcf.field_id, bcf.value as type_value
             from bug_custom_field bcf
                      inner join custom_field cf on cf.id = bcf.field_id and cf.name = 'bug_type'
         ) t on t.bug_id = b.id
-        where brc.test_plan_id = #{planId}
-        group by ifnull(nullif(t.type_value, ''), '未分类')
+                 left join custom_field_option cfo on cfo.field_id = t.field_id and cfo.value = t.type_value
+        group by ifnull(nullif(ifnull(cfo.text, t.type_value), ''), '未分类')
         order by count desc
         limit 100
+    </select>
+
+    <!-- 第四节：未关闭缺陷（非 END 状态） -->
+    <select id="listOpenBugsByPlan"
+            resultType="io.metersphere.functional.dto.FunctionalTestReportOpenBugDTO">
+        select b.id as bugId,
+               b.num,
+               b.title,
+               ifnull(si.name, ifnull(b.status, '-')) as statusName,
+               ifnull(u.name, ifnull(nullif(b.handle_user, ''), '-')) as handleUserName
+        from (
+                 select distinct b.id, b.num, b.title, b.status, b.handle_user, b.update_time
+                 <include refid="planRelatedBug"/>
+                   and b.status not in (
+                     select sd.status_id from status_definition sd where sd.definition_id = 'END'
+                 )
+             ) b
+                 left join status_item si on si.id = b.status
+                 left join user u on u.id = substring_index(b.handle_user, ',', 1)
+        order by b.update_time desc
+        limit 200
     </select>
 </mapper>

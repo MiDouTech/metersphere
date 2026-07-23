@@ -1,47 +1,82 @@
 ---
-description: MeterSphere Agent 功能测试工作流 - 用例提取、执行与回写
+description: MeterSphere Agent 功能测试工作流 - 用例提取、执行与回写及对话闭环
 alwaysApply: false
 ---
 
 # MeterSphere Agent 工作流
 
-当用户提及 MeterSphere、功能用例、提取用例、执行测试、回写结果时，按以下流程操作。
+当用户提及 MeterSphere、功能用例、提取用例、执行测试、回写结果、创建项目、导入用例、测试计划、评审、缺陷时，按以下流程操作。
 
-## 1. 提取用例
+## 0. 高危确认
 
-1. 用户表述模糊（如「财务相关」「那个模块」）时，先调用 `list_modules` 展示模块列表，请用户确认。
+以下操作调用写 Tool 前，先摘要确认再执行：
+
+- 创建项目 / 添加成员
+- 批量导入用例（>5 条）
+- 批量关联计划或评审
+- 创建缺陷
+
+后续写操作优先显式传 `projectId`（创建项目返回的 id），勿依赖热改 MCP env。
+
+## 1. 创建项目并添加成员
+
+1. 确认 `organizationId`、项目名、成员 `userIds`。
+2. 调用 `create_project`。
+3. 如需追加成员，调用 `add_project_members`。
+4. 记住返回的 `projectId`，后续 Tool 均带上。
+
+## 2. Agent 生成用例并导入
+
+1. 根据需求在对话中生成结构化用例（name/priority/steps.desc/steps.expected）。
+2. 先输出摘要请用户确认。
+3. 可选 `create_functional_module`（或 batch 时传 `modulePath`）。
+4. 调用 `batch_create_functional_cases`（主路径）或 `create_functional_case`。
+5. 记录返回的 `caseId` 列表。
+
+## 3. 创建测试计划并关联
+
+1. `create_test_plan`，可同时传 `caseIds`；或创建后 `associate_test_plan_cases`。
+2. 记住 `testPlanId`；后续提取/回写需该计划。
+
+## 4. 创建评审并关联
+
+1. `create_case_review`（可带 `caseIds`/`reviewers`）。
+2. 或 `associate_case_review_cases`。
+
+## 5. 提取用例
+
+1. 用户表述模糊时，先 `list_modules` 请用户确认。
 2. 调用 `search_functional_cases`：
    - 传 `testPlanId`（环境变量 `MS_TEST_PLAN_ID` 或用户指定），确保返回 `testPlanCaseId`。
    - 模块检索：`query` 填模块名；P0 过滤：`filters: { priority: ["P0"] }`。
-3. 检查响应：
-   - `matchedBy` / `matchedModules`：确认命中范围是否符合预期。
-   - `warnings`：如有 `MODULE_NOT_MATCHED_KEYWORD_FALLBACK`，告知用户并确认是否继续。
-   - `total > 20`：先用 `includeSteps: false` 摘要确认，再按需拉详情。
+3. 检查响应：`matchedBy` / `warnings`；`total > 20` 时先摘要再拉详情。
 
-## 2. 执行前检查
+## 6. 执行前检查
 
 - 每条用例必须有 `testPlanCaseId` 才能回写计划内执行历史。
-- 若无 `testPlanCaseId`，提示用户将用例关联到 **Agent 专用测试计划** 后重试。
-- 记住每条用例的 `caseId`、`testPlanCaseId`、`step.id`（回写时需要）。
+- 若无 `testPlanCaseId`，提示用户将用例关联到测试计划后重试。
+- 记住 `caseId`、`testPlanCaseId`、`step.id`。
 
-## 3. 外部执行
+## 7. 外部执行与回写
 
 - MeterSphere 不在平台内执行 UI 自动化；在外部按 `steps` 逐步执行（Playwright 等）。
-- 逐步记录 `actualResult`，判断每步 `executeResult`（SUCCESS / ERROR / BLOCKED）。
-- 汇总 `lastExecResult`：全部 SUCCESS → SUCCESS，否则 ERROR。
+- 截图先 `upload_execution_attachment({ filePath })`，拿到附件 ID。
+- 再 `submit_functional_result`：
+  - `testPlanCaseId` 是计划关联 ID，**不是** `caseId`。
+  - `steps` 保留 search 返回的 `step.id`。
+  - `attachmentIds` 挂上一步附件 ID。
+  - `lastExecResult`：SUCCESS / ERROR / BLOCKED / FAKE_ERROR。
+  - `executedBy` 建议填 `cursor-agent`。
 
-## 4. 回写结果
+## 8. 创建缺陷并关联用例
 
-对每条已执行用例调用 `submit_functional_result`：
+- 执行失败（ERROR）后：`create_bug`，传 `caseId`（及可选 `testPlanId`/`testPlanCaseId`）、标题与现象描述。
+- 已有缺陷补关联：`relate_bug_case`。
+- 必填自定义字段报错时，按提示补 `customFields` 后重试。
 
-- `testPlanCaseId` 是计划关联 ID，**不是** `caseId`。
-- `steps` 中保留 search 返回的 `step.id`。
-- `executedBy` 建议填 `cursor-agent`。
-- `projectId` / `testPlanId` 可省略（使用 MCP 环境变量默认值）。
+## 9. 回复用户
 
-## 5. 回复用户
-
-汇总报告：总数、通过数、失败数、失败用例编号（`num`）与名称。
+汇总报告：创建/导入/关联结果；执行总数、通过数、失败数、失败用例编号与名称；缺陷 ID。
 
 ## 关键字段对照
 
@@ -56,5 +91,7 @@ alwaysApply: false
 | 现象 | 处理 |
 |------|------|
 | 401 | 检查 MCP 配置中 `MS_AGENT_TOKEN` |
-| 403 submit | Token 需要 FUNCTIONAL_SUBMIT 权限 |
+| 403 scope | Token 需对应写权限（PROJECT_WRITE / CASE_WRITE / PLAN_WRITE / REVIEW_WRITE / BUG_WRITE / FUNCTIONAL_SUBMIT）或 AGENT_ALL |
+| 缺少 testPlanCaseId | 先创建/关联测试计划 |
 | 模块未命中 | `list_modules` 后使用 `filters.moduleIds` |
+| 缺陷必填字段 | 补 `customFields` |

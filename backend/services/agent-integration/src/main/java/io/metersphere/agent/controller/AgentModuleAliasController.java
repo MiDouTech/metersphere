@@ -19,7 +19,7 @@ import java.util.List;
 
 @Tag(name = "Agent Config")
 @RestController
-@RequestMapping("/api/agent/v1/config")
+@RequestMapping({"/agent/v1/config", "/api/agent/v1/config"})
 public class AgentModuleAliasController {
     @Resource
     private AgentModuleAliasService agentModuleAliasService;

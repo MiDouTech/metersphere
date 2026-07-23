@@ -1,6 +1,5 @@
 package io.metersphere.agent.security;
 
-import io.metersphere.agent.constants.AgentTokenScope;
 import io.metersphere.system.domain.AgentToken;
 import io.metersphere.system.mapper.AgentTokenMapper;
 import jakarta.annotation.Resource;
@@ -32,9 +31,7 @@ public class AgentTokenService {
         if (token == null || StringUtils.isBlank(requiredScope)) {
             return false;
         }
-        String scopes = StringUtils.defaultString(token.getScopes());
-        return StringUtils.contains(scopes, AgentTokenScope.FUNCTIONAL_ALL)
-                || StringUtils.contains(scopes, requiredScope);
+        return AgentScopeAssert.hasScope(StringUtils.defaultString(token.getScopes()), requiredScope);
     }
 
     private String extractBearerToken(String authorization) {

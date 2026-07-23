@@ -41,6 +41,22 @@ public class AgentExecLogService {
         return log.getId();
     }
 
+    /**
+     * 高危写操作审计（复用 agent_exec_log；case_id 存资源 ID，last_exec_result 存动作码）。
+     */
+    public String audit(String action, String resourceId, String content) {
+        AgentExecLog log = new AgentExecLog();
+        log.setId(IDGenerator.nextStr());
+        log.setCaseId(StringUtils.defaultIfBlank(resourceId, "AUDIT"));
+        log.setLastExecResult(StringUtils.defaultIfBlank(action, "AUDIT"));
+        log.setExecutedBy("agent-audit");
+        log.setContent(content);
+        log.setCreateTime(System.currentTimeMillis());
+        log.setCreateUser(SessionUtils.getUserId());
+        agentExecLogMapper.insert(log);
+        return log.getId();
+    }
+
     public Pager<List<AgentExecLogDTO>> page(AgentExecLogPageRequest request) {
         long current = Math.max(request.getCurrent(), 1);
         long pageSize = Math.max(request.getPageSize(), 1);

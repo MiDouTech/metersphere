@@ -8,6 +8,20 @@ import { searchFunctionalCasesTool } from "./tools/searchFunctionalCases.js";
 import { submitFunctionalResultTool } from "./tools/submitFunctionalResult.js";
 import { submitFunctionalResultsBatchTool } from "./tools/submitFunctionalResultsBatch.js";
 import { uploadExecutionAttachmentTool } from "./tools/uploadExecutionAttachment.js";
+import { createProjectTool } from "./tools/createProject.js";
+import { addProjectMembersTool } from "./tools/addProjectMembers.js";
+import {
+  batchCreateFunctionalCasesTool,
+  createFunctionalCaseTool,
+  createFunctionalModuleTool,
+} from "./tools/caseWrite.js";
+import {
+  associateCaseReviewCasesTool,
+  associateTestPlanCasesTool,
+  createCaseReviewTool,
+  createTestPlanTool,
+} from "./tools/planReview.js";
+import { createBugTool, getExecLogTool, relateBugCaseTool } from "./tools/bugWrite.js";
 
 type ToolDef = {
   name: string;
@@ -26,6 +40,18 @@ const tools: ToolDef[] = [
   submitFunctionalResultsBatchTool,
   uploadExecutionAttachmentTool,
   listModulesTool,
+  createProjectTool,
+  addProjectMembersTool,
+  createFunctionalModuleTool,
+  createFunctionalCaseTool,
+  batchCreateFunctionalCasesTool,
+  createTestPlanTool,
+  associateTestPlanCasesTool,
+  createCaseReviewTool,
+  associateCaseReviewCasesTool,
+  createBugTool,
+  relateBugCaseTool,
+  getExecLogTool,
 ];
 
 async function main() {
@@ -34,7 +60,7 @@ async function main() {
 
   const server = new McpServer({
     name: "metersphere-mcp",
-    version: "0.1.0",
+    version: "0.2.0",
   });
 
   for (const tool of tools) {
