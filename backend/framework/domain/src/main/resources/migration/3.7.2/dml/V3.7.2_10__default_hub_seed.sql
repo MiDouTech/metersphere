@@ -8,13 +8,19 @@ SET name = '米多公司默认项目',
 WHERE id = '100001100001';
 
 -- 仅当仍无默认项目时，将组织下最早启用的未删项目标为默认（幂等兜底）
+-- 注意：MySQL 禁止 UPDATE project 同时在 WHERE 子查询直接读 project（Error 1093），须包一层派生表
 UPDATE project p
 JOIN (
   SELECT MIN(id) AS id FROM project
   WHERE organization_id = '100001' AND deleted = 0 AND enable = 1
 ) t ON p.id = t.id
-SET p.is_default = 1, p.name = IF(p.is_default = 1 OR p.id = '100001100001', '米多公司默认项目', p.name)
-WHERE NOT EXISTS (SELECT 1 FROM project WHERE is_default = 1 AND deleted = 0);
+SET p.is_default = 1,
+    p.name = IF(p.id = '100001100001', '米多公司默认项目', p.name)
+WHERE NOT EXISTS (
+  SELECT 1 FROM (
+    SELECT id FROM project WHERE is_default = 1 AND deleted = 0 LIMIT 1
+  ) already_default
+);
 
 -- 组织侧：默认项目成员自动补授的组织设置角色（不含 SYSTEM_*）
 INSERT INTO user_role (id, name, description, internal, type, create_time, update_time, create_user, scope_id)

@@ -1,0 +1,28 @@
+---
+description: Flyway 迁移防再发（版本号唯一、禁止改历史脚本、502 先查迁移）
+globs: backend/framework/domain/src/main/resources/migration/**/*.sql
+alwaysApply: false
+---
+
+# Flyway 迁移纪律（MeterSphere）
+
+> 详细归档：`docs/summary/MeterSphere-Flyway迁移故障-排障与防再发-2026-07-24.md`  
+> 新增/大改本规则需技术负责人审核。
+
+## 必须遵守
+
+1. **版本号全局唯一**：`ddl/` 与 `dml/` 共用 `V{x.y.z}_{N}` 空间，禁止撞车（历史实锤：`3.7.2.4`）。
+2. **只追加、不改史**：已进入任意环境的脚本禁止改内容/改名/改版本；修复用**下一个 N**。
+3. **取号方式**：扫描 `migration/**/V*.sql`，对同 major 取最大 `N+1`；或跑 `scripts/check-flyway-versions.ps1`。
+4. **幂等优先**：`CREATE TABLE/INDEX IF NOT EXISTS`；避免「半成功不可重跑」的裸 `DROP INDEX`。
+5. **宽列+索引**：utf8mb4 注意 Error **1071**，优先前缀索引。
+
+## 现象对照
+
+前端大面积 **502** + 登录页网络错误 → 先查后端 Flyway / `metersphere_version.success=0`，再查业务代码。
+
+## 提交前
+
+```powershell
+powershell -File scripts/check-flyway-versions.ps1
+```
