@@ -136,8 +136,9 @@ powershell -File scripts/check-flyway-versions.ps1
 | 12 | ddl | resource_edit_lock_snapshot |
 | 13 | **dml** | backfill_project_module_setting |
 | 14 | **dml** | align_hub_role_permissions（枢纽角色对齐 org_admin/project_admin） |
+| 15 | **dml** | admin_login_entry_switch（ui.login.admin.enabled 默认 false） |
 
-**下一条新迁移必须从 `15` 起**，无论放在 ddl 还是 dml。
+**下一条新迁移必须从 `16` 起**，无论放在 ddl 还是 dml。
 
 ---
 

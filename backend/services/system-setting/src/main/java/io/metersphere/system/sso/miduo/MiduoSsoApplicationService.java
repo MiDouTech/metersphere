@@ -2,6 +2,7 @@ package io.metersphere.system.sso.miduo;
 
 import io.metersphere.sdk.constants.HttpMethodConstants;
 import io.metersphere.sdk.constants.UserSource;
+import io.metersphere.system.config.AdminLoginEntryService;
 import io.metersphere.system.config.LocalLoginProperties;
 import io.metersphere.system.config.MiduoSsoProperties;
 import io.metersphere.system.domain.OrgWecomSyncConfig;
@@ -50,6 +51,8 @@ public class MiduoSsoApplicationService {
     @Resource
     private LocalLoginProperties localLoginProperties;
     @Resource
+    private AdminLoginEntryService adminLoginEntryService;
+    @Resource
     private MiduoSsoClient miduoSsoClient;
     @Resource
     private MiduoSsoStateService miduoSsoStateService;
@@ -66,6 +69,7 @@ public class MiduoSsoApplicationService {
         MiduoSsoStatusDTO dto = new MiduoSsoStatusDTO();
         dto.setEnabled(properties.isEnabled());
         dto.setLocalLoginEnabled(localLoginProperties.isEnabled());
+        dto.setAdminLoginEnabled(adminLoginEntryService.isAdminLoginEntryEnabled());
         if (!properties.isEnabled()) {
             dto.setReady(false);
             dto.setReason("DISABLED");

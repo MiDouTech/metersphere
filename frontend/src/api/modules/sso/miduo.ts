@@ -15,6 +15,8 @@ export interface MiduoSsoStatus {
   enabled: boolean;
   ready: boolean;
   localLoginEnabled: boolean;
+  /** /#/login/admin 是否开启，默认 false */
+  adminLoginEnabled?: boolean;
   reason?: string;
   message?: string;
 }

@@ -236,4 +236,6 @@ export default {
   'common.checkDetail': '查看详情',
   'common.operator': '操作人',
   'common.notNull': '{value}不能为空',
+  'base.notFound.subtitle': '网页不存在',
+  'base.notFound.back': '返回',
 };

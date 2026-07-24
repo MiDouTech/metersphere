@@ -4,6 +4,7 @@ package io.metersphere.system.security.realm;
 import io.metersphere.sdk.constants.SessionConstants;
 import io.metersphere.sdk.constants.UserSource;
 import io.metersphere.sdk.util.Translator;
+import io.metersphere.system.config.AdminLoginEntryService;
 import io.metersphere.system.config.LocalLoginProperties;
 import io.metersphere.system.dto.sdk.SessionUser;
 import io.metersphere.system.dto.user.UserDTO;
@@ -38,6 +39,8 @@ public class LocalRealm extends AuthorizingRealm {
     private UserLoginService userLoginService;
     @Resource
     private LocalLoginProperties localLoginProperties;
+    @Resource
+    private AdminLoginEntryService adminLoginEntryService;
 
     @Override
     public String getName() {
@@ -96,6 +99,9 @@ public class LocalRealm extends AuthorizingRealm {
     }
 
     private AuthenticationInfo loginLocalMode(String userId, String password) {
+        if (!adminLoginEntryService.isAdminLoginEntryEnabled()) {
+            throw new AuthenticationException(Translator.get("admin_login_entry_disabled"));
+        }
         UserDTO user = userLoginService.getUserDTO(userId);
         String msg;
         if (user == null) {

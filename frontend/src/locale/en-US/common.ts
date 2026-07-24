@@ -236,4 +236,6 @@ export default {
   'common.checkDetail': 'View details',
   'common.operator': 'Operator',
   'common.notNull': '{value} cannot be empty',
+  'base.notFound.subtitle': 'Page not found',
+  'base.notFound.back': 'Back',
 };
