@@ -64,6 +64,7 @@ public class DefaultHubCaseImportService {
     private TransactionTemplate transactionTemplate;
     @Resource
     private JdbcTemplate jdbcTemplate;
+    @Lazy
     @Resource
     private DefaultHubCaseImportService self;
 

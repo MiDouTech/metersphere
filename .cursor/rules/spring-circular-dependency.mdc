@@ -1,0 +1,38 @@
+---
+description: Spring Bean 循环依赖防再发（Hub Sync / Adapter 互注须 @Lazy）
+globs: backend/services/**/hub/**/*.java,backend/services/**/edit/**/*.java,backend/services/**/invoker/**/*.java,backend/services/**/service/*Service.java
+alwaysApply: false
+---
+
+# Spring 循环依赖纪律（MeterSphere）
+
+> 详细归档：`docs/summary/MeterSphere-Spring循环依赖-排障与防再发-2026-07-24.md`  
+> 新增/大改本规则需技术负责人审核。
+
+## 必须遵守
+
+1. **Hub Sync / ResourceEditAdapter / Invoker / Cleanup** 与核心业务 Service 互相 `@Resource` 注入时，**至少一侧加 `@Lazy`**（本仓库惯例可两侧都加）。
+2. **自注入 `self`（为 `@Async` / 事务代理）必须 `@Lazy`**，否则会出现单 Bean 自环（日志形如只列出 `defaultHubXxxService`）。
+3. **禁止**用 `spring.main.allow-circular-references=true` 绕过。
+4. 新增 `*Hub*SyncService` / `*ImportService` 注入业务 Service（或反向）前，对照已有先例：
+   - `DefaultHubCaseSyncService` / `DefaultHubCaseImportService`
+   - `FunctionalCaseResourceEditAdapter` / `BugResourceEditAdapter` / `TestPlanDocumentResourceEditAdapter`
+   - `DefaultHubPlanSyncService` ↔ `TestPlanService`（`655892adaa`）
+   - `DefaultHubPlanImportService` 的 `self` + `TestPlanService`（本规则后续提交）
+5. 合并前确认启动无 `form a cycle` / `APPLICATION FAILED TO START`。
+6. Hub 包内改完后，**扫一遍** `private Xxx self` 是否都带 `@Lazy`。
+
+## 现象对照
+
+前端大面积 **502** + 容器起不来：
+
+1. 先查 Flyway / `metersphere_version.success=0`（见 `flyway-migration` 规则）
+2. Flyway 已 up to date → 搜日志 `form a cycle` → 按本规则打断环
+
+## 最小改法示例
+
+```java
+@Lazy
+@Resource
+private XxxHubSyncService xxxHubSyncService;
+```

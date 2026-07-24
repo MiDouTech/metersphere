@@ -24,6 +24,7 @@ import io.metersphere.system.uid.NumGenerator;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -47,12 +48,14 @@ public class DefaultHubPlanImportService {
     private TestPlanConfigMapper testPlanConfigMapper;
     @Resource
     private TestPlanDocumentMapper testPlanDocumentMapper;
+    @Lazy
     @Resource
     private TestPlanService testPlanService;
     @Resource
     private TransactionTemplate transactionTemplate;
     @Resource
     private JdbcTemplate jdbcTemplate;
+    @Lazy
     @Resource
     private DefaultHubPlanImportService self;
 

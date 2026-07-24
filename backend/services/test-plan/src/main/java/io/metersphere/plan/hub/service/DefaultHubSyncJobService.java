@@ -10,6 +10,7 @@ import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.service.DefaultHubProjectService;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class DefaultHubSyncJobService {
     private DefaultHubPlanSyncService defaultHubPlanSyncService;
     @Resource
     private JdbcTemplate jdbcTemplate;
+    @Lazy
     @Resource
     private DefaultHubSyncJobService self;
 

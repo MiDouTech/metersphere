@@ -19,7 +19,8 @@ alwaysApply: false
 
 ## 现象对照
 
-前端大面积 **502** + 登录页网络错误 → 先查后端 Flyway / `metersphere_version.success=0`，再查业务代码。
+前端大面积 **502** + 登录页网络错误 → 先查后端 Flyway / `metersphere_version.success=0`。  
+若迁移已 up to date 仍 502 → 查 Spring `form a cycle`（见 `spring-circular-dependency` 规则与同日归档）。
 
 ## 提交前
 

@@ -147,7 +147,7 @@ powershell -File scripts/check-flyway-versions.ps1
 - [ ] 宽列 + 索引：优先前缀索引，避免 1071  
 - [ ] 多语句迁移：考虑失败重入；避免「半成功」不可重跑  
 - [ ] 合入后：看一次目标环境启动日志中 Flyway 段是否 `Successfully applied`  
-- [ ] 若出现 502：先查后端 Flyway，再查网关  
+- [ ] 若出现 502：先查后端 Flyway，再查网关；Flyway 正常仍 502 → 查 `form a cycle`（见循环依赖归档）  
 
 ---
 
@@ -160,6 +160,7 @@ powershell -File scripts/check-flyway-versions.ps1
 | 本次新表 | `V3.7.2_12__resource_edit_lock_snapshot.sql`（auto_save_undo） |
 | 自检脚本 | `scripts/check-flyway-versions.ps1` |
 | Cursor 规则 | `.cursor/rules/flyway-migration.mdc` |
+| 同日后续故障 | Flyway 修复后仍 502 → Spring 循环依赖，见 `MeterSphere-Spring循环依赖-排障与防再发-2026-07-24.md`（`655892adaa`） |
 
 ---
 
@@ -168,3 +169,4 @@ powershell -File scripts/check-flyway-versions.ps1
 | 日期 | 说明 |
 |------|------|
 | 2026-07-24 | 初版：结合 502 现象、历史 3.7.2.4 撞车与 1071 案例归档 |
+| 2026-07-24 | 补充：迁移恢复后仍 502 时转查循环依赖归档 |
