@@ -153,6 +153,7 @@ export const importExcelCaseUrl = '/functional/case/import/excel';
 export const importXMindCaseUrl = '/functional/case/import/xmind';
 // 从默认项目导入用例
 export const importCaseFromDefaultProjectUrl = '/functional/case/import/from-default-project';
+export const importCaseFromDefaultProjectTreeUrl = '/functional/case/import/from-default-project/tree';
 // 导出excel文件
 export const ExportExcelCaseUrl = '/functional/case/export/excel';
 // 导出XMind文件

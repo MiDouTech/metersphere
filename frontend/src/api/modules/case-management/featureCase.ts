@@ -75,6 +75,7 @@ import {
   GetThirdDemandUrl,
   getTransferTreeUrl,
   GetTrashCaseModuleTreeUrl,
+  importCaseFromDefaultProjectTreeUrl,
   importCaseFromDefaultProjectUrl,
   importExcelCaseUrl,
   importXMindCaseUrl,
@@ -477,6 +478,11 @@ export function importCaseFromDefaultProject(data: {
     url: importCaseFromDefaultProjectUrl,
     data,
   });
+}
+
+/** 默认项目导入勾选树（模块 + 用例叶子） */
+export function getDefaultHubImportTree() {
+  return MSR.get<ModuleTreeNode[]>({ url: importCaseFromDefaultProjectTreeUrl });
 }
 
 export function getDefaultHubJob(jobId: string) {

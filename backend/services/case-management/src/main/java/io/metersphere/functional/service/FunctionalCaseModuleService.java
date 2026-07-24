@@ -76,6 +76,19 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         return super.buildTreeAndCountResource(functionalModuleList, true, Translator.get("functional_case.module.default.name"));
     }
 
+    /**
+     * 默认项目导入树：不含「未规划」虚拟根节点。
+     */
+    public List<BaseTreeNode> getTreeWithoutVirtualRoot(String projectId) {
+        List<BaseTreeNode> functionalModuleList = extFunctionalCaseModuleMapper.selectBaseByProjectId(projectId);
+        functionalModuleList.forEach(baseTreeNode -> {
+            if (StringUtils.equalsIgnoreCase(baseTreeNode.getParentId(), ModuleConstants.ROOT_NODE_PARENT_ID)) {
+                baseTreeNode.setPath(baseTreeNode.getPath() + baseTreeNode.getName());
+            }
+        });
+        return super.buildTreeAndCountResource(functionalModuleList, false, null);
+    }
+
     public String add(FunctionalCaseModuleCreateRequest request, String userId) {
         FunctionalCaseModule functionalCaseModule = new FunctionalCaseModule();
         functionalCaseModule.setId(IDGenerator.nextStr());

@@ -134,8 +134,9 @@ powershell -File scripts/check-flyway-versions.ps1
 | 10 | **dml** | default_hub_seed |
 | 11 | ddl | default_hub_import_audit |
 | 12 | ddl | resource_edit_lock_snapshot |
+| 13 | **dml** | backfill_project_module_setting |
 
-**下一条新迁移必须从 `13` 起**，无论放在 ddl 还是 dml。
+**下一条新迁移必须从 `14` 起**，无论放在 ddl 还是 dml。
 
 ---
 

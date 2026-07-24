@@ -1,15 +1,21 @@
 package io.metersphere.dashboard.service;
 
 import io.metersphere.project.domain.Project;
-import io.metersphere.system.service.PermissionCheckService;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.dto.user.UserDTO;
+import io.metersphere.system.service.PermissionCheckService;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,8 +24,6 @@ public class DashboardProjectService {
 
     @Resource
     private PermissionCheckService permissionCheckService;
-
-
 
     public static final String API_TEST = "apiTest";
     public static final String TEST_PLAN = "testPlan";
@@ -34,12 +38,9 @@ public class DashboardProjectService {
      */
     public Map<String, Set<String>> getPermissionModuleProjectIds(List<Project> projects, String userId) {
         boolean isAdmin = isAdmin(userId);
-        Set<String> projectSet;
-        Map<String, String> moduleMap;
-        projectSet = projects.stream() .map(Project::getId).collect(Collectors.toCollection(LinkedHashSet::new));
-        moduleMap = projects.stream().collect(Collectors.toMap(Project::getId, Project::getModuleSetting));
+        Set<String> projectSet = projects.stream().map(Project::getId).collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<String, String> moduleMap = toModuleMap(projects);
         Map<String, Set<String>> hasModuleProjectIds = new HashMap<>();
-        Map<String, String> finalModuleMap = moduleMap;
         Set<String> searchCaseProjectIds = new LinkedHashSet<>();
         Set<String> searchReviewProjectIds = new LinkedHashSet<>();
         Set<String> searchApiProjectIds = new LinkedHashSet<>();
@@ -55,45 +56,44 @@ public class DashboardProjectService {
             Set<String> functionalProjectIds = hasUserPermissionProjectIds.get(PermissionConstants.FUNCTIONAL_CASE_READ);
             //检查是否开启功能用例模块
             if (CollectionUtils.isNotEmpty(functionalProjectIds)) {
-                //有权限
-                searchCaseProjectIds = functionalProjectIds.stream().filter(t -> finalModuleMap.get(t).contains(FUNCTIONAL_CASE)).collect(Collectors.toCollection(LinkedHashSet::new));
+                searchCaseProjectIds = filterByModule(functionalProjectIds, moduleMap, FUNCTIONAL_CASE);
             }
             Set<String> reviewProjectIds = hasUserPermissionProjectIds.get(PermissionConstants.CASE_REVIEW_READ);
             if (CollectionUtils.isNotEmpty(reviewProjectIds)) {
-                searchReviewProjectIds = reviewProjectIds.stream().filter(t -> finalModuleMap.get(t).contains(FUNCTIONAL_CASE)).collect(Collectors.toCollection(LinkedHashSet::new));
+                searchReviewProjectIds = filterByModule(reviewProjectIds, moduleMap, FUNCTIONAL_CASE);
             }
             //检查是否开启接口模块
             Set<String> apiProjectIds = hasUserPermissionProjectIds.get(PermissionConstants.PROJECT_API_DEFINITION_READ);
             if (CollectionUtils.isNotEmpty(apiProjectIds)) {
-                searchApiProjectIds = apiProjectIds.stream().filter(t -> finalModuleMap.get(t).contains(API_TEST)).collect(Collectors.toCollection(LinkedHashSet::new));
+                searchApiProjectIds = filterByModule(apiProjectIds, moduleMap, API_TEST);
             }
             Set<String> apiCaseProjectIds = hasUserPermissionProjectIds.get(PermissionConstants.PROJECT_API_DEFINITION_CASE_READ);
             if (CollectionUtils.isNotEmpty(apiCaseProjectIds)) {
-                searchApiCaseProjectIds = apiCaseProjectIds.stream().filter(t -> finalModuleMap.get(t).contains(API_TEST)).collect(Collectors.toCollection(LinkedHashSet::new));
+                searchApiCaseProjectIds = filterByModule(apiCaseProjectIds, moduleMap, API_TEST);
             }
             Set<String> scenarioProjectIds = hasUserPermissionProjectIds.get(PermissionConstants.PROJECT_API_SCENARIO_READ);
             if (CollectionUtils.isNotEmpty(scenarioProjectIds)) {
-                searchScenarioProjectIds = scenarioProjectIds.stream().filter(t -> finalModuleMap.get(t).contains(API_TEST)).collect(Collectors.toCollection(LinkedHashSet::new));
+                searchScenarioProjectIds = filterByModule(scenarioProjectIds, moduleMap, API_TEST);
             }
             //检查是否开启测试计划模块
             Set<String> planProjectIds = hasUserPermissionProjectIds.get(PermissionConstants.TEST_PLAN_READ);
             if (CollectionUtils.isNotEmpty(planProjectIds)) {
-                searchPlanProjectIds = planProjectIds.stream().filter(t -> finalModuleMap.get(t).contains(TEST_PLAN)).collect(Collectors.toCollection(LinkedHashSet::new));
+                searchPlanProjectIds = filterByModule(planProjectIds, moduleMap, TEST_PLAN);
             }
             //检查是否开启缺陷模块
             Set<String> bugProjectIds = hasUserPermissionProjectIds.get(PermissionConstants.PROJECT_BUG_READ);
             if (CollectionUtils.isNotEmpty(bugProjectIds)) {
-                searchBugProjectIds = bugProjectIds.stream().filter(t -> finalModuleMap.get(t).contains(BUG)).collect(Collectors.toCollection(LinkedHashSet::new));
+                searchBugProjectIds = filterByModule(bugProjectIds, moduleMap, BUG);
             }
         } else {
             //查出这些项目分别有模块的
-            searchCaseProjectIds = projectSet.stream().filter(t -> finalModuleMap.get(t).contains(FUNCTIONAL_CASE)).collect(Collectors.toCollection(LinkedHashSet::new));
-            searchReviewProjectIds = projectSet.stream().filter(t -> finalModuleMap.get(t).contains(FUNCTIONAL_CASE)).collect(Collectors.toCollection(LinkedHashSet::new));
-            searchApiProjectIds = projectSet.stream().filter(t -> finalModuleMap.get(t).contains(API_TEST)).collect(Collectors.toCollection(LinkedHashSet::new));
-            searchApiCaseProjectIds = projectSet.stream().filter(t -> finalModuleMap.get(t).contains(API_TEST)).collect(Collectors.toCollection(LinkedHashSet::new));
-            searchScenarioProjectIds = projectSet.stream().filter(t -> finalModuleMap.get(t).contains(API_TEST)).collect(Collectors.toCollection(LinkedHashSet::new));
-            searchPlanProjectIds = projectSet.stream().filter(t -> finalModuleMap.get(t).contains(TEST_PLAN)).collect(Collectors.toCollection(LinkedHashSet::new));
-            searchBugProjectIds = projectSet.stream().filter(t -> finalModuleMap.get(t).contains(BUG)).collect(Collectors.toCollection(LinkedHashSet::new));
+            searchCaseProjectIds = filterByModule(projectSet, moduleMap, FUNCTIONAL_CASE);
+            searchReviewProjectIds = filterByModule(projectSet, moduleMap, FUNCTIONAL_CASE);
+            searchApiProjectIds = filterByModule(projectSet, moduleMap, API_TEST);
+            searchApiCaseProjectIds = filterByModule(projectSet, moduleMap, API_TEST);
+            searchScenarioProjectIds = filterByModule(projectSet, moduleMap, API_TEST);
+            searchPlanProjectIds = filterByModule(projectSet, moduleMap, TEST_PLAN);
+            searchBugProjectIds = filterByModule(projectSet, moduleMap, BUG);
         }
         //如果value 为空，则没有权限或者没开启模块
         hasModuleProjectIds.put(PermissionConstants.FUNCTIONAL_CASE_READ, searchCaseProjectIds);
@@ -114,12 +114,12 @@ public class DashboardProjectService {
      * @return 模块开启对应的项目ids
      */
     public Map<String, Set<String>> getModuleProjectIds(List<Project> userProject) {
-        Map<String, String> moduleMap = userProject.stream().collect(Collectors.toMap(Project::getId, Project::getModuleSetting));
+        Map<String, String> moduleMap = toModuleMap(userProject);
         Set<String> projectIds = userProject.stream().map(Project::getId).collect(Collectors.toCollection(LinkedHashSet::new));
-        Set<String> searchCaseProjectIds = projectIds.stream().filter(t -> moduleMap.get(t).contains(FUNCTIONAL_CASE)).collect(Collectors.toCollection(LinkedHashSet::new));
-        Set<String> searchApiProjectIds = projectIds.stream().filter(t -> moduleMap.get(t).contains(API_TEST)).collect(Collectors.toCollection(LinkedHashSet::new));
-        Set<String> searchPlanProjectIds = projectIds.stream().filter(t -> moduleMap.get(t).contains(TEST_PLAN)).collect(Collectors.toCollection(LinkedHashSet::new));
-        Set<String> searchBugProjectIds = projectIds.stream().filter(t -> moduleMap.get(t).contains(BUG)).collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<String> searchCaseProjectIds = filterByModule(projectIds, moduleMap, FUNCTIONAL_CASE);
+        Set<String> searchApiProjectIds = filterByModule(projectIds, moduleMap, API_TEST);
+        Set<String> searchPlanProjectIds = filterByModule(projectIds, moduleMap, TEST_PLAN);
+        Set<String> searchBugProjectIds = filterByModule(projectIds, moduleMap, BUG);
         Map<String, Set<String>> hasModuleProjectIds = new HashMap<>();
         hasModuleProjectIds.put(PermissionConstants.FUNCTIONAL_CASE_READ, searchCaseProjectIds);
         hasModuleProjectIds.put(PermissionConstants.CASE_REVIEW_READ, searchCaseProjectIds);
@@ -131,6 +131,25 @@ public class DashboardProjectService {
         return hasModuleProjectIds;
     }
 
+    /**
+     * Collectors.toMap 不允许 value 为 null；空 module_setting 的项目须安全跳过模块匹配。
+     */
+    private static Map<String, String> toModuleMap(List<Project> projects) {
+        Map<String, String> moduleMap = new HashMap<>();
+        if (CollectionUtils.isEmpty(projects)) {
+            return moduleMap;
+        }
+        for (Project project : projects) {
+            moduleMap.put(project.getId(), StringUtils.defaultString(project.getModuleSetting()));
+        }
+        return moduleMap;
+    }
+
+    private static Set<String> filterByModule(Set<String> projectIds, Map<String, String> moduleMap, String module) {
+        return projectIds.stream()
+                .filter(id -> StringUtils.contains(moduleMap.get(id), module))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
 
     private static Set<String> getPermissionSet() {
         Set<String> permissionSet = new HashSet<>();

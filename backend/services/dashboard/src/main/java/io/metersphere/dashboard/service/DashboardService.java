@@ -519,6 +519,9 @@ public class DashboardService {
     }
 
     private void setPlanId(LayoutDTO layoutDTO) {
+        if (layoutDTO == null || CollectionUtils.isEmpty(layoutDTO.getProjectIds())) {
+            return;
+        }
         TestPlan testPlan = testPlanMapper.selectByPrimaryKey(layoutDTO.getPlanId());
         if (testPlan == null || StringUtils.equalsIgnoreCase(testPlan.getStatus(), TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED) || !StringUtils.equalsIgnoreCase(testPlan.getProjectId(),layoutDTO.getProjectIds().getFirst())) {
             TestPlan latestPlan = extTestPlanMapper.getLatestPlan(layoutDTO.getProjectIds().getFirst());

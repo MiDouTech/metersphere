@@ -152,10 +152,26 @@ public class DefaultHubPlanSyncService {
         hub.setNum(NumGenerator.nextNum(hubProjectId, ApplicationNumScope.TEST_PLAN));
         hub.setPos(testPlanService.getNextOrder(hubProjectId, TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID));
         testPlanMapper.insert(hub);
-        TestPlanConfig config = new TestPlanConfig();
-        config.setTestPlanId(hubPlanId);
-        testPlanConfigMapper.insertSelective(config);
+        insertPlanConfig(hubPlanId, src.getId());
         return hubPlanId;
+    }
+
+    private void insertPlanConfig(String newPlanId, String sourcePlanId) {
+        TestPlanConfig source = testPlanConfigMapper.selectByPrimaryKey(sourcePlanId);
+        TestPlanConfig config = new TestPlanConfig();
+        config.setTestPlanId(newPlanId);
+        if (source != null) {
+            config.setAutomaticStatusUpdate(Boolean.TRUE.equals(source.getAutomaticStatusUpdate()));
+            config.setRepeatCase(Boolean.TRUE.equals(source.getRepeatCase()));
+            config.setPassThreshold(source.getPassThreshold() != null ? source.getPassThreshold() : 100.0);
+            config.setCaseRunMode(StringUtils.defaultIfBlank(source.getCaseRunMode(), "PARALLEL"));
+        } else {
+            config.setAutomaticStatusUpdate(false);
+            config.setRepeatCase(false);
+            config.setPassThreshold(100.0);
+            config.setCaseRunMode("PARALLEL");
+        }
+        testPlanConfigMapper.insertSelective(config);
     }
 
     private void updateHubPlan(String hubPlanId, TestPlan src, String hubModuleId, String operator) {

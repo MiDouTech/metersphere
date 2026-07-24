@@ -11,6 +11,7 @@ import io.metersphere.functional.hub.dto.DefaultHubSyncJobRow;
 import io.metersphere.functional.mapper.FunctionalCaseBlobMapper;
 import io.metersphere.functional.mapper.FunctionalCaseMapper;
 import io.metersphere.functional.service.FunctionalCaseCustomFieldService;
+import io.metersphere.functional.service.FunctionalCaseModuleService;
 import io.metersphere.functional.service.FunctionalCaseService;
 import io.metersphere.project.mapper.ExtBaseProjectVersionMapper;
 import io.metersphere.sdk.constants.ApplicationNumScope;
@@ -19,6 +20,7 @@ import io.metersphere.sdk.constants.ExecStatus;
 import io.metersphere.sdk.constants.ModuleConstants;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.LogUtils;
+import io.metersphere.system.dto.sdk.BaseTreeNode;
 import io.metersphere.system.service.DefaultHubProjectService;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.uid.NumGenerator;
@@ -33,8 +35,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -49,6 +53,9 @@ public class DefaultHubCaseImportService {
     private DefaultHubModuleResolver defaultHubModuleResolver;
     @Resource
     private DefaultHubSyncJobDao defaultHubSyncJobDao;
+    @Lazy
+    @Resource
+    private FunctionalCaseModuleService functionalCaseModuleService;
     @Resource
     private FunctionalCaseMapper functionalCaseMapper;
     @Resource
@@ -76,7 +83,9 @@ public class DefaultHubCaseImportService {
         if (StringUtils.isBlank(hubProjectId)) {
             throw new MSException("default hub project not configured");
         }
+        assertSelectModeAllowed(request.getSelectMode());
         List<String> sourceCaseIds = resolveSourceCaseIds(hubProjectId, request);
+        sourceCaseIds = filterPlannedHubCases(hubProjectId, sourceCaseIds);
         if (sourceCaseIds.size() > DefaultHubConstants.MAX_CASE_IMPORT_BATCH) {
             throw new MSException("单次导入用例不能超过 " + DefaultHubConstants.MAX_CASE_IMPORT_BATCH + " 条");
         }
@@ -92,6 +101,20 @@ public class DefaultHubCaseImportService {
         resp.setStatus(DefaultHubConstants.JOB_STATUS_PENDING);
         resp.setProgress(0);
         return resp;
+    }
+
+    /**
+     * 默认项目导入勾选树：模块/文件夹 + 已归类用例叶子（排除未规划 root）。
+     */
+    public List<BaseTreeNode> getImportTree() {
+        String hubProjectId = defaultHubProjectService.getDefaultProjectId();
+        if (StringUtils.isBlank(hubProjectId)) {
+            throw new MSException("default hub project not configured");
+        }
+        List<BaseTreeNode> tree = functionalCaseModuleService.getTreeWithoutVirtualRoot(hubProjectId);
+        Map<String, List<BaseTreeNode>> casesByModule = loadPlannedCaseLeaves(hubProjectId);
+        attachCaseLeaves(tree, casesByModule);
+        return tree;
     }
 
     public DefaultHubJobResponse getJob(String jobId) {
@@ -232,44 +255,105 @@ public class DefaultHubCaseImportService {
         String mode = request.getSelectMode();
         if (DefaultHubConstants.SELECT_CASE_IDS.equals(mode)) {
             caseIds.addAll(nullToEmpty(request.getIds()));
-        } else if (DefaultHubConstants.SELECT_ALL.equals(mode)) {
-            caseIds.addAll(listCaseIdsByProject(hubProjectId, null));
-        } else if (DefaultHubConstants.SELECT_UNPLANNED.equals(mode)) {
-            caseIds.addAll(listUnplannedCaseIds(hubProjectId));
-        } else if (DefaultHubConstants.SELECT_MODULE_IDS.equals(mode)) {
+        } else if (DefaultHubConstants.SELECT_MODULE_IDS.equals(mode)
+                || DefaultHubConstants.SELECT_FOLDER_IDS.equals(mode)) {
             List<String> moduleIds = defaultHubModuleResolver.listDescendantModuleIds(hubProjectId, request.getIds());
             caseIds.addAll(listCaseIdsByProject(hubProjectId, moduleIds));
-        } else if (DefaultHubConstants.SELECT_FOLDER_IDS.equals(mode)) {
-            List<String> moduleIds = defaultHubModuleResolver.listDescendantModuleIds(hubProjectId, request.getIds());
-            caseIds.addAll(listCaseIdsByProject(hubProjectId, moduleIds));
+        } else {
+            throw new MSException("不支持的选择模式: " + mode);
         }
         return new ArrayList<>(caseIds);
+    }
+
+    private void assertSelectModeAllowed(String mode) {
+        if (DefaultHubConstants.SELECT_ALL.equals(mode) || DefaultHubConstants.SELECT_UNPLANNED.equals(mode)) {
+            throw new MSException("不支持全部/未规划导入，请勾选已归类模块或用例");
+        }
+        if (!StringUtils.equalsAny(mode,
+                DefaultHubConstants.SELECT_CASE_IDS,
+                DefaultHubConstants.SELECT_MODULE_IDS,
+                DefaultHubConstants.SELECT_FOLDER_IDS)) {
+            throw new MSException("不支持的选择模式: " + mode);
+        }
+    }
+
+    /**
+     * 仅保留枢纽项目内、且不属于未规划（module_id=root）的用例。
+     */
+    private List<String> filterPlannedHubCases(String hubProjectId, List<String> caseIds) {
+        if (CollectionUtils.isEmpty(caseIds)) {
+            return List.of();
+        }
+        String placeholders = String.join(",", caseIds.stream().map(id -> "?").toList());
+        Object[] args = new Object[caseIds.size() + 2];
+        args[0] = hubProjectId;
+        args[1] = ModuleConstants.DEFAULT_NODE_ID;
+        for (int i = 0; i < caseIds.size(); i++) {
+            args[i + 2] = caseIds.get(i);
+        }
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM functional_case WHERE project_id = ? AND deleted = 0 AND module_id <> ? AND id IN ("
+                        + placeholders + ")",
+                String.class, args);
+    }
+
+    private Map<String, List<BaseTreeNode>> loadPlannedCaseLeaves(String hubProjectId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT id, num, name, module_id FROM functional_case " +
+                        "WHERE project_id = ? AND deleted = 0 AND module_id IS NOT NULL AND module_id <> ? " +
+                        "ORDER BY num ASC",
+                hubProjectId, ModuleConstants.DEFAULT_NODE_ID);
+        Map<String, List<BaseTreeNode>> byModule = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            String moduleId = String.valueOf(row.get("module_id"));
+            String caseId = String.valueOf(row.get("id"));
+            Object numObj = row.get("num");
+            String num = numObj == null ? "" : String.valueOf(numObj);
+            String name = row.get("name") == null ? "" : String.valueOf(row.get("name"));
+            BaseTreeNode leaf = new BaseTreeNode(caseId, num + " " + name, "CASE", moduleId);
+            leaf.putAttachInfo("num", num);
+            leaf.putAttachInfo("caseName", name);
+            byModule.computeIfAbsent(moduleId, k -> new ArrayList<>()).add(leaf);
+        }
+        return byModule;
+    }
+
+    private void attachCaseLeaves(List<BaseTreeNode> nodes, Map<String, List<BaseTreeNode>> casesByModule) {
+        if (CollectionUtils.isEmpty(nodes)) {
+            return;
+        }
+        for (BaseTreeNode node : nodes) {
+            if (node.getChildren() == null) {
+                node.setChildren(new ArrayList<>());
+            }
+            attachCaseLeaves(node.getChildren(), casesByModule);
+            List<BaseTreeNode> cases = casesByModule.get(node.getId());
+            if (CollectionUtils.isNotEmpty(cases)) {
+                node.getChildren().addAll(cases);
+            }
+        }
     }
 
     private List<String> listCaseIdsByProject(String projectId, List<String> moduleIds) {
         if (moduleIds == null) {
             return jdbcTemplate.queryForList(
-                    "SELECT id FROM functional_case WHERE project_id = ? AND deleted = 0", String.class, projectId);
+                    "SELECT id FROM functional_case WHERE project_id = ? AND deleted = 0 AND module_id <> ?",
+                    String.class, projectId, ModuleConstants.DEFAULT_NODE_ID);
         }
         if (moduleIds.isEmpty()) {
             return List.of();
         }
         String placeholders = String.join(",", moduleIds.stream().map(id -> "?").toList());
-        Object[] args = new Object[moduleIds.size() + 1];
+        Object[] args = new Object[moduleIds.size() + 2];
         args[0] = projectId;
+        args[1] = ModuleConstants.DEFAULT_NODE_ID;
         for (int i = 0; i < moduleIds.size(); i++) {
-            args[i + 1] = moduleIds.get(i);
+            args[i + 2] = moduleIds.get(i);
         }
         return jdbcTemplate.queryForList(
-                "SELECT id FROM functional_case WHERE project_id = ? AND deleted = 0 AND module_id IN (" + placeholders + ")",
+                "SELECT id FROM functional_case WHERE project_id = ? AND deleted = 0 AND module_id <> ? AND module_id IN ("
+                        + placeholders + ")",
                 String.class, args);
-    }
-
-    private List<String> listUnplannedCaseIds(String projectId) {
-        return jdbcTemplate.queryForList(
-                "SELECT fc.id FROM functional_case fc JOIN functional_case_module m ON fc.module_id = m.id " +
-                        "WHERE fc.project_id = ? AND fc.deleted = 0 AND m.parent_id = ? AND m.module_type = ?",
-                String.class, projectId, ModuleConstants.ROOT_NODE_PARENT_ID, DefaultHubConstants.MODULE_TYPE_MODULE);
     }
 
     private List<String> nullToEmpty(List<String> ids) {

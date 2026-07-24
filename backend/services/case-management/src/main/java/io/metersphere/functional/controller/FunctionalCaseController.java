@@ -345,4 +345,11 @@ public class FunctionalCaseController {
     public DefaultHubJobResponse importFromDefaultProject(@Validated @RequestBody DefaultHubCaseImportRequest request) {
         return defaultHubCaseImportService.startImport(request, SessionUtils.getUserId());
     }
+
+    @GetMapping("/import/from-default-project/tree")
+    @Operation(summary = "从默认项目导入-模块用例勾选树")
+    @RequiresPermissions(value = {PermissionConstants.FUNCTIONAL_CASE_READ_IMPORT, PermissionConstants.FUNCTIONAL_CASE_READ_ADD}, logical = Logical.OR)
+    public List<io.metersphere.system.dto.sdk.BaseTreeNode> importFromDefaultProjectTree() {
+        return defaultHubCaseImportService.getImportTree();
+    }
 }

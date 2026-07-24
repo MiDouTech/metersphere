@@ -14,10 +14,10 @@ public class DefaultHubCaseImportRequest {
     private String targetProjectId;
 
     @NotBlank
-    @Schema(description = "CASE_IDS|MODULE_IDS|FOLDER_IDS|ALL|UNPLANNED")
+    @Schema(description = "CASE_IDS|MODULE_IDS|FOLDER_IDS（不再支持 ALL/UNPLANNED）")
     private String selectMode;
 
-    @Schema(description = "选择模式对应的 ID 列表（ALL 可空）")
+    @Schema(description = "选择模式对应的 ID 列表")
     private List<String> ids;
 
     @NotBlank

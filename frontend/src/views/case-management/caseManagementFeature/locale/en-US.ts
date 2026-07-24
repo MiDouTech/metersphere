@@ -38,10 +38,12 @@ export default {
   'caseManagement.featureCase.deleteFolderCascadeTip':
     'This will cascade delete child folders, modules and cases. Cases can be restored from recycle bin.',
   'caseManagement.featureCase.importFromDefaultProject': 'Import from default project',
-  'caseManagement.featureCase.importExcelTab': 'Excel import',
+  'caseManagement.featureCase.importExcelTab': 'Import from Excel',
   'caseManagement.featureCase.importHubTab': 'Import from default project',
   'caseManagement.featureCase.importHubTip':
     'Source is fixed to the company default project. Copies body and steps only; no attachments or links.',
+  'caseManagement.featureCase.importHubPlannedOnly':
+    'Only cases classified under modules/folders can be imported; unplanned cases are not allowed.',
   'caseManagement.featureCase.importHubConflict': 'Conflict strategy',
   'caseManagement.featureCase.importHubSkip': 'Skip',
   'caseManagement.featureCase.importHubOverwrite': 'Overwrite',
@@ -49,6 +51,10 @@ export default {
   'caseManagement.featureCase.importHubUnplanned': 'Unplanned cases',
   'caseManagement.featureCase.importHubSuccess': 'Import job submitted',
   'caseManagement.featureCase.importHubLimit': 'Max 500 cases per import',
+  'caseManagement.featureCase.importHubSelectedCount': '{count} selected',
+  'caseManagement.featureCase.importHubDisabledCurrent': 'Already in the default project; import is not needed',
+  'caseManagement.featureCase.importHubTreeFail': 'Failed to load default project tree',
+  'caseManagement.featureCase.importHubFail': 'Import failed',
   'caseManagement.featureCase.rename': 'rename',
   'caseManagement.featureCase.versionPlaceholder': 'The default is the latest version',
   'caseManagement.featureCase.searchByNameAndId': 'Search by ID, name, or tag',

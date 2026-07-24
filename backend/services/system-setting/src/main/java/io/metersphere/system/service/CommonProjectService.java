@@ -133,11 +133,13 @@ public class CommonProjectService {
         addProjectDTO.setId(project.getId());
         BeanUtils.copyBean(projectDTO, project);
         projectDTO.setOrganizationName(organizationMapper.selectByPrimaryKey(project.getOrganizationId()).getName());
-        //判断是否有模块设置
-        if (CollectionUtils.isNotEmpty(addProjectDTO.getModuleIds())) {
-            project.setModuleSetting(JSON.toJSONString(addProjectDTO.getModuleIds()));
-            projectDTO.setModuleIds(addProjectDTO.getModuleIds());
+        // 未指定模块时默认开启用例/缺陷/计划/接口，避免空 module_setting 导致工作台 NPE
+        List<String> moduleIds = addProjectDTO.getModuleIds();
+        if (CollectionUtils.isEmpty(moduleIds)) {
+            moduleIds = List.of("caseManagement", "bugManagement", "testPlan", "apiTest");
         }
+        project.setModuleSetting(JSON.toJSONString(moduleIds));
+        projectDTO.setModuleIds(moduleIds);
 
         ProjectAddMemberBatchRequest memberRequest = new ProjectAddMemberBatchRequest();
         memberRequest.setProjectIds(List.of(project.getId()));

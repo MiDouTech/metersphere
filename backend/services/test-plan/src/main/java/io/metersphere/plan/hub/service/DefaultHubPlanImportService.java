@@ -136,10 +136,26 @@ public class DefaultHubPlanImportService {
         plan.setUpdateTime(now);
         testPlanMapper.insert(plan);
         jdbcTemplate.update("UPDATE test_plan SET imported_from_hub_plan_id = ? WHERE id = ?", hubPlanId, newId);
-        TestPlanConfig config = new TestPlanConfig();
-        config.setTestPlanId(newId);
-        testPlanConfigMapper.insertSelective(config);
+        insertPlanConfig(newId, hubPlanId);
         copyDocument(hubPlanId, newId, targetProjectId, operator);
+    }
+
+    private void insertPlanConfig(String newPlanId, String sourcePlanId) {
+        TestPlanConfig source = testPlanConfigMapper.selectByPrimaryKey(sourcePlanId);
+        TestPlanConfig config = new TestPlanConfig();
+        config.setTestPlanId(newPlanId);
+        if (source != null) {
+            config.setAutomaticStatusUpdate(Boolean.TRUE.equals(source.getAutomaticStatusUpdate()));
+            config.setRepeatCase(Boolean.TRUE.equals(source.getRepeatCase()));
+            config.setPassThreshold(source.getPassThreshold() != null ? source.getPassThreshold() : 100.0);
+            config.setCaseRunMode(StringUtils.defaultIfBlank(source.getCaseRunMode(), "PARALLEL"));
+        } else {
+            config.setAutomaticStatusUpdate(false);
+            config.setRepeatCase(false);
+            config.setPassThreshold(100.0);
+            config.setCaseRunMode("PARALLEL");
+        }
+        testPlanConfigMapper.insertSelective(config);
     }
 
     private void overwritePlan(TestPlan target, TestPlan source, String operator) {

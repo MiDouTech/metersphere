@@ -3,15 +3,13 @@
     v-model:visible="dialogVisible"
     title-align="start"
     class="ms-modal-form ms-modal-medium"
-    :ok-text="t('common.import')"
     :title="t('caseManagement.featureCase.importFromDefaultProject')"
-    :cancel-text="t('common.cancel')"
-    :ok-loading="submitting"
-    :ok-button-props="{ disabled: !canImport }"
-    @before-ok="handleImport"
+    :footer="false"
+    unmount-on-close
     @cancel="handleCancel"
   >
     <a-alert type="info" class="mb-4">{{ t('caseManagement.featureCase.importHubTip') }}</a-alert>
+    <a-alert type="warning" class="mb-4">{{ t('caseManagement.featureCase.importHubPlannedOnly') }}</a-alert>
     <a-form :model="form" layout="vertical">
       <a-form-item :label="t('caseManagement.featureCase.importHubConflict')">
         <a-radio-group v-model="form.conflictStrategy">
@@ -19,17 +17,7 @@
           <a-radio value="OVERWRITE">{{ t('caseManagement.featureCase.importHubOverwrite') }}</a-radio>
         </a-radio-group>
       </a-form-item>
-      <a-form-item :label="t('common.select')">
-        <a-radio-group v-model="form.selectMode" @change="onModeChange">
-          <a-radio value="ALL">{{ t('caseManagement.featureCase.importHubSelectAll') }}</a-radio>
-          <a-radio value="UNPLANNED">{{ t('caseManagement.featureCase.importHubUnplanned') }}</a-radio>
-          <a-radio value="MODULE_IDS">{{ t('caseManagement.featureCase.tableColumnModule') }}</a-radio>
-        </a-radio-group>
-      </a-form-item>
-      <div
-        v-if="form.selectMode === 'MODULE_IDS'"
-        class="max-h-[320px] overflow-auto rounded border border-[var(--color-text-n8)] p-2"
-      >
+      <div class="max-h-[320px] overflow-auto rounded border border-[var(--color-text-n8)] p-2">
         <a-spin :loading="treeLoading" class="w-full">
           <a-tree
             v-model:checked-keys="checkedKeys"
@@ -40,23 +28,31 @@
           />
         </a-spin>
       </div>
-      <div class="mt-2 text-[12px] text-[var(--color-text-4)]">{{
-        t('caseManagement.featureCase.importHubLimit')
-      }}</div>
+      <div class="mt-2 text-[12px] text-[var(--color-text-4)]">
+        {{ t('caseManagement.featureCase.importHubLimit') }}
+        <span v-if="selectedCaseIds.length > 0" class="ml-2">
+          {{ t('caseManagement.featureCase.importHubSelectedCount', { count: selectedCaseIds.length }) }}
+        </span>
+      </div>
       <div v-if="jobProgress !== null" class="mt-3">
         <a-progress :percent="jobProgress" />
         <div class="mt-1 text-[12px] text-[var(--color-text-3)]">{{ jobStatus }}</div>
       </div>
     </a-form>
+    <div class="mt-4 flex justify-end gap-[8px]">
+      <a-button @click="handleCancel">{{ t('common.cancel') }}</a-button>
+      <a-button v-if="canImport" type="primary" :loading="submitting" @click="handleImport">
+        {{ t('common.import') }}
+      </a-button>
+    </div>
   </a-modal>
 </template>
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue';
 
-  import { getDefaultHubProjectId } from '@/api/modules/case-management/defaultHub';
   import {
-    getCaseModuleTree,
+    getDefaultHubImportTree,
     getDefaultHubJob,
     importCaseFromDefaultProject,
   } from '@/api/modules/case-management/featureCase';
@@ -67,6 +63,8 @@
   import { ModuleTreeNode } from '@/models/common';
 
   import Message from '@arco-design/web-vue/es/message';
+
+  const MAX_IMPORT = 500;
 
   const props = defineProps<{ visible: boolean }>();
   const emit = defineEmits<{
@@ -83,7 +81,6 @@
   });
 
   const form = ref({
-    selectMode: 'ALL',
     conflictStrategy: 'SKIP',
   });
   const checkedKeys = ref<string[]>([]);
@@ -94,11 +91,26 @@
   const jobStatus = ref('');
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
+  function collectCaseIds(nodes: ModuleTreeNode[], checked: Set<string>, out: string[]) {
+    nodes.forEach((node) => {
+      if ((node as any).type === 'CASE' && checked.has(node.id)) {
+        out.push(node.id);
+      }
+      if (node.children?.length) {
+        collectCaseIds(node.children as ModuleTreeNode[], checked, out);
+      }
+    });
+  }
+
+  const selectedCaseIds = computed(() => {
+    const ids: string[] = [];
+    collectCaseIds(moduleTree.value, new Set(checkedKeys.value), ids);
+    return ids;
+  });
+
   const canImport = computed(() => {
-    if (form.value.selectMode === 'MODULE_IDS') {
-      return checkedKeys.value.length > 0;
-    }
-    return true;
+    const count = selectedCaseIds.value.length;
+    return count >= 1 && count <= MAX_IMPORT;
   });
 
   function stopPoll() {
@@ -111,24 +123,12 @@
   async function loadHubTree() {
     try {
       treeLoading.value = true;
-      const hubProjectId = await getDefaultHubProjectId();
-      if (!hubProjectId) {
-        Message.warning('未配置默认项目');
-        return;
-      }
-      const res = await getCaseModuleTree({ projectId: hubProjectId });
-      moduleTree.value = mapTree(res, (e) => ({ ...e }));
+      const res = await getDefaultHubImportTree();
+      moduleTree.value = mapTree(res || [], (e) => ({ ...e }));
     } catch {
-      Message.error('加载默认项目模块树失败');
+      Message.error(t('caseManagement.featureCase.importHubTreeFail'));
     } finally {
       treeLoading.value = false;
-    }
-  }
-
-  function onModeChange() {
-    checkedKeys.value = [];
-    if (form.value.selectMode === 'MODULE_IDS') {
-      loadHubTree();
     }
   }
 
@@ -136,10 +136,11 @@
     () => props.visible,
     (val) => {
       if (val) {
-        form.value = { selectMode: 'ALL', conflictStrategy: 'SKIP' };
+        form.value = { conflictStrategy: 'SKIP' };
         checkedKeys.value = [];
         jobProgress.value = null;
         jobStatus.value = '';
+        loadHubTree();
       } else {
         stopPoll();
       }
@@ -159,7 +160,7 @@
             resolve(true);
           } else if (job.status === 'FAILED') {
             stopPoll();
-            Message.error(job.errorMessage || '导入失败');
+            Message.error(job.errorMessage || t('caseManagement.featureCase.importHubFail'));
             resolve(false);
           }
         } catch {
@@ -171,13 +172,17 @@
   }
 
   async function handleImport() {
-    if (!canImport.value) return false;
+    if (!canImport.value) return;
+    if (selectedCaseIds.value.length > MAX_IMPORT) {
+      Message.warning(t('caseManagement.featureCase.importHubLimit'));
+      return;
+    }
     try {
       submitting.value = true;
       const result = await importCaseFromDefaultProject({
         targetProjectId: appStore.currentProjectId,
-        selectMode: form.value.selectMode,
-        ids: form.value.selectMode === 'MODULE_IDS' ? checkedKeys.value : [],
+        selectMode: 'CASE_IDS',
+        ids: selectedCaseIds.value,
         conflictStrategy: form.value.conflictStrategy,
       });
       Message.success(t('caseManagement.featureCase.importHubSuccess'));
@@ -187,10 +192,8 @@
         emit('success');
         dialogVisible.value = false;
       }
-      return ok;
     } catch {
-      Message.error('导入失败');
-      return false;
+      Message.error(t('caseManagement.featureCase.importHubFail'));
     } finally {
       submitting.value = false;
     }
