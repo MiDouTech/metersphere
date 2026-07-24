@@ -45,18 +45,19 @@
 
 ## 3. 组织设置权限（ORGANIZATION_* — 授予组织角色）
 
-| 常量 | 说明 |
-|------|------|
-| `ORGANIZATION_USER_ROLE:READ` / `READ+ADD` / `READ+UPDATE` / `READ+DELETE` | 组织用户组 |
-| `ORGANIZATION_MEMBER:READ` / `READ+ADD` / `READ+INVITE` / `READ+UPDATE` / `READ+DELETE` | 组织成员 |
-| `ORGANIZATION_PROJECT:READ` / `READ+ADD` / `READ+UPDATE` / `READ+DELETE` / `READ+RECOVER` | 组织项目 |
-| `ORGANIZATION_PROJECT:READ+ADD_MEMBER` / `UPDATE_MEMBER` / `DELETE_MEMBER` | 组织侧项目成员 |
-| `ORGANIZATION_TEMPLATE:READ` / `ADD` / `UPDATE` / `DELETE` / `ENABLE` | 组织模板 |
-| `ORGANIZATION_LOG:READ` | 组织日志 |
+**对齐方式（2026-07-24 调整）**：不再维护独立硬编码白名单。  
+`default_hub_org_setting` 权限点 = 系统用户组 **`org_admin`（组织管理员）** 权限表，排除 `SYSTEM_*`。  
+管理员在「系统设置 → 系统 → 用户组」调整组织管理员后，部署 `V3.7.2_14` 或等价重刷即可同步到枢纽组织角色。
+
+历史草案清单仅作对照参考（以库中 `org_admin` 实际权限为准）。
 
 ---
 
-## 4. 项目业务权限（PROJECT / 功能模块 — 授予项目角色）
+### 4.x 项目业务权限对齐
+
+**对齐方式（2026-07-24 调整）**：`default_hub_project_member` = 系统用户组 **`project_admin`（项目管理员）** 权限表，排除 `SYSTEM_*`（见迁移 `V3.7.2_14`）。
+
+以下分节为早期草案摘录，实施以库中 `project_admin` 为准。
 
 ### 4.1 通用项目设置
 
