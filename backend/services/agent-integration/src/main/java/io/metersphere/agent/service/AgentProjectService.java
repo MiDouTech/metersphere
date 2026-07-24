@@ -6,6 +6,7 @@ import io.metersphere.agent.dto.AgentProjectDTO;
 import io.metersphere.agent.security.AgentTokenContext;
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.mapper.ProjectMapper;
+import io.metersphere.sdk.constants.InternalUserRole;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.domain.AgentToken;
@@ -25,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +54,12 @@ public class AgentProjectService {
         add.setName(request.getName());
         add.setDescription(request.getDescription());
         add.setUserIds(request.getUserIds());
-        add.setModuleIds(request.getModuleIds());
+        // 未指定模块时默认开启用例/缺陷/计划/接口，避免空 moduleSetting 影响后续写闭环
+        List<String> moduleIds = request.getModuleIds();
+        if (CollectionUtils.isEmpty(moduleIds)) {
+            moduleIds = List.of("caseManagement", "bugManagement", "testPlan", "apiTest");
+        }
+        add.setModuleIds(moduleIds);
         add.setResourcePoolIds(request.getResourcePoolIds());
         if (request.getAllResourcePool() != null) {
             add.setAllResourcePool(request.getAllResourcePool());
@@ -80,7 +87,12 @@ public class AgentProjectService {
         ProjectAddMemberRequest memberRequest = new ProjectAddMemberRequest();
         memberRequest.setProjectId(request.getProjectId());
         memberRequest.setUserIds(request.getUserIds());
-        memberRequest.setUserRoleIds(request.getUserRoleIds());
+        // CommonProjectService.addProjectUser 对 userRoleIds 不做空保护；未传时默认项目成员
+        List<String> roleIds = request.getUserRoleIds();
+        if (CollectionUtils.isEmpty(roleIds)) {
+            roleIds = Collections.singletonList(InternalUserRole.PROJECT_MEMBER.getValue());
+        }
+        memberRequest.setUserRoleIds(roleIds);
         organizationProjectService.orgAddProjectMember(memberRequest, userId);
 
         Map<String, Object> audit = new HashMap<>();

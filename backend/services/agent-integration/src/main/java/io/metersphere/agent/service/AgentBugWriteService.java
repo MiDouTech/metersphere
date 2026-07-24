@@ -50,12 +50,19 @@ public class AgentBugWriteService {
         if (project == null) {
             throw new MSException("项目不存在: " + request.getProjectId());
         }
-        String templateId = StringUtils.defaultIfBlank(request.getTemplateId(),
-                projectTemplateService.getDefaultTemplateId(request.getProjectId(), TemplateScene.BUG.name()));
-        if (StringUtils.isBlank(templateId)) {
-            throw new MSException("项目未配置缺陷默认模板");
+        String scene = TemplateScene.BUG.name();
+        TemplateDTO templateDTO;
+        String templateId = request.getTemplateId();
+        if (StringUtils.isNotBlank(templateId)) {
+            templateDTO = projectTemplateService.getTemplateDTOById(templateId, request.getProjectId(), scene);
+        } else {
+            // 未设置 ProjectApplication 默认模板时，回落到项目内置模板
+            templateDTO = projectTemplateService.getDefaultTemplateDTO(request.getProjectId(), scene);
+            if (templateDTO == null || StringUtils.isBlank(templateDTO.getId())) {
+                throw new MSException("项目未配置缺陷默认模板");
+            }
+            templateId = templateDTO.getId();
         }
-        TemplateDTO templateDTO = projectTemplateService.getTemplateDTOById(templateId, request.getProjectId(), TemplateScene.BUG.name());
 
         BugEditRequest editRequest = new BugEditRequest();
         editRequest.setId(IDGenerator.nextStr());

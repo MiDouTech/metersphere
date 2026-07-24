@@ -128,6 +128,12 @@
       <if test="parentId != null">
         parent_id,
       </if>
+      <if test="moduleType != null">
+        module_type,
+      </if>
+      <if test="refProjectId != null">
+        ref_project_id,
+      </if>
       <if test="pos != null">
         pos,
       </if>
@@ -156,6 +162,12 @@
       </if>
       <if test="parentId != null">
         #{parentId,jdbcType=VARCHAR},
+      </if>
+      <if test="moduleType != null">
+        #{moduleType,jdbcType=VARCHAR},
+      </if>
+      <if test="refProjectId != null">
+        #{refProjectId,jdbcType=VARCHAR},
       </if>
       <if test="pos != null">
         #{pos,jdbcType=BIGINT},

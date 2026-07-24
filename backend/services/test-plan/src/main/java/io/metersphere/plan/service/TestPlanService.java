@@ -111,6 +111,8 @@ public class TestPlanService extends TestPlanBaseUtilsService {
     private TestPlanReportMapper testPlanReportMapper;
     @Resource
     private ExtTestPlanReportMapper extTestPlanReportMapper;
+    @Resource
+    private io.metersphere.plan.hub.service.DefaultHubPlanSyncService defaultHubPlanSyncService;
 
     public void autoUpdateFunctionalCase(String testPlanReportId) {
         TestPlanReport testPlanReport = testPlanReportMapper.selectByPrimaryKey(testPlanReportId);
@@ -169,7 +171,24 @@ public class TestPlanService extends TestPlanBaseUtilsService {
         this.initDefaultPlanCollection(testPlan.getId(), operator);
 
         testPlanLogService.saveAddLog(testPlan, operator, requestUrl, requestMethod);
+        triggerHubPlanSync(testPlan.getProjectId(), testPlan.getId(), operator);
         return testPlan;
+    }
+
+    private void triggerHubPlanSync(String projectId, String planId, String operator) {
+        try {
+            defaultHubPlanSyncService.syncPlanUpsert(projectId, planId, operator);
+        } catch (Exception e) {
+            LogUtils.error("default hub plan sync hook failed, planId=" + planId, e);
+        }
+    }
+
+    private void triggerHubPlanDelete(String planId) {
+        try {
+            defaultHubPlanSyncService.syncPlanDelete(planId);
+        } catch (Exception e) {
+            LogUtils.error("default hub plan delete sync failed, planId=" + planId, e);
+        }
     }
 
 
@@ -241,6 +260,7 @@ public class TestPlanService extends TestPlanBaseUtilsService {
         if (StringUtils.equals(testPlan.getType(), TestPlanConstants.TEST_PLAN_TYPE_GROUP)) {
             this.deleteGroupByList(Collections.singletonList(testPlan.getId()));
         } else {
+            triggerHubPlanDelete(id);
             testPlanMapper.deleteByPrimaryKey(id);
             //级联删除
             TestPlanReportService testPlanReportService = CommonBeanFactory.getBean(TestPlanReportService.class);
@@ -319,6 +339,7 @@ public class TestPlanService extends TestPlanBaseUtilsService {
                     }
                 }
                 testPlanSendNoticeService.batchSendNotice(request.getProjectId(), deleteIdList, userMapper.selectByPrimaryKey(operator), NoticeConstants.Event.DELETE);
+                testPlanIdList.forEach(this::triggerHubPlanDelete);
                 this.deleteByList(testPlanIdList);
                 // 计划组的删除暂时预留
                 this.deleteGroupByList(testPlanGroupList);
@@ -421,6 +442,7 @@ public class TestPlanService extends TestPlanBaseUtilsService {
         }
 
         testPlanLogService.saveUpdateLog(testPlan, testPlanMapper.selectByPrimaryKey(request.getId()), testPlan.getProjectId(), userId, requestUrl, requestMethod);
+        triggerHubPlanSync(testPlan.getProjectId(), request.getId(), userId);
         return updateTestPlan;
     }
 

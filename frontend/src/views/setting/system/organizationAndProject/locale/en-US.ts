@@ -84,5 +84,8 @@ export default {
   'system.project.pleaseSelectAdmin': 'Please select project administrator',
   'system.project.poolIsNotNull': 'Resource pool cannot be empty',
   'system.project.enterOrganization': 'Enter the organization',
+  'system.project.enterProject': 'Enter project',
+  'system.project.systemDefault': 'System default',
+  'system.project.defaultProjectNotAllowDelete': 'System default project cannot be deleted',
   'system.memberList': 'Member list',
 };

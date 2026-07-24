@@ -183,6 +183,18 @@ export function getTestPlanList(data: TableQueryParams) {
   return MSR.post<CommonList<TestPlanItem>>({ url: GetTestPlanListUrl, data });
 }
 
+/** 从默认项目导入测试计划 */
+export function importPlanFromDefaultProject(data: {
+  sourcePlanId: string;
+  targetProjectId: string;
+  conflictStrategy: string;
+}) {
+  return MSR.post<{ jobId: string; status: string; progress: number }>({
+    url: '/test-plan/import/from-default-project',
+    data,
+  });
+}
+
 // 获取计划列表(无分页)
 export function getTestPlanListWithoutPage(projectId: string) {
   return MSR.get<TestPlanWithoutPageItem[]>({ url: `${GetTestPlanListWithoutPageUrl}/${projectId}` });

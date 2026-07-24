@@ -38,6 +38,7 @@
                p.update_user,
                p.enable,
                p.all_resource_pool,
+               p.is_default AS isDefault,
                o.name as organization_name,
                p.module_setting
         FROM project p
@@ -278,5 +279,15 @@
         </where>
         group by u.id, u.NAME, u.email, u.create_time
         order by u.create_time desc
+    </select>
+
+    <select id="selectDefaultProjectId" resultType="java.lang.String">
+        SELECT id FROM project WHERE is_default = 1 AND deleted = 0 ORDER BY create_time ASC LIMIT 1
+    </select>
+
+    <select id="isDefaultProject" resultType="java.lang.Boolean">
+        SELECT CASE WHEN COUNT(1) > 0 THEN TRUE ELSE FALSE END
+        FROM project
+        WHERE id = #{projectId} AND is_default = 1 AND deleted = 0
     </select>
 </mapper>

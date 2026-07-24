@@ -78,6 +78,10 @@ public class CommonProjectService {
     private TestResourcePoolService testResourcePoolService;
     @Resource
     private CommonProjectPoolService commonProjectPoolService;
+    @Resource
+    private DefaultHubProjectService defaultHubProjectService;
+    @Resource
+    private DefaultHubFolderService defaultHubFolderService;
 
     public static final Integer DEFAULT_REMAIN_DAY_COUNT = 30;
     public static final String API_TEST = "apiTest";
@@ -166,6 +170,8 @@ public class CommonProjectService {
         //添加项目管理员   创建的时候如果没有传管理员id  则默认创建者为管理员
         this.addProjectAdmin(memberRequest, createUser, path,
                 OperationLogType.ADD.name(), Translator.get("add"), module);
+        // 默认项目枢纽：双侧同名文件夹（失败不阻断建项）
+        defaultHubFolderService.onBizProjectCreated(project.getId(), project.getName(), createUser);
         return projectDTO;
     }
 
@@ -287,6 +293,8 @@ public class CommonProjectService {
     public ProjectDTO update(UpdateProjectRequest updateProjectDto, String updateUser, String path, String module) {
         Project existingProject = projectMapper.selectByPrimaryKey(updateProjectDto.getId());
         checkProjectNotExist(updateProjectDto.getId());
+        defaultHubProjectService.assertOrganizationNotChangedForDefault(existingProject, updateProjectDto.getOrganizationId());
+        String oldName = existingProject != null ? existingProject.getName() : null;
         boolean organizationChanged = StringUtils.isNotBlank(updateProjectDto.getOrganizationId())
                 && existingProject != null
                 && !StringUtils.equals(existingProject.getOrganizationId(), updateProjectDto.getOrganizationId());
@@ -388,6 +396,9 @@ public class CommonProjectService {
             project.setOrganizationId(null);
         }
         projectMapper.updateByPrimaryKeySelective(project);
+        if (StringUtils.isNotBlank(oldName) && StringUtils.isNotBlank(updateProjectDto.getName())) {
+            defaultHubFolderService.onBizProjectRenamed(updateProjectDto.getId(), oldName, updateProjectDto.getName(), updateUser);
+        }
         return projectDTO;
     }
 
@@ -418,12 +429,16 @@ public class CommonProjectService {
     public int delete(String id, String deleteUser) {
         // 删除项目删除全部资源 这里的删除只是假删除
         checkProjectNotExist(id);
+        defaultHubProjectService.assertNotDefaultProject(id);
         Project project = new Project();
         project.setId(id);
         project.setDeleteUser(deleteUser);
         project.setDeleted(true);
         project.setDeleteTime(System.currentTimeMillis());
-        return projectMapper.updateByPrimaryKeySelective(project);
+        int rows = projectMapper.updateByPrimaryKeySelective(project);
+        // 默认项目文件夹随删（业务项目删除时）
+        defaultHubFolderService.onBizProjectDeleted(id, deleteUser);
+        return rows;
     }
 
     /**
@@ -471,6 +486,8 @@ public class CommonProjectService {
             userRoleRelationMapper.batchInsert(userRoleRelations);
         }
         operationLogService.batchAdd(logDTOList);
+        request.getProjectIds().forEach(projectId ->
+                defaultHubProjectService.onMembersJoinedDefaultProject(projectId, request.getUserIds(), createUser));
     }
 
     public Map<String, String> addUserPre(List<String> userIds, String createUser, String path, String module, String projectId, Project project) {
@@ -531,6 +548,8 @@ public class CommonProjectService {
             userRoleRelationMapper.batchInsert(userRoleRelations);
         }
         operationLogService.batchAdd(logDTOList);
+        request.getProjectIds().forEach(projectId ->
+                defaultHubProjectService.onMembersJoinedDefaultProject(projectId, request.getUserIds(), createUser));
     }
 
     public int removeProjectMember(String projectId, String userId, String createUser, String module, String path) {
@@ -567,7 +586,9 @@ public class CommonProjectService {
             setLog(logDTO, path, HttpMethodConstants.GET.name(), logDTOList);
         });
         operationLogService.batchAdd(logDTOList);
-        return userRoleRelationMapper.deleteByExample(userRoleRelationExample);
+        int deleted = userRoleRelationMapper.deleteByExample(userRoleRelationExample);
+        defaultHubProjectService.onMembersLeftDefaultProject(projectId, List.of(userId));
+        return deleted;
     }
 
     public int revoke(String id, String updateUser) {

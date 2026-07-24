@@ -110,6 +110,7 @@
   >
     <Plan
       v-if="activeTab === 'plan'"
+      ref="planTabRef"
       :plan-id="planId"
       :status="countDetail.status || 'PREPARED'"
       @refresh="initDetail"
@@ -352,6 +353,7 @@
   }
 
   const activeTab = ref('plan');
+  const planTabRef = ref<{ getAutoSaveStatus?: () => string } | null>(null);
   // 接口/场景 Tab 仍按数量显隐；切到已隐藏 Tab 时回落到计划文档
   watch(
     () => detail.value,
@@ -535,6 +537,24 @@
         content: t('ms.minders.leaveUnsavedTip'),
         okText: t('common.confirm'),
         cancelText: t('common.cancel'),
+        okButtonProps: {
+          status: 'normal',
+        },
+        onBeforeOk: async () => {
+          done();
+        },
+        hideCancel: false,
+      });
+      return;
+    }
+    const planStatus = planTabRef.value?.getAutoSaveStatus?.();
+    if (oldVal === 'plan' && (planStatus === 'dirty' || planStatus === 'error' || planStatus === 'saving')) {
+      openModal({
+        type: 'warning',
+        title: t('common.unSaveLeaveTitle'),
+        content: planStatus === 'error' ? t('common.autoSave.leaveWithError') : t('common.unSaveLeaveContent'),
+        okText: t('common.leave'),
+        cancelText: t('common.stay'),
         okButtonProps: {
           status: 'normal',
         },

@@ -9,6 +9,8 @@ import io.metersphere.functional.dto.FunctionalCaseDetailDTO;
 import io.metersphere.functional.dto.FunctionalCasePageDTO;
 import io.metersphere.functional.dto.FunctionalCaseVersionDTO;
 import io.metersphere.functional.dto.response.FunctionalCaseImportResponse;
+import io.metersphere.functional.hub.dto.DefaultHubCaseImportRequest;
+import io.metersphere.functional.hub.dto.DefaultHubJobResponse;
 import io.metersphere.functional.excel.domain.FunctionalCaseExportColumns;
 import io.metersphere.functional.request.*;
 import io.metersphere.functional.service.*;
@@ -62,6 +64,8 @@ public class FunctionalCaseController {
     private FunctionalCaseFileService functionalCaseFileService;
     @Resource
     private FunctionalCaseXmindService functionalCaseXmindService;
+    @Resource
+    private io.metersphere.functional.hub.service.DefaultHubCaseImportService defaultHubCaseImportService;
 
     //TODO 获取模板列表(多模板功能暂时不做)
 
@@ -332,5 +336,13 @@ public class FunctionalCaseController {
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
     public ExportTaskDTO checkExportTask() {
         return functionalCaseFileService.checkExportTask(SessionUtils.getCurrentProjectId(), SessionUtils.getUserId());
+    }
+
+    @PostMapping("/import/from-default-project")
+    @Operation(summary = "从默认项目导入用例")
+    @RequiresPermissions(value = {PermissionConstants.FUNCTIONAL_CASE_READ_IMPORT, PermissionConstants.FUNCTIONAL_CASE_READ_ADD}, logical = Logical.OR)
+    @CheckOwner(resourceId = "#request.getTargetProjectId()", resourceType = "project")
+    public DefaultHubJobResponse importFromDefaultProject(@Validated @RequestBody DefaultHubCaseImportRequest request) {
+        return defaultHubCaseImportService.startImport(request, SessionUtils.getUserId());
     }
 }

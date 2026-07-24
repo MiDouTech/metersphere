@@ -29,6 +29,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotBlank;
 import org.apache.commons.collections4.MapUtils;
+import io.metersphere.plan.hub.dto.DefaultHubPlanImportRequest;
+import io.metersphere.functional.hub.dto.DefaultHubJobResponse;
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -51,6 +54,8 @@ public class TestPlanController {
     private TestPlanStatisticsService testPlanStatisticsService;
     @Resource
     private PermissionCheckService permissionCheckService;
+    @Resource
+    private io.metersphere.plan.hub.service.DefaultHubPlanImportService defaultHubPlanImportService;
 
     public static final String TEST_PLAN_MODULE = "testPlan";
 
@@ -286,5 +291,13 @@ public class TestPlanController {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
                 MapUtils.isEmpty(request.getSort()) ? "et.create_time desc" : request.getSortString());
         return PageUtils.setPageInfo(page, testPlanService.listHis(request));
+    }
+
+    @PostMapping("/import/from-default-project")
+    @Operation(summary = "从默认项目导入测试计划")
+    @RequiresPermissions(value = {PermissionConstants.TEST_PLAN_READ_ADD, PermissionConstants.TEST_PLAN_READ}, logical = Logical.AND)
+    @CheckOwner(resourceId = "#request.getTargetProjectId()", resourceType = "project")
+    public DefaultHubJobResponse importFromDefaultProject(@Validated @RequestBody DefaultHubPlanImportRequest request) {
+        return defaultHubPlanImportService.startImport(request, SessionUtils.getUserId());
     }
 }

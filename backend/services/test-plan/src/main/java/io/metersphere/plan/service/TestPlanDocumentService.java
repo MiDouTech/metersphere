@@ -40,6 +40,8 @@ public class TestPlanDocumentService {
     private TestPlanMapper testPlanMapper;
     @Resource
     private ProjectMapper projectMapper;
+    @Resource
+    private io.metersphere.plan.hub.service.DefaultHubPlanSyncService defaultHubPlanSyncService;
 
     public TestPlanDocumentResponse getDocument(String testPlanId) {
         TestPlan testPlan = checkAndGetTestPlan(testPlanId);
@@ -100,6 +102,11 @@ public class TestPlanDocumentService {
         response.setUpdateTime(existing.getUpdateTime());
         response.setUpdateUser(existing.getUpdateUser());
         response.setTemplateMeta(buildTemplateMeta(testPlan));
+        try {
+            defaultHubPlanSyncService.syncPlanUpsert(testPlan.getProjectId(), testPlanId, userId);
+        } catch (Exception e) {
+            io.metersphere.sdk.util.LogUtils.error("default hub plan document sync failed, planId=" + testPlanId, e);
+        }
         return response;
     }
 

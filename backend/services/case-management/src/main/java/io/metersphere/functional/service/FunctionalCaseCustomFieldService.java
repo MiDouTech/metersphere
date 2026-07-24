@@ -148,4 +148,24 @@ public class FunctionalCaseCustomFieldService {
     public List<FunctionalCaseCustomFieldDTO> getCustomFieldsByCaseIds(List<String> ids) {
         return extFunctionalCaseCustomFieldMapper.getCustomFieldsByCaseIds(ids);
     }
+
+    /** 复制源用例自定义字段到目标用例（先删后插） */
+    public void copyCustomField(String sourceCaseId, String targetCaseId) {
+        FunctionalCaseCustomFieldExample del = new FunctionalCaseCustomFieldExample();
+        del.createCriteria().andCaseIdEqualTo(targetCaseId);
+        functionalCaseCustomFieldMapper.deleteByExample(del);
+        FunctionalCaseCustomFieldExample src = new FunctionalCaseCustomFieldExample();
+        src.createCriteria().andCaseIdEqualTo(sourceCaseId);
+        List<FunctionalCaseCustomField> fields = functionalCaseCustomFieldMapper.selectByExample(src);
+        if (CollectionUtils.isEmpty(fields)) {
+            return;
+        }
+        fields.forEach(f -> {
+            FunctionalCaseCustomField copy = new FunctionalCaseCustomField();
+            copy.setCaseId(targetCaseId);
+            copy.setFieldId(f.getFieldId());
+            copy.setValue(f.getValue());
+            functionalCaseCustomFieldMapper.insertSelective(copy);
+        });
+    }
 }

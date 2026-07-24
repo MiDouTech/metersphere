@@ -151,6 +151,8 @@ export const exportXMindCheckUrl = '/functional/case/pre-check/xmind';
 export const importExcelCaseUrl = '/functional/case/import/excel';
 // 导入xmind文件
 export const importXMindCaseUrl = '/functional/case/import/xmind';
+// 从默认项目导入用例
+export const importCaseFromDefaultProjectUrl = '/functional/case/import/from-default-project';
 // 导出excel文件
 export const ExportExcelCaseUrl = '/functional/case/export/excel';
 // 导出XMind文件

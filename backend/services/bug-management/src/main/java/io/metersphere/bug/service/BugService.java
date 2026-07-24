@@ -68,6 +68,7 @@ import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -169,6 +170,9 @@ public class BugService {
     private BugPlatformService bugPlatformService;
     @Resource
     private SystemParameterService systemParameterService;
+    @Lazy
+    @Resource
+    private io.metersphere.system.edit.service.ResourceEditService resourceEditService;
 
     public static final Long INTERVAL_POS = 5000L;
 
@@ -546,6 +550,8 @@ public class BugService {
             request.setUpdateTime(System.currentTimeMillis());
             extBugMapper.batchUpdate(request, batchIds);
         }
+        resourceEditService.recordWritePathSnapshots(
+                ResourceEditConstants.TYPE_BUG, request.getProjectId(), batchIds, currentUser);
     }
 
     /**

@@ -13,6 +13,8 @@ export interface ProjectListItem {
   deleted: boolean;
   deleteUser: string;
   enable: boolean;
+  /** 系统默认项目（米多公司默认项目） */
+  isDefault?: boolean;
   moduleIds: string[];
   moduleSetting: string;
 }

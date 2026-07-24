@@ -79,6 +79,8 @@ export default {
   'system.project.removeName': 'Confirm remove the {name}',
   'system.project.descriptionPlaceholder': 'Please describe the project.',
   'system.project.enterProject': 'Enter project',
+  'system.project.systemDefault': 'System default',
+  'system.project.defaultProjectNotAllowDelete': 'System default project cannot be deleted',
   'system.project.allResPool': 'All resource pool',
   'system.project.specifyResPool': 'Specify resource pool',
 };

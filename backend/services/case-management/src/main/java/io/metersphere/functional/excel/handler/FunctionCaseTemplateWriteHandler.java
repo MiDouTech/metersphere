@@ -93,6 +93,10 @@ public class FunctionCaseTemplateWriteHandler implements RowWriteHandler {
                     setComment(index, Translator.get("excel.template.description"));
                     continue;
                 }
+                if (FunctionalCaseImportFiled.EXECUTE_USER.containsHead(head)) {
+                    setComment(index, Translator.get("excel.template.execute_user"));
+                    continue;
+                }
                 if (FunctionalCaseImportFiled.TAGS.containsHead(head)) {
                     setComment(index, Translator.get("excel.template.tag"));
                     continue;

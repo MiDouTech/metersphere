@@ -42,4 +42,10 @@ public interface ExtSystemProjectMapper {
     List<OptionDTO> getSystemProject(@Param("keyword") String keyword);
 
     List<UserExtendDTO> getUserList(@Param("userIds") List<String> userIds, @Param("projectId") String projectId, @Param("keyword") String keyword);
+
+    /** 查询系统默认项目 ID（is_default=1 且未删除） */
+    String selectDefaultProjectId();
+
+    /** 是否默认项目 */
+    Boolean isDefaultProject(@Param("projectId") String projectId);
 }

@@ -63,6 +63,9 @@ public class Project implements Serializable {
     @NotNull(message = "{project.all_resource_pool.not_blank}", groups = {Created.class})
     private Boolean allResourcePool;
 
+    @Schema(description = "是否系统默认项目")
+    private Boolean isDefault;
+
     private static final long serialVersionUID = 1L;
 
     public enum Column {
@@ -80,7 +83,8 @@ public class Project implements Serializable {
         deleteUser("delete_user", "deleteUser", "VARCHAR", false),
         enable("enable", "enable", "BIT", true),
         moduleSetting("module_setting", "moduleSetting", "VARCHAR", false),
-        allResourcePool("all_resource_pool", "allResourcePool", "BIT", false);
+        allResourcePool("all_resource_pool", "allResourcePool", "BIT", false),
+        isDefault("is_default", "isDefault", "BIT", false);
 
         private static final String BEGINNING_DELIMITER = "`";
 

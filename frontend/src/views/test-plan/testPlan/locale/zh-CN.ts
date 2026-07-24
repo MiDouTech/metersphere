@@ -1,6 +1,10 @@
 export default {
   'testPlan.testPlanIndex.createTestPlan': '新建测试计划',
   'testPlan.testPlanIndex.createTestPlanGroup': '新建计划组',
+  'testPlan.testPlanIndex.importFromDefaultProject': '从【米多公司默认项目】导入',
+  'testPlan.testPlanIndex.importFromDefaultTip':
+    '仅复制计划基本信息与「测试计划」Tab 规划文档，不含关联用例、计划组、定时任务与报告。',
+  'testPlan.testPlanIndex.importFromDefaultSuccess': '导入成功',
   'testPlan.testPlanIndex.updateTestPlan': '更新测试计划',
   'testPlan.testPlanIndex.copyTestPlan': '复制测试计划',
   'testPlan.testPlanIndex.allTestPlan': '全部测试计划',

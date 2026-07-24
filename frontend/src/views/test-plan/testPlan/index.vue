@@ -23,6 +23,9 @@
                 <a-doption value="createGroup" @click="handleSelect('createGroup')">
                   {{ t('testPlan.testPlanIndex.testPlanGroup') }}
                 </a-doption>
+                <a-doption value="importFromDefault" @click="handleSelect('importFromDefault')">
+                  {{ t('testPlan.testPlanIndex.importFromDefaultProject') }}
+                </a-doption>
               </template>
             </a-dropdown-button>
           </div>
@@ -113,6 +116,7 @@
       @close="resetPlanId"
       @load-plan-list="loadPlanList"
     />
+    <ImportFromDefaultDrawer v-model:visible="showImportDrawer" @success="loadPlanList" />
   </MsCard>
 </template>
 
@@ -124,6 +128,7 @@
   import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsPopConfirm, { ConfirmValue } from '@/components/pure/ms-popconfirm/index.vue';
   import MsSplitBox from '@/components/pure/ms-split-box/index.vue';
+  import ImportFromDefaultDrawer from './components/importFromDefaultDrawer.vue';
   import PlanTable from './components/planTable.vue';
   import TestPlanTree from './components/testPlanTree.vue';
   import CreateAndEditPlanDrawer from './createAndEditPlanDrawer.vue';
@@ -239,6 +244,7 @@
 
   const showPlanDrawer = ref<boolean>(false);
   const showPlanGroupModel = ref<boolean>(false);
+  const showImportDrawer = ref(false);
   function handleSelect(value: string | number | Record<string, any> | undefined) {
     switch (value) {
       case 'createPlan':
@@ -246,6 +252,9 @@
         break;
       case 'createGroup':
         showPlanGroupModel.value = true;
+        break;
+      case 'importFromDefault':
+        showImportDrawer.value = true;
         break;
       default:
         break;

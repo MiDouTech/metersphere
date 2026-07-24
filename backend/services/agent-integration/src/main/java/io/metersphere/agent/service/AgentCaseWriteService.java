@@ -101,12 +101,19 @@ public class AgentCaseWriteService {
         }
         String organizationId = project.getOrganizationId();
         String moduleId = resolveModuleId(request.getProjectId(), request.getModuleId(), request.getModulePath(), userId);
-        String templateId = StringUtils.defaultIfBlank(request.getTemplateId(),
-                projectTemplateService.getDefaultTemplateId(request.getProjectId(), TemplateScene.FUNCTIONAL.name()));
-        if (StringUtils.isBlank(templateId)) {
-            throw new MSException("项目未配置功能用例默认模板");
+        String scene = TemplateScene.FUNCTIONAL.name();
+        TemplateDTO templateDTO;
+        String templateId = request.getTemplateId();
+        if (StringUtils.isNotBlank(templateId)) {
+            templateDTO = projectTemplateService.getTemplateDTOById(templateId, request.getProjectId(), scene);
+        } else {
+            // 未设置 ProjectApplication 默认模板时，回落到项目内置模板（与 getDefaultTemplateDTO 一致）
+            templateDTO = projectTemplateService.getDefaultTemplateDTO(request.getProjectId(), scene);
+            if (templateDTO == null || StringUtils.isBlank(templateDTO.getId())) {
+                throw new MSException("项目未配置功能用例默认模板");
+            }
+            templateId = templateDTO.getId();
         }
-        TemplateDTO templateDTO = projectTemplateService.getTemplateDTOById(templateId, request.getProjectId(), TemplateScene.FUNCTIONAL.name());
 
         AgentCaseBatchCreateResponse response = new AgentCaseBatchCreateResponse();
         boolean failFast = Boolean.TRUE.equals(request.getFailFast());

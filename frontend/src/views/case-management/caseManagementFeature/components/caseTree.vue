@@ -32,7 +32,12 @@
       @drop="handleDrag"
     >
       <template #title="nodeData">
-        <div class="inline-flex w-full min-w-0 gap-[8px]">
+        <div class="inline-flex w-full min-w-0 items-center gap-[8px]">
+          <MsIcon
+            :type="nodeData.type === 'folder' ? 'icon-icon_folder_filled1' : 'icon-icon_drive_file'"
+            size="14"
+            class="shrink-0 text-[var(--color-text-4)]"
+          />
           <div class="one-line-text min-w-0 flex-1 text-[var(--color-text-1)]">{{ nodeData.name }}</div>
           <div v-if="!props.isModal" class="ms-tree-node-count ml-[4px] shrink-0 text-[var(--color-text-brand)]">
             {{ nodeData.count || 0 }}
@@ -83,6 +88,7 @@
   import { Message } from '@arco-design/web-vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
+  import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsPopConfirm, { ConfirmValue } from '@/components/pure/ms-popconfirm/index.vue';
   import type { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsTree from '@/components/business/ms-tree/index.vue';
@@ -215,12 +221,18 @@
     }
   }
 
-  // 删除节点
+  // 删除节点（文件夹/模块均级联删除子树及用例）
   const deleteHandler = (node: MsTreeNodeData) => {
+    const isFolder = node.type === 'folder';
     openModal({
       type: 'error',
-      title: t('caseManagement.featureCase.moduleDeleteTipTitle', { name: characterLimit(node.name) }),
-      content: t('caseManagement.featureCase.deleteCaseTipContent'),
+      title: t(
+        isFolder
+          ? 'caseManagement.featureCase.folderDeleteTipTitle'
+          : 'caseManagement.featureCase.moduleDeleteTipTitle',
+        { name: characterLimit(node.name) }
+      ),
+      content: t('caseManagement.featureCase.deleteFolderCascadeTip'),
       okText: t('caseManagement.featureCase.deleteConfirm'),
       okButtonProps: {
         status: 'danger',
@@ -233,6 +245,7 @@
           emits('deleteNode');
           Message.success(t('caseManagement.featureCase.deleteSuccess'));
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.log(error);
         }
       },
@@ -323,6 +336,7 @@
         projectId: currentProjectId.value,
         name: formValue?.field as string,
         parentId: focusNodeKey.value,
+        moduleType: 'MODULE',
       };
       await createCaseModuleTree(params);
       Message.success(t('common.addSuccess'));

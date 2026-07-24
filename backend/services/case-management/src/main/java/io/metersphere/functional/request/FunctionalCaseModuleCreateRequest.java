@@ -29,5 +29,8 @@ public class FunctionalCaseModuleCreateRequest implements Serializable {
     @Schema(description = "父模块ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotEmpty(message = "{parent.node.not_blank}")
     private String parentId = ModuleConstants.ROOT_NODE_PARENT_ID;
+
+    @Schema(description = "模块类型：MODULE|FOLDER，默认 MODULE")
+    private String moduleType = "MODULE";
 }
 

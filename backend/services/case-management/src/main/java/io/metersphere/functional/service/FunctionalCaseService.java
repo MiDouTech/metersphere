@@ -36,6 +36,7 @@ import io.metersphere.sdk.util.*;
 import io.metersphere.system.domain.CustomFieldOption;
 import io.metersphere.system.domain.OperationHistoryExample;
 import io.metersphere.system.domain.User;
+import io.metersphere.system.domain.UserExample;
 import io.metersphere.system.dto.OperationHistoryDTO;
 import io.metersphere.system.dto.request.OperationHistoryRequest;
 import io.metersphere.system.dto.sdk.*;
@@ -59,6 +60,7 @@ import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -179,6 +181,11 @@ public class FunctionalCaseService {
     private FunctionalCaseNoticeService functionalCaseNoticeService;
     @Resource
     private CaseReviewLogService caseReviewLogService;;
+    @Resource
+    private io.metersphere.functional.hub.service.DefaultHubCaseSyncService defaultHubCaseSyncService;
+    @Lazy
+    @Resource
+    private io.metersphere.system.edit.service.ResourceEditService resourceEditService;
 
     public FunctionalCase addFunctionalCase(FunctionalCaseAddRequest request, List<MultipartFile> files, String userId, String organizationId) {
         String caseId = IDGenerator.nextStr();
@@ -208,7 +215,25 @@ public class FunctionalCaseService {
         FunctionalCaseHistoryLogDTO historyLogDTO = getAddLogModule(functionalCase);
         saveAddDataLog(functionalCase, new FunctionalCaseHistoryLogDTO(), historyLogDTO, userId, organizationId, OperationLogType.ADD.name(), OperationLogModule.CASE_MANAGEMENT_CASE_CASE);
 
+        triggerHubCaseSync(request.getProjectId(), functionalCase.getId(), userId);
         return functionalCase;
+    }
+
+    /** 枢纽同步：失败仅日志，不阻断主流程 */
+    private void triggerHubCaseSync(String projectId, String caseId, String userId) {
+        try {
+            defaultHubCaseSyncService.syncCaseUpsert(projectId, caseId, userId);
+        } catch (Exception e) {
+            LogUtils.error("default hub case sync hook failed, caseId=" + caseId, e);
+        }
+    }
+
+    private void triggerHubCaseDelete(String caseId, String userId) {
+        try {
+            defaultHubCaseSyncService.syncCaseDelete(caseId, userId);
+        } catch (Exception e) {
+            LogUtils.error("default hub case delete sync failed, caseId=" + caseId, e);
+        }
     }
 
     private void filterCaseDetailTmpFile(FunctionalCaseAddRequest request) {
@@ -592,6 +617,7 @@ public class FunctionalCaseService {
         //处理评审状态
         handleReviewStatus(request, functionalCaseBlob, checked.getName(), userId);
 
+        triggerHubCaseSync(request.getProjectId(), request.getId(), userId);
         return functionalCase;
 
     }
@@ -698,9 +724,11 @@ public class FunctionalCaseService {
             List<FunctionalCase> functionalCases = functionalCaseMapper.selectByExample(functionalCaseExample);
             List<String> caseIds = functionalCases.stream().map(FunctionalCase::getId).toList();
             param.put(CaseEvent.Param.CASE_IDS, CollectionUtils.isNotEmpty(caseIds) ? caseIds : new ArrayList<>());
+            caseIds.forEach(id -> triggerHubCaseDelete(id, userId));
             extFunctionalCaseMapper.batchDelete(refId, userId);
         } else {
             param.put(CaseEvent.Param.CASE_IDS, CollectionUtils.isNotEmpty(ids) ? ids : new ArrayList<>());
+            ids.forEach(id -> triggerHubCaseDelete(id, userId));
             doDelete(ids, userId);
         }
         User user = userMapper.selectByPrimaryKey(userId);
@@ -1006,6 +1034,10 @@ public class FunctionalCaseService {
             functionalCase.setUpdateUser(userId);
             extFunctionalCaseMapper.batchUpdate(functionalCase, ids);
             functionalCaseNoticeService.batchSendNotice(request.getProjectId(), ids, user, NoticeConstants.Event.UPDATE);
+            // 写入路径单次快照（无中间态；开关默认关）
+            resourceEditService.recordWritePathSnapshots(
+                    io.metersphere.sdk.constants.ResourceEditConstants.TYPE_FUNCTIONAL_CASE,
+                    request.getProjectId(), ids, userId);
         }
 
     }
@@ -1260,6 +1292,10 @@ public class FunctionalCaseService {
         functionalCase.setUpdateUser(userId);
         functionalCase.setCreateTime(System.currentTimeMillis());
         functionalCase.setUpdateTime(System.currentTimeMillis());
+        // 执行人：邮箱 → 用户名(id) → 姓名；解析失败时在校验阶段已拦截，此处仅写入成功解析结果
+        if (StringUtils.isNotBlank(functionalCaseExcelData.getExecuteUserId())) {
+            functionalCase.setExecuteUser(functionalCaseExcelData.getExecuteUserId());
+        }
         caseMapper.insertSelective(functionalCase);
 
         //用例附属表
@@ -1290,6 +1326,37 @@ public class FunctionalCaseService {
     public List<String> handleImportTags(String tags) {
         List<String> split = List.of(tags.split("[,;]"));
         return split.stream().map(String::trim).filter(StringUtils::isNotEmpty).collect(Collectors.toList());
+    }
+
+    /**
+     * Excel 执行人解析：邮箱 → 用户名(id) → 姓名。
+     * 姓名匹配到多个用户时返回 null（导入行记失败）。
+     */
+    public String resolveImportExecuteUser(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return null;
+        }
+        String keyword = StringUtils.trim(raw);
+        // 1) 邮箱
+        UserExample emailExample = new UserExample();
+        emailExample.createCriteria().andEmailEqualTo(keyword);
+        List<User> byEmail = userMapper.selectByExample(emailExample);
+        if (CollectionUtils.isNotEmpty(byEmail)) {
+            return byEmail.getFirst().getId();
+        }
+        // 2) 用户名（登录 ID）
+        User byId = userMapper.selectByPrimaryKey(keyword);
+        if (byId != null) {
+            return byId.getId();
+        }
+        // 3) 姓名（唯一才采纳）
+        UserExample nameExample = new UserExample();
+        nameExample.createCriteria().andNameEqualTo(keyword);
+        List<User> byName = userMapper.selectByExample(nameExample);
+        if (CollectionUtils.size(byName) == 1) {
+            return byName.getFirst().getId();
+        }
+        return null;
     }
 
 
@@ -1457,6 +1524,9 @@ public class FunctionalCaseService {
         functionalCase.setVersionId(request.getVersionId());
         functionalCase.setUpdateUser(userId);
         functionalCase.setUpdateTime(System.currentTimeMillis());
+        if (StringUtils.isNotBlank(functionalCaseExcelData.getExecuteUserId())) {
+            functionalCase.setExecuteUser(functionalCaseExcelData.getExecuteUserId());
+        }
         caseMapper.updateByPrimaryKeySelective(functionalCase);
 
         //用例附属表

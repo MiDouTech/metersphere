@@ -46,6 +46,12 @@ public class FunctionalCaseModule implements Serializable {
     @Schema(description = "更新人")
     private String updateUser;
 
+    @Schema(description = "模块类型 MODULE|FOLDER")
+    private String moduleType;
+
+    @Schema(description = "关联业务项目ID（默认项目同步文件夹）")
+    private String refProjectId;
+
     private static final long serialVersionUID = 1L;
 
     public enum Column {
@@ -53,6 +59,8 @@ public class FunctionalCaseModule implements Serializable {
         projectId("project_id", "projectId", "VARCHAR", false),
         name("name", "name", "VARCHAR", true),
         parentId("parent_id", "parentId", "VARCHAR", false),
+        moduleType("module_type", "moduleType", "VARCHAR", false),
+        refProjectId("ref_project_id", "refProjectId", "VARCHAR", false),
         pos("pos", "pos", "BIGINT", false),
         createTime("create_time", "createTime", "BIGINT", false),
         updateTime("update_time", "updateTime", "BIGINT", false),

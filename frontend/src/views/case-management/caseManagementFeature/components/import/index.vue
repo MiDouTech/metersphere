@@ -1,8 +1,15 @@
 <template>
-  <a-button v-permission="['FUNCTIONAL_CASE:READ+IMPORT']" type="outline" @click="importCase">
+  <a-dropdown-button v-permission="['FUNCTIONAL_CASE:READ+IMPORT']" type="outline" @click="importCase">
     {{ t('common.import') }}
-  </a-button>
-  <!-- 导入 -->
+    <template #icon>
+      <icon-down />
+    </template>
+    <template #content>
+      <a-doption @click="importCase">{{ t('caseManagement.featureCase.importExcelTab') }}</a-doption>
+      <a-doption @click="openHubImport">{{ t('caseManagement.featureCase.importHubTab') }}</a-doption>
+    </template>
+  </a-dropdown-button>
+  <!-- Excel 导入 -->
   <ExportExcelModal
     v-model:visible="showExcelModal"
     v-model:validate-type="validateType"
@@ -25,12 +32,14 @@
     @close="closeHandler"
     @save="confirmImport"
   />
+  <ImportFromDefaultModal v-model:visible="showHubModal" @success="onHubImportSuccess" />
 </template>
 
 <script setup lang="ts">
   import { ref } from 'vue';
 
   import ExportExcelModal from './exportCaseModal.vue';
+  import ImportFromDefaultModal from './importFromDefaultModal.vue';
   import ValidateModal from './validateModal.vue';
   import ValidateResult from './validateResult.vue';
 
@@ -52,8 +61,16 @@
   const { t } = useI18n();
 
   const showExcelModal = ref<boolean>(false);
+  const showHubModal = ref(false);
   function importCase() {
     showExcelModal.value = true;
+  }
+  function openHubImport() {
+    showHubModal.value = true;
+  }
+  function onHubImportSuccess() {
+    emit('confirmImport');
+    emit('initModules');
   }
 
   const validateType = ref<'Excel' | 'Xmind'>('Excel');

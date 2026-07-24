@@ -3,7 +3,7 @@
 > **阶段**：P0（里程碑收口）  
 > **前置依赖**：task001–009  
 > **关联方案**：§12、§14  
-> **执行日期**：2026-07-23
+> **执行日期**：2026-07-23 / 重试 2026-07-23 晚
 
 ---
 
@@ -13,53 +13,62 @@
 
 ---
 
-## 2. 已完成（本轮）
+## 2. 测试环境
 
-- [x] 静态核对 task001–009 代码与 Scope/审计/MCP 对齐  
-- [x] 单测：`AgentScopeAssertTests`（含 CASE_WRITE 隔离）+ 既有 Token/Controller 测试 **14 passed**  
-- [x] MCP `npm run build` 通过  
-- [x] OpenAPI：`AgentOpenApiConfig` pathsToMatch `/api/agent/v1/**`（含写 Path）  
-- [x] 联调脚本：`scripts/verify-agent-conversation-loop.ps1`  
-- [x] Fixture：`msat_demo_agent_all_token_01` / scopes=`AGENT_ALL`  
-
-## 3. 阻塞（运行时）
-
-| 项 | 状态 |
-|----|------|
-| 本地 `http://127.0.0.1:8081` | **未启动**（连接失败） |
-| `https://msp.ebcone.cn` health | 超时/不可用 |
-| 6 项 E2E 场景 | **未跑通** |
-
-### 解锁步骤
-
-1. 启动 MeterSphere 后端（并确认 Flyway / agent 表）  
-2. 导入 fixture（含 AGENT_ALL Token）或 UI 发放 `AGENT_ALL` Token  
-3. 执行：
+| 项 | 值 |
+|----|-----|
+| Base URL | `https://msp.ebcone.net` |
+| OrganizationId | `100001`（探测确认可创建项目） |
+| Token | 会话内 env `MS_AGENT_TOKEN`（**勿提交 Git**） |
+| 联调脚本 | `scripts/verify-agent-conversation-loop.ps1`（已修 Result.data 解包） |
 
 ```powershell
-$env:MS_BASE_URL = "http://127.0.0.1:8081"
-$env:MS_AGENT_TOKEN = "msat_demo_agent_all_token_01"
-.\scripts\verify-agent-conversation-loop.ps1 -ProjectId <项目ID> -SkipProjectCreate
-# 或新建项目：
-# .\scripts\verify-agent-conversation-loop.ps1 -OrganizationId <组织ID> -CreateProject
+$env:MS_BASE_URL = "https://msp.ebcone.net"
+$env:MS_AGENT_TOKEN = "<msat_...>"
+.\scripts\verify-agent-conversation-loop.ps1 -OrganizationId 100001 -CreateProject -AdminUserId admin
 ```
-
-### 端到端勾选（待跑）
-
-| # | 场景 | 结果 |
-|---|------|------|
-| 1 | 创建项目并加成员 | [ ] |
-| 2 | ≥5 条用例导入 | [ ] |
-| 3 | 计划关联 + testPlanCaseId | [ ] |
-| 4 | 评审关联 | [ ] |
-| 5 | 回写 + 截图 | [ ]（脚本未覆盖 upload/submit，可手工或沿用 verify-agent-api） |
-| 6 | 失败提缺陷 | [ ] |
 
 ---
 
-## 4. 任务状态
+## 3. 本轮 E2E 结果（部署修复前）
+
+| # | 场景 | 结果 | 说明 |
+|---|------|------|------|
+| 1 | 创建项目并加成员 | 部分通过 | `project/create` OK；`members/add` 未传 `userRoleIds` 时 NPE（见缺陷 A） |
+| 2 | ≥5 条用例导入 | **失败** | `getDefaultTemplateId` 为空即抛错，未回落内置模板（见缺陷 B） |
+| 3 | 计划关联 + testPlanCaseId | 阻塞 | 计划/评审可创建；无用例则 search 无 `testPlanCaseId` |
+| 4 | 评审关联 | 部分 | `case-review/create` 业务成功（需解包 `data.id`） |
+| 5 | 回写 + 截图 | 未跑通 | 依赖 2/3；脚本已补 submit |
+| 6 | 失败提缺陷 | 未跑通 | 同模板回落问题（缺陷 B 同步修 BUG） |
+
+OpenAPI：`/v3/api-docs/agent` HTTP 200 但体积极小（~936B），路径字符串未命中 → 记 WARN/SKIP。
+
+说明：文档示例项目 `100001100001` **在本环境不存在**（GET 报「项目不存在」）；勿再用作默认 ProjectId。
+
+---
+
+## 4. 已发现并本地修复的缺陷（待发布到 msp.ebcone.net）
+
+| ID | 问题 | 修复 |
+|----|------|------|
+| A | `members/add` 未传 `userRoleIds` → NPE | `AgentProjectService` 默认 `project_member` |
+| B | 批量建用例/缺陷：仅认 `getDefaultTemplateId`，新建项目常为空 | 回落 `getDefaultTemplateDTO`（内置模板） |
+| C | 联调脚本未解包 `{code,data}` | `Get-MsData`；members 可显式传 `userRoleIds` |
+
+涉及文件：
+
+- `AgentProjectService.java`
+- `AgentCaseWriteService.java`
+- `AgentBugWriteService.java`
+- `scripts/verify-agent-conversation-loop.ps1`
+
+**阻塞**：修复未部署到 `msp.ebcone.net` 前，场景 2–6 无法在测试环境闭环验收。
+
+---
+
+## 5. 任务状态
 
 | 字段 | 值 |
 |------|-----|
-| 状态 | **进行中**：静态/单测/脚本已就绪；**等待后端环境**完成运行时勾选 |
+| 状态 | **进行中**：联调环境已通；发现并修复 A/B；**等待测试环境发版后重跑脚本勾选 §12** |
 | 优先级 | 一期最高 |

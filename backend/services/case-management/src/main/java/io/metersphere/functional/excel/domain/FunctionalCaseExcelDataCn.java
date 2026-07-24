@@ -51,6 +51,12 @@ public class FunctionalCaseExcelDataCn extends FunctionalCaseExcelData {
     private String description;
 
     @ColumnWidth(50)
+    @ExcelProperty("执行人")
+    @NotRequired
+    @Length(max = 255)
+    private String executeUser;
+
+    @ColumnWidth(50)
     @ExcelProperty("步骤描述")
     @NotRequired
     private String textDescription;

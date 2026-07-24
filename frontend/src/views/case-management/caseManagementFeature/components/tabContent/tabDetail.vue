@@ -10,12 +10,21 @@
         :label="t('system.orgTemplate.precondition')"
         asterisk-position="end"
       >
-        <span class="absolute right-[6px] top-0">
+        <span class="absolute right-[6px] top-0 inline-flex items-center gap-2">
+          <MsAutoSaveStatus
+            v-if="isEditPreposition"
+            :status="autoSaveStatus"
+            :last-saved-at="lastSavedAt"
+            :lock-message="lockMessage"
+            show-retry
+            @retry="manualSave"
+          />
           <a-button
             v-if="props.allowEdit && !props.isTestPlan"
             v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
             type="text"
             class="px-0"
+            :disabled="autoSaveStatus === 'locked-readonly'"
             @click="prepositionEdit"
           >
             <MsIcon type="icon-icon_edit_outlined" class="mr-1 font-[16px] text-[rgb(var(--primary-5))]" />
@@ -119,9 +128,16 @@
           </button>
         </div>
       </template>
-      <div v-if="isEditPreposition" class="flex justify-end">
+      <div v-if="isEditPreposition" class="flex items-center justify-end gap-3">
+        <MsAutoSaveStatus
+          :status="autoSaveStatus"
+          :last-saved-at="lastSavedAt"
+          :lock-message="lockMessage"
+          show-retry
+          @retry="manualSave"
+        />
         <a-button type="secondary" @click="handleCancel">{{ t('common.cancel') }}</a-button>
-        <a-button class="ml-[12px]" type="primary" :loading="confirmLoading" @click="handleOK">
+        <a-button class="ml-[12px]" type="primary" :loading="confirmLoading || autoSaveSaving" @click="handleOK">
           {{ t('common.save') }}
         </a-button>
       </div>
@@ -415,7 +431,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+  import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
   import { FormInstance, Message } from '@arco-design/web-vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
@@ -427,6 +443,7 @@
   import type { MsFileItem } from '@/components/pure/ms-upload/types';
   import AddAttachment from '@/components/business/ms-add-attachment/index.vue';
   import SaveAsFilePopover from '@/components/business/ms-add-attachment/saveAsFilePopover.vue';
+  import MsAutoSaveStatus from '@/components/business/ms-auto-save-status/index.vue';
   import inputComment from '@/components/business/ms-comment/input.vue';
   import type { CommentParams } from '@/components/business/ms-comment/types';
   import LinkFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
@@ -450,10 +467,10 @@
   } from '@/api/modules/case-management/featureCase';
   import { getModules, getModulesCount } from '@/api/modules/project-management/fileManagement';
   import { PreviewEditorImageUrl } from '@/api/requrls/case-management/featureCase';
+  import useAutoSaveEditor from '@/hooks/useAutoSaveEditor';
   import useFeatureCaseAutoNext from '@/hooks/useFeatureCaseAutoNext';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
-  import useShortcutSave from '@/hooks/useShortcutSave';
   import useAppStore from '@/store/modules/app';
   import { characterLimit, downloadByteFile, getGenerateId, sleep } from '@/utils';
   import { scrollIntoView } from '@/utils/dom';
@@ -539,6 +556,191 @@
   ]);
 
   const isEditPreposition = ref<boolean>(props.isEdit); // 非编辑状态
+  const formReady = ref(false);
+
+  const caseResourceId = computed(() => String(detailForm.value.id || props.form?.id || ''));
+  const autoSaveCanEdit = computed(
+    () =>
+      formReady.value &&
+      !!caseResourceId.value &&
+      isEditPreposition.value &&
+      !!props.allowEdit &&
+      !props.isTestPlan &&
+      hasAnyPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+  );
+
+  let skipAutoSaveDirty = false;
+
+  function setStepData(steps: string) {
+    if (steps) {
+      stepData.value = JSON.parse(steps).map((item: any) => {
+        return {
+          id: item.id,
+          step: item.desc,
+          expected: item.result,
+          actualResult: item.actualResult,
+          executeResult: item.executeResult,
+          attachmentIds: item.attachmentIds || [],
+          attachmentNames: item.attachmentNames || [],
+        };
+      });
+    } else {
+      stepData.value = [];
+    }
+  }
+
+  function buildStepsForSave() {
+    if (detailForm.value.caseEditType === 'TEXT') {
+      stepData.value = textFieldsToSteps(detailForm.value.textDescription, detailForm.value.expectedResult);
+    } else {
+      const synced = stepsToTextFields(stepData.value);
+      detailForm.value.textDescription = synced.textDescription;
+      detailForm.value.expectedResult = synced.expectedResult;
+    }
+    return stepData.value.map((item, index) => ({
+      id: item.id,
+      num: index,
+      desc: item.step,
+      result: item.expected,
+      actualResult: item.actualResult,
+      executeResult: item.executeResult,
+      attachmentIds: item.attachmentIds || [],
+      attachmentNames: item.attachmentNames || [],
+    }));
+  }
+
+  function buildCustomFieldsPayload() {
+    return (
+      props.formRules?.map((item: any) => ({
+        fieldId: item.field,
+        value: Array.isArray(item.value) ? JSON.stringify(item.value) : item.value,
+      })) || []
+    );
+  }
+
+  /** 正文白名单快照（不含附件；不回写表单，避免触发 dirty 循环） */
+  function serializeCaseBody() {
+    let textDescription = detailForm.value.textDescription || '';
+    let expectedResult = detailForm.value.expectedResult || '';
+    let stepSource = stepData.value;
+    if (detailForm.value.caseEditType === 'TEXT') {
+      stepSource = textFieldsToSteps(textDescription, expectedResult);
+    } else {
+      const synced = stepsToTextFields(stepData.value);
+      textDescription = synced.textDescription;
+      expectedResult = synced.expectedResult;
+    }
+    const steps = stepSource.map((item, index) => ({
+      id: item.id,
+      num: index,
+      desc: item.step,
+      result: item.expected,
+      actualResult: item.actualResult,
+      executeResult: item.executeResult,
+      attachmentIds: item.attachmentIds || [],
+      attachmentNames: item.attachmentNames || [],
+    }));
+    return JSON.stringify({
+      id: detailForm.value.id,
+      projectId: detailForm.value.projectId || currentProjectId.value,
+      templateId: detailForm.value.templateId,
+      name: detailForm.value.name,
+      prerequisite: detailForm.value.prerequisite || '',
+      caseEditType: detailForm.value.caseEditType,
+      steps: JSON.stringify(steps),
+      textDescription,
+      expectedResult,
+      description: detailForm.value.description || '',
+      publicCase: detailForm.value.publicCase ? 'true' : 'false',
+      moduleId: detailForm.value.moduleId,
+      versionId: detailForm.value.versionId,
+      tags: detailForm.value.tags || [],
+      customFields: buildCustomFieldsPayload(),
+      lastExecuteResult: detailForm.value.lastExecuteResult,
+    });
+  }
+
+  async function applyCasePayload(payload: string) {
+    skipAutoSaveDirty = true;
+    try {
+      const data = JSON.parse(payload);
+      detailForm.value = {
+        ...detailForm.value,
+        name: data.name ?? detailForm.value.name,
+        prerequisite: data.prerequisite ?? '',
+        caseEditType: data.caseEditType || detailForm.value.caseEditType,
+        textDescription: data.textDescription ?? '',
+        expectedResult: data.expectedResult ?? '',
+        description: data.description ?? '',
+        moduleId: data.moduleId || detailForm.value.moduleId,
+        versionId: data.versionId || detailForm.value.versionId,
+        tags: data.tags || [],
+        lastExecuteResult: data.lastExecuteResult,
+        publicCase: data.publicCase === true || data.publicCase === 'true',
+      };
+      setStepData(data.steps || '[]');
+      if (Array.isArray(data.customFields) && props.formRules?.length) {
+        data.customFields.forEach((cf: { fieldId: string; value: string }) => {
+          const rule = props.formRules?.find((item: any) => item.field === cf.fieldId) as any;
+          if (!rule) return;
+          try {
+            rule.value = JSON.parse(cf.value);
+          } catch {
+            rule.value = cf.value;
+          }
+        });
+      }
+      await nextTick();
+    } finally {
+      skipAutoSaveDirty = false;
+    }
+  }
+
+  const {
+    status: autoSaveStatus,
+    saving: autoSaveSaving,
+    lastSavedAt,
+    readOnly: autoSaveReadOnly,
+    lockMessage,
+    markDirty,
+    manualSave,
+  } = useAutoSaveEditor({
+    resourceType: 'FUNCTIONAL_CASE',
+    resourceId: caseResourceId,
+    projectId: currentProjectId,
+    canEdit: autoSaveCanEdit,
+    serialize: serializeCaseBody,
+    save: async () => {
+      // eslint-disable-next-line no-use-before-define -- persistCase depends on file computeds below
+      const ok = await persistCase(true);
+      if (!ok) {
+        throw new Error('persistCase failed');
+      }
+    },
+    applyPayload: applyCasePayload,
+    debounceMs: 1800,
+  });
+
+  watch(autoSaveReadOnly, (locked) => {
+    if (locked && isEditPreposition.value) {
+      Message.warning(lockMessage.value || t('common.autoSave.lockedByOther'));
+      isEditPreposition.value = false;
+    }
+  });
+
+  function markDirtySafe() {
+    if (!isEditPreposition.value || skipAutoSaveDirty || autoSaveReadOnly.value) return;
+    if (autoSaveStatus.value === 'saving') return;
+    markDirty();
+  }
+
+  watch(
+    [detailForm, stepData],
+    () => {
+      markDirtySafe();
+    },
+    { deep: true }
+  );
 
   // StepDescription 通过 v-model 切换类型；同步逻辑见上方 watch
   let lastCaseEditType = detailForm.value.caseEditType || 'STEP';
@@ -559,7 +761,19 @@
 
   // 编辑前置操作
   function prepositionEdit() {
-    isEditPreposition.value = !isEditPreposition.value;
+    if (autoSaveStatus.value === 'locked-readonly') {
+      Message.warning(lockMessage.value || t('common.autoSave.lockedByOther'));
+      return;
+    }
+    if (!isEditPreposition.value) {
+      skipAutoSaveDirty = true;
+      isEditPreposition.value = true;
+      nextTick(() => {
+        skipAutoSaveDirty = false;
+      });
+    } else {
+      isEditPreposition.value = false;
+    }
   }
 
   const fileList = ref<MsFileItem[]>([]);
@@ -647,34 +861,8 @@
 
   // 处理编辑详情参数
   function getParams() {
-    // 保存前双向同步：当前 UI 侧写入另一侧
-    if (detailForm.value.caseEditType === 'TEXT') {
-      stepData.value = textFieldsToSteps(detailForm.value.textDescription, detailForm.value.expectedResult);
-    } else {
-      const synced = stepsToTextFields(stepData.value);
-      detailForm.value.textDescription = synced.textDescription;
-      detailForm.value.expectedResult = synced.expectedResult;
-    }
-
-    const steps = stepData.value.map((item, index) => {
-      return {
-        id: item.id,
-        num: index,
-        desc: item.step,
-        result: item.expected,
-        actualResult: item.actualResult,
-        executeResult: item.executeResult,
-        attachmentIds: item.attachmentIds || [],
-        attachmentNames: item.attachmentNames || [],
-      };
-    });
-
-    const customFieldsArr = props.formRules?.map((item: any) => {
-      return {
-        fieldId: item.field,
-        value: Array.isArray(item.value) ? JSON.stringify(item.value) : item.value,
-      };
-    });
+    const steps = buildStepsForSave();
+    const customFieldsArr = buildCustomFieldsPayload();
 
     // 汇总用例级执行结果：有失败→失败；否则有阻塞→阻塞；否则全跳过/通过→通过；无结果则保留已标记值
     const execList = steps.map((s) => s.executeResult).filter(Boolean) as string[];
@@ -710,6 +898,7 @@
   async function persistCase(silent = false) {
     try {
       confirmLoading.value = true;
+      skipAutoSaveDirty = true;
       await updateCaseRequest(getParams());
       // 清掉已提交的临时步骤文件
       stepData.value.forEach((item: any) => {
@@ -727,10 +916,18 @@
       return false;
     } finally {
       confirmLoading.value = false;
+      nextTick(() => {
+        skipAutoSaveDirty = false;
+      });
     }
   }
 
   function handleStepChange() {
+    if (isEditPreposition.value) {
+      markDirtySafe();
+      return;
+    }
+    // 执行态静默保存（非正文编辑锁路径）
     if (!props.autoSave) return;
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => {
@@ -839,28 +1036,14 @@
   function handleOK() {
     caseFormRef.value?.validate().then(async (res: any) => {
       if (!res) {
-        await persistCase(false);
+        const ok = await manualSave();
+        if (ok) {
+          Message.success(t('caseManagement.featureCase.editSuccess'));
+          isEditPreposition.value = false;
+        }
       }
       return scrollIntoView(document.querySelector('.arco-form-item-message'), { block: 'center' });
     });
-  }
-
-  function setStepData(steps: string) {
-    if (steps) {
-      stepData.value = JSON.parse(steps).map((item: any) => {
-        return {
-          id: item.id,
-          step: item.desc,
-          expected: item.result,
-          actualResult: item.actualResult,
-          executeResult: item.executeResult,
-          attachmentIds: item.attachmentIds || [],
-          attachmentNames: item.attachmentNames || [],
-        };
-      });
-    } else {
-      stepData.value = [];
-    }
   }
 
   function handleCancel() {
@@ -1025,8 +1208,12 @@
   watch(
     () => props.form,
     (val) => {
+      skipAutoSaveDirty = true;
       detailForm.value = { ...val };
       getDetails();
+      nextTick(() => {
+        skipAutoSaveDirty = false;
+      });
     },
     {
       deep: true,
@@ -1202,20 +1389,19 @@
     handlePasteEvent(e);
   }
 
-  const { registerCatchSaveShortcut, removeCatchSaveShortcut } = useShortcutSave(handleOK);
   onMounted(async () => {
     // capture：悬停附件区时优先截获截图粘贴，避免富文本编辑器抢走
     document.addEventListener('paste', onDocumentPaste, true);
+    skipAutoSaveDirty = true;
     detailForm.value = { ...props.form };
     await getDetails();
-    if (isEditPreposition.value) {
-      registerCatchSaveShortcut();
-    }
+    await nextTick();
+    skipAutoSaveDirty = false;
+    formReady.value = true;
   });
 
   onBeforeUnmount(() => {
     document.removeEventListener('paste', onDocumentPaste, true);
-    removeCatchSaveShortcut();
   });
 
   defineExpose({

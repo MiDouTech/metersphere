@@ -37,6 +37,30 @@
                   </a-tooltip>
                   <MsPopConfirm
                     v-if="hasAnyPermission(['FUNCTIONAL_CASE:READ+ADD'])"
+                    v-model:visible="addFolderVisible"
+                    :is-delete="false"
+                    :title="t('caseManagement.featureCase.createFolder')"
+                    :all-names="rootModulesName"
+                    :loading="confirmLoading"
+                    :ok-text="t('common.confirm')"
+                    :field-config="{
+                      placeholder: t('caseManagement.featureCase.addFolderTip'),
+                      nameExistTipText: t('project.fileManagement.nameExist'),
+                    }"
+                    @confirm="confirmCreateFolder"
+                  >
+                    <a-tooltip :content="t('caseManagement.featureCase.createFolder')">
+                      <MsButton type="icon" class="!mr-0 p-[2px]">
+                        <MsIcon
+                          type="icon-icon_folder_filled1"
+                          size="18"
+                          class="text-[rgb(var(--primary-5))] hover:text-[rgb(var(--primary-4))]"
+                        />
+                      </MsButton>
+                    </a-tooltip>
+                  </MsPopConfirm>
+                  <MsPopConfirm
+                    v-if="hasAnyPermission(['FUNCTIONAL_CASE:READ+ADD'])"
                     v-model:visible="addSubVisible"
                     :is-delete="false"
                     :title="t('caseManagement.featureCase.addSubModule')"
@@ -225,13 +249,14 @@
 
   const confirmLoading = ref(false);
   const addSubVisible = ref(false);
+  const addFolderVisible = ref(false);
 
   // 处理用例树节点选中：切回列表 Tab、退出高级搜索并按模块刷新列表
   function caseNodeSelect(keys: string[], _offspringIds: string[], node: MsTreeNodeData) {
     const nextId = keys?.[0] != null ? String(keys[0]) : '';
     if (!nextId) return;
     activeFolder.value = nextId;
-    activeCaseType.value = 'module';
+    activeCaseType.value = node?.type === 'folder' ? 'folder' : 'module';
     offspringIds.value = [..._offspringIds];
     featureCaseStore.setModuleId([nextId]);
     activeFolderName.value = node?.title || node?.name;
@@ -251,11 +276,34 @@
         projectId: currentProjectId.value,
         name: formValue.field,
         parentId: 'NONE',
+        moduleType: 'MODULE',
       };
       await createCaseModuleTree(params);
       Message.success(t('caseManagement.featureCase.addSuccess'));
       caseTreeRef.value.initModules();
       addSubVisible.value = false;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    } finally {
+      confirmLoading.value = false;
+    }
+  }
+
+  // 创建根文件夹
+  async function confirmCreateFolder(formValue: ConfirmValue) {
+    try {
+      confirmLoading.value = true;
+      const params: CreateOrUpdateModule = {
+        projectId: currentProjectId.value,
+        name: formValue.field,
+        parentId: 'NONE',
+        moduleType: 'FOLDER',
+      };
+      await createCaseModuleTree(params);
+      Message.success(t('caseManagement.featureCase.createFolderSuccess'));
+      caseTreeRef.value.initModules();
+      addFolderVisible.value = false;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);

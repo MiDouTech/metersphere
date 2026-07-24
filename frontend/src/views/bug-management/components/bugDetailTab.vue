@@ -5,11 +5,19 @@
     class="relative"
   >
     <div class="header">
-      <div v-permission="['PROJECT_BUG:READ+UPDATE']" class="header-action">
+      <div v-permission="['PROJECT_BUG:READ+UPDATE']" class="header-action inline-flex items-center gap-2">
+        <MsAutoSaveStatus
+          v-if="contentEditAble"
+          :status="autoSaveStatus"
+          :last-saved-at="lastSavedAt"
+          :lock-message="lockMessage"
+          show-retry
+          @retry="manualSave"
+        />
         <a-button
           type="text"
-          :disabled="props.currentPlatform !== props.detailInfo.platform"
-          @click="contentEditAble = !contentEditAble"
+          :disabled="props.currentPlatform !== props.detailInfo.platform || autoSaveStatus === 'locked-readonly'"
+          @click="toggleContentEdit"
         >
           <template #icon> <MsIconfont type="icon-icon_edit_outlined" /> </template>
           {{ t('bugManagement.edit.contentEdit') }}
@@ -41,9 +49,16 @@
             class="markdown-body bug-rich-content"
           ></div>
         </div>
-        <div v-if="contentEditAble" class="mt-[8px] flex justify-end">
+        <div v-if="contentEditAble" class="mt-[8px] flex items-center justify-end gap-3">
+          <MsAutoSaveStatus
+            :status="autoSaveStatus"
+            :last-saved-at="lastSavedAt"
+            :lock-message="lockMessage"
+            show-retry
+            @retry="manualSave"
+          />
           <a-button type="secondary" @click="handleCancel">{{ t('common.cancel') }}</a-button>
-          <a-button class="ml-[12px]" type="primary" :loading="confirmLoading" @click="handleSave">
+          <a-button class="ml-[12px]" type="primary" :loading="confirmLoading || autoSaveSaving" @click="handleSave">
             {{ t('common.save') }}
           </a-button>
         </div>
@@ -74,9 +89,16 @@
             </div>
           </div>
         </div>
-        <div v-if="contentEditAble" class="mt-[8px] flex justify-end">
+        <div v-if="contentEditAble" class="mt-[8px] flex items-center justify-end gap-3">
+          <MsAutoSaveStatus
+            :status="autoSaveStatus"
+            :last-saved-at="lastSavedAt"
+            :lock-message="lockMessage"
+            show-retry
+            @retry="manualSave"
+          />
           <a-button type="secondary" @click="handleCancel">{{ t('common.cancel') }}</a-button>
-          <a-button class="ml-[12px]" type="primary" :loading="confirmLoading" @click="handleSave">
+          <a-button class="ml-[12px]" type="primary" :loading="confirmLoading || autoSaveSaving" @click="handleSave">
             {{ t('common.save') }}
           </a-button>
         </div>
@@ -251,6 +273,7 @@
 </template>
 
 <script setup lang="ts">
+  import { computed, nextTick, ref, watch } from 'vue';
   import { Message } from '@arco-design/web-vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
@@ -261,6 +284,7 @@
   import { MsFileItem } from '@/components/pure/ms-upload/types';
   import AddAttachment from '@/components/business/ms-add-attachment/index.vue';
   import SaveAsFilePopover from '@/components/business/ms-add-attachment/saveAsFilePopover.vue';
+  import MsAutoSaveStatus from '@/components/business/ms-auto-save-status/index.vue';
   import RelateFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
 
   import {
@@ -279,6 +303,7 @@
   import { getTransferFileTree } from '@/api/modules/case-management/featureCase';
   import { getModules, getModulesCount } from '@/api/modules/project-management/fileManagement';
   import { EditorPreviewFileUrl } from '@/api/requrls/bug-management';
+  import useAutoSaveEditor from '@/hooks/useAutoSaveEditor';
   import { useI18n } from '@/hooks/useI18n';
   import { useAppStore } from '@/store';
   import { downloadByteFile, sleep } from '@/utils';
@@ -374,6 +399,191 @@
   };
 
   const confirmLoading = ref<boolean>(false);
+  let skipAutoSaveDirty = false;
+
+  const autoSaveCanEdit = computed(
+    () =>
+      !!bugId.value &&
+      contentEditAble.value &&
+      hasAnyPermission(['PROJECT_BUG:READ+UPDATE']) &&
+      props.currentPlatform === props.detailInfo.platform
+  );
+
+  function getDescriptionFileId() {
+    const fileIds = [] as string[];
+    Object.keys(descriptionFileIdMap.value).forEach((key) => {
+      if (descriptionFileIdMap.value[key].length > 0) {
+        fileIds.push(...descriptionFileIdMap.value[key]);
+      }
+    });
+    return fileIds;
+  }
+
+  function getDetailCustomFields() {
+    return props.currentCustomFields.map((field) => {
+      const filterField = props.detailInfo.customFields.filter((item: any) => item.id === field.fieldId)[0];
+      return {
+        id: field.fieldId,
+        name: field.fieldName,
+        type: field.type,
+        value: field.fieldId === 'status' ? props.detailInfo.status : filterField?.value,
+      };
+    });
+  }
+
+  function buildBugCustomFieldsPayload() {
+    let customFields: BugEditCustomFieldItem[] = getDetailCustomFields();
+    customFields = customFields.map((e: any) => ({
+      ...e,
+      text: getCurrentText(e, props.currentCustomFields, 'id'),
+    }));
+    if (props.isPlatformDefaultTemplate) {
+      props.platformSystemFields.forEach((item) => {
+        const systemField = customFields.filter((field) => field.id === item.fieldId)[0];
+        if (systemField) {
+          systemField.value = item.defaultValue;
+        } else {
+          customFields.push({
+            id: item.fieldId,
+            name: item.fieldName,
+            type: item.type,
+            value: item.defaultValue,
+          });
+        }
+      });
+    }
+    return customFields;
+  }
+
+  function serializeBugBody() {
+    const payload: BugEditFormObject = {
+      id: props.detailInfo.id,
+      projectId: currentProjectId.value,
+      templateId: props.detailInfo.templateId,
+      tags: props.detailInfo.tags,
+      customFields: buildBugCustomFieldsPayload(),
+    };
+    if (!props.isPlatformDefaultTemplate) {
+      payload.description = form.value.description;
+      payload.title = form.value.title || props.detailInfo.title;
+    }
+    return JSON.stringify(payload);
+  }
+
+  async function persistBug(silent = false) {
+    try {
+      confirmLoading.value = true;
+      skipAutoSaveDirty = true;
+      const customFields = buildBugCustomFieldsPayload();
+      const tmpObj: BugEditFormObject = {
+        id: props.detailInfo.id,
+        projectId: currentProjectId.value,
+        templateId: props.detailInfo.templateId,
+        tags: props.detailInfo.tags,
+        deleteLocalFileIds: form.value.deleteLocalFileIds,
+        unLinkRefIds: form.value.unLinkRefIds,
+        linkFileIds: form.value.linkFileIds,
+        customFields,
+        richTextTmpFileIds: props.isPlatformDefaultTemplate ? getDescriptionFileId() : descriptionFileIds.value,
+      };
+      if (!props.isPlatformDefaultTemplate) {
+        tmpObj.description = form.value.description;
+        tmpObj.title = form.value.title || props.detailInfo.title;
+      }
+      const res = await createOrUpdateBug({ request: tmpObj, fileList: [] as unknown as File[] });
+      if (!res) return false;
+      if (!silent) {
+        Message.success(t('common.updateSuccess'));
+        defaultContentValue.value = form.value.description;
+        contentEditAble.value = false;
+        const attachments = await getAttachmentList(bugId.value);
+        await handleFileFunc(attachments);
+        emit('updateSuccess');
+      }
+      return true;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+      return false;
+    } finally {
+      confirmLoading.value = false;
+      nextTick(() => {
+        skipAutoSaveDirty = false;
+      });
+    }
+  }
+
+  const {
+    status: autoSaveStatus,
+    saving: autoSaveSaving,
+    lastSavedAt,
+    readOnly: autoSaveReadOnly,
+    lockMessage,
+    markDirty,
+    manualSave,
+  } = useAutoSaveEditor({
+    resourceType: 'BUG',
+    resourceId: bugId,
+    projectId: currentProjectId,
+    canEdit: autoSaveCanEdit,
+    serialize: serializeBugBody,
+    save: async () => {
+      const ok = await persistBug(true);
+      if (!ok) throw new Error('persistBug failed');
+    },
+    applyPayload: async (payload: string) => {
+      skipAutoSaveDirty = true;
+      try {
+        const data = JSON.parse(payload);
+        if (!props.isPlatformDefaultTemplate) {
+          form.value.description = data.description ?? '';
+          form.value.title = data.title ?? form.value.title;
+        } else if (Array.isArray(data.customFields)) {
+          data.customFields.forEach((cf: any) => {
+            const field = props.platformSystemFields.find((item) => item.fieldId === cf.id);
+            if (field) field.defaultValue = cf.value;
+          });
+        }
+        await nextTick();
+      } finally {
+        skipAutoSaveDirty = false;
+      }
+    },
+    debounceMs: 1800,
+  });
+
+  watch(autoSaveReadOnly, (locked) => {
+    if (locked && contentEditAble.value) {
+      Message.warning(lockMessage.value || t('common.autoSave.lockedByOther'));
+      contentEditAble.value = false;
+    }
+  });
+
+  watch(
+    () => [form.value.description, props.platformSystemFields],
+    () => {
+      if (!contentEditAble.value || skipAutoSaveDirty || autoSaveReadOnly.value) return;
+      if (autoSaveStatus.value === 'saving') return;
+      markDirty();
+    },
+    { deep: true }
+  );
+
+  function toggleContentEdit() {
+    if (autoSaveStatus.value === 'locked-readonly') {
+      Message.warning(lockMessage.value || t('common.autoSave.lockedByOther'));
+      return;
+    }
+    if (!contentEditAble.value) {
+      skipAutoSaveDirty = true;
+      contentEditAble.value = true;
+      nextTick(() => {
+        skipAutoSaveDirty = false;
+      });
+    } else {
+      contentEditAble.value = false;
+    }
+  }
 
   const initCurrentDetail = async (detail: BugEditFormObject) => {
     const { attachments, title, description } = detail;
@@ -513,86 +723,20 @@
     return data;
   }
 
-  function getDescriptionFileId() {
-    const fileIds = [] as string[];
-    Object.keys(descriptionFileIdMap.value).forEach((key) => {
-      if (descriptionFileIdMap.value[key].length > 0) {
-        fileIds.push(...descriptionFileIdMap.value[key]);
-      }
-    });
-    return fileIds;
-  }
-
-  function getDetailCustomFields() {
-    return props.currentCustomFields.map((field) => {
-      const filterField = props.detailInfo.customFields.filter((item: any) => item.id === field.fieldId)[0];
-      return {
-        id: field.fieldId,
-        name: field.fieldName,
-        type: field.type,
-        value: field.fieldId === 'status' ? props.detailInfo.status : filterField?.value,
-      };
-    });
-  }
-
   // 保存操作
   async function handleSave() {
+    const ok = await manualSave();
+    if (!ok) return;
+    Message.success(t('common.updateSuccess'));
+    defaultContentValue.value = form.value.description;
+    contentEditAble.value = false;
     try {
-      confirmLoading.value = true;
-      let customFields: BugEditCustomFieldItem[] = getDetailCustomFields();
-      customFields = customFields.map((e: any) => {
-        return {
-          ...e,
-          text: getCurrentText(e, props.currentCustomFields, 'id'),
-        };
-      });
-      if (props.isPlatformDefaultTemplate) {
-        // 平台系统默认字段插入自定义集合
-        props.platformSystemFields.forEach((item) => {
-          const systemField = customFields.filter((field) => field.id === item.fieldId)[0];
-          if (systemField) {
-            systemField.value = item.defaultValue;
-          } else {
-            customFields.push({
-              id: item.fieldId,
-              name: item.fieldName,
-              type: item.type,
-              value: item.defaultValue,
-            });
-          }
-        });
-      }
-      const tmpObj: BugEditFormObject = {
-        id: props.detailInfo.id,
-        projectId: currentProjectId.value,
-        templateId: props.detailInfo.templateId,
-        tags: props.detailInfo.tags,
-        deleteLocalFileIds: form.value.deleteLocalFileIds,
-        unLinkRefIds: form.value.unLinkRefIds,
-        linkFileIds: form.value.linkFileIds,
-        customFields,
-        richTextTmpFileIds: props.isPlatformDefaultTemplate ? getDescriptionFileId() : descriptionFileIds.value,
-      };
-      if (!props.isPlatformDefaultTemplate) {
-        tmpObj.description = form.value.description;
-        tmpObj.title = form.value.title;
-      }
-      // 执行保存操作。 保存成功后将富文本内容赋值给默认值
-      const res = await createOrUpdateBug({ request: tmpObj, fileList: [] as unknown as File[] });
-      if (res) {
-        Message.success(t('common.updateSuccess'));
-        defaultContentValue.value = form.value.description;
-        handleCancel();
-        // 富文本图片转附件后刷新列表
-        const attachments = await getAttachmentList(bugId.value);
-        await handleFileFunc(attachments);
-        emit('updateSuccess');
-      }
+      const attachments = await getAttachmentList(bugId.value);
+      await handleFileFunc(attachments);
+      emit('updateSuccess');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
-    } finally {
-      confirmLoading.value = false;
     }
   }
 

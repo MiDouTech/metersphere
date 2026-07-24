@@ -273,8 +273,12 @@
       try {
         loading.value = true;
         const res = await createOrUpdateProjectByOrg({ id: isEdit.value ? props.currentProject?.id : '', ...form });
-        showUpdateOrCreateMessage(isEdit.value, res.id);
-        appStore.initProjectList();
+        // 创建人已写入项目管理员：刷新项目列表与权限缓存，进入项目时无需 F5
+        await appStore.initProjectList();
+        if (!isEdit.value) {
+          await userStore.isLogin(true);
+        }
+        showUpdateOrCreateMessage(isEdit.value, res.id, res.organizationId || form.organizationId);
         handleCancel(true);
       } catch (error) {
         // eslint-disable-next-line no-console

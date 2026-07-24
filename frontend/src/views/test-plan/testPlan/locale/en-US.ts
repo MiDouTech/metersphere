@@ -1,6 +1,10 @@
 export default {
   'testPlan.testPlanIndex.createTestPlan': 'create test plan',
   'testPlan.testPlanIndex.createTestPlanGroup': 'New Plan group',
+  'testPlan.testPlanIndex.importFromDefaultProject': 'Import from default project',
+  'testPlan.testPlanIndex.importFromDefaultTip':
+    'Copies plan basics and planning document only; no linked cases, groups, schedules or reports.',
+  'testPlan.testPlanIndex.importFromDefaultSuccess': 'Import succeeded',
   'testPlan.testPlanIndex.updateTestPlan': 'update test plan',
   'testPlan.testPlanIndex.copyTestPlan': 'copy test plan',
   'testPlan.testPlanIndex.allTestPlan': 'All test Plans',

@@ -26,6 +26,8 @@ public enum FunctionalCaseImportFiled {
     TEXT_DESCRIPTION("textDescription", "步骤描述", "步驟描述", "Text description", FunctionalCaseExcelData::getTextDescription),
     EXPECTED_RESULT("expectedResult", "预期结果", "預期結果", "Expected result", FunctionalCaseExcelData::getExpectedResult),
     DESCRIPTION("description", "备注", "備註", "Description", FunctionalCaseExcelData::getDescription),
+    /** 执行人：邮箱 / 用户名 / 姓名，写入 functional_case.execute_user */
+    EXECUTE_USER("executeUser", "执行人", "執行人", "Executor", FunctionalCaseExcelData::getExecuteUser),
     /** 兼容旧模板导入，下载模板不再包含 */
     TAGS("tags", "标签", "標簽", "Tag", FunctionalCaseImportFiled::parseTags),
     /** 兼容旧模板导入，下载模板不再包含 */

@@ -41,6 +41,14 @@
           />
         </a-tooltip>
       </template>
+      <template #projectName="{ record }">
+        <div class="inline-flex max-w-full items-center gap-1">
+          <span class="truncate">{{ record.name }}</span>
+          <a-tag v-if="record.isDefault" size="small" color="arcoblue" class="shrink-0">
+            {{ t('system.project.systemDefault') }}
+          </a-tag>
+        </div>
+      </template>
       <template #creator="{ record }">
         <MsUserAdminDiv :is-admin="record.orgCreateUserIsAdmin" :name="record.createUser" />
       </template>
@@ -61,7 +69,10 @@
           </MsButton>
         </template>
         <template v-else-if="!record.enable">
-          <MsButton v-permission="['ORGANIZATION_PROJECT:READ+DELETE']" @click="handleDelete(record)">
+          <a-tooltip v-if="record.isDefault" :content="t('system.project.defaultProjectNotAllowDelete')">
+            <MsButton disabled>{{ t('common.delete') }}</MsButton>
+          </a-tooltip>
+          <MsButton v-else v-permission="['ORGANIZATION_PROJECT:READ+DELETE']" @click="handleDelete(record)">
             {{ t('common.delete') }}
           </MsButton>
         </template>
@@ -76,6 +87,7 @@
             {{ t('system.project.enterProject') }}
           </MsButton>
           <MsTableMoreAction
+            v-if="!record.isDefault"
             v-permission="['ORGANIZATION_PROJECT:READ+DELETE']"
             :list="tableActions"
             @select="handleMoreAction($event, record)"
@@ -185,6 +197,7 @@
       editType: hasAnyPermission(['ORGANIZATION_PROJECT:READ+UPDATE']) ? ColumnEditTypeEnum.INPUT : undefined,
       dataIndex: 'name',
       showTooltip: true,
+      slotName: 'projectName',
     },
     {
       title: 'system.organization.member',

@@ -6,18 +6,32 @@
           {{ t('testPlan.document.title') }}
         </div>
         <div class="mt-[4px] text-[12px] text-[var(--color-text-4)]">
-          {{ canEdit ? t('testPlan.document.editTip') : t('testPlan.document.readonlyTip') }}
+          {{
+            autoSaveStatus === 'locked-readonly'
+              ? lockMessage || t('common.autoSave.lockedByOther')
+              : canEdit
+              ? t('testPlan.document.editTip')
+              : t('testPlan.document.readonlyTip')
+          }}
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-[8px]">
-        <template v-if="canEdit">
-          <a-button type="primary" :loading="saving" @click="handleSave">
+        <MsAutoSaveStatus
+          v-if="editorCanEdit"
+          :status="autoSaveStatus"
+          :last-saved-at="lastSavedAt"
+          :lock-message="lockMessage"
+          show-retry
+          @retry="manualSave"
+        />
+        <template v-if="editorCanEdit">
+          <a-button type="primary" :loading="saving || autoSaveSaving" @click="handleSave">
             {{ t('common.save') }}
           </a-button>
           <a-button type="secondary" @click="previewVisible = true">
             {{ t('testPlan.document.preview') }}
           </a-button>
-          <a-button type="secondary" :disabled="saving" @click="handleResetTemplate">
+          <a-button type="secondary" :disabled="saving || autoSaveSaving" @click="handleResetTemplate">
             {{ t('testPlan.document.resetTemplate') }}
           </a-button>
         </template>
@@ -29,7 +43,7 @@
 
     <section class="document-section">
       <h3 class="section-title">{{ t('testPlan.document.contentSection') }}</h3>
-      <div v-if="canEdit" class="mb-[8px] text-[12px] text-[var(--color-text-4)]">
+      <div v-if="editorCanEdit" class="mb-[8px] text-[12px] text-[var(--color-text-4)]">
         {{ t('testPlan.document.resetTip') }}
       </div>
       <div class="document-editor rounded-[var(--border-radius-small)] bg-[var(--color-bg-1)]">
@@ -38,7 +52,7 @@
           v-model:filedIds="fileIds"
           :upload-image="handleUploadImage"
           :preview-url="`${PreviewEditorImageUrl}/${appStore.currentProjectId}`"
-          :editable="canEdit"
+          :editable="editorCanEdit"
           :auto-height="true"
           class="w-full"
         />
@@ -61,14 +75,16 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from 'vue';
+  import { computed, nextTick, onMounted, ref, watch } from 'vue';
   import { Message } from '@arco-design/web-vue';
 
   import MsRichText from '@/components/pure/ms-rich-text/MsRichText.vue';
+  import MsAutoSaveStatus from '@/components/business/ms-auto-save-status/index.vue';
 
   import { editorUploadFile } from '@/api/modules/case-management/featureCase';
   import { exportTestPlanDocument, getTestPlanDocument, saveTestPlanDocument } from '@/api/modules/test-plan/document';
   import { PreviewEditorImageUrl } from '@/api/requrls/case-management/featureCase';
+  import useAutoSaveEditor from '@/hooks/useAutoSaveEditor';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import useAppStore from '@/store/modules/app';
@@ -98,9 +114,91 @@
   const fileIds = ref<string[]>([]);
   const templateMeta = ref<TestPlanDocumentTemplateMeta | undefined>();
   const previewVisible = ref(false);
+  const formReady = ref(false);
+  let skipAutoSaveDirty = false;
 
   const canEdit = computed(() => {
     return hasAnyPermission(['PROJECT_TEST_PLAN:READ+UPDATE']) && props.status !== 'ARCHIVED';
+  });
+
+  const planResourceId = computed(() => props.planId || '');
+  const projectId = computed(() => appStore.currentProjectId);
+  const autoSaveCanEdit = computed(() => formReady.value && canEdit.value && !!planResourceId.value);
+
+  function serializeDocument() {
+    return JSON.stringify({
+      testPlanId: props.planId,
+      projectId: projectId.value,
+      content: content.value || '',
+      contentType: 'RICH_TEXT',
+    });
+  }
+
+  async function persistDocument(silent = false) {
+    if (!canEdit.value) {
+      return false;
+    }
+    try {
+      saving.value = true;
+      skipAutoSaveDirty = true;
+      await saveTestPlanDocument(props.planId, {
+        content: content.value,
+        contentType: 'RICH_TEXT',
+      });
+      if (!silent) {
+        Message.success(t('common.saveSuccess'));
+        emit('refresh');
+      }
+      return true;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+      return false;
+    } finally {
+      saving.value = false;
+      nextTick(() => {
+        skipAutoSaveDirty = false;
+      });
+    }
+  }
+
+  const {
+    status: autoSaveStatus,
+    saving: autoSaveSaving,
+    lastSavedAt,
+    readOnly: autoSaveReadOnly,
+    lockMessage,
+    markDirty,
+    manualSave,
+  } = useAutoSaveEditor({
+    resourceType: 'TEST_PLAN_DOCUMENT',
+    resourceId: planResourceId,
+    projectId,
+    canEdit: autoSaveCanEdit,
+    serialize: serializeDocument,
+    save: async () => {
+      const ok = await persistDocument(true);
+      if (!ok) throw new Error('persistDocument failed');
+    },
+    applyPayload: async (payload: string) => {
+      skipAutoSaveDirty = true;
+      try {
+        const data = JSON.parse(payload);
+        content.value = data.content ?? '';
+        await nextTick();
+      } finally {
+        skipAutoSaveDirty = false;
+      }
+    },
+    debounceMs: 1800,
+  });
+
+  const editorCanEdit = computed(() => canEdit.value && !autoSaveReadOnly.value);
+
+  watch(content, () => {
+    if (!autoSaveCanEdit.value || skipAutoSaveDirty || autoSaveReadOnly.value) return;
+    if (autoSaveStatus.value === 'saving') return;
+    markDirty();
   });
 
   async function handleUploadImage(file: File) {
@@ -116,6 +214,8 @@
     }
     try {
       loading.value = true;
+      formReady.value = false;
+      skipAutoSaveDirty = true;
       const res = await getTestPlanDocument(props.planId);
       templateMeta.value = res.templateMeta;
       if (!res.exists || !res.content) {
@@ -123,31 +223,22 @@
       } else {
         content.value = res.content;
       }
+      await nextTick();
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
     } finally {
+      skipAutoSaveDirty = false;
       loading.value = false;
+      formReady.value = true;
     }
   }
 
   async function handleSave() {
-    if (!canEdit.value) {
-      return;
-    }
-    try {
-      saving.value = true;
-      await saveTestPlanDocument(props.planId, {
-        content: content.value,
-        contentType: 'RICH_TEXT',
-      });
+    const ok = await manualSave();
+    if (ok) {
       Message.success(t('common.saveSuccess'));
       emit('refresh');
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    } finally {
-      saving.value = false;
     }
   }
 
@@ -205,6 +296,10 @@
   onMounted(() => {
     loadDocument();
   });
+
+  defineExpose({
+    getAutoSaveStatus: () => autoSaveStatus.value,
+  });
 </script>
 
 <style lang="less" scoped>
@@ -226,11 +321,6 @@
     :deep(.halo-rich-text-editor .ProseMirror) {
       overflow: visible !important;
       max-height: none !important;
-    }
-  }
-  .preview-body {
-    :deep(.halo-rich-text-editor) {
-      border: none;
     }
   }
 </style>

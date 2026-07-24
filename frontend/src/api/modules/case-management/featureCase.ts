@@ -75,6 +75,7 @@ import {
   GetThirdDemandUrl,
   getTransferTreeUrl,
   GetTrashCaseModuleTreeUrl,
+  importCaseFromDefaultProjectUrl,
   importExcelCaseUrl,
   importXMindCaseUrl,
   MoveCaseModuleTreeUrl,
@@ -463,6 +464,30 @@ export function importExcelOrXMindCase(data: { request: ImportExcelType; fileLis
     { request: data.request, fileList: data.fileList },
     ''
   );
+}
+
+/** 从默认项目导入用例 */
+export function importCaseFromDefaultProject(data: {
+  targetProjectId: string;
+  selectMode: string;
+  ids?: string[];
+  conflictStrategy: string;
+}) {
+  return MSR.post<{ jobId: string; status: string; progress: number }>({
+    url: importCaseFromDefaultProjectUrl,
+    data,
+  });
+}
+
+export function getDefaultHubJob(jobId: string) {
+  return MSR.get<{
+    jobId: string;
+    status: string;
+    progress: number;
+    successCount?: number;
+    failCount?: number;
+    errorMessage?: string;
+  }>({ url: `/default-hub/sync/${jobId}` });
 }
 // 导出excel
 export function exportExcelCase(data: TableQueryParams) {

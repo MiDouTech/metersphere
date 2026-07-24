@@ -20,6 +20,7 @@ import io.metersphere.functional.request.FunctionalCaseModuleUpdateRequest;
 import io.metersphere.project.dto.ModuleCountDTO;
 import io.metersphere.project.dto.NodeSortDTO;
 import io.metersphere.project.service.ModuleTreeService;
+import io.metersphere.sdk.constants.DefaultHubConstants;
 import io.metersphere.sdk.constants.ModuleConstants;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.Translator;
@@ -81,13 +82,17 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         functionalCaseModule.setName(request.getName());
         functionalCaseModule.setParentId(request.getParentId());
         functionalCaseModule.setProjectId(request.getProjectId());
+        String moduleType = StringUtils.equalsIgnoreCase(request.getModuleType(), DefaultHubConstants.MODULE_TYPE_FOLDER)
+                ? DefaultHubConstants.MODULE_TYPE_FOLDER
+                : DefaultHubConstants.MODULE_TYPE_MODULE;
+        functionalCaseModule.setModuleType(moduleType);
         this.checkDataValidity(functionalCaseModule);
         functionalCaseModule.setCreateTime(System.currentTimeMillis());
         functionalCaseModule.setUpdateTime(functionalCaseModule.getCreateTime());
         functionalCaseModule.setPos(this.countPos(request.getParentId()));
         functionalCaseModule.setCreateUser(userId);
         functionalCaseModule.setUpdateUser(userId);
-        functionalCaseModuleMapper.insert(functionalCaseModule);
+        functionalCaseModuleMapper.insertSelective(functionalCaseModule);
         functionalCaseModuleLogService.addModuleLog(functionalCaseModule, userId);
         return functionalCaseModule.getId();
     }

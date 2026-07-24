@@ -51,6 +51,12 @@ public class FunctionalCaseExcelDataUs extends FunctionalCaseExcelData {
     private String description;
 
     @ColumnWidth(50)
+    @ExcelProperty("Executor")
+    @NotRequired
+    @Length(max = 255)
+    private String executeUser;
+
+    @ColumnWidth(50)
     @ExcelProperty("Text description")
     @NotRequired
     private String textDescription;

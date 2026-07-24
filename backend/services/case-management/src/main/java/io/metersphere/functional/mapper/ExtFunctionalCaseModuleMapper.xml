@@ -2,9 +2,27 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="io.metersphere.functional.mapper.ExtFunctionalCaseModuleMapper">
     <select id="selectBaseByProjectId" resultType="io.metersphere.system.dto.sdk.BaseTreeNode">
-        SELECT id, name, parent_id AS parentId, 'module' AS type
+        SELECT id,
+               name,
+               parent_id AS parentId,
+               CASE WHEN module_type = 'FOLDER' THEN 'folder' ELSE 'module' END AS type
         FROM functional_case_module
         WHERE project_id = #{projectId}
+          AND (
+            module_type &lt;&gt; 'FOLDER'
+            OR ref_project_id IS NULL
+            OR ref_project_id = ''
+            OR EXISTS (
+                SELECT 1 FROM project p
+                WHERE p.id = functional_case_module.ref_project_id
+                  AND p.deleted = 0
+                  AND (
+                    p.enable = 1
+                    OR p.enable IS NULL
+                    OR #{projectId} = (SELECT id FROM project WHERE is_default = 1 AND deleted = 0 LIMIT 1)
+                  )
+            )
+          )
         ORDER BY pos
     </select>
     <select id="selectFunRootIdByReviewId" resultType="io.metersphere.functional.dto.ProjectOptionDTO">

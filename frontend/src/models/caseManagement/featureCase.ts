@@ -17,6 +17,8 @@ export interface CreateOrUpdateModule {
   projectId: string;
   name: string;
   parentId: string;
+  /** MODULE | FOLDER */
+  moduleType?: string;
 }
 // 更新模块
 export interface UpdateModule {

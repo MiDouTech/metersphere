@@ -461,6 +461,28 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
         validateIdExist(data, errMsg);
         //标签长度校验
         validateTags(data, errMsg);
+        //执行人：邮箱 → 用户名 → 姓名
+        validateExecuteUser(data, errMsg);
+    }
+
+    /**
+     * 解析执行人并写入 executeUserId；填写了但无法唯一解析则记入错误。
+     */
+    private void validateExecuteUser(FunctionalCaseExcelData data, StringBuilder errMsg) {
+        if (StringUtils.isBlank(data.getExecuteUser())) {
+            data.setExecuteUserId(null);
+            return;
+        }
+        String resolved = functionalCaseService.resolveImportExecuteUser(StringUtils.trim(data.getExecuteUser()));
+        if (StringUtils.isBlank(resolved)) {
+            errMsg.append(Translator.get("case.import.execute_user.not_found"))
+                    .append("[")
+                    .append(data.getExecuteUser())
+                    .append("]")
+                    .append(ERROR_MSG_SEPARATOR);
+            return;
+        }
+        data.setExecuteUserId(resolved);
     }
 
     /**
@@ -621,6 +643,8 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
                 data.setPrerequisite(value);
             } else if (StringUtils.equals(field, "description")) {
                 data.setDescription(value);
+            } else if (StringUtils.equals(field, "executeUser")) {
+                data.setExecuteUser(value);
             } else if (StringUtils.equals(field, "textDescription")) {
                 data.setTextDescription(value);
             } else if (StringUtils.equals(field, "expectedResult")) {

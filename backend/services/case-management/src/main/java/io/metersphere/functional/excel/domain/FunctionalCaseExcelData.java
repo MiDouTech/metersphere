@@ -33,6 +33,13 @@ public class FunctionalCaseExcelData {
     @ExcelIgnore
     private String description;
     @ExcelIgnore
+    private String executeUser;
+    /**
+     * 导入校验通过后解析出的用户 ID（非 Excel 列）
+     */
+    @ExcelIgnore
+    private String executeUserId;
+    @ExcelIgnore
     private String textDescription;
     @ExcelIgnore
     private String expectedResult;
@@ -65,8 +72,8 @@ public class FunctionalCaseExcelData {
     }
 
     /**
-     * 下载导入模板表头（固定 8 列，全部非必填）：
-     * 用例ID|用例名称|所属模块|前置条件|步骤描述|预期结果|用例等级|备注
+     * 下载导入模板表头（全部非必填）：
+     * 用例ID|用例名称|所属模块|前置条件|步骤描述|预期结果|用例等级|执行人|备注
      * 标签、编辑模式及其他自定义字段仅兼容导入，不出现在下载模板中。
      */
     public List<List<String>> getHead(List<TemplateCustomFieldDTO> customFields, Locale lang) {
@@ -84,6 +91,7 @@ public class FunctionalCaseExcelData {
         }
 
         heads.add(Arrays.asList(resolvePriorityFieldName(customFields)));
+        heads.add(Arrays.asList(FunctionalCaseImportFiled.EXECUTE_USER.getFiledLangMap().get(lang)));
         heads.add(Arrays.asList(FunctionalCaseImportFiled.DESCRIPTION.getFiledLangMap().get(lang)));
         return heads;
     }
