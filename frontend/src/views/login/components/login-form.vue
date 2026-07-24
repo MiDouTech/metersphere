@@ -345,7 +345,18 @@
   }
 
   async function initAdminLoginPage() {
-    refreshLocalLoginConfig();
+    try {
+      const status = await getMiduoSsoStatus();
+      localLoginEnabled.value = status.localLoginEnabled !== false;
+      if (status.adminLoginEnabled !== true) {
+        router.replace({ name: 'notFound' });
+        return;
+      }
+    } catch {
+      // 状态接口异常时也不暴露运维入口
+      router.replace({ name: 'notFound' });
+      return;
+    }
     userStore.getAuthentication();
     initPlatformInfo();
     isLogin()
