@@ -19,6 +19,7 @@ import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.uid.NumGenerator;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +48,7 @@ public class DefaultHubPlanSyncService {
     private TestPlanConfigMapper testPlanConfigMapper;
     @Resource
     private TestPlanDocumentMapper testPlanDocumentMapper;
+    @Lazy
     @Resource
     private TestPlanService testPlanService;
     @Resource

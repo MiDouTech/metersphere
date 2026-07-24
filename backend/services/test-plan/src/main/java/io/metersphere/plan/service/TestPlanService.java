@@ -48,6 +48,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -111,6 +112,7 @@ public class TestPlanService extends TestPlanBaseUtilsService {
     private TestPlanReportMapper testPlanReportMapper;
     @Resource
     private ExtTestPlanReportMapper extTestPlanReportMapper;
+    @Lazy
     @Resource
     private io.metersphere.plan.hub.service.DefaultHubPlanSyncService defaultHubPlanSyncService;
 
