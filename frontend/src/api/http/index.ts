@@ -1,10 +1,9 @@
-import { Message, Modal } from '@arco-design/web-vue';
-
 import { useI18n } from '@/hooks/useI18n';
 import useLocale from '@/locale/useLocale';
 import useAppStore from '@/store/modules/app';
 import { deepMerge, setObjToUrlParams } from '@/utils';
 import { getToken } from '@/utils/auth';
+import { showHttpErrorMessage } from '@/utils/httpMessage';
 import { isString } from '@/utils/is';
 
 import type CommonResponse from '@/models/common';
@@ -165,9 +164,9 @@ const transform: AxiosTransform = {
 
       if (errMessage) {
         if (errorMessageMode === 'modal') {
-          Modal.error({ title: t('api.errorTip'), content: errMessage });
+          showHttpErrorMessage(errMessage, { mode: 'modal', title: t('api.errorTip') });
         } else if (errorMessageMode === 'message') {
-          Message.error({ content: errMessage, duration: 5000 });
+          showHttpErrorMessage(errMessage);
         }
         return Promise.reject(error);
       }

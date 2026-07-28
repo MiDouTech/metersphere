@@ -495,19 +495,23 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
      * @param logInsertModule
      */
     public void run(TestPlanCaseRunRequest request, LogInsertModule logInsertModule) {
-        TestPlanFunctionalCase functionalCase = new TestPlanFunctionalCase();
-        functionalCase.setLastExecResult(request.getLastExecResult());
-        functionalCase.setLastExecTime(System.currentTimeMillis());
-        functionalCase.setExecuteUser(logInsertModule.getOperator());
-        functionalCase.setId(request.getId());
-        testPlanFunctionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
+        long now = System.currentTimeMillis();
+        String operator = logInsertModule.getOperator();
+        // 同一用例在所有测试计划中的关联行与用例库执行状态互相同步
+        TestPlanFunctionalCase planCaseUpdate = new TestPlanFunctionalCase();
+        planCaseUpdate.setLastExecResult(request.getLastExecResult());
+        planCaseUpdate.setLastExecTime(now);
+        planCaseUpdate.setExecuteUser(operator);
+        TestPlanFunctionalCaseExample planCaseExample = new TestPlanFunctionalCaseExample();
+        planCaseExample.createCriteria().andFunctionalCaseIdEqualTo(request.getCaseId());
+        testPlanFunctionalCaseMapper.updateByExampleSelective(planCaseUpdate, planCaseExample);
 
         //更新用例表执行状态 以及补充用例步骤ID为null的步骤信息
         updateFunctionalCaseStatus(Collections.singletonList(request.getCaseId()), request.getLastExecResult(),request.getStepsExecResult());
 
         //执行记录
-        TestPlanCaseExecuteHistory executeHistory = buildHistory(request, logInsertModule.getOperator());
-        handleFileAndNotice(request.getCaseId(), request.getProjectId(), request.getPlanCommentFileIds(), logInsertModule.getOperator(), CaseFileSourceType.PLAN_COMMENT.toString(), request.getNotifier(), request.getTestPlanId(), request.getLastExecResult());
+        TestPlanCaseExecuteHistory executeHistory = buildHistory(request, operator);
+        handleFileAndNotice(request.getCaseId(), request.getProjectId(), request.getPlanCommentFileIds(), operator, CaseFileSourceType.PLAN_COMMENT.toString(), request.getNotifier(), request.getTestPlanId(), request.getLastExecResult());
         testPlanCaseExecuteHistoryMapper.insert(executeHistory);
 
     }
@@ -592,17 +596,26 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     }
 
     private void handleBatchRun(List<String> ids, TestPlanCaseBatchRunRequest request, LogInsertModule logInsertModule) {
-        //更新状态
-        extTestPlanFunctionalCaseMapper.batchUpdate(ids, request.getLastExecResult(), System.currentTimeMillis(), logInsertModule.getOperator());
-
         //执行记录
         TestPlanFunctionalCaseExample example = new TestPlanFunctionalCaseExample();
         example.createCriteria().andIdIn(ids);
         List<TestPlanFunctionalCase> functionalCases = testPlanFunctionalCaseMapper.selectByExample(example);
-        List<String> caseIds = functionalCases.stream().map(TestPlanFunctionalCase::getFunctionalCaseId).collect(Collectors.toList());
+        List<String> caseIds = functionalCases.stream().map(TestPlanFunctionalCase::getFunctionalCaseId).distinct().collect(Collectors.toList());
         Map<String, String> idsMap = functionalCases.stream().collect(Collectors.toMap(TestPlanFunctionalCase::getId, TestPlanFunctionalCase::getFunctionalCaseId));
         List<FunctionalCase> list = extFunctionalCaseMapper.getProjectIdByIds(caseIds);
         Map<String, String> projectMap = list.stream().collect(Collectors.toMap(FunctionalCase::getId, FunctionalCase::getProjectId));
+
+        // 用例库与所有关联计划行互相同步执行状态
+        if (CollectionUtils.isNotEmpty(caseIds)) {
+            TestPlanFunctionalCase planCaseUpdate = new TestPlanFunctionalCase();
+            planCaseUpdate.setLastExecResult(request.getLastExecResult());
+            planCaseUpdate.setLastExecTime(System.currentTimeMillis());
+            planCaseUpdate.setExecuteUser(logInsertModule.getOperator());
+            TestPlanFunctionalCaseExample syncExample = new TestPlanFunctionalCaseExample();
+            syncExample.createCriteria().andFunctionalCaseIdIn(caseIds);
+            testPlanFunctionalCaseMapper.updateByExampleSelective(planCaseUpdate, syncExample);
+        }
+
         List<TestPlanCaseExecuteHistory> historyList = getExecHistory(ids, request, logInsertModule, idsMap, projectMap);
         testPlanCaseExecuteHistoryMapper.batchInsert(historyList);
 

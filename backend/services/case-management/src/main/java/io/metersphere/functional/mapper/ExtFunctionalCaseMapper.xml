@@ -565,6 +565,28 @@
         and deleted = false
     </update>
 
+    <update id="syncPlanExecByCaseIds">
+        update test_plan_functional_case
+        set last_exec_result = #{lastExecResult},
+            last_exec_time = #{lastExecTime}
+            <if test="executeUser != null and executeUser != ''">
+                , execute_user = #{executeUser}
+            </if>
+        where functional_case_id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="syncPlanExecutorByCaseIds">
+        update test_plan_functional_case
+        set execute_user = #{userId}
+        where functional_case_id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
     <select id="countModuleIdByRequest"  resultType="io.metersphere.project.dto.ModuleCountDTO">
         SELECT module_id AS moduleId, count(id) AS dataCount
         FROM functional_case

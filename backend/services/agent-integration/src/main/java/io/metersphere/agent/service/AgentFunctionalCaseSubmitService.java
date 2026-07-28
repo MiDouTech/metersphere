@@ -7,6 +7,7 @@ import io.metersphere.functional.domain.FunctionalCaseBlob;
 import io.metersphere.functional.dto.FunctionalCaseStepDTO;
 import io.metersphere.functional.mapper.FunctionalCaseBlobMapper;
 import io.metersphere.functional.mapper.FunctionalCaseMapper;
+import io.metersphere.functional.service.FunctionalCaseService;
 import io.metersphere.plan.dto.request.TestPlanCaseRunRequest;
 import io.metersphere.plan.service.TestPlanFunctionalCaseService;
 import io.metersphere.sdk.constants.HttpMethodConstants;
@@ -42,6 +43,8 @@ public class AgentFunctionalCaseSubmitService {
     private FunctionalCaseMapper functionalCaseMapper;
     @Resource
     private SqlSessionFactory sqlSessionFactory;
+    @Resource
+    private FunctionalCaseService functionalCaseService;
 
     @Transactional(rollbackFor = Exception.class)
     public void submit(AgentCaseSubmitRequest request) {
@@ -87,6 +90,8 @@ public class AgentFunctionalCaseSubmitService {
         }
         String stepsJson = agentCaseSchemaMapper.toStepsExecResultJson(request.getSteps());
         updateFunctionalCaseStatus(request.getCaseId(), request.getLastExecResult(), stepsJson);
+        functionalCaseService.syncAssociatedPlanCaseExec(
+                List.of(request.getCaseId()), request.getLastExecResult(), SessionUtils.getUserId());
         String execLogId = agentExecLogService.log(request, stepsJson);
         agentAttachmentService.linkToExecLog(execLogId, request.getAttachmentIds());
     }
