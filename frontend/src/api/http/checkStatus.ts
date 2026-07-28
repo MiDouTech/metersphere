@@ -1,10 +1,12 @@
-import { Message, Modal } from '@arco-design/web-vue';
+import { h } from 'vue';
+import { Message } from '@arco-design/web-vue';
 
 import { useI18n } from '@/hooks/useI18n';
 import useUser from '@/hooks/useUser';
 import router from '@/router';
 import { NO_RESOURCE_ROUTE_NAME } from '@/router/constants';
 import useLicenseStore from '@/store/modules/setting/license';
+import { HTTP_MESSAGE_DURATION, showHttpErrorMessage, tryBeginSessionExpiredHandling } from '@/utils/httpMessage';
 
 import type { ErrorMessageMode } from '#/axios';
 
@@ -23,11 +25,17 @@ export default function checkStatus(
       errMessage = `${msg}`;
       break;
     case 401: {
-      errMessage = msg || t('api.errMsg401');
-      if (!isLoginPage() && !isWhiteListPage()) {
-        // 不是登录页再调用logout
-        logout();
+      // 登录页只提示错误，不登出；业务页并发 401 只处理一次
+      if (isLoginPage() || isWhiteListPage()) {
+        errMessage = msg || t('api.errMsg401');
+        break;
       }
+      if (!tryBeginSessionExpiredHandling()) {
+        return;
+      }
+      errMessage = msg || t('api.errMsg401');
+      // 静默登出：避免「认证失败」后再弹「登出成功」
+      logout(undefined, false, true);
       break;
     }
     case 403:
@@ -139,9 +147,9 @@ export default function checkStatus(
 
   if (errMessage) {
     if (errorMessageMode === 'modal') {
-      Modal.error({ title: t('api.errorTip'), content: errMessage });
+      showHttpErrorMessage(errMessage, { mode: 'modal', title: t('api.errorTip') });
     } else if (errorMessageMode === 'message') {
-      Message.error(errMessage);
+      showHttpErrorMessage(errMessage, { duration: HTTP_MESSAGE_DURATION });
     }
   }
 }

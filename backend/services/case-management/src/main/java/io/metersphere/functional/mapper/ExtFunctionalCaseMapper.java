@@ -58,6 +58,19 @@ public interface ExtFunctionalCaseMapper {
 
     void batchUpdateExecutor(@Param("ids") List<String> ids, @Param("userId") String userId);
 
+    /**
+     * 用例库执行结果变更 → 同步到所有关联的测试计划用例行
+     */
+    void syncPlanExecByCaseIds(@Param("ids") List<String> ids,
+                               @Param("lastExecResult") String lastExecResult,
+                               @Param("executeUser") String executeUser,
+                               @Param("lastExecTime") Long lastExecTime);
+
+    /**
+     * 用例库执行人变更 → 同步到所有关联的测试计划用例行
+     */
+    void syncPlanExecutorByCaseIds(@Param("ids") List<String> ids, @Param("userId") String userId);
+
     void recoverCaseByRefIds(@Param("refIds") List<String> refIds, @Param("userId") String userId, @Param("time") long time);
 
     @BaseConditionFilter

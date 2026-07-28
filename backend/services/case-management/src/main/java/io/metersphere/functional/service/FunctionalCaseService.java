@@ -641,8 +641,9 @@ public class FunctionalCaseService {
     private void updateCase(FunctionalCaseEditRequest request, String userId, FunctionalCase functionalCase, FunctionalCase oldCase) {
         functionalCase.setUpdateUser(userId);
         functionalCase.setUpdateTime(System.currentTimeMillis());
-        if (StringUtils.isNotBlank(request.getLastExecuteResult())
-                && !StringUtils.equals(request.getLastExecuteResult(), oldCase.getLastExecuteResult())) {
+        boolean execResultChanged = StringUtils.isNotBlank(request.getLastExecuteResult())
+                && !StringUtils.equals(request.getLastExecuteResult(), oldCase.getLastExecuteResult());
+        if (execResultChanged) {
             functionalCase.setExecuteUser(userId);
         }
         //更新用例
@@ -680,6 +681,20 @@ public class FunctionalCaseService {
             customFields = customFields.stream().distinct().collect(Collectors.toList());
             functionalCaseCustomFieldService.updateCustomField(request.getId(), customFields);
         }
+        // 用例库执行结果 → 同步到所有关联的测试计划用例（评审不改）
+        if (execResultChanged) {
+            syncAssociatedPlanCaseExec(List.of(request.getId()), request.getLastExecuteResult(), userId);
+        }
+    }
+
+    /**
+     * 用例库执行状态同步到测试计划关联行（同一 functional_case_id 的全部关联）
+     */
+    public void syncAssociatedPlanCaseExec(List<String> caseIds, String lastExecResult, String executeUser) {
+        if (CollectionUtils.isEmpty(caseIds) || StringUtils.isBlank(lastExecResult)) {
+            return;
+        }
+        extFunctionalCaseMapper.syncPlanExecByCaseIds(caseIds, lastExecResult, executeUser, System.currentTimeMillis());
     }
 
 
@@ -1053,6 +1068,7 @@ public class FunctionalCaseService {
         functionalCase.setUpdateTime(System.currentTimeMillis());
         functionalCase.setUpdateUser(userId);
         extFunctionalCaseMapper.batchUpdate(functionalCase, ids);
+        syncAssociatedPlanCaseExec(ids, request.getLastExecuteResult(), userId);
     }
 
     /**
@@ -1064,6 +1080,7 @@ public class FunctionalCaseService {
         List<String> ids = doSelectIds(request, request.getProjectId());
         if (CollectionUtils.isNotEmpty(ids)) {
             extFunctionalCaseMapper.batchUpdateExecutor(ids, request.getUserId());
+            extFunctionalCaseMapper.syncPlanExecutorByCaseIds(ids, request.getUserId());
         }
     }
 
