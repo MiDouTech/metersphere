@@ -227,6 +227,8 @@
   import { BugEditCustomField, BugEditFormObject } from '@/models/bug-management';
   import { BugManagementRouteEnum, RouteEnum } from '@/enums/routeEnum';
 
+  import resolveBugFieldTooltip from '../bugFieldTips';
+
   const DeleteModal = defineAsyncComponent(() => import('@/views/bug-management/components/deleteModal.vue'));
 
   const router = useRouter();
@@ -308,6 +310,7 @@
           options: initOptions,
           required: item.required as boolean,
           platformPlaceHolder: item.platformPlaceHolder,
+          tooltip: resolveBugFieldTooltip(item),
           props: {
             modelValue: initValue,
             options: initOptions,

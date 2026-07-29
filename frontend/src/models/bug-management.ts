@@ -52,6 +52,8 @@ export interface BugEditCustomField {
   platformSystemField: boolean;
   sourceType?: string;
   field?: string;
+  /** 内置字段 key，如 bug_degree / bug_type */
+  internalFieldKey?: string;
 }
 export interface BugEditFormObject {
   [key: string]: any;
@@ -98,6 +100,8 @@ export interface CustomFieldItem {
   supportSearch: boolean;
   optionMethod: string;
   internal: boolean;
+  /** 内置字段 key，如 bug_degree / bug_type */
+  internalFieldKey?: string;
 }
 
 export interface OperationFile {

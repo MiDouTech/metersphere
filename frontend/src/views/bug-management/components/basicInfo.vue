@@ -248,6 +248,11 @@
   :deep(.arco-form-item-label-col > .arco-form-item-label) {
     color: var(--color-text-3) !important;
   }
+  :deep(.arco-tooltip-content) {
+    max-width: 320px;
+    white-space: pre-line;
+    line-height: 1.5;
+  }
 
   /* 状态：按钮式下拉 */
   :deep(.bug-status-select .arco-select-view-single) {

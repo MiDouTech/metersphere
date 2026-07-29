@@ -260,6 +260,7 @@
   import { CaseLinkEnum } from '@/enums/caseEnum';
 
   import { convertToFile } from '../case-management/caseManagementFeature/components/utils';
+  import resolveBugFieldTooltip from './bugFieldTips';
   import { convertToFileByBug, getCurrentText, getDefaultMemberValue } from './utils';
   import { getCaseTemplateContent } from '@/views/case-management/components/addDefectDrawer/utils';
 
@@ -425,6 +426,7 @@
           options: initOptions,
           required: item.required as boolean,
           platformPlaceHolder: item.platformPlaceHolder,
+          tooltip: resolveBugFieldTooltip(item),
           props: {
             modelValue: initValue,
             options: initOptions,
@@ -905,5 +907,10 @@
   }
   :deep(.arco-form-item-content) {
     overflow-wrap: anywhere;
+  }
+  :deep(.arco-tooltip-content) {
+    max-width: 320px;
+    white-space: pre-line;
+    line-height: 1.5;
   }
 </style>
