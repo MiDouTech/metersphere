@@ -13,8 +13,7 @@
         <if test="request.keyword != null and request.keyword != ''">
             and (
                 u.name like concat('%', #{request.keyword}, '%')
-                    or u.email like concat('%', #{request.keyword}, '%')
-                    or u.phone like concat('%', #{request.keyword}, '%')
+                    or u.wecom_userid like concat('%', #{request.keyword}, '%')
                 )
         </if>
         <if test="request.enable != null">

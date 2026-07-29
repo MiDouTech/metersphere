@@ -17,7 +17,7 @@ public class OrgStructureMemberPageRequest extends BasePageRequest {
     @Schema(description = "部门ID")
     private String departmentId;
 
-    @Schema(description = "姓名/邮箱/手机模糊搜索")
+    @Schema(description = "姓名模糊搜索")
     private String keyword;
 
     @Schema(description = "账号启用状态")

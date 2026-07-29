@@ -11,13 +11,13 @@ public class OrgStructureMemberDetailDTO {
     @Schema(description = "姓名")
     private String name;
 
-    @Schema(description = "邮箱（脱敏）")
+  @Schema(description = "邮箱（全局隐藏，接口不返回）")
     private String email;
 
-    @Schema(description = "手机号（脱敏）")
+    @Schema(description = "手机号（全局隐藏，接口不返回）")
     private String phone;
 
-    @Schema(description = "企微UserID（脱敏）")
+    @Schema(description = "企微UserID（明文）")
     private String wecomUserid;
 
     @Schema(description = "主部门ID")

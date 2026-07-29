@@ -130,24 +130,34 @@ public class BugSyncNoticeService {
             UserExample userExample = new UserExample();
             userExample.createCriteria().andIdIn(handleUserIds);
             List<User> handlers = userMapper.selectByExample(userExample);
-            List<String> mobileList = handlers.stream()
-                    .map(User::getPhone)
-                    .filter(StringUtils::isNotBlank)
-                    .distinct()
-                    .collect(Collectors.toList());
             List<String> wecomUserIds = handlers.stream()
                     .map(User::getWecomUserid)
                     .filter(StringUtils::isNotBlank)
+                    .map(String::trim)
                     .distinct()
                     .collect(Collectors.toList());
             String creatorName = creator != null && StringUtils.isNotBlank(creator.getName())
                     ? creator.getName() : (creator != null ? creator.getId() : StringUtils.EMPTY);
+            String atText = handlers.stream()
+                    .map(h -> {
+                        if (StringUtils.isNotBlank(h.getWecomUserid())) {
+                            return "@" + h.getWecomUserid().trim();
+                        }
+                        return StringUtils.isNotBlank(h.getName()) ? "@" + h.getName() : null;
+                    })
+                    .filter(StringUtils::isNotBlank)
+                    .distinct()
+                    .collect(Collectors.joining(" "));
             String content = creatorName + " 创建了缺陷：" + StringUtils.defaultString(bug.getTitle());
+            if (StringUtils.isNotBlank(atText)) {
+                content = content + "\n" + atText;
+            }
             for (ProjectRobot robot : robots) {
                 if (StringUtils.isBlank(robot.getWebhook())) {
                     continue;
                 }
-                WeComClient.send(robot.getWebhook(), content, mobileList, wecomUserIds);
+                // 正文写入 @ 文本，并用 wecom_userid 触发真·@；不再依赖手机号
+                WeComClient.send(robot.getWebhook(), content, null, wecomUserIds);
             }
         } catch (Exception e) {
             LogUtils.error("send wecom robot create bug notice failed", e);

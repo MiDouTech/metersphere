@@ -10,8 +10,6 @@
     <a-spin class="w-full" :loading="loading">
       <a-descriptions v-if="detail" :column="1" bordered size="large">
         <a-descriptions-item :label="t('orgStructure.member.name')">{{ detail.name || '-' }}</a-descriptions-item>
-        <a-descriptions-item :label="t('orgStructure.member.email')">{{ detail.email || '-' }}</a-descriptions-item>
-        <a-descriptions-item :label="t('orgStructure.member.phone')">{{ detail.phone || '-' }}</a-descriptions-item>
         <a-descriptions-item :label="t('orgStructure.member.wecomUserid')">{{
           detail.wecomUserid || '-'
         }}</a-descriptions-item>

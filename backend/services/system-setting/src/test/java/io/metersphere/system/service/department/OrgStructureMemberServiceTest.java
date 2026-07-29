@@ -7,24 +7,17 @@ import org.junit.jupiter.api.Test;
 class OrgStructureMemberServiceTest {
 
     @Test
-    void maskSensitive_fields() {
+    void hideContactFields_clearsPhoneEmail_keepsWecomUserid() {
         OrgStructureMemberDetailDTO dto = new OrgStructureMemberDetailDTO();
         dto.setPhone("13800138001");
         dto.setEmail("orguser1@metersphere.io");
         dto.setWecomUserid("wx_user_001");
 
         OrgStructureMemberService service = new OrgStructureMemberService();
-        service.maskSensitive(dto);
+        service.hideContactFields(dto);
 
-        Assertions.assertEquals("138****8001", dto.getPhone());
-        Assertions.assertEquals("o***1@metersphere.io", dto.getEmail());
-        Assertions.assertEquals("wx****01", dto.getWecomUserid());
-    }
-
-    @Test
-    void maskSensitive_shortValues() {
-        Assertions.assertEquals("123", OrgStructureMemberService.maskPhone("123"));
-        Assertions.assertEquals("*@x.com", OrgStructureMemberService.maskEmail("a@x.com"));
-        Assertions.assertEquals("ab", OrgStructureMemberService.maskWecomUserid("ab"));
+        Assertions.assertNull(dto.getPhone());
+        Assertions.assertNull(dto.getEmail());
+        Assertions.assertEquals("wx_user_001", dto.getWecomUserid());
     }
 }
