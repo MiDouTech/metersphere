@@ -21,15 +21,6 @@
         <a-button v-permission.all="['SYSTEM_USER:READ+IMPORT']" class="mr-3" type="outline" @click="showImportModal">
           {{ t('system.user.importUser') }}
         </a-button>
-        <a-button
-          v-permission.all="['SYSTEM_USER:READ+UPDATE']"
-          class="mr-3"
-          type="outline"
-          :loading="syncWecomPhoneLoading"
-          @click="handleSyncWecomUseridToPhone"
-        >
-          {{ t('system.user.syncWecomUseridToPhone') }}
-        </a-button>
       </div>
       <a-input-search
         v-model:model-value="keyword"
@@ -324,7 +315,6 @@
     getUserList,
     importUserInfo,
     resetUserPassword,
-    syncWecomUseridToPhone,
     toggleUserStatus,
     updateUserInfo,
   } from '@/api/modules/setting/user';
@@ -352,32 +342,11 @@
 
   const columns: MsTableColumn = [
     {
-      title: 'system.user.userName',
-      dataIndex: 'email',
-      showTooltip: true,
-      sortIndex: 0,
-      columnSelectorDisabled: true,
-    },
-    {
       title: 'system.user.tableColumnName',
       dataIndex: 'name',
       showTooltip: true,
       sortIndex: 1,
       columnSelectorDisabled: true,
-    },
-    {
-      title: 'system.user.tableColumnEmail',
-      dataIndex: 'email',
-      showTooltip: true,
-      sortIndex: 2,
-      columnSelectorDisabled: true,
-    },
-    {
-      title: 'system.user.tableColumnPhone',
-      dataIndex: 'phone',
-      showDrag: true,
-      showTooltip: true,
-      width: 140,
     },
     {
       title: 'system.user.tableColumnOrg',
@@ -864,13 +833,6 @@
       ],
       placeholder: 'system.user.createUserEmailPlaceholder',
     },
-    {
-      field: 'phone',
-      type: 'input',
-      label: 'system.user.createUserPhone',
-      rules: [{ validator: checkUerPhone }],
-      placeholder: 'system.user.createUserPhonePlaceholder',
-    },
   ]);
   const isBatchFormChange = ref(false);
 
@@ -1033,30 +995,6 @@
   const inviteVisible = ref(false);
   function showEmailInviteModal() {
     inviteVisible.value = true;
-  }
-
-  const syncWecomPhoneLoading = ref(false);
-  function handleSyncWecomUseridToPhone() {
-    openModal({
-      type: 'info',
-      title: t('system.user.syncWecomUseridToPhone'),
-      content: t('system.user.syncWecomUseridToPhoneTip'),
-      okText: t('system.user.syncWecomUseridToPhoneConfirm'),
-      cancelText: t('common.cancel'),
-      onBeforeOk: async () => {
-        try {
-          syncWecomPhoneLoading.value = true;
-          const res = await syncWecomUseridToPhone();
-          Message.success(t('system.user.syncWecomUseridToPhoneSuccess', { count: res?.successCount ?? 0 }));
-          searchUser();
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.log(error);
-        } finally {
-          syncWecomPhoneLoading.value = false;
-        }
-      },
-    });
   }
 
   const importVisible = ref(false);

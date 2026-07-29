@@ -163,17 +163,6 @@
       width: 300,
     },
     {
-      title: 'system.organization.email',
-      dataIndex: 'email',
-      width: 180,
-      showTooltip: true,
-    },
-    {
-      title: 'system.organization.phone',
-      dataIndex: 'phone',
-      width: 130,
-    },
-    {
       title: hasOperationPermission.value ? 'system.organization.operation' : '',
       slotName: 'operation',
       width: hasOperationPermission.value ? 60 : 20,

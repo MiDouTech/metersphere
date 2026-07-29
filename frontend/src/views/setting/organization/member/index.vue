@@ -215,13 +215,6 @@
   );
   const columns: MsTableColumn = [
     {
-      title: 'system.user.userName',
-      dataIndex: 'email',
-      showTooltip: true,
-      sortIndex: 0,
-      width: 200,
-    },
-    {
       title: 'organization.member.tableColunmName',
       dataIndex: 'name',
       showInTable: true,
@@ -229,23 +222,6 @@
       showDrag: false,
       sortIndex: 1,
       width: 300,
-    },
-    {
-      title: 'organization.member.tableColunmEmail',
-      dataIndex: 'email',
-      width: 150,
-      showInTable: true,
-      showTooltip: true,
-      sortIndex: 2,
-      showDrag: false,
-    },
-    {
-      title: 'organization.member.tableColunmPhone',
-      dataIndex: 'phone',
-      showInTable: true,
-      width: 200,
-      showTooltip: true,
-      showDrag: true,
     },
     {
       title: 'organization.member.tableColunmPro',

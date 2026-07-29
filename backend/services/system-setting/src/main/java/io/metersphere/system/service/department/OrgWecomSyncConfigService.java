@@ -77,34 +77,14 @@ public class OrgWecomSyncConfigService {
                 List<WecomUserDTO> sampleUsers = wecomContactClient.executeWithToken(corpId, contactSecret,
                         token -> wecomContactClient.listDepartmentUsers(token, OrgSyncConstants.ROOT_WECOM_DEPARTMENT_ID, true));
                 int sampleSize = Math.min(20, sampleUsers == null ? 0 : sampleUsers.size());
-                boolean hasMobile = false;
-                boolean hasEmail = false;
-                for (int i = 0; i < sampleSize; i++) {
-                    WecomUserDTO u = sampleUsers.get(i);
-                    if (u == null) {
-                        continue;
-                    }
-                    if (StringUtils.isNotBlank(u.getMobile())) {
-                        hasMobile = true;
-                    }
-                    if (StringUtils.isNotBlank(u.getEmail()) || StringUtils.isNotBlank(u.getBizMail())) {
-                        hasEmail = true;
-                    }
-                }
                 response.setSampleSize(sampleSize);
-                response.setHasMobileSample(hasMobile);
-                response.setHasEmailOrBizMailSample(hasEmail);
-                if (sampleSize > 0 && !hasMobile) {
-                    response.setMessage(response.getMessage() + "；抽样未见手机号，请检查「获取成员手机号」权限");
-                }
-                if (sampleSize > 0 && !hasEmail) {
-                    response.setMessage(response.getMessage() + "；抽样未见邮箱/企业邮箱，请检查邮箱相关权限");
+                // 不同步手机/邮箱，抽样仅确认能拉到成员
+                if (sampleSize > 0) {
+                    response.setMessage(response.getMessage() + "；抽样成员 " + sampleSize + " 人");
                 }
             } catch (Exception sampleEx) {
                 response.setSampleSize(0);
-                response.setHasMobileSample(false);
-                response.setHasEmailOrBizMailSample(false);
-                response.setMessage(response.getMessage() + "；字段抽样失败(不影响连接结论): " + sampleEx.getMessage());
+                response.setMessage(response.getMessage() + "；成员抽样失败(不影响连接结论): " + sampleEx.getMessage());
             }
             addOperationLog(request.getOrganizationId(), existing == null ? request.getOrganizationId() : existing.getId(),
                     operatorId, OperationLogType.DEBUG.name(), "/org-wecom/config/test",

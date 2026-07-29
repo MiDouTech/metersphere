@@ -15,16 +15,14 @@ public class WeComClient {
     }
 
     /**
-     * 企业微信群机器人文本消息，支持手机号 / 企微 userid @提醒
+     * 企业微信群机器人文本消息。
+     * mentioned_list 使用企微 userid；正文可同时写入 @ 文本便于可读。不再依赖手机号。
      */
     public static void send(String webhook, String context, List<String> mobileList, List<String> mentionedUserIds) {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         Map<String, Object> mp = new LinkedHashMap<>();
         Map<String, Object> js = new HashMap<>();
         js.put("content", context);
-        if (mobileList != null && !mobileList.isEmpty()) {
-            js.put("mentioned_mobile_list", mobileList);
-        }
         if (mentionedUserIds != null && !mentionedUserIds.isEmpty()) {
             js.put("mentioned_list", mentionedUserIds);
         }

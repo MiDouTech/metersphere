@@ -4,7 +4,7 @@ export default {
   'orgStructure.selectOrgTip': '请确保该组织与企微主体一一对应',
   'orgStructure.department.search': '搜索部门',
   'orgStructure.department.disabled': '已停用',
-  'orgStructure.member.search': '通过姓名/邮箱/手机搜索',
+  'orgStructure.member.search': '通过姓名/企微 UserID 搜索',
   'orgStructure.member.name': '姓名',
   'orgStructure.member.department': '部门',
   'orgStructure.member.position': '职位',

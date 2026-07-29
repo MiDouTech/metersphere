@@ -27,7 +27,6 @@ import java.util.function.Function;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,15 +49,12 @@ class UserSyncHandlerTest {
     private SimpleUserService simpleUserService;
     @Mock
     private OrganizationService organizationService;
-    @Mock
-    private OrgSyncEmailConflictService orgSyncEmailConflictService;
 
     @Test
-    void sync_newUser_createsUserAndOrgMember() {
+    void sync_newUser_createsWithPlaceholderEmailAndNoPhone() {
         mockDepartments();
         when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(new ArrayList<>());
         when(extUserMapper.selectByWecomUserid("zhangsan")).thenReturn(null);
-        when(orgSyncEmailConflictService.findOtherByEmail(anyString(), isNull())).thenReturn(null);
         mockTokenUsers(List.of(user("zhangsan", "张三", "13800000001", "zhangsan@example.com", null, 1L, null, 1)));
         doAnswer(invocation -> {
             UserBatchCreateRequest request = invocation.getArgument(0);
@@ -71,16 +67,17 @@ class UserSyncHandlerTest {
         Assertions.assertEquals(1, result.getCreated());
         ArgumentCaptor<UserBatchCreateRequest> createCaptor = ArgumentCaptor.forClass(UserBatchCreateRequest.class);
         verify(simpleUserService).addUser(createCaptor.capture(), anyString(), eq("admin"));
-        Assertions.assertEquals("zhangsan@example.com", createCaptor.getValue().getUserInfoList().getFirst().getEmail());
+        Assertions.assertEquals("zhangsan@wecom.sync.internal",
+                createCaptor.getValue().getUserInfoList().getFirst().getEmail());
+        Assertions.assertNull(createCaptor.getValue().getUserInfoList().getFirst().getPhone());
         verify(organizationService).addMemberBySystem(any(OrganizationMemberRequest.class), eq("admin"));
     }
 
     @Test
-    void sync_newUser_bizMailOnly_writesEnterpriseEmail() {
+    void sync_newUser_bizMailIgnored_stillPlaceholder() {
         mockDepartments();
         when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(new ArrayList<>());
         when(extUserMapper.selectByWecomUserid("lisi")).thenReturn(null);
-        when(orgSyncEmailConflictService.findOtherByEmail(anyString(), isNull())).thenReturn(null);
         mockTokenUsers(List.of(user("lisi", "李四", null, null, "lisi@corp.com", 1L, null, 1)));
         doAnswer(invocation -> {
             UserBatchCreateRequest request = invocation.getArgument(0);
@@ -92,112 +89,44 @@ class UserSyncHandlerTest {
 
         ArgumentCaptor<UserBatchCreateRequest> createCaptor = ArgumentCaptor.forClass(UserBatchCreateRequest.class);
         verify(simpleUserService).addUser(createCaptor.capture(), anyString(), anyString());
-        Assertions.assertEquals("lisi@corp.com", createCaptor.getValue().getUserInfoList().getFirst().getEmail());
+        Assertions.assertEquals("lisi@wecom.sync.internal",
+                createCaptor.getValue().getUserInfoList().getFirst().getEmail());
     }
 
     @Test
-    void sync_existingPlaceholder_upgradesByBizMail() {
-        mockDepartments();
-        User existing = buildUser("user-1", "zhangsan", "13800000001");
-        existing.setEmail("zhangsan@wecom.sync.internal");
-        existing.setName("张三");
-        existing.setDepartmentId("dept-1");
-        when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(List.of(existing));
-        when(orgSyncEmailConflictService.findOtherByEmail(anyString(), eq("user-1"))).thenReturn(null);
-        mockTokenUsers(List.of(user("zhangsan", "张三", "13800000001", null, "zhangsan@corp.com", 1L, null, 1)));
-
-        SyncPartResult result = userSyncHandler.sync("org-1", "admin", "corp", "secret");
-
-        Assertions.assertEquals(1, result.getUpdated());
-        Assertions.assertEquals("zhangsan@corp.com", existing.getEmail());
-        verify(userMapper).updateByPrimaryKeySelective(existing);
-    }
-
-    @Test
-    void sync_existingUser_emptyMobile_doesNotClearPhone() {
-        mockDepartments();
-        User existing = buildUser("user-1", "zhangsan", "13800000001");
-        existing.setName("张三");
-        existing.setDepartmentId("dept-1");
-        existing.setEmail("zhangsan@example.com");
-        when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(List.of(existing));
-        mockTokenUsers(List.of(user("zhangsan", "张三", null, "zhangsan@example.com", null, 1L, null, 1)));
-
-        SyncPartResult result = userSyncHandler.sync("org-1", "admin", "corp", "secret");
-
-        Assertions.assertEquals(0, result.getUpdated());
-        verify(userMapper, never()).updateByPrimaryKeySelective(any(User.class));
-        Assertions.assertEquals("13800000001", existing.getPhone());
-    }
-
-    @Test
-    void sync_existingUser_emptyApiEmail_doesNotClearLocalEmail() {
-        mockDepartments();
-        User existing = buildUser("user-1", "zhangsan", "13800000001");
-        existing.setName("张三");
-        existing.setDepartmentId("dept-1");
-        existing.setEmail("zhangsan@example.com");
-        when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(List.of(existing));
-        WecomUserDTO wecom = user("zhangsan", "张三改名", "13800000001", null, null, 1L, null, 1);
-        mockTokenUsers(List.of(wecom));
-
-        SyncPartResult result = userSyncHandler.sync("org-1", "admin", "corp", "secret");
-
-        Assertions.assertEquals(1, result.getUpdated());
-        Assertions.assertEquals("zhangsan@example.com", existing.getEmail());
-        Assertions.assertEquals("张三改名", existing.getName());
-    }
-
-    @Test
-    void sync_existingUser_mobileUpdated() {
-        mockDepartments();
-        User existing = buildUser("user-1", "zhangsan", "13800000001");
-        existing.setName("张三");
-        existing.setDepartmentId("dept-1");
-        existing.setEmail("zhangsan@example.com");
-        when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(List.of(existing));
-        mockTokenUsers(List.of(user("zhangsan", "张三", "13900000001", "zhangsan@example.com", null, 1L, null, 1)));
-
-        SyncPartResult result = userSyncHandler.sync("org-1", "admin", "corp", "secret");
-
-        Assertions.assertEquals(1, result.getUpdated());
-        Assertions.assertEquals("13900000001", existing.getPhone());
-        verify(userMapper).updateByPrimaryKeySelective(existing);
-    }
-
-    @Test
-    void sync_sameUser_emailOverwrittenByWecom() {
+    void sync_existingUser_doesNotUpdateEmailOrPhone() {
         mockDepartments();
         User existing = buildUser("user-1", "zhangsan", "13800000001");
         existing.setName("张三");
         existing.setDepartmentId("dept-1");
         existing.setEmail("old@example.com");
         when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(List.of(existing));
-        when(orgSyncEmailConflictService.findOtherByEmail(eq("new@corp.com"), eq("user-1"))).thenReturn(null);
-        mockTokenUsers(List.of(user("zhangsan", "张三", "13800000001", "new@corp.com", null, 1L, null, 1)));
+        mockTokenUsers(List.of(user("zhangsan", "张三", "13900000001", "new@corp.com", null, 1L, null, 1)));
+
+        SyncPartResult result = userSyncHandler.sync("org-1", "admin", "corp", "secret");
+
+        Assertions.assertEquals(0, result.getUpdated());
+        Assertions.assertEquals("old@example.com", existing.getEmail());
+        Assertions.assertEquals("13800000001", existing.getPhone());
+        verify(userMapper, never()).updateByPrimaryKeySelective(any(User.class));
+    }
+
+    @Test
+    void sync_existingUser_updatesNameOnly() {
+        mockDepartments();
+        User existing = buildUser("user-1", "zhangsan", "13800000001");
+        existing.setName("张三");
+        existing.setDepartmentId("dept-1");
+        existing.setEmail("old@example.com");
+        when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(List.of(existing));
+        mockTokenUsers(List.of(user("zhangsan", "张三改名", "13900000001", "new@corp.com", null, 1L, null, 1)));
 
         SyncPartResult result = userSyncHandler.sync("org-1", "admin", "corp", "secret");
 
         Assertions.assertEquals(1, result.getUpdated());
-        Assertions.assertEquals("new@corp.com", existing.getEmail());
-        verify(orgSyncEmailConflictService, never()).registerConflict(anyString(), any(), anyString(),
-                any(), any(), anyString(), any(), anyString());
-    }
-
-    @Test
-    void sync_emailTooLong_marksFailedWithoutTruncation() {
-        mockDepartments();
-        when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(new ArrayList<>());
-        when(extUserMapper.selectByWecomUserid("zhangsan")).thenReturn(null);
-        String tooLong = "a".repeat(OrgSyncConstants.MAX_EMAIL_LENGTH + 1) + "@corp.com";
-        mockTokenUsers(List.of(user("zhangsan", "张三", "13800000001", tooLong, null, 1L, null, 1)));
-
-        SyncPartResult result = userSyncHandler.sync("org-1", "admin", "corp", "secret");
-
-        Assertions.assertEquals(1, result.getFailed());
-        Assertions.assertEquals(0, result.getCreated());
-        verify(simpleUserService, never()).addUser(any(UserBatchCreateRequest.class), anyString(), anyString());
-        Assertions.assertTrue(result.getErrorMessage().contains("邮箱长度超过"));
+        Assertions.assertEquals("张三改名", existing.getName());
+        Assertions.assertEquals("old@example.com", existing.getEmail());
+        Assertions.assertEquals("13800000001", existing.getPhone());
     }
 
     @Test
@@ -211,7 +140,6 @@ class UserSyncHandlerTest {
         when(extDepartmentMapper.listByOrganizationId("org-1")).thenReturn(List.of(dept1, dept2));
         when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(new ArrayList<>());
         when(extUserMapper.selectByWecomUserid("zhangsan")).thenReturn(null);
-        when(orgSyncEmailConflictService.findOtherByEmail(anyString(), isNull())).thenReturn(null);
         mockTokenUsers(List.of(user("zhangsan", "张三", "13800000001", "zhangsan@example.com", null, 1L, 2L, 1)));
         doAnswer(invocation -> {
             UserBatchCreateRequest request = invocation.getArgument(0);
@@ -224,56 +152,7 @@ class UserSyncHandlerTest {
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).updateByPrimaryKeySelective(captor.capture());
         Assertions.assertEquals("dept-2", captor.getValue().getDepartmentId());
-    }
-
-    @Test
-    void sync_mainDepartmentUnmapped_fallsBackToDepartmentList() {
-        Department dept1 = new Department();
-        dept1.setId("dept-1");
-        dept1.setWecomDeptId(1L);
-        when(extDepartmentMapper.listByOrganizationId("org-1")).thenReturn(List.of(dept1));
-        when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(new ArrayList<>());
-        when(extUserMapper.selectByWecomUserid("zhangsan")).thenReturn(null);
-        when(orgSyncEmailConflictService.findOtherByEmail(anyString(), isNull())).thenReturn(null);
-        WecomUserDTO wecom = user("zhangsan", "张三", "13800000001", "zhangsan@example.com", null, 1L, 99L, 1);
-        wecom.setDepartment(List.of(99L, 1L));
-        mockTokenUsers(List.of(wecom));
-        doAnswer(invocation -> {
-            UserBatchCreateRequest request = invocation.getArgument(0);
-            request.getUserInfoList().getFirst().setId("user-1");
-            return new UserBatchCreateResponse();
-        }).when(simpleUserService).addUser(any(UserBatchCreateRequest.class), anyString(), anyString());
-
-        userSyncHandler.sync("org-1", "admin", "corp", "secret");
-
-        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        verify(userMapper).updateByPrimaryKeySelective(captor.capture());
-        Assertions.assertEquals("dept-1", captor.getValue().getDepartmentId());
-    }
-
-    @Test
-    void sync_emailConflict_registersAndKeepsPlaceholder() {
-        mockDepartments();
-        when(extUserMapper.listWecomUsersByOrganizationId("org-1")).thenReturn(new ArrayList<>());
-        when(extUserMapper.selectByWecomUserid("zhangsan")).thenReturn(null);
-        User occupied = buildUser("user-occ", "other", "13900000000");
-        occupied.setEmail("same@corp.com");
-        when(orgSyncEmailConflictService.findOtherByEmail(eq("same@corp.com"), isNull())).thenReturn(occupied);
-        mockTokenUsers(List.of(user("zhangsan", "张三", "13800000001", "same@corp.com", null, 1L, null, 1)));
-        doAnswer(invocation -> {
-            UserBatchCreateRequest request = invocation.getArgument(0);
-            request.getUserInfoList().getFirst().setId("user-new");
-            return new UserBatchCreateResponse();
-        }).when(simpleUserService).addUser(any(UserBatchCreateRequest.class), anyString(), anyString());
-
-        SyncPartResult result = userSyncHandler.sync("org-1", "admin", "corp", "secret");
-
-        Assertions.assertEquals(1, result.getEmailConflict());
-        ArgumentCaptor<UserBatchCreateRequest> createCaptor = ArgumentCaptor.forClass(UserBatchCreateRequest.class);
-        verify(simpleUserService).addUser(createCaptor.capture(), anyString(), anyString());
-        Assertions.assertTrue(OrgSyncConstants.isPlaceholderEmail(createCaptor.getValue().getUserInfoList().getFirst().getEmail()));
-        verify(orgSyncEmailConflictService).registerConflict(eq("org-1"), isNull(), eq("zhangsan"),
-                isNull(), eq("张三"), eq("same@corp.com"), eq(occupied), eq(OrgSyncConstants.EMAIL_CONFLICT_SCENE_CREATE));
+        Assertions.assertEquals("zhangsan", captor.getValue().getWecomUserid());
     }
 
     @Test

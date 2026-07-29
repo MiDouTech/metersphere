@@ -4,7 +4,7 @@ export default {
   'orgStructure.selectOrgTip': 'Ensure this organization maps one-to-one with a WeCom entity',
   'orgStructure.department.search': 'Search department',
   'orgStructure.department.disabled': 'Disabled',
-  'orgStructure.member.search': 'Search by name/email/phone',
+  'orgStructure.member.search': 'Search by name/WeCom UserID',
   'orgStructure.member.name': 'Name',
   'orgStructure.member.department': 'Department',
   'orgStructure.member.position': 'Position',
