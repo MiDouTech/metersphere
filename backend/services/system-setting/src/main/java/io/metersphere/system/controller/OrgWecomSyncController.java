@@ -4,6 +4,8 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.domain.OrgSyncLog;
+import io.metersphere.system.dto.department.OrgSyncEmailConflictDTO;
+import io.metersphere.system.dto.department.OrgSyncEmailConflictResolveRequest;
 import io.metersphere.system.dto.department.OrgWecomSyncConfigDTO;
 import io.metersphere.system.dto.department.OrgWecomSyncConfigSaveRequest;
 import io.metersphere.system.dto.department.OrgWecomSyncConfigTestRequest;
@@ -12,6 +14,7 @@ import io.metersphere.system.dto.department.OrgWecomSyncLogPageRequest;
 import io.metersphere.system.dto.department.OrgWecomSyncManualResponse;
 import io.metersphere.system.dto.department.OrgWecomSyncStatusDTO;
 import io.metersphere.system.dto.department.SyncResult;
+import io.metersphere.system.service.department.OrgSyncEmailConflictService;
 import io.metersphere.system.service.department.OrgWecomSyncAccessService;
 import io.metersphere.system.service.department.OrgWecomSyncConfigService;
 import io.metersphere.system.service.department.OrgWecomSyncQueryService;
@@ -50,6 +53,8 @@ public class OrgWecomSyncController {
     private OrgWecomSyncConfigService orgWecomSyncConfigService;
     @Resource
     private OrgWecomSyncAccessService orgWecomSyncAccessService;
+    @Resource
+    private OrgSyncEmailConflictService orgSyncEmailConflictService;
 
     @PostMapping("/sync/manual")
     @Operation(summary = "组织架构-手动同步企微通讯录")
@@ -63,6 +68,42 @@ public class OrgWecomSyncController {
         try {
             SyncResult result = wecomOrgSyncApplicationService.syncManual(organizationId, SessionUtils.getUserId());
             return toManualResponse(result);
+        } finally {
+            SessionUtils.clearCurrentOrganizationId();
+        }
+    }
+
+    @GetMapping("/email-conflict/pending")
+    @Operation(summary = "组织架构-待处理邮箱冲突列表")
+    @RequiresPermissions(value = {
+            PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_READ,
+            PermissionConstants.ORGANIZATION_MEMBER_READ
+    }, logical = Logical.OR)
+    public List<OrgSyncEmailConflictDTO> listEmailConflicts(@RequestParam @NotBlank String organizationId) {
+        orgWecomSyncAccessService.validateReadable(organizationId);
+        SessionUtils.setCurrentOrganizationId(organizationId);
+        try {
+            return orgSyncEmailConflictService.listPending(organizationId);
+        } finally {
+            SessionUtils.clearCurrentOrganizationId();
+        }
+    }
+
+    @PostMapping("/email-conflict/resolve")
+    @Operation(summary = "组织架构-处理邮箱冲突")
+    @RequiresPermissions(value = {
+            PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_READ_UPDATE,
+            PermissionConstants.ORGANIZATION_MEMBER_UPDATE
+    }, logical = Logical.OR)
+    public void resolveEmailConflict(@Valid @RequestBody OrgSyncEmailConflictResolveRequest request) {
+        OrgSyncEmailConflictDTO conflict = orgSyncEmailConflictService.getById(request.getId());
+        if (conflict == null) {
+            throw new io.metersphere.sdk.exception.MSException("邮箱冲突记录不存在");
+        }
+        orgWecomSyncAccessService.validateWritable(conflict.getOrganizationId());
+        SessionUtils.setCurrentOrganizationId(conflict.getOrganizationId());
+        try {
+            orgSyncEmailConflictService.resolve(request.getId(), request.getAction(), SessionUtils.getUserId());
         } finally {
             SessionUtils.clearCurrentOrganizationId();
         }
@@ -152,6 +193,10 @@ public class OrgWecomSyncController {
         response.setDeptFailed(result.getDeptFailed());
         response.setUserSuccess(result.getUserSuccess());
         response.setUserFailed(result.getUserFailed());
+        response.setUserMissingMobile(result.getUserMissingMobile());
+        response.setUserMissingEmail(result.getUserMissingEmail());
+        response.setUserPlaceholderEmail(result.getUserPlaceholderEmail());
+        response.setUserEmailConflict(result.getUserEmailConflict());
         response.setDurationMs(result.getDurationMs());
         response.setErrorMessage(result.getErrorMessage());
         return response;

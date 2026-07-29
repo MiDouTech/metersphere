@@ -34,7 +34,11 @@
     @close="closeHandler"
     @save="confirmImport"
   />
-  <ImportFromDefaultModal v-model:visible="showHubModal" @success="onHubImportSuccess" />
+  <ImportFromDefaultModal
+    v-model:visible="showHubModal"
+    :target-module-id="importTargetModuleId"
+    @success="onHubImportSuccess"
+  />
 </template>
 
 <script setup lang="ts">
@@ -55,6 +59,14 @@
   import type { FileItem } from '@arco-design/web-vue';
   import Message from '@arco-design/web-vue/es/message';
 
+  const props = withDefaults(
+    defineProps<{
+      /** 左树当前选中文件夹，导入目标 */
+      activeFolder?: string;
+    }>(),
+    { activeFolder: 'all' }
+  );
+
   const emit = defineEmits<{
     (e: 'confirmImport'): void;
     (e: 'initModules'): void;
@@ -67,6 +79,14 @@
   const hubProjectId = ref('');
   const showExcelModal = ref<boolean>(false);
   const showHubModal = ref(false);
+
+  const importTargetModuleId = computed(() => {
+    const id = props.activeFolder;
+    if (!id || id === 'all' || id === 'recycle' || id === 'root') {
+      return '';
+    }
+    return id;
+  });
 
   const hubModeDisabled = computed(() => !!hubProjectId.value && hubProjectId.value === appStore.currentProjectId);
   const hubDisabledTip = computed(() => t('caseManagement.featureCase.importHubDisabledCurrent'));
@@ -157,6 +177,7 @@
         projectId: appStore.currentProjectId,
         versionId: '',
         cover,
+        moduleId: importTargetModuleId.value || undefined,
       };
       const result = await importExcelOrXMindChecked(
         { request: params, fileList: files.map((item: any) => item.file) },
@@ -196,6 +217,7 @@
         versionId: '',
         cover: isCover.value,
         count: validateInfo.value.successCount,
+        moduleId: importTargetModuleId.value || undefined,
       };
       await importExcelOrXMindCase(
         { request: params, fileList: fileList.value.map((item: any) => item.file) },

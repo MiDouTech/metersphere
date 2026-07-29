@@ -66,7 +66,7 @@
 
   const MAX_IMPORT = 500;
 
-  const props = defineProps<{ visible: boolean }>();
+  const props = defineProps<{ visible: boolean; targetModuleId?: string }>();
   const emit = defineEmits<{
     (e: 'update:visible', val: boolean): void;
     (e: 'success'): void;
@@ -184,6 +184,7 @@
         selectMode: 'CASE_IDS',
         ids: selectedCaseIds.value,
         conflictStrategy: form.value.conflictStrategy,
+        targetModuleId: props.targetModuleId || undefined,
       });
       Message.success(t('caseManagement.featureCase.importHubSuccess'));
       jobProgress.value = 0;

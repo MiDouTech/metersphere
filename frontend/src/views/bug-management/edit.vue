@@ -261,7 +261,7 @@
 
   import { convertToFile } from '../case-management/caseManagementFeature/components/utils';
   import resolveBugFieldTooltip from './bugFieldTips';
-  import { convertToFileByBug, getCurrentText, getDefaultMemberValue } from './utils';
+  import { convertToFileByBug, getCurrentText, getDefaultMemberValue, resolveHandleUserFormValue } from './utils';
   import { getCaseTemplateContent } from '@/views/case-management/components/addDefectDrawer/utils';
 
   const props = defineProps<{
@@ -729,8 +729,19 @@
         if (item.id === 'status' && props.isCopyBug) {
           // 复制时, 状态赋值为空
           tmpObj[item.id] = '';
-          // 多选类型需要过滤选项
-        } else if (MULTIPLE_TYPE.includes(item.type)) {
+          return;
+        }
+        // 处理人：编辑/复制时保留原值，禁止因类型不一致或 JSON 解析失败被清空
+        if (item.id === 'handleUser') {
+          const multipleOptions = getOptionFromTemplate(
+            currentCustomFields.value.find((filed: any) => item.id === filed.fieldId)
+          );
+          const optionsIds = (multipleOptions || []).map((e: any) => e.value);
+          const raw = item.value ?? (bugDetail as any).handleUser;
+          tmpObj[item.id] = resolveHandleUserFormValue(raw, optionsIds);
+          return;
+        }
+        if (MULTIPLE_TYPE.includes(item.type)) {
           if (!item.value) {
             tmpObj[item.id] = [];
             return;
@@ -767,6 +778,9 @@
           tmpObj[item.id] = item.value;
         }
       });
+    }
+    if (tmpObj.handleUser == null && (bugDetail as any).handleUser) {
+      tmpObj.handleUser = resolveHandleUserFormValue((bugDetail as any).handleUser);
     }
     return tmpObj;
   }

@@ -114,7 +114,57 @@ export function makeCustomFieldsParams(formItem: FormRuleItem[], currentCustomFi
   return customFields;
 }
 
-// 设置成员默认值
+/**
+ * 解析处理人：兼容单值、逗号分隔、JSON 数组
+ */
+export function parseHandleUserIds(raw: unknown): string[] {
+  if (raw == null || raw === '') {
+    return [];
+  }
+  if (Array.isArray(raw)) {
+    return raw
+      .map(String)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  if (typeof raw !== 'string') {
+    return [];
+  }
+  const value = raw.trim();
+  if (!value) {
+    return [];
+  }
+  try {
+    if (value.startsWith('[')) {
+      const ids = JSON.parse(value);
+      if (Array.isArray(ids)) {
+        return ids
+          .map(String)
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+    }
+  } catch {
+    // fallthrough
+  }
+  return value
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * 回显处理人表单值。选项未加载时保留原 id，避免被清空后误写成当前用户。
+ */
+export function resolveHandleUserFormValue(raw: unknown, optionIds: string[] = []): string[] {
+  const ids = parseHandleUserIds(raw);
+  if (!optionIds.length) {
+    return ids;
+  }
+  return ids.filter((id) => optionIds.includes(id));
+}
+
+// 设置成员默认值（仅新建场景使用）
 export function getDefaultMemberValue(item: DetailCustomField, initOptions: FieldOptions[]) {
   if (item.defaultValue) {
     // 系统模板创建人

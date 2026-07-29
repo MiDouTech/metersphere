@@ -62,8 +62,26 @@ export interface OrgWecomSyncManualResponse {
   deptFailed?: number;
   userSuccess?: number;
   userFailed?: number;
+  userMissingMobile?: number;
+  userMissingEmail?: number;
+  userPlaceholderEmail?: number;
+  userEmailConflict?: number;
   durationMs?: number;
   errorMessage?: string;
+}
+
+export interface OrgSyncEmailConflictItem {
+  id: string;
+  organizationId: string;
+  wecomUserid: string;
+  pendingUserId?: string;
+  wecomUserName?: string;
+  conflictEmail: string;
+  occupiedUserId: string;
+  occupiedUserName?: string;
+  conflictScene: 'CREATE' | 'UPDATE' | string;
+  status: string;
+  createTime?: number;
 }
 
 export interface OrgSyncLogItem {
@@ -122,6 +140,9 @@ export interface OrgWecomSyncConfigTestResponse {
   success: boolean;
   deptCount?: number;
   message?: string;
+  hasMobileSample?: boolean;
+  hasEmailOrBizMailSample?: boolean;
+  sampleSize?: number;
 }
 
 export const SECRET_MASK_PREFIX = '******';

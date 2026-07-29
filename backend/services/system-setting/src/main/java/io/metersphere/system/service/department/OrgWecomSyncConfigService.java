@@ -17,6 +17,7 @@ import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.log.dto.LogDTO;
 import io.metersphere.system.log.service.OperationLogService;
 import io.metersphere.system.mapper.OrgWecomSyncConfigMapper;
+import io.metersphere.system.dto.wecom.WecomUserDTO;
 import io.metersphere.system.service.wecom.WecomApiException;
 import io.metersphere.system.service.wecom.WecomContactClient;
 import io.metersphere.system.uid.IDGenerator;
@@ -72,6 +73,39 @@ public class OrgWecomSyncConfigService {
             response.setSuccess(true);
             response.setDeptCount(deptCount);
             response.setMessage("连接成功");
+            try {
+                List<WecomUserDTO> sampleUsers = wecomContactClient.executeWithToken(corpId, contactSecret,
+                        token -> wecomContactClient.listDepartmentUsers(token, OrgSyncConstants.ROOT_WECOM_DEPARTMENT_ID, true));
+                int sampleSize = Math.min(20, sampleUsers == null ? 0 : sampleUsers.size());
+                boolean hasMobile = false;
+                boolean hasEmail = false;
+                for (int i = 0; i < sampleSize; i++) {
+                    WecomUserDTO u = sampleUsers.get(i);
+                    if (u == null) {
+                        continue;
+                    }
+                    if (StringUtils.isNotBlank(u.getMobile())) {
+                        hasMobile = true;
+                    }
+                    if (StringUtils.isNotBlank(u.getEmail()) || StringUtils.isNotBlank(u.getBizMail())) {
+                        hasEmail = true;
+                    }
+                }
+                response.setSampleSize(sampleSize);
+                response.setHasMobileSample(hasMobile);
+                response.setHasEmailOrBizMailSample(hasEmail);
+                if (sampleSize > 0 && !hasMobile) {
+                    response.setMessage(response.getMessage() + "；抽样未见手机号，请检查「获取成员手机号」权限");
+                }
+                if (sampleSize > 0 && !hasEmail) {
+                    response.setMessage(response.getMessage() + "；抽样未见邮箱/企业邮箱，请检查邮箱相关权限");
+                }
+            } catch (Exception sampleEx) {
+                response.setSampleSize(0);
+                response.setHasMobileSample(false);
+                response.setHasEmailOrBizMailSample(false);
+                response.setMessage(response.getMessage() + "；字段抽样失败(不影响连接结论): " + sampleEx.getMessage());
+            }
             addOperationLog(request.getOrganizationId(), existing == null ? request.getOrganizationId() : existing.getId(),
                     operatorId, OperationLogType.DEBUG.name(), "/org-wecom/config/test",
                     "测试企微通讯录连接成功，部门数: " + deptCount, null, JSON.toJSONBytes(response));

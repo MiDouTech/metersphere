@@ -168,6 +168,12 @@
       });
       if (result.success) {
         Message.success(`${result.message || t('orgStructure.config.testSuccess')} (${result.deptCount ?? 0})`);
+        if ((result.sampleSize || 0) > 0 && result.hasMobileSample === false) {
+          Message.warning(t('orgStructure.config.testNoMobileSample'));
+        }
+        if ((result.sampleSize || 0) > 0 && result.hasEmailOrBizMailSample === false) {
+          Message.warning(t('orgStructure.config.testNoEmailSample'));
+        }
       } else {
         Message.error(result.message || t('orgStructure.config.testFailed'));
       }

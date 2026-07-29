@@ -46,7 +46,12 @@
                 >
                   {{ t('common.newCreate') }}
                 </a-button>
-                <ImportCase ref="importCaseRef" @init-modules="emit('initModules')" @confirm-import="confirmImport" />
+                <ImportCase
+                  ref="importCaseRef"
+                  :active-folder="props.activeFolder"
+                  @init-modules="emit('initModules')"
+                  @confirm-import="confirmImport"
+                />
                 <MsAiButton
                   v-if="aiStore.aiSourceNameList.length > 0"
                   class="ml-[12px]"

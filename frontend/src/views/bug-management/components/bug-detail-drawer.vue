@@ -220,7 +220,6 @@
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import { useAppStore } from '@/store';
-  import useUserStore from '@/store/modules/user';
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { CustomFieldItem } from '@/models/bug-management';
@@ -228,6 +227,7 @@
   import { BugManagementRouteEnum, RouteEnum } from '@/enums/routeEnum';
 
   import resolveBugFieldTooltip from '../bugFieldTips';
+  import { resolveHandleUserFormValue } from '../utils';
 
   const DeleteModal = defineAsyncComponent(() => import('@/views/bug-management/components/deleteModal.vue'));
 
@@ -276,25 +276,13 @@
   const detailInfo = ref<Record<string, any>>({ match: [] }); // 存储当前详情信息，通过loadBug 获取
   const tags = ref([]);
   const platformSystemFields = ref<BugEditCustomField[]>([]); // 平台系统字段
-  const userStore = useUserStore();
-  // 处理表单格式
+  // 处理表单格式（详情编辑禁止用 CREATE_USER 覆盖已有处理人）
   const getFormRules = (arr: BugEditCustomField[], valueObj: BugEditFormObject) => {
     formRules.value = [];
-    const memberType = ['MEMBER', 'MULTIPLE_MEMBER'];
     if (Array.isArray(arr) && arr.length) {
       formRules.value = arr.map((item: any) => {
-        let initValue = valueObj[item.fieldId];
+        const initValue = valueObj[item.fieldId];
         const initOptions = item.options ? item.options : JSON.parse(item.platformOptionJson);
-        if (memberType.includes(item.type)) {
-          // 详情为空, 默认值为当前
-          if (
-            initValue == null &&
-            initValue === '' &&
-            (item.defaultValue === 'CREATE_USER' || item.defaultValue.includes('CREATE_USER'))
-          ) {
-            initValue = item.type === 'MEMBER' ? userStore.id : [userStore.id];
-          }
-        }
         let fieldType = item.type;
         // 状态：按钮触发的下拉选择（SELECT）
         if (item.fieldId === 'status') {
@@ -364,6 +352,16 @@
       const MULTIPLE_TYPE = ['MULTIPLE_SELECT', 'MULTIPLE_INPUT', 'CHECKBOX', 'MULTIPLE_MEMBER'];
       const SINGLE_TYPE = ['RADIO', 'SELECT', 'MEMBER'];
       detail.customFields.forEach((item: Record<string, any>) => {
+        // 处理人：始终按多选成员解析，避免 MEMBER/MULTIPLE_MEMBER 不一致或选项未加载时被清空
+        if (item.id === 'handleUser') {
+          const multipleOptions = getOptionFromTemplate(
+            currentCustomFields.value.find((filed: any) => item.id === filed.fieldId)
+          );
+          const optionsIds = (multipleOptions || []).map((e: any) => e.value);
+          const raw = item.value ?? detail.handleUser;
+          tmpObj[item.id] = resolveHandleUserFormValue(raw, optionsIds);
+          return;
+        }
         if (MULTIPLE_TYPE.includes(item.type)) {
           const multipleOptions = getOptionFromTemplate(
             currentCustomFields.value.find((filed: any) => item.id === filed.fieldId)
@@ -392,29 +390,15 @@
           );
           // 如果该值在选项中已经被删除掉
           const optionsIds = (multipleOptions || []).map((e: any) => e.value);
-          // 处理人兼容历史单值 / 逗号分隔，统一转为数组供多选
-          if (item.id === 'handleUser') {
-            let ids: string[] = [];
-            try {
-              if (typeof item.value === 'string' && item.value.startsWith('[')) {
-                ids = JSON.parse(item.value);
-              } else if (typeof item.value === 'string' && item.value) {
-                ids = item.value
-                  .split(',')
-                  .map((e: string) => e.trim())
-                  .filter(Boolean);
-              }
-            } catch {
-              ids = item.value ? [item.value] : [];
-            }
-            tmpObj[item.id] = optionsIds.filter((e: any) => ids.includes(e));
-          } else {
-            tmpObj[item.id] = optionsIds.find((e: any) => item.value === e) || '';
-          }
+          tmpObj[item.id] = optionsIds.find((e: any) => item.value === e) || '';
         } else {
           tmpObj[item.id] = item.value;
         }
       });
+    }
+    // 兜底：自定义字段未带处理人时，用详情主字段回填
+    if (tmpObj.handleUser == null && detail.handleUser) {
+      tmpObj.handleUser = resolveHandleUserFormValue(detail.handleUser);
     }
     // 初始化自定义字段
     platformSystemFields.value.forEach((item) => {

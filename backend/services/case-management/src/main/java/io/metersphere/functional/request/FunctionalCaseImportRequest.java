@@ -30,4 +30,7 @@ public class FunctionalCaseImportRequest implements Serializable {
 
     @Schema(description = "导入数量")
     private String count;
+
+    @Schema(description = "目标模块ID（左树选中文件夹；all/root/空则导入到项目根）")
+    private String moduleId;
 }

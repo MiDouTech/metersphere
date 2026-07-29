@@ -877,6 +877,8 @@ public class FunctionalCaseService {
             List<String> refId = extFunctionalCaseMapper.getRefIds(ids, false);
             extFunctionalCaseMapper.batchMoveModule(request, refId, userId);
             functionalCaseNoticeService.batchSendNotice(request.getProjectId(), ids, user, NoticeConstants.Event.UPDATE);
+            // 移动后同步至默认项目对应项目文件夹
+            ids.forEach(id -> triggerHubCaseSync(request.getProjectId(), id, userId));
         }
     }
 
@@ -991,6 +993,8 @@ public class FunctionalCaseService {
 
             User user = userMapper.selectByPrimaryKey(userId);
             functionalCaseNoticeService.batchSendNotice(request.getProjectId(), ids, user, NoticeConstants.Event.CREATE);
+            // 复制产生的新用例同步至默认项目
+            addList.forEach(c -> triggerHubCaseSync(request.getProjectId(), c.getId(), userId));
 
 
         }
@@ -1196,8 +1200,9 @@ public class FunctionalCaseService {
         TemplateDTO defaultTemplateDTO = projectTemplateService.getDefaultTemplateDTO(request.getProjectId(), TemplateScene.FUNCTIONAL.name());
         //模块路径
         List<String> modulePath = list.stream().map(FunctionalCaseExcelData::getModule).toList();
-        //构建模块树
-        Map<String, String> caseModulePathMap = functionalCaseModuleService.createCaseModule(modulePath, request.getProjectId(), moduleTree, user.getId(), pathMap);
+        //构建模块树（若指定了左树选中文件夹，则在其下创建 Excel 模块路径）
+        Map<String, String> caseModulePathMap = functionalCaseModuleService.createCaseModule(
+                modulePath, request.getProjectId(), moduleTree, user.getId(), pathMap, resolveImportBaseModuleId(request));
 
         SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
         FunctionalCaseMapper caseMapper = sqlSession.getMapper(FunctionalCaseMapper.class);
@@ -1227,6 +1232,18 @@ public class FunctionalCaseService {
         List<Map> resources = new ArrayList<>();
         resources.addAll(JSON.parseArray(JSON.toJSONString(noticeList), Map.class));
         commonNoticeSendService.sendNotice(NoticeConstants.TaskType.FUNCTIONAL_CASE_TASK, NoticeConstants.Event.CREATE, resources, user, request.getProjectId());
+        // 导入用例同步至默认项目对应文件夹
+        caseIds.forEach(id -> triggerHubCaseSync(request.getProjectId(), id, user.getId()));
+    }
+
+    /** 导入目标文件夹：all/root/回收站视为未选中 */
+    private String resolveImportBaseModuleId(FunctionalCaseImportRequest request) {
+        String moduleId = request.getModuleId();
+        if (StringUtils.isBlank(moduleId)
+                || StringUtils.equalsAny(moduleId, "all", "recycle", ModuleConstants.DEFAULT_NODE_ID)) {
+            return null;
+        }
+        return moduleId;
     }
 
     /**
@@ -1293,7 +1310,11 @@ public class FunctionalCaseService {
         String caseId = IDGenerator.nextStr();
         functionalCase.setId(caseId);
         functionalCase.setNum(getNextNum(request.getProjectId()));
-        functionalCase.setModuleId(caseModulePathMap.get(functionalCaseExcelData.getModule()));
+        String resolvedModuleId = caseModulePathMap.get(functionalCaseExcelData.getModule());
+        if (StringUtils.isBlank(resolvedModuleId)) {
+            resolvedModuleId = resolveImportBaseModuleId(request);
+        }
+        functionalCase.setModuleId(resolvedModuleId);
         functionalCase.setProjectId(request.getProjectId());
         functionalCase.setTemplateId(defaultTemplateDTO.getId());
         functionalCase.setName(functionalCaseExcelData.getName().toString());
@@ -1446,7 +1467,8 @@ public class FunctionalCaseService {
         //模块路径
         List<String> modulePath = updateList.stream().map(FunctionalCaseExcelData::getModule).toList();
         //构建模块树
-        Map<String, String> caseModulePathMap = functionalCaseModuleService.createCaseModule(modulePath, request.getProjectId(), moduleTree, user.getId(), pathMap);
+        Map<String, String> caseModulePathMap = functionalCaseModuleService.createCaseModule(
+                modulePath, request.getProjectId(), moduleTree, user.getId(), pathMap, resolveImportBaseModuleId(request));
 
         //获取重新提审标识
         ProjectApplicationExample example = new ProjectApplicationExample();
@@ -1493,6 +1515,8 @@ public class FunctionalCaseService {
         List<Map> resources = new ArrayList<>();
         resources.addAll(JSON.parseArray(JSON.toJSONString(noticeList), Map.class));
         commonNoticeSendService.sendNotice(NoticeConstants.TaskType.FUNCTIONAL_CASE_TASK, NoticeConstants.Event.UPDATE, resources, user, request.getProjectId());
+        // 覆盖导入后同步枢纽
+        collect.keySet().forEach(id -> triggerHubCaseSync(request.getProjectId(), id, user.getId()));
     }
 
     private void batchHandImportUpdateLog(FunctionalCaseHistoryLogDTO newData, Map<String, List<FunctionalCase>> collect, Map<String, List<FunctionalCaseBlob>> blobsCollect, Map<String, List<FunctionalCaseCustomField>> customFieldMap, List<LogDTO> logDTOS, SessionUser user) {
@@ -1534,6 +1558,9 @@ public class FunctionalCaseService {
 
         functionalCase.setName(functionalCaseExcelData.getName().toString());
         functionalCase.setModuleId(caseModulePathMap.get(functionalCaseExcelData.getModule()));
+        if (StringUtils.isBlank(functionalCase.getModuleId())) {
+            functionalCase.setModuleId(resolveImportBaseModuleId(request));
+        }
         functionalCase.setTags(handleImportTags(functionalCaseExcelData.getTags()));
         functionalCase.setCaseEditType(StringUtils.defaultIfBlank(functionalCaseExcelData.getCaseEditType(), FunctionalCaseTypeConstants.CaseEditType.TEXT.name()));
         //模板

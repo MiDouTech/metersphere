@@ -136,7 +136,7 @@ class WecomContactClientTest {
                         .withQueryStringParameter("department_id", "2")
                         .withQueryStringParameter("fetch_child", "1")
         ).respond(jsonResponse(
-                "{\"errcode\":0,\"errmsg\":\"ok\",\"userlist\":[{\"userid\":\"zhangsan\",\"name\":\"张三\",\"mobile\":\"13800000000\",\"email\":\"zhangsan@example.com\",\"position\":\"工程师\",\"department\":[2,3],\"status\":1}]}"
+                "{\"errcode\":0,\"errmsg\":\"ok\",\"userlist\":[{\"userid\":\"zhangsan\",\"name\":\"张三\",\"mobile\":\"13800000000\",\"email\":\"zhangsan@example.com\",\"biz_mail\":\"zhangsan@corp.com\",\"position\":\"工程师\",\"department\":[2,3],\"main_department\":3,\"status\":1}]}"
         ));
 
         List<WecomUserDTO> users = wecomContactClient.listDepartmentUsers("token-1", 2L, true);
@@ -146,8 +146,32 @@ class WecomContactClientTest {
         Assertions.assertEquals("zhangsan", user.getUserid());
         Assertions.assertEquals("张三", user.getName());
         Assertions.assertEquals("13800000000", user.getMobile());
+        Assertions.assertEquals("zhangsan@example.com", user.getEmail());
+        Assertions.assertEquals("zhangsan@corp.com", user.getBizMail());
         Assertions.assertEquals(List.of(2L, 3L), user.getDepartment());
+        Assertions.assertEquals(3L, user.getMainDepartment());
         Assertions.assertEquals(1, user.getStatus());
+    }
+
+    @Test
+    void listDepartmentUsers_bizMailOnlyAndMissingMobile() {
+        mockGetToken("token-1", 7200);
+        mockServer.when(
+                request().withMethod("GET").withPath("/cgi-bin/user/list")
+                        .withQueryStringParameter("department_id", "2")
+                        .withQueryStringParameter("fetch_child", "1")
+        ).respond(jsonResponse(
+                "{\"errcode\":0,\"errmsg\":\"ok\",\"userlist\":[{\"userid\":\"lisi\",\"name\":\"李四\",\"biz_mail\":\"lisi@corp.com\",\"department\":[2],\"main_department\":2,\"status\":1}]}"
+        ));
+
+        List<WecomUserDTO> users = wecomContactClient.listDepartmentUsers("token-1", 2L, true);
+
+        Assertions.assertEquals(1, users.size());
+        WecomUserDTO user = users.getFirst();
+        Assertions.assertNull(user.getMobile());
+        Assertions.assertNull(user.getEmail());
+        Assertions.assertEquals("lisi@corp.com", user.getBizMail());
+        Assertions.assertEquals(2L, user.getMainDepartment());
     }
 
     @Test

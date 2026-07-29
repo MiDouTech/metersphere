@@ -47,6 +47,10 @@ public class WecomOrgSyncService {
         result.setUserCreated(userResult.getCreated());
         result.setUserUpdated(userResult.getUpdated());
         result.setUserDisabled(userResult.getDisabled());
+        result.setUserMissingMobile(userResult.getMissingMobile());
+        result.setUserMissingEmail(userResult.getMissingEmail());
+        result.setUserPlaceholderEmail(userResult.getPlaceholderEmail());
+        result.setUserEmailConflict(userResult.getEmailConflict());
         result.setErrorMessage(joinErrors(deptResult.getErrorMessage(), userResult.getErrorMessage()));
         result.setDurationMs(System.currentTimeMillis() - startTime);
         result.setSyncStatus(resolveSyncStatus(deptResult.getFailed(), userResult.getFailed()));

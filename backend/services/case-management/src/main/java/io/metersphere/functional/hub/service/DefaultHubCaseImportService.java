@@ -166,7 +166,7 @@ public class DefaultHubCaseImportService {
             return;
         }
         String targetModuleId = defaultHubModuleResolver.resolveTargetModuleId(
-                hubProjectId, hubCase.getModuleId(), request.getTargetProjectId(), operator);
+                hubProjectId, hubCase.getModuleId(), request.getTargetProjectId(), operator, request.getTargetModuleId());
         FunctionalCaseExample example = new FunctionalCaseExample();
         example.createCriteria().andProjectIdEqualTo(request.getTargetProjectId())
                 .andModuleIdEqualTo(targetModuleId).andNameEqualTo(hubCase.getName()).andDeletedEqualTo(false);

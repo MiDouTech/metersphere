@@ -97,9 +97,13 @@ public class DefaultHubCaseSyncService {
         if (map == null) {
             String hubCaseId = createHubMirror(bizCase, blob, hubProjectId, hubModuleId, operator);
             defaultHubCaseMapDao.insert(bizProjectId, bizCaseId, hubCaseId, contentHash);
-        } else if (!StringUtils.equals(contentHash, map.getContentHash())) {
-            updateHubMirror(map.getHubCaseId(), bizCase, blob, hubModuleId, operator);
-            defaultHubCaseMapDao.updateHash(bizCaseId, contentHash);
+        } else {
+            FunctionalCase hubExisting = functionalCaseMapper.selectByPrimaryKey(map.getHubCaseId());
+            boolean moduleChanged = hubExisting != null && !StringUtils.equals(hubExisting.getModuleId(), hubModuleId);
+            if (!StringUtils.equals(contentHash, map.getContentHash()) || moduleChanged) {
+                updateHubMirror(map.getHubCaseId(), bizCase, blob, hubModuleId, operator);
+                defaultHubCaseMapDao.updateHash(bizCaseId, contentHash);
+            }
         }
     }
 

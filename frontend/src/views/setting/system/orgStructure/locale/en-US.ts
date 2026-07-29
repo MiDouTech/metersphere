@@ -58,4 +58,21 @@ export default {
   'orgStructure.config.retryTimes': 'Retry Times',
   'orgStructure.config.testSuccess': 'Connection succeeded',
   'orgStructure.config.testFailed': 'Connection failed',
+  'orgStructure.config.testNoMobileSample': 'No mobile in sample; check WeCom "Get member mobile" permission',
+  'orgStructure.config.testNoEmailSample': 'No email/biz_mail in sample; check WeCom email contact permissions',
+  'orgStructure.sync.missingMobile': 'Missing mobile: {count}; check WeCom "Get member mobile" permission',
+  'orgStructure.sync.missingEmail': 'Missing/placeholder email: {count}; check WeCom email contact permissions',
+  'orgStructure.sync.emailConflict.entry': 'Email Conflicts',
+  'orgStructure.sync.emailConflict.title': 'Resolve Email Conflicts',
+  'orgStructure.sync.emailConflict.tip':
+    'WeCom email is occupied. Choose Skip, Overwrite (occupant gets placeholder), or Create (create scene only).',
+  'orgStructure.sync.emailConflict.wecomUser': 'WeCom user',
+  'orgStructure.sync.emailConflict.email': 'Expected email',
+  'orgStructure.sync.emailConflict.occupied': 'Occupied by',
+  'orgStructure.sync.emailConflict.skip': 'Skip',
+  'orgStructure.sync.emailConflict.overwrite': 'Overwrite',
+  'orgStructure.sync.emailConflict.create': 'Create',
+  'orgStructure.sync.emailConflict.overwriteConfirm':
+    'Overwrite will remove this email from the occupant account. Continue?',
+  'orgStructure.sync.emailConflict.resolved': 'Conflict resolved',
 };

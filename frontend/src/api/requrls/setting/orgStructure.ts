@@ -7,3 +7,5 @@ export const GetSyncLogPageUrl = '/org-wecom/sync/log/page';
 export const GetSyncConfigUrl = '/org-wecom/config/get';
 export const SaveSyncConfigUrl = '/org-wecom/config/save';
 export const TestSyncConfigUrl = '/org-wecom/config/test';
+export const GetEmailConflictPendingUrl = '/org-wecom/email-conflict/pending';
+export const ResolveEmailConflictUrl = '/org-wecom/email-conflict/resolve';

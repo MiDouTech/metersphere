@@ -112,6 +112,8 @@
   }>();
 
   const loading = ref<boolean>(false);
+  // 详情初次渲染 / 表单规则切换时会触发 change，禁止此时自动保存以免误改处理人
+  const allowAutoSave = ref(false);
 
   const detailInfo = ref<Record<string, any>>({ match: [] }); // 存储当前详情信息，通过loadBug 获取
   const fApi = ref<any>(null);
@@ -202,10 +204,16 @@
   }
 
   const handleFormCreateChange = debounce(() => {
+    if (!allowAutoSave.value) {
+      return;
+    }
     saveHandler();
   }, 300);
 
   const changeTag = debounce(() => {
+    if (!allowAutoSave.value) {
+      return;
+    }
     emit('update:tags', innerTags.value);
     saveHandler();
   }, 300);
@@ -213,6 +221,19 @@
   watchEffect(() => {
     detailInfo.value = cloneDeep(props.detail);
   });
+
+  watch(
+    () => [props.detail?.id, props.formRule],
+    async () => {
+      allowAutoSave.value = false;
+      await nextTick();
+      // 等待表单初始化 change 与 debounce 窗口结束后再允许自动保存
+      window.setTimeout(() => {
+        allowAutoSave.value = true;
+      }, 500);
+    },
+    { deep: true, immediate: true }
+  );
 </script>
 
 <style scoped lang="less">

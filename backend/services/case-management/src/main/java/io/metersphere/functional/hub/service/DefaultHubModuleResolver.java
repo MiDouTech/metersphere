@@ -47,12 +47,21 @@ public class DefaultHubModuleResolver {
         return parentId;
     }
 
-    /** 枢纽用例 module → 目标项目 self 根下对应路径 */
+    /** 枢纽用例 module → 目标项目指定根或 self 根下对应路径 */
     public String resolveTargetModuleId(String hubProjectId, String hubModuleId, String targetProjectId, String operator) {
-        String targetRootFolderId = findSelfRootFolder(targetProjectId);
-        if (StringUtils.isBlank(targetRootFolderId)) {
-            targetRootFolderId = findOrCreateModule(targetProjectId, ModuleConstants.ROOT_NODE_PARENT_ID,
-                    "导入", null, operator);
+        return resolveTargetModuleId(hubProjectId, hubModuleId, targetProjectId, operator, null);
+    }
+
+    public String resolveTargetModuleId(String hubProjectId, String hubModuleId, String targetProjectId,
+                                        String operator, String preferredRootModuleId) {
+        String targetRootFolderId = preferredRootModuleId;
+        if (StringUtils.isBlank(targetRootFolderId)
+                || StringUtils.equalsAny(targetRootFolderId, "all", "recycle", ModuleConstants.DEFAULT_NODE_ID)) {
+            targetRootFolderId = findSelfRootFolder(targetProjectId);
+            if (StringUtils.isBlank(targetRootFolderId)) {
+                targetRootFolderId = findOrCreateModule(targetProjectId, ModuleConstants.ROOT_NODE_PARENT_ID,
+                        "导入", null, operator);
+            }
         }
         if (StringUtils.isBlank(hubModuleId)) {
             return targetRootFolderId;
