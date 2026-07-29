@@ -14,4 +14,13 @@ public class OrgWecomSyncConfigTestResponse {
 
     @Schema(description = "提示信息")
     private String message;
+
+    @Schema(description = "抽样是否含手机号")
+    private Boolean hasMobileSample;
+
+    @Schema(description = "抽样是否含邮箱或企业邮箱")
+    private Boolean hasEmailOrBizMailSample;
+
+    @Schema(description = "抽样人数")
+    private Integer sampleSize;
 }

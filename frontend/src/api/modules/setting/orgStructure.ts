@@ -1,12 +1,14 @@
 import MSR from '@/api/http/index';
 import {
   GetDepartmentTreeUrl,
+  GetEmailConflictPendingUrl,
   GetMemberDetailUrl,
   GetMemberPageUrl,
   GetSyncConfigUrl,
   GetSyncLogPageUrl,
   GetSyncStatusUrl,
   ManualSyncUrl,
+  ResolveEmailConflictUrl,
   SaveSyncConfigUrl,
   TestSyncConfigUrl,
 } from '@/api/requrls/setting/orgStructure';
@@ -17,6 +19,7 @@ import type {
   MemberPageParams,
   OrgStructureMemberDetail,
   OrgStructureMemberItem,
+  OrgSyncEmailConflictItem,
   OrgSyncLogItem,
   OrgWecomSyncConfig,
   OrgWecomSyncConfigSaveParams,
@@ -87,4 +90,15 @@ export function saveSyncConfig(data: OrgWecomSyncConfigSaveParams) {
 
 export function testSyncConfig(data: OrgWecomSyncConfigTestParams) {
   return MSR.post<OrgWecomSyncConfigTestResponse>({ url: TestSyncConfigUrl, data });
+}
+
+export function getEmailConflictPending(organizationId: string) {
+  return MSR.get<OrgSyncEmailConflictItem[]>({
+    url: GetEmailConflictPendingUrl,
+    params: { organizationId },
+  });
+}
+
+export function resolveEmailConflict(data: { id: string; action: 'SKIP' | 'OVERWRITE' | 'CREATE' }) {
+  return MSR.post({ url: ResolveEmailConflictUrl, data });
 }

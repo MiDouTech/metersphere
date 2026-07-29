@@ -22,4 +22,8 @@ public class SyncResult {
     private Integer userCreated;
     private Integer userUpdated;
     private Integer userDisabled;
+    private Integer userMissingMobile;
+    private Integer userMissingEmail;
+    private Integer userPlaceholderEmail;
+    private Integer userEmailConflict;
 }

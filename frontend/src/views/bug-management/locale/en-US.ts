@@ -7,6 +7,12 @@ export default {
     project: 'Project',
     bugName: 'Bug Name',
     severity: 'Severity',
+    fieldTip: {
+      severity:
+        'Hint: UX/copy only; Normal: minor with workaround; Major: core flow broken; Critical: outage, data loss, or severe security risk',
+      bugType:
+        'Functional: logic vs requirements; Performance: slow/timeout; Compatibility: browser/device/env; Security: authz/injection; Other: does not fit above',
+    },
     status: 'Status',
     handleMan: 'Handler',
     handleManTips: '"-"Indicates that the user member has been removed or does not exist in the system',

@@ -23,4 +23,7 @@ public class DefaultHubCaseImportRequest {
     @NotBlank
     @Schema(description = "SKIP|OVERWRITE")
     private String conflictStrategy = DefaultHubConstants.CONFLICT_SKIP;
+
+    @Schema(description = "目标模块ID（左树选中文件夹；空则按原逻辑落到项目自建根/导入文件夹）")
+    private String targetModuleId;
 }

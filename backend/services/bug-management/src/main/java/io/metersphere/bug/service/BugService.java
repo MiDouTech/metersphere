@@ -1087,6 +1087,7 @@ public class BugService {
         }
 
         boolean noticeHandler = false;
+        boolean isCreateBug = false;
         Long handleTimeToSet = null;
         Long closeTimeToSet = null;
         // 保存基础信息
@@ -1107,6 +1108,7 @@ public class BugService {
             bugContent.setDescription(StringUtils.isEmpty(request.getDescription()) ? StringUtils.EMPTY : request.getDescription());
             bugContentMapper.insert(bugContent);
             noticeHandler = true;
+            isCreateBug = true;
             handleTimeToSet = System.currentTimeMillis();
             if (isEndStatus(request.getProjectId(), bug.getStatus())) {
                 closeTimeToSet = System.currentTimeMillis();
@@ -1145,9 +1147,9 @@ public class BugService {
             extBugMapper.updateBugExtraTimes(bug.getId(), handleTimeToSet, closeTimeToSet);
         }
 
-        // 异步发送处理人通知 (第三方不通知 && 处理人没更改不通知)
+        // 异步发送处理人通知 (第三方不通知 && 处理人没更改不通知)；新建额外推企微机器人
         if (StringUtils.equals(platformName, BugPlatform.LOCAL.getName()) && noticeHandler) {
-            bugSyncNoticeService.sendHandleUserNotice(bug, currentUser);
+            bugSyncNoticeService.sendHandleUserNotice(bug, currentUser, isCreateBug);
         }
         return bug;
     }

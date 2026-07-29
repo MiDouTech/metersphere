@@ -60,6 +60,10 @@ class WecomOrgSyncServiceTest {
         userResult.setCreated(1);
         userResult.setUpdated(1);
         userResult.setDisabled(1);
+        userResult.setMissingMobile(2);
+        userResult.setMissingEmail(1);
+        userResult.setPlaceholderEmail(3);
+        userResult.setEmailConflict(1);
         userResult.appendError("用户[a]同步失败; ");
         when(userSyncHandler.sync("org-1", "admin", "corp", "secret")).thenReturn(userResult);
 
@@ -71,6 +75,10 @@ class WecomOrgSyncServiceTest {
         Assertions.assertEquals(1, result.getUserFailed());
         Assertions.assertEquals(1, result.getDeptCreated());
         Assertions.assertEquals(1, result.getUserDisabled());
+        Assertions.assertEquals(2, result.getUserMissingMobile());
+        Assertions.assertEquals(1, result.getUserMissingEmail());
+        Assertions.assertEquals(3, result.getUserPlaceholderEmail());
+        Assertions.assertEquals(1, result.getUserEmailConflict());
         Assertions.assertTrue(result.getErrorMessage().contains("用户[a]同步失败"));
     }
 }

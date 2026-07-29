@@ -10,6 +10,10 @@ class SyncPartResult {
     private int created;
     private int updated;
     private int disabled;
+    private int missingMobile;
+    private int missingEmail;
+    private int placeholderEmail;
+    private int emailConflict;
     private String errorMessage = "";
 
     void appendError(String error) {

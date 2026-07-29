@@ -2,6 +2,7 @@ package io.metersphere.system.service.department;
 
 import io.metersphere.sdk.constants.InternalUserRole;
 import io.metersphere.sdk.constants.UserSource;
+import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.domain.Department;
 import io.metersphere.system.domain.User;
 import io.metersphere.system.dto.request.OrganizationMemberRequest;
@@ -44,6 +45,8 @@ public class UserSyncHandler {
     private SimpleUserService simpleUserService;
     @Resource
     private OrganizationService organizationService;
+    @Resource
+    private OrgSyncEmailConflictService orgSyncEmailConflictService;
 
     public SyncPartResult sync(String organizationId, String operatorId, String corpId, String contactSecret) {
         SyncPartResult result = new SyncPartResult();
@@ -65,6 +68,7 @@ public class UserSyncHandler {
         if (wecomUsers == null) {
             wecomUsers = List.of();
         }
+        logFieldSample(wecomUsers);
 
         Map<String, User> existingUserMap = extUserMapper.listWecomUsersByOrganizationId(organizationId).stream()
                 .filter(user -> StringUtils.isNotBlank(user.getWecomUserid()))
@@ -81,23 +85,27 @@ public class UserSyncHandler {
                 continue;
             }
             incomingUserIds.add(wecomUserId);
+            collectMissingStats(wecomUser, result);
             try {
                 User existing = existingUserMap.get(wecomUserId);
                 if (existing == null) {
                     existing = extUserMapper.selectByWecomUserid(wecomUserId);
                 }
                 if (existing == null) {
-                    createUser(wecomUser, organizationId, operatorId, resolveMainDepartment(wecomUser, wecomDeptMap), syncTime);
+                    createUser(wecomUser, organizationId, operatorId, resolveMainDepartment(wecomUser, wecomDeptMap), syncTime, result);
                     result.setCreated(result.getCreated() + 1);
                     continue;
                 }
                 if (updateUser(existing, wecomUser, organizationId, operatorId,
-                        resolveMainDepartment(wecomUser, wecomDeptMap), syncTime)) {
+                        resolveMainDepartment(wecomUser, wecomDeptMap), syncTime, result)) {
                     userMapper.updateByPrimaryKeySelective(existing);
                     result.setUpdated(result.getUpdated() + 1);
                 }
                 ensureOrganizationMember(existing.getId(), organizationId, operatorId);
                 existingUserMap.put(wecomUserId, existing);
+                if (OrgSyncConstants.isPlaceholderEmail(existing.getEmail()) && resolveSyncEmail(wecomUser) == null) {
+                    result.setPlaceholderEmail(result.getPlaceholderEmail() + 1);
+                }
             } catch (Exception ex) {
                 result.setFailed(result.getFailed() + 1);
                 result.appendError("用户[" + wecomUserId + "]同步失败: " + ex.getMessage() + "; ");
@@ -132,15 +140,24 @@ public class UserSyncHandler {
 
         result.setTotal(incomingUserIds.size() + staleUsers.size());
         result.setSuccess(Math.max(result.getTotal() - result.getFailed(), 0));
+        String summary = String.format("企微成员 %d 人，手机号缺失 %d 人，邮箱缺失/占位 %d 人，邮箱冲突 %d 人; ",
+                incomingUserIds.size(), result.getMissingMobile(),
+                result.getMissingEmail() + result.getPlaceholderEmail(), result.getEmailConflict());
+        result.appendError(summary);
+        if (result.getMissingMobile() > 0) {
+            LogUtils.warn("企微同步手机号缺失 {} 人，请检查通讯录「获取成员手机号」权限", result.getMissingMobile());
+        }
+        LogUtils.info(summary);
         return result;
     }
 
     private void createUser(WecomUserDTO wecomUser, String organizationId, String operatorId,
-                            String departmentId, long syncTime) {
+                            String departmentId, long syncTime, SyncPartResult result) {
+        String createEmail = resolveCreateEmail(wecomUser, organizationId, null, result);
         UserBatchCreateRequest request = new UserBatchCreateRequest();
         UserCreateInfo userCreateInfo = new UserCreateInfo();
         userCreateInfo.setName(trimToNull(wecomUser.getName()));
-        userCreateInfo.setEmail(resolveEmail(wecomUser));
+        userCreateInfo.setEmail(createEmail);
         userCreateInfo.setPhone(trimToNull(wecomUser.getMobile()));
         request.setUserInfoList(List.of(userCreateInfo));
         request.setUserRoleIdList(List.of(InternalUserRole.MEMBER.getValue()));
@@ -162,10 +179,21 @@ public class UserSyncHandler {
         update.setUpdateTime(syncTime);
         update.setUpdateUser(operatorId);
         userMapper.updateByPrimaryKeySelective(update);
+
+        // 创建时因冲突用了占位：补 pending_user_id
+        String apiEmail = resolveSyncEmail(wecomUser);
+        if (apiEmail != null && OrgSyncConstants.isPlaceholderEmail(createEmail)) {
+            User occupied = orgSyncEmailConflictService.findOtherByEmail(apiEmail, userId);
+            if (occupied != null) {
+                orgSyncEmailConflictService.registerConflict(organizationId, null, wecomUser.getUserid().trim(),
+                        userId, trimToNull(wecomUser.getName()), apiEmail, occupied,
+                        OrgSyncConstants.EMAIL_CONFLICT_SCENE_CREATE);
+            }
+        }
     }
 
     private boolean updateUser(User existing, WecomUserDTO wecomUser, String organizationId, String operatorId,
-                               String departmentId, long syncTime) {
+                               String departmentId, long syncTime, SyncPartResult result) {
         boolean changed = false;
         String latestName = trimToNull(wecomUser.getName());
         if (!Objects.equals(latestName, existing.getName())) {
@@ -177,9 +205,7 @@ public class UserSyncHandler {
             existing.setPhone(latestPhone);
             changed = true;
         }
-        String latestEmail = trimToNull(wecomUser.getEmail());
-        if (latestEmail != null && !Objects.equals(latestEmail, existing.getEmail())) {
-            existing.setEmail(latestEmail);
+        if (applyEmailOnUpdate(existing, wecomUser, organizationId, result)) {
             changed = true;
         }
         String latestPosition = trimToNull(wecomUser.getPosition());
@@ -208,6 +234,102 @@ public class UserSyncHandler {
         return changed;
     }
 
+    /**
+     * API 侧真实邮箱：email → biz_mail → null
+     */
+    String resolveSyncEmail(WecomUserDTO wecomUser) {
+        if (wecomUser == null) {
+            return null;
+        }
+        String email = trimToNull(wecomUser.getEmail());
+        if (email != null) {
+            return email;
+        }
+        return trimToNull(wecomUser.getBizMail());
+    }
+
+    String resolveCreateEmail(WecomUserDTO wecomUser, String organizationId, String excludeUserId, SyncPartResult result) {
+        String apiEmail = resolveSyncEmail(wecomUser);
+        if (apiEmail == null) {
+            return OrgSyncConstants.buildPlaceholderEmail(wecomUser.getUserid());
+        }
+        if (apiEmail.length() > OrgSyncConstants.MAX_EMAIL_LENGTH) {
+            throw new IllegalArgumentException("邮箱长度超过 " + OrgSyncConstants.MAX_EMAIL_LENGTH + ": " + apiEmail);
+        }
+        User occupied = orgSyncEmailConflictService.findOtherByEmail(apiEmail, excludeUserId);
+        if (occupied != null) {
+            result.setEmailConflict(result.getEmailConflict() + 1);
+            orgSyncEmailConflictService.registerConflict(organizationId, null, wecomUser.getUserid().trim(),
+                    excludeUserId, trimToNull(wecomUser.getName()), apiEmail, occupied,
+                    OrgSyncConstants.EMAIL_CONFLICT_SCENE_CREATE);
+            return OrgSyncConstants.buildPlaceholderEmail(wecomUser.getUserid());
+        }
+        return apiEmail;
+    }
+
+    boolean applyEmailOnUpdate(User existing, WecomUserDTO wecomUser, String organizationId, SyncPartResult result) {
+        String apiEmail = resolveSyncEmail(wecomUser);
+        if (apiEmail == null) {
+            return false;
+        }
+        if (apiEmail.length() > OrgSyncConstants.MAX_EMAIL_LENGTH) {
+            throw new IllegalArgumentException("邮箱长度超过 " + OrgSyncConstants.MAX_EMAIL_LENGTH + ": " + apiEmail);
+        }
+        if (StringUtils.equalsIgnoreCase(apiEmail, existing.getEmail())) {
+            return false;
+        }
+        User occupied = orgSyncEmailConflictService.findOtherByEmail(apiEmail, existing.getId());
+        if (occupied != null) {
+            result.setEmailConflict(result.getEmailConflict() + 1);
+            orgSyncEmailConflictService.registerConflict(organizationId, null, wecomUser.getUserid().trim(),
+                    existing.getId(), trimToNull(wecomUser.getName()), apiEmail, occupied,
+                    OrgSyncConstants.EMAIL_CONFLICT_SCENE_UPDATE);
+            return false;
+        }
+        existing.setEmail(apiEmail);
+        return true;
+    }
+
+    private void collectMissingStats(WecomUserDTO wecomUser, SyncPartResult result) {
+        if (trimToNull(wecomUser.getMobile()) == null) {
+            result.setMissingMobile(result.getMissingMobile() + 1);
+        }
+        if (resolveSyncEmail(wecomUser) == null) {
+            result.setMissingEmail(result.getMissingEmail() + 1);
+        }
+    }
+
+    private void logFieldSample(List<WecomUserDTO> wecomUsers) {
+        int n = Math.min(20, wecomUsers.size());
+        if (n == 0) {
+            return;
+        }
+        int mobile = 0;
+        int email = 0;
+        int bizMail = 0;
+        int mainDept = 0;
+        for (int i = 0; i < n; i++) {
+            WecomUserDTO u = wecomUsers.get(i);
+            if (u == null) {
+                continue;
+            }
+            if (trimToNull(u.getMobile()) != null) {
+                mobile++;
+            }
+            if (trimToNull(u.getEmail()) != null) {
+                email++;
+            }
+            if (trimToNull(u.getBizMail()) != null) {
+                bizMail++;
+            }
+            if (u.getMainDepartment() != null) {
+                mainDept++;
+            }
+        }
+        LogUtils.info("企微成员字段抽样(前{}): mobile={}/{}, email={}/{}, biz_mail={}/{}, main_department={}/{}",
+                n, mobile, n, email, n, bizMail, n, mainDept, n);
+    }
+
     private void ensureOrganizationMember(String userId, String organizationId, String operatorId) {
         OrganizationMemberRequest request = new OrganizationMemberRequest();
         request.setOrganizationId(organizationId);
@@ -216,21 +338,29 @@ public class UserSyncHandler {
         organizationService.addMemberBySystem(request, operatorId);
     }
 
-    private String resolveMainDepartment(WecomUserDTO wecomUser, Map<Long, Department> wecomDeptMap) {
-        if (wecomUser == null || CollectionUtils.isEmpty(wecomUser.getDepartment())) {
+    String resolveMainDepartment(WecomUserDTO wecomUser, Map<Long, Department> wecomDeptMap) {
+        if (wecomUser == null) {
             return null;
         }
-        Long wecomDeptId = wecomUser.getDepartment().getFirst();
-        Department department = wecomDeptMap.get(wecomDeptId);
-        return department == null ? null : department.getId();
-    }
-
-    private String resolveEmail(WecomUserDTO wecomUser) {
-        String email = trimToNull(wecomUser.getEmail());
-        if (email != null) {
-            return email;
+        Long wecomDeptId = wecomUser.getMainDepartment();
+        if (wecomDeptId == null && CollectionUtils.isNotEmpty(wecomUser.getDepartment())) {
+            wecomDeptId = wecomUser.getDepartment().getFirst();
         }
-        return wecomUser.getUserid().trim().toLowerCase() + OrgSyncConstants.WECOM_SYNC_EMAIL_SUFFIX;
+        if (wecomDeptId != null) {
+            Department department = wecomDeptMap.get(wecomDeptId);
+            if (department != null) {
+                return department.getId();
+            }
+        }
+        if (CollectionUtils.isNotEmpty(wecomUser.getDepartment())) {
+            for (Long deptId : wecomUser.getDepartment()) {
+                Department department = wecomDeptMap.get(deptId);
+                if (department != null) {
+                    return department.getId();
+                }
+            }
+        }
+        return null;
     }
 
     private Boolean mapEnable(Integer wecomStatus) {

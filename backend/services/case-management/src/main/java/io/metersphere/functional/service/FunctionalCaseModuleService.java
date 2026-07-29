@@ -289,25 +289,40 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
     /**
      * 根据模块路径创建模块
      *
-     * @param modulePath 模块路径
-     * @param projectId  项目ID
-     * @param moduleTree 已存在的模块树
-     * @param userId     userId
+     * @param modulePath    模块路径
+     * @param projectId     项目ID
+     * @param moduleTree    已存在的模块树
+     * @param userId        userId
+     * @param pathMap       路径映射
+     * @param baseModuleId  选中文件夹：Excel 路径在此节点下创建；空则项目根
      */
-    public Map<String, String> createCaseModule(List<String> modulePath, String projectId, List<BaseTreeNode> moduleTree, String userId, Map<String, String> pathMap) {
+    public Map<String, String> createCaseModule(List<String> modulePath, String projectId, List<BaseTreeNode> moduleTree,
+                                                String userId, Map<String, String> pathMap, String baseModuleId) {
+        BaseTreeNode baseNode = findTreeNodeById(moduleTree, baseModuleId);
+        List<BaseTreeNode> searchRoots = baseNode != null
+                ? (CollectionUtils.isEmpty(baseNode.getChildren()) ? List.of() : baseNode.getChildren())
+                : moduleTree;
         modulePath.forEach(path -> {
+            if (StringUtils.isBlank(path)) {
+                return;
+            }
             List<String> moduleNames = new ArrayList<>(List.of(path.split("/")));
             Iterator<String> itemIterator = moduleNames.iterator();
             AtomicReference<Boolean> hasNode = new AtomicReference<>(false);
             //当前节点模块名称
             String currentModuleName;
             if (moduleNames.size() <= 1) {
+                // 无有效子路径：有选中文件夹则落入该文件夹，否则保持原错误
+                if (baseNode != null) {
+                    pathMap.put(path, baseNode.getId());
+                    return;
+                }
                 throw new MSException(Translator.get("test_case_create_module_fail") + ":" + path);
             } else {
                 itemIterator.next();
                 itemIterator.remove();
                 currentModuleName = itemIterator.next().trim();
-                moduleTree.forEach(module -> {
+                searchRoots.forEach(module -> {
                     //根节点是否存在
                     if (StringUtils.equalsIgnoreCase(currentModuleName, module.getName())) {
                         hasNode.set(true);
@@ -317,11 +332,32 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
                 });
             }
             if (!hasNode.get()) {
-                //根节点不存在，直接创建
-                createModuleByPath(itemIterator, currentModuleName, null, projectId, StringUtils.EMPTY, pathMap, userId);
+                //根节点不存在，直接创建（挂在选中文件夹或项目根下）
+                createModuleByPath(itemIterator, currentModuleName, baseNode, projectId, StringUtils.EMPTY, pathMap, userId);
             }
         });
         return pathMap;
+    }
+
+    public Map<String, String> createCaseModule(List<String> modulePath, String projectId, List<BaseTreeNode> moduleTree, String userId, Map<String, String> pathMap) {
+        return createCaseModule(modulePath, projectId, moduleTree, userId, pathMap, null);
+    }
+
+    private BaseTreeNode findTreeNodeById(List<BaseTreeNode> nodes, String id) {
+        if (StringUtils.isBlank(id) || CollectionUtils.isEmpty(nodes)
+                || StringUtils.equalsAny(id, "all", ModuleConstants.DEFAULT_NODE_ID, "recycle")) {
+            return null;
+        }
+        for (BaseTreeNode node : nodes) {
+            if (StringUtils.equals(node.getId(), id)) {
+                return node;
+            }
+            BaseTreeNode child = findTreeNodeById(node.getChildren(), id);
+            if (child != null) {
+                return child;
+            }
+        }
+        return null;
     }
 
 

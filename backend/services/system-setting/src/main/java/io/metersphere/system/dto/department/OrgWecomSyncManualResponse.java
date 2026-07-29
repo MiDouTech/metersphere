@@ -10,6 +10,10 @@ public class OrgWecomSyncManualResponse {
     private Integer deptFailed;
     private Integer userSuccess;
     private Integer userFailed;
+    private Integer userMissingMobile;
+    private Integer userMissingEmail;
+    private Integer userPlaceholderEmail;
+    private Integer userEmailConflict;
     private Long durationMs;
     private String errorMessage;
 }

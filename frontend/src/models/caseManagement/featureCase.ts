@@ -337,6 +337,9 @@ export interface ImportExcelType {
   projectId: string;
   versionId: string;
   cover: boolean;
+  /** 左树选中模块；all/root 不传或空表示项目根 */
+  moduleId?: string;
+  count?: string | number;
 }
 
 export interface errorMessagesType {

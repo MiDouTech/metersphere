@@ -222,9 +222,7 @@
         sourceType: item.type || '',
         control: [],
         update: item.update,
-        wrap: {
-          tooltip: item.tooltip,
-        },
+        wrap: item.tooltip ? { tooltip: item.tooltip } : undefined,
       };
       if (ruleItem.type === 'input') {
         // input 需要单独emit监听事件 emit:['change', 'blur'],

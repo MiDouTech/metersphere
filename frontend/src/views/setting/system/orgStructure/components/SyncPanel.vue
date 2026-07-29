@@ -1,6 +1,11 @@
 <template>
   <div class="flex items-center gap-[12px]">
     <span v-if="statusText" class="text-[12px] text-[var(--color-text-3)]">{{ statusText }}</span>
+    <a-badge v-if="pendingConflictCount > 0" :count="pendingConflictCount" :max-count="99">
+      <a-button :disabled="!organizationId" @click="openConflictModal">
+        {{ t('orgStructure.sync.emailConflict.entry') }}
+      </a-button>
+    </a-badge>
     <a-button
       v-permission="['SYSTEM_ORGANIZATION_PROJECT:READ+UPDATE', 'ORGANIZATION_MEMBER:READ+UPDATE']"
       type="primary"
@@ -58,6 +63,53 @@
       </template>
     </ms-base-table>
   </MsDrawer>
+
+  <a-modal
+    v-model:visible="conflictModalVisible"
+    :title="t('orgStructure.sync.emailConflict.title')"
+    :footer="false"
+    :width="820"
+    unmount-on-close
+  >
+    <a-alert type="warning" class="mb-3">{{ t('orgStructure.sync.emailConflict.tip') }}</a-alert>
+    <a-spin :loading="conflictLoading" class="w-full">
+      <a-empty v-if="!conflictLoading && conflicts.length === 0" />
+      <div v-for="item in conflicts" :key="item.id" class="mb-3 rounded border border-[var(--color-text-n8)] p-3">
+        <div class="mb-2 text-[13px] text-[var(--color-text-1)]">
+          {{ t('orgStructure.sync.emailConflict.wecomUser') }}: {{ item.wecomUserName || item.wecomUserid }} ({{
+            item.wecomUserid
+          }})
+        </div>
+        <div class="mb-2 text-[13px]"> {{ t('orgStructure.sync.emailConflict.email') }}: {{ item.conflictEmail }} </div>
+        <div class="mb-3 text-[13px]">
+          {{ t('orgStructure.sync.emailConflict.occupied') }}:
+          {{ item.occupiedUserName || item.occupiedUserId }}
+        </div>
+        <div class="flex gap-2">
+          <a-button size="small" :loading="resolvingId === item.id" @click="resolveConflict(item, 'SKIP')">
+            {{ t('orgStructure.sync.emailConflict.skip') }}
+          </a-button>
+          <a-popconfirm
+            :content="t('orgStructure.sync.emailConflict.overwriteConfirm')"
+            @ok="resolveConflict(item, 'OVERWRITE')"
+          >
+            <a-button size="small" status="warning" :loading="resolvingId === item.id">
+              {{ t('orgStructure.sync.emailConflict.overwrite') }}
+            </a-button>
+          </a-popconfirm>
+          <a-button
+            v-if="item.conflictScene === 'CREATE'"
+            size="small"
+            type="outline"
+            :loading="resolvingId === item.id"
+            @click="resolveConflict(item, 'CREATE')"
+          >
+            {{ t('orgStructure.sync.emailConflict.create') }}
+          </a-button>
+        </div>
+      </div>
+    </a-spin>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
@@ -69,10 +121,16 @@
   import MsBaseTable from '@/components/pure/ms-table/base-table.vue';
   import useTable from '@/components/pure/ms-table/useTable';
 
-  import { getSyncLogPage, getSyncStatus, manualSync } from '@/api/modules/setting/orgStructure';
+  import {
+    getEmailConflictPending,
+    getSyncLogPage,
+    getSyncStatus,
+    manualSync,
+    resolveEmailConflict,
+  } from '@/api/modules/setting/orgStructure';
   import { useI18n } from '@/hooks/useI18n';
 
-  import type { OrgWecomSyncStatus } from '@/models/setting/orgStructure';
+  import type { OrgSyncEmailConflictItem, OrgWecomSyncStatus } from '@/models/setting/orgStructure';
 
   import { SYNC_LOG_STATUS, SYNC_MODE, syncLogStatusOptions, syncLogTableColumns } from '../config';
 
@@ -89,6 +147,11 @@
   const syncStatus = ref<OrgWecomSyncStatus>();
   const logDrawerVisible = ref(false);
   const logStatusFilter = ref<string>();
+  const conflictModalVisible = ref(false);
+  const conflictLoading = ref(false);
+  const conflicts = ref<OrgSyncEmailConflictItem[]>([]);
+  const pendingConflictCount = ref(0);
+  const resolvingId = ref('');
 
   const {
     propsRes: logPropsRes,
@@ -173,6 +236,30 @@
     syncStatus.value = await getSyncStatus(props.organizationId);
   }
 
+  async function loadConflicts(openWhenHasData = false) {
+    if (!props.organizationId) {
+      conflicts.value = [];
+      pendingConflictCount.value = 0;
+      return;
+    }
+    try {
+      conflictLoading.value = true;
+      const list = (await getEmailConflictPending(props.organizationId)) || [];
+      conflicts.value = list;
+      pendingConflictCount.value = list.length;
+      if (openWhenHasData && list.length > 0) {
+        conflictModalVisible.value = true;
+      }
+    } finally {
+      conflictLoading.value = false;
+    }
+  }
+
+  async function openConflictModal() {
+    conflictModalVisible.value = true;
+    await loadConflicts();
+  }
+
   async function loadLogList() {
     if (!props.organizationId) {
       return;
@@ -194,9 +281,21 @@
       if (result.syncStatus === SYNC_LOG_STATUS.FAILED) {
         Message.error(result.errorMessage || t('orgStructure.sync.status.failed'));
       } else {
-        Message.success(t('orgStructure.sync.success'));
+        const tips: string[] = [t('orgStructure.sync.success')];
+        if ((result.userMissingMobile || 0) > 0) {
+          tips.push(t('orgStructure.sync.missingMobile', { count: result.userMissingMobile }));
+        }
+        if ((result.userPlaceholderEmail || 0) + (result.userMissingEmail || 0) > 0) {
+          tips.push(
+            t('orgStructure.sync.missingEmail', {
+              count: (result.userPlaceholderEmail || 0) + (result.userMissingEmail || 0),
+            })
+          );
+        }
+        Message.success(tips.join('；'));
       }
       await loadStatus();
+      await loadConflicts((result.userEmailConflict || 0) > 0);
       emit('syncComplete');
     } catch (error: any) {
       if (error?.response?.status === 409) {
@@ -207,10 +306,25 @@
     }
   }
 
+  async function resolveConflict(item: OrgSyncEmailConflictItem, action: 'SKIP' | 'OVERWRITE' | 'CREATE') {
+    try {
+      resolvingId.value = item.id;
+      await resolveEmailConflict({ id: item.id, action });
+      Message.success(t('orgStructure.sync.emailConflict.resolved'));
+      await loadConflicts();
+      if (conflicts.value.length === 0) {
+        conflictModalVisible.value = false;
+      }
+    } finally {
+      resolvingId.value = '';
+    }
+  }
+
   watch(
     () => props.organizationId,
     () => {
       loadStatus();
+      loadConflicts();
     },
     { immediate: true }
   );

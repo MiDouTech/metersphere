@@ -473,6 +473,7 @@ export function importCaseFromDefaultProject(data: {
   selectMode: string;
   ids?: string[];
   conflictStrategy: string;
+  targetModuleId?: string;
 }) {
   return MSR.post<{ jobId: string; status: string; progress: number }>({
     url: importCaseFromDefaultProjectUrl,
