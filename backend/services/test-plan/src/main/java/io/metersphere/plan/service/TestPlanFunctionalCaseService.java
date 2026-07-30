@@ -253,7 +253,11 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
     public List<TestPlanCasePageResponse> getFunctionalCasePage(TestPlanCaseRequest request, boolean deleted, String projectId) {
         request.setNullExecutorKey(filterCaseRequest(request.getFilter()));
-        List<TestPlanCasePageResponse> functionalCaseLists = extTestPlanFunctionalCaseMapper.getCasePage(request, deleted, request.getSortString());
+        List<TestPlanCasePageResponse> functionalCaseLists = extTestPlanFunctionalCaseMapper.getCasePage(
+                request,
+                deleted,
+                request.getSortString("id", "functional_case")
+        );
         if (CollectionUtils.isEmpty(functionalCaseLists)) {
             return new ArrayList<>();
         }
@@ -274,6 +278,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         functionalCaseLists.forEach(testPlanCasePageResponse -> {
             testPlanCasePageResponse.setCustomFields(collect.get(testPlanCasePageResponse.getCaseId()));
             testPlanCasePageResponse.setCreateUserName(userMap.get(testPlanCasePageResponse.getCreateUser()));
+            testPlanCasePageResponse.setUpdateUserName(userMap.get(testPlanCasePageResponse.getUpdateUser()));
             testPlanCasePageResponse.setExecuteUserName(userMap.get(testPlanCasePageResponse.getExecuteUser()));
             testPlanCasePageResponse.setModuleName(StringUtils.isNotBlank(moduleNameMap.get(testPlanCasePageResponse.getModuleId())) ? moduleNameMap.get(testPlanCasePageResponse.getModuleId()) : Translator.get("functional_case.module.default.name"));
             if (associateBugMap.containsKey(testPlanCasePageResponse.getId())) {

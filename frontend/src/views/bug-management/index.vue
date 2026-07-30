@@ -959,6 +959,11 @@
     }
   });
 
+  onDeactivated(() => {
+    detailVisible.value = false;
+    activeDetailId.value = '';
+  });
+
   onBeforeUnmount(() => {
     detailVisible.value = false;
   });

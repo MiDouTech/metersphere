@@ -64,6 +64,28 @@
         <template #caseLevel="{ record }">
           <CaseLevel :case-level="record.caseLevel" />
         </template>
+        <template #[FilterSlotNameEnum.CASE_MANAGEMENT_REVIEW_RESULT]="{ filterContent }">
+          <div class="flex items-center">
+            <MsIcon
+              v-if="statusIconMap[filterContent.value]?.icon"
+              :type="statusIconMap[filterContent.value]?.icon"
+              class="mr-[4px]"
+              :class="[statusIconMap[filterContent.value]?.color]"
+            />
+            <span>{{ statusIconMap[filterContent.value]?.statusText || filterContent.label }}</span>
+          </div>
+        </template>
+        <template #reviewStatus="{ record }">
+          <div class="flex items-center">
+            <MsIcon
+              v-if="statusIconMap[record.reviewStatus]?.icon"
+              :type="statusIconMap[record.reviewStatus]?.icon"
+              class="mr-[4px]"
+              :class="[statusIconMap[record.reviewStatus]?.color]"
+            />
+            <span>{{ statusIconMap[record.reviewStatus]?.statusText || '-' }}</span>
+          </div>
+        </template>
         <template #[FilterSlotNameEnum.CASE_MANAGEMENT_EXECUTE_RESULT]="{ filterContent }">
           <ExecuteResult :execute-result="filterContent.key" />
         </template>
@@ -87,6 +109,28 @@
           <span v-else class="text-[var(--color-text-2)]">
             <ExecuteResult :execute-result="record.lastExecResult" />
           </span>
+        </template>
+        <template #lastExecTime="{ record }">
+          <span>{{ formatTime(record.lastExecTime) }}</span>
+        </template>
+        <template #lastExecuteUserName="{ record }">
+          <span>{{ record.lastExecuteUserName || '-' }}</span>
+        </template>
+        <template #updateUserName="{ record }">
+          <a-tooltip :content="`${record.updateUserName || '-'}`" position="tl">
+            <div class="one-line-text">{{ record.updateUserName || '-' }}</div>
+          </a-tooltip>
+        </template>
+        <template #updateTime="{ record }">
+          <span>{{ formatTime(record.updateTime) }}</span>
+        </template>
+        <template #createUserName="{ record }">
+          <a-tooltip :content="`${record.createUserName || '-'}`" position="tl">
+            <div class="one-line-text">{{ record.createUserName || '-' }}</div>
+          </a-tooltip>
+        </template>
+        <template #createTime="{ record }">
+          <span>{{ formatTime(record.createTime) }}</span>
         </template>
         <template #bugCount="{ record }">
           <MsBugOperation
@@ -229,6 +273,7 @@
   import { useRoute, useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
   import { cloneDeep } from 'lodash-es';
+  import dayjs from 'dayjs';
 
   import { getFilterCustomFields, MsAdvanceFilter } from '@/components/pure/ms-advance-filter';
   import { FilterFormItem, FilterResult } from '@/components/pure/ms-advance-filter/type';
@@ -386,6 +431,41 @@
       showDrag: true,
     },
     {
+      title: 'caseManagement.featureCase.tableColumnReviewResult',
+      dataIndex: 'reviewStatus',
+      slotName: 'reviewStatus',
+      filterConfig: {
+        options: reviewResultOptions.value,
+        filterSlotName: FilterSlotNameEnum.CASE_MANAGEMENT_REVIEW_RESULT,
+      },
+      width: 150,
+      showDrag: true,
+    },
+    {
+      title: 'caseManagement.featureCase.tableColumnExecutionResult',
+      dataIndex: 'lastExecResult',
+      slotName: 'lastExecResult',
+      filterConfig: {
+        valueKey: 'key',
+        labelKey: 'statusText',
+        options: Object.values(executionResultMap),
+        filterSlotName: FilterSlotNameEnum.CASE_MANAGEMENT_EXECUTE_RESULT,
+      },
+      width: 150,
+      showDrag: true,
+    },
+    {
+      title: 'caseManagement.featureCase.tableColumnLastExecuteTime',
+      dataIndex: 'lastExecTime',
+      slotName: 'lastExecTime',
+      sortable: {
+        sortDirections: ['ascend', 'descend'],
+        sorter: true,
+      },
+      width: 200,
+      showDrag: true,
+    },
+    {
       title: 'testPlan.featureCase.executor',
       dataIndex: 'executeUserName',
       showTooltip: true,
@@ -400,30 +480,41 @@
       },
     },
     {
-      title: 'common.tag',
+      title: 'caseManagement.featureCase.tableColumnLastExecutor',
+      dataIndex: 'lastExecuteUserName',
+      slotName: 'lastExecuteUserName',
+      showInTable: true,
+      width: 120,
+      showDrag: true,
+      showTooltip: true,
+    },
+    {
+      title: 'caseManagement.featureCase.tableColumnTag',
       dataIndex: 'tags',
       showDrag: true,
       isTag: true,
       isStringTag: true,
-    },
-    {
-      title: 'common.executionResult',
-      dataIndex: 'lastExecResult',
-      slotName: 'lastExecResult',
-      filterConfig: {
-        valueKey: 'key',
-        labelKey: 'statusText',
-        options: Object.values(executionResultMap),
-        filterSlotName: FilterSlotNameEnum.CASE_MANAGEMENT_EXECUTE_RESULT,
-      },
-      width: 150,
-      showDrag: true,
+      width: 300,
     },
     {
       title: 'testPlan.featureCase.bugCount',
       dataIndex: 'bugCount',
       slotName: 'bugCount',
       width: 100,
+      showDrag: true,
+    },
+    {
+      title: 'caseManagement.featureCase.tableColumnUpdateUser',
+      slotName: 'updateUserName',
+      dataIndex: 'updateUser',
+      filterConfig: {
+        mode: 'remote',
+        loadOptionParams: {
+          projectId: appStore.currentProjectId,
+        },
+        remoteMethod: FilterRemoteMethodsEnum.PROJECT_PERMISSION_MEMBER,
+      },
+      width: 200,
       showDrag: true,
     },
     {
@@ -439,10 +530,18 @@
       showDrag: true,
     },
     {
-      title: 'case.tableColumnCreateUser',
-      dataIndex: 'createUserName',
+      title: 'caseManagement.featureCase.tableColumnCreateUser',
+      slotName: 'createUserName',
+      dataIndex: 'createUser',
+      filterConfig: {
+        mode: 'remote',
+        loadOptionParams: {
+          projectId: appStore.currentProjectId,
+        },
+        remoteMethod: FilterRemoteMethodsEnum.PROJECT_PERMISSION_MEMBER,
+      },
       showTooltip: true,
-      width: 150,
+      width: 200,
       showDrag: true,
     },
     {
@@ -497,6 +596,7 @@
     return {
       ...record,
       lastExecResult: record.lastExecResult ?? LastExecuteResults.PENDING,
+      lastExecuteUserName: record.lastExecuteUserName || record.executeUserName,
       caseLevel: getCaseLevels(record.customFields),
     };
   });
@@ -855,6 +955,10 @@
   const tableSorter = ref<Record<string, string>>({});
   function handleSorterChange(sorter: { [key: string]: string }) {
     tableSorter.value = sorter;
+  }
+
+  function formatTime(time?: number | string) {
+    return time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-';
   }
 
   /**

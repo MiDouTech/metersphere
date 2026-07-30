@@ -4,10 +4,12 @@ import io.metersphere.system.dto.sdk.BasePageRequest;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author wx
@@ -38,4 +40,19 @@ public class TestPlanCaseRequest extends BasePageRequest implements Serializable
 
     @Schema(description = "是否包含空执行人")
     private boolean nullExecutorKey;
+
+    @Override
+    public String getSortString(String defaultColumn, String tableAliseName) {
+        Map<String, String> sort = getSort();
+        if (sort == null || sort.isEmpty()) {
+            return null;
+        }
+        Map.Entry<String, String> entry = sort.entrySet().iterator().next();
+        if (StringUtils.equals(entry.getKey(), "lastExecTime")) {
+            String direction = StringUtils.equalsIgnoreCase(entry.getValue(), "DESC") ? "DESC" : "ASC";
+            return "test_plan_functional_case.last_exec_time " + direction
+                    + ",test_plan_functional_case.id " + direction;
+        }
+        return super.getSortString(defaultColumn, tableAliseName);
+    }
 }

@@ -122,6 +122,9 @@ export default {
     'system.agentIntegration.mcpDownloadSuccess': '开始下载技能包',
     'system.agentIntegration.mcpHint':
       '解压后按 INSTALL.md 配置本机 mcp.json（填入平台地址与 Token）。Token 仅本地保存，勿提交到 Git。',
+    'system.agentIntegration.platformAddress': '内置平台地址',
+    'system.agentIntegration.platformTest': '测试环境',
+    'system.agentIntegration.platformProd': '正式环境',
     'system.agentIntegration.mcpScopeHelp': '常用 Scope（创建 Token 时选择）',
     'system.agentIntegration.scopeAgentAll': '对话闭环全能力',
     'system.agentIntegration.scopeBug': '缺陷检索/详情/创建/更新',
