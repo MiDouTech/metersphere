@@ -1,0 +1,7 @@
+# 本地 Playwright / CDP 产物，禁止入库
+node_modules/
+.auth/
+*.png
+*-report.json
+.env
+.env.*

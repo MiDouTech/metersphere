@@ -1,0 +1,12 @@
+{
+  "terms": [
+    {"term": "测试计划", "aliases": ["计划", "Test Plan"], "definition": "MeterSphere 中组织用例执行的计划实体"},
+    {"term": "计划组", "aliases": ["Test Plan Group", "GROUP"], "definition": "可包含多个子测试计划的分组容器，单组最多20个子计划"},
+    {"term": "通过阀值", "aliases": ["通过阈值", "passThreshold"], "definition": "通过率达到该阈值时报告结果为通过，前端可设1-100，默认100"},
+    {"term": "允许关联重复用例", "aliases": ["repeatCase"], "definition": "开启后可重复关联同一用例"},
+    {"term": "允许自动更新状态", "aliases": ["automaticStatusUpdate"], "definition": "开启后功能用例关联的接口/场景用例执行成功时，功能用例状态自动更新为成功"},
+    {"term": "新建测试计划抽屉", "aliases": ["CreateAndEditPlanDrawer"], "definition": "创建/编辑测试计划的右侧抽屉表单"},
+    {"term": "可视化前往路径", "aliases": ["页面路径", "导航路径"], "definition": "从系统菜单进入目标页面的逐步点击路径"}
+  ],
+  "updated_at": "2026-07-23T11:45:00"
+}

@@ -7,6 +7,7 @@ import io.metersphere.functional.domain.FunctionalCase;
 import io.metersphere.functional.dto.ExportTaskDTO;
 import io.metersphere.functional.dto.FunctionalCaseDetailDTO;
 import io.metersphere.functional.dto.FunctionalCasePageDTO;
+import io.metersphere.functional.dto.FunctionalCasePersonalProgressDTO;
 import io.metersphere.functional.dto.FunctionalCaseVersionDTO;
 import io.metersphere.functional.dto.response.FunctionalCaseImportResponse;
 import io.metersphere.functional.hub.dto.DefaultHubCaseImportRequest;
@@ -152,6 +153,14 @@ public class FunctionalCaseController {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
                 StringUtils.isNotBlank(request.getSortString()) ? request.getSortString() : "pos desc");
         return PageUtils.setPageInfo(page, functionalCaseService.getFunctionalCasePage(request, false, true));
+    }
+
+    @GetMapping("/personal-progress")
+    @Operation(summary = "用例管理-功能用例-当前用户个人执行进度")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    public FunctionalCasePersonalProgressDTO getPersonalProgress(@RequestParam String projectId) {
+        return functionalCaseService.getPersonalProgress(projectId, SessionUtils.getUserId());
     }
 
     @PostMapping("/module/count")

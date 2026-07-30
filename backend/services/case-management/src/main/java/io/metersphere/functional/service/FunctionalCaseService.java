@@ -438,6 +438,12 @@ public class FunctionalCaseService {
                 functionalCaseDetailDTO.setExecuteUserName(executeUser.getName());
             }
         }
+        if (StringUtils.isNotBlank(functionalCaseDetailDTO.getLastExecuteUser())) {
+            User lastExecuteUser = userMapper.selectByPrimaryKey(functionalCaseDetailDTO.getLastExecuteUser());
+            if (lastExecuteUser != null) {
+                functionalCaseDetailDTO.setLastExecuteUserName(lastExecuteUser.getName());
+            }
+        }
     }
 
     private void handleCount(FunctionalCaseDetailDTO functionalCaseDetailDTO) {
@@ -644,7 +650,7 @@ public class FunctionalCaseService {
         boolean execResultChanged = StringUtils.isNotBlank(request.getLastExecuteResult())
                 && !StringUtils.equals(request.getLastExecuteResult(), oldCase.getLastExecuteResult());
         if (execResultChanged) {
-            functionalCase.setExecuteUser(userId);
+            functionalCase.setLastExecuteUser(userId);
         }
         //更新用例
         functionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
@@ -796,6 +802,21 @@ public class FunctionalCaseService {
         return handleCustomFields(functionalCaseLists, request.getProjectId());
     }
 
+    public FunctionalCasePersonalProgressDTO getPersonalProgress(String projectId, String userId) {
+        FunctionalCasePersonalProgressDTO progress = extFunctionalCaseMapper.getPersonalProgress(projectId, userId);
+        if (progress == null) {
+            progress = new FunctionalCasePersonalProgressDTO();
+            progress.setTotal(0L);
+            progress.setExecuted(0L);
+            progress.setPassed(0L);
+            progress.setFailed(0L);
+            progress.setBlocked(0L);
+            progress.setSkipped(0L);
+            progress.setUnexecuted(0L);
+        }
+        return progress;
+    }
+
     private List<FunctionalCasePageDTO> handleCustomFields(List<FunctionalCasePageDTO> functionalCaseLists, String projectId) {
         List<String> ids = functionalCaseLists.stream().map(FunctionalCasePageDTO::getId).collect(Collectors.toList());
         Map<String, List<FunctionalCaseCustomFieldDTO>> collect = getCaseCustomFiledMap(ids, projectId);
@@ -807,6 +828,7 @@ public class FunctionalCaseService {
             functionalCasePageDTO.setUpdateUserName(userMap.get(functionalCasePageDTO.getUpdateUser()));
             functionalCasePageDTO.setDeleteUserName(userMap.get(functionalCasePageDTO.getDeleteUser()));
             functionalCasePageDTO.setExecuteUserName(userMap.get(functionalCasePageDTO.getExecuteUser()));
+            functionalCasePageDTO.setLastExecuteUserName(userMap.get(functionalCasePageDTO.getLastExecuteUser()));
         });
         return functionalCaseLists;
 
@@ -814,7 +836,8 @@ public class FunctionalCaseService {
 
     private Set<String> extractUserIds(List<FunctionalCasePageDTO> list) {
         return list.stream()
-                .flatMap(functionalCasePageDTO -> Stream.of(functionalCasePageDTO.getUpdateUser(), functionalCasePageDTO.getDeleteUser(), functionalCasePageDTO.getCreateUser(), functionalCasePageDTO.getExecuteUser()))
+                .flatMap(functionalCasePageDTO -> Stream.of(functionalCasePageDTO.getUpdateUser(), functionalCasePageDTO.getDeleteUser(), functionalCasePageDTO.getCreateUser(), functionalCasePageDTO.getExecuteUser(), functionalCasePageDTO.getLastExecuteUser()))
+                .filter(StringUtils::isNotBlank)
                 .collect(Collectors.toSet());
     }
 
@@ -1067,7 +1090,7 @@ public class FunctionalCaseService {
         }
         FunctionalCase functionalCase = new FunctionalCase();
         functionalCase.setLastExecuteResult(request.getLastExecuteResult());
-        functionalCase.setExecuteUser(userId);
+        functionalCase.setLastExecuteUser(userId);
         functionalCase.setProjectId(request.getProjectId());
         functionalCase.setUpdateTime(System.currentTimeMillis());
         functionalCase.setUpdateUser(userId);

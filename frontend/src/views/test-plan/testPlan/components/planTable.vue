@@ -974,6 +974,11 @@
     emitTableParams();
   }
 
+  async function refreshPreserveState() {
+    await loadPlanList();
+    emitTableParams();
+  }
+
   const filterConfigList = computed<FilterFormItem[]>(() => [
     {
       title: 'testPlan.testPlanIndex.ID',
@@ -1748,13 +1753,12 @@
   });
 
   onActivated(() => {
-    if (isActivated.value) {
-      fetchData();
-    }
+    // keep-alive 返回时保留筛选、分页和滚动等现场；数据更新由模块刷新按钮或业务写操作触发。
   });
 
   defineExpose({
     fetchData,
+    refreshPreserveState,
     emitTableParams,
     isAdvancedSearchMode,
   });

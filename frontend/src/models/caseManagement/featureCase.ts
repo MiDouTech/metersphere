@@ -69,6 +69,8 @@ export interface CaseManagementTable {
   lastExecuteResult: string; // 最近的执行结果：未执行/通过/失败/阻塞/跳过
   executeUser?: string;
   executeUserName?: string;
+  lastExecuteUser?: string;
+  lastExecuteUserName?: string;
   deleted: boolean; // 是否在回收站：0-否，1-是
   publicCase: boolean; // 是否是公共用例：0-否，1-是
   latest: boolean; // 是否为最新版本：0-否，1-是
@@ -232,7 +234,19 @@ export interface DetailCase {
   functionalPriority: string;
   executeUser?: string;
   executeUserName?: string;
+  lastExecuteUser?: string;
+  lastExecuteUserName?: string;
   [key: string]: any;
+}
+
+export interface FunctionalCasePersonalProgress {
+  total: number;
+  executed: number;
+  passed: number;
+  failed: number;
+  blocked: number;
+  skipped: number;
+  unexecuted: number;
 }
 
 // 回收站

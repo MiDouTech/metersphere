@@ -7,6 +7,7 @@ export interface CachePath {
   cacheName: string; // 缓存名称
   toPathName?: string[]; // 跳转不被清空缓存的下一级
   type?: string;
+  keepModuleAlive?: boolean; // 一级业务模块常驻缓存
 }
 
 const useCacheStore = defineStore('cache', {
@@ -17,6 +18,7 @@ const useCacheStore = defineStore('cache', {
         cacheName: RouteEnum.CASE_MANAGEMENT_CASE,
         toPathName: [RouteEnum.CASE_MANAGEMENT_CASE_DETAIL, RouteEnum.CASE_MANAGEMENT_CASE_CREATE_SUCCESS],
         type: 'ROUTE',
+        keepModuleAlive: true,
       },
       // 用例评审
       {
@@ -27,6 +29,7 @@ const useCacheStore = defineStore('cache', {
           RouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL,
         ],
         type: 'ROUTE',
+        keepModuleAlive: true,
       },
       // 用例评审详情
       {
@@ -39,12 +42,14 @@ const useCacheStore = defineStore('cache', {
         cacheName: RouteEnum.BUG_MANAGEMENT_INDEX,
         toPathName: [RouteEnum.BUG_MANAGEMENT_DETAIL, RouteEnum.BUG_MANAGEMENT_CREATE_SUCCESS],
         type: 'ROUTE',
+        keepModuleAlive: true,
       },
       // 测试计划首页
       {
         cacheName: RouteEnum.TEST_PLAN_INDEX,
         toPathName: [RouteEnum.TEST_PLAN_INDEX_DETAIL, RouteEnum.TEST_PLAN_INDEX_DETAIL_FEATURE_CASE_DETAIL],
         type: 'ROUTE',
+        keepModuleAlive: true,
       },
       // 测试计划详情
       {
@@ -57,6 +62,7 @@ const useCacheStore = defineStore('cache', {
         cacheName: RouteEnum.TEST_PLAN_REPORT,
         toPathName: [RouteEnum.TEST_PLAN_REPORT_DETAIL],
         type: 'ROUTE',
+        keepModuleAlive: true,
       },
       // 接口测试-定义-API
       {
@@ -84,7 +90,9 @@ const useCacheStore = defineStore('cache', {
   actions: {
     // 设置缓存
     setCache(name: string) {
-      this.cacheViews.push(name);
+      if (!this.cacheViews.includes(name)) {
+        this.cacheViews.push(name);
+      }
     },
     // 移除缓存
     removeCache(name: string) {

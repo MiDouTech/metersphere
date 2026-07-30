@@ -3,6 +3,9 @@
     <a-tabs v-model:active-key="activeTab" class="no-content" @change="handleTabChange">
       <a-tab-pane key="execute" :title="t('menu.caseManagement.executeCase')" />
       <a-tab-pane key="xmind" :title="t('menu.caseManagement.xmindCase')" />
+      <template #extra>
+        <MsModuleRefresh :on-refresh="refreshModule" />
+      </template>
     </a-tabs>
     <a-divider margin="0" />
     <!-- 用 v-show 保留执行用例树/表状态，避免切到 Xmind 再回来时因 keep-alive 缓存跳过 mountedLoad 导致无数据 -->
@@ -147,6 +150,7 @@
   import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsPopConfirm, { ConfirmValue } from '@/components/pure/ms-popconfirm/index.vue';
   import MsSplitBox from '@/components/pure/ms-split-box/index.vue';
+  import MsModuleRefresh from '@/components/business/ms-module-refresh/index.vue';
   import { MsTreeNodeData } from '@/components/business/ms-tree/types';
   import CaseTable from './components/caseTable.vue';
   import FeatureCaseTree from './components/caseTree.vue';
@@ -154,6 +158,7 @@
 
   import { createCaseModuleTree } from '@/api/modules/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
+  import type { ModuleRefreshContext, ModuleRefreshResult } from '@/hooks/useModuleRefresh';
   import useAppStore from '@/store/modules/app';
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
   import { hasAnyPermission } from '@/utils/permission';
@@ -338,8 +343,8 @@
   /**
    * 右侧表格数据刷新后，若当前展示的是模块，则刷新模块树的统计数量
    */
-  async function initModulesCount(params: TableQueryParams, refreshModule = false) {
-    if (refreshModule) {
+  async function initModulesCount(params: TableQueryParams, shouldRefreshModule = false) {
+    if (shouldRefreshModule) {
       caseTreeRef.value.initModules();
     }
     await featureCaseStore.getCaseModulesCount(params);
@@ -364,6 +369,13 @@
 
   function dragUpdate() {
     caseTableRef.value.initData();
+  }
+
+  async function refreshModule(_context: ModuleRefreshContext): Promise<ModuleRefreshResult> {
+    await Promise.allSettled([caseTreeRef.value?.initModules?.(), caseTableRef.value?.initData?.()]);
+    return {
+      refreshedAt: Date.now(),
+    };
   }
 
   onBeforeUnmount(() => {

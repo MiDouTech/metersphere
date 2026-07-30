@@ -99,7 +99,15 @@
           v-dompurify-html="detailForm.textDescription || '-'"
           class="markdown-body !break-words break-all"
         ></div>
-        <a-form-item field="remark" class="mt-[20px]" :label="t('caseManagement.featureCase.expectedResult')">
+        <a-form-item field="remark" class="mt-[20px]">
+          <template #label>
+            <div class="flex w-full items-center justify-between">
+              <span>{{ t('caseManagement.featureCase.expectedResult') }}</span>
+              <a-button v-if="showTextReportDefectButton" type="text" size="mini" @click.stop="handleReportDefect">
+                {{ t('caseManagement.featureCase.reportDefect') }}
+              </a-button>
+            </div>
+          </template>
           <MsRichText
             v-if="isEditPreposition"
             v-model:raw="detailForm.expectedResult"
@@ -998,6 +1006,15 @@
       !props.isTestPlan &&
       !props.isDisabledTestPlan &&
       hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE', 'FUNCTIONAL_CASE:READ+UPDATE'])
+  );
+
+  const showTextReportDefectButton = computed(
+    () =>
+      detailForm.value.caseEditType === 'TEXT' &&
+      !isEditPreposition.value &&
+      props.enableExecute &&
+      !props.isDisabledTestPlan &&
+      hasAnyPermission(['PROJECT_BUG:READ+ADD'])
   );
 
   const showDefectDrawer = ref(false);

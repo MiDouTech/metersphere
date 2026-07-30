@@ -26,6 +26,7 @@ const TestPlan: AppRouteRecordRaw = {
         locale: 'menu.testPlanShort',
         roles: ['PROJECT_TEST_PLAN:READ'],
         isTopMenu: true,
+        keepModuleAlive: true,
       },
     },
     {
@@ -36,6 +37,7 @@ const TestPlan: AppRouteRecordRaw = {
         locale: 'menu.apiTest.report',
         roles: ['PROJECT_TEST_PLAN_REPORT:READ'],
         isTopMenu: true,
+        keepModuleAlive: true,
       },
     },
     {
