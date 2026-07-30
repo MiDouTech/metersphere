@@ -1,11 +1,18 @@
-# MeterSphere MCP 本地装配说明
+# MeterSphere MCP 技能包
 
-本包由 MeterSphere「系统设置 → Agent 集成」下载，供 Cursor / Claude Desktop 等 MCP 客户端使用。
+本包由 MeterSphere「系统设置 → Agent 集成」下载，交给 Cursor / Claude Desktop 等 AI 客户端，使其学会调用本平台 Agent API。
+
+平台侧你只需要两步：
+
+1. **下载本技能包**
+2. **创建 Agent Token**（`msat_...`，关联用户为登录/执行身份）
+
+Token 与 mcp.json 配置在**本机**完成，平台不会预填管理员账号密码。
 
 ## 环境要求
 
 - Node.js >= 18
-- 已在 MeterSphere 创建 Agent Token（`msat_...`）
+- 已在 MeterSphere 创建 Agent Token
 
 ## 装配步骤
 
@@ -16,7 +23,7 @@ cd metersphere-mcp
 npm install --omit=dev
 ```
 
-2. 将下方配置写入 Cursor 的 `~/.cursor/mcp.json`（或项目 `.cursor/mcp.json`），按实际值替换环境变量；`args` 改为本机**绝对路径**：
+2. 将下方配置写入 Cursor 的 `~/.cursor/mcp.json`（或项目 `.cursor/mcp.json`），按实际值替换；`args` 改为本机**绝对路径**：
 
 ```json
 {
@@ -35,7 +42,11 @@ npm install --omit=dev
 }
 ```
 
-也可在平台「Agent 集成」页填写 Token / 项目后一键复制完整配置。
+说明：
+
+- `MS_AGENT_TOKEN`：平台创建的 Token，作为 API 登录凭证
+- `MS_PROJECT_ID`：当前操作项目；若 Token 绑定了单项目白名单，可与之对齐
+- Token 仅本地保存，勿提交到 Git
 
 3. 重启 Cursor，在 Settings → MCP 确认 `metersphere` 已连接。
 

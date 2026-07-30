@@ -8,6 +8,7 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.UsernamePasswordToken;
@@ -16,6 +17,7 @@ import org.apache.shiro.web.util.WebUtils;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Component
 public class AgentTokenFilter extends AnonymousFilter {
@@ -44,14 +46,20 @@ public class AgentTokenFilter extends AnonymousFilter {
         if (token != null && StringUtils.isNotBlank(token.getUserId())) {
             boolean searchApi = AgentTokenRateLimiter.isSearchApi(httpRequest.getRequestURI());
             if (!agentTokenRateLimiter.tryAcquire(token.getId(), searchApi)) {
-                writeTooManyRequests(WebUtils.toHttp(response), searchApi);
+                writeJsonError(WebUtils.toHttp(response), 429, searchRateLimitMessage(searchApi));
+                return false;
+            }
+            String projectId;
+            try {
+                projectId = resolveProjectId(httpRequest, token);
+            } catch (ProjectAccessDeniedException ex) {
+                writeJsonError(WebUtils.toHttp(response), 403, ex.getMessage());
                 return false;
             }
             if (!SecurityUtils.getSubject().isAuthenticated()) {
                 SecurityUtils.getSubject().login(new UsernamePasswordToken(token.getUserId(), "no_pass"));
             }
             AgentTokenContext.set(token);
-            String projectId = resolveProjectId(httpRequest, token);
             if (StringUtils.isNotBlank(projectId)) {
                 SessionUtils.setCurrentProjectId(projectId);
             }
@@ -70,33 +78,53 @@ public class AgentTokenFilter extends AnonymousFilter {
         SessionUtils.clearCurrentProjectId();
     }
 
-    private String resolveProjectId(HttpServletRequest request, AgentToken token) {
+    /**
+     * 解析请求项目：Header 优先；单项目白名单可省略 Header；非空白名单外项目返回 403。
+     */
+    String resolveProjectId(HttpServletRequest request, AgentToken token) {
         String projectId = request.getHeader(AgentConstants.HEADER_PROJECT);
         if (StringUtils.isBlank(projectId)) {
             projectId = request.getHeader(AgentConstants.HEADER_PROJECT_LEGACY);
         }
+        List<String> allowed = AgentTokenProjectAccess.parseProjectIds(token);
         if (StringUtils.isBlank(projectId)) {
-            projectId = token.getProjectId();
+            if (CollectionUtils.isNotEmpty(allowed) && allowed.size() == 1) {
+                return allowed.get(0);
+            }
+            return AgentTokenProjectAccess.primaryProjectId(allowed);
+        }
+        if (!AgentTokenProjectAccess.allows(token, projectId)) {
+            throw new ProjectAccessDeniedException("Agent Token 无权访问项目: " + projectId);
         }
         return projectId;
     }
 
-    private void writeTooManyRequests(HttpServletResponse response, boolean searchApi) {
+    private String searchRateLimitMessage(boolean searchApi) {
+        return searchApi
+                ? "Agent 检索过于频繁，请降低轮询频率（检索限 "
+                + AgentConstants.SEARCH_RATE_LIMIT_PER_MINUTE + " 次/分钟，间隔≥"
+                + AgentConstants.SEARCH_MIN_INTERVAL_MS + "ms；pageSize≤"
+                + AgentConstants.MAX_PAGE_SIZE + "）"
+                : "Agent Token 请求过于频繁，请稍后重试（限 "
+                + AgentConstants.RATE_LIMIT_PER_MINUTE + " 次/分钟）";
+    }
+
+    private void writeJsonError(HttpServletResponse response, int status, String message) {
         try {
-            response.setStatus(429);
+            response.setStatus(status);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setContentType("application/json;charset=UTF-8");
-            String message = searchApi
-                    ? "Agent 检索过于频繁，请降低轮询频率（检索限 "
-                    + AgentConstants.SEARCH_RATE_LIMIT_PER_MINUTE + " 次/分钟，间隔≥"
-                    + AgentConstants.SEARCH_MIN_INTERVAL_MS + "ms；pageSize≤"
-                    + AgentConstants.MAX_PAGE_SIZE + "）"
-                    : "Agent Token 请求过于频繁，请稍后重试（限 "
-                    + AgentConstants.RATE_LIMIT_PER_MINUTE + " 次/分钟）";
-            response.getWriter().write("{\"code\":429,\"message\":\"" + message + "\"}");
+            String safe = StringUtils.defaultString(message).replace("\"", "'");
+            response.getWriter().write("{\"code\":" + status + ",\"message\":\"" + safe + "\"}");
             response.getWriter().flush();
         } catch (Exception ignored) {
             // ignore write failure
+        }
+    }
+
+    static final class ProjectAccessDeniedException extends RuntimeException {
+        ProjectAccessDeniedException(String message) {
+            super(message);
         }
     }
 }

@@ -16,49 +16,16 @@
           </span>
         </div>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <a-button
-          v-permission="['SYSTEM_USER:READ']"
-          :loading="downloadLoading"
-          :disabled="!manifest?.available"
-          type="primary"
-          @click="handleDownload"
-        >
-          {{ t('system.agentIntegration.mcpDownload') }}
-        </a-button>
-        <a-button @click="copyConfig">{{ t('system.agentIntegration.mcpCopyConfig') }}</a-button>
-      </div>
+      <a-button
+        v-permission="['SYSTEM_USER:READ']"
+        :loading="downloadLoading"
+        :disabled="!manifest?.available"
+        type="primary"
+        @click="handleDownload"
+      >
+        {{ t('system.agentIntegration.mcpDownload') }}
+      </a-button>
     </div>
-
-    <a-form :model="form" layout="vertical" class="max-w-[720px]">
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item :label="t('system.agentIntegration.mcpBaseUrl')">
-            <a-input v-model="form.baseUrl" :placeholder="defaultBaseUrl" />
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item :label="t('system.agentIntegration.defaultProjectId')">
-            <a-input v-model="form.projectId" />
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item :label="t('system.agentIntegration.mcpToken')">
-            <a-input-password v-model="form.token" :placeholder="t('system.agentIntegration.mcpTokenPlaceholder')" />
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item :label="t('system.agentIntegration.mcpTestPlanId')">
-            <a-input v-model="form.testPlanId" allow-clear />
-          </a-form-item>
-        </a-col>
-        <a-col :span="24">
-          <a-form-item :label="t('system.agentIntegration.mcpDistPath')">
-            <a-input v-model="form.distPath" :placeholder="t('system.agentIntegration.mcpDistPathPlaceholder')" />
-          </a-form-item>
-        </a-col>
-      </a-row>
-    </a-form>
 
     <a-alert type="info" class="mb-3">
       {{ t('system.agentIntegration.mcpHint') }}
@@ -74,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, reactive, ref } from 'vue';
+  import { onMounted, ref } from 'vue';
   import { Message } from '@arco-design/web-vue';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
@@ -87,51 +54,10 @@
   import { useI18n } from '@/hooks/useI18n';
   import { downloadByteFile } from '@/utils';
 
-  const props = defineProps<{
-    presetToken?: string;
-    presetProjectId?: string;
-  }>();
-
   const { t } = useI18n();
 
-  const defaultBaseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const manifest = ref<AgentMcpManifest>();
   const downloadLoading = ref(false);
-
-  const form = reactive({
-    baseUrl: defaultBaseUrl,
-    projectId: props.presetProjectId || '',
-    token: props.presetToken || '',
-    testPlanId: '',
-    distPath: 'metersphere-mcp/dist/index.js',
-  });
-
-  function buildMcpJson() {
-    const baseUrl = (form.baseUrl || defaultBaseUrl).replace(/\/$/, '');
-    return JSON.stringify(
-      {
-        mcpServers: {
-          metersphere: {
-            command: 'node',
-            args: [form.distPath || 'metersphere-mcp/dist/index.js'],
-            env: {
-              MS_BASE_URL: baseUrl,
-              MS_AGENT_TOKEN: form.token || 'msat_YOUR_TOKEN',
-              MS_PROJECT_ID: form.projectId || 'your-project-id',
-              MS_TEST_PLAN_ID: form.testPlanId || '',
-            },
-          },
-        },
-      },
-      null,
-      2
-    );
-  }
-
-  async function copyConfig() {
-    await navigator.clipboard.writeText(buildMcpJson());
-    Message.success(t('system.agentIntegration.mcpCopySuccess'));
-  }
 
   async function handleDownload() {
     downloadLoading.value = true;
@@ -144,13 +70,6 @@
       downloadLoading.value = false;
     }
   }
-
-  function applyPreset(token?: string, projectId?: string) {
-    if (token) form.token = token;
-    if (projectId) form.projectId = projectId;
-  }
-
-  defineExpose({ applyPreset, copyConfig, buildMcpJson });
 
   onMounted(async () => {
     try {
