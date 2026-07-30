@@ -1,8 +1,5 @@
 <template>
   <MsCard simple no-content-padding class="relative">
-    <div class="absolute right-[16px] top-[8px] z-10">
-      <MsModuleRefresh :on-refresh="refreshModule" />
-    </div>
     <div class="h-full p-[16px]">
       <MsAdvanceFilter
         ref="msAdvanceFilterRef"
@@ -30,6 +27,9 @@
               >{{ t('bugManagement.syncBug') }}
             </a-button>
           </div>
+        </template>
+        <template #right>
+          <MsModuleRefresh :on-refresh="refreshModule" />
         </template>
       </MsAdvanceFilter>
       <MsBaseTable
@@ -215,7 +215,6 @@
   import type { ModuleRefreshContext, ModuleRefreshResult } from '@/hooks/useModuleRefresh';
   import router from '@/router';
   import { useAppStore, useTableStore } from '@/store';
-  import useCacheStore from '@/store/modules/cache/cache';
   import { customFieldDataToTableData, customFieldToColumns, downloadByteFile } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
 
@@ -257,8 +256,6 @@
   const { openDeleteModal } = useModal();
   const route = useRoute();
   const severityFilterOptions = ref<BugOptionItem[]>([]);
-  const cacheStore = useCacheStore();
-
   // 是否同步完成
   const isComplete = ref(false);
   const isShowCompleteMsg = ref(false);
@@ -947,11 +944,12 @@
       refreshedAt: Date.now(),
     };
   }
-  const isActivated = computed(() => cacheStore.cacheViews.includes(RouteEnum.BUG_MANAGEMENT_INDEX));
+  const mountedLoaded = ref(false);
 
   onMounted(() => {
-    if (!isActivated.value) {
+    if (!mountedLoaded.value) {
       mountedLoad();
+      mountedLoaded.value = true;
     }
   });
 
@@ -959,10 +957,6 @@
     if (route.query.id && activeDetailId.value !== route.query.id) {
       handleShowDetail(route.query.id as string, -1);
     }
-  });
-
-  onDeactivated(() => {
-    detailVisible.value = false;
   });
 
   onBeforeUnmount(() => {

@@ -1,8 +1,5 @@
 <template>
   <MsCard simple no-content-padding class="relative">
-    <div class="absolute right-[16px] top-[8px] z-10">
-      <MsModuleRefresh :on-refresh="refreshModule" />
-    </div>
     <MsSplitBox :not-show-first="isAdvancedSearchMode">
       <template #first>
         <div class="min-w-[300px] p-[16px]">
@@ -99,7 +96,11 @@
             @edit="handleEdit"
             @new="createTestPlan"
             @handle-adv-search="handleAdvSearch"
-          />
+          >
+            <template #moduleRefresh>
+              <MsModuleRefresh :on-refresh="refreshModule" />
+            </template>
+          </PlanTable>
         </div>
       </template>
     </MsSplitBox>

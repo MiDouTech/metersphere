@@ -350,4 +350,14 @@ export default {
   'caseManagement.featureCase.deleteFileTip':
     'After deletion, the file cannot be restored. Please operate with caution!',
   'caseManagement.featureCase.nameNotNull': 'The name can not be null!',
+  'caseManagement.featureCase.reviewSummary': 'Review',
+  'caseManagement.featureCase.testPlanSummary': 'Test plan',
+  'caseManagement.featureCase.archived': 'Archived',
+  'caseManagement.featureCase.moreOverviewCount': '{count} more',
+  'caseManagement.featureCase.collapseOverview': 'Collapse',
+  'caseManagement.featureCase.progressPassed': 'Passed',
+  'caseManagement.featureCase.progressFailed': 'Failed',
+  'caseManagement.featureCase.progressBlocked': 'Blocked',
+  'caseManagement.featureCase.progressSkipped': 'Skipped',
+  'caseManagement.featureCase.progressUnexecuted': 'Unexecuted',
 };

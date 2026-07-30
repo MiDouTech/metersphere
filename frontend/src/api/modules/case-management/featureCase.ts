@@ -21,6 +21,7 @@ import {
   CaseAiBatchSaveUrl,
   CaseAiChatUrl,
   CaseAiTransformUrl,
+  CaseOverviewUrl,
   CheckCaseExportTaskUrl,
   checkFileIsUpdateUrl,
   CreateCaseModuleTreeUrl,
@@ -112,6 +113,7 @@ import type {
   DemandItem,
   DragCase,
   FeatureCaseMinderUpdateParams,
+  FunctionalCaseOverview,
   FunctionalCasePersonalProgress,
   ImportExcelType,
   ModulesTreeType,
@@ -190,6 +192,10 @@ export function getCaseDetail(id: string) {
 
 export function getPersonalProgress(projectId: string) {
   return MSR.get<FunctionalCasePersonalProgress>({ url: PersonalProgressUrl, params: { projectId } });
+}
+
+export function getCaseOverview(id: string) {
+  return MSR.get<FunctionalCaseOverview>({ url: `${CaseOverviewUrl}/${id}/overview` });
 }
 // 批量删除用例
 export function batchDeleteCase(data: TableQueryParams) {

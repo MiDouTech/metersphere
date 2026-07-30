@@ -16,7 +16,15 @@ public class AgentOpenApiConfig {
                         "/agent/token/**",
                         "/api/agent/token/**",
                         "/agent/mcp/**",
-                        "/api/agent/mcp/**")
+                        "/api/agent/mcp/**",
+                        "/personal/agent-tokens/**",
+                        "/api/personal/agent-tokens/**",
+                        "/personal/agent-package/**",
+                        "/api/personal/agent-package/**",
+                        "/admin/agent-tokens/**",
+                        "/api/admin/agent-tokens/**",
+                        "/mcp",
+                        "/api/mcp")
                 .build();
     }
 }

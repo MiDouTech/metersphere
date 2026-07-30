@@ -3,33 +3,42 @@
     <McpOnboardingPanel />
 
     <MsCard simple>
-      <div class="mb-4 flex items-center justify-between">
-        <a-button v-permission="['SYSTEM_USER:READ+ADD']" type="primary" @click="openCreateModal">
-          {{ t('system.agentIntegration.createToken') }}
-        </a-button>
-        <a-input-search
-          v-model:model-value="keyword"
-          :placeholder="t('system.agentIntegration.searchToken')"
-          class="w-[260px]"
-          allow-clear
-          @search="searchParams"
-          @press-enter="searchParams"
-          @clear="searchParams"
-        />
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
+          <div class="mt-1 text-sm text-[var(--color-text-3)]">
+            {{ t('system.agentIntegration.myTokensDesc') }}
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a-input-search
+            v-model:model-value="keyword"
+            :placeholder="t('system.agentIntegration.searchToken')"
+            class="w-[260px]"
+            allow-clear
+            @search="searchParams"
+            @press-enter="searchParams"
+            @clear="searchParams"
+          />
+          <a-button type="primary" @click="openCreateModal">
+            {{ t('system.agentIntegration.createToken') }}
+          </a-button>
+        </div>
       </div>
+
       <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
         <template #enable="{ record }">
-          <a-switch
-            v-model:model-value="record.enable"
-            v-permission="['SYSTEM_USER:READ+UPDATE']"
-            size="small"
-            :before-change="(val) => toggleEnable(val, record)"
-          />
+          <a-switch :model-value="record.enable" size="small" :before-change="(val) => toggleEnable(val, record)" />
         </template>
         <template #action="{ record }">
-          <MsButton v-permission="['SYSTEM_USER:READ+DELETE']" status="danger" @click="removeToken(record)">
-            {{ t('common.delete') }}
-          </MsButton>
+          <div class="flex gap-2">
+            <MsButton @click="rotateToken(record)">
+              {{ t('system.agentIntegration.rotate') }}
+            </MsButton>
+            <MsButton status="danger" @click="removeToken(record)">
+              {{ t('common.delete') }}
+            </MsButton>
+          </div>
         </template>
       </ms-base-table>
     </MsCard>
@@ -51,29 +60,17 @@
         >
           <a-input v-model="createForm.name" />
         </a-form-item>
-        <a-form-item
-          field="userId"
-          :label="t('system.agentIntegration.userId')"
-          required
-          :extra="t('system.agentIntegration.userIdHelp')"
-          :rules="[{ required: true, message: t('system.agentIntegration.userIdRequired') }]"
-        >
-          <a-select
-            v-model="createForm.userId"
-            allow-search
-            allow-clear
-            allow-create
-            :filter-option="false"
-            :placeholder="t('system.agentIntegration.userIdPlaceholder')"
-            :loading="userLoading"
-            @search="searchUsers"
-            @popup-visible-change="(visible: boolean) => visible && searchUsers('')"
-          >
-            <a-option v-for="u in userOptions" :key="u.id" :value="u.id" :label="`${u.name}（${u.id}）`">
-              {{ u.name }}（{{ u.id }}）
-            </a-option>
+
+        <a-form-item field="clientType" :label="t('system.agentIntegration.clientType')">
+          <a-select v-model="createForm.clientType">
+            <a-option value="CODEX">Codex</a-option>
+            <a-option value="CHATGPT">ChatGPT</a-option>
+            <a-option value="CURSOR">Cursor</a-option>
+            <a-option value="WORKBUDDY">WorkBuddy</a-option>
+            <a-option value="GENERIC">Other MCP</a-option>
           </a-select>
         </a-form-item>
+
         <a-form-item
           field="projectIds"
           :label="t('system.agentIntegration.projectIds')"
@@ -95,24 +92,30 @@
             </a-option>
           </a-select>
         </a-form-item>
+
         <a-form-item
           field="scopes"
           :label="t('system.agentIntegration.scopes')"
           required
           :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
         >
-          <a-select v-model="createForm.scopes">
-            <a-option value="AGENT_ALL">AGENT_ALL（闭环全能力）</a-option>
-            <a-option value="FUNCTIONAL_ALL">FUNCTIONAL_ALL（仅读/回写）</a-option>
-            <a-option value="FUNCTIONAL_READ">FUNCTIONAL_READ</a-option>
-            <a-option value="FUNCTIONAL_SUBMIT">FUNCTIONAL_SUBMIT</a-option>
-            <a-option value="PROJECT_WRITE">PROJECT_WRITE</a-option>
-            <a-option value="CASE_WRITE">CASE_WRITE</a-option>
-            <a-option value="PLAN_WRITE">PLAN_WRITE</a-option>
-            <a-option value="REVIEW_WRITE">REVIEW_WRITE</a-option>
-            <a-option value="BUG_READ">BUG_READ（缺陷只读）</a-option>
-            <a-option value="BUG_WRITE">BUG_WRITE（缺陷读写）</a-option>
-          </a-select>
+          <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <button
+              v-for="scope in scopeOptions"
+              :key="scope.value"
+              type="button"
+              class="rounded border p-3 text-left"
+              :class="
+                createForm.scopes === scope.value
+                  ? 'border-[rgb(var(--primary-6))] bg-[var(--color-primary-light-1)]'
+                  : 'border-[var(--color-border-2)]'
+              "
+              @click="createForm.scopes = scope.value"
+            >
+              <div class="font-medium">{{ scope.value }}</div>
+              <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.label }}</div>
+            </button>
+          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -150,18 +153,17 @@
     type AgentTokenListItem,
     createAgentToken,
     deleteAgentToken,
+    disableAgentToken,
+    enableAgentToken,
     getAgentTokenPage,
-    updateAgentToken,
+    rotateAgentToken,
   } from '@/api/modules/setting/agentIntegration';
-  import { getAdminByOrganizationOrProject } from '@/api/modules/setting/organizationAndProject';
   import { getSystemProjectList } from '@/api/modules/system';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
-  import useUserStore from '@/store/modules/user';
 
   const { t } = useI18n();
   const { openModal } = useModal();
-  const userStore = useUserStore();
 
   const keyword = ref('');
   const createVisible = ref(false);
@@ -171,28 +173,37 @@
   const createFormRef = ref<FormInstance>();
   const createForm = reactive({
     name: '',
-    userId: '',
     projectIds: [] as string[],
     scopes: 'AGENT_ALL',
+    clientType: 'CODEX',
   });
 
-  const userLoading = ref(false);
-  const userOptions = ref<{ id: string; name: string }[]>([]);
   const projectLoading = ref(false);
   const projectOptions = ref<{ id: string; name: string }[]>([]);
 
+  const scopeOptions = [
+    { value: 'AGENT_ALL', label: t('system.agentIntegration.scopeAgentAll') },
+    { value: 'FUNCTIONAL_ALL', label: t('system.agentIntegration.scopeCase') },
+    { value: 'BUG_WRITE', label: t('system.agentIntegration.scopeBug') },
+    { value: 'FUNCTIONAL_READ', label: 'Read functional cases only' },
+    { value: 'FUNCTIONAL_SUBMIT', label: 'Submit execution results only' },
+    { value: 'BUG_READ', label: 'Read bugs only' },
+  ];
+
   const columns: MsTableColumn = [
     { title: 'system.agentIntegration.tokenName', dataIndex: 'name', showTooltip: true },
-    { title: 'system.agentIntegration.userId', dataIndex: 'userId', width: 140 },
+    { title: 'system.agentIntegration.displayPrefix', dataIndex: 'displayPrefix', width: 180, showTooltip: true },
     {
       title: 'system.agentIntegration.projectIds',
       dataIndex: 'projectScopeLabel',
       width: 160,
       showTooltip: true,
     },
+    { title: 'system.agentIntegration.clientType', dataIndex: 'clientType', width: 120 },
     { title: 'system.agentIntegration.scopes', dataIndex: 'scopes', width: 160 },
+    { title: 'system.agentIntegration.invocationCount', dataIndex: 'invocationCount', width: 120 },
     { title: 'system.agentIntegration.enable', dataIndex: 'enable', slotName: 'enable', width: 100 },
-    { title: 'common.operation', slotName: 'action', fixed: 'right', width: 120 },
+    { title: 'common.operation', slotName: 'action', fixed: 'right', width: 180 },
   ];
 
   const { propsRes, propsEvent, loadList, setLoadListParams } = useTable(getAgentTokenPage, {
@@ -205,22 +216,6 @@
   function searchParams() {
     setLoadListParams({ keyword: keyword.value });
     loadList();
-  }
-
-  async function searchUsers(keywordText: string) {
-    userLoading.value = true;
-    try {
-      const list = (await getAdminByOrganizationOrProject(keywordText || '')) || [];
-      userOptions.value = list.map((item: { id: string; name: string }) => ({
-        id: item.id,
-        name: item.name,
-      }));
-      if (userStore.id && !userOptions.value.some((u) => u.id === userStore.id)) {
-        userOptions.value.unshift({ id: userStore.id, name: userStore.name || userStore.id });
-      }
-    } finally {
-      userLoading.value = false;
-    }
   }
 
   async function searchProjects(keywordText: string) {
@@ -237,19 +232,15 @@
   }
 
   function openCreateModal() {
-    createForm.userId = userStore.id || '';
-    if (userStore.id && userStore.name) {
-      userOptions.value = [{ id: userStore.id, name: userStore.name }];
-    }
     createVisible.value = true;
     searchProjects('');
   }
 
   function resetCreateForm() {
     createForm.name = '';
-    createForm.userId = userStore.id || '';
     createForm.projectIds = [];
     createForm.scopes = 'AGENT_ALL';
+    createForm.clientType = 'CODEX';
   }
 
   async function handleCreate() {
@@ -259,9 +250,9 @@
     try {
       createdToken.value = await createAgentToken({
         name: createForm.name,
-        userId: createForm.userId,
         projectIds: createForm.projectIds?.length ? createForm.projectIds : [],
         scopes: createForm.scopes,
+        clientType: createForm.clientType,
       });
       createVisible.value = false;
       tokenVisible.value = true;
@@ -280,12 +271,23 @@
 
   async function toggleEnable(val: string | number | boolean, record: AgentTokenListItem) {
     try {
-      await updateAgentToken({ id: record.id, enable: Boolean(val) });
+      if (val) {
+        await enableAgentToken(record.id);
+      } else {
+        await disableAgentToken(record.id);
+      }
       Message.success(t('common.updateSuccess'));
+      loadList();
       return true;
     } catch (error) {
       return false;
     }
+  }
+
+  async function rotateToken(record: AgentTokenListItem) {
+    createdToken.value = await rotateAgentToken(record.id);
+    tokenVisible.value = true;
+    loadList();
   }
 
   function removeToken(record: AgentTokenListItem) {

@@ -17,5 +17,6 @@ public class AgentTokenCreateRequest {
     private String projectId;
     @NotBlank
     private String scopes;
+    private String clientType;
     private Long expireTime;
 }

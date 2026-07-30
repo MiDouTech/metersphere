@@ -26,6 +26,7 @@ const BugManagement: AppRouteRecordRaw = {
         locale: 'bugManagement.index',
         roles: ['PROJECT_BUG:READ'],
         isTopMenu: true,
+        keepModuleAlive: true,
       },
     },
     // 缺陷管理-编辑缺陷
@@ -69,6 +70,7 @@ const BugManagement: AppRouteRecordRaw = {
         locale: 'bugManagement.recycle.recycleBin',
         roles: ['PROJECT_BUG:READ'],
         isTopMenu: true,
+        keepModuleAlive: true,
       },
     },
   ],

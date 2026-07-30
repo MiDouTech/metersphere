@@ -604,22 +604,16 @@
   provide('isActivated', isActivated);
 
   onBeforeMount(() => {
-    if (!isActivated.value) {
-      if (route.query.type === 'featureCase') {
-        activeTab.value = 'featureCase';
-      }
-      initDetail();
-      initPlanTree();
+    if (route.query.type === 'featureCase') {
+      activeTab.value = 'featureCase';
     }
+    initDetail();
+    initPlanTree();
   });
 
   onActivated(() => {
-    if (isActivated.value) {
-      if (route.query.type === 'featureCase') {
-        activeTab.value = 'featureCase';
-      }
-      initDetail();
-      initPlanTree();
+    if (route.query.type === 'featureCase') {
+      activeTab.value = 'featureCase';
     }
   });
 </script>

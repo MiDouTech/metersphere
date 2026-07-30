@@ -6,6 +6,7 @@ import com.github.pagehelper.PageHelper;
 import io.metersphere.functional.domain.FunctionalCase;
 import io.metersphere.functional.dto.ExportTaskDTO;
 import io.metersphere.functional.dto.FunctionalCaseDetailDTO;
+import io.metersphere.functional.dto.FunctionalCaseOverviewDTO;
 import io.metersphere.functional.dto.FunctionalCasePageDTO;
 import io.metersphere.functional.dto.FunctionalCasePersonalProgressDTO;
 import io.metersphere.functional.dto.FunctionalCaseVersionDTO;
@@ -100,6 +101,14 @@ public class FunctionalCaseController {
     public FunctionalCaseDetailDTO getFunctionalCaseDetail(@PathVariable String id) {
         String userId = SessionUtils.getUserId();
         return functionalCaseService.getFunctionalCaseDetail(id, userId, true);
+    }
+
+    @GetMapping("/{id}/overview")
+    @Operation(summary = "鐢ㄤ緥绠＄悊-鍔熻兘鐢ㄤ緥-璇︽儏姒傝")
+    @RequiresPermissions(value = {PermissionConstants.FUNCTIONAL_CASE_READ, PermissionConstants.CASE_REVIEW_READ}, logical = Logical.OR)
+    @CheckOwner(resourceId = "#id", resourceType = "functional_case")
+    public FunctionalCaseOverviewDTO getFunctionalCaseOverview(@PathVariable String id) {
+        return functionalCaseService.getOverview(id, SessionUtils.getUserId());
     }
 
     @FileLimit

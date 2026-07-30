@@ -144,4 +144,8 @@ public interface ExtFunctionalCaseMapper {
 
     FunctionalCasePersonalProgressDTO getPersonalProgress(@Param("projectId") String projectId, @Param("userId") String userId);
 
+    List<FunctionalCaseReviewOverviewDTO> getReviewOverview(@Param("caseId") String caseId);
+
+    List<FunctionalCaseTestPlanOverviewDTO> getTestPlanOverview(@Param("caseId") String caseId);
+
 }

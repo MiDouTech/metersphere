@@ -1,0 +1,40 @@
+package io.metersphere.agent.controller;
+
+import io.metersphere.agent.service.AgentMcpStreamableService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@Tag(name = "Agent Remote MCP")
+@RestController
+@RequestMapping({"/mcp", "/api/mcp"})
+public class AgentMcpStreamableController {
+    @Resource
+    private AgentMcpStreamableService agentMcpStreamableService;
+
+    @PostMapping
+    @Operation(summary = "Streamable HTTP MCP JSON-RPC endpoint")
+    public Map<String, Object> post(@RequestBody Map<String, Object> request) {
+        return agentMcpStreamableService.handle(request);
+    }
+
+    @GetMapping
+    @Operation(summary = "MCP health endpoint")
+    public Map<String, Object> get() {
+        return Map.of("name", "metersphere-agent", "transport", "streamable-http", "status", "ok");
+    }
+
+    @DeleteMapping
+    @Operation(summary = "MCP session close endpoint")
+    public Map<String, Object> delete() {
+        return Map.of("ok", true);
+    }
+}

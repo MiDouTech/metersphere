@@ -56,6 +56,7 @@ const useCacheStore = defineStore('cache', {
         cacheName: RouteEnum.TEST_PLAN_INDEX_DETAIL,
         toPathName: [RouteEnum.TEST_PLAN_INDEX_DETAIL_FEATURE_CASE_DETAIL],
         type: 'ROUTE',
+        keepModuleAlive: true,
       },
       // 测试计划报告
       {
