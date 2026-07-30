@@ -102,6 +102,7 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 |------|------|
 | 401 Unauthorized | 检查 `MS_AGENT_TOKEN` |
 | 403 Scope 不足 | Token 需 AGENT_ALL 或对应 WRITE/SUBMIT scope |
+| 429 Too Many Requests | Token 限流：全局 120/分钟；检索 30/分钟且间隔≥300ms；pageSize≤100 |
 | 缺少 testPlanCaseId | 先关联测试计划再 search |
 | 缺陷必填字段 | 传 `customFields` |
 

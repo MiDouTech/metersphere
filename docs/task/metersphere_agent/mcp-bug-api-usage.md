@@ -108,7 +108,7 @@ Token Scope 要求：
 | `status` | string[] | 否 | 平台状态值列表 |
 | `handleUserIds` | string[] | 否 | 处理人用户 ID |
 | `current` | number | 否 | 页码，默认 1 |
-| `pageSize` | number | 否 | 1–500，默认 50 |
+| `pageSize` | number | 否 | 1–100，默认 50（服务端强制上限 100） |
 
 **出参要点**：`{ total, bugs: [{ id, num, title, status, statusName, handleUser, ... }] }`
 
@@ -205,6 +205,7 @@ POST {MS_BASE_URL}/api/agent/v1/bug/relate-case
 |------|------|------|
 | 401 | Token 无效/过期 | 换发 Agent Token |
 | 403 | Scope 不足 | 加 `BUG_READ`/`BUG_WRITE` 或 `AGENT_ALL` |
+| 429 | Token 限流 | 全局约 120 次/分钟；检索约 30 次/分钟且间隔≥300ms；勿大页轮询 |
 | 「缺陷必填自定义字段缺失」 | 模板必填未传 | `get_bug` 或查模板后补 `customFields` |
 | 「缺陷不属于指定项目」 | projectId 与 bug 不一致 | 用缺陷真实 projectId |
 | MCP 未连接 | dist 未构建 / 路径错 | `npm run build`，检查绝对路径 |

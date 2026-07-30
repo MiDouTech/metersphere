@@ -7,7 +7,7 @@ export const searchBugsInputSchema = {
   status: z.array(z.string()).optional().describe("Bug status values"),
   handleUserIds: z.array(z.string()).optional(),
   current: z.number().int().min(1).optional(),
-  pageSize: z.number().int().min(1).max(500).optional(),
+  pageSize: z.number().int().min(1).max(100).optional().describe("Page size, default 50, max 100"),
 };
 
 export const searchBugsTool = {

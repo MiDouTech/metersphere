@@ -29,7 +29,7 @@ public class AgentBugSearchRequest {
     private int current = 1;
 
     @Min(1)
-    @Max(value = AgentConstants.MAX_PAGE_SIZE, message = "pageSize max 500")
-    @Schema(description = "每页条数")
-    private int pageSize = 50;
+    @Max(value = AgentConstants.MAX_PAGE_SIZE, message = "pageSize max 100")
+    @Schema(description = "每页条数，默认 50，最大 100")
+    private int pageSize = AgentConstants.DEFAULT_PAGE_SIZE;
 }

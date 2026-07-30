@@ -15,7 +15,7 @@ export const searchFunctionalCasesInputSchema = {
   testPlanId: z.string().optional().describe("Test plan ID; uses MS_TEST_PLAN_ID env when omitted"),
   includeSteps: z.boolean().optional().describe("Include full steps, default true"),
   current: z.number().int().min(1).optional().describe("Page number, default 1"),
-  pageSize: z.number().int().min(1).max(500).optional().describe("Page size, default 50, max 500"),
+  pageSize: z.number().int().min(1).max(100).optional().describe("Page size, default 50, max 100"),
   filters: filtersSchema.describe("Structured filters: priority, lastExecuteResult, tags, moduleIds"),
 };
 

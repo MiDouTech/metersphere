@@ -2,6 +2,7 @@ package io.metersphere.agent.service;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import io.metersphere.agent.constants.AgentConstants;
 import io.metersphere.agent.dto.AgentBugCreateRequest;
 import io.metersphere.agent.dto.AgentBugDTO;
 import io.metersphere.agent.dto.AgentBugRelateCaseRequest;
@@ -60,7 +61,7 @@ public class AgentBugWriteService {
         pageRequest.setProjectId(request.getProjectId());
         pageRequest.setUseTrash(false);
         pageRequest.setCurrent(Math.max(request.getCurrent(), 1));
-        pageRequest.setPageSize(Math.min(Math.max(request.getPageSize(), 5), 500));
+        pageRequest.setPageSize(AgentConstants.normalizePageSize(request.getPageSize()));
         if (StringUtils.isNotBlank(request.getQuery())) {
             pageRequest.initKeyword(request.getQuery().trim());
         }
