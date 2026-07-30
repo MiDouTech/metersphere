@@ -184,6 +184,8 @@ export default {
   'common.resourceDeleted': 'Resource has been deleted',
   'common.resourceExpired': 'Link has failed, please get it again',
   'common.refresh': 'Refresh',
+  'common.refreshSuccess': 'Refresh succeeded',
+  'common.lastRefreshTime': 'Last refreshed: {time}',
   'common.searchByIdName': 'Search by ID/name',
   'common.searchByIDNameTag': 'Search by ID/name/tag',
   'common.searchByName': 'Search by name',

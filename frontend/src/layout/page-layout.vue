@@ -61,6 +61,9 @@
     // 获取需要清理缓存的页面名称
     const namesToRemove = cacheStore.cacheViews.filter((name) => {
       const cachePath = cacheStore.cachePath.find((item) => item.cacheName === name);
+      if (cachePath?.keepModuleAlive) {
+        return false;
+      }
       return cachePath && !(cachePath.toPathName || []).includes(to.name);
     });
 

@@ -16,6 +16,7 @@
         <result column="ref_id" jdbcType="VARCHAR" property="refId" />
         <result column="last_execute_result" jdbcType="VARCHAR" property="lastExecuteResult" />
         <result column="execute_user" jdbcType="VARCHAR" property="executeUser" />
+        <result column="last_execute_user" jdbcType="VARCHAR" property="lastExecuteUser" />
         <result column="deleted" jdbcType="BIT" property="deleted" />
         <result column="public_case" jdbcType="BIT" property="publicCase" />
         <result column="latest" jdbcType="BIT" property="latest" />
@@ -77,6 +78,21 @@
             project_id = #{projectId}
     </select>
 
+    <select id="getPersonalProgress" resultType="io.metersphere.functional.dto.FunctionalCasePersonalProgressDTO">
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN last_execute_result IS NOT NULL AND last_execute_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END) AS executed,
+            SUM(CASE WHEN last_execute_result = 'SUCCESS' THEN 1 ELSE 0 END) AS passed,
+            SUM(CASE WHEN last_execute_result = 'ERROR' THEN 1 ELSE 0 END) AS failed,
+            SUM(CASE WHEN last_execute_result = 'BLOCKED' THEN 1 ELSE 0 END) AS blocked,
+            SUM(CASE WHEN last_execute_result = 'SKIP' THEN 1 ELSE 0 END) AS skipped,
+            SUM(CASE WHEN last_execute_result IS NULL OR last_execute_result IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END) AS unexecuted
+        FROM functional_case
+        WHERE project_id = #{projectId}
+          AND execute_user = #{userId}
+          AND deleted = false
+    </select>
+
     <update id="removeToTrashByModuleIds" parameterType="java.lang.String">
         UPDATE functional_case SET deleted = true, module_id = 'root', delete_time = unix_timestamp()*1000, delete_user = #{userId} WHERE module_id IN
         <foreach collection="moduleIds" item="id" open="(" separator="," close=")">
@@ -115,6 +131,7 @@
         functional_case.review_status,
         functional_case.last_execute_result,
         functional_case.execute_user,
+        functional_case.last_execute_user,
         functional_case.delete_user,
         functional_case.delete_time,
         functional_case.tags,
@@ -278,6 +295,11 @@
                             and functional_case.execute_user in
                             <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
                         </when>
+                        <!-- 最后执行人 -->
+                        <when test="key=='lastExecuteUser'">
+                            and functional_case.last_execute_user in
+                            <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                        </when>
                         <!-- 删除人 -->
                         <when test="key=='deleteUser'">
                             and functional_case.delete_user in
@@ -349,6 +371,13 @@
                             <include refid="io.metersphere.system.mapper.BaseMapper.condition">
                                 <property name="condition" value="condition"/>
                                 <property name="column" value="functional_case.last_execute_result"/>
+                            </include>
+                        </if>
+                        <!-- 最后执行人 -->
+                        <if test="condition.name == 'lastExecuteUser'">
+                            <include refid="io.metersphere.system.mapper.BaseMapper.condition">
+                                <property name="condition" value="condition"/>
+                                <property name="column" value="functional_case.last_execute_user"/>
                             </include>
                         </if>
                         <!-- 关联需求 -->
@@ -539,6 +568,9 @@
             </if>
             <if test="functionalCase.executeUser != null and functionalCase.executeUser != ''">
                 execute_user = #{functionalCase.executeUser},
+            </if>
+            <if test="functionalCase.lastExecuteUser != null and functionalCase.lastExecuteUser != ''">
+                last_execute_user = #{functionalCase.lastExecuteUser},
             </if>
             <if test="functionalCase.updateUser != null and functionalCase.updateUser != ''">
                 update_user = #{functionalCase.updateUser},

@@ -142,4 +142,6 @@ public interface ExtFunctionalCaseMapper {
 
     long simpleCaseCount(@Param("projectId") String projectId, @Param("startTime") Long startTime, @Param("endTime") Long endTime);
 
+    FunctionalCasePersonalProgressDTO getPersonalProgress(@Param("projectId") String projectId, @Param("userId") String userId);
+
 }

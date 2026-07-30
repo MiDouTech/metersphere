@@ -144,6 +144,9 @@
             <template #executeUserName="{ record }">
               <span>{{ record.executeUserName || '-' }}</span>
             </template>
+            <template #lastExecuteUserName="{ record }">
+              <span>{{ record.lastExecuteUserName || '-' }}</span>
+            </template>
             <template #moduleId="{ record }">
               <a-tree-select
                 v-if="record.showModuleTree"
@@ -769,6 +772,15 @@
       showDrag: true,
       showTooltip: true,
     },
+    {
+      title: 'caseManagement.featureCase.tableColumnLastExecutor',
+      dataIndex: 'lastExecuteUserName',
+      slotName: 'lastExecuteUserName',
+      showInTable: true,
+      width: 120,
+      showDrag: true,
+      showTooltip: true,
+    },
     // {
     //   title: 'caseManagement.featureCase.tableColumnVersion',
     //   slotName: 'versionName',
@@ -994,6 +1006,11 @@
     {
       title: 'caseManagement.featureCase.tableColumnExecutor',
       dataIndex: 'executeUser',
+      type: FilterType.MEMBER,
+    },
+    {
+      title: 'caseManagement.featureCase.tableColumnLastExecutor',
+      dataIndex: 'lastExecuteUser',
       type: FilterType.MEMBER,
     },
     {
@@ -2069,8 +2086,8 @@
   });
 
   onActivated(() => {
-    if (isActivated.value) {
-      mountedLoad();
+    if (route.query.id && activeDetailId.value !== route.query.id) {
+      showCaseDetail(route.query.id as string, -1);
     }
   });
 

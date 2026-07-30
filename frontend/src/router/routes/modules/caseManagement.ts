@@ -26,6 +26,7 @@ const CaseManagement: AppRouteRecordRaw = {
         locale: 'menu.caseManagementShort',
         roles: ['FUNCTIONAL_CASE:READ'],
         isTopMenu: true,
+        keepModuleAlive: true,
       },
     },
     // 创建用例&编辑用例
@@ -95,6 +96,7 @@ const CaseManagement: AppRouteRecordRaw = {
         locale: 'menu.caseManagement.caseManagementReviewShort',
         roles: ['CASE_REVIEW:READ'],
         isTopMenu: true,
+        keepModuleAlive: true,
       },
     },
     // 创建评审
@@ -174,6 +176,7 @@ const CaseManagement: AppRouteRecordRaw = {
         locale: 'menu.caseManagement.testReport',
         roles: ['FUNCTIONAL_CASE:READ'],
         isTopMenu: true,
+        keepModuleAlive: true,
       },
     },
     // 测试报告详情/编辑

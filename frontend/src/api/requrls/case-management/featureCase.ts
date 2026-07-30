@@ -8,6 +8,8 @@ export const UpdateCaseUrl = '/functional/case/update';
 export const DeleteCaseUrl = '/functional/case/delete';
 // 用例管理-详情
 export const DetailCaseUrl = '/functional/case/detail';
+// 用例管理-当前用户个人执行进度
+export const PersonalProgressUrl = '/functional/case/personal-progress';
 // 用例管理-批量移动用例
 export const BatchMoveCaseUrl = '/functional/case/batch/move';
 // 用例管理-批量删除用例

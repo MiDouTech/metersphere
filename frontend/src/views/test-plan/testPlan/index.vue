@@ -1,5 +1,8 @@
 <template>
-  <MsCard simple no-content-padding>
+  <MsCard simple no-content-padding class="relative">
+    <div class="absolute right-[16px] top-[8px] z-10">
+      <MsModuleRefresh :on-refresh="refreshModule" />
+    </div>
     <MsSplitBox :not-show-first="isAdvancedSearchMode">
       <template #first>
         <div class="min-w-[300px] p-[16px]">
@@ -128,6 +131,7 @@
   import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsPopConfirm, { ConfirmValue } from '@/components/pure/ms-popconfirm/index.vue';
   import MsSplitBox from '@/components/pure/ms-split-box/index.vue';
+  import MsModuleRefresh from '@/components/business/ms-module-refresh/index.vue';
   import ImportFromDefaultDrawer from './components/importFromDefaultDrawer.vue';
   import PlanTable from './components/planTable.vue';
   import TestPlanTree from './components/testPlanTree.vue';
@@ -136,6 +140,7 @@
 
   import { createPlanModuleTree, getPlanModulesCount } from '@/api/modules/test-plan/testPlan';
   import { useI18n } from '@/hooks/useI18n';
+  import type { ModuleRefreshContext, ModuleRefreshResult } from '@/hooks/useModuleRefresh';
   import useAppStore from '@/store/modules/app';
 
   import type { CreateOrUpdateModule } from '@/models/caseManagement/featureCase';
@@ -304,6 +309,13 @@
   const isAdvancedSearchMode = computed(() => planTableRef.value?.isAdvancedSearchMode);
   function handleAdvSearch() {
     setActiveFolder('all');
+  }
+
+  async function refreshModule(_context: ModuleRefreshContext): Promise<ModuleRefreshResult> {
+    await Promise.allSettled([planTreeRef.value?.initModules?.(), planTableRef.value?.refreshPreserveState?.()]);
+    return {
+      refreshedAt: Date.now(),
+    };
   }
 </script>
 

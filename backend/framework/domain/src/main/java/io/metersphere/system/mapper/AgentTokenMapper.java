@@ -14,6 +14,9 @@ public interface AgentTokenMapper {
 
     int updateByPrimaryKeySelective(AgentToken record);
 
+    /** 更新可访问项目（允许将 project_id / project_ids 置空表示全部项目） */
+    int updateProjectAccess(AgentToken record);
+
     int deleteByPrimaryKey(@Param("id") String id);
 
     List<AgentToken> selectPage(@Param("keyword") String keyword,

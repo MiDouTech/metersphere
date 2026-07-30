@@ -15,6 +15,8 @@ export interface AgentTokenListItem {
   name: string;
   userId: string;
   projectId?: string;
+  projectIds?: string[];
+  projectScopeLabel?: string;
   scopes: string;
   expireTime?: number;
   enable: boolean;
@@ -25,6 +27,7 @@ export interface AgentTokenListItem {
 export interface AgentTokenCreateParams {
   name: string;
   userId: string;
+  projectIds?: string[];
   projectId?: string;
   scopes: string;
   expireTime?: number;
@@ -42,6 +45,7 @@ export interface AgentTokenCreateResult {
 export interface AgentTokenUpdateParams {
   id: string;
   name?: string;
+  projectIds?: string[];
   projectId?: string;
   scopes?: string;
   expireTime?: number;

@@ -140,6 +140,16 @@
     </template>
     <template #default="{ loading }">
       <div ref="wrapperRef" class="bg-[var(--color-text-fff)]">
+        <div class="flex items-center gap-3 border-b border-[var(--color-text-n8)] px-4 py-2 text-[13px]">
+          <span class="text-[var(--color-text-2)]">{{ t('caseManagement.featureCase.personalProgress') }}：</span>
+          <span>{{ personalProgress.executed || 0 }}/{{ personalProgress.total || 0 }}</span>
+          <div
+            class="h-[6px] w-[160px] overflow-hidden rounded bg-[var(--color-fill-2)]"
+            aria-label="personal progress"
+          >
+            <div class="h-full bg-[rgb(var(--success-6))]" :style="{ width: `${personalProgressRate}%` }"></div>
+          </div>
+        </div>
         <div class="header relative h-[48px] border-b border-[var(--color-text-n8)] pl-2">
           <div class="max-w-[calc(100%-100px)]">
             <MsTab
@@ -157,11 +167,7 @@
         <div>
           <div
             :class="`${
-              props.embed
-                ? 'h-[calc(100vh-280px)]'
-                : commentInputIsActive
-                ? 'h-[calc(100vh-378px)]'
-                : 'h-[calc(100vh-174px)]'
+              props.embed ? 'h-[calc(100vh-280px)]' : 'h-[calc(100vh-174px)]'
             } content-wrapper w-full overflow-auto p-[16px] pt-4`"
           >
             <template v-if="activeTab === 'detail' && detailInfo.id">
@@ -178,7 +184,6 @@
                 @update-success="updateSuccess"
                 @prev-case="goPrevCase"
                 @next-case="goNextCase"
-                @goto-comments="gotoCommentsTab"
               />
             </template>
             <template v-else-if="activeTab === 'detail'">
@@ -198,38 +203,11 @@
             <template v-if="activeTab === 'bug' && detailInfo.id">
               <TabDefect :case-id="detailInfo.id" />
             </template>
-            <template v-if="activeTab === 'dependency' && detailInfo.id">
-              <TabDependency :case-id="detailInfo.id" @create="handleCreate" />
-            </template>
-            <template v-if="activeTab === 'caseReview' && detailInfo.id">
-              <TabCaseReview :case-id="detailInfo.id" />
-            </template>
-            <template v-if="activeTab === 'testPlan' && detailInfo.id">
-              <TabTestPlan :case-id="detailInfo.id" />
-            </template>
-            <template v-if="activeTab === 'comments' && detailInfo.id">
-              <TabComment ref="commentRef" :case-id="detailInfo.id" :comment-value="detailInfo.commentList" />
-            </template>
             <template v-if="activeTab === 'changeHistory' && detailInfo.id">
               <TabChangeHistory :case-id="detailInfo.id" />
             </template>
           </div>
         </div>
-        <inputComment
-          v-if="activeTab !== 'detail'"
-          ref="commentInputRef"
-          v-model:content="content"
-          v-model:notice-user-ids="noticeUserIds"
-          v-model:filed-ids="uploadFileIds"
-          v-permission="['FUNCTIONAL_CASE:READ+COMMENT']"
-          :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
-          :is-active="isActive"
-          is-show-avatar
-          is-use-bottom
-          :upload-image="handleUploadImage"
-          @publish="publishHandler"
-          @cancel="cancelPublish"
-        />
       </div>
     </template>
   </MsDetailDrawer>
@@ -250,22 +228,18 @@
   import type { MsPaginationI } from '@/components/pure/ms-table/type';
   import caseLevel from '@/components/business/ms-case-associate/caseLevel.vue';
   import type { CaseLevel } from '@/components/business/ms-case-associate/types';
-  import inputComment from '@/components/business/ms-comment/input.vue';
-  import { CommentParams } from '@/components/business/ms-comment/types';
   import MsDetailDrawer from '@/components/business/ms-detail-drawer/index.vue';
   import BasicInfo from './tabContent/basicInfo.vue';
   import SettingDrawer from './tabContent/settingDrawer.vue';
 
   import {
-    createCommentList,
     deleteCaseRequest,
-    editorUploadFile,
     followerCaseRequest,
     getCaseDetail,
     getCaseModuleTree,
+    getPersonalProgress,
     updateCaseRequest,
   } from '@/api/modules/case-management/featureCase';
-  import { PreviewEditorImageUrl } from '@/api/requrls/case-management/featureCase';
   import { defaultCaseDetail } from '@/config/caseManagement';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
@@ -275,7 +249,12 @@
   import { characterLimit } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
 
-  import type { CustomAttributes, DetailCase, TabItemType } from '@/models/caseManagement/featureCase';
+  import type {
+    CustomAttributes,
+    DetailCase,
+    FunctionalCasePersonalProgress,
+    TabItemType,
+  } from '@/models/caseManagement/featureCase';
   import { ModuleTreeNode } from '@/models/common';
   import type { FieldOptions } from '@/models/setting/template';
   import { CaseManagementRouteEnum } from '@/enums/routeEnum';
@@ -284,13 +263,9 @@
   // 异步加载组件
   const TabDefect = defineAsyncComponent(() => import('./tabContent/tabBug/tabDefect.vue'));
   const TabCaseTable = defineAsyncComponent(() => import('./tabContent/tabCase/tabCaseTable.vue'));
-  const TabCaseReview = defineAsyncComponent(() => import('./tabContent/tabCaseReview.vue'));
   const TabChangeHistory = defineAsyncComponent(() => import('./tabContent/tabChangeHistory.vue'));
-  const TabComment = defineAsyncComponent(() => import('./tabContent/tabComment/tabCommentIndex.vue'));
   const TabDemand = defineAsyncComponent(() => import('./tabContent/tabDemand/demand.vue'));
-  const TabDependency = defineAsyncComponent(() => import('./tabContent/tabDependency/tabDependency.vue'));
   const TabDetail = defineAsyncComponent(() => import('./tabContent/tabDetail.vue'));
-  const TabTestPlan = defineAsyncComponent(() => import('./tabContent/tabTestPlan.vue'));
 
   const router = useRouter();
   const detailDrawerRef = ref<InstanceType<typeof MsDetailDrawer>>();
@@ -365,17 +340,15 @@
     showSettingDrawer.value = true;
   }
 
-  const commentInputRef = ref<InstanceType<typeof inputComment>>();
-  const commentInputIsActive = computed(() => commentInputRef.value?.isActive);
-
   const tabSetting = ref<TabItemType[]>([]);
   const activeTab = ref<string | number>('detail');
+  const deprecatedDetailTabs = ['dependency', 'caseReview', 'testPlan', 'comments'];
 
   const titleName = ref('');
 
   function clickMenu(key: string | number) {
-    activeTab.value = key;
-    featureCaseStore.setActiveTab(key);
+    activeTab.value = deprecatedDetailTabs.includes(String(key)) ? 'detail' : key;
+    featureCaseStore.setActiveTab(activeTab.value);
     switch (activeTab.value) {
       case 'setting':
         showMenuSetting();
@@ -397,6 +370,20 @@
   }
   const route = useRoute();
   const detailInfo = ref<DetailCase>(cloneDeep(defaultCaseDetail));
+  const personalProgress = ref<FunctionalCasePersonalProgress>({
+    total: 0,
+    executed: 0,
+    passed: 0,
+    failed: 0,
+    blocked: 0,
+    skipped: 0,
+    unexecuted: 0,
+  });
+  const personalProgressRate = computed(() =>
+    personalProgress.value.total
+      ? Math.round((personalProgress.value.executed / personalProgress.value.total) * 100)
+      : 0
+  );
   const customFields = ref<CustomAttributes[]>([]);
   const caseLevels = ref<CaseLevel>('P0');
 
@@ -425,6 +412,13 @@
     featureCaseStore.initCountMap(countMap);
   }
 
+  async function refreshPersonalProgress() {
+    if (!detailInfo.value.projectId) {
+      return;
+    }
+    personalProgress.value = await getPersonalProgress(detailInfo.value.projectId);
+  }
+
   function loadedCase(detail: DetailCase) {
     getCaseTree();
     detailInfo.value = { ...detail };
@@ -432,6 +426,7 @@
     setCount(detail);
     customFields.value = detailInfo.value?.customFields as CustomAttributes[];
     caseLevels.value = getCaseLevels(customFields.value) as CaseLevel;
+    refreshPersonalProgress();
   }
 
   const caseLevelList = computed<FieldOptions[]>(() => {
@@ -639,43 +634,6 @@
     }
   );
 
-  const content = ref('');
-  const commentRef = ref();
-  const isActive = ref<boolean>(false);
-
-  const noticeUserIds = ref<string[]>([]);
-  const uploadFileIds = ref<string[]>([]);
-  async function publishHandler(currentContent: string) {
-    try {
-      const params: CommentParams = {
-        caseId: detailInfo.value.id,
-        notifier: noticeUserIds.value.join(';'),
-        replyUser: '',
-        parentId: '',
-        content: currentContent,
-        event: noticeUserIds.value.join(';') ? 'AT' : 'COMMENT', // 任务事件(仅评论: ’COMMENT‘; 评论并@: ’AT‘; 回复评论/回复并@: ’REPLAY‘;)
-        uploadFileIds: uploadFileIds.value,
-      };
-      await createCommentList(params);
-      if (activeTab.value === 'comments') {
-        commentRef.value.getAllCommentList();
-      }
-      emit('success');
-      Message.success(t('common.publishSuccessfully'));
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  function cancelPublish() {
-    isActive.value = !isActive.value;
-  }
-
-  function gotoCommentsTab() {
-    activeTab.value = 'comments';
-    featureCaseStore.setActiveTab('comments');
-  }
-
   const tabDefaultSettingList: TabItemType[] = [
     {
       value: 'basicInfo',
@@ -692,37 +650,13 @@
 
     {
       value: 'case',
-      label: t('caseManagement.featureCase.case'),
+      label: t('caseManagement.featureCase.precedingCase'),
       canHide: true,
       isShow: true,
     },
   ];
 
   const caseTab: TabItemType[] = [
-    {
-      value: 'dependency',
-      label: t('caseManagement.featureCase.dependency'),
-      canHide: true,
-      isShow: true,
-    },
-    {
-      value: 'caseReview',
-      label: t('caseManagement.featureCase.caseReview'),
-      canHide: true,
-      isShow: true,
-    },
-    {
-      value: 'testPlan',
-      label: t('caseManagement.featureCase.testPlan'),
-      canHide: true,
-      isShow: true,
-    },
-    {
-      value: 'comments',
-      label: t('caseManagement.featureCase.comments'),
-      canHide: true,
-      isShow: true,
-    },
     {
       value: 'changeHistory',
       label: t('caseManagement.featureCase.changeHistory'),
@@ -759,7 +693,7 @@
   async function initTabConfig() {
     const result = (await featureCaseStore.getContentTabList()) || [];
     if (result.length) {
-      return result.filter((item) => item.isShow);
+      return result.filter((item) => item.isShow && !deprecatedDetailTabs.includes(String(item.value)));
     }
     return newTabDefaultSettingList.value;
   }
@@ -769,15 +703,13 @@
   const initTab = async () => {
     showSettingDrawer.value = false;
     const tmpArr = (await featureCaseStore.getContentTabList()) || [];
-    tabSetting.value = tmpArr.filter((item) => item.isShow);
+    tabSetting.value = tmpArr.filter((item) => item.isShow && !deprecatedDetailTabs.includes(String(item.value)));
+    if (deprecatedDetailTabs.includes(String(activeTab.value))) {
+      activeTab.value = 'detail';
+      featureCaseStore.setActiveTab('detail');
+    }
   };
 
-  async function handleUploadImage(file: File) {
-    const { data } = await editorUploadFile({
-      fileList: [file],
-    });
-    return data;
-  }
   // 更新用例等级
   async function handleStatusChange(value: string) {
     try {

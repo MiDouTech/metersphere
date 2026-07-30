@@ -80,6 +80,7 @@ import {
   importExcelCaseUrl,
   importXMindCaseUrl,
   MoveCaseModuleTreeUrl,
+  PersonalProgressUrl,
   PreviewEditorImageUrl,
   PreviewFileUrl,
   publicAssociatedCaseUrl,
@@ -111,6 +112,7 @@ import type {
   DemandItem,
   DragCase,
   FeatureCaseMinderUpdateParams,
+  FunctionalCasePersonalProgress,
   ImportExcelType,
   ModulesTreeType,
   OperationFile,
@@ -184,6 +186,10 @@ export function updateCaseRequest(data: Record<string, any>) {
 // 用例详情
 export function getCaseDetail(id: string) {
   return MSR.get({ url: `${DetailCaseUrl}/${id}` });
+}
+
+export function getPersonalProgress(projectId: string) {
+  return MSR.get<FunctionalCasePersonalProgress>({ url: PersonalProgressUrl, params: { projectId } });
 }
 // 批量删除用例
 export function batchDeleteCase(data: TableQueryParams) {

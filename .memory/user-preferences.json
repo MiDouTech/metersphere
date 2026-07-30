@@ -1,0 +1,10 @@
+{
+  "interaction_mode": "fast",
+  "output_format": "excel",
+  "language": "zh-CN",
+  "require_visual_nav_path": true,
+  "visual_nav_path_field": "前置条件或步骤首步",
+  "step_granularity": "one_action_per_step",
+  "title_style": "动作+对象+条件/场景",
+  "updated_at": "2026-07-23T11:45:00"
+}

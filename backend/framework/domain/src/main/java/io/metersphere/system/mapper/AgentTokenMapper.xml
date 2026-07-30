@@ -8,6 +8,7 @@
         <result column="token_hash" jdbcType="VARCHAR" property="tokenHash"/>
         <result column="user_id" jdbcType="VARCHAR" property="userId"/>
         <result column="project_id" jdbcType="VARCHAR" property="projectId"/>
+        <result column="project_ids" jdbcType="LONGVARCHAR" property="projectIds"/>
         <result column="scopes" jdbcType="VARCHAR" property="scopes"/>
         <result column="expire_time" jdbcType="BIGINT" property="expireTime"/>
         <result column="enable" jdbcType="BIT" property="enable"/>
@@ -16,7 +17,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, name, token_prefix, token_hash, user_id, project_id, scopes, expire_time, enable, create_time, create_user
+        id, name, token_prefix, token_hash, user_id, project_id, project_ids, scopes, expire_time, enable, create_time, create_user
     </sql>
 
     <select id="selectByTokenHash" resultMap="BaseResultMap">
@@ -35,10 +36,11 @@
     </select>
 
     <insert id="insert" parameterType="io.metersphere.system.domain.AgentToken">
-        insert into agent_token (id, name, token_prefix, token_hash, user_id, project_id, scopes, expire_time, enable,
+        insert into agent_token (id, name, token_prefix, token_hash, user_id, project_id, project_ids, scopes, expire_time, enable,
                                  create_time, create_user)
         values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{tokenPrefix,jdbcType=VARCHAR},
                 #{tokenHash,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR},
+                #{projectIds,jdbcType=LONGVARCHAR},
                 #{scopes,jdbcType=VARCHAR}, #{expireTime,jdbcType=BIGINT}, #{enable,jdbcType=BIT},
                 #{createTime,jdbcType=BIGINT}, #{createUser,jdbcType=VARCHAR})
     </insert>
@@ -48,10 +50,18 @@
         <set>
             <if test="name != null">name = #{name,jdbcType=VARCHAR},</if>
             <if test="projectId != null">project_id = #{projectId,jdbcType=VARCHAR},</if>
+            <if test="projectIds != null">project_ids = #{projectIds,jdbcType=LONGVARCHAR},</if>
             <if test="scopes != null">scopes = #{scopes,jdbcType=VARCHAR},</if>
             <if test="expireTime != null">expire_time = #{expireTime,jdbcType=BIGINT},</if>
             <if test="enable != null">enable = #{enable,jdbcType=BIT},</if>
         </set>
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateProjectAccess" parameterType="io.metersphere.system.domain.AgentToken">
+        update agent_token
+        set project_id = #{projectId,jdbcType=VARCHAR},
+            project_ids = #{projectIds,jdbcType=LONGVARCHAR}
         where id = #{id,jdbcType=VARCHAR}
     </update>
 
@@ -60,7 +70,7 @@
     </delete>
 
     <select id="selectPage" resultMap="BaseResultMap">
-        select id, name, token_prefix, user_id, project_id, scopes, expire_time, enable, create_time, create_user
+        select id, name, token_prefix, user_id, project_id, project_ids, scopes, expire_time, enable, create_time, create_user
         from agent_token
         <where>
             <if test="keyword != null and keyword != ''">

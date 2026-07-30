@@ -1,6 +1,6 @@
 <template>
   <div>
-    <McpOnboardingPanel ref="mcpPanelRef" />
+    <McpOnboardingPanel />
 
     <MsCard simple>
       <div class="mb-4 flex items-center justify-between">
@@ -38,6 +38,7 @@
       v-model:visible="createVisible"
       :title="t('system.agentIntegration.createToken')"
       :ok-loading="createLoading"
+      unmount-on-close
       @ok="handleCreate"
       @cancel="resetCreateForm"
     >
@@ -54,12 +55,45 @@
           field="userId"
           :label="t('system.agentIntegration.userId')"
           required
+          :extra="t('system.agentIntegration.userIdHelp')"
           :rules="[{ required: true, message: t('system.agentIntegration.userIdRequired') }]"
         >
-          <a-input v-model="createForm.userId" :placeholder="t('system.agentIntegration.userIdPlaceholder')" />
+          <a-select
+            v-model="createForm.userId"
+            allow-search
+            allow-clear
+            allow-create
+            :filter-option="false"
+            :placeholder="t('system.agentIntegration.userIdPlaceholder')"
+            :loading="userLoading"
+            @search="searchUsers"
+            @popup-visible-change="(visible: boolean) => visible && searchUsers('')"
+          >
+            <a-option v-for="u in userOptions" :key="u.id" :value="u.id" :label="`${u.name}（${u.id}）`">
+              {{ u.name }}（{{ u.id }}）
+            </a-option>
+          </a-select>
         </a-form-item>
-        <a-form-item field="projectId" :label="t('system.agentIntegration.defaultProjectId')">
-          <a-input v-model="createForm.projectId" />
+        <a-form-item
+          field="projectIds"
+          :label="t('system.agentIntegration.projectIds')"
+          :extra="t('system.agentIntegration.projectIdsHelp')"
+        >
+          <a-select
+            v-model="createForm.projectIds"
+            multiple
+            allow-search
+            allow-clear
+            :filter-option="false"
+            :placeholder="t('system.agentIntegration.projectIdsPlaceholder')"
+            :loading="projectLoading"
+            @search="searchProjects"
+            @popup-visible-change="(visible: boolean) => visible && searchProjects('')"
+          >
+            <a-option v-for="p in projectOptions" :key="p.id" :value="p.id" :label="p.name">
+              {{ p.name }}
+            </a-option>
+          </a-select>
         </a-form-item>
         <a-form-item
           field="scopes"
@@ -93,8 +127,7 @@
         {{ createdToken?.warning }}
       </a-alert>
       <div class="break-all rounded bg-[var(--color-fill-2)] p-3 text-sm">{{ createdToken?.token }}</div>
-      <div class="mt-4 flex justify-end gap-2">
-        <a-button @click="copyTokenAndFillMcp">{{ t('system.agentIntegration.copyTokenAndMcp') }}</a-button>
+      <div class="mt-4 flex justify-end">
         <a-button type="primary" @click="copyToken">{{ t('common.copy') }}</a-button>
       </div>
     </a-modal>
@@ -120,31 +153,43 @@
     getAgentTokenPage,
     updateAgentToken,
   } from '@/api/modules/setting/agentIntegration';
+  import { getAdminByOrganizationOrProject } from '@/api/modules/setting/organizationAndProject';
+  import { getSystemProjectList } from '@/api/modules/system';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
+  import useUserStore from '@/store/modules/user';
 
   const { t } = useI18n();
   const { openModal } = useModal();
+  const userStore = useUserStore();
 
-  const mcpPanelRef = ref<InstanceType<typeof McpOnboardingPanel>>();
   const keyword = ref('');
   const createVisible = ref(false);
   const createLoading = ref(false);
   const tokenVisible = ref(false);
   const createdToken = ref<AgentTokenCreateResult>();
-  const lastCreateProjectId = ref('');
   const createFormRef = ref<FormInstance>();
   const createForm = reactive({
     name: '',
     userId: '',
-    projectId: '',
+    projectIds: [] as string[],
     scopes: 'AGENT_ALL',
   });
+
+  const userLoading = ref(false);
+  const userOptions = ref<{ id: string; name: string }[]>([]);
+  const projectLoading = ref(false);
+  const projectOptions = ref<{ id: string; name: string }[]>([]);
 
   const columns: MsTableColumn = [
     { title: 'system.agentIntegration.tokenName', dataIndex: 'name', showTooltip: true },
     { title: 'system.agentIntegration.userId', dataIndex: 'userId', width: 140 },
-    { title: 'system.agentIntegration.defaultProjectId', dataIndex: 'projectId', width: 160, showTooltip: true },
+    {
+      title: 'system.agentIntegration.projectIds',
+      dataIndex: 'projectScopeLabel',
+      width: 160,
+      showTooltip: true,
+    },
     { title: 'system.agentIntegration.scopes', dataIndex: 'scopes', width: 160 },
     { title: 'system.agentIntegration.enable', dataIndex: 'enable', slotName: 'enable', width: 100 },
     { title: 'common.operation', slotName: 'action', fixed: 'right', width: 120 },
@@ -162,14 +207,48 @@
     loadList();
   }
 
+  async function searchUsers(keywordText: string) {
+    userLoading.value = true;
+    try {
+      const list = (await getAdminByOrganizationOrProject(keywordText || '')) || [];
+      userOptions.value = list.map((item: { id: string; name: string }) => ({
+        id: item.id,
+        name: item.name,
+      }));
+      if (userStore.id && !userOptions.value.some((u) => u.id === userStore.id)) {
+        userOptions.value.unshift({ id: userStore.id, name: userStore.name || userStore.id });
+      }
+    } finally {
+      userLoading.value = false;
+    }
+  }
+
+  async function searchProjects(keywordText: string) {
+    projectLoading.value = true;
+    try {
+      const list = (await getSystemProjectList(keywordText || '')) || [];
+      projectOptions.value = list.map((item: { id: string; name: string }) => ({
+        id: item.id,
+        name: item.name,
+      }));
+    } finally {
+      projectLoading.value = false;
+    }
+  }
+
   function openCreateModal() {
+    createForm.userId = userStore.id || '';
+    if (userStore.id && userStore.name) {
+      userOptions.value = [{ id: userStore.id, name: userStore.name }];
+    }
     createVisible.value = true;
+    searchProjects('');
   }
 
   function resetCreateForm() {
     createForm.name = '';
-    createForm.userId = '';
-    createForm.projectId = '';
+    createForm.userId = userStore.id || '';
+    createForm.projectIds = [];
     createForm.scopes = 'AGENT_ALL';
   }
 
@@ -178,8 +257,12 @@
     if (valid) return;
     createLoading.value = true;
     try {
-      lastCreateProjectId.value = createForm.projectId;
-      createdToken.value = await createAgentToken({ ...createForm });
+      createdToken.value = await createAgentToken({
+        name: createForm.name,
+        userId: createForm.userId,
+        projectIds: createForm.projectIds?.length ? createForm.projectIds : [],
+        scopes: createForm.scopes,
+      });
       createVisible.value = false;
       tokenVisible.value = true;
       resetCreateForm();
@@ -193,12 +276,6 @@
     if (!createdToken.value?.token) return;
     await navigator.clipboard.writeText(createdToken.value.token);
     Message.success(t('common.copySuccess'));
-  }
-
-  async function copyTokenAndFillMcp() {
-    if (!createdToken.value?.token) return;
-    mcpPanelRef.value?.applyPreset(createdToken.value.token, lastCreateProjectId.value);
-    await mcpPanelRef.value?.copyConfig();
   }
 
   async function toggleEnable(val: string | number | boolean, record: AgentTokenListItem) {

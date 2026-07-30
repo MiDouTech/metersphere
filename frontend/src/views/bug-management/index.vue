@@ -1,5 +1,8 @@
 <template>
-  <MsCard simple no-content-padding>
+  <MsCard simple no-content-padding class="relative">
+    <div class="absolute right-[16px] top-[8px] z-10">
+      <MsModuleRefresh :on-refresh="refreshModule" />
+    </div>
     <div class="h-full p-[16px]">
       <MsAdvanceFilter
         ref="msAdvanceFilterRef"
@@ -188,6 +191,7 @@
   import useTable from '@/components/pure/ms-table/useTable';
   import MsTableMoreAction from '@/components/pure/ms-table-more-action/index.vue';
   import { ActionsItem } from '@/components/pure/ms-table-more-action/types';
+  import MsModuleRefresh from '@/components/business/ms-module-refresh/index.vue';
   import BugDetailDrawer from './components/bug-detail-drawer.vue';
   import BugNamePopover from '@/views/case-management/caseManagementFeature/components/tabContent/tabBug/bugNamePopover.vue';
 
@@ -208,6 +212,7 @@
   import { NAV_NAVIGATION } from '@/config/workbench';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
+  import type { ModuleRefreshContext, ModuleRefreshResult } from '@/hooks/useModuleRefresh';
   import router from '@/router';
   import { useAppStore, useTableStore } from '@/store';
   import useCacheStore from '@/store/modules/cache/cache';
@@ -935,6 +940,13 @@
       handleShowDetail(route.query.id as string, -1);
     }
   }
+
+  async function refreshModule(_context: ModuleRefreshContext): Promise<ModuleRefreshResult> {
+    await Promise.allSettled([setCurrentPlatform(), setExportOptionData(), fetchData()]);
+    return {
+      refreshedAt: Date.now(),
+    };
+  }
   const isActivated = computed(() => cacheStore.cacheViews.includes(RouteEnum.BUG_MANAGEMENT_INDEX));
 
   onMounted(() => {
@@ -944,8 +956,8 @@
   });
 
   onActivated(() => {
-    if (isActivated.value) {
-      mountedLoad();
+    if (route.query.id && activeDetailId.value !== route.query.id) {
+      handleShowDetail(route.query.id as string, -1);
     }
   });
 

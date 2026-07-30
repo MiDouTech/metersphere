@@ -30,5 +30,7 @@ public class FunctionalCasePageDTO extends FunctionalCase {
     @Schema(description = "执行人姓名")
     private String executeUserName;
 
+    @Schema(description = "最后执行人姓名")
+    private String lastExecuteUserName;
 
 }

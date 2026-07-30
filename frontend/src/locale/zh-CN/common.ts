@@ -184,6 +184,8 @@ export default {
   'common.resourceDeleted': '资源已被删除',
   'common.resourceExpired': '链接已失效，请重新获取',
   'common.refresh': '刷新',
+  'common.refreshSuccess': '刷新成功',
+  'common.lastRefreshTime': '最后刷新时间：{time}',
   'common.searchByIdName': '通过 ID/名称搜索',
   'common.searchByIDNameTag': '通过 ID/名称/标签搜索',
   'common.searchByName': '通过名称搜索',

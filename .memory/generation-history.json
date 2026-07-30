@@ -1,0 +1,22 @@
+{
+  "generations": [
+    {
+      "type": "test_case",
+      "date": "2026-07-23T11:46:55.739495",
+      "source": "frontend/src/views/test-plan/testPlan/createAndEditPlanDrawer.vue",
+      "output": "C:\\Users\\midoo\\Desktop\\工作文件夹\\自动化巡检\\cases\\MeterSphere_测试用例_20260723115000.xlsx",
+      "quality_report": "C:\\Users\\midoo\\Desktop\\工作文件夹\\自动化巡检\\cases\\quality_report_20260723115000.md",
+      "case_count": 31,
+      "coverage_rate": "100%",
+      "priority_distribution": {
+        "P0": 5,
+        "P1": 11,
+        "P2": 12,
+        "P3": 3
+      },
+      "scope": "创建测试计划",
+      "visual_nav_path": true,
+      "notes": "以前端实现为准；每条用例含可视化前往路径"
+    }
+  ]
+}

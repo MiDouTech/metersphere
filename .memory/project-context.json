@@ -1,0 +1,10 @@
+{
+  "project_name": "MeterSphere",
+  "initialized_at": "2026-07-23T11:42:47.252522",
+  "template_dir": "templates",
+  "requirements_dir": "frontend/src/views/test-plan/testPlan",
+  "requirements_source": "frontend_implementation",
+  "requirements_scope": "创建测试计划（createAndEditPlanDrawer）",
+  "output_dir": "C:\\Users\\midoo\\Desktop\\工作文件夹\\自动化巡检\\cases",
+  "updated_at": "2026-07-23T11:45:00"
+}

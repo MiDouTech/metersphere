@@ -507,7 +507,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         testPlanFunctionalCaseMapper.updateByExampleSelective(planCaseUpdate, planCaseExample);
 
         //更新用例表执行状态 以及补充用例步骤ID为null的步骤信息
-        updateFunctionalCaseStatus(Collections.singletonList(request.getCaseId()), request.getLastExecResult(),request.getStepsExecResult());
+        updateFunctionalCaseStatus(Collections.singletonList(request.getCaseId()), request.getLastExecResult(), request.getStepsExecResult(), operator);
 
         //执行记录
         TestPlanCaseExecuteHistory executeHistory = buildHistory(request, operator);
@@ -522,7 +522,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
      * @param ids
      * @param lastExecResult
      */
-    private void updateFunctionalCaseStatus(List<String> ids, String lastExecResult,String stepsExecResult) {
+    private void updateFunctionalCaseStatus(List<String> ids, String lastExecResult, String stepsExecResult, String operator) {
         SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
         FunctionalCaseMapper functionalCaseMapper = sqlSession.getMapper(FunctionalCaseMapper.class);
         FunctionalCaseBlobMapper functionalCaseBlobMapper = sqlSession.getMapper(FunctionalCaseBlobMapper.class);
@@ -545,6 +545,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
             FunctionalCase functionalCase = new FunctionalCase();
             functionalCase.setId(id);
             functionalCase.setLastExecuteResult(lastExecResult);
+            functionalCase.setLastExecuteUser(operator);
             functionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
             if (StringUtils.isNotBlank(steps)) {
                 FunctionalCaseBlob functionalCaseBlob = new FunctionalCaseBlob();
@@ -620,7 +621,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         testPlanCaseExecuteHistoryMapper.batchInsert(historyList);
 
         //更新用例表执行状态 以及补充用例步骤ID为null的步骤信息
-        updateFunctionalCaseStatus(caseIds, request.getLastExecResult(),null);
+        updateFunctionalCaseStatus(caseIds, request.getLastExecResult(), null, logInsertModule.getOperator());
 
     }
 
