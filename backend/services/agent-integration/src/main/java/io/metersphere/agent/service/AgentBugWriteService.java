@@ -1,11 +1,20 @@
 package io.metersphere.agent.service;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
+import io.metersphere.agent.constants.AgentConstants;
 import io.metersphere.agent.dto.AgentBugCreateRequest;
 import io.metersphere.agent.dto.AgentBugDTO;
 import io.metersphere.agent.dto.AgentBugRelateCaseRequest;
+import io.metersphere.agent.dto.AgentBugSearchRequest;
+import io.metersphere.agent.dto.AgentBugSearchResponse;
+import io.metersphere.agent.dto.AgentBugUpdateRequest;
 import io.metersphere.bug.domain.Bug;
 import io.metersphere.bug.dto.request.BugEditRequest;
+import io.metersphere.bug.dto.request.BugPageRequest;
 import io.metersphere.bug.dto.response.BugCustomFieldDTO;
+import io.metersphere.bug.dto.response.BugDTO;
+import io.metersphere.bug.dto.response.BugDetailDTO;
 import io.metersphere.bug.service.BugRelateCaseCommonService;
 import io.metersphere.bug.service.BugService;
 import io.metersphere.project.domain.Project;
@@ -19,6 +28,7 @@ import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.dto.sdk.TemplateCustomFieldDTO;
 import io.metersphere.system.dto.sdk.TemplateDTO;
 import io.metersphere.system.uid.IDGenerator;
+import io.metersphere.system.utils.PageUtils;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
@@ -27,6 +37,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,25 +56,47 @@ public class AgentBugWriteService {
     @Resource
     private AgentExecLogService agentExecLogService;
 
+    public AgentBugSearchResponse search(AgentBugSearchRequest request) {
+        BugPageRequest pageRequest = new BugPageRequest();
+        pageRequest.setProjectId(request.getProjectId());
+        pageRequest.setUseTrash(false);
+        pageRequest.setCurrent(Math.max(request.getCurrent(), 1));
+        pageRequest.setPageSize(AgentConstants.normalizePageSize(request.getPageSize()));
+        if (StringUtils.isNotBlank(request.getQuery())) {
+            pageRequest.initKeyword(request.getQuery().trim());
+        }
+        Map<String, List<String>> filter = new HashMap<>();
+        if (CollectionUtils.isNotEmpty(request.getStatus())) {
+            filter.put("status", request.getStatus());
+        }
+        if (CollectionUtils.isNotEmpty(request.getHandleUserIds())) {
+            filter.put("handleUser", request.getHandleUserIds());
+        }
+        if (!filter.isEmpty()) {
+            pageRequest.setFilter(filter);
+        }
+
+        Page<Object> page = PageHelper.startPage(pageRequest.getCurrent(), pageRequest.getPageSize(), "pos desc");
+        List<BugDTO> bugs = bugService.list(pageRequest);
+        var pager = PageUtils.setPageInfo(page, bugs);
+
+        AgentBugSearchResponse response = new AgentBugSearchResponse();
+        response.setTotal(pager.getTotal());
+        response.setBugs(bugs.stream().map(this::toListDto).toList());
+        return response;
+    }
+
+    public AgentBugDTO get(String bugId) {
+        String userId = requireUserId();
+        BugDetailDTO detail = bugService.get(bugId, userId, "zh_CN");
+        return toDetailDto(detail);
+    }
+
     public AgentBugDTO create(AgentBugCreateRequest request) {
         String userId = requireUserId();
-        Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
-        if (project == null) {
-            throw new MSException("项目不存在: " + request.getProjectId());
-        }
-        String scene = TemplateScene.BUG.name();
-        TemplateDTO templateDTO;
-        String templateId = request.getTemplateId();
-        if (StringUtils.isNotBlank(templateId)) {
-            templateDTO = projectTemplateService.getTemplateDTOById(templateId, request.getProjectId(), scene);
-        } else {
-            // 未设置 ProjectApplication 默认模板时，回落到项目内置模板
-            templateDTO = projectTemplateService.getDefaultTemplateDTO(request.getProjectId(), scene);
-            if (templateDTO == null || StringUtils.isBlank(templateDTO.getId())) {
-                throw new MSException("项目未配置缺陷默认模板");
-            }
-            templateId = templateDTO.getId();
-        }
+        Project project = requireProject(request.getProjectId());
+        TemplateDTO templateDTO = resolveTemplate(request.getProjectId(), request.getTemplateId());
+        String templateId = templateDTO.getId();
 
         BugEditRequest editRequest = new BugEditRequest();
         editRequest.setId(IDGenerator.nextStr());
@@ -92,6 +126,45 @@ public class AgentBugWriteService {
         return dto;
     }
 
+    public AgentBugDTO update(AgentBugUpdateRequest request) {
+        String userId = requireUserId();
+        Project project = requireProject(request.getProjectId());
+        BugDetailDTO existing = bugService.get(request.getBugId(), userId, "zh_CN");
+        if (!StringUtils.equals(existing.getProjectId(), request.getProjectId())) {
+            throw new MSException("缺陷不属于指定项目");
+        }
+
+        String templateId = StringUtils.defaultIfBlank(request.getTemplateId(), existing.getTemplateId());
+        TemplateDTO templateDTO = resolveTemplate(request.getProjectId(), templateId);
+
+        BugEditRequest editRequest = new BugEditRequest();
+        editRequest.setId(existing.getId());
+        editRequest.setProjectId(request.getProjectId());
+        editRequest.setTemplateId(templateId);
+        editRequest.setTitle(StringUtils.defaultIfBlank(request.getTitle(), existing.getTitle()));
+        editRequest.setDescription(request.getDescription() != null
+                ? request.getDescription()
+                : StringUtils.defaultString(existing.getDescription()));
+        editRequest.setTags(request.getTags() != null ? request.getTags() : existing.getTags());
+
+        Map<String, String> mergedCustom = new LinkedHashMap<>();
+        if (CollectionUtils.isNotEmpty(existing.getCustomFields())) {
+            for (BugCustomFieldDTO field : existing.getCustomFields()) {
+                if (field != null && StringUtils.isNotBlank(field.getId()) && field.getValue() != null) {
+                    mergedCustom.put(field.getId(), String.valueOf(field.getValue()));
+                }
+            }
+        }
+        if (request.getCustomFields() != null) {
+            mergedCustom.putAll(request.getCustomFields());
+        }
+        editRequest.setCustomFields(buildCustomFields(templateDTO, mergedCustom, userId));
+
+        Bug bug = bugService.addOrUpdate(editRequest, new ArrayList<>(), userId, project.getOrganizationId(), true);
+        agentExecLogService.audit("BUG_UPDATE", bug.getId(), JSON.toJSONString(request));
+        return get(bug.getId());
+    }
+
     public void relateCase(AgentBugRelateCaseRequest request) {
         String userId = requireUserId();
         AssociateOtherCaseRequest associate = new AssociateOtherCaseRequest();
@@ -102,6 +175,77 @@ public class AgentBugWriteService {
         associate.setSelectAll(false);
         bugRelateCaseCommonService.relateCase(associate, false, userId);
         agentExecLogService.audit("BUG_RELATE_CASE", request.getBugId(), JSON.toJSONString(request));
+    }
+
+    private AgentBugDTO toListDto(BugDTO bug) {
+        AgentBugDTO dto = new AgentBugDTO();
+        dto.setId(bug.getId());
+        dto.setNum(bug.getNum());
+        dto.setTitle(bug.getTitle());
+        dto.setProjectId(bug.getProjectId());
+        dto.setStatus(bug.getStatus());
+        dto.setStatusName(bug.getStatusName());
+        dto.setHandleUser(bug.getHandleUser());
+        dto.setHandleUserName(bug.getHandleUserName());
+        dto.setCreateUser(bug.getCreateUser());
+        dto.setCreateUserName(bug.getCreateUserName());
+        dto.setCreateTime(bug.getCreateTime());
+        dto.setUpdateTime(bug.getUpdateTime());
+        dto.setDescription(bug.getDescription());
+        dto.setTemplateId(bug.getTemplateId());
+        dto.setTags(bug.getTags());
+        dto.setRelationCaseCount(bug.getRelationCaseCount());
+        return dto;
+    }
+
+    private AgentBugDTO toDetailDto(BugDetailDTO detail) {
+        AgentBugDTO dto = new AgentBugDTO();
+        dto.setId(detail.getId());
+        dto.setNum(detail.getNum());
+        dto.setTitle(detail.getTitle());
+        dto.setProjectId(detail.getProjectId());
+        dto.setStatus(detail.getStatus());
+        dto.setHandleUser(detail.getHandleUser());
+        dto.setHandleUserName(detail.getHandleUserName());
+        dto.setCreateUser(detail.getCreateUser());
+        dto.setCreateUserName(detail.getCreateUserName());
+        dto.setCreateTime(detail.getCreateTime());
+        dto.setDescription(detail.getDescription());
+        dto.setTemplateId(detail.getTemplateId());
+        dto.setTags(detail.getTags());
+        dto.setRelationCaseCount((int) detail.getLinkCaseCount());
+        if (CollectionUtils.isNotEmpty(detail.getCustomFields())) {
+            Map<String, String> fields = new LinkedHashMap<>();
+            for (BugCustomFieldDTO field : detail.getCustomFields()) {
+                if (field != null && StringUtils.isNotBlank(field.getId()) && field.getValue() != null) {
+                    fields.put(field.getId(), String.valueOf(field.getValue()));
+                }
+            }
+            dto.setCustomFields(fields);
+        }
+        return dto;
+    }
+
+    private Project requireProject(String projectId) {
+        Project project = projectMapper.selectByPrimaryKey(projectId);
+        if (project == null) {
+            throw new MSException("项目不存在: " + projectId);
+        }
+        return project;
+    }
+
+    private TemplateDTO resolveTemplate(String projectId, String templateId) {
+        String scene = TemplateScene.BUG.name();
+        TemplateDTO templateDTO;
+        if (StringUtils.isNotBlank(templateId)) {
+            templateDTO = projectTemplateService.getTemplateDTOById(templateId, projectId, scene);
+        } else {
+            templateDTO = projectTemplateService.getDefaultTemplateDTO(projectId, scene);
+            if (templateDTO == null || StringUtils.isBlank(templateDTO.getId())) {
+                throw new MSException("项目未配置缺陷默认模板");
+            }
+        }
+        return templateDTO;
     }
 
     private List<BugCustomFieldDTO> buildCustomFields(TemplateDTO templateDTO, Map<String, String> customFields, String userId) {

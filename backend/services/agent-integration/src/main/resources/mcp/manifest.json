@@ -1,0 +1,8 @@
+﻿{
+  "name": "@midoo/metersphere-mcp",
+  "version": "0.3.0",
+  "fileName": "metersphere-mcp-0.3.0.zip",
+  "description": "MeterSphere MCP server package for Cursor / Claude Desktop",
+  "nodeEngine": ">=18",
+  "installHint": "Unzip, run npm install --omit=dev, point mcp.json args to dist/index.js"
+}

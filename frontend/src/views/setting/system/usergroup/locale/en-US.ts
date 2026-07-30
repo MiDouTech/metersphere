@@ -62,6 +62,8 @@ export default {
       reset: 'Undo',
       name: 'Name',
       email: 'Email',
+      wecomUserid: 'WeCom UserID',
+      userId: 'User ID',
       operation: 'Operation',
       phone: 'Phone',
       remove: 'Remove',

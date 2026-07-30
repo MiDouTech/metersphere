@@ -40,7 +40,19 @@ export const memberTableColumns: MsTableColumn = [
     title: 'orgStructure.member.name',
     dataIndex: 'name',
     slotName: 'name',
-    width: 160,
+    width: 140,
+    showTooltip: true,
+  },
+  {
+    title: 'orgStructure.member.wecomUserid',
+    dataIndex: 'wecomUserid',
+    width: 140,
+    showTooltip: true,
+  },
+  {
+    title: 'orgStructure.member.userId',
+    dataIndex: 'id',
+    width: 180,
     showTooltip: true,
   },
   {

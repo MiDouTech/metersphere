@@ -4,21 +4,25 @@ import io.metersphere.agent.constants.AgentConstants;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
-public class AgentCaseSearchRequest {
-    @Schema(description = "自然语言检索片段")
+public class AgentBugSearchRequest {
+    @Schema(description = "项目ID", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank
+    private String projectId;
+
+    @Schema(description = "关键词：标题/编号/标签")
     private String query;
 
-    @Schema(description = "是否返回完整步骤，默认 true")
-    private Boolean includeSteps = true;
+    @Schema(description = "状态过滤，如 open/closed 等平台状态值")
+    private List<String> status;
 
-    @Schema(description = "测试计划 ID")
-    private String testPlanId;
-
-    @Schema(description = "结构化过滤条件")
-    private AgentSearchFilters filters;
+    @Schema(description = "处理人用户ID列表")
+    private List<String> handleUserIds;
 
     @Min(1)
     @Schema(description = "当前页")

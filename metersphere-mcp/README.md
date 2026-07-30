@@ -40,8 +40,13 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 | `associate_test_plan_cases` | PLAN_WRITE | 关联用例到计划 |
 | `create_case_review` | REVIEW_WRITE | 创建评审 |
 | `associate_case_review_cases` | REVIEW_WRITE | 关联用例到评审 |
+| `search_bugs` | BUG_READ | 检索缺陷（关键词/状态/处理人） |
+| `get_bug` | BUG_READ | 缺陷详情（含 customFields） |
 | `create_bug` | BUG_WRITE | 创建缺陷（可关联用例） |
+| `update_bug` | BUG_WRITE | 更新标题/描述/标签/自定义字段 |
 | `relate_bug_case` | BUG_WRITE | 缺陷补关联用例 |
+
+> `BUG_WRITE` 隐含 `BUG_READ`。缺陷读写详细说明见 [MCP 缺陷接口使用文档](../docs/task/metersphere_agent/mcp-bug-api-usage.md)。
 
 ## 本地开发
 
@@ -53,6 +58,10 @@ npm start
 ```
 
 ## Cursor 配置
+
+**推荐**：平台「系统设置 → Agent 集成」下载 MCP 包并复制 `mcp.json`。
+
+也可手写：
 
 ```json
 {
@@ -71,13 +80,21 @@ npm start
 }
 ```
 
+重新打包进平台（管理员）：
+
+```bash
+cd metersphere-mcp && npm run build
+# 仓库根目录
+powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
+```
+
 ## 对话闭环示例
 
 1. `create_project` → 得到 projectId  
 2. 对话生成用例 → `batch_create_functional_cases`  
 3. `create_test_plan` + caseIds；`create_case_review` + caseIds  
 4. `search_functional_cases` → 外部执行 → `upload_execution_attachment` → `submit_functional_result`  
-5. 失败则 `create_bug`（带 caseId）
+5. 失败则 `create_bug`（带 caseId）；后续可用 `search_bugs` / `get_bug` / `update_bug` 跟踪与改状态
 
 ## 常见问题
 
@@ -85,10 +102,12 @@ npm start
 |------|------|
 | 401 Unauthorized | 检查 `MS_AGENT_TOKEN` |
 | 403 Scope 不足 | Token 需 AGENT_ALL 或对应 WRITE/SUBMIT scope |
+| 429 Too Many Requests | Token 限流：全局 120/分钟；检索 30/分钟且间隔≥300ms；pageSize≤100 |
 | 缺少 testPlanCaseId | 先关联测试计划再 search |
 | 缺陷必填字段 | 传 `customFields` |
 
 ## 关联文档
 
+- [缺陷 MCP 使用文档（AI 自配置）](../docs/task/metersphere_agent/mcp-bug-api-usage.md)
 - [Cursor 接入指南](../docs/task/metersphere_agent/cursor-onboarding.md)
 - [扩展方案](../docs/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)

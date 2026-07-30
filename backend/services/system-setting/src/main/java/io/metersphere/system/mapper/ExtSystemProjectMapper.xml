@@ -17,7 +17,9 @@
             <if test="request.keyword != null and request.keyword !='' ">
                 AND (u.name LIKE CONCAT('%', #{request.keyword},'%')
                 OR u.email LIKE CONCAT('%', #{request.keyword},'%')
-                OR u.phone LIKE CONCAT('%', #{request.keyword},'%'))
+                OR u.phone LIKE CONCAT('%', #{request.keyword},'%')
+                OR u.wecom_userid LIKE CONCAT('%', #{request.keyword},'%')
+                OR u.id LIKE CONCAT('%', #{request.keyword},'%'))
             </if>
         </where>
         GROUP BY u.id

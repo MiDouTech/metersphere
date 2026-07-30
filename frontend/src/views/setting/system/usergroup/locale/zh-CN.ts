@@ -61,6 +61,8 @@ export default {
       reset: '撤销修改',
       name: '姓名',
       email: '邮箱',
+      wecomUserid: '企微 UserID',
+      userId: '用户 ID',
       operation: '操作',
       phone: '手机',
       remove: '移除',

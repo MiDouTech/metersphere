@@ -8,12 +8,17 @@ import io.metersphere.agent.dto.AgentTokenPageRequest;
 import io.metersphere.agent.dto.AgentTokenUpdateRequest;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.domain.AgentToken;
+import io.metersphere.system.domain.User;
 import io.metersphere.system.mapper.AgentTokenMapper;
+import io.metersphere.system.mapper.ExtUserMapper;
+import io.metersphere.system.mapper.UserMapper;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,15 +32,20 @@ import java.util.stream.Collectors;
 public class AgentTokenManagementService {
     @Resource
     private AgentTokenMapper agentTokenMapper;
+    @Resource
+    private UserMapper userMapper;
+    @Resource
+    private ExtUserMapper extUserMapper;
 
     public AgentTokenCreateResponse create(AgentTokenCreateRequest request) {
+        String boundUserId = resolveBoundUserId(request.getUserId());
         String rawToken = generateRawToken();
         AgentToken token = new AgentToken();
         token.setId(IDGenerator.nextStr());
         token.setName(request.getName());
         token.setTokenPrefix(AgentConstants.TOKEN_PREFIX);
         token.setTokenHash(DigestUtils.sha256Hex(rawToken));
-        token.setUserId(request.getUserId());
+        token.setUserId(boundUserId);
         token.setProjectId(request.getProjectId());
         token.setScopes(request.getScopes());
         token.setExpireTime(request.getExpireTime());
@@ -87,6 +97,25 @@ public class AgentTokenManagementService {
         return AgentConstants.TOKEN_PREFIX
                 + UUID.randomUUID().toString().replace("-", "")
                 + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    }
+
+    /**
+     * 支持平台用户 ID 或企微 wecom_userid；最终落库为 user.id。
+     */
+    String resolveBoundUserId(String input) {
+        String key = StringUtils.trimToEmpty(input);
+        if (StringUtils.isBlank(key)) {
+            throw new MSException("关联用户不能为空");
+        }
+        User byId = userMapper.selectByPrimaryKey(key);
+        if (byId != null && !BooleanUtils.isTrue(byId.getDeleted())) {
+            return byId.getId();
+        }
+        User byWecom = extUserMapper.selectByWecomUserid(key);
+        if (byWecom != null && !BooleanUtils.isTrue(byWecom.getDeleted())) {
+            return byWecom.getId();
+        }
+        throw new MSException("用户不存在，请填写平台用户ID或企微UserID: " + key);
     }
 
     private AgentTokenListItemDTO toListItem(AgentToken source) {

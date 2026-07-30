@@ -24,4 +24,7 @@ public class UserRoleRelationUserDTO {
 
     @Schema(description =  "手机号")
     private String phone;
+
+    @Schema(description =  "企微 UserID")
+    private String wecomUserid;
 }

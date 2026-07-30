@@ -349,6 +349,20 @@
       columnSelectorDisabled: true,
     },
     {
+      title: 'system.user.tableColumnWecomUserid',
+      dataIndex: 'wecomUserid',
+      showTooltip: true,
+      showDrag: true,
+      width: 160,
+    },
+    {
+      title: 'system.user.tableColumnUserId',
+      dataIndex: 'id',
+      showTooltip: true,
+      showDrag: true,
+      width: 200,
+    },
+    {
       title: 'system.user.tableColumnOrg',
       dataIndex: 'organizationList',
       isTag: true,

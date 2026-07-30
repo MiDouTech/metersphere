@@ -1,6 +1,39 @@
 import { z } from "zod";
 import type { MeterSphereClient } from "../client.js";
 
+export const searchBugsInputSchema = {
+  projectId: z.string().optional(),
+  query: z.string().optional().describe("Keyword: title / num / tags"),
+  status: z.array(z.string()).optional().describe("Bug status values"),
+  handleUserIds: z.array(z.string()).optional(),
+  current: z.number().int().min(1).optional(),
+  pageSize: z.number().int().min(1).max(100).optional().describe("Page size, default 50, max 100"),
+};
+
+export const searchBugsTool = {
+  name: "search_bugs",
+  description: "Search defects in a project by keyword, status, or handlers.",
+  inputSchema: searchBugsInputSchema,
+  handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
+    const result = await client.searchBugs(args as Parameters<MeterSphereClient["searchBugs"]>[0]);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+  },
+};
+
+export const getBugInputSchema = {
+  bugId: z.string().describe("Bug ID"),
+};
+
+export const getBugTool = {
+  name: "get_bug",
+  description: "Get defect detail including description, tags, and custom fields.",
+  inputSchema: getBugInputSchema,
+  handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
+    const result = await client.getBug(String(args.bugId));
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+  },
+};
+
 export const createBugInputSchema = {
   projectId: z.string().optional(),
   title: z.string(),
@@ -21,6 +54,29 @@ export const createBugTool = {
   inputSchema: createBugInputSchema,
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
     const result = await client.createBug(args as Parameters<MeterSphereClient["createBug"]>[0]);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+  },
+};
+
+export const updateBugInputSchema = {
+  projectId: z.string().optional(),
+  bugId: z.string(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  templateId: z.string().optional(),
+  customFields: z
+    .record(z.string())
+    .optional()
+    .describe("fieldId -> value; merges with existing custom fields (status/handler etc.)"),
+};
+
+export const updateBugTool = {
+  name: "update_bug",
+  description: "Update defect title/description/tags/custom fields (including status and handlers).",
+  inputSchema: updateBugInputSchema,
+  handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
+    const result = await client.updateBug(args as Parameters<MeterSphereClient["updateBug"]>[0]);
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 };

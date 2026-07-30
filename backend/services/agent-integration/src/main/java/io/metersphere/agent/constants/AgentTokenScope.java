@@ -9,6 +9,7 @@ public class AgentTokenScope {
     public static final String CASE_WRITE = "CASE_WRITE";
     public static final String PLAN_WRITE = "PLAN_WRITE";
     public static final String REVIEW_WRITE = "REVIEW_WRITE";
+    public static final String BUG_READ = "BUG_READ";
     public static final String BUG_WRITE = "BUG_WRITE";
     public static final String AGENT_ALL = "AGENT_ALL";
 
@@ -17,5 +18,9 @@ public class AgentTokenScope {
 
     public static boolean isFunctionalScope(String scope) {
         return FUNCTIONAL_READ.equals(scope) || FUNCTIONAL_SUBMIT.equals(scope);
+    }
+
+    public static boolean isBugScope(String scope) {
+        return BUG_READ.equals(scope) || BUG_WRITE.equals(scope);
     }
 }

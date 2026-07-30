@@ -23,6 +23,8 @@
                 u.name like concat('%', #{request.keyword}, '%')
                 or u.email like concat('%', #{request.keyword}, '%')
                 or u.phone like concat('%', #{request.keyword}, '%')
+                or u.wecom_userid like concat('%', #{request.keyword}, '%')
+                or u.id like concat('%', #{request.keyword}, '%')
             )
         </if>
         order by urr.create_time desc

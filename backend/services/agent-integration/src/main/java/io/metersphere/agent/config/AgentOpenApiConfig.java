@@ -14,7 +14,9 @@ public class AgentOpenApiConfig {
                         "/agent/v1/**",
                         "/api/agent/v1/**",
                         "/agent/token/**",
-                        "/api/agent/token/**")
+                        "/api/agent/token/**",
+                        "/agent/mcp/**",
+                        "/api/agent/mcp/**")
                 .build();
     }
 }

@@ -233,8 +233,9 @@ public class AgentFunctionalCaseSearchService {
             throw new IllegalArgumentException("query 与 filters 至少一项非空");
         }
         if (request.getPageSize() > AgentConstants.MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("pageSize 最大 500");
+            throw new IllegalArgumentException("pageSize 最大 " + AgentConstants.MAX_PAGE_SIZE);
         }
+        request.setPageSize(AgentConstants.normalizePageSize(request.getPageSize()));
     }
 
     private String requireProjectId() {

@@ -14,6 +14,7 @@ export interface DepartmentTreeNode {
 export interface OrgStructureMemberItem {
   id: string;
   name: string;
+  wecomUserid?: string;
   departmentId?: string;
   departmentName?: string;
   position?: string;
