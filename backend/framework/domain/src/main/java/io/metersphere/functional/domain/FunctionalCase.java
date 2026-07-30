@@ -79,6 +79,9 @@ public class FunctionalCase implements Serializable {
     @Size(min = 0, max = 50, message = "{functional_case.last_execute_user.length_range}", groups = {Created.class, Updated.class})
     private String lastExecuteUser;
 
+    @Schema(description = "最后执行时间，仅在用例执行状态变更时更新")
+    private Long lastExecuteTime;
+
     @Schema(description = "是否在回收站：0-否，1-是", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "{functional_case.deleted.not_blank}", groups = {Created.class})
     private Boolean deleted;
@@ -131,6 +134,7 @@ public class FunctionalCase implements Serializable {
         lastExecuteResult("last_execute_result", "lastExecuteResult", "VARCHAR", false),
         executeUser("execute_user", "executeUser", "VARCHAR", false),
         lastExecuteUser("last_execute_user", "lastExecuteUser", "VARCHAR", false),
+        lastExecuteTime("last_execute_time", "lastExecuteTime", "BIGINT", false),
         deleted("deleted", "deleted", "BIT", false),
         aiCreate("ai_create", "aiCreate", "BIT", false),
         publicCase("public_case", "publicCase", "BIT", false),

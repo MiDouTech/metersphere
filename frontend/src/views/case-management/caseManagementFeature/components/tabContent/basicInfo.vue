@@ -57,6 +57,10 @@
           <span class="value">{{ detailInfo?.lastExecuteUserName || '-' }}</span>
         </div>
         <div class="baseItem">
+          <span class="label"> {{ t('caseManagement.featureCase.tableColumnLastExecuteTime') }}</span>
+          <span class="value">{{ formatTime(detailInfo?.lastExecuteTime) }}</span>
+        </div>
+        <div class="baseItem">
           <span class="label"> {{ t('caseManagement.featureCase.tableColumnCreateTime') }}</span>
           <span class="value">{{ dayjs(detailInfo?.createTime).format('YYYY-MM-DD HH:mm:ss') }}</span>
         </div>
@@ -176,6 +180,10 @@
   function handleChangeModule(value: string | number | LabelValue | Array<string | number> | LabelValue[] | undefined) {
     detailInfo.value.moduleId = value as string;
     updateHandler();
+  }
+
+  function formatTime(time?: number | string) {
+    return time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-';
   }
 
   function filterTreeNode(searchValue: string, nodeValue: TreeNodeData) {

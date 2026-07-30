@@ -141,6 +141,9 @@
               <ExecuteStatusTag v-if="record.lastExecuteResult" :execute-result="record.lastExecuteResult" />
               <span v-else>-</span>
             </template>
+            <template #lastExecuteTime="{ record }">
+              <span>{{ formatTime(record.lastExecuteTime) }}</span>
+            </template>
             <template #executeUserName="{ record }">
               <span>{{ record.executeUserName || '-' }}</span>
             </template>
@@ -468,6 +471,7 @@
   import { useRoute, useRouter } from 'vue-router';
   import { Message, TableChangeExtra, TableData } from '@arco-design/web-vue';
   import { cloneDeep } from 'lodash-es';
+  import dayjs from 'dayjs';
 
   import { getFilterCustomFields, MsAdvanceFilter } from '@/components/pure/ms-advance-filter';
   import { FilterFormItem, FilterResult } from '@/components/pure/ms-advance-filter/type';
@@ -762,6 +766,18 @@
       },
       showInTable: true,
       width: 150,
+      showDrag: true,
+    },
+    {
+      title: 'caseManagement.featureCase.tableColumnLastExecuteTime',
+      dataIndex: 'lastExecuteTime',
+      slotName: 'lastExecuteTime',
+      sortable: {
+        sortDirections: ['ascend', 'descend'],
+        sorter: true,
+      },
+      showInTable: true,
+      width: 200,
       showDrag: true,
     },
     {
@@ -1090,6 +1106,11 @@
       return Promise.resolve(false);
     }
   }
+
+  function formatTime(time?: number | string) {
+    return time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-';
+  }
+
   const initDefaultFields = ref<CustomAttributes[]>([]);
 
   const tableProps = ref<Partial<MsTableProps<CaseManagementTable>>>({

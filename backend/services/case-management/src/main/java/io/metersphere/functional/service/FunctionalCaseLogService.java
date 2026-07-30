@@ -19,6 +19,7 @@ import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.log.dto.LogDTO;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -321,10 +322,17 @@ public class FunctionalCaseLogService {
         List<String> ids = functionalCaseService.doSelectIds(request, request.getProjectId());
         List<LogDTO> dtoList = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(ids)) {
+            boolean hasTagEdit = CollectionUtils.isNotEmpty(request.getTags());
+            boolean hasCustomFieldEdit = request.getCustomField() != null && StringUtils.isNotBlank(request.getCustomField().getFieldId());
+            boolean onlyExecuteResultEdit = !hasTagEdit && !hasCustomFieldEdit && StringUtils.isNotBlank(request.getLastExecuteResult());
             List<FunctionalCase> functionalCases = extFunctionalCaseMapper.getLogInfo(ids, false);
             functionalCases.forEach(functionalCase -> {
+                if (onlyExecuteResultEdit && StringUtils.equals(request.getLastExecuteResult(), functionalCase.getLastExecuteResult())) {
+                    return;
+                }
                 FunctionalCaseHistoryLogDTO historyLogDTO = getOriginalValue(functionalCase.getId());
                 LogDTO dto = getUpdateLogDTO(functionalCase.getProjectId(), functionalCase.getId(), functionalCase.getName(), "/functional/case/batch/edit");
+                dto.setModifiedValue(JSON.toJSONBytes(request));
                 dto.setOriginalValue(JSON.toJSONBytes(historyLogDTO));
                 dtoList.add(dto);
             });

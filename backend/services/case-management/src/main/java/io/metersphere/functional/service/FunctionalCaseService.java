@@ -645,12 +645,14 @@ public class FunctionalCaseService {
 
 
     private void updateCase(FunctionalCaseEditRequest request, String userId, FunctionalCase functionalCase, FunctionalCase oldCase) {
+        long now = System.currentTimeMillis();
         functionalCase.setUpdateUser(userId);
-        functionalCase.setUpdateTime(System.currentTimeMillis());
+        functionalCase.setUpdateTime(now);
         boolean execResultChanged = StringUtils.isNotBlank(request.getLastExecuteResult())
                 && !StringUtils.equals(request.getLastExecuteResult(), oldCase.getLastExecuteResult());
         if (execResultChanged) {
             functionalCase.setLastExecuteUser(userId);
+            functionalCase.setLastExecuteTime(now);
         }
         //更新用例
         functionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
@@ -689,7 +691,7 @@ public class FunctionalCaseService {
         }
         // 用例库执行结果 → 同步到所有关联的测试计划用例（评审不改）
         if (execResultChanged) {
-            syncAssociatedPlanCaseExec(List.of(request.getId()), request.getLastExecuteResult(), userId);
+            syncAssociatedPlanCaseExec(List.of(request.getId()), request.getLastExecuteResult(), userId, now);
         }
     }
 
@@ -697,10 +699,14 @@ public class FunctionalCaseService {
      * 用例库执行状态同步到测试计划关联行（同一 functional_case_id 的全部关联）
      */
     public void syncAssociatedPlanCaseExec(List<String> caseIds, String lastExecResult, String executeUser) {
+        syncAssociatedPlanCaseExec(caseIds, lastExecResult, executeUser, System.currentTimeMillis());
+    }
+
+    private void syncAssociatedPlanCaseExec(List<String> caseIds, String lastExecResult, String executeUser, long now) {
         if (CollectionUtils.isEmpty(caseIds) || StringUtils.isBlank(lastExecResult)) {
             return;
         }
-        extFunctionalCaseMapper.syncPlanExecByCaseIds(caseIds, lastExecResult, executeUser, System.currentTimeMillis());
+        extFunctionalCaseMapper.syncPlanExecByCaseIds(caseIds, lastExecResult, executeUser, now);
     }
 
 
@@ -1072,39 +1078,58 @@ public class FunctionalCaseService {
         List<String> ids = doSelectIds(request, request.getProjectId());
         if (CollectionUtils.isNotEmpty(ids)) {
             User user = userMapper.selectByPrimaryKey(userId);
+            boolean hasTagEdit = CollectionUtils.isNotEmpty(request.getTags());
+            boolean hasCustomFieldEdit = Optional.ofNullable(request.getCustomField()).map(CaseCustomFieldDTO::getFieldId).filter(StringUtils::isNotBlank).isPresent();
             //标签处理
             handleTags(request, userId, ids);
             //自定义字段处理
             handleCustomFields(request, userId, ids);
             //执行结果
-            handleLastExecuteResult(request, userId, ids);
+            List<String> lastExecuteResultChangedIds = handleLastExecuteResult(request, userId, ids);
             //基本信息
-            FunctionalCase functionalCase = new FunctionalCase();
-            functionalCase.setProjectId(request.getProjectId());
-            functionalCase.setUpdateTime(System.currentTimeMillis());
-            functionalCase.setUpdateUser(userId);
-            extFunctionalCaseMapper.batchUpdate(functionalCase, ids);
-            functionalCaseNoticeService.batchSendNotice(request.getProjectId(), ids, user, NoticeConstants.Event.UPDATE);
-            // 写入路径单次快照（无中间态；开关默认关）
-            resourceEditService.recordWritePathSnapshots(
-                    io.metersphere.sdk.constants.ResourceEditConstants.TYPE_FUNCTIONAL_CASE,
-                    request.getProjectId(), ids, userId);
+            List<String> updateIds = ids;
+            if (!hasTagEdit && !hasCustomFieldEdit && StringUtils.isNotBlank(request.getLastExecuteResult())) {
+                updateIds = lastExecuteResultChangedIds;
+            }
+            if (CollectionUtils.isNotEmpty(updateIds)) {
+                FunctionalCase functionalCase = new FunctionalCase();
+                functionalCase.setProjectId(request.getProjectId());
+                functionalCase.setUpdateTime(System.currentTimeMillis());
+                functionalCase.setUpdateUser(userId);
+                extFunctionalCaseMapper.batchUpdate(functionalCase, updateIds);
+                functionalCaseNoticeService.batchSendNotice(request.getProjectId(), updateIds, user, NoticeConstants.Event.UPDATE);
+                // 写入路径单次快照（无中间态；开关默认关）
+                resourceEditService.recordWritePathSnapshots(
+                        io.metersphere.sdk.constants.ResourceEditConstants.TYPE_FUNCTIONAL_CASE,
+                        request.getProjectId(), updateIds, userId);
+            }
         }
 
     }
 
-    private void handleLastExecuteResult(FunctionalCaseBatchEditRequest request, String userId, List<String> ids) {
+    private List<String> handleLastExecuteResult(FunctionalCaseBatchEditRequest request, String userId, List<String> ids) {
         if (StringUtils.isBlank(request.getLastExecuteResult())) {
-            return;
+            return new ArrayList<>();
         }
+        List<FunctionalCase> functionalCases = extFunctionalCaseMapper.getLogInfo(ids, false);
+        List<String> changedIds = functionalCases.stream()
+                .filter(functionalCase -> !StringUtils.equals(request.getLastExecuteResult(), functionalCase.getLastExecuteResult()))
+                .map(FunctionalCase::getId)
+                .toList();
+        if (CollectionUtils.isEmpty(changedIds)) {
+            return new ArrayList<>();
+        }
+        long now = System.currentTimeMillis();
         FunctionalCase functionalCase = new FunctionalCase();
         functionalCase.setLastExecuteResult(request.getLastExecuteResult());
         functionalCase.setLastExecuteUser(userId);
+        functionalCase.setLastExecuteTime(now);
         functionalCase.setProjectId(request.getProjectId());
-        functionalCase.setUpdateTime(System.currentTimeMillis());
+        functionalCase.setUpdateTime(now);
         functionalCase.setUpdateUser(userId);
-        extFunctionalCaseMapper.batchUpdate(functionalCase, ids);
-        syncAssociatedPlanCaseExec(ids, request.getLastExecuteResult(), userId);
+        extFunctionalCaseMapper.batchUpdate(functionalCase, changedIds);
+        syncAssociatedPlanCaseExec(changedIds, request.getLastExecuteResult(), userId, now);
+        return changedIds;
     }
 
     /**
