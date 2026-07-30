@@ -84,6 +84,7 @@ export default {
   'caseManagement.featureCase.tableColumnCaseState': 'Case State',
   'caseManagement.featureCase.tableColumnReviewResult': 'Review Result',
   'caseManagement.featureCase.tableColumnExecutionResult': 'Execution Result',
+  'caseManagement.featureCase.tableColumnLastExecuteTime': 'Last Execute Time',
   'caseManagement.featureCase.tableColumnVersion': 'version',
   'caseManagement.featureCase.tableColumnModule': 'Module',
   'caseManagement.featureCase.tableColumnTag': 'Tag',

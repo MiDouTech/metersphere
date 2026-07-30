@@ -80,6 +80,7 @@ export default {
   'caseManagement.featureCase.tableColumnCaseState': '用例状态',
   'caseManagement.featureCase.tableColumnReviewResult': '评审结果',
   'caseManagement.featureCase.tableColumnExecutionResult': '执行结果',
+  'caseManagement.featureCase.tableColumnLastExecuteTime': '最后执行时间',
   'caseManagement.featureCase.tableColumnVersion': '版本',
   'caseManagement.featureCase.tableColumnModule': '所属模块',
   'caseManagement.featureCase.tableColumnTag': '标签',

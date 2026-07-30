@@ -17,6 +17,7 @@
         <result column="last_execute_result" jdbcType="VARCHAR" property="lastExecuteResult" />
         <result column="execute_user" jdbcType="VARCHAR" property="executeUser" />
         <result column="last_execute_user" jdbcType="VARCHAR" property="lastExecuteUser" />
+        <result column="last_execute_time" jdbcType="BIGINT" property="lastExecuteTime" />
         <result column="deleted" jdbcType="BIT" property="deleted" />
         <result column="public_case" jdbcType="BIT" property="publicCase" />
         <result column="latest" jdbcType="BIT" property="latest" />
@@ -172,6 +173,7 @@
         functional_case.last_execute_result,
         functional_case.execute_user,
         functional_case.last_execute_user,
+        functional_case.last_execute_time,
         functional_case.delete_user,
         functional_case.delete_time,
         functional_case.tags,
@@ -562,7 +564,10 @@
         SELECT
             id,
             name,
-            project_id
+            project_id,
+            last_execute_result,
+            last_execute_user,
+            last_execute_time
         from
             functional_case
         where id in
@@ -611,6 +616,9 @@
             </if>
             <if test="functionalCase.lastExecuteUser != null and functionalCase.lastExecuteUser != ''">
                 last_execute_user = #{functionalCase.lastExecuteUser},
+            </if>
+            <if test="functionalCase.lastExecuteTime != null">
+                last_execute_time = #{functionalCase.lastExecuteTime},
             </if>
             <if test="functionalCase.updateUser != null and functionalCase.updateUser != ''">
                 update_user = #{functionalCase.updateUser},

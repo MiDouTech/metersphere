@@ -71,6 +71,7 @@ export interface CaseManagementTable {
   executeUserName?: string;
   lastExecuteUser?: string;
   lastExecuteUserName?: string;
+  lastExecuteTime?: number | string;
   deleted: boolean; // 是否在回收站：0-否，1-是
   publicCase: boolean; // 是否是公共用例：0-否，1-是
   latest: boolean; // 是否为最新版本：0-否，1-是
@@ -236,6 +237,7 @@ export interface DetailCase {
   executeUserName?: string;
   lastExecuteUser?: string;
   lastExecuteUserName?: string;
+  lastExecuteTime?: number | string;
   [key: string]: any;
 }
 

@@ -140,4 +140,7 @@ public class FunctionalCaseDetailDTO implements Serializable {
 
     @Schema(description = "最后执行人姓名")
     private String lastExecuteUserName;
+
+    @Schema(description = "最后执行时间，仅在用例执行状态变更时更新")
+    private Long lastExecuteTime;
 }

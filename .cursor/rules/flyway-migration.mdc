@@ -6,8 +6,9 @@ alwaysApply: false
 
 # Flyway 迁移纪律（MeterSphere）
 
-> 详细归档：`docs/summary/MeterSphere-Flyway迁移故障-排障与防再发-2026-07-24.md`  
+> 详细归档：`docs/summary/MeterSphere-Flyway迁移故障-排障与防再发-2026-07-24.md`（含修复 SOP 与防再发清单）
 > 新增/大改本规则需技术负责人审核。
+> 当前 `3.7.2` 下一可用号以 `scripts/check-flyway-versions.ps1` 为准（2026-07-30 扫库为 **20**）。
 
 ## 必须遵守
 
@@ -16,10 +17,12 @@ alwaysApply: false
 3. **取号方式**：扫描 `migration/**/V*.sql`，对同 major 取最大 `N+1`；或跑 `scripts/check-flyway-versions.ps1`。
 4. **幂等优先**：`CREATE TABLE/INDEX IF NOT EXISTS`；避免「半成功不可重跑」的裸 `DROP INDEX`。
 5. **宽列+索引**：utf8mb4 注意 Error **1071**，优先前缀索引。
+6. **同表 UPDATE**：避免 Error **1093**，子查询外包派生表（历史实锤：`3.7.2.10`）。
+7. **避免例程依赖**：迁移脚本默认不要使用 `CREATE PROCEDURE` / `CREATE FUNCTION` / `DELIMITER`；条件 DDL 优先用 `information_schema + PREPARE/EXECUTE`。
 
 ## 现象对照
 
-前端大面积 **502** + 登录页网络错误 → 先查后端 Flyway / `metersphere_version.success=0`。  
+前端大面积 **502** + 登录页网络错误 → 先查后端 Flyway / `metersphere_version.success=0`。
 若迁移已 up to date 仍 502 → 查 Spring `form a cycle`（见 `spring-circular-dependency` 规则与同日归档）。
 
 ## 提交前
