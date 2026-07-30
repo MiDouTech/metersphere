@@ -62,7 +62,7 @@
 
   import { deleteUserFromUserGroup, postUserByUserGroup } from '@/api/modules/project-management/usergroup';
   import { useI18n } from '@/hooks/useI18n';
-  import { characterLimit, formatPhoneNumber } from '@/utils';
+  import { characterLimit } from '@/utils';
 
   export interface projectDrawerProps {
     visible: boolean;
@@ -91,35 +91,28 @@
       width: 200,
     },
     {
-      title: 'system.organization.email',
-      dataIndex: 'email',
+      title: 'system.organization.wecomUserid',
+      dataIndex: 'wecomUserid',
       showTooltip: true,
-      width: 200,
+      width: 160,
     },
     {
-      title: 'system.organization.phone',
-      dataIndex: 'phone',
+      title: 'system.organization.userId',
+      dataIndex: 'id',
+      showTooltip: true,
+      width: 200,
     },
     { title: 'system.organization.operation', slotName: 'operation', width: 60 },
   ];
 
-  const { propsRes, propsEvent, loadList, setLoadListParams, setKeyword } = useTable(
-    postUserByUserGroup,
-    {
-      heightUsed: 240,
-      columns: projectColumn,
-      scroll: { x: '100%' },
-      selectable: false,
-      noDisable: false,
-      pageSimple: true,
-    },
-    (record) => {
-      return {
-        ...record,
-        phone: formatPhoneNumber(record.phone || ''),
-      };
-    }
-  );
+  const { propsRes, propsEvent, loadList, setLoadListParams, setKeyword } = useTable(postUserByUserGroup, {
+    heightUsed: 240,
+    columns: projectColumn,
+    scroll: { x: '100%' },
+    selectable: false,
+    noDisable: false,
+    pageSimple: true,
+  });
 
   async function searchUser() {
     setKeyword(keyword.value);

@@ -1,7 +1,7 @@
 export default {
   'organization.member.addMember': 'Add Member',
   'organization.member.updateMember': 'Update Member（{name}）',
-  'organization.member.searchMember': 'Search by name/email/phone',
+  'organization.member.searchMember': 'Search by name/WeCom UserID/user ID',
   'organization.member.remove': 'Remove',
   'organization.member.edit': 'Edit',
   'organization.member.batchActionAddProject': 'Add to project',
@@ -13,6 +13,8 @@ export default {
   'organization.member.tableDisable': 'Disabled',
   'organization.member.tableColunmEmail': 'Email',
   'organization.member.tableColunmName': 'Name',
+  'organization.member.tableColumnWecomUserid': 'WeCom UserID',
+  'organization.member.tableColumnUserId': 'User ID',
   'organization.member.tableColunmPhone': 'Phone',
   'organization.member.tableColunmPro': 'Project',
   'organization.member.tableColunmUsergroup': 'UserGroup',

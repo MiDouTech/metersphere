@@ -29,6 +29,12 @@ npm install
 npm run build
 ```
 
+将包打入平台供「Agent 集成」页下载（部署前执行）：
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
+```
+
 验证启动（应挂起等待 stdio，Ctrl+C 退出）：
 
 ```bash
@@ -104,6 +110,12 @@ npm start
 
 期望依次调用：`create_project` → `batch_create_functional_cases` → `create_test_plan` / `create_case_review` → search/upload/submit → `create_bug`。
 
+### 5.5 缺陷读写
+
+> 搜索当前项目标题含「登录」的缺陷，打开第一条详情，并把状态更新为处理中（按模板 customFields）
+
+期望：`search_bugs` → `get_bug` → `update_bug`。Scope 需 `BUG_READ`/`BUG_WRITE` 或 `AGENT_ALL`。详见 [mcp-bug-api-usage.md](./mcp-bug-api-usage.md)。
+
 ---
 
 ## 6. 自然语言示例
@@ -117,6 +129,7 @@ npm start
 | 消歧 | 「提取财务相关用例」（Agent 应先 list_modules） |
 | 执行回写 | 「执行完成后把结果回写 MeterSphere，并上传截图」 |
 | 提缺陷 | 「给失败用例创建缺陷并关联」 |
+| 查/改缺陷 | 「搜索登录相关缺陷并更新处理人」 |
 | 单条详情 | 「查看用例 1001 的详细步骤」 |
 
 ---
@@ -148,6 +161,7 @@ npm start
 
 ## 9. 相关文档
 
+- [缺陷 MCP 使用文档（AI 自配置 + 插件化评估）](./mcp-bug-api-usage.md)
 - [metersphere-mcp README](../../metersphere-mcp/README.md)
 - [对话闭环扩展方案](../../summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)
 - [curl 联调示例](./curl-examples.md)

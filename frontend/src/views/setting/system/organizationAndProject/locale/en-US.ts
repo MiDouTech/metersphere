@@ -39,6 +39,8 @@ export default {
   'system.project.name': 'Project name',
   'system.organization.userName': 'Name',
   'system.organization.email': 'Email',
+  'system.organization.wecomUserid': 'WeCom UserID',
+  'system.organization.userId': 'User ID',
   'system.organization.phone': 'Phone',
   'system.organization.addSuccess': 'Add success',
   'system.organization.deleteName': 'Are you sure to delete {name}',

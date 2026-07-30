@@ -80,12 +80,13 @@
         WHERE DELETED = 0
         <if test="keyword != null and keyword != ''">
             AND (
-            id = #{keyword} OR
-            (name LIKE CONCAT('%', #{keyword}, '%')
+            id = #{keyword}
+            OR wecom_userid = #{keyword}
+            OR name LIKE CONCAT('%', #{keyword}, '%')
             OR email LIKE CONCAT('%', #{keyword}, '%')
-                OR phone LIKE CONCAT('%', #{keyword}, '%')
-            ))
-
+            OR phone LIKE CONCAT('%', #{keyword}, '%')
+            OR wecom_userid LIKE CONCAT('%', #{keyword}, '%')
+            )
         </if>
     </select>
     <select id="selectUnDeletedUserIdByIdList" resultType="java.lang.String">

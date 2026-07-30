@@ -74,7 +74,9 @@
             <if test="request.keyword != null and request.keyword != ''">
                 and (u.name like CONCAT('%', #{request.keyword},'%')
                 or u.email like CONCAT('%', #{request.keyword},'%')
-                or u.phone like CONCAT('%', #{request.keyword},'%'))
+                or u.phone like CONCAT('%', #{request.keyword},'%')
+                or u.wecom_userid like CONCAT('%', #{request.keyword},'%')
+                or u.id like CONCAT('%', #{request.keyword},'%'))
             </if>
         </where>
         group by u.id
@@ -92,7 +94,9 @@
             <if test="request.keyword != null and request.keyword != ''">
                 and (u.name like CONCAT('%', #{request.keyword},'%')
                 or u.email like CONCAT('%', #{request.keyword},'%')
-                or u.phone like CONCAT('%', #{request.keyword},'%'))
+                or u.phone like CONCAT('%', #{request.keyword},'%')
+                or u.wecom_userid like CONCAT('%', #{request.keyword},'%')
+                or u.id like CONCAT('%', #{request.keyword},'%'))
             </if>
         </where>
         group by u.id

@@ -172,7 +172,26 @@ curl -X POST "$MS_BASE_URL/api/agent/v1/case-review/create" \
 
 ---
 
-## 10. 创建缺陷（需 BUG_WRITE）
+## 10. 缺陷检索 / 详情（需 BUG_READ）
+
+```bash
+curl -X POST "$MS_BASE_URL/api/agent/v1/bug/search" \
+  -H "Authorization: Bearer $MS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"projectId\": \"$MS_PROJECT\",
+    \"query\": \"登录\",
+    \"current\": 1,
+    \"pageSize\": 20
+  }"
+
+curl "$MS_BASE_URL/api/agent/v1/bug/$BUG_ID" \
+  -H "Authorization: Bearer $MS_TOKEN"
+```
+
+---
+
+## 11. 创建缺陷（需 BUG_WRITE）
 
 ```bash
 curl -X POST "$MS_BASE_URL/api/agent/v1/bug/create" \
@@ -190,7 +209,23 @@ curl -X POST "$MS_BASE_URL/api/agent/v1/bug/create" \
 
 ---
 
-## 11. OpenAPI Spec
+## 12. 更新缺陷（需 BUG_WRITE）
+
+```bash
+curl -X POST "$MS_BASE_URL/api/agent/v1/bug/update" \
+  -H "Authorization: Bearer $MS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"projectId\": \"$MS_PROJECT\",
+    \"bugId\": \"$BUG_ID\",
+    \"title\": \"登录失败-已复现\",
+    \"customFields\": {\"field-id\": \"value\"}
+  }"
+```
+
+---
+
+## 13. OpenAPI Spec
 
 ```bash
 curl "$MS_BASE_URL/v3/api-docs/agent"
@@ -198,7 +233,7 @@ curl "$MS_BASE_URL/v3/api-docs/agent"
 
 ---
 
-## 12. 常见错误
+## 14. 常见错误
 
 | HTTP | 原因 | 处理 |
 |------|------|------|

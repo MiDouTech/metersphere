@@ -33,6 +33,11 @@ public final class AgentScopeAssert {
                 && StringUtils.contains(scopes, AgentTokenScope.FUNCTIONAL_ALL)) {
             return true;
         }
+        // BUG_WRITE 覆盖 BUG_READ
+        if (AgentTokenScope.BUG_READ.equals(requiredScope)
+                && StringUtils.contains(scopes, AgentTokenScope.BUG_WRITE)) {
+            return true;
+        }
         return StringUtils.contains(scopes, requiredScope);
     }
 }

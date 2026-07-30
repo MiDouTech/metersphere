@@ -21,7 +21,7 @@ import {
   createCaseReviewTool,
   createTestPlanTool,
 } from "./tools/planReview.js";
-import { createBugTool, getExecLogTool, relateBugCaseTool } from "./tools/bugWrite.js";
+import { createBugTool, getBugTool, getExecLogTool, relateBugCaseTool, searchBugsTool, updateBugTool } from "./tools/bugWrite.js";
 
 type ToolDef = {
   name: string;
@@ -49,7 +49,10 @@ const tools: ToolDef[] = [
   associateTestPlanCasesTool,
   createCaseReviewTool,
   associateCaseReviewCasesTool,
+  searchBugsTool,
+  getBugTool,
   createBugTool,
+  updateBugTool,
   relateBugCaseTool,
   getExecLogTool,
 ];
@@ -60,7 +63,7 @@ async function main() {
 
   const server = new McpServer({
     name: "metersphere-mcp",
-    version: "0.2.0",
+    version: "0.3.0",
   });
 
   for (const tool of tools) {

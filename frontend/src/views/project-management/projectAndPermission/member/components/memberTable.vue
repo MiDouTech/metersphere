@@ -134,7 +134,7 @@
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import { useAppStore, useTableStore } from '@/store';
-  import { characterLimit, formatPhoneNumber } from '@/utils';
+  import { characterLimit } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { TableQueryParams } from '@/models/common';
@@ -154,32 +154,26 @@
   const hasOperationPermission = computed(() => hasAnyPermission(['PROJECT_USER:READ+DELETE']));
   const columns: MsTableColumn = [
     {
-      title: 'system.user.userName',
-      dataIndex: 'email',
-      showTooltip: true,
-      sortIndex: 0,
-      showDrag: false,
-    },
-    {
       title: 'project.member.tableColumnName',
       slotName: 'name',
       dataIndex: 'name',
       showTooltip: true,
       showDrag: false,
+      sortIndex: 0,
     },
     {
-      title: 'project.member.tableColumnEmail',
-      slotName: 'email',
-      dataIndex: 'email',
+      title: 'project.member.tableColumnWecomUserid',
+      dataIndex: 'wecomUserid',
       showTooltip: true,
       showDrag: false,
+      width: 160,
     },
     {
-      title: 'project.member.tableColumnPhone',
-      slotName: 'phone',
-      dataIndex: 'phone',
+      title: 'project.member.tableColumnUserId',
+      dataIndex: 'id',
+      showTooltip: true,
       showDrag: true,
-      width: 150,
+      width: 200,
     },
     {
       title: 'project.member.tableColumnUserGroup',
@@ -228,24 +222,15 @@
     tableSelected.value = selectArr;
   };
 
-  const { propsRes, propsEvent, loadList, setLoadListParams, resetSelector } = useTable(
-    getProjectMemberList,
-    {
-      tableKey: TableKeyEnum.PROJECT_MEMBER,
-      selectable: hasAnyPermission(['ORGANIZATION_MEMBER:READ+UPDATE']),
-      showSetting: true,
-      heightUsed: 288,
-      scroll: {
-        x: 1200,
-      },
+  const { propsRes, propsEvent, loadList, setLoadListParams, resetSelector } = useTable(getProjectMemberList, {
+    tableKey: TableKeyEnum.PROJECT_MEMBER,
+    selectable: hasAnyPermission(['ORGANIZATION_MEMBER:READ+UPDATE']),
+    showSetting: true,
+    heightUsed: 288,
+    scroll: {
+      x: 1200,
     },
-    (record) => {
-      return {
-        ...record,
-        phone: formatPhoneNumber(record.phone || ''),
-      };
-    }
-  );
+  });
 
   const userGroupAll = ref<ProjectUserOption[]>([]);
   const userGroupOptions = ref<ProjectUserOption[]>([]);

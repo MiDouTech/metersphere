@@ -102,14 +102,20 @@
     {
       title: 'common.name',
       dataIndex: 'name',
-      width: 200,
+      width: 180,
       showTooltip: true,
     },
     {
-      title: 'system.organization.email',
-      dataIndex: 'email',
+      title: 'system.organization.wecomUserid',
+      dataIndex: 'wecomUserid',
       showTooltip: true,
-      width: 250,
+      width: 140,
+    },
+    {
+      title: 'system.organization.userId',
+      dataIndex: 'id',
+      showTooltip: true,
+      width: 200,
     },
   ];
   const { propsRes, propsEvent, loadList, setLoadListParams, resetSelector, resetPagination } = useTable(

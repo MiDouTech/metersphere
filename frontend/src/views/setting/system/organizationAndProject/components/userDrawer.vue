@@ -172,14 +172,16 @@
       width: 300,
     },
     {
-      title: 'system.organization.email',
-      dataIndex: 'email',
-      width: 180,
+      title: 'system.organization.wecomUserid',
+      dataIndex: 'wecomUserid',
+      width: 160,
       showTooltip: true,
     },
     {
-      title: 'system.organization.phone',
-      dataIndex: 'phone',
+      title: 'system.organization.userId',
+      dataIndex: 'id',
+      width: 200,
+      showTooltip: true,
     },
     { title: hasOperationPermission.value ? 'system.organization.operation' : '', slotName: 'operation', width: 60 },
   ];

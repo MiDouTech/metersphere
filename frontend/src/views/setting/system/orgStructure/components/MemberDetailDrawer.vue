@@ -13,6 +13,7 @@
         <a-descriptions-item :label="t('orgStructure.member.wecomUserid')">{{
           detail.wecomUserid || '-'
         }}</a-descriptions-item>
+        <a-descriptions-item :label="t('orgStructure.member.userId')">{{ detail.id || '-' }}</a-descriptions-item>
         <a-descriptions-item :label="t('orgStructure.member.department')">{{
           detail.departmentName || '-'
         }}</a-descriptions-item>

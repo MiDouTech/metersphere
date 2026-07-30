@@ -4,6 +4,9 @@
       <template v-if="hasAnyPermission(props.updatePermission || [])" #quickCreate>
         <MsConfirmUserSelector :ok-loading="okLoading" v-bind="userSelectorProps" @confirm="handleAddMember" />
       </template>
+      <template #userId="{ record }">
+        {{ record.userId || record.id || '-' }}
+      </template>
       <template v-if="hasAnyPermission(props.updatePermission || [])" #action="{ record }">
         <MsRemoveButton
           :title="t('system.userGroup.removeName', { name: characterLimit(record.name) })"
@@ -35,7 +38,7 @@
   } from '@/api/modules/setting/usergroup';
   import { useI18n } from '@/hooks/useI18n';
   import { useAppStore } from '@/store';
-  import { characterLimit, formatPhoneNumber } from '@/utils';
+  import { characterLimit } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
 
   import { CurrentUserGroupItem, UserTableItem } from '@/models/setting/usergroup';
@@ -84,14 +87,17 @@
       showTooltip: true,
     },
     {
-      title: 'system.userGroup.email',
-      dataIndex: 'email',
+      title: 'system.userGroup.wecomUserid',
+      dataIndex: 'wecomUserid',
       showTooltip: true,
+      width: 160,
     },
     {
-      title: 'system.userGroup.phone',
-      dataIndex: 'phone',
+      title: 'system.userGroup.userId',
+      slotName: 'userId',
+      dataIndex: 'userId',
       showTooltip: true,
+      width: 200,
     },
     {
       title: 'system.userGroup.operation',
@@ -110,23 +116,14 @@
     return postOrgUserByUserGroup;
   };
 
-  const { propsRes, propsEvent, loadList, setLoadListParams, setKeyword } = useTable(
-    getRequestBySystemType(),
-    {
-      columns: userGroupUserColumns,
-      scroll: { x: '100%', minWidth: 700, y: '100%' },
-      selectable: false,
-      noDisable: true,
-      showSetting: false,
-      heightUsed: 288,
-    },
-    (record) => {
-      return {
-        ...record,
-        phone: formatPhoneNumber(record.phone || ''),
-      };
-    }
-  );
+  const { propsRes, propsEvent, loadList, setLoadListParams, setKeyword } = useTable(getRequestBySystemType(), {
+    columns: userGroupUserColumns,
+    scroll: { x: '100%', minWidth: 700, y: '100%' },
+    selectable: false,
+    noDisable: true,
+    showSetting: false,
+    heightUsed: 288,
+  });
 
   const handlePermission = (permission: string[], cb: () => void) => {
     if (!hasAnyPermission(permission)) {

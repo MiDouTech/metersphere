@@ -1,7 +1,7 @@
 export default {
   'project.member.addMember': 'Add Member',
   'project.member.updateMember': 'Update Member',
-  'project.member.searchMember': 'Search by name/email/phone',
+  'project.member.searchMember': 'Search by name/WeCom UserID/user ID',
   'project.member.remove': 'Remove',
   'project.member.edit': 'Edit',
   'project.member.add': 'Add',
@@ -10,6 +10,8 @@ export default {
   'project.member.tableDisable': 'Disabled',
   'project.member.tableColumnEmail': 'Email',
   'project.member.tableColumnName': 'Name',
+  'project.member.tableColumnWecomUserid': 'WeCom UserID',
+  'project.member.tableColumnUserId': 'User ID',
   'project.member.tableColumnPhone': 'Phone',
   'project.member.tableColumnPro': 'Project',
   'project.member.tableColumnUserGroup': 'UserGroup',

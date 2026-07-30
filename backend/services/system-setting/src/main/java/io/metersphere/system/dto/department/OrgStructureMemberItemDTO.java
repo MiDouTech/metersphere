@@ -11,6 +11,9 @@ public class OrgStructureMemberItemDTO {
     @Schema(description = "姓名")
     private String name;
 
+    @Schema(description = "企微 UserID")
+    private String wecomUserid;
+
     @Schema(description = "主部门ID")
     private String departmentId;
 

@@ -344,6 +344,39 @@ export class MeterSphereClient {
     });
   }
 
+  searchBugs(payload: {
+    projectId?: string;
+    query?: string;
+    status?: string[];
+    handleUserIds?: string[];
+    current?: number;
+    pageSize?: number;
+  }) {
+    return this.request("POST", "/api/agent/v1/bug/search", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  getBug(bugId: string) {
+    return this.request("GET", `/api/agent/v1/bug/${encodeURIComponent(bugId)}`);
+  }
+
+  updateBug(payload: {
+    projectId?: string;
+    bugId: string;
+    title?: string;
+    description?: string;
+    tags?: string[];
+    templateId?: string;
+    customFields?: Record<string, string>;
+  }) {
+    return this.request("POST", "/api/agent/v1/bug/update", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
   relateBugCase(payload: {
     projectId?: string;
     bugId: string;

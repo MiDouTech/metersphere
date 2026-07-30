@@ -14,6 +14,7 @@
             and (
                 u.name like concat('%', #{request.keyword}, '%')
                     or u.wecom_userid like concat('%', #{request.keyword}, '%')
+                    or u.id like concat('%', #{request.keyword}, '%')
                 )
         </if>
         <if test="request.enable != null">
@@ -27,6 +28,7 @@
     <select id="pageMembers" resultType="io.metersphere.system.dto.department.OrgStructureMemberItemDTO">
         select distinct u.id,
                         u.name,
+                        u.wecom_userid as wecomUserid,
                         u.department_id as departmentId,
                         d.name as departmentName,
                         u.position,

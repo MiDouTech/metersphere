@@ -1,5 +1,7 @@
 import MSR from '@/api/http/index';
 import {
+  AgentMcpDownloadUrl,
+  AgentMcpManifestUrl,
   AgentTokenAddUrl,
   AgentTokenDeleteUrl,
   AgentTokenPageUrl,
@@ -46,6 +48,16 @@ export interface AgentTokenUpdateParams {
   enable?: boolean;
 }
 
+export interface AgentMcpManifest {
+  name?: string;
+  version?: string;
+  fileName?: string;
+  description?: string;
+  nodeEngine?: string;
+  installHint?: string;
+  available?: boolean;
+}
+
 export function getAgentTokenPage(data: TableQueryParams) {
   return MSR.post<CommonList<AgentTokenListItem>>({ url: AgentTokenPageUrl, data });
 }
@@ -60,4 +72,12 @@ export function updateAgentToken(data: AgentTokenUpdateParams) {
 
 export function deleteAgentToken(id: string) {
   return MSR.get({ url: AgentTokenDeleteUrl, params: id });
+}
+
+export function getAgentMcpManifest() {
+  return MSR.get<AgentMcpManifest>({ url: AgentMcpManifestUrl });
+}
+
+export function downloadAgentMcpBundle() {
+  return MSR.get<BlobPart>({ url: AgentMcpDownloadUrl, responseType: 'blob' }, { isTransformResponse: false });
 }

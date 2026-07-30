@@ -1,7 +1,7 @@
 export default {
   'organization.member.addMember': '添加成员',
   'organization.member.updateMember': '更新成员（{name}）',
-  'organization.member.searchMember': '通过姓名/邮箱/手机搜索',
+  'organization.member.searchMember': '通过姓名/企微UserID/用户ID搜索',
   'organization.member.remove': '移除',
   'organization.member.edit': '编辑',
   'organization.member.batchActionAddProject': '添加至项目',
@@ -13,6 +13,8 @@ export default {
   'organization.member.tableDisable': '禁用',
   'organization.member.tableColunmEmail': '邮箱',
   'organization.member.tableColunmName': '姓名',
+  'organization.member.tableColumnWecomUserid': '企微 UserID',
+  'organization.member.tableColumnUserId': '用户 ID',
   'organization.member.tableColunmPhone': '手机',
   'organization.member.tableColunmPro': '项目',
   'organization.member.tableColunmUsergroup': '用户组',

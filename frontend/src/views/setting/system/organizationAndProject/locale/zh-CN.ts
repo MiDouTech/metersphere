@@ -36,6 +36,8 @@ export default {
   'system.project.name': '项目名称',
   'system.organization.userName': '姓名',
   'system.organization.email': '邮箱',
+  'system.organization.wecomUserid': '企微 UserID',
+  'system.organization.userId': '用户 ID',
   'system.organization.phone': '手机',
   'system.organization.addSuccess': '添加成功',
   'system.organization.deleteName': '确认删除 {name} 组织吗？',
