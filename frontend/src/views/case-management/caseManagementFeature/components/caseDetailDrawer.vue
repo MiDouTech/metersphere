@@ -144,16 +144,26 @@
           <div class="case-overview-row">
             <span class="overview-label">{{ t('caseManagement.featureCase.reviewSummary') }}：</span>
             <template v-if="visibleReviews.length">
-              <a-tag
-                v-for="review in visibleReviews"
-                :key="review.id"
-                size="small"
-                class="overview-tag"
-                @click="goReviewDetail(review)"
-              >
-                {{ formatOverviewId(review.num, review.id) }} {{ review.name }}：{{ review.caseStatus || '-' }}
-                <span v-if="review.archived">（{{ t('caseManagement.featureCase.archived') }}）</span>
-              </a-tag>
+              <span v-for="review in visibleReviews" :key="review.id" class="overview-item">
+                <span class="overview-link" @click="goReviewDetail(review)">
+                  {{ formatOverviewTitle(review.name, review.num, review.id) }}
+                </span>
+                <a-tag
+                  size="small"
+                  class="overview-status-tag"
+                  :class="[statusIconMap[resolveReviewStatus(review)]?.color]"
+                >
+                  <MsIcon
+                    v-if="statusIconMap[resolveReviewStatus(review)]?.icon"
+                    :type="statusIconMap[resolveReviewStatus(review)]?.icon"
+                    class="mr-1 text-[13px]"
+                  />
+                  {{ statusIconMap[resolveReviewStatus(review)]?.statusText || review.caseStatus || '-' }}
+                </a-tag>
+                <span v-if="review.archived" class="overview-archived">
+                  （{{ t('caseManagement.featureCase.archived') }}）
+                </span>
+              </span>
               <a-button v-if="hiddenReviewCount > 0" type="text" size="mini" @click="showAllReviews = !showAllReviews">
                 {{
                   showAllReviews
@@ -167,16 +177,20 @@
           <div class="case-overview-row">
             <span class="overview-label">{{ t('caseManagement.featureCase.testPlanSummary') }}：</span>
             <template v-if="visibleTestPlans.length">
-              <a-tag
-                v-for="plan in visibleTestPlans"
-                :key="plan.id"
-                size="small"
-                class="overview-tag"
-                @click="goTestPlanDetail(plan)"
-              >
-                {{ formatOverviewId(plan.num, plan.id) }} {{ plan.name }}：{{ plan.rate || 0 }}%
-                <span v-if="plan.archived">（{{ t('caseManagement.featureCase.archived') }}）</span>
-              </a-tag>
+              <span v-for="plan in visibleTestPlans" :key="plan.id" class="overview-item">
+                <span class="overview-link" @click="goTestPlanDetail(plan)">
+                  {{ formatOverviewTitle(plan.name, plan.num, plan.id) }}
+                </span>
+                <span class="overview-percent">{{ normalizeRate(plan.rate) }}%</span>
+                <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
+                  <div class="overview-plan-progress" :aria-label="formatPlanProgressTooltip(plan)">
+                    <div class="overview-plan-progress-fill" :style="{ width: `${normalizeRate(plan.rate)}%` }"></div>
+                  </div>
+                </a-tooltip>
+                <span v-if="plan.archived" class="overview-archived">
+                  （{{ t('caseManagement.featureCase.archived') }}）
+                </span>
+              </span>
               <a-button
                 v-if="hiddenTestPlanCount > 0"
                 type="text"
@@ -329,7 +343,7 @@
   import type { FieldOptions } from '@/models/setting/template';
   import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
-  import { getCaseLevels, initFormCreate } from './utils';
+  import { getCaseLevels, initFormCreate, statusIconMap } from './utils';
   // 异步加载组件
   const TabDefect = defineAsyncComponent(() => import('./tabContent/tabBug/tabDefect.vue'));
   const TabCaseTable = defineAsyncComponent(() => import('./tabContent/tabCase/tabCaseTable.vue'));
@@ -571,7 +585,27 @@
   }
 
   function formatOverviewId(num: number | undefined, id: string) {
-    return num ? `#${num}` : id;
+    return num ? `${num}` : id;
+  }
+
+  function formatOverviewTitle(name: string, num: number | undefined, id: string) {
+    return `${name}（${formatOverviewId(num, id)}）`;
+  }
+
+  function resolveReviewStatus(review: FunctionalCaseReviewOverview) {
+    return review.caseStatus || review.reviewStatus || '';
+  }
+
+  function normalizeRate(rate?: number) {
+    const value = Number(rate || 0);
+    if (Number.isNaN(value)) return 0;
+    return Math.min(Math.max(value, 0), 100);
+  }
+
+  function formatPlanProgressTooltip(plan: FunctionalCaseTestPlanOverview) {
+    return `${t('caseManagement.featureCase.testPlanSummary')}：${formatOverviewTitle(plan.name, plan.num, plan.id)}，${
+      plan.executed || 0
+    }/${plan.total || 0}，${normalizeRate(plan.rate)}%`;
   }
 
   function goReviewDetail(review: FunctionalCaseReviewOverview) {
@@ -955,8 +989,41 @@
   .overview-label {
     color: var(--color-text-2);
   }
-  .overview-tag {
+  .overview-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .overview-link {
     cursor: pointer;
+    color: var(--color-text-1);
+    &:hover {
+      color: rgb(var(--primary-6));
+    }
+  }
+  .overview-status-tag {
+    display: inline-flex;
+    align-items: center;
+  }
+  .overview-percent {
+    font-weight: 600;
+    color: var(--color-text-1);
+  }
+  .overview-archived {
+    color: var(--color-text-3);
+  }
+  .overview-plan-progress {
+    display: flex;
+    overflow: hidden;
+    width: 120px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-fill-2);
+  }
+  .overview-plan-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: rgb(var(--primary-5));
   }
   .personal-progress-bar {
     display: flex;

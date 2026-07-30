@@ -23,15 +23,17 @@ public class AgentMcpBundleService {
     private static final String PACKAGE_NAME = "metersphere-agent-skill";
     private static final String VERSION = "1.0.0";
     private static final String FILE_NAME = PACKAGE_NAME + "-" + VERSION + ".zip";
+    private static final String TEST_BASE_URL = "https://msp.ebcone.net";
+    private static final String PROD_BASE_URL = "https://msp.ebcone.cn";
 
     public AgentMcpManifestDTO getManifest() {
         AgentMcpManifestDTO dto = new AgentMcpManifestDTO();
         dto.setName(PACKAGE_NAME);
         dto.setVersion(VERSION);
         dto.setFileName(FILE_NAME);
-        dto.setDescription("MeterSphere AI Skill package for remote Streamable HTTP MCP. No token is embedded.");
+        dto.setDescription("MeterSphere AI Skill package for remote Streamable HTTP MCP. Platform addresses are embedded; no token is embedded.");
         dto.setNodeEngine("not-required");
-        dto.setInstallHint("Create a personal Agent Token, then configure your AI client to call /api/mcp with Bearer or X-API-Key.");
+        dto.setInstallHint("Create a personal Agent Token, then configure your AI client to call the test or production /api/mcp endpoint with Bearer or X-API-Key.");
         dto.setAvailable(true);
         return dto;
     }
@@ -56,13 +58,19 @@ public class AgentMcpBundleService {
         files.put("metersphere-agent/README.md", readme());
         files.put("metersphere-agent/manifest.json", manifestJson());
         files.put("metersphere-agent/references/tools.md", toolsMd());
+        files.put("metersphere-agent/references/platforms.md", platformsMd());
         files.put("metersphere-agent/references/permissions.md", permissionsMd());
         files.put("metersphere-agent/references/workflows.md", workflowsMd());
         files.put("metersphere-agent/references/troubleshooting.md", troubleshootingMd());
         files.put("metersphere-agent/examples/codex.config.example.toml", codexExample());
-        files.put("metersphere-agent/examples/chatgpt-remote-mcp.example.json", remoteMcpExample("ChatGPT"));
-        files.put("metersphere-agent/examples/cursor.remote-mcp.example.json", remoteMcpExample("Cursor"));
-        files.put("metersphere-agent/examples/workbuddy-mcp.example.json", remoteMcpExample("WorkBuddy"));
+        files.put("metersphere-agent/examples/codex.test.config.example.toml", codexExample(TEST_BASE_URL));
+        files.put("metersphere-agent/examples/codex.prod.config.example.toml", codexExample(PROD_BASE_URL));
+        files.put("metersphere-agent/examples/chatgpt-remote-mcp.test.example.json", remoteMcpExample("ChatGPT", TEST_BASE_URL, "test"));
+        files.put("metersphere-agent/examples/chatgpt-remote-mcp.prod.example.json", remoteMcpExample("ChatGPT", PROD_BASE_URL, "prod"));
+        files.put("metersphere-agent/examples/cursor.remote-mcp.test.example.json", remoteMcpExample("Cursor", TEST_BASE_URL, "test"));
+        files.put("metersphere-agent/examples/cursor.remote-mcp.prod.example.json", remoteMcpExample("Cursor", PROD_BASE_URL, "prod"));
+        files.put("metersphere-agent/examples/workbuddy-mcp.test.example.json", remoteMcpExample("WorkBuddy", TEST_BASE_URL, "test"));
+        files.put("metersphere-agent/examples/workbuddy-mcp.prod.example.json", remoteMcpExample("WorkBuddy", PROD_BASE_URL, "prod"));
         files.put("metersphere-agent/examples/generic-streamable-http.example.json", remoteMcpExample("Generic"));
         files.put("metersphere-agent/scripts/verify-mcp-connection.js", verifyScript());
         files.put("metersphere-agent/checksums.txt", checksums(files));
@@ -86,7 +94,17 @@ public class AgentMcpBundleService {
 
                 The skill never contains a real token. Ask the user to create a personal Agent Token in MeterSphere and configure the client with `Authorization: Bearer ${METERSPHERE_AGENT_TOKEN}` or `X-API-Key: ${METERSPHERE_AGENT_TOKEN}`.
 
-                MCP endpoint: `${METERSPHERE_BASE_URL}/api/mcp`
+                Built-in platform addresses:
+
+                - Test: `https://msp.ebcone.net`
+                - Production: `https://msp.ebcone.cn`
+
+                Default MCP endpoints:
+
+                - Test: `https://msp.ebcone.net/api/mcp`
+                - Production: `https://msp.ebcone.cn/api/mcp`
+
+                Only ask the user for a base URL when they are using a non-standard private deployment.
                 Transport: Streamable HTTP
                 """;
     }
@@ -97,9 +115,12 @@ public class AgentMcpBundleService {
 
                 1. In MeterSphere, open System Settings > Agent Integration.
                 2. Create a personal Agent Token. The plaintext token is displayed only once.
-                3. Configure your AI client with the remote MCP endpoint:
-                   `${METERSPHERE_BASE_URL}/api/mcp`
+                3. Configure your AI client with one of the built-in remote MCP endpoints:
+                   - Test: `https://msp.ebcone.net/api/mcp`
+                   - Production: `https://msp.ebcone.cn/api/mcp`
                 4. Provide the token through an environment variable or secret store. Do not commit tokens.
+
+                If you use a private deployment, set `METERSPHERE_BASE_URL` to that deployment URL and call `${METERSPHERE_BASE_URL}/api/mcp`.
                 """;
     }
 
@@ -109,8 +130,30 @@ public class AgentMcpBundleService {
                 "version", VERSION,
                 "transport", "streamable-http",
                 "endpoint", "/api/mcp",
+                "platforms", Map.of(
+                        "test", TEST_BASE_URL,
+                        "production", PROD_BASE_URL
+                ),
                 "tokenEmbedded", false
         ));
+    }
+
+    private String platformsMd() {
+        return """
+                # Platform addresses
+
+                Use these built-in platform addresses unless the user explicitly says they are using a private deployment:
+
+                - Test environment: `https://msp.ebcone.net`
+                - Production environment: `https://msp.ebcone.cn`
+
+                MCP endpoints:
+
+                - Test: `https://msp.ebcone.net/api/mcp`
+                - Production: `https://msp.ebcone.cn/api/mcp`
+
+                Tokens are never embedded in this package. The user must create a personal Agent Token in MeterSphere and configure it as a client secret or environment variable.
+                """;
     }
 
     private String toolsMd() {
@@ -187,6 +230,17 @@ public class AgentMcpBundleService {
                 """;
     }
 
+    private String codexExample(String baseUrl) {
+        return """
+                [mcp_servers.metersphere]
+                type = "streamable-http"
+                url = "%s/api/mcp"
+
+                [mcp_servers.metersphere.headers]
+                Authorization = "Bearer ${METERSPHERE_AGENT_TOKEN}"
+                """.formatted(baseUrl);
+    }
+
     private String remoteMcpExample(String client) {
         return JSON.toJSONString(Map.of(
                 "name", "metersphere",
@@ -197,12 +251,29 @@ public class AgentMcpBundleService {
         ));
     }
 
+    private String remoteMcpExample(String client, String baseUrl, String environment) {
+        return JSON.toJSONString(Map.of(
+                "name", "metersphere",
+                "client", client,
+                "environment", environment,
+                "transport", "streamable-http",
+                "url", baseUrl + "/api/mcp",
+                "headers", Map.of("Authorization", "Bearer ${METERSPHERE_AGENT_TOKEN}")
+        ));
+    }
+
     private String verifyScript() {
         return """
-                const baseUrl = process.env.METERSPHERE_BASE_URL;
+                const platforms = {
+                  test: 'https://msp.ebcone.net',
+                  production: 'https://msp.ebcone.cn',
+                  prod: 'https://msp.ebcone.cn',
+                };
+                const env = (process.env.METERSPHERE_ENV || 'test').toLowerCase();
+                const baseUrl = process.env.METERSPHERE_BASE_URL || platforms[env];
                 const token = process.env.METERSPHERE_AGENT_TOKEN;
                 if (!baseUrl || !token) {
-                  throw new Error('Set METERSPHERE_BASE_URL and METERSPHERE_AGENT_TOKEN first.');
+                  throw new Error('Set METERSPHERE_AGENT_TOKEN first. Set METERSPHERE_ENV=production or METERSPHERE_BASE_URL only when needed.');
                 }
                 const res = await fetch(`${baseUrl.replace(/\\/$/, '')}/api/mcp`, {
                   method: 'POST',

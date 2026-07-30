@@ -269,6 +269,7 @@
   const detailLoading = ref(false);
   const activeTab = ref<string>('detail');
   const currentDetailId = ref(props.detailId);
+  const bugRouteNames: string[] = [RouteEnum.BUG_MANAGEMENT_INDEX, RouteEnum.BUG_MANAGEMENT_DETAIL];
 
   const commentInputRef = ref<InstanceType<typeof CommentInput>>();
   const commentInputIsActive = computed(() => commentInputRef.value?.isActive);
@@ -601,6 +602,15 @@
         } else {
           activeTab.value = 'detail';
         }
+      }
+    }
+  );
+
+  watch(
+    () => route.name,
+    (name) => {
+      if (showDrawerVisible.value && !bugRouteNames.includes(String(name))) {
+        showDrawerVisible.value = false;
       }
     }
   );

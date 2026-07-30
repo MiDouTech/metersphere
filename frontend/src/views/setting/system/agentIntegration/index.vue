@@ -1,6 +1,6 @@
 <template>
   <div>
-    <McpOnboardingPanel />
+    <McpOnboardingPanel @create-token="openCreateModal" />
 
     <MsCard simple>
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">

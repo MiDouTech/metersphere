@@ -15,14 +15,27 @@
           </span>
         </div>
       </div>
-      <a-button :loading="downloadLoading" :disabled="!manifest?.available" type="primary" @click="handleDownload">
-        {{ t('system.agentIntegration.mcpDownload') }}
-      </a-button>
+      <div class="flex flex-wrap items-center gap-2">
+        <a-button @click="emit('create-token')">
+          {{ t('system.agentIntegration.createToken') }}
+        </a-button>
+        <a-button :loading="downloadLoading" :disabled="!manifest?.available" type="primary" @click="handleDownload">
+          {{ t('system.agentIntegration.mcpDownload') }}
+        </a-button>
+      </div>
     </div>
 
     <a-alert type="info" class="mb-3">
       {{ t('system.agentIntegration.mcpHint') }}
     </a-alert>
+
+    <div class="mb-3 rounded bg-[var(--color-fill-2)] p-3 text-sm text-[var(--color-text-2)]">
+      <div class="mb-1 font-medium text-[var(--color-text-1)]">
+        {{ t('system.agentIntegration.platformAddress') }}
+      </div>
+      <div>{{ t('system.agentIntegration.platformTest') }}：https://msp.ebcone.net</div>
+      <div>{{ t('system.agentIntegration.platformProd') }}：https://msp.ebcone.cn</div>
+    </div>
 
     <div class="mb-1 text-sm font-medium">{{ t('system.agentIntegration.mcpScopeHelp') }}</div>
     <ul class="mb-0 list-disc pl-5 text-sm text-[var(--color-text-3)]">
@@ -48,6 +61,10 @@
   import { downloadByteFile } from '@/utils';
 
   const { t } = useI18n();
+
+  const emit = defineEmits<{
+    (e: 'create-token'): void;
+  }>();
 
   const manifest = ref<AgentMcpManifest>();
   const downloadLoading = ref(false);

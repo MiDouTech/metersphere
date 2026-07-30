@@ -129,7 +129,7 @@
         <include refid="queryWhereCondition"/>
         order by
         <if test="sort != null and sort != ''">
-            functional_case.${sort}
+            ${sort}
         </if>
         <if test="sort == null or sort == ''">
             test_plan_functional_case.pos desc

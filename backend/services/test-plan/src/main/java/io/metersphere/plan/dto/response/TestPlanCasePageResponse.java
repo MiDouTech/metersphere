@@ -74,6 +74,9 @@ public class TestPlanCasePageResponse implements Serializable {
     @Schema(description = "创建人名称")
     private String createUserName;
 
+    @Schema(description = "更新人名称")
+    private String updateUserName;
+
     @Schema(description = "执行结果")
     private String lastExecResult;
 

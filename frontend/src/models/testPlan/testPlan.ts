@@ -202,10 +202,15 @@ export interface PlanDetailFeatureCaseItem {
   versionName: string;
   createUser: string;
   createUserName: string;
+  createTime: number;
+  updateUser: string;
+  updateUserName: string;
+  updateTime: number;
   lastExecResult: LastExecuteResults;
   lastExecTime: number;
   executeUser: string;
   executeUserName: string;
+  lastExecuteUserName?: string;
   bugCount: number;
   customFields: customFieldsItem[]; // 自定义字段集合
   caseId: string;

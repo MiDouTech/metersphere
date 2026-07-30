@@ -123,6 +123,9 @@ export default {
     'system.agentIntegration.mcpDownloadSuccess': 'Skill pack download started',
     'system.agentIntegration.mcpHint':
       'Unzip and follow INSTALL.md to configure local mcp.json (base URL + Token). Keep tokens local; never commit them to Git.',
+    'system.agentIntegration.platformAddress': 'Built-in platform addresses',
+    'system.agentIntegration.platformTest': 'Test',
+    'system.agentIntegration.platformProd': 'Production',
     'system.agentIntegration.mcpScopeHelp': 'Common scopes (when creating a Token)',
     'system.agentIntegration.scopeAgentAll': 'Full agent loop',
     'system.agentIntegration.scopeBug': 'Bug read / write',

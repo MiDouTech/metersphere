@@ -65,7 +65,7 @@
           <span class="case-inline-label">{{ t('caseManagement.featureCase.remark') }}：</span>
           <div
             v-dompurify-html="detailForm.description || '-'"
-            class="case-inline-value markdown-body !break-words break-all"
+            class="case-inline-value case-strong-rich-value markdown-body !break-words break-all"
           ></div>
         </div>
       </a-form-item>
@@ -106,12 +106,12 @@
               <a-button
                 v-if="showTextReportDefectButton"
                 type="outline"
-                size="mini"
-                class="arco-btn-outline--secondary"
+                size="small"
+                class="report-defect-btn arco-btn-outline--secondary"
                 @click.stop="handleReportDefect"
               >
                 <template #icon>
-                  <icon-plus class="text-[14px]" />
+                  <icon-plus class="text-[16px]" />
                 </template>
                 {{ t('caseManagement.featureCase.reportDefect') }}
               </a-button>
@@ -1465,7 +1465,8 @@
   }
 
   /* 前置条件内容：黑色加粗，字号 +1 */
-  .case-prerequisite-value {
+  .case-prerequisite-value,
+  .case-strong-rich-value {
     font-size: 15px;
     font-weight: 700;
     color: #000000;
@@ -1477,6 +1478,13 @@
       font-weight: inherit;
       color: inherit;
     }
+  }
+  .report-defect-btn {
+    padding: 0 12px;
+    min-width: 92px;
+    height: 30px;
+    font-size: 13px;
+    font-weight: 500;
   }
   .attachment-paste-region {
     position: relative;

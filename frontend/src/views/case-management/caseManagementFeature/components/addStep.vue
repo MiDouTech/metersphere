@@ -80,12 +80,12 @@
           v-if="!props.isPreview && !props.isDisabledTestPlan"
           v-permission="['PROJECT_BUG:READ+ADD']"
           type="outline"
-          size="mini"
-          class="arco-btn-outline--secondary !px-2"
+          size="small"
+          class="report-defect-step-btn arco-btn-outline--secondary"
           @click="emit('reportDefect', record)"
         >
           <template #icon>
-            <icon-plus class="text-[14px]" />
+            <icon-plus class="text-[16px]" />
           </template>
           {{ t('caseManagement.featureCase.reportDefect') }}
         </a-button>
@@ -561,6 +561,13 @@
 
     justify-content: space-between;
     min-width: 110px;
+  }
+  .report-defect-step-btn {
+    padding: 0 12px;
+    min-width: 92px;
+    height: 30px;
+    font-size: 13px;
+    font-weight: 500;
   }
   .case-result-btn {
     @apply inline-flex items-center;
