@@ -1,12 +1,5 @@
 import MSR from '@/api/http/index';
-import {
-  AgentMcpDownloadUrl,
-  AgentMcpManifestUrl,
-  AgentTokenAddUrl,
-  AgentTokenDeleteUrl,
-  AgentTokenPageUrl,
-  AgentTokenUpdateUrl,
-} from '@/api/requrls/setting/agentIntegration';
+import { AgentMcpDownloadUrl, AgentMcpManifestUrl, AgentTokenUrl } from '@/api/requrls/setting/agentIntegration';
 
 import type { CommonList, TableQueryParams } from '@/models/common';
 
@@ -18,18 +11,23 @@ export interface AgentTokenListItem {
   projectIds?: string[];
   projectScopeLabel?: string;
   scopes: string;
+  clientType?: string;
   expireTime?: number;
   enable: boolean;
+  status?: string;
+  displayPrefix?: string;
+  lastUsedAt?: number;
+  invocationCount?: number;
   createTime: number;
   createUser: string;
 }
 
 export interface AgentTokenCreateParams {
   name: string;
-  userId: string;
   projectIds?: string[];
   projectId?: string;
   scopes: string;
+  clientType?: string;
   expireTime?: number;
 }
 
@@ -48,6 +46,7 @@ export interface AgentTokenUpdateParams {
   projectIds?: string[];
   projectId?: string;
   scopes?: string;
+  clientType?: string;
   expireTime?: number;
   enable?: boolean;
 }
@@ -63,19 +62,36 @@ export interface AgentMcpManifest {
 }
 
 export function getAgentTokenPage(data: TableQueryParams) {
-  return MSR.post<CommonList<AgentTokenListItem>>({ url: AgentTokenPageUrl, data });
+  return MSR.get<CommonList<AgentTokenListItem>>({ url: AgentTokenUrl, params: data });
 }
 
 export function createAgentToken(data: AgentTokenCreateParams) {
-  return MSR.post<AgentTokenCreateResult>({ url: AgentTokenAddUrl, data });
+  return MSR.post<AgentTokenCreateResult>({ url: AgentTokenUrl, data });
 }
 
 export function updateAgentToken(data: AgentTokenUpdateParams) {
-  return MSR.post({ url: AgentTokenUpdateUrl, data });
+  const { id, ...payload } = data;
+  return MSR.post({ url: `${AgentTokenUrl}/${id}`, data: payload });
+}
+
+export function enableAgentToken(id: string) {
+  return MSR.post({ url: `${AgentTokenUrl}/${id}/enable` });
+}
+
+export function disableAgentToken(id: string) {
+  return MSR.post({ url: `${AgentTokenUrl}/${id}/disable` });
+}
+
+export function rotateAgentToken(id: string) {
+  return MSR.post<AgentTokenCreateResult>({ url: `${AgentTokenUrl}/${id}/rotate` });
 }
 
 export function deleteAgentToken(id: string) {
-  return MSR.get({ url: AgentTokenDeleteUrl, params: id });
+  return MSR.delete({ url: `${AgentTokenUrl}/${id}` });
+}
+
+export function testAgentToken(id: string) {
+  return MSR.post<AgentTokenListItem>({ url: `${AgentTokenUrl}/${id}/test` });
 }
 
 export function getAgentMcpManifest() {

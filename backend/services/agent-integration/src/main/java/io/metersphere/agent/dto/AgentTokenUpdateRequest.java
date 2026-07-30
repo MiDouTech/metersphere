@@ -13,6 +13,7 @@ public class AgentTokenUpdateRequest {
     private List<String> projectIds;
     private String projectId;
     private String scopes;
+    private String clientType;
     private Long expireTime;
     private Boolean enable;
 }

@@ -372,7 +372,11 @@
   }
 
   async function refreshModule(_context: ModuleRefreshContext): Promise<ModuleRefreshResult> {
-    await Promise.allSettled([caseTreeRef.value?.initModules?.(), caseTableRef.value?.initData?.()]);
+    await Promise.allSettled([
+      caseTreeRef.value?.initModules?.(),
+      caseTableRef.value?.initData?.(),
+      caseTableRef.value?.refreshOpenDetail?.(),
+    ]);
     return {
       refreshedAt: Date.now(),
     };

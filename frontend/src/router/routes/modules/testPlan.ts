@@ -67,6 +67,7 @@ const TestPlan: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.testPlan.testPlanDetail',
         roles: ['PROJECT_TEST_PLAN:READ'],
+        keepModuleAlive: true,
         breadcrumbs: [
           {
             name: TestPlanRouteEnum.TEST_PLAN_INDEX,

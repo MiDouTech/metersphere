@@ -103,7 +103,16 @@
           <template #label>
             <div class="flex w-full items-center justify-between">
               <span>{{ t('caseManagement.featureCase.expectedResult') }}</span>
-              <a-button v-if="showTextReportDefectButton" type="text" size="mini" @click.stop="handleReportDefect">
+              <a-button
+                v-if="showTextReportDefectButton"
+                type="outline"
+                size="mini"
+                class="arco-btn-outline--secondary"
+                @click.stop="handleReportDefect"
+              >
+                <template #icon>
+                  <icon-plus class="text-[14px]" />
+                </template>
                 {{ t('caseManagement.featureCase.reportDefect') }}
               </a-button>
             </div>

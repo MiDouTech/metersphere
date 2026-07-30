@@ -16,8 +16,13 @@ public class AgentTokenListItemDTO {
     /** 展示：全部项目 / 数量 */
     private String projectScopeLabel;
     private String scopes;
+    private String clientType;
     private Long expireTime;
     private Boolean enable;
+    private String status;
+    private String displayPrefix;
+    private Long lastUsedAt;
+    private Long invocationCount;
     private Long createTime;
     private String createUser;
 }

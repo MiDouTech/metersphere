@@ -4,27 +4,50 @@
     <resultMap id="BaseResultMap" type="io.metersphere.system.domain.AgentToken">
         <id column="id" jdbcType="VARCHAR" property="id"/>
         <result column="name" jdbcType="VARCHAR" property="name"/>
+        <result column="public_id" jdbcType="VARCHAR" property="publicId"/>
         <result column="token_prefix" jdbcType="VARCHAR" property="tokenPrefix"/>
         <result column="token_hash" jdbcType="VARCHAR" property="tokenHash"/>
+        <result column="secret_hash" jdbcType="VARCHAR" property="secretHash"/>
+        <result column="display_prefix" jdbcType="VARCHAR" property="displayPrefix"/>
         <result column="user_id" jdbcType="VARCHAR" property="userId"/>
         <result column="project_id" jdbcType="VARCHAR" property="projectId"/>
         <result column="project_ids" jdbcType="LONGVARCHAR" property="projectIds"/>
         <result column="scopes" jdbcType="VARCHAR" property="scopes"/>
+        <result column="client_type" jdbcType="VARCHAR" property="clientType"/>
         <result column="expire_time" jdbcType="BIGINT" property="expireTime"/>
         <result column="enable" jdbcType="BIT" property="enable"/>
+        <result column="status" jdbcType="VARCHAR" property="status"/>
+        <result column="last_used_at" jdbcType="BIGINT" property="lastUsedAt"/>
+        <result column="invocation_count" jdbcType="BIGINT" property="invocationCount"/>
+        <result column="last_ip" jdbcType="VARCHAR" property="lastIp"/>
+        <result column="revoked_at" jdbcType="BIGINT" property="revokedAt"/>
+        <result column="revoked_by" jdbcType="VARCHAR" property="revokedBy"/>
+        <result column="token_version" jdbcType="INTEGER" property="tokenVersion"/>
         <result column="create_time" jdbcType="BIGINT" property="createTime"/>
         <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, name, token_prefix, token_hash, user_id, project_id, project_ids, scopes, expire_time, enable, create_time, create_user
+        id, name, public_id, token_prefix, token_hash, secret_hash, display_prefix, user_id, project_id, project_ids, scopes,
+        client_type, expire_time, enable, status, last_used_at, invocation_count, last_ip, revoked_at, revoked_by, token_version,
+        create_time, create_user
     </sql>
 
     <select id="selectByTokenHash" resultMap="BaseResultMap">
         select <include refid="Base_Column_List"/>
         from agent_token
-        where token_hash = #{tokenHash}
+        where (token_hash = #{tokenHash} or secret_hash = #{tokenHash})
           and enable = 1
+          and (status is null or status = 'ACTIVE')
+        limit 1
+    </select>
+
+    <select id="selectByPublicId" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/>
+        from agent_token
+        where public_id = #{publicId}
+          and enable = 1
+          and (status is null or status = 'ACTIVE')
         limit 1
     </select>
 
@@ -36,12 +59,18 @@
     </select>
 
     <insert id="insert" parameterType="io.metersphere.system.domain.AgentToken">
-        insert into agent_token (id, name, token_prefix, token_hash, user_id, project_id, project_ids, scopes, expire_time, enable,
+        insert into agent_token (id, name, public_id, token_prefix, token_hash, secret_hash, display_prefix, user_id,
+                                 project_id, project_ids, scopes, client_type, expire_time, enable, status,
+                                 last_used_at, invocation_count, last_ip, revoked_at, revoked_by, token_version,
                                  create_time, create_user)
-        values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{tokenPrefix,jdbcType=VARCHAR},
-                #{tokenHash,jdbcType=VARCHAR}, #{userId,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR},
+        values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{publicId,jdbcType=VARCHAR}, #{tokenPrefix,jdbcType=VARCHAR},
+                #{tokenHash,jdbcType=VARCHAR}, #{secretHash,jdbcType=VARCHAR}, #{displayPrefix,jdbcType=VARCHAR},
+                #{userId,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR},
                 #{projectIds,jdbcType=LONGVARCHAR},
-                #{scopes,jdbcType=VARCHAR}, #{expireTime,jdbcType=BIGINT}, #{enable,jdbcType=BIT},
+                #{scopes,jdbcType=VARCHAR}, #{clientType,jdbcType=VARCHAR}, #{expireTime,jdbcType=BIGINT},
+                #{enable,jdbcType=BIT}, #{status,jdbcType=VARCHAR}, #{lastUsedAt,jdbcType=BIGINT},
+                #{invocationCount,jdbcType=BIGINT}, #{lastIp,jdbcType=VARCHAR}, #{revokedAt,jdbcType=BIGINT},
+                #{revokedBy,jdbcType=VARCHAR}, #{tokenVersion,jdbcType=INTEGER},
                 #{createTime,jdbcType=BIGINT}, #{createUser,jdbcType=VARCHAR})
     </insert>
 
@@ -52,9 +81,35 @@
             <if test="projectId != null">project_id = #{projectId,jdbcType=VARCHAR},</if>
             <if test="projectIds != null">project_ids = #{projectIds,jdbcType=LONGVARCHAR},</if>
             <if test="scopes != null">scopes = #{scopes,jdbcType=VARCHAR},</if>
+            <if test="clientType != null">client_type = #{clientType,jdbcType=VARCHAR},</if>
             <if test="expireTime != null">expire_time = #{expireTime,jdbcType=BIGINT},</if>
             <if test="enable != null">enable = #{enable,jdbcType=BIT},</if>
+            <if test="status != null">status = #{status,jdbcType=VARCHAR},</if>
+            <if test="revokedAt != null">revoked_at = #{revokedAt,jdbcType=BIGINT},</if>
+            <if test="revokedBy != null">revoked_by = #{revokedBy,jdbcType=VARCHAR},</if>
         </set>
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateSecret" parameterType="io.metersphere.system.domain.AgentToken">
+        update agent_token
+        set token_hash = #{tokenHash,jdbcType=VARCHAR},
+            secret_hash = #{secretHash,jdbcType=VARCHAR},
+            display_prefix = #{displayPrefix,jdbcType=VARCHAR},
+            public_id = #{publicId,jdbcType=VARCHAR},
+            token_version = #{tokenVersion,jdbcType=INTEGER},
+            status = 'ACTIVE',
+            enable = 1,
+            revoked_at = null,
+            revoked_by = null
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <update id="markUsed" parameterType="io.metersphere.system.domain.AgentToken">
+        update agent_token
+        set last_used_at = #{lastUsedAt,jdbcType=BIGINT},
+            last_ip = #{lastIp,jdbcType=VARCHAR},
+            invocation_count = coalesce(invocation_count, 0) + 1
         where id = #{id,jdbcType=VARCHAR}
     </update>
 
@@ -70,7 +125,7 @@
     </delete>
 
     <select id="selectPage" resultMap="BaseResultMap">
-        select id, name, token_prefix, user_id, project_id, project_ids, scopes, expire_time, enable, create_time, create_user
+        select <include refid="Base_Column_List"/>
         from agent_token
         <where>
             <if test="keyword != null and keyword != ''">
@@ -89,6 +144,30 @@
             <if test="keyword != null and keyword != ''">
                 and (name like concat('%', #{keyword}, '%')
                 or user_id like concat('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </select>
+
+    <select id="selectUserPage" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/>
+        from agent_token
+        <where>
+            user_id = #{userId}
+            <if test="keyword != null and keyword != ''">
+                and name like concat('%', #{keyword}, '%')
+            </if>
+        </where>
+        order by create_time desc
+        limit #{offset}, #{pageSize}
+    </select>
+
+    <select id="countUserPage" resultType="long">
+        select count(1)
+        from agent_token
+        <where>
+            user_id = #{userId}
+            <if test="keyword != null and keyword != ''">
+                and name like concat('%', #{keyword}, '%')
             </if>
         </where>
     </select>

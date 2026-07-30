@@ -3,6 +3,7 @@ package io.metersphere.agent.security;
 import io.metersphere.system.domain.AgentToken;
 import io.metersphere.system.mapper.AgentTokenMapper;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -14,10 +15,29 @@ public class AgentTokenService {
 
     public AgentToken validateBearerToken(String authorization) {
         String token = extractBearerToken(authorization);
+        return validateRawToken(token);
+    }
+
+    public AgentToken validateApiKey(String apiKey) {
+        return validateRawToken(apiKey);
+    }
+
+    public AgentToken validateRequest(HttpServletRequest request) {
+        AgentToken bearerToken = validateBearerToken(request.getHeader("Authorization"));
+        if (bearerToken != null) {
+            return bearerToken;
+        }
+        return validateApiKey(request.getHeader("X-API-Key"));
+    }
+
+    public AgentToken validateRawToken(String token) {
         if (StringUtils.isBlank(token)) {
             return null;
         }
-        AgentToken agentToken = agentTokenMapper.selectByTokenHash(DigestUtils.sha256Hex(token));
+        AgentToken agentToken = validateV2Token(token);
+        if (agentToken == null) {
+            agentToken = agentTokenMapper.selectByTokenHash(DigestUtils.sha256Hex(token));
+        }
         if (agentToken == null) {
             return null;
         }
@@ -43,5 +63,20 @@ public class AgentTokenService {
             return null;
         }
         return StringUtils.trim(authorization.substring(prefix.length()));
+    }
+
+    private AgentToken validateV2Token(String rawToken) {
+        if (!StringUtils.startsWith(rawToken, "msat_")) {
+            return null;
+        }
+        String[] parts = StringUtils.split(rawToken, '_');
+        if (parts == null || parts.length != 3 || !"msat".equals(parts[0])) {
+            return null;
+        }
+        AgentToken token = agentTokenMapper.selectByPublicId(parts[1]);
+        if (token == null || !StringUtils.equals(token.getSecretHash(), DigestUtils.sha256Hex(parts[2]))) {
+            return null;
+        }
+        return token;
     }
 }

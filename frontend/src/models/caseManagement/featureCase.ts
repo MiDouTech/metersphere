@@ -249,6 +249,34 @@ export interface FunctionalCasePersonalProgress {
   unexecuted: number;
 }
 
+export interface FunctionalCaseReviewOverview {
+  id: string;
+  num?: number;
+  name: string;
+  caseStatus: string;
+  reviewStatus?: string;
+  archived?: boolean;
+  updateTime?: number;
+}
+
+export interface FunctionalCaseTestPlanOverview {
+  id: string;
+  num?: number;
+  name: string;
+  status?: string;
+  archived?: boolean;
+  executed: number;
+  total: number;
+  rate: number;
+  updateTime?: number;
+}
+
+export interface FunctionalCaseOverview {
+  reviews: FunctionalCaseReviewOverview[];
+  testPlans: FunctionalCaseTestPlanOverview[];
+  personalProgress: FunctionalCasePersonalProgress;
+}
+
 // 回收站
 export interface CaseModuleQueryParams extends TableQueryParams {
   moduleIds: string[];

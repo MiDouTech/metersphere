@@ -817,6 +817,15 @@ public class FunctionalCaseService {
         return progress;
     }
 
+    public FunctionalCaseOverviewDTO getOverview(String caseId, String userId) {
+        FunctionalCaseDetailDTO detail = getFunctionalCaseDetail(caseId, userId, false);
+        FunctionalCaseOverviewDTO overviewDTO = new FunctionalCaseOverviewDTO();
+        overviewDTO.setReviews(extFunctionalCaseMapper.getReviewOverview(caseId));
+        overviewDTO.setTestPlans(extFunctionalCaseMapper.getTestPlanOverview(caseId));
+        overviewDTO.setPersonalProgress(getPersonalProgress(detail.getProjectId(), userId));
+        return overviewDTO;
+    }
+
     private List<FunctionalCasePageDTO> handleCustomFields(List<FunctionalCasePageDTO> functionalCaseLists, String projectId) {
         List<String> ids = functionalCaseLists.stream().map(FunctionalCasePageDTO::getId).collect(Collectors.toList());
         Map<String, List<FunctionalCaseCustomFieldDTO>> collect = getCaseCustomFiledMap(ids, projectId);

@@ -23,6 +23,9 @@
         </a-radio>
       </a-radio-group>
     </template>
+    <template #right>
+      <slot name="moduleRefresh"></slot>
+    </template>
   </MsAdvanceFilter>
   <MsBaseTable
     v-bind="propsRes"

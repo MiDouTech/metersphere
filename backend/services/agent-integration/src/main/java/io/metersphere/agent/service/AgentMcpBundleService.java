@@ -3,87 +3,226 @@ package io.metersphere.agent.service;
 import io.metersphere.agent.dto.AgentMcpManifestDTO;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
-import jakarta.annotation.PostConstruct;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 public class AgentMcpBundleService {
-    private static final String MANIFEST_PATH = "mcp/manifest.json";
-    private static final String ZIP_PREFIX = "mcp/";
-
-    private AgentMcpManifestDTO manifest;
-    private byte[] zipBytes;
-
-    @PostConstruct
-    public void init() {
-        try {
-            ClassPathResource manifestRes = new ClassPathResource(MANIFEST_PATH);
-            if (!manifestRes.exists()) {
-                AgentMcpManifestDTO empty = new AgentMcpManifestDTO();
-                empty.setAvailable(false);
-                empty.setDescription("MCP bundle not packaged; run scripts/pack-metersphere-mcp.ps1");
-                this.manifest = empty;
-                return;
-            }
-            String json = IOUtils.toString(manifestRes.getInputStream(), StandardCharsets.UTF_8);
-            if (json.startsWith("\uFEFF")) {
-                json = json.substring(1);
-            }
-            AgentMcpManifestDTO dto = JSON.parseObject(json, AgentMcpManifestDTO.class);
-            if (dto == null) {
-                dto = new AgentMcpManifestDTO();
-                dto.setAvailable(false);
-                this.manifest = dto;
-                return;
-            }
-            if (StringUtils.isBlank(dto.getFileName())) {
-                dto.setAvailable(false);
-                this.manifest = dto;
-                return;
-            }
-            ClassPathResource zipRes = new ClassPathResource(ZIP_PREFIX + dto.getFileName());
-            if (!zipRes.exists()) {
-                dto.setAvailable(false);
-                this.manifest = dto;
-                return;
-            }
-            try (InputStream in = zipRes.getInputStream()) {
-                this.zipBytes = IOUtils.toByteArray(in);
-            }
-            dto.setAvailable(true);
-            this.manifest = dto;
-        } catch (Exception e) {
-            AgentMcpManifestDTO empty = new AgentMcpManifestDTO();
-            empty.setAvailable(false);
-            empty.setDescription("Failed to load MCP bundle: " + e.getMessage());
-            this.manifest = empty;
-        }
-    }
+    private static final String PACKAGE_NAME = "metersphere-agent-skill";
+    private static final String VERSION = "1.0.0";
+    private static final String FILE_NAME = PACKAGE_NAME + "-" + VERSION + ".zip";
 
     public AgentMcpManifestDTO getManifest() {
-        return manifest;
+        AgentMcpManifestDTO dto = new AgentMcpManifestDTO();
+        dto.setName(PACKAGE_NAME);
+        dto.setVersion(VERSION);
+        dto.setFileName(FILE_NAME);
+        dto.setDescription("MeterSphere AI Skill package for remote Streamable HTTP MCP. No token is embedded.");
+        dto.setNodeEngine("not-required");
+        dto.setInstallHint("Create a personal Agent Token, then configure your AI client to call /api/mcp with Bearer or X-API-Key.");
+        dto.setAvailable(true);
+        return dto;
     }
 
     public ResponseEntity<byte[]> download() {
-        if (manifest == null || !manifest.isAvailable() || zipBytes == null) {
-            throw new MSException("MCP 包不可用，请联系管理员重新打包部署");
+        try {
+            byte[] bytes = buildSkillPackage();
+            String encoded = URLEncoder.encode(FILE_NAME, StandardCharsets.UTF_8).replace("+", "%20");
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded);
+            headers.setContentLength(bytes.length);
+            return ResponseEntity.ok().headers(headers).body(bytes);
+        } catch (Exception e) {
+            throw new MSException("Failed to build Agent skill package: " + e.getMessage());
         }
-        String fileName = StringUtils.defaultIfBlank(manifest.getFileName(), "metersphere-mcp.zip");
-        String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded);
-        headers.setContentLength(zipBytes.length);
-        return ResponseEntity.ok().headers(headers).body(zipBytes);
+    }
+
+    private byte[] buildSkillPackage() throws Exception {
+        Map<String, String> files = new LinkedHashMap<>();
+        files.put("metersphere-agent/SKILL.md", skillMd());
+        files.put("metersphere-agent/README.md", readme());
+        files.put("metersphere-agent/manifest.json", manifestJson());
+        files.put("metersphere-agent/references/tools.md", toolsMd());
+        files.put("metersphere-agent/references/permissions.md", permissionsMd());
+        files.put("metersphere-agent/references/workflows.md", workflowsMd());
+        files.put("metersphere-agent/references/troubleshooting.md", troubleshootingMd());
+        files.put("metersphere-agent/examples/codex.config.example.toml", codexExample());
+        files.put("metersphere-agent/examples/chatgpt-remote-mcp.example.json", remoteMcpExample("ChatGPT"));
+        files.put("metersphere-agent/examples/cursor.remote-mcp.example.json", remoteMcpExample("Cursor"));
+        files.put("metersphere-agent/examples/workbuddy-mcp.example.json", remoteMcpExample("WorkBuddy"));
+        files.put("metersphere-agent/examples/generic-streamable-http.example.json", remoteMcpExample("Generic"));
+        files.put("metersphere-agent/scripts/verify-mcp-connection.js", verifyScript());
+        files.put("metersphere-agent/checksums.txt", checksums(files));
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(out, StandardCharsets.UTF_8)) {
+            for (Map.Entry<String, String> entry : files.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue().getBytes(StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+        }
+        return out.toByteArray();
+    }
+
+    private String skillMd() {
+        return """
+                # MeterSphere Agent
+
+                Use this skill when the user asks you to search, create, update, or submit MeterSphere test cases, test execution results, test plans, reviews, or bugs through the MeterSphere remote MCP endpoint.
+
+                The skill never contains a real token. Ask the user to create a personal Agent Token in MeterSphere and configure the client with `Authorization: Bearer ${METERSPHERE_AGENT_TOKEN}` or `X-API-Key: ${METERSPHERE_AGENT_TOKEN}`.
+
+                MCP endpoint: `${METERSPHERE_BASE_URL}/api/mcp`
+                Transport: Streamable HTTP
+                """;
+    }
+
+    private String readme() {
+        return """
+                # MeterSphere Agent Skill Package
+
+                1. In MeterSphere, open System Settings > Agent Integration.
+                2. Create a personal Agent Token. The plaintext token is displayed only once.
+                3. Configure your AI client with the remote MCP endpoint:
+                   `${METERSPHERE_BASE_URL}/api/mcp`
+                4. Provide the token through an environment variable or secret store. Do not commit tokens.
+                """;
+    }
+
+    private String manifestJson() {
+        return JSON.toJSONString(Map.of(
+                "name", PACKAGE_NAME,
+                "version", VERSION,
+                "transport", "streamable-http",
+                "endpoint", "/api/mcp",
+                "tokenEmbedded", false
+        ));
+    }
+
+    private String toolsMd() {
+        return """
+                # Tools
+
+                - metersphere.functional.search
+                - metersphere.functional.get
+                - metersphere.functional.modules
+                - metersphere.functional.submit
+                - metersphere.functional.module.create
+                - metersphere.functional.case.create
+                - metersphere.functional.case.batch_create
+                - metersphere.bug.search
+                - metersphere.bug.get
+                - metersphere.bug.create
+                - metersphere.bug.update
+                - metersphere.project.create
+                - metersphere.project.members.add
+                - metersphere.project.get
+                - metersphere.test_plan.create
+                - metersphere.test_plan.associate_cases
+                - metersphere.test_plan.get
+                - metersphere.case_review.create
+                - metersphere.case_review.associate_cases
+                - metersphere.case_review.get
+                """;
+    }
+
+    private String permissionsMd() {
+        return """
+                # Permissions
+
+                Runtime permission is the intersection of:
+
+                - MeterSphere user RBAC
+                - Agent Token scopes
+                - Project allow-list
+                - Server-side tool policy
+
+                `AGENT_ALL` grants all Agent scopes but never bypasses the bound user's RBAC or project restrictions.
+                """;
+    }
+
+    private String workflowsMd() {
+        return """
+                # Workflows
+
+                - Search cases before creating duplicates.
+                - When submitting execution results, include exact case ID, result, step snapshots, and attachments where available.
+                - For bug creation, include reproduction steps, expected result, actual result, severity, and related case ID when known.
+                """;
+    }
+
+    private String troubleshootingMd() {
+        return """
+                # Troubleshooting
+
+                - 401: token missing, expired, disabled, or malformed.
+                - 403: token scope, user RBAC, or project allow-list does not permit the operation.
+                - 429: token rate limit exceeded.
+                - Do not paste tokens into prompts; configure them as environment variables or client secrets.
+                """;
+    }
+
+    private String codexExample() {
+        return """
+                [mcp_servers.metersphere]
+                type = "streamable-http"
+                url = "${METERSPHERE_BASE_URL}/api/mcp"
+
+                [mcp_servers.metersphere.headers]
+                Authorization = "Bearer ${METERSPHERE_AGENT_TOKEN}"
+                """;
+    }
+
+    private String remoteMcpExample(String client) {
+        return JSON.toJSONString(Map.of(
+                "name", "metersphere",
+                "client", client,
+                "transport", "streamable-http",
+                "url", "${METERSPHERE_BASE_URL}/api/mcp",
+                "headers", Map.of("Authorization", "Bearer ${METERSPHERE_AGENT_TOKEN}")
+        ));
+    }
+
+    private String verifyScript() {
+        return """
+                const baseUrl = process.env.METERSPHERE_BASE_URL;
+                const token = process.env.METERSPHERE_AGENT_TOKEN;
+                if (!baseUrl || !token) {
+                  throw new Error('Set METERSPHERE_BASE_URL and METERSPHERE_AGENT_TOKEN first.');
+                }
+                const res = await fetch(`${baseUrl.replace(/\\/$/, '')}/api/mcp`, {
+                  method: 'POST',
+                  headers: {
+                    'content-type': 'application/json',
+                    authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+                });
+                console.log(res.status, await res.text());
+                """;
+    }
+
+    private String checksums(Map<String, String> files) {
+        StringBuilder builder = new StringBuilder();
+        files.forEach((path, content) -> {
+            if (!StringUtils.endsWith(path, "checksums.txt")) {
+                builder.append(DigestUtils.sha256Hex(content)).append("  ").append(path).append('\n');
+            }
+        });
+        return builder.toString();
     }
 }

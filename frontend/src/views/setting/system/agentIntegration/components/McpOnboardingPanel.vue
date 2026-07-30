@@ -9,20 +9,13 @@
         <div v-if="manifest" class="mt-2 text-xs text-[var(--color-text-3)]">
           <span v-if="manifest.available">
             {{ t('system.agentIntegration.mcpVersion', { version: manifest.version || '-' }) }}
-            · Node {{ manifest.nodeEngine || '>=18' }}
           </span>
           <span v-else class="text-[rgb(var(--danger-6))]">
             {{ manifest.description || t('system.agentIntegration.mcpUnavailable') }}
           </span>
         </div>
       </div>
-      <a-button
-        v-permission="['SYSTEM_USER:READ']"
-        :loading="downloadLoading"
-        :disabled="!manifest?.available"
-        type="primary"
-        @click="handleDownload"
-      >
+      <a-button :loading="downloadLoading" :disabled="!manifest?.available" type="primary" @click="handleDownload">
         {{ t('system.agentIntegration.mcpDownload') }}
       </a-button>
     </div>
@@ -63,7 +56,7 @@
     downloadLoading.value = true;
     try {
       const blob = await downloadAgentMcpBundle();
-      const name = manifest.value?.fileName || 'metersphere-mcp.zip';
+      const name = manifest.value?.fileName || 'metersphere-agent-skill.zip';
       downloadByteFile(blob, name);
       Message.success(t('system.agentIntegration.mcpDownloadSuccess'));
     } finally {

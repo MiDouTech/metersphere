@@ -140,14 +140,81 @@
     </template>
     <template #default="{ loading }">
       <div ref="wrapperRef" class="bg-[var(--color-text-fff)]">
-        <div class="flex items-center gap-3 border-b border-[var(--color-text-n8)] px-4 py-2 text-[13px]">
-          <span class="text-[var(--color-text-2)]">{{ t('caseManagement.featureCase.personalProgress') }}：</span>
-          <span>{{ personalProgress.executed || 0 }}/{{ personalProgress.total || 0 }}</span>
-          <div
-            class="h-[6px] w-[160px] overflow-hidden rounded bg-[var(--color-fill-2)]"
-            aria-label="personal progress"
-          >
-            <div class="h-full bg-[rgb(var(--success-6))]" :style="{ width: `${personalProgressRate}%` }"></div>
+        <div class="case-overview border-b border-[var(--color-text-n8)] px-4 py-2 text-[13px]">
+          <div class="case-overview-row">
+            <span class="overview-label">{{ t('caseManagement.featureCase.reviewSummary') }}：</span>
+            <template v-if="visibleReviews.length">
+              <a-tag
+                v-for="review in visibleReviews"
+                :key="review.id"
+                size="small"
+                class="overview-tag"
+                @click="goReviewDetail(review)"
+              >
+                {{ formatOverviewId(review.num, review.id) }} {{ review.name }}：{{ review.caseStatus || '-' }}
+                <span v-if="review.archived">（{{ t('caseManagement.featureCase.archived') }}）</span>
+              </a-tag>
+              <a-button v-if="hiddenReviewCount > 0" type="text" size="mini" @click="showAllReviews = !showAllReviews">
+                {{
+                  showAllReviews
+                    ? t('caseManagement.featureCase.collapseOverview')
+                    : t('caseManagement.featureCase.moreOverviewCount', { count: hiddenReviewCount })
+                }}
+              </a-button>
+            </template>
+            <span v-else>-</span>
+          </div>
+          <div class="case-overview-row">
+            <span class="overview-label">{{ t('caseManagement.featureCase.testPlanSummary') }}：</span>
+            <template v-if="visibleTestPlans.length">
+              <a-tag
+                v-for="plan in visibleTestPlans"
+                :key="plan.id"
+                size="small"
+                class="overview-tag"
+                @click="goTestPlanDetail(plan)"
+              >
+                {{ formatOverviewId(plan.num, plan.id) }} {{ plan.name }}：{{ plan.rate || 0 }}%
+                <span v-if="plan.archived">（{{ t('caseManagement.featureCase.archived') }}）</span>
+              </a-tag>
+              <a-button
+                v-if="hiddenTestPlanCount > 0"
+                type="text"
+                size="mini"
+                @click="showAllTestPlans = !showAllTestPlans"
+              >
+                {{
+                  showAllTestPlans
+                    ? t('caseManagement.featureCase.collapseOverview')
+                    : t('caseManagement.featureCase.moreOverviewCount', { count: hiddenTestPlanCount })
+                }}
+              </a-button>
+            </template>
+            <span v-else>-</span>
+          </div>
+          <div class="case-overview-row">
+            <span class="overview-label">{{ t('caseManagement.featureCase.personalProgress') }}：</span>
+            <span>{{ personalProgress.executed || 0 }}/{{ personalProgress.total || 0 }}</span>
+            <div
+              class="personal-progress-bar"
+              :aria-label="`${t('caseManagement.featureCase.personalProgress')} ${personalProgress.executed || 0}/${
+                personalProgress.total || 0
+              }`"
+            >
+              <a-tooltip
+                v-for="segment in personalProgressSegments"
+                :key="segment.key"
+                :content="segment.tooltip"
+                position="top"
+              >
+                <div
+                  class="personal-progress-segment"
+                  :class="segment.className"
+                  :style="{ width: `${segment.rate}%` }"
+                  :aria-label="segment.tooltip"
+                ></div>
+              </a-tooltip>
+            </div>
           </div>
         </div>
         <div class="header relative h-[48px] border-b border-[var(--color-text-n8)] pl-2">
@@ -237,7 +304,7 @@
     followerCaseRequest,
     getCaseDetail,
     getCaseModuleTree,
-    getPersonalProgress,
+    getCaseOverview,
     updateCaseRequest,
   } from '@/api/modules/case-management/featureCase';
   import { defaultCaseDetail } from '@/config/caseManagement';
@@ -252,12 +319,15 @@
   import type {
     CustomAttributes,
     DetailCase,
+    FunctionalCaseOverview,
     FunctionalCasePersonalProgress,
+    FunctionalCaseReviewOverview,
+    FunctionalCaseTestPlanOverview,
     TabItemType,
   } from '@/models/caseManagement/featureCase';
   import { ModuleTreeNode } from '@/models/common';
   import type { FieldOptions } from '@/models/setting/template';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
   import { getCaseLevels, initFormCreate } from './utils';
   // 异步加载组件
@@ -324,6 +394,14 @@
     detailDrawerRef.value?.openNextDetail();
   }
 
+  function refreshCurrentDetail() {
+    detailDrawerRef.value?.initDetail();
+  }
+
+  defineExpose({
+    refreshCurrentDetail,
+  });
+
   function handleNavChange(payload: { id: string; index: number }) {
     currentDetailIndex.value = payload.index;
     emit('navChange', payload);
@@ -379,11 +457,64 @@
     skipped: 0,
     unexecuted: 0,
   });
-  const personalProgressRate = computed(() =>
-    personalProgress.value.total
-      ? Math.round((personalProgress.value.executed / personalProgress.value.total) * 100)
-      : 0
+  const caseOverview = ref<FunctionalCaseOverview>({
+    reviews: [],
+    testPlans: [],
+    personalProgress: personalProgress.value,
+  });
+  const showAllReviews = ref(false);
+  const showAllTestPlans = ref(false);
+  const visibleReviews = computed(() =>
+    showAllReviews.value ? caseOverview.value.reviews || [] : (caseOverview.value.reviews || []).slice(0, 2)
   );
+  const visibleTestPlans = computed(() =>
+    showAllTestPlans.value ? caseOverview.value.testPlans || [] : (caseOverview.value.testPlans || []).slice(0, 2)
+  );
+  const hiddenReviewCount = computed(() => Math.max((caseOverview.value.reviews || []).length - 2, 0));
+  const hiddenTestPlanCount = computed(() => Math.max((caseOverview.value.testPlans || []).length - 2, 0));
+  const personalProgressSegments = computed(() => {
+    const total = personalProgress.value.total || 0;
+    const segments = [
+      {
+        key: 'passed',
+        count: personalProgress.value.passed || 0,
+        label: t('caseManagement.featureCase.progressPassed'),
+        className: 'is-passed',
+      },
+      {
+        key: 'failed',
+        count: personalProgress.value.failed || 0,
+        label: t('caseManagement.featureCase.progressFailed'),
+        className: 'is-failed',
+      },
+      {
+        key: 'blocked',
+        count: personalProgress.value.blocked || 0,
+        label: t('caseManagement.featureCase.progressBlocked'),
+        className: 'is-blocked',
+      },
+      {
+        key: 'skipped',
+        count: personalProgress.value.skipped || 0,
+        label: t('caseManagement.featureCase.progressSkipped'),
+        className: 'is-skipped',
+      },
+      {
+        key: 'unexecuted',
+        count: personalProgress.value.unexecuted || 0,
+        label: t('caseManagement.featureCase.progressUnexecuted'),
+        className: 'is-unexecuted',
+      },
+    ];
+    return segments.map((segment) => {
+      const rate = total ? Math.round((segment.count / total) * 10000) / 100 : 0;
+      return {
+        ...segment,
+        rate,
+        tooltip: `${segment.label}：${segment.count}（${rate}%）`,
+      };
+    });
+  });
   const customFields = ref<CustomAttributes[]>([]);
   const caseLevels = ref<CaseLevel>('P0');
 
@@ -412,11 +543,21 @@
     featureCaseStore.initCountMap(countMap);
   }
 
-  async function refreshPersonalProgress() {
-    if (!detailInfo.value.projectId) {
+  async function refreshOverview() {
+    if (!detailInfo.value.id) {
       return;
     }
-    personalProgress.value = await getPersonalProgress(detailInfo.value.projectId);
+    const overview = await getCaseOverview(detailInfo.value.id);
+    caseOverview.value = overview;
+    personalProgress.value = overview.personalProgress || {
+      total: 0,
+      executed: 0,
+      passed: 0,
+      failed: 0,
+      blocked: 0,
+      skipped: 0,
+      unexecuted: 0,
+    };
   }
 
   function loadedCase(detail: DetailCase) {
@@ -426,7 +567,29 @@
     setCount(detail);
     customFields.value = detailInfo.value?.customFields as CustomAttributes[];
     caseLevels.value = getCaseLevels(customFields.value) as CaseLevel;
-    refreshPersonalProgress();
+    refreshOverview();
+  }
+
+  function formatOverviewId(num: number | undefined, id: string) {
+    return num ? `#${num}` : id;
+  }
+
+  function goReviewDetail(review: FunctionalCaseReviewOverview) {
+    router.push({
+      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
+      query: {
+        id: review.id,
+      },
+    });
+  }
+
+  function goTestPlanDetail(plan: FunctionalCaseTestPlanOverview) {
+    router.push({
+      name: TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL,
+      query: {
+        id: plan.id,
+      },
+    });
   }
 
   const caseLevelList = computed<FieldOptions[]>(() => {
@@ -775,6 +938,51 @@
   .content-wrapper {
     @apply overflow-y-auto overflow-x-hidden;
     .ms-scroll-bar();
+  }
+  .case-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--color-bg-1);
+  }
+  .case-overview-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 24px;
+  }
+  .overview-label {
+    color: var(--color-text-2);
+  }
+  .overview-tag {
+    cursor: pointer;
+  }
+  .personal-progress-bar {
+    display: flex;
+    overflow: hidden;
+    width: 180px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-fill-2);
+  }
+  .personal-progress-segment {
+    height: 100%;
+    &.is-passed {
+      background: rgb(var(--success-6));
+    }
+    &.is-failed {
+      background: rgb(var(--danger-6));
+    }
+    &.is-blocked {
+      background: #722ed1;
+    }
+    &.is-skipped {
+      background: var(--color-text-4);
+    }
+    &.is-unexecuted {
+      background: rgb(var(--primary-5));
+    }
   }
   .rightButtons {
     :deep(.ms-button--secondary):hover,

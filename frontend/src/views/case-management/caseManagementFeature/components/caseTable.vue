@@ -305,6 +305,7 @@
     </div>
     <div v-if="showType === 'list' && caseViewTab === 'detail' && activeDetailId" class="h-[calc(100%-46px)]">
       <CaseDetailDrawer
+        ref="caseDetailDrawerRef"
         v-model:visible="showDetailDrawer"
         embed
         :detail-id="activeDetailId"
@@ -1244,6 +1245,7 @@
   }
 
   const showDetailDrawer = ref(false);
+  const caseDetailDrawerRef = ref<InstanceType<typeof CaseDetailDrawer>>();
   const activeDetailId = ref<string>('');
   const activeCaseIndex = ref<number>(0);
   const caseViewTab = ref<'list' | 'detail'>('list');
@@ -1275,6 +1277,12 @@
     activeCaseIndex.value = index;
     showDetailDrawer.value = true;
     caseViewTab.value = 'detail';
+  }
+
+  async function refreshOpenDetail() {
+    if (showDetailDrawer.value && activeDetailId.value) {
+      caseDetailDrawerRef.value?.refreshCurrentDetail();
+    }
   }
 
   /** 左侧模块树切换时回到用例列表 Tab */
@@ -2095,6 +2103,7 @@
     isAdvancedSearchMode,
     emitTableParams,
     initData,
+    refreshOpenDetail,
     exitAdvancedSearchAndRefresh,
     switchToListTab,
   });

@@ -3,6 +3,7 @@ package io.metersphere.agent.security;
 import io.metersphere.agent.constants.AgentConstants;
 import io.metersphere.sdk.constants.SessionConstants;
 import io.metersphere.system.domain.AgentToken;
+import io.metersphere.system.mapper.AgentTokenMapper;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -23,17 +24,23 @@ import java.util.List;
 public class AgentTokenFilter extends AnonymousFilter {
     private final AgentTokenService agentTokenService;
     private final AgentTokenRateLimiter agentTokenRateLimiter;
+    private final AgentTokenMapper agentTokenMapper;
 
-    public AgentTokenFilter(AgentTokenService agentTokenService, AgentTokenRateLimiter agentTokenRateLimiter) {
+    public AgentTokenFilter(AgentTokenService agentTokenService,
+                            AgentTokenRateLimiter agentTokenRateLimiter,
+                            AgentTokenMapper agentTokenMapper) {
         this.agentTokenService = agentTokenService;
         this.agentTokenRateLimiter = agentTokenRateLimiter;
+        this.agentTokenMapper = agentTokenMapper;
     }
 
     public static boolean isAgentTokenCall(HttpServletRequest request) {
         String authorization = request.getHeader("Authorization");
-        return StringUtils.isNotBlank(authorization)
+        boolean bearer = StringUtils.isNotBlank(authorization)
                 && StringUtils.startsWithIgnoreCase(authorization, "Bearer ")
                 && StringUtils.contains(authorization, AgentConstants.TOKEN_PREFIX);
+        String apiKey = request.getHeader("X-API-Key");
+        return bearer || (StringUtils.isNotBlank(apiKey) && StringUtils.startsWith(apiKey, AgentConstants.TOKEN_PREFIX));
     }
 
     @Override
@@ -42,7 +49,7 @@ public class AgentTokenFilter extends AnonymousFilter {
         if (!isAgentTokenCall(httpRequest)) {
             return true;
         }
-        AgentToken token = agentTokenService.validateBearerToken(httpRequest.getHeader("Authorization"));
+        AgentToken token = agentTokenService.validateRequest(httpRequest);
         if (token != null && StringUtils.isNotBlank(token.getUserId())) {
             boolean searchApi = AgentTokenRateLimiter.isSearchApi(httpRequest.getRequestURI());
             if (!agentTokenRateLimiter.tryAcquire(token.getId(), searchApi)) {
@@ -63,6 +70,7 @@ public class AgentTokenFilter extends AnonymousFilter {
             if (StringUtils.isNotBlank(projectId)) {
                 SessionUtils.setCurrentProjectId(projectId);
             }
+            markTokenUsed(token, httpRequest);
             return true;
         }
         ((HttpServletResponse) response).setHeader(SessionConstants.AUTHENTICATION_STATUS, SessionConstants.AUTHENTICATION_INVALID);
@@ -119,6 +127,18 @@ public class AgentTokenFilter extends AnonymousFilter {
             response.getWriter().flush();
         } catch (Exception ignored) {
             // ignore write failure
+        }
+    }
+
+    private void markTokenUsed(AgentToken token, HttpServletRequest request) {
+        try {
+            AgentToken update = new AgentToken();
+            update.setId(token.getId());
+            update.setLastUsedAt(System.currentTimeMillis());
+            update.setLastIp(StringUtils.defaultIfBlank(request.getHeader("X-Forwarded-For"), request.getRemoteAddr()));
+            agentTokenMapper.markUsed(update);
+        } catch (Exception ignored) {
+            // ignore audit metadata update failure
         }
     }
 
