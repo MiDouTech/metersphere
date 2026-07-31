@@ -81,19 +81,28 @@
           </a-button>
         </template>
         <template #statusName="{ record }">
-          <a-select
+          <a-dropdown
             v-if="canEditBugStatus(record)"
-            :model-value="record.status"
-            :loading="statusUpdatingIds.includes(record.id)"
-            size="mini"
-            class="bug-status-inline-select"
-            :class="getBugStatusClass(record.statusName || record.status)"
-            @change="handleStatusChange(record, $event as string)"
+            trigger="click"
+            position="bl"
+            :disabled="statusUpdatingIds.includes(record.id)"
+            @select="(value) => handleStatusChange(record, value as string)"
           >
-            <a-option v-for="item in statusOption" :key="item.value" :value="item.value">
-              {{ item.text }}
-            </a-option>
-          </a-select>
+            <button
+              type="button"
+              class="bug-status-button"
+              :class="getBugStatusClass(record.statusName || record.status)"
+            >
+              {{ record.statusName || '-' }}
+            </button>
+            <template #content>
+              <a-doption v-for="item in statusOption" :key="item.value" :value="item.value">
+                <span class="bug-status-button bug-status-option" :class="getBugStatusClass(item.text || item.value)">
+                  {{ item.text }}
+                </span>
+              </a-doption>
+            </template>
+          </a-dropdown>
           <span v-else class="bug-status-button" :class="getBugStatusClass(record.statusName || record.status)">
             {{ record.statusName || '-' }}
           </span>
@@ -242,6 +251,7 @@
   import { TableKeyEnum } from '@/enums/tableEnum';
   import { WorkNavValueEnum } from '@/enums/workbenchEnum';
 
+  import getBugStatusClass from './utils/bugStatusStyle';
   import { makeColumns } from '@/views/case-management/caseManagementFeature/components/utils';
 
   defineOptions({
@@ -543,45 +553,6 @@
       currentPlatform.value === record.platform &&
       statusOption.value.length > 0
     );
-  }
-
-  function getBugStatusClass(status?: string) {
-    const normalizedStatus = String(status || '').toLowerCase();
-    if (
-      normalizedStatus.includes('新建') ||
-      normalizedStatus.includes('待处理') ||
-      normalizedStatus.includes('open') ||
-      normalizedStatus.includes('new')
-    ) {
-      return 'is-new';
-    }
-    if (
-      normalizedStatus.includes('处理中') ||
-      normalizedStatus.includes('处理') ||
-      normalizedStatus.includes('进行中') ||
-      normalizedStatus.includes('process') ||
-      normalizedStatus.includes('progress')
-    ) {
-      return 'is-processing';
-    }
-    if (
-      normalizedStatus.includes('已解决') ||
-      normalizedStatus.includes('解决') ||
-      normalizedStatus.includes('resolved') ||
-      normalizedStatus.includes('fixed')
-    ) {
-      return 'is-resolved';
-    }
-    if (
-      normalizedStatus.includes('已关闭') ||
-      normalizedStatus.includes('关闭') ||
-      normalizedStatus.includes('非缺陷') ||
-      normalizedStatus.includes('closed') ||
-      normalizedStatus.includes('invalid')
-    ) {
-      return 'is-muted';
-    }
-    return 'is-default';
   }
 
   async function handleStatusChange(record: TableData, status: string) {
@@ -1086,41 +1057,6 @@
   :deep(.arco-divider-vertical) {
     margin: 0 8px;
   }
-  .bug-status-inline-select {
-    width: 86px;
-    :deep(.arco-select-view-single) {
-      padding: 0 10px;
-      height: 28px;
-      font-weight: 500;
-      border-width: 1px;
-      border-radius: var(--border-radius-small);
-      box-shadow: none;
-    }
-    :deep(.arco-select-view-suffix) {
-      opacity: 0.7;
-    }
-    &.is-new :deep(.arco-select-view-single) {
-      border-color: rgb(var(--primary-2));
-      color: rgb(var(--primary-6));
-      background: var(--color-primary-light-1);
-    }
-    &.is-processing :deep(.arco-select-view-single) {
-      border-color: rgb(var(--warning-2));
-      color: rgb(var(--warning-7));
-      background: rgb(var(--warning-1));
-    }
-    &.is-resolved :deep(.arco-select-view-single) {
-      border-color: rgb(var(--success-2));
-      color: rgb(var(--success-7));
-      background: rgb(var(--success-1));
-    }
-    &.is-muted :deep(.arco-select-view-single),
-    &.is-default :deep(.arco-select-view-single) {
-      border-color: var(--color-border-2);
-      color: var(--color-text-2);
-      background: var(--color-fill-2);
-    }
-  }
   .bug-status-button {
     display: inline-flex;
     justify-content: center;
@@ -1133,6 +1069,7 @@
     border: 1px solid transparent;
     border-radius: var(--border-radius-small);
     line-height: 26px;
+    cursor: pointer;
     &.is-new {
       border-color: rgb(var(--primary-2));
       color: rgb(var(--primary-6));
@@ -1154,5 +1091,9 @@
       color: var(--color-text-2);
       background: var(--color-fill-2);
     }
+  }
+  .bug-status-option {
+    cursor: default;
+    pointer-events: none;
   }
 </style>

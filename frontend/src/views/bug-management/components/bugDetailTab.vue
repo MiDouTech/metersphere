@@ -73,6 +73,14 @@
       </div>
       <!-- 特殊布局内容(平台默认模板时展示) -->
       <div v-if="isPlatformDefaultTemplate" class="special-content">
+        <div class="header-title">
+          <strong>
+            {{ t('bugManagement.bugName') }}
+          </strong>
+        </div>
+        <div class="bug-name-content mb-4 mt-[16px]">
+          {{ form.title || '-' }}
+        </div>
         <div v-for="(item, index) in platformSystemFields" :key="index">
           <div v-if="item.fieldId !== 'summary' && item.fieldId !== 'title'">
             <h1 class="header-title">

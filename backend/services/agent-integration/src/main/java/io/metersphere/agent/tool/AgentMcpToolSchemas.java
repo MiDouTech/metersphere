@@ -40,6 +40,19 @@ public final class AgentMcpToolSchemas {
         return schema;
     }
 
+    public static Map<String, Object> number() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "number");
+        return schema;
+    }
+
+    public static Map<String, Object> objectAny() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+        schema.put("additionalProperties", true);
+        return schema;
+    }
+
     public static Map<String, Object> annotations(String scope, boolean readOnly, boolean destructive, boolean idempotent) {
         Map<String, Object> annotations = new LinkedHashMap<>();
         annotations.put("scope", scope);
