@@ -87,13 +87,16 @@
             :loading="statusUpdatingIds.includes(record.id)"
             size="mini"
             class="bug-status-inline-select"
+            :class="getBugStatusClass(record.statusName || record.status)"
             @change="handleStatusChange(record, $event as string)"
           >
             <a-option v-for="item in statusOption" :key="item.value" :value="item.value">
               {{ item.text }}
             </a-option>
           </a-select>
-          <span v-else>{{ record.statusName || '-' }}</span>
+          <span v-else class="bug-status-pill" :class="getBugStatusClass(record.statusName || record.status)">
+            {{ record.statusName || '-' }}
+          </span>
         </template>
         <template #handleUserTitle>
           <div class="flex items-center text-[var(--color-text-3)]">
@@ -540,6 +543,28 @@
       currentPlatform.value === record.platform &&
       statusOption.value.length > 0
     );
+  }
+
+  function getBugStatusClass(status?: string) {
+    const normalizedStatus = String(status || '').toLowerCase();
+    if (normalizedStatus.includes('新建') || normalizedStatus.includes('new')) {
+      return 'is-new';
+    }
+    if (normalizedStatus.includes('处理') || normalizedStatus.includes('process')) {
+      return 'is-processing';
+    }
+    if (normalizedStatus.includes('解决') || normalizedStatus.includes('resolved')) {
+      return 'is-resolved';
+    }
+    if (
+      normalizedStatus.includes('非缺陷') ||
+      normalizedStatus.includes('关闭') ||
+      normalizedStatus.includes('closed') ||
+      normalizedStatus.includes('invalid')
+    ) {
+      return 'is-muted';
+    }
+    return 'is-default';
   }
 
   async function handleStatusChange(record: TableData, status: string) {
@@ -1046,5 +1071,58 @@
   }
   .bug-status-inline-select {
     width: 92px;
+    :deep(.arco-select-view-single) {
+      height: 26px;
+      font-weight: 500;
+      border-color: transparent;
+      border-radius: 4px;
+    }
+    :deep(.arco-select-view-suffix) {
+      opacity: 0.7;
+    }
+    &.is-new :deep(.arco-select-view-single) {
+      color: rgb(var(--primary-6));
+      background: var(--color-primary-light-1);
+    }
+    &.is-processing :deep(.arco-select-view-single) {
+      color: rgb(var(--warning-7));
+      background: rgb(var(--warning-1));
+    }
+    &.is-resolved :deep(.arco-select-view-single) {
+      color: rgb(var(--success-7));
+      background: rgb(var(--success-1));
+    }
+    &.is-muted :deep(.arco-select-view-single),
+    &.is-default :deep(.arco-select-view-single) {
+      color: var(--color-text-2);
+      background: var(--color-fill-2);
+    }
+  }
+  .bug-status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 10px;
+    min-height: 26px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    line-height: 26px;
+    &.is-new {
+      color: rgb(var(--primary-6));
+      background: var(--color-primary-light-1);
+    }
+    &.is-processing {
+      color: rgb(var(--warning-7));
+      background: rgb(var(--warning-1));
+    }
+    &.is-resolved {
+      color: rgb(var(--success-7));
+      background: rgb(var(--success-1));
+    }
+    &.is-muted,
+    &.is-default {
+      color: var(--color-text-2);
+      background: var(--color-fill-2);
+    }
   }
 </style>

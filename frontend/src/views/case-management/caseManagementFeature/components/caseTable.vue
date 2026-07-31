@@ -85,12 +85,12 @@
                   <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
                     <span class="case-progress-name">{{ formatOverviewTitle(plan.name, plan.num, plan.id) }}</span>
                   </a-tooltip>
-                  <span class="case-progress-percent">{{ normalizeRate(plan.rate) }}%</span>
                   <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
                     <div class="case-plan-progress" :aria-label="formatPlanProgressTooltip(plan)">
                       <div class="case-plan-progress-fill" :style="{ width: `${normalizeRate(plan.rate)}%` }"></div>
                     </div>
                   </a-tooltip>
+                  <span class="case-progress-percent">{{ normalizeRate(plan.rate) }}%</span>
                 </div>
               </div>
               <span v-else class="text-[var(--color-text-4)]">-</span>
@@ -568,6 +568,7 @@
     getCaseExportConfig,
     getCaseList,
     getCustomFieldsTable,
+    getPersonalProgress,
     stopCaseExport,
     updateCaseRequest,
   } from '@/api/modules/case-management/featureCase';
@@ -1284,30 +1285,30 @@
     return Array.from(planMap.values());
   });
 
-  const pageCasePersonalProgress = computed<FunctionalCasePersonalProgress>(() => {
-    return pageCaseRows.value.reduce(
-      (total, record) => {
-        const progress = record.personalProgress;
-        total.total += Number(progress?.total || 0);
-        total.executed += Number(progress?.executed || 0);
-        total.passed += Number(progress?.passed || 0);
-        total.failed += Number(progress?.failed || 0);
-        total.blocked += Number(progress?.blocked || 0);
-        total.skipped += Number(progress?.skipped || 0);
-        total.unexecuted += Number(progress?.unexecuted || 0);
-        return total;
-      },
-      {
-        total: 0,
-        executed: 0,
-        passed: 0,
-        failed: 0,
-        blocked: 0,
-        skipped: 0,
-        unexecuted: 0,
-      }
-    );
+  const emptyPersonalProgress = (): FunctionalCasePersonalProgress => ({
+    total: 0,
+    executed: 0,
+    passed: 0,
+    failed: 0,
+    blocked: 0,
+    skipped: 0,
+    unexecuted: 0,
   });
+
+  const pageCasePersonalProgress = ref<FunctionalCasePersonalProgress>(emptyPersonalProgress());
+
+  async function loadPageCasePersonalProgress() {
+    if (!appStore.currentProjectId) {
+      pageCasePersonalProgress.value = emptyPersonalProgress();
+      return;
+    }
+    try {
+      pageCasePersonalProgress.value =
+        (await getPersonalProgress(appStore.currentProjectId)) || emptyPersonalProgress();
+    } catch (error) {
+      pageCasePersonalProgress.value = emptyPersonalProgress();
+    }
+  }
 
   const hasUpdatePermission = computed(() => hasAnyPermission(['FUNCTIONAL_CASE:READ+UPDATE']));
 
@@ -1401,7 +1402,7 @@
   // 初始化列表
   async function initData() {
     await getLoadListParams();
-    await loadList();
+    await Promise.all([loadList(), loadPageCasePersonalProgress()]);
     emitTableParams();
   }
 
@@ -2336,12 +2337,12 @@
   }
   .case-list-overview {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px 24px;
-    min-height: 24px;
     margin-top: 8px;
     padding-left: 16px;
+    min-height: 24px;
     color: var(--color-text-2);
+    flex-wrap: wrap;
+    gap: 8px 24px;
   }
   .case-list-overview-item {
     display: flex;
