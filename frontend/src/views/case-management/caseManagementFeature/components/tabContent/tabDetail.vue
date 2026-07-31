@@ -392,27 +392,34 @@
       </MsFileList>
     </div>
     <!-- 详情内嵌评论（非底部悬浮） -->
-    <div
-      v-if="!props.isTestPlan"
-      v-permission="['FUNCTIONAL_CASE:READ+COMMENT']"
-      class="mt-6 border-t border-[var(--color-text-n8)] pt-4"
-    >
+    <div v-if="!props.isTestPlan" class="mt-6 border-t border-[var(--color-text-n8)] pt-4">
       <div class="mb-3 flex items-center justify-between">
         <div class="font-medium text-[var(--color-text-1)]">{{ t('caseManagement.featureCase.inlineComment') }}</div>
-        <MsButton type="button" status="primary" class="!mr-0" @click="emit('gotoComments')">
-          {{ t('caseManagement.featureCase.viewAllComments') }}
-        </MsButton>
+        <span class="text-xs text-[var(--color-text-4)]">{{ inlineCommentList.length }}</span>
       </div>
       <inputComment
-        v-model:content="inlineCommentContent"
+        v-model:default-value="inlineCommentContent"
         v-model:notice-user-ids="inlineNoticeUserIds"
         v-model:filed-ids="inlineUploadFileIds"
+        v-permission="['FUNCTIONAL_CASE:READ+COMMENT']"
         :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
         is-show-avatar
         :is-use-bottom="false"
         :upload-image="handleUploadImage"
         @publish="handleInlinePublish"
       />
+      <div class="mt-4">
+        <MsComment
+          v-if="inlineCommentList.length"
+          :upload-image="handleUploadImage"
+          :comment-list="inlineCommentList"
+          :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
+          :permissions="['FUNCTIONAL_CASE:READ+COMMENT']"
+          @delete="handleInlineDelete"
+          @update-or-add="handleInlineUpdateOrAdd"
+        />
+        <MsEmpty v-else />
+      </div>
     </div>
     <div>
       <MsUpload
@@ -452,6 +459,7 @@
   import { FormInstance, Message } from '@arco-design/web-vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
+  import MsEmpty from '@/components/pure/ms-empty/index.vue';
   import type { FormRuleItem } from '@/components/pure/ms-form-create/types';
   import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsRichText from '@/components/pure/ms-rich-text/MsRichText.vue';
@@ -461,20 +469,24 @@
   import AddAttachment from '@/components/business/ms-add-attachment/index.vue';
   import SaveAsFilePopover from '@/components/business/ms-add-attachment/saveAsFilePopover.vue';
   import MsAutoSaveStatus from '@/components/business/ms-auto-save-status/index.vue';
+  import MsComment from '@/components/business/ms-comment/comment';
   import inputComment from '@/components/business/ms-comment/input.vue';
-  import type { CommentParams } from '@/components/business/ms-comment/types';
+  import type { CommentItem, CommentParams } from '@/components/business/ms-comment/types';
   import LinkFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
   import AddStep from '../addStep.vue';
   import StepDescription from '@/views/case-management/caseManagementFeature/components/tabContent/stepDescription.vue';
   import AddDefectDrawer from '@/views/case-management/components/addDefectDrawer/index.vue';
 
   import {
+    addOrUpdateCommentList,
     checkFileIsUpdateRequest,
     createCommentList,
+    deleteCommentList,
     deleteFileOrCancelAssociation,
     downloadFileRequest,
     editorUploadFile,
     getAssociatedFileListUrl,
+    getCommentList,
     getTransferFileTree,
     previewFile,
     transferFileRequest,
@@ -1035,6 +1047,21 @@
   const inlineCommentContent = ref('');
   const inlineNoticeUserIds = ref<string[]>([]);
   const inlineUploadFileIds = ref<string[]>([]);
+  const inlineCommentList = ref<CommentItem[]>([]);
+
+  async function initInlineCommentList() {
+    if (!detailForm.value.id) {
+      inlineCommentList.value = [];
+      return;
+    }
+    try {
+      inlineCommentList.value = (await getCommentList(detailForm.value.id)) || [];
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+
   async function handleInlinePublish(currentContent: string) {
     if (!detailForm.value.id || !currentContent) return;
     try {
@@ -1051,12 +1078,51 @@
       inlineCommentContent.value = '';
       inlineNoticeUserIds.value = [];
       inlineUploadFileIds.value = [];
+      await initInlineCommentList();
       Message.success(t('common.publishSuccessfully'));
       emit('updateSuccess');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
     }
+  }
+
+  async function handleInlineUpdateOrAdd(item: CommentParams, cb: (result: boolean) => void) {
+    try {
+      await addOrUpdateCommentList(item);
+      await initInlineCommentList();
+      cb(true);
+      emit('updateSuccess');
+    } catch (error) {
+      cb(false);
+      // eslint-disable-next-line no-console
+      console.log(error);
+    }
+  }
+
+  async function handleInlineDelete(commentId: string) {
+    openModal({
+      type: 'error',
+      title: t('ms.comment.deleteConfirm'),
+      content: t('ms.comment.deleteContent'),
+      okText: t('common.confirmDelete'),
+      cancelText: t('common.cancel'),
+      okButtonProps: {
+        status: 'danger',
+      },
+      onBeforeOk: async () => {
+        try {
+          await deleteCommentList(commentId);
+          Message.success(t('common.deleteSuccess'));
+          await initInlineCommentList();
+          emit('updateSuccess');
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.log(error);
+        }
+      },
+      hideCancel: false,
+    });
   }
 
   function handleOK() {
@@ -1182,6 +1248,7 @@
       .map((fileInfo: any) => {
         return convertToFile(fileInfo);
       });
+    await initInlineCommentList();
   }
 
   const imageUrl = ref('');

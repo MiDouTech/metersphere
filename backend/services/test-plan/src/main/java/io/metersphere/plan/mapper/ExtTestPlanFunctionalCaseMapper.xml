@@ -108,6 +108,7 @@
         functional_case.update_time as updateTime,
         functional_case.review_status as reviewStatus,
         functional_case.last_execute_result as lastExecuteResult,
+        functional_case.last_execute_user as lastExecuteUser,
         functional_case.tags,
         test_plan_functional_case.execute_user as executeUser,
         test_plan_functional_case.last_exec_time as lastExecTime,

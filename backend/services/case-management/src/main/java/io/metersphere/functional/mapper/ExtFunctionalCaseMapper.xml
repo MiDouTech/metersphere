@@ -134,6 +134,35 @@
         ORDER BY tp.update_time DESC
     </select>
 
+    <select id="getTestPlanOverviewByCaseIds" resultType="io.metersphere.functional.dto.FunctionalCaseTestPlanOverviewDTO">
+        SELECT
+            related.functional_case_id AS caseId,
+            tp.id,
+            tp.num,
+            tp.name,
+            tp.status,
+            CASE WHEN tp.status = 'ARCHIVED' THEN true ELSE false END AS archived,
+            COALESCE(COUNT(tpfc.id), 0) AS total,
+            COALESCE(SUM(CASE WHEN tpfc.last_exec_result IS NOT NULL AND tpfc.last_exec_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END), 0) AS executed,
+            CASE
+                WHEN COUNT(tpfc.id) = 0 THEN 0
+                ELSE ROUND(SUM(CASE WHEN tpfc.last_exec_result IS NOT NULL AND tpfc.last_exec_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END) * 100 / COUNT(tpfc.id))
+            END AS rate,
+            tp.update_time AS updateTime
+        FROM (
+            SELECT DISTINCT functional_case_id, test_plan_id
+            FROM test_plan_functional_case
+            WHERE functional_case_id IN
+            <foreach collection="caseIds" item="caseId" open="(" separator="," close=")">
+                #{caseId}
+            </foreach>
+        ) related
+                 INNER JOIN test_plan tp ON tp.id = related.test_plan_id
+                 LEFT JOIN test_plan_functional_case tpfc ON tpfc.test_plan_id = tp.id
+        GROUP BY related.functional_case_id, tp.id, tp.num, tp.name, tp.status, tp.update_time
+        ORDER BY related.functional_case_id, tp.update_time DESC
+    </select>
+
     <update id="removeToTrashByModuleIds" parameterType="java.lang.String">
         UPDATE functional_case SET deleted = true, module_id = 'root', delete_time = unix_timestamp()*1000, delete_user = #{userId} WHERE module_id IN
         <foreach collection="moduleIds" item="id" open="(" separator="," close=")">

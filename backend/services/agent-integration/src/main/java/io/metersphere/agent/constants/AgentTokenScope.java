@@ -17,7 +17,11 @@ public class AgentTokenScope {
     }
 
     public static boolean isFunctionalScope(String scope) {
-        return FUNCTIONAL_READ.equals(scope) || FUNCTIONAL_SUBMIT.equals(scope);
+        return FUNCTIONAL_READ.equals(scope)
+                || FUNCTIONAL_SUBMIT.equals(scope)
+                || CASE_WRITE.equals(scope)
+                || PLAN_WRITE.equals(scope)
+                || REVIEW_WRITE.equals(scope);
     }
 
     public static boolean isBugScope(String scope) {

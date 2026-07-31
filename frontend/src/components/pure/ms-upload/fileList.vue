@@ -50,7 +50,11 @@
             <template #title>
               <div class="m-b[2px] flex items-center">
                 <a-tooltip :content="item.file.name">
-                  <div class="show-file-name">
+                  <div
+                    class="show-file-name"
+                    :class="{ 'cursor-pointer text-[rgb(var(--primary-5))]': isImageFile(item) }"
+                    @click="isImageFile(item) ? handlePreview(item) : undefined"
+                  >
                     <div
                       :class="`file-name-first one-line-text pl-[4px] font-normal max-w-[${
                         props.fileNameMaxWidth || '300px'

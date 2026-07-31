@@ -6,6 +6,9 @@ import lombok.Data;
 @Data
 public class FunctionalCaseTestPlanOverviewDTO {
 
+    @Schema(description = "功能用例 ID")
+    private String caseId;
+
     @Schema(description = "测试计划 ID")
     private String id;
 

@@ -30,6 +30,9 @@
         <template #enable="{ record }">
           <a-switch :model-value="record.enable" size="small" :before-change="(val) => toggleEnable(val, record)" />
         </template>
+        <template #scopes="{ record }">
+          {{ formatScopeLabel(record.scopes) }}
+        </template>
         <template #action="{ record }">
           <div class="flex gap-2">
             <MsButton @click="rotateToken(record)">
@@ -63,11 +66,10 @@
 
         <a-form-item field="clientType" :label="t('system.agentIntegration.clientType')">
           <a-select v-model="createForm.clientType">
-            <a-option value="CODEX">Codex</a-option>
             <a-option value="CHATGPT">ChatGPT</a-option>
             <a-option value="CURSOR">Cursor</a-option>
             <a-option value="WORKBUDDY">WorkBuddy</a-option>
-            <a-option value="GENERIC">Other MCP</a-option>
+            <a-option value="GENERIC">{{ t('system.agentIntegration.clientOther') }}</a-option>
           </a-select>
         </a-form-item>
 
@@ -112,8 +114,8 @@
               "
               @click="createForm.scopes = scope.value"
             >
-              <div class="font-medium">{{ scope.value }}</div>
-              <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.label }}</div>
+              <div class="font-medium">{{ scope.label }}</div>
+              <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.desc }}</div>
             </button>
           </div>
         </a-form-item>
@@ -129,16 +131,25 @@
       <a-alert type="warning" class="mb-4">
         {{ createdToken?.warning }}
       </a-alert>
+      <div class="mb-2 font-medium">{{ t('system.agentIntegration.fullToken') }}</div>
       <div class="break-all rounded bg-[var(--color-fill-2)] p-3 text-sm">{{ createdToken?.token }}</div>
-      <div class="mt-4 flex justify-end">
-        <a-button type="primary" @click="copyToken">{{ t('common.copy') }}</a-button>
+      <div class="mt-3 flex justify-end">
+        <a-button type="primary" @click="copyToken">{{ t('system.agentIntegration.copyToken') }}</a-button>
+      </div>
+      <div class="mb-2 mt-4 font-medium">{{ t('system.agentIntegration.mcpConfig') }}</div>
+      <pre
+        class="max-h-[220px] overflow-auto whitespace-pre-wrap break-all rounded bg-[var(--color-fill-2)] p-3 text-xs"
+        >{{ currentMcpConfig }}</pre
+      >
+      <div class="mt-3 flex justify-end">
+        <a-button type="primary" @click="copyMcpConfig">{{ t('system.agentIntegration.copyMcpConfig') }}</a-button>
       </div>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { reactive, ref } from 'vue';
+  import { computed, reactive, ref } from 'vue';
   import { FormInstance, Message } from '@arco-design/web-vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
@@ -170,25 +181,70 @@
   const createLoading = ref(false);
   const tokenVisible = ref(false);
   const createdToken = ref<AgentTokenCreateResult>();
+  const createdClientType = ref('CHATGPT');
   const createFormRef = ref<FormInstance>();
   const createForm = reactive({
     name: '',
     projectIds: [] as string[],
     scopes: 'AGENT_ALL',
-    clientType: 'CODEX',
+    clientType: 'CHATGPT',
   });
 
   const projectLoading = ref(false);
   const projectOptions = ref<{ id: string; name: string }[]>([]);
 
   const scopeOptions = [
-    { value: 'AGENT_ALL', label: t('system.agentIntegration.scopeAgentAll') },
-    { value: 'FUNCTIONAL_ALL', label: t('system.agentIntegration.scopeCase') },
-    { value: 'BUG_WRITE', label: t('system.agentIntegration.scopeBug') },
-    { value: 'FUNCTIONAL_READ', label: 'Read functional cases only' },
-    { value: 'FUNCTIONAL_SUBMIT', label: 'Submit execution results only' },
-    { value: 'BUG_READ', label: 'Read bugs only' },
+    {
+      value: 'AGENT_ALL',
+      label: t('system.agentIntegration.scopeAgentAll'),
+      desc: t('system.agentIntegration.scopeAgentAllDesc'),
+    },
+    {
+      value: 'FUNCTIONAL_ALL',
+      label: t('system.agentIntegration.scopeCase'),
+      desc: t('system.agentIntegration.scopeCaseDesc'),
+    },
+    {
+      value: 'BUG_WRITE',
+      label: t('system.agentIntegration.scopeBug'),
+      desc: t('system.agentIntegration.scopeBugDesc'),
+    },
+    {
+      value: 'FUNCTIONAL_READ',
+      label: t('system.agentIntegration.scopeFunctionalRead'),
+      desc: t('system.agentIntegration.scopeFunctionalReadDesc'),
+    },
+    {
+      value: 'FUNCTIONAL_SUBMIT',
+      label: t('system.agentIntegration.scopeFunctionalSubmit'),
+      desc: t('system.agentIntegration.scopeFunctionalSubmitDesc'),
+    },
+    {
+      value: 'BUG_READ',
+      label: t('system.agentIntegration.scopeBugRead'),
+      desc: t('system.agentIntegration.scopeBugReadDesc'),
+    },
   ];
+
+  const scopeLabelMap = computed<Record<string, string>>(() =>
+    scopeOptions.reduce(
+      (map, item) => ({
+        ...map,
+        [item.value]: item.label,
+      }),
+      {} as Record<string, string>
+    )
+  );
+
+  function formatScopeLabel(scopes?: string) {
+    if (!scopes) return '-';
+    return scopes
+      .split(/[;,]/)
+      .map((scope) => scope.trim())
+      .filter(Boolean)
+      .map((scope) => scopeLabelMap.value[scope] || scope)
+      .join('、');
+  }
 
   const columns: MsTableColumn = [
     { title: 'system.agentIntegration.tokenName', dataIndex: 'name', showTooltip: true },
@@ -200,7 +256,7 @@
       showTooltip: true,
     },
     { title: 'system.agentIntegration.clientType', dataIndex: 'clientType', width: 120 },
-    { title: 'system.agentIntegration.scopes', dataIndex: 'scopes', width: 160 },
+    { title: 'system.agentIntegration.scopes', dataIndex: 'scopes', slotName: 'scopes', width: 180, showTooltip: true },
     { title: 'system.agentIntegration.invocationCount', dataIndex: 'invocationCount', width: 120 },
     { title: 'system.agentIntegration.enable', dataIndex: 'enable', slotName: 'enable', width: 100 },
     { title: 'common.operation', slotName: 'action', fixed: 'right', width: 180 },
@@ -240,14 +296,66 @@
     createForm.name = '';
     createForm.projectIds = [];
     createForm.scopes = 'AGENT_ALL';
-    createForm.clientType = 'CODEX';
+    createForm.clientType = 'CHATGPT';
   }
+
+  function getMcpUrl() {
+    return `${window.location.origin}/api/mcp`;
+  }
+
+  function buildMcpConfig(token?: string, clientType?: string) {
+    if (!token) return '';
+    const mcpUrl = getMcpUrl();
+    if (clientType === 'CURSOR') {
+      return JSON.stringify(
+        {
+          mcpServers: {
+            metersphere: {
+              url: mcpUrl,
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          },
+        },
+        null,
+        2
+      );
+    }
+    if (clientType === 'WORKBUDDY' || clientType === 'GENERIC') {
+      return JSON.stringify(
+        {
+          name: 'metersphere',
+          transport: 'streamable-http',
+          url: mcpUrl,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        null,
+        2
+      );
+    }
+    return JSON.stringify(
+      {
+        type: 'mcp',
+        name: 'metersphere',
+        server_url: mcpUrl,
+        authorization: `Bearer ${token}`,
+      },
+      null,
+      2
+    );
+  }
+
+  const currentMcpConfig = computed(() => buildMcpConfig(createdToken.value?.token, createdClientType.value));
 
   async function handleCreate() {
     const valid = await createFormRef.value?.validate();
     if (valid) return;
     createLoading.value = true;
     try {
+      createdClientType.value = createForm.clientType;
       createdToken.value = await createAgentToken({
         name: createForm.name,
         projectIds: createForm.projectIds?.length ? createForm.projectIds : [],
@@ -269,6 +377,12 @@
     Message.success(t('common.copySuccess'));
   }
 
+  async function copyMcpConfig() {
+    if (!currentMcpConfig.value) return;
+    await navigator.clipboard.writeText(currentMcpConfig.value);
+    Message.success(t('common.copySuccess'));
+  }
+
   async function toggleEnable(val: string | number | boolean, record: AgentTokenListItem) {
     try {
       if (val) {
@@ -285,6 +399,7 @@
   }
 
   async function rotateToken(record: AgentTokenListItem) {
+    createdClientType.value = record.clientType || 'GENERIC';
     createdToken.value = await rotateAgentToken(record.id);
     tokenVisible.value = true;
     loadList();

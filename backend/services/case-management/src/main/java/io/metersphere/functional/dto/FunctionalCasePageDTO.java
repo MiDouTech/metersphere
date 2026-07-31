@@ -33,4 +33,10 @@ public class FunctionalCasePageDTO extends FunctionalCase {
     @Schema(description = "最后执行人姓名")
     private String lastExecuteUserName;
 
+    @Schema(description = "关联测试计划进度概览")
+    private List<FunctionalCaseTestPlanOverviewDTO> testPlans;
+
+    @Schema(description = "当前用户个人执行进度")
+    private FunctionalCasePersonalProgressDTO personalProgress;
+
 }

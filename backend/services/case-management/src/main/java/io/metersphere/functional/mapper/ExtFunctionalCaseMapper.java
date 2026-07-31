@@ -148,4 +148,6 @@ public interface ExtFunctionalCaseMapper {
 
     List<FunctionalCaseTestPlanOverviewDTO> getTestPlanOverview(@Param("caseId") String caseId);
 
+    List<FunctionalCaseTestPlanOverviewDTO> getTestPlanOverviewByCaseIds(@Param("caseIds") List<String> caseIds);
+
 }

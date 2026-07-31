@@ -280,6 +280,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
             testPlanCasePageResponse.setCreateUserName(userMap.get(testPlanCasePageResponse.getCreateUser()));
             testPlanCasePageResponse.setUpdateUserName(userMap.get(testPlanCasePageResponse.getUpdateUser()));
             testPlanCasePageResponse.setExecuteUserName(userMap.get(testPlanCasePageResponse.getExecuteUser()));
+            testPlanCasePageResponse.setLastExecuteUserName(userMap.get(testPlanCasePageResponse.getLastExecuteUser()));
             testPlanCasePageResponse.setModuleName(StringUtils.isNotBlank(moduleNameMap.get(testPlanCasePageResponse.getModuleId())) ? moduleNameMap.get(testPlanCasePageResponse.getModuleId()) : Translator.get("functional_case.module.default.name"));
             if (associateBugMap.containsKey(testPlanCasePageResponse.getId())) {
                 List<TestPlanCaseBugDTO> associateBugs = associateBugMap.get(testPlanCasePageResponse.getId());
@@ -301,7 +302,8 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
     public Set<String> extractUserIds(List<TestPlanCasePageResponse> list) {
         return list.stream()
-                .flatMap(testPlanCasePageResponse -> Stream.of(testPlanCasePageResponse.getUpdateUser(), testPlanCasePageResponse.getCreateUser(), testPlanCasePageResponse.getExecuteUser()))
+                .flatMap(testPlanCasePageResponse -> Stream.of(testPlanCasePageResponse.getUpdateUser(), testPlanCasePageResponse.getCreateUser(), testPlanCasePageResponse.getExecuteUser(), testPlanCasePageResponse.getLastExecuteUser()))
+                .filter(StringUtils::isNotBlank)
                 .collect(Collectors.toSet());
     }
 

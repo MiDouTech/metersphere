@@ -37,7 +37,7 @@
     <inputComment
       v-if="hasEditPermission"
       ref="commentInputRef"
-      v-model:content="content"
+      v-model:default-value="content"
       v-model:notice-user-ids="noticeUserIds"
       v-model:filed-ids="uploadFileIds"
       v-permission="['FUNCTIONAL_CASE:READ+COMMENT']"

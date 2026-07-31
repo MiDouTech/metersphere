@@ -210,6 +210,7 @@ export interface PlanDetailFeatureCaseItem {
   lastExecTime: number;
   executeUser: string;
   executeUserName: string;
+  lastExecuteUser?: string;
   lastExecuteUserName?: string;
   bugCount: number;
   customFields: customFieldsItem[]; // 自定义字段集合
