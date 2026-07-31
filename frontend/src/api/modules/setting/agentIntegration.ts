@@ -95,10 +95,6 @@ export function disableAgentToken(id: string) {
   return MSR.post({ url: `${AgentTokenUrl}/${id}/disable` });
 }
 
-export function rotateAgentToken(id: string) {
-  return MSR.post<AgentTokenCreateResult>({ url: `${AgentTokenUrl}/${id}/rotate` });
-}
-
 export function deleteAgentToken(id: string) {
   return MSR.delete({ url: `${AgentTokenUrl}/${id}` });
 }

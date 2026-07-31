@@ -21,8 +21,15 @@
           <a-button type="primary" @click="openCreateModal">
             {{ t('system.agentIntegration.createToken') }}
           </a-button>
+          <a-button :loading="downloadLoading" type="outline" @click="handleDownload">
+            {{ t('system.agentIntegration.mcpDownload') }}
+          </a-button>
         </div>
       </div>
+
+      <a-alert type="info" class="mb-4">
+        {{ t('system.agentIntegration.myTokensSecretTip') }}
+      </a-alert>
 
       <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
         <template #enable="{ record }">
@@ -36,8 +43,8 @@
         </template>
         <template #action="{ record }">
           <div class="flex gap-2">
-            <MsButton @click="rotateToken(record)">
-              {{ t('system.agentIntegration.rotate') }}
+            <MsButton @click="openEditModal(record)">
+              {{ t('system.agentIntegration.tokenSettings') }}
             </MsButton>
             <MsButton status="danger" @click="removeToken(record)">
               {{ t('common.delete') }}
@@ -126,6 +133,73 @@
     </a-modal>
 
     <a-modal
+      v-model:visible="editVisible"
+      :title="t('system.agentIntegration.tokenSettings')"
+      :ok-loading="editLoading"
+      unmount-on-close
+      @ok="handleUpdate"
+      @cancel="resetEditForm"
+    >
+      <a-form ref="editFormRef" :model="editForm" layout="vertical">
+        <a-form-item
+          field="name"
+          :label="t('system.agentIntegration.tokenName')"
+          required
+          :rules="[{ required: true, message: t('system.agentIntegration.tokenNameRequired') }]"
+        >
+          <a-input v-model="editForm.name" />
+        </a-form-item>
+
+        <a-form-item
+          field="projectIds"
+          :label="t('system.agentIntegration.projectIds')"
+          :extra="t('system.agentIntegration.projectIdsHelp')"
+        >
+          <a-select
+            v-model="editForm.projectIds"
+            multiple
+            allow-search
+            allow-clear
+            :filter-option="false"
+            :placeholder="t('system.agentIntegration.projectIdsPlaceholder')"
+            :loading="projectLoading"
+            @search="searchProjects"
+            @popup-visible-change="(visible: boolean) => visible && searchProjects('')"
+          >
+            <a-option v-for="p in projectOptions" :key="p.id" :value="p.id" :label="p.name">
+              {{ p.name }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item
+          field="scopes"
+          :label="t('system.agentIntegration.scopes')"
+          required
+          :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
+        >
+          <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <button
+              v-for="scope in scopeOptions"
+              :key="scope.value"
+              type="button"
+              class="rounded border p-3 text-left"
+              :class="
+                editForm.scopes === scope.value
+                  ? 'border-[rgb(var(--primary-6))] bg-[var(--color-primary-light-1)]'
+                  : 'border-[var(--color-border-2)]'
+              "
+              @click="editForm.scopes = scope.value"
+            >
+              <div class="font-medium">{{ scope.label }}</div>
+              <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.desc }}</div>
+            </button>
+          </div>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <a-modal
       v-model:visible="tokenVisible"
       :title="t('system.agentIntegration.tokenCreated')"
       :footer="false"
@@ -152,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, reactive, ref } from 'vue';
+  import { computed, onMounted, reactive, ref } from 'vue';
   import { FormInstance, Message } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
@@ -164,18 +238,22 @@
   import McpOnboardingPanel from './components/McpOnboardingPanel.vue';
 
   import {
+    type AgentMcpManifest,
     type AgentTokenCreateResult,
     type AgentTokenListItem,
     createAgentToken,
     deleteAgentToken,
     disableAgentToken,
+    downloadAgentMcpBundle,
     enableAgentToken,
+    getAgentMcpManifest,
     getAgentTokenPage,
     getPersonalAgentProjectList,
-    rotateAgentToken,
+    updateAgentToken,
   } from '@/api/modules/setting/agentIntegration';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
+  import { downloadByteFile } from '@/utils';
 
   const { t } = useI18n();
   const { openModal } = useModal();
@@ -183,15 +261,26 @@
   const keyword = ref('');
   const createVisible = ref(false);
   const createLoading = ref(false);
+  const editVisible = ref(false);
+  const editLoading = ref(false);
+  const downloadLoading = ref(false);
   const tokenVisible = ref(false);
+  const manifest = ref<AgentMcpManifest>();
   const createdToken = ref<AgentTokenCreateResult>();
   const createdClientType = ref('CHATGPT');
   const createFormRef = ref<FormInstance>();
+  const editFormRef = ref<FormInstance>();
   const createForm = reactive({
     name: '',
     projectIds: [] as string[],
     scopes: 'AGENT_ALL',
     clientType: 'CHATGPT',
+  });
+  const editForm = reactive({
+    id: '',
+    name: '',
+    projectIds: [] as string[],
+    scopes: 'AGENT_ALL',
   });
 
   const projectLoading = ref(false);
@@ -276,7 +365,6 @@
 
   const columns: MsTableColumn = [
     { title: 'system.agentIntegration.tokenName', dataIndex: 'name', showTooltip: true },
-    { title: 'system.agentIntegration.displayPrefix', dataIndex: 'displayPrefix', width: 180, showTooltip: true },
     {
       title: 'system.agentIntegration.projectIds',
       dataIndex: 'projectScopeLabel',
@@ -294,7 +382,7 @@
     },
     { title: 'system.agentIntegration.invocationCount', dataIndex: 'invocationCount', width: 120 },
     { title: 'system.agentIntegration.enable', dataIndex: 'enable', slotName: 'enable', width: 100 },
-    { title: 'common.operation', slotName: 'action', fixed: 'right', width: 180 },
+    { title: 'common.operation', slotName: 'action', fixed: 'right', width: 140 },
   ];
 
   const { propsRes, propsEvent, loadList, setLoadListParams } = useTable(getAgentTokenPage, {
@@ -327,11 +415,33 @@
     searchProjects('');
   }
 
+  function openEditModal(record: AgentTokenListItem) {
+    editForm.id = record.id;
+    editForm.name = record.name;
+    if (record.projectIds?.length) {
+      editForm.projectIds = [...record.projectIds];
+    } else if (record.projectId) {
+      editForm.projectIds = [record.projectId];
+    } else {
+      editForm.projectIds = [];
+    }
+    editForm.scopes = record.scopes || 'AGENT_ALL';
+    editVisible.value = true;
+    searchProjects('');
+  }
+
   function resetCreateForm() {
     createForm.name = '';
     createForm.projectIds = [];
     createForm.scopes = 'AGENT_ALL';
     createForm.clientType = 'CHATGPT';
+  }
+
+  function resetEditForm() {
+    editForm.id = '';
+    editForm.name = '';
+    editForm.projectIds = [];
+    editForm.scopes = 'AGENT_ALL';
   }
 
   function getMcpUrl() {
@@ -406,6 +516,38 @@
     }
   }
 
+  async function handleUpdate() {
+    const valid = await editFormRef.value?.validate();
+    if (valid) return;
+    editLoading.value = true;
+    try {
+      await updateAgentToken({
+        id: editForm.id,
+        name: editForm.name,
+        projectIds: editForm.projectIds?.length ? editForm.projectIds : [],
+        scopes: editForm.scopes,
+      });
+      Message.success(t('common.updateSuccess'));
+      editVisible.value = false;
+      resetEditForm();
+      loadList();
+    } finally {
+      editLoading.value = false;
+    }
+  }
+
+  async function handleDownload() {
+    downloadLoading.value = true;
+    try {
+      const blob = await downloadAgentMcpBundle();
+      const name = manifest.value?.fileName || 'metersphere-agent-skill.zip';
+      downloadByteFile(blob, name);
+      Message.success(t('system.agentIntegration.mcpDownloadSuccess'));
+    } finally {
+      downloadLoading.value = false;
+    }
+  }
+
   async function copyToken() {
     if (!createdToken.value?.token) return;
     await navigator.clipboard.writeText(createdToken.value.token);
@@ -433,13 +575,6 @@
     }
   }
 
-  async function rotateToken(record: AgentTokenListItem) {
-    createdClientType.value = record.clientType || 'GENERIC';
-    createdToken.value = await rotateAgentToken(record.id);
-    tokenVisible.value = true;
-    loadList();
-  }
-
   function removeToken(record: AgentTokenListItem) {
     openModal({
       type: 'error',
@@ -453,5 +588,12 @@
     });
   }
 
-  loadList();
+  onMounted(async () => {
+    try {
+      manifest.value = await getAgentMcpManifest();
+    } catch {
+      manifest.value = { available: false };
+    }
+    loadList();
+  });
 </script>

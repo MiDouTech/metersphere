@@ -66,12 +66,6 @@ public class PersonalAgentTokenController {
         agentTokenManagementService.enablePersonal(id);
     }
 
-    @PostMapping("/{id}/rotate")
-    @Operation(summary = "Rotate current user's Agent Token secret")
-    public AgentTokenCreateResponse rotate(@PathVariable String id) {
-        return agentTokenManagementService.rotatePersonal(id);
-    }
-
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete current user's Agent Token")
     public void delete(@PathVariable String id) {
