@@ -25,9 +25,9 @@
           </a-tooltip>
         </template>
         <template #statusName="{ record }">
-          <a-tooltip :content="`${record.statusName}`" position="tl">
-            <div class="one-line-text">{{ characterLimit(record.statusName) }}</div>
-          </a-tooltip>
+          <span class="bug-status-button" :class="getBugStatusClass(record.statusName || record.status)">
+            {{ record.statusName || '-' }}
+          </span>
         </template>
         <template #operation="{ record }">
           <div class="flex flex-row flex-nowrap">
@@ -82,6 +82,7 @@
   import { FilterType } from '@/enums/advancedFilterEnum';
   import { TableKeyEnum } from '@/enums/tableEnum';
 
+  import getBugStatusClass from './utils/bugStatusStyle';
   import { makeColumns } from '@/views/case-management/caseManagementFeature/components/utils';
 
   const { t } = useI18n();
@@ -485,4 +486,38 @@
 
 <style lang="less" scoped>
   .ms-table--special-small();
+  .bug-status-button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 12px;
+    min-width: 62px;
+    min-height: 28px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: var(--border-radius-small);
+    line-height: 26px;
+    &.is-new {
+      border-color: rgb(var(--primary-2));
+      color: rgb(var(--primary-6));
+      background: var(--color-primary-light-1);
+    }
+    &.is-processing {
+      border-color: rgb(var(--warning-2));
+      color: rgb(var(--warning-7));
+      background: rgb(var(--warning-1));
+    }
+    &.is-resolved {
+      border-color: rgb(var(--success-2));
+      color: rgb(var(--success-7));
+      background: rgb(var(--success-1));
+    }
+    &.is-muted,
+    &.is-default {
+      border-color: var(--color-border-2);
+      color: var(--color-text-2);
+      background: var(--color-fill-2);
+    }
+  }
 </style>

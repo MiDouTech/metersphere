@@ -20,6 +20,10 @@ public class AgentConstants {
     public static final int RATE_LIMIT_WINDOW_MS = 60_000;
     public static final int MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024;
     public static final int MAX_ATTACHMENTS_PER_SUBMIT = 10;
+    /** 临时附件默认有效期：24 小时 */
+    public static final long TEMP_ATTACHMENT_TTL_MS = 24L * 60 * 60 * 1000;
+    /** 幂等记录保留：7 天 */
+    public static final long IDEMPOTENCY_TTL_MS = 7L * 24 * 60 * 60 * 1000;
     public static final String PRIORITY_FIELD = "functional_priority";
     public static final String FILTER_CASE_LEVEL = "caseLevel";
     public static final String FILTER_LAST_EXECUTE_RESULT = "lastExecuteResult";

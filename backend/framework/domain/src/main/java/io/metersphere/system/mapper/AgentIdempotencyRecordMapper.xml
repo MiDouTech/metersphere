@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.AgentIdempotencyRecordMapper">
+    <resultMap id="BaseResultMap" type="io.metersphere.system.domain.AgentIdempotencyRecord">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="token_id" jdbcType="VARCHAR" property="tokenId"/>
+        <result column="tool_name" jdbcType="VARCHAR" property="toolName"/>
+        <result column="request_id" jdbcType="VARCHAR" property="requestId"/>
+        <result column="request_hash" jdbcType="VARCHAR" property="requestHash"/>
+        <result column="response_json" jdbcType="LONGVARCHAR" property="responseJson"/>
+        <result column="create_time" jdbcType="BIGINT" property="createTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="io.metersphere.system.domain.AgentIdempotencyRecord">
+        insert into agent_idempotency_record (id, token_id, tool_name, request_id, request_hash, response_json, create_time)
+        values (#{id,jdbcType=VARCHAR}, #{tokenId,jdbcType=VARCHAR}, #{toolName,jdbcType=VARCHAR},
+                #{requestId,jdbcType=VARCHAR}, #{requestHash,jdbcType=VARCHAR}, #{responseJson,jdbcType=LONGVARCHAR},
+                #{createTime,jdbcType=BIGINT})
+    </insert>
+
+    <select id="selectByTokenToolRequest" resultMap="BaseResultMap">
+        select *
+        from agent_idempotency_record
+        where token_id = #{tokenId}
+          and tool_name = #{toolName}
+          and request_id = #{requestId}
+        limit 1
+    </select>
+
+    <delete id="deleteExpired">
+        delete from agent_idempotency_record
+        where create_time &lt; #{expiresBefore}
+    </delete>
+</mapper>

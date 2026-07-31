@@ -31,4 +31,19 @@ public class AgentBugUpdateRequest {
 
     @Schema(description = "自定义字段 fieldId -> value（含状态/处理人等模板字段）")
     private Map<String, String> customFields;
+
+    @Schema(description = "乐观锁：期望的 updateTime")
+    private Long expectedUpdateTime;
+
+    @Schema(description = "临时附件 ID 列表（purpose=BUG_DETAIL）")
+    private List<String> attachmentIds;
+
+    @Schema(description = "新增关联用例 ID 列表")
+    private List<String> addCaseIds;
+
+    @Schema(description = "解除关联关系 ID 列表")
+    private List<String> removeRelationIds;
+
+    @Schema(description = "幂等键")
+    private String requestId;
 }

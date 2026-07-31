@@ -1,5 +1,6 @@
 package io.metersphere.agent.service;
 
+import io.metersphere.agent.constants.AgentErrorCode;
 import io.metersphere.agent.constants.AgentTokenScope;
 import io.metersphere.agent.dto.AgentBugCreateRequest;
 import io.metersphere.agent.dto.AgentBugSearchRequest;
@@ -20,6 +21,7 @@ import io.metersphere.agent.security.AgentScopeAssert;
 import io.metersphere.agent.security.AgentTokenContext;
 import io.metersphere.agent.security.AgentTokenRateLimiter;
 import io.metersphere.agent.tool.AgentMcpToolHandler;
+import io.metersphere.sdk.exception.IResultCode;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.domain.AgentToken;
@@ -30,15 +32,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class AgentMcpStreamableService {
-    private static final long IDEMPOTENCY_CACHE_TTL_MS = 10 * 60 * 1000L;
     private static final Set<String> WRITE_TOOLS = Set.of(
             "metersphere.functional.submit",
             "metersphere.functional.module.create",
@@ -53,8 +54,6 @@ public class AgentMcpStreamableService {
             "metersphere.case_review.create",
             "metersphere.case_review.associate_cases"
     );
-
-    private final ConcurrentHashMap<String, IdempotencyRecord> idempotencyCache = new ConcurrentHashMap<>();
 
     @Resource
     private AgentFunctionalCaseSearchService agentFunctionalCaseSearchService;
@@ -72,6 +71,8 @@ public class AgentMcpStreamableService {
     private AgentCaseReviewWriteService agentCaseReviewWriteService;
     @Resource
     private AgentTokenRateLimiter agentTokenRateLimiter;
+    @Resource
+    private AgentIdempotencyService agentIdempotencyService;
     @Autowired(required = false)
     private List<AgentMcpToolHandler> toolHandlers = List.of();
 
@@ -89,12 +90,12 @@ public class AgentMcpStreamableService {
                 case "ping" -> response(id, Map.of("ok", true));
                 case "tools/list" -> response(id, Map.of("tools", tools()));
                 case "tools/call" -> response(id, callTool(asMap(request.get("params")), idempotencyKey));
-                default -> error(id, -32601, "Unsupported MCP method: " + method);
+                default -> error(id, -32601, "Unsupported MCP method: " + method, null);
             };
         } catch (MSException ex) {
-            return error(id, -32001, ex.getMessage());
+            return error(id, -32001, ex.getMessage(), ex.getErrorCode());
         } catch (Exception ex) {
-            return error(id, -32603, ex.getMessage());
+            return error(id, -32603, ex.getMessage(), null);
         }
     }
 
@@ -174,17 +175,13 @@ public class AgentMcpStreamableService {
         }
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
         if (StringUtils.isNotBlank(effectiveIdempotencyKey) && isWriteTool(name)) {
-            String cacheKey = idempotencyCacheKey(token, name, effectiveIdempotencyKey);
-            synchronized (idempotencyCache) {
-                cleanExpiredIdempotencyRecords();
-                IdempotencyRecord cached = idempotencyCache.get(cacheKey);
-                if (cached != null && !cached.expired()) {
-                    return cached.response();
-                }
-                Map<String, Object> response = callToolInternal(name, arguments);
-                idempotencyCache.put(cacheKey, new IdempotencyRecord(System.currentTimeMillis(), response));
-                return response;
+            Optional<Map<String, Object>> cached = agentIdempotencyService.findCachedResponse(name, effectiveIdempotencyKey, arguments);
+            if (cached.isPresent()) {
+                return cached.get();
             }
+            Map<String, Object> response = callToolInternal(name, arguments);
+            agentIdempotencyService.save(name, effectiveIdempotencyKey, arguments, response);
+            return response;
         }
         return callToolInternal(name, arguments);
     }
@@ -315,15 +312,6 @@ public class AgentMcpStreamableService {
         return Map.of("content", List.of(Map.of("type", "text", "text", JSON.toJSONString(result))));
     }
 
-    private String idempotencyCacheKey(AgentToken token, String toolName, String idempotencyKey) {
-        String userId = token == null ? "anonymous" : StringUtils.defaultIfBlank(token.getUserId(), token.getId());
-        return userId + ":" + toolName + ":" + StringUtils.trim(idempotencyKey);
-    }
-
-    private void cleanExpiredIdempotencyRecords() {
-        idempotencyCache.entrySet().removeIf(entry -> entry.getValue().expired());
-    }
-
     private Map<String, Object> tool(String name, String description, String scope, Map<String, Object> inputSchema) {
         Map<String, Object> annotations = new LinkedHashMap<>();
         annotations.put("scope", scope);
@@ -383,17 +371,23 @@ public class AgentMcpStreamableService {
         return response;
     }
 
-    private Map<String, Object> error(Object id, int code, String message) {
+    private Map<String, Object> error(Object id, int code, String message, IResultCode errorCode) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("jsonrpc", "2.0");
         response.put("id", id);
-        response.put("error", Map.of("code", code, "message", StringUtils.defaultString(message)));
-        return response;
-    }
-
-    private record IdempotencyRecord(long createTime, Map<String, Object> response) {
-        boolean expired() {
-            return System.currentTimeMillis() - createTime > IDEMPOTENCY_CACHE_TTL_MS;
+        Map<String, Object> error = new LinkedHashMap<>();
+        error.put("code", code);
+        error.put("message", StringUtils.defaultString(message));
+        if (errorCode != null) {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("code", errorCode instanceof AgentErrorCode agentCode ? agentCode.name() : errorCode.getMessage());
+            data.put("httpCode", errorCode.getCode());
+            if (StringUtils.isNotBlank(message)) {
+                data.put("detail", message);
+            }
+            error.put("data", data);
         }
+        response.put("error", error);
+        return response;
     }
 }

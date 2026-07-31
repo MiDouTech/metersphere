@@ -1,5 +1,6 @@
 package io.metersphere.agent.security;
 
+import io.metersphere.agent.constants.AgentErrorCode;
 import io.metersphere.agent.constants.AgentTokenScope;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.controller.handler.result.MsHttpResultCode;
@@ -19,7 +20,21 @@ public final class AgentScopeAssert {
         if (hasScope(token.getScopes(), requiredScope)) {
             return;
         }
-        throw new MSException(MsHttpResultCode.FORBIDDEN, "Agent token scope 不足: " + requiredScope);
+        throw new MSException(AgentErrorCode.SCOPE_DENIED, "Agent token scope 不足: " + requiredScope);
+    }
+
+    public static void assertAnyScope(String... requiredScopes) {
+        AgentToken token = AgentTokenContext.get();
+        if (token == null || StringUtils.isBlank(token.getScopes()) || requiredScopes == null || requiredScopes.length == 0) {
+            return;
+        }
+        for (String requiredScope : requiredScopes) {
+            if (hasScope(token.getScopes(), requiredScope)) {
+                return;
+            }
+        }
+        throw new MSException(AgentErrorCode.SCOPE_DENIED,
+                "Agent token scope 不足: " + String.join("|", requiredScopes));
     }
 
     public static boolean hasScope(String scopes, String requiredScope) {
