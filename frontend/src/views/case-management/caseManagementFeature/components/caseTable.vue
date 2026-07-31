@@ -77,11 +77,57 @@
               </a-radio-group>
             </template>
           </MsAdvanceFilter>
+          <div class="case-list-overview">
+            <div class="case-list-overview-item">
+              <span class="case-list-overview-label">{{ t('caseManagement.featureCase.testPlanSummary') }}：</span>
+              <div v-if="pageCaseTestPlans.length" class="case-list-overview-content">
+                <div v-for="plan in pageCaseTestPlans" :key="plan.id" class="case-progress-item">
+                  <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
+                    <span class="case-progress-name">{{ formatOverviewTitle(plan.name, plan.num, plan.id) }}</span>
+                  </a-tooltip>
+                  <span class="case-progress-percent">{{ normalizeRate(plan.rate) }}%</span>
+                  <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
+                    <div class="case-plan-progress" :aria-label="formatPlanProgressTooltip(plan)">
+                      <div class="case-plan-progress-fill" :style="{ width: `${normalizeRate(plan.rate)}%` }"></div>
+                    </div>
+                  </a-tooltip>
+                </div>
+              </div>
+              <span v-else class="text-[var(--color-text-4)]">-</span>
+            </div>
+            <div class="case-list-overview-item">
+              <span class="case-list-overview-label">{{ t('caseManagement.featureCase.personalProgress') }}：</span>
+              <div v-if="pageCasePersonalProgress.total" class="case-progress-item">
+                <span>{{ pageCasePersonalProgress.executed }}/{{ pageCasePersonalProgress.total }}</span>
+                <div
+                  class="case-personal-progress"
+                  :aria-label="`${t('caseManagement.featureCase.personalProgress')} ${
+                    pageCasePersonalProgress.executed
+                  }/${pageCasePersonalProgress.total}`"
+                >
+                  <a-tooltip
+                    v-for="segment in buildPersonalProgressSegments(pageCasePersonalProgress)"
+                    :key="segment.key"
+                    :content="segment.tooltip"
+                    position="top"
+                  >
+                    <div
+                      class="case-personal-progress-segment"
+                      :class="segment.className"
+                      :style="{ width: `${segment.rate}%` }"
+                      :aria-label="segment.tooltip"
+                    ></div>
+                  </a-tooltip>
+                </div>
+              </div>
+              <span v-else class="text-[var(--color-text-4)]">-</span>
+            </div>
+          </div>
           <ms-base-table
             v-bind="propsRes"
             ref="tableRef"
             filter-icon-align-left
-            class="mt-[16px]"
+            class="mt-[8px]"
             :action-config="tableBatchActions"
             :not-show-table-filter="isAdvancedSearchMode"
             @selected-change="handleTableSelect"
@@ -143,50 +189,6 @@
             </template>
             <template #lastExecuteTime="{ record }">
               <span>{{ formatTime(record.lastExecuteTime) }}</span>
-            </template>
-            <template #testPlans="{ record }">
-              <div v-if="visibleRecordTestPlans(record).length" class="case-progress-list">
-                <div v-for="plan in visibleRecordTestPlans(record)" :key="plan.id" class="case-progress-item">
-                  <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
-                    <span class="case-progress-name">{{ formatOverviewTitle(plan.name, plan.num, plan.id) }}</span>
-                  </a-tooltip>
-                  <span class="case-progress-percent">{{ normalizeRate(plan.rate) }}%</span>
-                  <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
-                    <div class="case-plan-progress" :aria-label="formatPlanProgressTooltip(plan)">
-                      <div class="case-plan-progress-fill" :style="{ width: `${normalizeRate(plan.rate)}%` }"></div>
-                    </div>
-                  </a-tooltip>
-                </div>
-                <span v-if="hiddenRecordTestPlanCount(record) > 0" class="case-progress-more">
-                  +{{ hiddenRecordTestPlanCount(record) }}
-                </span>
-              </div>
-              <span v-else>-</span>
-            </template>
-            <template #personalProgress="{ record }">
-              <div class="case-progress-item">
-                <span>{{ record.personalProgress?.executed || 0 }}/{{ record.personalProgress?.total || 0 }}</span>
-                <div
-                  class="case-personal-progress"
-                  :aria-label="`${t('caseManagement.featureCase.personalProgress')} ${
-                    record.personalProgress?.executed || 0
-                  }/${record.personalProgress?.total || 0}`"
-                >
-                  <a-tooltip
-                    v-for="segment in buildPersonalProgressSegments(record.personalProgress)"
-                    :key="segment.key"
-                    :content="segment.tooltip"
-                    position="top"
-                  >
-                    <div
-                      class="case-personal-progress-segment"
-                      :class="segment.className"
-                      :style="{ width: `${segment.rate}%` }"
-                      :aria-label="segment.tooltip"
-                    ></div>
-                  </a-tooltip>
-                </div>
-              </div>
             </template>
             <template #executeUserName="{ record }">
               <span>{{ record.executeUserName || '-' }}</span>
@@ -827,22 +829,6 @@
       showDrag: true,
     },
     {
-      title: 'caseManagement.featureCase.testPlanSummary',
-      dataIndex: 'testPlans',
-      slotName: 'testPlans',
-      showInTable: false,
-      width: 320,
-      showDrag: true,
-    },
-    {
-      title: 'caseManagement.featureCase.personalProgress',
-      dataIndex: 'personalProgress',
-      slotName: 'personalProgress',
-      showInTable: false,
-      width: 220,
-      showDrag: true,
-    },
-    {
       title: 'caseManagement.featureCase.tableColumnExecutor',
       dataIndex: 'executeUserName',
       slotName: 'executeUserName',
@@ -1197,14 +1183,6 @@
     )}%`;
   }
 
-  function visibleRecordTestPlans(record: CaseManagementTable) {
-    return (record.testPlans || []).slice(0, 2);
-  }
-
-  function hiddenRecordTestPlanCount(record: CaseManagementTable) {
-    return Math.max((record.testPlans || []).length - 2, 0);
-  }
-
   function buildPersonalProgressSegments(progress?: FunctionalCasePersonalProgress) {
     const total = Number(progress?.total || 0);
     const segments = [
@@ -1255,7 +1233,7 @@
     tableKey: TableKeyEnum.CASE_MANAGEMENT_TABLE,
     selectable: true,
     showSetting: true,
-    heightUsed: 236,
+    heightUsed: 268,
     draggable: { type: 'handle' },
     paginationSize: 'mini',
     draggableCondition: true,
@@ -1290,6 +1268,46 @@
     },
     updateCaseName
   );
+
+  const pageCaseRows = computed(() => (propsRes.value.data || []) as CaseManagementTable[]);
+
+  const pageCaseTestPlans = computed(() => {
+    const planMap = new Map<string, FunctionalCaseTestPlanOverview>();
+    pageCaseRows.value.forEach((record) => {
+      (record.testPlans || []).forEach((plan) => {
+        const key = plan.id || `${plan.num || ''}-${plan.name || ''}`;
+        if (!planMap.has(key)) {
+          planMap.set(key, plan);
+        }
+      });
+    });
+    return Array.from(planMap.values());
+  });
+
+  const pageCasePersonalProgress = computed<FunctionalCasePersonalProgress>(() => {
+    return pageCaseRows.value.reduce(
+      (total, record) => {
+        const progress = record.personalProgress;
+        total.total += Number(progress?.total || 0);
+        total.executed += Number(progress?.executed || 0);
+        total.passed += Number(progress?.passed || 0);
+        total.failed += Number(progress?.failed || 0);
+        total.blocked += Number(progress?.blocked || 0);
+        total.skipped += Number(progress?.skipped || 0);
+        total.unexecuted += Number(progress?.unexecuted || 0);
+        return total;
+      },
+      {
+        total: 0,
+        executed: 0,
+        passed: 0,
+        failed: 0,
+        blocked: 0,
+        skipped: 0,
+        unexecuted: 0,
+      }
+    );
+  });
 
   const hasUpdatePermission = computed(() => hasAnyPermission(['FUNCTIONAL_CASE:READ+UPDATE']));
 
@@ -2315,6 +2333,31 @@
   }
   :deep(.arco-radio-group) {
     display: flex;
+  }
+  .case-list-overview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    min-height: 24px;
+    margin-top: 8px;
+    padding-left: 16px;
+    color: var(--color-text-2);
+  }
+  .case-list-overview-item {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    font-size: 13px;
+  }
+  .case-list-overview-label {
+    flex: none;
+    color: rgb(var(--primary-6));
+  }
+  .case-list-overview-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    min-width: 0;
   }
   .case-progress-list {
     display: flex;

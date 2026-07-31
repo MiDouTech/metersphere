@@ -6,6 +6,7 @@ import io.metersphere.agent.mapper.AgentCaseSchemaMapper;
 import io.metersphere.functional.domain.FunctionalCase;
 import io.metersphere.functional.mapper.FunctionalCaseBlobMapper;
 import io.metersphere.functional.mapper.FunctionalCaseMapper;
+import io.metersphere.functional.service.FunctionalCaseService;
 import io.metersphere.plan.service.TestPlanFunctionalCaseService;
 import io.metersphere.sdk.exception.MSException;
 import org.apache.ibatis.session.SqlSession;
@@ -45,6 +46,10 @@ class AgentFunctionalCaseSubmitServiceTests {
     private SqlSessionFactory sqlSessionFactory;
     @Mock
     private SqlSession sqlSession;
+    @Mock
+    private FunctionalCaseService functionalCaseService;
+    @Mock
+    private AgentProjectService agentProjectService;
 
     @Test
     void mismatchedPlanFieldsShouldFailValidation() {
@@ -61,6 +66,7 @@ class AgentFunctionalCaseSubmitServiceTests {
         AgentCaseSubmitRequest request = baseRequest();
         request.setTestPlanId("plan-001");
         request.setTestPlanCaseId("relate-001");
+        when(agentProjectService.resolveProjectId("proj-001")).thenReturn("proj-001");
         when(agentCaseSchemaMapper.toStepsExecResultJson(any())).thenReturn("[{\"actualResult\":\"通过\"}]");
 
         submitService.submit(request);
@@ -87,6 +93,7 @@ class AgentFunctionalCaseSubmitServiceTests {
 
         FunctionalCase functionalCase = new FunctionalCase();
         functionalCase.setId("fc-001");
+        when(agentProjectService.resolveProjectId("proj-001")).thenReturn("proj-001");
         when(functionalCaseMapper.selectByPrimaryKey("fc-001")).thenReturn(functionalCase);
         when(agentCaseSchemaMapper.toStepsExecResultJson(any())).thenReturn("[]");
         when(agentExecLogService.log(request, "[]")).thenReturn("log-001");

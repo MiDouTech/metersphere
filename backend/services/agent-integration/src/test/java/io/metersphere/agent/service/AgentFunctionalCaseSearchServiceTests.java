@@ -52,6 +52,8 @@ class AgentFunctionalCaseSearchServiceTests {
     private AgentCaseSchemaMapper agentCaseSchemaMapper;
     @Mock
     private ModuleTreeMatcher moduleTreeMatcher;
+    @Mock
+    private AgentProjectService agentProjectService;
 
     @AfterEach
     void tearDown() {
@@ -76,6 +78,7 @@ class AgentFunctionalCaseSearchServiceTests {
         mapped.setCaseId("fc-001");
         mapped.setPriority("P0");
 
+        when(agentProjectService.resolveProjectId(null)).thenReturn("proj-001");
         when(agentQueryResolver.resolve(request, "proj-001")).thenReturn(condition);
         ModuleTreeMatcher.AgentModuleNode moduleNode = new ModuleTreeMatcher.AgentModuleNode();
         moduleNode.setId("mod-order");
@@ -113,6 +116,7 @@ class AgentFunctionalCaseSearchServiceTests {
         mapped.setCaseId("fc-001");
         mapped.setTestPlanCaseId("relate-001");
 
+        when(agentProjectService.resolveProjectId(null)).thenReturn("proj-001");
         when(agentQueryResolver.resolve(request, "proj-001")).thenReturn(condition);
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
         when(testPlanFunctionalCaseService.getFunctionalCasePage(any(), eq(false), eq("proj-001")))
@@ -140,6 +144,7 @@ class AgentFunctionalCaseSearchServiceTests {
         condition.setPriorities(List.of("P0"));
         condition.getMatchedBy().add("filter");
 
+        when(agentProjectService.resolveProjectId(null)).thenReturn("proj-001");
         when(agentQueryResolver.resolve(request, "proj-001")).thenReturn(condition);
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
         when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(false))).thenReturn(List.of());
@@ -160,6 +165,7 @@ class AgentFunctionalCaseSearchServiceTests {
         condition.getMatchedBy().add("keyword");
         condition.getWarnings().add(AgentWarningCode.MODULE_NOT_MATCHED_KEYWORD_FALLBACK);
 
+        when(agentProjectService.resolveProjectId(null)).thenReturn("proj-001");
         when(agentQueryResolver.resolve(request, "proj-001")).thenReturn(condition);
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
         when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(false))).thenReturn(List.of());
@@ -178,6 +184,7 @@ class AgentFunctionalCaseSearchServiceTests {
         dto.setId("mod-order");
         dto.setPath("订单/下单流程");
 
+        when(agentProjectService.resolveProjectId("proj-001")).thenReturn("proj-001");
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of(node));
         when(agentCaseSchemaMapper.toModuleDto(node)).thenReturn(dto);
 
@@ -203,6 +210,7 @@ class AgentFunctionalCaseSearchServiceTests {
         request.setIncludeSteps(false);
 
         ResolvedSearchCondition condition = new ResolvedSearchCondition();
+        when(agentProjectService.resolveProjectId(null)).thenReturn("proj-001");
         when(agentQueryResolver.resolve(request, "proj-001")).thenReturn(condition);
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
         when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(false))).thenReturn(List.of());

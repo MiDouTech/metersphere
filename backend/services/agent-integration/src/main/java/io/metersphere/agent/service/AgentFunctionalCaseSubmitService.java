@@ -45,10 +45,13 @@ public class AgentFunctionalCaseSubmitService {
     private SqlSessionFactory sqlSessionFactory;
     @Resource
     private FunctionalCaseService functionalCaseService;
+    @Resource
+    private AgentProjectService agentProjectService;
 
     @Transactional(rollbackFor = Exception.class)
     public void submit(AgentCaseSubmitRequest request) {
         validateSubmitRequest(request);
+        request.setProjectId(agentProjectService.resolveProjectId(request.getProjectId()));
         if (StringUtils.isNotBlank(request.getTestPlanCaseId())) {
             submitInPlan(request);
         } else {
