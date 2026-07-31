@@ -111,18 +111,41 @@ public class AgentProjectService {
     }
 
     public AgentProjectDTO get(String id) {
-        ProjectDTO project = organizationProjectService.get(id);
+        String projectId = resolveProjectId(id);
+        ProjectDTO project = organizationProjectService.get(projectId);
         if (project == null) {
             throw new MSException("Project does not exist: " + id);
         }
-        if (!accessibleProjectIds(requireUserId()).contains(id)) {
-            throw new MSException("Current user cannot access project: " + id);
-        }
-        AgentToken token = AgentTokenContext.get();
-        if (token != null && !AgentTokenProjectAccess.allows(token, id)) {
-            throw new MSException("Agent Token cannot access project: " + id);
-        }
         return toDto(project);
+    }
+
+    public String resolveProjectId(String projectIdentity) {
+        String identity = StringUtils.trimToEmpty(projectIdentity);
+        if (StringUtils.isBlank(identity)) {
+            String currentProjectId = SessionUtils.getCurrentProjectId();
+            if (StringUtils.isBlank(currentProjectId)) {
+                throw new MSException("Missing project identity. Use projectId with internal project id, UI project number, or project name.");
+            }
+            identity = currentProjectId;
+        }
+
+        String searchIdentity = identity;
+        AgentProjectSearchRequest request = new AgentProjectSearchRequest();
+        request.setKeyword(searchIdentity);
+        request.setLimit(200);
+        List<AgentProjectDTO> matched = search(request).stream()
+                .filter(project -> exactProjectMatch(project, searchIdentity))
+                .collect(Collectors.toList());
+        if (matched.isEmpty()) {
+            throw new MSException("Project not found or not accessible by current Agent Token: " + identity);
+        }
+        if (matched.size() > 1) {
+            String candidates = matched.stream()
+                    .map(project -> project.getName() + "(" + project.getNum() + ", " + project.getId() + ")")
+                    .collect(Collectors.joining(", "));
+            throw new MSException("Project identity matched multiple projects. Use internal project id. Candidates: " + candidates);
+        }
+        return matched.get(0).getId();
     }
 
     public List<AgentProjectDTO> search(AgentProjectSearchRequest request) {
@@ -209,6 +232,14 @@ public class AgentProjectService {
             return 50;
         }
         return Math.min(limit, 200);
+    }
+
+    private boolean exactProjectMatch(AgentProjectDTO project, String identity) {
+        String key = StringUtils.trimToEmpty(identity);
+        String num = project.getNum() == null ? "" : String.valueOf(project.getNum());
+        return StringUtils.equals(project.getId(), key)
+                || StringUtils.equals(num, key)
+                || StringUtils.equalsIgnoreCase(project.getName(), key);
     }
 
     private boolean matches(Project project, String keyword) {

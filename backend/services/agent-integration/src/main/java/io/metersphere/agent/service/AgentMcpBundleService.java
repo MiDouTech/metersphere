@@ -206,6 +206,7 @@ public class AgentMcpBundleService {
 
                 - Search cases before creating duplicates.
                 - When the user provides a project name or the numeric ID shown in the MeterSphere project list, call `metersphere.project.search` first. Use `metersphere.project.list` to enumerate accessible projects. The numeric UI ID maps to `project.num`; if multiple projects share the same number, return all matches and ask the user to choose.
+                - For case search, execution result submission, module creation, case creation, and batch case creation, always pass `projectId`. `projectId` may be the internal project id, the numeric UI project ID, or the exact project name; the server resolves it to the internal project id and enforces user/token project access.
                 - When submitting execution results, include exact case ID, result, step snapshots, and attachments where available.
                 - For bug creation, include reproduction steps, expected result, actual result, severity, and related case ID when known.
                 """;

@@ -56,15 +56,18 @@ public class AgentCaseWriteService {
     private AgentCaseSchemaMapper agentCaseSchemaMapper;
     @Resource
     private AgentExecLogService agentExecLogService;
+    @Resource
+    private AgentProjectService agentProjectService;
 
     public AgentModuleDTO createModule(AgentModuleCreateRequest request) {
         String userId = requireUserId();
+        String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         String moduleId;
         if (StringUtils.isNotBlank(request.getModulePath())) {
-            moduleId = resolveOrCreateModulePath(request.getProjectId(), request.getModulePath(), userId);
+            moduleId = resolveOrCreateModulePath(projectId, request.getModulePath(), userId);
         } else {
             FunctionalCaseModuleCreateRequest createRequest = new FunctionalCaseModuleCreateRequest();
-            createRequest.setProjectId(request.getProjectId());
+            createRequest.setProjectId(projectId);
             createRequest.setName(request.getName());
             createRequest.setParentId(StringUtils.defaultIfBlank(request.getParentId(), ModuleConstants.ROOT_NODE_PARENT_ID));
             moduleId = functionalCaseModuleService.add(createRequest, userId);
@@ -95,20 +98,22 @@ public class AgentCaseWriteService {
 
     public AgentCaseBatchCreateResponse batchCreate(AgentCaseBatchCreateRequest request) {
         String userId = requireUserId();
-        Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
+        String projectId = agentProjectService.resolveProjectId(request.getProjectId());
+        request.setProjectId(projectId);
+        Project project = projectMapper.selectByPrimaryKey(projectId);
         if (project == null) {
             throw new MSException("项目不存在: " + request.getProjectId());
         }
         String organizationId = project.getOrganizationId();
-        String moduleId = resolveModuleId(request.getProjectId(), request.getModuleId(), request.getModulePath(), userId);
+        String moduleId = resolveModuleId(projectId, request.getModuleId(), request.getModulePath(), userId);
         String scene = TemplateScene.FUNCTIONAL.name();
         TemplateDTO templateDTO;
         String templateId = request.getTemplateId();
         if (StringUtils.isNotBlank(templateId)) {
-            templateDTO = projectTemplateService.getTemplateDTOById(templateId, request.getProjectId(), scene);
+            templateDTO = projectTemplateService.getTemplateDTOById(templateId, projectId, scene);
         } else {
             // 未设置 ProjectApplication 默认模板时，回落到项目内置模板（与 getDefaultTemplateDTO 一致）
-            templateDTO = projectTemplateService.getDefaultTemplateDTO(request.getProjectId(), scene);
+            templateDTO = projectTemplateService.getDefaultTemplateDTO(projectId, scene);
             if (templateDTO == null || StringUtils.isBlank(templateDTO.getId())) {
                 throw new MSException("项目未配置功能用例默认模板");
             }
@@ -119,7 +124,7 @@ public class AgentCaseWriteService {
         boolean failFast = Boolean.TRUE.equals(request.getFailFast());
         for (AgentCaseCreateItem item : request.getCases()) {
             try {
-                FunctionalCase created = createOne(request.getProjectId(), organizationId, moduleId, templateId, templateDTO, item, userId);
+                FunctionalCase created = createOne(projectId, organizationId, moduleId, templateId, templateDTO, item, userId);
                 AgentCaseBatchCreateResponse.CreatedCase createdCase = new AgentCaseBatchCreateResponse.CreatedCase();
                 createdCase.setCaseId(created.getId());
                 createdCase.setNum(created.getNum());
@@ -136,7 +141,7 @@ public class AgentCaseWriteService {
                 }
             }
         }
-        agentExecLogService.audit("CASE_BATCH_CREATE", request.getProjectId(),
+        agentExecLogService.audit("CASE_BATCH_CREATE", projectId,
                 JSON.toJSONString(response));
         return response;
     }

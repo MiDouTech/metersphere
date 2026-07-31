@@ -47,10 +47,12 @@ public class AgentFunctionalCaseSearchService {
     private AgentCaseSchemaMapper agentCaseSchemaMapper;
     @Resource
     private ModuleTreeMatcher moduleTreeMatcher;
+    @Resource
+    private AgentProjectService agentProjectService;
 
     public AgentCaseSearchResponse search(AgentCaseSearchRequest request) {
         validateSearchRequest(request);
-        String projectId = requireProjectId();
+        String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         ResolvedSearchCondition condition = agentQueryResolver.resolve(request, projectId);
         Map<String, String> modulePathMap = buildModulePathMap(projectId);
 
@@ -105,7 +107,8 @@ public class AgentFunctionalCaseSearchService {
     }
 
     public List<AgentModuleDTO> listModules(String projectId) {
-        return moduleTreeMatcher.flatten(projectId).stream()
+        String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
+        return moduleTreeMatcher.flatten(resolvedProjectId).stream()
                 .map(agentCaseSchemaMapper::toModuleDto)
                 .collect(Collectors.toList());
     }

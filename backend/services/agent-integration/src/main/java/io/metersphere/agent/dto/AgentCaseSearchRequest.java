@@ -8,6 +8,9 @@ import lombok.Data;
 
 @Data
 public class AgentCaseSearchRequest {
+    @Schema(description = "项目标识；支持内部项目 ID、页面显示的项目编号或项目名称。为空时使用 Agent Token 当前项目上下文")
+    private String projectId;
+
     @Schema(description = "自然语言检索片段")
     private String query;
 
