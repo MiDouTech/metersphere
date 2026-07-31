@@ -389,21 +389,6 @@
       showInTable: true,
     },
     {
-      title: 'bugManagement.numberOfCase',
-      dataIndex: 'relationCaseCount',
-      slotName: 'relationCaseCount',
-      width: 80,
-      showDrag: true,
-      showInTable: true,
-    },
-    {
-      title: 'bugManagement.belongPlatform',
-      width: 100,
-      showDrag: true,
-      dataIndex: 'platform',
-      showInTable: true,
-    },
-    {
       title: 'bugManagement.tag',
       showDrag: true,
       isStringTag: true,
@@ -464,6 +449,21 @@
         sorter: true,
       },
       showInTable: true,
+    },
+    {
+      title: 'bugManagement.belongPlatform',
+      width: 100,
+      showDrag: true,
+      dataIndex: 'platform',
+      showInTable: false,
+    },
+    {
+      title: 'bugManagement.numberOfCase',
+      dataIndex: 'relationCaseCount',
+      slotName: 'relationCaseCount',
+      width: 80,
+      showDrag: true,
+      showInTable: false,
     },
     {
       title: 'common.operation',
@@ -984,26 +984,47 @@
   });
 
   let customColumns: MsTableColumn = [];
+
+  /** 缺陷列表默认展示的自定义字段（与表格设置预览一致） */
+  const DEFAULT_VISIBLE_CUSTOM_FIELD_TITLES = [
+    ['严重程度', 'Bug Degree'],
+    ['优先级', 'Priority'],
+    ['缺陷类型', 'Bug Type'],
+    ['责任人', 'Responsible person', 'Responsible Person'],
+  ];
+
+  function isDefaultVisibleCustomField(title?: string): boolean {
+    if (!title) return false;
+    return DEFAULT_VISIBLE_CUSTOM_FIELD_TITLES.some((aliases) => aliases.includes(title));
+  }
+
+  function defaultVisibleCustomFieldOrder(title?: string): number {
+    if (!title) return DEFAULT_VISIBLE_CUSTOM_FIELD_TITLES.length;
+    const idx = DEFAULT_VISIBLE_CUSTOM_FIELD_TITLES.findIndex((aliases) => aliases.includes(title));
+    return idx >= 0 ? idx : DEFAULT_VISIBLE_CUSTOM_FIELD_TITLES.length;
+  }
+
   async function getColumnHeaders() {
     try {
       customColumns = await getCustomFieldColumns();
       customColumns.forEach((item) => {
-        // 目前自定义字段的过滤只支持严重程度
+        const visible = isDefaultVisibleCustomField(item.title as string);
+        item.showInTable = visible;
         if (item.title === '严重程度' || item.title === 'Bug Degree') {
-          item.showInTable = true;
           item.slotName = 'severity';
           item.filterConfig = {
             options: item.options || [],
             labelKey: 'text',
           };
-        } else {
-          item.showInTable = false;
         }
         if (item.type === 'RICH_TEXT') {
           item.slotName = item.dataIndex;
           item.showTooltip = false;
         }
       });
+      customColumns.sort(
+        (a, b) => defaultVisibleCustomFieldOrder(a.title as string) - defaultVisibleCustomFieldOrder(b.title as string)
+      );
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -1014,10 +1035,18 @@
     return customColumns.filter((item) => item.type === 'RICH_TEXT');
   });
 
+  function buildBugListColumns(): MsTableColumn {
+    const handleUserIndex = columns.findIndex((item) => item.dataIndex === 'handleUser');
+    if (handleUserIndex < 0) {
+      return columns.concat(customColumns);
+    }
+    return [...columns.slice(0, handleUserIndex + 1), ...customColumns, ...columns.slice(handleUserIndex + 1)];
+  }
+
   await getColumnHeaders();
   await initFilterOptions();
   await initPlatformOption();
-  await tableStore.initColumn(TableKeyEnum.BUG_MANAGEMENT, columns.concat(customColumns), 'drawer');
+  await tableStore.initColumn(TableKeyEnum.BUG_MANAGEMENT, buildBugListColumns(), 'drawer');
 
   function mountedLoad() {
     setLoadListParams({ projectId: projectId.value });
