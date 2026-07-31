@@ -94,7 +94,7 @@
               {{ item.text }}
             </a-option>
           </a-select>
-          <span v-else class="bug-status-pill" :class="getBugStatusClass(record.statusName || record.status)">
+          <span v-else class="bug-status-button" :class="getBugStatusClass(record.statusName || record.status)">
             {{ record.statusName || '-' }}
           </span>
         </template>
@@ -228,7 +228,7 @@
   import { NAV_NAVIGATION } from '@/config/workbench';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
-  import type { ModuleRefreshContext, ModuleRefreshResult } from '@/hooks/useModuleRefresh';
+  import type { ModuleRefreshResult } from '@/hooks/useModuleRefresh';
   import router from '@/router';
   import { useAppStore, useTableStore } from '@/store';
   import { customFieldDataToTableData, customFieldToColumns, downloadByteFile } from '@/utils';
@@ -547,18 +547,35 @@
 
   function getBugStatusClass(status?: string) {
     const normalizedStatus = String(status || '').toLowerCase();
-    if (normalizedStatus.includes('新建') || normalizedStatus.includes('new')) {
+    if (
+      normalizedStatus.includes('新建') ||
+      normalizedStatus.includes('待处理') ||
+      normalizedStatus.includes('open') ||
+      normalizedStatus.includes('new')
+    ) {
       return 'is-new';
     }
-    if (normalizedStatus.includes('处理') || normalizedStatus.includes('process')) {
+    if (
+      normalizedStatus.includes('处理中') ||
+      normalizedStatus.includes('处理') ||
+      normalizedStatus.includes('进行中') ||
+      normalizedStatus.includes('process') ||
+      normalizedStatus.includes('progress')
+    ) {
       return 'is-processing';
     }
-    if (normalizedStatus.includes('解决') || normalizedStatus.includes('resolved')) {
+    if (
+      normalizedStatus.includes('已解决') ||
+      normalizedStatus.includes('解决') ||
+      normalizedStatus.includes('resolved') ||
+      normalizedStatus.includes('fixed')
+    ) {
       return 'is-resolved';
     }
     if (
-      normalizedStatus.includes('非缺陷') ||
+      normalizedStatus.includes('已关闭') ||
       normalizedStatus.includes('关闭') ||
+      normalizedStatus.includes('非缺陷') ||
       normalizedStatus.includes('closed') ||
       normalizedStatus.includes('invalid')
     ) {
@@ -1031,7 +1048,7 @@
     }
   }
 
-  async function refreshModule(_context: ModuleRefreshContext): Promise<ModuleRefreshResult> {
+  async function refreshModule(): Promise<ModuleRefreshResult> {
     await Promise.allSettled([setCurrentPlatform(), setExportOptionData(), fetchData()]);
     return {
       refreshedAt: Date.now(),
@@ -1047,7 +1064,7 @@
   });
 
   onActivated(() => {
-    refreshModule({ reason: 'activated', preserveViewState: true });
+    refreshModule();
   });
 
   onDeactivated(() => {
@@ -1070,57 +1087,70 @@
     margin: 0 8px;
   }
   .bug-status-inline-select {
-    width: 92px;
+    width: 86px;
     :deep(.arco-select-view-single) {
-      height: 26px;
+      padding: 0 10px;
+      height: 28px;
       font-weight: 500;
-      border-color: transparent;
-      border-radius: 4px;
+      border-width: 1px;
+      border-radius: var(--border-radius-small);
+      box-shadow: none;
     }
     :deep(.arco-select-view-suffix) {
       opacity: 0.7;
     }
     &.is-new :deep(.arco-select-view-single) {
+      border-color: rgb(var(--primary-2));
       color: rgb(var(--primary-6));
       background: var(--color-primary-light-1);
     }
     &.is-processing :deep(.arco-select-view-single) {
+      border-color: rgb(var(--warning-2));
       color: rgb(var(--warning-7));
       background: rgb(var(--warning-1));
     }
     &.is-resolved :deep(.arco-select-view-single) {
+      border-color: rgb(var(--success-2));
       color: rgb(var(--success-7));
       background: rgb(var(--success-1));
     }
     &.is-muted :deep(.arco-select-view-single),
     &.is-default :deep(.arco-select-view-single) {
+      border-color: var(--color-border-2);
       color: var(--color-text-2);
       background: var(--color-fill-2);
     }
   }
-  .bug-status-pill {
+  .bug-status-button {
     display: inline-flex;
+    justify-content: center;
     align-items: center;
-    padding: 0 10px;
-    min-height: 26px;
+    padding: 0 12px;
+    min-width: 62px;
+    min-height: 28px;
     font-size: 12px;
     font-weight: 500;
-    border-radius: 4px;
+    border: 1px solid transparent;
+    border-radius: var(--border-radius-small);
     line-height: 26px;
     &.is-new {
+      border-color: rgb(var(--primary-2));
       color: rgb(var(--primary-6));
       background: var(--color-primary-light-1);
     }
     &.is-processing {
+      border-color: rgb(var(--warning-2));
       color: rgb(var(--warning-7));
       background: rgb(var(--warning-1));
     }
     &.is-resolved {
+      border-color: rgb(var(--success-2));
       color: rgb(var(--success-7));
       background: rgb(var(--success-1));
     }
     &.is-muted,
     &.is-default {
+      border-color: var(--color-border-2);
       color: var(--color-text-2);
       background: var(--color-fill-2);
     }

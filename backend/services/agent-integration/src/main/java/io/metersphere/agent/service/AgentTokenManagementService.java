@@ -165,25 +165,6 @@ public class AgentTokenManagementService {
         changePersonalEnable(id, false);
     }
 
-    public AgentTokenCreateResponse rotatePersonal(String id) {
-        AgentToken existing = requirePersonalToken(id);
-        GeneratedToken generatedToken = generateRawToken(existing.getPublicId());
-        AgentToken update = new AgentToken();
-        update.setId(id);
-        applyGeneratedToken(update, generatedToken);
-        update.setTokenVersion(2);
-        agentTokenMapper.updateSecret(update);
-
-        AgentTokenCreateResponse response = new AgentTokenCreateResponse();
-        response.setId(existing.getId());
-        response.setName(existing.getName());
-        response.setToken(generatedToken.rawToken());
-        response.setScopes(existing.getScopes());
-        response.setExpireTime(existing.getExpireTime());
-        response.setWarning("Token rotated. The plaintext is shown only once. Update all Agent/MCP clients immediately.");
-        return response;
-    }
-
     public void deletePersonal(String id) {
         requirePersonalToken(id);
         delete(id);

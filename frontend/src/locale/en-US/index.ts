@@ -119,7 +119,7 @@ export default {
       'Download the skill pack for your AI (e.g. Cursor) so it can call this platform’s Agent/MCP APIs. On the platform you only need: download the pack + create a Token.',
     'system.agentIntegration.mcpVersion': 'Bundle version {version}',
     'system.agentIntegration.mcpUnavailable': 'Skill pack unavailable; ask admin to repack and redeploy',
-    'system.agentIntegration.mcpDownload': 'Download skill pack',
+    'system.agentIntegration.mcpDownload': 'Download MCP skill pack',
     'system.agentIntegration.mcpDownloadSuccess': 'Skill pack download started',
     'system.agentIntegration.mcpHint':
       'The skill pack teaches AI to connect to the remote MCP service and never contains your Token. Create a Token, then copy the MCP config to your client.',
@@ -152,13 +152,14 @@ export default {
     'system.agentIntegration.scopeFunctionalSubmit': 'Submit test results',
     'system.agentIntegration.scopeFunctionalSubmitDesc': 'Only submit execution results and execution attachments.',
     'system.agentIntegration.myTokens': 'My Agent Tokens',
-    'system.agentIntegration.myTokensDesc':
-      'Create and manage only your own Agent Tokens. Tokens cannot manage other tokens.',
+    'system.agentIntegration.myTokensDesc': 'Users can manage only the Tokens they created.',
+    'system.agentIntegration.myTokensSecretTip':
+      'The Token secret is shown only once after creation. Copy and store it immediately. If lost, create a new Token and disable or delete the old one.',
+    'system.agentIntegration.tokenSettings': 'Settings',
     'system.agentIntegration.clientType': 'Client',
     'system.agentIntegration.displayPrefix': 'Token Prefix',
     'system.agentIntegration.lastUsedAt': 'Last Used At',
     'system.agentIntegration.invocationCount': 'Calls',
-    'system.agentIntegration.rotate': 'Rotate',
     'system.agentIntegration.clientOther': 'Other MCP',
     'system.agentIntegration.fullToken': 'Full Token',
     'system.agentIntegration.copyToken': 'Copy Token',
