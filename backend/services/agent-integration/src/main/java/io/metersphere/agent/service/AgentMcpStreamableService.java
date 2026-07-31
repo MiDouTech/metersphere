@@ -133,6 +133,10 @@ public class AgentMcpStreamableService {
                         "Search projects by internal project id, project name, or project number shown as ID in the UI. Returns all matched projects, including projects with the same number.",
                         AgentTokenScope.FUNCTIONAL_READ,
                         objectSchema(Map.of("keyword", stringSchema(), "limit", Map.of("type", "integer", "minimum", 1, "maximum", 200)), List.of())),
+                tool("metersphere.project.list",
+                        "List projects accessible to the current Agent Token user. Optional keyword matches project number shown as ID in the UI or project name.",
+                        AgentTokenScope.FUNCTIONAL_READ,
+                        objectSchema(Map.of("keyword", stringSchema(), "limit", Map.of("type", "integer", "minimum", 1, "maximum", 200)), List.of())),
                 tool("metersphere.project.get", "Get project detail", AgentTokenScope.FUNCTIONAL_READ,
                         objectSchema(Map.of("projectId", stringSchema()), List.of("projectId"))),
                 tool("metersphere.test_plan.create", "Create test plan", AgentTokenScope.PLAN_WRITE,
@@ -233,6 +237,10 @@ public class AgentMcpStreamableService {
                 yield Map.of("ok", true);
             }
             case "metersphere.project.search" -> {
+                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
+                yield agentProjectService.search(convert(arguments, AgentProjectSearchRequest.class));
+            }
+            case "metersphere.project.list" -> {
                 AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
                 yield agentProjectService.search(convert(arguments, AgentProjectSearchRequest.class));
             }

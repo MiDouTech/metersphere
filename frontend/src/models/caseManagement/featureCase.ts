@@ -69,6 +69,7 @@ export interface FunctionalCaseTestPlanOverview {
   status?: string;
   archived?: boolean;
   executed: number;
+  passed: number;
   total: number;
   rate: number;
   updateTime?: number;

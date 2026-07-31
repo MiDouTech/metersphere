@@ -830,7 +830,7 @@
       title: 'caseManagement.featureCase.testPlanSummary',
       dataIndex: 'testPlans',
       slotName: 'testPlans',
-      showInTable: true,
+      showInTable: false,
       width: 320,
       showDrag: true,
     },
@@ -838,7 +838,7 @@
       title: 'caseManagement.featureCase.personalProgress',
       dataIndex: 'personalProgress',
       slotName: 'personalProgress',
-      showInTable: true,
+      showInTable: false,
       width: 220,
       showDrag: true,
     },
@@ -1188,9 +1188,13 @@
   }
 
   function formatPlanProgressTooltip(plan: FunctionalCaseTestPlanOverview) {
-    return `${t('caseManagement.featureCase.testPlanSummary')}：${formatOverviewTitle(plan.name, plan.num, plan.id)}，${
-      plan.executed || 0
-    }/${plan.total || 0}，${normalizeRate(plan.rate)}%`;
+    return `${t('caseManagement.featureCase.testPlanSummary')}: ${formatOverviewTitle(
+      plan.name,
+      plan.num,
+      plan.id
+    )}, ${t('caseManagement.caseReview.passRate')}: ${plan.passed || 0}/${plan.total || 0}, ${normalizeRate(
+      plan.rate
+    )}%`;
   }
 
   function visibleRecordTestPlans(record: CaseManagementTable) {

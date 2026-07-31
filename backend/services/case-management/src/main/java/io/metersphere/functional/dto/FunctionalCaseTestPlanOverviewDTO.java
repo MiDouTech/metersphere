@@ -27,6 +27,9 @@ public class FunctionalCaseTestPlanOverviewDTO {
     @Schema(description = "计划内已执行用例数")
     private Long executed;
 
+    @Schema(description = "Passed cases in the test plan")
+    private Long passed;
+
     @Schema(description = "计划内用例总数")
     private Long total;
 
