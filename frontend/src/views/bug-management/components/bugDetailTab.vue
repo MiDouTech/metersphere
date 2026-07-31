@@ -133,19 +133,6 @@
           <!-- 本地文件 -->
           <div v-if="item.local || item.status === 'init'" class="flex items-center font-normal">
             <MsButton
-              v-if="item.status !== 'init' && item.status !== 'uploading' && item.file.type.includes('image')"
-              type="button"
-              status="primary"
-              class="!mx-0"
-              @click="handlePreview(item)"
-            >
-              {{ t('ms.upload.preview') }}
-            </MsButton>
-            <a-divider
-              v-if="item.status !== 'init' && item.status !== 'uploading' && item.file.type.includes('image')"
-              direction="vertical"
-            />
-            <MsButton
               v-if="item.status === 'done' && hasAnyPermission(['PROJECT_BUG:READ+UPDATE'])"
               type="button"
               status="primary"
@@ -190,17 +177,6 @@
           </div>
           <!-- 关联文件 -->
           <div v-else class="flex items-center font-normal">
-            <MsButton
-              v-if="item.status !== 'init' && item.file.type.includes('image')"
-              type="button"
-              status="primary"
-              class="!mx-0"
-              @click="handlePreview(item)"
-            >
-              {{ t('ms.upload.preview') }}
-            </MsButton>
-            <a-divider v-if="item.status !== 'init' && item.file.type.includes('image')" direction="vertical" />
-
             <MsButton
               v-if="item.status === 'done'"
               type="button"

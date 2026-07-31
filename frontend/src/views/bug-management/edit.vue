@@ -60,21 +60,12 @@
           :init-file-save-tips="t('ms.upload.waiting_save')"
           mode="static"
           :show-delete="false"
+          :handle-view="handlePreview"
           :file-name-max-width="props.fileNameMaxWidth"
         >
           <template #actions="{ item }">
             <!-- 本地文件 -->
             <div v-if="item.local || item.status === 'init'" class="flex items-center font-normal">
-              <MsButton
-                v-if="item.status !== 'init' && item.file.type.includes('image')"
-                type="button"
-                status="primary"
-                class="!mx-0"
-                @click="handlePreview(item)"
-              >
-                {{ t('ms.upload.preview') }}
-              </MsButton>
-              <a-divider v-if="item.status !== 'init' && item.file.type.includes('image')" direction="vertical" />
               <MsButton
                 v-if="item.status !== 'init'"
                 type="button"
@@ -116,16 +107,6 @@
             </div>
             <!-- 关联文件 -->
             <div v-else class="flex items-center font-normal">
-              <MsButton
-                v-if="item.status !== 'init' && item.file.type.includes('image')"
-                type="button"
-                status="primary"
-                class="!mx-0"
-                @click="handlePreview(item)"
-              >
-                {{ t('ms.upload.preview') }}
-              </MsButton>
-              <a-divider v-if="item.status !== 'init' && item.file.type.includes('image')" direction="vertical" />
               <MsButton v-if="bugId" type="button" status="primary" class="!mx-0" @click="downloadFile(item)">
                 {{ t('common.download') }}
               </MsButton>

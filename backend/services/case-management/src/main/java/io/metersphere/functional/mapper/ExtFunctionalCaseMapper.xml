@@ -118,9 +118,10 @@
             CASE WHEN tp.status = 'ARCHIVED' THEN true ELSE false END AS archived,
             COALESCE(COUNT(tpfc.id), 0) AS total,
             COALESCE(SUM(CASE WHEN tpfc.last_exec_result IS NOT NULL AND tpfc.last_exec_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END), 0) AS executed,
+            COALESCE(SUM(CASE WHEN tpfc.last_exec_result = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS passed,
             CASE
                 WHEN COUNT(tpfc.id) = 0 THEN 0
-                ELSE ROUND(SUM(CASE WHEN tpfc.last_exec_result IS NOT NULL AND tpfc.last_exec_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END) * 100 / COUNT(tpfc.id))
+                ELSE ROUND(SUM(CASE WHEN tpfc.last_exec_result = 'SUCCESS' THEN 1 ELSE 0 END) * 100 / COUNT(tpfc.id))
             END AS rate,
             tp.update_time AS updateTime
         FROM test_plan tp
@@ -144,9 +145,10 @@
             CASE WHEN tp.status = 'ARCHIVED' THEN true ELSE false END AS archived,
             COALESCE(COUNT(tpfc.id), 0) AS total,
             COALESCE(SUM(CASE WHEN tpfc.last_exec_result IS NOT NULL AND tpfc.last_exec_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END), 0) AS executed,
+            COALESCE(SUM(CASE WHEN tpfc.last_exec_result = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS passed,
             CASE
                 WHEN COUNT(tpfc.id) = 0 THEN 0
-                ELSE ROUND(SUM(CASE WHEN tpfc.last_exec_result IS NOT NULL AND tpfc.last_exec_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END) * 100 / COUNT(tpfc.id))
+                ELSE ROUND(SUM(CASE WHEN tpfc.last_exec_result = 'SUCCESS' THEN 1 ELSE 0 END) * 100 / COUNT(tpfc.id))
             END AS rate,
             tp.update_time AS updateTime
         FROM (

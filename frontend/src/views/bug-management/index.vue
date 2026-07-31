@@ -81,7 +81,19 @@
           </a-button>
         </template>
         <template #statusName="{ record }">
-          {{ record.statusName || '-' }}
+          <a-select
+            v-if="canEditBugStatus(record)"
+            :model-value="record.status"
+            :loading="statusUpdatingIds.includes(record.id)"
+            size="mini"
+            class="bug-status-inline-select"
+            @change="handleStatusChange(record, $event as string)"
+          >
+            <a-option v-for="item in statusOption" :key="item.value" :value="item.value">
+              {{ item.text }}
+            </a-option>
+          </a-select>
+          <span v-else>{{ record.statusName || '-' }}</span>
         </template>
         <template #handleUserTitle>
           <div class="flex items-center text-[var(--color-text-3)]">
@@ -207,6 +219,7 @@
     getPlatform,
     getSyncStatus,
     syncBugEnterprise,
+    updateBug,
   } from '@/api/modules/bug-management';
   import { getPlatformOptions } from '@/api/modules/project-management/menuManagement';
   import { NAV_NAVIGATION } from '@/config/workbench';
@@ -518,7 +531,62 @@
   };
 
   const statusOption = ref<BugOptionItem[]>([]);
+  const statusUpdatingIds = ref<string[]>([]);
   const handleUserOption = ref<BugOptionItem[]>([]);
+
+  function canEditBugStatus(record: TableData) {
+    return (
+      hasAnyPermission(['PROJECT_BUG:READ+UPDATE']) &&
+      currentPlatform.value === record.platform &&
+      statusOption.value.length > 0
+    );
+  }
+
+  async function handleStatusChange(record: TableData, status: string) {
+    if (!status || status === record.status || statusUpdatingIds.value.includes(record.id)) {
+      return;
+    }
+    const previousStatus = record.status;
+    const previousStatusName = record.statusName;
+    const nextStatusName = statusOption.value.find((item) => item.value === status)?.text || status;
+    statusUpdatingIds.value = [...statusUpdatingIds.value, record.id];
+    record.status = status;
+    record.statusName = nextStatusName;
+    try {
+      await updateBug({
+        request: {
+          id: record.id,
+          projectId: projectId.value,
+          templateId: record.templateId,
+          title: record.title,
+          description: record.description,
+          tags: record.tags || [],
+          customFields: [
+            {
+              id: 'status',
+              value: status,
+            },
+            {
+              id: 'handleUser',
+              value: record.handleUser,
+            },
+          ],
+          deleteLocalFileIds: [],
+          unLinkRefIds: [],
+          linkFileIds: [],
+          richTextTmpFileIds: [],
+        },
+        fileList: [] as unknown as File[],
+      });
+      Message.success(t('common.editSuccess'));
+      fetchData();
+    } catch (error) {
+      record.status = previousStatus;
+      record.statusName = previousStatusName;
+    } finally {
+      statusUpdatingIds.value = statusUpdatingIds.value.filter((id) => id !== record.id);
+    }
+  }
 
   const platformOption = ref<PoolOption[]>([]);
   const initPlatformOption = async () => {
@@ -975,5 +1043,8 @@
 <style lang="less" scoped>
   :deep(.arco-divider-vertical) {
     margin: 0 8px;
+  }
+  .bug-status-inline-select {
+    width: 92px;
   }
 </style>
