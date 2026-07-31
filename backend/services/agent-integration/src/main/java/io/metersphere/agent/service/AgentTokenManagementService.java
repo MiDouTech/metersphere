@@ -8,13 +8,17 @@ import io.metersphere.agent.dto.AgentTokenPageRequest;
 import io.metersphere.agent.dto.AgentTokenUpdateRequest;
 import io.metersphere.agent.security.AgentTokenProjectAccess;
 import io.metersphere.project.domain.Project;
+import io.metersphere.project.domain.ProjectExample;
 import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.domain.AgentToken;
 import io.metersphere.system.domain.User;
+import io.metersphere.system.domain.UserRoleRelation;
+import io.metersphere.system.domain.UserRoleRelationExample;
 import io.metersphere.system.mapper.AgentTokenMapper;
 import io.metersphere.system.mapper.ExtUserMapper;
 import io.metersphere.system.mapper.UserMapper;
+import io.metersphere.system.mapper.UserRoleRelationMapper;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
@@ -23,19 +27,25 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentTokenManagementService {
+    private static final BCryptPasswordEncoder TOKEN_SECRET_ENCODER = new BCryptPasswordEncoder(12);
+
     @Resource
     private AgentTokenMapper agentTokenMapper;
     @Resource
@@ -44,6 +54,8 @@ public class AgentTokenManagementService {
     private ExtUserMapper extUserMapper;
     @Resource
     private ProjectMapper projectMapper;
+    @Resource
+    private UserRoleRelationMapper userRoleRelationMapper;
 
     public AgentTokenCreateResponse create(AgentTokenCreateRequest request) {
         String inputUser = StringUtils.isNotBlank(request.getUserId())
@@ -85,6 +97,7 @@ public class AgentTokenManagementService {
 
     public AgentTokenCreateResponse createPersonal(AgentTokenCreateRequest request) {
         request.setUserId(SessionUtils.getUserId());
+        validatePersonalProjectAccess(normalizeProjectIds(request.getProjectIds(), request.getProjectId()));
         return create(request);
     }
 
@@ -138,6 +151,9 @@ public class AgentTokenManagementService {
 
     public void updatePersonal(AgentTokenUpdateRequest request) {
         AgentToken existing = requirePersonalToken(request.getId());
+        if (request.getProjectIds() != null || request.getProjectId() != null) {
+            validatePersonalProjectAccess(normalizeProjectIds(request.getProjectIds(), request.getProjectId()));
+        }
         update(request);
     }
 
@@ -206,8 +222,8 @@ public class AgentTokenManagementService {
 
     private void applyGeneratedToken(AgentToken token, GeneratedToken generatedToken) {
         token.setPublicId(generatedToken.publicId());
-        token.setTokenHash(DigestUtils.sha256Hex(generatedToken.rawToken()));
-        token.setSecretHash(DigestUtils.sha256Hex(generatedToken.secret()));
+        token.setTokenHash(DigestUtils.sha256Hex(UUID.randomUUID().toString() + generatedToken.publicId()));
+        token.setSecretHash(TOKEN_SECRET_ENCODER.encode(generatedToken.secret()));
         token.setDisplayPrefix(StringUtils.left(generatedToken.rawToken(), 20) + "...");
     }
 
@@ -285,6 +301,46 @@ public class AgentTokenManagementService {
                 throw new MSException("项目不存在: " + projectId);
             }
         }
+    }
+
+    private void validatePersonalProjectAccess(List<String> projectIds) {
+        if (CollectionUtils.isEmpty(projectIds)) {
+            return;
+        }
+        Set<String> accessibleProjectIds = accessibleProjectIds(SessionUtils.getUserId());
+        List<String> denied = projectIds.stream()
+                .filter(projectId -> !accessibleProjectIds.contains(projectId))
+                .toList();
+        if (CollectionUtils.isNotEmpty(denied)) {
+            throw new MSException("Current user cannot create Agent Token for projects: " + StringUtils.join(denied, ","));
+        }
+    }
+
+    private Set<String> accessibleProjectIds(String userId) {
+        UserRoleRelationExample relationExample = new UserRoleRelationExample();
+        relationExample.createCriteria().andUserIdEqualTo(userId);
+        List<UserRoleRelation> relations = userRoleRelationMapper.selectByExample(relationExample);
+        if (CollectionUtils.isEmpty(relations)) {
+            return new LinkedHashSet<>();
+        }
+        List<String> sourceIds = relations.stream()
+                .map(UserRoleRelation::getSourceId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(sourceIds)) {
+            return new LinkedHashSet<>();
+        }
+
+        Map<String, Project> merged = new LinkedHashMap<>();
+        ProjectExample projectById = new ProjectExample();
+        projectById.createCriteria().andIdIn(sourceIds).andDeletedEqualTo(false);
+        projectMapper.selectByExample(projectById).forEach(project -> merged.put(project.getId(), project));
+
+        ProjectExample projectByOrg = new ProjectExample();
+        projectByOrg.createCriteria().andOrganizationIdIn(sourceIds).andDeletedEqualTo(false);
+        projectMapper.selectByExample(projectByOrg).forEach(project -> merged.put(project.getId(), project));
+        return new LinkedHashSet<>(merged.keySet());
     }
 
     private AgentTokenListItemDTO toListItem(AgentToken source) {

@@ -6,10 +6,13 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AgentTokenService {
+    private static final BCryptPasswordEncoder TOKEN_SECRET_ENCODER = new BCryptPasswordEncoder(12);
+
     @Resource
     private AgentTokenMapper agentTokenMapper;
 
@@ -74,9 +77,21 @@ public class AgentTokenService {
             return null;
         }
         AgentToken token = agentTokenMapper.selectByPublicId(parts[1]);
-        if (token == null || !StringUtils.equals(token.getSecretHash(), DigestUtils.sha256Hex(parts[2]))) {
+        if (token == null || !matchesV2Secret(parts[2], token.getSecretHash())) {
             return null;
         }
         return token;
+    }
+
+    private boolean matchesV2Secret(String rawSecret, String storedHash) {
+        if (StringUtils.isAnyBlank(rawSecret, storedHash)) {
+            return false;
+        }
+        if (StringUtils.startsWith(storedHash, "$2a$")
+                || StringUtils.startsWith(storedHash, "$2b$")
+                || StringUtils.startsWith(storedHash, "$2y$")) {
+            return TOKEN_SECRET_ENCODER.matches(rawSecret, storedHash);
+        }
+        return StringUtils.equals(storedHash, DigestUtils.sha256Hex(rawSecret));
     }
 }

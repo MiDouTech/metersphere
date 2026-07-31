@@ -3,8 +3,11 @@ package io.metersphere.agent.service;
 import io.metersphere.agent.dto.AgentProjectAddMembersRequest;
 import io.metersphere.agent.dto.AgentProjectCreateRequest;
 import io.metersphere.agent.dto.AgentProjectDTO;
+import io.metersphere.agent.dto.AgentProjectSearchRequest;
 import io.metersphere.agent.security.AgentTokenContext;
+import io.metersphere.agent.security.AgentTokenProjectAccess;
 import io.metersphere.project.domain.Project;
+import io.metersphere.project.domain.ProjectExample;
 import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.sdk.constants.InternalUserRole;
 import io.metersphere.sdk.exception.MSException;
@@ -22,14 +25,21 @@ import io.metersphere.system.service.OrganizationProjectService;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
@@ -54,7 +64,6 @@ public class AgentProjectService {
         add.setName(request.getName());
         add.setDescription(request.getDescription());
         add.setUserIds(request.getUserIds());
-        // 未指定模块时默认开启用例/缺陷/计划/接口，避免空 moduleSetting 影响后续写闭环
         List<String> moduleIds = request.getModuleIds();
         if (CollectionUtils.isEmpty(moduleIds)) {
             moduleIds = List.of("caseManagement", "bugManagement", "testPlan", "apiTest");
@@ -80,14 +89,13 @@ public class AgentProjectService {
         String userId = requireUserId();
         Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
         if (project == null) {
-            throw new MSException("项目不存在: " + request.getProjectId());
+            throw new MSException("Project does not exist: " + request.getProjectId());
         }
         assertOrgAccessible(project.getOrganizationId(), userId);
 
         ProjectAddMemberRequest memberRequest = new ProjectAddMemberRequest();
         memberRequest.setProjectId(request.getProjectId());
         memberRequest.setUserIds(request.getUserIds());
-        // CommonProjectService.addProjectUser 对 userRoleIds 不做空保护；未传时默认项目成员
         List<String> roleIds = request.getUserRoleIds();
         if (CollectionUtils.isEmpty(roleIds)) {
             roleIds = Collections.singletonList(InternalUserRole.PROJECT_MEMBER.getValue());
@@ -105,28 +113,61 @@ public class AgentProjectService {
     public AgentProjectDTO get(String id) {
         ProjectDTO project = organizationProjectService.get(id);
         if (project == null) {
-            throw new MSException("项目不存在: " + id);
+            throw new MSException("Project does not exist: " + id);
+        }
+        if (!accessibleProjectIds(requireUserId()).contains(id)) {
+            throw new MSException("Current user cannot access project: " + id);
+        }
+        AgentToken token = AgentTokenContext.get();
+        if (token != null && !AgentTokenProjectAccess.allows(token, id)) {
+            throw new MSException("Agent Token cannot access project: " + id);
         }
         return toDto(project);
+    }
+
+    public List<AgentProjectDTO> search(AgentProjectSearchRequest request) {
+        String keyword = StringUtils.trimToEmpty(request == null ? null : request.getKeyword());
+        int limit = normalizeLimit(request == null ? null : request.getLimit());
+        Set<String> candidateIds = accessibleProjectIds(requireUserId());
+
+        AgentToken token = AgentTokenContext.get();
+        List<String> tokenProjectIds = AgentTokenProjectAccess.parseProjectIds(token);
+        if (CollectionUtils.isNotEmpty(tokenProjectIds)) {
+            candidateIds.retainAll(new LinkedHashSet<>(tokenProjectIds));
+        }
+        if (candidateIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        ProjectExample example = new ProjectExample();
+        example.createCriteria().andIdIn(new ArrayList<>(candidateIds)).andDeletedEqualTo(false);
+        List<Project> projects = projectMapper.selectByExample(example);
+
+        return projects.stream()
+                .filter(project -> matches(project, keyword))
+                .sorted(projectComparator(keyword))
+                .limit(limit)
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     private void assertOrgAccessible(String organizationId, String userId) {
         Organization organization = organizationMapper.selectByPrimaryKey(organizationId);
         if (organization == null) {
-            throw new MSException("组织不存在: " + organizationId);
+            throw new MSException("Organization does not exist: " + organizationId);
         }
         UserRoleRelationExample example = new UserRoleRelationExample();
         example.createCriteria().andSourceIdEqualTo(organizationId).andUserIdEqualTo(userId);
         List<UserRoleRelation> relations = userRoleRelationMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(relations)) {
-            throw new MSException("当前用户不属于组织: " + organizationId);
+            throw new MSException("Current user does not belong to organization: " + organizationId);
         }
     }
 
     private String requireUserId() {
         String userId = SessionUtils.getUserId();
         if (StringUtils.isBlank(userId)) {
-            throw new MSException("无法解析 Agent Token 对应用户");
+            throw new MSException("Cannot resolve user bound to Agent Token");
         }
         return userId;
     }
@@ -136,13 +177,109 @@ public class AgentProjectService {
         return token == null ? null : token.getId();
     }
 
+    private Set<String> accessibleProjectIds(String userId) {
+        UserRoleRelationExample relationExample = new UserRoleRelationExample();
+        relationExample.createCriteria().andUserIdEqualTo(userId);
+        List<UserRoleRelation> relations = userRoleRelationMapper.selectByExample(relationExample);
+        if (CollectionUtils.isEmpty(relations)) {
+            return new LinkedHashSet<>();
+        }
+        List<String> sourceIds = relations.stream()
+                .map(UserRoleRelation::getSourceId)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(sourceIds)) {
+            return new LinkedHashSet<>();
+        }
+
+        Map<String, Project> merged = new LinkedHashMap<>();
+        ProjectExample projectById = new ProjectExample();
+        projectById.createCriteria().andIdIn(sourceIds).andDeletedEqualTo(false);
+        projectMapper.selectByExample(projectById).forEach(project -> merged.put(project.getId(), project));
+
+        ProjectExample projectByOrg = new ProjectExample();
+        projectByOrg.createCriteria().andOrganizationIdIn(sourceIds).andDeletedEqualTo(false);
+        projectMapper.selectByExample(projectByOrg).forEach(project -> merged.put(project.getId(), project));
+        return new LinkedHashSet<>(merged.keySet());
+    }
+
+    private int normalizeLimit(Integer limit) {
+        if (limit == null || limit <= 0) {
+            return 50;
+        }
+        return Math.min(limit, 200);
+    }
+
+    private boolean matches(Project project, String keyword) {
+        if (StringUtils.isBlank(keyword)) {
+            return true;
+        }
+        String key = StringUtils.lowerCase(keyword);
+        String projectNum = project.getNum() == null ? "" : String.valueOf(project.getNum());
+        return StringUtils.contains(StringUtils.lowerCase(project.getId()), key)
+                || StringUtils.contains(StringUtils.lowerCase(project.getName()), key)
+                || StringUtils.contains(projectNum, keyword);
+    }
+
+    private Comparator<Project> projectComparator(String keyword) {
+        String key = StringUtils.lowerCase(StringUtils.trimToEmpty(keyword));
+        return Comparator
+                .comparingInt((Project project) -> matchRank(project, key))
+                .thenComparing((Project project) -> project.getCreateTime(), Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(Project::getId, Comparator.nullsLast(String::compareTo));
+    }
+
+    private int matchRank(Project project, String key) {
+        if (StringUtils.isBlank(key)) {
+            return 10;
+        }
+        String id = StringUtils.lowerCase(project.getId());
+        String name = StringUtils.lowerCase(project.getName());
+        String num = project.getNum() == null ? "" : String.valueOf(project.getNum());
+        if (StringUtils.equals(num, key)) {
+            return 0;
+        }
+        if (StringUtils.equals(id, key)) {
+            return 1;
+        }
+        if (StringUtils.equals(name, key)) {
+            return 2;
+        }
+        if (StringUtils.contains(num, key)) {
+            return 3;
+        }
+        if (StringUtils.contains(id, key)) {
+            return 4;
+        }
+        if (StringUtils.contains(name, key)) {
+            return 5;
+        }
+        return 10;
+    }
+
     private AgentProjectDTO toDto(ProjectDTO source) {
         AgentProjectDTO dto = new AgentProjectDTO();
         dto.setId(source.getId());
+        dto.setNum(source.getNum());
         dto.setName(source.getName());
         dto.setOrganizationId(source.getOrganizationId());
+        dto.setOrganizationName(source.getOrganizationName());
         dto.setDescription(source.getDescription());
         dto.setEnable(source.getEnable());
+        return dto;
+    }
+
+    private AgentProjectDTO toDto(Project source) {
+        AgentProjectDTO dto = new AgentProjectDTO();
+        dto.setId(source.getId());
+        dto.setNum(source.getNum());
+        dto.setName(source.getName());
+        dto.setOrganizationId(source.getOrganizationId());
+        Organization organization = organizationMapper.selectByPrimaryKey(source.getOrganizationId());
+        dto.setOrganizationName(organization == null ? null : organization.getName());
+        dto.setDescription(source.getDescription());
+        dto.setEnable(BooleanUtils.isTrue(source.getEnable()));
         return dto;
     }
 }

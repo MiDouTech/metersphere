@@ -10,6 +10,7 @@ import { submitFunctionalResultsBatchTool } from "./tools/submitFunctionalResult
 import { uploadExecutionAttachmentTool } from "./tools/uploadExecutionAttachment.js";
 import { createProjectTool } from "./tools/createProject.js";
 import { addProjectMembersTool } from "./tools/addProjectMembers.js";
+import { searchProjectsTool } from "./tools/searchProjects.js";
 import {
   batchCreateFunctionalCasesTool,
   createFunctionalCaseTool,
@@ -40,6 +41,7 @@ const tools: ToolDef[] = [
   submitFunctionalResultsBatchTool,
   uploadExecutionAttachmentTool,
   listModulesTool,
+  searchProjectsTool,
   createProjectTool,
   addProjectMembersTool,
   createFunctionalModuleTool,

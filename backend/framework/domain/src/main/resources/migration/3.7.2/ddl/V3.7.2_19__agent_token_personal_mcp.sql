@@ -19,7 +19,7 @@ SET @ddl = IF(
      WHERE TABLE_SCHEMA = DATABASE()
        AND TABLE_NAME = 'agent_token'
        AND COLUMN_NAME = 'secret_hash') = 0,
-    'ALTER TABLE agent_token ADD COLUMN secret_hash VARCHAR(128) NULL COMMENT ''SHA-256(token secret or raw token)'' AFTER token_hash',
+    'ALTER TABLE agent_token ADD COLUMN secret_hash VARCHAR(128) NULL COMMENT ''BCrypt token secret hash for v2; legacy SHA-256 during migration'' AFTER token_hash',
     'DO 0'
 );
 PREPARE stmt FROM @ddl;

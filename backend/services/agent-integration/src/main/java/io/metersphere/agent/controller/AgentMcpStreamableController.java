@@ -4,6 +4,7 @@ import io.metersphere.agent.service.AgentMcpStreamableService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,8 +23,8 @@ public class AgentMcpStreamableController {
 
     @PostMapping
     @Operation(summary = "Streamable HTTP MCP JSON-RPC endpoint")
-    public Map<String, Object> post(@RequestBody Map<String, Object> request) {
-        return agentMcpStreamableService.handle(request);
+    public Map<String, Object> post(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+        return agentMcpStreamableService.handle(request, httpRequest.getHeader("Idempotency-Key"));
     }
 
     @GetMapping

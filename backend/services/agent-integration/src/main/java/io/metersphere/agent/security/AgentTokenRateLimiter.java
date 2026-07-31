@@ -16,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AgentTokenRateLimiter {
     private final ConcurrentHashMap<String, ArrayDeque<Long>> generalWindows = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ArrayDeque<Long>> searchWindows = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ArrayDeque<Long>> toolWindows = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ArrayDeque<Long>> ipWindows = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> lastSearchAt = new ConcurrentHashMap<>();
 
     public boolean tryAcquire(String tokenId, boolean searchApi) {
@@ -38,6 +40,20 @@ public class AgentTokenRateLimiter {
         }
         lastSearchAt.put(tokenId, now);
         return true;
+    }
+
+    public boolean tryAcquireIp(String tokenId, String ip) {
+        if (StringUtils.isAnyBlank(tokenId, ip)) {
+            return true;
+        }
+        return allow(ipWindows, tokenId + ":" + ip, System.currentTimeMillis(), AgentConstants.RATE_LIMIT_PER_MINUTE);
+    }
+
+    public boolean tryAcquireTool(String tokenId, String toolName) {
+        if (StringUtils.isAnyBlank(tokenId, toolName)) {
+            return true;
+        }
+        return allow(toolWindows, tokenId + ":" + toolName, System.currentTimeMillis(), AgentConstants.RATE_LIMIT_PER_MINUTE);
     }
 
     public static boolean isSearchApi(String requestUri) {

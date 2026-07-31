@@ -23,6 +23,7 @@
         <apiKey v-else-if="activeMenu === 'apiKey'" />
         <localExec v-else-if="activeMenu === 'local'" />
         <tripartite v-else-if="activeMenu === 'tripartite'" />
+        <AgentIntegration v-else-if="activeMenu === 'agentIntegration'" />
         <modelConfig v-else-if="activeMenu === 'modelConfig'" model-key="personal" />
       </div>
     </div>
@@ -40,6 +41,7 @@
   import localExec from './components/localExec.vue';
   import setPsw from './components/setPsw.vue';
   import tripartite from './components/tripartite.vue';
+  import AgentIntegration from '@/views/setting/system/agentIntegration/index.vue';
 
   import { useI18n } from '@/hooks/useI18n';
 
@@ -90,6 +92,11 @@
     {
       name: 'tripartite',
       title: t('ms.personal.tripartite'),
+      level: 2,
+    },
+    {
+      name: 'agentIntegration',
+      title: t('ms.personal.agentIntegration'),
       level: 2,
     },
     {

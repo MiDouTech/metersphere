@@ -56,6 +56,11 @@ public class AgentTokenFilter extends AnonymousFilter {
                 writeJsonError(WebUtils.toHttp(response), 429, searchRateLimitMessage(searchApi));
                 return false;
             }
+            String clientIp = clientIp(httpRequest);
+            if (!agentTokenRateLimiter.tryAcquireIp(token.getId(), clientIp)) {
+                writeJsonError(WebUtils.toHttp(response), 429, "Agent Token requests from this IP are too frequent. Please retry later.");
+                return false;
+            }
             String projectId;
             try {
                 projectId = resolveProjectId(httpRequest, token);
@@ -70,7 +75,7 @@ public class AgentTokenFilter extends AnonymousFilter {
             if (StringUtils.isNotBlank(projectId)) {
                 SessionUtils.setCurrentProjectId(projectId);
             }
-            markTokenUsed(token, httpRequest);
+            markTokenUsed(token, clientIp);
             return true;
         }
         ((HttpServletResponse) response).setHeader(SessionConstants.AUTHENTICATION_STATUS, SessionConstants.AUTHENTICATION_INVALID);
@@ -130,12 +135,20 @@ public class AgentTokenFilter extends AnonymousFilter {
         }
     }
 
-    private void markTokenUsed(AgentToken token, HttpServletRequest request) {
+    private String clientIp(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (StringUtils.isNotBlank(forwardedFor)) {
+            return StringUtils.trim(StringUtils.substringBefore(forwardedFor, ","));
+        }
+        return request.getRemoteAddr();
+    }
+
+    private void markTokenUsed(AgentToken token, String clientIp) {
         try {
             AgentToken update = new AgentToken();
             update.setId(token.getId());
             update.setLastUsedAt(System.currentTimeMillis());
-            update.setLastIp(StringUtils.defaultIfBlank(request.getHeader("X-Forwarded-For"), request.getRemoteAddr()));
+            update.setLastIp(clientIp);
             agentTokenMapper.markUsed(update);
         } catch (Exception ignored) {
             // ignore audit metadata update failure

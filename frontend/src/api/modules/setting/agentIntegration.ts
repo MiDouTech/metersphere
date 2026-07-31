@@ -1,5 +1,10 @@
 import MSR from '@/api/http/index';
-import { AgentMcpDownloadUrl, AgentMcpManifestUrl, AgentTokenUrl } from '@/api/requrls/setting/agentIntegration';
+import {
+  AgentMcpDownloadUrl,
+  AgentMcpManifestUrl,
+  AgentTokenUrl,
+  PersonalAgentProjectUrl,
+} from '@/api/requrls/setting/agentIntegration';
 
 import type { CommonList, TableQueryParams } from '@/models/common';
 
@@ -61,6 +66,14 @@ export interface AgentMcpManifest {
   available?: boolean;
 }
 
+export interface PersonalAgentProject {
+  id: string;
+  num?: number;
+  name: string;
+  organizationId?: string;
+  organizationName?: string;
+}
+
 export function getAgentTokenPage(data: TableQueryParams) {
   return MSR.get<CommonList<AgentTokenListItem>>({ url: AgentTokenUrl, params: data });
 }
@@ -100,4 +113,8 @@ export function getAgentMcpManifest() {
 
 export function downloadAgentMcpBundle() {
   return MSR.get<BlobPart>({ url: AgentMcpDownloadUrl, responseType: 'blob' }, { isTransformResponse: false });
+}
+
+export function getPersonalAgentProjectList(keyword: string) {
+  return MSR.get<PersonalAgentProject[]>({ url: PersonalAgentProjectUrl, params: { keyword, limit: 50 } });
 }

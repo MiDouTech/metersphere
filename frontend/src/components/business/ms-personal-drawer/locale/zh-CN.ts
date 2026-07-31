@@ -5,6 +5,7 @@ export default {
   'ms.personal.setPsw': '密码设置',
   'ms.personal.setting': '个人设置',
   'ms.personal.apiKey': 'API KEY',
+  'ms.personal.agentIntegration': 'Agent 集成',
   'ms.personal.tripartite': '三方平台账号',
   'ms.personal.changeAvatar': '更换头像',
   'ms.personal.name': '姓名',
