@@ -134,19 +134,27 @@
             v-on="propsEvent"
             @batch-action="handleTableBatch"
             @change="changeHandler"
-            @cell-click="handleCellClick"
             @filter-change="filterChange"
           >
             <template #num="{ record }">
               <div class="flex items-center gap-[8px]">
                 <MsAiTag v-if="record.aiCreate" />
-                <span type="text" class="one-line-text cursor-pointer px-0 text-[rgb(var(--primary-5))]">
+                <span
+                  type="text"
+                  class="one-line-text cursor-pointer px-0 text-[rgb(var(--primary-5))]"
+                  @click.stop="handleCellClick(record)"
+                >
                   {{ record.num }}
                 </span>
               </div>
             </template>
             <template #name="{ record }">
-              <div class="one-line-text">{{ record.name }}</div>
+              <div
+                class="one-line-text cursor-pointer text-[rgb(var(--primary-5))]"
+                @click.stop="handleCellClick(record)"
+              >
+                {{ record.name }}
+              </div>
             </template>
             <template #caseLevel="{ record }">
               <a-select
