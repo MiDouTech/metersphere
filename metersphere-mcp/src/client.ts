@@ -229,6 +229,21 @@ export class MeterSphereClient {
     return this.request("GET", `/api/agent/v1/project/${encodeURIComponent(projectId)}`);
   }
 
+  searchProjects(payload: {
+    keyword?: string;
+    limit?: number;
+  }) {
+    const query = new URLSearchParams();
+    if (payload.keyword) {
+      query.set("keyword", payload.keyword);
+    }
+    if (payload.limit) {
+      query.set("limit", String(payload.limit));
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return this.request("GET", `/api/agent/v1/project/search${suffix}`);
+  }
+
   createFunctionalModule(payload: {
     projectId?: string;
     name?: string;

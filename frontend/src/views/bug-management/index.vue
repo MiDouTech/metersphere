@@ -954,9 +954,7 @@
   });
 
   onActivated(() => {
-    if (route.query.id && activeDetailId.value !== route.query.id) {
-      handleShowDetail(route.query.id as string, -1);
-    }
+    refreshModule({ reason: 'activated', preserveViewState: true });
   });
 
   onDeactivated(() => {

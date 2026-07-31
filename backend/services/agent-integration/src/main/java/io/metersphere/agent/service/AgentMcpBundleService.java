@@ -173,6 +173,7 @@ public class AgentMcpBundleService {
                 - metersphere.bug.update
                 - metersphere.project.create
                 - metersphere.project.members.add
+                - metersphere.project.search
                 - metersphere.project.get
                 - metersphere.test_plan.create
                 - metersphere.test_plan.associate_cases
@@ -203,6 +204,7 @@ public class AgentMcpBundleService {
                 # Workflows
 
                 - Search cases before creating duplicates.
+                - When the user provides a project name or the numeric ID shown in the MeterSphere project list, call `metersphere.project.search` first. The numeric UI ID maps to `project.num`; if multiple projects share the same number, return all matches and ask the user to choose.
                 - When submitting execution results, include exact case ID, result, step snapshots, and attachments where available.
                 - For bug creation, include reproduction steps, expected result, actual result, severity, and related case ID when known.
                 """;

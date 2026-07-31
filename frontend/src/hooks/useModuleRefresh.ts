@@ -4,7 +4,7 @@ import { Message } from '@arco-design/web-vue';
 import { useI18n } from '@/hooks/useI18n';
 
 export interface ModuleRefreshContext {
-  reason: 'manual';
+  reason: 'initial' | 'activated' | 'data-change' | 'manual';
   preserveViewState: true;
 }
 
@@ -29,14 +29,14 @@ export function useModuleRefresh(handler?: ModuleRefreshHandler) {
     return t('common.lastRefreshTime', { time: new Date(lastRefreshedAt.value).toLocaleTimeString() });
   });
 
-  async function refresh() {
+  async function refresh(reason: ModuleRefreshContext['reason'] = 'manual') {
     if (refreshing.value) {
       return;
     }
     refreshing.value = true;
     try {
       const result = await handler?.({
-        reason: 'manual',
+        reason,
         preserveViewState: true,
       });
       lastRefreshedAt.value = result?.refreshedAt || Date.now();

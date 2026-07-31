@@ -512,7 +512,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         testPlanFunctionalCaseMapper.updateByExampleSelective(planCaseUpdate, planCaseExample);
 
         //更新用例表执行状态 以及补充用例步骤ID为null的步骤信息
-        updateFunctionalCaseStatus(Collections.singletonList(request.getCaseId()), request.getLastExecResult(), request.getStepsExecResult(), operator);
+        updateFunctionalCaseStatus(Collections.singletonList(request.getCaseId()), request.getLastExecResult(), request.getStepsExecResult(), operator, now);
 
         //执行记录
         TestPlanCaseExecuteHistory executeHistory = buildHistory(request, operator);
@@ -527,7 +527,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
      * @param ids
      * @param lastExecResult
      */
-    private void updateFunctionalCaseStatus(List<String> ids, String lastExecResult, String stepsExecResult, String operator) {
+    private void updateFunctionalCaseStatus(List<String> ids, String lastExecResult, String stepsExecResult, String operator, long lastExecuteTime) {
         SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
         FunctionalCaseMapper functionalCaseMapper = sqlSession.getMapper(FunctionalCaseMapper.class);
         FunctionalCaseBlobMapper functionalCaseBlobMapper = sqlSession.getMapper(FunctionalCaseBlobMapper.class);
@@ -551,6 +551,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
             functionalCase.setId(id);
             functionalCase.setLastExecuteResult(lastExecResult);
             functionalCase.setLastExecuteUser(operator);
+            functionalCase.setLastExecuteTime(lastExecuteTime);
             functionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
             if (StringUtils.isNotBlank(steps)) {
                 FunctionalCaseBlob functionalCaseBlob = new FunctionalCaseBlob();
@@ -610,12 +611,13 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         Map<String, String> idsMap = functionalCases.stream().collect(Collectors.toMap(TestPlanFunctionalCase::getId, TestPlanFunctionalCase::getFunctionalCaseId));
         List<FunctionalCase> list = extFunctionalCaseMapper.getProjectIdByIds(caseIds);
         Map<String, String> projectMap = list.stream().collect(Collectors.toMap(FunctionalCase::getId, FunctionalCase::getProjectId));
+        long now = System.currentTimeMillis();
 
         // 用例库与所有关联计划行互相同步执行状态
         if (CollectionUtils.isNotEmpty(caseIds)) {
             TestPlanFunctionalCase planCaseUpdate = new TestPlanFunctionalCase();
             planCaseUpdate.setLastExecResult(request.getLastExecResult());
-            planCaseUpdate.setLastExecTime(System.currentTimeMillis());
+            planCaseUpdate.setLastExecTime(now);
             planCaseUpdate.setExecuteUser(logInsertModule.getOperator());
             TestPlanFunctionalCaseExample syncExample = new TestPlanFunctionalCaseExample();
             syncExample.createCriteria().andFunctionalCaseIdIn(caseIds);
@@ -626,7 +628,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         testPlanCaseExecuteHistoryMapper.batchInsert(historyList);
 
         //更新用例表执行状态 以及补充用例步骤ID为null的步骤信息
-        updateFunctionalCaseStatus(caseIds, request.getLastExecResult(), null, logInsertModule.getOperator());
+        updateFunctionalCaseStatus(caseIds, request.getLastExecResult(), null, logInsertModule.getOperator(), now);
 
     }
 

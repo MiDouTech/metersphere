@@ -5,7 +5,7 @@
       class="arco-btn-outline--secondary"
       :loading="refreshing"
       :disabled="refreshing"
-      @click="refresh"
+      @click="() => refresh()"
     >
       <template #icon>
         <icon-refresh />

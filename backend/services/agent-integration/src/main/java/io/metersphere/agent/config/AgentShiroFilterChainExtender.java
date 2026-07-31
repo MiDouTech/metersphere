@@ -27,6 +27,8 @@ public class AgentShiroFilterChainExtender implements ShiroFilterChainExtender {
         chain.put("/api/agent/mcp/**", "authc");
         chain.put("/personal/agent-tokens/**", "authc");
         chain.put("/api/personal/agent-tokens/**", "authc");
+        chain.put("/personal/agent-projects/**", "authc");
+        chain.put("/api/personal/agent-projects/**", "authc");
         chain.put("/personal/agent-package/**", "authc");
         chain.put("/api/personal/agent-package/**", "authc");
         chain.put("/admin/agent-tokens/**", "authc");

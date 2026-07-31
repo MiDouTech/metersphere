@@ -13,22 +13,46 @@ import io.metersphere.agent.dto.AgentCaseSubmitRequest;
 import io.metersphere.agent.dto.AgentModuleCreateRequest;
 import io.metersphere.agent.dto.AgentProjectAddMembersRequest;
 import io.metersphere.agent.dto.AgentProjectCreateRequest;
+import io.metersphere.agent.dto.AgentProjectSearchRequest;
 import io.metersphere.agent.dto.AgentTestPlanAssociateRequest;
 import io.metersphere.agent.dto.AgentTestPlanCreateRequest;
 import io.metersphere.agent.security.AgentScopeAssert;
+import io.metersphere.agent.security.AgentTokenContext;
+import io.metersphere.agent.security.AgentTokenRateLimiter;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
+import io.metersphere.system.domain.AgentToken;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class AgentMcpStreamableService {
+    private static final long IDEMPOTENCY_CACHE_TTL_MS = 10 * 60 * 1000L;
+    private static final Set<String> WRITE_TOOLS = Set.of(
+            "metersphere.functional.submit",
+            "metersphere.functional.module.create",
+            "metersphere.functional.case.create",
+            "metersphere.functional.case.batch_create",
+            "metersphere.bug.create",
+            "metersphere.bug.update",
+            "metersphere.project.create",
+            "metersphere.project.members.add",
+            "metersphere.test_plan.create",
+            "metersphere.test_plan.associate_cases",
+            "metersphere.case_review.create",
+            "metersphere.case_review.associate_cases"
+    );
+
+    private final ConcurrentHashMap<String, IdempotencyRecord> idempotencyCache = new ConcurrentHashMap<>();
+
     @Resource
     private AgentFunctionalCaseSearchService agentFunctionalCaseSearchService;
     @Resource
@@ -43,8 +67,14 @@ public class AgentMcpStreamableService {
     private AgentTestPlanWriteService agentTestPlanWriteService;
     @Resource
     private AgentCaseReviewWriteService agentCaseReviewWriteService;
+    @Resource
+    private AgentTokenRateLimiter agentTokenRateLimiter;
 
     public Map<String, Object> handle(Map<String, Object> request) {
+        return handle(request, null);
+    }
+
+    public Map<String, Object> handle(Map<String, Object> request, String idempotencyKey) {
         Object id = request.get("id");
         String method = StringUtils.defaultString((String) request.get("method"));
         try {
@@ -53,7 +83,7 @@ public class AgentMcpStreamableService {
                 case "notifications/initialized" -> response(id, Map.of("ok", true));
                 case "ping" -> response(id, Map.of("ok", true));
                 case "tools/list" -> response(id, Map.of("tools", tools()));
-                case "tools/call" -> response(id, callTool(asMap(request.get("params"))));
+                case "tools/call" -> response(id, callTool(asMap(request.get("params")), idempotencyKey));
                 default -> error(id, -32601, "Unsupported MCP method: " + method);
             };
         } catch (MSException ex) {
@@ -99,6 +129,10 @@ public class AgentMcpStreamableService {
                         Map.of("type", "object", "additionalProperties", true)),
                 tool("metersphere.project.members.add", "Add project members", AgentTokenScope.PROJECT_WRITE,
                         Map.of("type", "object", "additionalProperties", true)),
+                tool("metersphere.project.search",
+                        "Search projects by internal project id, project name, or project number shown as ID in the UI. Returns all matched projects, including projects with the same number.",
+                        AgentTokenScope.FUNCTIONAL_READ,
+                        objectSchema(Map.of("keyword", stringSchema(), "limit", Map.of("type", "integer", "minimum", 1, "maximum", 200)), List.of())),
                 tool("metersphere.project.get", "Get project detail", AgentTokenScope.FUNCTIONAL_READ,
                         objectSchema(Map.of("projectId", stringSchema()), List.of("projectId"))),
                 tool("metersphere.test_plan.create", "Create test plan", AgentTokenScope.PLAN_WRITE,
@@ -116,9 +150,30 @@ public class AgentMcpStreamableService {
         );
     }
 
-    private Map<String, Object> callTool(Map<String, Object> params) {
+    private Map<String, Object> callTool(Map<String, Object> params, String idempotencyKey) {
         String name = StringUtils.defaultString((String) params.get("name"));
         Map<String, Object> arguments = asMap(params.get("arguments"));
+        AgentToken token = AgentTokenContext.get();
+        if (token != null && !agentTokenRateLimiter.tryAcquireTool(token.getId(), name)) {
+            throw new MSException("Agent MCP tool requests are too frequent. Please retry later.");
+        }
+        if (StringUtils.isNotBlank(idempotencyKey) && WRITE_TOOLS.contains(name)) {
+            String cacheKey = idempotencyCacheKey(token, name, idempotencyKey);
+            synchronized (idempotencyCache) {
+                cleanExpiredIdempotencyRecords();
+                IdempotencyRecord cached = idempotencyCache.get(cacheKey);
+                if (cached != null && !cached.expired()) {
+                    return cached.response();
+                }
+                Map<String, Object> response = callToolInternal(name, arguments);
+                idempotencyCache.put(cacheKey, new IdempotencyRecord(System.currentTimeMillis(), response));
+                return response;
+            }
+        }
+        return callToolInternal(name, arguments);
+    }
+
+    private Map<String, Object> callToolInternal(String name, Map<String, Object> arguments) {
         Object result = switch (name) {
             case "metersphere.functional.search" -> {
                 AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
@@ -177,6 +232,10 @@ public class AgentMcpStreamableService {
                 agentProjectService.addMembers(convert(arguments, AgentProjectAddMembersRequest.class));
                 yield Map.of("ok", true);
             }
+            case "metersphere.project.search" -> {
+                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
+                yield agentProjectService.search(convert(arguments, AgentProjectSearchRequest.class));
+            }
             case "metersphere.project.get" -> {
                 AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
                 yield agentProjectService.get(requiredString(arguments, "projectId"));
@@ -210,6 +269,15 @@ public class AgentMcpStreamableService {
             default -> throw new MSException("Unsupported MCP tool: " + name);
         };
         return Map.of("content", List.of(Map.of("type", "text", "text", JSON.toJSONString(result))));
+    }
+
+    private String idempotencyCacheKey(AgentToken token, String toolName, String idempotencyKey) {
+        String userId = token == null ? "anonymous" : StringUtils.defaultIfBlank(token.getUserId(), token.getId());
+        return userId + ":" + toolName + ":" + StringUtils.trim(idempotencyKey);
+    }
+
+    private void cleanExpiredIdempotencyRecords() {
+        idempotencyCache.entrySet().removeIf(entry -> entry.getValue().expired());
     }
 
     private Map<String, Object> tool(String name, String description, String scope, Map<String, Object> inputSchema) {
@@ -267,5 +335,11 @@ public class AgentMcpStreamableService {
         response.put("id", id);
         response.put("error", Map.of("code", code, "message", StringUtils.defaultString(message)));
         return response;
+    }
+
+    private record IdempotencyRecord(long createTime, Map<String, Object> response) {
+        boolean expired() {
+            return System.currentTimeMillis() - createTime > IDEMPOTENCY_CACHE_TTL_MS;
+        }
     }
 }

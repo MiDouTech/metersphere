@@ -154,13 +154,16 @@ Codex / ChatGPT / Cursor / WorkBuddy
 
 客户端选择卡片：
 
-- Codex
 - ChatGPT
 - Cursor
 - WorkBuddy
 - 其他 MCP 客户端
 
-选择客户端后只展示该客户端所需的接入方式，不把所有 JSON 和说明堆在一个页面。
+创建 Token 页面不提供 Codex 客户端选项。该调整仅影响 Token 的客户端用途标记，不删除平台对 Codex 的 MCP 接入能力；Codex 仍可使用创建后生成的通用 MCP 配置或技能包完成接入。
+
+选择客户端后只展示该客户端所需的接入方式，不把所有 JSON 和说明堆在一个页面。页面删除以下提示，不再展示同义替代文案：
+
+> 解压后按 INSTALL.md 配置本机 mcp.json（填入平台地址与 Token）。Token 仅本地保存，勿提交到 Git。
 
 ### 5.2 创建 Token
 
@@ -168,10 +171,10 @@ Codex / ChatGPT / Cursor / WorkBuddy
 
 | 字段 | 规则 |
 |---|---|
-| Token 名称 | 必填，如“公司电脑 Codex” |
-| 使用客户端 | Codex / ChatGPT / Cursor / WorkBuddy / Other，用于审计与生成配置 |
+| Token 名称 | 必填，如“公司电脑测试助手” |
+| 使用客户端 | ChatGPT / Cursor / WorkBuddy / Other，用于审计与生成配置；删除 Codex 选项 |
 | 项目范围 | 默认当前项目；只能选择当前用户有权限的项目 |
-| 能力预设 | 用户可自主选择“只读”“测试执行”“用例管理”“缺陷管理”“项目管理”“自定义”或 `AGENT_ALL` |
+| 权限范围 | 全部使用中文业务描述，用户可自主选择“全部 Agent 权限”“只读访问”“测试执行”“用例管理”“缺陷管理”“项目管理”或“自定义权限” |
 | 有效期 | 默认 90 天；可选 7/30/90/180 天，永久需管理员策略允许 |
 | IP 限制 | 可选，首版可仅预留 |
 
@@ -181,10 +184,36 @@ Codex / ChatGPT / Cursor / WorkBuddy
 
 - 展示完整 Token 一次；
 - 提供“复制 Token”；
-- 提供“复制当前客户端配置”；
+- 根据当前平台地址和新 Token 即时生成完整 MCP 配置；
+- 在独立代码框中展示 MCP 配置并提供“一键复制 MCP 配置”；
 - 提供“下载技能包”；
 - 要求用户勾选“我已保存 Token”后关闭；
 - 关闭后不可再次查看完整 Token，只能轮换或新建。
+
+MCP 配置生成规则：
+
+- 配置中直接使用当前部署的 MCP 服务地址。
+- Token 只在本次创建成功弹窗中注入配置并展示一次。
+- 配置格式根据所选客户端生成；选择“其他”时生成标准 Streamable HTTP MCP JSON。
+- 创建页面虽不提供 Codex 选项，但用户仍可切换查看并复制 Codex 支持的 TOML 配置模板。
+- Token 和 MCP 配置分别提供复制按钮，并显示复制成功反馈。
+- 关闭弹窗前明确提示完整 Token 和含 Token 的配置均不可再次查看。
+- 页面不得自动写入用户本机 Agent 配置；用户自行复制并在 Agent 中完成设置。
+
+权限范围展示映射：
+
+| 页面中文名称 | 内部 scope |
+|---|---|
+| 全部 Agent 权限 | `AGENT_ALL` |
+| 功能测试只读 | `FUNCTIONAL_READ` |
+| 测试结果提交 | `FUNCTIONAL_SUBMIT` |
+| 项目管理 | `PROJECT_READ` / `PROJECT_WRITE` |
+| 测试用例管理 | `CASE_READ` / `CASE_WRITE` |
+| 测试计划管理 | `PLAN_READ` / `PLAN_WRITE` |
+| 用例评审管理 | `REVIEW_READ` / `REVIEW_WRITE` |
+| 缺陷管理 | `BUG_READ` / `BUG_WRITE` |
+
+前端选项、已选标签、Token 列表和确认弹窗均显示中文名称，不直接把 `AGENT_ALL`、`BUG_WRITE` 等内部枚举作为主文案。内部枚举仅用于接口传输、开发诊断和审计详情。
 
 ### 5.3 Token 列表
 
@@ -242,7 +271,7 @@ msat_k7Q2p9_4Hq...高熵随机秘密...
 | `public_id` | Token 公共定位 ID，唯一索引 |
 | `secret_hash` | Argon2id 或 BCrypt 慢哈希 |
 | `display_prefix` | 列表脱敏展示 |
-| `client_type` | CODEX / CHATGPT / CURSOR / WORKBUDDY / OTHER |
+| `client_type` | CHATGPT / CURSOR / WORKBUDDY / OTHER；历史 `CODEX` 值继续兼容读取，但创建页面不再新增 |
 | `project_ids` | 项目白名单 JSON |
 | `scopes` | scope 数组 JSON，不再用字符串包含判断 |
 | `expire_time` | 到期时间 |
@@ -381,6 +410,7 @@ interface MeterSphereMcpTool<I, O> {
 #### 只读
 
 - `list_projects`
+- `search_projects`
 - `list_functional_modules`
 - `search_functional_cases`
 - `get_functional_case`
@@ -416,7 +446,77 @@ interface MeterSphereMcpTool<I, O> {
 
 普通用户可以选择包含高风险 Tool 的 `AGENT_ALL`。选择时必须展示能力清单和风险确认；客户端应对写入/高风险 Tool 启用审批，但服务端仍以用户 RBAC 和项目权限作为最终安全边界。
 
-### 7.5 Tool 安全标注
+### 7.5 按项目名称模糊检索项目
+
+新增只读 MCP Tool：`search_projects`。该 Tool 用于 Agent 在用户只提供项目名称或名称片段时，检索并确定后续业务 Tool 所需的 `projectId`。
+
+#### 输入参数
+
+```json
+{
+  "name": "资产云",
+  "page": 1,
+  "pageSize": 20,
+  "includeArchived": false
+}
+```
+
+| 参数 | 必填 | 规则 |
+|---|---:|---|
+| `name` | 是 | 项目名称关键词；去除首尾空格后长度 1～100 |
+| `page` | 否 | 默认 1，必须大于 0 |
+| `pageSize` | 否 | 默认 20，最大 100 |
+| `includeArchived` | 否 | 默认 false；是否包含已归档但用户仍有查看权限的项目 |
+
+#### 查询规则
+
+- 按项目名称执行包含式模糊匹配，即 SQL 语义为安全转义后的 `LIKE '%关键词%'`。
+- 根据数据库字符集执行中文、英文名称匹配；英文默认忽略大小写。
+- `%`、`_`、反斜杠等通配符必须转义，不允许将用户输入直接拼接到 SQL。
+- 返回结果必须同时满足：
+  - 当前 Token 所属用户对项目具有查看权限；
+  - 项目位于 Token 的项目白名单内；Token 未限制项目时使用用户当前全部可访问项目；
+  - 项目状态符合 `includeArchived` 条件。
+- 不返回仅因名称匹配但当前用户无权访问的项目，也不返回其数量、名称片段等旁路信息。
+- 排序优先级为“名称完全匹配 → 名称前缀匹配 → 名称包含匹配 → 最近更新时间倒序 → projectId”，保证分页稳定。
+
+#### 返回结构
+
+```json
+{
+  "items": [
+    {
+      "projectId": "project-1",
+      "name": "测试资产云平台",
+      "status": "ACTIVE",
+      "description": "资产管理与测试项目"
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "total": 1,
+  "hasMore": false
+}
+```
+
+- 仅返回 Agent 识别项目所必需的信息，不附带项目成员、密钥或其他敏感配置。
+- 未命中时返回空 `items`，不以 404 表示。
+- 查询结果存在多个项目时，技能包必须指导 AI 向用户展示候选项目并确认，不得仅凭第一条结果执行写操作。
+
+#### 权限与安全标注
+
+| 项目 | 设计 |
+|---|---|
+| 内部 scope | `PROJECT_READ` 或 `AGENT_ALL` |
+| RBAC | 复用当前用户的项目查看权限 |
+| `readOnlyHint` | `true` |
+| `destructiveHint` | `false` |
+| 审计 | 记录 Tool、Token ID、用户、关键词摘要、结果数量、耗时和结果码；不记录完整 Token |
+| 限流 | 计入 Token 查询类 Tool 限流，防止枚举项目 |
+
+`list_projects` 继续保留，用于列出可访问项目和连接测试；`search_projects` 专门用于名称模糊检索，避免改变已有 Tool 的输入输出契约。
+
+### 7.6 Tool 安全标注
 
 每个 Tool 提供标准 annotations：
 
@@ -429,7 +529,7 @@ interface MeterSphereMcpTool<I, O> {
 
 服务端不能依赖客户端审批作为安全边界，审批只是额外保护；服务端仍必须鉴权、限流、校验幂等。
 
-### 7.6 会话与无状态
+### 7.7 会话与无状态
 
 首版优先无状态实现：
 
@@ -510,7 +610,7 @@ ${MS_PROJECT_ID}
 
 `SKILL.md` 应规定：
 
-1. 执行写操作前先确认项目和目标对象。
+1. 用户提供项目名称或名称片段时，先调用 `search_projects`；唯一命中后使用返回的 `projectId`，多条命中时先请用户确认目标项目。
 2. 批量创建前先调用模板/字段查询 Tool。
 3. 结果回写必须使用 Token 身份，忽略模型自行填写的执行人。
 4. 删除、覆盖、批量更新必须要求用户确认。
@@ -673,9 +773,11 @@ Agent 与 API
 
 - 页面不再搜索全局 Token 或用户。
 - 创建 Token 不显示关联用户。
-- scope 使用业务能力卡片解释具体能力，同时允许普通用户直接选择 `AGENT_ALL`；选择后展示完整权限清单并二次确认。
+- 权限范围全部使用中文业务描述，同时允许普通用户直接选择“全部 Agent 权限”（内部值 `AGENT_ALL`）；选择后展示中文权限清单并二次确认。
 - 高风险能力单独分组并展示风险说明。
-- 创建成功时根据已选客户端即时生成可复制配置。
+- 创建 Token 页面删除 Codex 客户端选项，但快速接入和技能包继续保留 Codex 接入说明。
+- 创建成功时根据已选客户端即时生成完整、可查看、可一键复制的 MCP 配置；用户自行粘贴到 Agent 中。
+- 页面删除“解压后按 INSTALL.md 配置本机 mcp.json……”提示。
 - Token 列表展示使用统计和安全状态。
 - “连接测试”调用只读 Tool（如 `list_projects`），返回当前身份、可访问项目和可用 Tools，不执行写操作。
 
@@ -782,10 +884,15 @@ Idempotency-Key: <client-generated-id>
 ### 15.1 个人 Token
 
 - 普通登录用户可以创建自己的 Token，不依赖 `SYSTEM_USER:*` 权限。
+- 创建 Token 页面客户端选项中不存在 Codex，保留 ChatGPT、Cursor、WorkBuddy 和其他。
+- 权限范围的选项、已选结果和确认信息均使用中文业务描述。
 - 请求中伪造 `userId` 无法为他人创建 Token。
 - 用户列表只能看到自己的 Token。
 - 修改、禁用、轮换、删除他人 Token 均返回 403。
 - 完整 Token 只在创建/轮换响应中出现一次。
+- 创建成功后同时展示完整 Token 和根据平台地址生成的 MCP 配置，两者均可独立一键复制。
+- 复制的 MCP 配置可由用户直接粘贴到对应 Agent；页面不自动修改用户本机配置。
+- 创建流程不再展示“解压后按 INSTALL.md 配置本机 mcp.json……”提示或同义提示。
 - 数据库、日志、列表和技能包中均无明文 Token。
 - 用户权限撤回或账号停用后 Token 立即失效。
 
@@ -795,6 +902,11 @@ Idempotency-Key: <client-generated-id>
 - ChatGPT 可通过 HTTPS 远程 MCP 获取 Tools 并执行只读调用。
 - Cursor 通过远程 Streamable HTTP MCP 完成连接和只读调用。
 - WorkBuddy 按其支持方式完成连接和只读调用。
+- `search_projects` 可以通过中文或英文项目名称片段进行模糊查询，并正确分页。
+- 项目名称完全匹配、前缀匹配和包含匹配的结果顺序符合设计；相同条件重复查询顺序稳定。
+- `search_projects` 只返回“用户可访问项目”和“Token 项目范围”的交集，无法通过关键词枚举无权项目。
+- 项目名称中的 `%`、`_`、反斜杠和超长输入不会造成通配符绕过、SQL 注入或异常查询。
+- 多个项目匹配时，技能指导 AI 先向用户确认，不直接对首条项目执行写操作。
 - 写 Tool 同时受用户 RBAC、Token scope 和项目范围约束。
 - Tool annotations 正确区分只读与写入。
 - 401、403、429、超时和业务校验错误能被 Agent 理解。
@@ -822,6 +934,10 @@ Idempotency-Key: <client-generated-id>
 2. 舍弃原有 MCP 集成程序包，不再交付或维护本地 `stdio` adapter，仅保留 AI 技能包。
 3. 页面拆分为“个人 Agent 与 API”和“管理员 Agent 集成治理”。
 4. “管理员 Agent 集成治理”菜单、路由和接口仅系统管理员可见/可访问。
+5. 创建 Token 页面删除 Codex 客户端选项，但 Codex MCP 接入能力继续保留。
+6. 权限范围统一显示中文业务描述，内部 scope 枚举不作为主文案。
+7. Token 创建成功后生成并展示可复制的 MCP 配置，由用户自行配置 Agent。
+8. 删除“解压后按 INSTALL.md 配置本机 mcp.json……”提示。
 
 ### 16.2 剩余待确认
 

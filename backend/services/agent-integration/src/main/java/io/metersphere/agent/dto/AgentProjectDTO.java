@@ -5,14 +5,24 @@ import lombok.Data;
 
 @Data
 public class AgentProjectDTO {
-    @Schema(description = "项目ID")
+    @Schema(description = "Internal project ID")
     private String id;
-    @Schema(description = "项目名称")
+
+    @Schema(description = "Project number shown as ID in the UI")
+    private Long num;
+
+    @Schema(description = "Project name")
     private String name;
-    @Schema(description = "组织ID")
+
+    @Schema(description = "Organization ID")
     private String organizationId;
-    @Schema(description = "描述")
+
+    @Schema(description = "Organization name")
+    private String organizationName;
+
+    @Schema(description = "Description")
     private String description;
-    @Schema(description = "是否启用")
+
+    @Schema(description = "Enabled")
     private Boolean enable;
 }

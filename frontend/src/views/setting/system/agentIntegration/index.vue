@@ -156,9 +156,9 @@
     disableAgentToken,
     enableAgentToken,
     getAgentTokenPage,
+    getPersonalAgentProjectList,
     rotateAgentToken,
   } from '@/api/modules/setting/agentIntegration';
-  import { getSystemProjectList } from '@/api/modules/system';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
 
@@ -221,10 +221,10 @@
   async function searchProjects(keywordText: string) {
     projectLoading.value = true;
     try {
-      const list = (await getSystemProjectList(keywordText || '')) || [];
-      projectOptions.value = list.map((item: { id: string; name: string }) => ({
+      const list = (await getPersonalAgentProjectList(keywordText || '')) || [];
+      projectOptions.value = list.map((item: { id: string; name: string; num?: number }) => ({
         id: item.id,
-        name: item.name,
+        name: item.num ? `${item.name}（${item.num}）` : item.name,
       }));
     } finally {
       projectLoading.value = false;
