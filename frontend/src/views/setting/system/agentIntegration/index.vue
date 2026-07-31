@@ -1,7 +1,5 @@
 <template>
   <div>
-    <McpOnboardingPanel @create-token="openCreateModal" />
-
     <MsCard simple>
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -33,6 +31,9 @@
         <template #scopes="{ record }">
           {{ formatScopeLabel(record.scopes) }}
         </template>
+        <template #lastUsedAt="{ record }">
+          {{ formatTime(record.lastUsedAt) }}
+        </template>
         <template #action="{ record }">
           <div class="flex gap-2">
             <MsButton @click="rotateToken(record)">
@@ -45,6 +46,8 @@
         </template>
       </ms-base-table>
     </MsCard>
+
+    <McpOnboardingPanel class="mt-4" @create-token="openCreateModal" />
 
     <a-modal
       v-model:visible="createVisible"
@@ -151,6 +154,7 @@
 <script setup lang="ts">
   import { computed, reactive, ref } from 'vue';
   import { FormInstance, Message } from '@arco-design/web-vue';
+  import dayjs from 'dayjs';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
   import MsCard from '@/components/pure/ms-card/index.vue';
@@ -205,9 +209,29 @@
       desc: t('system.agentIntegration.scopeCaseDesc'),
     },
     {
+      value: 'CASE_UPDATE;CASE_COMMENT;CASE_ATTACHMENT',
+      label: t('system.agentIntegration.scopeCaseMaintain'),
+      desc: t('system.agentIntegration.scopeCaseMaintainDesc'),
+    },
+    {
+      value: 'CASE_DELETE',
+      label: t('system.agentIntegration.scopeCaseDelete'),
+      desc: t('system.agentIntegration.scopeCaseDeleteDesc'),
+    },
+    {
       value: 'BUG_WRITE',
       label: t('system.agentIntegration.scopeBug'),
       desc: t('system.agentIntegration.scopeBugDesc'),
+    },
+    {
+      value: 'BUG_COMMENT;BUG_ATTACHMENT;BUG_RELATE',
+      label: t('system.agentIntegration.scopeBugExtend'),
+      desc: t('system.agentIntegration.scopeBugExtendDesc'),
+    },
+    {
+      value: 'BUG_DELETE',
+      label: t('system.agentIntegration.scopeBugDelete'),
+      desc: t('system.agentIntegration.scopeBugDeleteDesc'),
     },
     {
       value: 'FUNCTIONAL_READ',
@@ -246,6 +270,10 @@
       .join('、');
   }
 
+  function formatTime(time?: number) {
+    return time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-';
+  }
+
   const columns: MsTableColumn = [
     { title: 'system.agentIntegration.tokenName', dataIndex: 'name', showTooltip: true },
     { title: 'system.agentIntegration.displayPrefix', dataIndex: 'displayPrefix', width: 180, showTooltip: true },
@@ -257,6 +285,13 @@
     },
     { title: 'system.agentIntegration.clientType', dataIndex: 'clientType', width: 120 },
     { title: 'system.agentIntegration.scopes', dataIndex: 'scopes', slotName: 'scopes', width: 180, showTooltip: true },
+    { title: 'common.createTime', dataIndex: 'createTime', width: 170 },
+    {
+      title: 'system.agentIntegration.lastUsedAt',
+      dataIndex: 'lastUsedAt',
+      slotName: 'lastUsedAt',
+      width: 170,
+    },
     { title: 'system.agentIntegration.invocationCount', dataIndex: 'invocationCount', width: 120 },
     { title: 'system.agentIntegration.enable', dataIndex: 'enable', slotName: 'enable', width: 100 },
     { title: 'common.operation', slotName: 'action', fixed: 'right', width: 180 },

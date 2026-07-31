@@ -134,8 +134,19 @@ export default {
     'system.agentIntegration.scopeBugDesc': 'Search, view, create and update bugs.',
     'system.agentIntegration.scopeBugRead': 'Bug read-only',
     'system.agentIntegration.scopeBugReadDesc': 'Only search and view bugs.',
+    'system.agentIntegration.scopeBugExtend': 'Bug comments/attachments/relations',
+    'system.agentIntegration.scopeBugExtendDesc': 'Manage bug comments, bug detail attachments and related cases.',
+    'system.agentIntegration.scopeBugDelete': 'Bug delete/restore',
+    'system.agentIntegration.scopeBugDeleteDesc':
+      'Delete bugs to trash and restore them. Permanent deletion is excluded.',
     'system.agentIntegration.scopeCase': 'Test case management',
     'system.agentIntegration.scopeCaseDesc': 'Read cases, submit results, and operate test plans/reviews.',
+    'system.agentIntegration.scopeCaseMaintain': 'Test case maintenance',
+    'system.agentIntegration.scopeCaseMaintainDesc':
+      'Update cases, manage case comments and case detail attachments. Deletion is excluded.',
+    'system.agentIntegration.scopeCaseDelete': 'Test case delete/restore',
+    'system.agentIntegration.scopeCaseDeleteDesc':
+      'Query trash, soft-delete and restore cases. Permanent deletion is excluded.',
     'system.agentIntegration.scopeFunctionalRead': 'Functional read-only',
     'system.agentIntegration.scopeFunctionalReadDesc': 'Only read functional cases, modules, plans and reviews.',
     'system.agentIntegration.scopeFunctionalSubmit': 'Submit test results',
@@ -145,6 +156,7 @@ export default {
       'Create and manage only your own Agent Tokens. Tokens cannot manage other tokens.',
     'system.agentIntegration.clientType': 'Client',
     'system.agentIntegration.displayPrefix': 'Token Prefix',
+    'system.agentIntegration.lastUsedAt': 'Last Used At',
     'system.agentIntegration.invocationCount': 'Calls',
     'system.agentIntegration.rotate': 'Rotate',
     'system.agentIntegration.clientOther': 'Other MCP',

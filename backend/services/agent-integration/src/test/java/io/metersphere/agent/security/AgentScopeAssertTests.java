@@ -47,8 +47,37 @@ class AgentScopeAssertTests {
         token.setScopes(AgentTokenScope.FUNCTIONAL_ALL);
         AgentTokenContext.set(token);
         Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_WRITE));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_UPDATE));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_COMMENT));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_ATTACHMENT));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_DELETE));
         Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.PLAN_WRITE));
         Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE));
+    }
+
+    @Test
+    void bugWriteShouldOnlyGrantBugReadCompatibility() {
+        AgentToken token = new AgentToken();
+        token.setScopes(AgentTokenScope.BUG_WRITE);
+        AgentTokenContext.set(token);
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_READ));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE));
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_COMMENT));
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_ATTACHMENT));
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_RELATE));
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_DELETE));
+    }
+
+    @Test
+    void agentAllShouldGrantNewFineGrainedScopes() {
+        AgentToken token = new AgentToken();
+        token.setScopes(AgentTokenScope.AGENT_ALL);
+        AgentTokenContext.set(token);
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_COMMENT));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_ATTACHMENT));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_COMMENT));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_ATTACHMENT));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_RELATE));
     }
 
     @Test

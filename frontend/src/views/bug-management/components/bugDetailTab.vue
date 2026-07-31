@@ -29,6 +29,14 @@
       <div v-if="!isPlatformDefaultTemplate" class="default-content !break-words break-all">
         <div class="header-title">
           <strong>
+            {{ t('bugManagement.bugName') }}
+          </strong>
+        </div>
+        <div class="bug-name-content mb-4 mt-[16px]">
+          {{ form.title || '-' }}
+        </div>
+        <div class="header-title">
+          <strong>
             {{ t('bugManagement.edit.content') }}
           </strong>
         </div>
@@ -776,5 +784,10 @@
       height: auto;
       object-fit: contain;
     }
+  }
+  .bug-name-content {
+    color: var(--color-text-1);
+    line-height: 22px;
+    word-break: break-word;
   }
 </style>

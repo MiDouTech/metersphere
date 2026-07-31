@@ -4,7 +4,7 @@
     v-model:visible="showDrawerVisible"
     :width="1100"
     :footer="false"
-    :title="t('bugManagement.detail.title', { id: detailInfo?.num, name: detailInfo?.title })"
+    :title="detailInfo?.num ? String(detailInfo.num) : ''"
     :tooltip-text="(detailInfo && detailInfo.title) || null"
     :detail-id="props.detailId"
     :detail-index="props.detailIndex"
@@ -21,7 +21,7 @@
   >
     <template #titleName>
       <div class="bug-detail-title-full">
-        {{ t('bugManagement.detail.title', { id: detailInfo?.num, name: detailInfo?.title }) }}
+        {{ detailInfo?.num || '-' }}
       </div>
     </template>
     <template #titleLeft>
@@ -182,25 +182,11 @@
                 @update-case-success="updateSuccess"
               />
 
-              <CommentTab v-else-if="activeTab === 'comment'" ref="commentRef" :bug-id="detailInfo.id" />
-
               <BugHistoryTab v-else-if="activeTab === 'history'" :bug-id="detailInfo.id" />
             </div>
           </a-spin>
         </div>
       </div>
-      <CommentInput
-        v-if="activeTab === 'comment' && hasAnyPermission(['PROJECT_BUG:READ+COMMENT'])"
-        ref="commentInputRef"
-        v-model:notice-user-ids="noticeUserIds"
-        v-model:filed-ids="uploadFileIds"
-        v-model:default-value="commentContent"
-        is-show-avatar
-        :upload-image="handleUploadImage"
-        is-use-bottom
-        :preview-url="`${EditorPreviewFileUrl}/${appStore.currentProjectId}`"
-        @publish="publishHandler"
-      />
     </template>
   </MsDetailDrawer>
   <DeleteModal
@@ -281,7 +267,6 @@
   const caseCount = ref(0);
   const appStore = useAppStore();
   const commentContent = ref('');
-  const commentRef = ref();
   const detailCommentRef = ref();
   const noticeUserIds = ref<string[]>([]); // 通知人ids
   const formRules = ref<FormItem[]>([]); // 表单规则
@@ -296,8 +281,7 @@
   const currentDetailId = ref(props.detailId);
   const bugRouteNames: string[] = [RouteEnum.BUG_MANAGEMENT_INDEX, RouteEnum.BUG_MANAGEMENT_DETAIL];
 
-  const commentInputRef = ref<InstanceType<typeof CommentInput>>();
-  const commentInputIsActive = computed(() => commentInputRef.value?.isActive);
+  const commentInputIsActive = computed(() => false);
 
   const detailInfo = ref<Record<string, any>>({ match: [] }); // 存储当前详情信息，通过loadBug 获取
   const tags = ref([]);
@@ -453,8 +437,6 @@
         return '';
       case 'case':
         return `${caseCount.value > 0 ? caseCount.value : ''}`;
-      case 'comment':
-        return '';
       case 'history':
         return '';
       default:
@@ -482,10 +464,6 @@
     {
       value: 'case',
       label: t('bugManagement.detail.case'),
-    },
-    {
-      value: 'comment',
-      label: t('bugManagement.detail.comment'),
     },
     {
       value: 'history',
@@ -600,7 +578,6 @@
       noticeUserIds.value = [];
       uploadFileIds.value = [];
       detailCommentRef.value?.initData(detailInfo.value.id);
-      commentRef.value?.initData(detailInfo.value.id);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -626,7 +603,7 @@
     () => showDrawerVisible.value,
     (val) => {
       if (val) {
-        if (props.detailDefaultTab && props.detailDefaultTab !== 'basicInfo') {
+        if (props.detailDefaultTab && props.detailDefaultTab !== 'basicInfo' && props.detailDefaultTab !== 'comment') {
           activeTab.value = props.detailDefaultTab;
         } else {
           activeTab.value = 'detail';

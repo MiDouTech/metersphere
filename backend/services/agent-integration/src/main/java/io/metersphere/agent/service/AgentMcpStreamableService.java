@@ -19,14 +19,17 @@ import io.metersphere.agent.dto.AgentTestPlanCreateRequest;
 import io.metersphere.agent.security.AgentScopeAssert;
 import io.metersphere.agent.security.AgentTokenContext;
 import io.metersphere.agent.security.AgentTokenRateLimiter;
+import io.metersphere.agent.tool.AgentMcpToolHandler;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.domain.AgentToken;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.LinkedHashMap;
@@ -69,6 +72,8 @@ public class AgentMcpStreamableService {
     private AgentCaseReviewWriteService agentCaseReviewWriteService;
     @Resource
     private AgentTokenRateLimiter agentTokenRateLimiter;
+    @Autowired(required = false)
+    private List<AgentMcpToolHandler> toolHandlers = List.of();
 
     public Map<String, Object> handle(Map<String, Object> request) {
         return handle(request, null);
@@ -102,7 +107,7 @@ public class AgentMcpStreamableService {
     }
 
     private List<Map<String, Object>> tools() {
-        return List.of(
+        List<Map<String, Object>> tools = new ArrayList<>(List.of(
                 tool("metersphere.functional.search",
                         "Search functional test cases. Optional projectId accepts internal project id, UI project number, or exact project name; when omitted it uses Agent Token current/default project.",
                         AgentTokenScope.FUNCTIONAL_READ,
@@ -153,7 +158,11 @@ public class AgentMcpStreamableService {
                         Map.of("type", "object", "additionalProperties", true)),
                 tool("metersphere.case_review.get", "Get case review detail", AgentTokenScope.FUNCTIONAL_READ,
                         objectSchema(Map.of("reviewId", stringSchema()), List.of("reviewId")))
-        );
+        ));
+        for (AgentMcpToolHandler handler : toolHandlers) {
+            tools.add(tool(handler.name(), handler.description(), handler.requiredScope(), handler.inputSchema(), handler.annotations()));
+        }
+        return tools;
     }
 
     private Map<String, Object> callTool(Map<String, Object> params, String idempotencyKey) {
@@ -163,8 +172,9 @@ public class AgentMcpStreamableService {
         if (token != null && !agentTokenRateLimiter.tryAcquireTool(token.getId(), name)) {
             throw new MSException("Agent MCP tool requests are too frequent. Please retry later.");
         }
-        if (StringUtils.isNotBlank(idempotencyKey) && WRITE_TOOLS.contains(name)) {
-            String cacheKey = idempotencyCacheKey(token, name, idempotencyKey);
+        String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
+        if (StringUtils.isNotBlank(effectiveIdempotencyKey) && isWriteTool(name)) {
+            String cacheKey = idempotencyCacheKey(token, name, effectiveIdempotencyKey);
             synchronized (idempotencyCache) {
                 cleanExpiredIdempotencyRecords();
                 IdempotencyRecord cached = idempotencyCache.get(cacheKey);
@@ -180,6 +190,11 @@ public class AgentMcpStreamableService {
     }
 
     private Map<String, Object> callToolInternal(String name, Map<String, Object> arguments) {
+        AgentMcpToolHandler handler = findToolHandler(name);
+        if (handler != null) {
+            AgentScopeAssert.assertScope(handler.requiredScope());
+            return toolResponse(handler.execute(arguments));
+        }
         Object result = switch (name) {
             case "metersphere.functional.search" -> {
                 AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
@@ -278,6 +293,25 @@ public class AgentMcpStreamableService {
             }
             default -> throw new MSException("Unsupported MCP tool: " + name);
         };
+        return toolResponse(result);
+    }
+
+    private AgentMcpToolHandler findToolHandler(String name) {
+        return toolHandlers.stream()
+                .filter(handler -> StringUtils.equals(handler.name(), name))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isWriteTool(String name) {
+        if (WRITE_TOOLS.contains(name)) {
+            return true;
+        }
+        AgentMcpToolHandler handler = findToolHandler(name);
+        return handler != null && !Boolean.TRUE.equals(handler.annotations().get("readOnlyHint"));
+    }
+
+    private Map<String, Object> toolResponse(Object result) {
         return Map.of("content", List.of(Map.of("type", "text", "text", JSON.toJSONString(result))));
     }
 
@@ -295,11 +329,21 @@ public class AgentMcpStreamableService {
         annotations.put("scope", scope);
         annotations.put("readOnlyHint", !StringUtils.contains(scope, "WRITE") && !StringUtils.contains(scope, "SUBMIT"));
 
+        return tool(name, description, scope, inputSchema, annotations);
+    }
+
+    private Map<String, Object> tool(String name, String description, String scope, Map<String, Object> inputSchema, Map<String, Object> annotations) {
+        Map<String, Object> mergedAnnotations = new LinkedHashMap<>();
+        if (annotations != null) {
+            mergedAnnotations.putAll(annotations);
+        }
+        mergedAnnotations.put("scope", scope);
+
         Map<String, Object> tool = new LinkedHashMap<>();
         tool.put("name", name);
         tool.put("description", description);
         tool.put("inputSchema", inputSchema);
-        tool.put("annotations", annotations);
+        tool.put("annotations", mergedAnnotations);
         return tool;
     }
 

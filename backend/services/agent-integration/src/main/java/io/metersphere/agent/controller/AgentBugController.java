@@ -58,7 +58,7 @@ public class AgentBugController {
     @PostMapping("/relate-case")
     @Operation(summary = "缺陷关联用例")
     public void relateCase(@RequestBody @Valid AgentBugRelateCaseRequest request) {
-        AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE);
+        AgentScopeAssert.assertScope(AgentTokenScope.BUG_RELATE);
         agentBugWriteService.relateCase(request);
     }
 }
