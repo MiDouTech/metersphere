@@ -47,6 +47,16 @@
             {{ record.num }}
           </a-button>
         </template>
+        <!-- 缺陷名称 -->
+        <template #title="{ record, rowIndex }">
+          <a-button
+            type="text"
+            class="one-line-text max-w-full px-0 text-left text-[14px] leading-[22px]"
+            @click="handleShowDetail(record.id, rowIndex)"
+          >
+            {{ record.title }}
+          </a-button>
+        </template>
         <template #operation="{ record, rowIndex }">
           <div class="flex flex-nowrap items-center">
             <span v-permission="['PROJECT_BUG:READ']" class="flex flex-row items-center">
@@ -341,6 +351,7 @@
     {
       title: 'bugManagement.bugName',
       dataIndex: 'title',
+      slotName: 'title',
       width: 250,
       showTooltip: true,
       sortable: {
