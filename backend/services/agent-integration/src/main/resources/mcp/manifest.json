@@ -1,8 +1,8 @@
 ﻿{
-  "name": "@midoo/metersphere-mcp",
-  "version": "0.3.0",
-  "fileName": "metersphere-mcp-0.3.0.zip",
-  "description": "MeterSphere MCP skill pack for Cursor / Claude Desktop",
-  "nodeEngine": ">=18",
-  "installHint": "Unzip, npm install --omit=dev, configure mcp.json with MS_BASE_URL + MS_AGENT_TOKEN"
+  "name": "metersphere-agent-skill",
+  "version": "1.0.0",
+  "fileName": "metersphere-agent-skill-1.0.0.zip",
+  "description": "MeterSphere AI skill package for remote Streamable HTTP MCP. Built-in endpoints: https://msp.ebcone.net/api/mcp and https://msp.ebcone.cn/api/mcp. No token is embedded.",
+  "nodeEngine": "not-required",
+  "installHint": "Create a personal Agent Token, then configure your AI client to call the remote /api/mcp endpoint with Bearer or X-API-Key."
 }

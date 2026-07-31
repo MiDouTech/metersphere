@@ -89,6 +89,12 @@ public class TestPlanCasePageResponse implements Serializable {
     @Schema(description = "执行人名称")
     private String executeUserName;
 
+    @Schema(description = "最后执行人")
+    private String lastExecuteUser;
+
+    @Schema(description = "最后执行人名称")
+    private String lastExecuteUserName;
+
     @Schema(description = "缺陷数量")
     private Integer bugCount;
 

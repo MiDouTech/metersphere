@@ -19,6 +19,11 @@
     @loaded="loadedBug"
     @get-detail="getDetail"
   >
+    <template #titleName>
+      <div class="bug-detail-title-full">
+        {{ t('bugManagement.detail.title', { id: detailInfo?.num, name: detailInfo?.title }) }}
+      </div>
+    </template>
     <template #titleLeft>
       <div class="flex items-center">
         <MsTag
@@ -131,6 +136,25 @@
                     :current-platform="props.currentPlatform"
                     @update-success="updateSuccessHandler"
                   />
+                  <div v-if="detailInfo.id" class="mt-6 border-t border-[var(--color-text-n8)] pt-4">
+                    <div class="mb-3 font-medium text-[var(--color-text-1)]">
+                      {{ t('bugManagement.detail.comment') }}
+                    </div>
+                    <CommentInput
+                      v-if="hasAnyPermission(['PROJECT_BUG:READ+COMMENT'])"
+                      v-model:notice-user-ids="noticeUserIds"
+                      v-model:filed-ids="uploadFileIds"
+                      v-model:default-value="commentContent"
+                      is-show-avatar
+                      :upload-image="handleUploadImage"
+                      :is-use-bottom="false"
+                      :preview-url="`${EditorPreviewFileUrl}/${appStore.currentProjectId}`"
+                      @publish="publishHandler"
+                    />
+                    <div class="mt-4">
+                      <CommentTab ref="detailCommentRef" :bug-id="detailInfo.id" />
+                    </div>
+                  </div>
                 </div>
                 <a-divider direction="vertical" class="!mx-0 !h-auto" />
                 <div class="rightWrapper w-[332px] shrink-0 overflow-y-auto pl-4">
@@ -170,7 +194,7 @@
         ref="commentInputRef"
         v-model:notice-user-ids="noticeUserIds"
         v-model:filed-ids="uploadFileIds"
-        :content="commentContent"
+        v-model:default-value="commentContent"
         is-show-avatar
         :upload-image="handleUploadImage"
         is-use-bottom
@@ -258,6 +282,7 @@
   const appStore = useAppStore();
   const commentContent = ref('');
   const commentRef = ref();
+  const detailCommentRef = ref();
   const noticeUserIds = ref<string[]>([]); // 通知人ids
   const formRules = ref<FormItem[]>([]); // 表单规则
 
@@ -571,6 +596,10 @@
       };
       await createOrUpdateComment(params as CommentParams);
       Message.success(t('common.publishSuccessfully'));
+      commentContent.value = '';
+      noticeUserIds.value = [];
+      uploadFileIds.value = [];
+      detailCommentRef.value?.initData(detailInfo.value.id);
       commentRef.value?.initData(detailInfo.value.id);
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -617,6 +646,14 @@
 </script>
 
 <style scoped lang="less">
+  .bug-detail-title-full {
+    max-width: 520px;
+    font-weight: 500;
+    white-space: normal;
+    color: var(--color-text-1);
+    word-break: break-word;
+    line-height: 20px;
+  }
   .detail-merge-layout {
     .ms-scroll-bar();
   }

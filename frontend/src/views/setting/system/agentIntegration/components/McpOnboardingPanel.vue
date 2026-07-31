@@ -39,9 +39,9 @@
 
     <div class="mb-1 text-sm font-medium">{{ t('system.agentIntegration.mcpScopeHelp') }}</div>
     <ul class="mb-0 list-disc pl-5 text-sm text-[var(--color-text-3)]">
-      <li>AGENT_ALL — {{ t('system.agentIntegration.scopeAgentAll') }}</li>
-      <li>BUG_READ / BUG_WRITE — {{ t('system.agentIntegration.scopeBug') }}</li>
-      <li>FUNCTIONAL_ALL / CASE_WRITE / PLAN_WRITE / REVIEW_WRITE — {{ t('system.agentIntegration.scopeCase') }}</li>
+      <li>{{ t('system.agentIntegration.scopeAgentAll') }}：{{ t('system.agentIntegration.scopeAgentAllDesc') }}</li>
+      <li>{{ t('system.agentIntegration.scopeCase') }}：{{ t('system.agentIntegration.scopeCaseDesc') }}</li>
+      <li>{{ t('system.agentIntegration.scopeBug') }}：{{ t('system.agentIntegration.scopeBugDesc') }}</li>
     </ul>
   </MsCard>
 </template>

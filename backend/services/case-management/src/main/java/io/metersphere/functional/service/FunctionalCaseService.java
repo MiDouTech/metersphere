@@ -52,6 +52,7 @@ import io.metersphere.system.service.*;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.uid.NumGenerator;
 import io.metersphere.system.utils.ServiceUtils;
+import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -805,20 +806,16 @@ public class FunctionalCaseService {
             return new ArrayList<>();
         }
         //处理自定义字段值
-        return handleCustomFields(functionalCaseLists, request.getProjectId());
+        List<FunctionalCasePageDTO> result = handleCustomFields(functionalCaseLists, request.getProjectId());
+        String projectId = StringUtils.defaultIfBlank(request.getProjectId(), result.get(0).getProjectId());
+        enrichFunctionalCasePageOverview(result, projectId, SessionUtils.getUserId());
+        return result;
     }
 
     public FunctionalCasePersonalProgressDTO getPersonalProgress(String projectId, String userId) {
         FunctionalCasePersonalProgressDTO progress = extFunctionalCaseMapper.getPersonalProgress(projectId, userId);
         if (progress == null) {
-            progress = new FunctionalCasePersonalProgressDTO();
-            progress.setTotal(0L);
-            progress.setExecuted(0L);
-            progress.setPassed(0L);
-            progress.setFailed(0L);
-            progress.setBlocked(0L);
-            progress.setSkipped(0L);
-            progress.setUnexecuted(0L);
+            progress = emptyPersonalProgress();
         }
         return progress;
     }
@@ -830,6 +827,36 @@ public class FunctionalCaseService {
         overviewDTO.setTestPlans(extFunctionalCaseMapper.getTestPlanOverview(caseId));
         overviewDTO.setPersonalProgress(getPersonalProgress(detail.getProjectId(), userId));
         return overviewDTO;
+    }
+
+    private void enrichFunctionalCasePageOverview(List<FunctionalCasePageDTO> functionalCaseLists, String projectId, String userId) {
+        if (CollectionUtils.isEmpty(functionalCaseLists)) {
+            return;
+        }
+        List<String> ids = functionalCaseLists.stream().map(FunctionalCasePageDTO::getId).collect(Collectors.toList());
+        List<FunctionalCaseTestPlanOverviewDTO> testPlanOverviews = extFunctionalCaseMapper.getTestPlanOverviewByCaseIds(ids);
+        Map<String, List<FunctionalCaseTestPlanOverviewDTO>> testPlanMap = CollectionUtils.isEmpty(testPlanOverviews)
+                ? new HashMap<>()
+                : testPlanOverviews.stream().collect(Collectors.groupingBy(FunctionalCaseTestPlanOverviewDTO::getCaseId, LinkedHashMap::new, Collectors.toList()));
+        FunctionalCasePersonalProgressDTO personalProgress = StringUtils.isBlank(projectId) || StringUtils.isBlank(userId)
+                ? emptyPersonalProgress()
+                : getPersonalProgress(projectId, userId);
+        functionalCaseLists.forEach(functionalCasePageDTO -> {
+            functionalCasePageDTO.setTestPlans(testPlanMap.getOrDefault(functionalCasePageDTO.getId(), new ArrayList<>()));
+            functionalCasePageDTO.setPersonalProgress(personalProgress);
+        });
+    }
+
+    private FunctionalCasePersonalProgressDTO emptyPersonalProgress() {
+        FunctionalCasePersonalProgressDTO progress = new FunctionalCasePersonalProgressDTO();
+        progress.setTotal(0L);
+        progress.setExecuted(0L);
+        progress.setPassed(0L);
+        progress.setFailed(0L);
+        progress.setBlocked(0L);
+        progress.setSkipped(0L);
+        progress.setUnexecuted(0L);
+        return progress;
     }
 
     private List<FunctionalCasePageDTO> handleCustomFields(List<FunctionalCasePageDTO> functionalCaseLists, String projectId) {

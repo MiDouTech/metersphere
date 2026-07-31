@@ -1756,7 +1756,10 @@
   });
 
   onActivated(() => {
-    // keep-alive 返回时保留筛选、分页和滚动等现场；数据更新由模块刷新按钮或业务写操作触发。
+    // keep-alive 返回时保留筛选、分页和滚动等现场；如果当前没有任何数据，必须兜底拉取，避免进入测试计划后列表空白。
+    if (!propsRes.value.data?.length) {
+      fetchData();
+    }
   });
 
   defineExpose({

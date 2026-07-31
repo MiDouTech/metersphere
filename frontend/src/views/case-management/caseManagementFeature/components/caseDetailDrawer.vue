@@ -1018,12 +1018,12 @@
     width: 120px;
     height: 8px;
     border-radius: 999px;
-    background: var(--color-fill-2);
+    background: rgb(var(--primary-4));
   }
   .overview-plan-progress-fill {
     height: 100%;
     border-radius: inherit;
-    background: rgb(var(--primary-5));
+    background: rgb(var(--success-6));
   }
   .personal-progress-bar {
     display: flex;

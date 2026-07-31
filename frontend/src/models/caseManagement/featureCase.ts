@@ -51,6 +51,29 @@ export interface CustomAttributes {
   options: OptionsField[];
 }
 
+export interface FunctionalCasePersonalProgress {
+  total: number;
+  executed: number;
+  passed: number;
+  failed: number;
+  blocked: number;
+  skipped: number;
+  unexecuted: number;
+}
+
+export interface FunctionalCaseTestPlanOverview {
+  caseId?: string;
+  id: string;
+  num?: number;
+  name: string;
+  status?: string;
+  archived?: boolean;
+  executed: number;
+  total: number;
+  rate: number;
+  updateTime?: number;
+}
+
 // 功能用例表
 export interface CaseManagementTable {
   id: string;
@@ -72,6 +95,8 @@ export interface CaseManagementTable {
   lastExecuteUser?: string;
   lastExecuteUserName?: string;
   lastExecuteTime?: number | string;
+  testPlans?: FunctionalCaseTestPlanOverview[];
+  personalProgress?: FunctionalCasePersonalProgress;
   deleted: boolean; // 是否在回收站：0-否，1-是
   publicCase: boolean; // 是否是公共用例：0-否，1-是
   latest: boolean; // 是否为最新版本：0-否，1-是
@@ -241,16 +266,6 @@ export interface DetailCase {
   [key: string]: any;
 }
 
-export interface FunctionalCasePersonalProgress {
-  total: number;
-  executed: number;
-  passed: number;
-  failed: number;
-  blocked: number;
-  skipped: number;
-  unexecuted: number;
-}
-
 export interface FunctionalCaseReviewOverview {
   id: string;
   num?: number;
@@ -258,18 +273,6 @@ export interface FunctionalCaseReviewOverview {
   caseStatus: string;
   reviewStatus?: string;
   archived?: boolean;
-  updateTime?: number;
-}
-
-export interface FunctionalCaseTestPlanOverview {
-  id: string;
-  num?: number;
-  name: string;
-  status?: string;
-  archived?: boolean;
-  executed: number;
-  total: number;
-  rate: number;
   updateTime?: number;
 }
 

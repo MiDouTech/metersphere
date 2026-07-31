@@ -378,6 +378,15 @@
   );
   const isActivated = inject<Ref<boolean>>('isActivated', ref(false));
 
+  const reviewResultOptions = computed(() => {
+    return Object.keys(statusIconMap).map((key) => {
+      return {
+        value: key,
+        label: statusIconMap[key].statusText,
+      };
+    });
+  });
+
   // 默认列与产品「表格设置」对齐；不 bump tableKey，已有本地缓存用户不受影响
   const columns = computed<MsTableColumn>(() => [
     {
@@ -596,7 +605,6 @@
     return {
       ...record,
       lastExecResult: record.lastExecResult ?? LastExecuteResults.PENDING,
-      lastExecuteUserName: record.lastExecuteUserName || record.executeUserName,
       caseLevel: getCaseLevels(record.customFields),
     };
   });
@@ -756,15 +764,6 @@
       initAnotherModules();
     }
   );
-
-  const reviewResultOptions = computed(() => {
-    return Object.keys(statusIconMap).map((key) => {
-      return {
-        value: key,
-        label: statusIconMap[key].statusText,
-      };
-    });
-  });
 
   const filterConfigList = computed<FilterFormItem[]>(() => [
     {

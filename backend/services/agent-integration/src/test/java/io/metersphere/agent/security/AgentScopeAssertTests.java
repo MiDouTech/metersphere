@@ -42,6 +42,16 @@ class AgentScopeAssertTests {
     }
 
     @Test
+    void functionalAllShouldGrantFunctionalWriteScopes() {
+        AgentToken token = new AgentToken();
+        token.setScopes(AgentTokenScope.FUNCTIONAL_ALL);
+        AgentTokenContext.set(token);
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_WRITE));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.PLAN_WRITE));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE));
+    }
+
+    @Test
     void caseWriteShouldNotGrantProjectWrite() {
         AgentToken token = new AgentToken();
         token.setScopes(AgentTokenScope.CASE_WRITE);
