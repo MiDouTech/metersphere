@@ -407,13 +407,19 @@
       .map((item: any) => getThumbSrc(item) || item.url);
   });
 
-  function handlePreview(item: MsFileItem) {
+  async function handlePreview(item: MsFileItem) {
     if (typeof props.handleView === 'function') {
       props.handleView(item);
-    } else {
-      previewVisible.value = true;
-      previewCurrent.value = previewList.value.indexOf(item.url);
+      return;
     }
+    // 预览前确保图片缩略图已加载，便于组内切换
+    await loadThumbnails(innerFileList.value);
+    const images = innerFileList.value.filter(isImageFile);
+    previewCurrent.value = Math.max(
+      0,
+      images.findIndex((e) => e.uid === item.uid)
+    );
+    previewVisible.value = true;
   }
 
   function deleteFile(item: MsFileItem) {
