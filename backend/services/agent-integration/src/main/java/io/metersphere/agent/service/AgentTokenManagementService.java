@@ -7,6 +7,7 @@ import io.metersphere.agent.dto.AgentTokenListItemDTO;
 import io.metersphere.agent.dto.AgentTokenPageRequest;
 import io.metersphere.agent.dto.AgentTokenUpdateRequest;
 import io.metersphere.agent.security.AgentTokenProjectAccess;
+import io.metersphere.agent.security.AgentTokenScopeParser;
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.domain.ProjectExample;
 import io.metersphere.project.mapper.ProjectMapper;
@@ -74,7 +75,7 @@ public class AgentTokenManagementService {
         token.setUserId(boundUserId);
         token.setProjectId(AgentTokenProjectAccess.primaryProjectId(projectIds));
         token.setProjectIds(AgentTokenProjectAccess.toStorageJson(projectIds));
-        token.setScopes(request.getScopes());
+        token.setScopes(AgentTokenScopeParser.normalizeAndValidate(request.getScopes()));
         token.setClientType(normalizeClientType(request.getClientType()));
         token.setExpireTime(request.getExpireTime());
         token.setEnable(true);
@@ -132,7 +133,7 @@ public class AgentTokenManagementService {
         AgentToken update = new AgentToken();
         update.setId(request.getId());
         update.setName(request.getName());
-        update.setScopes(request.getScopes());
+        update.setScopes(AgentTokenScopeParser.normalizeAndValidate(request.getScopes()));
         update.setClientType(StringUtils.isBlank(request.getClientType()) ? null : normalizeClientType(request.getClientType()));
         update.setExpireTime(request.getExpireTime());
         update.setEnable(request.getEnable());

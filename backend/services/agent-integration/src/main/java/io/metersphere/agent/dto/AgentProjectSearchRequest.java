@@ -10,8 +10,20 @@ public class AgentProjectSearchRequest {
     @Schema(description = "Project keyword. Matches project id, project name, or project number shown as ID in the UI.")
     private String keyword;
 
-    @Schema(description = "Max returned projects. Default 50, max 200.")
+    @Schema(description = "Page number, starting from 1. Default 1.")
+    @Min(1)
+    private Integer page;
+
+    @Schema(description = "Page size. Default 20, max 100.")
+    @Min(1)
+    @Max(100)
+    private Integer pageSize;
+
+    @Schema(description = "Legacy limit. Prefer pageSize. Max 100 when used alone.")
     @Min(1)
     @Max(200)
     private Integer limit;
+
+    @Schema(description = "When false (default), exclude disabled projects. Deleted projects are always excluded.")
+    private Boolean includeArchived;
 }

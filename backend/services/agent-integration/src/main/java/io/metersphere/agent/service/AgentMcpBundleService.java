@@ -197,6 +197,8 @@ public class AgentMcpBundleService {
                 - Server-side tool policy
 
                 `AGENT_ALL` grants all Agent scopes but never bypasses the bound user's RBAC or project restrictions.
+                `PROJECT_READ` is required for project search/list/get. During migration, `FUNCTIONAL_READ` / `FUNCTIONAL_ALL` temporarily also grant `PROJECT_READ`.
+                Empty scopes are denied. Scope matching is exact set membership (no substring match).
                 """;
     }
 
@@ -205,7 +207,7 @@ public class AgentMcpBundleService {
                 # Workflows
 
                 - Search cases before creating duplicates.
-                - When the user provides a project name or the numeric ID shown in the MeterSphere project list, call `metersphere.project.search` first. Use `metersphere.project.list` to enumerate accessible projects. The numeric UI ID maps to `project.num`; if multiple projects share the same number, return all matches and ask the user to choose.
+                - When the user provides a project name or the numeric ID shown in the MeterSphere project list, call `metersphere.project.search` first (alias `search_projects` is accepted). Use `metersphere.project.list` to enumerate accessible projects. Pass `page`/`pageSize` for pagination; response contains `items`, `total`, `hasMore`. The numeric UI ID maps to `project.num`; if multiple projects share the same number, return all matches and ask the user to choose.
                 - For case search, execution result submission, module creation, case creation, and batch case creation, always pass `projectId`. `projectId` may be the internal project id, the numeric UI project ID, or the exact project name; the server resolves it to the internal project id and enforces user/token project access.
                 - When submitting execution results, include exact case ID, result, step snapshots, and attachments where available.
                 - For bug creation, include reproduction steps, expected result, actual result, severity, and related case ID when known.
@@ -216,7 +218,8 @@ public class AgentMcpBundleService {
         return """
                 # Troubleshooting
 
-                - 401: token missing, expired, disabled, or malformed.
+                - 401: token missing, expired, disabled, or malformed on POST.
+                - GET /api/mcp returns 405 (no SSE); clients must use POST Streamable HTTP.
                 - 403: token scope, user RBAC, or project allow-list does not permit the operation.
                 - 429: token rate limit exceeded.
                 - Do not paste tokens into prompts; configure them as environment variables or client secrets.

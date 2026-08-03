@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.agent.mapper.ExtAgentProjectMapper">
+
+    <sql id="searchWhere">
+        <where>
+            p.deleted = 0
+            <if test="projectIds != null and projectIds.size() &gt; 0">
+                AND p.id IN
+                <foreach collection="projectIds" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+            <if test="!includeArchived">
+                AND (p.enable IS NULL OR p.enable = 1)
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    LOWER(p.id) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '\\'
+                    OR LOWER(p.name) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '\\'
+                    OR CAST(p.num AS CHAR) LIKE CONCAT('%', #{keyword}, '%') ESCAPE '\\'
+                )
+            </if>
+        </where>
+    </sql>
+
+    <select id="countSearch" resultType="long">
+        SELECT COUNT(1)
+        FROM project p
+        <include refid="searchWhere"/>
+    </select>
+
+    <select id="search" resultType="io.metersphere.project.domain.Project">
+        SELECT p.id,
+               p.num,
+               p.organization_id AS organizationId,
+               p.name,
+               p.description,
+               p.create_time AS createTime,
+               p.update_time AS updateTime,
+               p.update_user AS updateUser,
+               p.create_user AS createUser,
+               p.delete_time AS deleteTime,
+               p.deleted,
+               p.delete_user AS deleteUser,
+               p.enable,
+               p.module_setting AS moduleSetting,
+               p.all_resource_pool AS allResourcePool,
+               p.is_default AS isDefault
+        FROM project p
+        <include refid="searchWhere"/>
+        ORDER BY
+            <choose>
+                <when test="keyword != null and keyword != ''">
+                    CASE
+                        WHEN CAST(p.num AS CHAR) = #{keyword} THEN 0
+                        WHEN LOWER(p.id) = LOWER(#{keyword}) THEN 1
+                        WHEN LOWER(p.name) = LOWER(#{keyword}) THEN 2
+                        WHEN LOWER(p.name) LIKE CONCAT(LOWER(#{keyword}), '%') THEN 3
+                        WHEN LOWER(p.name) LIKE CONCAT('%', #{likeKeyword}, '%') THEN 4
+                        WHEN CAST(p.num AS CHAR) LIKE CONCAT('%', #{keyword}, '%') THEN 5
+                        WHEN LOWER(p.id) LIKE CONCAT('%', #{likeKeyword}, '%') THEN 6
+                        ELSE 10
+                    END ASC,
+                </when>
+            </choose>
+            p.update_time DESC,
+            p.id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+</mapper>

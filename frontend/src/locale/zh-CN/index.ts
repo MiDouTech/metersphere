@@ -118,10 +118,10 @@ export default {
       '下载技能包交给 AI（如 Cursor），使其学会调用本平台 Agent/MCP 接口。平台侧只需：下载技能包 + 创建 Token。',
     'system.agentIntegration.mcpVersion': '当前包版本 {version}',
     'system.agentIntegration.mcpUnavailable': '技能包暂不可用，请联系管理员重新打包部署',
-    'system.agentIntegration.mcpDownload': '下载 MCP 技能包',
-    'system.agentIntegration.mcpDownloadSuccess': '开始下载技能包',
+    'system.agentIntegration.mcpDownload': '下载 AI 技能包',
+    'system.agentIntegration.mcpDownloadSuccess': '开始下载 AI 技能包',
     'system.agentIntegration.mcpHint':
-      '技能包用于指导 AI 连接远程 MCP，不包含 Token。创建 Token 后复制 MCP 配置到对应客户端。',
+      'AI 技能包用于指导 AI 连接远程 MCP，不包含 Token。创建 Token 后复制 MCP 配置到对应客户端。',
     'system.agentIntegration.platformAddress': '内置平台地址',
     'system.agentIntegration.platformTest': '测试环境',
     'system.agentIntegration.platformProd': '正式环境',
@@ -145,6 +145,9 @@ export default {
     'system.agentIntegration.scopeCaseDeleteDesc': '允许查询回收站、软删除和恢复用例；不包含永久删除。',
     'system.agentIntegration.scopeFunctionalRead': '功能测试只读',
     'system.agentIntegration.scopeFunctionalReadDesc': '仅允许读取功能用例、模块、计划和评审信息。',
+    'system.agentIntegration.scopeProjectRead': '项目查看',
+    'system.agentIntegration.scopeProjectReadDesc':
+      '允许检索和查看可访问项目；迁移期 FUNCTIONAL_READ 仍临时覆盖本权限。',
     'system.agentIntegration.scopeFunctionalSubmit': '测试结果提交',
     'system.agentIntegration.scopeFunctionalSubmitDesc': '仅允许提交用例执行结果和执行附件。',
     'system.agentIntegration.myTokens': '我的 Agent Token',

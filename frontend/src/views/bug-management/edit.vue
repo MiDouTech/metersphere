@@ -60,7 +60,7 @@
           :init-file-save-tips="t('ms.upload.waiting_save')"
           mode="static"
           :show-delete="false"
-          :handle-view="handlePreview"
+          :get-thumbnail="getAttachmentThumbnail"
           :file-name-max-width="props.fileNameMaxWidth"
         >
           <template #actions="{ item }">
@@ -188,7 +188,6 @@
     :get-list-fun-params="getListFunParams"
     @save="saveSelectAssociatedFile"
   />
-  <a-image-preview v-model:visible="previewVisible" :src="imageUrl" />
 </template>
 
 <script setup lang="ts">
@@ -310,8 +309,6 @@
   const bugId = ref<string | undefined>(props.bugId);
   const isEditOrCopy = computed(() => !!bugId.value);
   const isPlatformDefaultTemplate = ref(false);
-  const imageUrl = ref('');
-  const previewVisible = ref<boolean>(false);
   // 内容/富文本临时附件ID
   const descriptionFileIds = ref<string[]>([]);
   // 描述-环境/富文本临时附件ID
@@ -467,26 +464,19 @@
     }
   };
 
-  // 预览图片
-  async function handlePreview(item: MsFileItem) {
-    try {
-      if (item.status !== 'init') {
-        const res = await previewFile({
-          projectId: currentProjectId.value,
-          bugId: bugId.value as string,
-          fileId: item.uid,
-          associated: !item.local,
-        });
-        const blob = new Blob([res], { type: 'image/jpeg' });
-        imageUrl.value = URL.createObjectURL(blob);
-      } else {
-        imageUrl.value = item.url || '';
-      }
-      previewVisible.value = true;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+  // 预览图片改由 MsFileList 内置 preview-group（含上一张/下一张/循环）
+
+  async function getAttachmentThumbnail(item: MsFileItem) {
+    if (item.status === 'init' || !bugId.value) {
+      return item.url || '';
     }
+    const res = await previewFile({
+      projectId: currentProjectId.value,
+      bugId: bugId.value as string,
+      fileId: item.uid,
+      associated: !item.local,
+    });
+    return URL.createObjectURL(new Blob([res], { type: item.file?.type || 'image/png' }));
   }
 
   // 下载

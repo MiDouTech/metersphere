@@ -119,10 +119,10 @@ export default {
       'Download the skill pack for your AI (e.g. Cursor) so it can call this platform’s Agent/MCP APIs. On the platform you only need: download the pack + create a Token.',
     'system.agentIntegration.mcpVersion': 'Bundle version {version}',
     'system.agentIntegration.mcpUnavailable': 'Skill pack unavailable; ask admin to repack and redeploy',
-    'system.agentIntegration.mcpDownload': 'Download MCP skill pack',
-    'system.agentIntegration.mcpDownloadSuccess': 'Skill pack download started',
+    'system.agentIntegration.mcpDownload': 'Download AI skill pack',
+    'system.agentIntegration.mcpDownloadSuccess': 'AI skill pack download started',
     'system.agentIntegration.mcpHint':
-      'The skill pack teaches AI to connect to the remote MCP service and never contains your Token. Create a Token, then copy the MCP config to your client.',
+      'The AI skill pack teaches AI to connect to the remote MCP service and never contains your Token. Create a Token, then copy the MCP config to your client.',
     'system.agentIntegration.platformAddress': 'Built-in platform addresses',
     'system.agentIntegration.platformTest': 'Test',
     'system.agentIntegration.platformProd': 'Production',
@@ -149,6 +149,9 @@ export default {
       'Query trash, soft-delete and restore cases. Permanent deletion is excluded.',
     'system.agentIntegration.scopeFunctionalRead': 'Functional read-only',
     'system.agentIntegration.scopeFunctionalReadDesc': 'Only read functional cases, modules, plans and reviews.',
+    'system.agentIntegration.scopeProjectRead': 'Project read',
+    'system.agentIntegration.scopeProjectReadDesc':
+      'Search and view accessible projects. During migration FUNCTIONAL_READ temporarily also grants this scope.',
     'system.agentIntegration.scopeFunctionalSubmit': 'Submit test results',
     'system.agentIntegration.scopeFunctionalSubmitDesc': 'Only submit execution results and execution attachments.',
     'system.agentIntegration.myTokens': 'My Agent Tokens',

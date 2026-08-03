@@ -14,12 +14,15 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentExecLogService {
+    private static final long EXPORT_MAX = 5000;
+
     @Resource
     private AgentExecLogMapper agentExecLogMapper;
     @Resource
@@ -61,12 +64,32 @@ public class AgentExecLogService {
         long current = Math.max(request.getCurrent(), 1);
         long pageSize = Math.max(request.getPageSize(), 1);
         long offset = (current - 1) * pageSize;
-        long total = agentExecLogMapper.countPage(request.getCaseId(), request.getExecutedBy());
-        List<AgentExecLogDTO> list = agentExecLogMapper.selectPage(request.getCaseId(), request.getExecutedBy(), offset, pageSize)
+        long total = agentExecLogMapper.countPage(request.getCaseId(), request.getExecutedBy(),
+                request.getAction(), request.getCreateUser());
+        List<AgentExecLogDTO> list = agentExecLogMapper.selectPage(request.getCaseId(), request.getExecutedBy(),
+                        request.getAction(), request.getCreateUser(), offset, pageSize)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
         return new Pager<>(list, total, pageSize, current);
+    }
+
+    public byte[] exportCsv(AgentExecLogPageRequest request) {
+        List<AgentExecLog> logs = agentExecLogMapper.selectExport(
+                request.getCaseId(), request.getExecutedBy(), request.getAction(), request.getCreateUser(), EXPORT_MAX);
+        StringBuilder sb = new StringBuilder();
+        sb.append("id,caseId,action,executedBy,createUser,createTime,content\n");
+        for (AgentExecLog log : logs) {
+            sb.append(csv(log.getId())).append(',')
+                    .append(csv(log.getCaseId())).append(',')
+                    .append(csv(log.getLastExecResult())).append(',')
+                    .append(csv(log.getExecutedBy())).append(',')
+                    .append(csv(log.getCreateUser())).append(',')
+                    .append(log.getCreateTime() == null ? "" : log.getCreateTime()).append(',')
+                    .append(csv(log.getContent()))
+                    .append('\n');
+        }
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     public AgentExecLogDTO get(String id) {
@@ -90,5 +113,10 @@ public class AgentExecLogService {
             return "[" + executedBy + "] " + StringUtils.defaultString(content);
         }
         return content;
+    }
+
+    private static String csv(String value) {
+        String raw = StringUtils.defaultString(value).replace("\"", "\"\"");
+        return "\"" + raw + "\"";
     }
 }

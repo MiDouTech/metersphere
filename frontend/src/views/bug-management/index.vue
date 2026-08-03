@@ -51,7 +51,7 @@
         <template #title="{ record, rowIndex }">
           <a-button
             type="text"
-            class="one-line-text max-w-full px-0 text-left text-[14px] leading-[22px]"
+            class="one-line-text max-w-full !justify-start px-0 text-left text-[14px] leading-[22px]"
             @click="handleShowDetail(record.id, rowIndex)"
           >
             {{ record.title }}

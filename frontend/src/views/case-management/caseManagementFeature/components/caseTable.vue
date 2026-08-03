@@ -839,21 +839,35 @@
     },
     {
       title: 'caseManagement.featureCase.tableColumnExecutor',
-      dataIndex: 'executeUserName',
+      dataIndex: 'executeUser',
       slotName: 'executeUserName',
       showInTable: true,
       width: 120,
       showDrag: true,
       showTooltip: true,
+      filterConfig: {
+        mode: 'remote',
+        loadOptionParams: {
+          projectId: appStore.currentProjectId,
+        },
+        remoteMethod: FilterRemoteMethodsEnum.PROJECT_PERMISSION_MEMBER,
+      },
     },
     {
       title: 'caseManagement.featureCase.tableColumnLastExecutor',
-      dataIndex: 'lastExecuteUserName',
+      dataIndex: 'lastExecuteUser',
       slotName: 'lastExecuteUserName',
       showInTable: true,
       width: 120,
       showDrag: true,
       showTooltip: true,
+      filterConfig: {
+        mode: 'remote',
+        loadOptionParams: {
+          projectId: appStore.currentProjectId,
+        },
+        remoteMethod: FilterRemoteMethodsEnum.PROJECT_PERMISSION_MEMBER,
+      },
     },
     // {
     //   title: 'caseManagement.featureCase.tableColumnVersion',

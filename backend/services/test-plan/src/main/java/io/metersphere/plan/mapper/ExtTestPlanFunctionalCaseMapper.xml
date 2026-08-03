@@ -288,6 +288,11 @@
                                 </if>
                             )
                         </when>
+                        <!-- 最后执行人 -->
+                        <when test="key == 'lastExecuteUserName' and values.size() > 0">
+                            and functional_case.last_execute_user in
+                            <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                        </when>
                     </choose>
                 </if>
             </foreach>
@@ -314,6 +319,7 @@
                         <include refid="io.metersphere.system.mapper.BaseMapper.baseSystemFieldConditions">
                             <property name="condition" value="condition"/>
                             <property name="tablePrefix" value="functional_case"/>
+                            <property name="skipExecuteUser" value="true"/>
                         </include>
                         <!-- 所属模块(项目ID_模块ID 组合查询) -->
                         <if test="condition.name == 'moduleId'">
@@ -367,11 +373,18 @@
                                 <property name="column" value="functional_case.review_status"/>
                             </include>
                         </if>
-                        <!-- 执行人 -->
+                        <!-- 执行人（计划指派） -->
                         <if test="condition.name == 'executeUser'">
                             <include refid="io.metersphere.system.mapper.BaseMapper.condition">
                                 <property name="condition" value="condition"/>
                                 <property name="column" value="test_plan_functional_case.execute_user"/>
+                            </include>
+                        </if>
+                        <!-- 最后执行人 -->
+                        <if test="condition.name == 'lastExecuteUser'">
+                            <include refid="io.metersphere.system.mapper.BaseMapper.condition">
+                                <property name="condition" value="condition"/>
+                                <property name="column" value="functional_case.last_execute_user"/>
                             </include>
                         </if>
                         <!-- 执行结果 -->

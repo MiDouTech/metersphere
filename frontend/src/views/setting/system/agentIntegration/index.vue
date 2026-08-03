@@ -323,6 +323,11 @@
       desc: t('system.agentIntegration.scopeBugDeleteDesc'),
     },
     {
+      value: 'PROJECT_READ',
+      label: t('system.agentIntegration.scopeProjectRead'),
+      desc: t('system.agentIntegration.scopeProjectReadDesc'),
+    },
+    {
       value: 'FUNCTIONAL_READ',
       label: t('system.agentIntegration.scopeFunctionalRead'),
       desc: t('system.agentIntegration.scopeFunctionalReadDesc'),

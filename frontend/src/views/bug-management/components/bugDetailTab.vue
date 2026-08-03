@@ -138,7 +138,6 @@
       }"
       :upload-func="uploadOrAssociationFile"
       :handle-delete="deleteFileHandler"
-      :handle-view="handlePreview"
       :get-thumbnail="getAttachmentThumbnail"
       :init-file-save-tips="t('ms.upload.waiting_save')"
       :show-delete="false"
@@ -261,7 +260,6 @@
     :get-list-fun-params="getListFunParams"
     @save="saveSelectAssociatedFile"
   />
-  <a-image-preview v-model:visible="previewVisible" :src="imageUrl" />
 </template>
 
 <script setup lang="ts">
@@ -335,12 +333,10 @@
 
   const appStore = useAppStore();
   const transferVisible = ref<boolean>(false);
-  const previewVisible = ref<boolean>(false);
   const acceptType = ref('none'); // 模块-上传文件类型
   // 描述-富文本临时附件ID
   const descriptionFileIds = ref<string[]>([]);
   const descriptionFileIdMap = ref<Record<string, string[]>>({});
-  const imageUrl = ref<string>('');
   const associatedDrawer = ref(false);
   const fileListRef = ref<InstanceType<typeof MsFileList>>();
   // 富文本编辑器是否可编辑
@@ -612,27 +608,7 @@
     }
   }
 
-  // 预览图片
-  async function handlePreview(item: MsFileItem) {
-    try {
-      if (item.status !== 'init') {
-        const res = await previewFile({
-          projectId: currentProjectId.value,
-          bugId: bugId.value as string,
-          fileId: item.uid,
-          associated: !item.local,
-        });
-        const blob = new Blob([res], { type: 'image/jpeg' });
-        imageUrl.value = URL.createObjectURL(blob);
-      } else {
-        imageUrl.value = item.url || '';
-      }
-      previewVisible.value = true;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    }
-  }
+  // 预览图片改由 MsFileList 内置 preview-group（含上一张/下一张/循环），见 getAttachmentThumbnail
 
   /** 列表缩略图：走鉴权预览接口 */
   async function getAttachmentThumbnail(item: MsFileItem) {

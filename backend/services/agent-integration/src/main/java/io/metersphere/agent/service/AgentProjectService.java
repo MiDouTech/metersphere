@@ -4,6 +4,8 @@ import io.metersphere.agent.dto.AgentProjectAddMembersRequest;
 import io.metersphere.agent.dto.AgentProjectCreateRequest;
 import io.metersphere.agent.dto.AgentProjectDTO;
 import io.metersphere.agent.dto.AgentProjectSearchRequest;
+import io.metersphere.agent.dto.AgentProjectSearchResponse;
+import io.metersphere.agent.mapper.ExtAgentProjectMapper;
 import io.metersphere.agent.security.AgentTokenContext;
 import io.metersphere.agent.security.AgentTokenProjectAccess;
 import io.metersphere.project.domain.Project;
@@ -32,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -44,12 +45,18 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentProjectService {
+    private static final int DEFAULT_PAGE = 1;
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
+
     @Resource
     private OrganizationProjectService organizationProjectService;
     @Resource
     private OrganizationMapper organizationMapper;
     @Resource
     private ProjectMapper projectMapper;
+    @Resource
+    private ExtAgentProjectMapper extAgentProjectMapper;
     @Resource
     private UserRoleRelationMapper userRoleRelationMapper;
     @Resource
@@ -132,8 +139,10 @@ public class AgentProjectService {
         String searchIdentity = identity;
         AgentProjectSearchRequest request = new AgentProjectSearchRequest();
         request.setKeyword(searchIdentity);
-        request.setLimit(200);
-        List<AgentProjectDTO> matched = search(request).stream()
+        request.setPage(1);
+        request.setPageSize(MAX_PAGE_SIZE);
+        request.setIncludeArchived(true);
+        List<AgentProjectDTO> matched = search(request).getItems().stream()
                 .filter(project -> exactProjectMatch(project, searchIdentity))
                 .collect(Collectors.toList());
         if (matched.isEmpty()) {
@@ -148,30 +157,54 @@ public class AgentProjectService {
         return matched.get(0).getId();
     }
 
-    public List<AgentProjectDTO> search(AgentProjectSearchRequest request) {
+    public AgentProjectSearchResponse search(AgentProjectSearchRequest request) {
+        int page = normalizePage(request == null ? null : request.getPage());
+        int pageSize = normalizePageSize(request);
+        boolean includeArchived = BooleanUtils.isTrue(request == null ? null : request.getIncludeArchived());
         String keyword = StringUtils.trimToEmpty(request == null ? null : request.getKeyword());
-        int limit = normalizeLimit(request == null ? null : request.getLimit());
-        Set<String> candidateIds = accessibleProjectIds(requireUserId());
+        String likeKeyword = escapeLike(keyword.toLowerCase());
 
+        Set<String> candidateIds = accessibleProjectIds(requireUserId());
         AgentToken token = AgentTokenContext.get();
         List<String> tokenProjectIds = AgentTokenProjectAccess.parseProjectIds(token);
         if (CollectionUtils.isNotEmpty(tokenProjectIds)) {
             candidateIds.retainAll(new LinkedHashSet<>(tokenProjectIds));
         }
+
+        AgentProjectSearchResponse response = new AgentProjectSearchResponse();
+        response.setPage(page);
+        response.setPageSize(pageSize);
         if (candidateIds.isEmpty()) {
-            return Collections.emptyList();
+            response.setItems(Collections.emptyList());
+            response.setTotal(0);
+            response.setHasMore(false);
+            return response;
         }
 
-        ProjectExample example = new ProjectExample();
-        example.createCriteria().andIdIn(new ArrayList<>(candidateIds)).andDeletedEqualTo(false);
-        List<Project> projects = projectMapper.selectByExample(example);
+        List<String> projectIds = new ArrayList<>(candidateIds);
+        long total = extAgentProjectMapper.countSearch(projectIds, keyword, likeKeyword, includeArchived);
+        int offset = (page - 1) * pageSize;
+        List<Project> projects = total == 0
+                ? Collections.emptyList()
+                : extAgentProjectMapper.search(projectIds, keyword, likeKeyword, includeArchived, offset, pageSize);
 
-        return projects.stream()
-                .filter(project -> matches(project, keyword))
-                .sorted(projectComparator(keyword))
-                .limit(limit)
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        response.setTotal(total);
+        response.setHasMore((long) page * pageSize < total);
+        response.setItems(projects.stream().map(this::toDto).collect(Collectors.toList()));
+        return response;
+    }
+
+    /**
+     * Escape LIKE wildcards for parameterized LIKE clauses.
+     */
+    static String escapeLike(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     private void assertOrgAccessible(String organizationId, String userId) {
@@ -227,11 +260,24 @@ public class AgentProjectService {
         return new LinkedHashSet<>(merged.keySet());
     }
 
-    private int normalizeLimit(Integer limit) {
-        if (limit == null || limit <= 0) {
-            return 50;
+    private int normalizePage(Integer page) {
+        if (page == null || page <= 0) {
+            return DEFAULT_PAGE;
         }
-        return Math.min(limit, 200);
+        return page;
+    }
+
+    private int normalizePageSize(AgentProjectSearchRequest request) {
+        if (request == null) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        if (request.getPageSize() != null && request.getPageSize() > 0) {
+            return Math.min(request.getPageSize(), MAX_PAGE_SIZE);
+        }
+        if (request.getLimit() != null && request.getLimit() > 0) {
+            return Math.min(request.getLimit(), MAX_PAGE_SIZE);
+        }
+        return DEFAULT_PAGE_SIZE;
     }
 
     private boolean exactProjectMatch(AgentProjectDTO project, String identity) {
@@ -240,53 +286,6 @@ public class AgentProjectService {
         return StringUtils.equals(project.getId(), key)
                 || StringUtils.equals(num, key)
                 || StringUtils.equalsIgnoreCase(project.getName(), key);
-    }
-
-    private boolean matches(Project project, String keyword) {
-        if (StringUtils.isBlank(keyword)) {
-            return true;
-        }
-        String key = StringUtils.lowerCase(keyword);
-        String projectNum = project.getNum() == null ? "" : String.valueOf(project.getNum());
-        return StringUtils.contains(StringUtils.lowerCase(project.getId()), key)
-                || StringUtils.contains(StringUtils.lowerCase(project.getName()), key)
-                || StringUtils.contains(projectNum, keyword);
-    }
-
-    private Comparator<Project> projectComparator(String keyword) {
-        String key = StringUtils.lowerCase(StringUtils.trimToEmpty(keyword));
-        return Comparator
-                .comparingInt((Project project) -> matchRank(project, key))
-                .thenComparing((Project project) -> project.getCreateTime(), Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing(Project::getId, Comparator.nullsLast(String::compareTo));
-    }
-
-    private int matchRank(Project project, String key) {
-        if (StringUtils.isBlank(key)) {
-            return 10;
-        }
-        String id = StringUtils.lowerCase(project.getId());
-        String name = StringUtils.lowerCase(project.getName());
-        String num = project.getNum() == null ? "" : String.valueOf(project.getNum());
-        if (StringUtils.equals(num, key)) {
-            return 0;
-        }
-        if (StringUtils.equals(id, key)) {
-            return 1;
-        }
-        if (StringUtils.equals(name, key)) {
-            return 2;
-        }
-        if (StringUtils.contains(num, key)) {
-            return 3;
-        }
-        if (StringUtils.contains(id, key)) {
-            return 4;
-        }
-        if (StringUtils.contains(name, key)) {
-            return 5;
-        }
-        return 10;
     }
 
     private AgentProjectDTO toDto(ProjectDTO source) {

@@ -496,6 +496,13 @@
       width: 120,
       showDrag: true,
       showTooltip: true,
+      filterConfig: {
+        mode: 'remote',
+        loadOptionParams: {
+          projectId: appStore.currentProjectId,
+        },
+        remoteMethod: FilterRemoteMethodsEnum.PROJECT_PERMISSION_MEMBER,
+      },
     },
     {
       title: 'caseManagement.featureCase.tableColumnTag',
@@ -870,6 +877,11 @@
     {
       title: 'testPlan.featureCase.executor',
       dataIndex: 'executeUser',
+      type: FilterType.MEMBER,
+    },
+    {
+      title: 'caseManagement.featureCase.tableColumnLastExecutor',
+      dataIndex: 'lastExecuteUser',
       type: FilterType.MEMBER,
     },
     {

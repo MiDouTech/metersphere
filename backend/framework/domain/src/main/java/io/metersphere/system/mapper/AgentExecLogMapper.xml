@@ -14,6 +14,23 @@
         <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
     </resultMap>
 
+    <sql id="pageWhere">
+        <where>
+            <if test="caseId != null and caseId != ''">
+                and case_id = #{caseId}
+            </if>
+            <if test="executedBy != null and executedBy != ''">
+                and executed_by = #{executedBy}
+            </if>
+            <if test="action != null and action != ''">
+                and last_exec_result = #{action}
+            </if>
+            <if test="createUser != null and createUser != ''">
+                and create_user = #{createUser}
+            </if>
+        </where>
+    </sql>
+
     <insert id="insert" parameterType="io.metersphere.system.domain.AgentExecLog">
         insert into agent_exec_log (id, case_id, test_plan_id, test_plan_case_id, last_exec_result,
                                     executed_by, steps_snapshot, content, create_time, create_user)
@@ -33,14 +50,7 @@
     <select id="selectPage" resultMap="BaseResultMap">
         select *
         from agent_exec_log
-        <where>
-            <if test="caseId != null and caseId != ''">
-                and case_id = #{caseId}
-            </if>
-            <if test="executedBy != null and executedBy != ''">
-                and executed_by = #{executedBy}
-            </if>
-        </where>
+        <include refid="pageWhere"/>
         order by create_time desc
         limit #{offset}, #{pageSize}
     </select>
@@ -48,13 +58,14 @@
     <select id="countPage" resultType="long">
         select count(1)
         from agent_exec_log
-        <where>
-            <if test="caseId != null and caseId != ''">
-                and case_id = #{caseId}
-            </if>
-            <if test="executedBy != null and executedBy != ''">
-                and executed_by = #{executedBy}
-            </if>
-        </where>
+        <include refid="pageWhere"/>
+    </select>
+
+    <select id="selectExport" resultMap="BaseResultMap">
+        select *
+        from agent_exec_log
+        <include refid="pageWhere"/>
+        order by create_time desc
+        limit #{limit}
     </select>
 </mapper>

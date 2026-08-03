@@ -22,6 +22,8 @@ import java.util.List;
 
 @Component
 public class AgentTokenFilter extends AnonymousFilter {
+    public static final String ATTR_AGENT_LOGIN_ESTABLISHED = "AGENT_TOKEN_LOGIN_ESTABLISHED";
+
     private final AgentTokenService agentTokenService;
     private final AgentTokenRateLimiter agentTokenRateLimiter;
     private final AgentTokenMapper agentTokenMapper;
@@ -43,9 +45,39 @@ public class AgentTokenFilter extends AnonymousFilter {
         return bearer || (StringUtils.isNotBlank(apiKey) && StringUtils.startsWith(apiKey, AgentConstants.TOKEN_PREFIX));
     }
 
+    /**
+     * Streamable HTTP MCP 端点（含网关剥离 /api 后的内部路径）。
+     */
+    public static boolean isMcpStreamableEndpoint(HttpServletRequest request) {
+        String path = StringUtils.defaultString(request.getServletPath());
+        if (StringUtils.isBlank(path)) {
+            path = StringUtils.defaultString(request.getRequestURI());
+            String context = request.getContextPath();
+            if (StringUtils.isNotBlank(context) && path.startsWith(context)) {
+                path = path.substring(context.length());
+            }
+        }
+        if (path.length() > 1 && path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
+        }
+        return "/mcp".equals(path) || "/api/mcp".equals(path);
+    }
+
+    /**
+     * 无状态 MCP 不提供 GET SSE：规范要求返回 405，禁止用 401 表达「不支持 SSE」。
+     */
+    public static boolean isMcpGetWithoutSse(HttpServletRequest request) {
+        return "GET".equalsIgnoreCase(request.getMethod()) && isMcpStreamableEndpoint(request);
+    }
+
     @Override
     protected boolean onPreHandle(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpRequest = WebUtils.toHttp(request);
+        // Cursor/WorkBuddy 在 POST initialize 后会 GET 探 SSE；无 SSE 时必须 405，不能落到 authc→401
+        if (isMcpGetWithoutSse(httpRequest)) {
+            writeMethodNotAllowed(WebUtils.toHttp(response), "POST");
+            return false;
+        }
         if (!isAgentTokenCall(httpRequest)) {
             return true;
         }
@@ -68,8 +100,19 @@ public class AgentTokenFilter extends AnonymousFilter {
                 writeJsonError(WebUtils.toHttp(response), 403, ex.getMessage());
                 return false;
             }
-            if (!SecurityUtils.getSubject().isAuthenticated()) {
+            boolean alreadyAuthenticated = SecurityUtils.getSubject().isAuthenticated();
+            if (alreadyAuthenticated) {
+                Object principal = SecurityUtils.getSubject().getPrincipal();
+                String sessionUserId = principal == null ? null : String.valueOf(principal);
+                if (StringUtils.isNotBlank(sessionUserId) && !StringUtils.equals(sessionUserId, token.getUserId())) {
+                    writeJsonError(WebUtils.toHttp(response), 403,
+                            "Agent Token user does not match current web session user");
+                    return false;
+                }
+                httpRequest.setAttribute(ATTR_AGENT_LOGIN_ESTABLISHED, Boolean.FALSE);
+            } else {
                 SecurityUtils.getSubject().login(new UsernamePasswordToken(token.getUserId(), "no_pass"));
+                httpRequest.setAttribute(ATTR_AGENT_LOGIN_ESTABLISHED, Boolean.TRUE);
             }
             AgentTokenContext.set(token);
             if (StringUtils.isNotBlank(projectId)) {
@@ -84,7 +127,8 @@ public class AgentTokenFilter extends AnonymousFilter {
 
     @Override
     protected void postHandle(ServletRequest request, ServletResponse response) {
-        if (isAgentTokenCall(WebUtils.toHttp(request)) && SecurityUtils.getSubject().isAuthenticated()) {
+        if (Boolean.TRUE.equals(request.getAttribute(ATTR_AGENT_LOGIN_ESTABLISHED))
+                && SecurityUtils.getSubject().isAuthenticated()) {
             SecurityUtils.getSubject().logout();
         }
         AgentTokenContext.clear();
@@ -129,6 +173,20 @@ public class AgentTokenFilter extends AnonymousFilter {
             response.setContentType("application/json;charset=UTF-8");
             String safe = StringUtils.defaultString(message).replace("\"", "'");
             response.getWriter().write("{\"code\":" + status + ",\"message\":\"" + safe + "\"}");
+            response.getWriter().flush();
+        } catch (Exception ignored) {
+            // ignore write failure
+        }
+    }
+
+    private void writeMethodNotAllowed(HttpServletResponse response, String allow) {
+        try {
+            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            response.setHeader("Allow", allow);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write(
+                    "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Method Not Allowed\"}}");
             response.getWriter().flush();
         } catch (Exception ignored) {
             // ignore write failure

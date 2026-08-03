@@ -40,6 +40,11 @@
     <div class="mb-1 text-sm font-medium">{{ t('system.agentIntegration.mcpScopeHelp') }}</div>
     <ul class="mb-0 list-disc pl-5 text-sm text-[var(--color-text-3)]">
       <li>{{ t('system.agentIntegration.scopeAgentAll') }}：{{ t('system.agentIntegration.scopeAgentAllDesc') }}</li>
+      <li
+        >{{ t('system.agentIntegration.scopeProjectRead') }}：{{
+          t('system.agentIntegration.scopeProjectReadDesc')
+        }}</li
+      >
       <li>{{ t('system.agentIntegration.scopeCase') }}：{{ t('system.agentIntegration.scopeCaseDesc') }}</li>
       <li>{{ t('system.agentIntegration.scopeBug') }}：{{ t('system.agentIntegration.scopeBugDesc') }}</li>
     </ul>

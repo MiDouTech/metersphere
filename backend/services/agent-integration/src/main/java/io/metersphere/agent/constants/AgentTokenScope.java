@@ -1,10 +1,15 @@
 package io.metersphere.agent.constants;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 public class AgentTokenScope {
     public static final String FUNCTIONAL_READ = "FUNCTIONAL_READ";
     public static final String FUNCTIONAL_SUBMIT = "FUNCTIONAL_SUBMIT";
     public static final String FUNCTIONAL_ALL = "FUNCTIONAL_ALL";
 
+    public static final String PROJECT_READ = "PROJECT_READ";
     public static final String PROJECT_WRITE = "PROJECT_WRITE";
     public static final String CASE_WRITE = "CASE_WRITE";
     public static final String CASE_UPDATE = "CASE_UPDATE";
@@ -21,7 +26,41 @@ public class AgentTokenScope {
     public static final String BUG_RELATE = "BUG_RELATE";
     public static final String AGENT_ALL = "AGENT_ALL";
 
+    private static final Set<String> KNOWN_SCOPES;
+
+    static {
+        Set<String> scopes = new LinkedHashSet<>();
+        scopes.add(FUNCTIONAL_READ);
+        scopes.add(FUNCTIONAL_SUBMIT);
+        scopes.add(FUNCTIONAL_ALL);
+        scopes.add(PROJECT_READ);
+        scopes.add(PROJECT_WRITE);
+        scopes.add(CASE_WRITE);
+        scopes.add(CASE_UPDATE);
+        scopes.add(CASE_DELETE);
+        scopes.add(CASE_COMMENT);
+        scopes.add(CASE_ATTACHMENT);
+        scopes.add(PLAN_WRITE);
+        scopes.add(REVIEW_WRITE);
+        scopes.add(BUG_READ);
+        scopes.add(BUG_WRITE);
+        scopes.add(BUG_DELETE);
+        scopes.add(BUG_COMMENT);
+        scopes.add(BUG_ATTACHMENT);
+        scopes.add(BUG_RELATE);
+        scopes.add(AGENT_ALL);
+        KNOWN_SCOPES = Collections.unmodifiableSet(scopes);
+    }
+
     private AgentTokenScope() {
+    }
+
+    public static Set<String> knownScopes() {
+        return KNOWN_SCOPES;
+    }
+
+    public static boolean isKnownScope(String scope) {
+        return scope != null && KNOWN_SCOPES.contains(scope);
     }
 
     public static boolean isFunctionalScope(String scope) {

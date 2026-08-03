@@ -27,6 +27,6 @@ public class PersonalAgentProjectController {
         AgentProjectSearchRequest request = new AgentProjectSearchRequest();
         request.setKeyword(keyword);
         request.setLimit(limit);
-        return agentProjectService.search(request);
+        return agentProjectService.search(request).getItems();
     }
 }

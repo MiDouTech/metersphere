@@ -142,7 +142,7 @@
   /**
    * @description 功能测试-功能用例
    */
-  import { computed, nextTick, ref } from 'vue';
+  import { computed, nextTick, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
@@ -381,6 +381,24 @@
       refreshedAt: Date.now(),
     };
   }
+
+  /** 切换项目后刷新模块树与列表（keep-alive 下不会重新 mount） */
+  async function reloadAfterProjectChange() {
+    activeFolder.value = 'all';
+    offspringIds.value = [];
+    featureCaseStore.setModuleId(['all']);
+    await nextTick();
+    await caseTreeRef.value?.initModules?.();
+    caseTableRef.value?.initData?.();
+  }
+
+  watch(
+    () => currentProjectId.value,
+    async (id, prev) => {
+      if (!id || id === prev) return;
+      await reloadAfterProjectChange();
+    }
+  );
 
   onBeforeUnmount(() => {
     const routeName = [

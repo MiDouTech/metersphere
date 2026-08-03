@@ -20,6 +20,8 @@
 | BUG-API-001 | 2026-07-04 | [2026-07-04-BUG-API-001-JDK21-XStream解析失败.md](./2026-07-04-BUG-API-001-JDK21-XStream解析失败.md) | Surefire --add-opens |
 | BUG-CASE-001 | 2026-07-04 | [2026-07-04-BUG-CASE-001-caseReview路由404.md](./2026-07-04-BUG-CASE-001-caseReview路由404.md) | 路由重定向 |
 | BUG-PRJ-001 | 2026-07-04 | [2026-07-04-BUG-PRJ-001-项目所属组织更新不生效.md](./2026-07-04-BUG-PRJ-001-项目所属组织更新不生效.md) | CommonProjectService.update |
+| BUG-AGENT-MCP-P0 | 2026-07-31 | [2026-07-31-BUG-AGENT-MCP-P0-任务未完整实现巡检.md](./2026-07-31-BUG-AGENT-MCP-P0-任务未完整实现巡检.md) | Agent MCP P0/P1 任务未完整实现巡检 |
+| BUG-PLAN-003 | 2026-08-03 | [2026-08-03-BUG-PLAN-003-测试计划执行人筛选错列.md](./2026-08-03-BUG-PLAN-003-测试计划执行人筛选错列.md) | 计划三类列表高级筛 executeUser 错列/双条件 |
 
 ## 汇总文档
 
@@ -34,3 +36,4 @@
 | BUG-SYS-003 | 待修复 | mvn test 依赖 frontend/dist（文档/流程） |
 | BUG-DOC-001 | 待修复 | 测试策略文档路径不一致 |
 | BUG-SYS-004 | 待确认 | 系统设置「进入组织」走查覆盖缺口 |
+| BUG-PLAN-003 | 已修复 | 测试计划执行人高级筛错列（A/B/C）；D/F 已修，E 不改 |
