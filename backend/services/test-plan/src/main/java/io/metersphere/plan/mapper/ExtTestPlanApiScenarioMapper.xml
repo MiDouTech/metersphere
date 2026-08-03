@@ -265,10 +265,9 @@
                         </include>
                     </foreach>
                     <foreach collection="${combineSearch}.systemFieldConditions" item="condition">
-                        <include refid="io.metersphere.system.mapper.BaseMapper.baseSystemFieldConditions">
+                        <include refid="io.metersphere.system.mapper.BaseMapper.baseSystemFieldConditionsWithoutExecuteUser">
                             <property name="condition" value="condition"/>
                             <property name="tablePrefix" value="api_scenario"/>
-                            <property name="skipExecuteUser" value="true"/>
                         </include>
                         <!-- 所属模块(项目ID_模块ID 组合查询) -->
                         <if test="condition.name == 'moduleId'">

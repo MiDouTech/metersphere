@@ -366,7 +366,9 @@
   // 第三列值是数组类型的
   function valueIsArray(listItem: FilterFormItem) {
     return (
+      listItem.type === FilterType.MEMBER ||
       listItem.selectProps?.multiple ||
+      listItem.treeSelectProps?.multiple ||
       listItem.cascaderProps?.multiple ||
       (listItem.type === FilterType.TAGS_INPUT &&
         ![OperatorEnum.COUNT_LT, OperatorEnum.COUNT_GT].includes(listItem.operator as OperatorEnum)) ||

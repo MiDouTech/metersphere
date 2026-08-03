@@ -125,7 +125,11 @@
             END AS rate,
             tp.update_time AS updateTime
         FROM test_plan tp
-                 LEFT JOIN test_plan_functional_case tpfc ON tpfc.test_plan_id = tp.id
+                 LEFT JOIN (
+            SELECT tpfc.test_plan_id, tpfc.id, tpfc.last_exec_result
+            FROM test_plan_functional_case tpfc
+                     INNER JOIN functional_case fc ON fc.id = tpfc.functional_case_id AND fc.deleted = false
+        ) tpfc ON tpfc.test_plan_id = tp.id
         WHERE tp.id IN (
             SELECT DISTINCT test_plan_id
             FROM test_plan_functional_case
@@ -160,7 +164,11 @@
             </foreach>
         ) related
                  INNER JOIN test_plan tp ON tp.id = related.test_plan_id
-                 LEFT JOIN test_plan_functional_case tpfc ON tpfc.test_plan_id = tp.id
+                 LEFT JOIN (
+            SELECT tpfc.test_plan_id, tpfc.id, tpfc.last_exec_result
+            FROM test_plan_functional_case tpfc
+                     INNER JOIN functional_case fc ON fc.id = tpfc.functional_case_id AND fc.deleted = false
+        ) tpfc ON tpfc.test_plan_id = tp.id
         GROUP BY related.functional_case_id, tp.id, tp.num, tp.name, tp.status, tp.update_time
         ORDER BY related.functional_case_id, tp.update_time DESC
     </select>

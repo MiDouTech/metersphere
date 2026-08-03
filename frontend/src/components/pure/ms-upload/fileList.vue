@@ -495,3 +495,29 @@
     padding-bottom: 4px;
   }
 </style>
+
+<!-- 预览挂载到 body，需非 scoped：加大翻页按钮并贴在图片两侧 -->
+<style lang="less">
+  .arco-image-preview {
+    .arco-image-preview-arrow-left,
+    .arco-image-preview-arrow-right {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background-color: rgb(0 0 0 / 45%);
+      box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+      > svg {
+        font-size: 28px;
+      }
+      &:hover {
+        background-color: rgb(0 0 0 / 65%);
+      }
+    }
+    .arco-image-preview-arrow-left {
+      left: max(16px, calc(50% - min(42vw, 480px) - 72px));
+    }
+    .arco-image-preview-arrow-right {
+      right: max(16px, calc(50% - min(42vw, 480px) - 72px));
+    }
+  }
+</style>
