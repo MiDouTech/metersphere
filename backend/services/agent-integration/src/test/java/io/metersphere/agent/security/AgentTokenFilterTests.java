@@ -70,4 +70,9 @@ class AgentTokenFilterTests {
 
         Assertions.assertFalse(AgentTokenFilter.isMcpGetWithoutSse(request));
     }
+
+    @Test
+    void loginAttributeConstantShouldBeStable() {
+        Assertions.assertEquals("AGENT_TOKEN_LOGIN_ESTABLISHED", AgentTokenFilter.ATTR_AGENT_LOGIN_ESTABLISHED);
+    }
 }

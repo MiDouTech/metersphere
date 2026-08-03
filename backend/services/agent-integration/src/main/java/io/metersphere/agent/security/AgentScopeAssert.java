@@ -1,11 +1,11 @@
 package io.metersphere.agent.security;
 
 import io.metersphere.agent.constants.AgentErrorCode;
-import io.metersphere.agent.constants.AgentTokenScope;
 import io.metersphere.sdk.exception.MSException;
-import io.metersphere.system.controller.handler.result.MsHttpResultCode;
 import io.metersphere.system.domain.AgentToken;
 import org.apache.commons.lang3.StringUtils;
+
+import java.util.Set;
 
 public final class AgentScopeAssert {
 
@@ -13,10 +13,7 @@ public final class AgentScopeAssert {
     }
 
     public static void assertScope(String requiredScope) {
-        AgentToken token = AgentTokenContext.get();
-        if (token == null || StringUtils.isBlank(token.getScopes())) {
-            return;
-        }
+        AgentToken token = requireToken();
         if (hasScope(token.getScopes(), requiredScope)) {
             return;
         }
@@ -24,9 +21,9 @@ public final class AgentScopeAssert {
     }
 
     public static void assertAnyScope(String... requiredScopes) {
-        AgentToken token = AgentTokenContext.get();
-        if (token == null || StringUtils.isBlank(token.getScopes()) || requiredScopes == null || requiredScopes.length == 0) {
-            return;
+        AgentToken token = requireToken();
+        if (requiredScopes == null || requiredScopes.length == 0) {
+            throw new MSException(AgentErrorCode.SCOPE_DENIED, "Agent token scope 不足: (empty required)");
         }
         for (String requiredScope : requiredScopes) {
             if (hasScope(token.getScopes(), requiredScope)) {
@@ -38,21 +35,21 @@ public final class AgentScopeAssert {
     }
 
     public static boolean hasScope(String scopes, String requiredScope) {
-        if (StringUtils.isBlank(scopes) || StringUtils.isBlank(requiredScope)) {
-            return false;
+        return AgentTokenScopeParser.hasScope(scopes, requiredScope);
+    }
+
+    public static boolean hasScope(Set<String> scopes, String requiredScope) {
+        return AgentTokenScopeParser.hasScope(scopes, requiredScope);
+    }
+
+    private static AgentToken requireToken() {
+        AgentToken token = AgentTokenContext.get();
+        if (token == null) {
+            throw new MSException(AgentErrorCode.SCOPE_DENIED, "Agent token 缺失，无法校验 scope");
         }
-        if (StringUtils.contains(scopes, AgentTokenScope.AGENT_ALL)) {
-            return true;
+        if (StringUtils.isBlank(token.getScopes())) {
+            throw new MSException(AgentErrorCode.SCOPE_DENIED, "Agent token scopes 为空");
         }
-        if (AgentTokenScope.isFunctionalScope(requiredScope)
-                && StringUtils.contains(scopes, AgentTokenScope.FUNCTIONAL_ALL)) {
-            return true;
-        }
-        // BUG_WRITE 覆盖 BUG_READ
-        if (AgentTokenScope.BUG_READ.equals(requiredScope)
-                && StringUtils.contains(scopes, AgentTokenScope.BUG_WRITE)) {
-            return true;
-        }
-        return StringUtils.contains(scopes, requiredScope);
+        return token;
     }
 }

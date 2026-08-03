@@ -5,6 +5,7 @@ import io.metersphere.agent.dto.AgentProjectAddMembersRequest;
 import io.metersphere.agent.dto.AgentProjectCreateRequest;
 import io.metersphere.agent.dto.AgentProjectDTO;
 import io.metersphere.agent.dto.AgentProjectSearchRequest;
+import io.metersphere.agent.dto.AgentProjectSearchResponse;
 import io.metersphere.agent.security.AgentScopeAssert;
 import io.metersphere.agent.service.AgentProjectService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @Tag(name = "Agent Project")
 @RestController
@@ -44,19 +43,25 @@ public class AgentProjectController {
 
     @GetMapping("/search")
     @Operation(summary = "Search projects by internal id, name, or project number")
-    public List<AgentProjectDTO> search(@RequestParam(required = false) String keyword,
-                                        @RequestParam(required = false) Integer limit) {
-        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
+    public AgentProjectSearchResponse search(@RequestParam(required = false) String keyword,
+                                             @RequestParam(required = false) Integer page,
+                                             @RequestParam(required = false) Integer pageSize,
+                                             @RequestParam(required = false) Integer limit,
+                                             @RequestParam(required = false) Boolean includeArchived) {
+        AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_READ);
         AgentProjectSearchRequest request = new AgentProjectSearchRequest();
         request.setKeyword(keyword);
+        request.setPage(page);
+        request.setPageSize(pageSize);
         request.setLimit(limit);
+        request.setIncludeArchived(includeArchived);
         return agentProjectService.search(request);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get project detail")
     public AgentProjectDTO get(@PathVariable String id) {
-        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_READ);
         return agentProjectService.get(id);
     }
 }

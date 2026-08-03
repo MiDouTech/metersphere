@@ -12,8 +12,19 @@ public interface AgentExecLogMapper {
 
     List<AgentExecLog> selectPage(@Param("caseId") String caseId,
                                   @Param("executedBy") String executedBy,
+                                  @Param("action") String action,
+                                  @Param("createUser") String createUser,
                                   @Param("offset") long offset,
                                   @Param("pageSize") long pageSize);
 
-    long countPage(@Param("caseId") String caseId, @Param("executedBy") String executedBy);
+    long countPage(@Param("caseId") String caseId,
+                   @Param("executedBy") String executedBy,
+                   @Param("action") String action,
+                   @Param("createUser") String createUser);
+
+    List<AgentExecLog> selectExport(@Param("caseId") String caseId,
+                                    @Param("executedBy") String executedBy,
+                                    @Param("action") String action,
+                                    @Param("createUser") String createUser,
+                                    @Param("limit") long limit);
 }

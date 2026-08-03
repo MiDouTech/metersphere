@@ -26,8 +26,12 @@ public class AgentMcpStreamableController {
 
     @PostMapping
     @Operation(summary = "Streamable HTTP MCP JSON-RPC endpoint")
-    public Map<String, Object> post(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
-        return agentMcpStreamableService.handle(request, httpRequest.getHeader("Idempotency-Key"));
+    public ResponseEntity<?> post(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+        if (agentMcpStreamableService.isNotification(request)) {
+            agentMcpStreamableService.handleNotification(request);
+            return ResponseEntity.accepted().build();
+        }
+        return ResponseEntity.ok(agentMcpStreamableService.handle(request, httpRequest.getHeader("Idempotency-Key")));
     }
 
     /**

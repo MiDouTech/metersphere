@@ -22,6 +22,8 @@ import java.util.List;
 
 @Component
 public class AgentTokenFilter extends AnonymousFilter {
+    public static final String ATTR_AGENT_LOGIN_ESTABLISHED = "AGENT_TOKEN_LOGIN_ESTABLISHED";
+
     private final AgentTokenService agentTokenService;
     private final AgentTokenRateLimiter agentTokenRateLimiter;
     private final AgentTokenMapper agentTokenMapper;
@@ -98,8 +100,19 @@ public class AgentTokenFilter extends AnonymousFilter {
                 writeJsonError(WebUtils.toHttp(response), 403, ex.getMessage());
                 return false;
             }
-            if (!SecurityUtils.getSubject().isAuthenticated()) {
+            boolean alreadyAuthenticated = SecurityUtils.getSubject().isAuthenticated();
+            if (alreadyAuthenticated) {
+                Object principal = SecurityUtils.getSubject().getPrincipal();
+                String sessionUserId = principal == null ? null : String.valueOf(principal);
+                if (StringUtils.isNotBlank(sessionUserId) && !StringUtils.equals(sessionUserId, token.getUserId())) {
+                    writeJsonError(WebUtils.toHttp(response), 403,
+                            "Agent Token user does not match current web session user");
+                    return false;
+                }
+                httpRequest.setAttribute(ATTR_AGENT_LOGIN_ESTABLISHED, Boolean.FALSE);
+            } else {
                 SecurityUtils.getSubject().login(new UsernamePasswordToken(token.getUserId(), "no_pass"));
+                httpRequest.setAttribute(ATTR_AGENT_LOGIN_ESTABLISHED, Boolean.TRUE);
             }
             AgentTokenContext.set(token);
             if (StringUtils.isNotBlank(projectId)) {
@@ -114,7 +127,8 @@ public class AgentTokenFilter extends AnonymousFilter {
 
     @Override
     protected void postHandle(ServletRequest request, ServletResponse response) {
-        if (isAgentTokenCall(WebUtils.toHttp(request)) && SecurityUtils.getSubject().isAuthenticated()) {
+        if (Boolean.TRUE.equals(request.getAttribute(ATTR_AGENT_LOGIN_ESTABLISHED))
+                && SecurityUtils.getSubject().isAuthenticated()) {
             SecurityUtils.getSubject().logout();
         }
         AgentTokenContext.clear();

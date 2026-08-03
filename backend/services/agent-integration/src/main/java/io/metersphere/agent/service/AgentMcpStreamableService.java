@@ -1,34 +1,17 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.constants.AgentErrorCode;
-import io.metersphere.agent.constants.AgentTokenScope;
-import io.metersphere.agent.dto.AgentBugCreateRequest;
-import io.metersphere.agent.dto.AgentBugSearchRequest;
-import io.metersphere.agent.dto.AgentBugUpdateRequest;
-import io.metersphere.agent.dto.AgentCaseBatchCreateRequest;
-import io.metersphere.agent.dto.AgentCaseCreateRequest;
-import io.metersphere.agent.dto.AgentCaseReviewAssociateRequest;
-import io.metersphere.agent.dto.AgentCaseReviewCreateRequest;
-import io.metersphere.agent.dto.AgentCaseSearchRequest;
-import io.metersphere.agent.dto.AgentCaseSubmitRequest;
-import io.metersphere.agent.dto.AgentModuleCreateRequest;
-import io.metersphere.agent.dto.AgentProjectAddMembersRequest;
-import io.metersphere.agent.dto.AgentProjectCreateRequest;
-import io.metersphere.agent.dto.AgentProjectSearchRequest;
-import io.metersphere.agent.dto.AgentTestPlanAssociateRequest;
-import io.metersphere.agent.dto.AgentTestPlanCreateRequest;
 import io.metersphere.agent.security.AgentScopeAssert;
 import io.metersphere.agent.security.AgentTokenContext;
 import io.metersphere.agent.security.AgentTokenRateLimiter;
 import io.metersphere.agent.tool.AgentMcpToolHandler;
+import io.metersphere.agent.tool.AgentMcpToolRegistry;
 import io.metersphere.sdk.exception.IResultCode;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.domain.AgentToken;
 import jakarta.annotation.Resource;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -36,48 +19,40 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 public class AgentMcpStreamableService {
-    private static final Set<String> WRITE_TOOLS = Set.of(
-            "metersphere.functional.submit",
-            "metersphere.functional.module.create",
-            "metersphere.functional.case.create",
-            "metersphere.functional.case.batch_create",
-            "metersphere.bug.create",
-            "metersphere.bug.update",
-            "metersphere.project.create",
-            "metersphere.project.members.add",
-            "metersphere.test_plan.create",
-            "metersphere.test_plan.associate_cases",
-            "metersphere.case_review.create",
-            "metersphere.case_review.associate_cases"
-    );
-
-    @Resource
-    private AgentFunctionalCaseSearchService agentFunctionalCaseSearchService;
-    @Resource
-    private AgentFunctionalCaseSubmitService agentFunctionalCaseSubmitService;
-    @Resource
-    private AgentCaseWriteService agentCaseWriteService;
-    @Resource
-    private AgentBugWriteService agentBugWriteService;
-    @Resource
-    private AgentProjectService agentProjectService;
-    @Resource
-    private AgentTestPlanWriteService agentTestPlanWriteService;
-    @Resource
-    private AgentCaseReviewWriteService agentCaseReviewWriteService;
     @Resource
     private AgentTokenRateLimiter agentTokenRateLimiter;
     @Resource
     private AgentIdempotencyService agentIdempotencyService;
-    @Autowired(required = false)
-    private List<AgentMcpToolHandler> toolHandlers = List.of();
+    @Resource
+    private AgentMcpToolRegistry agentMcpToolRegistry;
 
     public Map<String, Object> handle(Map<String, Object> request) {
         return handle(request, null);
+    }
+
+    /**
+     * JSON-RPC Notification（无 id）：不返回响应体语义，由 Controller 映射为 202/空 body。
+     */
+    public boolean isNotification(Map<String, Object> request) {
+        if (request == null) {
+            return false;
+        }
+        if (request.containsKey("id") && request.get("id") != null) {
+            return false;
+        }
+        String method = StringUtils.defaultString((String) request.get("method"));
+        return method.startsWith("notifications/");
+    }
+
+    public void handleNotification(Map<String, Object> request) {
+        String method = StringUtils.defaultString((String) request.get("method"));
+        if ("notifications/initialized".equals(method) || method.startsWith("notifications/")) {
+            return;
+        }
+        throw new MSException("Unsupported MCP notification: " + method);
     }
 
     public Map<String, Object> handle(Map<String, Object> request, String idempotencyKey) {
@@ -86,7 +61,10 @@ public class AgentMcpStreamableService {
         try {
             return switch (method) {
                 case "initialize" -> response(id, initializeResult());
-                case "notifications/initialized" -> response(id, Map.of("ok", true));
+                case "notifications/initialized" -> {
+                    // 带 id 的非标准客户端：返回空 result；无 id 应由 isNotification 短路
+                    yield response(id, Map.of());
+                }
                 case "ping" -> response(id, Map.of("ok", true));
                 case "tools/list" -> response(id, Map.of("tools", tools()));
                 case "tools/call" -> response(id, callTool(asMap(request.get("params")), idempotencyKey));
@@ -108,60 +86,10 @@ public class AgentMcpStreamableService {
     }
 
     private List<Map<String, Object>> tools() {
-        List<Map<String, Object>> tools = new ArrayList<>(List.of(
-                tool("metersphere.functional.search",
-                        "Search functional test cases. Optional projectId accepts internal project id, UI project number, or exact project name; when omitted it uses Agent Token current/default project.",
-                        AgentTokenScope.FUNCTIONAL_READ,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.functional.get", "Get functional test case detail", AgentTokenScope.FUNCTIONAL_READ,
-                        objectSchema(Map.of("caseId", stringSchema(), "includeSteps", Map.of("type", "boolean"), "testPlanId", stringSchema()), List.of("caseId"))),
-                tool("metersphere.functional.modules", "List functional case modules by project. projectId accepts internal project id, UI project number, or exact project name.", AgentTokenScope.FUNCTIONAL_READ,
-                        objectSchema(Map.of("projectId", stringSchema()), List.of("projectId"))),
-                tool("metersphere.functional.submit", "Submit functional case execution result. projectId accepts internal project id, UI project number, or exact project name.", AgentTokenScope.FUNCTIONAL_SUBMIT,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.functional.module.create", "Create functional case module. projectId accepts internal project id, UI project number, or exact project name.", AgentTokenScope.CASE_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.functional.case.create", "Create functional case. projectId accepts internal project id, UI project number, or exact project name.", AgentTokenScope.CASE_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.functional.case.batch_create", "Batch create functional cases. projectId accepts internal project id, UI project number, or exact project name.", AgentTokenScope.CASE_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.bug.search", "Search bugs", AgentTokenScope.BUG_READ,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.bug.get", "Get bug detail", AgentTokenScope.BUG_READ,
-                        objectSchema(Map.of("bugId", stringSchema()), List.of("bugId"))),
-                tool("metersphere.bug.create", "Create bug", AgentTokenScope.BUG_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.bug.update", "Update bug", AgentTokenScope.BUG_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.project.create", "Create project", AgentTokenScope.PROJECT_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.project.members.add", "Add project members", AgentTokenScope.PROJECT_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.project.search",
-                        "Search projects by internal project id, project name, or project number shown as ID in the UI. Returns all matched projects, including projects with the same number.",
-                        AgentTokenScope.FUNCTIONAL_READ,
-                        objectSchema(Map.of("keyword", stringSchema(), "limit", Map.of("type", "integer", "minimum", 1, "maximum", 200)), List.of())),
-                tool("metersphere.project.list",
-                        "List projects accessible to the current Agent Token user. Optional keyword matches project number shown as ID in the UI or project name.",
-                        AgentTokenScope.FUNCTIONAL_READ,
-                        objectSchema(Map.of("keyword", stringSchema(), "limit", Map.of("type", "integer", "minimum", 1, "maximum", 200)), List.of())),
-                tool("metersphere.project.get", "Get project detail", AgentTokenScope.FUNCTIONAL_READ,
-                        objectSchema(Map.of("projectId", stringSchema()), List.of("projectId"))),
-                tool("metersphere.test_plan.create", "Create test plan", AgentTokenScope.PLAN_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.test_plan.associate_cases", "Associate cases to test plan", AgentTokenScope.PLAN_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.test_plan.get", "Get test plan detail", AgentTokenScope.FUNCTIONAL_READ,
-                        objectSchema(Map.of("testPlanId", stringSchema()), List.of("testPlanId"))),
-                tool("metersphere.case_review.create", "Create case review", AgentTokenScope.REVIEW_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.case_review.associate_cases", "Associate cases to review", AgentTokenScope.REVIEW_WRITE,
-                        Map.of("type", "object", "additionalProperties", true)),
-                tool("metersphere.case_review.get", "Get case review detail", AgentTokenScope.FUNCTIONAL_READ,
-                        objectSchema(Map.of("reviewId", stringSchema()), List.of("reviewId")))
-        ));
-        for (AgentMcpToolHandler handler : toolHandlers) {
-            tools.add(tool(handler.name(), handler.description(), handler.requiredScope(), handler.inputSchema(), handler.annotations()));
+        List<Map<String, Object>> tools = new ArrayList<>();
+        for (AgentMcpToolHandler handler : agentMcpToolRegistry.all()) {
+            tools.add(tool(handler.name(), handler.description(), handler.requiredScope(),
+                    handler.inputSchema(), handler.annotations()));
         }
         return tools;
     }
@@ -174,7 +102,7 @@ public class AgentMcpStreamableService {
             throw new MSException("Agent MCP tool requests are too frequent. Please retry later.");
         }
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
-        if (StringUtils.isNotBlank(effectiveIdempotencyKey) && isWriteTool(name)) {
+        if (StringUtils.isNotBlank(effectiveIdempotencyKey) && agentMcpToolRegistry.isWriteTool(name)) {
             Optional<Map<String, Object>> cached = agentIdempotencyService.findCachedResponse(name, effectiveIdempotencyKey, arguments);
             if (cached.isPresent()) {
                 return cached.get();
@@ -187,140 +115,18 @@ public class AgentMcpStreamableService {
     }
 
     private Map<String, Object> callToolInternal(String name, Map<String, Object> arguments) {
-        AgentMcpToolHandler handler = findToolHandler(name);
-        if (handler != null) {
-            AgentScopeAssert.assertScope(handler.requiredScope());
-            return toolResponse(handler.execute(arguments));
-        }
-        Object result = switch (name) {
-            case "metersphere.functional.search" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
-                yield agentFunctionalCaseSearchService.search(convert(arguments, AgentCaseSearchRequest.class));
-            }
-            case "metersphere.functional.get" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
-                String caseId = requiredString(arguments, "caseId");
-                boolean includeSteps = !arguments.containsKey("includeSteps") || BooleanUtils.toBoolean(arguments.get("includeSteps").toString());
-                String testPlanId = (String) arguments.get("testPlanId");
-                yield agentFunctionalCaseSearchService.getById(caseId, includeSteps, testPlanId);
-            }
-            case "metersphere.functional.modules" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
-                yield agentFunctionalCaseSearchService.listModules(requiredString(arguments, "projectId"));
-            }
-            case "metersphere.functional.submit" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
-                agentFunctionalCaseSubmitService.submit(convert(arguments, AgentCaseSubmitRequest.class));
-                yield Map.of("ok", true);
-            }
-            case "metersphere.functional.module.create" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.CASE_WRITE);
-                yield agentCaseWriteService.createModule(convert(arguments, AgentModuleCreateRequest.class));
-            }
-            case "metersphere.functional.case.create" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.CASE_WRITE);
-                yield agentCaseWriteService.createCase(convert(arguments, AgentCaseCreateRequest.class));
-            }
-            case "metersphere.functional.case.batch_create" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.CASE_WRITE);
-                yield agentCaseWriteService.batchCreate(convert(arguments, AgentCaseBatchCreateRequest.class));
-            }
-            case "metersphere.bug.search" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.BUG_READ);
-                yield agentBugWriteService.search(convert(arguments, AgentBugSearchRequest.class));
-            }
-            case "metersphere.bug.get" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.BUG_READ);
-                yield agentBugWriteService.get(requiredString(arguments, "bugId"));
-            }
-            case "metersphere.bug.create" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE);
-                yield agentBugWriteService.create(convert(arguments, AgentBugCreateRequest.class));
-            }
-            case "metersphere.bug.update" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE);
-                yield agentBugWriteService.update(convert(arguments, AgentBugUpdateRequest.class));
-            }
-            case "metersphere.project.create" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_WRITE);
-                yield agentProjectService.create(convert(arguments, AgentProjectCreateRequest.class));
-            }
-            case "metersphere.project.members.add" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_WRITE);
-                agentProjectService.addMembers(convert(arguments, AgentProjectAddMembersRequest.class));
-                yield Map.of("ok", true);
-            }
-            case "metersphere.project.search" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
-                yield agentProjectService.search(convert(arguments, AgentProjectSearchRequest.class));
-            }
-            case "metersphere.project.list" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
-                yield agentProjectService.search(convert(arguments, AgentProjectSearchRequest.class));
-            }
-            case "metersphere.project.get" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
-                yield agentProjectService.get(requiredString(arguments, "projectId"));
-            }
-            case "metersphere.test_plan.create" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.PLAN_WRITE);
-                yield agentTestPlanWriteService.create(convert(arguments, AgentTestPlanCreateRequest.class));
-            }
-            case "metersphere.test_plan.associate_cases" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.PLAN_WRITE);
-                agentTestPlanWriteService.associate(convert(arguments, AgentTestPlanAssociateRequest.class));
-                yield Map.of("ok", true);
-            }
-            case "metersphere.test_plan.get" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
-                yield agentTestPlanWriteService.get(requiredString(arguments, "testPlanId"));
-            }
-            case "metersphere.case_review.create" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE);
-                yield agentCaseReviewWriteService.create(convert(arguments, AgentCaseReviewCreateRequest.class));
-            }
-            case "metersphere.case_review.associate_cases" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE);
-                agentCaseReviewWriteService.associate(convert(arguments, AgentCaseReviewAssociateRequest.class));
-                yield Map.of("ok", true);
-            }
-            case "metersphere.case_review.get" -> {
-                AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
-                yield agentCaseReviewWriteService.get(requiredString(arguments, "reviewId"));
-            }
-            default -> throw new MSException("Unsupported MCP tool: " + name);
-        };
-        return toolResponse(result);
-    }
-
-    private AgentMcpToolHandler findToolHandler(String name) {
-        return toolHandlers.stream()
-                .filter(handler -> StringUtils.equals(handler.name(), name))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private boolean isWriteTool(String name) {
-        if (WRITE_TOOLS.contains(name)) {
-            return true;
-        }
-        AgentMcpToolHandler handler = findToolHandler(name);
-        return handler != null && !Boolean.TRUE.equals(handler.annotations().get("readOnlyHint"));
+        AgentMcpToolHandler handler = agentMcpToolRegistry.find(name)
+                .orElseThrow(() -> new MSException("Unsupported MCP tool: " + name));
+        AgentScopeAssert.assertScope(handler.requiredScope());
+        return toolResponse(handler.execute(arguments));
     }
 
     private Map<String, Object> toolResponse(Object result) {
         return Map.of("content", List.of(Map.of("type", "text", "text", JSON.toJSONString(result))));
     }
 
-    private Map<String, Object> tool(String name, String description, String scope, Map<String, Object> inputSchema) {
-        Map<String, Object> annotations = new LinkedHashMap<>();
-        annotations.put("scope", scope);
-        annotations.put("readOnlyHint", !StringUtils.contains(scope, "WRITE") && !StringUtils.contains(scope, "SUBMIT"));
-
-        return tool(name, description, scope, inputSchema, annotations);
-    }
-
-    private Map<String, Object> tool(String name, String description, String scope, Map<String, Object> inputSchema, Map<String, Object> annotations) {
+    private Map<String, Object> tool(String name, String description, String scope,
+                                     Map<String, Object> inputSchema, Map<String, Object> annotations) {
         Map<String, Object> mergedAnnotations = new LinkedHashMap<>();
         if (annotations != null) {
             mergedAnnotations.putAll(annotations);
@@ -335,32 +141,12 @@ public class AgentMcpStreamableService {
         return tool;
     }
 
-    private Map<String, Object> objectSchema(Map<String, Object> properties, List<String> required) {
-        return Map.of("type", "object", "properties", properties, "required", required);
-    }
-
-    private Map<String, Object> stringSchema() {
-        return Map.of("type", "string");
-    }
-
     @SuppressWarnings("unchecked")
     private Map<String, Object> asMap(Object value) {
         if (value instanceof Map<?, ?> map) {
             return (Map<String, Object>) map;
         }
         return Map.of();
-    }
-
-    private <T> T convert(Map<String, Object> arguments, Class<T> clazz) {
-        return JSON.parseObject(JSON.toJSONString(arguments), clazz);
-    }
-
-    private String requiredString(Map<String, Object> arguments, String key) {
-        String value = (String) arguments.get(key);
-        if (StringUtils.isBlank(value)) {
-            throw new MSException("Missing required argument: " + key);
-        }
-        return value;
     }
 
     private Map<String, Object> response(Object id, Object result) {

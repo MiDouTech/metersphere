@@ -15,12 +15,52 @@ class AgentScopeAssertTests {
     }
 
     @Test
+    void nullTokenShouldDeny() {
+        AgentTokenContext.clear();
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ));
+    }
+
+    @Test
+    void blankScopesShouldDeny() {
+        AgentToken token = new AgentToken();
+        token.setScopes("   ");
+        AgentTokenContext.set(token);
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ));
+    }
+
+    @Test
+    void emptyScopesShouldDeny() {
+        AgentToken token = new AgentToken();
+        token.setScopes("");
+        AgentTokenContext.set(token);
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE));
+    }
+
+    @Test
+    void substringLookalikeShouldNotGrantAgentAll() {
+        AgentToken token = new AgentToken();
+        token.setScopes("XAGENT_ALL");
+        AgentTokenContext.set(token);
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_WRITE));
+    }
+
+    @Test
+    void substringLookalikeShouldNotGrantBugWrite() {
+        AgentToken token = new AgentToken();
+        token.setScopes("BUG_WRITE_EXT");
+        AgentTokenContext.set(token);
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE));
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_READ));
+    }
+
+    @Test
     void agentAllShouldAllowAnyScope() {
         AgentToken token = new AgentToken();
         token.setScopes(AgentTokenScope.AGENT_ALL);
         AgentTokenContext.set(token);
         Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_WRITE));
         Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_READ));
     }
 
     @Test
@@ -31,6 +71,23 @@ class AgentScopeAssertTests {
         MSException ex = Assertions.assertThrows(MSException.class,
                 () -> AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_WRITE));
         Assertions.assertTrue(ex.getMessage().contains(AgentTokenScope.PROJECT_WRITE));
+    }
+
+    @Test
+    void functionalReadShouldTemporarilyGrantProjectRead() {
+        AgentToken token = new AgentToken();
+        token.setScopes(AgentTokenScope.FUNCTIONAL_READ);
+        AgentTokenContext.set(token);
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_READ));
+    }
+
+    @Test
+    void projectReadAloneShouldGrantProjectRead() {
+        AgentToken token = new AgentToken();
+        token.setScopes(AgentTokenScope.PROJECT_READ);
+        AgentTokenContext.set(token);
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_READ));
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ));
     }
 
     @Test
@@ -69,15 +126,13 @@ class AgentScopeAssertTests {
     }
 
     @Test
-    void agentAllShouldGrantNewFineGrainedScopes() {
+    void multiScopeExactCombination() {
         AgentToken token = new AgentToken();
-        token.setScopes(AgentTokenScope.AGENT_ALL);
+        token.setScopes(AgentTokenScope.FUNCTIONAL_READ + ";" + AgentTokenScope.BUG_WRITE);
         AgentTokenContext.set(token);
-        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_COMMENT));
-        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_ATTACHMENT));
-        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_COMMENT));
-        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_ATTACHMENT));
-        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_RELATE));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ));
+        Assertions.assertDoesNotThrow(() -> AgentScopeAssert.assertScope(AgentTokenScope.BUG_READ));
+        Assertions.assertThrows(MSException.class, () -> AgentScopeAssert.assertScope(AgentTokenScope.CASE_WRITE));
     }
 
     @Test
@@ -89,5 +144,14 @@ class AgentScopeAssertTests {
         MSException ex = Assertions.assertThrows(MSException.class,
                 () -> AgentScopeAssert.assertScope(AgentTokenScope.PROJECT_WRITE));
         Assertions.assertTrue(ex.getMessage().contains(AgentTokenScope.PROJECT_WRITE));
+    }
+
+    @Test
+    void missingWriteScopeShouldDenyAssertAny() {
+        AgentToken token = new AgentToken();
+        token.setScopes(AgentTokenScope.FUNCTIONAL_READ);
+        AgentTokenContext.set(token);
+        Assertions.assertThrows(MSException.class,
+                () -> AgentScopeAssert.assertAnyScope(AgentTokenScope.CASE_WRITE, AgentTokenScope.BUG_WRITE));
     }
 }
