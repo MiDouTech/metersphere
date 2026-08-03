@@ -36,10 +36,11 @@
     </select>
 
     <select id="countExecByPlan" resultType="io.metersphere.functional.dto.FunctionalTestReportResultCountDTO">
-        select last_exec_result as result, count(1) as cnt
-        from test_plan_functional_case
-        where test_plan_id = #{planId}
-        group by last_exec_result
+        select tpfc.last_exec_result as result, count(1) as cnt
+        from test_plan_functional_case tpfc
+                 inner join functional_case fc on fc.id = tpfc.functional_case_id and fc.deleted = false
+        where tpfc.test_plan_id = #{planId}
+        group by tpfc.last_exec_result
     </select>
 
     <select id="listRiskCasesByProject" resultType="io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO">
@@ -56,7 +57,7 @@
     <select id="listRiskCasesByPlan" resultType="io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO">
         select fc.id as caseId, fc.num, fc.name, tpf.last_exec_result as lastExecResult
         from test_plan_functional_case tpf
-                 inner join functional_case fc on fc.id = tpf.functional_case_id
+                 inner join functional_case fc on fc.id = tpf.functional_case_id and fc.deleted = false
         where tpf.test_plan_id = #{planId}
           and tpf.last_exec_result in ('ERROR', 'BLOCKED', 'FAKE_ERROR')
         order by tpf.last_exec_time desc

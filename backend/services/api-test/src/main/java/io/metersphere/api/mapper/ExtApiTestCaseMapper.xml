@@ -640,11 +640,9 @@
                         </include>
                     </foreach>
                     <foreach collection="${combineSearch}.systemFieldConditions" item="condition">
-                        <include refid="io.metersphere.system.mapper.BaseMapper.baseSystemFieldConditions">
+                        <include refid="io.metersphere.system.mapper.BaseMapper.baseSystemFieldConditionsWithoutExecuteUser">
                             <property name="condition" value="condition"/>
                             <property name="tablePrefix" value="atc"/>
-                            <!-- api_test_case 无 execute_user 列，避免高级筛误打错列 -->
-                            <property name="skipExecuteUser" value="true"/>
                         </include>
                         <if test="condition.name == 'belongTestPlan' and condition.operator == 'EQUALS'">
                             atc.id in (
