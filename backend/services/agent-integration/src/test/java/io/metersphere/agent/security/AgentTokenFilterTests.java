@@ -43,4 +43,31 @@ class AgentTokenFilterTests {
 
         Assertions.assertFalse(AgentTokenFilter.isAgentTokenCall(request));
     }
+
+    @Test
+    void isMcpGetWithoutSseShouldMatchApiMcpGet() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getServletPath()).thenReturn("/api/mcp");
+
+        Assertions.assertTrue(AgentTokenFilter.isMcpStreamableEndpoint(request));
+        Assertions.assertTrue(AgentTokenFilter.isMcpGetWithoutSse(request));
+    }
+
+    @Test
+    void isMcpGetWithoutSseShouldMatchStrippedMcpGet() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getServletPath()).thenReturn("/mcp");
+
+        Assertions.assertTrue(AgentTokenFilter.isMcpGetWithoutSse(request));
+    }
+
+    @Test
+    void isMcpGetWithoutSseShouldIgnorePost() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getMethod()).thenReturn("POST");
+
+        Assertions.assertFalse(AgentTokenFilter.isMcpGetWithoutSse(request));
+    }
 }

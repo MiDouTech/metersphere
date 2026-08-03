@@ -216,7 +216,8 @@ public class AgentMcpBundleService {
         return """
                 # Troubleshooting
 
-                - 401: token missing, expired, disabled, or malformed.
+                - 401: token missing, expired, disabled, or malformed on POST.
+                - GET /api/mcp returns 405 (no SSE); clients must use POST Streamable HTTP.
                 - 403: token scope, user RBAC, or project allow-list does not permit the operation.
                 - 429: token rate limit exceeded.
                 - Do not paste tokens into prompts; configure them as environment variables or client secrets.

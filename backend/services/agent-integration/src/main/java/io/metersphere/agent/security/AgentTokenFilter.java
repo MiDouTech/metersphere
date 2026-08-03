@@ -43,9 +43,39 @@ public class AgentTokenFilter extends AnonymousFilter {
         return bearer || (StringUtils.isNotBlank(apiKey) && StringUtils.startsWith(apiKey, AgentConstants.TOKEN_PREFIX));
     }
 
+    /**
+     * Streamable HTTP MCP 端点（含网关剥离 /api 后的内部路径）。
+     */
+    public static boolean isMcpStreamableEndpoint(HttpServletRequest request) {
+        String path = StringUtils.defaultString(request.getServletPath());
+        if (StringUtils.isBlank(path)) {
+            path = StringUtils.defaultString(request.getRequestURI());
+            String context = request.getContextPath();
+            if (StringUtils.isNotBlank(context) && path.startsWith(context)) {
+                path = path.substring(context.length());
+            }
+        }
+        if (path.length() > 1 && path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
+        }
+        return "/mcp".equals(path) || "/api/mcp".equals(path);
+    }
+
+    /**
+     * 无状态 MCP 不提供 GET SSE：规范要求返回 405，禁止用 401 表达「不支持 SSE」。
+     */
+    public static boolean isMcpGetWithoutSse(HttpServletRequest request) {
+        return "GET".equalsIgnoreCase(request.getMethod()) && isMcpStreamableEndpoint(request);
+    }
+
     @Override
     protected boolean onPreHandle(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpRequest = WebUtils.toHttp(request);
+        // Cursor/WorkBuddy 在 POST initialize 后会 GET 探 SSE；无 SSE 时必须 405，不能落到 authc→401
+        if (isMcpGetWithoutSse(httpRequest)) {
+            writeMethodNotAllowed(WebUtils.toHttp(response), "POST");
+            return false;
+        }
         if (!isAgentTokenCall(httpRequest)) {
             return true;
         }
@@ -129,6 +159,20 @@ public class AgentTokenFilter extends AnonymousFilter {
             response.setContentType("application/json;charset=UTF-8");
             String safe = StringUtils.defaultString(message).replace("\"", "'");
             response.getWriter().write("{\"code\":" + status + ",\"message\":\"" + safe + "\"}");
+            response.getWriter().flush();
+        } catch (Exception ignored) {
+            // ignore write failure
+        }
+    }
+
+    private void writeMethodNotAllowed(HttpServletResponse response, String allow) {
+        try {
+            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            response.setHeader("Allow", allow);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write(
+                    "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Method Not Allowed\"}}");
             response.getWriter().flush();
         } catch (Exception ignored) {
             // ignore write failure
