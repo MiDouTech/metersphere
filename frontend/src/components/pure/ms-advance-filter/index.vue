@@ -380,9 +380,18 @@
     }
   }
 
+  function restoreFilterState(filter: FilterResult, view?: string, advanced = false) {
+    filterResult.value = filter || { searchMode: 'AND', conditions: [] };
+    if (view) {
+      currentView.value = view;
+    }
+    isAdvancedSearchMode.value = advanced;
+  }
+
   defineExpose({
     clearFilter,
     isAdvancedSearchMode,
+    restoreFilterState,
   });
 </script>
 

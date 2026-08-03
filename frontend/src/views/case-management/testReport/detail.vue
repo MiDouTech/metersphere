@@ -16,7 +16,7 @@
           <div v-else class="truncate text-[16px] font-medium text-[var(--color-text-1)]">{{ reportName }}</div>
           <a-tag v-if="planLabel" size="small" color="arcoblue">{{ planLabel }}</a-tag>
         </div>
-        <div class="flex items-center gap-[8px]">
+        <div v-if="!isStandaloneView" class="flex items-center gap-[8px]">
           <MsButton v-permission="['FUNCTIONAL_CASE:READ+UPDATE']" :loading="refreshLoading" @click="handleRefresh">
             {{ t('caseManagement.testReport.refreshStats') }}
           </MsButton>
@@ -308,9 +308,12 @@
 
   import {
     getTestReportDetail,
+    getTestReportProject,
+    getTestReportStandaloneDetail,
     refreshTestReportStats,
     updateTestReport,
   } from '@/api/modules/case-management/testReport';
+  import { getProjectInfo, switchProject } from '@/api/modules/project-management/project';
   import { getTestPlanListWithoutPage } from '@/api/modules/test-plan/testPlan';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
@@ -322,7 +325,8 @@
     TestReportItem,
     TestReportStats,
   } from '@/models/caseManagement/testReport';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import type { LoginRes } from '@/models/user';
+  import { CaseManagementRouteEnum, ShareEnum } from '@/enums/routeEnum';
 
   defineOptions({
     name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
@@ -337,8 +341,10 @@
   const loading = ref(true);
   const saveLoading = ref(false);
   const refreshLoading = ref(false);
+  const switchingProject = ref(false);
   const reportId = computed(() => (route.query.id as string) || '');
-  const isEdit = computed(() => route.query.mode === 'edit');
+  const isStandaloneView = computed(() => route.name === ShareEnum.SHARE_FUNCTIONAL_TEST_REPORT);
+  const isEdit = computed(() => !isStandaloneView.value && route.query.mode === 'edit');
 
   const reportName = ref('');
   const planId = ref<string | null>(null);
@@ -562,6 +568,65 @@
     }
   }
 
+  async function switchToReportProject(projectId: string) {
+    if (!projectId || switchingProject.value) {
+      return;
+    }
+    if (projectId === appStore.currentProjectId && userStore.lastProjectId === projectId) {
+      return;
+    }
+    switchingProject.value = true;
+    appStore.showLoading();
+    try {
+      const switchedUser = (await switchProject({
+        projectId,
+        userId: userStore.id || '',
+      })) as LoginRes;
+      if (switchedUser) {
+        userStore.setInfo(switchedUser);
+        if (switchedUser.lastOrganizationId) {
+          appStore.setCurrentOrgId(switchedUser.lastOrganizationId);
+        }
+      }
+      appStore.setCurrentProjectId(projectId);
+      await userStore.checkIsLogin(true);
+      appStore.setCurrentProjectId(projectId);
+      try {
+        const project = await getProjectInfo(projectId);
+        if (project) {
+          appStore.setCurrentMenuConfig(project.moduleIds || []);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log(error);
+      }
+      await router.replace({
+        name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
+        query: {
+          ...route.query,
+          orgId: appStore.currentOrgId,
+          pId: projectId,
+        },
+      });
+    } finally {
+      switchingProject.value = false;
+      appStore.hideLoading();
+    }
+  }
+
+  async function ensureReportProject() {
+    if (!reportId.value) return;
+    const reportProject = await getTestReportProject(reportId.value);
+    if (!reportProject.hasProjectPermission) {
+      await router.replace({
+        name: ShareEnum.SHARE_FUNCTIONAL_TEST_REPORT,
+        query: { id: reportId.value },
+      });
+      return;
+    }
+    await switchToReportProject(reportProject.projectId);
+  }
+
   async function loadDetail() {
     if (!reportId.value) {
       router.replace({ name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT });
@@ -569,9 +634,21 @@
     }
     loading.value = true;
     try {
-      const report = await getTestReportDetail(reportId.value);
+      if (!isStandaloneView.value) {
+        await ensureReportProject();
+        if (route.name === ShareEnum.SHARE_FUNCTIONAL_TEST_REPORT) {
+          return;
+        }
+      }
+      const report = isStandaloneView.value
+        ? await getTestReportStandaloneDetail(reportId.value)
+        : await getTestReportDetail(reportId.value);
       applyReport(report);
-      await resolvePlanLabel();
+      if (isStandaloneView.value) {
+        planLabel.value = report.planName || report.planId || t('caseManagement.testReport.noPlan');
+      } else {
+        await resolvePlanLabel();
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);

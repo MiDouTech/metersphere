@@ -120,6 +120,7 @@ export enum ShareEnum {
   SHARE_DEFINITION_API = 'shareDefinitionApi',
   SHARE_REPORT_CASE = 'shareReportCase',
   SHARE_REPORT_TEST_PLAN = 'shareReportTestPlan',
+  SHARE_FUNCTIONAL_TEST_REPORT = 'shareFunctionalTestReport',
 }
 
 export enum FullPageEnum {

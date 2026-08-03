@@ -27,6 +27,14 @@ import { LoginRes } from '@/models/user';
 import useAppStore from '../app';
 import { UserState } from './types';
 
+const CASE_MANAGEMENT_TABLE_FILTER_CACHE_PREFIX = 'MS_CASE_MANAGEMENT_TABLE_FILTER_STATE:';
+
+function clearCaseManagementTableFilterCache() {
+  Object.keys(sessionStorage)
+    .filter((key) => key.startsWith(CASE_MANAGEMENT_TABLE_FILTER_CACHE_PREFIX))
+    .forEach((key) => sessionStorage.removeItem(key));
+}
+
 const useUserStore = defineStore('user', {
   // 开启数据持久化
   persist: true,
@@ -161,6 +169,7 @@ const useUserStore = defineStore('user', {
       const licenseStore = useLicenseStore();
       this.resetInfo();
       clearToken();
+      clearCaseManagementTableFilterCache();
       removeRouteListener();
       licenseStore.removeLicenseStatus();
       appStore.clearServerMenu();

@@ -4,6 +4,8 @@ import {
   GenerateTestReportUrl,
   GetTestReportDetailUrl,
   GetTestReportPageUrl,
+  GetTestReportProjectUrl,
+  GetTestReportStandaloneUrl,
   RefreshTestReportStatsUrl,
   UpdateTestReportUrl,
 } from '@/api/requrls/case-management/testReport';
@@ -22,6 +24,14 @@ export const getTestReportPage = (data: TestReportPageRequest) => {
 
 export const getTestReportDetail = (id: string) => {
   return MSR.get<TestReportItem>({ url: `${GetTestReportDetailUrl}/${id}` });
+};
+
+export const getTestReportProject = (id: string) => {
+  return MSR.get<{ projectId: string; hasProjectPermission: boolean }>({ url: `${GetTestReportProjectUrl}/${id}` });
+};
+
+export const getTestReportStandaloneDetail = (id: string) => {
+  return MSR.get<TestReportItem>({ url: `${GetTestReportStandaloneUrl}/${id}` });
 };
 
 export const generateTestReport = (data: TestReportGenerateRequest) => {

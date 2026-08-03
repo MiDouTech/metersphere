@@ -13,7 +13,6 @@ const ShareRoute: AppRouteRecordRaw = {
     requiresAuth: true,
   },
   children: [
-    // 接口测试-场景报告-详情
     {
       path: 'shareReportScenario',
       name: ShareEnum.SHARE_REPORT_SCENARIO,
@@ -24,7 +23,6 @@ const ShareRoute: AppRouteRecordRaw = {
         isTopMenu: false,
       },
     },
-    // 接口测试-用例报告-详情
     {
       path: 'shareReportCase',
       name: ShareEnum.SHARE_REPORT_CASE,
@@ -35,7 +33,6 @@ const ShareRoute: AppRouteRecordRaw = {
         isTopMenu: false,
       },
     },
-    // 测试计划-报告-详情
     {
       path: 'shareReportTestPlan',
       name: ShareEnum.SHARE_REPORT_TEST_PLAN,
@@ -46,7 +43,16 @@ const ShareRoute: AppRouteRecordRaw = {
         isTopMenu: false,
       },
     },
-    // 接口文档分享
+    {
+      path: 'shareFunctionalTestReport',
+      name: ShareEnum.SHARE_FUNCTIONAL_TEST_REPORT,
+      component: () => import('@/views/case-management/testReport/detail.vue'),
+      meta: {
+        locale: '',
+        roles: ['*'],
+        isTopMenu: false,
+      },
+    },
     {
       path: 'shareDefinitionApi',
       name: ShareEnum.SHARE_DEFINITION_API,
