@@ -4,6 +4,7 @@ import io.metersphere.functional.domain.FunctionalTestReport;
 import io.metersphere.functional.dto.FunctionalTestReportBugCountDTO;
 import io.metersphere.functional.dto.FunctionalTestReportDTO;
 import io.metersphere.functional.dto.FunctionalTestReportOpenBugDTO;
+import io.metersphere.functional.dto.FunctionalTestReportProjectDTO;
 import io.metersphere.functional.dto.FunctionalTestReportResultCountDTO;
 import io.metersphere.functional.dto.FunctionalTestReportRiskCaseDTO;
 import io.metersphere.functional.dto.FunctionalTestReportStatsDTO;
@@ -12,12 +13,14 @@ import io.metersphere.functional.mapper.FunctionalTestReportMapper;
 import io.metersphere.functional.request.FunctionalTestReportGenerateRequest;
 import io.metersphere.functional.request.FunctionalTestReportPageRequest;
 import io.metersphere.functional.request.FunctionalTestReportUpdateRequest;
+import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.sdk.constants.ResultStatus;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.domain.User;
 import io.metersphere.system.mapper.UserMapper;
+import io.metersphere.system.service.PermissionCheckService;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
@@ -53,6 +56,8 @@ public class FunctionalTestReportService {
     private ExtFunctionalTestReportMapper extFunctionalTestReportMapper;
     @Resource
     private UserMapper userMapper;
+    @Resource
+    private PermissionCheckService permissionCheckService;
 
     public List<FunctionalTestReportDTO> list(FunctionalTestReportPageRequest request) {
         List<FunctionalTestReport> reports = extFunctionalTestReportMapper.list(request);
@@ -68,6 +73,30 @@ public class FunctionalTestReportService {
 
     public FunctionalTestReportDTO get(String id) {
         return toDTO(checkAndGet(id));
+    }
+
+    public FunctionalTestReportProjectDTO getProject(String id) {
+        FunctionalTestReport report = functionalTestReportMapper.selectByPrimaryKey(id);
+        if (report == null) {
+            throw new MSException(Translator.get("resource_not_exist"));
+        }
+        boolean hasProjectPermission = Boolean.TRUE.equals(permissionCheckService.checkModule(
+                report.getProjectId(),
+                PermissionCheckService.FUNCTIONAL_CASE_MODULE,
+                SessionUtils.getUserId(),
+                PermissionConstants.FUNCTIONAL_CASE_READ));
+        FunctionalTestReportProjectDTO dto = new FunctionalTestReportProjectDTO();
+        dto.setProjectId(report.getProjectId());
+        dto.setHasProjectPermission(hasProjectPermission);
+        return dto;
+    }
+
+    public FunctionalTestReportDTO getStandalone(String id) {
+        FunctionalTestReport report = functionalTestReportMapper.selectByPrimaryKey(id);
+        if (report == null) {
+            throw new MSException(Translator.get("resource_not_exist"));
+        }
+        return toDTO(report);
     }
 
     public FunctionalTestReportDTO generate(FunctionalTestReportGenerateRequest request) {

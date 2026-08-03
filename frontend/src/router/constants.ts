@@ -31,6 +31,11 @@ export const WHITE_LIST = [
         children: [],
       },
       {
+        name: 'shareFunctionalTestReport',
+        path: '/shareFunctionalTestReport',
+        children: [],
+      },
+      {
         name: 'shareDefinitionApi',
         path: '/shareDefinitionApi',
         children: [],
@@ -50,6 +55,11 @@ export const WHITE_LIST = [
   {
     name: 'shareReportTestPlan',
     path: '/shareReportTestPlan',
+    children: [],
+  },
+  {
+    name: 'shareFunctionalTestReport',
+    path: '/shareFunctionalTestReport',
     children: [],
   },
   {

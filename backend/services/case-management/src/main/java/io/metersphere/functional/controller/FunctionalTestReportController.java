@@ -3,6 +3,7 @@ package io.metersphere.functional.controller;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import io.metersphere.functional.dto.FunctionalTestReportDTO;
+import io.metersphere.functional.dto.FunctionalTestReportProjectDTO;
 import io.metersphere.functional.request.FunctionalTestReportGenerateRequest;
 import io.metersphere.functional.request.FunctionalTestReportPageRequest;
 import io.metersphere.functional.request.FunctionalTestReportUpdateRequest;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotBlank;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +47,20 @@ public class FunctionalTestReportController {
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
     public FunctionalTestReportDTO get(@NotBlank @PathVariable String id) {
         return functionalTestReportService.get(id);
+    }
+
+    @GetMapping("/project/{id}")
+    @Operation(summary = "用例管理-测试报告-归属项目")
+    @RequiresAuthentication
+    public FunctionalTestReportProjectDTO getProject(@NotBlank @PathVariable String id) {
+        return functionalTestReportService.getProject(id);
+    }
+
+    @GetMapping("/standalone/{id}")
+    @Operation(summary = "用例管理-测试报告-独立查看详情")
+    @RequiresAuthentication
+    public FunctionalTestReportDTO standalone(@NotBlank @PathVariable String id) {
+        return functionalTestReportService.getStandalone(id);
     }
 
     @PostMapping("/generate")

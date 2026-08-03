@@ -131,10 +131,10 @@
             :action-config="tableBatchActions"
             :not-show-table-filter="isAdvancedSearchMode"
             @selected-change="handleTableSelect"
-            v-on="propsEvent"
+            v-on="tableEventHandlers"
             @batch-action="handleTableBatch"
             @change="changeHandler"
-            @filter-change="filterChange"
+            @filter-change="handleTableFilterChange"
           >
             <template #num="{ record }">
               <div class="flex items-center gap-[8px]">
@@ -1292,6 +1292,12 @@
     updateCaseName
   );
 
+  const tableEventHandlers = computed(() => {
+    const events: Record<string, any> = { ...propsEvent.value };
+    delete events.filterChange;
+    return events;
+  });
+
   const pageCaseRows = computed(() => (propsRes.value.data || []) as CaseManagementTable[]);
 
   const pageCaseTestPlans = computed(() => {
@@ -1362,7 +1368,99 @@
   });
 
   const msAdvanceFilterRef = ref<InstanceType<typeof MsAdvanceFilter>>();
-  const isAdvancedSearchMode = computed(() => msAdvanceFilterRef.value?.isAdvancedSearchMode);
+  const restoredAdvancedSearchActive = ref(false);
+  const CASE_TABLE_FILTER_CACHE_PREFIX = 'MS_CASE_MANAGEMENT_TABLE_FILTER_STATE:';
+
+  type CaseTableFilterCache = {
+    keyword?: string;
+    tableFilter?: Record<string, any>;
+    advanceFilter?: FilterResult;
+    viewId?: string;
+    isAdvanced?: boolean;
+  };
+
+  function getCaseTableFilterCacheKey() {
+    return `${CASE_TABLE_FILTER_CACHE_PREFIX}${currentProjectId.value || 'unknown'}`;
+  }
+
+  function hasValidAdvanceFilter(filter: FilterResult = advanceFilter) {
+    return (
+      filter.conditions?.some((item) => {
+        if (['EMPTY', 'NOT_EMPTY'].includes(item.operator as string)) {
+          return true;
+        }
+        const value = item.value;
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        return value !== undefined && value !== null && value !== '';
+      }) ?? false
+    );
+  }
+
+  function hasTableFilter(filter: Record<string, any> = {}) {
+    return Object.values(filter).some((value) => {
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return value !== undefined && value !== null && value !== '';
+    });
+  }
+
+  function clearCaseTableFilterCache() {
+    if (!currentProjectId.value) return;
+    sessionStorage.removeItem(getCaseTableFilterCacheKey());
+  }
+
+  function persistCaseTableFilterState() {
+    if (!currentProjectId.value) return;
+    const tableFilter = cloneDeep(propsRes.value.filter || {});
+    const currentAdvanceFilter = cloneDeep(advanceFilter);
+    const isAdvanced =
+      !!msAdvanceFilterRef.value?.isAdvancedSearchMode ||
+      restoredAdvancedSearchActive.value ||
+      hasValidAdvanceFilter(currentAdvanceFilter);
+    const cache: CaseTableFilterCache = {
+      keyword: keyword.value,
+      tableFilter,
+      advanceFilter: currentAdvanceFilter,
+      viewId: isAdvanced ? viewId.value : '',
+      isAdvanced,
+    };
+    if (!keyword.value && !hasTableFilter(tableFilter) && !isAdvanced) {
+      clearCaseTableFilterCache();
+      return;
+    }
+    sessionStorage.setItem(getCaseTableFilterCacheKey(), JSON.stringify(cache));
+  }
+
+  function restoreCaseTableFilterState() {
+    if (!currentProjectId.value || route.query.home || route.query.view) return;
+    const raw = sessionStorage.getItem(getCaseTableFilterCacheKey());
+    if (!raw) return;
+    try {
+      const cache = JSON.parse(raw) as CaseTableFilterCache;
+      keyword.value = cache.keyword || '';
+      setKeyword(keyword.value);
+      if (cache.advanceFilter && (cache.isAdvanced || hasValidAdvanceFilter(cache.advanceFilter))) {
+        setAdvanceFilter(cache.advanceFilter, cache.viewId || '');
+        restoredAdvancedSearchActive.value = true;
+        msAdvanceFilterRef.value?.restoreFilterState(cache.advanceFilter, cache.viewId, true);
+      } else if (cache.tableFilter) {
+        restoredAdvancedSearchActive.value = false;
+        propsRes.value.filter = cloneDeep(cache.tableFilter);
+      }
+    } catch {
+      clearCaseTableFilterCache();
+    }
+  }
+
+  const isAdvancedSearchMode = computed(
+    () =>
+      msAdvanceFilterRef.value?.isAdvancedSearchMode ||
+      restoredAdvancedSearchActive.value ||
+      hasValidAdvanceFilter(advanceFilter)
+  );
   async function initTableParams() {
     let moduleIds: string[] = [];
     if (props.activeFolder !== 'all' && !isAdvancedSearchMode.value) {
@@ -1941,9 +2039,10 @@
     }
   }
 
-  const fetchData = (keywordStr = '') => {
+  const fetchData = async (keywordStr = '') => {
     setKeyword(keywordStr);
-    initData();
+    await initData();
+    persistCaseTableFilterState();
   };
 
   function successHandler() {
@@ -2076,7 +2175,13 @@
     keyword.value = '';
     await getLoadListParams(); // 基础筛选都清空
     setAdvanceFilter(filter, id);
-    loadList();
+    restoredAdvancedSearchActive.value = false;
+    await loadList();
+    if (isAdvanced || hasValidAdvanceFilter(filter)) {
+      persistCaseTableFilterState();
+    } else {
+      clearCaseTableFilterCache();
+    }
   };
 
   /** 点树/全部用例时：退出高级搜索并按当前模块刷新 */
@@ -2236,7 +2341,15 @@
     }
   });
 
-  function filterChange() {
+  function handleTableFilterChange(
+    dataIndex: string,
+    filteredValues: string[] | (string | number | boolean)[] | undefined,
+    isCustomParam: boolean
+  ) {
+    const currentColumn = propsRes.value.columns?.find((item) => item.dataIndex === dataIndex);
+    const multiple = !!(currentColumn?.filterConfig as Record<string, any> | undefined)?.multiple;
+    propsEvent.value.filterChange(dataIndex, (filteredValues || []) as (string | number)[], multiple, isCustomParam);
+    persistCaseTableFilterState();
     emitTableParams();
   }
 
@@ -2245,6 +2358,7 @@
       propsRes.value.filter = { ...NAV_NAVIGATION[route.query.home as WorkNavValueEnum] };
     }
     await initFilter();
+    restoreCaseTableFilterState();
     await initData();
     getCaseExportData();
     if (route.query.id) {
