@@ -1358,15 +1358,6 @@
   };
   const batchParams = ref<BatchActionQueryParams>(cloneDeep(initBatchParams));
 
-  const conditionParams = computed(() => {
-    return {
-      keyword: keyword.value,
-      filter: propsRes.value.filter,
-      viewId: viewId.value,
-      combineSearch: advanceFilter,
-    };
-  });
-
   const msAdvanceFilterRef = ref<InstanceType<typeof MsAdvanceFilter>>();
   const restoredAdvancedSearchActive = ref(false);
   const CASE_TABLE_FILTER_CACHE_PREFIX = 'MS_CASE_MANAGEMENT_TABLE_FILTER_STATE:';
@@ -1383,20 +1374,37 @@
     return `${CASE_TABLE_FILTER_CACHE_PREFIX}${currentProjectId.value || 'unknown'}`;
   }
 
-  function hasValidAdvanceFilter(filter: FilterResult = advanceFilter) {
-    return (
-      filter.conditions?.some((item) => {
+  function normalizeAdvanceFilter(filter: FilterResult = advanceFilter): FilterResult {
+    return {
+      searchMode: filter?.searchMode || 'AND',
+      conditions: (filter?.conditions || []).filter((item) => {
+        if (!item.name || !item.operator) {
+          return false;
+        }
         if (['EMPTY', 'NOT_EMPTY'].includes(item.operator as string)) {
           return true;
         }
-        const value = item.value;
+        const { value } = item;
         if (Array.isArray(value)) {
           return value.length > 0;
         }
         return value !== undefined && value !== null && value !== '';
-      }) ?? false
-    );
+      }),
+    };
   }
+
+  function hasValidAdvanceFilter(filter: FilterResult = advanceFilter) {
+    return (normalizeAdvanceFilter(filter).conditions?.length || 0) > 0;
+  }
+
+  const conditionParams = computed(() => {
+    return {
+      keyword: keyword.value,
+      filter: propsRes.value.filter,
+      viewId: viewId.value,
+      combineSearch: normalizeAdvanceFilter(advanceFilter),
+    };
+  });
 
   function hasTableFilter(filter: Record<string, any> = {}) {
     return Object.values(filter).some((value) => {
@@ -1410,12 +1418,13 @@
   function clearCaseTableFilterCache() {
     if (!currentProjectId.value) return;
     sessionStorage.removeItem(getCaseTableFilterCacheKey());
+    localStorage.removeItem(getCaseTableFilterCacheKey());
   }
 
   function persistCaseTableFilterState() {
     if (!currentProjectId.value) return;
     const tableFilter = cloneDeep(propsRes.value.filter || {});
-    const currentAdvanceFilter = cloneDeep(advanceFilter);
+    const currentAdvanceFilter = normalizeAdvanceFilter(cloneDeep(advanceFilter));
     const isAdvanced =
       !!msAdvanceFilterRef.value?.isAdvancedSearchMode ||
       restoredAdvancedSearchActive.value ||
@@ -1431,21 +1440,24 @@
       clearCaseTableFilterCache();
       return;
     }
-    sessionStorage.setItem(getCaseTableFilterCacheKey(), JSON.stringify(cache));
+    localStorage.setItem(getCaseTableFilterCacheKey(), JSON.stringify(cache));
+    sessionStorage.removeItem(getCaseTableFilterCacheKey());
   }
 
   function restoreCaseTableFilterState() {
     if (!currentProjectId.value || route.query.home || route.query.view) return;
-    const raw = sessionStorage.getItem(getCaseTableFilterCacheKey());
+    const raw =
+      localStorage.getItem(getCaseTableFilterCacheKey()) || sessionStorage.getItem(getCaseTableFilterCacheKey());
     if (!raw) return;
     try {
       const cache = JSON.parse(raw) as CaseTableFilterCache;
       keyword.value = cache.keyword || '';
       setKeyword(keyword.value);
-      if (cache.advanceFilter && (cache.isAdvanced || hasValidAdvanceFilter(cache.advanceFilter))) {
-        setAdvanceFilter(cache.advanceFilter, cache.viewId || '');
+      const cachedAdvanceFilter = normalizeAdvanceFilter(cache.advanceFilter);
+      if (cache.advanceFilter && (cache.isAdvanced || hasValidAdvanceFilter(cachedAdvanceFilter))) {
+        setAdvanceFilter(cachedAdvanceFilter, cache.viewId || '');
         restoredAdvancedSearchActive.value = true;
-        msAdvanceFilterRef.value?.restoreFilterState(cache.advanceFilter, cache.viewId, true);
+        msAdvanceFilterRef.value?.restoreFilterState(cachedAdvanceFilter, cache.viewId, true);
       } else if (cache.tableFilter) {
         restoredAdvancedSearchActive.value = false;
         propsRes.value.filter = cloneDeep(cache.tableFilter);
@@ -2168,16 +2180,17 @@
   }
   // 高级检索；进入高级搜索时回到「全部」，退出时保留当前模块以便树点击切列表
   const handleAdvSearch = async (filter: FilterResult, id: string, isAdvanced = false) => {
+    const effectiveFilter = normalizeAdvanceFilter(filter);
     resetSelector();
-    if (isAdvanced) {
+    if (isAdvanced || hasValidAdvanceFilter(effectiveFilter)) {
       emit('setActiveFolder');
     }
     keyword.value = '';
     await getLoadListParams(); // 基础筛选都清空
-    setAdvanceFilter(filter, id);
+    setAdvanceFilter(effectiveFilter, id);
     restoredAdvancedSearchActive.value = false;
     await loadList();
-    if (isAdvanced || hasValidAdvanceFilter(filter)) {
+    if (isAdvanced || hasValidAdvanceFilter(effectiveFilter)) {
       persistCaseTableFilterState();
     } else {
       clearCaseTableFilterCache();

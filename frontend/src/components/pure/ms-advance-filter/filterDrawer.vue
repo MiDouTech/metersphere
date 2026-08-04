@@ -292,6 +292,33 @@
   function getListItemByDataIndex(dataIndex: string) {
     return [...currentConfigList.value, ...(props.customList || [])].find((item) => item.dataIndex === dataIndex);
   }
+
+  function buildFormListFromConditions(conditions: ConditionsItem[] = []) {
+    const list: FilterFormItem[] = [];
+    conditions.forEach((item: ConditionsItem) => {
+      const listItem = getListItemByDataIndex(item.name ?? '') as FilterFormItem;
+      if (!listItem) {
+        return;
+      }
+      let { value } = item;
+      if (FilterType.SELECT === listItem.type && Array.isArray(value)) {
+        const valueKeyList = listItem.selectProps?.options?.map(
+          (option) => option[listItem.selectProps?.valueKey ?? 'value']
+        );
+        value = value.filter((valueItem: string) => valueKeyList?.includes(valueItem));
+      } else if (FilterType.MEMBER === listItem.type && Array.isArray(value) && props.memberOptions?.length) {
+        const memberValueList = props.memberOptions.map((option) => option.value);
+        value = value.filter((valueItem: string) => memberValueList.includes(valueItem));
+      }
+      list.push({
+        ...listItem,
+        operator: item.operator,
+        value,
+      });
+    });
+    return list;
+  }
+
   async function getUserViewDetail(id?: string) {
     if (!id) {
       return;
@@ -435,15 +462,28 @@
   }
 
   function getParams() {
-    const conditions = formModel.value.list.map(({ customFieldType, value, operator, customField, dataIndex }) => {
-      return {
-        value,
-        operator,
-        customField: customField ?? false,
-        name: dataIndex,
-        customFieldType: customFieldType ?? '',
-      };
-    });
+    const conditions = formModel.value.list
+      .map(({ customFieldType, value, operator, customField, dataIndex }) => {
+        return {
+          value,
+          operator,
+          customField: customField ?? false,
+          name: dataIndex,
+          customFieldType: customFieldType ?? '',
+        };
+      })
+      .filter((condition) => {
+        if (!condition.name || !condition.operator) {
+          return false;
+        }
+        if ([OperatorEnum.EMPTY, OperatorEnum.NOT_EMPTY].includes(condition.operator as OperatorEnum)) {
+          return true;
+        }
+        if (Array.isArray(condition.value)) {
+          return condition.value.length > 0;
+        }
+        return condition.value !== undefined && condition.value !== null && condition.value !== '';
+      });
     return { searchMode: formModel.value.searchMode, conditions };
   }
 
@@ -451,6 +491,22 @@
   function handleReset() {
     formModel.value = cloneDeep(savedFormModel.value);
     isShowNameInput.value = false;
+  }
+
+  const isSaveAsView = ref(false);
+
+  function restoreFilterState(filter: FilterResult, view?: string) {
+    const list = buildFormListFromConditions(filter?.conditions ?? []);
+    formModel.value = {
+      ...cloneDeep(defaultFormModel),
+      id: view,
+      searchMode: filter?.searchMode || 'AND',
+      conditions: cloneDeep(filter?.conditions ?? []),
+      list: list.length ? list : cloneDeep(defaultFormModel.list),
+    };
+    savedFormModel.value = cloneDeep(defaultFormModel);
+    isShowNameInput.value = false;
+    isSaveAsView.value = false;
   }
   // 过滤
   function handleFilter() {
@@ -530,7 +586,6 @@
   }
 
   // 开启另存为视图模式
-  const isSaveAsView = ref(false);
   const saveAsViewForm = ref({ name: '' });
   const saveAsViewNameInputRef = ref<InstanceType<typeof ViewNameInput>>();
   function handleToSaveAs() {
@@ -601,6 +656,7 @@
     resetToNewViewForm,
     handleReset,
     getUserViewDetail,
+    restoreFilterState,
   });
 </script>
 

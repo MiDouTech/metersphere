@@ -962,11 +962,20 @@
     currentColumns.value.forEach((e) => {
       const dataIndexKey = e.dataIndex as string;
       // 初始化配置了filterConfig默认值回显已选项
-      if (e.filterConfig?.options && filterData.value[dataIndexKey] && filterData.value[dataIndexKey].length) {
-        e.filterCheckedList = filterData.value[dataIndexKey];
+      if (e.filterConfig?.options && dataIndexKey) {
+        e.filterCheckedList =
+          filterData.value[dataIndexKey] && filterData.value[dataIndexKey].length ? filterData.value[dataIndexKey] : [];
       }
     });
   }
+
+  watch(
+    filterData,
+    () => {
+      initDefaultFilter();
+    },
+    { deep: true }
+  );
 
   onMounted(async () => {
     await initColumn();
