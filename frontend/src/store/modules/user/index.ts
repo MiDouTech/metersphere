@@ -33,6 +33,9 @@ function clearCaseManagementTableFilterCache() {
   Object.keys(sessionStorage)
     .filter((key) => key.startsWith(CASE_MANAGEMENT_TABLE_FILTER_CACHE_PREFIX))
     .forEach((key) => sessionStorage.removeItem(key));
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith(CASE_MANAGEMENT_TABLE_FILTER_CACHE_PREFIX))
+    .forEach((key) => localStorage.removeItem(key));
 }
 
 const useUserStore = defineStore('user', {

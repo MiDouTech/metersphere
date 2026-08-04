@@ -380,12 +380,15 @@
     }
   }
 
-  function restoreFilterState(filter: FilterResult, view?: string, advanced = false) {
-    filterResult.value = filter || { searchMode: 'AND', conditions: [] };
+  async function restoreFilterState(filter: FilterResult, view?: string, advanced = false) {
+    const restoredFilter = filter || { searchMode: 'AND', conditions: [] };
+    filterResult.value = restoredFilter;
     if (view) {
       currentView.value = view;
     }
     isAdvancedSearchMode.value = advanced;
+    await nextTick();
+    filterDrawerRef.value?.restoreFilterState(restoredFilter, currentView.value);
   }
 
   defineExpose({
