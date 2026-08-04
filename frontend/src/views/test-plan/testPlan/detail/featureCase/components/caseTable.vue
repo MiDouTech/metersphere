@@ -4,7 +4,7 @@
       <MsAdvanceFilter
         ref="msAdvanceFilterRef"
         v-model:keyword="keyword"
-        :view-type="ViewTypeEnum.PLAN_API_SCENARIO"
+        :view-type="ViewTypeEnum.PLAN_FUNCTIONAL_CASE"
         :filter-config-list="filterConfigList"
         :custom-fields-config-list="searchCustomFields"
         :search-placeholder="t('common.searchByIdName')"
@@ -48,11 +48,11 @@
         :action-config="batchActions"
         :selectable="hasOperationPermission"
         :not-show-table-filter="isAdvancedSearchMode"
-        v-on="propsEvent"
+        v-on="tableEventHandlers"
         @batch-action="handleTableBatch"
         @drag-change="handleDragChange"
         @selected-change="handleTableSelect"
-        @filter-change="getModuleCount"
+        @filter-change="handleTableFilterChange"
         @sorter-change="handleSorterChange"
       >
         <template #num="{ record }">
@@ -269,7 +269,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onBeforeMount, ref } from 'vue';
+  import { computed, nextTick, onBeforeMount, onMounted, ref } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
   import { cloneDeep } from 'lodash-es';
@@ -615,6 +615,12 @@
       caseLevel: getCaseLevels(record.customFields),
     };
   });
+
+  const tableEventHandlers = computed(() => {
+    const events: Record<string, any> = { ...propsEvent.value };
+    delete events.filterChange;
+    return events;
+  });
   const existedDefect = inject<Ref<number>>('existedDefect', ref(0));
 
   function getLinkAction() {
@@ -668,7 +674,118 @@
     }
   );
   const msAdvanceFilterRef = ref<InstanceType<typeof MsAdvanceFilter>>();
-  const isAdvancedSearchMode = computed(() => msAdvanceFilterRef.value?.isAdvancedSearchMode);
+  const restoredAdvancedSearchActive = ref(false);
+  const TEST_PLAN_FEATURE_CASE_FILTER_CACHE_PREFIX = 'MS_TEST_PLAN_FEATURE_CASE_FILTER_STATE:';
+
+  type TestPlanFeatureCaseFilterCache = {
+    keyword?: string;
+    tableFilter?: Record<string, any>;
+    advanceFilter?: FilterResult;
+    viewId?: string;
+    isAdvanced?: boolean;
+  };
+
+  const restoredFilterForDrawer = ref<TestPlanFeatureCaseFilterCache | undefined>();
+
+  function getTestPlanFeatureCaseFilterCacheKey() {
+    return `${TEST_PLAN_FEATURE_CASE_FILTER_CACHE_PREFIX}${props.planId || 'unknown'}:${props.treeType}`;
+  }
+
+  function normalizeAdvanceFilter(filter: FilterResult = advanceFilter): FilterResult {
+    return {
+      searchMode: filter?.searchMode || 'AND',
+      conditions: (filter?.conditions || []).filter((item) => {
+        if (!item.name || !item.operator) {
+          return false;
+        }
+        if (['EMPTY', 'NOT_EMPTY'].includes(item.operator as string)) {
+          return true;
+        }
+        const { value } = item;
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        return value !== undefined && value !== null && value !== '';
+      }),
+    };
+  }
+
+  function hasValidAdvanceFilter(filter: FilterResult = advanceFilter) {
+    return (normalizeAdvanceFilter(filter).conditions?.length || 0) > 0;
+  }
+
+  const isAdvancedSearchMode = computed(
+    () =>
+      msAdvanceFilterRef.value?.isAdvancedSearchMode ||
+      restoredAdvancedSearchActive.value ||
+      hasValidAdvanceFilter(advanceFilter)
+  );
+
+  function hasTableFilter(filter: Record<string, any> = {}) {
+    return Object.values(filter).some((value) => {
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return value !== undefined && value !== null && value !== '';
+    });
+  }
+
+  function clearTestPlanFeatureCaseFilterCache() {
+    sessionStorage.removeItem(getTestPlanFeatureCaseFilterCacheKey());
+    localStorage.removeItem(getTestPlanFeatureCaseFilterCacheKey());
+  }
+
+  function persistTestPlanFeatureCaseFilterState() {
+    const tableFilter = cloneDeep(propsRes.value.filter || {});
+    const currentAdvanceFilter = normalizeAdvanceFilter(cloneDeep(advanceFilter));
+    const isAdvanced =
+      !!msAdvanceFilterRef.value?.isAdvancedSearchMode ||
+      restoredAdvancedSearchActive.value ||
+      hasValidAdvanceFilter(currentAdvanceFilter);
+    if (!keyword.value && !hasTableFilter(tableFilter) && !isAdvanced) {
+      clearTestPlanFeatureCaseFilterCache();
+      return;
+    }
+    const cache: TestPlanFeatureCaseFilterCache = {
+      keyword: keyword.value,
+      tableFilter,
+      advanceFilter: currentAdvanceFilter,
+      viewId: isAdvanced ? viewId.value : '',
+      isAdvanced,
+    };
+    localStorage.setItem(getTestPlanFeatureCaseFilterCacheKey(), JSON.stringify(cache));
+    sessionStorage.removeItem(getTestPlanFeatureCaseFilterCacheKey());
+  }
+
+  function restoreTestPlanFeatureCaseFilterState() {
+    const raw =
+      localStorage.getItem(getTestPlanFeatureCaseFilterCacheKey()) ||
+      sessionStorage.getItem(getTestPlanFeatureCaseFilterCacheKey());
+    if (!raw) return;
+    try {
+      const cache = JSON.parse(raw) as TestPlanFeatureCaseFilterCache;
+      keyword.value = cache.keyword || '';
+      if (cache.advanceFilter && (cache.isAdvanced || hasValidAdvanceFilter(cache.advanceFilter))) {
+        const cachedAdvanceFilter = normalizeAdvanceFilter(cache.advanceFilter);
+        setAdvanceFilter(cachedAdvanceFilter, cache.viewId || '');
+        restoredAdvancedSearchActive.value = true;
+        restoredFilterForDrawer.value = { ...cache, advanceFilter: cachedAdvanceFilter };
+      } else if (cache.tableFilter) {
+        restoredAdvancedSearchActive.value = false;
+        propsRes.value.filter = cloneDeep(cache.tableFilter);
+      }
+    } catch {
+      clearTestPlanFeatureCaseFilterCache();
+    }
+  }
+
+  async function restoreAdvancedFilterDrawerState() {
+    await nextTick();
+    const cache = restoredFilterForDrawer.value;
+    if (cache?.advanceFilter) {
+      msAdvanceFilterRef.value?.restoreFilterState(cache.advanceFilter, cache.viewId, true);
+    }
+  }
   async function getModuleIds() {
     let moduleIds: string[] = [];
     if (props.activeModule !== 'all' && !isAdvancedSearchMode.value) {
@@ -695,7 +812,7 @@
           keyword: keyword.value,
           filter: propsRes.value.filter,
           viewId: viewId.value,
-          combineSearch: advanceFilter,
+          combineSearch: normalizeAdvanceFilter(advanceFilter),
         },
         projectId: props.activeModule !== 'all' && props.treeType === 'MODULE' ? props.moduleParentId : '',
         ...commonParams,
@@ -728,11 +845,12 @@
     setLoadListParams({
       ...tableParams,
       viewId: viewId.value,
-      combineSearch: advanceFilter,
+      combineSearch: normalizeAdvanceFilter(advanceFilter),
       projectId: props.activeModule !== 'all' && props.treeType === 'MODULE' ? props.moduleParentId : '',
     });
     resetSelector();
-    loadList();
+    await loadList();
+    persistTestPlanFeatureCaseFilterState();
     if (refreshTreeCount && !isAdvancedSearchMode.value) {
       testPlanFeatureCaseStore.getModuleCount({
         ...tableParams,
@@ -917,11 +1035,19 @@
   }
   // 高级检索
   const handleAdvSearch = async (filter: FilterResult, id: string, isStartAdvance: boolean) => {
+    const effectiveFilter = normalizeAdvanceFilter(filter);
+    const isAdvanced = isStartAdvance || hasValidAdvanceFilter(effectiveFilter);
     resetSelector();
-    emit('handleAdvSearch', isStartAdvance);
+    emit('handleAdvSearch', isAdvanced);
     keyword.value = '';
-    setAdvanceFilter(filter, id);
+    setAdvanceFilter(effectiveFilter, id);
+    restoredAdvancedSearchActive.value = false;
     await loadCaseList(); // 基础筛选都清空
+    if (isAdvanced || hasValidAdvanceFilter(effectiveFilter)) {
+      persistTestPlanFeatureCaseFilterState();
+    } else {
+      clearTestPlanFeatureCaseFilterCache();
+    }
   };
 
   watch(
@@ -935,9 +1061,14 @@
 
   onBeforeMount(async () => {
     await initFilter();
-    loadCaseList();
+    restoreTestPlanFeatureCaseFilterState();
+    await loadCaseList();
     initProjectList();
     initAnotherModules();
+  });
+
+  onMounted(() => {
+    restoreAdvancedFilterDrawerState();
   });
 
   onActivated(() => {
@@ -961,6 +1092,18 @@
       params = { treeType: props.treeType, moduleIds: [], testPlanId: props.planId, pageSize: 10, current: 1 };
     }
     await testPlanFeatureCaseStore.getModuleCount(params);
+  }
+
+  function handleTableFilterChange(
+    dataIndex: string,
+    filteredValues: (string | number | boolean)[] | undefined,
+    isCustomParam: boolean
+  ) {
+    const currentColumn = propsRes.value.columns?.find((item) => item.dataIndex === dataIndex);
+    const multiple = !!(currentColumn?.filterConfig as Record<string, any> | undefined)?.multiple;
+    propsEvent.value.filterChange(dataIndex, (filteredValues || []) as (string | number)[], multiple, isCustomParam);
+    persistTestPlanFeatureCaseFilterState();
+    getModuleCount();
   }
 
   const tableSorter = ref<Record<string, string>>({});

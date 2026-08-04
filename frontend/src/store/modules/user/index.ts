@@ -28,14 +28,17 @@ import useAppStore from '../app';
 import { UserState } from './types';
 
 const CASE_MANAGEMENT_TABLE_FILTER_CACHE_PREFIX = 'MS_CASE_MANAGEMENT_TABLE_FILTER_STATE:';
+const TEST_PLAN_FEATURE_CASE_FILTER_CACHE_PREFIX = 'MS_TEST_PLAN_FEATURE_CASE_FILTER_STATE:';
 
 function clearCaseManagementTableFilterCache() {
-  Object.keys(sessionStorage)
-    .filter((key) => key.startsWith(CASE_MANAGEMENT_TABLE_FILTER_CACHE_PREFIX))
-    .forEach((key) => sessionStorage.removeItem(key));
-  Object.keys(localStorage)
-    .filter((key) => key.startsWith(CASE_MANAGEMENT_TABLE_FILTER_CACHE_PREFIX))
-    .forEach((key) => localStorage.removeItem(key));
+  [CASE_MANAGEMENT_TABLE_FILTER_CACHE_PREFIX, TEST_PLAN_FEATURE_CASE_FILTER_CACHE_PREFIX].forEach((prefix) => {
+    Object.keys(sessionStorage)
+      .filter((key) => key.startsWith(prefix))
+      .forEach((key) => sessionStorage.removeItem(key));
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(prefix))
+      .forEach((key) => localStorage.removeItem(key));
+  });
 }
 
 const useUserStore = defineStore('user', {
