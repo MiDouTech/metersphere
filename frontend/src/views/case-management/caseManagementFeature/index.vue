@@ -125,7 +125,7 @@
               :module-count-is-init="moduleCountIsInit"
               @init="initModulesCount"
               @init-modules="initModules"
-              @set-active-folder="setActiveFolder('all')"
+              @set-active-folder="(options) => setActiveFolder('all', options)"
             />
           </div>
         </template>
@@ -227,7 +227,7 @@
   const caseTableRef = ref();
 
   // 设置当前激活用例类型公共用例|全部用例|回收站
-  const setActiveFolder = (type: string) => {
+  const setActiveFolder = (type: string, options?: { preserveAdvancedFilter?: boolean }) => {
     activeFolder.value = type;
     offspringIds.value = [];
     if (['public', 'all', 'recycle'].includes(type)) {
@@ -241,7 +241,7 @@
     // 点「全部/回收站」时切回列表 Tab；若处于高级搜索则退出并刷新
     nextTick(() => {
       caseTableRef.value?.switchToListTab?.();
-      if (caseTableRef.value?.isAdvancedSearchMode) {
+      if (!options?.preserveAdvancedFilter && caseTableRef.value?.isAdvancedSearchMode) {
         caseTableRef.value?.exitAdvancedSearchAndRefresh?.();
       }
     });

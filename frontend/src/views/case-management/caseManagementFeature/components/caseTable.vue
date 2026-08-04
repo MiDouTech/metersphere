@@ -649,7 +649,7 @@
   const emit = defineEmits<{
     (e: 'init', params: CaseModuleQueryParams, refreshModule?: boolean): void;
     (e: 'initModules'): void;
-    (e: 'setActiveFolder'): void;
+    (e: 'setActiveFolder', options?: { preserveAdvancedFilter?: boolean }): void;
   }>();
 
   const minderStore = useMinderStore();
@@ -2204,7 +2204,7 @@
     const effectiveFilter = normalizeAdvanceFilter(filter);
     resetSelector();
     if (isAdvanced || hasValidAdvanceFilter(effectiveFilter)) {
-      emit('setActiveFolder');
+      emit('setActiveFolder', { preserveAdvancedFilter: true });
     }
     keyword.value = '';
     setAdvanceFilter(effectiveFilter, id);
