@@ -521,7 +521,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
+  import { computed, nextTick, ref } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { Message, TableChangeExtra, TableData } from '@arco-design/web-vue';
   import { cloneDeep } from 'lodash-es';
@@ -1031,6 +1031,12 @@
     moreAction: [],
   };
 
+  const caseLevelFields = ref<Record<string, any>>({});
+
+  const caseLevelList = computed(() => {
+    return caseLevelFields.value?.options || [];
+  });
+
   const filterConfigList = computed<FilterFormItem[]>(() => [
     {
       title: 'caseManagement.featureCase.tableColumnID',
@@ -1041,6 +1047,17 @@
       title: 'caseManagement.featureCase.tableColumnName',
       dataIndex: 'name',
       type: FilterType.INPUT,
+    },
+    {
+      title: 'caseManagement.featureCase.tableColumnLevel',
+      dataIndex: 'caseLevel',
+      type: FilterType.SELECT,
+      selectProps: {
+        multiple: true,
+        valueKey: 'value',
+        labelKey: 'text',
+        options: caseLevelList.value,
+      },
     },
     {
       title: 'common.belongModule',
@@ -1370,6 +1387,8 @@
     isAdvanced?: boolean;
   };
 
+  const restoredFilterForDrawer = ref<CaseTableFilterCache | undefined>();
+
   function getCaseTableFilterCacheKey() {
     return `${CASE_TABLE_FILTER_CACHE_PREFIX}${currentProjectId.value || 'unknown'}`;
   }
@@ -1457,13 +1476,21 @@
       if (cache.advanceFilter && (cache.isAdvanced || hasValidAdvanceFilter(cachedAdvanceFilter))) {
         setAdvanceFilter(cachedAdvanceFilter, cache.viewId || '');
         restoredAdvancedSearchActive.value = true;
-        msAdvanceFilterRef.value?.restoreFilterState(cachedAdvanceFilter, cache.viewId, true);
+        restoredFilterForDrawer.value = { ...cache, advanceFilter: cachedAdvanceFilter };
       } else if (cache.tableFilter) {
         restoredAdvancedSearchActive.value = false;
         propsRes.value.filter = cloneDeep(cache.tableFilter);
       }
     } catch {
       clearCaseTableFilterCache();
+    }
+  }
+
+  async function restoreAdvancedFilterDrawerState() {
+    await nextTick();
+    const cache = restoredFilterForDrawer.value;
+    if (cache?.advanceFilter) {
+      msAdvanceFilterRef.value?.restoreFilterState(cache.advanceFilter, cache.viewId, true);
     }
   }
 
@@ -1520,12 +1547,6 @@
   function handleTableSelect(selectArr: (string | number)[]) {
     tableSelected.value = selectArr;
   }
-
-  const caseLevelFields = ref<Record<string, any>>({});
-
-  const caseLevelList = computed(() => {
-    return caseLevelFields.value?.options || [];
-  });
 
   async function getLoadListParams() {
     setLoadListParams(await initTableParams());
@@ -2186,9 +2207,9 @@
       emit('setActiveFolder');
     }
     keyword.value = '';
-    await getLoadListParams(); // 基础筛选都清空
     setAdvanceFilter(effectiveFilter, id);
     restoredAdvancedSearchActive.value = false;
+    await getLoadListParams(); // 基础筛选都清空
     await loadList();
     if (isAdvanced || hasValidAdvanceFilter(effectiveFilter)) {
       persistCaseTableFilterState();
@@ -2372,6 +2393,7 @@
     }
     await initFilter();
     restoreCaseTableFilterState();
+    await restoreAdvancedFilterDrawerState();
     await initData();
     getCaseExportData();
     if (route.query.id) {

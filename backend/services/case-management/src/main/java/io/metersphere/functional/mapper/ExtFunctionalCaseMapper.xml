@@ -454,6 +454,22 @@
                                 <property name="column" value="functional_case.last_execute_result"/>
                             </include>
                         </if>
+                        <!-- 用例等级 -->
+                        <if test="condition.name == 'caseLevel'">
+                            functional_case.id in (
+                            select fccf.case_id
+                            from functional_case_custom_field fccf
+                            left join custom_field cf on cf.id = fccf.field_id
+                            where cf.name = 'functional_priority'
+                            and cf.scene = 'FUNCTIONAL'
+                            and cf.internal = true
+                            and
+                            <include refid="io.metersphere.system.mapper.BaseMapper.condition">
+                                <property name="condition" value="condition"/>
+                                <property name="column" value="value"/>
+                            </include>
+                            )
+                        </if>
                         <!-- 最后执行人 -->
                         <if test="condition.name == 'lastExecuteUser'">
                             <include refid="io.metersphere.system.mapper.BaseMapper.condition">
