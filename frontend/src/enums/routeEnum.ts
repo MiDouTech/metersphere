@@ -23,6 +23,7 @@ export enum CaseManagementRouteEnum {
   CASE_MANAGEMENT_CASE_CREATE_SUCCESS = 'caseManagementCaseCreateSuccess',
   CASE_MANAGEMENT_CASE_RECYCLE = 'caseManagementCaseRecycle',
   CASE_MANAGEMENT_CASE_DETAIL = 'caseManagementCaseDetail',
+  CASE_MANAGEMENT_CASE_GENERATE = 'caseManagementCaseGenerate',
   CASE_MANAGEMENT_REVIEW = 'caseManagementReview',
   CASE_MANAGEMENT_REVIEW_CREATE = 'caseManagementReviewCreate',
   CASE_MANAGEMENT_REVIEW_DETAIL = 'caseManagementReviewDetail',

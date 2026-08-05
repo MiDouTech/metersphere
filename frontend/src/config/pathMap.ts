@@ -242,6 +242,13 @@ export const pathMap: PathMapItem[] = [
         ],
       },
       {
+        key: 'CASE_MANAGEMENT_CASE_GENERATE', // 功能测试-生成用例
+        locale: 'menu.caseManagement.caseGenerate',
+        route: RouteEnum.CASE_MANAGEMENT_CASE_GENERATE,
+        permission: [],
+        level: MENU_LEVEL[2],
+      },
+      {
         key: 'CASE_MANAGEMENT_REVIEW', // 功能测试-功能用例-用例评审
         locale: 'menu.caseManagement.caseManagementReview',
         route: RouteEnum.CASE_MANAGEMENT_REVIEW,

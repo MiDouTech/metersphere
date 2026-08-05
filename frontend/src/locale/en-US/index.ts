@@ -61,6 +61,7 @@ export default {
     'menu.caseManagement.featureCase': 'Feature Case',
     'menu.caseManagement.executeCase': 'Execute Cases',
     'menu.caseManagement.xmindCase': 'Xmind Cases',
+    'menu.caseManagement.caseGenerate': 'Generate Cases',
     'menu.caseManagement.featureCaseRecycle': 'Recycle',
     'menu.caseManagement.featureCaseList': 'Case list',
     'menu.caseManagement.featureCaseDetail': 'Create Case',

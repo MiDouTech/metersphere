@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.functional.mapper.FunctionalCaseAiGenerationMapper">
+    <resultMap id="BaseResultMap" type="io.metersphere.functional.domain.FunctionalCaseAiGeneration">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="project_id" jdbcType="VARCHAR" property="projectId"/>
+        <result column="conversation_id" jdbcType="VARCHAR" property="conversationId"/>
+        <result column="model_source_id" jdbcType="VARCHAR" property="modelSourceId"/>
+        <result column="prompt" jdbcType="LONGVARCHAR" property="prompt"/>
+        <result column="status" jdbcType="VARCHAR" property="status"/>
+        <result column="token_usage" jdbcType="BIGINT" property="tokenUsage"/>
+        <result column="duration_ms" jdbcType="BIGINT" property="durationMs"/>
+        <result column="error_message" jdbcType="LONGVARCHAR" property="errorMessage"/>
+        <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
+        <result column="create_time" jdbcType="BIGINT" property="createTime"/>
+        <result column="update_time" jdbcType="BIGINT" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="io.metersphere.functional.domain.FunctionalCaseAiGeneration">
+        insert into functional_case_ai_generation (id, project_id, conversation_id, model_source_id, prompt,
+                                                   status, token_usage, duration_ms, error_message,
+                                                   create_user, create_time, update_time)
+        values (#{id,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR}, #{conversationId,jdbcType=VARCHAR},
+                #{modelSourceId,jdbcType=VARCHAR}, #{prompt,jdbcType=LONGVARCHAR}, #{status,jdbcType=VARCHAR},
+                #{tokenUsage,jdbcType=BIGINT}, #{durationMs,jdbcType=BIGINT}, #{errorMessage,jdbcType=LONGVARCHAR},
+                #{createUser,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT})
+    </insert>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        select *
+        from functional_case_ai_generation
+        where id = #{id}
+        limit 1
+    </select>
+
+    <update id="updateByPrimaryKeySelective" parameterType="io.metersphere.functional.domain.FunctionalCaseAiGeneration">
+        update functional_case_ai_generation
+        <set>
+            <if test="projectId != null">project_id = #{projectId,jdbcType=VARCHAR},</if>
+            <if test="conversationId != null">conversation_id = #{conversationId,jdbcType=VARCHAR},</if>
+            <if test="modelSourceId != null">model_source_id = #{modelSourceId,jdbcType=VARCHAR},</if>
+            <if test="prompt != null">prompt = #{prompt,jdbcType=LONGVARCHAR},</if>
+            <if test="status != null">status = #{status,jdbcType=VARCHAR},</if>
+            <if test="tokenUsage != null">token_usage = #{tokenUsage,jdbcType=BIGINT},</if>
+            <if test="durationMs != null">duration_ms = #{durationMs,jdbcType=BIGINT},</if>
+            <if test="errorMessage != null">error_message = #{errorMessage,jdbcType=LONGVARCHAR},</if>
+            <if test="createUser != null">create_user = #{createUser,jdbcType=VARCHAR},</if>
+            <if test="createTime != null">create_time = #{createTime,jdbcType=BIGINT},</if>
+            <if test="updateTime != null">update_time = #{updateTime,jdbcType=BIGINT},</if>
+        </set>
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <select id="selectByProjectAndCreateUser" resultMap="BaseResultMap">
+        select *
+        from functional_case_ai_generation
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+        order by create_time desc
+        limit #{offset}, #{pageSize}
+    </select>
+</mapper>

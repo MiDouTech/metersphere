@@ -16,13 +16,19 @@ public enum DefaultBugStatusItem {
      * 新建
      */
     NEW(DefaultBugStatusItemName.NEW, null,
-            Arrays.asList(DefaultBugStatusItemName.IN_PROCESS, DefaultBugStatusItemName.REJECTED),
+            Arrays.asList(DefaultBugStatusItemName.IN_PROCESS, DefaultBugStatusItemName.SUSPENDED, DefaultBugStatusItemName.REJECTED),
             Arrays.asList(BugStatusDefinitionType.START)),
     /**
      * 处理中
      */
     IN_PROCESS(DefaultBugStatusItemName.IN_PROCESS, null,
-            Arrays.asList(DefaultBugStatusItemName.REJECTED, DefaultBugStatusItemName.RESOLVED, DefaultBugStatusItemName.CLOSED),
+            Arrays.asList(DefaultBugStatusItemName.SUSPENDED, DefaultBugStatusItemName.REJECTED, DefaultBugStatusItemName.RESOLVED, DefaultBugStatusItemName.CLOSED),
+            List.of()),
+    /**
+     * 挂起
+     */
+    SUSPENDED(DefaultBugStatusItemName.SUSPENDED, null,
+            Arrays.asList(DefaultBugStatusItemName.IN_PROCESS, DefaultBugStatusItemName.REJECTED, DefaultBugStatusItemName.CLOSED),
             List.of()),
     /**
      * 已关闭
