@@ -65,6 +65,7 @@ export default {
     'menu.caseManagement.featureCase': '功能用例',
     'menu.caseManagement.executeCase': '执行用例',
     'menu.caseManagement.xmindCase': 'Xmind用例',
+    'menu.caseManagement.caseGenerate': '生成用例',
     'menu.caseManagement.featureCaseRecycle': '回收站',
     'menu.caseManagement.featureCaseList': '用例列表',
     'menu.caseManagement.featureCaseDetail': '创建用例',

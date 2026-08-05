@@ -21,6 +21,14 @@ export default function getBugStatusClass(status?: string): string {
     return 'is-processing';
   }
   if (
+    normalizedStatus.includes('挂起') ||
+    normalizedStatus.includes('掛起') ||
+    normalizedStatus.includes('suspended') ||
+    normalizedStatus.includes('suspend')
+  ) {
+    return 'is-suspended';
+  }
+  if (
     normalizedStatus.includes('已解决') ||
     normalizedStatus.includes('解决') ||
     normalizedStatus.includes('resolved') ||

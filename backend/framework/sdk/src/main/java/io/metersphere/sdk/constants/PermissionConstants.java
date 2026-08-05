@@ -227,6 +227,10 @@ public class PermissionConstants {
     public static final String FUNCTIONAL_CASE_READ_EXPORT = "FUNCTIONAL_CASE:READ+EXPORT";
     public static final String FUNCTIONAL_CASE_READ_IMPORT = "FUNCTIONAL_CASE:READ+IMPORT";
     public static final String FUNCTIONAL_CASE_READ_MINDER = "FUNCTIONAL_CASE:READ+MINDER";
+    public static final String FUNCTIONAL_CASE_AI_GENERATE = FUNCTIONAL_CASE_READ_ADD;
+    public static final String FUNCTIONAL_CASE_AI_UPLOAD = FUNCTIONAL_CASE_READ_IMPORT;
+    public static final String FUNCTIONAL_CASE_AI_SAVE = FUNCTIONAL_CASE_READ_ADD;
+    public static final String FUNCTIONAL_CASE_AI_CONFIG = FUNCTIONAL_CASE_READ_UPDATE;
 
 
 

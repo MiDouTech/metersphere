@@ -29,6 +29,18 @@ const CaseManagement: AppRouteRecordRaw = {
         keepModuleAlive: true,
       },
     },
+    // AI 生成用例
+    {
+      path: 'caseGenerate',
+      name: CaseManagementRouteEnum.CASE_MANAGEMENT_CASE_GENERATE,
+      component: () => import('@/views/case-management/caseGenerate/index.vue'),
+      meta: {
+        locale: 'menu.caseManagement.caseGenerate',
+        roles: ['FUNCTIONAL_CASE:READ'],
+        isTopMenu: true,
+        keepModuleAlive: true,
+      },
+    },
     // 创建用例&编辑用例
     {
       path: 'featureCaseDetail/:mode?',

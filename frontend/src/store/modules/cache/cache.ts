@@ -20,6 +20,12 @@ const useCacheStore = defineStore('cache', {
         type: 'ROUTE',
         keepModuleAlive: true,
       },
+      // AI 生成用例
+      {
+        cacheName: RouteEnum.CASE_MANAGEMENT_CASE_GENERATE,
+        type: 'ROUTE',
+        keepModuleAlive: true,
+      },
       // 用例评审
       {
         cacheName: RouteEnum.CASE_MANAGEMENT_REVIEW,

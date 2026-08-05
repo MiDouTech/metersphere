@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.functional.mapper.FunctionalCaseAiDraftMapper">
+    <resultMap id="BaseResultMap" type="io.metersphere.functional.domain.FunctionalCaseAiDraft">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="generation_id" jdbcType="VARCHAR" property="generationId"/>
+        <result column="source_document_id" jdbcType="VARCHAR" property="sourceDocumentId"/>
+        <result column="project_id" jdbcType="VARCHAR" property="projectId"/>
+        <result column="module_id" jdbcType="VARCHAR" property="moduleId"/>
+        <result column="template_id" jdbcType="VARCHAR" property="templateId"/>
+        <result column="name" jdbcType="VARCHAR" property="name"/>
+        <result column="case_level" jdbcType="VARCHAR" property="caseLevel"/>
+        <result column="edit_type" jdbcType="VARCHAR" property="editType"/>
+        <result column="prerequisite" jdbcType="LONGVARCHAR" property="prerequisite"/>
+        <result column="steps" jdbcType="LONGVARCHAR" property="steps"/>
+        <result column="expected_result" jdbcType="LONGVARCHAR" property="expectedResult"/>
+        <result column="tags" jdbcType="LONGVARCHAR" property="tags"/>
+        <result column="custom_fields" jdbcType="LONGVARCHAR" property="customFields"/>
+        <result column="validation_message" jdbcType="LONGVARCHAR" property="validationMessage"/>
+        <result column="fingerprint" jdbcType="VARCHAR" property="fingerprint"/>
+        <result column="duplicate" jdbcType="BIT" property="duplicate"/>
+        <result column="validation_status" jdbcType="VARCHAR" property="validationStatus"/>
+        <result column="draft_status" jdbcType="VARCHAR" property="draftStatus"/>
+        <result column="formal_case_id" jdbcType="VARCHAR" property="formalCaseId"/>
+        <result column="deleted" jdbcType="BIT" property="deleted"/>
+        <result column="version" jdbcType="INTEGER" property="version"/>
+        <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
+        <result column="create_time" jdbcType="BIGINT" property="createTime"/>
+        <result column="update_time" jdbcType="BIGINT" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="io.metersphere.functional.domain.FunctionalCaseAiDraft">
+        insert into functional_case_ai_draft (id, generation_id, source_document_id, project_id, module_id,
+                                              template_id, name, case_level, edit_type, prerequisite, steps,
+                                              expected_result, tags, custom_fields, validation_message, fingerprint,
+                                              duplicate, validation_status, draft_status, formal_case_id, deleted,
+                                              version, create_user, create_time, update_time)
+        values (#{id,jdbcType=VARCHAR}, #{generationId,jdbcType=VARCHAR}, #{sourceDocumentId,jdbcType=VARCHAR},
+                #{projectId,jdbcType=VARCHAR}, #{moduleId,jdbcType=VARCHAR}, #{templateId,jdbcType=VARCHAR},
+                #{name,jdbcType=VARCHAR}, #{caseLevel,jdbcType=VARCHAR}, #{editType,jdbcType=VARCHAR},
+                #{prerequisite,jdbcType=LONGVARCHAR}, #{steps,jdbcType=LONGVARCHAR},
+                #{expectedResult,jdbcType=LONGVARCHAR}, #{tags,jdbcType=LONGVARCHAR},
+                #{customFields,jdbcType=LONGVARCHAR}, #{validationMessage,jdbcType=LONGVARCHAR},
+                #{fingerprint,jdbcType=VARCHAR}, #{duplicate,jdbcType=BIT}, #{validationStatus,jdbcType=VARCHAR},
+                #{draftStatus,jdbcType=VARCHAR}, #{formalCaseId,jdbcType=VARCHAR}, #{deleted,jdbcType=BIT}, #{version,jdbcType=INTEGER},
+                #{createUser,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT})
+    </insert>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        select *
+        from functional_case_ai_draft
+        where id = #{id}
+        limit 1
+    </select>
+
+    <update id="updateByPrimaryKeySelective" parameterType="io.metersphere.functional.domain.FunctionalCaseAiDraft">
+        update functional_case_ai_draft
+        <set>
+            <if test="generationId != null">generation_id = #{generationId,jdbcType=VARCHAR},</if>
+            <if test="sourceDocumentId != null">source_document_id = #{sourceDocumentId,jdbcType=VARCHAR},</if>
+            <if test="projectId != null">project_id = #{projectId,jdbcType=VARCHAR},</if>
+            <if test="moduleId != null">module_id = #{moduleId,jdbcType=VARCHAR},</if>
+            <if test="templateId != null">template_id = #{templateId,jdbcType=VARCHAR},</if>
+            <if test="name != null">name = #{name,jdbcType=VARCHAR},</if>
+            <if test="caseLevel != null">case_level = #{caseLevel,jdbcType=VARCHAR},</if>
+            <if test="editType != null">edit_type = #{editType,jdbcType=VARCHAR},</if>
+            <if test="prerequisite != null">prerequisite = #{prerequisite,jdbcType=LONGVARCHAR},</if>
+            <if test="steps != null">steps = #{steps,jdbcType=LONGVARCHAR},</if>
+            <if test="expectedResult != null">expected_result = #{expectedResult,jdbcType=LONGVARCHAR},</if>
+            <if test="tags != null">tags = #{tags,jdbcType=LONGVARCHAR},</if>
+            <if test="customFields != null">custom_fields = #{customFields,jdbcType=LONGVARCHAR},</if>
+            <if test="validationMessage != null">validation_message = #{validationMessage,jdbcType=LONGVARCHAR},</if>
+            <if test="fingerprint != null">fingerprint = #{fingerprint,jdbcType=VARCHAR},</if>
+            <if test="duplicate != null">duplicate = #{duplicate,jdbcType=BIT},</if>
+            <if test="validationStatus != null">validation_status = #{validationStatus,jdbcType=VARCHAR},</if>
+            <if test="draftStatus != null">draft_status = #{draftStatus,jdbcType=VARCHAR},</if>
+            <if test="formalCaseId != null">formal_case_id = #{formalCaseId,jdbcType=VARCHAR},</if>
+            <if test="deleted != null">deleted = #{deleted,jdbcType=BIT},</if>
+            <if test="version != null">version = #{version,jdbcType=INTEGER},</if>
+            <if test="createUser != null">create_user = #{createUser,jdbcType=VARCHAR},</if>
+            <if test="createTime != null">create_time = #{createTime,jdbcType=BIGINT},</if>
+            <if test="updateTime != null">update_time = #{updateTime,jdbcType=BIGINT},</if>
+        </set>
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateByPrimaryKeyAndVersionSelective">
+        update functional_case_ai_draft
+        <set>
+            <if test="record.sourceDocumentId != null">source_document_id = #{record.sourceDocumentId,jdbcType=VARCHAR},</if>
+            <if test="record.moduleId != null">module_id = #{record.moduleId,jdbcType=VARCHAR},</if>
+            <if test="record.templateId != null">template_id = #{record.templateId,jdbcType=VARCHAR},</if>
+            <if test="record.name != null">name = #{record.name,jdbcType=VARCHAR},</if>
+            <if test="record.caseLevel != null">case_level = #{record.caseLevel,jdbcType=VARCHAR},</if>
+            <if test="record.editType != null">edit_type = #{record.editType,jdbcType=VARCHAR},</if>
+            <if test="record.prerequisite != null">prerequisite = #{record.prerequisite,jdbcType=LONGVARCHAR},</if>
+            <if test="record.steps != null">steps = #{record.steps,jdbcType=LONGVARCHAR},</if>
+            <if test="record.expectedResult != null">expected_result = #{record.expectedResult,jdbcType=LONGVARCHAR},</if>
+            <if test="record.tags != null">tags = #{record.tags,jdbcType=LONGVARCHAR},</if>
+            <if test="record.customFields != null">custom_fields = #{record.customFields,jdbcType=LONGVARCHAR},</if>
+            <if test="record.validationMessage != null">validation_message = #{record.validationMessage,jdbcType=LONGVARCHAR},</if>
+            <if test="record.fingerprint != null">fingerprint = #{record.fingerprint,jdbcType=VARCHAR},</if>
+            <if test="record.duplicate != null">duplicate = #{record.duplicate,jdbcType=BIT},</if>
+            <if test="record.validationStatus != null">validation_status = #{record.validationStatus,jdbcType=VARCHAR},</if>
+            <if test="record.draftStatus != null">draft_status = #{record.draftStatus,jdbcType=VARCHAR},</if>
+            <if test="record.formalCaseId != null">formal_case_id = #{record.formalCaseId,jdbcType=VARCHAR},</if>
+            <if test="record.deleted != null">deleted = #{record.deleted,jdbcType=BIT},</if>
+            <if test="record.updateTime != null">update_time = #{record.updateTime,jdbcType=BIGINT},</if>
+            version = version + 1,
+        </set>
+        where id = #{record.id,jdbcType=VARCHAR}
+          and version = #{version,jdbcType=INTEGER}
+    </update>
+
+    <select id="selectByProjectAndCreateUser" resultMap="BaseResultMap">
+        select *
+        from functional_case_ai_draft
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+        <if test="draftStatus != null and draftStatus != ''">
+          and draft_status = #{draftStatus}
+        </if>
+        order by update_time desc
+        limit #{offset}, #{pageSize}
+    </select>
+
+    <select id="countByProjectAndCreateUser" resultType="long">
+        select count(1)
+        from functional_case_ai_draft
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+        <if test="draftStatus != null and draftStatus != ''">
+          and draft_status = #{draftStatus}
+        </if>
+    </select>
+
+    <select id="selectByIds" resultMap="BaseResultMap">
+        select *
+        from functional_case_ai_draft
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+          and id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+          #{id}
+        </foreach>
+    </select>
+
+    <select id="countDuplicateByFingerprint" resultType="long">
+        select count(1)
+        from functional_case_ai_draft
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+          and fingerprint = #{fingerprint}
+        <if test="excludeId != null and excludeId != ''">
+          and id != #{excludeId}
+        </if>
+    </select>
+
+    <update id="markDeleted">
+        update functional_case_ai_draft
+        set deleted = 1,
+            update_time = #{updateTime},
+            version = version + 1
+        where id = #{id}
+          and project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+    </update>
+</mapper>

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.functional.mapper.AiSourceDocumentMapper">
+    <resultMap id="BaseResultMap" type="io.metersphere.functional.domain.AiSourceDocument">
+        <id column="id" jdbcType="VARCHAR" property="id"/>
+        <result column="project_id" jdbcType="VARCHAR" property="projectId"/>
+        <result column="conversation_id" jdbcType="VARCHAR" property="conversationId"/>
+        <result column="file_id" jdbcType="VARCHAR" property="fileId"/>
+        <result column="original_name" jdbcType="VARCHAR" property="originalName"/>
+        <result column="mime_type" jdbcType="VARCHAR" property="mimeType"/>
+        <result column="file_size" jdbcType="BIGINT" property="fileSize"/>
+        <result column="sha256" jdbcType="VARCHAR" property="sha256"/>
+        <result column="duplicate" jdbcType="BIT" property="duplicate"/>
+        <result column="duplicate_source_document_id" jdbcType="VARCHAR" property="duplicateSourceDocumentId"/>
+        <result column="parse_status" jdbcType="VARCHAR" property="parseStatus"/>
+        <result column="parsed_result_path" jdbcType="VARCHAR" property="parsedResultPath"/>
+        <result column="parser_type" jdbcType="VARCHAR" property="parserType"/>
+        <result column="summary" jdbcType="LONGVARCHAR" property="summary"/>
+        <result column="section_index" jdbcType="LONGVARCHAR" property="sectionIndex"/>
+        <result column="error_message" jdbcType="LONGVARCHAR" property="errorMessage"/>
+        <result column="create_user" jdbcType="VARCHAR" property="createUser"/>
+        <result column="create_time" jdbcType="BIGINT" property="createTime"/>
+        <result column="update_time" jdbcType="BIGINT" property="updateTime"/>
+        <result column="deleted" jdbcType="BIT" property="deleted"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="io.metersphere.functional.domain.AiSourceDocument">
+        insert into ai_source_document (id, project_id, conversation_id, file_id, original_name, mime_type,
+                                        file_size, sha256, duplicate, duplicate_source_document_id, parse_status,
+                                        parsed_result_path, parser_type, summary, section_index,
+                                        error_message, create_user, create_time, update_time, deleted)
+        values (#{id,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR}, #{conversationId,jdbcType=VARCHAR},
+                #{fileId,jdbcType=VARCHAR}, #{originalName,jdbcType=VARCHAR}, #{mimeType,jdbcType=VARCHAR},
+                #{fileSize,jdbcType=BIGINT}, #{sha256,jdbcType=VARCHAR}, #{duplicate,jdbcType=BIT},
+                #{duplicateSourceDocumentId,jdbcType=VARCHAR}, #{parseStatus,jdbcType=VARCHAR},
+                #{parsedResultPath,jdbcType=VARCHAR}, #{parserType,jdbcType=VARCHAR},
+                #{summary,jdbcType=LONGVARCHAR}, #{sectionIndex,jdbcType=LONGVARCHAR},
+                #{errorMessage,jdbcType=LONGVARCHAR}, #{createUser,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT},
+                #{updateTime,jdbcType=BIGINT}, #{deleted,jdbcType=BIT})
+    </insert>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        select *
+        from ai_source_document
+        where id = #{id}
+        limit 1
+    </select>
+
+    <update id="updateByPrimaryKeySelective" parameterType="io.metersphere.functional.domain.AiSourceDocument">
+        update ai_source_document
+        <set>
+            <if test="projectId != null">project_id = #{projectId,jdbcType=VARCHAR},</if>
+            <if test="conversationId != null">conversation_id = #{conversationId,jdbcType=VARCHAR},</if>
+            <if test="fileId != null">file_id = #{fileId,jdbcType=VARCHAR},</if>
+            <if test="originalName != null">original_name = #{originalName,jdbcType=VARCHAR},</if>
+            <if test="mimeType != null">mime_type = #{mimeType,jdbcType=VARCHAR},</if>
+            <if test="fileSize != null">file_size = #{fileSize,jdbcType=BIGINT},</if>
+            <if test="sha256 != null">sha256 = #{sha256,jdbcType=VARCHAR},</if>
+            <if test="duplicate != null">duplicate = #{duplicate,jdbcType=BIT},</if>
+            <if test="duplicateSourceDocumentId != null">duplicate_source_document_id = #{duplicateSourceDocumentId,jdbcType=VARCHAR},</if>
+            <if test="parseStatus != null">parse_status = #{parseStatus,jdbcType=VARCHAR},</if>
+            <if test="parsedResultPath != null">parsed_result_path = #{parsedResultPath,jdbcType=VARCHAR},</if>
+            <if test="parserType != null">parser_type = #{parserType,jdbcType=VARCHAR},</if>
+            <if test="summary != null">summary = #{summary,jdbcType=LONGVARCHAR},</if>
+            <if test="sectionIndex != null">section_index = #{sectionIndex,jdbcType=LONGVARCHAR},</if>
+            <if test="errorMessage != null">error_message = #{errorMessage,jdbcType=LONGVARCHAR},</if>
+            <if test="createUser != null">create_user = #{createUser,jdbcType=VARCHAR},</if>
+            <if test="createTime != null">create_time = #{createTime,jdbcType=BIGINT},</if>
+            <if test="updateTime != null">update_time = #{updateTime,jdbcType=BIGINT},</if>
+            <if test="deleted != null">deleted = #{deleted,jdbcType=BIT},</if>
+        </set>
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <select id="selectReusableBySha256" resultMap="BaseResultMap">
+        select *
+        from ai_source_document
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+          and sha256 = #{sha256}
+          and deleted = 0
+          and parse_status = 'PARSED'
+        order by create_time desc
+        limit 1
+    </select>
+
+    <select id="selectByProjectAndCreateUser" resultMap="BaseResultMap">
+        select *
+        from ai_source_document
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+        <if test="parseStatus != null and parseStatus != ''">
+          and parse_status = #{parseStatus}
+        </if>
+        order by create_time desc
+        limit #{offset}, #{pageSize}
+    </select>
+
+    <select id="selectByIds" resultMap="BaseResultMap">
+        select *
+        from ai_source_document
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+          and id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+          #{id}
+        </foreach>
+    </select>
+
+    <select id="countByProjectAndCreateUser" resultType="long">
+        select count(1)
+        from ai_source_document
+        where project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+        <if test="parseStatus != null and parseStatus != ''">
+          and parse_status = #{parseStatus}
+        </if>
+    </select>
+
+    <update id="markDeleted">
+        update ai_source_document
+        set deleted = 1,
+            update_time = #{updateTime}
+        where id = #{id}
+          and project_id = #{projectId}
+          and create_user = #{createUser}
+          and deleted = 0
+    </update>
+</mapper>

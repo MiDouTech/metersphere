@@ -1,0 +1,647 @@
+package io.metersphere.functional.service;
+
+import io.metersphere.functional.constants.FunctionalCaseAiDraftStatus;
+import io.metersphere.functional.constants.FunctionalCaseAiGenerationStatus;
+import io.metersphere.functional.constants.FunctionalCaseTypeConstants;
+import io.metersphere.functional.domain.AiSourceDocument;
+import io.metersphere.functional.domain.FunctionalCase;
+import io.metersphere.functional.domain.FunctionalCaseAiDraft;
+import io.metersphere.functional.domain.FunctionalCaseAiGeneration;
+import io.metersphere.functional.domain.FunctionalCaseExample;
+import io.metersphere.functional.dto.CaseCustomFieldDTO;
+import io.metersphere.functional.dto.CaseGenerationCaseDTO;
+import io.metersphere.functional.dto.CaseGenerationResult;
+import io.metersphere.functional.dto.FunctionalCaseAiDTO;
+import io.metersphere.functional.dto.FunctionalCaseAiDraftDTO;
+import io.metersphere.functional.dto.FunctionalCaseStepDTO;
+import io.metersphere.functional.mapper.FunctionalCaseAiDraftMapper;
+import io.metersphere.functional.mapper.FunctionalCaseAiGenerationMapper;
+import io.metersphere.functional.mapper.FunctionalCaseMapper;
+import io.metersphere.functional.mapper.AiSourceDocumentMapper;
+import io.metersphere.functional.request.FunctionalCaseAddRequest;
+import io.metersphere.functional.request.FunctionalCaseAiDraftBatchDeleteRequest;
+import io.metersphere.functional.request.FunctionalCaseAiDraftBatchSaveRequest;
+import io.metersphere.functional.request.FunctionalCaseAiDraftPageRequest;
+import io.metersphere.functional.request.FunctionalCaseAiDraftRegenerateRequest;
+import io.metersphere.functional.request.FunctionalCaseAiDraftUpsertRequest;
+import io.metersphere.functional.request.FunctionalCaseAiGenerateRequest;
+import io.metersphere.functional.response.FunctionalCaseAiBatchSaveResponse;
+import io.metersphere.functional.response.FunctionalCaseAiDraftPageResponse;
+import io.metersphere.functional.response.FunctionalCaseAiGenerateResponse;
+import io.metersphere.functional.utils.MdUtil;
+import io.metersphere.project.domain.Project;
+import io.metersphere.project.mapper.ProjectMapper;
+import io.metersphere.project.service.ProjectTemplateService;
+import io.metersphere.sdk.constants.ModuleConstants;
+import io.metersphere.sdk.constants.TemplateScene;
+import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.util.JSON;
+import io.metersphere.system.dto.request.ai.AIChatOption;
+import io.metersphere.system.dto.request.ai.AIChatRequest;
+import io.metersphere.system.dto.request.ai.AiModelSourceDTO;
+import io.metersphere.system.dto.sdk.TemplateDTO;
+import io.metersphere.system.service.AiChatBaseService;
+import io.metersphere.system.uid.IDGenerator;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class FunctionalCaseAiDraftService {
+    private static final int DEFAULT_MAX_CASES = 50;
+    private static final int MAX_CASES = 100;
+
+    @Resource
+    private FunctionalCaseAiGenerationMapper generationMapper;
+    @Resource
+    private FunctionalCaseAiDraftMapper draftMapper;
+    @Resource
+    private FunctionalCaseMapper functionalCaseMapper;
+    @Resource
+    private AiSourceDocumentMapper aiSourceDocumentMapper;
+    @Resource
+    private FunctionalCaseService functionalCaseService;
+    @Resource
+    private ProjectTemplateService projectTemplateService;
+    @Resource
+    private ProjectMapper projectMapper;
+    @Resource
+    private AiChatBaseService aiChatBaseService;
+
+    public FunctionalCaseAiGenerateResponse generate(FunctionalCaseAiGenerateRequest request, String userId) {
+        int maxCases = normalizeMaxCases(request.getMaxCases());
+        long startTime = System.currentTimeMillis();
+        FunctionalCaseAiGeneration generation = createGeneration(request, userId, startTime);
+        generationMapper.insert(generation);
+        try {
+            String rawContent = callAiForStructuredCases(request, userId, maxCases);
+            CaseGenerationResult result = parseGenerationResult(rawContent);
+            List<CaseGenerationCaseDTO> cases = sanitizeAndLimit(result, maxCases);
+            if (result.getWarnings() == null) {
+                result.setWarnings(new ArrayList<>());
+            }
+            if (CollectionUtils.isEmpty(cases)) {
+                throw new MSException("AI 未返回有效用例，未创建草稿");
+            }
+
+            List<FunctionalCaseAiDraftDTO> createdDrafts = new ArrayList<>();
+            for (CaseGenerationCaseDTO item : cases) {
+                FunctionalCaseAiDraft draft = buildDraft(request, item, generation.getId(), userId);
+                validateDraft(draft);
+                draftMapper.insert(draft);
+                createdDrafts.add(toDTO(draft));
+            }
+
+            generation.setStatus(FunctionalCaseAiGenerationStatus.GENERATED.name());
+            generation.setDurationMs(System.currentTimeMillis() - startTime);
+            generation.setUpdateTime(System.currentTimeMillis());
+            if (CollectionUtils.isNotEmpty(result.getWarnings())) {
+                generation.setErrorMessage(String.join("; ", result.getWarnings()));
+            }
+            generationMapper.updateByPrimaryKeySelective(generation);
+
+            FunctionalCaseAiGenerateResponse response = new FunctionalCaseAiGenerateResponse();
+            response.setGenerationId(generation.getId());
+            response.setCreatedCount(createdDrafts.size());
+            response.setDrafts(createdDrafts);
+            response.setWarnings(result.getWarnings());
+            audit("GENERATE", request.getProjectId(), userId, "generationId=" + generation.getId() + ",drafts=" + createdDrafts.size());
+            return response;
+        } catch (Exception ex) {
+            generation.setStatus(FunctionalCaseAiGenerationStatus.FAILED.name());
+            generation.setDurationMs(System.currentTimeMillis() - startTime);
+            generation.setErrorMessage(StringUtils.left(ex.getMessage(), 4000));
+            generation.setUpdateTime(System.currentTimeMillis());
+            generationMapper.updateByPrimaryKeySelective(generation);
+            audit("GENERATE_FAILED", request.getProjectId(), userId, "generationId=" + generation.getId() + ",error=" + ex.getMessage());
+            if (ex instanceof MSException msException) {
+                throw msException;
+            }
+            throw new MSException("AI 结构化生成失败：" + ex.getMessage(), ex);
+        }
+    }
+
+    public FunctionalCaseAiDraftPageResponse page(FunctionalCaseAiDraftPageRequest request, String userId) {
+        int current = Math.max(1, request.getCurrent() == null ? 1 : request.getCurrent());
+        int pageSize = Math.min(100, Math.max(1, request.getPageSize() == null ? 20 : request.getPageSize()));
+        String status = StringUtils.equalsIgnoreCase(request.getDraftStatus(), "ALL") ? null : request.getDraftStatus();
+        long total = draftMapper.countByProjectAndCreateUser(request.getProjectId(), userId, status);
+        List<FunctionalCaseAiDraft> rows = draftMapper.selectByProjectAndCreateUser(
+                request.getProjectId(), userId, status, (long) (current - 1) * pageSize, pageSize);
+        FunctionalCaseAiDraftPageResponse response = new FunctionalCaseAiDraftPageResponse();
+        response.setTotal(total);
+        response.setRecords(rows.stream().map(this::toDTO).toList());
+        return response;
+    }
+
+    public FunctionalCaseAiDraftDTO get(String id, String projectId, String userId) {
+        FunctionalCaseAiDraft draft = requireDraft(id, projectId, userId);
+        return toDTO(draft);
+    }
+
+    public FunctionalCaseAiDraftDTO update(FunctionalCaseAiDraftUpsertRequest request, String userId) {
+        FunctionalCaseAiDraft existing = requireDraft(request.getId(), request.getProjectId(), userId);
+        if (FunctionalCaseAiDraftStatus.SAVED.name().equals(existing.getDraftStatus())) {
+            throw new MSException("已保存为正式用例的草稿不允许继续编辑");
+        }
+        FunctionalCaseAiDraft update = new FunctionalCaseAiDraft();
+        update.setId(existing.getId());
+        update.setSourceDocumentId(request.getSourceDocumentId());
+        update.setModuleId(request.getModuleId());
+        update.setTemplateId(request.getTemplateId());
+        update.setName(request.getName());
+        update.setCaseLevel(normalizeLevel(request.getCaseLevel()));
+        update.setEditType(normalizeEditType(request.getEditType()));
+        update.setPrerequisite(request.getPrerequisite());
+        update.setSteps(request.getSteps());
+        update.setExpectedResult(request.getExpectedResult());
+        update.setTags(request.getTags());
+        update.setCustomFields(request.getCustomFields());
+        update.setDraftStatus(FunctionalCaseAiDraftStatus.DRAFT.name());
+        update.setUpdateTime(System.currentTimeMillis());
+        validateDraft(update, existing.getId(), request.getProjectId(), userId);
+        int affected = draftMapper.updateByPrimaryKeyAndVersionSelective(update, request.getVersion());
+        if (affected == 0) {
+            throw new MSException("草稿已被其他窗口更新，请刷新后重试");
+        }
+        audit("EDIT_DRAFT", request.getProjectId(), userId, "draftId=" + existing.getId());
+        return toDTO(draftMapper.selectByPrimaryKey(existing.getId()));
+    }
+
+    public void delete(FunctionalCaseAiDraftBatchDeleteRequest request, String userId) {
+        long now = System.currentTimeMillis();
+        for (String id : request.getDraftIds()) {
+            draftMapper.markDeleted(id, request.getProjectId(), userId, now);
+        }
+        audit("DELETE_DRAFT", request.getProjectId(), userId, "draftIds=" + request.getDraftIds());
+    }
+
+    public FunctionalCaseAiGenerateResponse regenerate(FunctionalCaseAiDraftRegenerateRequest request, String userId) {
+        FunctionalCaseAiDraft draft = requireDraft(request.getDraftId(), request.getProjectId(), userId);
+        FunctionalCaseAiGenerateRequest generateRequest = new FunctionalCaseAiGenerateRequest();
+        generateRequest.setProjectId(request.getProjectId());
+        generateRequest.setModuleId(draft.getModuleId());
+        generateRequest.setTemplateId(draft.getTemplateId());
+        generateRequest.setChatModelId(request.getChatModelId());
+        generateRequest.setConversationId(request.getConversationId());
+        generateRequest.setOrganizationId(request.getOrganizationId());
+        generateRequest.setMaxCases(1);
+        generateRequest.setPrompt(buildRegeneratePrompt(draft, request.getPrompt()));
+        return generate(generateRequest, userId);
+    }
+
+    public FunctionalCaseAiBatchSaveResponse batchSave(FunctionalCaseAiDraftBatchSaveRequest request,
+                                                       String userId,
+                                                       String organizationId) {
+        List<FunctionalCaseAiDraft> drafts = draftMapper.selectByIds(request.getDraftIds(), request.getProjectId(), userId);
+        Map<String, FunctionalCaseAiDraft> draftMap = new HashMap<>();
+        drafts.forEach(draft -> draftMap.put(draft.getId(), draft));
+        FunctionalCaseAiBatchSaveResponse response = new FunctionalCaseAiBatchSaveResponse();
+        for (String draftId : request.getDraftIds()) {
+            FunctionalCaseAiBatchSaveResponse.ItemResult itemResult = new FunctionalCaseAiBatchSaveResponse.ItemResult();
+            itemResult.setDraftId(draftId);
+            try {
+                FunctionalCaseAiDraft draft = draftMap.get(draftId);
+                if (draft == null) {
+                    throw new MSException("草稿不存在或无权限访问");
+                }
+                itemResult.setName(draft.getName());
+                FunctionalCase created = saveOneDraftAsCase(draft, request, userId, organizationId);
+                itemResult.setFormalCaseId(created.getId());
+                itemResult.setSuccess(true);
+                response.setSuccessCount(response.getSuccessCount() + 1);
+            } catch (Exception ex) {
+                itemResult.setSuccess(false);
+                itemResult.setMessage(ex.getMessage());
+                response.setFailureCount(response.getFailureCount() + 1);
+                markDraftFailed(draftMap.get(draftId), ex.getMessage());
+            }
+            response.getResults().add(itemResult);
+        }
+        audit("BATCH_SAVE", request.getProjectId(), userId, JSON.toJSONString(response));
+        return response;
+    }
+
+    private FunctionalCase saveOneDraftAsCase(FunctionalCaseAiDraft draft,
+                                              FunctionalCaseAiDraftBatchSaveRequest request,
+                                              String userId,
+                                              String organizationId) {
+        if (FunctionalCaseAiDraftStatus.SAVED.name().equals(draft.getDraftStatus())) {
+            throw new MSException("草稿已保存为正式用例");
+        }
+        validateDraft(draft);
+        if (FunctionalCaseAiDraftStatus.INVALID.name().equals(draft.getValidationStatus())) {
+            throw new MSException(StringUtils.defaultIfBlank(draft.getValidationMessage(), "草稿校验未通过"));
+        }
+        String moduleId = StringUtils.defaultIfBlank(draft.getModuleId(), request.getModuleId());
+        moduleId = StringUtils.defaultIfBlank(moduleId, ModuleConstants.DEFAULT_NODE_ID);
+        String templateId = StringUtils.defaultIfBlank(draft.getTemplateId(), request.getTemplateId());
+        if (StringUtils.isBlank(templateId)) {
+            TemplateDTO templateDTO = projectTemplateService.getDefaultTemplateDTO(draft.getProjectId(), TemplateScene.FUNCTIONAL.name());
+            if (templateDTO == null || StringUtils.isBlank(templateDTO.getId())) {
+                throw new MSException("项目未配置功能用例默认模板");
+            }
+            templateId = templateDTO.getId();
+        }
+        Project project = projectMapper.selectByPrimaryKey(draft.getProjectId());
+        String resolvedOrganizationId = StringUtils.defaultIfBlank(organizationId, project == null ? null : project.getOrganizationId());
+        if (StringUtils.isBlank(resolvedOrganizationId)) {
+            throw new MSException("无法获取项目所属组织");
+        }
+
+        FunctionalCaseAiDraft saving = new FunctionalCaseAiDraft();
+        saving.setId(draft.getId());
+        saving.setDraftStatus(FunctionalCaseAiDraftStatus.SAVING.name());
+        saving.setUpdateTime(System.currentTimeMillis());
+        draftMapper.updateByPrimaryKeySelective(saving);
+
+        FunctionalCaseAddRequest addRequest = new FunctionalCaseAddRequest();
+        addRequest.setProjectId(draft.getProjectId());
+        addRequest.setModuleId(moduleId);
+        addRequest.setTemplateId(templateId);
+        addRequest.setName(draft.getName());
+        addRequest.setPrerequisite(StringUtils.defaultString(draft.getPrerequisite()));
+        addRequest.setCaseEditType(normalizeEditType(draft.getEditType()));
+        addRequest.setSteps(StringUtils.defaultIfBlank(draft.getSteps(), JSON.toJSONString(new ArrayList<FunctionalCaseStepDTO>())));
+        addRequest.setTextDescription(FunctionalCaseTypeConstants.CaseEditType.TEXT.name().equals(normalizeEditType(draft.getEditType()))
+                ? StringUtils.defaultString(draft.getSteps())
+                : StringUtils.EMPTY);
+        addRequest.setExpectedResult(StringUtils.defaultString(draft.getExpectedResult()));
+        addRequest.setTags(parseTags(draft.getTags()));
+        addRequest.setCustomFields(parseCustomFields(draft.getCustomFields()));
+        addRequest.setAiCreate(true);
+        FunctionalCase created = functionalCaseService.addFunctionalCase(addRequest, new ArrayList<>(), userId, resolvedOrganizationId);
+
+        FunctionalCaseAiDraft saved = new FunctionalCaseAiDraft();
+        saved.setId(draft.getId());
+        saved.setFormalCaseId(created.getId());
+        saved.setDraftStatus(FunctionalCaseAiDraftStatus.SAVED.name());
+        saved.setValidationStatus(FunctionalCaseAiDraftStatus.READY.name());
+        saved.setUpdateTime(System.currentTimeMillis());
+        draftMapper.updateByPrimaryKeySelective(saved);
+        return created;
+    }
+
+    private FunctionalCaseAiGeneration createGeneration(FunctionalCaseAiGenerateRequest request, String userId, long now) {
+        FunctionalCaseAiGeneration generation = new FunctionalCaseAiGeneration();
+        generation.setId(IDGenerator.nextStr());
+        generation.setProjectId(request.getProjectId());
+        generation.setConversationId(request.getConversationId());
+        generation.setModelSourceId(request.getChatModelId());
+        generation.setPrompt(request.getPrompt());
+        generation.setStatus(FunctionalCaseAiGenerationStatus.GENERATING.name());
+        generation.setCreateUser(userId);
+        generation.setCreateTime(now);
+        generation.setUpdateTime(now);
+        return generation;
+    }
+
+    private String callAiForStructuredCases(FunctionalCaseAiGenerateRequest request, String userId, int maxCases) {
+        AIChatRequest aiRequest = new AIChatRequest();
+        aiRequest.setPrompt(request.getPrompt());
+        aiRequest.setChatModelId(request.getChatModelId());
+        aiRequest.setConversationId(request.getConversationId());
+        aiRequest.setOrganizationId(request.getOrganizationId());
+        AiModelSourceDTO module = aiChatBaseService.getModule(aiRequest, userId);
+        String system = """
+                你是 MeterSphere 功能测试用例生成助手。必须只返回 JSON，不要返回 Markdown 或解释。
+                JSON Schema:
+                {"cases":[{"name":"必填","level":"P0|P1|P2|P3","editType":"STEP|TEXT","prerequisite":"","steps":[{"num":1,"desc":"步骤","result":"预期结果"}],"textDescription":"","expectedResult":"","tags":["标签"]}],"warnings":[]}
+                限制：最多返回 %s 条；不得输出 projectId、createUser、token、密钥、Cookie 或其它敏感字段。
+                """.formatted(maxCases);
+        String fullPrompt = "请根据以下材料生成结构化功能测试用例：\n"
+                + buildSourceDocumentContext(request, userId)
+                + "\n用户输入：\n" + request.getPrompt();
+        aiChatBaseService.saveUserConversationContent(request.getConversationId(), fullPrompt);
+        String content = aiChatBaseService.chatWithMemory(AIChatOption.builder()
+                .conversationId(request.getConversationId())
+                .module(module)
+                .system(system)
+                .prompt(fullPrompt)
+                .build()).content();
+        aiChatBaseService.saveAssistantConversationContent(request.getConversationId(), content);
+        return content;
+    }
+
+    private String buildSourceDocumentContext(FunctionalCaseAiGenerateRequest request, String userId) {
+        if (CollectionUtils.isEmpty(request.getSourceDocumentIds())) {
+            return StringUtils.EMPTY;
+        }
+        List<AiSourceDocument> documents = aiSourceDocumentMapper.selectByIds(
+                request.getSourceDocumentIds(), request.getProjectId(), userId);
+        if (CollectionUtils.isEmpty(documents)) {
+            return StringUtils.EMPTY;
+        }
+        StringBuilder builder = new StringBuilder("已解析产品方案上下文：\n");
+        for (AiSourceDocument document : documents) {
+            builder.append("文件：").append(document.getOriginalName()).append('\n')
+                    .append("摘要：").append(StringUtils.defaultString(document.getSummary())).append('\n')
+                    .append("章节：").append(StringUtils.left(StringUtils.defaultString(document.getSectionIndex()), 3000)).append("\n\n");
+        }
+        return builder.toString();
+    }
+
+    private CaseGenerationResult parseGenerationResult(String rawContent) {
+        if (StringUtils.isBlank(rawContent)) {
+            throw new MSException("AI 返回为空");
+        }
+        try {
+            return JSON.parseObject(extractJson(rawContent), CaseGenerationResult.class);
+        } catch (Exception first) {
+            List<FunctionalCaseAiDTO> mdCases = MdUtil.batchTransformToCaseDTO(rawContent);
+            if (CollectionUtils.isEmpty(mdCases)) {
+                throw new MSException("AI 返回内容不符合结构化 JSON，且修复失败");
+            }
+            CaseGenerationResult repaired = new CaseGenerationResult();
+            repaired.setCases(mdCases.stream().map(this::fromLegacyAiDTO).toList());
+            repaired.getWarnings().add("AI 未返回标准 JSON，已按旧 Markdown 格式尝试修复");
+            return repaired;
+        }
+    }
+
+    private String extractJson(String rawContent) {
+        String content = StringUtils.trim(rawContent);
+        if (content.startsWith("```")) {
+            int firstLineEnd = content.indexOf('\n');
+            int lastFence = content.lastIndexOf("```");
+            if (firstLineEnd >= 0 && lastFence > firstLineEnd) {
+                content = content.substring(firstLineEnd + 1, lastFence).trim();
+            }
+        }
+        int objectStart = content.indexOf('{');
+        int objectEnd = content.lastIndexOf('}');
+        if (objectStart >= 0 && objectEnd > objectStart) {
+            return content.substring(objectStart, objectEnd + 1);
+        }
+        return content;
+    }
+
+    private CaseGenerationCaseDTO fromLegacyAiDTO(FunctionalCaseAiDTO source) {
+        CaseGenerationCaseDTO target = new CaseGenerationCaseDTO();
+        target.setName(source.getName());
+        target.setEditType(StringUtils.defaultIfBlank(source.getCaseEditType(), FunctionalCaseTypeConstants.CaseEditType.STEP.name()));
+        target.setPrerequisite(source.getPrerequisite());
+        target.setTextDescription(source.getTextDescription());
+        target.setExpectedResult(source.getExpectedResult());
+        FunctionalCaseStepDTO step = new FunctionalCaseStepDTO();
+        step.setId(IDGenerator.nextStr());
+        step.setNum(1);
+        step.setDesc(StringUtils.defaultString(source.getSteps()));
+        step.setResult(StringUtils.defaultString(source.getExpectedResult()));
+        target.setSteps(new ArrayList<>(List.of(step)));
+        return target;
+    }
+
+    private List<CaseGenerationCaseDTO> sanitizeAndLimit(CaseGenerationResult result, int maxCases) {
+        if (result == null || CollectionUtils.isEmpty(result.getCases())) {
+            return Collections.emptyList();
+        }
+        if (result.getWarnings() == null) {
+            result.setWarnings(new ArrayList<>());
+        }
+        List<CaseGenerationCaseDTO> cases = new ArrayList<>(result.getCases());
+        if (cases.size() > maxCases) {
+            cases = new ArrayList<>(cases.subList(0, maxCases));
+            result.getWarnings().add("AI 返回数量超过限制，已截断为 " + maxCases + " 条");
+        }
+        cases.sort(Comparator.comparing(item -> StringUtils.defaultString(item.getName())));
+        return cases;
+    }
+
+    private FunctionalCaseAiDraft buildDraft(FunctionalCaseAiGenerateRequest request,
+                                             CaseGenerationCaseDTO item,
+                                             String generationId,
+                                             String userId) {
+        FunctionalCaseAiDraft draft = new FunctionalCaseAiDraft();
+        long now = System.currentTimeMillis();
+        draft.setId(IDGenerator.nextStr());
+        draft.setGenerationId(generationId);
+        draft.setProjectId(request.getProjectId());
+        draft.setModuleId(StringUtils.defaultIfBlank(item.getModuleId(), request.getModuleId()));
+        draft.setTemplateId(StringUtils.defaultIfBlank(item.getTemplateId(), request.getTemplateId()));
+        draft.setName(StringUtils.trim(item.getName()));
+        draft.setCaseLevel(normalizeLevel(item.getLevel()));
+        draft.setEditType(normalizeEditType(item.getEditType()));
+        draft.setPrerequisite(StringUtils.defaultString(item.getPrerequisite()));
+        draft.setSteps(toStepsJson(item.getSteps()));
+        draft.setExpectedResult(StringUtils.defaultString(item.getExpectedResult()));
+        draft.setTags(JSON.toJSONString(CollectionUtils.emptyIfNull(item.getTags())));
+        draft.setCustomFields(JSON.toJSONString(new ArrayList<CaseCustomFieldDTO>()));
+        draft.setDraftStatus(FunctionalCaseAiDraftStatus.DRAFT.name());
+        draft.setDeleted(false);
+        draft.setVersion(0);
+        draft.setCreateUser(userId);
+        draft.setCreateTime(now);
+        draft.setUpdateTime(now);
+        return draft;
+    }
+
+    private String toStepsJson(List<FunctionalCaseStepDTO> steps) {
+        List<FunctionalCaseStepDTO> normalized = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(steps)) {
+            int index = 1;
+            for (FunctionalCaseStepDTO step : steps) {
+                if (StringUtils.isBlank(step.getId())) {
+                    step.setId(IDGenerator.nextStr());
+                }
+                if (step.getNum() == null) {
+                    step.setNum(index);
+                }
+                normalized.add(step);
+                index++;
+            }
+        }
+        return JSON.toJSONString(normalized);
+    }
+
+    private void validateDraft(FunctionalCaseAiDraft draft) {
+        validateDraft(draft, draft.getId(), draft.getProjectId(), draft.getCreateUser());
+    }
+
+    private void validateDraft(FunctionalCaseAiDraft draft, String excludeId, String projectId, String userId) {
+        List<String> errors = new ArrayList<>();
+        if (StringUtils.isBlank(draft.getName())) {
+            errors.add("用例名称不能为空");
+        }
+        if (!List.of("P0", "P1", "P2", "P3").contains(normalizeLevel(draft.getCaseLevel()))) {
+            errors.add("用例等级必须为 P0/P1/P2/P3");
+        }
+        if (!List.of("STEP", "TEXT").contains(normalizeEditType(draft.getEditType()))) {
+            errors.add("编辑模式必须为 STEP/TEXT");
+        }
+        if (FunctionalCaseTypeConstants.CaseEditType.STEP.name().equals(normalizeEditType(draft.getEditType()))
+                && !isJsonArray(draft.getSteps())) {
+            errors.add("步骤必须为 JSON 数组");
+        }
+        String fingerprint = fingerprint(projectId, draft.getName());
+        boolean duplicate = false;
+        if (StringUtils.isNotBlank(fingerprint)) {
+            duplicate = draftMapper.countDuplicateByFingerprint(projectId, userId, fingerprint, excludeId) > 0
+                    || existsFormalCase(projectId, draft.getName());
+        }
+        draft.setFingerprint(fingerprint);
+        draft.setDuplicate(duplicate);
+        if (duplicate) {
+            errors.add("存在同名或疑似重复用例");
+        }
+        draft.setValidationMessage(String.join("; ", errors));
+        draft.setValidationStatus(errors.isEmpty()
+                ? FunctionalCaseAiDraftStatus.READY.name()
+                : FunctionalCaseAiDraftStatus.INVALID.name());
+    }
+
+    private boolean existsFormalCase(String projectId, String name) {
+        if (StringUtils.isAnyBlank(projectId, name)) {
+            return false;
+        }
+        FunctionalCaseExample example = new FunctionalCaseExample();
+        example.createCriteria()
+                .andProjectIdEqualTo(projectId)
+                .andNameEqualTo(name)
+                .andDeletedEqualTo(false);
+        return functionalCaseMapper.countByExample(example) > 0;
+    }
+
+    private String fingerprint(String projectId, String name) {
+        if (StringUtils.isAnyBlank(projectId, name)) {
+            return null;
+        }
+        return DigestUtils.sha256Hex(projectId + ":" + StringUtils.deleteWhitespace(name).toLowerCase());
+    }
+
+    private boolean isJsonArray(String value) {
+        if (StringUtils.isBlank(value)) {
+            return true;
+        }
+        try {
+            JSON.parseArray(value, FunctionalCaseStepDTO.class);
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    private String normalizeLevel(String level) {
+        String normalized = StringUtils.upperCase(StringUtils.defaultIfBlank(level, "P1"));
+        return List.of("P0", "P1", "P2", "P3").contains(normalized) ? normalized : "P1";
+    }
+
+    private String normalizeEditType(String editType) {
+        String normalized = StringUtils.upperCase(StringUtils.defaultIfBlank(editType, FunctionalCaseTypeConstants.CaseEditType.STEP.name()));
+        return FunctionalCaseTypeConstants.CaseEditType.TEXT.name().equals(normalized)
+                ? FunctionalCaseTypeConstants.CaseEditType.TEXT.name()
+                : FunctionalCaseTypeConstants.CaseEditType.STEP.name();
+    }
+
+    private List<String> parseTags(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return new ArrayList<>();
+        }
+        try {
+            return JSON.parseArray(raw, String.class);
+        } catch (Exception ex) {
+            return Arrays.stream(raw.split(",")).map(StringUtils::trim).filter(StringUtils::isNotBlank).toList();
+        }
+    }
+
+    private List<CaseCustomFieldDTO> parseCustomFields(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return new ArrayList<>();
+        }
+        try {
+            return JSON.parseArray(raw, CaseCustomFieldDTO.class);
+        } catch (Exception ex) {
+            throw new MSException("自定义字段必须为 JSON 数组");
+        }
+    }
+
+    private int normalizeMaxCases(Integer maxCases) {
+        if (maxCases == null || maxCases <= 0) {
+            return DEFAULT_MAX_CASES;
+        }
+        return Math.min(maxCases, MAX_CASES);
+    }
+
+    private FunctionalCaseAiDraft requireDraft(String id, String projectId, String userId) {
+        FunctionalCaseAiDraft draft = draftMapper.selectByPrimaryKey(id);
+        if (draft == null
+                || Boolean.TRUE.equals(draft.getDeleted())
+                || !StringUtils.equals(projectId, draft.getProjectId())
+                || !StringUtils.equals(userId, draft.getCreateUser())) {
+            throw new MSException("草稿不存在或无权限访问");
+        }
+        return draft;
+    }
+
+    private void markDraftFailed(FunctionalCaseAiDraft draft, String message) {
+        if (draft == null) {
+            return;
+        }
+        FunctionalCaseAiDraft failed = new FunctionalCaseAiDraft();
+        failed.setId(draft.getId());
+        failed.setDraftStatus(FunctionalCaseAiDraftStatus.FAILED.name());
+        failed.setValidationMessage(StringUtils.left(message, 4000));
+        failed.setUpdateTime(System.currentTimeMillis());
+        draftMapper.updateByPrimaryKeySelective(failed);
+    }
+
+    private String buildRegeneratePrompt(FunctionalCaseAiDraft draft, String extraPrompt) {
+        return """
+                请基于以下草稿重新生成 1 条改进后的功能测试用例：
+                名称：%s
+                前置条件：%s
+                步骤：%s
+                预期结果：%s
+                额外要求：%s
+                """.formatted(draft.getName(), draft.getPrerequisite(), draft.getSteps(), draft.getExpectedResult(),
+                StringUtils.defaultString(extraPrompt));
+    }
+
+    private FunctionalCaseAiDraftDTO toDTO(FunctionalCaseAiDraft draft) {
+        FunctionalCaseAiDraftDTO dto = new FunctionalCaseAiDraftDTO();
+        dto.setId(draft.getId());
+        dto.setGenerationId(draft.getGenerationId());
+        dto.setSourceDocumentId(draft.getSourceDocumentId());
+        dto.setProjectId(draft.getProjectId());
+        dto.setModuleId(draft.getModuleId());
+        dto.setTemplateId(draft.getTemplateId());
+        dto.setName(draft.getName());
+        dto.setCaseLevel(draft.getCaseLevel());
+        dto.setEditType(draft.getEditType());
+        dto.setPrerequisite(draft.getPrerequisite());
+        dto.setSteps(draft.getSteps());
+        dto.setExpectedResult(draft.getExpectedResult());
+        dto.setTags(draft.getTags());
+        dto.setCustomFields(draft.getCustomFields());
+        dto.setValidationMessage(draft.getValidationMessage());
+        dto.setFingerprint(draft.getFingerprint());
+        dto.setDuplicate(draft.getDuplicate());
+        dto.setValidationStatus(draft.getValidationStatus());
+        dto.setDraftStatus(draft.getDraftStatus());
+        dto.setFormalCaseId(draft.getFormalCaseId());
+        dto.setDeleted(draft.getDeleted());
+        dto.setVersion(draft.getVersion());
+        dto.setCreateUser(draft.getCreateUser());
+        dto.setCreateTime(draft.getCreateTime());
+        dto.setUpdateTime(draft.getUpdateTime());
+        return dto;
+    }
+
+    private void audit(String action, String projectId, String userId, String message) {
+        log.info("functional_case_ai action={}, projectId={}, userId={}, {}", action, projectId, userId, message);
+    }
+}

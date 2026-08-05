@@ -1120,6 +1120,11 @@
       color: rgb(var(--warning-7));
       background: rgb(var(--warning-1));
     }
+    &.is-suspended {
+      border-color: rgb(var(--warning-3));
+      color: rgb(var(--warning-8));
+      background: rgb(var(--warning-2));
+    }
     &.is-resolved {
       border-color: rgb(var(--success-2));
       color: rgb(var(--success-7));
