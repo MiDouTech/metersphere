@@ -19,8 +19,10 @@
         <div class="case-generate-panel-title">{{ t('caseManagement.caseGenerate.conversation') }}</div>
         <a-form :model="generationForm" layout="vertical">
           <a-form-item :label="t('caseManagement.caseGenerate.model')">
-            <a-input
+            <a-select
               v-model:model-value="chatModelId"
+              :options="modelOptions"
+              allow-search
               :placeholder="t('caseManagement.caseGenerate.modelPlaceholder')"
             />
           </a-form-item>
@@ -95,7 +97,7 @@
       <section class="case-generate-panel">
         <div class="case-generate-panel-title">{{ t('caseManagement.caseGenerate.draftList') }}</div>
         <div class="mb-[12px] flex items-center gap-[8px]">
-          <a-select v-model:model-value="statusFilter" class="min-w-0 flex-1" @change="reloadDrafts">
+          <a-select v-model:model-value="statusFilter" class="min-w-0 flex-1" @change="handleStatusFilterChange">
             <a-option value="ALL">{{ t('caseManagement.caseGenerate.statusAll') }}</a-option>
             <a-option value="DRAFT">{{ t('caseManagement.caseGenerate.statusDraft') }}</a-option>
             <a-option value="READY">{{ t('caseManagement.caseGenerate.statusReady') }}</a-option>
@@ -143,7 +145,13 @@
                 <a-tag v-if="draft.validationStatus === 'INVALID'" size="small" color="red">Invalid</a-tag>
                 <a-tag v-if="draft.duplicate" size="small" color="orange">Duplicate</a-tag>
               </div>
-              <div v-if="draft.validationMessage" class="mt-[4px] truncate text-[12px] text-[rgb(var(--danger-6))]">
+              <div
+                v-if="draft.validationMessage"
+                class="mt-[4px] truncate text-[12px]"
+                :class="
+                  draft.validationStatus === 'INVALID' ? 'text-[rgb(var(--danger-6))]' : 'text-[rgb(var(--warning-6))]'
+                "
+              >
                 {{ draft.validationMessage }}
               </div>
             </div>
@@ -151,6 +159,19 @@
               {{ t('caseManagement.caseGenerate.openDetail') }}
             </a-button>
           </div>
+        </div>
+        <div class="mt-[12px] flex justify-end">
+          <a-pagination
+            v-model:current="draftPage"
+            v-model:page-size="draftPageSize"
+            size="mini"
+            :total="draftTotal"
+            show-total
+            show-page-size
+            :page-size-options="[10, 20, 50]"
+            @change="reloadDrafts"
+            @page-size-change="handleDraftPageSizeChange"
+          />
         </div>
       </section>
 
@@ -174,8 +195,10 @@
 
   import DraftDetailForm from './components/DraftDetailForm.vue';
 
+  import { AxiosCanceler } from '@/api/http/axiosCancel';
   import {
     batchSaveAiCaseDraft,
+    cancelAiCaseGeneration,
     deleteAiCaseDraft,
     generateAiCaseDraft,
     pageAiCaseDraft,
@@ -187,6 +210,7 @@
   } from '@/api/modules/case-management/caseGenerate';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
+  import useAIStore from '@/store/modules/setting/ai';
 
   import type { AiCaseDraft, AiDraftStatus, AiSourceDocument } from '@/models/caseManagement/caseGenerate';
   import { CaseManagementRouteEnum } from '@/enums/routeEnum';
@@ -203,18 +227,25 @@
 
   const { t } = useI18n();
   const appStore = useAppStore();
+  const aiStore = useAIStore();
   const currentProjectId = computed(() => appStore.currentProjectId || '');
   const currentOrgId = computed(() => appStore.currentOrgId || '');
   const localStateKey = computed(() => `case-generate-workbench:${currentProjectId.value || 'none'}`);
 
   const prompt = ref('');
-  const chatModelId = ref(localStorage.getItem('case-generate-chat-model-id') || '');
+  const chatModelId = ref(
+    localStorage.getItem('case-generate-chat-model-id') || localStorage.getItem('aiChatModel') || ''
+  );
   const maxCases = ref(50);
   const generationForm = {};
   const conversationId = ref(`ai_case_conversation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const generating = ref(false);
+  const activeGenerationId = ref('');
   const saving = ref(false);
   const statusFilter = ref<'ALL' | AiDraftStatus>('ALL');
+  const draftPage = ref(1);
+  const draftPageSize = ref(20);
+  const draftTotal = ref(0);
   const messages = ref<ConversationMessage[]>([]);
   const drafts = ref<AiCaseDraft[]>([]);
   const sourceDocuments = ref<AiSourceDocument[]>([]);
@@ -227,6 +258,13 @@
   const leftWidth = ref(30);
   const middleWidth = ref(35);
   let updateTimer: number | undefined;
+
+  const modelOptions = computed(() =>
+    (aiStore.aiSourceNameList || []).map((item) => ({
+      label: item.name,
+      value: item.id,
+    }))
+  );
 
   function createId(prefix: string) {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -312,19 +350,31 @@
     if (!currentProjectId.value) {
       drafts.value = [];
       activeDraftId.value = '';
+      draftTotal.value = 0;
       return;
     }
     const response = await pageAiCaseDraft({
       projectId: currentProjectId.value,
       draftStatus: statusFilter.value === 'ALL' ? undefined : statusFilter.value,
-      current: 1,
-      pageSize: 100,
+      current: draftPage.value,
+      pageSize: draftPageSize.value,
     });
     drafts.value = response.records || [];
+    draftTotal.value = response.total || 0;
     checkedDraftIds.value = checkedDraftIds.value.filter((id) => drafts.value.some((draft) => draft.id === id));
     if (!drafts.value.some((draft) => draft.id === activeDraftId.value)) {
       activeDraftId.value = drafts.value[0]?.id || '';
     }
+  }
+
+  function handleDraftPageSizeChange() {
+    draftPage.value = 1;
+    reloadDrafts();
+  }
+
+  function handleStatusFilterChange() {
+    draftPage.value = 1;
+    reloadDrafts();
   }
 
   async function reloadSourceDocuments() {
@@ -350,6 +400,8 @@
       return;
     }
     generating.value = true;
+    const generationId = createId('generation');
+    activeGenerationId.value = generationId;
     messages.value.push({ id: createId('message'), role: 'user', content });
     try {
       const response = await generateAiCaseDraft({
@@ -360,26 +412,51 @@
         organizationId: currentOrgId.value,
         maxCases: maxCases.value,
         sourceDocumentIds: selectedSourceDocumentIds.value,
+        generationId,
       });
       messages.value.push({
         id: createId('message'),
         role: 'assistant',
         content: `${t('caseManagement.caseGenerate.generatedCount')}${response.createdCount}`,
       });
-      drafts.value = [...(response.drafts || []), ...drafts.value];
+      draftPage.value = 1;
+      await reloadDrafts();
       activeDraftId.value = response.drafts?.[0]?.id || activeDraftId.value;
       prompt.value = '';
       localStorage.setItem('case-generate-chat-model-id', chatModelId.value.trim());
+      localStorage.setItem('aiChatModel', chatModelId.value.trim());
       if (response.warnings?.length) {
         Message.warning(response.warnings.join('; '));
       }
+    } catch (error: any) {
+      if (error?.message?.includes('cancel') || error?.__CANCEL__) {
+        Message.info(t('caseManagement.caseGenerate.canceled'));
+      } else {
+        Message.error(error?.message || t('common.error'));
+      }
     } finally {
       generating.value = false;
+      activeGenerationId.value = '';
     }
   }
 
-  function stopGenerate() {
+  async function stopGenerate() {
+    const generationId = activeGenerationId.value;
     generating.value = false;
+    const axiosCanceler = new AxiosCanceler();
+    axiosCanceler.removeAllPending();
+    if (generationId && currentProjectId.value) {
+      try {
+        await cancelAiCaseGeneration({
+          projectId: currentProjectId.value,
+          generationId,
+        });
+      } catch {
+        // ignore cancel race
+      }
+    }
+    activeGenerationId.value = '';
+    Message.info(t('caseManagement.caseGenerate.canceled'));
   }
 
   function selectDraft(id: string) {
@@ -571,7 +648,21 @@
     },
     { immediate: true }
   );
+  watch(
+    () => modelOptions.value,
+    (vals) => {
+      if (!vals.length) {
+        return;
+      }
+      if (!vals.some((item) => item.value === chatModelId.value)) {
+        chatModelId.value = vals[0].value;
+      }
+    },
+    { immediate: true }
+  );
   watch([messages, selectedSourceDocumentIds, conversationId], persistLocalState, { deep: true });
+
+  aiStore.getAISourceNameList();
 
   onBeforeUnmount(() => {
     window.clearTimeout(updateTimer);

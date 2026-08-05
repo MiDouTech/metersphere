@@ -37,4 +37,7 @@ public class CaseGenerationCaseDTO {
 
     @Schema(description = "Tags")
     private List<String> tags = new ArrayList<>();
+
+    @Schema(description = "Source references from product design")
+    private List<CaseGenerationSourceRefDTO> sourceReferences = new ArrayList<>();
 }

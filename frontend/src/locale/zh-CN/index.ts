@@ -31,6 +31,7 @@ export default {
     'menu.bugManagementShort': '缺陷',
     'menu.bugManagement.bugDetail': '缺陷',
     'menu.bugManagement.bugRecycle': '回收站',
+    'menu.bugManagement.automationExecution': '自动化执行',
     'menu.caseManagement': '测试用例',
     'menu.caseManagementShort': '用例',
     'menu.apiTest': '接口测试',

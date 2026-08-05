@@ -26,6 +26,14 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 | `upload_execution_attachment` | 上传执行截图/附件 |
 | `list_modules` | 模块列表 |
 | `get_exec_log` | 执行审计日志详情 |
+| `metersphere.test_plan.search` | 检索测试计划 |
+| `metersphere.test_plan.cases` | 获取测试计划功能用例 |
+| `metersphere.execution.resolve` | 解析 AI 执行范围 |
+| `metersphere.execution.create` | 创建 AI 执行任务 |
+| `metersphere.execution.get` | 查询 AI 执行任务 |
+| `metersphere.execution.events` | 读取 AI 执行事件 |
+| `metersphere.execution.cancel` | 取消 AI 执行任务 |
+| `metersphere.execution.resume` | 登录恢复后继续 AI 执行任务 |
 
 ### 写闭环（一期）
 

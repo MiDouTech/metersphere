@@ -10,18 +10,24 @@ import io.metersphere.agent.dto.AgentCaseReviewAssociateRequest;
 import io.metersphere.agent.dto.AgentCaseReviewCreateRequest;
 import io.metersphere.agent.dto.AgentCaseSearchRequest;
 import io.metersphere.agent.dto.AgentCaseSubmitRequest;
+import io.metersphere.agent.dto.AgentExecutionCreateRequest;
+import io.metersphere.agent.dto.AgentExecutionEventsRequest;
+import io.metersphere.agent.dto.AgentExecutionResolveRequest;
 import io.metersphere.agent.dto.AgentModuleCreateRequest;
 import io.metersphere.agent.dto.AgentProjectAddMembersRequest;
 import io.metersphere.agent.dto.AgentProjectCreateRequest;
 import io.metersphere.agent.dto.AgentProjectSearchRequest;
 import io.metersphere.agent.dto.AgentTestPlanAssociateRequest;
 import io.metersphere.agent.dto.AgentTestPlanCreateRequest;
+import io.metersphere.agent.dto.AgentTestPlanSearchRequest;
 import io.metersphere.agent.service.AgentBugWriteService;
 import io.metersphere.agent.service.AgentCaseReviewWriteService;
 import io.metersphere.agent.service.AgentCaseWriteService;
+import io.metersphere.agent.service.AgentExecutionService;
 import io.metersphere.agent.service.AgentFunctionalCaseSearchService;
 import io.metersphere.agent.service.AgentFunctionalCaseSubmitService;
 import io.metersphere.agent.service.AgentProjectService;
+import io.metersphere.agent.service.AgentTestPlanQueryService;
 import io.metersphere.agent.service.AgentTestPlanWriteService;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
@@ -210,9 +216,96 @@ public class BuiltinAgentMcpToolConfig {
 
     @Bean
     public AgentMcpToolHandler testPlanGetTool(AgentTestPlanWriteService service) {
-        return tool("metersphere.test_plan.get", "Get test plan detail", AgentTokenScope.FUNCTIONAL_READ, true,
+        return tool("metersphere.test_plan.get", "Get test plan detail", AgentTokenScope.PLAN_READ, true,
                 objectSchema(Map.of("testPlanId", stringSchema()), List.of("testPlanId")),
                 args -> service.get(requiredString(args, "testPlanId")));
+    }
+
+    @Bean
+    public AgentMcpToolHandler testPlanSearchTool(AgentTestPlanQueryService service) {
+        return tool("metersphere.test_plan.search",
+                "Search test plans by projectId, keyword, status, includeArchived, page, and pageSize.",
+                AgentTokenScope.PLAN_READ, true,
+                objectSchema(Map.of(
+                        "projectId", stringSchema(),
+                        "keyword", stringSchema(),
+                        "status", stringSchema(),
+                        "includeArchived", Map.of("type", "boolean"),
+                        "page", Map.of("type", "integer", "minimum", 1),
+                        "pageSize", Map.of("type", "integer", "minimum", 1, "maximum", 100)
+                ), List.of("projectId")),
+                args -> service.search(convert(args, AgentTestPlanSearchRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler testPlanCasesTool(AgentTestPlanQueryService service) {
+        return tool("metersphere.test_plan.cases",
+                "List functional cases in a test plan. Requires projectId and testPlanId.",
+                AgentTokenScope.FUNCTIONAL_READ, true,
+                objectSchema(Map.of(
+                        "projectId", stringSchema(),
+                        "testPlanId", stringSchema(),
+                        "current", Map.of("type", "integer", "minimum", 1),
+                        "pageSize", Map.of("type", "integer", "minimum", 1, "maximum", 100),
+                        "includeSteps", Map.of("type", "boolean")
+                ), List.of("projectId", "testPlanId")),
+                args -> service.cases(requiredString(args, "projectId"), requiredString(args, "testPlanId"),
+                        optionalInt(args, "current", 1), optionalInt(args, "pageSize", 50),
+                        optionalBool(args, "includeSteps", true)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionResolveTool(AgentExecutionService service) {
+        return tool("metersphere.execution.resolve",
+                "Resolve project, test plan, and functional case execution scope before creating an AI execution task.",
+                AgentTokenScope.AI_EXECUTION_READ, true,
+                Map.of("type", "object", "additionalProperties", true),
+                args -> service.resolve(convert(args, AgentExecutionResolveRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionCreateTool(AgentExecutionService service) {
+        return tool("metersphere.execution.create",
+                "Create an AI execution task. Backend revalidates project, plan, cases, and confirmation constraints.",
+                AgentTokenScope.AI_EXECUTION_RUN, false,
+                Map.of("type", "object", "additionalProperties", true),
+                args -> service.create(convert(args, AgentExecutionCreateRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionGetTool(AgentExecutionService service) {
+        return tool("metersphere.execution.get", "Get AI execution task detail.",
+                AgentTokenScope.AI_EXECUTION_READ, true,
+                objectSchema(Map.of("executionTaskId", stringSchema()), List.of("executionTaskId")),
+                args -> service.get(requiredString(args, "executionTaskId")));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionEventsTool(AgentExecutionService service) {
+        return tool("metersphere.execution.events", "Read append-only AI execution events.",
+                AgentTokenScope.AI_EXECUTION_READ, true,
+                objectSchema(Map.of(
+                        "executionTaskId", stringSchema(),
+                        "cursor", Map.of("type", "integer", "minimum", 0),
+                        "limit", Map.of("type", "integer", "minimum", 1, "maximum", 500)
+                ), List.of("executionTaskId")),
+                args -> service.events(requiredString(args, "executionTaskId"), convert(args, AgentExecutionEventsRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionCancelTool(AgentExecutionService service) {
+        return tool("metersphere.execution.cancel", "Cancel an AI execution task.",
+                AgentTokenScope.AI_EXECUTION_RUN, false,
+                objectSchema(Map.of("executionTaskId", stringSchema(), "reason", stringSchema()), List.of("executionTaskId")),
+                args -> service.cancel(requiredString(args, "executionTaskId"), (String) args.get("reason")));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionResumeTool(AgentExecutionService service) {
+        return tool("metersphere.execution.resume", "Resume an AI execution task after manual login is ready.",
+                AgentTokenScope.AI_EXECUTION_RUN, false,
+                objectSchema(Map.of("executionTaskId", stringSchema(), "reason", stringSchema()), List.of("executionTaskId")),
+                args -> service.loginReady(requiredString(args, "executionTaskId"), (String) args.get("reason")));
     }
 
     @Bean
@@ -295,5 +388,24 @@ public class BuiltinAgentMcpToolConfig {
             throw new MSException("Missing required argument: " + key);
         }
         return value;
+    }
+
+    private static int optionalInt(Map<String, Object> arguments, String key, int defaultValue) {
+        Object value = arguments.get(key);
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return Integer.parseInt(String.valueOf(value));
+    }
+
+    private static boolean optionalBool(Map<String, Object> arguments, String key, boolean defaultValue) {
+        Object value = arguments.get(key);
+        if (value == null) {
+            return defaultValue;
+        }
+        return BooleanUtils.toBoolean(String.valueOf(value));
     }
 }

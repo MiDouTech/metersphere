@@ -22,6 +22,16 @@ import {
   createCaseReviewTool,
   createTestPlanTool,
 } from "./tools/planReview.js";
+import {
+  cancelExecutionTaskTool,
+  createExecutionTaskTool,
+  getExecutionEventsTool,
+  getExecutionTaskTool,
+  listTestPlanCasesTool,
+  resolveExecutionScopeTool,
+  resumeExecutionTaskTool,
+  searchTestPlansTool,
+} from "./tools/testPlanExecution.js";
 import { createBugTool, getBugTool, getExecLogTool, relateBugCaseTool, searchBugsTool, updateBugTool } from "./tools/bugWrite.js";
 
 type ToolDef = {
@@ -49,6 +59,14 @@ const tools: ToolDef[] = [
   batchCreateFunctionalCasesTool,
   createTestPlanTool,
   associateTestPlanCasesTool,
+  searchTestPlansTool,
+  listTestPlanCasesTool,
+  resolveExecutionScopeTool,
+  createExecutionTaskTool,
+  getExecutionTaskTool,
+  getExecutionEventsTool,
+  cancelExecutionTaskTool,
+  resumeExecutionTaskTool,
   createCaseReviewTool,
   associateCaseReviewCasesTool,
   searchBugsTool,

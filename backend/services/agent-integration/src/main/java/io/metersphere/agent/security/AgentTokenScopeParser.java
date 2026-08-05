@@ -75,6 +75,20 @@ public final class AgentTokenScopeParser {
                 || owned.contains(AgentTokenScope.FUNCTIONAL_ALL))) {
             return true;
         }
+        if (AgentTokenScope.PLAN_READ.equals(required) && owned.contains(AgentTokenScope.PLAN_WRITE)) {
+            return true;
+        }
+        if (AgentTokenScope.AI_EXECUTION_READ.equals(required)
+                && (owned.contains(AgentTokenScope.AI_EXECUTION_RUN)
+                || owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN))) {
+            return true;
+        }
+        if ((AgentTokenScope.AI_EXECUTION_RUN.equals(required)
+                || AgentTokenScope.AI_EXECUTION_CANCEL.equals(required)
+                || AgentTokenScope.AI_EXECUTION_LOGIN.equals(required))
+                && owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN)) {
+            return true;
+        }
         return false;
     }
 

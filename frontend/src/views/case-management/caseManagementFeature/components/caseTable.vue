@@ -559,6 +559,7 @@
   import ThirdDemandDrawer from './tabContent/tabDemand/thirdDemandDrawer.vue';
   import BatchUpdateExecutorModal from '@/views/test-plan/testPlan/components/batchUpdateExecutorModal.vue';
 
+  import { createAiExecutionTask } from '@/api/modules/ai-execution';
   import {
     batchAssociationDemand,
     batchCopyToModules,
@@ -617,7 +618,7 @@
   import { FilterType, ViewTypeEnum } from '@/enums/advancedFilterEnum';
   import { CacheTabTypeEnum } from '@/enums/cacheTabEnum';
   import { MinderKeyEnum } from '@/enums/minderEnum';
-  import { CaseManagementRouteEnum, RouteEnum } from '@/enums/routeEnum';
+  import { BugManagementRouteEnum, CaseManagementRouteEnum, RouteEnum } from '@/enums/routeEnum';
   import { ColumnEditTypeEnum, TableKeyEnum } from '@/enums/tableEnum';
   import { FilterRemoteMethodsEnum, FilterSlotNameEnum } from '@/enums/tableFilterEnum';
   import { WorkNavValueEnum } from '@/enums/workbenchEnum';
@@ -1016,6 +1017,11 @@
         label: 'caseManagement.featureCase.batchChangeExecutor',
         eventTag: 'batchChangeExecutor',
         permission: ['FUNCTIONAL_CASE:READ+UPDATE'],
+      },
+      {
+        label: 'caseManagement.featureCase.aiExecution',
+        eventTag: 'aiExecution',
+        permission: ['AI_EXECUTION:RUN'],
       },
       {
         label: 'caseManagement.featureCase.moveTo',
@@ -2033,6 +2039,44 @@
     showThirdDrawer.value = true;
   }
 
+  async function createAiExecutionFromSelection() {
+    const { selectedIds, selectAll } = batchParams.value;
+    if (selectAll) {
+      Message.warning(t('caseManagement.featureCase.aiExecutionSelectAllNotSupported'));
+      return;
+    }
+    const caseIds = (selectedIds || []).filter(Boolean) as string[];
+    if (!caseIds.length) {
+      Message.warning(t('caseManagement.featureCase.aiExecutionNoSelection'));
+      return;
+    }
+    openModal({
+      type: 'warning',
+      title: t('caseManagement.featureCase.aiExecutionConfirmTitle', { number: caseIds.length }),
+      content: t('caseManagement.featureCase.aiExecutionConfirmContent', { number: caseIds.length }),
+      okText: t('caseManagement.featureCase.aiExecutionStart'),
+      cancelText: t('common.cancel'),
+      onBeforeOk: async () => {
+        const task = await createAiExecutionTask({
+          projectId: currentProjectId.value,
+          caseIds,
+          source: 'CASE_LIST',
+          confirmed: true,
+          idempotencyKey: `case-list-${currentProjectId.value}-${Date.now()}`,
+        });
+        Message.success(t('caseManagement.featureCase.aiExecutionCreated'));
+        resetSelector();
+        router.push({
+          name: BugManagementRouteEnum.BUG_MANAGEMENT_AUTOMATION_EXECUTION,
+          query: {
+            executionTaskId: task.id,
+          },
+        });
+      },
+      hideCancel: false,
+    });
+  }
+
   async function handleTableBatch(event: BatchActionParams, params: BatchActionQueryParams) {
     batchParams.value = params;
     switch (event.eventTag) {
@@ -2049,6 +2093,9 @@
         break;
       case 'batchChangeExecutor':
         batchChangeExecutor();
+        break;
+      case 'aiExecution':
+        createAiExecutionFromSelection();
         break;
       case 'delete':
         batchDelete();

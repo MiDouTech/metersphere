@@ -361,4 +361,13 @@ export default {
   'caseManagement.featureCase.progressBlocked': 'Blocked',
   'caseManagement.featureCase.progressSkipped': 'Skipped',
   'caseManagement.featureCase.progressUnexecuted': 'Unexecuted',
+  'caseManagement.featureCase.aiExecution': 'AI Execution',
+  'caseManagement.featureCase.aiExecutionConfirmTitle': 'Create AI execution task ({number} cases)',
+  'caseManagement.featureCase.aiExecutionConfirmContent':
+    'Selected scope: {number} cases; test plan: not specified/out-of-plan; target environment: configure later on the automation execution page; target URL: configure later; browser: default; login mode: manual login or Runner session recovery; risk notice: backend revalidates project, permissions, deletion status, and scope.',
+  'caseManagement.featureCase.aiExecutionStart': 'Create task',
+  'caseManagement.featureCase.aiExecutionCreated': 'AI execution task created',
+  'caseManagement.featureCase.aiExecutionNoSelection': 'Select cases before starting AI execution',
+  'caseManagement.featureCase.aiExecutionSelectAllNotSupported':
+    'AI execution does not support selecting all results yet. Select explicit cases first.',
 };

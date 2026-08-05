@@ -20,6 +20,7 @@ public class FunctionalCaseAiDraft implements Serializable {
     private String expectedResult;
     private String tags;
     private String customFields;
+    private String sourceReferences;
     private String validationMessage;
     private String fingerprint;
     private Boolean duplicate;

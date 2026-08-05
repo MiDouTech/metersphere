@@ -202,6 +202,13 @@ export const pathMap: PathMapItem[] = [
         permission: [],
         level: MENU_LEVEL[2],
       },
+      {
+        key: 'BUG_MANAGEMENT_AUTOMATION_EXECUTION',
+        locale: 'menu.bugManagement.automationExecution',
+        route: RouteEnum.BUG_MANAGEMENT_AUTOMATION_EXECUTION,
+        permission: [],
+        level: MENU_LEVEL[2],
+      },
     ],
   },
   {

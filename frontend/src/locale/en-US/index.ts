@@ -32,6 +32,7 @@ export default {
     'menu.bugManagementShort': 'Bug',
     'menu.bugManagement.bugDetail': 'Bug',
     'menu.bugManagement.bugRecycle': 'Recycle',
+    'menu.bugManagement.automationExecution': 'Automation Execution',
     'menu.caseManagement': 'Functional',
     'menu.apiTest': 'API Test',
     'menu.caseManagementShort': 'Case',

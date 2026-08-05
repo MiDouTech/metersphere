@@ -38,6 +38,32 @@
         ]
       },
       {
+        "id": "FUNCTIONAL_CASE_AI",
+        "name": "permission.functional_case_ai.name",
+        "permissions": [
+          {
+            "id": "FUNCTIONAL_CASE_AI:READ",
+            "name": "permission.functional_case_ai.read"
+          },
+          {
+            "id": "FUNCTIONAL_CASE_AI:GENERATE",
+            "name": "permission.functional_case_ai.generate"
+          },
+          {
+            "id": "FUNCTIONAL_CASE_AI:UPLOAD",
+            "name": "permission.functional_case_ai.upload"
+          },
+          {
+            "id": "FUNCTIONAL_CASE_AI:SAVE",
+            "name": "permission.functional_case_ai.save"
+          },
+          {
+            "id": "FUNCTIONAL_CASE_AI:CONFIG",
+            "name": "permission.functional_case_ai.config"
+          }
+        ]
+      },
+      {
         "id": "CASE_REVIEW",
         "name": "permission.case_review.name",
         "permissions": [

@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.agent.mapper.AgentExecutionMapper">
+
+    <resultMap id="taskMap" type="io.metersphere.agent.dto.AgentExecutionTaskDTO">
+        <id column="id" property="id"/>
+        <result column="organization_id" property="organizationId"/>
+        <result column="project_id" property="projectId"/>
+        <result column="test_plan_id" property="testPlanId"/>
+        <result column="source" property="source"/>
+        <result column="status" property="status"/>
+        <result column="runner_id" property="runnerId"/>
+        <result column="provider_id" property="providerId"/>
+        <result column="environment_id" property="environmentId"/>
+        <result column="target_url" property="targetUrl"/>
+        <result column="browser_type" property="browserType"/>
+        <result column="login_mode" property="loginMode"/>
+        <result column="idempotency_key" property="idempotencyKey"/>
+        <result column="confirm_required" property="confirmRequired"/>
+        <result column="confirmation_reason" property="confirmationReason"/>
+        <result column="total_count" property="totalCount"/>
+        <result column="success_count" property="successCount"/>
+        <result column="failed_count" property="failedCount"/>
+        <result column="blocked_count" property="blockedCount"/>
+        <result column="skipped_count" property="skippedCount"/>
+        <result column="unexecuted_count" property="unexecutedCount"/>
+        <result column="executed_by" property="executedBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_user" property="createUser"/>
+        <result column="update_user" property="updateUser"/>
+    </resultMap>
+
+    <resultMap id="caseMap" type="io.metersphere.agent.dto.AgentExecutionCaseDTO">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="project_id" property="projectId"/>
+        <result column="case_id" property="caseId"/>
+        <result column="case_num" property="caseNum"/>
+        <result column="case_name" property="caseName"/>
+        <result column="test_plan_id" property="testPlanId"/>
+        <result column="test_plan_case_id" property="testPlanCaseId"/>
+        <result column="status" property="status"/>
+        <result column="result" property="result"/>
+        <result column="pos" property="pos"/>
+        <result column="retry_count" property="retryCount"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="eventMap" type="io.metersphere.agent.dto.AgentExecutionEventDTO">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="case_id" property="caseId"/>
+        <result column="step_id" property="stepId"/>
+        <result column="sequence" property="sequence"/>
+        <result column="event_time" property="eventTime"/>
+        <result column="level" property="level"/>
+        <result column="event_type" property="eventType"/>
+        <result column="message" property="message"/>
+        <result column="sanitized_metadata" property="sanitizedMetadata"/>
+        <result column="create_user" property="createUser"/>
+    </resultMap>
+
+    <select id="selectTaskById" resultMap="taskMap">
+        SELECT * FROM ai_execution_task WHERE id = #{id}
+    </select>
+
+    <select id="selectTaskByIdempotency" resultMap="taskMap">
+        SELECT * FROM ai_execution_task
+        WHERE project_id = #{projectId}
+          AND create_user = #{createUser}
+          AND idempotency_key = #{idempotencyKey}
+        LIMIT 1
+    </select>
+
+    <select id="selectCasesByTaskId" resultMap="caseMap">
+        SELECT ec.*, fc.num AS case_num, fc.name AS case_name
+        FROM ai_execution_case ec
+        LEFT JOIN functional_case fc ON fc.id = ec.case_id
+        WHERE ec.task_id = #{taskId}
+        ORDER BY ec.pos ASC, ec.create_time ASC
+    </select>
+
+    <select id="selectCasesByTaskIdAndStatuses" resultMap="caseMap">
+        SELECT ec.*, fc.num AS case_num, fc.name AS case_name
+        FROM ai_execution_case ec
+        LEFT JOIN functional_case fc ON fc.id = ec.case_id
+        WHERE ec.task_id = #{taskId}
+        <if test="statuses != null and statuses.size() &gt; 0">
+            AND ec.status IN
+            <foreach collection="statuses" item="status" open="(" separator="," close=")">
+                #{status}
+            </foreach>
+        </if>
+        ORDER BY ec.pos ASC, ec.create_time ASC
+    </select>
+
+    <select id="selectEvents" resultMap="eventMap">
+        SELECT * FROM ai_execution_event
+        WHERE task_id = #{taskId}
+          AND sequence &gt; #{cursor}
+        ORDER BY sequence ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectMaxEventSequence" resultType="long">
+        SELECT COALESCE(MAX(sequence), 0) FROM ai_execution_event WHERE task_id = #{taskId}
+    </select>
+
+    <insert id="insertTask" parameterType="io.metersphere.agent.dto.AgentExecutionTaskDTO">
+        INSERT INTO ai_execution_task (
+            id, organization_id, project_id, test_plan_id, source, status, runner_id, provider_id,
+            environment_id, target_url, browser_type, login_mode, idempotency_key, confirm_required,
+            confirmation_reason, total_count, success_count, failed_count, blocked_count, skipped_count,
+            unexecuted_count, executed_by, create_time, update_time, create_user, update_user
+        ) VALUES (
+            #{id}, #{organizationId}, #{projectId}, #{testPlanId}, #{source}, #{status}, #{runnerId}, #{providerId},
+            #{environmentId}, #{targetUrl}, #{browserType}, #{loginMode}, #{idempotencyKey}, #{confirmRequired},
+            #{confirmationReason}, #{totalCount}, #{successCount}, #{failedCount}, #{blockedCount}, #{skippedCount},
+            #{unexecutedCount}, #{executedBy}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser}
+        )
+    </insert>
+
+    <insert id="insertCase" parameterType="io.metersphere.agent.dto.AgentExecutionCaseDTO">
+        INSERT INTO ai_execution_case (
+            id, task_id, project_id, case_id, test_plan_id, test_plan_case_id, status, result,
+            pos, retry_count, error_message, create_time, update_time
+        ) VALUES (
+            #{id}, #{taskId}, #{projectId}, #{caseId}, #{testPlanId}, #{testPlanCaseId}, #{status}, #{result},
+            #{pos}, #{retryCount}, #{errorMessage}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <insert id="insertEvent" parameterType="io.metersphere.agent.dto.AgentExecutionEventDTO">
+        INSERT INTO ai_execution_event (
+            id, task_id, case_id, step_id, sequence, event_time, level, event_type, message,
+            artifact_ids, sanitized_metadata, create_user
+        ) VALUES (
+            #{id}, #{taskId}, #{caseId}, #{stepId}, #{sequence}, #{eventTime}, #{level}, #{eventType}, #{message},
+            NULL, #{sanitizedMetadata}, #{createUser}
+        )
+    </insert>
+
+    <update id="updateTaskStatus">
+        UPDATE ai_execution_task
+        SET status = #{status}, update_user = #{updateUser}, update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <update id="confirmTask">
+        UPDATE ai_execution_task
+        SET status = #{status},
+            confirm_required = 0,
+            update_user = #{updateUser},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateTaskCounts">
+        UPDATE ai_execution_task
+        SET status = #{status},
+            success_count = #{successCount},
+            failed_count = #{failedCount},
+            blocked_count = #{blockedCount},
+            skipped_count = #{skippedCount},
+            unexecuted_count = #{unexecutedCount},
+            update_user = #{updateUser},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateCaseStatus">
+        UPDATE ai_execution_case
+        SET status = #{status},
+            result = #{result},
+            error_message = #{errorMessage},
+            update_time = #{updateTime}
+        WHERE task_id = #{taskId}
+          AND case_id = #{caseId}
+    </update>
+
+    <update id="retryFailedCases">
+        UPDATE ai_execution_case
+        SET status = 'CREATED',
+            result = NULL,
+            retry_count = retry_count + 1,
+            error_message = NULL,
+            update_time = #{updateTime}
+        WHERE task_id = #{taskId}
+          AND status IN ('FAILED', 'BLOCKED')
+    </update>
+
+    <sql id="planSearchWhere">
+        <where>
+            tp.project_id = #{projectId}
+            AND tp.type = 'TEST_PLAN'
+            <if test="!includeArchived">
+                AND tp.status != 'ARCHIVED'
+            </if>
+            <if test="status != null and status != ''">
+                AND tp.status = #{status}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    LOWER(tp.id) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '\\'
+                    OR LOWER(tp.name) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '\\'
+                    OR CAST(tp.num AS CHAR) LIKE CONCAT('%', #{keyword}, '%') ESCAPE '\\'
+                )
+            </if>
+        </where>
+    </sql>
+
+    <select id="countPlans" resultType="long">
+        SELECT COUNT(1)
+        FROM test_plan tp
+        <include refid="planSearchWhere"/>
+    </select>
+
+    <select id="searchPlans" resultType="io.metersphere.agent.dto.AgentTestPlanDTO">
+        SELECT tp.id,
+               tp.name,
+               tp.project_id AS projectId,
+               tp.status,
+               tp.num,
+               COALESCE(fc.case_count, 0) AS associatedCaseCount
+        FROM test_plan tp
+        LEFT JOIN (
+            SELECT test_plan_id, COUNT(1) AS case_count
+            FROM test_plan_functional_case
+            GROUP BY test_plan_id
+        ) fc ON fc.test_plan_id = tp.id
+        <include refid="planSearchWhere"/>
+        ORDER BY
+            CASE WHEN tp.status IN ('UNDERWAY', 'RUNNING', 'IN_PROGRESS') THEN 0 ELSE 1 END ASC,
+            tp.update_time DESC,
+            tp.id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <sql id="projectCaseWhere">
+        <where>
+            fc.project_id = #{projectId}
+            AND fc.deleted = 0
+            AND fc.latest = 1
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    LOWER(fc.id) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '\\'
+                    OR LOWER(fc.name) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '\\'
+                    OR CAST(fc.num AS CHAR) LIKE CONCAT('%', #{keyword}, '%') ESCAPE '\\'
+                )
+            </if>
+        </where>
+    </sql>
+
+    <select id="countProjectCases" resultType="long">
+        SELECT COUNT(1)
+        FROM functional_case fc
+        <include refid="projectCaseWhere"/>
+    </select>
+
+    <select id="selectProjectCases" resultMap="caseMap">
+        SELECT NULL AS id,
+               NULL AS task_id,
+               fc.project_id,
+               fc.id AS case_id,
+               fc.num AS case_num,
+               fc.name AS case_name,
+               NULL AS test_plan_id,
+               NULL AS test_plan_case_id,
+               NULL AS status,
+               fc.last_execute_result AS result,
+               0 AS pos,
+               0 AS retry_count,
+               NULL AS error_message,
+               fc.create_time,
+               fc.update_time
+        FROM functional_case fc
+        <include refid="projectCaseWhere"/>
+        ORDER BY fc.pos ASC, fc.create_time DESC
+        LIMIT #{limit}
+    </select>
+</mapper>
