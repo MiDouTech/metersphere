@@ -39,4 +39,7 @@ public class FunctionalCaseAiGenerateRequest {
 
     @Schema(description = "Parsed source document IDs")
     private List<String> sourceDocumentIds;
+
+    @Schema(description = "Client-provided generation ID for cancel support")
+    private String generationId;
 }

@@ -15,6 +15,7 @@ export interface AiCaseDraft {
   expectedResult?: string;
   tags?: string;
   customFields?: string;
+  sourceReferences?: string;
   validationMessage?: string;
   fingerprint?: string;
   duplicate?: boolean;
@@ -38,6 +39,7 @@ export interface AiCaseGenerateRequest {
   organizationId: string;
   maxCases?: number;
   sourceDocumentIds?: string[];
+  generationId?: string;
 }
 
 export interface AiCaseGenerateResponse {

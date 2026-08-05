@@ -197,7 +197,7 @@ public class AgentProjectService {
     /**
      * Escape LIKE wildcards for parameterized LIKE clauses.
      */
-    static String escapeLike(String input) {
+    public static String escapeLike(String input) {
         if (input == null) {
             return "";
         }

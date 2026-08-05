@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 public class AgentBatchSubmitService {
     @Resource
     private AgentFunctionalCaseSubmitService agentFunctionalCaseSubmitService;
+    @Resource
+    private AgentExecutionService agentExecutionService;
 
     public AgentBatchSubmitResponse batchSubmit(AgentBatchSubmitRequest request) {
         AgentBatchSubmitResponse response = new AgentBatchSubmitResponse();
@@ -21,6 +23,9 @@ public class AgentBatchSubmitService {
                 agentFunctionalCaseSubmitService.submit(item);
                 response.setSuccess(response.getSuccess() + 1);
             } catch (Exception e) {
+                if (StringUtils.isNotBlank(item.getExecutionTaskId())) {
+                    agentExecutionService.markCaseWritebackFailed(item.getExecutionTaskId(), item.getCaseId(), e.getMessage());
+                }
                 response.setFailed(response.getFailed() + 1);
                 response.getErrors().add(new AgentBatchSubmitResponse.AgentBatchSubmitError(
                         item.getCaseId(), e.getMessage()));
@@ -41,6 +46,9 @@ public class AgentBatchSubmitService {
         }
         if (StringUtils.isBlank(item.getExecutedBy())) {
             item.setExecutedBy(request.getExecutedBy());
+        }
+        if (StringUtils.isBlank(item.getExecutionTaskId())) {
+            item.setExecutionTaskId(request.getExecutionTaskId());
         }
     }
 }

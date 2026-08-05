@@ -142,6 +142,8 @@ public class OperationLogModule {
     public static final String CASE_MANAGEMENT_CASE_MODULE = "CASE_MANAGEMENT_CASE_MODULE";
     //功能用例-用例
     public static final String CASE_MANAGEMENT_CASE_CASE = "CASE_MANAGEMENT_CASE_CASE";
+    //功能用例-AI生成用例
+    public static final String CASE_MANAGEMENT_CASE_GENERATE = "CASE_MANAGEMENT_CASE_GENERATE";
 
     public static final String CASE_REVIEW = "CASE_MANAGEMENT_REVIEW";
 

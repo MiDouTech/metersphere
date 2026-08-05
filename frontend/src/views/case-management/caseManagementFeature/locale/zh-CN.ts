@@ -352,4 +352,13 @@ export default {
   'caseManagement.featureCase.progressBlocked': '阻塞',
   'caseManagement.featureCase.progressSkipped': '跳过',
   'caseManagement.featureCase.progressUnexecuted': '未执行',
+  'caseManagement.featureCase.aiExecution': 'AI执行',
+  'caseManagement.featureCase.aiExecutionConfirmTitle': '确认创建 AI 执行任务（{number} 条用例）',
+  'caseManagement.featureCase.aiExecutionConfirmContent':
+    '选中范围：{number} 条用例；测试计划：未指定/计划外；目标环境：任务创建后在自动化执行页继续配置；访问地址：任务创建后继续配置；浏览器类型：默认浏览器；登录方式：人工登录或 Runner 会话恢复；风险提示：后端会重新校验项目、权限、删除状态和执行范围。',
+  'caseManagement.featureCase.aiExecutionStart': '创建任务',
+  'caseManagement.featureCase.aiExecutionCreated': 'AI 执行任务已创建',
+  'caseManagement.featureCase.aiExecutionNoSelection': '请先勾选需要执行的用例',
+  'caseManagement.featureCase.aiExecutionSelectAllNotSupported':
+    'AI执行暂不支持全选全部结果，请手动勾选具体用例后再执行',
 };

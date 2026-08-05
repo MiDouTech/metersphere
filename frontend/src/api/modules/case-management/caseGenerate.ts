@@ -20,6 +20,10 @@ export function generateAiCaseDraft(data: AiCaseGenerateRequest) {
   return MSR.post<AiCaseGenerateResponse>({ url: `${BaseUrl}/generation/structured`, data });
 }
 
+export function cancelAiCaseGeneration(data: { projectId: string; generationId: string }) {
+  return MSR.post({ url: `${BaseUrl}/generation/cancel`, data });
+}
+
 export function pageAiCaseDraft(data: AiDraftPageRequest) {
   return MSR.post<AiDraftPageResponse>({ url: `${BaseUrl}/page`, data });
 }

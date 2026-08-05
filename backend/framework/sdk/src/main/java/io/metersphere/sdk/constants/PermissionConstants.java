@@ -227,10 +227,13 @@ public class PermissionConstants {
     public static final String FUNCTIONAL_CASE_READ_EXPORT = "FUNCTIONAL_CASE:READ+EXPORT";
     public static final String FUNCTIONAL_CASE_READ_IMPORT = "FUNCTIONAL_CASE:READ+IMPORT";
     public static final String FUNCTIONAL_CASE_READ_MINDER = "FUNCTIONAL_CASE:READ+MINDER";
-    public static final String FUNCTIONAL_CASE_AI_GENERATE = FUNCTIONAL_CASE_READ_ADD;
-    public static final String FUNCTIONAL_CASE_AI_UPLOAD = FUNCTIONAL_CASE_READ_IMPORT;
-    public static final String FUNCTIONAL_CASE_AI_SAVE = FUNCTIONAL_CASE_READ_ADD;
-    public static final String FUNCTIONAL_CASE_AI_CONFIG = FUNCTIONAL_CASE_READ_UPDATE;
+    /*------ start: FUNCTIONAL_CASE_AI (独立 AI 生成用例权限) ------*/
+    public static final String FUNCTIONAL_CASE_AI_READ = "FUNCTIONAL_CASE_AI:READ";
+    public static final String FUNCTIONAL_CASE_AI_GENERATE = "FUNCTIONAL_CASE_AI:GENERATE";
+    public static final String FUNCTIONAL_CASE_AI_UPLOAD = "FUNCTIONAL_CASE_AI:UPLOAD";
+    public static final String FUNCTIONAL_CASE_AI_SAVE = "FUNCTIONAL_CASE_AI:SAVE";
+    public static final String FUNCTIONAL_CASE_AI_CONFIG = "FUNCTIONAL_CASE_AI:CONFIG";
+    /*------ end: FUNCTIONAL_CASE_AI ------*/
 
 
 
@@ -262,6 +265,14 @@ public class PermissionConstants {
     public static final String PROJECT_BUG_EXPORT = "PROJECT_BUG:READ+EXPORT";
     public static final String PROJECT_BUG_COMMENT = "PROJECT_BUG:READ+COMMENT";
     /*------ end: BUG ------*/
+
+    /*------ start: AI_EXECUTION ------*/
+    public static final String AI_EXECUTION_READ = "AI_EXECUTION:READ";
+    public static final String AI_EXECUTION_RUN = "AI_EXECUTION:RUN";
+    public static final String AI_EXECUTION_CANCEL = "AI_EXECUTION:CANCEL";
+    public static final String AI_EXECUTION_LOGIN = "AI_EXECUTION:LOGIN";
+    public static final String AI_EXECUTION_ADMIN = "AI_EXECUTION:ADMIN";
+    /*------ end: AI_EXECUTION ------*/
     /*------ start: API_MANAGEMENT ------*/
     public static final String PROJECT_API_DEFINITION_READ = "PROJECT_API_DEFINITION:READ";
     public static final String PROJECT_API_DEFINITION_ADD = "PROJECT_API_DEFINITION:READ+ADD";

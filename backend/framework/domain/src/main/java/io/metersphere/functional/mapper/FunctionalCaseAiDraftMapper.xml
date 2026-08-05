@@ -16,6 +16,7 @@
         <result column="expected_result" jdbcType="LONGVARCHAR" property="expectedResult"/>
         <result column="tags" jdbcType="LONGVARCHAR" property="tags"/>
         <result column="custom_fields" jdbcType="LONGVARCHAR" property="customFields"/>
+        <result column="source_references" jdbcType="LONGVARCHAR" property="sourceReferences"/>
         <result column="validation_message" jdbcType="LONGVARCHAR" property="validationMessage"/>
         <result column="fingerprint" jdbcType="VARCHAR" property="fingerprint"/>
         <result column="duplicate" jdbcType="BIT" property="duplicate"/>
@@ -32,7 +33,7 @@
     <insert id="insert" parameterType="io.metersphere.functional.domain.FunctionalCaseAiDraft">
         insert into functional_case_ai_draft (id, generation_id, source_document_id, project_id, module_id,
                                               template_id, name, case_level, edit_type, prerequisite, steps,
-                                              expected_result, tags, custom_fields, validation_message, fingerprint,
+                                              expected_result, tags, custom_fields, source_references, validation_message, fingerprint,
                                               duplicate, validation_status, draft_status, formal_case_id, deleted,
                                               version, create_user, create_time, update_time)
         values (#{id,jdbcType=VARCHAR}, #{generationId,jdbcType=VARCHAR}, #{sourceDocumentId,jdbcType=VARCHAR},
@@ -40,7 +41,7 @@
                 #{name,jdbcType=VARCHAR}, #{caseLevel,jdbcType=VARCHAR}, #{editType,jdbcType=VARCHAR},
                 #{prerequisite,jdbcType=LONGVARCHAR}, #{steps,jdbcType=LONGVARCHAR},
                 #{expectedResult,jdbcType=LONGVARCHAR}, #{tags,jdbcType=LONGVARCHAR},
-                #{customFields,jdbcType=LONGVARCHAR}, #{validationMessage,jdbcType=LONGVARCHAR},
+                #{customFields,jdbcType=LONGVARCHAR}, #{sourceReferences,jdbcType=LONGVARCHAR}, #{validationMessage,jdbcType=LONGVARCHAR},
                 #{fingerprint,jdbcType=VARCHAR}, #{duplicate,jdbcType=BIT}, #{validationStatus,jdbcType=VARCHAR},
                 #{draftStatus,jdbcType=VARCHAR}, #{formalCaseId,jdbcType=VARCHAR}, #{deleted,jdbcType=BIT}, #{version,jdbcType=INTEGER},
                 #{createUser,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT})
@@ -69,6 +70,7 @@
             <if test="expectedResult != null">expected_result = #{expectedResult,jdbcType=LONGVARCHAR},</if>
             <if test="tags != null">tags = #{tags,jdbcType=LONGVARCHAR},</if>
             <if test="customFields != null">custom_fields = #{customFields,jdbcType=LONGVARCHAR},</if>
+            <if test="sourceReferences != null">source_references = #{sourceReferences,jdbcType=LONGVARCHAR},</if>
             <if test="validationMessage != null">validation_message = #{validationMessage,jdbcType=LONGVARCHAR},</if>
             <if test="fingerprint != null">fingerprint = #{fingerprint,jdbcType=VARCHAR},</if>
             <if test="duplicate != null">duplicate = #{duplicate,jdbcType=BIT},</if>
@@ -98,6 +100,7 @@
             <if test="record.expectedResult != null">expected_result = #{record.expectedResult,jdbcType=LONGVARCHAR},</if>
             <if test="record.tags != null">tags = #{record.tags,jdbcType=LONGVARCHAR},</if>
             <if test="record.customFields != null">custom_fields = #{record.customFields,jdbcType=LONGVARCHAR},</if>
+            <if test="record.sourceReferences != null">source_references = #{record.sourceReferences,jdbcType=LONGVARCHAR},</if>
             <if test="record.validationMessage != null">validation_message = #{record.validationMessage,jdbcType=LONGVARCHAR},</if>
             <if test="record.fingerprint != null">fingerprint = #{record.fingerprint,jdbcType=VARCHAR},</if>
             <if test="record.duplicate != null">duplicate = #{record.duplicate,jdbcType=BIT},</if>

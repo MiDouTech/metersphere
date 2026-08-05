@@ -47,6 +47,8 @@ public class AgentFunctionalCaseSubmitService {
     private FunctionalCaseService functionalCaseService;
     @Resource
     private AgentProjectService agentProjectService;
+    @Resource
+    private AgentExecutionService agentExecutionService;
 
     @Transactional(rollbackFor = Exception.class)
     public void submit(AgentCaseSubmitRequest request) {
@@ -56,6 +58,9 @@ public class AgentFunctionalCaseSubmitService {
             submitInPlan(request);
         } else {
             submitOutOfPlan(request);
+        }
+        if (StringUtils.isNotBlank(request.getExecutionTaskId())) {
+            agentExecutionService.markCaseWritebackSuccess(request.getExecutionTaskId(), request.getCaseId(), request.getLastExecResult());
         }
     }
 

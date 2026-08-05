@@ -29,6 +29,12 @@ public class AgentCaseSubmitRequest {
     @Schema(description = "Agent 标识")
     private String executedBy;
 
+    @Schema(description = "AI execution task id")
+    private String executionTaskId;
+
+    @Schema(description = "Result writeback idempotency key")
+    private String idempotencyKey;
+
     @Schema(description = "步骤执行结果")
     private List<AgentCaseStepDTO> steps;
 

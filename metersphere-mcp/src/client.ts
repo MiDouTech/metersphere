@@ -127,6 +127,8 @@ export class MeterSphereClient {
     testPlanCaseId?: string;
     lastExecResult: string;
     executedBy?: string;
+    executionTaskId?: string;
+    idempotencyKey?: string;
     steps?: Array<{
       id?: string;
       num?: number;
@@ -150,11 +152,14 @@ export class MeterSphereClient {
     projectId?: string;
     testPlanId?: string;
     executedBy?: string;
+    executionTaskId?: string;
     failFast?: boolean;
     results: Array<{
       caseId: string;
       testPlanCaseId?: string;
       lastExecResult: string;
+      executionTaskId?: string;
+      idempotencyKey?: string;
       steps?: Array<Record<string, unknown>>;
       content?: string;
       attachmentIds?: string[];
@@ -307,6 +312,95 @@ export class MeterSphereClient {
 
   getTestPlan(testPlanId: string) {
     return this.request("GET", `/api/agent/v1/test-plan/${encodeURIComponent(testPlanId)}`);
+  }
+
+  searchTestPlans(payload: {
+    projectId?: string;
+    keyword?: string;
+    status?: string;
+    includeArchived?: boolean;
+    page?: number;
+    pageSize?: number;
+  }) {
+    return this.request("POST", "/api/agent/v1/test-plan/search", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+    });
+  }
+
+  getTestPlanCases(payload: {
+    projectId?: string;
+    testPlanId: string;
+    current?: number;
+    pageSize?: number;
+    includeSteps?: boolean;
+  }) {
+    const query = new URLSearchParams();
+    query.set("projectId", payload.projectId ?? this.config.projectId);
+    if (payload.current) query.set("current", String(payload.current));
+    if (payload.pageSize) query.set("pageSize", String(payload.pageSize));
+    if (payload.includeSteps !== undefined) query.set("includeSteps", String(payload.includeSteps));
+    return this.request(
+      "GET",
+      `/api/agent/v1/test-plan/${encodeURIComponent(payload.testPlanId)}/cases?${query.toString()}`
+    );
+  }
+
+  resolveExecutionScope(payload: Record<string, unknown>) {
+    return this.request("POST", "/api/ai/execution/resolve", {
+      ...payload,
+      projectId: (payload.projectId as string | undefined) ?? this.config.projectId,
+    });
+  }
+
+  createExecutionTask(payload: {
+    projectId?: string;
+    testPlanId?: string;
+    caseIds?: string[];
+    source?: string;
+    environmentId?: string;
+    targetUrl?: string;
+    browserType?: string;
+    loginMode?: string;
+    providerId?: string;
+    runnerId?: string;
+    executedBy?: string;
+    idempotencyKey?: string;
+    confirmed?: boolean;
+  }) {
+    return this.request("POST", "/api/ai/execution/task", {
+      ...payload,
+      projectId: payload.projectId ?? this.config.projectId,
+      testPlanId: payload.testPlanId ?? this.config.testPlanId,
+    });
+  }
+
+  getExecutionTask(executionTaskId: string) {
+    return this.request("GET", `/api/ai/execution/task/${encodeURIComponent(executionTaskId)}`);
+  }
+
+  getExecutionEvents(payload: {
+    executionTaskId: string;
+    cursor?: number;
+    limit?: number;
+  }) {
+    const query = new URLSearchParams();
+    if (payload.cursor !== undefined) query.set("cursor", String(payload.cursor));
+    if (payload.limit !== undefined) query.set("limit", String(payload.limit));
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return this.request("GET", `/api/ai/execution/task/${encodeURIComponent(payload.executionTaskId)}/events${suffix}`);
+  }
+
+  cancelExecutionTask(payload: { executionTaskId: string; reason?: string }) {
+    return this.request("POST", `/api/ai/execution/task/${encodeURIComponent(payload.executionTaskId)}/cancel`, {
+      reason: payload.reason,
+    });
+  }
+
+  resumeExecutionTask(payload: { executionTaskId: string; reason?: string }) {
+    return this.request("POST", `/api/ai/execution/task/${encodeURIComponent(payload.executionTaskId)}/login-ready`, {
+      reason: payload.reason,
+    });
   }
 
   createCaseReview(payload: {

@@ -33,6 +33,8 @@ public class FunctionalCaseAiDraftDTO {
     private String tags;
     @Schema(description = "Custom fields JSON")
     private String customFields;
+    @Schema(description = "Source references JSON")
+    private String sourceReferences;
     @Schema(description = "Validation message")
     private String validationMessage;
     @Schema(description = "Duplicate fingerprint")

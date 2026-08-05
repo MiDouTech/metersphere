@@ -13,6 +13,7 @@ public class AgentBatchSubmitRequest {
     private String projectId;
     private String testPlanId;
     private String executedBy;
+    private String executionTaskId;
     private boolean failFast;
     @NotEmpty
     @Valid

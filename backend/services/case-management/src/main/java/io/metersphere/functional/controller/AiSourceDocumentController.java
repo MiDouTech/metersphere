@@ -43,7 +43,7 @@ public class AiSourceDocumentController {
 
     @PostMapping("/page")
     @Operation(summary = "分页查询 AI 来源文档")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_READ)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public AiSourceDocumentPageResponse page(@Validated @RequestBody AiSourceDocumentPageRequest request) {
         return aiSourceDocumentService.page(request, SessionUtils.getUserId());
@@ -51,7 +51,7 @@ public class AiSourceDocumentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "查询 AI 来源文档详情")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_READ)
     public AiSourceDocumentDTO get(@PathVariable String id, @RequestParam String projectId) {
         return aiSourceDocumentService.get(id, projectId, SessionUtils.getUserId());
     }
@@ -66,7 +66,7 @@ public class AiSourceDocumentController {
 
     @PostMapping("/delete")
     @Operation(summary = "删除 AI 来源文档")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_DELETE)
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_UPLOAD)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public void delete(@Validated @RequestBody AiSourceDocumentIdRequest request) {
         aiSourceDocumentService.delete(request, SessionUtils.getUserId());
@@ -74,7 +74,7 @@ public class AiSourceDocumentController {
 
     @PostMapping("/download")
     @Operation(summary = "下载 AI 来源文档")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_READ)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public ResponseEntity<byte[]> download(@Validated @RequestBody AiSourceDocumentIdRequest request) {
         return aiSourceDocumentService.download(request, SessionUtils.getUserId());

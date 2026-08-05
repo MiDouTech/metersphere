@@ -14,7 +14,7 @@ const CaseManagement: AppRouteRecordRaw = {
     icon: 'icon-icon_functional_testing1',
     order: 3,
     hideChildrenInMenu: true,
-    roles: ['FUNCTIONAL_CASE:READ', 'CASE_REVIEW:READ'],
+    roles: ['FUNCTIONAL_CASE:READ', 'CASE_REVIEW:READ', 'FUNCTIONAL_CASE_AI:READ'],
   },
   children: [
     // 功能用例
@@ -36,7 +36,7 @@ const CaseManagement: AppRouteRecordRaw = {
       component: () => import('@/views/case-management/caseGenerate/index.vue'),
       meta: {
         locale: 'menu.caseManagement.caseGenerate',
-        roles: ['FUNCTIONAL_CASE:READ'],
+        roles: ['FUNCTIONAL_CASE_AI:READ'],
         isTopMenu: true,
         keepModuleAlive: true,
       },

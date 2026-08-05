@@ -7,6 +7,7 @@ import io.metersphere.functional.request.FunctionalCaseAiDraftPageRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftRegenerateRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftUpsertRequest;
 import io.metersphere.functional.request.FunctionalCaseAiGenerateRequest;
+import io.metersphere.functional.request.FunctionalCaseAiGenerationCancelRequest;
 import io.metersphere.functional.response.FunctionalCaseAiBatchSaveResponse;
 import io.metersphere.functional.response.FunctionalCaseAiDraftPageResponse;
 import io.metersphere.functional.response.FunctionalCaseAiGenerateResponse;
@@ -44,7 +45,7 @@ public class FunctionalCaseAiDraftController {
 
     @PostMapping("/page")
     @Operation(summary = "分页查询 AI 用例草稿")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_READ)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public FunctionalCaseAiDraftPageResponse page(@Validated @RequestBody FunctionalCaseAiDraftPageRequest request) {
         return functionalCaseAiDraftService.page(request, SessionUtils.getUserId());
@@ -52,14 +53,14 @@ public class FunctionalCaseAiDraftController {
 
     @GetMapping("/{id}")
     @Operation(summary = "查询 AI 用例草稿详情")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_READ)
     public FunctionalCaseAiDraftDTO get(@PathVariable String id, @RequestParam String projectId) {
         return functionalCaseAiDraftService.get(id, projectId, SessionUtils.getUserId());
     }
 
     @PostMapping("/update")
     @Operation(summary = "更新 AI 用例草稿")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE)
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public FunctionalCaseAiDraftDTO update(@Validated @RequestBody FunctionalCaseAiDraftUpsertRequest request) {
         return functionalCaseAiDraftService.update(request, SessionUtils.getUserId());
@@ -67,10 +68,18 @@ public class FunctionalCaseAiDraftController {
 
     @PostMapping("/delete")
     @Operation(summary = "删除 AI 用例草稿")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_DELETE)
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public void delete(@Validated @RequestBody FunctionalCaseAiDraftBatchDeleteRequest request) {
         functionalCaseAiDraftService.delete(request, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/generation/cancel")
+    @Operation(summary = "取消 AI 结构化生成任务")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
+    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
+    public void cancel(@Validated @RequestBody FunctionalCaseAiGenerationCancelRequest request) {
+        functionalCaseAiDraftService.cancel(request, SessionUtils.getUserId());
     }
 
     @PostMapping("/regenerate")
