@@ -84,4 +84,31 @@ public interface AgentExecutionMapper {
                                                    @Param("keyword") String keyword,
                                                    @Param("likeKeyword") String likeKeyword,
                                                    @Param("limit") int limit);
+
+    List<String> selectProjectCaseIds(@Param("projectId") String projectId);
+
+    int countWritebackIdempotency(@Param("taskId") String taskId,
+                                  @Param("caseId") String caseId,
+                                  @Param("idempotencyKey") String idempotencyKey);
+
+    void insertWritebackIdempotency(@Param("id") String id,
+                                    @Param("taskId") String taskId,
+                                    @Param("caseId") String caseId,
+                                    @Param("idempotencyKey") String idempotencyKey,
+                                    @Param("projectId") String projectId,
+                                    @Param("lastExecResult") String lastExecResult,
+                                    @Param("createUser") String createUser,
+                                    @Param("createTime") long createTime);
+
+    int countActiveRunnerSessions(@Param("userId") String userId,
+                                  @Param("domain") String domain,
+                                  @Param("now") long now);
+
+    int countCredentialReferences(@Param("projectId") String projectId,
+                                  @Param("environmentId") String environmentId,
+                                  @Param("domain") String domain);
+
+    int countEventsByType(@Param("taskId") String taskId, @Param("eventType") String eventType);
+
+    int countEvidenceEvents(@Param("taskId") String taskId);
 }

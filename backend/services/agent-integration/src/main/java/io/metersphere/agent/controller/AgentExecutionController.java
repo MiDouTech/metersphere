@@ -52,7 +52,8 @@ public class AgentExecutionController {
     @GetMapping("/task/{id}/events")
     @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
     @Operation(summary = "获取 AI 自动化执行任务事件")
-    public AgentExecutionEventsResponse events(@PathVariable String id, AgentExecutionEventsRequest request) {
+    public AgentExecutionEventsResponse events(@PathVariable String id,
+                                               @org.springframework.web.bind.annotation.ModelAttribute AgentExecutionEventsRequest request) {
         return agentExecutionService.events(id, request);
     }
 
@@ -68,6 +69,13 @@ public class AgentExecutionController {
     @Operation(summary = "人工登录完成后恢复 AI 自动化执行任务")
     public AgentExecutionTaskDTO loginReady(@PathVariable String id, @RequestBody(required = false) AgentExecutionActionRequest request) {
         return agentExecutionService.loginReady(id, request == null ? null : request.getReason());
+    }
+
+    @PostMapping("/task/{id}/pause")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    @Operation(summary = "暂停 AI 自动化执行任务")
+    public AgentExecutionTaskDTO pause(@PathVariable String id, @RequestBody(required = false) AgentExecutionActionRequest request) {
+        return agentExecutionService.pause(id, request == null ? null : request.getReason());
     }
 
     @PostMapping("/task/{id}/cancel")

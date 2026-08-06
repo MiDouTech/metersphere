@@ -424,6 +424,61 @@
         @case-node-select="caseNodeSelect"
       ></FeatureCaseTree>
     </a-modal>
+    <a-modal
+      v-model:visible="aiExecutionVisible"
+      title-align="start"
+      class="ms-modal-form"
+      :mask-closable="false"
+      :ok-text="t('caseManagement.featureCase.aiExecutionStart')"
+      :ok-button-props="{
+        disabled: aiExecutionSubmitting || !aiExecutionForm.targetUrl || !aiExecutionForm.environmentId,
+      }"
+      :confirm-loading="aiExecutionSubmitting"
+      :on-before-ok="submitAiExecutionTask"
+      @cancel="aiExecutionVisible = false"
+    >
+      <template #title>
+        {{ t('caseManagement.featureCase.aiExecutionConfirmTitle', { number: aiExecutionCaseIds.length }) }}
+      </template>
+      <a-alert type="warning" show-icon class="mb-[12px]">
+        {{ t('caseManagement.featureCase.aiExecutionConfirmContent', { number: aiExecutionCaseIds.length }) }}
+      </a-alert>
+      <a-form :model="aiExecutionForm" layout="vertical">
+        <a-form-item :label="t('caseManagement.featureCase.aiExecutionEnvironment')" required>
+          <a-input
+            v-model:model-value="aiExecutionForm.environmentId"
+            :placeholder="t('caseManagement.featureCase.aiExecutionEnvironmentPlaceholder')"
+            :max-length="100"
+          />
+        </a-form-item>
+        <a-form-item :label="t('caseManagement.featureCase.aiExecutionTargetUrl')" required>
+          <a-input
+            v-model:model-value="aiExecutionForm.targetUrl"
+            :placeholder="t('caseManagement.featureCase.aiExecutionTargetUrlPlaceholder')"
+            :max-length="500"
+          />
+        </a-form-item>
+        <a-form-item :label="t('caseManagement.featureCase.aiExecutionBrowser')">
+          <a-select v-model:model-value="aiExecutionForm.browserType">
+            <a-option value="chromium">Chromium</a-option>
+            <a-option value="chrome">Chrome</a-option>
+            <a-option value="edge">Edge</a-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item :label="t('caseManagement.featureCase.aiExecutionLoginMode')">
+          <a-select v-model:model-value="aiExecutionForm.loginMode">
+            <a-option value="MANUAL">{{ t('caseManagement.featureCase.aiExecutionLoginManual') }}</a-option>
+            <a-option value="RUNNER_SESSION">{{ t('caseManagement.featureCase.aiExecutionLoginSession') }}</a-option>
+            <a-option value="CREDENTIAL_REF">{{ t('caseManagement.featureCase.aiExecutionLoginCredential') }}</a-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item v-if="aiExecutionNeedsConfirm" :label="t('caseManagement.featureCase.aiExecutionLargeConfirm')">
+          <a-checkbox v-model:model-value="aiExecutionForm.confirmed">
+            {{ t('caseManagement.featureCase.aiExecutionLargeConfirmTip', { number: aiExecutionCaseIds.length }) }}
+          </a-checkbox>
+        </a-form-item>
+      </a-form>
+    </a-modal>
     <MsExportDrawer
       v-model:visible="showExportVisible"
       :export-loading="exportLoading"
@@ -521,7 +576,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, nextTick, ref } from 'vue';
+  import { computed, nextTick, reactive, ref } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { Message, TableChangeExtra, TableData } from '@arco-design/web-vue';
   import { cloneDeep } from 'lodash-es';
@@ -2033,6 +2088,17 @@
   }
 
   const showThirdDrawer = ref<boolean>(false);
+  const aiExecutionVisible = ref(false);
+  const aiExecutionSubmitting = ref(false);
+  const aiExecutionCaseIds = ref<string[]>([]);
+  const aiExecutionForm = reactive({
+    environmentId: '',
+    targetUrl: '',
+    browserType: 'chromium',
+    loginMode: 'MANUAL',
+    confirmed: false,
+  });
+  const aiExecutionNeedsConfirm = computed(() => aiExecutionCaseIds.value.length > 20);
 
   // 关联需求
   function handleAssociatedDemand() {
@@ -2050,31 +2116,57 @@
       Message.warning(t('caseManagement.featureCase.aiExecutionNoSelection'));
       return;
     }
-    openModal({
-      type: 'warning',
-      title: t('caseManagement.featureCase.aiExecutionConfirmTitle', { number: caseIds.length }),
-      content: t('caseManagement.featureCase.aiExecutionConfirmContent', { number: caseIds.length }),
-      okText: t('caseManagement.featureCase.aiExecutionStart'),
-      cancelText: t('common.cancel'),
-      onBeforeOk: async () => {
-        const task = await createAiExecutionTask({
-          projectId: currentProjectId.value,
-          caseIds,
-          source: 'CASE_LIST',
-          confirmed: true,
-          idempotencyKey: `case-list-${currentProjectId.value}-${Date.now()}`,
-        });
-        Message.success(t('caseManagement.featureCase.aiExecutionCreated'));
-        resetSelector();
-        router.push({
-          name: BugManagementRouteEnum.BUG_MANAGEMENT_AUTOMATION_EXECUTION,
-          query: {
-            executionTaskId: task.id,
-          },
-        });
-      },
-      hideCancel: false,
-    });
+    aiExecutionCaseIds.value = caseIds;
+    aiExecutionForm.environmentId = '';
+    aiExecutionForm.targetUrl = '';
+    aiExecutionForm.browserType = 'chromium';
+    aiExecutionForm.loginMode = 'MANUAL';
+    aiExecutionForm.confirmed = false;
+    aiExecutionVisible.value = true;
+  }
+
+  async function submitAiExecutionTask() {
+    if (!aiExecutionForm.targetUrl?.trim()) {
+      Message.warning(t('caseManagement.featureCase.aiExecutionTargetUrlRequired'));
+      return false;
+    }
+    if (!aiExecutionForm.environmentId?.trim()) {
+      Message.warning(t('caseManagement.featureCase.aiExecutionEnvironmentRequired'));
+      return false;
+    }
+    if (aiExecutionNeedsConfirm.value && !aiExecutionForm.confirmed) {
+      Message.warning(t('caseManagement.featureCase.aiExecutionLargeConfirmRequired'));
+      return false;
+    }
+    aiExecutionSubmitting.value = true;
+    try {
+      const task = await createAiExecutionTask({
+        projectId: currentProjectId.value,
+        caseIds: aiExecutionCaseIds.value,
+        source: 'CASE_LIST',
+        // 仅在超阈值时传 confirmed；少量勾选不默认 true，由后端按规则判定
+        confirmed: aiExecutionNeedsConfirm.value ? true : undefined,
+        environmentId: aiExecutionForm.environmentId.trim(),
+        targetUrl: aiExecutionForm.targetUrl.trim(),
+        browserType: aiExecutionForm.browserType,
+        loginMode: aiExecutionForm.loginMode,
+        idempotencyKey: `case-list-${currentProjectId.value}-${Date.now()}`,
+      });
+      Message.success(t('caseManagement.featureCase.aiExecutionCreated'));
+      aiExecutionVisible.value = false;
+      resetSelector();
+      router.push({
+        name: BugManagementRouteEnum.BUG_MANAGEMENT_AUTOMATION_EXECUTION,
+        query: {
+          executionTaskId: task.id,
+        },
+      });
+      return true;
+    } catch {
+      return false;
+    } finally {
+      aiExecutionSubmitting.value = false;
+    }
   }
 
   async function handleTableBatch(event: BatchActionParams, params: BatchActionQueryParams) {

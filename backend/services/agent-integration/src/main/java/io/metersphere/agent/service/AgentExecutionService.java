@@ -28,6 +28,7 @@ import io.metersphere.project.domain.Project;
 import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.sdk.constants.ExecStatus;
 import io.metersphere.sdk.constants.ResultStatus;
+import io.metersphere.sdk.constants.TestPlanConstants;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.uid.IDGenerator;
@@ -39,12 +40,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -53,6 +55,18 @@ import java.util.stream.Collectors;
 public class AgentExecutionService {
     private static final int DEFAULT_CONFIRM_THRESHOLD = 20;
     private static final int EVENT_LIMIT_MAX = 500;
+    private static final int ESTIMATE_MINUTES_PER_CASE = 2;
+    private static final List<String> EXECUTABLE_PLAN_STATUSES = List.of(
+            TestPlanConstants.TEST_PLAN_SHOW_STATUS_PREPARED,
+            TestPlanConstants.TEST_PLAN_SHOW_STATUS_UNDERWAY,
+            TestPlanConstants.TEST_PLAN_SHOW_STATUS_COMPLETED,
+            "RUNNING",
+            "IN_PROGRESS"
+    );
+    private static final List<String> HIGH_RISK_KEYWORDS = List.of(
+            "删除", "支付", "发布", "权限", "批量修改", "退款", "转账", "清空",
+            "delete", "payment", "pay", "publish", "privilege", "permission", "refund", "transfer"
+    );
 
     @Resource
     private AgentExecutionMapper agentExecutionMapper;
@@ -70,6 +84,8 @@ public class AgentExecutionService {
     private TestPlanFunctionalCaseMapper testPlanFunctionalCaseMapper;
     @Resource
     private ProjectMapper projectMapper;
+    @Resource
+    private AgentExecLogService agentExecLogService;
 
     public AgentExecutionResolveResponse resolve(AgentExecutionResolveRequest request) {
         AgentExecutionResolveRequest actual = request == null ? new AgentExecutionResolveRequest() : request;
@@ -133,6 +149,7 @@ public class AgentExecutionService {
         AgentTestPlanSearchResponse plans = agentTestPlanQueryService.search(searchRequest);
         List<AgentTestPlanDTO> runnablePlans = plans.getItems().stream()
                 .filter(item -> item.getAssociatedCaseCount() != null && item.getAssociatedCaseCount() > 0)
+                .filter(this::isExecutablePlanStatus)
                 .toList();
         if (runnablePlans.size() == 1) {
             testPlanId = runnablePlans.get(0).getId();
@@ -145,8 +162,9 @@ public class AgentExecutionService {
             response.setStatus(AgentExecutionStatus.WAITING_CONFIRMATION);
             response.setExecutable(false);
             response.setConfirmationRequired(true);
-            response.setConfirmationReason("存在多个可执行测试计划，请确认后再创建执行任务");
+            response.setConfirmationReason("存在多个可执行测试计划（按进行中/最近更新排序），请确认后再创建执行任务");
             response.setMessage(response.getConfirmationReason());
+            response.getWarnings().add("第一名计划不唯一时禁止静默选择，避免重复或错误执行");
             return response;
         }
 
@@ -155,13 +173,18 @@ public class AgentExecutionService {
                 AgentProjectService.escapeLike(StringUtils.trimToEmpty(keyword).toLowerCase()));
         List<AgentExecutionCaseDTO> fallbackCases = agentExecutionMapper.selectProjectCases(projectId, StringUtils.trimToEmpty(keyword),
                 AgentProjectService.escapeLike(StringUtils.trimToEmpty(keyword).toLowerCase()), threshold + 1);
+        List<AgentCaseDTO> mapped = fallbackCases.stream().map(this::toAgentCase).toList();
+        List<String> highRiskSignals = detectHighRiskSignals(mapped.stream().map(AgentCaseDTO::getName).toList());
         response.setStatus(AgentExecutionStatus.WAITING_CONFIRMATION);
         response.setExecutable(total > 0);
         response.setConfirmationRequired(true);
         response.setConfirmationReason("未找到可自动选择的测试计划，需确认是否改为执行项目下有效功能用例");
         response.setMessage(response.getConfirmationReason());
         response.setTotal((int) total);
-        response.setCases(fallbackCases.stream().map(this::toAgentCase).toList());
+        response.setEstimatedMinutes(estimateMinutes((int) total));
+        response.setHighRisk(!highRiskSignals.isEmpty());
+        response.setHighRiskSignals(highRiskSignals);
+        response.setCases(mapped);
         return response;
     }
 
@@ -182,12 +205,24 @@ public class AgentExecutionService {
         if (StringUtils.isNotBlank(testPlanId)) {
             assertPlanBelongsToProject(projectId, testPlanId);
         }
-        List<AgentExecutionCaseDTO> cases = resolveCreateCases(projectId, testPlanId, request.getCaseIds());
+        List<AgentExecutionCaseDTO> cases = resolveCreateCases(projectId, testPlanId, request.getCaseIds(),
+                BooleanUtils.isTrue(request.getProjectWide()) && BooleanUtils.isTrue(request.getConfirmed()));
         if (CollectionUtils.isEmpty(cases)) {
             throw new MSException("未解析到可执行功能用例，任务未创建");
         }
 
-        boolean confirmRequired = cases.size() > DEFAULT_CONFIRM_THRESHOLD && !BooleanUtils.isTrue(request.getConfirmed());
+        List<String> highRiskSignals = detectHighRiskSignals(cases.stream().map(AgentExecutionCaseDTO::getCaseName).toList());
+        List<String> confirmReasons = new ArrayList<>();
+        if (cases.size() > DEFAULT_CONFIRM_THRESHOLD) {
+            confirmReasons.add("执行范围超过 " + DEFAULT_CONFIRM_THRESHOLD + " 条");
+        }
+        if (!highRiskSignals.isEmpty()) {
+            confirmReasons.add("检测到高风险关键词：" + String.join("、", highRiskSignals));
+        }
+        if (StringUtils.isAnyBlank(request.getEnvironmentId(), request.getTargetUrl()) && cases.size() > 1) {
+            confirmReasons.add("目标环境或访问地址未明确");
+        }
+        boolean confirmRequired = !confirmReasons.isEmpty() && !BooleanUtils.isTrue(request.getConfirmed());
         String status = confirmRequired ? AgentExecutionStatus.WAITING_CONFIRMATION : AgentExecutionStatus.CREATED;
         Project project = projectMapper.selectByPrimaryKey(projectId);
         long now = System.currentTimeMillis();
@@ -206,7 +241,7 @@ public class AgentExecutionService {
         task.setLoginMode(request.getLoginMode());
         task.setIdempotencyKey(StringUtils.trimToNull(request.getIdempotencyKey()));
         task.setConfirmRequired(confirmRequired);
-        task.setConfirmationReason(confirmRequired ? "执行范围超过 " + DEFAULT_CONFIRM_THRESHOLD + " 条，需要确认后继续" : null);
+        task.setConfirmationReason(confirmRequired ? String.join("；", confirmReasons) + "，需要确认后继续" : null);
         task.setTotalCount(cases.size());
         task.setSuccessCount(0);
         task.setFailedCount(0);
@@ -236,8 +271,20 @@ public class AgentExecutionService {
         }
         appendEvent(task.getId(), null, "INFO", "TASK_CREATED", "AI 执行任务已创建", Map.of(
                 "total", cases.size(),
-                "confirmRequired", confirmRequired
+                "confirmRequired", confirmRequired,
+                "highRisk", !highRiskSignals.isEmpty(),
+                "estimatedMinutes", estimateMinutes(cases.size())
         ));
+        agentExecLogService.audit("AI_EXECUTION_CREATE", task.getId(), JSON.toJSONString(Map.of(
+                "projectId", projectId,
+                "testPlanId", testPlanId,
+                "total", cases.size(),
+                "confirmRequired", confirmRequired,
+                "source", task.getSource()
+        )));
+        if (!confirmRequired) {
+            advanceAfterPrepare(task.getId());
+        }
         return get(task.getId());
     }
 
@@ -265,14 +312,34 @@ public class AgentExecutionService {
         assertNotTerminal(task);
         agentExecutionMapper.confirmTask(id, AgentExecutionStatus.PREPARING_BROWSER, requireUserId(), System.currentTimeMillis());
         appendEvent(id, null, "INFO", "TASK_CONFIRMED", StringUtils.defaultIfBlank(reason, "任务范围已确认"), null);
+        agentExecLogService.audit("AI_EXECUTION_CONFIRM", id, StringUtils.defaultIfBlank(reason, "confirmed"));
+        advanceAfterPrepare(id);
         return get(id);
     }
 
     public AgentExecutionTaskDTO loginReady(String id, String reason) {
         AgentExecutionTaskDTO task = requireTask(id);
         assertNotTerminal(task);
+        if (!List.of(AgentExecutionStatus.WAITING_LOGIN, AgentExecutionStatus.PAUSED, AgentExecutionStatus.PREPARING_BROWSER)
+                .contains(task.getStatus())) {
+            throw new MSException("当前状态不允许登录恢复：" + task.getStatus());
+        }
         agentExecutionMapper.updateTaskStatus(id, AgentExecutionStatus.RUNNING, requireUserId(), System.currentTimeMillis());
         appendEvent(id, null, "INFO", "LOGIN_READY", StringUtils.defaultIfBlank(reason, "登录已恢复，可继续执行"), null);
+        agentExecLogService.audit("AI_EXECUTION_LOGIN_READY", id, StringUtils.defaultIfBlank(reason, "login-ready"));
+        return get(id);
+    }
+
+    public AgentExecutionTaskDTO pause(String id, String reason) {
+        AgentExecutionTaskDTO task = requireTask(id);
+        assertNotTerminal(task);
+        if (!List.of(AgentExecutionStatus.RUNNING, AgentExecutionStatus.WAITING_LOGIN, AgentExecutionStatus.PREPARING_BROWSER)
+                .contains(task.getStatus())) {
+            throw new MSException("当前状态不允许暂停：" + task.getStatus());
+        }
+        agentExecutionMapper.updateTaskStatus(id, AgentExecutionStatus.PAUSED, requireUserId(), System.currentTimeMillis());
+        appendEvent(id, null, "WARN", "TASK_PAUSED", StringUtils.defaultIfBlank(reason, "任务已暂停"), null);
+        agentExecLogService.audit("AI_EXECUTION_PAUSE", id, StringUtils.defaultIfBlank(reason, "paused"));
         return get(id);
     }
 
@@ -284,6 +351,7 @@ public class AgentExecutionService {
         if (!AgentExecutionStatus.TERMINAL.contains(task.getStatus())) {
             agentExecutionMapper.updateTaskStatus(id, AgentExecutionStatus.CANCELED, requireUserId(), System.currentTimeMillis());
             appendEvent(id, null, "WARN", "TASK_CANCELED", StringUtils.defaultIfBlank(reason, "任务已取消"), null);
+            agentExecLogService.audit("AI_EXECUTION_CANCEL", id, StringUtils.defaultIfBlank(reason, "canceled"));
         }
         return get(id);
     }
@@ -311,6 +379,11 @@ public class AgentExecutionService {
         if (AgentExecutionStatus.CANCELED.equals(task.getStatus())) {
             throw new MSException("执行任务已取消，禁止继续回写结果");
         }
+        if (!AgentExecutionStatus.TERMINAL.contains(task.getStatus())
+                && !AgentExecutionStatus.WRITING_BACK.equals(task.getStatus())) {
+            agentExecutionMapper.updateTaskStatus(taskId, AgentExecutionStatus.WRITING_BACK, requireUserId(), System.currentTimeMillis());
+            appendEvent(taskId, null, "INFO", "WRITING_BACK", "开始回写执行结果", null);
+        }
         String caseStatus = toCaseStatus(result);
         agentExecutionMapper.updateCaseStatus(taskId, caseId, caseStatus, result, null, System.currentTimeMillis());
         appendEvent(taskId, caseId, "INFO", "CASE_WRITEBACK_SUCCESS", "用例结果已回写：" + result, null);
@@ -321,14 +394,48 @@ public class AgentExecutionService {
         if (StringUtils.isAnyBlank(taskId, caseId)) {
             return;
         }
-        requireTask(taskId);
+        AgentExecutionTaskDTO task = requireTask(taskId);
+        if (!AgentExecutionStatus.TERMINAL.contains(task.getStatus())
+                && !AgentExecutionStatus.WRITING_BACK.equals(task.getStatus())) {
+            agentExecutionMapper.updateTaskStatus(taskId, AgentExecutionStatus.WRITING_BACK, requireUserId(), System.currentTimeMillis());
+        }
         agentExecutionMapper.updateCaseStatus(taskId, caseId, AgentExecutionStatus.FAILED, null,
                 StringUtils.abbreviate(message, 1000), System.currentTimeMillis());
         appendEvent(taskId, caseId, "ERROR", "CASE_WRITEBACK_FAILED", StringUtils.defaultString(message, "结果回写失败"), null);
         refreshCounts(taskId);
     }
 
+    public boolean existsWritebackIdempotency(String taskId, String caseId, String idempotencyKey) {
+        if (StringUtils.isAnyBlank(taskId, caseId, idempotencyKey)) {
+            return false;
+        }
+        return agentExecutionMapper.countWritebackIdempotency(taskId, caseId, idempotencyKey) > 0;
+    }
+
+    public void recordWritebackIdempotency(String taskId,
+                                           String caseId,
+                                           String idempotencyKey,
+                                           String projectId,
+                                           String lastExecResult) {
+        if (StringUtils.isAnyBlank(taskId, caseId, idempotencyKey)) {
+            return;
+        }
+        if (existsWritebackIdempotency(taskId, caseId, idempotencyKey)) {
+            return;
+        }
+        agentExecutionMapper.insertWritebackIdempotency(
+                IDGenerator.nextStr(),
+                taskId,
+                caseId,
+                idempotencyKey,
+                projectId,
+                lastExecResult,
+                requireUserId(),
+                System.currentTimeMillis());
+    }
+
     private void refreshCounts(String taskId) {
+        AgentExecutionTaskDTO task = requireTask(taskId);
         List<AgentExecutionCaseDTO> cases = agentExecutionMapper.selectCasesByTaskId(taskId);
         int success = 0;
         int failed = 0;
@@ -350,17 +457,83 @@ public class AgentExecutionService {
         }
         String status;
         if (unexecuted > 0) {
-            status = AgentExecutionStatus.RUNNING;
+            if (AgentExecutionStatus.HOLDING.contains(task.getStatus())
+                    || AgentExecutionStatus.WRITING_BACK.equals(task.getStatus())) {
+                status = task.getStatus();
+            } else {
+                status = AgentExecutionStatus.RUNNING;
+            }
         } else if (failed > 0 || blocked > 0 || skipped > 0) {
             status = success > 0 ? AgentExecutionStatus.PARTIAL_SUCCESS : AgentExecutionStatus.FAILED;
         } else {
-            status = AgentExecutionStatus.SUCCESS;
+            status = reconcileSuccessStatus(taskId, success);
         }
         agentExecutionMapper.updateTaskCounts(taskId, status, success, failed, blocked, skipped, unexecuted,
                 requireUserId(), System.currentTimeMillis());
     }
 
-    private List<AgentExecutionCaseDTO> resolveCreateCases(String projectId, String testPlanId, List<String> caseIds) {
+    private String reconcileSuccessStatus(String taskId, int successCount) {
+        int writebackEvents = agentExecutionMapper.countEventsByType(taskId, "CASE_WRITEBACK_SUCCESS");
+        int evidenceEvents = agentExecutionMapper.countEvidenceEvents(taskId);
+        if (writebackEvents < successCount) {
+            if (agentExecutionMapper.countEventsByType(taskId, "RECONCILE_WRITEBACK") == 0) {
+                appendEvent(taskId, null, "WARN", "RECONCILE_WRITEBACK",
+                        "回写事件数不足，禁止标记 SUCCESS（writeback=" + writebackEvents + ", success=" + successCount + "）", null);
+            }
+            return AgentExecutionStatus.PARTIAL_SUCCESS;
+        }
+        if (evidenceEvents <= 0) {
+            if (agentExecutionMapper.countEventsByType(taskId, "RECONCILE_EVIDENCE") == 0) {
+                appendEvent(taskId, null, "WARN", "RECONCILE_EVIDENCE",
+                        "证据未落库（截图/附件/HAR），按方案完成判定标记为 PARTIAL_SUCCESS", null);
+            }
+            return AgentExecutionStatus.PARTIAL_SUCCESS;
+        }
+        return AgentExecutionStatus.SUCCESS;
+    }
+
+    private void advanceAfterPrepare(String taskId) {
+        AgentExecutionTaskDTO task = requireTask(taskId);
+        if (AgentExecutionStatus.TERMINAL.contains(task.getStatus())) {
+            return;
+        }
+        if (!AgentExecutionStatus.PREPARING_BROWSER.equals(task.getStatus())
+                && !AgentExecutionStatus.CREATED.equals(task.getStatus())) {
+            if (AgentExecutionStatus.WAITING_CONFIRMATION.equals(task.getStatus())) {
+                return;
+            }
+        }
+        if (AgentExecutionStatus.CREATED.equals(task.getStatus())) {
+            agentExecutionMapper.updateTaskStatus(taskId, AgentExecutionStatus.PREPARING_BROWSER, requireUserId(), System.currentTimeMillis());
+            appendEvent(taskId, null, "INFO", "PREPARING_BROWSER", "开始准备受控浏览器会话", null);
+            task = requireTask(taskId);
+        }
+        String domain = extractDomain(task.getTargetUrl());
+        String userId = requireUserId();
+        long now = System.currentTimeMillis();
+        int runnerSessions = agentExecutionMapper.countActiveRunnerSessions(userId, domain, now);
+        int credentials = agentExecutionMapper.countCredentialReferences(task.getProjectId(), task.getEnvironmentId(), domain);
+        if (runnerSessions > 0) {
+            agentExecutionMapper.updateTaskStatus(taskId, AgentExecutionStatus.RUNNING, userId, now);
+            appendEvent(taskId, null, "INFO", "RUNNER_ATTACHED",
+                    "检测到已授权活动 Runner 会话，进入 RUNNING（真实页面操作仍依赖 Runner）",
+                    Map.of("domain", StringUtils.defaultString(domain), "runnerSessions", runnerSessions));
+            return;
+        }
+        if (credentials > 0) {
+            appendEvent(taskId, null, "INFO", "CREDENTIAL_REF_FOUND",
+                    "发现凭据引用，但凭据注入依赖 Runner，任务进入 WAITING_LOGIN",
+                    Map.of("credentialRefs", credentials));
+        } else {
+            appendEvent(taskId, null, "WARN", "WAITING_LOGIN",
+                    "无活动 Runner 会话且无可用凭据引用，请在受控窗口完成登录后继续",
+                    Map.of("domain", StringUtils.defaultString(domain)));
+        }
+        agentExecutionMapper.updateTaskStatus(taskId, AgentExecutionStatus.WAITING_LOGIN, userId, now);
+    }
+
+    private List<AgentExecutionCaseDTO> resolveCreateCases(String projectId, String testPlanId, List<String> caseIds,
+                                                           boolean projectWide) {
         List<String> orderedCaseIds;
         Map<String, String> planCaseMap = new LinkedHashMap<>();
         if (StringUtils.isNotBlank(testPlanId)) {
@@ -379,9 +552,14 @@ public class AgentExecutionService {
                     planCaseMap.put(planCase.getFunctionalCaseId(), planCase.getId());
                 }
             }
+        } else if (projectWide) {
+            orderedCaseIds = agentExecutionMapper.selectProjectCaseIds(projectId);
+            if (CollectionUtils.isEmpty(orderedCaseIds)) {
+                return List.of();
+            }
         } else {
             if (CollectionUtils.isEmpty(caseIds)) {
-                throw new MSException("计划外执行必须提供 caseIds");
+                throw new MSException("计划外执行必须提供 caseIds，或确认后使用 projectWide");
             }
             orderedCaseIds = new ArrayList<>(new LinkedHashSet<>(caseIds));
         }
@@ -441,14 +619,74 @@ public class AgentExecutionService {
 
     private void fillResolvedCases(AgentExecutionResolveResponse response, List<AgentCaseDTO> cases, String testPlanId,
                                    int threshold, String message) {
-        response.setStatus(CollectionUtils.size(cases) > threshold ? AgentExecutionStatus.WAITING_CONFIRMATION : AgentExecutionStatus.CREATED);
+        List<String> highRiskSignals = detectHighRiskSignals(cases.stream().map(AgentCaseDTO::getName).toList());
+        boolean overThreshold = CollectionUtils.size(cases) > threshold;
+        boolean highRisk = !highRiskSignals.isEmpty();
+        response.setStatus(overThreshold || highRisk ? AgentExecutionStatus.WAITING_CONFIRMATION : AgentExecutionStatus.CREATED);
         response.setExecutable(CollectionUtils.isNotEmpty(cases));
-        response.setConfirmationRequired(CollectionUtils.size(cases) > threshold);
-        response.setConfirmationReason(response.isConfirmationRequired() ? "执行范围超过 " + threshold + " 条，需要确认后继续" : null);
+        response.setConfirmationRequired(overThreshold || highRisk);
+        if (overThreshold && highRisk) {
+            response.setConfirmationReason("执行范围超过 " + threshold + " 条，且检测到高风险关键词，需要确认后继续");
+        } else if (overThreshold) {
+            response.setConfirmationReason("执行范围超过 " + threshold + " 条，需要确认后继续");
+        } else if (highRisk) {
+            response.setConfirmationReason("检测到高风险关键词：" + String.join("、", highRiskSignals) + "，需要确认后继续");
+        } else {
+            response.setConfirmationReason(null);
+        }
         response.setTestPlanId(testPlanId);
         response.setTotal(CollectionUtils.size(cases));
+        response.setEstimatedMinutes(estimateMinutes(CollectionUtils.size(cases)));
+        response.setHighRisk(highRisk);
+        response.setHighRiskSignals(highRiskSignals);
         response.setCases(cases);
         response.setMessage(message);
+    }
+
+    private boolean isExecutablePlanStatus(AgentTestPlanDTO plan) {
+        if (plan == null || StringUtils.isBlank(plan.getStatus())) {
+            return false;
+        }
+        if (StringUtils.equalsIgnoreCase(plan.getStatus(), TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED)) {
+            return false;
+        }
+        return EXECUTABLE_PLAN_STATUSES.stream().anyMatch(item -> StringUtils.equalsIgnoreCase(item, plan.getStatus()))
+                || StringUtils.equalsIgnoreCase(plan.getStatus(), TestPlanConstants.TEST_PLAN_STATUS_NOT_ARCHIVED);
+    }
+
+    private List<String> detectHighRiskSignals(List<String> texts) {
+        LinkedHashSet<String> matched = new LinkedHashSet<>();
+        if (CollectionUtils.isEmpty(texts)) {
+            return List.of();
+        }
+        for (String text : texts) {
+            if (StringUtils.isBlank(text)) {
+                continue;
+            }
+            String lower = text.toLowerCase(Locale.ROOT);
+            for (String keyword : HIGH_RISK_KEYWORDS) {
+                if (lower.contains(keyword.toLowerCase(Locale.ROOT))) {
+                    matched.add(keyword);
+                }
+            }
+        }
+        return new ArrayList<>(matched);
+    }
+
+    private int estimateMinutes(int caseCount) {
+        return Math.max(caseCount, 0) * ESTIMATE_MINUTES_PER_CASE;
+    }
+
+    private String extractDomain(String targetUrl) {
+        if (StringUtils.isBlank(targetUrl)) {
+            return null;
+        }
+        try {
+            URI uri = URI.create(targetUrl.trim());
+            return StringUtils.trimToNull(uri.getHost());
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private void assertPlanBelongsToProject(String projectId, String testPlanId) {

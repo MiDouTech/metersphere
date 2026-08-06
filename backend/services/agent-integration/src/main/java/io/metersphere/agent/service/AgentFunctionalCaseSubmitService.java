@@ -54,14 +54,39 @@ public class AgentFunctionalCaseSubmitService {
     public void submit(AgentCaseSubmitRequest request) {
         validateSubmitRequest(request);
         request.setProjectId(agentProjectService.resolveProjectId(request.getProjectId()));
+        if (isDuplicateWriteback(request)) {
+            return;
+        }
         if (StringUtils.isNotBlank(request.getTestPlanCaseId())) {
             submitInPlan(request);
         } else {
             submitOutOfPlan(request);
         }
+        recordWritebackIdempotency(request);
         if (StringUtils.isNotBlank(request.getExecutionTaskId())) {
-            agentExecutionService.markCaseWritebackSuccess(request.getExecutionTaskId(), request.getCaseId(), request.getLastExecResult());
+            agentExecutionService.markCaseWritebackSuccess(
+                    request.getExecutionTaskId(), request.getCaseId(), request.getLastExecResult());
         }
+    }
+
+    private boolean isDuplicateWriteback(AgentCaseSubmitRequest request) {
+        if (StringUtils.isAnyBlank(request.getExecutionTaskId(), request.getCaseId(), request.getIdempotencyKey())) {
+            return false;
+        }
+        return agentExecutionService.existsWritebackIdempotency(
+                request.getExecutionTaskId(), request.getCaseId(), request.getIdempotencyKey());
+    }
+
+    private void recordWritebackIdempotency(AgentCaseSubmitRequest request) {
+        if (StringUtils.isAnyBlank(request.getExecutionTaskId(), request.getCaseId(), request.getIdempotencyKey())) {
+            return;
+        }
+        agentExecutionService.recordWritebackIdempotency(
+                request.getExecutionTaskId(),
+                request.getCaseId(),
+                request.getIdempotencyKey(),
+                request.getProjectId(),
+                request.getLastExecResult());
     }
 
     private void validateSubmitRequest(AgentCaseSubmitRequest request) {
