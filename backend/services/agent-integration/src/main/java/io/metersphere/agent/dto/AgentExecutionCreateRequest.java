@@ -28,4 +28,6 @@ public class AgentExecutionCreateRequest {
     private String idempotencyKey;
     @Schema(description = "是否已确认大范围/高风险任务")
     private Boolean confirmed;
+    @Schema(description = "计划外项目级全量执行（须 confirmed=true 且 caseIds 为空）")
+    private Boolean projectWide;
 }

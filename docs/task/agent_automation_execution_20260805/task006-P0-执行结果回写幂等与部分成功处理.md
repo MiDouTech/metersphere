@@ -10,8 +10,9 @@
 - 已复用原 `AgentFunctionalCaseSubmitService` 计划内/计划外正式回写链路，不直接写正式执行结果表。
 - 单条回写成功后会同步更新 `ai_execution_case` 和 `ai_execution_task` 统计。
 - 批量回写中单条失败时会记录失败用例并刷新任务为 `PARTIAL_SUCCESS` 或 `FAILED`，不回滚已成功项。
-- 已验证：后端编译通过。
-- 未完整实现：`idempotencyKey` 字段已透传但尚未建立单条结果回写去重表/约束；附件关联仍复用现有链路，未实现 task012 的证据保留策略；单条非批量回写失败时还未单独落失败事件。
+- 已新增迁移 `V3.7.2_27__ai_execution_writeback_idempotency.sql`，并在提交前回查/成功后写入 `taskId + caseId + idempotencyKey` 去重。
+- 已验证：后端相关代码已落地；尚未补集成测试与真实环境重复提交验证。
+- 未完整实现：证据保留策略（task012）；无 `idempotencyKey` 时仍按原链路直接回写。
 
 ## 目标
 

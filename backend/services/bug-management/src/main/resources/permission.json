@@ -29,6 +29,32 @@
             "name": "permission.functional_case.comment"
           }
         ]
+      },
+      {
+        "id": "AI_EXECUTION",
+        "name": "permission.ai_execution.name",
+        "permissions": [
+          {
+            "id": "AI_EXECUTION:READ",
+            "name": "permission.ai_execution.read"
+          },
+          {
+            "id": "AI_EXECUTION:RUN",
+            "name": "permission.ai_execution.run"
+          },
+          {
+            "id": "AI_EXECUTION:CANCEL",
+            "name": "permission.ai_execution.cancel"
+          },
+          {
+            "id": "AI_EXECUTION:LOGIN",
+            "name": "permission.ai_execution.login"
+          },
+          {
+            "id": "AI_EXECUTION:ADMIN",
+            "name": "permission.ai_execution.admin"
+          }
+        ]
       }
     ],
     "order": 8

@@ -22,6 +22,8 @@
 | BUG-PRJ-001 | 2026-07-04 | [2026-07-04-BUG-PRJ-001-项目所属组织更新不生效.md](./2026-07-04-BUG-PRJ-001-项目所属组织更新不生效.md) | CommonProjectService.update |
 | BUG-AGENT-MCP-P0 | 2026-07-31 | [2026-07-31-BUG-AGENT-MCP-P0-任务未完整实现巡检.md](./2026-07-31-BUG-AGENT-MCP-P0-任务未完整实现巡检.md) | Agent MCP P0/P1 任务未完整实现巡检 |
 | BUG-PLAN-003 | 2026-08-03 | [2026-08-03-BUG-PLAN-003-测试计划执行人筛选错列.md](./2026-08-03-BUG-PLAN-003-测试计划执行人筛选错列.md) | 计划三类列表高级筛 executeUser 错列/双条件 |
+| BUG-AGENT-AUTOMATION | 2026-08-05 | [2026-08-05-BUG-AGENT-AUTOMATION-需求实现偏差巡检.md](./2026-08-05-BUG-AGENT-AUTOMATION-需求实现偏差巡检.md) | Agent 自动化执行方案 vs 实现偏差（未宣称完成） |
+| BUG-AI-CASE-GENERATION | 2026-08-05 | [2026-08-05-BUG-AI-CASE-GENERATION-需求实现偏差巡检.md](./2026-08-05-BUG-AI-CASE-GENERATION-需求实现偏差巡检.md) | AI 生成用例方案 vs 实现偏差 |
 
 ## 汇总文档
 

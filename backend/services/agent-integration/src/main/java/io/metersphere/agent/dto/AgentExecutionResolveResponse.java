@@ -15,6 +15,9 @@ public class AgentExecutionResolveResponse {
     private String testPlanId;
     private String message;
     private int total;
+    private Integer estimatedMinutes;
+    private boolean highRisk;
+    private List<String> highRiskSignals = new ArrayList<>();
     private List<AgentTestPlanDTO> candidatePlans = new ArrayList<>();
     private List<AgentCaseDTO> cases = new ArrayList<>();
     private List<String> warnings = new ArrayList<>();

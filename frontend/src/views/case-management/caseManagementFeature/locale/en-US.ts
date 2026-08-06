@@ -364,10 +364,26 @@ export default {
   'caseManagement.featureCase.aiExecution': 'AI Execution',
   'caseManagement.featureCase.aiExecutionConfirmTitle': 'Create AI execution task ({number} cases)',
   'caseManagement.featureCase.aiExecutionConfirmContent':
-    'Selected scope: {number} cases; test plan: not specified/out-of-plan; target environment: configure later on the automation execution page; target URL: configure later; browser: default; login mode: manual login or Runner session recovery; risk notice: backend revalidates project, permissions, deletion status, and scope.',
+    'Only the selected {number} cases will run; test plan: none (out-of-plan writeback). Backend revalidates project, permissions, deletion, and thresholds. Cases with delete/payment/publish/permission keywords require confirmation.',
   'caseManagement.featureCase.aiExecutionStart': 'Create task',
   'caseManagement.featureCase.aiExecutionCreated': 'AI execution task created',
   'caseManagement.featureCase.aiExecutionNoSelection': 'Select cases before starting AI execution',
   'caseManagement.featureCase.aiExecutionSelectAllNotSupported':
     'AI execution does not support selecting all results yet. Select explicit cases first.',
+  'caseManagement.featureCase.aiExecutionEnvironment': 'Target environment',
+  'caseManagement.featureCase.aiExecutionEnvironmentPlaceholder': 'Environment ID or name',
+  'caseManagement.featureCase.aiExecutionEnvironmentRequired': 'Enter the target environment',
+  'caseManagement.featureCase.aiExecutionTargetUrl': 'Target URL',
+  'caseManagement.featureCase.aiExecutionTargetUrlPlaceholder': 'e.g. https://test.example.com',
+  'caseManagement.featureCase.aiExecutionTargetUrlRequired': 'Enter the target URL',
+  'caseManagement.featureCase.aiExecutionBrowser': 'Browser',
+  'caseManagement.featureCase.aiExecutionLoginMode': 'Login mode',
+  'caseManagement.featureCase.aiExecutionLoginManual': 'Manual login then resume',
+  'caseManagement.featureCase.aiExecutionLoginSession': 'Attach authorized Runner session',
+  'caseManagement.featureCase.aiExecutionLoginCredential': 'Credential reference inject (needs Runner)',
+  'caseManagement.featureCase.aiExecutionLargeConfirm': 'Large-scope confirmation',
+  'caseManagement.featureCase.aiExecutionLargeConfirmTip':
+    'Selected {number} cases (>20). I confirm the scope, environment, and risks.',
+  'caseManagement.featureCase.aiExecutionLargeConfirmRequired':
+    'Confirmation is required when more than 20 cases are selected',
 };

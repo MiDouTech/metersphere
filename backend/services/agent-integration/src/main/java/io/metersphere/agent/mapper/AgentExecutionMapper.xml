@@ -281,4 +281,67 @@
         ORDER BY fc.pos ASC, fc.create_time DESC
         LIMIT #{limit}
     </select>
+
+    <select id="selectProjectCaseIds" resultType="string">
+        SELECT fc.id
+        FROM functional_case fc
+        WHERE fc.project_id = #{projectId}
+          AND fc.deleted = 0
+          AND fc.latest = 1
+        ORDER BY fc.pos ASC, fc.create_time DESC
+    </select>
+
+    <select id="countWritebackIdempotency" resultType="int">
+        SELECT COUNT(1)
+        FROM ai_execution_writeback_idempotency
+        WHERE task_id = #{taskId}
+          AND case_id = #{caseId}
+          AND idempotency_key = #{idempotencyKey}
+    </select>
+
+    <insert id="insertWritebackIdempotency">
+        INSERT INTO ai_execution_writeback_idempotency (
+            id, task_id, case_id, idempotency_key, project_id, last_exec_result, create_user, create_time
+        ) VALUES (
+            #{id}, #{taskId}, #{caseId}, #{idempotencyKey}, #{projectId}, #{lastExecResult}, #{createUser}, #{createTime}
+        )
+    </insert>
+
+    <select id="countActiveRunnerSessions" resultType="int">
+        SELECT COUNT(1)
+        FROM ai_runner_session
+        WHERE user_id = #{userId}
+          AND status = 'ACTIVE'
+          AND (lease_expire_time IS NULL OR lease_expire_time &gt; #{now})
+          <if test="domain != null and domain != ''">
+              AND (domain = #{domain} OR domain LIKE CONCAT('%.', #{domain}) OR #{domain} LIKE CONCAT('%.', domain))
+          </if>
+    </select>
+
+    <select id="countCredentialReferences" resultType="int">
+        SELECT COUNT(1)
+        FROM ai_credential_reference
+        WHERE project_id = #{projectId}
+          AND enable = 1
+          <if test="domain != null and domain != ''">
+              AND domain = #{domain}
+          </if>
+          <if test="environmentId != null and environmentId != ''">
+              AND (environment_id = #{environmentId} OR environment_id IS NULL OR environment_id = '')
+          </if>
+    </select>
+
+    <select id="countEventsByType" resultType="int">
+        SELECT COUNT(1)
+        FROM ai_execution_event
+        WHERE task_id = #{taskId}
+          AND event_type = #{eventType}
+    </select>
+
+    <select id="countEvidenceEvents" resultType="int">
+        SELECT COUNT(1)
+        FROM ai_execution_event
+        WHERE task_id = #{taskId}
+          AND event_type IN ('EVIDENCE_ATTACHED', 'ARTIFACT_ATTACHED', 'SCREENSHOT', 'VIDEO', 'HAR')
+    </select>
 </mapper>
