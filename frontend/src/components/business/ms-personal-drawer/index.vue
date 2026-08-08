@@ -23,7 +23,8 @@
         <apiKey v-else-if="activeMenu === 'apiKey'" />
         <localExec v-else-if="activeMenu === 'local'" />
         <tripartite v-else-if="activeMenu === 'tripartite'" />
-        <AgentIntegration v-else-if="activeMenu === 'agentIntegration'" />
+        <AgentIntegration v-else-if="activeMenu === 'agentIntegration'" compact />
+        <userAgent v-else-if="activeMenu === 'userAgent'" />
         <modelConfig v-else-if="activeMenu === 'modelConfig'" model-key="personal" />
       </div>
     </div>
@@ -41,6 +42,7 @@
   import localExec from './components/localExec.vue';
   import setPsw from './components/setPsw.vue';
   import tripartite from './components/tripartite.vue';
+  import userAgent from './components/userAgent.vue';
   import AgentIntegration from '@/views/setting/system/agentIntegration/index.vue';
 
   import { useI18n } from '@/hooks/useI18n';
@@ -98,6 +100,12 @@
       name: 'agentIntegration',
       title: t('ms.personal.agentIntegration'),
       level: 2,
+    },
+    {
+      name: 'userAgent',
+      title: t('ms.personal.userAgent.menu'),
+      level: 2,
+      permission: ['SYSTEM_PERSONAL_AI_AGENT:READ'],
     },
     {
       name: 'modelConfig',

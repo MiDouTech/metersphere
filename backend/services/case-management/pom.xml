@@ -79,6 +79,14 @@
             <artifactId>commons-io</artifactId>
             <version>2.21.0</version>
         </dependency>
+        <!-- java-json-tools initializes RFC email format validators through the
+             legacy javax.mail API. The SDK excludes mailapi globally, so this
+             service must provide the small compatibility runtime explicitly. -->
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
+        </dependency>
     </dependencies>
 
     <build>

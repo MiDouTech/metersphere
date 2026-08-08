@@ -2,6 +2,7 @@ package io.metersphere.functional.service;
 
 import io.metersphere.functional.constants.AiCaseConversationStatus;
 import io.metersphere.functional.dto.AiCaseConversationDTO;
+import io.metersphere.functional.dto.AiResourceSelection;
 import io.metersphere.functional.dto.AiCaseConversationPageResponse;
 import io.metersphere.functional.dto.AiCaseMessageDTO;
 import io.metersphere.functional.dto.AiCaseMessagePageResponse;
@@ -37,7 +38,7 @@ public class AiCaseConversationService {
     @Resource
     private AiCaseAgentRepository repository;
     @Resource
-    private AiCaseAvailableModelService availableModelService;
+    private AiCaseAvailableResourceService availableResourceService;
     @Resource
     private AiAuditService aiAuditService;
     @Resource
@@ -49,7 +50,8 @@ public class AiCaseConversationService {
                 || !StringUtils.equals(project.getOrganizationId(), request.getOrganizationId())) {
             throw new MSException("项目不存在或组织与项目不匹配");
         }
-        availableModelService.requireAllowed(request.getProjectId(), request.getModelSourceId(), userId);
+        AiResourceSelection selection = availableResourceService.requireAllowed(request.getProjectId(),
+                request.getResourceType(), request.getResourceId(), request.getModelSourceId(), userId);
         long now = System.currentTimeMillis();
         AiCaseConversationDTO conversation = new AiCaseConversationDTO();
         conversation.setId(IDGenerator.nextStr());
@@ -57,14 +59,14 @@ public class AiCaseConversationService {
         conversation.setOrganizationId(request.getOrganizationId());
         conversation.setUserId(userId);
         conversation.setTitle(StringUtils.left(StringUtils.defaultIfBlank(StringUtils.trim(request.getTitle()), "新对话"), 255));
-        conversation.setModelSourceId(request.getModelSourceId());
+        applySelection(conversation, selection);
         conversation.setStatus(AiCaseConversationStatus.ACTIVE.name());
         conversation.setSystemPromptVersion(SYSTEM_PROMPT_VERSION);
         conversation.setCreateTime(now);
         conversation.setUpdateTime(now);
         repository.insertConversation(conversation);
         audit(conversation, userId, "AI_CASE_CONVERSATION_CREATE", Map.of(
-                "modelSourceId", conversation.getModelSourceId()));
+                "resourceType", conversation.getResourceType(), "resourceId", conversation.getResourceId()));
         return conversation;
     }
 
@@ -126,22 +128,32 @@ public class AiCaseConversationService {
 
     public AiCaseConversationDTO switchModel(AiCaseConversationModelRequest request, String userId) {
         AiCaseConversationDTO conversation = requireConversation(request.getConversationId(), request.getProjectId(), userId);
-        availableModelService.requireAllowed(request.getProjectId(), request.getModelSourceId(), userId);
+        AiResourceSelection selection = availableResourceService.requireAllowed(request.getProjectId(),
+                request.getResourceType(), request.getResourceId(), request.getModelSourceId(), userId);
         if (repository.countActiveExecutions(conversation.getId(), conversation.getProjectId(), userId) > 0) {
             throw new MSException("当前会话存在运行中的 AI 请求，请结束后再切换模型");
         }
         long now = System.currentTimeMillis();
-        if (repository.updateConversationModel(conversation.getId(), conversation.getProjectId(), userId,
-                request.getModelSourceId(), now) == 0) {
+        if (repository.updateConversationResource(conversation.getId(), conversation.getProjectId(), userId,
+                selection.resourceType(), selection.resourceId(), selection.modelSourceId(),
+                selection.agentConnectionId(), now) == 0) {
             throw new MSException("会话不存在或无权限");
         }
-        String previousModel = conversation.getModelSourceId();
-        conversation.setModelSourceId(request.getModelSourceId());
+        String previousType = conversation.getResourceType();
+        String previousResource = conversation.getResourceId();
+        applySelection(conversation, selection);
         conversation.setUpdateTime(now);
-        audit(conversation, userId, "AI_CASE_CONVERSATION_MODEL_SWITCH", Map.of(
-                "previousModelSourceId", previousModel,
-                "modelSourceId", request.getModelSourceId()));
+        audit(conversation, userId, "AI_CASE_CONVERSATION_RESOURCE_SWITCH", Map.of(
+                "previousResourceType", previousType, "previousResourceId", previousResource,
+                "resourceType", selection.resourceType(), "resourceId", selection.resourceId()));
         return conversation;
+    }
+
+    private void applySelection(AiCaseConversationDTO conversation, AiResourceSelection selection) {
+        conversation.setResourceType(selection.resourceType());
+        conversation.setResourceId(selection.resourceId());
+        conversation.setModelSourceId(selection.modelSourceId());
+        conversation.setAgentConnectionId(selection.agentConnectionId());
     }
 
     public AiCaseConversationDTO archive(AiCaseConversationOperationRequest request, String userId) {

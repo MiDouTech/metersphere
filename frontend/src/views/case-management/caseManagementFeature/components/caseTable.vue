@@ -58,6 +58,11 @@
                   :text="t('settings.navbar.ai')"
                   @click="openAI"
                 />
+                <a-tooltip :content="aiExecutionEntryTip">
+                  <a-button v-permission="['AI_EXECUTION:RUN']" class="ml-[12px]" @click="handleAiExecutionEntry">
+                    {{ t('caseManagement.featureCase.aiExecution') }}
+                  </a-button>
+                </a-tooltip>
               </div>
             </template>
             <template #right>
@@ -130,7 +135,6 @@
             class="mt-[8px]"
             :action-config="tableBatchActions"
             :not-show-table-filter="isAdvancedSearchMode"
-            @selected-change="handleTableSelect"
             v-on="tableEventHandlers"
             @batch-action="handleTableBatch"
             @change="changeHandler"
@@ -433,9 +437,10 @@
       :ok-button-props="{
         disabled:
           aiExecutionSubmitting ||
-          !aiExecutionForm.providerId ||
+          (aiExecutionForm.executionMode === 'RUNNER' && !aiExecutionForm.providerId) ||
           !aiExecutionForm.targetUrl ||
-          !aiExecutionForm.environmentId,
+          !aiExecutionForm.environmentId ||
+          (aiExecutionForm.executionMode === 'AGENT' && !selectedAiExecutionAgentConfigured),
       }"
       :confirm-loading="aiExecutionSubmitting"
       :on-before-ok="submitAiExecutionTask"
@@ -448,7 +453,31 @@
         {{ t('caseManagement.featureCase.aiExecutionConfirmContent', { number: aiExecutionCaseIds.length }) }}
       </a-alert>
       <a-form :model="aiExecutionForm" layout="vertical">
-        <a-form-item :label="t('caseManagement.featureCase.aiExecutionModel')" required>
+        <a-form-item :label="t('caseManagement.featureCase.aiExecutionMode')" required>
+          <a-radio-group v-model:model-value="aiExecutionForm.executionMode" type="button">
+            <a-radio value="RUNNER">{{ t('caseManagement.featureCase.aiExecutionModeRunner') }}</a-radio>
+            <a-radio value="AGENT">{{ t('caseManagement.featureCase.aiExecutionModeAgent') }}</a-radio>
+          </a-radio-group>
+        </a-form-item>
+        <a-form-item
+          v-if="aiExecutionForm.executionMode === 'AGENT'"
+          :label="t('caseManagement.featureCase.aiExecutionAgent')"
+          required
+        >
+          <a-select
+            v-model:model-value="aiExecutionForm.agentType"
+            :options="aiExecutionAgentSelectOptions"
+            :placeholder="t('caseManagement.featureCase.aiExecutionAgentPlaceholder')"
+          />
+          <div class="mt-[4px] text-[12px] text-[var(--color-text-3)]">
+            {{ t('caseManagement.featureCase.aiExecutionAgentTip') }}
+          </div>
+        </a-form-item>
+        <a-form-item
+          v-if="aiExecutionForm.executionMode === 'RUNNER'"
+          :label="t('caseManagement.featureCase.aiExecutionModel')"
+          required
+        >
           <a-select
             v-model:model-value="aiExecutionForm.providerId"
             :options="aiExecutionModelOptions"
@@ -626,7 +655,13 @@
   import ThirdDemandDrawer from './tabContent/tabDemand/thirdDemandDrawer.vue';
   import BatchUpdateExecutorModal from '@/views/test-plan/testPlan/components/batchUpdateExecutorModal.vue';
 
-  import { createAiExecutionTask } from '@/api/modules/ai-execution';
+  import {
+    type AiExecutionAgentOption,
+    type AiExecutionAgentType,
+    type AiExecutionMode,
+    createAiExecutionTask,
+    getAiExecutionAgents,
+  } from '@/api/modules/ai-execution';
   import {
     batchAssociationDemand,
     batchCopyToModules,
@@ -686,7 +721,7 @@
   import { CacheTabTypeEnum } from '@/enums/cacheTabEnum';
   import { MinderKeyEnum } from '@/enums/minderEnum';
   import { BugManagementRouteEnum, CaseManagementRouteEnum, RouteEnum } from '@/enums/routeEnum';
-  import { ColumnEditTypeEnum, TableKeyEnum } from '@/enums/tableEnum';
+  import { ColumnEditTypeEnum, SelectAllEnum, TableKeyEnum } from '@/enums/tableEnum';
   import { FilterRemoteMethodsEnum, FilterSlotNameEnum } from '@/enums/tableFilterEnum';
   import { WorkNavValueEnum } from '@/enums/workbenchEnum';
 
@@ -1615,12 +1650,6 @@
     emitTableParams(true);
   }
 
-  const tableSelected = ref<(string | number)[]>([]);
-
-  function handleTableSelect(selectArr: (string | number)[]) {
-    tableSelected.value = selectArr;
-  }
-
   async function getLoadListParams() {
     setLoadListParams(await initTableParams());
   }
@@ -2103,7 +2132,10 @@
   const aiExecutionVisible = ref(false);
   const aiExecutionSubmitting = ref(false);
   const aiExecutionCaseIds = ref<string[]>([]);
+  const aiExecutionAgentOptions = ref<AiExecutionAgentOption[]>([]);
   const aiExecutionForm = reactive({
+    executionMode: 'RUNNER' as AiExecutionMode,
+    agentType: undefined as AiExecutionAgentType | undefined,
     providerId: localStorage.getItem('aiChatModel') || '',
     environmentId: '',
     targetUrl: '',
@@ -2115,14 +2147,44 @@
   const aiExecutionModelOptions = computed(() =>
     (aiStore.aiSourceNameList || []).map((item) => ({ label: item.name, value: item.id }))
   );
+  const aiExecutionAgentSelectOptions = computed(() =>
+    aiExecutionAgentOptions.value.map((item) => ({
+      label: item.configured
+        ? item.name
+        : `${item.name} (${t('caseManagement.featureCase.aiExecutionAgentNotConfigured')})`,
+      value: item.name.toUpperCase() as AiExecutionAgentType,
+      disabled: !item.configured,
+    }))
+  );
+  const selectedAiExecutionAgentConfigured = computed(
+    () =>
+      aiExecutionForm.executionMode !== 'AGENT' ||
+      aiExecutionAgentOptions.value.some(
+        (item) => item.configured && item.name.toUpperCase() === aiExecutionForm.agentType
+      )
+  );
+  const selectedAiExecutionCaseIds = computed(() =>
+    Array.from(propsRes.value.selectedKeys || [])
+      .filter(Boolean)
+      .map(String)
+  );
+  const aiExecutionEntryTip = computed(() =>
+    selectedAiExecutionCaseIds.value.length
+      ? t('caseManagement.featureCase.aiExecutionSelectedTip', {
+          number: selectedAiExecutionCaseIds.value.length,
+        })
+      : t('caseManagement.featureCase.aiExecutionWorkbenchTip')
+  );
 
   // 关联需求
   function handleAssociatedDemand() {
     showThirdDrawer.value = true;
   }
 
-  async function createAiExecutionFromSelection() {
-    const { selectedIds, selectAll } = batchParams.value;
+  async function createAiExecutionFromSelection(
+    selection: Pick<BatchActionQueryParams, 'selectedIds' | 'selectAll'> = batchParams.value
+  ) {
+    const { selectedIds, selectAll } = selection;
     if (selectAll) {
       Message.warning(t('caseManagement.featureCase.aiExecutionSelectAllNotSupported'));
       return;
@@ -2136,10 +2198,17 @@
     if (!aiStore.aiSourceNameList.length) {
       await aiStore.getAISourceNameList();
     }
+    try {
+      aiExecutionAgentOptions.value = await getAiExecutionAgents(currentProjectId.value);
+    } catch {
+      aiExecutionAgentOptions.value = [];
+    }
     if (!aiExecutionModelOptions.value.some((item) => item.value === aiExecutionForm.providerId)) {
       aiExecutionForm.providerId = aiExecutionModelOptions.value[0]?.value || '';
     }
     aiExecutionForm.environmentId = '';
+    aiExecutionForm.executionMode = 'RUNNER';
+    aiExecutionForm.agentType = undefined;
     aiExecutionForm.targetUrl = '';
     aiExecutionForm.browserType = 'chromium';
     aiExecutionForm.loginMode = 'MANUAL';
@@ -2147,9 +2216,27 @@
     aiExecutionVisible.value = true;
   }
 
+  function handleAiExecutionEntry() {
+    const selectAll = propsRes.value.selectorStatus === SelectAllEnum.ALL;
+    if (selectAll || selectedAiExecutionCaseIds.value.length) {
+      createAiExecutionFromSelection({
+        selectedIds: selectedAiExecutionCaseIds.value,
+        selectAll,
+      });
+      return;
+    }
+    router.push({
+      name: BugManagementRouteEnum.BUG_MANAGEMENT_AUTOMATION_EXECUTION,
+    });
+  }
+
   async function submitAiExecutionTask() {
-    if (!aiExecutionForm.providerId) {
+    if (aiExecutionForm.executionMode === 'RUNNER' && !aiExecutionForm.providerId) {
       Message.warning(t('caseManagement.featureCase.aiExecutionModelRequired'));
+      return false;
+    }
+    if (aiExecutionForm.executionMode === 'AGENT' && !selectedAiExecutionAgentConfigured.value) {
+      Message.warning(t('caseManagement.featureCase.aiExecutionAgentRequired'));
       return false;
     }
     if (!aiExecutionForm.targetUrl?.trim()) {
@@ -2177,7 +2264,9 @@
         targetUrl: aiExecutionForm.targetUrl.trim(),
         browserType: aiExecutionForm.browserType,
         loginMode: aiExecutionForm.loginMode,
-        providerId: aiExecutionForm.providerId,
+        providerId: aiExecutionForm.executionMode === 'RUNNER' ? aiExecutionForm.providerId : undefined,
+        executionMode: aiExecutionForm.executionMode,
+        agentType: aiExecutionForm.executionMode === 'AGENT' ? aiExecutionForm.agentType : undefined,
         idempotencyKey: `case-list-${currentProjectId.value}-${Date.now()}`,
       });
       Message.success(t('caseManagement.featureCase.aiExecutionCreated'));

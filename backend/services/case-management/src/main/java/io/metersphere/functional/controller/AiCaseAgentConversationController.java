@@ -6,6 +6,7 @@ import io.metersphere.functional.dto.AiCaseConversationPageResponse;
 import io.metersphere.functional.dto.AiCaseExecutionDTO;
 import io.metersphere.functional.dto.AiCaseExecutionEventDTO;
 import io.metersphere.functional.dto.AiCaseMessagePageResponse;
+import io.metersphere.functional.dto.AiSelectableResourceDTO;
 import io.metersphere.functional.request.AiCaseAgentCancelRequest;
 import io.metersphere.functional.request.AiCaseAgentChatRequest;
 import io.metersphere.functional.request.AiCaseAgentRetryRequest;
@@ -16,6 +17,7 @@ import io.metersphere.functional.request.AiCaseConversationPageRequest;
 import io.metersphere.functional.request.AiCaseConversationRenameRequest;
 import io.metersphere.functional.request.AiCaseMessagePageRequest;
 import io.metersphere.functional.service.AiCaseAvailableModelService;
+import io.metersphere.functional.service.AiCaseAvailableResourceService;
 import io.metersphere.functional.service.AiCaseAgentOrchestrator;
 import io.metersphere.functional.service.AiCaseConversationService;
 import io.metersphere.sdk.constants.PermissionConstants;
@@ -48,6 +50,8 @@ public class AiCaseAgentConversationController {
     private AiCaseConversationService conversationService;
     @Resource
     private AiCaseAvailableModelService availableModelService;
+    @Resource
+    private AiCaseAvailableResourceService availableResourceService;
     @Resource
     private AiCaseAgentOrchestrator agentOrchestrator;
 
@@ -101,6 +105,14 @@ public class AiCaseAgentConversationController {
         return availableModelService.list(projectId, SessionUtils.getUserId());
     }
 
+    @GetMapping("/resources")
+    @Operation(summary = "查询当前项目可用的模型 API 与个人 Agent 资源")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_READ)
+    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    public List<AiSelectableResourceDTO> resources(@RequestParam String projectId) {
+        return availableResourceService.list(projectId, SessionUtils.getUserId());
+    }
+
     @PostMapping("/conversation/create")
     @Operation(summary = "创建用例 Agent 会话")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
@@ -146,6 +158,14 @@ public class AiCaseAgentConversationController {
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public AiCaseConversationDTO switchModel(@Validated @RequestBody AiCaseConversationModelRequest request) {
+        return conversationService.switchModel(request, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/conversation/resource")
+    @Operation(summary = "切换用例 Agent 会话 AI 资源")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
+    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
+    public AiCaseConversationDTO switchResource(@Validated @RequestBody AiCaseConversationModelRequest request) {
         return conversationService.switchModel(request, SessionUtils.getUserId());
     }
 

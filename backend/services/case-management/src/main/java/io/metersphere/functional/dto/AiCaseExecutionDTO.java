@@ -13,6 +13,11 @@ public class AiCaseExecutionDTO {
     private String assistantMessageId;
     private String executionType;
     private String status;
+    private String resourceType;
+    private String requestedResourceId;
+    private String actualResourceId;
+    private String agentConnectionId;
+    private String agentDeviceId;
     private String requestedModelSourceId;
     private String actualModelSourceId;
     private Boolean cancelRequested;

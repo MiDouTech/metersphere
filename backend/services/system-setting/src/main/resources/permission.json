@@ -429,6 +429,21 @@
             "id": "SYSTEM_PERSONAL_API_KEY:READ+DELETE"
           }
         ]
+      },
+      {
+        "id": "AI_AGENT",
+        "name": "permission.ai_agent",
+        "permissions": [
+          {
+            "id": "SYSTEM_PERSONAL_AI_AGENT:READ"
+          },
+          {
+            "id": "SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT"
+          },
+          {
+            "id": "SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE"
+          }
+        ]
       }
     ],
     "order": 2

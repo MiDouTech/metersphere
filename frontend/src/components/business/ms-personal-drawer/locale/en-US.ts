@@ -90,4 +90,28 @@ export default {
   'ms.personal.azurePlaceholder': 'Please enter Personal Access Tokens',
   'ms.personal.noData': 'No data yet, please ',
   'ms.personal.empty': 'No data',
+  'ms.personal.userAgent.menu': 'My AI Agents',
+  'ms.personal.userAgent.title': 'My AI Agents',
+  'ms.personal.userAgent.description':
+    'Use your authorized official Agents through local Bridge while keeping the model API channel.',
+  'ms.personal.userAgent.securityNotice':
+    'Requirement text and selected documents are sent to your authorized Agent. The platform never asks for third-party passwords, cookies, or login tokens, and does not allow arbitrary local file or command access by default.',
+  'ms.personal.userAgent.status': 'Status',
+  'ms.personal.userAgent.device': 'Device',
+  'ms.personal.userAgent.account': 'Account',
+  'ms.personal.userAgent.pair': 'Pair Bridge',
+  'ms.personal.userAgent.connect': 'Create connection',
+  'ms.personal.userAgent.authorize': 'Official sign-in',
+  'ms.personal.userAgent.authorizationStarted': 'The local Bridge was asked to start the official sign-in flow.',
+  'ms.personal.userAgent.revoke': 'Revoke',
+  'ms.personal.userAgent.devices': 'Paired devices',
+  'ms.personal.userAgent.os': 'OS',
+  'ms.personal.userAgent.bridgeVersion': 'Bridge version',
+  'ms.personal.userAgent.pairingCode': 'One-time pairing code',
+  'ms.personal.userAgent.pairingExpiry': 'Enter it in Agent Bridge within 5 minutes. It can only be used once.',
+  'ms.personal.userAgent.connectionCreated': 'Agent connection created. Complete the official sign-in on your device.',
+  'ms.personal.userAgent.workbuddyDescription':
+    'Use WorkBuddy Managed Agent through the local Bridge (kept disabled until the formal SDK is accepted).',
+  'ms.personal.userAgent.codexDescription': 'Use the official local Codex CLI and its existing sign-in.',
+  'ms.personal.userAgent.cursorDescription': 'Use the official local Cursor Agent CLI inside an approved OS sandbox.',
 };

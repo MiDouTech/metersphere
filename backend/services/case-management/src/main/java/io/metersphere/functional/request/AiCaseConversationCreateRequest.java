@@ -10,8 +10,11 @@ public class AiCaseConversationCreateRequest {
     private String projectId;
     @NotBlank
     private String organizationId;
-    @NotBlank
     private String modelSourceId;
+    @Size(max = 32)
+    private String resourceType;
+    @Size(max = 50)
+    private String resourceId;
     @Size(max = 255)
     private String title;
 }

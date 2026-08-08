@@ -361,7 +361,20 @@ export default {
   'caseManagement.featureCase.progressBlocked': 'Blocked',
   'caseManagement.featureCase.progressSkipped': 'Skipped',
   'caseManagement.featureCase.progressUnexecuted': 'Unexecuted',
-  'caseManagement.featureCase.aiExecution': 'AI Execution',
+  'caseManagement.featureCase.aiExecution': 'AI Automation',
+  'caseManagement.featureCase.aiExecutionSelectedTip':
+    'Run the {number} selected cases after configuring the execution',
+  'caseManagement.featureCase.aiExecutionWorkbenchTip':
+    'No cases selected. Open the natural-language AI execution workbench',
+  'caseManagement.featureCase.aiExecutionMode': 'Execution method',
+  'caseManagement.featureCase.aiExecutionModeRunner': 'Platform Runner',
+  'caseManagement.featureCase.aiExecutionModeAgent': 'Agent',
+  'caseManagement.featureCase.aiExecutionAgent': 'Execution Agent',
+  'caseManagement.featureCase.aiExecutionAgentPlaceholder': 'Select WorkBuddy, Cursor, or Codex',
+  'caseManagement.featureCase.aiExecutionAgentTip':
+    'The configured Agent Gateway is invoked after the task is committed.',
+  'caseManagement.featureCase.aiExecutionAgentNotConfigured': 'Not configured',
+  'caseManagement.featureCase.aiExecutionAgentRequired': 'Select a configured and available Agent',
   'caseManagement.featureCase.aiExecutionConfirmTitle': 'Create AI execution task ({number} cases)',
   'caseManagement.featureCase.aiExecutionConfirmContent':
     'Only the selected {number} cases will run; test plan: none (out-of-plan writeback). Backend revalidates project, permissions, deletion, and thresholds. Cases with delete/payment/publish/permission keywords require confirmation.',

@@ -31,6 +31,10 @@ public class AgentExecutionCreateRequest {
     private String loginMode;
     private String providerId;
     private String runnerId;
+    @Schema(description = "执行方式：RUNNER/AGENT，默认 RUNNER")
+    private String executionMode;
+    @Schema(description = "Agent 类型：WORKBUDDY/CURSOR/CODEX；executionMode=AGENT 时必填")
+    private String agentType;
     private String executedBy;
     @Schema(description = "幂等键")
     private String idempotencyKey;

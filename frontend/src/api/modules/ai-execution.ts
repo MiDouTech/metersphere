@@ -1,5 +1,22 @@
 import MSR from '@/api/http/index';
-import { AiExecutionResolveUrl, AiExecutionTaskDetailUrl, AiExecutionTaskUrl } from '@/api/requrls/ai-execution';
+import {
+  AiExecutionAgentsUrl,
+  AiExecutionResolveUrl,
+  AiExecutionTaskDetailUrl,
+  AiExecutionTaskUrl,
+} from '@/api/requrls/ai-execution';
+
+export type AiExecutionMode = 'RUNNER' | 'AGENT';
+export type AiExecutionAgentType = 'WORKBUDDY' | 'CURSOR' | 'CODEX';
+
+export interface AiExecutionAgentOption {
+  gatewayId?: string;
+  name: string;
+  protocol?: string;
+  configured: boolean;
+  features?: string[];
+  message?: string;
+}
 
 export interface AiExecutionStep {
   id: string;
@@ -38,6 +55,9 @@ export interface AiExecutionTask {
   source?: string;
   status: string;
   providerId?: string;
+  executionMode?: AiExecutionMode;
+  agentType?: AiExecutionAgentType;
+  agentGatewayId?: string;
   environmentId?: string;
   targetUrl?: string;
   browserType?: string;
@@ -111,6 +131,8 @@ export interface AiExecutionCreateParams {
   prompt?: string;
   resolvedFilter?: string;
   policySnapshot?: string;
+  executionMode?: AiExecutionMode;
+  agentType?: AiExecutionAgentType;
 }
 
 export interface AiExecutionResolveResult {
@@ -137,6 +159,10 @@ export interface AiExecutionResolveResult {
 
 export function resolveAiExecutionScope(data: Record<string, any>) {
   return MSR.post<AiExecutionResolveResult>({ url: AiExecutionResolveUrl, data });
+}
+
+export function getAiExecutionAgents(projectId: string) {
+  return MSR.get<AiExecutionAgentOption[]>({ url: AiExecutionAgentsUrl, params: { projectId } });
 }
 
 export function createAiExecutionTask(data: AiExecutionCreateParams) {

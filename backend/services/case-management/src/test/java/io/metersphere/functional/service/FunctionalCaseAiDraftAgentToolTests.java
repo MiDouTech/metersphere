@@ -1,12 +1,14 @@
 package io.metersphere.functional.service;
 
 import io.metersphere.functional.dto.CaseGenerationCaseDTO;
+import io.metersphere.functional.dto.CaseGenerationResult;
 import io.metersphere.functional.dto.FunctionalCaseStepDTO;
 import io.metersphere.sdk.exception.MSException;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,6 +45,19 @@ class FunctionalCaseAiDraftAgentToolTests {
         MSException error = assertThrows(MSException.class, () -> create(item));
 
         assertTrue(error.getMessage().contains("textDescription"));
+    }
+
+    @Test
+    void agentStructuredOutputReusesBoundedJsonFenceRepair() {
+        String raw = "```json\n"
+                + "{\"reply\":\"已生成\",\"cases\":[{\"name\":\"登录成功\",\"level\":\"P1\","
+                + "\"editType\":\"STEP\",\"steps\":[{\"desc\":\"输入正确账号密码\","
+                + "\"result\":\"登录成功\"}]}]}\n```";
+
+        CaseGenerationResult result = service.parseAgentGenerationResult(raw);
+
+        assertEquals(1, result.getCases().size());
+        assertEquals("登录成功", result.getCases().getFirst().getName());
     }
 
     private void create(CaseGenerationCaseDTO item) {

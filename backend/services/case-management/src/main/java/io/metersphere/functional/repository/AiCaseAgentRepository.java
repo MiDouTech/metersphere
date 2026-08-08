@@ -23,12 +23,14 @@ public class AiCaseAgentRepository {
     public void insertConversation(AiCaseConversationDTO conversation) {
         jdbcTemplate.update("""
                         INSERT INTO ai_case_conversation
-                        (id, project_id, organization_id, user_id, title, model_source_id, status,
+                        (id, project_id, organization_id, user_id, title, resource_type, resource_id,
+                         agent_connection_id, model_source_id, status,
                          system_prompt_version, last_message_time, create_time, update_time, deleted)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                         """,
                 conversation.getId(), conversation.getProjectId(), conversation.getOrganizationId(),
-                conversation.getUserId(), conversation.getTitle(), conversation.getModelSourceId(),
+                conversation.getUserId(), conversation.getTitle(), conversation.getResourceType(),
+                conversation.getResourceId(), conversation.getAgentConnectionId(), conversation.getModelSourceId(),
                 conversation.getStatus(), conversation.getSystemPromptVersion(), conversation.getLastMessageTime(),
                 conversation.getCreateTime(), conversation.getUpdateTime());
     }
@@ -80,10 +82,19 @@ public class AiCaseAgentRepository {
     }
 
     public int updateConversationModel(String id, String projectId, String userId, String modelSourceId, long updateTime) {
+        return updateConversationResource(id, projectId, userId, "MODEL_API", modelSourceId,
+                modelSourceId, null, updateTime);
+    }
+
+    public int updateConversationResource(String id, String projectId, String userId, String resourceType,
+                                          String resourceId, String modelSourceId,
+                                          String agentConnectionId, long updateTime) {
         return jdbcTemplate.update("""
-                UPDATE ai_case_conversation SET model_source_id=?, update_time=?
+                UPDATE ai_case_conversation
+                SET resource_type=?, resource_id=?, model_source_id=?, agent_connection_id=?, update_time=?
                 WHERE id=? AND project_id=? AND user_id=? AND deleted=0
-                """, modelSourceId, updateTime, id, projectId, userId);
+                """, resourceType, resourceId, modelSourceId, agentConnectionId, updateTime,
+                id, projectId, userId);
     }
 
     public int updateConversationStatus(String id, String projectId, String userId, String status, long updateTime) {
@@ -103,13 +114,15 @@ public class AiCaseAgentRepository {
     public void insertMessage(AiCaseMessageDTO message) {
         jdbcTemplate.update("""
                         INSERT INTO ai_case_message
-                        (id, conversation_id, project_id, user_id, role, content, status, model_source_id,
+                        (id, conversation_id, project_id, user_id, role, content, status, resource_type,
+                         resource_id, agent_connection_id, model_source_id,
                          request_id, tool_name, tool_call_id, tool_arguments, tool_result, input_tokens,
                          output_tokens, token_estimated, error_code, create_time, update_time)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 message.getId(), message.getConversationId(), message.getProjectId(), message.getUserId(),
-                message.getRole(), message.getContent(), message.getStatus(), message.getModelSourceId(),
+                message.getRole(), message.getContent(), message.getStatus(), message.getResourceType(),
+                message.getResourceId(), message.getAgentConnectionId(), message.getModelSourceId(),
                 message.getRequestId(), message.getToolName(), message.getToolCallId(), message.getToolArguments(),
                 message.getToolResult(), defaultLong(message.getInputTokens()), defaultLong(message.getOutputTokens()),
                 Boolean.TRUE.equals(message.getTokenEstimated()), message.getErrorCode(), message.getCreateTime(),
@@ -150,15 +163,19 @@ public class AiCaseAgentRepository {
         jdbcTemplate.update("""
                         INSERT INTO ai_case_execution
                         (id, request_id, conversation_id, project_id, user_id, user_message_id,
-                         assistant_message_id, execution_type, status, requested_model_source_id,
+                         assistant_message_id, execution_type, status, resource_type, requested_resource_id,
+                         actual_resource_id, agent_connection_id, agent_device_id, requested_model_source_id,
                          actual_model_source_id, cancel_requested, retry_of_request_id, input_tokens,
                          output_tokens, token_estimated, error_code, error_message, start_time,
                          first_token_time, finish_time, duration_ms, event_sequence, create_time, update_time)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 execution.getId(), execution.getRequestId(), execution.getConversationId(), execution.getProjectId(),
                 execution.getUserId(), execution.getUserMessageId(), execution.getAssistantMessageId(),
-                execution.getExecutionType(), execution.getStatus(), execution.getRequestedModelSourceId(),
+                execution.getExecutionType(), execution.getStatus(), execution.getResourceType(),
+                execution.getRequestedResourceId(), execution.getActualResourceId(),
+                execution.getAgentConnectionId(), execution.getAgentDeviceId(),
+                execution.getRequestedModelSourceId(),
                 execution.getActualModelSourceId(), Boolean.TRUE.equals(execution.getCancelRequested()),
                 execution.getRetryOfRequestId(), defaultLong(execution.getInputTokens()),
                 defaultLong(execution.getOutputTokens()), Boolean.TRUE.equals(execution.getTokenEstimated()),
@@ -219,6 +236,28 @@ public class AiCaseAgentRepository {
                 UPDATE ai_case_execution SET actual_model_source_id=?, update_time=?
                 WHERE request_id=? AND project_id=? AND user_id=? AND status='RUNNING'
                 """, modelSourceId, updateTime, requestId, projectId, userId);
+    }
+
+    public int updateExecutionAgentDevice(String requestId, String projectId, String userId,
+                                          String deviceId, long updateTime) {
+        return jdbcTemplate.update("""
+                UPDATE ai_case_execution SET agent_device_id=?, update_time=?
+                WHERE request_id=? AND project_id=? AND user_id=?
+                  AND resource_type='USER_AGENT' AND status='RUNNING'
+                """, deviceId, updateTime, requestId, projectId, userId);
+    }
+
+    public void upsertAgentSessionBinding(String conversationId, String connectionId,
+                                          String externalSessionId, String provider,
+                                          String deviceId, long sequence, long now) {
+        jdbcTemplate.update("""
+                INSERT INTO ai_agent_session_binding
+                (conversation_id,connection_id,external_session_id,provider,device_id,last_sequence,create_time,update_time)
+                VALUES (?,?,?,?,?,?,?,?)
+                ON DUPLICATE KEY UPDATE external_session_id=VALUES(external_session_id),
+                    provider=VALUES(provider),device_id=VALUES(device_id),
+                    last_sequence=GREATEST(last_sequence,VALUES(last_sequence)),update_time=VALUES(update_time)
+                """, conversationId, connectionId, externalSessionId, provider, deviceId, sequence, now, now);
     }
 
     public int completeExecution(String requestId, String projectId, String userId, String status,
@@ -317,6 +356,9 @@ public class AiCaseAgentRepository {
         dto.setOrganizationId(rs.getString("organization_id"));
         dto.setUserId(rs.getString("user_id"));
         dto.setTitle(rs.getString("title"));
+        dto.setResourceType(rs.getString("resource_type"));
+        dto.setResourceId(rs.getString("resource_id"));
+        dto.setAgentConnectionId(rs.getString("agent_connection_id"));
         dto.setModelSourceId(rs.getString("model_source_id"));
         dto.setStatus(rs.getString("status"));
         dto.setSystemPromptVersion(rs.getString("system_prompt_version"));
@@ -335,6 +377,9 @@ public class AiCaseAgentRepository {
         dto.setRole(rs.getString("role"));
         dto.setContent(rs.getString("content"));
         dto.setStatus(rs.getString("status"));
+        dto.setResourceType(rs.getString("resource_type"));
+        dto.setResourceId(rs.getString("resource_id"));
+        dto.setAgentConnectionId(rs.getString("agent_connection_id"));
         dto.setModelSourceId(rs.getString("model_source_id"));
         dto.setRequestId(rs.getString("request_id"));
         dto.setToolName(rs.getString("tool_name"));
@@ -361,6 +406,11 @@ public class AiCaseAgentRepository {
         dto.setAssistantMessageId(rs.getString("assistant_message_id"));
         dto.setExecutionType(rs.getString("execution_type"));
         dto.setStatus(rs.getString("status"));
+        dto.setResourceType(rs.getString("resource_type"));
+        dto.setRequestedResourceId(rs.getString("requested_resource_id"));
+        dto.setActualResourceId(rs.getString("actual_resource_id"));
+        dto.setAgentConnectionId(rs.getString("agent_connection_id"));
+        dto.setAgentDeviceId(rs.getString("agent_device_id"));
         dto.setRequestedModelSourceId(rs.getString("requested_model_source_id"));
         dto.setActualModelSourceId(rs.getString("actual_model_source_id"));
         dto.setCancelRequested(rs.getBoolean("cancel_requested"));

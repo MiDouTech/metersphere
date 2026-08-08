@@ -1,18 +1,21 @@
 <template>
   <div>
     <MsCard simple>
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div
+        class="mb-4 gap-3"
+        :class="compact ? 'flex flex-col items-stretch' : 'flex flex-wrap items-center justify-between'"
+      >
         <div>
           <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
           <div class="mt-1 text-sm text-[var(--color-text-3)]">
             {{ t('system.agentIntegration.myTokensDesc') }}
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2" :class="compact ? 'justify-end' : ''">
           <a-input-search
             v-model:model-value="keyword"
             :placeholder="t('system.agentIntegration.searchToken')"
-            class="w-[260px]"
+            :class="compact ? 'min-w-[220px] flex-1' : 'w-[260px]'"
             allow-clear
             @search="searchParams"
             @press-enter="searchParams"
@@ -254,6 +257,15 @@
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import { downloadByteFile } from '@/utils';
+
+  withDefaults(
+    defineProps<{
+      compact?: boolean;
+    }>(),
+    {
+      compact: false,
+    }
+  );
 
   const { t } = useI18n();
   const { openModal } = useModal();

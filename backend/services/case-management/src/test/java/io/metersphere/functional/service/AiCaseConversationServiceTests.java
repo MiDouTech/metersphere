@@ -2,6 +2,7 @@ package io.metersphere.functional.service;
 
 import io.metersphere.functional.dto.AiCaseConversationDTO;
 import io.metersphere.functional.dto.AiCaseMessageDTO;
+import io.metersphere.functional.dto.AiResourceSelection;
 import io.metersphere.functional.repository.AiCaseAgentRepository;
 import io.metersphere.functional.request.AiCaseConversationCreateRequest;
 import io.metersphere.functional.request.AiCaseConversationModelRequest;
@@ -32,13 +33,13 @@ import static org.mockito.Mockito.when;
 class AiCaseConversationServiceTests {
     private AiCaseConversationService service;
     private AiCaseAgentRepository repository;
-    private AiCaseAvailableModelService availableModelService;
+    private AiCaseAvailableResourceService availableResourceService;
 
     @BeforeEach
     void setUp() {
         service = new AiCaseConversationService();
         repository = mock(AiCaseAgentRepository.class);
-        availableModelService = mock(AiCaseAvailableModelService.class);
+        availableResourceService = mock(AiCaseAvailableResourceService.class);
         ProjectMapper projectMapper = mock(ProjectMapper.class);
         Project project = new Project();
         project.setId("project-1");
@@ -46,13 +47,17 @@ class AiCaseConversationServiceTests {
         project.setDeleted(false);
         when(projectMapper.selectByPrimaryKey("project-1")).thenReturn(project);
         ReflectionTestUtils.setField(service, "repository", repository);
-        ReflectionTestUtils.setField(service, "availableModelService", availableModelService);
+        ReflectionTestUtils.setField(service, "availableResourceService", availableResourceService);
         ReflectionTestUtils.setField(service, "aiAuditService", mock(AiAuditService.class));
         ReflectionTestUtils.setField(service, "projectMapper", projectMapper);
     }
 
     @Test
     void createsServerOwnedConversationAfterModelAuthorization() {
+        AiResourceSelection selection = new AiResourceSelection(
+                "MODEL_API", "model-1", "model-1", null, null, true);
+        when(availableResourceService.requireAllowed("project-1", null, null, "model-1", "user-1"))
+                .thenReturn(selection);
         AiCaseConversationCreateRequest request = new AiCaseConversationCreateRequest();
         request.setProjectId("project-1");
         request.setOrganizationId("organization-1");
@@ -70,12 +75,16 @@ class AiCaseConversationServiceTests {
         assertEquals("project-1", result.getProjectId());
         assertEquals("新对话", result.getTitle());
         assertEquals("ACTIVE", result.getStatus());
-        verify(availableModelService).requireAllowed("project-1", "model-1", "user-1");
+        verify(availableResourceService).requireAllowed("project-1", null, null, "model-1", "user-1");
         verify(repository).insertConversation(result);
     }
 
     @Test
     void blocksModelSwitchWhileRequestIsActive() {
+        AiResourceSelection selection = new AiResourceSelection(
+                "MODEL_API", "model-2", "model-2", null, null, true);
+        when(availableResourceService.requireAllowed("project-1", null, null, "model-2", "user-1"))
+                .thenReturn(selection);
         AiCaseConversationDTO conversation = conversation();
         when(repository.findConversation("conversation-1", "project-1", "user-1"))
                 .thenReturn(conversation);
@@ -88,7 +97,7 @@ class AiCaseConversationServiceTests {
 
         assertThrows(MSException.class, () -> service.switchModel(request, "user-1"));
 
-        verify(availableModelService).requireAllowed("project-1", "model-2", "user-1");
+        verify(availableResourceService).requireAllowed("project-1", null, null, "model-2", "user-1");
         verify(repository, never()).updateConversationModel(any(), any(), any(), any(), anyLong());
     }
 

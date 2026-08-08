@@ -1,0 +1,7 @@
+{
+  "platformUrl": "https://metersphere.example.com",
+  "deviceName": "My Windows PC",
+  "bridgeVersion": "0.1.0",
+  "protocolVersion": "1.0",
+  "allowUnsandboxedCursor": false
+}

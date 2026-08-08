@@ -29,6 +29,19 @@ public class AiCaseAgentPromptService {
                 """;
     }
 
+    public String bridgeSystemPrompt(boolean toolsSupported) {
+        if (toolsSupported) {
+            return systemPrompt();
+        }
+        return systemPrompt() + """
+
+                当前 Agent 通道不能直接调用平台工具。用户明确要求生成用例且信息充分时，必须只返回以下 JSON 对象，不能使用 Markdown 代码块：
+                {"reply":"给用户的简短说明","cases":[{"name":"必填","level":"P0|P1|P2|P3","editType":"STEP|TEXT","prerequisite":"","steps":[{"num":1,"desc":"步骤","result":"预期结果"}],"textDescription":"","expectedResult":"","tags":[]}]}
+                `cases` 最多 50 条；不得包含 projectId、userId、createUser、formalCaseId、凭据、Token 或 Cookie。平台只会把通过严格校验的内容保存为草稿，正式用例仍需用户确认。
+                如果当前只需澄清或回答问题，请返回普通中文文本，不要伪造 JSON。
+                """;
+    }
+
     public String buildUserPrompt(List<AiCaseMessageDTO> descendingHistory, String currentMessage) {
         List<AiCaseMessageDTO> history = new ArrayList<>(descendingHistory);
         Collections.reverse(history);

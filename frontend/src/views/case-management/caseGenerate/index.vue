@@ -18,13 +18,16 @@
       <section class="case-generate-panel">
         <div class="case-generate-panel-title">{{ t('caseManagement.caseGenerate.conversation') }}</div>
         <a-form :model="generationForm" layout="vertical">
-          <a-form-item :label="t('caseManagement.caseGenerate.model')">
+          <a-form-item :label="t('caseManagement.caseGenerate.aiResource')">
             <a-select
               v-model:model-value="chatModelId"
               :options="modelOptions"
               allow-search
-              :placeholder="t('caseManagement.caseGenerate.modelPlaceholder')"
+              :placeholder="t('caseManagement.caseGenerate.resourcePlaceholder')"
             />
+            <div v-if="selectedResource?.unavailableReason" class="mt-[6px] text-[12px] text-[rgb(var(--danger-6))]">
+              {{ resourceUnavailableText(selectedResource.unavailableReason) }}
+            </div>
           </a-form-item>
         </a-form>
         <input ref="fileInputRef" class="hidden" type="file" @change="handleFileChange" />
@@ -63,7 +66,10 @@
         </div>
         <div class="case-generate-messages">
           <div v-for="message in messages" :key="message.id" class="case-generate-message" :class="message.role">
-            <div class="case-generate-message-role">{{ message.role === 'user' ? 'User' : 'AI' }}</div>
+            <div class="case-generate-message-role flex items-center gap-[6px]">
+              <span>{{ message.role === 'user' ? 'User' : 'AI' }}</span>
+              <a-tag v-if="message.resourceId" size="small">{{ messageResourceLabel(message) }}</a-tag>
+            </div>
             <div class="case-generate-message-content">{{ message.content }}</div>
           </div>
         </div>
@@ -110,7 +116,11 @@
           <a-button size="small" :disabled="checkedDraftIds.length === 0" @click="deleteChecked">
             {{ t('caseManagement.caseGenerate.delete') }}
           </a-button>
-          <a-button size="small" :disabled="!activeDraft || !chatModelId.trim()" @click="regenerateActive">
+          <a-button
+            size="small"
+            :disabled="!activeDraft || !chatModelId.trim() || selectedResource?.resourceType !== 'MODEL_API'"
+            @click="regenerateActive"
+          >
             {{ t('caseManagement.caseGenerate.regenerate') }}
           </a-button>
           <a-button
@@ -188,11 +198,15 @@
 
 <script setup lang="ts">
   import { computed, onBeforeUnmount, ref, watch } from 'vue';
-  import { Message } from '@arco-design/web-vue';
+  import { Message, Modal } from '@arco-design/web-vue';
 
   import DraftDetailForm from './components/DraftDetailForm.vue';
 
-  import type { AiCaseAgentEvent, AiCaseAgentModel } from '@/api/modules/case-management/caseGenerate';
+  import type {
+    AiCaseAgentEvent,
+    AiResourceType,
+    AiSelectableResource,
+  } from '@/api/modules/case-management/caseGenerate';
   import {
     batchSaveAiCaseDraft,
     cancelAiCaseAgentChat,
@@ -201,7 +215,7 @@
     getAiCaseAgentConversation,
     getAiCaseAgentExecution,
     listAiCaseAgentEvents,
-    listAiCaseAgentModels,
+    listAiCaseAgentResources,
     pageAiCaseAgentMessages,
     pageAiCaseDraft,
     pageAiSourceDocument,
@@ -209,7 +223,7 @@
     retryAiSourceDocument,
     streamAiCaseAgentChat,
     subscribeAiSourceDocumentEvents,
-    switchAiCaseAgentModel,
+    switchAiCaseAgentResource,
     updateAiCaseDraft,
     uploadAiSourceDocument,
   } from '@/api/modules/case-management/caseGenerate';
@@ -230,6 +244,8 @@
     content: string;
     status?: 'streaming' | 'completed' | 'failed' | 'canceled';
     requestId?: string;
+    resourceType?: AiResourceType;
+    resourceId?: string;
   }
 
   const { t } = useI18n();
@@ -245,8 +261,9 @@
   );
   const generationForm = {};
   const conversationId = ref('');
-  const conversationModelId = ref('');
-  const availableModels = ref<AiCaseAgentModel[]>([]);
+  const conversationResourceId = ref('');
+  const conversationResourceType = ref<AiResourceType>('MODEL_API');
+  const availableResources = ref<AiSelectableResource[]>([]);
   const generating = ref(false);
   const activeGenerationId = ref('');
   const saving = ref(false);
@@ -269,12 +286,33 @@
   let unsubscribeDocumentEvents: (() => void) | undefined;
   let abortAgentStream: (() => void) | undefined;
 
-  const modelOptions = computed(() =>
-    availableModels.value.map((item) => ({
-      label: item.name,
-      value: item.id,
-    }))
-  );
+  const selectedResource = computed(() => availableResources.value.find((item) => item.id === chatModelId.value));
+  const modelOptions = computed(() => {
+    const groups = [
+      {
+        label: t('caseManagement.caseGenerate.platformModels'),
+        test: (item: AiSelectableResource) => item.resourceType === 'MODEL_API' && !item.personal,
+      },
+      {
+        label: t('caseManagement.caseGenerate.personalModels'),
+        test: (item: AiSelectableResource) => item.resourceType === 'MODEL_API' && item.personal,
+      },
+      {
+        label: t('caseManagement.caseGenerate.myAgents'),
+        test: (item: AiSelectableResource) => item.resourceType === 'USER_AGENT',
+      },
+    ];
+    return groups
+      .map((group) => ({
+        label: group.label,
+        options: availableResources.value.filter(group.test).map((item) => ({
+          label: `${item.displayName} · ${item.provider}${item.experimental ? ' (Experimental)' : ''}`,
+          value: item.id,
+          disabled: Boolean(item.unavailableReason),
+        })),
+      }))
+      .filter((group) => group.options.length > 0);
+  });
 
   function createId(prefix: string) {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -314,21 +352,22 @@
 
   async function loadAgentWorkspace() {
     messages.value = [];
-    conversationModelId.value = '';
+    conversationResourceId.value = '';
     if (!currentProjectId.value) {
-      availableModels.value = [];
+      availableResources.value = [];
       conversationId.value = '';
       return;
     }
-    availableModels.value = (await listAiCaseAgentModels(currentProjectId.value)) || [];
-    if (!availableModels.value.some((item) => item.id === chatModelId.value)) {
-      chatModelId.value = availableModels.value[0]?.id || '';
+    availableResources.value = (await listAiCaseAgentResources(currentProjectId.value)) || [];
+    if (!availableResources.value.some((item) => item.id === chatModelId.value && !item.unavailableReason)) {
+      chatModelId.value = availableResources.value.find((item) => !item.unavailableReason)?.id || '';
     }
     if (!conversationId.value) return;
     try {
       const conversation = await getAiCaseAgentConversation(conversationId.value, currentProjectId.value);
-      conversationModelId.value = conversation.modelSourceId;
-      chatModelId.value = conversation.modelSourceId;
+      conversationResourceId.value = conversation.resourceId || conversation.modelSourceId || '';
+      conversationResourceType.value = conversation.resourceType || 'MODEL_API';
+      chatModelId.value = conversationResourceId.value;
       const history = await pageAiCaseAgentMessages({
         projectId: currentProjectId.value,
         conversationId: conversationId.value,
@@ -342,34 +381,75 @@
           content: item.content || '',
           status: item.status.toLowerCase() as ConversationMessage['status'],
           requestId: item.requestId,
+          resourceType: item.resourceType,
+          resourceId: item.resourceId,
         }));
     } catch {
       conversationId.value = '';
-      conversationModelId.value = '';
+      conversationResourceId.value = '';
       messages.value = [];
     }
   }
 
+  function confirmResourceSwitch(previous: AiResourceType, next: AiResourceType) {
+    if (previous === 'MODEL_API' && next === 'MODEL_API') return Promise.resolve(true);
+    return new Promise<boolean>((resolve) => {
+      Modal.confirm({
+        title: t('caseManagement.caseGenerate.resourceSwitchTitle'),
+        content: t('caseManagement.caseGenerate.resourceSwitchWarning'),
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false),
+        onClose: () => resolve(false),
+      });
+    });
+  }
+
+  function resourceUnavailableText(reason?: string) {
+    const reasonMessageMap: Record<string, string> = {
+      AGENT_OFFLINE: t('caseManagement.caseGenerate.agentOffline'),
+      AGENT_AUTH_EXPIRED: t('caseManagement.caseGenerate.agentAuthExpired'),
+      AI_RESOURCE_NOT_ALLOWED: t('caseManagement.caseGenerate.resourceNotAllowed'),
+    };
+    return reasonMessageMap[reason || ''] || reason || t('caseManagement.caseGenerate.resourceUnavailable');
+  }
+
   async function ensureConversation() {
+    const resource = selectedResource.value;
+    if (!resource || resource.unavailableReason) throw new Error(resourceUnavailableText(resource?.unavailableReason));
     if (!conversationId.value) {
       const conversation = await createAiCaseAgentConversation({
         projectId: currentProjectId.value,
         organizationId: currentOrgId.value,
-        modelSourceId: chatModelId.value,
+        resourceType: resource.resourceType,
+        resourceId: resource.id,
+        modelSourceId: resource.resourceType === 'MODEL_API' ? resource.id : undefined,
         title: prompt.value.trim().slice(0, 80) || undefined,
       });
       conversationId.value = conversation.id;
-      conversationModelId.value = conversation.modelSourceId;
+      conversationResourceId.value = conversation.resourceId;
+      conversationResourceType.value = conversation.resourceType;
       persistLocalState();
-    } else if (conversationModelId.value !== chatModelId.value) {
-      const conversation = await switchAiCaseAgentModel({
+    } else if (conversationResourceId.value !== resource.id) {
+      const confirmed = await confirmResourceSwitch(conversationResourceType.value, resource.resourceType);
+      if (!confirmed) {
+        chatModelId.value = conversationResourceId.value;
+        throw new Error(t('caseManagement.caseGenerate.resourceSwitchCanceled'));
+      }
+      const conversation = await switchAiCaseAgentResource({
         projectId: currentProjectId.value,
         conversationId: conversationId.value,
-        modelSourceId: chatModelId.value,
+        resourceType: resource.resourceType,
+        resourceId: resource.id,
       });
-      conversationModelId.value = conversation.modelSourceId;
+      conversationResourceId.value = conversation.resourceId;
+      conversationResourceType.value = conversation.resourceType;
     }
     return conversationId.value;
+  }
+
+  function messageResourceLabel(message: ConversationMessage) {
+    const resource = availableResources.value.find((item) => item.id === message.resourceId);
+    return resource?.displayName || message.resourceId || message.resourceType || '';
   }
 
   function handleAgentEvent(event: AiCaseAgentEvent, temporaryAssistantId: string) {
@@ -399,6 +479,8 @@
         content: '',
         status: 'streaming',
         requestId: event.requestId,
+        resourceType: conversationResourceType.value,
+        resourceId: conversationResourceId.value,
       });
     }
   }
@@ -526,13 +608,23 @@
     activeGenerationId.value = requestId;
     try {
       await ensureConversation();
-      messages.value.push({ id: createId('message'), role: 'user', content, status: 'completed', requestId });
+      messages.value.push({
+        id: createId('message'),
+        role: 'user',
+        content,
+        status: 'completed',
+        requestId,
+        resourceType: selectedResource.value?.resourceType,
+        resourceId: selectedResource.value?.id,
+      });
       messages.value.push({
         id: temporaryAssistantId,
         role: 'assistant',
         content: '',
         status: 'streaming',
         requestId,
+        resourceType: selectedResource.value?.resourceType,
+        resourceId: selectedResource.value?.id,
       });
       prompt.value = '';
       const eventSequence = { value: 0 };
@@ -542,6 +634,9 @@
           conversationId: conversationId.value,
           requestId,
           message: content,
+          resourceType: selectedResource.value?.resourceType,
+          resourceId: selectedResource.value?.id,
+          modelSourceId: selectedResource.value?.resourceType === 'MODEL_API' ? selectedResource.value.id : undefined,
         },
         (event) => {
           if (event.sequence <= eventSequence.value) return;
@@ -617,7 +712,13 @@
   }
 
   async function regenerateActive() {
-    if (!activeDraft.value || !currentProjectId.value || !currentOrgId.value || !chatModelId.value.trim()) {
+    if (
+      !activeDraft.value ||
+      !currentProjectId.value ||
+      !currentOrgId.value ||
+      !chatModelId.value.trim() ||
+      selectedResource.value?.resourceType !== 'MODEL_API'
+    ) {
       return;
     }
     const response = await regenerateAiCaseDraft({

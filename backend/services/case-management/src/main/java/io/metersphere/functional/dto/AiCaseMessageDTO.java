@@ -11,6 +11,9 @@ public class AiCaseMessageDTO {
     private String role;
     private String content;
     private String status;
+    private String resourceType;
+    private String resourceId;
+    private String agentConnectionId;
     private String modelSourceId;
     private String requestId;
     private String toolName;

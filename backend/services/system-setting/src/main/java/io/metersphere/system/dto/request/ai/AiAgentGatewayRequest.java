@@ -10,6 +10,7 @@ import java.util.List;
 public class AiAgentGatewayRequest {
     private String id;
     @NotBlank private String name;
+    private String agentType;
     @NotBlank private String protocol;
     @NotBlank private String baseUrl;
     private String authType = "BEARER";

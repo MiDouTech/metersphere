@@ -13,6 +13,16 @@ public class AiProjectGovernanceDTO {
     @NotBlank
     private String projectId;
     private List<String> allowedModelIds = new ArrayList<>();
+    private List<String> allowedResourceTypes = new ArrayList<>(List.of("MODEL_API"));
+    private List<String> allowedAgentProviders = new ArrayList<>();
+    private boolean allowPersonalAgent;
+    private boolean allowLocalAgentTools;
+    @Min(1) @Max(20)
+    private int maxAgentConcurrentTasks = 1;
+    @Min(1) @Max(240)
+    private int maxAgentExecutionMinutes = 15;
+    @Min(1) @Max(10000)
+    private int dailyAgentExecutionLimit = 50;
     private String fallbackModelId;
     @Min(1) @Max(100)
     private int maxConcurrentTasks = 3;

@@ -9,6 +9,7 @@ import io.metersphere.agent.dto.AgentExecutionResolveResponse;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
 import io.metersphere.agent.service.AgentExecutionService;
 import io.metersphere.sdk.constants.PermissionConstants;
+import io.metersphere.system.dto.request.ai.AiAgentGatewayCapabilityDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -20,6 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @Tag(name = "AI Execution")
 @RestController
@@ -27,6 +31,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AgentExecutionController {
     @Resource
     private AgentExecutionService agentExecutionService;
+
+    @GetMapping("/agents")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    @Operation(summary = "获取可用于 Web UI 自动化执行的 Agent")
+    public List<AiAgentGatewayCapabilityDTO> agents(@RequestParam String projectId) {
+        return agentExecutionService.executionAgents(projectId);
+    }
 
     @PostMapping("/resolve")
     @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)

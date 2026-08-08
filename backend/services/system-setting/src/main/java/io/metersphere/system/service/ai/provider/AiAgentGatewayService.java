@@ -22,7 +22,9 @@ import org.springframework.web.client.RestClient;
 
 import java.util.Map;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,6 +55,7 @@ public class AiAgentGatewayService {
             throw new MSException("Agent Gateway authType 仅支持 NONE/BEARER/API_KEY");
         }
         validateUrl(request.getBaseUrl());
+        String agentType = normalizeAgentType(request.getAgentType());
         assertScopeAccess(request.getProjectId(), request.getOrganizationId(), userId);
         if (StringUtils.isNotBlank(request.getId())) {
             requireGateway(request.getId(), userId, PermissionConstants.FUNCTIONAL_CASE_AI_CONFIG);
@@ -61,20 +64,21 @@ public class AiAgentGatewayService {
         long now = System.currentTimeMillis();
         jdbcTemplate.update("""
                 INSERT INTO ai_agent_gateway
-                (id,name,protocol,base_url,auth_type,auth_cipher,organization_id,project_id,owner_user_id,
+                (id,name,agent_type,protocol,base_url,auth_type,auth_cipher,organization_id,project_id,owner_user_id,
                  enabled,capabilities,create_user,create_time,update_user,update_time)
-                VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?,?,?)
-                ON DUPLICATE KEY UPDATE name=VALUES(name), protocol=VALUES(protocol), base_url=VALUES(base_url),
+                VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?)
+                ON DUPLICATE KEY UPDATE name=VALUES(name), agent_type=VALUES(agent_type), protocol=VALUES(protocol), base_url=VALUES(base_url),
                   auth_type=VALUES(auth_type), auth_cipher=COALESCE(VALUES(auth_cipher),auth_cipher),
                   organization_id=VALUES(organization_id), project_id=VALUES(project_id), owner_user_id=VALUES(owner_user_id),
                   enabled=1, capabilities=VALUES(capabilities), update_user=VALUES(update_user), update_time=VALUES(update_time)
-                """, id, request.getName(), StringUtils.upperCase(request.getProtocol()), request.getBaseUrl(),
+                """, id, request.getName(), agentType, StringUtils.upperCase(request.getProtocol()), request.getBaseUrl(),
                 StringUtils.upperCase(request.getAuthType()), StringUtils.isBlank(request.getAuthToken()) ? null : EncryptUtils.aesEncrypt(request.getAuthToken()),
                 request.getOrganizationId(), request.getProjectId(), request.isPersonal() ? userId : null,
                 JSON.toJSONString(request.getCapabilities()), userId, now, userId, now);
         aiAuditService.record(request.getProjectId(), request.getOrganizationId(), userId, id, "UPDATE",
                 "AI_AGENT_GATEWAY_CONFIGURE", "/ai/agent-gateway", "POST",
-                Map.of("protocol", request.getProtocol(), "capabilities", request.getCapabilities()));
+                Map.of("protocol", request.getProtocol(), "agentType", StringUtils.defaultString(agentType),
+                        "capabilities", request.getCapabilities()));
         return capability(id, userId);
     }
 
@@ -109,8 +113,48 @@ public class AiAgentGatewayService {
     }
 
     public Map<?, ?> invoke(AiAgentGatewayInvokeRequest request, String userId) {
-        Map<String, Object> gateway = requireGateway(request.getGatewayId(), userId,
-                PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE);
+        return invoke(request, userId, PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE);
+    }
+
+    public List<AiAgentGatewayCapabilityDTO> executionAgentCapabilities(String projectId, String userId) {
+        List<AiAgentGatewayCapabilityDTO> result = new ArrayList<>();
+        for (String product : List.of("workbuddy", "cursor", "codex")) {
+            Map<String, Object> gateway = findExecutionGateway(product, projectId, userId);
+            AiAgentGatewayCapabilityDTO dto = new AiAgentGatewayCapabilityDTO();
+            dto.setGatewayId(gateway == null ? null : (String) gateway.get("id"));
+            dto.setName(product.substring(0, 1).toUpperCase(Locale.ROOT) + product.substring(1));
+            dto.setProtocol(gateway == null ? null : (String) gateway.get("protocol"));
+            dto.setConfigured(gateway != null);
+            dto.setFeatures(gateway == null ? List.of() : JSON.parseArray(
+                    StringUtils.defaultString((String) gateway.get("capabilities"), "[]"), String.class));
+            dto.setMessage(gateway == null ? "Agent Gateway 未配置" : "Agent Gateway 已就绪");
+            result.add(dto);
+        }
+        return result;
+    }
+
+    public String requireExecutionAgentGateway(String agentType, String projectId, String userId) {
+        String normalized = normalizeAgentType(agentType);
+        Map<String, Object> gateway = findExecutionGateway(normalized, projectId, userId);
+        if (gateway == null) {
+            throw new MSException(normalized + " Agent Gateway 未配置、未启用或当前用户无权访问");
+        }
+        return (String) gateway.get("id");
+    }
+
+    public Map<?, ?> invokeExecutionAgent(String gatewayId, String projectId, String taskId,
+                                           Map<String, Object> context, String userId) {
+        AiAgentGatewayInvokeRequest request = new AiAgentGatewayInvokeRequest();
+        request.setGatewayId(gatewayId);
+        request.setProjectId(projectId);
+        request.setTaskId(taskId);
+        request.setOperation("metersphere.webui.execute");
+        request.setContext(context);
+        return invoke(request, userId, PermissionConstants.AI_EXECUTION_RUN);
+    }
+
+    private Map<?, ?> invoke(AiAgentGatewayInvokeRequest request, String userId, String permission) {
+        Map<String, Object> gateway = requireGateway(request.getGatewayId(), userId, permission);
         if (StringUtils.isNotBlank((String) gateway.get("project_id"))
                 && !StringUtils.equals(request.getProjectId(), (String) gateway.get("project_id"))) {
             throw new MSException("Agent Gateway 与请求项目不匹配");
@@ -158,6 +202,37 @@ public class AiAgentGatewayService {
         } catch (Exception ex) {
             throw new MSException("Agent Gateway 调用失败：" + sanitize(ex.getMessage()), ex);
         }
+    }
+
+    private Map<String, Object> findExecutionGateway(String agentType, String projectId, String userId) {
+        String normalized = normalizeAgentType(agentType);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT * FROM ai_agent_gateway
+                WHERE enabled=1 AND (LOWER(agent_type)=? OR (agent_type IS NULL AND LOWER(id)=?))
+                ORDER BY CASE
+                    WHEN owner_user_id=? THEN 0
+                    WHEN project_id=? THEN 1
+                    WHEN project_id IS NULL AND organization_id IS NOT NULL THEN 2
+                    ELSE 3 END,
+                    update_time DESC
+                """, normalized.toLowerCase(Locale.ROOT), normalized.toLowerCase(Locale.ROOT), userId, projectId);
+        return rows.stream()
+                .filter(row -> StringUtils.isBlank((String) row.get("project_id"))
+                        || StringUtils.equals(projectId, (String) row.get("project_id")))
+                .filter(row -> canAccess(row, userId, PermissionConstants.AI_EXECUTION_RUN))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String normalizeAgentType(String value) {
+        String normalized = StringUtils.upperCase(StringUtils.trimToEmpty(value));
+        if (StringUtils.isBlank(normalized)) {
+            return null;
+        }
+        if (!KNOWN_PRODUCT_NAMES.contains(normalized.toLowerCase(Locale.ROOT))) {
+            throw new MSException("Agent 类型仅支持 WORKBUDDY/CURSOR/CODEX");
+        }
+        return normalized;
     }
 
     public void disable(String id, String userId) {

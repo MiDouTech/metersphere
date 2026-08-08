@@ -45,6 +45,8 @@ public class AiGovernanceService {
         List<String> allowedModels = dto.getAllowedModelIds() == null ? List.of()
                 : dto.getAllowedModelIds().stream().filter(StringUtils::isNotBlank).distinct().toList();
         dto.setAllowedModelIds(allowedModels);
+        dto.setAllowedResourceTypes(normalizeAllowlist(dto.getAllowedResourceTypes(), List.of("MODEL_API")));
+        dto.setAllowedAgentProviders(normalizeAllowlist(dto.getAllowedAgentProviders(), List.of()));
         if (StringUtils.isNotBlank(dto.getFallbackModelId())
                 && CollectionUtils.isNotEmpty(allowedModels)
                 && !allowedModels.contains(dto.getFallbackModelId())) {
@@ -53,16 +55,30 @@ public class AiGovernanceService {
         jdbcTemplate.update("""
                 INSERT INTO ai_project_governance
                 (project_id, allowed_model_ids, fallback_model_id, max_concurrent_tasks, monthly_token_quota,
-                 project_file_quota, session_file_limit, single_file_limit, update_user, update_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 project_file_quota, session_file_limit, single_file_limit, allowed_resource_types,
+                 allowed_agent_providers, allow_personal_agent, allow_local_agent_tools,
+                 max_agent_concurrent_tasks, max_agent_execution_minutes, daily_agent_execution_limit,
+                 update_user, update_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE allowed_model_ids=VALUES(allowed_model_ids),
                   fallback_model_id=VALUES(fallback_model_id),
                   max_concurrent_tasks=VALUES(max_concurrent_tasks), monthly_token_quota=VALUES(monthly_token_quota),
                   project_file_quota=VALUES(project_file_quota), session_file_limit=VALUES(session_file_limit),
-                  single_file_limit=VALUES(single_file_limit), update_user=VALUES(update_user), update_time=VALUES(update_time)
+                  single_file_limit=VALUES(single_file_limit), allowed_resource_types=VALUES(allowed_resource_types),
+                  allowed_agent_providers=VALUES(allowed_agent_providers),
+                  allow_personal_agent=VALUES(allow_personal_agent),
+                  allow_local_agent_tools=VALUES(allow_local_agent_tools),
+                  max_agent_concurrent_tasks=VALUES(max_agent_concurrent_tasks),
+                  max_agent_execution_minutes=VALUES(max_agent_execution_minutes),
+                  daily_agent_execution_limit=VALUES(daily_agent_execution_limit),
+                  update_user=VALUES(update_user), update_time=VALUES(update_time)
                 """, dto.getProjectId(), JSON.toJSONString(dto.getAllowedModelIds()), dto.getFallbackModelId(), dto.getMaxConcurrentTasks(),
                 dto.getMonthlyTokenQuota(), dto.getProjectFileQuota(), dto.getSessionFileLimit(),
-                dto.getSingleFileLimit(), userId, System.currentTimeMillis());
+                dto.getSingleFileLimit(), JSON.toJSONString(dto.getAllowedResourceTypes()),
+                JSON.toJSONString(dto.getAllowedAgentProviders()), dto.isAllowPersonalAgent(),
+                dto.isAllowLocalAgentTools(), dto.getMaxAgentConcurrentTasks(),
+                dto.getMaxAgentExecutionMinutes(), dto.getDailyAgentExecutionLimit(), userId,
+                System.currentTimeMillis());
         aiAuditService.record(dto.getProjectId(), null, userId, dto.getProjectId(), "UPDATE",
                 "AI_PROJECT_GOVERNANCE_UPDATE", "/ai/governance", "POST",
                 Map.of("allowedModelCount", dto.getAllowedModelIds().size(),
@@ -81,6 +97,42 @@ public class AiGovernanceService {
         if (CollectionUtils.isNotEmpty(allowed) && !allowed.contains(modelSourceId)) {
             throw new MSException("当前模型不在项目 AI 模型白名单中");
         }
+    }
+
+    public void assertAgentAllowed(String projectId, String provider) {
+        AiProjectGovernanceDTO governance = get(projectId);
+        if (!governance.isAllowPersonalAgent()
+                || !governance.getAllowedResourceTypes().contains("USER_AGENT")) {
+            throw new MSException("AI_RESOURCE_NOT_ALLOWED：项目未允许个人 Agent");
+        }
+        if (CollectionUtils.isNotEmpty(governance.getAllowedAgentProviders())
+                && governance.getAllowedAgentProviders().stream()
+                .noneMatch(item -> StringUtils.equalsIgnoreCase(item, provider))) {
+            throw new MSException("AI_RESOURCE_NOT_ALLOWED：Agent Provider 不在项目白名单中");
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void admitAgentExecution(String projectId, String userId, String connectionId,
+                                    String provider, Runnable createExecution) {
+        lockProject(projectId);
+        assertAgentAllowed(projectId, provider);
+        AiProjectGovernanceDTO limits = get(projectId);
+        Integer concurrent = jdbcTemplate.queryForObject("""
+                SELECT COUNT(1) FROM ai_case_execution
+                WHERE project_id=? AND resource_type='USER_AGENT'
+                  AND status IN ('CREATED','RUNNING','WAITING_CONFIRMATION')
+                """, Integer.class, projectId);
+        if (concurrent != null && concurrent >= limits.getMaxAgentConcurrentTasks()) {
+            throw new MSException("项目 Agent 并发任务已达到上限：" + limits.getMaxAgentConcurrentTasks());
+        }
+        Long daily = jdbcTemplate.queryForObject("""
+                SELECT COUNT(1) FROM ai_agent_usage WHERE project_id=? AND user_id=? AND create_time>=?
+                """, Long.class, projectId, userId, dayStart());
+        if (daily != null && daily >= limits.getDailyAgentExecutionLimit()) {
+            throw new MSException("项目用户当日 Agent 执行次数已达到上限：" + limits.getDailyAgentExecutionLimit());
+        }
+        createExecution.run();
     }
 
     public void assertCanStartGeneration(String projectId) {
@@ -202,6 +254,24 @@ public class AiGovernanceService {
         return LocalDate.now().withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
+    public void recordAgentUsage(String projectId, String userId, String conversationId, String requestId,
+                                 String connectionId, String deviceId, String provider, long durationMs,
+                                 long inputTokens, long outputTokens, boolean usageEstimated,
+                                 String status, String errorCode) {
+        jdbcTemplate.update("""
+                INSERT IGNORE INTO ai_agent_usage
+                (id,project_id,user_id,conversation_id,request_id,connection_id,device_id,provider,
+                 duration_ms,input_tokens,output_tokens,usage_estimated,status,error_code,create_time)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, IDGenerator.nextStr(), projectId, userId, conversationId, requestId, connectionId,
+                deviceId, provider, durationMs, inputTokens, outputTokens, usageEstimated, status,
+                errorCode, System.currentTimeMillis());
+    }
+
+    private long dayStart() {
+        return LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
     private void lockProject(String projectId) {
         long now = System.currentTimeMillis();
         jdbcTemplate.update("""
@@ -223,6 +293,13 @@ public class AiGovernanceService {
         dto.setProjectFileQuota(DEFAULT_PROJECT_FILE_QUOTA);
         dto.setSessionFileLimit(DEFAULT_SESSION_FILE_LIMIT);
         dto.setSingleFileLimit(DEFAULT_SINGLE_FILE_LIMIT);
+        dto.setAllowedResourceTypes(List.of("MODEL_API"));
+        dto.setAllowedAgentProviders(List.of());
+        dto.setAllowPersonalAgent(false);
+        dto.setAllowLocalAgentTools(false);
+        dto.setMaxAgentConcurrentTasks(1);
+        dto.setMaxAgentExecutionMinutes(15);
+        dto.setDailyAgentExecutionLimit(50);
         return dto;
     }
 
@@ -235,6 +312,29 @@ public class AiGovernanceService {
         dto.setProjectFileQuota(((Number) row.get("project_file_quota")).longValue());
         dto.setSessionFileLimit(((Number) row.get("session_file_limit")).intValue());
         dto.setSingleFileLimit(((Number) row.get("single_file_limit")).longValue());
+        dto.setAllowedResourceTypes(JSON.parseArray(StringUtils.defaultIfBlank(
+                (String) row.get("allowed_resource_types"), "[\"MODEL_API\"]"), String.class));
+        dto.setAllowedAgentProviders(JSON.parseArray(StringUtils.defaultString(
+                (String) row.get("allowed_agent_providers"), "[]"), String.class));
+        dto.setAllowPersonalAgent(booleanValue(row.get("allow_personal_agent")));
+        dto.setAllowLocalAgentTools(booleanValue(row.get("allow_local_agent_tools")));
+        dto.setMaxAgentConcurrentTasks(((Number) row.get("max_agent_concurrent_tasks")).intValue());
+        dto.setMaxAgentExecutionMinutes(((Number) row.get("max_agent_execution_minutes")).intValue());
+        dto.setDailyAgentExecutionLimit(((Number) row.get("daily_agent_execution_limit")).intValue());
         return dto;
+    }
+
+    private List<String> normalizeAllowlist(List<String> values, List<String> defaults) {
+        if (values == null) {
+            return defaults;
+        }
+        return values.stream().filter(StringUtils::isNotBlank).map(StringUtils::upperCase).distinct().toList();
+    }
+
+    private boolean booleanValue(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return value instanceof Number number && number.intValue() == 1;
     }
 }
