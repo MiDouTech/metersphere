@@ -21,7 +21,7 @@
           </div>
           <div
             :class="[
-              'h-full min-w-0 flex-1 overflow-auto bg-[var(--color-text-fff)]',
+              'h-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-[var(--color-text-fff)]',
               activeMenu === 'modelConfig' ? 'p-0' : 'p-[24px]',
             ]"
           >
@@ -176,6 +176,7 @@
   .ms-personal-page-window__body {
     display: flex;
     flex: 1;
+    min-width: 0;
     min-height: 0;
   }
 </style>
