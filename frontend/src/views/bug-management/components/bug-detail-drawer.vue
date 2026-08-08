@@ -502,8 +502,7 @@
   function shareHandler() {
     const url = `${window.location.origin}#${
       router.resolve({ name: BugManagementRouteEnum.BUG_MANAGEMENT_INDEX }).fullPath
-    }?
-      id=${detailInfo.value.id}&orgId=${appStore.currentOrgId}&pId=${appStore.currentProjectId}`;
+    }?id=${detailInfo.value.id}&orgId=${appStore.currentOrgId}&pId=${appStore.currentProjectId}`;
     if (isSupported) {
       copy(url);
       Message.info(t('bugManagement.detail.shareTip'));

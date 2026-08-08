@@ -121,9 +121,8 @@ const transform: AxiosTransform = {
     const { currentLocale } = useLocale();
     const appStore = useAppStore();
     const token = getToken();
-    if (token && (config as Recordable)?.requestOptions?.withToken !== false) {
-      const { sessionId, csrfToken } = token;
-
+    const { sessionId, csrfToken } = token;
+    if (sessionId && csrfToken && (config as Recordable)?.requestOptions?.withToken !== false) {
       (config as Recordable).headers = {
         ...config.headers,
         'X-AUTH-TOKEN': sessionId,

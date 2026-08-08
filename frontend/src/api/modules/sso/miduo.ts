@@ -28,16 +28,16 @@ export interface MiduoSsoCallbackBody {
 }
 
 export function getMiduoSsoStatus() {
-  return MSR.get<MiduoSsoStatus>({ url: MiduoSsoStatusUrl }, { ignoreCancelToken: true });
+  return MSR.get<MiduoSsoStatus>({ url: MiduoSsoStatusUrl }, { ignoreCancelToken: true, withToken: false });
 }
 
 export function getMiduoSsoState() {
-  return MSR.get<{ state: string }>({ url: MiduoSsoStateUrl });
+  return MSR.get<{ state: string }>({ url: MiduoSsoStateUrl }, { withToken: false });
 }
 
 export function postMiduoSsoCallback(data: MiduoSsoCallbackBody) {
   // 落地页会改 URL；勿被路由守卫 removeAllPending 取消
-  return MSR.post({ url: MiduoSsoCallbackUrl, data }, { ignoreCancelToken: true });
+  return MSR.post({ url: MiduoSsoCallbackUrl, data }, { ignoreCancelToken: true, withToken: false });
 }
 
 export function postMiduoSsoLogout() {
@@ -45,5 +45,5 @@ export function postMiduoSsoLogout() {
 }
 
 export function getMiduoBridgeUrl() {
-  return MSR.get<{ url: string; state?: string }>({ url: MiduoSsoBridgeUrl });
+  return MSR.get<{ url: string; state?: string }>({ url: MiduoSsoBridgeUrl }, { withToken: false });
 }
