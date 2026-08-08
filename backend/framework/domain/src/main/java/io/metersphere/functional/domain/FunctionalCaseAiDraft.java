@@ -8,6 +8,8 @@ import java.io.Serializable;
 public class FunctionalCaseAiDraft implements Serializable {
     private String id;
     private String generationId;
+    private String conversationId;
+    private String requestId;
     private String sourceDocumentId;
     private String projectId;
     private String moduleId;

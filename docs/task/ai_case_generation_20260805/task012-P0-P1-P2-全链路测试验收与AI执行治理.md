@@ -130,3 +130,11 @@
 - 当前全链路主要通过编译、类型检查和源码静态证据验证，缺少真实运行环境接口调用证据。
 - Provider Adapter 仍是对现有 AI 能力的包装，未形成多 Provider 独立策略和限流/重试/统计能力。
 - 文档解析首期仅支持文本类文件，PDF/Office/OCR 如果被用户上传，会被明确标记解析失败，不能用于生成上下文。
+
+## 2026-08-06 补充验证记录（替代上述过时结论）
+
+- 后端专项测试：解析与文件安全 4/4 通过；Provider/OAuth/Gateway/SSRF 13/13 通过。
+- 前端全量类型检查：`pnpm.cmd run type:check` 通过。
+- 已新增 `AiProviderEndToEndTests`，覆盖 HTTP 权限拦截、Redis 限流、Spring AI、Mock Provider、MySQL usage 和 `operation_log` 审计落库。
+- E2E 在当前开发机执行时于 Spring 启动前失败，明确原因为 `Docker must be present`；当前没有 Docker，MySQL/Redis Testcontainers 未启动，因此不得把真实 E2E 标为通过。
+- PDF/Office 已由 Tika 3.3.2 实测通过；OCR 代码已接 Tesseract，但仍需有 Tesseract 的部署环境完成图片样例验收。

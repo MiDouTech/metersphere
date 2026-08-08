@@ -8,8 +8,14 @@
         <result column="project_id" property="projectId"/>
         <result column="test_plan_id" property="testPlanId"/>
         <result column="source" property="source"/>
+        <result column="selection_mode" property="selectionMode"/>
+        <result column="prompt" property="prompt"/>
+        <result column="resolved_filter" property="resolvedFilter"/>
+        <result column="case_snapshot_hash" property="caseSnapshotHash"/>
+        <result column="policy_snapshot" property="policySnapshot"/>
         <result column="status" property="status"/>
         <result column="runner_id" property="runnerId"/>
+        <result column="runner_lease_id" property="runnerLeaseId"/>
         <result column="provider_id" property="providerId"/>
         <result column="environment_id" property="environmentId"/>
         <result column="target_url" property="targetUrl"/>
@@ -24,11 +30,14 @@
         <result column="blocked_count" property="blockedCount"/>
         <result column="skipped_count" property="skippedCount"/>
         <result column="unexecuted_count" property="unexecutedCount"/>
+        <result column="writeback_status" property="writebackStatus"/>
+        <result column="artifact_status" property="artifactStatus"/>
         <result column="executed_by" property="executedBy"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="create_user" property="createUser"/>
         <result column="update_user" property="updateUser"/>
+        <result column="version" property="version"/>
     </resultMap>
 
     <resultMap id="caseMap" type="io.metersphere.agent.dto.AgentExecutionCaseDTO">
@@ -40,26 +49,139 @@
         <result column="case_name" property="caseName"/>
         <result column="test_plan_id" property="testPlanId"/>
         <result column="test_plan_case_id" property="testPlanCaseId"/>
+        <result column="case_version" property="caseVersion"/>
+        <result column="case_snapshot" property="caseSnapshot"/>
         <result column="status" property="status"/>
         <result column="result" property="result"/>
         <result column="pos" property="pos"/>
         <result column="retry_count" property="retryCount"/>
+        <result column="heal_count" property="healCount"/>
+        <result column="healed" property="healed"/>
         <result column="error_message" property="errorMessage"/>
+        <result column="failure_category" property="failureCategory"/>
+        <result column="writeback_status" property="writebackStatus"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
     </resultMap>
 
     <resultMap id="eventMap" type="io.metersphere.agent.dto.AgentExecutionEventDTO">
         <id column="id" property="id"/>
+        <result column="contract_version" property="contractVersion"/>
+        <result column="runner_event_id" property="eventId"/>
         <result column="task_id" property="taskId"/>
         <result column="case_id" property="caseId"/>
         <result column="step_id" property="stepId"/>
+        <result column="attempt" property="attempt"/>
         <result column="sequence" property="sequence"/>
         <result column="event_time" property="eventTime"/>
         <result column="level" property="level"/>
         <result column="event_type" property="eventType"/>
         <result column="message" property="message"/>
+        <result column="artifact_ids" property="artifactIdsJson"/>
         <result column="sanitized_metadata" property="sanitizedMetadata"/>
+        <result column="create_user" property="createUser"/>
+    </resultMap>
+
+    <resultMap id="stepMap" type="io.metersphere.agent.dto.AgentExecutionStepDTO">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="execution_case_id" property="executionCaseId"/>
+        <result column="case_id" property="caseId"/>
+        <result column="source_step_id" property="sourceStepId"/>
+        <result column="pos" property="pos"/>
+        <result column="instruction" property="instruction"/>
+        <result column="expected" property="expected"/>
+        <result column="action_json" property="actionJson"/>
+        <result column="assertion_json" property="assertionJson"/>
+        <result column="risk_level" property="riskLevel"/>
+        <result column="retryable" property="retryable"/>
+        <result column="status" property="status"/>
+        <result column="actual_result" property="actualResult"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="failure_category" property="failureCategory"/>
+        <result column="attempt" property="attempt"/>
+        <result column="retry_count" property="retryCount"/>
+        <result column="healed" property="healed"/>
+        <result column="started_at" property="startedAt"/>
+        <result column="finished_at" property="finishedAt"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <resultMap id="healingMap" type="io.metersphere.agent.dto.AgentExecutionHealingDTO">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="execution_case_id" property="executionCaseId"/>
+        <result column="execution_step_id" property="executionStepId"/>
+        <result column="attempt" property="attempt"/>
+        <result column="failure_type" property="failureType"/>
+        <result column="original_locator" property="originalLocator"/>
+        <result column="candidate_locators" property="candidateLocators"/>
+        <result column="selected_locator" property="selectedLocator"/>
+        <result column="reason" property="reason"/>
+        <result column="confidence" property="confidence"/>
+        <result column="result" property="result"/>
+        <result column="before_artifact_id" property="beforeArtifactId"/>
+        <result column="after_artifact_id" property="afterArtifactId"/>
+        <result column="duration_ms" property="durationMs"/>
+        <result column="create_time" property="createTime"/>
+        <result column="create_user" property="createUser"/>
+    </resultMap>
+
+    <resultMap id="runnerMap" type="io.metersphere.agent.dto.AgentRunnerDTO">
+        <id column="id" property="id"/>
+        <result column="organization_id" property="organizationId"/>
+        <result column="name" property="name"/>
+        <result column="runner_version" property="runnerVersion"/>
+        <result column="contract_version" property="contractVersion"/>
+        <result column="status" property="status"/>
+        <result column="operating_system" property="operatingSystem"/>
+        <result column="browser_capabilities" property="browserCapabilities"/>
+        <result column="environment_labels" property="environmentLabels"/>
+        <result column="auth_token_hash" property="authTokenHash"/>
+        <result column="max_concurrency" property="maxConcurrency"/>
+        <result column="active_count" property="activeCount"/>
+        <result column="last_heartbeat_time" property="lastHeartbeatTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_user" property="createUser"/>
+        <result column="update_user" property="updateUser"/>
+    </resultMap>
+
+    <resultMap id="runnerLeaseMap" type="io.metersphere.agent.dto.AgentRunnerLeaseDTO">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="runner_id" property="runnerId"/>
+        <result column="status" property="status"/>
+        <result column="lease_token_hash" property="leaseTokenHash"/>
+        <result column="accepted_time" property="acceptedTime"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="last_heartbeat_time" property="lastHeartbeatTime"/>
+        <result column="last_event_sequence" property="lastEventSequence"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <resultMap id="artifactMap" type="io.metersphere.agent.dto.AgentExecutionArtifactDTO">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="execution_case_id" property="executionCaseId"/>
+        <result column="case_id" property="caseId"/>
+        <result column="step_id" property="stepId"/>
+        <result column="purpose" property="purpose"/>
+        <result column="file_id" property="fileId"/>
+        <result column="file_name" property="fileName"/>
+        <result column="storage_folder" property="storageFolder"/>
+        <result column="content_type" property="contentType"/>
+        <result column="size_bytes" property="sizeBytes"/>
+        <result column="sha256" property="sha256"/>
+        <result column="redacted" property="redacted"/>
+        <result column="status" property="status"/>
+        <result column="retention_until" property="retentionUntil"/>
+        <result column="create_time" property="createTime"/>
         <result column="create_user" property="createUser"/>
     </resultMap>
 
@@ -81,6 +203,108 @@
         LEFT JOIN functional_case fc ON fc.id = ec.case_id
         WHERE ec.task_id = #{taskId}
         ORDER BY ec.pos ASC, ec.create_time ASC
+    </select>
+
+    <select id="selectStepsByTaskId" resultMap="stepMap">
+        SELECT * FROM ai_execution_step
+        WHERE task_id = #{taskId}
+        ORDER BY execution_case_id ASC, pos ASC
+    </select>
+
+    <select id="selectHealingByTaskId" resultMap="healingMap">
+        SELECT * FROM ai_execution_healing
+        WHERE task_id = #{taskId}
+        ORDER BY execution_step_id ASC, attempt ASC
+    </select>
+
+    <select id="selectRunnerById" resultMap="runnerMap">
+        SELECT * FROM ai_runner WHERE id = #{id}
+    </select>
+
+    <select id="selectLeaseById" resultMap="runnerLeaseMap">
+        SELECT * FROM ai_runner_lease WHERE id = #{id}
+    </select>
+
+    <select id="selectArtifactById" resultMap="artifactMap">
+        SELECT * FROM ai_execution_artifact WHERE id = #{id}
+    </select>
+
+    <select id="selectArtifactByIdentity" resultMap="artifactMap">
+        SELECT * FROM ai_execution_artifact
+        WHERE task_id = #{taskId} AND sha256 = #{sha256} AND purpose = #{purpose}
+          AND ((step_id IS NULL AND #{stepId} IS NULL) OR step_id = #{stepId})
+        LIMIT 1
+    </select>
+
+    <select id="selectArtifactsByTaskId" resultMap="artifactMap">
+        SELECT * FROM ai_execution_artifact
+        WHERE task_id = #{taskId} AND status = 'AVAILABLE'
+        ORDER BY create_time ASC, id ASC
+    </select>
+
+    <select id="selectExpiredArtifacts" resultMap="artifactMap">
+        SELECT * FROM ai_execution_artifact
+        WHERE status = 'AVAILABLE'
+          AND retention_until IS NOT NULL
+          AND retention_until &lt;= #{now}
+        ORDER BY retention_until ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectOperationsSummary" resultType="io.metersphere.agent.dto.AgentExecutionOperationsDTO">
+        SELECT
+          (SELECT COUNT(1) FROM ai_runner r
+             WHERE r.organization_id = #{organizationId} AND r.status = 'ONLINE'
+               AND r.last_heartbeat_time &gt;= #{runnerStaleBefore}) AS onlineRunnerCount,
+          (SELECT COUNT(1) FROM ai_runner r
+             WHERE r.organization_id = #{organizationId}
+               AND (r.status != 'ONLINE' OR r.last_heartbeat_time IS NULL
+                    OR r.last_heartbeat_time &lt; #{runnerStaleBefore})) AS staleRunnerCount,
+          (SELECT COUNT(1) FROM ai_runner_lease l JOIN ai_runner r ON r.id = l.runner_id
+             WHERE r.organization_id = #{organizationId} AND l.status = 'ACTIVE'
+               AND l.expire_time &gt;= #{now}) AS activeLeaseCount,
+          (SELECT COUNT(1) FROM ai_execution_task t
+             WHERE t.organization_id = #{organizationId} AND t.status = 'QUEUED') AS queuedTaskCount,
+          (SELECT COUNT(1) FROM ai_execution_task t
+             WHERE t.organization_id = #{organizationId}
+               AND t.status IN ('PREPARING_BROWSER','WAITING_LOGIN','RUNNING','PAUSED','WRITING_BACK')
+               AND t.update_time &lt; #{taskStuckBefore}) AS stuckTaskCount,
+          (SELECT COUNT(1) FROM ai_execution_task t
+             WHERE t.organization_id = #{organizationId}
+               AND (t.status = 'WRITING_BACK' OR t.writeback_status IN ('FAILED','PARTIAL'))) AS writebackBacklogCount,
+          (SELECT COUNT(1) FROM ai_execution_task t
+             WHERE t.organization_id = #{organizationId}
+               AND t.status IN ('SUCCESS','PARTIAL_SUCCESS','FAILED')
+               AND t.artifact_status IN ('PENDING','FAILED','PARTIAL')) AS artifactBacklogCount,
+          (SELECT COUNT(1) FROM ai_execution_artifact a JOIN ai_execution_task t ON t.id = a.task_id
+             WHERE t.organization_id = #{organizationId} AND a.status = 'AVAILABLE'
+               AND a.retention_until IS NOT NULL AND a.retention_until &lt;= #{now}) AS expiredArtifactCount
+    </select>
+
+    <select id="selectExpiredActiveLeases" resultMap="runnerLeaseMap">
+        SELECT * FROM ai_runner_lease
+        WHERE status = 'ACTIVE' AND expire_time &lt; #{now}
+        ORDER BY expire_time ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countActiveRunnerLeases" resultType="int">
+        SELECT COUNT(*) FROM ai_runner_lease
+        WHERE runner_id = #{runnerId} AND status = 'ACTIVE' AND expire_time &gt;= #{now}
+    </select>
+
+    <select id="countAvailableArtifacts" resultType="int">
+        SELECT COUNT(*) FROM ai_execution_artifact WHERE task_id = #{taskId} AND status = 'AVAILABLE'
+    </select>
+
+    <select id="selectQueuedTaskForRunner" resultMap="taskMap">
+        SELECT * FROM ai_execution_task
+        WHERE organization_id = #{organizationId}
+          AND status = 'QUEUED'
+          AND (runner_id IS NULL OR runner_id = '' OR runner_id = #{runnerId})
+        ORDER BY create_time ASC, id ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
     </select>
 
     <select id="selectCasesByTaskIdAndStatuses" resultMap="caseMap">
@@ -111,51 +335,248 @@
 
     <insert id="insertTask" parameterType="io.metersphere.agent.dto.AgentExecutionTaskDTO">
         INSERT INTO ai_execution_task (
-            id, organization_id, project_id, test_plan_id, source, status, runner_id, provider_id,
+            id, organization_id, project_id, test_plan_id, source, selection_mode, prompt, resolved_filter,
+            case_snapshot_hash, policy_snapshot, status, runner_id, runner_lease_id, provider_id,
             environment_id, target_url, browser_type, login_mode, idempotency_key, confirm_required,
             confirmation_reason, total_count, success_count, failed_count, blocked_count, skipped_count,
-            unexecuted_count, executed_by, create_time, update_time, create_user, update_user
+            unexecuted_count, writeback_status, artifact_status, executed_by, create_time, update_time,
+            create_user, update_user, version
         ) VALUES (
-            #{id}, #{organizationId}, #{projectId}, #{testPlanId}, #{source}, #{status}, #{runnerId}, #{providerId},
+            #{id}, #{organizationId}, #{projectId}, #{testPlanId}, #{source}, #{selectionMode}, #{prompt}, #{resolvedFilter},
+            #{caseSnapshotHash}, #{policySnapshot}, #{status}, #{runnerId}, #{runnerLeaseId}, #{providerId},
             #{environmentId}, #{targetUrl}, #{browserType}, #{loginMode}, #{idempotencyKey}, #{confirmRequired},
             #{confirmationReason}, #{totalCount}, #{successCount}, #{failedCount}, #{blockedCount}, #{skippedCount},
-            #{unexecutedCount}, #{executedBy}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser}
+            #{unexecutedCount}, #{writebackStatus}, #{artifactStatus}, #{executedBy}, #{createTime}, #{updateTime},
+            #{createUser}, #{updateUser}, COALESCE(#{version}, 0)
         )
     </insert>
 
     <insert id="insertCase" parameterType="io.metersphere.agent.dto.AgentExecutionCaseDTO">
         INSERT INTO ai_execution_case (
-            id, task_id, project_id, case_id, test_plan_id, test_plan_case_id, status, result,
-            pos, retry_count, error_message, create_time, update_time
+            id, task_id, project_id, case_id, test_plan_id, test_plan_case_id, case_version, case_snapshot,
+            status, result, pos, retry_count, heal_count, healed, error_message, failure_category,
+            writeback_status, create_time, update_time, version
         ) VALUES (
-            #{id}, #{taskId}, #{projectId}, #{caseId}, #{testPlanId}, #{testPlanCaseId}, #{status}, #{result},
-            #{pos}, #{retryCount}, #{errorMessage}, #{createTime}, #{updateTime}
+            #{id}, #{taskId}, #{projectId}, #{caseId}, #{testPlanId}, #{testPlanCaseId}, #{caseVersion}, #{caseSnapshot},
+            #{status}, #{result}, #{pos}, #{retryCount}, COALESCE(#{healCount}, 0), COALESCE(#{healed}, 0),
+            #{errorMessage}, #{failureCategory}, #{writebackStatus}, #{createTime}, #{updateTime}, COALESCE(#{version}, 0)
         )
     </insert>
 
+    <insert id="insertStep" parameterType="io.metersphere.agent.dto.AgentExecutionStepDTO">
+        INSERT INTO ai_execution_step (
+            id, task_id, execution_case_id, case_id, source_step_id, pos, instruction, expected,
+            action_json, assertion_json, risk_level, retryable, status, actual_result, error_message,
+            failure_category, attempt, retry_count, healed, started_at, finished_at, create_time,
+            update_time, version
+        ) VALUES (
+            #{id}, #{taskId}, #{executionCaseId}, #{caseId}, #{sourceStepId}, #{pos}, #{instruction}, #{expected},
+            #{actionJson}, #{assertionJson}, #{riskLevel}, #{retryable}, #{status}, #{actualResult}, #{errorMessage},
+            #{failureCategory}, #{attempt}, #{retryCount}, #{healed}, #{startedAt}, #{finishedAt}, #{createTime},
+            #{updateTime}, COALESCE(#{version}, 0)
+        )
+    </insert>
+
+    <insert id="insertHealing" parameterType="io.metersphere.agent.dto.AgentExecutionHealingDTO">
+        INSERT INTO ai_execution_healing (
+            id, task_id, execution_case_id, execution_step_id, attempt, failure_type, original_locator,
+            candidate_locators, selected_locator, reason, confidence, result, before_artifact_id,
+            after_artifact_id, duration_ms, create_time, create_user
+        ) VALUES (
+            #{id}, #{taskId}, #{executionCaseId}, #{executionStepId}, #{attempt}, #{failureType}, #{originalLocator},
+            #{candidateLocators}, #{selectedLocator}, #{reason}, #{confidence}, #{result}, #{beforeArtifactId},
+            #{afterArtifactId}, #{durationMs}, #{createTime}, #{createUser}
+        )
+    </insert>
+
+    <insert id="insertRunner" parameterType="io.metersphere.agent.dto.AgentRunnerDTO">
+        INSERT INTO ai_runner (
+            id, organization_id, name, runner_version, contract_version, status, operating_system,
+            browser_capabilities, environment_labels, auth_token_hash, max_concurrency, active_count, last_heartbeat_time,
+            create_time, update_time, create_user, update_user
+        ) VALUES (
+            #{id}, #{organizationId}, #{name}, #{runnerVersion}, #{contractVersion}, #{status}, #{operatingSystem},
+            #{browserCapabilities}, #{environmentLabels}, #{authTokenHash}, #{maxConcurrency}, #{activeCount}, #{lastHeartbeatTime},
+            #{createTime}, #{updateTime}, #{createUser}, #{updateUser}
+        )
+    </insert>
+
+    <insert id="insertRunnerLease" parameterType="io.metersphere.agent.dto.AgentRunnerLeaseDTO">
+        INSERT INTO ai_runner_lease (
+            id, task_id, runner_id, status, lease_token_hash, accepted_time, expire_time,
+            last_heartbeat_time, last_event_sequence, create_time, update_time, version
+        ) VALUES (
+            #{id}, #{taskId}, #{runnerId}, #{status}, #{leaseTokenHash}, #{acceptedTime}, #{expireTime},
+            #{lastHeartbeatTime}, #{lastEventSequence}, #{createTime}, #{updateTime}, COALESCE(#{version}, 0)
+        )
+    </insert>
+
+    <insert id="insertArtifact" parameterType="io.metersphere.agent.dto.AgentExecutionArtifactDTO">
+        INSERT INTO ai_execution_artifact (
+            id, task_id, execution_case_id, case_id, step_id, purpose, file_id, file_name,
+            storage_folder, content_type, size_bytes, sha256, redacted, status, retention_until,
+            create_time, create_user
+        ) VALUES (
+            #{id}, #{taskId}, #{executionCaseId}, #{caseId}, #{stepId}, #{purpose}, #{fileId}, #{fileName},
+            #{storageFolder}, #{contentType}, #{sizeBytes}, #{sha256}, #{redacted}, #{status}, #{retentionUntil},
+            #{createTime}, #{createUser}
+        )
+    </insert>
+
+    <update id="markArtifactDeleted">
+        UPDATE ai_execution_artifact
+        SET status = #{status}
+        WHERE id = #{id} AND status = 'AVAILABLE'
+    </update>
+
+    <update id="completeHealing">
+        UPDATE ai_execution_healing
+        SET result = #{result}, after_artifact_id = #{afterArtifactId},
+            duration_ms = GREATEST(0, #{eventTime} - create_time)
+        WHERE task_id = #{taskId} AND execution_step_id = #{stepId}
+          AND attempt = #{attempt} AND result = 'STARTED'
+    </update>
+
+    <update id="updateRunnerHeartbeat">
+        UPDATE ai_runner
+        SET status = #{status}, active_count = #{activeCount}, last_heartbeat_time = #{heartbeatTime},
+            update_time = #{heartbeatTime}
+        WHERE id = #{id}
+    </update>
+
+    <update id="renewRunnerLease">
+        UPDATE ai_runner_lease
+        SET expire_time = #{expireTime}, last_heartbeat_time = #{heartbeatTime},
+            update_time = #{heartbeatTime}, version = version + 1
+        WHERE id = #{id} AND runner_id = #{runnerId} AND status = 'ACTIVE'
+    </update>
+
+    <update id="assignRunnerLease">
+        UPDATE ai_execution_task
+        SET runner_id = #{runnerId}, runner_lease_id = #{leaseId}, status = #{toStatus},
+            version = version + 1, update_time = #{updateTime}
+        WHERE id = #{taskId} AND status = #{fromStatus} AND version = #{version}
+    </update>
+
+    <update id="updateLeaseEventSequence">
+        UPDATE ai_runner_lease
+        SET last_event_sequence = #{lastEventSequence}, update_time = #{updateTime}, version = version + 1
+        WHERE id = #{id} AND runner_id = #{runnerId} AND status = 'ACTIVE'
+          AND last_event_sequence = #{previousEventSequence}
+    </update>
+
+    <update id="closeRunnerLease">
+        UPDATE ai_runner_lease
+        SET status = #{status}, update_time = #{updateTime}, version = version + 1
+        WHERE id = #{id} AND runner_id = #{runnerId} AND status = 'ACTIVE'
+    </update>
+
+    <update id="expireTaskLease">
+        UPDATE ai_execution_task
+        SET status = #{status}, update_time = #{updateTime}, version = version + 1
+        WHERE id = #{taskId} AND runner_lease_id = #{leaseId}
+          AND status IN ('PREPARING_BROWSER', 'WAITING_LOGIN', 'RUNNING', 'PAUSED')
+    </update>
+
+    <update id="markStepStarted">
+        UPDATE ai_execution_step
+        SET status = 'RUNNING', attempt = #{attempt}, started_at = COALESCE(started_at, #{updateTime}),
+            update_time = #{updateTime}, version = version + 1
+        WHERE task_id = #{taskId} AND id = #{stepId} AND status IN ('PENDING', 'RUNNING')
+    </update>
+
+    <update id="markStepHealing">
+        UPDATE ai_execution_step
+        SET status = 'HEALING', retry_count = retry_count + 1, update_time = #{updateTime}, version = version + 1
+        WHERE task_id = #{taskId} AND id = #{stepId} AND status = 'RUNNING'
+    </update>
+
+    <update id="markStepHealingCompleted">
+        UPDATE ai_execution_step
+        SET status = 'RUNNING', healed = 1, update_time = #{updateTime}, version = version + 1
+        WHERE task_id = #{taskId} AND id = #{stepId} AND status = 'HEALING'
+    </update>
+
+    <update id="markStepCompleted">
+        UPDATE ai_execution_step
+        SET status = #{status}, actual_result = #{actualResult}, error_message = #{errorMessage},
+            failure_category = #{failureCategory}, healed = CASE WHEN #{healed} THEN 1 ELSE healed END,
+            finished_at = #{updateTime}, update_time = #{updateTime}, version = version + 1
+        WHERE task_id = #{taskId} AND id = #{stepId}
+          AND status NOT IN ('SUCCESS', 'FAILED', 'BLOCKED', 'SKIPPED', 'NEEDS_REVIEW', 'ERROR')
+    </update>
+
+    <update id="markCaseStarted">
+        UPDATE ai_execution_case
+        SET status = 'RUNNING', update_time = #{updateTime}, version = version + 1
+        WHERE task_id = #{taskId} AND case_id = #{caseId} AND status IN ('PENDING', 'CREATED', 'RUNNING')
+    </update>
+
+    <update id="markCaseCompleted">
+        UPDATE ai_execution_case
+        SET status = #{status}, result = #{result}, error_message = #{errorMessage},
+            update_time = #{updateTime}, version = version + 1
+        WHERE task_id = #{taskId} AND case_id = #{caseId}
+          AND status NOT IN ('SUCCESS', 'FAILED', 'BLOCKED', 'SKIPPED', 'NEEDS_REVIEW', 'ERROR')
+    </update>
+
+    <update id="updateCaseWritebackStatus">
+        UPDATE ai_execution_case
+        SET writeback_status = #{writebackStatus}, error_message = COALESCE(#{errorMessage}, error_message),
+            update_time = #{updateTime}, version = version + 1
+        WHERE task_id = #{taskId} AND case_id = #{caseId}
+    </update>
+
+    <update id="finalizeExecutionTask">
+        UPDATE ai_execution_task
+        SET status = #{status}, success_count = #{successCount}, failed_count = #{failedCount},
+            blocked_count = #{blockedCount}, skipped_count = #{skippedCount}, unexecuted_count = #{unexecutedCount},
+            writeback_status = #{writebackStatus}, artifact_status = #{artifactStatus},
+            update_user = #{updateUser}, update_time = #{updateTime}, version = version + 1
+        WHERE id = #{taskId} AND status = 'WRITING_BACK'
+    </update>
+
     <insert id="insertEvent" parameterType="io.metersphere.agent.dto.AgentExecutionEventDTO">
         INSERT INTO ai_execution_event (
-            id, task_id, case_id, step_id, sequence, event_time, level, event_type, message,
+            id, contract_version, runner_event_id, task_id, case_id, step_id, attempt, sequence, event_time, level, event_type, message,
             artifact_ids, sanitized_metadata, create_user
         ) VALUES (
-            #{id}, #{taskId}, #{caseId}, #{stepId}, #{sequence}, #{eventTime}, #{level}, #{eventType}, #{message},
-            NULL, #{sanitizedMetadata}, #{createUser}
+            #{id}, COALESCE(#{contractVersion}, 'v1'), #{eventId}, #{taskId}, #{caseId}, #{stepId}, COALESCE(#{attempt}, 0),
+            #{sequence}, #{eventTime}, #{level}, #{eventType}, #{message},
+            #{artifactIdsJson}, #{sanitizedMetadata}, #{createUser}
         )
     </insert>
 
     <update id="updateTaskStatus">
         UPDATE ai_execution_task
-        SET status = #{status}, update_user = #{updateUser}, update_time = #{updateTime}
+        SET status = #{status},
+            version = version + 1,
+            update_user = #{updateUser},
+            update_time = #{updateTime}
         WHERE id = #{id}
+    </update>
+
+    <update id="transitionTaskStatus">
+        UPDATE ai_execution_task
+        SET status = #{toStatus},
+            version = version + 1,
+            update_user = #{updateUser},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+          AND status = #{fromStatus}
+          AND version = #{version}
     </update>
 
     <update id="confirmTask">
         UPDATE ai_execution_task
         SET status = #{status},
             confirm_required = 0,
+            version = version + 1,
             update_user = #{updateUser},
             update_time = #{updateTime}
         WHERE id = #{id}
+          AND status = #{fromStatus}
+          AND version = #{version}
     </update>
 
     <update id="updateTaskCounts">
@@ -166,6 +587,7 @@
             blocked_count = #{blockedCount},
             skipped_count = #{skippedCount},
             unexecuted_count = #{unexecutedCount},
+            version = version + 1,
             update_user = #{updateUser},
             update_time = #{updateTime}
         WHERE id = #{id}
@@ -183,13 +605,37 @@
 
     <update id="retryFailedCases">
         UPDATE ai_execution_case
-        SET status = 'CREATED',
+        SET status = 'PENDING',
             result = NULL,
             retry_count = retry_count + 1,
             error_message = NULL,
+            failure_category = NULL,
+            writeback_status = 'PENDING',
+            version = version + 1,
             update_time = #{updateTime}
         WHERE task_id = #{taskId}
           AND status IN ('FAILED', 'BLOCKED')
+    </update>
+
+    <update id="retryFailedSteps">
+        UPDATE ai_execution_step
+        SET status = 'PENDING', actual_result = NULL, error_message = NULL, failure_category = NULL,
+            attempt = attempt + 1, healed = 0, started_at = NULL, finished_at = NULL,
+            update_time = #{updateTime}, version = version + 1
+        WHERE task_id = #{taskId}
+          AND execution_case_id IN (
+              SELECT id FROM ai_execution_case WHERE task_id = #{taskId} AND status IN ('FAILED', 'BLOCKED')
+          )
+    </update>
+
+    <update id="requeueTaskForRetry">
+        UPDATE ai_execution_task
+        SET status = 'QUEUED', runner_id = NULL, runner_lease_id = NULL,
+            success_count = #{successCount}, failed_count = #{failedCount},
+            blocked_count = #{blockedCount}, skipped_count = #{skippedCount}, unexecuted_count = #{unexecutedCount},
+            writeback_status = 'PENDING', artifact_status = 'PENDING',
+            update_user = #{updateUser}, update_time = #{updateTime}, version = version + 1
+        WHERE id = #{id} AND status = #{fromStatus} AND version = #{version}
     </update>
 
     <sql id="planSearchWhere">

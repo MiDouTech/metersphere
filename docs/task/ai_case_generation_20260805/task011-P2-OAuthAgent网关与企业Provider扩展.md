@@ -68,3 +68,11 @@ Cursor、Codex、WorkBuddy 等产品不一定向第三方系统提供统一模�
 - 未实现项目/用户/Provider 维度额度统计。
 - 未实现组织授权、项目授权、个人授权。
 - OAuth 回调、Token 刷新、撤销授权、Agent 网关协议、额度统计测试均未完成。
+
+## 2026-08-06 补充执行记录（替代上述过时缺口）
+
+- OAuth 已实现连接配置、随机 state 哈希与过期、PKCE S256、回调换 Token、加密存储、到期自动刷新、强制刷新和标准撤销。
+- OAuth/Agent Gateway 均实现个人、项目、组织作用域鉴权；个人连接跨用户访问被拒绝，回调 state 使用数据库行锁一次性消费。
+- Agent Gateway 已实现 MCP Streamable HTTP 与自定义 HTTP；MCP 使用 `MCP-Protocol-Version: 2026-07-28`、JSON-RPC `tools/call`、能力白名单和任务/项目上下文。
+- 远程地址默认只允许 HTTPS 公网，阻断本机、私网、链路本地、组播和云元数据地址；企业 Agent Gateway 可通过受控配置允许私网。
+- OAuth/SSRF/Gateway 专项测试共 9 项通过；仍待与真实企业 OAuth Provider、MCP Gateway 做部署联调。

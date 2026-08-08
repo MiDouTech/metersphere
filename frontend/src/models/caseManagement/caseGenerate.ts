@@ -80,6 +80,7 @@ export interface AiDraftBatchSaveRequest {
   moduleId?: string;
   templateId?: string;
   draftIds: string[];
+  confirmed: boolean;
 }
 
 export interface AiDraftBatchSaveResponse {

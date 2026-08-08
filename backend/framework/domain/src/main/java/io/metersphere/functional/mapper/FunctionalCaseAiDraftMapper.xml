@@ -4,6 +4,8 @@
     <resultMap id="BaseResultMap" type="io.metersphere.functional.domain.FunctionalCaseAiDraft">
         <id column="id" jdbcType="VARCHAR" property="id"/>
         <result column="generation_id" jdbcType="VARCHAR" property="generationId"/>
+        <result column="conversation_id" jdbcType="VARCHAR" property="conversationId"/>
+        <result column="request_id" jdbcType="VARCHAR" property="requestId"/>
         <result column="source_document_id" jdbcType="VARCHAR" property="sourceDocumentId"/>
         <result column="project_id" jdbcType="VARCHAR" property="projectId"/>
         <result column="module_id" jdbcType="VARCHAR" property="moduleId"/>
@@ -31,12 +33,13 @@
     </resultMap>
 
     <insert id="insert" parameterType="io.metersphere.functional.domain.FunctionalCaseAiDraft">
-        insert into functional_case_ai_draft (id, generation_id, source_document_id, project_id, module_id,
+        insert into functional_case_ai_draft (id, generation_id, conversation_id, request_id, source_document_id, project_id, module_id,
                                               template_id, name, case_level, edit_type, prerequisite, steps,
                                               expected_result, tags, custom_fields, source_references, validation_message, fingerprint,
                                               duplicate, validation_status, draft_status, formal_case_id, deleted,
                                               version, create_user, create_time, update_time)
-        values (#{id,jdbcType=VARCHAR}, #{generationId,jdbcType=VARCHAR}, #{sourceDocumentId,jdbcType=VARCHAR},
+        values (#{id,jdbcType=VARCHAR}, #{generationId,jdbcType=VARCHAR}, #{conversationId,jdbcType=VARCHAR},
+                #{requestId,jdbcType=VARCHAR}, #{sourceDocumentId,jdbcType=VARCHAR},
                 #{projectId,jdbcType=VARCHAR}, #{moduleId,jdbcType=VARCHAR}, #{templateId,jdbcType=VARCHAR},
                 #{name,jdbcType=VARCHAR}, #{caseLevel,jdbcType=VARCHAR}, #{editType,jdbcType=VARCHAR},
                 #{prerequisite,jdbcType=LONGVARCHAR}, #{steps,jdbcType=LONGVARCHAR},
@@ -58,6 +61,8 @@
         update functional_case_ai_draft
         <set>
             <if test="generationId != null">generation_id = #{generationId,jdbcType=VARCHAR},</if>
+            <if test="conversationId != null">conversation_id = #{conversationId,jdbcType=VARCHAR},</if>
+            <if test="requestId != null">request_id = #{requestId,jdbcType=VARCHAR},</if>
             <if test="sourceDocumentId != null">source_document_id = #{sourceDocumentId,jdbcType=VARCHAR},</if>
             <if test="projectId != null">project_id = #{projectId,jdbcType=VARCHAR},</if>
             <if test="moduleId != null">module_id = #{moduleId,jdbcType=VARCHAR},</if>

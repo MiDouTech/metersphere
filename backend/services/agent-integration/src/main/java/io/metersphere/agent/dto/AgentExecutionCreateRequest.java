@@ -17,6 +17,14 @@ public class AgentExecutionCreateRequest {
     private List<String> caseIds;
     @Schema(description = "来源：MCP/CASE_LIST/WORKBENCH/API")
     private String source;
+    @Schema(description = "选择方式：MANUAL/NATURAL_LANGUAGE")
+    private String selectionMode;
+    @Schema(description = "脱敏后的原始提示词")
+    private String prompt;
+    @Schema(description = "服务端确认过的结构化筛选 DSL JSON")
+    private String resolvedFilter;
+    @Schema(description = "执行、自愈、截图和风险策略快照 JSON")
+    private String policySnapshot;
     private String environmentId;
     private String targetUrl;
     private String browserType;

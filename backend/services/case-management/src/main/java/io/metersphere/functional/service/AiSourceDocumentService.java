@@ -12,6 +12,8 @@ import io.metersphere.project.service.FileMetadataService;
 import io.metersphere.sdk.constants.ModuleConstants;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.uid.IDGenerator;
+import io.metersphere.system.service.ai.AiGovernanceService;
+import io.metersphere.system.service.ai.AiAuditService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -20,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.apache.tika.Tika;
 
 import java.io.IOException;
 import java.util.List;
@@ -44,10 +47,24 @@ public class AiSourceDocumentService {
     private FileMetadataService fileMetadataService;
     @Resource
     private AiSourceDocumentParserService parserService;
+    @Resource
+    private AiGovernanceService aiGovernanceService;
+    @Resource
+    private AiAuditService aiAuditService;
+    @Resource
+    private AiDocumentVirusScanner virusScanner;
 
     public AiSourceDocumentDTO upload(AiSourceDocumentUploadRequest request, MultipartFile file, String userId) {
         validateFile(file);
         byte[] fileBytes = readBytes(file);
+        virusScanner.scan(file.getOriginalFilename(), fileBytes);
+        String detectedMimeType = validateDetectedType(file.getOriginalFilename(), file.getContentType(), fileBytes);
+        return aiGovernanceService.admitFileUpload(request.getProjectId(), request.getConversationId(), userId,
+                file.getSize(), () -> persistUpload(request, file, userId, fileBytes, detectedMimeType));
+    }
+
+    private AiSourceDocumentDTO persistUpload(AiSourceDocumentUploadRequest request, MultipartFile file, String userId,
+                                              byte[] fileBytes, String detectedMimeType) {
         String sha256 = DigestUtils.sha256Hex(fileBytes);
         String originalName = StringUtils.defaultString(file.getOriginalFilename());
         long now = System.currentTimeMillis();
@@ -66,7 +83,7 @@ public class AiSourceDocumentService {
         document.setConversationId(request.getConversationId());
         document.setFileId(fileId);
         document.setOriginalName(originalName);
-        document.setMimeType(StringUtils.defaultString(file.getContentType()));
+        document.setMimeType(detectedMimeType);
         document.setFileSize(file.getSize());
         document.setSha256(sha256);
         document.setParseStatus(AiSourceDocumentParseStatus.UPLOADED.name());
@@ -200,5 +217,36 @@ public class AiSourceDocumentService {
 
     private void audit(String action, String projectId, String userId, String message) {
         log.info("functional_case_ai_document action={}, projectId={}, userId={}, {}", action, projectId, userId, message);
+        aiAuditService.record(projectId, null, userId, projectId, action.startsWith("DELETE") ? "DELETE" : "UPDATE",
+                "AI_SOURCE_DOCUMENT_" + action, "/functional/case/ai/document", "POST",
+                java.util.Map.of("detail", StringUtils.left(StringUtils.defaultString(message), 1000)));
+    }
+
+    private String validateDetectedType(String fileName, String claimedMimeType, byte[] content) {
+        String detected;
+        try {
+            detected = new Tika().detect(content, fileName);
+        } catch (Exception ex) {
+            throw new MSException("无法识别文件真实类型", ex);
+        }
+        String ext = extension(fileName);
+        String actual = StringUtils.lowerCase(StringUtils.defaultString(detected));
+        boolean valid = switch (ext) {
+            case "pdf" -> actual.contains("pdf");
+            case "doc", "xls", "ppt" -> actual.contains("msword") || actual.contains("msoffice")
+                    || actual.contains("vnd.ms-") || actual.contains("ole-storage");
+            case "docx", "xlsx", "pptx" -> actual.contains("officedocument") || actual.contains("ooxml");
+            case "png", "jpg", "jpeg", "bmp", "gif", "webp" -> actual.startsWith("image/");
+            default -> actual.startsWith("text/") || actual.contains("json") || actual.contains("xml")
+                    || actual.contains("yaml") || "application/octet-stream".equals(actual);
+        };
+        if (!valid) {
+            throw new MSException("文件扩展名与真实 MIME 不匹配：" + ext + " / " + actual);
+        }
+        if (StringUtils.isNotBlank(claimedMimeType)
+                && StringUtils.containsAny(StringUtils.lowerCase(claimedMimeType), "x-msdownload", "x-sh", "x-msdos")) {
+            throw new MSException("声明的文件 MIME 类型不安全");
+        }
+        return actual;
     }
 }

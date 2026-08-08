@@ -1,6 +1,18 @@
 import MSR from '@/api/http/index';
 import { AiExecutionResolveUrl, AiExecutionTaskDetailUrl, AiExecutionTaskUrl } from '@/api/requrls/ai-execution';
 
+export interface AiExecutionStep {
+  id: string;
+  pos?: number;
+  instruction?: string;
+  expected?: string;
+  status?: string;
+  actualResult?: string;
+  errorMessage?: string;
+  failureCategory?: string;
+  healed?: boolean;
+}
+
 export interface AiExecutionCase {
   id?: string;
   taskId?: string;
@@ -15,6 +27,8 @@ export interface AiExecutionCase {
   pos?: number;
   retryCount?: number;
   errorMessage?: string;
+  writebackStatus?: string;
+  steps?: AiExecutionStep[];
 }
 
 export interface AiExecutionTask {
@@ -38,6 +52,11 @@ export interface AiExecutionTask {
   confirmationReason?: string;
   createTime?: number;
   updateTime?: number;
+  selectionMode?: string;
+  resolvedFilter?: string;
+  caseSnapshotHash?: string;
+  writebackStatus?: string;
+  artifactStatus?: string;
   cases?: AiExecutionCase[];
 }
 
@@ -51,6 +70,22 @@ export interface AiExecutionEvent {
   level: string;
   eventType: string;
   message?: string;
+  artifactIds?: string[];
+}
+
+export interface AiExecutionArtifact {
+  id: string;
+  taskId: string;
+  caseId?: string;
+  stepId?: string;
+  purpose: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  sha256: string;
+  redacted: boolean;
+  downloadPath: string;
+  createTime?: number;
 }
 
 export interface AiExecutionEventsResponse {
@@ -72,6 +107,10 @@ export interface AiExecutionCreateParams {
   targetUrl?: string;
   browserType?: string;
   loginMode?: string;
+  selectionMode?: string;
+  prompt?: string;
+  resolvedFilter?: string;
+  policySnapshot?: string;
 }
 
 export interface AiExecutionResolveResult {
@@ -89,6 +128,11 @@ export interface AiExecutionResolveResult {
   candidatePlans?: Array<{ id: string; name?: string; status?: string; associatedCaseCount?: number }>;
   cases?: Array<{ caseId: string; num?: number; name?: string; testPlanCaseId?: string }>;
   warnings?: string[];
+  selectionMode?: string;
+  resolvedFilter?: Record<string, any>;
+  caseSnapshotHash?: string;
+  parseConfidence?: number;
+  matchedReasons?: string[];
 }
 
 export function resolveAiExecutionScope(data: Record<string, any>) {
@@ -111,6 +155,10 @@ export function getAiExecutionEvents(id: string, params?: { cursor?: number; lim
       limit: params?.limit ?? 100,
     },
   });
+}
+
+export function getAiExecutionArtifacts(id: string) {
+  return MSR.get<AiExecutionArtifact[]>({ url: `${AiExecutionTaskDetailUrl}/${id}/artifacts` });
 }
 
 export function confirmAiExecutionTask(id: string, reason?: string) {

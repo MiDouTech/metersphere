@@ -6,6 +6,7 @@ import io.metersphere.functional.request.AiSourceDocumentPageRequest;
 import io.metersphere.functional.request.AiSourceDocumentUploadRequest;
 import io.metersphere.functional.response.AiSourceDocumentPageResponse;
 import io.metersphere.functional.service.AiSourceDocumentService;
+import io.metersphere.functional.service.AiSourceDocumentEventService;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.security.CheckOwner;
 import io.metersphere.system.utils.SessionUtils;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Tag(name = "用例管理-功能用例-AI来源文档")
 @RestController
@@ -31,6 +33,16 @@ import org.springframework.web.multipart.MultipartFile;
 public class AiSourceDocumentController {
     @Resource
     private AiSourceDocumentService aiSourceDocumentService;
+    @Resource
+    private AiSourceDocumentEventService aiSourceDocumentEventService;
+
+    @GetMapping(value = "/events", produces = "text/event-stream")
+    @Operation(summary = "订阅 AI 来源文档解析状态")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_READ)
+    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    public SseEmitter events(@RequestParam String projectId) {
+        return aiSourceDocumentEventService.subscribe(projectId, SessionUtils.getUserId());
+    }
 
     @PostMapping("/upload")
     @Operation(summary = "上传 AI 用例生成来源文档")

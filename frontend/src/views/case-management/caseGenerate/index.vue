@@ -26,12 +26,9 @@
               :placeholder="t('caseManagement.caseGenerate.modelPlaceholder')"
             />
           </a-form-item>
-          <a-form-item :label="t('caseManagement.caseGenerate.maxCases')">
-            <a-input-number v-model:model-value="maxCases" :min="1" :max="100" class="w-full" />
-          </a-form-item>
         </a-form>
         <input ref="fileInputRef" class="hidden" type="file" @change="handleFileChange" />
-        <a-button class="mb-[12px] w-full" :loading="uploading" @click="fileInputRef?.click()">
+        <a-button class="mb-[12px] w-full" :loading="uploading" :disabled="!chatModelId" @click="fileInputRef?.click()">
           {{ t('caseManagement.caseGenerate.uploadDesign') }}
         </a-button>
         <div class="case-generate-source-list">
@@ -195,22 +192,30 @@
 
   import DraftDetailForm from './components/DraftDetailForm.vue';
 
-  import { AxiosCanceler } from '@/api/http/axiosCancel';
+  import type { AiCaseAgentEvent, AiCaseAgentModel } from '@/api/modules/case-management/caseGenerate';
   import {
     batchSaveAiCaseDraft,
-    cancelAiCaseGeneration,
+    cancelAiCaseAgentChat,
+    createAiCaseAgentConversation,
     deleteAiCaseDraft,
-    generateAiCaseDraft,
+    getAiCaseAgentConversation,
+    getAiCaseAgentExecution,
+    listAiCaseAgentEvents,
+    listAiCaseAgentModels,
+    pageAiCaseAgentMessages,
     pageAiCaseDraft,
     pageAiSourceDocument,
     regenerateAiCaseDraft,
     retryAiSourceDocument,
+    streamAiCaseAgentChat,
+    subscribeAiSourceDocumentEvents,
+    switchAiCaseAgentModel,
     updateAiCaseDraft,
     uploadAiSourceDocument,
   } from '@/api/modules/case-management/caseGenerate';
   import { useI18n } from '@/hooks/useI18n';
+  import useModal from '@/hooks/useModal';
   import useAppStore from '@/store/modules/app';
-  import useAIStore from '@/store/modules/setting/ai';
 
   import type { AiCaseDraft, AiDraftStatus, AiSourceDocument } from '@/models/caseManagement/caseGenerate';
   import { CaseManagementRouteEnum } from '@/enums/routeEnum';
@@ -223,11 +228,13 @@
     id: string;
     role: 'user' | 'assistant';
     content: string;
+    status?: 'streaming' | 'completed' | 'failed' | 'canceled';
+    requestId?: string;
   }
 
   const { t } = useI18n();
+  const { openModal } = useModal();
   const appStore = useAppStore();
-  const aiStore = useAIStore();
   const currentProjectId = computed(() => appStore.currentProjectId || '');
   const currentOrgId = computed(() => appStore.currentOrgId || '');
   const localStateKey = computed(() => `case-generate-workbench:${currentProjectId.value || 'none'}`);
@@ -236,9 +243,10 @@
   const chatModelId = ref(
     localStorage.getItem('case-generate-chat-model-id') || localStorage.getItem('aiChatModel') || ''
   );
-  const maxCases = ref(50);
   const generationForm = {};
-  const conversationId = ref(`ai_case_conversation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const conversationId = ref('');
+  const conversationModelId = ref('');
+  const availableModels = ref<AiCaseAgentModel[]>([]);
   const generating = ref(false);
   const activeGenerationId = ref('');
   const saving = ref(false);
@@ -258,9 +266,11 @@
   const leftWidth = ref(30);
   const middleWidth = ref(35);
   let updateTimer: number | undefined;
+  let unsubscribeDocumentEvents: (() => void) | undefined;
+  let abortAgentStream: (() => void) | undefined;
 
   const modelOptions = computed(() =>
-    (aiStore.aiSourceNameList || []).map((item) => ({
+    availableModels.value.map((item) => ({
       label: item.name,
       value: item.id,
     }))
@@ -273,13 +283,11 @@
   function loadLocalState() {
     const raw = localStorage.getItem(localStateKey.value);
     if (!raw) {
-      messages.value = [];
       selectedSourceDocumentIds.value = [];
       return;
     }
     try {
       const parsed = JSON.parse(raw);
-      messages.value = Array.isArray(parsed.messages) ? parsed.messages : [];
       selectedSourceDocumentIds.value = Array.isArray(parsed.selectedSourceDocumentIds)
         ? parsed.selectedSourceDocumentIds
         : [];
@@ -287,7 +295,6 @@
         conversationId.value = parsed.conversationId;
       }
     } catch {
-      messages.value = [];
       selectedSourceDocumentIds.value = [];
     }
   }
@@ -300,10 +307,124 @@
       localStateKey.value,
       JSON.stringify({
         conversationId: conversationId.value,
-        messages: messages.value,
         selectedSourceDocumentIds: selectedSourceDocumentIds.value,
       })
     );
+  }
+
+  async function loadAgentWorkspace() {
+    messages.value = [];
+    conversationModelId.value = '';
+    if (!currentProjectId.value) {
+      availableModels.value = [];
+      conversationId.value = '';
+      return;
+    }
+    availableModels.value = (await listAiCaseAgentModels(currentProjectId.value)) || [];
+    if (!availableModels.value.some((item) => item.id === chatModelId.value)) {
+      chatModelId.value = availableModels.value[0]?.id || '';
+    }
+    if (!conversationId.value) return;
+    try {
+      const conversation = await getAiCaseAgentConversation(conversationId.value, currentProjectId.value);
+      conversationModelId.value = conversation.modelSourceId;
+      chatModelId.value = conversation.modelSourceId;
+      const history = await pageAiCaseAgentMessages({
+        projectId: currentProjectId.value,
+        conversationId: conversationId.value,
+        pageSize: 100,
+      });
+      messages.value = (history.records || [])
+        .filter((item) => item.role === 'USER' || item.role === 'ASSISTANT')
+        .map((item) => ({
+          id: item.id,
+          role: item.role === 'USER' ? 'user' : 'assistant',
+          content: item.content || '',
+          status: item.status.toLowerCase() as ConversationMessage['status'],
+          requestId: item.requestId,
+        }));
+    } catch {
+      conversationId.value = '';
+      conversationModelId.value = '';
+      messages.value = [];
+    }
+  }
+
+  async function ensureConversation() {
+    if (!conversationId.value) {
+      const conversation = await createAiCaseAgentConversation({
+        projectId: currentProjectId.value,
+        organizationId: currentOrgId.value,
+        modelSourceId: chatModelId.value,
+        title: prompt.value.trim().slice(0, 80) || undefined,
+      });
+      conversationId.value = conversation.id;
+      conversationModelId.value = conversation.modelSourceId;
+      persistLocalState();
+    } else if (conversationModelId.value !== chatModelId.value) {
+      const conversation = await switchAiCaseAgentModel({
+        projectId: currentProjectId.value,
+        conversationId: conversationId.value,
+        modelSourceId: chatModelId.value,
+      });
+      conversationModelId.value = conversation.modelSourceId;
+    }
+    return conversationId.value;
+  }
+
+  function handleAgentEvent(event: AiCaseAgentEvent, temporaryAssistantId: string) {
+    const payload = event.payload ? JSON.parse(event.payload) : {};
+    const assistant = messages.value.find((item) => item.requestId === event.requestId && item.role === 'assistant');
+    if (event.eventType === 'message-start' && assistant) {
+      assistant.id = payload.messageId || assistant.id;
+    } else if (event.eventType === 'content-delta' && assistant) {
+      assistant.content += payload.delta || '';
+    } else if (event.eventType === 'message-completed' && assistant) {
+      assistant.content = payload.content ?? assistant.content;
+      assistant.status = 'completed';
+    } else if (event.eventType === 'error') {
+      if (assistant) assistant.status = 'failed';
+      Message.error(payload.message || t('common.error'));
+    } else if (event.eventType === 'execution-completed' && assistant) {
+      assistant.status = String(payload.status || '').toLowerCase() as ConversationMessage['status'];
+    } else if (event.eventType === 'drafts-changed') {
+      // reloadDrafts is declared later with the other draft list operations.
+      // eslint-disable-next-line no-use-before-define
+      reloadDrafts().catch(() => Message.error(t('caseManagement.caseGenerate.loadDraftFailed')));
+    }
+    if (!assistant && event.eventType === 'message-start') {
+      messages.value.push({
+        id: payload.messageId || temporaryAssistantId,
+        role: 'assistant',
+        content: '',
+        status: 'streaming',
+        requestId: event.requestId,
+      });
+    }
+  }
+
+  async function recoverAgentExecution(requestId: string, temporaryAssistantId: string, sequence: { value: number }) {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      // Recovery polling is intentionally sequential to preserve event order.
+      // eslint-disable-next-line no-await-in-loop
+      const recovered = await listAiCaseAgentEvents(currentProjectId.value, requestId, sequence.value);
+      recovered.forEach((event) => {
+        if (event.sequence > sequence.value) {
+          sequence.value = event.sequence;
+          handleAgentEvent(event, temporaryAssistantId);
+        }
+      });
+      // Execution status must be checked after applying recovered events.
+      // eslint-disable-next-line no-await-in-loop
+      const execution = await getAiCaseAgentExecution(currentProjectId.value, requestId);
+      if (['COMPLETED', 'FAILED', 'CANCELED'].includes(execution.status)) return;
+      // Backoff must complete before the next polling attempt.
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 1000);
+      });
+    }
+    throw new Error('Agent 执行仍在后台运行，请稍后刷新会话');
   }
 
   function scheduleUpdateDraft(draft: AiCaseDraft) {
@@ -400,36 +521,47 @@
       return;
     }
     generating.value = true;
-    const generationId = createId('generation');
-    activeGenerationId.value = generationId;
-    messages.value.push({ id: createId('message'), role: 'user', content });
+    const requestId = createId('request');
+    const temporaryAssistantId = createId('assistant');
+    activeGenerationId.value = requestId;
     try {
-      const response = await generateAiCaseDraft({
-        projectId: currentProjectId.value,
-        prompt: content,
-        chatModelId: chatModelId.value.trim(),
-        conversationId: conversationId.value,
-        organizationId: currentOrgId.value,
-        maxCases: maxCases.value,
-        sourceDocumentIds: selectedSourceDocumentIds.value,
-        generationId,
-      });
+      await ensureConversation();
+      messages.value.push({ id: createId('message'), role: 'user', content, status: 'completed', requestId });
       messages.value.push({
-        id: createId('message'),
+        id: temporaryAssistantId,
         role: 'assistant',
-        content: `${t('caseManagement.caseGenerate.generatedCount')}${response.createdCount}`,
+        content: '',
+        status: 'streaming',
+        requestId,
       });
-      draftPage.value = 1;
-      await reloadDrafts();
-      activeDraftId.value = response.drafts?.[0]?.id || activeDraftId.value;
       prompt.value = '';
+      const eventSequence = { value: 0 };
+      const stream = streamAiCaseAgentChat(
+        {
+          projectId: currentProjectId.value,
+          conversationId: conversationId.value,
+          requestId,
+          message: content,
+        },
+        (event) => {
+          if (event.sequence <= eventSequence.value) return;
+          eventSequence.value = event.sequence;
+          handleAgentEvent(event, temporaryAssistantId);
+        }
+      );
+      abortAgentStream = stream.abort;
+      await stream.promise;
+      const assistant = messages.value.find((item) => item.requestId === requestId && item.role === 'assistant');
+      if (assistant?.status === 'streaming') {
+        await recoverAgentExecution(requestId, temporaryAssistantId, eventSequence);
+      }
       localStorage.setItem('case-generate-chat-model-id', chatModelId.value.trim());
       localStorage.setItem('aiChatModel', chatModelId.value.trim());
-      if (response.warnings?.length) {
-        Message.warning(response.warnings.join('; '));
-      }
+      await reloadDrafts();
     } catch (error: any) {
-      if (error?.message?.includes('cancel') || error?.__CANCEL__) {
+      const assistant = messages.value.find((item) => item.requestId === requestId && item.role === 'assistant');
+      if (assistant && assistant.status === 'streaming') assistant.status = 'failed';
+      if (error?.name === 'AbortError') {
         Message.info(t('caseManagement.caseGenerate.canceled'));
       } else {
         Message.error(error?.message || t('common.error'));
@@ -437,24 +569,21 @@
     } finally {
       generating.value = false;
       activeGenerationId.value = '';
+      abortAgentStream = undefined;
     }
   }
 
   async function stopGenerate() {
-    const generationId = activeGenerationId.value;
-    generating.value = false;
-    const axiosCanceler = new AxiosCanceler();
-    axiosCanceler.removeAllPending();
-    if (generationId && currentProjectId.value) {
+    const requestId = activeGenerationId.value;
+    if (requestId && currentProjectId.value) {
       try {
-        await cancelAiCaseGeneration({
-          projectId: currentProjectId.value,
-          generationId,
-        });
+        await cancelAiCaseAgentChat({ projectId: currentProjectId.value, requestId });
       } catch {
         // ignore cancel race
       }
     }
+    abortAgentStream?.();
+    generating.value = false;
     activeGenerationId.value = '';
     Message.info(t('caseManagement.caseGenerate.canceled'));
   }
@@ -510,6 +639,7 @@
     }
     uploading.value = true;
     try {
+      await ensureConversation();
       const document = await uploadAiSourceDocument({
         request: { projectId: currentProjectId.value, conversationId: conversationId.value },
         file,
@@ -544,15 +674,30 @@
     await reloadSourceDocuments();
   }
 
-  async function batchSave() {
+  function batchSave() {
     if (!currentProjectId.value || checkedDraftIds.value.length === 0) {
       return;
     }
+    openModal({
+      type: 'warning',
+      title: '确认保存为正式用例',
+      content: `将把选中的 ${checkedDraftIds.value.length} 条草稿逐条保存为正式功能用例，保存成功后不可作为草稿继续编辑。`,
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      hideCancel: false,
+      // executeBatchSave is declared next to keep the modal trigger readable.
+      // eslint-disable-next-line no-use-before-define
+      onBeforeOk: executeBatchSave,
+    });
+  }
+
+  async function executeBatchSave() {
     saving.value = true;
     try {
       const response = await batchSaveAiCaseDraft({
         projectId: currentProjectId.value,
         draftIds: checkedDraftIds.value,
+        confirmed: true,
       });
       if (response.failureCount > 0) {
         Message.warning(
@@ -641,31 +786,35 @@
 
   watch(
     currentProjectId,
-    () => {
+    async () => {
+      unsubscribeDocumentEvents?.();
+      unsubscribeDocumentEvents = undefined;
       loadLocalState();
-      reloadDrafts();
-      reloadSourceDocuments();
+      await Promise.all([loadAgentWorkspace(), reloadDrafts(), reloadSourceDocuments()]);
+      if (currentProjectId.value) {
+        unsubscribeDocumentEvents = subscribeAiSourceDocumentEvents(
+          currentProjectId.value,
+          (event) => {
+            const document = sourceDocuments.value.find((item) => item.id === event.documentId);
+            if (document) {
+              document.parseStatus = event.status as AiSourceDocument['parseStatus'];
+              document.errorMessage = event.message;
+            }
+            if (event.status === 'PARSED' || event.status === 'FAILED') reloadSourceDocuments();
+          },
+          undefined,
+          reloadSourceDocuments
+        );
+      }
     },
     { immediate: true }
   );
-  watch(
-    () => modelOptions.value,
-    (vals) => {
-      if (!vals.length) {
-        return;
-      }
-      if (!vals.some((item) => item.value === chatModelId.value)) {
-        chatModelId.value = vals[0].value;
-      }
-    },
-    { immediate: true }
-  );
-  watch([messages, selectedSourceDocumentIds, conversationId], persistLocalState, { deep: true });
-
-  aiStore.getAISourceNameList();
+  watch([selectedSourceDocumentIds, conversationId], persistLocalState, { deep: true });
 
   onBeforeUnmount(() => {
     window.clearTimeout(updateTimer);
+    unsubscribeDocumentEvents?.();
+    abortAgentStream?.();
   });
 </script>
 

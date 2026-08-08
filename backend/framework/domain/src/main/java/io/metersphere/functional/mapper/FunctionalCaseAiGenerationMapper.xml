@@ -51,6 +51,24 @@
         where id = #{id,jdbcType=VARCHAR}
     </update>
 
+    <update id="updateTerminalIfActive" parameterType="io.metersphere.functional.domain.FunctionalCaseAiGeneration">
+        update functional_case_ai_generation
+        set status = #{status,jdbcType=VARCHAR},
+            token_usage = #{tokenUsage,jdbcType=BIGINT},
+            duration_ms = #{durationMs,jdbcType=BIGINT},
+            error_message = #{errorMessage,jdbcType=LONGVARCHAR},
+            update_time = #{updateTime,jdbcType=BIGINT}
+        where id = #{id,jdbcType=VARCHAR}
+          and status in ('PENDING', 'GENERATING', 'VALIDATING')
+    </update>
+
+    <update id="cancelIfActive">
+        update functional_case_ai_generation
+        set status = 'CANCELED', update_time = #{updateTime}, error_message = #{errorMessage}
+        where id = #{id} and project_id = #{projectId} and create_user = #{createUser}
+          and status in ('PENDING', 'GENERATING', 'VALIDATING')
+    </update>
+
     <select id="selectByProjectAndCreateUser" resultMap="BaseResultMap">
         select *
         from functional_case_ai_generation

@@ -1,8 +1,14 @@
 package io.metersphere.agent.mapper;
 
 import io.metersphere.agent.dto.AgentExecutionCaseDTO;
+import io.metersphere.agent.dto.AgentExecutionArtifactDTO;
 import io.metersphere.agent.dto.AgentExecutionEventDTO;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
+import io.metersphere.agent.dto.AgentExecutionStepDTO;
+import io.metersphere.agent.dto.AgentExecutionHealingDTO;
+import io.metersphere.agent.dto.AgentExecutionOperationsDTO;
+import io.metersphere.agent.dto.AgentRunnerDTO;
+import io.metersphere.agent.dto.AgentRunnerLeaseDTO;
 import io.metersphere.agent.dto.AgentTestPlanDTO;
 import org.apache.ibatis.annotations.Param;
 
@@ -17,6 +23,40 @@ public interface AgentExecutionMapper {
 
     List<AgentExecutionCaseDTO> selectCasesByTaskId(@Param("taskId") String taskId);
 
+    List<AgentExecutionStepDTO> selectStepsByTaskId(@Param("taskId") String taskId);
+
+    List<AgentExecutionHealingDTO> selectHealingByTaskId(@Param("taskId") String taskId);
+
+    AgentRunnerDTO selectRunnerById(@Param("id") String id);
+
+    AgentRunnerLeaseDTO selectLeaseById(@Param("id") String id);
+
+    AgentExecutionArtifactDTO selectArtifactById(@Param("id") String id);
+
+    AgentExecutionArtifactDTO selectArtifactByIdentity(@Param("taskId") String taskId,
+                                                       @Param("sha256") String sha256,
+                                                       @Param("purpose") String purpose,
+                                                       @Param("stepId") String stepId);
+
+    List<AgentExecutionArtifactDTO> selectArtifactsByTaskId(@Param("taskId") String taskId);
+
+    List<AgentExecutionArtifactDTO> selectExpiredArtifacts(@Param("now") long now,
+                                                           @Param("limit") int limit);
+
+    AgentExecutionOperationsDTO selectOperationsSummary(@Param("organizationId") String organizationId,
+                                                         @Param("now") long now,
+                                                         @Param("runnerStaleBefore") long runnerStaleBefore,
+                                                         @Param("taskStuckBefore") long taskStuckBefore);
+
+    List<AgentRunnerLeaseDTO> selectExpiredActiveLeases(@Param("now") long now,
+                                                        @Param("limit") int limit);
+
+    int countActiveRunnerLeases(@Param("runnerId") String runnerId,
+                                @Param("now") long now);
+
+    AgentExecutionTaskDTO selectQueuedTaskForRunner(@Param("organizationId") String organizationId,
+                                                    @Param("runnerId") String runnerId);
+
     List<AgentExecutionCaseDTO> selectCasesByTaskIdAndStatuses(@Param("taskId") String taskId,
                                                                @Param("statuses") List<String> statuses);
 
@@ -30,6 +70,99 @@ public interface AgentExecutionMapper {
 
     void insertCase(AgentExecutionCaseDTO executionCase);
 
+    void insertStep(AgentExecutionStepDTO executionStep);
+
+    void insertHealing(AgentExecutionHealingDTO healing);
+
+    void insertRunner(AgentRunnerDTO runner);
+
+    void insertRunnerLease(AgentRunnerLeaseDTO lease);
+
+    void insertArtifact(AgentExecutionArtifactDTO artifact);
+
+    int markArtifactDeleted(@Param("id") String id, @Param("status") String status);
+
+    int completeHealing(@Param("taskId") String taskId,
+                        @Param("stepId") String stepId,
+                        @Param("attempt") int attempt,
+                        @Param("result") String result,
+                        @Param("afterArtifactId") String afterArtifactId,
+                        @Param("eventTime") long eventTime);
+
+    int updateRunnerHeartbeat(@Param("id") String id,
+                              @Param("status") String status,
+                              @Param("activeCount") int activeCount,
+                              @Param("heartbeatTime") long heartbeatTime);
+
+    int renewRunnerLease(@Param("id") String id,
+                         @Param("runnerId") String runnerId,
+                         @Param("version") int version,
+                         @Param("expireTime") long expireTime,
+                         @Param("heartbeatTime") long heartbeatTime);
+
+    int assignRunnerLease(@Param("taskId") String taskId,
+                          @Param("fromStatus") String fromStatus,
+                          @Param("version") int version,
+                          @Param("runnerId") String runnerId,
+                          @Param("leaseId") String leaseId,
+                          @Param("toStatus") String toStatus,
+                          @Param("updateTime") long updateTime);
+
+    int updateLeaseEventSequence(@Param("id") String id,
+                                 @Param("runnerId") String runnerId,
+                                 @Param("version") int version,
+                                 @Param("previousEventSequence") long previousEventSequence,
+                                 @Param("lastEventSequence") long lastEventSequence,
+                                 @Param("updateTime") long updateTime);
+
+    int closeRunnerLease(@Param("id") String id,
+                         @Param("runnerId") String runnerId,
+                         @Param("version") int version,
+                         @Param("status") String status,
+                         @Param("updateTime") long updateTime);
+
+    int expireTaskLease(@Param("taskId") String taskId,
+                        @Param("leaseId") String leaseId,
+                        @Param("status") String status,
+                        @Param("updateTime") long updateTime);
+
+    int markStepStarted(@Param("taskId") String taskId, @Param("stepId") String stepId,
+                        @Param("attempt") int attempt, @Param("updateTime") long updateTime);
+
+    int markStepHealing(@Param("taskId") String taskId, @Param("stepId") String stepId,
+                        @Param("updateTime") long updateTime);
+
+    int markStepHealingCompleted(@Param("taskId") String taskId, @Param("stepId") String stepId,
+                                 @Param("updateTime") long updateTime);
+
+    int markStepCompleted(@Param("taskId") String taskId, @Param("stepId") String stepId,
+                          @Param("status") String status, @Param("actualResult") String actualResult,
+                          @Param("errorMessage") String errorMessage,
+                          @Param("failureCategory") String failureCategory,
+                          @Param("healed") boolean healed, @Param("updateTime") long updateTime);
+
+    int markCaseStarted(@Param("taskId") String taskId, @Param("caseId") String caseId,
+                        @Param("updateTime") long updateTime);
+
+    int markCaseCompleted(@Param("taskId") String taskId, @Param("caseId") String caseId,
+                          @Param("status") String status, @Param("result") String result,
+                          @Param("errorMessage") String errorMessage, @Param("updateTime") long updateTime);
+
+    int updateCaseWritebackStatus(@Param("taskId") String taskId, @Param("caseId") String caseId,
+                                  @Param("writebackStatus") String writebackStatus,
+                                  @Param("errorMessage") String errorMessage,
+                                  @Param("updateTime") long updateTime);
+
+    int finalizeExecutionTask(@Param("taskId") String taskId, @Param("status") String status,
+                              @Param("successCount") int successCount, @Param("failedCount") int failedCount,
+                              @Param("blockedCount") int blockedCount, @Param("skippedCount") int skippedCount,
+                              @Param("unexecutedCount") int unexecutedCount,
+                              @Param("writebackStatus") String writebackStatus,
+                              @Param("artifactStatus") String artifactStatus,
+                              @Param("updateUser") String updateUser, @Param("updateTime") long updateTime);
+
+    int countAvailableArtifacts(@Param("taskId") String taskId);
+
     void insertEvent(AgentExecutionEventDTO event);
 
     int updateTaskStatus(@Param("id") String id,
@@ -37,7 +170,16 @@ public interface AgentExecutionMapper {
                          @Param("updateUser") String updateUser,
                          @Param("updateTime") long updateTime);
 
+    int transitionTaskStatus(@Param("id") String id,
+                             @Param("fromStatus") String fromStatus,
+                             @Param("version") int version,
+                             @Param("toStatus") String toStatus,
+                             @Param("updateUser") String updateUser,
+                             @Param("updateTime") long updateTime);
+
     int confirmTask(@Param("id") String id,
+                    @Param("fromStatus") String fromStatus,
+                    @Param("version") int version,
                     @Param("status") String status,
                     @Param("updateUser") String updateUser,
                     @Param("updateTime") long updateTime);
@@ -61,6 +203,16 @@ public interface AgentExecutionMapper {
 
     int retryFailedCases(@Param("taskId") String taskId,
                          @Param("updateTime") long updateTime);
+
+    int retryFailedSteps(@Param("taskId") String taskId,
+                         @Param("updateTime") long updateTime);
+
+    int requeueTaskForRetry(@Param("id") String id, @Param("fromStatus") String fromStatus,
+                            @Param("version") int version, @Param("updateUser") String updateUser,
+                            @Param("successCount") int successCount, @Param("failedCount") int failedCount,
+                            @Param("blockedCount") int blockedCount, @Param("skippedCount") int skippedCount,
+                            @Param("unexecutedCount") int unexecutedCount,
+                            @Param("updateTime") long updateTime);
 
     long countPlans(@Param("projectId") String projectId,
                     @Param("keyword") String keyword,

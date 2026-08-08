@@ -12,8 +12,14 @@ public class AgentExecutionTaskDTO {
     private String projectId;
     private String testPlanId;
     private String source;
+    private String selectionMode;
+    private String prompt;
+    private String resolvedFilter;
+    private String caseSnapshotHash;
+    private String policySnapshot;
     private String status;
     private String runnerId;
+    private String runnerLeaseId;
     private String providerId;
     private String environmentId;
     private String targetUrl;
@@ -28,10 +34,13 @@ public class AgentExecutionTaskDTO {
     private Integer blockedCount;
     private Integer skippedCount;
     private Integer unexecutedCount;
+    private String writebackStatus;
+    private String artifactStatus;
     private String executedBy;
     private Long createTime;
     private Long updateTime;
     private String createUser;
     private String updateUser;
+    private Integer version;
     private List<AgentExecutionCaseDTO> cases = new ArrayList<>();
 }
