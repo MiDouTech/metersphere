@@ -31,3 +31,18 @@ Copy `config.example.json` to the per-user Bridge data directory, pair the devic
 The platform must set `ms.ai.user-agent.enabled=true` plus the individual Provider flag. Multi-node deployments must
 give each Gateway a unique `ms.ai.user-agent.gateway-node-id` and share Redis. Provider flags must remain disabled
 until the corresponding real-account acceptance is complete.
+
+## Windows phase-one installation
+
+The user-facing product name is **MeterSphere Agent**. The web UI detects it through the registered
+`metersphere-agent://` protocol and keeps the one-time pairing code out of visible UI and browser storage.
+
+Release packaging is driven by `scripts/windows/build-package.ps1` and requires an official Windows Node.js runtime
+directory so end users do not need Node.js installed. Publish the ZIP and its SHA-256 manifest from a
+trusted HTTPS location, configure `ms.ai.user-agent.bridge.windows-download-url`, and sign the delivered executable
+installer in the release pipeline with the organization's code-signing certificate. The repository does not contain
+or fabricate signing credentials.
+
+For development, extract the package and run `scripts/windows/install.ps1`. This registers the protocol and a
+current-user auto-start entry. Use `scripts/windows/uninstall.ps1`; add `-RemoveApplicationData` only when device
+identity recovery is not required. A production release should wrap the same actions in a signed MSIX/EXE.

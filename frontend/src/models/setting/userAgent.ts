@@ -32,3 +32,10 @@ export interface AgentBridgeDevice {
   osType?: string;
   lastHeartbeatTime?: number;
 }
+
+export interface AgentBridgeInstallInfo {
+  productName: string;
+  windowsDownloadUrl: string;
+  minimumVersion: string;
+  protocolScheme: string;
+}

@@ -65,7 +65,7 @@
           show-time
           value-format="timestamp"
           class="w-[400px]"
-          @change="(v) => setRangeValue(v)"
+          @change="setRangeValue"
         />
       </a-form-item>
       <div class="mb-[16px] flex items-center">
@@ -291,7 +291,7 @@
     form.value.password = '';
   }
 
-  function setRangeValue(v: any) {
+  function setRangeValue(v: unknown) {
     if (!v) {
       form.value.invalidTime = 0;
     }

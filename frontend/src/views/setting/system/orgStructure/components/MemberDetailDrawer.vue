@@ -1,6 +1,6 @@
 <template>
   <MsDrawer
-    :visible="visible"
+    :visible="props.visible"
     :width="480"
     :title="t('orgStructure.member.detail')"
     :footer="false"

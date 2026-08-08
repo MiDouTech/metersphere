@@ -8,7 +8,11 @@
           :options="languageOptions"
           class="w-[100px]"
           size="mini"
-          @change="(val) => handleLanguageChange(val as Language)"
+          @change="
+            (
+              val: string | number | boolean | Record<string, any> | (string | number | boolean | Record<string, any>)[]
+            ) => handleLanguageChange(val as Language)
+          "
         />
         <a-select
           v-if="showCharsetChange"
@@ -16,7 +20,11 @@
           :options="charsetOptions"
           class="w-[100px]"
           size="mini"
-          @change="(val) => handleCharsetChange(val as string)"
+          @change="
+            (
+              val: string | number | boolean | Record<string, any> | (string | number | boolean | Record<string, any>)[]
+            ) => handleCharsetChange(val as string)
+          "
         />
         <a-select
           v-if="showThemeChange"
@@ -24,7 +32,11 @@
           :options="themeOptions"
           class="w-[100px]"
           size="mini"
-          @change="(val) => handleThemeChange(val as Theme)"
+          @change="
+            (
+              val: string | number | boolean | Record<string, any> | (string | number | boolean | Record<string, any>)[]
+            ) => handleThemeChange(val as Theme)
+          "
         />
         <slot name="leftTitle">
           <span class="flex items-center gap-[4px] font-medium">{{ title }}</span>

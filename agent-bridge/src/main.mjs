@@ -1,13 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 import { envelope, parseDownstream } from './protocol.mjs';
 import { providers } from './providers.mjs';
 import { authenticateDevice } from './device-auth.mjs';
 
+const applicationRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const configPath = process.env.MS_AGENT_BRIDGE_CONFIG
-  ?? path.join(process.cwd(), 'config.json');
+  ?? path.join(applicationRoot, 'config.json');
 const config = JSON.parse(await readFile(configPath, 'utf8'));
 const providerMap = providers(config);
 const running = new Map();

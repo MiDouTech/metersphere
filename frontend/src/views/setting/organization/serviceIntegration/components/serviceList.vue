@@ -106,7 +106,7 @@
                         size="small"
                         :disabled="true"
                         type="line"
-                        @change="(v) => changeStatus(v, item.id)"
+                        @change="(v: string | number | boolean) => changeStatus(v, item.id)"
                     /></span>
                   </a-tooltip>
                   <a-switch
@@ -115,7 +115,7 @@
                     size="small"
                     type="line"
                     :disabled="!hasAnyPermission(['SYSTEM_SERVICE_INTEGRATION:READ+UPDATE'])"
-                    @change="(v) => changeStatus(v, item.id)"
+                    @change="(v: string | number | boolean) => changeStatus(v, item.id)"
                   />
                 </span>
               </div>
@@ -170,6 +170,7 @@
       data.value = result;
       filterList.value = result;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.log(error);
     } finally {
       loading.value = false;
@@ -207,6 +208,7 @@
           Message.success(t('organization.service.resetConfigTip'));
           loadList();
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.log(error);
         }
       },
@@ -222,6 +224,7 @@
       Message.success(t('organization.service.testLinkStatusTip'));
       loadList();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.log(error);
     } finally {
       loading.value = false;
@@ -237,6 +240,7 @@
       Message.success(t(message));
       loadList();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.log(error);
     } finally {
       loading.value = false;

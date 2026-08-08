@@ -2,7 +2,7 @@
   <div class="flex flex-1 flex-col overflow-hidden">
     <keep-alive :include="cacheStore.cacheViews">
       <MsCacheWrapper
-        v-if="activeApiTab.id === 'all' && currentTab === 'case'"
+        v-if="activeApiTab.id === 'all' && props.currentTab === 'case'"
         class="flex-1 overflow-hidden"
         :cache-name="CacheTabTypeEnum.API_TEST_CASE_TABLE"
       >
@@ -15,7 +15,7 @@
           :selected-protocols="props.selectedProtocols"
           @open-case-tab="openCaseTab"
           @open-case-tab-and-execute="openCaseTabAndExecute"
-          @handle-adv-search="(val) => emit('handleAdvSearch', val)"
+          @handle-adv-search="(val: boolean) => emit('handleAdvSearch', val)"
         />
       </MsCacheWrapper>
     </keep-alive>

@@ -2,7 +2,11 @@
   <div class="mb-[8px] flex items-center justify-between">
     <div class="font-medium"> {{ props.label }} </div>
     <div v-if="props.isPreview" class="flex items-center">
-      <a-switch v-model:model-value="enabledTestSet" size="small" @change="(val)=>changeHandler(val as boolean)" />
+      <a-switch
+        v-model:model-value="enabledTestSet"
+        size="small"
+        @change="(val: string | number | boolean) => changeHandler(val as boolean)"
+      />
       <span class="mx-[16px]"> {{ t('ms.case.associate.testSet') }}</span>
       <a-input-search
         v-model:model-value="keyword"
@@ -58,7 +62,6 @@
   import FeatureCaseTable from '@/views/test-plan/report/detail/component/system-card/featureCaseTable.vue';
 
   import { useI18n } from '@/hooks/useI18n';
-  import useTableStore from '@/hooks/useTableStore';
   import useTestPlanReportStore from '@/store/modules/testPlan/testPlanReport';
 
   import { TableKeyEnum } from '@/enums/tableEnum';
@@ -74,7 +77,6 @@
 
   const { t } = useI18n();
   const testPlanReportStore = useTestPlanReportStore();
-  const tableStore = useTableStore();
 
   const keyword = ref<string>('');
   const expandedKeys = ref<string[]>([]);

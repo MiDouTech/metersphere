@@ -16,7 +16,7 @@
               :default-key="activeMenu"
               :menu-list="menuList"
               active-class="!bg-transparent font-medium"
-              @toggle-menu="(val) => (activeMenu = val)"
+              @toggle-menu="(val: string) => (activeMenu = val)"
             />
           </div>
           <div

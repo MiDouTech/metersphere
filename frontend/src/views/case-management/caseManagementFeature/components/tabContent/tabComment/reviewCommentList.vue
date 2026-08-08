@@ -49,6 +49,7 @@
               {{ t('common.fail') }}
             </div>
           </div>
+          <!-- eslint-disable-next-line vue/no-v-html -->
           <div class="markdown-body mt-[4px]" v-html="item.contentText"></div>
           <div class="mt-[8px] flex text-[12px] leading-[16px] text-[var(--color-text-4)]">
             {{ dayjs(item.createTime).format('YYYY-MM-DD HH:mm:ss') }}
@@ -85,7 +86,7 @@
           </div>
         </div>
       </div>
-      <MsEmpty v-if="reviewCommentList.length === 0" />
+      <MsEmpty v-if="props.reviewCommentList.length === 0" />
     </div>
   </div>
 </template>

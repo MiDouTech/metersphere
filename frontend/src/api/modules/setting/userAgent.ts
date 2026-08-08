@@ -3,6 +3,7 @@ import Url from '@/api/requrls/setting/userAgent';
 
 import type {
   AgentBridgeDevice,
+  AgentBridgeInstallInfo,
   UserAgentConnection,
   UserAgentFeatureFlags,
   UserAgentProvider,
@@ -11,6 +12,7 @@ import type {
 export const getUserAgentFeatures = () => MSR.get<UserAgentFeatureFlags>({ url: Url.features });
 export const listUserAgentConnections = () => MSR.get<UserAgentConnection[]>({ url: Url.connections });
 export const listAgentBridgeDevices = () => MSR.get<AgentBridgeDevice[]>({ url: Url.devices });
+export const getAgentBridgeInstallInfo = () => MSR.get<AgentBridgeInstallInfo>({ url: Url.installInfo });
 
 export const createAgentBridgePairing = (data: { provider: UserAgentProvider; expectedDeviceName?: string }) =>
   MSR.post<{ pairingId: string; pairingCode: string; expiresAt: number }>({ url: Url.pairing, data });

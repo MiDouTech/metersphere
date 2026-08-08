@@ -16,7 +16,7 @@
     :remote-func="loadList"
     :remote-extra-params="{ ...props.loadOptionParams, type: props.type }"
     :option-label-render="optionLabelRender"
-    :fallback-option="(val) => ({
+    :fallback-option="(val: string | number | boolean | Record<string, unknown>) => ({
       label: `${(val as Record<string, any>).name}（${(val as Record<string, any>).email}）`,
       value: val,
     })"

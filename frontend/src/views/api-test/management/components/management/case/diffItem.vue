@@ -6,7 +6,7 @@
   >
     <MsFormTable
       :columns="headerColumns"
-      :data="previewDetail?.headers?.filter((e) => e.key !== '') || []"
+      :data="previewDetail?.headers?.filter((e: any) => e.key !== '') || []"
       :selectable="false"
       :diff-mode="props.mode"
       :scroll="{ x: '100%' }"
@@ -26,7 +26,7 @@
   >
     <MsFormTable
       :columns="queryRestColumns"
-      :data="previewDetail?.query?.filter((e) => e.key !== '') || []"
+      :data="previewDetail?.query?.filter((e: any) => e.key !== '') || []"
       :selectable="false"
       :diff-mode="props.mode"
       :scroll="{ x: '100%' }"
@@ -45,7 +45,7 @@
     :style="{ 'padding-bottom': `${getBottomDistance(RequestComposition.REST)}px` }"
   >
     <MsFormTable
-      :columns="queryRestColumns?.filter((e) => e.key !== '')"
+      :columns="queryRestColumns?.filter((e: any) => e.key !== '')"
       :data="previewDetail?.rest || []"
       :selectable="false"
       :diff-mode="props.mode"

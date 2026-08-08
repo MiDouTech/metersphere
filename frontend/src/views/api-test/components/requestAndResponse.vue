@@ -119,7 +119,7 @@
       :loading="requestVModel.executeLoading || loading"
       :is-definition="true"
       @change="handleActiveDebugChange"
-      @execute="(val) => emit('execute', val)"
+      @execute="(val: 'localExec' | 'serverExec' | undefined) => emit('execute', val)"
     />
   </div>
 </template>

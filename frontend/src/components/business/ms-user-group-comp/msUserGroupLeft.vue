@@ -78,7 +78,7 @@
                     element.type === systemType ||
                     (isSystemShowAll &&
                       !element.internal &&
-                      (element.scopeId !== 'global' || !isGlobalDisable) &&
+                      (element.scopeId !== 'global' || !props.isGlobalDisable) &&
                       systemMoreAction.length > 0)
                   "
                   class="list-item-action flex flex-row items-center gap-[8px] opacity-0"
@@ -96,11 +96,11 @@
                     v-if="
                       isSystemShowAll &&
                       !element.internal &&
-                      (element.scopeId !== 'global' || !isGlobalDisable) &&
+                      (element.scopeId !== 'global' || !props.isGlobalDisable) &&
                       systemMoreAction.length > 0
                     "
                     :list="systemMoreAction"
-                    @select="(value) => handleMoreAction(value, element.id, AuthScopeEnum.SYSTEM)"
+                    @select="(value: ActionsItem) => handleMoreAction(value, element.id, AuthScopeEnum.SYSTEM)"
                   >
                     <div class="icon-button">
                       <MsIcon type="icon-icon_more_outlined" size="16" />
@@ -214,7 +214,7 @@
                     element.type === systemType ||
                     (isOrdShowAll &&
                       !element.internal &&
-                      (element.scopeId !== 'global' || !isGlobalDisable) &&
+                      (element.scopeId !== 'global' || !props.isGlobalDisable) &&
                       orgMoreAction.length > 0)
                   "
                   class="list-item-action flex flex-row items-center gap-[8px] opacity-0"
@@ -232,11 +232,11 @@
                     v-if="
                       isOrdShowAll &&
                       !element.internal &&
-                      (element.scopeId !== 'global' || !isGlobalDisable) &&
+                      (element.scopeId !== 'global' || !props.isGlobalDisable) &&
                       orgMoreAction.length > 0
                     "
                     :list="orgMoreAction"
-                    @select="(value) => handleMoreAction(value, element.id, AuthScopeEnum.ORGANIZATION)"
+                    @select="(value: ActionsItem) => handleMoreAction(value, element.id, AuthScopeEnum.ORGANIZATION)"
                   >
                     <div class="icon-button">
                       <MsIcon type="icon-icon_more_outlined" size="16" />
@@ -317,7 +317,7 @@
                     element.type === systemType ||
                     (isProjectShowAll &&
                       !element.internal &&
-                      (element.scopeId !== 'global' || !isGlobalDisable) &&
+                      (element.scopeId !== 'global' || !props.isGlobalDisable) &&
                       projectMoreAction.length > 0)
                   "
                   class="list-item-action flex flex-row items-center gap-[8px] opacity-0"
@@ -335,11 +335,11 @@
                     v-if="
                       isProjectShowAll &&
                       !element.internal &&
-                      (element.scopeId !== 'global' || !isGlobalDisable) &&
+                      (element.scopeId !== 'global' || !props.isGlobalDisable) &&
                       projectMoreAction.length > 0
                     "
                     :list="projectMoreAction"
-                    @select="(value) => handleMoreAction(value, element.id, AuthScopeEnum.PROJECT)"
+                    @select="(value: ActionsItem) => handleMoreAction(value, element.id, AuthScopeEnum.PROJECT)"
                   >
                     <div class="icon-button">
                       <MsIcon type="icon-icon_more_outlined" size="16" />

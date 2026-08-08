@@ -2,7 +2,7 @@
   <div class="flex flex-1 flex-col overflow-hidden">
     <keep-alive :include="cacheStore.cacheViews">
       <apiTable
-        v-if="activeApiTab.id === 'all' && currentTab === 'api'"
+        v-if="activeApiTab.id === 'all' && props.currentTab === 'api'"
         ref="apiTableRef"
         class="flex-1 pt-[8px]"
         :active-module="props.activeModule"
@@ -10,12 +10,15 @@
         :module-tree-data="props.moduleTree"
         :selected-protocols="props.selectedProtocols"
         :refresh-time-stamp="refreshTableTimeStamp"
-        @open-api-tab="(record, isExecute) => openApiTab({ apiInfo: record, isCopy: false, isExecute })"
+        @open-api-tab="
+          (record: ModuleTreeNode | ApiDefinitionDetail | string, isExecute?: boolean) =>
+            openApiTab({ apiInfo: record, isCopy: false, isExecute })
+        "
         @open-copy-api-tab="openApiTab({ apiInfo: $event, isCopy: true })"
         @add-api-tab="addApiTab"
         @import="() => emit('import')"
         @open-edit-api-tab="openApiTab"
-        @handle-adv-search="(val) => emit('handleAdvSearch', val)"
+        @handle-adv-search="(val: boolean) => emit('handleAdvSearch', val)"
       />
     </keep-alive>
     <div v-if="activeApiTab.id !== 'all'" class="flex-1 overflow-hidden">

@@ -52,7 +52,7 @@
     />
     <ThirdDemandDrawer
       v-model:visible="linkDemandDrawer"
-      :case-id="caseId"
+      :case-id="props.caseId"
       :drawer-loading="drawerLoading"
       :platform-info="platformInfo"
       @save="handleDrawerConfirm"

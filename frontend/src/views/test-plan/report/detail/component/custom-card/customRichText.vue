@@ -17,7 +17,11 @@
     @change="() => emit('handleSetSave')"
     @blur="blurHandler"
   />
-  <div :class="`${hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !shareId ? '' : 'cursor-not-allowed'}`">
+  <div
+    :class="`${
+      hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !props.shareId ? '' : 'cursor-not-allowed'
+    }`"
+  >
     <MsRichText
       ref="msRichTextRef"
       v-model:raw="innerTextForm.content"
@@ -31,7 +35,7 @@
     />
   </div>
   <div
-    v-show="hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !shareId && props.canEdit"
+    v-show="hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !props.shareId && props.canEdit"
     class="mt-[16px] flex items-center gap-[12px]"
   >
     <a-button type="primary" @click="handleUpdateReportDetail">{{ t('common.save') }}</a-button>
@@ -41,7 +45,6 @@
 
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { useVModel } from '@vueuse/core';
 
   import MsRichText from '@/components/pure/ms-rich-text/MsRichText.vue';
 

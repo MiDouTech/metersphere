@@ -48,7 +48,7 @@
               v-model:model-value="apiConfig.enable"
               size="small"
               :disabled="apiConfig.id === '' || testApiLoading || apiConfig.userUrl.trim() === ''"
-              :before-change="(val) => handleApiPriorityBeforeChange(val)"
+              :before-change="(val: string | number | boolean) => handleApiPriorityBeforeChange(val)"
               type="line"
             />
           </div>

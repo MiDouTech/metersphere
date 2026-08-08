@@ -5,8 +5,8 @@
     :ok-text="t(isEdit ? 'system.orgTemplate.update' : 'system.orgTemplate.addField')"
     :ok-loading="drawerLoading"
     :width="800"
-    :show-continue="!isEdit && data.length < 20"
-    :ok-disabled="data.length >= 20 && !isEdit"
+    :show-continue="!isEdit && props.data.length < 20"
+    :ok-disabled="props.data.length >= 20 && !isEdit"
     @confirm="handleDrawerConfirm"
     @continue="saveAndContinue"
     @cancel="handleDrawerCancel"
@@ -317,6 +317,7 @@
       resetForm();
       emit('success', isEdit.value, res.id);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.log(error);
     } finally {
       drawerLoading.value = false;
@@ -363,7 +364,7 @@
   }
 
   // 新增 || 保存并继续添加
-  const handleDrawerConfirm = (isContinue: boolean) => {
+  const handleDrawerConfirm = () => {
     userFormFiledValidate(confirmHandler);
   };
   function saveAndContinue() {
@@ -409,6 +410,7 @@
         };
       });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.log(error);
     }
   };

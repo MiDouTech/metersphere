@@ -43,6 +43,11 @@ public class AiUserAgentController {
         return featureService.flags();
     }
 
+    @GetMapping("/ai/agent-bridge/install-info")
+    public Map<String, Object> bridgeInstallInfo() {
+        return featureService.bridgeInstallInfo();
+    }
+
     @GetMapping("/ai/user-agent/connections")
     public List<AiUserAgentConnectionDTO> connections() {
         return service.listConnections(SessionUtils.getUserId());

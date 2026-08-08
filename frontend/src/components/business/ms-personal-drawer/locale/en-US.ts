@@ -116,4 +116,20 @@ export default {
   'ms.personal.userAgent.chatgptDescription':
     'Use the ChatGPT / OpenAI official Agent channel and its existing sign-in through the local Bridge.',
   'ms.personal.userAgent.cursorDescription': 'Use the official local Cursor Agent CLI inside an approved OS sandbox.',
+  'ms.personal.userAgent.setupTitle': 'Connect AI Agent',
+  'ms.personal.userAgent.detecting': 'Detect',
+  'ms.personal.userAgent.installing': 'Install',
+  'ms.personal.userAgent.signingIn': 'Sign in',
+  'ms.personal.userAgent.completed': 'Done',
+  'ms.personal.userAgent.detectingMessage': 'Detecting MeterSphere Agent on this computer…',
+  'ms.personal.userAgent.installRequired':
+    'MeterSphere Agent was not detected. Install it once and setup will continue automatically.',
+  'ms.personal.userAgent.installNotice':
+    'MeterSphere Agent securely connects local AI services and never uploads passwords, cookies, or sign-in tokens.',
+  'ms.personal.userAgent.downloadInstall': 'Download and install',
+  'ms.personal.userAgent.installedRetry': 'Installed — detect again',
+  'ms.personal.userAgent.waitingForAgent': 'Waiting for MeterSphere Agent to start and establish a secure connection…',
+  'ms.personal.userAgent.startingSignIn': 'Local connection established. Starting the official account sign-in…',
+  'ms.personal.userAgent.setupExpired':
+    'This connection request expired. Close this dialog and create the connection again.',
 };

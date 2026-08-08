@@ -1,5 +1,5 @@
 <template>
-  <a-spin :loading="loading" class="w-full">
+  <a-spin :loading="props.loading" class="w-full">
     <div :class="`${props.height || 'h-full'} execute-history-list`">
       <div v-for="item of props.executeList" :key="item.id" class="execute-history-list-item">
         <div class="flex items-center">
@@ -32,6 +32,7 @@
             </div>
           </div>
         </div>
+        <!-- eslint-disable-next-line vue/no-v-html -->
         <div class="markdown-body" style="margin-left: 48px" v-html="item.contentText"></div>
         <div v-if="props.showStepResult" class="ml-[48px] mt-[8px]">
           <StepDetail

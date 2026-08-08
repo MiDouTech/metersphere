@@ -14,6 +14,10 @@ public class AiUserAgentFeatureService {
     private boolean codexEnabled;
     @Value("${ms.ai.user-agent.cursor-enabled:true}")
     private boolean cursorEnabled;
+    @Value("${ms.ai.user-agent.bridge.windows-download-url:}")
+    private String windowsDownloadUrl;
+    @Value("${ms.ai.user-agent.bridge.minimum-version:0.1.0}")
+    private String minimumBridgeVersion;
 
     public boolean enabled() {
         return enabled;
@@ -34,5 +38,13 @@ public class AiUserAgentFeatureService {
     public java.util.Map<String, Boolean> flags() {
         return java.util.Map.of("enabled", enabled, "workbuddy", enabled && workbuddyEnabled,
                 "codex", enabled && codexEnabled, "cursor", enabled && cursorEnabled);
+    }
+
+    public java.util.Map<String, Object> bridgeInstallInfo() {
+        return java.util.Map.of(
+                "productName", "MeterSphere Agent",
+                "windowsDownloadUrl", StringUtils.defaultString(windowsDownloadUrl),
+                "minimumVersion", StringUtils.defaultIfBlank(minimumBridgeVersion, "0.1.0"),
+                "protocolScheme", "metersphere-agent");
     }
 }
