@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.PermissionResourceMapper">
+  <resultMap id="BaseResultMap" type="io.metersphere.system.domain.PermissionResource">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="type" jdbcType="VARCHAR" property="type" />
+    <result column="scope_type" jdbcType="VARCHAR" property="scopeType" />
+    <result column="parent_code" jdbcType="VARCHAR" property="parentCode" />
+    <result column="route_name" jdbcType="VARCHAR" property="routeName" />
+    <result column="permission_id" jdbcType="VARCHAR" property="permissionId" />
+    <result column="visible_default" jdbcType="BIT" property="visibleDefault" />
+    <result column="operable_default" jdbcType="BIT" property="operableDefault" />
+    <result column="sort" jdbcType="INTEGER" property="sort" />
+    <result column="enabled" jdbcType="BIT" property="enabled" />
+    <result column="description" jdbcType="VARCHAR" property="description" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, code, name, type, scope_type, parent_code, route_name, permission_id,
+    visible_default, operable_default, sort, enabled, description
+  </sql>
+
+  <select id="selectEnabledByScopeType" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from permission_resource
+    where enabled = b'1'
+      and scope_type = #{scopeType,jdbcType=VARCHAR}
+    order by sort asc, code asc
+  </select>
+
+  <select id="selectEnabled" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from permission_resource
+    where enabled = b'1'
+    order by scope_type asc, sort asc, code asc
+  </select>
+
+  <select id="selectEnabledByCodes" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from permission_resource
+    where enabled = b'1'
+      and code in
+      <foreach collection="codes" item="code" open="(" separator="," close=")">
+        #{code,jdbcType=VARCHAR}
+      </foreach>
+    order by scope_type asc, sort asc, code asc
+  </select>
+
+  <select id="countEnabledByCodes" resultType="java.lang.Long">
+    select count(*)
+    from permission_resource
+    where enabled = b'1'
+      and code in
+      <foreach collection="codes" item="code" open="(" separator="," close=")">
+        #{code,jdbcType=VARCHAR}
+      </foreach>
+  </select>
+</mapper>

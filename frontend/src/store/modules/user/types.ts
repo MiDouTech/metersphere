@@ -17,6 +17,13 @@ export interface permissionsItem {
   permissionId: string;
   roleId: string;
 }
+export interface UserRoleUiPermission {
+  id: string;
+  roleId: string;
+  resourceCode: string;
+  visible: boolean;
+  operable: boolean;
+}
 export interface UserRoleRelation {
   id: string;
   userId: string;
@@ -32,7 +39,19 @@ export interface UserRoleRelation {
 export interface UserRolePermissions {
   userRole: UserRole;
   userRolePermissions: permissionsItem[];
+  userRoleUiPermissions?: UserRoleUiPermission[];
 }
+export interface UiPermissionSet {
+  visible: string[];
+  operable: string[];
+}
+
+export interface UserUiPermissions {
+  system: UiPermissionSet;
+  organization: UiPermissionSet;
+  project: UiPermissionSet;
+}
+
 export interface UserState {
   name?: string;
   avatar?: string;
@@ -55,6 +74,7 @@ export interface UserState {
   userRolePermissions?: UserRolePermissions[];
   userRoles?: UserRole[];
   userRoleRelations?: UserRoleRelation[];
+  uiPermissions?: UserUiPermissions;
   loginType: string[];
   hasLocalExec?: boolean; // 是否配置了api本地执行
   isPriorityLocalExec?: boolean; // 是否优先本地执行

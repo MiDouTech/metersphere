@@ -39,7 +39,8 @@
     <template #titleRight="{ loading }">
       <div class="rightButtons flex items-center">
         <MsButton
-          v-permission="['PROJECT_BUG:READ+UPDATE']"
+          v-visible-permission="{ code: 'BUG_DETAIL_EDIT_BUTTON', permissions: ['PROJECT_BUG:READ+UPDATE'] }"
+          v-operable-permission="{ code: 'BUG_DETAIL_EDIT_BUTTON', permissions: ['PROJECT_BUG:READ+UPDATE'] }"
           type="icon"
           status="secondary"
           class="mr-4 !rounded-[var(--border-radius-small)]"
@@ -51,6 +52,8 @@
           {{ t('common.edit') }}
         </MsButton>
         <MsButton
+          v-visible-permission="{ code: 'BUG_DETAIL_SHARE_BUTTON', permissions: ['PROJECT_BUG:READ'] }"
+          v-operable-permission="{ code: 'BUG_DETAIL_SHARE_BUTTON', permissions: ['PROJECT_BUG:READ'] }"
           type="icon"
           status="secondary"
           class="mr-4 !rounded-[var(--border-radius-small)]"
@@ -62,6 +65,8 @@
           {{ t('caseManagement.featureCase.share') }}
         </MsButton>
         <MsButton
+          v-visible-permission="{ code: 'BUG_DETAIL_FOLLOW_BUTTON', permissions: ['PROJECT_BUG:READ'] }"
+          v-operable-permission="{ code: 'BUG_DETAIL_FOLLOW_BUTTON', permissions: ['PROJECT_BUG:READ'] }"
           type="icon"
           status="secondary"
           class="mr-4 !rounded-[var(--border-radius-small)]"
@@ -77,7 +82,10 @@
           {{ t('caseManagement.featureCase.follow') }}
         </MsButton>
         <MsButton
-          v-permission="['PROJECT_BUG:READ+ADD', 'PROJECT_BUG:READ+DELETE']"
+          v-if="
+            hasButtonVisible('BUG_DETAIL_COPY_BUTTON', ['PROJECT_BUG:READ+ADD']) ||
+            hasButtonVisible('BUG_DETAIL_DELETE_BUTTON', ['PROJECT_BUG:READ+DELETE'])
+          "
           type="icon"
           status="secondary"
           class="mr-2 !rounded-[var(--border-radius-small)]"
@@ -89,15 +97,19 @@
             </div>
             <template #content>
               <a-doption
-                v-permission="['PROJECT_BUG:READ+ADD']"
-                :disabled="props.currentPlatform !== detailInfo.platform"
+                v-visible-permission="{ code: 'BUG_DETAIL_COPY_BUTTON', permissions: ['PROJECT_BUG:READ+ADD'] }"
+                :disabled="
+                  props.currentPlatform !== detailInfo.platform ||
+                  !hasButtonOperable('BUG_DETAIL_COPY_BUTTON', ['PROJECT_BUG:READ+ADD'])
+                "
                 @click="handleCopy"
               >
                 <MsIcon type="icon-icon_copy_filled" class="font-[16px]" />
                 {{ t('common.copy') }}
               </a-doption>
               <a-doption
-                v-permission="['PROJECT_BUG:READ+DELETE']"
+                v-visible-permission="{ code: 'BUG_DETAIL_DELETE_BUTTON', permissions: ['PROJECT_BUG:READ+DELETE'] }"
+                :disabled="!hasButtonOperable('BUG_DETAIL_DELETE_BUTTON', ['PROJECT_BUG:READ+DELETE'])"
                 class="error-6 text-[rgb(var(--danger-6))]"
                 @click="deleteHandler"
               >
@@ -128,7 +140,7 @@
                 <div class="leftWrapper min-w-0 flex-1 overflow-y-auto pr-4">
                   <BugDetailTab
                     ref="bugDetailTabRef"
-                    :allow-edit="hasAnyPermission(['PROJECT_BUG:READ+UPDATE'])"
+                    :allow-edit="hasButtonOperable('BUG_DETAIL_EDIT_BUTTON', ['PROJECT_BUG:READ+UPDATE'])"
                     :detail-info="detailInfo"
                     :current-custom-fields="currentCustomFields"
                     :is-platform-default-template="isPlatformDefaultTemplate"
@@ -141,13 +153,14 @@
                       {{ t('bugManagement.detail.comment') }}
                     </div>
                     <CommentInput
-                      v-if="hasAnyPermission(['PROJECT_BUG:READ+COMMENT'])"
+                      v-if="hasButtonVisible('BUG_DETAIL_COMMENT_BUTTON', ['PROJECT_BUG:READ+COMMENT'])"
                       v-model:notice-user-ids="noticeUserIds"
                       v-model:filed-ids="uploadFileIds"
                       v-model:default-value="commentContent"
                       is-show-avatar
                       :upload-image="handleUploadImage"
                       :is-use-bottom="false"
+                      :disabled="!hasButtonOperable('BUG_DETAIL_COMMENT_BUTTON', ['PROJECT_BUG:READ+COMMENT'])"
                       :preview-url="`${EditorPreviewFileUrl}/${appStore.currentProjectId}`"
                       @publish="publishHandler"
                     />
@@ -230,7 +243,7 @@
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import { useAppStore } from '@/store';
-  import { hasAnyPermission } from '@/utils/permission';
+  import { hasButtonOperable, hasButtonVisible } from '@/utils/permission';
 
   import type { CustomFieldItem } from '@/models/bug-management';
   import { BugEditCustomField, BugEditFormObject } from '@/models/bug-management';
@@ -312,7 +325,7 @@
           props: {
             modelValue: initValue,
             options: initOptions,
-            disabled: !hasAnyPermission(['PROJECT_BUG:READ+UPDATE']),
+            disabled: !hasButtonOperable('BUG_DETAIL_EDIT_BUTTON', ['PROJECT_BUG:READ+UPDATE']),
             multiple: item.fieldId === 'handleUser' ? true : undefined,
             ...(item.fieldId === 'status'
               ? {
@@ -481,6 +494,10 @@
   });
 
   function updateHandler() {
+    if (!hasButtonOperable('BUG_DETAIL_EDIT_BUTTON', ['PROJECT_BUG:READ+UPDATE'])) {
+      Message.warning(t('common.noPermission'));
+      return;
+    }
     router.push({
       name: RouteEnum.BUG_MANAGEMENT_DETAIL,
       query: {
@@ -500,9 +517,17 @@
   const shareLoading = ref<boolean>(false);
 
   function shareHandler() {
-    const url = `${window.location.origin}#${
-      router.resolve({ name: BugManagementRouteEnum.BUG_MANAGEMENT_INDEX }).fullPath
-    }?id=${detailInfo.value.id}&orgId=${appStore.currentOrgId}&pId=${appStore.currentProjectId}`;
+    if (!hasButtonOperable('BUG_DETAIL_SHARE_BUTTON', ['PROJECT_BUG:READ'])) {
+      Message.warning(t('common.noPermission'));
+      return;
+    }
+    const bugListPath = router.resolve({ name: BugManagementRouteEnum.BUG_MANAGEMENT_INDEX }).fullPath;
+    const query = new URLSearchParams({
+      id: String(detailInfo.value.id),
+      orgId: String(appStore.currentOrgId),
+      pId: String(appStore.currentProjectId),
+    }).toString();
+    const url = `${window.location.origin}#${bugListPath}?${query}`;
     if (isSupported) {
       copy(url);
       Message.info(t('bugManagement.detail.shareTip'));
@@ -514,6 +539,10 @@
   const followLoading = ref<boolean>(false);
   // 关注
   async function followHandler() {
+    if (!hasButtonOperable('BUG_DETAIL_FOLLOW_BUTTON', ['PROJECT_BUG:READ'])) {
+      Message.warning(t('common.noPermission'));
+      return;
+    }
     followLoading.value = true;
     try {
       await followBug(detailInfo.value.id, detailInfo.value.followFlag);
@@ -535,6 +564,10 @@
 
   // 删除用例
   function deleteHandler() {
+    if (!hasButtonOperable('BUG_DETAIL_DELETE_BUTTON', ['PROJECT_BUG:READ+DELETE'])) {
+      Message.warning(t('common.noPermission'));
+      return;
+    }
     deleteVisible.value = true;
   }
 
@@ -548,6 +581,10 @@
   };
   // 复制bug
   function handleCopy() {
+    if (!hasButtonOperable('BUG_DETAIL_COPY_BUTTON', ['PROJECT_BUG:READ+ADD'])) {
+      Message.warning(t('common.noPermission'));
+      return;
+    }
     router.push({
       name: RouteEnum.BUG_MANAGEMENT_DETAIL,
       query: {
@@ -561,6 +598,10 @@
 
   const uploadFileIds = ref<string[]>([]);
   async function publishHandler(currentContent: string) {
+    if (!hasButtonOperable('BUG_DETAIL_COMMENT_BUTTON', ['PROJECT_BUG:READ+COMMENT'])) {
+      Message.warning(t('common.noPermission'));
+      return;
+    }
     try {
       const params = {
         bugId: detailInfo.value.id,

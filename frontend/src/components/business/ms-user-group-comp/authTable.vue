@@ -61,6 +61,45 @@
         </template>
       </a-table>
     </div>
+    <div v-if="uiTableData.length > 0" class="group-auth-table ui-auth-table">
+      <div class="mb-2 font-medium text-[var(--color-text-1)]">页面 / 按钮 UI 权限</div>
+      <a-table
+        :scroll="props.scroll"
+        :data="uiTableData"
+        :loading="uiLoading"
+        :bordered="{ wrapper: true, cell: true }"
+        size="small"
+        :pagination="false"
+      >
+        <template #columns>
+          <a-table-column title="资源" data-index="name">
+            <template #cell="{ record }">
+              <span :style="{ paddingLeft: `${record.level * 16}px` }">{{ record.name }}</span>
+            </template>
+          </a-table-column>
+          <a-table-column :width="90" title="类型" data-index="type" />
+          <a-table-column :width="220" title="关联接口权限" data-index="permissionId" />
+          <a-table-column :width="100" title="可见">
+            <template #cell="{ record }">
+              <a-checkbox
+                :model-value="record.visible"
+                :disabled="systemAdminDisabled || disabled"
+                @change="(value) => handleUiVisibleChange(record, Boolean(value))"
+              />
+            </template>
+          </a-table-column>
+          <a-table-column :width="100" title="可操作">
+            <template #cell="{ record }">
+              <a-checkbox
+                :model-value="record.operable"
+                :disabled="systemAdminDisabled || disabled"
+                @change="(value) => handleUiOperableChange(record, Boolean(value))"
+              />
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+    </div>
     <div
       v-if="props.showBottom && props.current.id !== 'admin' && !systemAdminDisabled"
       v-permission="props.savePermission || []"
@@ -84,6 +123,8 @@
   import {
     getGlobalUSetting,
     getOrgUSetting,
+    getPermissionResourceTree,
+    getRoleUiPermission,
     saveGlobalUSetting,
     saveOrgUSetting,
   } from '@/api/modules/setting/usergroup';
@@ -93,7 +134,10 @@
   import {
     AuthTableItem,
     CurrentUserGroupItem,
+    PermissionResourceItem,
+    RoleUiPermission,
     SavePermissions,
+    UiPermissionTableItem,
     UserGroupAuthSetting,
   } from '@/models/setting/usergroup';
   import { AuthScopeEnum } from '@/enums/commonEnum';
@@ -144,6 +188,10 @@
   const allIndeterminate = ref(false);
 
   const tableData = ref<AuthTableItem[]>();
+  const uiTableData = ref<UiPermissionTableItem[]>([]);
+  const uiLoading = ref(false);
+  const uiPermissionLoaded = ref(false);
+  const uiPermissionDirty = ref(false);
   // 是否可以保存
   const canSave = ref(false);
 
@@ -218,6 +266,95 @@
       result.push(...makeData(item));
     });
     return result;
+  };
+
+  const flattenUiResources = (
+    resources: PermissionResourceItem[],
+    permissionMap: Map<string, RoleUiPermission>,
+    level = 0
+  ): UiPermissionTableItem[] => {
+    return resources.flatMap((resource) => {
+      const configured = permissionMap.get(resource.code);
+      const current: UiPermissionTableItem = {
+        code: resource.code,
+        name: resource.name,
+        type: resource.type,
+        parentCode: resource.parentCode,
+        permissionId: resource.permissionId,
+        level,
+        visible: configured?.visible ?? false,
+        operable: configured?.operable ?? false,
+      };
+      return [current, ...flattenUiResources(resource.children || [], permissionMap, level + 1)];
+    });
+  };
+
+  const initUiPermissionData = async (id: string) => {
+    try {
+      uiLoading.value = true;
+      uiPermissionLoaded.value = false;
+      const [resources, roleUiPermissions] = await Promise.all([
+        getPermissionResourceTree(systemType || AuthScopeEnum.PROJECT),
+        getRoleUiPermission(id),
+      ]);
+      const permissionMap = new Map((roleUiPermissions || []).map((item) => [item.resourceCode, item]));
+      uiTableData.value = flattenUiResources(resources || [], permissionMap);
+      uiPermissionLoaded.value = true;
+      uiPermissionDirty.value = false;
+    } catch (error) {
+      uiTableData.value = [];
+      uiPermissionLoaded.value = false;
+      uiPermissionDirty.value = false;
+      // eslint-disable-next-line no-console
+      console.log(error);
+    } finally {
+      uiLoading.value = false;
+    }
+  };
+
+  const disableUiChildren = (parentCode: string) => {
+    uiTableData.value
+      .filter((item) => item.parentCode === parentCode)
+      .forEach((child) => {
+        child.visible = false;
+        child.operable = false;
+        disableUiChildren(child.code);
+      });
+  };
+
+  const setUiParentsVisible = (record: UiPermissionTableItem) => {
+    let { parentCode } = record;
+    while (parentCode) {
+      const currentParentCode = parentCode;
+      const parent = uiTableData.value.find((item) => item.code === currentParentCode);
+      if (!parent) {
+        break;
+      }
+      parent.visible = true;
+      parentCode = parent.parentCode;
+    }
+  };
+
+  const handleUiVisibleChange = (record: UiPermissionTableItem, value: boolean) => {
+    record.visible = value;
+    if (!value) {
+      record.operable = false;
+      disableUiChildren(record.code);
+    } else {
+      setUiParentsVisible(record);
+    }
+    uiPermissionDirty.value = true;
+    if (!canSave.value) canSave.value = true;
+  };
+
+  const handleUiOperableChange = (record: UiPermissionTableItem, value: boolean) => {
+    record.operable = value;
+    if (value) {
+      record.visible = true;
+      setUiParentsVisible(record);
+    }
+    uiPermissionDirty.value = true;
+    if (!canSave.value) canSave.value = true;
   };
 
   // 表格总全选change事件
@@ -343,6 +480,7 @@
         res = await getAuthByUserGroup(id);
       }
       tableData.value = transformData(res);
+      await initUiPermissionData(id);
       handleAllChange(true);
     } catch (error) {
       tableData.value = [];
@@ -366,25 +504,37 @@
         });
       });
     });
+    const uiPermissions =
+      uiPermissionLoaded.value && uiPermissionDirty.value
+        ? uiTableData.value.map((item) => ({
+            resourceCode: item.code,
+            visible: item.operable || item.visible,
+            operable: item.visible && item.operable,
+          }))
+        : undefined;
     try {
       if (systemType === AuthScopeEnum.SYSTEM) {
         await saveGlobalUSetting({
           userRoleId: props.current.id,
           permissions,
+          uiPermissions,
         });
       } else if (systemType === AuthScopeEnum.ORGANIZATION) {
         await saveOrgUSetting({
           userRoleId: props.current.id,
           permissions,
+          uiPermissions,
         });
       } else {
         // 项目的
         await saveProjectUGSetting({
           userRoleId: props.current.id,
           permissions,
+          uiPermissions,
         });
       }
       canSave.value = false;
+      uiPermissionDirty.value = false;
       Message.success(t('common.saveSuccess'));
       initData(props.current.id);
     } catch (error) {

@@ -2,6 +2,7 @@ package io.metersphere.system.dto.user;
 
 import io.metersphere.system.domain.UserRole;
 import io.metersphere.system.domain.UserRolePermission;
+import io.metersphere.system.domain.UserRoleUiPermission;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -17,4 +18,5 @@ public class UserRoleResourceDTO implements Serializable {
 
     private UserRole userRole;
     private List<UserRolePermission> userRolePermissions;
+    private List<UserRoleUiPermission> userRoleUiPermissions;
 }

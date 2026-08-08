@@ -10,9 +10,10 @@
     <div class="w-full items-center">
       <a-input
         v-if="!isActive"
+        :disabled="props.disabled"
         :placeholder="t('ms.comment.enterPlaceHolderTip')"
         class="w-full hover:border-[rgb(var(--primary-5))]"
-        @click="isActive = true"
+        @click="!props.disabled && (isActive = true)"
       ></a-input>
       <div v-else class="flex flex-col justify-between">
         <MsRichText
@@ -25,16 +26,20 @@
           class="w-full"
           :limit-length="1000"
           :auto-height="false"
+          :class="{ 'pointer-events-none opacity-60': props.disabled }"
           placeholder="ms.comment.enterPlaceHolderTip"
         />
         <a-textarea
           v-else
           v-model:model-value="currentContent"
+          :disabled="props.disabled"
           :placeholder="t('ms.comment.enterPlaceHolderTip')"
         ></a-textarea>
         <div class="mt-4 flex flex-row justify-end gap-[12px]">
-          <a-button @click="cancelClick">{{ t('common.cancel') }}</a-button>
-          <a-button type="primary" :disabled="isDisabled" @click="publish">{{ t('common.publish') }}</a-button>
+          <a-button :disabled="props.disabled" @click="cancelClick">{{ t('common.cancel') }}</a-button>
+          <a-button type="primary" :disabled="props.disabled || isDisabled" @click="publish">{{
+            t('common.publish')
+          }}</a-button>
         </div>
       </div>
     </div>
@@ -59,9 +64,11 @@
       isUseBottom: boolean; // 是否被用于底部
       uploadImage?: (file: File) => Promise<any>;
       previewUrl?: string;
+      disabled?: boolean;
     }>(),
     {
       mode: 'rich',
+      disabled: false,
     }
   );
 

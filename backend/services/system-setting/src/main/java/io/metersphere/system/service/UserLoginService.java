@@ -59,6 +59,8 @@ public class UserLoginService {
     private OrganizationMapper organizationMapper;
     @Resource
     private OperationLogService operationLogService;
+    @Resource
+    private PermissionUiService permissionUiService;
 
     public UserDTO getUserDTO(String userId) {
         UserDTO userDTO = baseUserMapper.selectById(userId);
@@ -72,6 +74,7 @@ public class UserLoginService {
         userDTO.setUserRoleRelations(dto.getUserRoleRelations());
         userDTO.setUserRoles(dto.getUserRoles());
         userDTO.setUserRolePermissions(dto.getList());
+        userDTO.setUiPermissions(permissionUiService.aggregate(userDTO));
         return userDTO;
     }
 
@@ -454,6 +457,12 @@ public class UserLoginService {
             dto.setUserRolePermissions(userRolePermissions);
             list.add(dto);
         }
+        Map<String, List<UserRoleUiPermission>> roleUiPermissionMap = permissionUiService.getUiPermissionsByRoles(userRoles);
+        list.forEach(dto -> {
+            if (dto.getUserRole() != null) {
+                dto.setUserRoleUiPermissions(roleUiPermissionMap.getOrDefault(dto.getUserRole().getId(), List.of()));
+            }
+        });
         permissionDTO.setList(list);
         return permissionDTO;
     }

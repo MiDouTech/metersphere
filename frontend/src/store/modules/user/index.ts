@@ -64,6 +64,7 @@ const useUserStore = defineStore('user', {
     userRolePermissions: [],
     userRoles: [],
     userRoleRelations: [],
+    uiPermissions: undefined,
     loginType: [],
     hasLocalExec: false, // 是否配置了api本地执行
     isPriorityLocalExec: false, // 是否优先本地执行

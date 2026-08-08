@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.UserRoleUiPermissionMapper">
+  <resultMap id="BaseResultMap" type="io.metersphere.system.domain.UserRoleUiPermission">
+    <id column="id" jdbcType="VARCHAR" property="id" />
+    <result column="role_id" jdbcType="VARCHAR" property="roleId" />
+    <result column="resource_code" jdbcType="VARCHAR" property="resourceCode" />
+    <result column="visible" jdbcType="BIT" property="visible" />
+    <result column="operable" jdbcType="BIT" property="operable" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, role_id, resource_code, visible, operable
+  </sql>
+
+  <select id="selectByRoleId" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from user_role_ui_permission
+    where role_id = #{roleId,jdbcType=VARCHAR}
+    order by resource_code asc
+  </select>
+
+  <select id="selectByRoleIds" resultMap="BaseResultMap">
+    select <include refid="Base_Column_List" />
+    from user_role_ui_permission
+    where role_id in
+      <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+        #{roleId,jdbcType=VARCHAR}
+      </foreach>
+    order by role_id asc, resource_code asc
+  </select>
+
+  <delete id="deleteByRoleId">
+    delete from user_role_ui_permission
+    where role_id = #{roleId,jdbcType=VARCHAR}
+  </delete>
+
+  <insert id="insert" parameterType="io.metersphere.system.domain.UserRoleUiPermission">
+    insert into user_role_ui_permission (id, role_id, resource_code, visible, operable)
+    values (#{id,jdbcType=VARCHAR}, #{roleId,jdbcType=VARCHAR}, #{resourceCode,jdbcType=VARCHAR},
+            #{visible,jdbcType=BIT}, #{operable,jdbcType=BIT})
+  </insert>
+
+  <insert id="batchInsert" parameterType="map">
+    insert into user_role_ui_permission (id, role_id, resource_code, visible, operable)
+    values
+    <foreach collection="list" item="item" separator=",">
+      (#{item.id,jdbcType=VARCHAR}, #{item.roleId,jdbcType=VARCHAR}, #{item.resourceCode,jdbcType=VARCHAR},
+       #{item.visible,jdbcType=BIT}, #{item.operable,jdbcType=BIT})
+    </foreach>
+  </insert>
+</mapper>

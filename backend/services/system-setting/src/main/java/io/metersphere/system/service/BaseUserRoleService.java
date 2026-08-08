@@ -48,6 +48,8 @@ public class BaseUserRoleService {
     protected BaseUserRolePermissionService baseUserRolePermissionService;
     @Resource
     protected BaseUserRoleRelationService baseUserRoleRelationService;
+    @Resource
+    protected PermissionUiService permissionUiService;
 
     /**
      * 根据用户组获取对应的权限配置项
@@ -138,7 +140,11 @@ public class BaseUserRoleService {
      * @param request
      */
     protected void updatePermissionSetting(PermissionSettingUpdateRequest request) {
+        checkAdminUserRole(getWithCheck(request.getUserRoleId()));
         baseUserRolePermissionService.updatePermissionSetting(request);
+        if (request.getUiPermissions() != null) {
+            permissionUiService.updateRoleUiPermissions(request.getUserRoleId(), request.getUiPermissions());
+        }
     }
 
     protected UserRole add(UserRole userRole) {
@@ -181,6 +187,7 @@ public class BaseUserRoleService {
 
         // 删除用户组的权限设置
         baseUserRolePermissionService.deleteByRoleId(id);
+        permissionUiService.updateRoleUiPermissions(id, Collections.emptyList());
 
         // 删除用户组
         userRoleMapper.deleteByPrimaryKey(id);

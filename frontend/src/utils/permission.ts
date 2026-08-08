@@ -3,7 +3,7 @@ import { RouteLocationNormalized, RouteRecordNormalized, RouteRecordRaw } from '
 import { INDEX_ROUTE } from '@/router/routes/base';
 import appRoutes from '@/router/routes/index';
 import { useAppStore, useUserStore } from '@/store';
-import { SystemScopeType, UserRole, UserRoleRelation } from '@/store/modules/user/types';
+import { SystemScopeType, UiPermissionSet, UserRole, UserRoleRelation } from '@/store/modules/user/types';
 
 export function hasPermission(permission: string, typeList: string[]) {
   const userStore = useUserStore();
@@ -48,6 +48,88 @@ export function hasAllPermission(permissions: string[], typeList = ['PROJECT', '
     return true;
   }
   return permissions.every((permission) => hasPermission(permission, typeList));
+}
+
+function getUiPermissionSets(typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']): UiPermissionSet[] | undefined {
+  const userStore = useUserStore();
+  if (!userStore.uiPermissions) {
+    return undefined;
+  }
+  const result: UiPermissionSet[] = [];
+  if (typeList.includes('PROJECT')) {
+    result.push(userStore.uiPermissions.project);
+  }
+  if (typeList.includes('ORGANIZATION')) {
+    result.push(userStore.uiPermissions.organization);
+  }
+  if (typeList.includes('SYSTEM')) {
+    result.push(userStore.uiPermissions.system);
+  }
+  return result;
+}
+
+export function hasUiVisible(resourceCode?: string, typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']) {
+  if (!resourceCode) {
+    return true;
+  }
+  const userStore = useUserStore();
+  if (userStore.isAdmin) {
+    return true;
+  }
+  const sets = getUiPermissionSets(typeList);
+  if (!sets) {
+    return true;
+  }
+  return sets.some((set) => set?.visible?.includes(resourceCode));
+}
+
+export function hasUiOperable(resourceCode?: string, typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']) {
+  if (!resourceCode) {
+    return true;
+  }
+  const userStore = useUserStore();
+  if (userStore.isAdmin) {
+    return true;
+  }
+  const sets = getUiPermissionSets(typeList);
+  if (!sets) {
+    return true;
+  }
+  return sets.some((set) => set?.operable?.includes(resourceCode));
+}
+
+export function hasPageVisible(resourceCode?: string, typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']) {
+  return hasUiVisible(resourceCode, typeList);
+}
+
+export function hasButtonVisible(
+  resourceCode?: string,
+  permissions?: string[],
+  typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']
+) {
+  const userStore = useUserStore();
+  if (userStore.isAdmin) {
+    return true;
+  }
+  if (userStore.uiPermissions) {
+    return hasUiVisible(resourceCode, typeList);
+  }
+  return hasAnyPermission(permissions || [], typeList);
+}
+
+export function hasButtonOperable(
+  resourceCode?: string,
+  permissions?: string[],
+  typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']
+) {
+  const userStore = useUserStore();
+  if (userStore.isAdmin) {
+    return true;
+  }
+  if (userStore.uiPermissions) {
+    return hasUiOperable(resourceCode, typeList);
+  }
+  return hasAnyPermission(permissions || [], typeList);
 }
 
 export function composePermissions(userRoleRelations: UserRoleRelation[], type: SystemScopeType, id: string) {
@@ -98,13 +180,16 @@ export function topLevelMenuHasPermission(route: RouteLocationNormalized | Route
     // 如果是系统管理员, 包含项目, 组织, 系统层级所有菜单权限
     return true;
   }
+  if (!hasPageVisible(route.meta?.resourceCode as string | undefined)) {
+    return false;
+  }
   return hasAnyPermission(route.meta?.roles || []);
 }
 
 // 有权限的第一个路由名，如果没有找到则返回IndexRoute
 export function getFirstRouteNameByPermission(routerList: RouteRecordNormalized[]) {
   const currentRoute = routerList
-    .filter((item) => hasAnyPermission(item.meta.roles || [])) // 排除没有权限的路由
+    .filter((item) => hasPageVisible(item.meta.resourceCode) && hasAnyPermission(item.meta.roles || [])) // 排除没有权限的路由
     .sort((a, b) => {
       // 如果 a 和 b 都有 order，按照 order 的值进行升序排序
       if (a.meta.order !== undefined && b.meta.order !== undefined) {
@@ -127,7 +212,9 @@ export function getFirstRouteNameByPermission(routerList: RouteRecordNormalized[
 // 判断当前路由名有没有权限
 export function routerNameHasPermission(routerName: string, routerList: RouteRecordNormalized[]) {
   const currentRoute = routerList.find((item) => item.name === routerName);
-  return currentRoute ? hasAnyPermission(currentRoute.meta?.roles || []) : false;
+  return currentRoute
+    ? hasPageVisible(currentRoute.meta?.resourceCode) && hasAnyPermission(currentRoute.meta?.roles || [])
+    : false;
 }
 
 export function findRouteByName(name: string) {
@@ -151,7 +238,9 @@ export function findRouteByName(name: string) {
 export function getFirstRouterNameByCurrentRoute(parentName: string) {
   const currentRoute = findRouteByName(parentName);
   if (currentRoute) {
-    const hasAuthChildrenRouter = currentRoute.children.find((item) => hasAnyPermission(item.meta?.roles || []));
+    const hasAuthChildrenRouter = currentRoute.children.find(
+      (item) => hasPageVisible(item.meta?.resourceCode) && hasAnyPermission(item.meta?.roles || [])
+    );
     return hasAuthChildrenRouter ? hasAuthChildrenRouter.name : parentName;
   }
   return parentName;
