@@ -720,7 +720,7 @@
   import { FilterType, ViewTypeEnum } from '@/enums/advancedFilterEnum';
   import { CacheTabTypeEnum } from '@/enums/cacheTabEnum';
   import { MinderKeyEnum } from '@/enums/minderEnum';
-  import { BugManagementRouteEnum, CaseManagementRouteEnum, RouteEnum } from '@/enums/routeEnum';
+  import { CaseManagementRouteEnum, RouteEnum } from '@/enums/routeEnum';
   import { ColumnEditTypeEnum, SelectAllEnum, TableKeyEnum } from '@/enums/tableEnum';
   import { FilterRemoteMethodsEnum, FilterSlotNameEnum } from '@/enums/tableFilterEnum';
   import { WorkNavValueEnum } from '@/enums/workbenchEnum';
@@ -2226,7 +2226,7 @@
       return;
     }
     router.push({
-      name: BugManagementRouteEnum.BUG_MANAGEMENT_AUTOMATION_EXECUTION,
+      name: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
     });
   }
 
@@ -2274,7 +2274,7 @@
       aiExecutionVisible.value = false;
       resetSelector();
       router.push({
-        name: BugManagementRouteEnum.BUG_MANAGEMENT_AUTOMATION_EXECUTION,
+        name: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
         query: {
           executionTaskId: task.id,
         },

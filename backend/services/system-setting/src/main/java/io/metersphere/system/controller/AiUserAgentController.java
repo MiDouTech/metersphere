@@ -1,6 +1,5 @@
 package io.metersphere.system.controller;
 
-import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.dto.ai.agent.AiAgentConnectionStatusRequest;
 import io.metersphere.system.dto.ai.agent.AiAgentDeviceAuthenticateRequest;
 import io.metersphere.system.dto.ai.agent.AiAgentDeviceChallengeRequest;
@@ -15,7 +14,6 @@ import io.metersphere.system.service.ai.agent.bridge.AgentBridgeSessionRegistry;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.validation.Valid;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,38 +39,32 @@ public class AiUserAgentController {
     }
 
     @GetMapping("/ai/user-agent/features")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_READ)
     public Map<String, Boolean> features() {
         return featureService.flags();
     }
 
     @GetMapping("/ai/user-agent/connections")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_READ)
     public List<AiUserAgentConnectionDTO> connections() {
         return service.listConnections(SessionUtils.getUserId());
     }
 
     @PostMapping("/ai/user-agent/connections")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_CONNECT)
     public AiUserAgentConnectionDTO createConnection(@Valid @RequestBody AiUserAgentConnectionCreateRequest request) {
         return service.createConnection(request, SessionUtils.getUserId());
     }
 
     @PostMapping("/ai/user-agent/connections/{id}/authorize")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_CONNECT)
     public void authorizeConnection(@PathVariable String id) {
         AiUserAgentConnectionDTO connection = service.prepareAuthorization(id, SessionUtils.getUserId());
         sessionRegistry.authorize(connection.getDeviceId(), connection.getId(), connection.getProvider());
     }
 
     @PostMapping("/ai/user-agent/connections/{id}/revoke")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_REVOKE)
     public void revokeConnection(@PathVariable String id) {
         service.revokeConnection(id, SessionUtils.getUserId());
     }
 
     @PostMapping("/ai/agent-bridge/pairing")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_CONNECT)
     public Map<String, Object> pairing(@Valid @RequestBody AiAgentPairingCreateRequest request) {
         return service.createPairing(request, SessionUtils.getUserId());
     }
@@ -105,13 +97,11 @@ public class AiUserAgentController {
     }
 
     @GetMapping("/ai/agent-bridge/devices")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_READ)
     public List<AiAgentDeviceDTO> devices() {
         return service.listDevices(SessionUtils.getUserId());
     }
 
     @PostMapping("/ai/agent-bridge/devices/{id}/revoke")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_REVOKE)
     public void revokeDevice(@PathVariable String id) {
         service.revokeDevice(id, SessionUtils.getUserId());
     }

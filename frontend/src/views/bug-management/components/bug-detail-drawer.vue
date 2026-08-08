@@ -241,7 +241,6 @@
   } from '@/api/modules/bug-management';
   import { EditorPreviewFileUrl } from '@/api/requrls/bug-management';
   import { useI18n } from '@/hooks/useI18n';
-  import useModal from '@/hooks/useModal';
   import { useAppStore } from '@/store';
   import { hasButtonOperable, hasButtonVisible } from '@/utils/permission';
 
@@ -260,7 +259,6 @@
   const wrapperRef = ref();
 
   const { t } = useI18n();
-  const { openDeleteModal } = useModal();
   const { copy, isSupported } = useClipboard({ legacy: true });
 
   const emit = defineEmits<{
@@ -284,7 +282,6 @@
   const noticeUserIds = ref<string[]>([]); // 通知人ids
   const formRules = ref<FormItem[]>([]); // 表单规则
 
-  const currentProjectId = computed(() => appStore.currentProjectId);
   const showDrawerVisible = defineModel<boolean>('visible', { default: false });
   const bugDetailTabRef = ref();
   const isPlatformDefaultTemplate = ref(false);
@@ -516,7 +513,7 @@
 
   const shareLoading = ref<boolean>(false);
 
-  function shareHandler() {
+  async function shareHandler() {
     if (!hasButtonOperable('BUG_DETAIL_SHARE_BUTTON', ['PROJECT_BUG:READ'])) {
       Message.warning(t('common.noPermission'));
       return;
@@ -527,9 +524,10 @@
       orgId: String(appStore.currentOrgId),
       pId: String(appStore.currentProjectId),
     }).toString();
-    const url = `${window.location.origin}#${bugListPath}?${query}`;
+    const separator = bugListPath.includes('?') ? '&' : '?';
+    const url = `${window.location.origin}#${bugListPath}${separator}${query}`.replace(/[\r\n]+/g, '').trim();
     if (isSupported) {
-      copy(url);
+      await copy(url);
       Message.info(t('bugManagement.detail.shareTip'));
     } else {
       Message.error(t('common.copyNotSupport'));

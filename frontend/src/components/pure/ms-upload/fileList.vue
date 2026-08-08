@@ -32,7 +32,7 @@
               <a-avatar
                 shape="square"
                 class="cursor-pointer rounded-[var(--border-radius-mini)] bg-[var(--color-text-n9)]"
-                @click="isImageFile(item) ? handlePreview(item) : undefined"
+                @click="canPreviewFile(item) ? handlePreview(item) : undefined"
               >
                 <a-image
                   v-if="isImageFile(item) && getThumbSrc(item)"
@@ -52,8 +52,8 @@
                 <a-tooltip :content="item.file.name">
                   <div
                     class="show-file-name"
-                    :class="{ 'cursor-pointer text-[rgb(var(--primary-5))]': isImageFile(item) }"
-                    @click="isImageFile(item) ? handlePreview(item) : undefined"
+                    :class="{ 'cursor-pointer text-[rgb(var(--primary-5))]': canPreviewFile(item) }"
+                    @click="canPreviewFile(item) ? handlePreview(item) : undefined"
                   >
                     <div
                       :class="`file-name-first one-line-text pl-[4px] font-normal max-w-[${
@@ -71,7 +71,7 @@
                 <div v-if="props.buttonInTitle" class="ml-auto flex items-center font-normal">
                   <slot name="titleAction" :item="item">
                     <MsButton
-                      v-if="isImageFile(item)"
+                      v-if="canPreviewFile(item)"
                       type="button"
                       status="primary"
                       class="!mr-0"
@@ -79,7 +79,7 @@
                     >
                       {{ t('ms.upload.preview') }}
                     </MsButton>
-                    <a-divider v-if="isImageFile(item)" direction="vertical" />
+                    <a-divider v-if="canPreviewFile(item)" direction="vertical" />
                     <MsButton
                       v-if="item.status === UploadStatus.error"
                       type="button"
@@ -152,7 +152,7 @@
           <template v-if="!props.buttonInTitle" #actions>
             <div class="flex items-center">
               <MsButton
-                v-if="isImageFile(item)"
+                v-if="canPreviewFile(item)"
                 type="button"
                 status="primary"
                 class="!mr-0"
@@ -160,7 +160,7 @@
               >
                 {{ t('ms.upload.preview') }}
               </MsButton>
-              <a-divider v-if="isImageFile(item)" direction="vertical" />
+              <a-divider v-if="canPreviewFile(item)" direction="vertical" />
               <MsButton
                 v-if="item.status === UploadStatus.error"
                 type="button"
@@ -272,6 +272,13 @@
     if (mime.includes('image')) return true;
     const name = item.name || item.file?.name || '';
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
+  }
+
+  function canPreviewFile(item: MsFileItem) {
+    if (isImageFile(item)) {
+      return item.status === UploadStatus.done || item.status === UploadStatus.init;
+    }
+    return item.status === UploadStatus.done && typeof props.handleView === 'function';
   }
 
   const thumbSrcMap = ref<Record<string, string>>({});
@@ -408,7 +415,7 @@
   });
 
   async function handlePreview(item: MsFileItem) {
-    if (typeof props.handleView === 'function') {
+    if (!isImageFile(item) && typeof props.handleView === 'function') {
       props.handleView(item);
       return;
     }

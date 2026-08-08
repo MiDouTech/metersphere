@@ -15,7 +15,6 @@ export enum BugManagementRouteEnum {
   BUG_MANAGEMENT_DETAIL = 'bugManagementIndexDetail',
   BUG_MANAGEMENT_RECYCLE = 'bugManagementIndexRecycle',
   BUG_MANAGEMENT_CREATE_SUCCESS = 'bugManagementIndexCreateSuccess',
-  BUG_MANAGEMENT_AUTOMATION_EXECUTION = 'bugManagementAutomationExecution',
 }
 
 export enum CaseManagementRouteEnum {
@@ -25,6 +24,7 @@ export enum CaseManagementRouteEnum {
   CASE_MANAGEMENT_CASE_RECYCLE = 'caseManagementCaseRecycle',
   CASE_MANAGEMENT_CASE_DETAIL = 'caseManagementCaseDetail',
   CASE_MANAGEMENT_CASE_GENERATE = 'caseManagementCaseGenerate',
+  CASE_MANAGEMENT_AUTOMATION_EXECUTION = 'caseManagementAutomationExecution',
   CASE_MANAGEMENT_REVIEW = 'caseManagementReview',
   CASE_MANAGEMENT_REVIEW_CREATE = 'caseManagementReviewCreate',
   CASE_MANAGEMENT_REVIEW_DETAIL = 'caseManagementReviewDetail',

@@ -138,6 +138,7 @@
       }"
       :upload-func="uploadOrAssociationFile"
       :handle-delete="deleteFileHandler"
+      :handle-view="handleAttachmentPreview"
       :get-thumbnail="getAttachmentThumbnail"
       :init-file-save-tips="t('ms.upload.waiting_save')"
       :show-delete="false"
@@ -260,6 +261,24 @@
     :get-list-fun-params="getListFunParams"
     @save="saveSelectAssociatedFile"
   />
+  <a-modal
+    v-model:visible="attachmentPreviewVisible"
+    :title="attachmentPreviewTitle"
+    :footer="false"
+    :width="960"
+    unmount-on-close
+    @cancel="clearAttachmentPreview"
+  >
+    <a-spin :loading="attachmentPreviewLoading" class="block w-full">
+      <pre v-if="attachmentPreviewType === 'text'" class="attachment-preview-text">{{ attachmentPreviewText }}</pre>
+      <iframe
+        v-else-if="attachmentPreviewUrl"
+        :src="attachmentPreviewUrl"
+        class="h-[70vh] w-full rounded border border-solid border-[var(--color-text-n8)]"
+      ></iframe>
+      <a-empty v-else />
+    </a-spin>
+  </a-modal>
 </template>
 
 <script setup lang="ts">
@@ -724,6 +743,91 @@
   }
 
   const activeTransferFileParams = ref<MsFileItem>();
+  const attachmentPreviewVisible = ref(false);
+  const attachmentPreviewLoading = ref(false);
+  const attachmentPreviewTitle = ref('');
+  const attachmentPreviewUrl = ref('');
+  const attachmentPreviewText = ref('');
+  const attachmentPreviewType = ref<'iframe' | 'text'>('iframe');
+
+  function getFileName(item: MsFileItem) {
+    return item.name || item.file?.name || '';
+  }
+
+  function getFileExtension(item: MsFileItem) {
+    const fileName = getFileName(item);
+    const index = fileName.lastIndexOf('.');
+    return index > -1 ? fileName.slice(index + 1).toLowerCase() : '';
+  }
+
+  function getPreviewMimeType(item: MsFileItem) {
+    const ext = getFileExtension(item);
+    const mimeMap: Record<string, string> = {
+      pdf: 'application/pdf',
+      txt: 'text/plain;charset=utf-8',
+      log: 'text/plain;charset=utf-8',
+      csv: 'text/csv;charset=utf-8',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
+    return mimeMap[ext] || item.file?.type || 'application/octet-stream';
+  }
+
+  function isTextPreviewFile(item: MsFileItem) {
+    return ['txt', 'log', 'csv'].includes(getFileExtension(item));
+  }
+
+  function isOfficePreviewFile(item: MsFileItem) {
+    return ['doc', 'docx', 'xls', 'xlsx'].includes(getFileExtension(item));
+  }
+
+  function clearAttachmentPreview() {
+    if (attachmentPreviewUrl.value && attachmentPreviewUrl.value.startsWith('blob:')) {
+      URL.revokeObjectURL(attachmentPreviewUrl.value);
+    }
+    attachmentPreviewUrl.value = '';
+    attachmentPreviewText.value = '';
+    attachmentPreviewType.value = 'iframe';
+  }
+
+  async function handleAttachmentPreview(item: MsFileItem) {
+    clearAttachmentPreview();
+    attachmentPreviewVisible.value = true;
+    attachmentPreviewLoading.value = true;
+    attachmentPreviewTitle.value = getFileName(item);
+    try {
+      if (isOfficePreviewFile(item) && item.url && /^https?:\/\//i.test(item.url)) {
+        attachmentPreviewType.value = 'iframe';
+        attachmentPreviewUrl.value = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
+          item.url
+        )}`;
+        return;
+      }
+      const res = await downloadFileRequest({
+        projectId: currentProjectId.value,
+        bugId: bugId.value as string,
+        fileId: item.uid,
+        associated: !item.local,
+      });
+      const blob = new Blob([res], { type: getPreviewMimeType(item) });
+      if (isTextPreviewFile(item)) {
+        attachmentPreviewType.value = 'text';
+        attachmentPreviewText.value = await blob.text();
+      } else {
+        attachmentPreviewType.value = 'iframe';
+        attachmentPreviewUrl.value = URL.createObjectURL(blob);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log(error);
+      Message.error(t('common.operationFailed'));
+      attachmentPreviewVisible.value = false;
+    } finally {
+      attachmentPreviewLoading.value = false;
+    }
+  }
 
   function transferHandler(item: MsFileItem) {
     activeTransferFileParams.value = {
@@ -734,6 +838,11 @@
 
   watchEffect(() => {
     initCurrentDetail(props.detailInfo);
+  });
+  watch(attachmentPreviewVisible, (visible) => {
+    if (!visible) {
+      clearAttachmentPreview();
+    }
   });
   defineExpose({
     handleSave,
@@ -755,6 +864,17 @@
       right: 6px;
       color: rgb(var(--primary-7));
     }
+  }
+  .attachment-preview-text {
+    overflow: auto;
+    padding: 12px;
+    height: 70vh;
+    border: 1px solid var(--color-text-n8);
+    border-radius: var(--border-radius-small);
+    white-space: pre-wrap;
+    background: var(--color-fill-2);
+    line-height: 20px;
+    word-break: break-word;
   }
 </style>
 

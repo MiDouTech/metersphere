@@ -177,11 +177,10 @@
 <style scoped lang="less">
   .footer-button {
     display: flex;
+    justify-content: space-between;
     align-items: center;
     flex-direction: row;
-    justify-content: space-between;
   }
-
   .ms-switch {
     display: flex;
     align-items: center;
