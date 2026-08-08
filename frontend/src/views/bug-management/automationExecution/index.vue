@@ -79,7 +79,7 @@
           <a-button
             type="primary"
             :loading="createLoading"
-            :disabled="!canCreateFromResolve"
+            :disabled="!canCreateFromResolve || !chatModelId || !draftForm.targetUrl || !draftForm.environmentId"
             @click="createFromResolve"
           >
             {{ t('bugManagement.automationExecution.createTask') }}
@@ -104,7 +104,19 @@
             <a-descriptions-item :label="t('bugManagement.automationExecution.confirmRequired')">
               {{ resolveResult.confirmationRequired ? resolveResult.confirmationReason : '-' }}
             </a-descriptions-item>
+            <a-descriptions-item :label="t('bugManagement.automationExecution.parseConfidence')">
+              {{ resolveResult.parseConfidence ?? '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item :label="t('bugManagement.automationExecution.snapshotHash')">
+              {{ resolveResult.caseSnapshotHash || '-' }}
+            </a-descriptions-item>
           </a-descriptions>
+          <div
+            v-if="(resolveResult.matchedReasons || []).length"
+            class="mt-[8px] text-[12px] text-[var(--color-text-3)]"
+          >
+            {{ (resolveResult.matchedReasons || []).join('；') }}
+          </div>
           <a-alert
             v-if="resolveResult.highRisk"
             class="mt-[8px]"
@@ -179,6 +191,12 @@
             <a-descriptions-item :label="t('bugManagement.automationExecution.startTime')">
               {{ formatTime(task.createTime) }}
             </a-descriptions-item>
+            <a-descriptions-item :label="t('bugManagement.automationExecution.writebackStatus')">
+              {{ task.writebackStatus || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item :label="t('bugManagement.automationExecution.artifactStatus')">
+              {{ task.artifactStatus || '-' }}
+            </a-descriptions-item>
             <a-descriptions-item :label="t('bugManagement.automationExecution.success')">
               {{ task.successCount || 0 }}
             </a-descriptions-item>
@@ -234,6 +252,16 @@
             </template>
           </a-table>
 
+          <div class="panel-subtitle mt-[12px]">{{ t('bugManagement.automationExecution.evidence') }}</div>
+          <div v-if="artifacts.length" class="evidence-list mt-[8px]">
+            <div v-for="artifact in artifacts" :key="artifact.id" class="evidence-item">
+              <a-image :src="artifact.downloadPath" width="140" height="88" fit="cover" />
+              <div class="mt-[4px] truncate text-[12px]">{{ artifact.purpose }} · {{ artifact.fileName }}</div>
+              <div class="truncate text-[11px] text-[var(--color-text-3)]">{{ artifact.sha256 }}</div>
+            </div>
+          </div>
+          <a-empty v-else :description="t('bugManagement.automationExecution.noEvidence')" />
+
           <div class="mt-[12px] flex items-center justify-between gap-[8px]">
             <div class="panel-subtitle">{{ t('bugManagement.automationExecution.eventLog') }}</div>
             <div class="flex items-center gap-[8px]">
@@ -270,12 +298,14 @@
   import dayjs from 'dayjs';
 
   import {
+    type AiExecutionArtifact,
     type AiExecutionEvent,
     type AiExecutionResolveResult,
     type AiExecutionTask,
     cancelAiExecutionTask,
     confirmAiExecutionTask,
     createAiExecutionTask,
+    getAiExecutionArtifacts,
     getAiExecutionEvents,
     getAiExecutionTask,
     loginReadyAiExecutionTask,
@@ -299,6 +329,7 @@
   const createLoading = ref(false);
   const task = ref<AiExecutionTask>();
   const events = ref<AiExecutionEvent[]>([]);
+  const artifacts = ref<AiExecutionArtifact[]>([]);
   const eventCursor = ref(0);
   const eventLevel = ref('ALL');
   const prompt = ref('');
@@ -310,6 +341,7 @@
   const resolveConfirmed = ref(false);
   const chatModelId = ref(localStorage.getItem('aiChatModel') || '');
   const messages = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([]);
+  const lastResolvedPrompt = ref('');
   let pollTimer: number | undefined;
 
   const executionTaskId = computed(() => (route.query.executionTaskId as string | undefined) || undefined);
@@ -323,7 +355,7 @@
     events.value.filter((item) => eventLevel.value === 'ALL' || item.level === eventLevel.value)
   );
   const canCancel = computed(
-    () => !!task.value && !['SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'CANCELED'].includes(task.value.status)
+    () => !!task.value && !['SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'CANCELED', 'EXPIRED'].includes(task.value.status)
   );
   const canPause = computed(
     () => !!task.value && ['RUNNING', 'WAITING_LOGIN', 'PREPARING_BROWSER'].includes(task.value.status)
@@ -402,9 +434,14 @@
     }
   }
 
+  async function loadArtifacts() {
+    artifacts.value = executionTaskId.value ? await getAiExecutionArtifacts(executionTaskId.value) : [];
+  }
+
   async function refreshAll() {
     await loadTask();
     await loadEvents(true);
+    await loadArtifacts();
   }
 
   function resetEvents() {
@@ -421,14 +458,13 @@
       return;
     }
     messages.value.push({ id: `${Date.now()}_u`, role: 'user', content });
+    lastResolvedPrompt.value = content;
     prompt.value = '';
     resolveLoading.value = true;
     try {
       const result = await resolveAiExecutionScope({
         projectId: appStore.currentProjectId,
         query: content,
-        caseKeyword: content,
-        providerId: chatModelId.value || undefined,
       });
       resolveResult.value = result;
       resolveConfirmed.value = false;
@@ -471,6 +507,12 @@
         testPlanId: resolveResult.value.testPlanId,
         caseIds,
         source: 'WORKBENCH',
+        selectionMode: resolveResult.value.selectionMode || 'NATURAL_LANGUAGE',
+        prompt: lastResolvedPrompt.value,
+        resolvedFilter: resolveResult.value.resolvedFilter
+          ? JSON.stringify(resolveResult.value.resolvedFilter)
+          : undefined,
+        policySnapshot: JSON.stringify({ screenshotMode: 'AFTER_STEP', fullPage: true }),
         confirmed: resolveResult.value.confirmationRequired ? resolveConfirmed.value : undefined,
         projectWide: projectWide || undefined,
         providerId: chatModelId.value || undefined,
@@ -574,6 +616,7 @@
       try {
         await loadTask();
         await loadEvents(false);
+        await loadArtifacts();
       } catch {
         // ignore transient poll errors
       }
@@ -661,6 +704,17 @@
     border: 1px solid var(--color-border-2);
     border-radius: 6px;
     flex: 1;
+  }
+  .evidence-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .evidence-item {
+    padding: 8px;
+    min-width: 0;
+    border: 1px solid var(--color-border-2);
+    border-radius: 4px;
   }
   .scope-preview {
     overflow: auto;

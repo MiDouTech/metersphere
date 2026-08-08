@@ -15,6 +15,7 @@ import jakarta.annotation.Resource;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.MessageType;
@@ -23,10 +24,12 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import reactor.core.publisher.Flux;
 
 /**
  * @Author: jianxing
@@ -81,6 +84,23 @@ public class AiChatBaseService {
                 .advisors(messageChatMemoryAdvisor)
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, aiChatOption.getConversationId()))
                 .call();
+    }
+
+    public Flux<ChatResponse> stream(AIChatOption aiChatOption) {
+        return stream(aiChatOption, Collections.emptyList());
+    }
+
+    public Flux<ChatResponse> stream(AIChatOption aiChatOption, List<Object> tools) {
+        ChatClient.ChatClientRequestSpec request = getClient(aiChatOption.getModule())
+                .prompt()
+                .user(aiChatOption.getPrompt());
+        if (StringUtils.isNotBlank(aiChatOption.getSystem())) {
+            request = request.system(aiChatOption.getSystem());
+        }
+        if (tools != null && !tools.isEmpty()) {
+            request = request.tools(tools.toArray());
+        }
+        return request.stream().chatResponse();
     }
 
     /**

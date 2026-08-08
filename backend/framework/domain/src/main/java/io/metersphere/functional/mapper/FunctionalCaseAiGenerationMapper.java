@@ -12,6 +12,12 @@ public interface FunctionalCaseAiGenerationMapper {
 
     int updateByPrimaryKeySelective(FunctionalCaseAiGeneration record);
 
+    int updateTerminalIfActive(FunctionalCaseAiGeneration record);
+
+    int cancelIfActive(@Param("id") String id, @Param("projectId") String projectId,
+                       @Param("createUser") String createUser, @Param("updateTime") long updateTime,
+                       @Param("errorMessage") String errorMessage);
+
     List<FunctionalCaseAiGeneration> selectByProjectAndCreateUser(@Param("projectId") String projectId,
                                                                   @Param("createUser") String createUser,
                                                                   @Param("offset") long offset,

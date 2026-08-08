@@ -15,5 +15,7 @@ public class AgentExecutionResolveRequest {
     private String testPlanName;
     private List<String> caseIds;
     private String caseKeyword;
+    @Schema(description = "受控结构化筛选条件；与自然语言解析结果合并")
+    private AgentSearchFilters filters;
     private Integer threshold = 20;
 }

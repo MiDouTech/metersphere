@@ -17,6 +17,15 @@
             <groupId>io.metersphere</groupId>
             <artifactId>metersphere-sdk</artifactId>
             <version>${revision}</version>
+            <exclusions>
+                <!-- easyexcel 3.3.3 pulls the legacy POI 4.1.2 full schemas jar.
+                     It defines the same OOXML classes as Tika's POI 5.x parser
+                     and causes NoSuchFieldError while parsing Office files. -->
+                <exclusion>
+                    <groupId>org.apache.poi</groupId>
+                    <artifactId>poi-ooxml-schemas</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.metersphere</groupId>
@@ -52,6 +61,23 @@
         <dependency>
             <groupId>jaxen</groupId>
             <artifactId>jaxen</artifactId>
+        </dependency>
+        <!-- Unified PDF/Office/image text extraction. Image OCR is enabled by Tika
+             when a Tesseract executable is available on the deployment host. -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>3.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-parsers-standard-package</artifactId>
+            <version>3.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.21.0</version>
         </dependency>
     </dependencies>
 

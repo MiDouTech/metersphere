@@ -230,6 +230,8 @@ public class AgentFunctionalCaseSearchService {
                         || CollectionUtils.isNotEmpty(request.getFilters().getPriority())
                         || CollectionUtils.isNotEmpty(request.getFilters().getLastExecuteResult())
                         || CollectionUtils.isNotEmpty(request.getFilters().getTags())
+                        || StringUtils.isNotBlank(request.getFilters().getKeyword())
+                        || Boolean.TRUE.equals(request.getFilters().getExcludeRiskActions())
         );
         boolean hasPlan = StringUtils.isNotBlank(request.getTestPlanId());
         if (!hasQuery && !hasFilters && !hasPlan) {

@@ -431,7 +431,11 @@
       :mask-closable="false"
       :ok-text="t('caseManagement.featureCase.aiExecutionStart')"
       :ok-button-props="{
-        disabled: aiExecutionSubmitting || !aiExecutionForm.targetUrl || !aiExecutionForm.environmentId,
+        disabled:
+          aiExecutionSubmitting ||
+          !aiExecutionForm.providerId ||
+          !aiExecutionForm.targetUrl ||
+          !aiExecutionForm.environmentId,
       }"
       :confirm-loading="aiExecutionSubmitting"
       :on-before-ok="submitAiExecutionTask"
@@ -444,6 +448,14 @@
         {{ t('caseManagement.featureCase.aiExecutionConfirmContent', { number: aiExecutionCaseIds.length }) }}
       </a-alert>
       <a-form :model="aiExecutionForm" layout="vertical">
+        <a-form-item :label="t('caseManagement.featureCase.aiExecutionModel')" required>
+          <a-select
+            v-model:model-value="aiExecutionForm.providerId"
+            :options="aiExecutionModelOptions"
+            allow-search
+            :placeholder="t('caseManagement.featureCase.aiExecutionModelPlaceholder')"
+          />
+        </a-form-item>
         <a-form-item :label="t('caseManagement.featureCase.aiExecutionEnvironment')" required>
           <a-input
             v-model:model-value="aiExecutionForm.environmentId"
@@ -2092,6 +2104,7 @@
   const aiExecutionSubmitting = ref(false);
   const aiExecutionCaseIds = ref<string[]>([]);
   const aiExecutionForm = reactive({
+    providerId: localStorage.getItem('aiChatModel') || '',
     environmentId: '',
     targetUrl: '',
     browserType: 'chromium',
@@ -2099,6 +2112,9 @@
     confirmed: false,
   });
   const aiExecutionNeedsConfirm = computed(() => aiExecutionCaseIds.value.length > 20);
+  const aiExecutionModelOptions = computed(() =>
+    (aiStore.aiSourceNameList || []).map((item) => ({ label: item.name, value: item.id }))
+  );
 
   // 关联需求
   function handleAssociatedDemand() {
@@ -2117,6 +2133,12 @@
       return;
     }
     aiExecutionCaseIds.value = caseIds;
+    if (!aiStore.aiSourceNameList.length) {
+      await aiStore.getAISourceNameList();
+    }
+    if (!aiExecutionModelOptions.value.some((item) => item.value === aiExecutionForm.providerId)) {
+      aiExecutionForm.providerId = aiExecutionModelOptions.value[0]?.value || '';
+    }
     aiExecutionForm.environmentId = '';
     aiExecutionForm.targetUrl = '';
     aiExecutionForm.browserType = 'chromium';
@@ -2126,6 +2148,10 @@
   }
 
   async function submitAiExecutionTask() {
+    if (!aiExecutionForm.providerId) {
+      Message.warning(t('caseManagement.featureCase.aiExecutionModelRequired'));
+      return false;
+    }
     if (!aiExecutionForm.targetUrl?.trim()) {
       Message.warning(t('caseManagement.featureCase.aiExecutionTargetUrlRequired'));
       return false;
@@ -2144,15 +2170,18 @@
         projectId: currentProjectId.value,
         caseIds: aiExecutionCaseIds.value,
         source: 'CASE_LIST',
+        selectionMode: 'MANUAL',
         // 仅在超阈值时传 confirmed；少量勾选不默认 true，由后端按规则判定
         confirmed: aiExecutionNeedsConfirm.value ? true : undefined,
         environmentId: aiExecutionForm.environmentId.trim(),
         targetUrl: aiExecutionForm.targetUrl.trim(),
         browserType: aiExecutionForm.browserType,
         loginMode: aiExecutionForm.loginMode,
+        providerId: aiExecutionForm.providerId,
         idempotencyKey: `case-list-${currentProjectId.value}-${Date.now()}`,
       });
       Message.success(t('caseManagement.featureCase.aiExecutionCreated'));
+      localStorage.setItem('aiChatModel', aiExecutionForm.providerId);
       aiExecutionVisible.value = false;
       resetSelector();
       router.push({

@@ -33,6 +33,9 @@ public class AgentShiroFilterChainExtender implements ShiroFilterChainExtender {
         chain.put("/api/personal/agent-package/**", "authc");
         chain.put("/admin/agent-tokens/**", "authc");
         chain.put("/api/admin/agent-tokens/**", "authc");
+        // Runner endpoints authenticate an msrt_/msrl_ token inside AgentRunnerService.
+        chain.put("/internal/ai-runner/v1/**", "anon");
+        chain.put("/api/internal/ai-runner/v1/**", "anon");
         chain.put("/mcp", "agentToken, authc");
         chain.put("/api/mcp", "agentToken, authc");
     }

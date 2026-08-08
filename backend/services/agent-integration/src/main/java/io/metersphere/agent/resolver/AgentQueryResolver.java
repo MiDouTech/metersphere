@@ -44,7 +44,11 @@ public class AgentQueryResolver {
             }
         }
 
-        if (condition.getModuleIds().isEmpty() && StringUtils.isNotBlank(request.getQuery())) {
+        if (StringUtils.isNotBlank(filters.getKeyword())) {
+            condition.setKeyword(filters.getKeyword());
+            condition.getMatchedBy().add("keywordFilter");
+        } else if (condition.getModuleIds().isEmpty() && StringUtils.isNotBlank(request.getQuery())
+                && !hasStructuredFilter(filters)) {
             condition.setKeyword(request.getQuery());
             condition.getMatchedBy().add("keyword");
             condition.getWarnings().add(AgentWarningCode.MODULE_NOT_MATCHED_KEYWORD_FALLBACK);
@@ -63,5 +67,13 @@ public class AgentQueryResolver {
             condition.getMatchedBy().add("filter");
         }
         return condition;
+    }
+
+    private boolean hasStructuredFilter(AgentSearchFilters filters) {
+        return CollectionUtils.isNotEmpty(filters.getPriority())
+                || CollectionUtils.isNotEmpty(filters.getLastExecuteResult())
+                || CollectionUtils.isNotEmpty(filters.getTags())
+                || CollectionUtils.isNotEmpty(filters.getModuleIds())
+                || Boolean.TRUE.equals(filters.getExcludeRiskActions());
     }
 }

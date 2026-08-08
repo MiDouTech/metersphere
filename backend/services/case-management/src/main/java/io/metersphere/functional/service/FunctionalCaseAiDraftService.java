@@ -39,15 +39,16 @@ import io.metersphere.sdk.constants.ModuleConstants;
 import io.metersphere.sdk.constants.TemplateScene;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
-import io.metersphere.system.dto.request.ai.AIChatOption;
-import io.metersphere.system.dto.request.ai.AIChatRequest;
-import io.metersphere.system.dto.request.ai.AiModelSourceDTO;
 import io.metersphere.system.dto.sdk.TemplateDTO;
 import io.metersphere.system.log.constants.OperationLogModule;
 import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.log.dto.LogDTO;
 import io.metersphere.system.log.service.OperationLogService;
 import io.metersphere.system.service.AiChatBaseService;
+import io.metersphere.system.service.ai.AiGovernanceService;
+import io.metersphere.system.service.ai.provider.AiProviderAdapter;
+import io.metersphere.system.dto.request.ai.AiProviderChatRequest;
+import io.metersphere.system.dto.request.ai.AiProviderInvocationResult;
 import io.metersphere.system.uid.IDGenerator;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +57,10 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -90,14 +95,23 @@ public class FunctionalCaseAiDraftService {
     private AiChatBaseService aiChatBaseService;
     @Resource
     private OperationLogService operationLogService;
+    @Resource
+    private AiGovernanceService aiGovernanceService;
+    @Resource
+    private AiProviderAdapter aiProviderAdapter;
+    @Resource
+    private PlatformTransactionManager transactionManager;
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public FunctionalCaseAiGenerateResponse generate(FunctionalCaseAiGenerateRequest request, String userId) {
+        aiGovernanceService.assertModelAllowed(request.getProjectId(), request.getChatModelId());
         int maxCases = normalizeMaxCases(request.getMaxCases());
         long startTime = System.currentTimeMillis();
         FunctionalCaseAiGeneration generation = createGeneration(request, userId, startTime);
-        generationMapper.insert(generation);
+        aiGovernanceService.admitGeneration(request.getProjectId(), () -> generationMapper.insert(generation));
         try {
-            String rawContent = callAiForStructuredCases(request, userId, maxCases);
+            AiProviderInvocationResult providerResult = callAiForStructuredCases(request, userId, maxCases);
+            String rawContent = providerResult.getContent();
             if (isCanceled(generation.getId())) {
                 audit("GENERATE_CANCELED", request.getProjectId(), userId, "generationId=" + generation.getId());
                 FunctionalCaseAiGenerateResponse canceled = new FunctionalCaseAiGenerateResponse();
@@ -116,21 +130,32 @@ public class FunctionalCaseAiDraftService {
                 throw new MSException("AI 未返回有效用例，未创建草稿");
             }
 
+            List<FunctionalCaseAiDraft> draftEntities = new ArrayList<>();
             List<FunctionalCaseAiDraftDTO> createdDrafts = new ArrayList<>();
             for (CaseGenerationCaseDTO item : cases) {
                 FunctionalCaseAiDraft draft = buildDraft(request, item, generation.getId(), userId);
                 validateDraft(draft);
-                draftMapper.insert(draft);
+                draftEntities.add(draft);
                 createdDrafts.add(toDTO(draft));
             }
 
             generation.setStatus(FunctionalCaseAiGenerationStatus.GENERATED.name());
             generation.setDurationMs(System.currentTimeMillis() - startTime);
+            generation.setTokenUsage(providerResult.getTotalTokens());
             generation.setUpdateTime(System.currentTimeMillis());
             if (CollectionUtils.isNotEmpty(result.getWarnings())) {
                 generation.setErrorMessage(String.join("; ", result.getWarnings()));
             }
-            generationMapper.updateByPrimaryKeySelective(generation);
+            Boolean persisted = new TransactionTemplate(transactionManager).execute(status -> {
+                if (generationMapper.updateTerminalIfActive(generation) == 0) {
+                    return false;
+                }
+                draftEntities.forEach(draftMapper::insert);
+                return true;
+            });
+            if (!Boolean.TRUE.equals(persisted)) {
+                return canceledResponse(generation.getId());
+            }
 
             FunctionalCaseAiGenerateResponse response = new FunctionalCaseAiGenerateResponse();
             response.setGenerationId(generation.getId());
@@ -153,7 +178,7 @@ public class FunctionalCaseAiDraftService {
             generation.setDurationMs(System.currentTimeMillis() - startTime);
             generation.setErrorMessage(StringUtils.left(ex.getMessage(), 4000));
             generation.setUpdateTime(System.currentTimeMillis());
-            generationMapper.updateByPrimaryKeySelective(generation);
+            generationMapper.updateTerminalIfActive(generation);
             audit("GENERATE_FAILED", request.getProjectId(), userId, "generationId=" + generation.getId() + ",error=" + ex.getMessage());
             if (ex instanceof MSException msException) {
                 throw msException;
@@ -174,13 +199,10 @@ public class FunctionalCaseAiDraftService {
                 || FunctionalCaseAiGenerationStatus.CANCELED.name().equals(generation.getStatus())) {
             return;
         }
-        FunctionalCaseAiGeneration update = new FunctionalCaseAiGeneration();
-        update.setId(generation.getId());
-        update.setStatus(FunctionalCaseAiGenerationStatus.CANCELED.name());
-        update.setUpdateTime(System.currentTimeMillis());
-        update.setErrorMessage("用户取消生成");
-        generationMapper.updateByPrimaryKeySelective(update);
-        audit("GENERATE_CANCEL", request.getProjectId(), userId, "generationId=" + generation.getId());
+        if (generationMapper.cancelIfActive(generation.getId(), request.getProjectId(), userId,
+                System.currentTimeMillis(), "用户取消生成") > 0) {
+            audit("GENERATE_CANCEL", request.getProjectId(), userId, "generationId=" + generation.getId());
+        }
     }
 
     private boolean isCanceled(String generationId) {
@@ -243,6 +265,7 @@ public class FunctionalCaseAiDraftService {
         audit("DELETE_DRAFT", request.getProjectId(), userId, "draftIds=" + request.getDraftIds());
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public FunctionalCaseAiGenerateResponse regenerate(FunctionalCaseAiDraftRegenerateRequest request, String userId) {
         FunctionalCaseAiDraft draft = requireDraft(request.getDraftId(), request.getProjectId(), userId);
         FunctionalCaseAiGenerateRequest generateRequest = new FunctionalCaseAiGenerateRequest();
@@ -273,7 +296,13 @@ public class FunctionalCaseAiDraftService {
                     throw new MSException("草稿不存在或无权限访问");
                 }
                 itemResult.setName(draft.getName());
-                FunctionalCase created = saveOneDraftAsCase(draft, request, userId, organizationId);
+                TransactionTemplate itemTransaction = new TransactionTemplate(transactionManager);
+                itemTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                FunctionalCase created = itemTransaction.execute(status ->
+                        saveOneDraftAsCase(draft, request, userId, organizationId));
+                if (created == null) {
+                    throw new MSException("正式用例保存事务未返回结果");
+                }
                 itemResult.setFormalCaseId(created.getId());
                 itemResult.setSuccess(true);
                 response.setSuccessCount(response.getSuccessCount() + 1);
@@ -363,13 +392,93 @@ public class FunctionalCaseAiDraftService {
         return generation;
     }
 
-    private String callAiForStructuredCases(FunctionalCaseAiGenerateRequest request, String userId, int maxCases) {
-        AIChatRequest aiRequest = new AIChatRequest();
-        aiRequest.setPrompt(request.getPrompt());
-        aiRequest.setChatModelId(request.getChatModelId());
-        aiRequest.setConversationId(request.getConversationId());
-        aiRequest.setOrganizationId(request.getOrganizationId());
-        AiModelSourceDTO module = aiChatBaseService.getModule(aiRequest, userId);
+    public FunctionalCaseAiGenerateResponse createDraftsFromAgent(String projectId, String conversationId,
+                                                                  String requestId, String modelSourceId,
+                                                                  List<CaseGenerationCaseDTO> cases, String userId) {
+        if (CollectionUtils.isEmpty(cases)) {
+            throw new MSException("create_case_drafts 至少需要一条用例");
+        }
+        if (cases.size() > MAX_CASES) {
+            throw new MSException("单次最多创建 " + MAX_CASES + " 条草稿");
+        }
+        for (int index = 0; index < cases.size(); index++) {
+            validateAgentCaseArgument(cases.get(index), index);
+        }
+        long now = System.currentTimeMillis();
+        String generationId = IDGenerator.nextStr();
+        FunctionalCaseAiGenerateRequest buildRequest = new FunctionalCaseAiGenerateRequest();
+        buildRequest.setProjectId(projectId);
+        buildRequest.setConversationId(conversationId);
+        buildRequest.setChatModelId(modelSourceId);
+        buildRequest.setPrompt("Agent tool create_case_drafts requestId=" + requestId);
+
+        FunctionalCaseAiGeneration generation = new FunctionalCaseAiGeneration();
+        generation.setId(generationId);
+        generation.setProjectId(projectId);
+        generation.setConversationId(conversationId);
+        generation.setModelSourceId(modelSourceId);
+        generation.setPrompt("Agent tool create_case_drafts");
+        generation.setStatus(FunctionalCaseAiGenerationStatus.GENERATED.name());
+        generation.setTokenUsage(0L);
+        generation.setDurationMs(0L);
+        generation.setCreateUser(userId);
+        generation.setCreateTime(now);
+        generation.setUpdateTime(now);
+
+        List<FunctionalCaseAiDraft> entities = new ArrayList<>();
+        for (CaseGenerationCaseDTO item : cases) {
+            FunctionalCaseAiDraft draft = buildDraft(buildRequest, item, generationId, userId);
+            draft.setConversationId(conversationId);
+            draft.setRequestId(requestId);
+            validateDraft(draft);
+            if (FunctionalCaseAiDraftStatus.INVALID.name().equals(draft.getValidationStatus())) {
+                throw new MSException("草稿参数校验失败：" + draft.getValidationMessage());
+            }
+            entities.add(draft);
+        }
+        generationMapper.insert(generation);
+        entities.forEach(draftMapper::insert);
+
+        FunctionalCaseAiGenerateResponse response = new FunctionalCaseAiGenerateResponse();
+        response.setGenerationId(generationId);
+        response.setCreatedCount(entities.size());
+        response.setDrafts(entities.stream().map(this::toDTO).toList());
+        response.setWarnings(entities.stream().filter(item -> Boolean.TRUE.equals(item.getDuplicate()))
+                .map(item -> "草稿“" + item.getName() + "”可能重复").toList());
+        audit("AGENT_CREATE_DRAFTS", projectId, userId,
+                "requestId=" + requestId + ",drafts=" + entities.size());
+        return response;
+    }
+
+    private void validateAgentCaseArgument(CaseGenerationCaseDTO item, int index) {
+        String path = "cases[" + index + "]";
+        if (item == null || StringUtils.isBlank(item.getName())) {
+            throw new MSException(path + ".name 不能为空");
+        }
+        String level = StringUtils.upperCase(item.getLevel());
+        if (!List.of("P0", "P1", "P2", "P3").contains(level)) {
+            throw new MSException(path + ".level 必须为 P0/P1/P2/P3");
+        }
+        String editType = StringUtils.upperCase(item.getEditType());
+        if (!List.of("STEP", "TEXT").contains(editType)) {
+            throw new MSException(path + ".editType 必须为 STEP/TEXT");
+        }
+        if ("STEP".equals(editType)) {
+            if (CollectionUtils.isEmpty(item.getSteps())) {
+                throw new MSException(path + ".steps 不能为空");
+            }
+            for (int stepIndex = 0; stepIndex < item.getSteps().size(); stepIndex++) {
+                FunctionalCaseStepDTO step = item.getSteps().get(stepIndex);
+                if (step == null || StringUtils.isBlank(step.getDesc())) {
+                    throw new MSException(path + ".steps[" + stepIndex + "].desc 不能为空");
+                }
+            }
+        } else if (StringUtils.isBlank(item.getTextDescription())) {
+            throw new MSException(path + ".textDescription 不能为空");
+        }
+    }
+
+    private AiProviderInvocationResult callAiForStructuredCases(FunctionalCaseAiGenerateRequest request, String userId, int maxCases) {
         String system = """
                 你是 MeterSphere 功能测试用例生成助手。必须只返回 JSON，不要返回 Markdown 或解释。
                 JSON Schema:
@@ -380,14 +489,25 @@ public class FunctionalCaseAiDraftService {
                 + buildSourceDocumentContext(request, userId)
                 + "\n用户输入：\n" + request.getPrompt();
         aiChatBaseService.saveUserConversationContent(request.getConversationId(), fullPrompt);
-        String content = aiChatBaseService.chatWithMemory(AIChatOption.builder()
-                .conversationId(request.getConversationId())
-                .module(module)
-                .system(system)
-                .prompt(fullPrompt)
-                .build()).content();
-        aiChatBaseService.saveAssistantConversationContent(request.getConversationId(), content);
-        return content;
+        AiProviderChatRequest providerRequest = new AiProviderChatRequest();
+        providerRequest.setProjectId(request.getProjectId());
+        providerRequest.setChatModelId(request.getChatModelId());
+        providerRequest.setConversationId(request.getConversationId());
+        providerRequest.setOrganizationId(request.getOrganizationId());
+        providerRequest.setSystem(system);
+        providerRequest.setPrompt(fullPrompt);
+        AiProviderInvocationResult result = aiProviderAdapter.invokeAdmitted(providerRequest, userId);
+        aiChatBaseService.saveAssistantConversationContent(request.getConversationId(), result.getContent());
+        return result;
+    }
+
+    private FunctionalCaseAiGenerateResponse canceledResponse(String generationId) {
+        FunctionalCaseAiGenerateResponse canceled = new FunctionalCaseAiGenerateResponse();
+        canceled.setGenerationId(generationId);
+        canceled.setCreatedCount(0);
+        canceled.setDrafts(Collections.emptyList());
+        canceled.setWarnings(List.of("生成任务已取消"));
+        return canceled;
     }
 
     private String buildSourceDocumentContext(FunctionalCaseAiGenerateRequest request, String userId) {
@@ -498,7 +618,9 @@ public class FunctionalCaseAiDraftService {
         draft.setCaseLevel(normalizeLevel(item.getLevel()));
         draft.setEditType(normalizeEditType(item.getEditType()));
         draft.setPrerequisite(StringUtils.defaultString(item.getPrerequisite()));
-        draft.setSteps(toStepsJson(item.getSteps()));
+        draft.setSteps(FunctionalCaseTypeConstants.CaseEditType.TEXT.name().equals(draft.getEditType())
+                ? StringUtils.defaultString(item.getTextDescription())
+                : toStepsJson(item.getSteps()));
         draft.setExpectedResult(StringUtils.defaultString(item.getExpectedResult()));
         draft.setTags(JSON.toJSONString(CollectionUtils.emptyIfNull(item.getTags())));
         draft.setCustomFields(JSON.toJSONString(new ArrayList<CaseCustomFieldDTO>()));

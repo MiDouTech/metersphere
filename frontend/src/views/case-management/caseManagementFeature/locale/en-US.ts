@@ -371,6 +371,9 @@ export default {
   'caseManagement.featureCase.aiExecutionSelectAllNotSupported':
     'AI execution does not support selecting all results yet. Select explicit cases first.',
   'caseManagement.featureCase.aiExecutionEnvironment': 'Target environment',
+  'caseManagement.featureCase.aiExecutionModel': 'AI model',
+  'caseManagement.featureCase.aiExecutionModelPlaceholder': 'Select an AI model for step compilation',
+  'caseManagement.featureCase.aiExecutionModelRequired': 'Select an AI model',
   'caseManagement.featureCase.aiExecutionEnvironmentPlaceholder': 'Environment ID or name',
   'caseManagement.featureCase.aiExecutionEnvironmentRequired': 'Enter the target environment',
   'caseManagement.featureCase.aiExecutionTargetUrl': 'Target URL',

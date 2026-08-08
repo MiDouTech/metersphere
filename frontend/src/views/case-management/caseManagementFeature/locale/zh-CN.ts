@@ -362,6 +362,9 @@ export default {
   'caseManagement.featureCase.aiExecutionSelectAllNotSupported':
     'AI执行暂不支持全选全部结果，请手动勾选具体用例后再执行',
   'caseManagement.featureCase.aiExecutionEnvironment': '目标环境',
+  'caseManagement.featureCase.aiExecutionModel': 'AI 模型',
+  'caseManagement.featureCase.aiExecutionModelPlaceholder': '请选择用于编译步骤的 AI 模型',
+  'caseManagement.featureCase.aiExecutionModelRequired': '请选择 AI 模型',
   'caseManagement.featureCase.aiExecutionEnvironmentPlaceholder': '填写环境 ID 或环境名称',
   'caseManagement.featureCase.aiExecutionEnvironmentRequired': '请填写目标环境',
   'caseManagement.featureCase.aiExecutionTargetUrl': '访问地址',

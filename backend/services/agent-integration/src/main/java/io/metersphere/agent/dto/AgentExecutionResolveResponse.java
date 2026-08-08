@@ -13,6 +13,11 @@ public class AgentExecutionResolveResponse {
     private String confirmationReason;
     private String projectId;
     private String testPlanId;
+    private String selectionMode;
+    private AgentSearchFilters resolvedFilter;
+    private String caseSnapshotHash;
+    private Double parseConfidence;
+    private List<String> matchedReasons = new ArrayList<>();
     private String message;
     private int total;
     private Integer estimatedMinutes;
