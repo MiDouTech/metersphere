@@ -126,16 +126,16 @@
       flex-direction: column;
     }
     .title {
+      z-index: 100000;
       display: flex;
       justify-content: center;
       align-items: center;
       overflow: hidden;
+      margin-bottom: -24px;
       font-size: 18px;
       font-weight: 500;
       font-style: normal;
       line-height: 26px;
-      margin-bottom: -24px;
-      z-index: 100000;
       .ed-icon {
         margin-right: 8px;
         font-size: 24px;
@@ -143,12 +143,11 @@
     }
   }
   .radioOneButton {
-    width: 100%;
     display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    font-size: 16px;
+    flex-flow: row nowrap;
     justify-content: center;
+    align-items: center;
+    width: 100%;
+    font-size: 16px;
   }
 </style>

@@ -11,7 +11,6 @@
     </div>
     <a-tooltip :content="t('ms.personal.maxTip')" position="right" :disabled="apiKeyList.length < 5">
       <a-button
-        v-permission="['SYSTEM_PERSONAL_API_KEY:READ+ADD']"
         type="outline"
         class="w-[60px]"
         :disabled="apiKeyList.length >= 5"
@@ -74,28 +73,15 @@
         </div>
         <div class="flex items-center justify-between px-[16px]">
           <div class="flex items-center gap-[8px]">
-            <a-button
-              v-permission="['SYSTEM_PERSONAL_API_KEY:READ+UPDATE']"
-              size="mini"
-              type="outline"
-              class="arco-btn-outline--secondary"
-              @click="handleSetValidTime(item)"
-            >
+            <a-button size="mini" type="outline" class="arco-btn-outline--secondary" @click="handleSetValidTime(item)">
               {{ t('ms.personal.validTime') }}
             </a-button>
-            <a-button
-              v-permission="['SYSTEM_PERSONAL_API_KEY:READ+DELETE']"
-              size="mini"
-              type="outline"
-              class="arco-btn-outline--danger"
-              @click="deleteApiKey(item)"
-            >
+            <a-button size="mini" type="outline" class="arco-btn-outline--danger" @click="deleteApiKey(item)">
               {{ t('common.delete') }}
             </a-button>
           </div>
           <a-switch
             v-model:model-value="item.enable"
-            v-permission="['SYSTEM_PERSONAL_API_KEY:READ+UPDATE']"
             size="small"
             :before-change="() => handleBeforeEnableChange(item)"
             type="line"
@@ -103,8 +89,8 @@
         </div>
       </div>
       <div v-if="apiKeyList.length === 0" class="col-span-2 flex w-full items-center justify-center p-[44px]">
-        {{ hasCratePermission ? t('ms.personal.noData') : t('ms.personal.empty') }}
-        <MsButton v-permission="['SYSTEM_PERSONAL_API_KEY:READ+ADD']" type="text" class="ml-[8px]" @click="newApiKey">
+        {{ t('ms.personal.noData') }}
+        <MsButton type="text" class="ml-[8px]" @click="newApiKey">
           {{ t('common.new') }}
         </MsButton>
       </div>
@@ -174,7 +160,6 @@
   } from '@/api/modules/user/index';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
-  import { hasAnyPermission } from '@/utils/permission';
 
   import { APIKEY } from '@/models/user';
 
@@ -189,7 +174,6 @@
     showDescInput: boolean;
   }
   const apiKeyList = ref<APIKEYItem[]>([]);
-  const hasCratePermission = hasAnyPermission(['SYSTEM_PERSONAL_API_KEY:READ+ADD']);
 
   async function initApiKeys() {
     try {

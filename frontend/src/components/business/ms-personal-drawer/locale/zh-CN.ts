@@ -104,5 +104,6 @@ export default {
   'ms.personal.userAgent.workbuddyDescription':
     '通过本机 Bridge 使用 WorkBuddy Managed Agent（正式 SDK 未验收时保持关闭）。',
   'ms.personal.userAgent.codexDescription': '使用本机官方 Codex CLI 及其现有登录状态。',
+  'ms.personal.userAgent.chatgptDescription': '通过本机 Bridge 使用 ChatGPT / OpenAI 官方 Agent 通道及其现有登录状态。',
   'ms.personal.userAgent.cursorDescription': '在批准的操作系统沙箱内使用本机官方 Cursor Agent CLI。',
 };

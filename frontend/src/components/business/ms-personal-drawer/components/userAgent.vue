@@ -20,13 +20,7 @@
             <div>{{ t('ms.personal.userAgent.account') }}：{{ connection(provider.id)?.maskedAccount || '-' }}</div>
           </div>
           <div class="flex flex-wrap gap-2">
-            <a-button v-if="!connection(provider.id)" type="primary" @click="startPairing(provider.id)">
-              {{ t('ms.personal.userAgent.pair') }}
-            </a-button>
-            <a-button
-              v-if="!connection(provider.id) && onlineDevices.length"
-              @click="connectProvider(provider.id, onlineDevices[0].id)"
-            >
+            <a-button v-if="!connection(provider.id)" type="primary" @click="createAndAuthorize(provider.id)">
               {{ t('ms.personal.userAgent.connect') }}
             </a-button>
             <a-button
@@ -75,7 +69,6 @@
     authorizeUserAgentConnection,
     createAgentBridgePairing,
     createUserAgentConnection,
-    getUserAgentFeatures,
     listAgentBridgeDevices,
     listUserAgentConnections,
     revokeAgentBridgeDevice,
@@ -83,53 +76,41 @@
   } from '@/api/modules/setting/userAgent';
   import { useI18n } from '@/hooks/useI18n';
 
-  import type {
-    AgentBridgeDevice,
-    UserAgentConnection,
-    UserAgentFeatureFlags,
-    UserAgentProvider,
-  } from '@/models/setting/userAgent';
+  import type { AgentBridgeDevice, UserAgentConnection, UserAgentProvider } from '@/models/setting/userAgent';
 
   const { t } = useI18n();
   const loading = ref(false);
-  const flags = ref<UserAgentFeatureFlags>({ enabled: false, workbuddy: false, codex: false, cursor: false });
   const connections = ref<UserAgentConnection[]>([]);
   const devices = ref<AgentBridgeDevice[]>([]);
   let pollingTimer: number | undefined;
   const providerDefinitions = [
     {
       id: 'WORKBUDDY' as const,
-      flag: 'workbuddy' as const,
       name: 'WorkBuddy',
       experimental: false,
       descriptionKey: 'ms.personal.userAgent.workbuddyDescription',
     },
     {
-      id: 'CODEX' as const,
-      flag: 'codex' as const,
-      name: 'OpenAI Codex CLI',
-      experimental: true,
-      descriptionKey: 'ms.personal.userAgent.codexDescription',
-    },
-    {
       id: 'CURSOR' as const,
-      flag: 'cursor' as const,
       name: 'Cursor Agent CLI',
       experimental: true,
       descriptionKey: 'ms.personal.userAgent.cursorDescription',
     },
+    {
+      id: 'CODEX' as const,
+      name: 'ChatGPT',
+      experimental: true,
+      descriptionKey: 'ms.personal.userAgent.chatgptDescription',
+    },
   ];
-  const visibleProviders = computed(() => providerDefinitions.filter((item) => flags.value[item.flag]));
+  const visibleProviders = providerDefinitions;
   const onlineDevices = computed(() => devices.value.filter((item) => item.status === 'ONLINE'));
   const connection = (provider: UserAgentProvider) => connections.value.find((item) => item.provider === provider);
 
   async function reload(silent = false) {
     if (!silent) loading.value = true;
     try {
-      flags.value = await getUserAgentFeatures();
-      if (flags.value.enabled) {
-        [connections.value, devices.value] = await Promise.all([listUserAgentConnections(), listAgentBridgeDevices()]);
-      }
+      [connections.value, devices.value] = await Promise.all([listUserAgentConnections(), listAgentBridgeDevices()]);
     } finally {
       loading.value = false;
     }
@@ -144,9 +125,16 @@
     });
   }
 
-  async function connectProvider(provider: UserAgentProvider, deviceId: string) {
-    await createUserAgentConnection({ provider, deviceId });
+  async function createAndAuthorize(provider: UserAgentProvider) {
+    const device = onlineDevices.value[0];
+    if (!device) {
+      await startPairing(provider);
+      return;
+    }
+    const created = await createUserAgentConnection({ provider, deviceId: device.id });
     Message.success(t('ms.personal.userAgent.connectionCreated'));
+    await authorizeUserAgentConnection(created.id);
+    Message.info(t('ms.personal.userAgent.authorizationStarted'));
     await reload(true);
   }
 

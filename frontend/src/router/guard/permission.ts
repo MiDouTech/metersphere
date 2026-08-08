@@ -3,6 +3,7 @@ import usePermission from '@/hooks/usePermission';
 import useAppStore from '@/store/modules/app';
 
 import { CaseManagementRouteEnum, ShareEnum } from '@/enums/routeEnum';
+
 import { featureRouteMap, NO_RESOURCE_ROUTE_NAME, WHITE_LIST } from '../constants';
 import NProgress from 'nprogress'; // progress bar
 import type { Router } from 'vue-router';

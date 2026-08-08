@@ -13,7 +13,7 @@ const BugManagement: AppRouteRecordRaw = {
     collapsedLocale: 'menu.bugManagementShort',
     icon: 'icon-icon_defect',
     order: 7,
-    roles: ['PROJECT_BUG:READ', 'AI_EXECUTION:READ'],
+    roles: ['PROJECT_BUG:READ'],
     hideChildrenInMenu: true,
   },
   children: [
@@ -71,17 +71,6 @@ const BugManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'bugManagement.recycle.recycleBin',
         roles: ['PROJECT_BUG:READ'],
-        isTopMenu: true,
-        keepModuleAlive: true,
-      },
-    },
-    {
-      path: 'automation-execution',
-      name: BugManagementRouteEnum.BUG_MANAGEMENT_AUTOMATION_EXECUTION,
-      component: () => import('@/views/bug-management/automationExecution/index.vue'),
-      meta: {
-        locale: 'menu.bugManagement.automationExecution',
-        roles: ['AI_EXECUTION:READ'],
         isTopMenu: true,
         keepModuleAlive: true,
       },

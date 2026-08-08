@@ -75,8 +75,8 @@
 
 <style scoped>
   .show-sub {
-    font-size: 12px;
     padding-top: 0.6rem;
+    font-size: 12px;
     color: rgb(var(--primary-5)) !important;
     cursor: pointer;
   }

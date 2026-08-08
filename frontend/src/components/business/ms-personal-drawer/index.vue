@@ -1,51 +1,61 @@
 <template>
-  <MsDrawer
-    v-model:visible="innerVisible"
-    :title="t('ms.personal')"
-    :width="1200"
-    :footer="false"
-    unmount-on-close
-    no-content-padding
-  >
-    <div class="flex h-full w-full">
-      <div class="h-full w-[208px] bg-[var(--color-text-n9)]">
-        <MsMenuPanel
-          class="h-full !rounded-none bg-[var(--color-text-n9)] p-[16px_24px]"
-          :default-key="activeMenu"
-          :menu-list="menuList"
-          active-class="!bg-transparent font-medium"
-          @toggle-menu="(val) => (activeMenu = val)"
-        />
-      </div>
-      <div :class="`w-[calc(100%-208px)] ${activeMenu === 'modelConfig' ? 'p-0' : 'p-[24px]'}`">
-        <baseInfo v-if="activeMenu === 'baseInfo'" />
-        <setPsw v-else-if="activeMenu === 'setPsw'" />
-        <apiKey v-else-if="activeMenu === 'apiKey'" />
-        <localExec v-else-if="activeMenu === 'local'" />
-        <tripartite v-else-if="activeMenu === 'tripartite'" />
-        <AgentIntegration v-else-if="activeMenu === 'agentIntegration'" compact />
-        <userAgent v-else-if="activeMenu === 'userAgent'" />
-        <modelConfig v-else-if="activeMenu === 'modelConfig'" model-key="personal" />
+  <Teleport to="body">
+    <div v-if="innerVisible" class="ms-personal-page-window">
+      <div class="ms-personal-page-window__mask" @click="closePersonalCenter"></div>
+      <div class="ms-personal-page-window__panel" :style="{ left: `${panelLeft}px` }">
+        <div class="ms-personal-page-window__header">
+          <div class="text-base font-medium text-[var(--color-text-1)]">{{ t('ms.personal') }}</div>
+          <button class="ms-personal-page-window__close" type="button" @click="closePersonalCenter">
+            <icon-close />
+          </button>
+        </div>
+        <div class="ms-personal-page-window__body">
+          <div class="h-full w-[208px] shrink-0 bg-[var(--color-text-n9)]">
+            <MsMenuPanel
+              class="h-full !rounded-none bg-[var(--color-text-n9)] p-[16px_24px]"
+              :default-key="activeMenu"
+              :menu-list="menuList"
+              active-class="!bg-transparent font-medium"
+              @toggle-menu="(val) => (activeMenu = val)"
+            />
+          </div>
+          <div
+            :class="[
+              'h-full min-w-0 flex-1 overflow-auto bg-[var(--color-text-fff)]',
+              activeMenu === 'modelConfig' ? 'p-0' : 'p-[24px]',
+            ]"
+          >
+            <baseInfo v-if="activeMenu === 'baseInfo'" />
+            <setPsw v-else-if="activeMenu === 'setPsw'" />
+            <apiKey v-else-if="activeMenu === 'apiKey'" />
+            <localExec v-else-if="activeMenu === 'local'" />
+            <tripartite v-else-if="activeMenu === 'tripartite'" />
+            <AgentIntegration v-else-if="activeMenu === 'agentIntegration'" compact />
+            <userAgent v-else-if="activeMenu === 'userAgent'" />
+            <modelConfig v-else-if="activeMenu === 'modelConfig'" model-key="personal" />
+          </div>
+        </div>
       </div>
     </div>
-  </MsDrawer>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
+  import { computed, ref } from 'vue';
   import { useVModel } from '@vueuse/core';
 
-  import MsDrawer from '@/components/pure/ms-drawer/index.vue';
   import MsMenuPanel from '@/components/pure/ms-menu-panel/index.vue';
-  import modelConfig from '@/components/business/ms-personal-drawer/components/modelConfig.vue';
+  import AgentIntegration from './components/agentIntegration.vue';
   import apiKey from './components/apiKey.vue';
   import baseInfo from './components/baseInfo.vue';
   import localExec from './components/localExec.vue';
+  import modelConfig from './components/modelConfig.vue';
   import setPsw from './components/setPsw.vue';
   import tripartite from './components/tripartite.vue';
   import userAgent from './components/userAgent.vue';
-  import AgentIntegration from '@/views/setting/system/agentIntegration/index.vue';
 
   import { useI18n } from '@/hooks/useI18n';
+  import { useAppStore } from '@/store';
 
   const props = defineProps<{
     visible: boolean;
@@ -55,9 +65,15 @@
   }>();
 
   const { t } = useI18n();
+  const appStore = useAppStore();
 
   const innerVisible = useVModel(props, 'visible', emit);
   const activeMenu = ref('baseInfo');
+  const panelLeft = computed(() => (appStore.menuCollapse ? 56 : 196));
+
+  function closePersonalCenter() {
+    innerVisible.value = false;
+  }
 
   const menuList = ref([
     {
@@ -84,7 +100,6 @@
       name: 'apiKey',
       title: t('ms.personal.apiKey'),
       level: 2,
-      permission: ['SYSTEM_PERSONAL_API_KEY:READ'],
     },
     {
       name: 'local',
@@ -105,7 +120,6 @@
       name: 'userAgent',
       title: t('ms.personal.userAgent.menu'),
       level: 2,
-      permission: ['SYSTEM_PERSONAL_AI_AGENT:READ'],
     },
     {
       name: 'modelConfig',
@@ -115,4 +129,53 @@
   ]);
 </script>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+  .ms-personal-page-window {
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+  }
+  .ms-personal-page-window__mask {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 48%);
+  }
+  .ms-personal-page-window__panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-text-fff);
+  }
+  .ms-personal-page-window__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 16px;
+    height: 56px;
+    border-bottom: 1px solid var(--color-text-n8);
+  }
+  .ms-personal-page-window__close {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: var(--border-radius-small);
+    color: var(--color-text-2);
+    background: transparent;
+    cursor: pointer;
+    &:hover {
+      background: var(--color-fill-2);
+    }
+  }
+  .ms-personal-page-window__body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+</style>

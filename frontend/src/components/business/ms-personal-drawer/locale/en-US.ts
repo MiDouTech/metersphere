@@ -113,5 +113,7 @@ export default {
   'ms.personal.userAgent.workbuddyDescription':
     'Use WorkBuddy Managed Agent through the local Bridge (kept disabled until the formal SDK is accepted).',
   'ms.personal.userAgent.codexDescription': 'Use the official local Codex CLI and its existing sign-in.',
+  'ms.personal.userAgent.chatgptDescription':
+    'Use the ChatGPT / OpenAI official Agent channel and its existing sign-in through the local Bridge.',
   'ms.personal.userAgent.cursorDescription': 'Use the official local Cursor Agent CLI inside an approved OS sandbox.',
 };

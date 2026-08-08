@@ -14,7 +14,7 @@ const CaseManagement: AppRouteRecordRaw = {
     icon: 'icon-icon_functional_testing1',
     order: 3,
     hideChildrenInMenu: true,
-    roles: ['FUNCTIONAL_CASE:READ', 'CASE_REVIEW:READ', 'FUNCTIONAL_CASE_AI:READ'],
+    roles: ['FUNCTIONAL_CASE:READ', 'CASE_REVIEW:READ', 'FUNCTIONAL_CASE_AI:READ', 'AI_EXECUTION:READ'],
   },
   children: [
     // 功能用例
@@ -37,6 +37,18 @@ const CaseManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.caseManagement.caseGenerate',
         roles: ['FUNCTIONAL_CASE_AI:READ'],
+        isTopMenu: true,
+        keepModuleAlive: true,
+      },
+    },
+    // 创建用例&编辑用例
+    {
+      path: 'automation-execution',
+      name: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
+      component: () => import('@/views/bug-management/automationExecution/index.vue'),
+      meta: {
+        locale: 'menu.bugManagement.automationExecution',
+        roles: ['AI_EXECUTION:READ'],
         isTopMenu: true,
         keepModuleAlive: true,
       },
