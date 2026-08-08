@@ -9,7 +9,7 @@
       <moduleTree
         class="w-[200px] pt-[16px]"
         read-only
-        @init="(val) => (folderTree = val)"
+        @init="(val: ModuleTreeNode[]) => (folderTree = val)"
         @folder-node-select="handleNodeSelect"
         @change-protocol="handleProtocolChange"
       />

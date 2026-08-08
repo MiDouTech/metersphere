@@ -86,7 +86,7 @@
                         v-model="item.enable"
                         size="small"
                         :disabled="true"
-                        @change="(v) => changeStatus(v, item.key)"
+                        @change="(v: string | number | boolean) => changeStatus(v, item.key)"
                     /></span>
                   </a-tooltip>
                   <a-switch
@@ -94,7 +94,7 @@
                     v-model="item.enable"
                     size="small"
                     :disabled="!hasAnyPermission(['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE'])"
-                    @change="(v) => changeStatus(v, item.key)"
+                    @change="(v: string | number | boolean) => changeStatus(v, item.key)"
                   />
                 </span>
               </div>

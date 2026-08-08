@@ -58,17 +58,46 @@
         </template>
       </a-table>
     </a-spin>
+
+    <a-modal
+      v-model:visible="wizardVisible"
+      :title="t('ms.personal.userAgent.setupTitle')"
+      :footer="false"
+      :mask-closable="false"
+    >
+      <a-steps :current="wizardStep" small class="mb-6">
+        <a-step :description="t('ms.personal.userAgent.detecting')" />
+        <a-step :description="t('ms.personal.userAgent.installing')" />
+        <a-step :description="t('ms.personal.userAgent.signingIn')" />
+        <a-step :description="t('ms.personal.userAgent.completed')" />
+      </a-steps>
+      <a-alert v-if="wizardError" type="error" class="mb-4">{{ wizardError }}</a-alert>
+      <div class="mb-4 text-[var(--color-text-2)]">{{ wizardMessage }}</div>
+      <div v-if="wizardStep === 2" class="mb-4 rounded bg-[var(--color-fill-2)] p-3 text-sm">
+        {{ t('ms.personal.userAgent.installNotice') }}
+      </div>
+      <div class="flex justify-end gap-2">
+        <a-button @click="closeWizard">{{ t('common.cancel') }}</a-button>
+        <a-button v-if="wizardStep === 2" :disabled="!installInfo?.windowsDownloadUrl" @click="downloadAgent">
+          {{ t('ms.personal.userAgent.downloadInstall') }}
+        </a-button>
+        <a-button v-if="wizardStep === 2" type="primary" @click="launchAgent">
+          {{ t('ms.personal.userAgent.installedRetry') }}
+        </a-button>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-  import { Message, Modal } from '@arco-design/web-vue';
+  import { Message } from '@arco-design/web-vue';
 
   import {
     authorizeUserAgentConnection,
     createAgentBridgePairing,
     createUserAgentConnection,
+    getAgentBridgeInstallInfo,
     listAgentBridgeDevices,
     listUserAgentConnections,
     revokeAgentBridgeDevice,
@@ -76,12 +105,26 @@
   } from '@/api/modules/setting/userAgent';
   import { useI18n } from '@/hooks/useI18n';
 
-  import type { AgentBridgeDevice, UserAgentConnection, UserAgentProvider } from '@/models/setting/userAgent';
+  import type {
+    AgentBridgeDevice,
+    AgentBridgeInstallInfo,
+    UserAgentConnection,
+    UserAgentProvider,
+  } from '@/models/setting/userAgent';
 
   const { t } = useI18n();
   const loading = ref(false);
   const connections = ref<UserAgentConnection[]>([]);
   const devices = ref<AgentBridgeDevice[]>([]);
+  const wizardVisible = ref(false);
+  const wizardStep = ref(1);
+  const wizardMessage = ref('');
+  const wizardError = ref('');
+  const installInfo = ref<AgentBridgeInstallInfo>();
+  const pendingProvider = ref<UserAgentProvider>();
+  const pendingPairingCode = ref('');
+  const pendingPairingExpiry = ref(0);
+  let setupCompleting = false;
   let pollingTimer: number | undefined;
   const providerDefinitions = [
     {
@@ -111,6 +154,8 @@
     if (!silent) loading.value = true;
     try {
       [connections.value, devices.value] = await Promise.all([listUserAgentConnections(), listAgentBridgeDevices()]);
+      // eslint-disable-next-line no-use-before-define
+      await continueSetupIfReady();
     } finally {
       loading.value = false;
     }
@@ -118,17 +163,16 @@
 
   async function startPairing(provider: UserAgentProvider) {
     const pairing = await createAgentBridgePairing({ provider });
-    Modal.info({
-      title: t('ms.personal.userAgent.pairingCode'),
-      content: `${pairing.pairingCode}\n${t('ms.personal.userAgent.pairingExpiry')}`,
-      okText: t('common.confirm'),
-    });
+    pendingPairingCode.value = pairing.pairingCode;
+    pendingPairingExpiry.value = pairing.expiresAt;
+    return pairing;
   }
 
   async function createAndAuthorize(provider: UserAgentProvider) {
     const device = onlineDevices.value[0];
     if (!device) {
-      await startPairing(provider);
+      // eslint-disable-next-line no-use-before-define
+      await beginSetup(provider);
       return;
     }
     const created = await createUserAgentConnection({ provider, deviceId: device.id });
@@ -136,6 +180,73 @@
     await authorizeUserAgentConnection(created.id);
     Message.info(t('ms.personal.userAgent.authorizationStarted'));
     await reload(true);
+  }
+
+  async function beginSetup(provider: UserAgentProvider) {
+    wizardVisible.value = true;
+    wizardStep.value = 1;
+    wizardError.value = '';
+    wizardMessage.value = t('ms.personal.userAgent.detectingMessage');
+    pendingProvider.value = provider;
+    sessionStorage.setItem('ms-user-agent-setup', JSON.stringify({ provider, expiresAt: Date.now() + 5 * 60_000 }));
+    try {
+      installInfo.value = await getAgentBridgeInstallInfo();
+      await startPairing(provider);
+      wizardStep.value = 2;
+      wizardMessage.value = t('ms.personal.userAgent.installRequired');
+      // eslint-disable-next-line no-use-before-define
+      launchAgent();
+    } catch (error) {
+      wizardError.value = String((error as Error).message || error);
+    }
+  }
+
+  function launchAgent() {
+    if (!pendingPairingCode.value || Date.now() >= pendingPairingExpiry.value) {
+      wizardError.value = t('ms.personal.userAgent.setupExpired');
+      return;
+    }
+    const scheme = installInfo.value?.protocolScheme || 'metersphere-agent';
+    const query = new URLSearchParams({
+      platformUrl: window.location.origin,
+      pairingCode: pendingPairingCode.value,
+      provider: pendingProvider.value || '',
+    });
+    window.location.href = `${scheme}://pair?${query.toString()}`;
+    wizardMessage.value = t('ms.personal.userAgent.waitingForAgent');
+  }
+
+  function downloadAgent() {
+    if (installInfo.value?.windowsDownloadUrl) window.open(installInfo.value.windowsDownloadUrl, '_blank', 'noopener');
+  }
+
+  async function continueSetupIfReady() {
+    if (!wizardVisible.value || !pendingProvider.value || setupCompleting) return;
+    const device = onlineDevices.value[0];
+    if (!device) return;
+    setupCompleting = true;
+    wizardStep.value = 3;
+    wizardMessage.value = t('ms.personal.userAgent.startingSignIn');
+    try {
+      const created = await createUserAgentConnection({ provider: pendingProvider.value, deviceId: device.id });
+      await authorizeUserAgentConnection(created.id);
+      sessionStorage.removeItem('ms-user-agent-setup');
+      wizardStep.value = 4;
+      wizardMessage.value = t('ms.personal.userAgent.authorizationStarted');
+      pendingProvider.value = undefined;
+      pendingPairingCode.value = '';
+      await reload(true);
+    } catch (error) {
+      wizardError.value = String((error as Error).message || error);
+    } finally {
+      setupCompleting = false;
+    }
+  }
+
+  function closeWizard() {
+    wizardVisible.value = false;
+    pendingPairingCode.value = '';
+    sessionStorage.removeItem('ms-user-agent-setup');
   }
 
   async function revokeConnection(id: string) {
@@ -152,6 +263,23 @@
   }
 
   onMounted(() => {
+    const savedSetup = sessionStorage.getItem('ms-user-agent-setup');
+    if (savedSetup) {
+      try {
+        const saved = JSON.parse(savedSetup) as { provider: UserAgentProvider; expiresAt: number };
+        if (saved.expiresAt > Date.now()) {
+          pendingProvider.value = saved.provider;
+          wizardVisible.value = true;
+          wizardStep.value = 2;
+          wizardMessage.value = t('ms.personal.userAgent.waitingForAgent');
+          getAgentBridgeInstallInfo().then((value) => {
+            installInfo.value = value;
+          });
+        } else sessionStorage.removeItem('ms-user-agent-setup');
+      } catch {
+        sessionStorage.removeItem('ms-user-agent-setup');
+      }
+    }
     reload();
     pollingTimer = window.setInterval(() => reload(true), 10_000);
   });

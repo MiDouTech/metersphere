@@ -128,6 +128,8 @@ export default {
     'system.agentIntegration.platformTest': '测试环境',
     'system.agentIntegration.platformProd': '正式环境',
     'system.agentIntegration.mcpScopeHelp': '常用 Scope（创建 Token 时选择）',
+    'system.agentIntegration.showConnectionDetails': '查看详细接入说明',
+    'system.agentIntegration.hideConnectionDetails': '收起详细接入说明',
     'system.agentIntegration.scopeAgentAll': '全部 Agent 权限',
     'system.agentIntegration.scopeAgentAllDesc':
       '包含查询、执行、用例、计划、评审、缺陷和项目相关能力，仍受本人 RBAC 限制。',

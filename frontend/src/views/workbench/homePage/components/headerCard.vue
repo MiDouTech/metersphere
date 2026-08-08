@@ -1,6 +1,6 @@
 <template>
   <div v-if="props.contentTabList.length" class="card-list">
-    <div v-for="ele of contentTabList" :key="ele.icon" class="card-list-item">
+    <div v-for="ele of props.contentTabList" :key="ele.icon" class="card-list-item">
       <div class="w-full">
         <div class="card-title flex items-center gap-[8px]">
           <div :class="`card-title-icon bg-[${ele?.color}]`">
@@ -16,8 +16,6 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
-
   import NoData from '../../components/notData.vue';
 
   import { addCommasToNumber } from '@/utils';

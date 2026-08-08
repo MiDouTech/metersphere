@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node src/main.mjs",
     "pair": "node src/pair.mjs",
+    "handle-protocol": "node src/protocol-handler.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {

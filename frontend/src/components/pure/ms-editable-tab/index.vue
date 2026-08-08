@@ -52,7 +52,7 @@
       </MsButton>
     </a-tooltip>
     <a-tooltip
-      v-if="!props.readonly && showAdd"
+      v-if="!props.readonly && props.showAdd"
       :content="t('ms.editableTab.limitTip', { max: props.limit })"
       :disabled="!props.limit || tabs.length >= props.limit"
     >

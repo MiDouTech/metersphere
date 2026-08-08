@@ -129,6 +129,8 @@ export default {
     'system.agentIntegration.platformTest': 'Test',
     'system.agentIntegration.platformProd': 'Production',
     'system.agentIntegration.mcpScopeHelp': 'Common scopes (when creating a Token)',
+    'system.agentIntegration.showConnectionDetails': 'Show connection details',
+    'system.agentIntegration.hideConnectionDetails': 'Hide connection details',
     'system.agentIntegration.scopeAgentAll': 'All Agent permissions',
     'system.agentIntegration.scopeAgentAllDesc':
       'Includes query, execution, case, plan, review, bug and project capabilities, still limited by your RBAC.',

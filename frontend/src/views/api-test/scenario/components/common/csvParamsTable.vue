@@ -13,7 +13,7 @@
     :file-save-as-source-id="props.scenarioId"
     :file-save-as-api="transferFile"
     :file-module-options-api="getTransferOptions"
-    @change="(data) => handleCsvVariablesChange(data as CsvVariable[])"
+    @change="handleParamTableChange"
   >
     <template #operationPre="{ record }">
       <a-trigger
@@ -210,6 +210,10 @@
     if (!isInit) {
       emit('change');
     }
+  }
+
+  function handleParamTableChange(data: Record<string, any>[]) {
+    handleCsvVariablesChange(data as CsvVariable[]);
   }
 
   function handleRecordConfig(record: CsvVariable) {

@@ -1,7 +1,7 @@
 <template>
   <a-input-password
     v-model="inputValue"
-    :placeholder="placeholder"
+    :placeholder="props.placeholder"
     :default-visibility="true"
     :disabled="props.disabled"
     allow-clear
@@ -15,10 +15,11 @@
 
   const props = defineProps<{
     placeholder?: string;
+    modelValue?: string;
     value?: string;
     disabled?: boolean;
   }>();
-  const inputValue = ref('');
+  const inputValue = ref(props.modelValue || props.value || '');
   const emits = defineEmits<{
     (event: 'update:modelValue', value: string): void;
   }>();
@@ -27,6 +28,13 @@
     () => inputValue.value,
     (val: string) => {
       emits('update:modelValue', val);
+    }
+  );
+
+  watch(
+    () => props.modelValue,
+    (val) => {
+      inputValue.value = val || '';
     }
   );
 

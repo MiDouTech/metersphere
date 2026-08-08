@@ -13,9 +13,9 @@
       testPlanId: props?.testPlanId,
     }"
     :modules-maps="props.modulesMaps"
-    :associated-type="associationType"
-    :node-api-test-set="nodeApiTestSet"
-    :node-scenario-test-set="nodeScenarioTestSet"
+    :associated-type="props.associationType"
+    :node-api-test-set="props.nodeApiTestSet"
+    :node-scenario-test-set="props.nodeScenarioTestSet"
     @save="saveHandler"
   >
   </MsCaseAssociate>

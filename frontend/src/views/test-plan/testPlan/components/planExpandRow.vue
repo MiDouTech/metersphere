@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="record.type === testPlanTypeEnum.GROUP || record.integrated"
+    v-if="props.record.type === testPlanTypeEnum.GROUP || props.record.integrated"
     class="mr-2 flex items-center"
     @click="expandHandler"
   >
@@ -9,17 +9,17 @@
       class="arrowIcon mr-1 cursor-pointer text-[16px]"
       :class="getIconClass"
     />
-    <span :class="getIconClass">{{ record.childrenCount || (record.children || []).length || 0 }}</span>
+    <span :class="getIconClass">{{ props.record.childrenCount || (props.record.children || []).length || 0 }}</span>
   </div>
   <div v-if="showButton" :class="`one-line-text ${hasIndent}`">
     <MsButton type="text" @click="handleAction">
       <a-tooltip :content="content">
-        <span>{{ record[props.numKey || 'num'] }}</span>
+        <span>{{ props.record[props.numKey || 'num'] }}</span>
       </a-tooltip>
     </MsButton>
   </div>
   <a-tooltip v-else :content="content">
-    <div :class="`one-line-text ${hasIndent}`">{{ record[props.numKey || 'num'] }}</div>
+    <div :class="`one-line-text ${hasIndent}`">{{ props.record[props.numKey || 'num'] }}</div>
   </a-tooltip>
 </template>
 

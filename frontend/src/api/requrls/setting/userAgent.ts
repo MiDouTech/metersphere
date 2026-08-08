@@ -3,4 +3,5 @@ export default {
   connections: '/ai/user-agent/connections',
   pairing: '/ai/agent-bridge/pairing',
   devices: '/ai/agent-bridge/devices',
+  installInfo: '/ai/agent-bridge/install-info',
 };

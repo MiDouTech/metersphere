@@ -1,7 +1,7 @@
 <template>
   <div
     :class="`${
-      hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !shareId ? '' : 'cursor-not-allowed'
+      hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !props.shareId ? '' : 'cursor-not-allowed'
     } w-full`"
   >
     <MsRichText
@@ -17,7 +17,9 @@
       @update="emit('handleSetSave')"
     />
     <MsFormItemSub
-      v-if="hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !shareId && props.canEdit && props.isPreview"
+      v-if="
+        hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !props.shareId && props.canEdit && props.isPreview
+      "
       :text="t('report.detail.oneClickSummary')"
       :show-fill-icon="true"
       @fill="handleSummary"
@@ -25,7 +27,7 @@
   </div>
 
   <div
-    v-show="hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !shareId && props.canEdit"
+    v-show="hasAnyPermission(['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']) && !props.shareId && props.canEdit"
     class="mt-[16px] flex items-center gap-[12px]"
   >
     <a-button type="primary" @click="handleUpdateReportDetail">{{ t('common.save') }}</a-button>

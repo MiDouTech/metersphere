@@ -1,34 +1,39 @@
 <template>
   <div class="personal-agent-integration">
-    <MsCard simple class="personal-agent-integration__card">
-      <div
-        class="mb-4 flex min-w-0 flex-col gap-3"
-        :class="compact ? 'items-stretch' : 'items-start xl:flex-row xl:items-center xl:justify-between'"
-      >
+    <MsCard simple :min-width="0" class="personal-agent-integration__card">
+      <div class="mb-3 min-w-0">
         <div class="min-w-0">
           <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
           <div class="mt-1 text-sm text-[var(--color-text-3)]">
             {{ t('system.agentIntegration.myTokensDesc') }}
           </div>
         </div>
-        <div class="flex w-full min-w-0 flex-wrap items-center gap-2 xl:w-auto" :class="compact ? '' : ''">
+        <div class="personal-agent-integration__actions mt-3">
+          <a-button class="shrink-0" type="primary" @click="openCreateModal">
+            {{ t('system.agentIntegration.createToken') }}
+          </a-button>
+          <a-button
+            class="shrink-0"
+            :loading="downloadLoading"
+            :disabled="manifest?.available === false"
+            type="outline"
+            @click="handleDownload"
+          >
+            {{ t('system.agentIntegration.mcpDownload') }}
+          </a-button>
           <a-input-search
             v-model:model-value="keyword"
             :placeholder="t('system.agentIntegration.searchToken')"
-            class="min-w-[180px] flex-1 xl:w-[260px] xl:flex-none"
+            class="personal-agent-integration__search"
             allow-clear
             @search="searchParams"
             @press-enter="searchParams"
             @clear="searchParams"
           />
-          <a-button class="shrink-0" type="primary" @click="openCreateModal">
-            {{ t('system.agentIntegration.createToken') }}
-          </a-button>
-          <a-button class="shrink-0" :loading="downloadLoading" type="outline" @click="handleDownload">
-            {{ t('system.agentIntegration.mcpDownload') }}
-          </a-button>
         </div>
       </div>
+
+      <McpOnboardingPanel :manifest="manifest" class="mb-4" />
 
       <a-alert type="info" class="mb-4">
         {{ t('system.agentIntegration.myTokensSecretTip') }}
@@ -58,8 +63,6 @@
         </ms-base-table>
       </div>
     </MsCard>
-
-    <McpOnboardingPanel class="mt-4" @create-token="openCreateModal" />
 
     <a-modal
       v-model:visible="createVisible"
@@ -408,7 +411,6 @@
     columns,
     scroll: { x: '100%' },
     selectable: false,
-    heightUsed: 280,
   });
 
   function searchParams() {
@@ -624,6 +626,19 @@
   }
   .personal-agent-integration__card {
     min-width: 0;
+    max-width: 100%;
+  }
+  .personal-agent-integration__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .personal-agent-integration__search {
+    flex: 0 0 12em;
+    width: 12em;
     max-width: 100%;
   }
   .personal-agent-integration__table {

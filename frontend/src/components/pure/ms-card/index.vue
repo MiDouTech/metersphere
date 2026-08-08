@@ -40,7 +40,10 @@
       </div>
       <div class="ms-card-container">
         <a-scrollbar :class="['h-full', props.noContentPadding ? '' : 'pr-[5px]']" :style="getComputedContentStyle">
-          <div class="relative h-full w-full" :style="{ minWidth: `${props.minWidth || 1000}px` }">
+          <div
+            class="relative h-full w-full"
+            :style="{ minWidth: `${props.minWidth === undefined ? 1000 : props.minWidth}px` }"
+          >
             <slot></slot>
           </div>
         </a-scrollbar>

@@ -17,7 +17,7 @@
           <div class="one-line-text mb-[8px] text-[var(--color-text-4)]">{{ item.label }}</div>
           <div class="pass-rate-count text-[rgb(var(--primary-4))]">
             <div @click="goNavigation(item)">
-              {{ hasPermission ? addCommasToNumber(item.value as number) : '-' }}
+              {{ props.hasPermission ? addCommasToNumber(item.value as number) : '-' }}
             </div>
           </div>
         </slot>

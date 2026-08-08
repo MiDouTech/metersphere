@@ -5,23 +5,23 @@
         {{ t('caseManagement.caseGenerate.detail') }}
       </div>
       <div class="flex flex-wrap gap-[4px]">
-        <a-tag v-if="draft.duplicate" color="orange">
+        <a-tag v-if="props.draft.duplicate" color="orange">
           {{ t('caseManagement.caseGenerate.duplicateWarning') }}
         </a-tag>
-        <a-tag v-if="draft.validationStatus === 'INVALID'" color="red">{{ draft.validationMessage }}</a-tag>
-        <a-tag v-else-if="draft.validationStatus === 'READY'" color="green">
+        <a-tag v-if="props.draft.validationStatus === 'INVALID'" color="red">{{ props.draft.validationMessage }}</a-tag>
+        <a-tag v-else-if="props.draft.validationStatus === 'READY'" color="green">
           {{ t('caseManagement.caseGenerate.statusReady') }}
         </a-tag>
       </div>
     </div>
-    <a-form :model="draft" layout="vertical">
+    <a-form :model="props.draft" layout="vertical">
       <a-form-item :label="t('caseManagement.caseGenerate.name')">
-        <a-input :model-value="draft.name" @update:model-value="(value: string) => updateField('name', value)" />
+        <a-input :model-value="props.draft.name" @update:model-value="(value: string) => updateField('name', value)" />
       </a-form-item>
       <a-form-item :label="t('caseManagement.caseGenerate.level')">
         <a-select
-          :model-value="draft.caseLevel || 'P1'"
-          @update:model-value="(value) => updateField('caseLevel', String(value))"
+          :model-value="props.draft.caseLevel || 'P1'"
+          @update:model-value="(value: unknown) => updateField('caseLevel', String(value))"
         >
           <a-option value="P0">P0</a-option>
           <a-option value="P1">P1</a-option>
@@ -31,8 +31,8 @@
       </a-form-item>
       <a-form-item :label="t('caseManagement.caseGenerate.editType')">
         <a-select
-          :model-value="draft.editType || 'STEP'"
-          @update:model-value="(value) => updateField('editType', String(value))"
+          :model-value="props.draft.editType || 'STEP'"
+          @update:model-value="(value: unknown) => updateField('editType', String(value))"
         >
           <a-option value="STEP">STEP</a-option>
           <a-option value="TEXT">TEXT</a-option>
@@ -40,22 +40,22 @@
       </a-form-item>
       <a-form-item :label="t('caseManagement.caseGenerate.moduleId')">
         <a-tree-select
-          :model-value="draft.moduleId"
+          :model-value="props.draft.moduleId"
           :data="moduleTree"
           allow-search
           :filter-tree-node="filterTreeNode"
           :field-names="{ title: 'name', key: 'id', children: 'children' }"
           :tree-props="{ virtualListProps: { height: 200 } }"
           :placeholder="t('caseManagement.caseGenerate.modulePlaceholder')"
-          @update:model-value="(value) => updateField('moduleId', String(value || ''))"
+          @update:model-value="(value: unknown) => updateField('moduleId', String(value || ''))"
         />
       </a-form-item>
       <a-form-item :label="t('caseManagement.caseGenerate.templateId')">
         <a-select
-          :model-value="draft.templateId"
+          :model-value="props.draft.templateId"
           allow-search
           :placeholder="t('caseManagement.caseGenerate.templatePlaceholder')"
-          @update:model-value="(value) => updateField('templateId', String(value || ''))"
+          @update:model-value="(value: unknown) => updateField('templateId', String(value || ''))"
         >
           <a-option v-for="item in templateOptions" :key="item.id" :value="item.id">
             {{ item.name }}
@@ -64,21 +64,21 @@
       </a-form-item>
       <a-form-item :label="t('caseManagement.caseGenerate.prerequisite')">
         <a-textarea
-          :model-value="draft.prerequisite"
+          :model-value="props.draft.prerequisite"
           :auto-size="{ minRows: 2, maxRows: 4 }"
           @update:model-value="(value: string) => updateField('prerequisite', value)"
         />
       </a-form-item>
       <a-form-item :label="t('caseManagement.caseGenerate.steps')">
         <a-textarea
-          :model-value="draft.steps"
+          :model-value="props.draft.steps"
           :auto-size="{ minRows: 5, maxRows: 10 }"
           @update:model-value="(value: string) => updateField('steps', value)"
         />
       </a-form-item>
       <a-form-item :label="t('caseManagement.caseGenerate.expectedResult')">
         <a-textarea
-          :model-value="draft.expectedResult"
+          :model-value="props.draft.expectedResult"
           :auto-size="{ minRows: 3, maxRows: 6 }"
           @update:model-value="(value: string) => updateField('expectedResult', value)"
         />
@@ -86,12 +86,12 @@
       <a-form-item :label="t('caseManagement.caseGenerate.tags')">
         <MsTagsInput :model-value="tagList" class="w-full" @change="handleTagsChange" />
       </a-form-item>
-      <a-form-item v-if="draft.sourceReferences" :label="t('caseManagement.caseGenerate.sourceReferences')">
-        <a-textarea :model-value="draft.sourceReferences" :auto-size="{ minRows: 2, maxRows: 4 }" readonly />
+      <a-form-item v-if="props.draft.sourceReferences" :label="t('caseManagement.caseGenerate.sourceReferences')">
+        <a-textarea :model-value="props.draft.sourceReferences" :auto-size="{ minRows: 2, maxRows: 4 }" readonly />
       </a-form-item>
       <a-form-item :label="t('caseManagement.caseGenerate.customFields')">
         <a-textarea
-          :model-value="draft.customFields"
+          :model-value="props.draft.customFields"
           :auto-size="{ minRows: 2, maxRows: 5 }"
           @update:model-value="(value: string) => updateField('customFields', value)"
         />
