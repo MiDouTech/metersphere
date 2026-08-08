@@ -6,13 +6,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AiUserAgentFeatureService {
-    @Value("${ms.ai.user-agent.enabled:false}")
+    @Value("${ms.ai.user-agent.enabled:true}")
     private boolean enabled;
-    @Value("${ms.ai.user-agent.workbuddy-enabled:false}")
+    @Value("${ms.ai.user-agent.workbuddy-enabled:true}")
     private boolean workbuddyEnabled;
-    @Value("${ms.ai.user-agent.codex-enabled:false}")
+    @Value("${ms.ai.user-agent.codex-enabled:true}")
     private boolean codexEnabled;
-    @Value("${ms.ai.user-agent.cursor-enabled:false}")
+    @Value("${ms.ai.user-agent.cursor-enabled:true}")
     private boolean cursorEnabled;
 
     public boolean enabled() {

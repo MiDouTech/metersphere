@@ -15,9 +15,9 @@
           <template #extra><a-tag v-if="provider.experimental" color="orange">Experimental</a-tag></template>
           <div class="mb-3 text-sm text-[var(--color-text-3)]">{{ t(provider.descriptionKey) }}</div>
           <div v-if="connection(provider.id)" class="mb-3 space-y-1 text-sm">
-            <div>{{ t('ms.personal.userAgent.status') }}：{{ connection(provider.id)?.status }}</div>
-            <div>{{ t('ms.personal.userAgent.device') }}：{{ connection(provider.id)?.deviceName || '-' }}</div>
-            <div>{{ t('ms.personal.userAgent.account') }}：{{ connection(provider.id)?.maskedAccount || '-' }}</div>
+            <div>{{ t('ms.personal.userAgent.status') }}: {{ connection(provider.id)?.status }}</div>
+            <div>{{ t('ms.personal.userAgent.device') }}: {{ connection(provider.id)?.deviceName || '-' }}</div>
+            <div>{{ t('ms.personal.userAgent.account') }}: {{ connection(provider.id)?.maskedAccount || '-' }}</div>
           </div>
           <div class="flex flex-wrap gap-2">
             <a-button v-if="!connection(provider.id)" type="primary" @click="createAndAuthorize(provider.id)">

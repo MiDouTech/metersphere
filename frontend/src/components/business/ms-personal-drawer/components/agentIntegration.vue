@@ -1,30 +1,30 @@
 <template>
-  <div>
-    <MsCard simple>
+  <div class="personal-agent-integration">
+    <MsCard simple class="personal-agent-integration__card">
       <div
-        class="mb-4 gap-3"
-        :class="compact ? 'flex flex-col items-stretch' : 'flex flex-wrap items-center justify-between'"
+        class="mb-4 flex min-w-0 flex-col gap-3"
+        :class="compact ? 'items-stretch' : 'items-start xl:flex-row xl:items-center xl:justify-between'"
       >
-        <div>
+        <div class="min-w-0">
           <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
           <div class="mt-1 text-sm text-[var(--color-text-3)]">
             {{ t('system.agentIntegration.myTokensDesc') }}
           </div>
         </div>
-        <div class="flex flex-wrap items-center gap-2" :class="compact ? 'justify-end' : ''">
+        <div class="flex w-full min-w-0 flex-wrap items-center gap-2 xl:w-auto" :class="compact ? '' : ''">
           <a-input-search
             v-model:model-value="keyword"
             :placeholder="t('system.agentIntegration.searchToken')"
-            :class="compact ? 'min-w-[220px] flex-1' : 'w-[260px]'"
+            class="min-w-[180px] flex-1 xl:w-[260px] xl:flex-none"
             allow-clear
             @search="searchParams"
             @press-enter="searchParams"
             @clear="searchParams"
           />
-          <a-button type="primary" @click="openCreateModal">
+          <a-button class="shrink-0" type="primary" @click="openCreateModal">
             {{ t('system.agentIntegration.createToken') }}
           </a-button>
-          <a-button :loading="downloadLoading" type="outline" @click="handleDownload">
+          <a-button class="shrink-0" :loading="downloadLoading" type="outline" @click="handleDownload">
             {{ t('system.agentIntegration.mcpDownload') }}
           </a-button>
         </div>
@@ -34,27 +34,29 @@
         {{ t('system.agentIntegration.myTokensSecretTip') }}
       </a-alert>
 
-      <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
-        <template #enable="{ record }">
-          <a-switch :model-value="record.enable" size="small" :before-change="(val) => toggleEnable(val, record)" />
-        </template>
-        <template #scopes="{ record }">
-          {{ formatScopeLabel(record.scopes) }}
-        </template>
-        <template #lastUsedAt="{ record }">
-          {{ formatTime(record.lastUsedAt) }}
-        </template>
-        <template #action="{ record }">
-          <div class="flex gap-2">
-            <MsButton @click="openEditModal(record)">
-              {{ t('system.agentIntegration.tokenSettings') }}
-            </MsButton>
-            <MsButton status="danger" @click="removeToken(record)">
-              {{ t('common.delete') }}
-            </MsButton>
-          </div>
-        </template>
-      </ms-base-table>
+      <div class="personal-agent-integration__table">
+        <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
+          <template #enable="{ record }">
+            <a-switch :model-value="record.enable" size="small" :before-change="(val) => toggleEnable(val, record)" />
+          </template>
+          <template #scopes="{ record }">
+            {{ formatScopeLabel(record.scopes) }}
+          </template>
+          <template #lastUsedAt="{ record }">
+            {{ formatTime(record.lastUsedAt) }}
+          </template>
+          <template #action="{ record }">
+            <div class="flex gap-2">
+              <MsButton @click="openEditModal(record)">
+                {{ t('system.agentIntegration.tokenSettings') }}
+              </MsButton>
+              <MsButton status="danger" @click="removeToken(record)">
+                {{ t('common.delete') }}
+              </MsButton>
+            </div>
+          </template>
+        </ms-base-table>
+      </div>
     </MsCard>
 
     <McpOnboardingPanel class="mt-4" @create-token="openCreateModal" />
@@ -614,3 +616,23 @@
     loadList();
   });
 </script>
+
+<style scoped lang="less">
+  .personal-agent-integration {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .personal-agent-integration__card {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .personal-agent-integration__table {
+    overflow-x: auto;
+    max-width: 100%;
+    :deep(.arco-table-container),
+    :deep(.arco-table-content),
+    :deep(.arco-table) {
+      min-width: 900px;
+    }
+  }
+</style>

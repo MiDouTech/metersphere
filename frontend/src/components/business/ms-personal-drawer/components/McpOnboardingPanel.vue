@@ -1,7 +1,7 @@
 <template>
   <MsCard simple class="mb-4">
     <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
-      <div>
+      <div class="min-w-0">
         <div class="text-base font-medium">{{ t('system.agentIntegration.mcpTitle') }}</div>
         <div class="mt-1 text-sm text-[var(--color-text-3)]">
           {{ t('system.agentIntegration.mcpDesc') }}
@@ -15,11 +15,17 @@
           </span>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <a-button @click="emit('create-token')">
+      <div class="flex shrink-0 flex-wrap items-center gap-2">
+        <a-button class="shrink-0" @click="emit('create-token')">
           {{ t('system.agentIntegration.createToken') }}
         </a-button>
-        <a-button :loading="downloadLoading" :disabled="!manifest?.available" type="primary" @click="handleDownload">
+        <a-button
+          class="shrink-0"
+          :loading="downloadLoading"
+          :disabled="!manifest?.available"
+          type="primary"
+          @click="handleDownload"
+        >
           {{ t('system.agentIntegration.mcpDownload') }}
         </a-button>
       </div>
@@ -33,20 +39,18 @@
       <div class="mb-1 font-medium text-[var(--color-text-1)]">
         {{ t('system.agentIntegration.platformAddress') }}
       </div>
-      <div>{{ t('system.agentIntegration.platformTest') }}：https://msp.ebcone.net</div>
-      <div>{{ t('system.agentIntegration.platformProd') }}：https://msp.ebcone.cn</div>
+      <div>{{ t('system.agentIntegration.platformTest') }}: https://msp.ebcone.net</div>
+      <div>{{ t('system.agentIntegration.platformProd') }}: https://msp.ebcone.cn</div>
     </div>
 
     <div class="mb-1 text-sm font-medium">{{ t('system.agentIntegration.mcpScopeHelp') }}</div>
     <ul class="mb-0 list-disc pl-5 text-sm text-[var(--color-text-3)]">
-      <li>{{ t('system.agentIntegration.scopeAgentAll') }}：{{ t('system.agentIntegration.scopeAgentAllDesc') }}</li>
-      <li
-        >{{ t('system.agentIntegration.scopeProjectRead') }}：{{
-          t('system.agentIntegration.scopeProjectReadDesc')
-        }}</li
-      >
-      <li>{{ t('system.agentIntegration.scopeCase') }}：{{ t('system.agentIntegration.scopeCaseDesc') }}</li>
-      <li>{{ t('system.agentIntegration.scopeBug') }}：{{ t('system.agentIntegration.scopeBugDesc') }}</li>
+      <li>{{ t('system.agentIntegration.scopeAgentAll') }}: {{ t('system.agentIntegration.scopeAgentAllDesc') }}</li>
+      <li>
+        {{ t('system.agentIntegration.scopeProjectRead') }}: {{ t('system.agentIntegration.scopeProjectReadDesc') }}
+      </li>
+      <li>{{ t('system.agentIntegration.scopeCase') }}: {{ t('system.agentIntegration.scopeCaseDesc') }}</li>
+      <li>{{ t('system.agentIntegration.scopeBug') }}: {{ t('system.agentIntegration.scopeBugDesc') }}</li>
     </ul>
   </MsCard>
 </template>
