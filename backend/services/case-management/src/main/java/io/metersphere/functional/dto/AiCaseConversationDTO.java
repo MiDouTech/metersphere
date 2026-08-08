@@ -9,6 +9,9 @@ public class AiCaseConversationDTO {
     private String organizationId;
     private String userId;
     private String title;
+    private String resourceType;
+    private String resourceId;
+    private String agentConnectionId;
     private String modelSourceId;
     private String status;
     private String systemPromptVersion;

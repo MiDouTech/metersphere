@@ -5,11 +5,12 @@ import io.metersphere.functional.constants.AiCaseExecutionStatus;
 import io.metersphere.functional.constants.AiCaseMessageRole;
 import io.metersphere.functional.constants.AiCaseMessageStatus;
 import io.metersphere.functional.dto.AiCaseConversationDTO;
-import io.metersphere.functional.dto.AiCaseAvailableModelDTO;
 import io.metersphere.functional.dto.AiCaseExecutionDTO;
 import io.metersphere.functional.dto.AiCaseExecutionEventDTO;
 import io.metersphere.functional.dto.AiCaseMessageDTO;
+import io.metersphere.functional.dto.AiResourceSelection;
 import io.metersphere.functional.dto.CaseGenerationCaseDTO;
+import io.metersphere.functional.dto.CaseGenerationResult;
 import io.metersphere.functional.repository.AiCaseAgentRepository;
 import io.metersphere.functional.request.AiCaseAgentCancelRequest;
 import io.metersphere.functional.request.AiCaseAgentChatRequest;
@@ -20,6 +21,10 @@ import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.dto.request.ai.AiProviderChatRequest;
 import io.metersphere.system.service.ai.AiGovernanceService;
 import io.metersphere.system.service.ai.provider.AiProviderAdapter;
+import io.metersphere.system.dto.ai.agent.AiUserAgentConnectionDTO;
+import io.metersphere.system.service.ai.agent.AgentStreamEvent;
+import io.metersphere.system.service.ai.agent.UserAgentConnector;
+import io.metersphere.system.service.ai.agent.UserAgentExecutionRequest;
 import io.metersphere.system.uid.IDGenerator;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
@@ -53,11 +58,13 @@ public class AiCaseAgentOrchestrator {
     @Resource
     private AiCaseConversationService conversationService;
     @Resource
-    private AiCaseAvailableModelService availableModelService;
+    private AiCaseAvailableResourceService availableResourceService;
     @Resource
     private AiCaseAgentPromptService promptService;
     @Resource
     private AiProviderAdapter providerAdapter;
+    @Resource
+    private UserAgentConnector userAgentConnector;
     @Resource
     private AiGovernanceService governanceService;
     @Resource
@@ -99,8 +106,9 @@ public class AiCaseAgentOrchestrator {
         if (!AiCaseConversationStatus.ACTIVE.name().equals(conversation.getStatus())) {
             throw new MSException("归档会话不能继续发送消息");
         }
-        AiCaseAvailableModelDTO selectedModel = availableModelService.requireAllowed(
-                request.getProjectId(), conversation.getModelSourceId(), userId);
+        AiResourceSelection selection = availableResourceService.requireAllowed(request.getProjectId(),
+                conversation.getResourceType(), conversation.getResourceId(), conversation.getModelSourceId(), userId);
+        validateRequestedResource(request, selection, userId);
         String requestId = request.getRequestId();
         if (StringUtils.isBlank(requestId)) {
             requestId = IDGenerator.nextStr();
@@ -116,13 +124,22 @@ public class AiCaseAgentOrchestrator {
                 userId, null, null, HISTORY_MESSAGE_LIMIT);
         String providerPrompt = promptService.buildUserPrompt(history, request.getMessage());
         AtomicReference<ActiveExecution> admitted = new AtomicReference<>();
-        governanceService.admitGeneration(request.getProjectId(),
-                () -> admitted.set(createExecution(request, conversation, providerPrompt, userId,
-                        retryOfRequestId, selectedModel.isSupportsTools())));
+        Runnable create = () -> admitted.set(createExecution(request, conversation, providerPrompt, userId,
+                retryOfRequestId, selection));
+        if ("USER_AGENT".equals(selection.resourceType())) {
+            governanceService.admitAgentExecution(request.getProjectId(), userId,
+                    selection.agentConnectionId(), selection.provider(), create);
+        } else {
+            governanceService.admitGeneration(request.getProjectId(), create);
+        }
         ActiveExecution active = admitted.get();
         activeExecutions.put(requestId, active);
         active.initialEvents.forEach(active::emit);
-        startProvider(active, conversation, providerPrompt, userId);
+        if ("USER_AGENT".equals(selection.resourceType())) {
+            startUserAgent(active, conversation, providerPrompt, userId);
+        } else {
+            startProvider(active, conversation, providerPrompt, userId);
+        }
         return active.sink.asFlux();
     }
 
@@ -149,6 +166,9 @@ public class AiCaseAgentOrchestrator {
         ActiveExecution active = activeExecutions.get(request.getRequestId());
         if (active != null) {
             active.cancelRequested.set(true);
+            if ("USER_AGENT".equals(active.resourceType)) {
+                userAgentConnector.cancel(active.requestId, userId);
+            }
             Disposable disposable = active.subscription.get();
             if (disposable != null) {
                 disposable.dispose();
@@ -159,9 +179,9 @@ public class AiCaseAgentOrchestrator {
 
     private ActiveExecution createExecution(AiCaseAgentChatRequest request, AiCaseConversationDTO conversation,
                                             String providerPrompt, String userId, String retryOfRequestId,
-                                            boolean toolsSupported) {
+                                            AiResourceSelection selection) {
         ActiveExecution active = new ActiveExecution(request.getRequestId(), request.getProjectId(), userId,
-                conversation.getId(), conversation.getModelSourceId(), providerPrompt, toolsSupported);
+                conversation.getId(), selection, providerPrompt);
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             if (!repository.lockConversation(conversation.getId(), request.getProjectId(), userId)) {
                 throw new MSException("会话不存在或无权限");
@@ -188,6 +208,10 @@ public class AiCaseAgentOrchestrator {
             execution.setAssistantMessageId(assistantMessage.getId());
             execution.setExecutionType("CHAT");
             execution.setStatus(AiCaseExecutionStatus.CREATED.name());
+            execution.setResourceType(selection.resourceType());
+            execution.setRequestedResourceId(selection.resourceId());
+            execution.setActualResourceId(selection.resourceId());
+            execution.setAgentConnectionId(selection.agentConnectionId());
             execution.setRequestedModelSourceId(conversation.getModelSourceId());
             execution.setCancelRequested(false);
             execution.setRetryOfRequestId(retryOfRequestId);
@@ -199,7 +223,8 @@ public class AiCaseAgentOrchestrator {
             repository.insertExecution(execution);
             active.initialEvents.add(appendEvent(active, "execution-start", Map.of(
                     "conversationId", conversation.getId(),
-                    "modelSourceId", conversation.getModelSourceId(),
+                    "resourceType", selection.resourceType(),
+                    "resourceId", selection.resourceId(),
                     "promptVersion", AiCaseAgentPromptService.VERSION)));
             active.initialEvents.add(appendEvent(active, "message-start", Map.of(
                     "messageId", assistantMessage.getId(), "role", "ASSISTANT")));
@@ -251,6 +276,130 @@ public class AiCaseAgentOrchestrator {
         }
     }
 
+    private void validateRequestedResource(AiCaseAgentChatRequest request,
+                                           AiResourceSelection conversationSelection, String userId) {
+        if (StringUtils.isAllBlank(request.getResourceType(), request.getResourceId(), request.getModelSourceId())) {
+            return;
+        }
+        AiResourceSelection requested = availableResourceService.requireAllowed(request.getProjectId(),
+                request.getResourceType(), request.getResourceId(), request.getModelSourceId(), userId);
+        if (!StringUtils.equals(requested.resourceType(), conversationSelection.resourceType())
+                || !StringUtils.equals(requested.resourceId(), conversationSelection.resourceId())) {
+            throw new MSException("聊天请求资源与当前会话资源不一致，请先切换会话资源");
+        }
+    }
+
+    private void startUserAgent(ActiveExecution active, AiCaseConversationDTO conversation,
+                                String providerPrompt, String userId) {
+        long now = System.currentTimeMillis();
+        active.startTime = now;
+        repository.markExecutionRunning(active.requestId, active.projectId, userId, now);
+        try {
+            AiUserAgentConnectionDTO connection = userAgentConnector.connectionStatus(
+                    active.agentConnectionId, userId);
+            active.agentDeviceId = connection.getDeviceId();
+            repository.updateExecutionAgentDevice(active.requestId, active.projectId, active.userId,
+                    active.agentDeviceId, System.currentTimeMillis());
+            int maxExecutionMinutes = Math.max(1,
+                    governanceService.get(active.projectId).getMaxAgentExecutionMinutes());
+            UserAgentExecutionRequest bridgeRequest = new UserAgentExecutionRequest(
+                    active.requestId, active.conversationId, active.projectId, active.agentConnectionId,
+                    connection.getDeviceId(), connection.getProvider(),
+                    promptService.bridgeSystemPrompt(active.toolsSupported),
+                    providerPrompt, null, active.toolsSupported
+                    ? List.of("search_product_documents", "create_case_drafts") : List.of(),
+                    Map.of("maxToolCalls", 8, "maxWriteToolCalls", 3,
+                            "maxExecutionSeconds", maxExecutionMinutes * 60));
+            Disposable subscription = userAgentConnector.stream(bridgeRequest, userId)
+                    .timeout(Duration.ofMinutes(maxExecutionMinutes).plusSeconds(5))
+                    .subscribe(event -> onAgentEvent(active, event), error -> finishFailed(active, error), () -> {
+                        if (!active.terminal.get()) {
+                            if (active.cancelRequested.get() || repository.isCancelRequested(active.requestId)) {
+                                finishCanceled(active);
+                            } else {
+                                finishCompleted(active);
+                            }
+                        }
+                    });
+            active.subscription.set(subscription);
+        } catch (Throwable error) {
+            finishFailed(active, error);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void onAgentEvent(ActiveExecution active, AgentStreamEvent event) {
+        if (active.terminal.get() || active.cancelRequested.get()) {
+            if ("tool.call".equals(event.type())) {
+                Object value = event.payload() == null ? null : event.payload().get("toolCallId");
+                String toolCallId = StringUtils.left(value instanceof String id ? id : "", 128);
+                userAgentConnector.sendToolResult(active.requestId, toolCallId, false,
+                        Map.of(), "AI_AGENT_EXECUTION_TERMINATED");
+            }
+            return;
+        }
+        switch (event.type()) {
+            case "content.delta" -> onContent(active, StringUtils.defaultString(
+                    (String) event.payload().get("delta")));
+            case "usage.reported" -> {
+                active.inputTokens = number(event.payload().get("inputTokens"));
+                active.outputTokens = number(event.payload().get("outputTokens"));
+                active.usageEstimated = !Boolean.FALSE.equals(event.payload().get("estimated"));
+            }
+            case "tool.call" -> handleAgentToolCall(active, event.payload());
+            case "execution.accepted" -> {
+                String externalSessionId = StringUtils.left(
+                        (String) event.payload().get("externalSessionId"), 255);
+                repository.upsertAgentSessionBinding(active.conversationId, active.agentConnectionId,
+                        externalSessionId, active.provider, active.agentDeviceId, event.sequence(),
+                        System.currentTimeMillis());
+                active.emit(appendEvent(active, "agent-accepted", Map.of(
+                        "deviceId", StringUtils.defaultString(active.agentDeviceId),
+                        "externalSessionId", StringUtils.defaultString(externalSessionId))));
+            }
+            case "message.start" -> active.emit(appendEvent(active, "agent-message-start", event.payload()));
+            default -> {
+                // Terminal events are converted by stream completion; unknown optional events are ignored.
+            }
+        }
+    }
+
+    private void handleAgentToolCall(ActiveExecution active, Map<String, Object> payload) {
+        String toolCallId = StringUtils.left((String) payload.get("toolCallId"), 128);
+        String toolName = StringUtils.left((String) payload.get("toolName"), 128);
+        if (StringUtils.isAnyBlank(toolCallId, toolName)
+                || !List.of("search_product_documents", "create_case_drafts").contains(toolName)) {
+            userAgentConnector.sendToolResult(active.requestId, StringUtils.defaultString(toolCallId), false,
+                    Map.of(), "AI_AGENT_TOOL_NOT_ALLOWED");
+            return;
+        }
+        try {
+            CaseAgentTools tools = new CaseAgentTools(active);
+            String result;
+            Map<String, Object> arguments = payload.get("arguments") instanceof Map<?, ?> map
+                    ? (Map<String, Object>) map : Map.of();
+            if (StringUtils.equals(toolName, "search_product_documents")) {
+                Number maxResults = arguments.get("maxResults") instanceof Number number ? number : null;
+                result = tools.searchProductDocuments((String) arguments.get("query"),
+                        maxResults == null ? null : maxResults.intValue());
+            } else {
+                List<CaseGenerationCaseDTO> cases = JSON.parseObject(JSON.toJSONString(
+                        arguments.getOrDefault("cases", List.of())),
+                        new com.fasterxml.jackson.core.type.TypeReference<List<CaseGenerationCaseDTO>>() { });
+                result = tools.createCaseDrafts(cases);
+            }
+            userAgentConnector.sendToolResult(active.requestId, toolCallId, true,
+                    Map.of("content", result), null);
+        } catch (Exception error) {
+            userAgentConnector.sendToolResult(active.requestId, toolCallId, false, Map.of(),
+                    "AI_AGENT_TOOL_EXECUTION_FAILED");
+        }
+    }
+
+    private long number(Object value) {
+        return value instanceof Number number ? Math.max(0, number.longValue()) : 0;
+    }
+
     private void onContent(ActiveExecution active, String chunk) {
         if (active.terminal.get() || active.cancelRequested.get() || StringUtils.isEmpty(chunk)) {
             return;
@@ -264,25 +413,83 @@ public class AiCaseAgentOrchestrator {
     }
 
     private void finishCompleted(ActiveExecution active) {
+        if ("USER_AGENT".equals(active.resourceType) && active.writeToolInvocationCount.get() == 0) {
+            try {
+                materializeStructuredAgentDrafts(active);
+            } catch (Exception error) {
+                finishFailed(active, error);
+                return;
+            }
+        }
         if (!active.terminal.compareAndSet(false, true)) {
             return;
         }
         long finishTime = System.currentTimeMillis();
-        long inputTokens = estimateTokens(active.providerPrompt);
-        long outputTokens = estimateTokens(active.content.toString());
+        long inputTokens = active.resourceType.equals("USER_AGENT") && active.inputTokens > 0
+                ? active.inputTokens : estimateTokens(active.providerPrompt);
+        long outputTokens = active.resourceType.equals("USER_AGENT") && active.outputTokens > 0
+                ? active.outputTokens : estimateTokens(active.content.toString());
+        boolean estimated = !active.resourceType.equals("USER_AGENT") || active.usageEstimated;
         repository.completeMessage(active.assistantMessageId, active.projectId, active.userId,
                 AiCaseMessageStatus.COMPLETED.name(), active.content.toString(), active.actualModelSourceId,
-                inputTokens, outputTokens, true, null, finishTime);
+                inputTokens, outputTokens, estimated, null, finishTime);
         repository.completeExecution(active.requestId, active.projectId, active.userId,
-                AiCaseExecutionStatus.COMPLETED.name(), inputTokens, outputTokens, true,
+                AiCaseExecutionStatus.COMPLETED.name(), inputTokens, outputTokens, estimated,
                 null, null, finishTime, finishTime - active.startTime);
         active.emit(appendEvent(active, "usage", Map.of(
                 "inputTokens", inputTokens, "outputTokens", outputTokens,
-                "totalTokens", inputTokens + outputTokens, "estimated", true)));
+                "totalTokens", inputTokens + outputTokens, "estimated", estimated)));
+        recordAgentUsage(active, "COMPLETED", null, finishTime);
         active.emit(appendEvent(active, "message-completed", Map.of(
                 "messageId", active.assistantMessageId, "content", active.content.toString())));
         active.emit(appendEvent(active, "execution-completed", Map.of("status", "COMPLETED")));
         close(active);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void materializeStructuredAgentDrafts(ActiveExecution active) {
+        String raw = StringUtils.trim(active.content.toString());
+        if (!raw.contains("\"cases\"")) {
+            return;
+        }
+        CaseGenerationResult generationResult;
+        try {
+            generationResult = draftService.parseAgentGenerationResult(raw);
+        } catch (RuntimeException error) {
+            throw new MSException("AI_AGENT_STRUCTURED_OUTPUT_INVALID：Agent 返回的用例结构无法解析或修复");
+        }
+        List<CaseGenerationCaseDTO> cases = generationResult.getCases();
+        if (cases.isEmpty()) {
+            return;
+        }
+        new CaseAgentTools(active).createCaseDrafts(cases);
+        String reply = extractStructuredReply(raw);
+        active.content.setLength(0);
+        active.content.append(StringUtils.defaultIfBlank(reply, "已生成通过平台校验的用例草稿，请确认后再保存为正式用例。"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private String extractStructuredReply(String raw) {
+        int objectStart = raw.indexOf('{');
+        int objectEnd = raw.lastIndexOf('}');
+        if (objectStart < 0 || objectEnd <= objectStart) {
+            return null;
+        }
+        try {
+            Map<String, Object> response = JSON.parseObject(raw.substring(objectStart, objectEnd + 1), Map.class);
+            return response.get("reply") instanceof String value ? StringUtils.trimToNull(value) : null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private void recordAgentUsage(ActiveExecution active, String status, String errorCode, long finishTime) {
+        if ("USER_AGENT".equals(active.resourceType)) {
+            governanceService.recordAgentUsage(active.projectId, active.userId, active.conversationId,
+                    active.requestId, active.agentConnectionId, active.agentDeviceId, active.provider,
+                    Math.max(0, finishTime - active.startTime), active.inputTokens, active.outputTokens,
+                    active.usageEstimated, status, errorCode);
+        }
     }
 
     private void finishCanceled(ActiveExecution active) {
@@ -298,6 +505,7 @@ public class AiCaseAgentOrchestrator {
         repository.completeExecution(active.requestId, active.projectId, active.userId,
                 AiCaseExecutionStatus.CANCELED.name(), inputTokens, outputTokens, true,
                 "AI_AGENT_CANCELED", "用户取消执行", finishTime, finishTime - active.startTime);
+        recordAgentUsage(active, "CANCELED", "AI_AGENT_CANCELED", finishTime);
         active.emit(appendEvent(active, "execution-completed", Map.of("status", "CANCELED")));
         close(active);
     }
@@ -320,6 +528,7 @@ public class AiCaseAgentOrchestrator {
                 AiCaseExecutionStatus.FAILED.name(), estimateTokens(active.providerPrompt),
                 estimateTokens(active.content.toString()), true, "AI_AGENT_PROVIDER_ERROR", message,
                 finishTime, finishTime - active.startTime);
+        recordAgentUsage(active, "FAILED", "AI_AGENT_PROVIDER_ERROR", finishTime);
         active.emit(appendEvent(active, "error", Map.of(
                 "errorCode", "AI_AGENT_PROVIDER_ERROR", "message", message, "retryable", true)));
         active.emit(appendEvent(active, "execution-completed", Map.of("status", "FAILED")));
@@ -335,6 +544,9 @@ public class AiCaseAgentOrchestrator {
         message.setUserId(userId);
         message.setRole(role);
         message.setStatus(status);
+        message.setResourceType(conversation.getResourceType());
+        message.setResourceId(conversation.getResourceId());
+        message.setAgentConnectionId(conversation.getAgentConnectionId());
         message.setContent(content);
         message.setRequestId(requestId);
         message.setTokenEstimated(false);
@@ -382,6 +594,11 @@ public class AiCaseAgentOrchestrator {
         private final String userId;
         private final String conversationId;
         private final String modelSourceId;
+        private final String resourceType;
+        private final String resourceId;
+        private final String agentConnectionId;
+        private final String provider;
+        private volatile String agentDeviceId;
         private volatile String actualModelSourceId;
         private final String providerPrompt;
         private final boolean toolsSupported;
@@ -396,17 +613,24 @@ public class AiCaseAgentOrchestrator {
         private String userMessageId;
         private String assistantMessageId;
         private long startTime;
+        private long inputTokens;
+        private long outputTokens;
+        private boolean usageEstimated = true;
 
         private ActiveExecution(String requestId, String projectId, String userId, String conversationId,
-                                String modelSourceId, String providerPrompt, boolean toolsSupported) {
+                                AiResourceSelection selection, String providerPrompt) {
             this.requestId = requestId;
             this.projectId = projectId;
             this.userId = userId;
             this.conversationId = conversationId;
-            this.modelSourceId = modelSourceId;
-            this.actualModelSourceId = modelSourceId;
+            this.modelSourceId = selection.modelSourceId();
+            this.actualModelSourceId = selection.modelSourceId();
+            this.resourceType = selection.resourceType();
+            this.resourceId = selection.resourceId();
+            this.agentConnectionId = selection.agentConnectionId();
+            this.provider = selection.provider();
             this.providerPrompt = providerPrompt;
-            this.toolsSupported = toolsSupported;
+            this.toolsSupported = selection.supportsTools();
         }
 
         private void emit(AiCaseExecutionEventDTO event) {
@@ -450,6 +674,9 @@ public class AiCaseAgentOrchestrator {
                 toolMessage.setUserId(active.userId);
                 toolMessage.setRole(AiCaseMessageRole.TOOL.name());
                 toolMessage.setStatus(AiCaseMessageStatus.COMPLETED.name());
+                toolMessage.setResourceType(active.resourceType);
+                toolMessage.setResourceId(active.resourceId);
+                toolMessage.setAgentConnectionId(active.agentConnectionId);
                 toolMessage.setContent(result);
                 toolMessage.setRequestId(active.requestId);
                 toolMessage.setToolName("search_product_documents");
@@ -540,6 +767,9 @@ public class AiCaseAgentOrchestrator {
             toolMessage.setUserId(active.userId);
             toolMessage.setRole(AiCaseMessageRole.TOOL.name());
             toolMessage.setStatus(status);
+            toolMessage.setResourceType(active.resourceType);
+            toolMessage.setResourceId(active.resourceId);
+            toolMessage.setAgentConnectionId(active.agentConnectionId);
             toolMessage.setContent(result);
             toolMessage.setRequestId(active.requestId);
             toolMessage.setToolName(toolName);

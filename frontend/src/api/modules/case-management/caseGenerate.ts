@@ -27,12 +27,36 @@ export interface AiCaseAgentModel {
   supportsTools: boolean;
 }
 
+export type AiResourceType = 'MODEL_API' | 'USER_AGENT';
+
+export interface AiSelectableResource {
+  id: string;
+  resourceType: AiResourceType;
+  provider: string;
+  displayName: string;
+  personal: boolean;
+  online: boolean;
+  experimental: boolean;
+  connectionStatus: string;
+  unavailableReason?: string;
+  capabilities: {
+    stream: boolean;
+    tools: boolean;
+    files: boolean;
+    cancel: boolean;
+    vision: boolean;
+  };
+}
+
 export interface AiCaseAgentConversation {
   id: string;
   projectId: string;
   organizationId: string;
   title: string;
-  modelSourceId: string;
+  modelSourceId?: string;
+  resourceType: AiResourceType;
+  resourceId: string;
+  agentConnectionId?: string;
   status: 'ACTIVE' | 'ARCHIVED';
 }
 
@@ -42,6 +66,9 @@ export interface AiCaseAgentMessage {
   content: string;
   status: 'STREAMING' | 'COMPLETED' | 'FAILED' | 'CANCELED';
   requestId?: string;
+  resourceType?: AiResourceType;
+  resourceId?: string;
+  agentConnectionId?: string;
 }
 
 export interface AiCaseAgentEvent {
@@ -64,10 +91,16 @@ export function listAiCaseAgentModels(projectId: string) {
   return MSR.get<AiCaseAgentModel[]>({ url: `${AgentBaseUrl}/models`, params: { projectId } });
 }
 
+export function listAiCaseAgentResources(projectId: string) {
+  return MSR.get<AiSelectableResource[]>({ url: `${AgentBaseUrl}/resources`, params: { projectId } });
+}
+
 export function createAiCaseAgentConversation(data: {
   projectId: string;
   organizationId: string;
-  modelSourceId: string;
+  modelSourceId?: string;
+  resourceType?: AiResourceType;
+  resourceId?: string;
   title?: string;
 }) {
   return MSR.post<AiCaseAgentConversation>({ url: `${AgentBaseUrl}/conversation/create`, data });
@@ -79,6 +112,15 @@ export function getAiCaseAgentConversation(id: string, projectId: string) {
 
 export function switchAiCaseAgentModel(data: { projectId: string; conversationId: string; modelSourceId: string }) {
   return MSR.post<AiCaseAgentConversation>({ url: `${AgentBaseUrl}/conversation/model`, data });
+}
+
+export function switchAiCaseAgentResource(data: {
+  projectId: string;
+  conversationId: string;
+  resourceType: AiResourceType;
+  resourceId: string;
+}) {
+  return MSR.post<AiCaseAgentConversation>({ url: `${AgentBaseUrl}/conversation/resource`, data });
 }
 
 export function pageAiCaseAgentMessages(data: {
@@ -112,7 +154,15 @@ export function listAiCaseAgentEvents(projectId: string, requestId: string, afte
 }
 
 export function streamAiCaseAgentChat(
-  data: { projectId: string; conversationId: string; requestId: string; message: string },
+  data: {
+    projectId: string;
+    conversationId: string;
+    requestId: string;
+    message: string;
+    resourceType?: AiResourceType;
+    resourceId?: string;
+    modelSourceId?: string;
+  },
   onEvent: (event: AiCaseAgentEvent) => void
 ) {
   const controller = new AbortController();

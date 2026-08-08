@@ -2,6 +2,7 @@ package io.metersphere.system.service.ai.provider;
 
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.dto.request.ai.AiAgentGatewayInvokeRequest;
+import io.metersphere.system.dto.request.ai.AiAgentGatewayCapabilityDTO;
 import io.metersphere.system.service.PermissionCheckService;
 import io.metersphere.system.service.ai.AiAuditService;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.metersphere.sdk.exception.MSException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -88,5 +91,28 @@ class AiAgentGatewayServiceTests {
         request.setOperation("tool");
 
         assertThrows(MSException.class, () -> service.invoke(request, "user-2"));
+    }
+
+    @Test
+    void exposesOnlyConfiguredSupportedExecutionAgents() {
+        RestClient.Builder builder = RestClient.builder();
+        AiAgentGatewayService service = new AiAgentGatewayService(builder);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ReflectionTestUtils.setField(service, "jdbcTemplate", jdbc);
+        ReflectionTestUtils.setField(service, "aiAuditService", mock(AiAuditService.class));
+        ReflectionTestUtils.setField(service, "permissionCheckService", mock(PermissionCheckService.class));
+        Map<String, Object> cursorGateway = Map.of(
+                "id", "cursor-gateway", "agent_type", "CURSOR", "protocol", "MCP",
+                "owner_user_id", "user-1", "project_id", "project-1", "capabilities", "[]");
+        when(jdbc.queryForList(anyString(), any(Object[].class)))
+                .thenReturn(List.of(), List.of(cursorGateway), List.of());
+
+        List<AiAgentGatewayCapabilityDTO> options =
+                service.executionAgentCapabilities("project-1", "user-1");
+
+        assertEquals(3, options.size());
+        assertEquals(1, options.stream().filter(AiAgentGatewayCapabilityDTO::isConfigured).count());
+        assertEquals("cursor-gateway", options.stream().filter(AiAgentGatewayCapabilityDTO::isConfigured)
+                .findFirst().orElseThrow().getGatewayId());
     }
 }

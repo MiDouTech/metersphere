@@ -1,7 +1,7 @@
 import { RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
 
 import { useUserStore } from '@/store';
-import { hasAnyPermission, topLevelMenuHasPermission } from '@/utils/permission';
+import { hasAnyPermission, hasPageVisible, topLevelMenuHasPermission } from '@/utils/permission';
 
 /**
  * 用户权限
@@ -31,7 +31,7 @@ export default function usePermission() {
         route.meta?.requiresAuth === false ||
         !route.meta?.roles ||
         route.meta?.roles?.includes('*') ||
-        hasAnyPermission(route.meta?.roles || [])
+        (hasPageVisible(route.meta?.resourceCode) && hasAnyPermission(route.meta?.roles || []))
       );
     },
     // You can add any rules you want

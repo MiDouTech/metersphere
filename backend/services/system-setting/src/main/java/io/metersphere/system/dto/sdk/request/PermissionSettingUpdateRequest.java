@@ -1,6 +1,7 @@
 package io.metersphere.system.dto.sdk.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.metersphere.system.dto.permission.RoleUiPermissionDTO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,6 +23,9 @@ public class PermissionSettingUpdateRequest {
     @Schema(description =  "菜单下的权限列表", requiredMode = Schema.RequiredMode.REQUIRED)
     @Valid
     private List<PermissionUpdateRequest> permissions;
+    @Schema(description = "页面/按钮 UI 权限列表")
+    @Valid
+    private List<RoleUiPermissionDTO> uiPermissions;
 
     @Data
     @NoArgsConstructor

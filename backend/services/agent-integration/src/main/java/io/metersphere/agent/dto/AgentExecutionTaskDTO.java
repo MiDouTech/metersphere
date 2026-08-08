@@ -18,6 +18,9 @@ public class AgentExecutionTaskDTO {
     private String caseSnapshotHash;
     private String policySnapshot;
     private String status;
+    private String executionMode;
+    private String agentType;
+    private String agentGatewayId;
     private String runnerId;
     private String runnerLeaseId;
     private String providerId;

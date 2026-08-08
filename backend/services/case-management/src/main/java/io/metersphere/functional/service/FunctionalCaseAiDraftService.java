@@ -450,6 +450,15 @@ public class FunctionalCaseAiDraftService {
         return response;
     }
 
+    /**
+     * Reuses the model API structured-output parser for the personal Agent channel.
+     * It performs at most the existing bounded compatibility repair and never
+     * persists data; callers must still use {@link #createDraftsFromAgent}.
+     */
+    public CaseGenerationResult parseAgentGenerationResult(String rawContent) {
+        return parseGenerationResult(rawContent);
+    }
+
     private void validateAgentCaseArgument(CaseGenerationCaseDTO item, int index) {
         String path = "cases[" + index + "]";
         if (item == null || StringUtils.isBlank(item.getName())) {

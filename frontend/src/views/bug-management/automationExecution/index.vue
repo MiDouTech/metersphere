@@ -43,7 +43,26 @@
       <section class="automation-panel">
         <div class="panel-title">{{ t('bugManagement.automationExecution.conversation') }}</div>
         <a-form :model="draftForm" layout="vertical" class="mb-[12px]">
-          <a-form-item :label="t('bugManagement.automationExecution.model')">
+          <a-form-item :label="t('bugManagement.automationExecution.executionMode')">
+            <a-radio-group v-model:model-value="draftForm.executionMode" type="button">
+              <a-radio value="RUNNER">{{ t('bugManagement.automationExecution.executionModeRunner') }}</a-radio>
+              <a-radio value="AGENT">{{ t('bugManagement.automationExecution.executionModeAgent') }}</a-radio>
+            </a-radio-group>
+          </a-form-item>
+          <a-form-item
+            v-if="draftForm.executionMode === 'AGENT'"
+            :label="t('bugManagement.automationExecution.executionAgent')"
+          >
+            <a-select
+              v-model:model-value="draftForm.agentType"
+              :options="agentSelectOptions"
+              :placeholder="t('bugManagement.automationExecution.executionAgentPlaceholder')"
+            />
+          </a-form-item>
+          <a-form-item
+            v-if="draftForm.executionMode === 'RUNNER'"
+            :label="t('bugManagement.automationExecution.model')"
+          >
             <a-select
               v-model:model-value="chatModelId"
               :options="modelOptions"
@@ -79,7 +98,13 @@
           <a-button
             type="primary"
             :loading="createLoading"
-            :disabled="!canCreateFromResolve || !chatModelId || !draftForm.targetUrl || !draftForm.environmentId"
+            :disabled="
+              !canCreateFromResolve ||
+              (draftForm.executionMode === 'RUNNER' && !chatModelId) ||
+              !draftForm.targetUrl ||
+              !draftForm.environmentId ||
+              (draftForm.executionMode === 'AGENT' && !selectedAgentConfigured)
+            "
             @click="createFromResolve"
           >
             {{ t('bugManagement.automationExecution.createTask') }}
@@ -187,6 +212,12 @@
             </a-descriptions-item>
             <a-descriptions-item :label="t('bugManagement.automationExecution.model')">
               {{ task.providerId || chatModelId || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item :label="t('bugManagement.automationExecution.executionMode')">
+              {{ task.executionMode || 'RUNNER' }}
+            </a-descriptions-item>
+            <a-descriptions-item :label="t('bugManagement.automationExecution.executionAgent')">
+              {{ task.agentType || '-' }}
             </a-descriptions-item>
             <a-descriptions-item :label="t('bugManagement.automationExecution.startTime')">
               {{ formatTime(task.createTime) }}
@@ -298,13 +329,17 @@
   import dayjs from 'dayjs';
 
   import {
+    type AiExecutionAgentOption,
+    type AiExecutionAgentType,
     type AiExecutionArtifact,
     type AiExecutionEvent,
+    type AiExecutionMode,
     type AiExecutionResolveResult,
     type AiExecutionTask,
     cancelAiExecutionTask,
     confirmAiExecutionTask,
     createAiExecutionTask,
+    getAiExecutionAgents,
     getAiExecutionArtifacts,
     getAiExecutionEvents,
     getAiExecutionTask,
@@ -330,10 +365,13 @@
   const task = ref<AiExecutionTask>();
   const events = ref<AiExecutionEvent[]>([]);
   const artifacts = ref<AiExecutionArtifact[]>([]);
+  const agentOptions = ref<AiExecutionAgentOption[]>([]);
   const eventCursor = ref(0);
   const eventLevel = ref('ALL');
   const prompt = ref('');
   const draftForm = reactive({
+    executionMode: 'RUNNER' as AiExecutionMode,
+    agentType: undefined as AiExecutionAgentType | undefined,
     targetUrl: '',
     environmentId: '',
   });
@@ -350,6 +388,20 @@
       label: item.name,
       value: item.id,
     }))
+  );
+  const agentSelectOptions = computed(() =>
+    agentOptions.value.map((item) => ({
+      label: item.configured
+        ? item.name
+        : `${item.name} (${t('bugManagement.automationExecution.agentNotConfigured')})`,
+      value: item.name.toUpperCase() as AiExecutionAgentType,
+      disabled: !item.configured,
+    }))
+  );
+  const selectedAgentConfigured = computed(
+    () =>
+      draftForm.executionMode !== 'AGENT' ||
+      agentOptions.value.some((item) => item.configured && item.name.toUpperCase() === draftForm.agentType)
   );
   const filteredEvents = computed(() =>
     events.value.filter((item) => eventLevel.value === 'ALL' || item.level === eventLevel.value)
@@ -448,6 +500,26 @@
     // filter only; keep loaded events
   }
 
+  async function loadExecutionAgents(projectId?: string) {
+    if (!projectId) {
+      agentOptions.value = [];
+      draftForm.agentType = undefined;
+      return;
+    }
+    try {
+      agentOptions.value = await getAiExecutionAgents(projectId);
+      if (
+        draftForm.agentType &&
+        !agentOptions.value.some((item) => item.configured && item.name.toUpperCase() === draftForm.agentType)
+      ) {
+        draftForm.agentType = undefined;
+      }
+    } catch {
+      agentOptions.value = [];
+      draftForm.agentType = undefined;
+    }
+  }
+
   async function sendPrompt() {
     const content = prompt.value.trim();
     if (!content) {
@@ -498,6 +570,10 @@
     }
     createLoading.value = true;
     try {
+      if (draftForm.executionMode === 'AGENT' && !selectedAgentConfigured.value) {
+        Message.warning(t('bugManagement.automationExecution.executionAgentRequired'));
+        return;
+      }
       const hasPlan = !!resolveResult.value.testPlanId;
       const projectWide = !hasPlan && !!resolveResult.value.confirmationRequired;
       const caseIds =
@@ -515,7 +591,9 @@
         policySnapshot: JSON.stringify({ screenshotMode: 'AFTER_STEP', fullPage: true }),
         confirmed: resolveResult.value.confirmationRequired ? resolveConfirmed.value : undefined,
         projectWide: projectWide || undefined,
-        providerId: chatModelId.value || undefined,
+        providerId: draftForm.executionMode === 'RUNNER' ? chatModelId.value || undefined : undefined,
+        executionMode: draftForm.executionMode,
+        agentType: draftForm.executionMode === 'AGENT' ? draftForm.agentType : undefined,
         environmentId: draftForm.environmentId || undefined,
         targetUrl: draftForm.targetUrl || undefined,
         browserType: 'chromium',
@@ -629,6 +707,12 @@
       await refreshAll();
       startPolling();
     },
+    { immediate: true }
+  );
+
+  watch(
+    () => appStore.currentProjectId,
+    (projectId) => loadExecutionAgents(projectId),
     { immediate: true }
   );
 

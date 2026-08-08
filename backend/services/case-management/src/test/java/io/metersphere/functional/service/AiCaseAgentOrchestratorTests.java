@@ -1,13 +1,15 @@
 package io.metersphere.functional.service;
 
 import io.metersphere.functional.dto.AiCaseConversationDTO;
-import io.metersphere.functional.dto.AiCaseAvailableModelDTO;
 import io.metersphere.functional.dto.AiCaseExecutionDTO;
 import io.metersphere.functional.dto.AiCaseExecutionEventDTO;
+import io.metersphere.functional.dto.AiResourceSelection;
 import io.metersphere.functional.repository.AiCaseAgentRepository;
 import io.metersphere.functional.request.AiCaseAgentCancelRequest;
 import io.metersphere.functional.request.AiCaseAgentChatRequest;
 import io.metersphere.system.service.ai.AiGovernanceService;
+import io.metersphere.system.service.ai.agent.AgentStreamEvent;
+import io.metersphere.system.service.ai.agent.UserAgentConnector;
 import io.metersphere.system.service.ai.provider.AiProviderAdapter;
 import io.metersphere.system.uid.IDGenerator;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +21,10 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import reactor.core.publisher.Flux;
 
+import java.lang.reflect.Constructor;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,14 +44,16 @@ class AiCaseAgentOrchestratorTests {
     private AiCaseAgentOrchestrator orchestrator;
     private AiCaseAgentRepository repository;
     private AiProviderAdapter providerAdapter;
+    private UserAgentConnector userAgentConnector;
 
     @BeforeEach
     void setUp() {
         orchestrator = new AiCaseAgentOrchestrator();
         repository = mock(AiCaseAgentRepository.class);
         providerAdapter = mock(AiProviderAdapter.class);
+        userAgentConnector = mock(UserAgentConnector.class);
         AiCaseConversationService conversationService = mock(AiCaseConversationService.class);
-        AiCaseAvailableModelService modelService = mock(AiCaseAvailableModelService.class);
+        AiCaseAvailableResourceService resourceService = mock(AiCaseAvailableResourceService.class);
         AiGovernanceService governanceService = mock(AiGovernanceService.class);
         PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
         when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
@@ -56,10 +63,10 @@ class AiCaseAgentOrchestratorTests {
         }).when(governanceService).admitGeneration(anyString(), any(Runnable.class));
         when(conversationService.get("conversation-1", "project-1", "user-1"))
                 .thenReturn(conversation());
-        AiCaseAvailableModelDTO availableModel = new AiCaseAvailableModelDTO();
-        availableModel.setId("model-1");
-        availableModel.setSupportsTools(true);
-        when(modelService.requireAllowed("project-1", "model-1", "user-1")).thenReturn(availableModel);
+        AiResourceSelection availableResource = new AiResourceSelection(
+                "MODEL_API", "model-1", "model-1", null, null, true);
+        when(resourceService.requireAllowed("project-1", "MODEL_API", "model-1", "model-1", "user-1"))
+                .thenReturn(availableResource);
         when(repository.lockConversation("conversation-1", "project-1", "user-1")).thenReturn(true);
         when(repository.listMessages("conversation-1", "project-1", "user-1", null, null, 30))
                 .thenReturn(List.of());
@@ -76,9 +83,10 @@ class AiCaseAgentOrchestratorTests {
         });
         ReflectionTestUtils.setField(orchestrator, "repository", repository);
         ReflectionTestUtils.setField(orchestrator, "conversationService", conversationService);
-        ReflectionTestUtils.setField(orchestrator, "availableModelService", modelService);
+        ReflectionTestUtils.setField(orchestrator, "availableResourceService", resourceService);
         ReflectionTestUtils.setField(orchestrator, "promptService", new AiCaseAgentPromptService());
         ReflectionTestUtils.setField(orchestrator, "providerAdapter", providerAdapter);
+        ReflectionTestUtils.setField(orchestrator, "userAgentConnector", userAgentConnector);
         ReflectionTestUtils.setField(orchestrator, "governanceService", governanceService);
         ReflectionTestUtils.setField(orchestrator, "transactionManager", transactionManager);
     }
@@ -135,6 +143,27 @@ class AiCaseAgentOrchestratorTests {
                 anyString(), anyLong(), anyLong());
     }
 
+    @Test
+    void rejectsToolCallThatArrivesAfterCancellation() throws Exception {
+        Class<?> activeClass = Class.forName(AiCaseAgentOrchestrator.class.getName() + "$ActiveExecution");
+        Constructor<?> constructor = activeClass.getDeclaredConstructor(String.class, String.class, String.class,
+                String.class, AiResourceSelection.class, String.class);
+        constructor.setAccessible(true);
+        AiResourceSelection selection = new AiResourceSelection(
+                "USER_AGENT", "connection-1", null, "connection-1", "CODEX", true);
+        Object active = constructor.newInstance(
+                "request-1", "project-1", "user-1", "conversation-1", selection, "prompt");
+        AtomicBoolean cancelRequested = (AtomicBoolean) ReflectionTestUtils.getField(active, "cancelRequested");
+        cancelRequested.set(true);
+        AgentStreamEvent event = new AgentStreamEvent("tool.call", "request-1", 3,
+                Map.of("toolCallId", "late-tool", "toolName", "create_case_drafts", "arguments", Map.of()));
+
+        ReflectionTestUtils.invokeMethod(orchestrator, "onAgentEvent", active, event);
+
+        verify(userAgentConnector).sendToolResult("request-1", "late-tool", false,
+                Map.of(), "AI_AGENT_EXECUTION_TERMINATED");
+    }
+
     private AiCaseAgentChatRequest chatRequest() {
         AiCaseAgentChatRequest request = new AiCaseAgentChatRequest();
         request.setProjectId("project-1");
@@ -150,6 +179,8 @@ class AiCaseAgentOrchestratorTests {
         conversation.setProjectId("project-1");
         conversation.setOrganizationId("organization-1");
         conversation.setUserId("user-1");
+        conversation.setResourceType("MODEL_API");
+        conversation.setResourceId("model-1");
         conversation.setModelSourceId("model-1");
         conversation.setStatus("ACTIVE");
         return conversation;

@@ -322,6 +322,9 @@ public class PermissionConstants {
     public static final String SYSTEM_PERSONAL_API_KEY_DELETE = "SYSTEM_PERSONAL_API_KEY:READ+DELETE";
     public static final String SYSTEM_PERSONAL_API_KEY_READ = "SYSTEM_PERSONAL_API_KEY:READ";
     public static final String SYSTEM_PERSONAL_API_KEY_UPDATE = "SYSTEM_PERSONAL_API_KEY:READ+UPDATE";
+    public static final String SYSTEM_PERSONAL_AI_AGENT_READ = "SYSTEM_PERSONAL_AI_AGENT:READ";
+    public static final String SYSTEM_PERSONAL_AI_AGENT_CONNECT = "SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT";
+    public static final String SYSTEM_PERSONAL_AI_AGENT_REVOKE = "SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE";
     /*------ end: PERSONAL_CENTER ------*/
 
     //测试计划

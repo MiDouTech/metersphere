@@ -9,6 +9,7 @@ public class AiCaseConversationModelRequest {
     private String projectId;
     @NotBlank
     private String conversationId;
-    @NotBlank
     private String modelSourceId;
+    private String resourceType;
+    private String resourceId;
 }

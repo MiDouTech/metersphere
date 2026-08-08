@@ -25,6 +25,7 @@ const BugManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'bugManagement.index',
         roles: ['PROJECT_BUG:READ'],
+        resourceCode: 'BUG_MANAGEMENT_PAGE',
         isTopMenu: true,
         keepModuleAlive: true,
       },
@@ -37,6 +38,7 @@ const BugManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'bugManagement.editBug',
         roles: ['PROJECT_BUG:READ+ADD', 'PROJECT_BUG:READ+UPDATE'],
+        resourceCode: 'BUG_DETAIL_PAGE',
         breadcrumbs: [
           {
             name: BugManagementRouteEnum.BUG_MANAGEMENT_INDEX,

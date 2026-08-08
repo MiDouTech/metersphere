@@ -14,6 +14,9 @@
         <result column="case_snapshot_hash" property="caseSnapshotHash"/>
         <result column="policy_snapshot" property="policySnapshot"/>
         <result column="status" property="status"/>
+        <result column="execution_mode" property="executionMode"/>
+        <result column="agent_type" property="agentType"/>
+        <result column="agent_gateway_id" property="agentGatewayId"/>
         <result column="runner_id" property="runnerId"/>
         <result column="runner_lease_id" property="runnerLeaseId"/>
         <result column="provider_id" property="providerId"/>
@@ -336,14 +339,16 @@
     <insert id="insertTask" parameterType="io.metersphere.agent.dto.AgentExecutionTaskDTO">
         INSERT INTO ai_execution_task (
             id, organization_id, project_id, test_plan_id, source, selection_mode, prompt, resolved_filter,
-            case_snapshot_hash, policy_snapshot, status, runner_id, runner_lease_id, provider_id,
+            case_snapshot_hash, policy_snapshot, status, execution_mode, agent_type, agent_gateway_id,
+            runner_id, runner_lease_id, provider_id,
             environment_id, target_url, browser_type, login_mode, idempotency_key, confirm_required,
             confirmation_reason, total_count, success_count, failed_count, blocked_count, skipped_count,
             unexecuted_count, writeback_status, artifact_status, executed_by, create_time, update_time,
             create_user, update_user, version
         ) VALUES (
             #{id}, #{organizationId}, #{projectId}, #{testPlanId}, #{source}, #{selectionMode}, #{prompt}, #{resolvedFilter},
-            #{caseSnapshotHash}, #{policySnapshot}, #{status}, #{runnerId}, #{runnerLeaseId}, #{providerId},
+            #{caseSnapshotHash}, #{policySnapshot}, #{status}, #{executionMode}, #{agentType}, #{agentGatewayId},
+            #{runnerId}, #{runnerLeaseId}, #{providerId},
             #{environmentId}, #{targetUrl}, #{browserType}, #{loginMode}, #{idempotencyKey}, #{confirmRequired},
             #{confirmationReason}, #{totalCount}, #{successCount}, #{failedCount}, #{blockedCount}, #{skippedCount},
             #{unexecutedCount}, #{writebackStatus}, #{artifactStatus}, #{executedBy}, #{createTime}, #{updateTime},

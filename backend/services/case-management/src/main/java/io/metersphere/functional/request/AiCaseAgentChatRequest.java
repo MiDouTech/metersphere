@@ -12,6 +12,12 @@ public class AiCaseAgentChatRequest {
     private String conversationId;
     @Size(max = 64)
     private String requestId;
+    @Size(max = 32)
+    private String resourceType;
+    @Size(max = 50)
+    private String resourceId;
+    @Size(max = 50)
+    private String modelSourceId;
     @NotBlank
     @Size(max = 20000)
     private String message;
