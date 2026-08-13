@@ -29,7 +29,7 @@ public class AgentEvaluationService {
     @Resource
     private AgentExecutionMapper executionMapper;
     @Resource
-    private AgentProjectService projectService;
+    private AgentProjectService agentProjectService;
     @Resource
     private AgentExecutionService executionService;
     @Resource
@@ -75,7 +75,7 @@ public class AgentEvaluationService {
     }
 
     public Pager<List<AgentExecutionEvaluationDTO>> page(String projectId, Integer current, Integer pageSize) {
-        String resolved = projectService.resolveProjectId(projectId);
+        String resolved = agentProjectService.resolveProjectId(projectId);
         int page = Math.max(current == null ? 1 : current, 1);
         int size = Math.min(Math.max(pageSize == null ? 20 : pageSize, 1), 100);
         long total = mapper.countByProject(resolved);
@@ -83,7 +83,7 @@ public class AgentEvaluationService {
     }
 
     public List<AgentEvaluationSummaryDTO> summary(String projectId, Long fromTime, Long toTime) {
-        String resolved = projectService.resolveProjectId(projectId);
+        String resolved = agentProjectService.resolveProjectId(projectId);
         if (fromTime != null && toTime != null && fromTime > toTime) {
             throw new MSException("fromTime 不能大于 toTime");
         }

@@ -44,7 +44,7 @@ public class AgentTaskClaimService {
     @Resource
     private AgentExecutionService executionService;
     @Resource
-    private AgentProjectService projectService;
+    private AgentProjectService agentProjectService;
     @Resource
     private AgentRunnerService runnerService;
     @Resource
@@ -54,7 +54,7 @@ public class AgentTaskClaimService {
 
     public AgentRunnerLeaseAssignmentDTO claim(AgentTaskClaimRequest request) {
         AgentToken token = requireToken();
-        String projectId = projectService.resolveProjectId(request.getProjectId());
+        String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         String agentType = StringUtils.upperCase(StringUtils.trimToNull(request.getAgentType()));
         Set<String> offered = new LinkedHashSet<>();
         if (CollectionUtils.isNotEmpty(request.getCapabilities())) {
@@ -113,7 +113,7 @@ public class AgentTaskClaimService {
     }
 
     public AgentExecutionTaskSearchResponse search(AgentTaskClaimRequest request) {
-        String projectId = projectService.resolveProjectId(request.getProjectId());
+        String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         String agentType = StringUtils.upperCase(StringUtils.trimToNull(request.getAgentType()));
         Set<String> offered = normalizeCapabilities(request.getCapabilities());
         List<AgentExecutionTaskDTO> tasks = executionMapper.selectQueuedTasksForAgent(projectId, agentType, 100)
