@@ -47,7 +47,7 @@ public class AgentTaskTriggerService {
     @Resource
     private AgentTaskTriggerMapper mapper;
     @Resource
-    private AgentProjectService projectService;
+    private AgentProjectService agentProjectService;
     @Resource
     private ProjectMapper projectMapper;
     @Resource
@@ -57,7 +57,7 @@ public class AgentTaskTriggerService {
 
     @Transactional(rollbackFor = Exception.class)
     public AgentTaskTriggerDTO create(AgentTaskTriggerRequest request) {
-        String projectId = projectService.resolveProjectId(request.getProjectId());
+        String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         Project project = projectMapper.selectByPrimaryKey(projectId);
         if (project == null) {
             throw new MSException("项目不存在: " + projectId);
@@ -86,7 +86,7 @@ public class AgentTaskTriggerService {
     @Transactional(rollbackFor = Exception.class)
     public AgentTaskTriggerDTO update(String id, AgentTaskTriggerRequest request) {
         AgentTaskTriggerDTO existing = requireAccessible(id);
-        String projectId = projectService.resolveProjectId(request.getProjectId());
+        String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         if (!StringUtils.equals(projectId, existing.getProjectId())) {
             throw new MSException("触发器不允许跨项目迁移");
         }
@@ -127,7 +127,7 @@ public class AgentTaskTriggerService {
     }
 
     public List<AgentTaskTriggerDTO> list(String projectId) {
-        String resolved = projectService.resolveProjectId(projectId);
+        String resolved = agentProjectService.resolveProjectId(projectId);
         return mapper.selectByProject(resolved).stream().map(this::sanitize).toList();
     }
 
@@ -350,7 +350,7 @@ public class AgentTaskTriggerService {
         if (trigger == null) {
             throw new MSException("触发器不存在: " + id);
         }
-        String projectId = projectService.resolveProjectId(trigger.getProjectId());
+        String projectId = agentProjectService.resolveProjectId(trigger.getProjectId());
         if (!StringUtils.equals(projectId, trigger.getProjectId())) {
             throw new MSException("触发器项目校验失败");
         }
