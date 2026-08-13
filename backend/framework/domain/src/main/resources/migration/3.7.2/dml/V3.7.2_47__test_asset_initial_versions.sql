@@ -77,7 +77,7 @@ SELECT SHA2(CONCAT('test-asset-derived:', draft.id, ':', fc.ref_id), 256),
        fc.ref_id,
        case_version.id,
        JSON_OBJECT('generationId', draft.generation_id, 'draftId', draft.id,
-                   'sourceReferences', draft.source_references, 'migration', 'V3.7.2_46'),
+                   'sourceReferences', draft.source_references, 'migration', 'V3.7.2_47'),
        COALESCE(draft.reviewed_by, draft.create_user),
        COALESCE(draft.reviewed_at, draft.update_time)
 FROM functional_case_ai_draft draft
