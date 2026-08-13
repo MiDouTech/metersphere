@@ -1,0 +1,19 @@
+export const roleListUrl = `/permission-control/role/list`;
+export const roleEnableUrl = `/permission-control/role/enable`;
+export const roleDeleteUrl = `/permission-control/role/delete`;
+export const resourceTreeUrl = `/permission-control/resource/tree`;
+export const rolePermissionSaveUrl = `/permission-control/role/permission/save`;
+
+export const flowListUrl = `/permission-control/flow/list`;
+export const flowAddUrl = `/permission-control/flow/add`;
+export const flowUpdateUrl = `/permission-control/flow/update`;
+export const flowEnableUrl = `/permission-control/flow/enable`;
+export const flowDeleteUrl = `/permission-control/flow/delete`;
+export const flowStatusListUrl = `/permission-control/flow/status/list`;
+export const flowMatrixUrl = `/permission-control/flow/matrix`;
+export const flowRoleListUrl = `/permission-control/flow/role/list`;
+export const flowRoleAddUrl = `/permission-control/flow/role/add`;
+export const flowRoleUpdateUrl = `/permission-control/flow/role/update`;
+export const flowRoleDeleteUrl = `/permission-control/flow/role/delete`;
+export const flowRolePermissionUrl = `/permission-control/flow/role-permission`;
+export const flowRolePermissionSaveUrl = `/permission-control/flow/role-permission/save`;

@@ -47,6 +47,8 @@ export interface UserGroupItem {
   createUser: string;
   // 应用范围
   scopeId: string;
+  // 是否启用
+  enabled?: boolean;
   // 自定义排序
   pos: number;
 }
@@ -68,6 +70,7 @@ export interface SystemUserGroupParams {
   name?: string; // 名称
   scopeId?: string; // 组织ID
   type?: string; // 组类型：SYSTEM | PROJECT | ORGANIZATION
+  enabled?: boolean;
 }
 export interface OrgUserGroupParams {
   id?: string; // 组ID
@@ -134,7 +137,7 @@ export interface PermissionResourceItem {
   id: string;
   code: string;
   name: string;
-  type: 'MENU' | 'PAGE' | 'BUTTON' | 'API';
+  type: 'MENU' | 'PAGE' | 'TAB' | 'BUTTON' | 'API';
   scopeType: AuthScopeEnum;
   parentCode?: string;
   routeName?: string;

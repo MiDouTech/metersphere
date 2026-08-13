@@ -126,6 +126,18 @@ public class GlobalUserRoleService extends BaseUserRoleService {
         super.delete(userRole, MEMBER.getValue(), currentUserId, UserRoleScope.SYSTEM);
     }
 
+    public UserRole enable(String id, Boolean enabled) {
+        UserRole userRole = getWithCheck(id);
+        checkGlobalUserRole(userRole);
+        checkAdminUserRole(userRole);
+        UserRole update = new UserRole();
+        update.setId(id);
+        update.setEnabled(BooleanUtils.isNotFalse(enabled));
+        update.setUpdateTime(System.currentTimeMillis());
+        userRoleMapper.updateByPrimaryKeySelective(update);
+        return userRoleMapper.selectByPrimaryKey(id);
+    }
+
     public void checkRoleIsGlobalAndHaveMember(@Valid @NotEmpty List<String> roleIdList, boolean isSystem) {
         List<String> globalRoleList = extUserRoleMapper.selectGlobalRoleList(roleIdList, isSystem);
         if (globalRoleList.size() != roleIdList.size()) {

@@ -3,6 +3,7 @@ package io.metersphere.functional.service;
 import io.metersphere.functional.constants.AiSourceDocumentParseStatus;
 import io.metersphere.functional.domain.AiSourceDocument;
 import io.metersphere.functional.dto.AiSourceDocumentDTO;
+import io.metersphere.functional.event.TestAssetDocumentPublishedEvent;
 import io.metersphere.functional.mapper.AiSourceDocumentMapper;
 import io.metersphere.functional.request.AiSourceDocumentIdRequest;
 import io.metersphere.functional.request.AiSourceDocumentPageRequest;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.ResponseEntity;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -53,6 +55,8 @@ public class AiSourceDocumentService {
     private AiAuditService aiAuditService;
     @Resource
     private AiDocumentVirusScanner virusScanner;
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     public AiSourceDocumentDTO upload(AiSourceDocumentUploadRequest request, MultipartFile file, String userId) {
         validateFile(file);
@@ -105,6 +109,11 @@ public class AiSourceDocumentService {
             document.setErrorMessage("识别为重复文件，已复用历史解析结果");
         }
         aiSourceDocumentMapper.insert(document);
+        if (Boolean.TRUE.equals(document.getDuplicate())
+                && AiSourceDocumentParseStatus.PARSED.name().equals(document.getParseStatus())) {
+            applicationEventPublisher.publishEvent(new TestAssetDocumentPublishedEvent(document,
+                    io.metersphere.sdk.util.JSON.toJSONString(document)));
+        }
         audit("UPLOAD", request.getProjectId(), userId, "documentId=" + documentId + ",fileId=" + fileId + ",duplicate=" + document.getDuplicate());
         if (!Boolean.TRUE.equals(document.getDuplicate())) {
             parserService.parseAsync(documentId);

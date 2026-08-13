@@ -11,6 +11,7 @@ import type {
   AiDraftPageRequest,
   AiDraftPageResponse,
   AiDraftRegenerateRequest,
+  AiDraftReviewRequest,
   AiSourceDocument,
   AiSourceDocumentPageResponse,
 } from '@/models/caseManagement/caseGenerate';
@@ -221,6 +222,10 @@ export function pageAiCaseDraft(data: AiDraftPageRequest) {
   return MSR.post<AiDraftPageResponse>({ url: `${BaseUrl}/page`, data });
 }
 
+export function pageAiCaseDraftReviewQueue(data: AiDraftPageRequest) {
+  return MSR.post<AiDraftPageResponse>({ url: `${BaseUrl}/review-page`, data });
+}
+
 export function updateAiCaseDraft(data: AiCaseDraft) {
   return MSR.post<AiCaseDraft>({ url: `${BaseUrl}/update`, data });
 }
@@ -235,6 +240,10 @@ export function regenerateAiCaseDraft(data: AiDraftRegenerateRequest) {
 
 export function batchSaveAiCaseDraft(data: AiDraftBatchSaveRequest) {
   return MSR.post<AiDraftBatchSaveResponse>({ url: `${BaseUrl}/batch-save`, data });
+}
+
+export function reviewAiCaseDraft(data: AiDraftReviewRequest) {
+  return MSR.post<AiCaseDraft[]>({ url: `${BaseUrl}/review`, data });
 }
 
 export function uploadAiSourceDocument(data: { request: { projectId: string; conversationId?: string }; file: File }) {

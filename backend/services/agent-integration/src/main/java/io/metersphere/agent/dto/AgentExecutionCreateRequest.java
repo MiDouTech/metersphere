@@ -13,6 +13,10 @@ public class AgentExecutionCreateRequest {
     private String projectId;
     @Schema(description = "测试计划 ID；为空表示计划外执行")
     private String testPlanId;
+    @Schema(description = "任务名称")
+    private String name;
+    @Schema(description = "任务目标及完成预期")
+    private String objective;
     @Schema(description = "明确选择的功能用例 ID 列表")
     private List<String> caseIds;
     @Schema(description = "来源：MCP/CASE_LIST/WORKBENCH/API")
@@ -25,6 +29,10 @@ public class AgentExecutionCreateRequest {
     private String resolvedFilter;
     @Schema(description = "执行、自愈、截图和风险策略快照 JSON")
     private String policySnapshot;
+    @Schema(description = "审批与高风险动作策略 JSON")
+    private String approvalPolicy;
+    @Schema(description = "执行器必须具备的能力编码")
+    private List<String> requiredCapabilities;
     private String environmentId;
     private String targetUrl;
     private String browserType;
@@ -33,6 +41,8 @@ public class AgentExecutionCreateRequest {
     private String runnerId;
     @Schema(description = "执行方式：RUNNER/AGENT，默认 RUNNER")
     private String executionMode;
+    @Schema(description = "Agent 调度方式：PUSH/PULL；Runner 固定为 PULL")
+    private String dispatchMode;
     @Schema(description = "Agent 类型：WORKBUDDY/CURSOR/CODEX；executionMode=AGENT 时必填")
     private String agentType;
     private String executedBy;
@@ -42,4 +52,8 @@ public class AgentExecutionCreateRequest {
     private Boolean confirmed;
     @Schema(description = "计划外项目级全量执行（须 confirmed=true 且 caseIds 为空）")
     private Boolean projectWide;
+    @Schema(description = "任务超时时间，epoch milliseconds")
+    private Long timeoutAt;
+    @Schema(description = "租约失败最大尝试次数，默认 3，最大 10")
+    private Integer maxAttempts;
 }

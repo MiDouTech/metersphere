@@ -74,13 +74,18 @@ public class PermissionUiService {
         if (resourceCount != resourceCodes.size()) {
             throw new MSException("存在无效或已禁用的 UI 权限资源");
         }
+        Map<String, PermissionResource> resourceMap = permissionResourceMapper.selectEnabledByCodes(resourceCodes).stream()
+                .collect(Collectors.toMap(PermissionResource::getCode, item -> item, (a, b) -> a));
 
         List<UserRoleUiPermission> records = new ArrayList<>();
         for (RoleUiPermissionDTO item : uiPermissions) {
             if (StringUtils.isBlank(item.getResourceCode())) {
                 continue;
             }
-            boolean operable = BooleanUtils.isTrue(item.getOperable());
+            PermissionResource resource = resourceMap.get(item.getResourceCode());
+            boolean operable = resource != null
+                    && (StringUtils.equals(resource.getType(), "BUTTON") || StringUtils.equals(resource.getType(), "API"))
+                    && BooleanUtils.isTrue(item.getOperable());
             boolean visible = operable || BooleanUtils.isTrue(item.getVisible());
             UserRoleUiPermission record = new UserRoleUiPermission();
             record.setId(IDGenerator.nextStr());
@@ -111,6 +116,7 @@ public class PermissionUiService {
         Map<String, List<PermissionResource>> resourcesByScope = resources.stream()
                 .collect(Collectors.groupingBy(PermissionResource::getScopeType, LinkedHashMap::new, Collectors.toList()));
         Map<String, UserRole> rolesById = userDTO.getUserRoles().stream()
+                .filter(role -> BooleanUtils.isNotFalse(role.getEnabled()))
                 .collect(Collectors.toMap(UserRole::getId, role -> role, (a, b) -> a));
         Map<String, Set<String>> oldPermissionsByRole = getOldPermissionsByRole(userDTO);
         Map<String, List<UserRoleUiPermission>> uiPermissionsByRole = getUiPermissionsByRole(userDTO);
@@ -173,8 +179,10 @@ public class PermissionUiService {
                 if (uiPermission != null) {
                     if (BooleanUtils.isTrue(uiPermission.getVisible()) || BooleanUtils.isTrue(uiPermission.getOperable())) {
                         target.getVisible().add(resource.getCode());
+                        addParentsVisible(target.getVisible(), resourceMap, resource);
                     }
-                    if (BooleanUtils.isTrue(uiPermission.getOperable())) {
+                    if (BooleanUtils.isTrue(uiPermission.getOperable())
+                            && (StringUtils.equals(resource.getType(), "BUTTON") || StringUtils.equals(resource.getType(), "API"))) {
                         target.getOperable().add(resource.getCode());
                     }
                     continue;
@@ -246,6 +254,7 @@ public class PermissionUiService {
             return new HashMap<>();
         }
         List<String> roleIds = userRoles.stream()
+                .filter(role -> role != null && BooleanUtils.isNotFalse(role.getEnabled()))
                 .map(UserRole::getId)
                 .filter(StringUtils::isNotBlank)
                 .distinct()

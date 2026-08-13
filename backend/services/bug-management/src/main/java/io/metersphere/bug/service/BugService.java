@@ -165,6 +165,8 @@ public class BugService {
     @Resource
     private BugStatusService bugStatusService;
     @Resource
+    private PermissionControlService permissionControlService;
+    @Resource
     private BugAttachmentService bugAttachmentService;
     @Resource
     private BugPlatformService bugPlatformService;
@@ -1128,6 +1130,10 @@ public class BugService {
                 handleTimeToSet = System.currentTimeMillis();
             }
             if (!StringUtils.equals(originalBug.getStatus(), bug.getStatus())) {
+                if (StringUtils.equalsIgnoreCase(BugPlatform.LOCAL.getName(), platformName)) {
+                    permissionControlService.assertBugTransitionOperable(request.getProjectId(),
+                            originalBug.getStatus(), bug.getStatus(), originalBug.getCreateUser(), originalBug.getHandleUser());
+                }
                 if (isEndStatus(request.getProjectId(), bug.getStatus())) {
                     closeTimeToSet = System.currentTimeMillis();
                 } else {

@@ -49,6 +49,27 @@
             LIMIT 1;
     </select>
 
+    <select id="getWorkspacePos" resultType="java.lang.Long">
+        SELECT
+            pos
+        FROM
+            functional_case
+        WHERE
+            workspace_id = #{workspaceId}
+        ORDER BY
+            pos DESC
+            LIMIT 1;
+    </select>
+
+    <select id="getWorkspaceMaxNum" resultType="java.lang.Long">
+        SELECT
+            max(num)
+        FROM
+            functional_case
+        WHERE
+            workspace_id = #{workspaceId}
+    </select>
+
 
     <update id="updateFunctionalCaseModule">
         UPDATE functional_case
@@ -216,13 +237,16 @@
         functional_case.delete_user,
         functional_case.delete_time,
         functional_case.tags,
+        functional_case.workspace_id,
         functional_case.project_id,
+        functional_case.system_id,
+        functional_case.system_module_id,
         functional_case.ai_create
         FROM
             functional_case
         LEFT JOIN project_version ON  functional_case.version_id = project_version.id
         where functional_case.deleted = #{deleted}
-        and functional_case.project_id = #{request.projectId}
+        <include refid="queryWorkspaceAndDimensionCondition"/>
         <include refid="queryWhereCondition"/>
         <if test="request.reviewId != null and request.reviewId != ''">
             AND functional_case.id not in (
@@ -241,6 +265,60 @@
             </foreach>
         </if>
     </select>
+
+    <sql id="queryWorkspaceAndDimensionCondition">
+        <if test="request.workspaceId != null and request.workspaceId != ''">
+            and functional_case.workspace_id = #{request.workspaceId}
+        </if>
+        <if test="(request.workspaceId == null or request.workspaceId == '') and request.projectId != null and request.projectId != ''">
+            and functional_case.project_id = #{request.projectId}
+        </if>
+        <if test="request.projectIds != null and request.projectIds.size() > 0">
+            and functional_case.project_id in
+            <foreach collection="request.projectIds" item="projectId" separator="," open="(" close=")">
+                #{projectId}
+            </foreach>
+        </if>
+        <if test="request.unassignedProject != null and request.unassignedProject">
+            and (functional_case.project_id is null or functional_case.project_id = '')
+        </if>
+        <if test="request.systemId != null and request.systemId != ''">
+            and functional_case.system_id = #{request.systemId}
+        </if>
+        <if test="request.systemModuleId != null and request.systemModuleId != ''">
+            and functional_case.system_module_id = #{request.systemModuleId}
+        </if>
+        <if test="request.unclassifiedSystem != null and request.unclassifiedSystem">
+            and (functional_case.system_id is null or functional_case.system_id = '')
+        </if>
+    </sql>
+
+    <sql id="queryWorkspaceAndDimensionConditionByBaseBatch">
+        <if test="request.workspaceId != null and request.workspaceId != ''">
+            and functional_case.workspace_id = #{request.workspaceId}
+        </if>
+        <if test="(request.workspaceId == null or request.workspaceId == '') and projectId != null and projectId != ''">
+            and functional_case.project_id = #{projectId}
+        </if>
+        <if test="request.projectIds != null and request.projectIds.size() > 0">
+            and functional_case.project_id in
+            <foreach collection="request.projectIds" item="projectId" separator="," open="(" close=")">
+                #{projectId}
+            </foreach>
+        </if>
+        <if test="request.unassignedProject != null and request.unassignedProject">
+            and (functional_case.project_id is null or functional_case.project_id = '')
+        </if>
+        <if test="request.systemId != null and request.systemId != ''">
+            and functional_case.system_id = #{request.systemId}
+        </if>
+        <if test="request.systemModuleId != null and request.systemModuleId != ''">
+            and functional_case.system_module_id = #{request.systemModuleId}
+        </if>
+        <if test="request.unclassifiedSystem != null and request.unclassifiedSystem">
+            and (functional_case.system_id is null or functional_case.system_id = '')
+        </if>
+    </sql>
 
     <update id="recoverCase">
         UPDATE functional_case
@@ -585,8 +663,8 @@
         FROM
             functional_case
         WHERE
-            functional_case.project_id = #{projectId}
-            and functional_case.deleted = #{deleted}
+            functional_case.deleted = #{deleted}
+        <include refid="queryWorkspaceAndDimensionConditionByBaseBatch"/>
         <include refid="queryWhereConditionByBaseQueryRequest"/>
     </select>
 
@@ -726,7 +804,7 @@
         SELECT module_id AS moduleId, count(id) AS dataCount
         FROM functional_case
         WHERE deleted = #{deleted}
-        AND project_id = #{request.projectId}
+        <include refid="queryWorkspaceAndDimensionCondition"/>
         <include refid="queryWhereCondition"/>
         <if test="request.reviewId != null and request.reviewId != ''">
             AND functional_case.id not in (
@@ -752,7 +830,7 @@
         SELECT count(id)
         FROM functional_case
         WHERE deleted = #{deleted}
-        AND project_id = #{request.projectId}
+        <include refid="queryWorkspaceAndDimensionCondition"/>
         <include refid="queryWhereCondition"/>
         <if test="request.reviewId != null and request.reviewId != ''">
             AND functional_case.id not in (

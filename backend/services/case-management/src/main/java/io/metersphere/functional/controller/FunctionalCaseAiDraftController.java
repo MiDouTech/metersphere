@@ -5,6 +5,8 @@ import io.metersphere.functional.request.FunctionalCaseAiDraftBatchDeleteRequest
 import io.metersphere.functional.request.FunctionalCaseAiDraftBatchSaveRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftPageRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftRegenerateRequest;
+import io.metersphere.functional.request.FunctionalCaseAiDraftReviewRequest;
+import io.metersphere.functional.dto.FunctionalCaseAiDraftDTO;
 import io.metersphere.functional.request.FunctionalCaseAiDraftUpsertRequest;
 import io.metersphere.functional.request.FunctionalCaseAiGenerateRequest;
 import io.metersphere.functional.request.FunctionalCaseAiGenerationCancelRequest;
@@ -49,6 +51,15 @@ public class FunctionalCaseAiDraftController {
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public FunctionalCaseAiDraftPageResponse page(@Validated @RequestBody FunctionalCaseAiDraftPageRequest request) {
         return functionalCaseAiDraftService.page(request, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/review-page")
+    @Operation(summary = "Page project AI case drafts awaiting review")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_REVIEW)
+    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
+    public FunctionalCaseAiDraftPageResponse reviewPage(
+            @Validated @RequestBody FunctionalCaseAiDraftPageRequest request) {
+        return functionalCaseAiDraftService.reviewQueue(request);
     }
 
     @GetMapping("/{id}")
@@ -99,5 +110,14 @@ public class FunctionalCaseAiDraftController {
                 request,
                 SessionUtils.getUserId(),
                 SessionUtils.getCurrentOrganizationId());
+    }
+
+    @PostMapping("/review")
+    @Operation(summary = "审核 AI 用例草稿")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_REVIEW)
+    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
+    public java.util.List<FunctionalCaseAiDraftDTO> review(
+            @Validated @RequestBody FunctionalCaseAiDraftReviewRequest request) {
+        return functionalCaseAiDraftService.review(request, SessionUtils.getUserId());
     }
 }

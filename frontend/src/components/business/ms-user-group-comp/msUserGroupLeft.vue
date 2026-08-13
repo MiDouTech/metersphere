@@ -9,7 +9,7 @@
         @clear="searchData('')"
       />
     </div>
-    <div v-if="showSystem" v-permission="['SYSTEM_USER_ROLE:READ']" class="mt-2">
+    <div v-if="showSystem" v-permission="['SYSTEM_USER_ROLE:READ', 'SYSTEM_PERMISSION_CONTROL:READ']" class="mt-2">
       <div class="flex items-center justify-between px-[4px] py-[7px]">
         <div class="flex flex-row items-center gap-1 text-[var(--color-text-4)]">
           <MsIcon

@@ -5,6 +5,10 @@ public enum FunctionalCaseAiDraftStatus {
     VALIDATING,
     INVALID,
     READY,
+    PENDING_REVIEW,
+    APPROVED,
+    CHANGES_REQUESTED,
+    REJECTED,
     SAVING,
     SAVED,
     FAILED

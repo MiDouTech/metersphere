@@ -48,10 +48,10 @@
 
   import { ReviewListQueryParams } from '@/models/caseManagement/caseReview';
   import { ModuleTreeNode } from '@/models/common';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
 
   defineOptions({
-    name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW,
+    name: TestPlanRouteEnum.TEST_PLAN_REVIEW,
   });
 
   const router = useRouter();
@@ -94,7 +94,7 @@
 
   function goCreateReview() {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_CREATE,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_CREATE,
       query:
         activeFolderId.value === 'all'
           ? {}

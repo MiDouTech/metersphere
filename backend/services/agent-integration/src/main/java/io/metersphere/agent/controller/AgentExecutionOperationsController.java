@@ -16,7 +16,7 @@ public class AgentExecutionOperationsController {
     private AgentExecutionOperationsService operationsService;
 
     @GetMapping("/summary")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_ADMIN)
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
     public AgentExecutionOperationsDTO summary() {
         return operationsService.summary();
     }

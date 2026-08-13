@@ -34,7 +34,7 @@ public class FunctionalTestReportController {
 
     @PostMapping("/page")
     @Operation(summary = "用例管理-测试报告-分页列表")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_REPORT_READ)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public Pager<List<FunctionalTestReportDTO>> page(@Validated @RequestBody FunctionalTestReportPageRequest request) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
@@ -44,7 +44,7 @@ public class FunctionalTestReportController {
 
     @GetMapping("/get/{id}")
     @Operation(summary = "用例管理-测试报告-详情")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_REPORT_READ)
     public FunctionalTestReportDTO get(@NotBlank @PathVariable String id) {
         return functionalTestReportService.get(id);
     }
@@ -65,7 +65,7 @@ public class FunctionalTestReportController {
 
     @PostMapping("/generate")
     @Operation(summary = "用例管理-测试报告-一键生成草稿")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_ADD)
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_REPORT_READ_UPDATE)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public FunctionalTestReportDTO generate(@Validated @RequestBody FunctionalTestReportGenerateRequest request) {
         return functionalTestReportService.generate(request);
@@ -73,21 +73,21 @@ public class FunctionalTestReportController {
 
     @PostMapping("/update")
     @Operation(summary = "用例管理-测试报告-更新名称/正文")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE)
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_REPORT_READ_UPDATE)
     public FunctionalTestReportDTO update(@Validated @RequestBody FunctionalTestReportUpdateRequest request) {
         return functionalTestReportService.update(request);
     }
 
     @PostMapping("/refresh-stats/{id}")
     @Operation(summary = "用例管理-测试报告-刷新统计快照")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE)
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_REPORT_READ_UPDATE)
     public FunctionalTestReportDTO refreshStats(@NotBlank @PathVariable String id) {
         return functionalTestReportService.refreshStats(id);
     }
 
     @GetMapping("/delete/{id}")
     @Operation(summary = "用例管理-测试报告-删除")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_DELETE)
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_REPORT_READ_DELETE)
     public void delete(@NotBlank @PathVariable String id) {
         functionalTestReportService.delete(id);
     }

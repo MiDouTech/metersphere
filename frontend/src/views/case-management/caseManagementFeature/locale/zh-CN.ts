@@ -1,4 +1,7 @@
 export default {
+  'caseManagement.featureCase.projectDimension': '\u9879\u76ee',
+  'caseManagement.featureCase.systemDimension': '\u7cfb\u7edf',
+  'caseManagement.featureCase.unclassifiedSystem': '\u5f85\u4eba\u5de5\u5206\u7c7b',
   'caseManagement.featureCase.creatingCase': '创建用例',
   'caseManagement.featureCase.importCase': '导入用例',
   'caseManagement.featureCase.importExcel': 'Excel 导入',

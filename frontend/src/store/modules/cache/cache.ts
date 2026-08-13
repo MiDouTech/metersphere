@@ -28,19 +28,19 @@ const useCacheStore = defineStore('cache', {
       },
       // 用例评审
       {
-        cacheName: RouteEnum.CASE_MANAGEMENT_REVIEW,
+        cacheName: RouteEnum.TEST_PLAN_REVIEW,
         toPathName: [
-          RouteEnum.CASE_MANAGEMENT_REVIEW_CREATE,
-          RouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
-          RouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL,
+          RouteEnum.TEST_PLAN_REVIEW_CREATE,
+          RouteEnum.TEST_PLAN_REVIEW_DETAIL,
+          RouteEnum.TEST_PLAN_REVIEW_DETAIL_CASE_DETAIL,
         ],
         type: 'ROUTE',
         keepModuleAlive: true,
       },
       // 用例评审详情
       {
-        cacheName: RouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
-        toPathName: [RouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL],
+        cacheName: RouteEnum.TEST_PLAN_REVIEW_DETAIL,
+        toPathName: [RouteEnum.TEST_PLAN_REVIEW_DETAIL_CASE_DETAIL],
         type: 'ROUTE',
       },
       // 缺陷管理
@@ -66,8 +66,8 @@ const useCacheStore = defineStore('cache', {
       },
       // 测试计划报告
       {
-        cacheName: RouteEnum.TEST_PLAN_REPORT,
-        toPathName: [RouteEnum.TEST_PLAN_REPORT_DETAIL],
+        cacheName: RouteEnum.TEST_PLAN_TEST_REPORT,
+        toPathName: [RouteEnum.TEST_PLAN_TEST_REPORT_DETAIL],
         type: 'ROUTE',
         keepModuleAlive: true,
       },

@@ -109,6 +109,17 @@
         </foreach>
     </select>
 
+    <select id="selectByIdsInProject" resultMap="BaseResultMap">
+        select *
+        from ai_source_document
+        where project_id = #{projectId}
+          and deleted = 0
+          and id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">
+          #{id}
+        </foreach>
+    </select>
+
     <select id="countByProjectAndCreateUser" resultType="long">
         select count(1)
         from ai_source_document

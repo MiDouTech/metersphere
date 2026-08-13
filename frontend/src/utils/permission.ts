@@ -102,6 +102,40 @@ export function hasPageVisible(resourceCode?: string, typeList = ['PROJECT', 'OR
   return hasUiVisible(resourceCode, typeList);
 }
 
+export function hasTabVisible(resourceCode?: string, typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']) {
+  return hasUiVisible(resourceCode, typeList);
+}
+
+export function hasResourceVisible(
+  resourceCode?: string,
+  fallbackPermissions?: string[],
+  typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']
+) {
+  const userStore = useUserStore();
+  if (userStore.isAdmin) {
+    return true;
+  }
+  if (userStore.uiPermissions) {
+    return hasUiVisible(resourceCode, typeList);
+  }
+  return hasAnyPermission(fallbackPermissions || [], typeList);
+}
+
+export function hasResourceOperable(
+  resourceCode?: string,
+  fallbackPermissions?: string[],
+  typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']
+) {
+  const userStore = useUserStore();
+  if (userStore.isAdmin) {
+    return true;
+  }
+  if (userStore.uiPermissions) {
+    return hasUiOperable(resourceCode, typeList) && hasAnyPermission(fallbackPermissions || [], typeList);
+  }
+  return hasAnyPermission(fallbackPermissions || [], typeList);
+}
+
 export function hasButtonVisible(
   resourceCode?: string,
   permissions?: string[],
@@ -127,7 +161,7 @@ export function hasButtonOperable(
     return true;
   }
   if (userStore.uiPermissions) {
-    return hasUiOperable(resourceCode, typeList);
+    return hasUiOperable(resourceCode, typeList) && hasAnyPermission(permissions || [], typeList);
   }
   return hasAnyPermission(permissions || [], typeList);
 }

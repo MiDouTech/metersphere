@@ -385,7 +385,7 @@
   import { BatchApiParams, TableQueryParams } from '@/models/common';
   import { FilterType, ViewTypeEnum } from '@/enums/advancedFilterEnum';
   import { StartReviewStatus } from '@/enums/caseEnum';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
   import { TableKeyEnum } from '@/enums/tableEnum';
   import { FilterRemoteMethodsEnum, FilterSlotNameEnum } from '@/enums/tableFilterEnum';
 
@@ -639,7 +639,7 @@
     getModuleCount();
   }
   const isActivated = computed(() =>
-    cacheStore.cacheViews.includes(CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL)
+    cacheStore.cacheViews.includes(TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL)
   );
   const reviewerTitlePopupVisible = ref(true);
 
@@ -1171,7 +1171,7 @@
   // 去用例评审页面
   function review(record: ReviewCaseItem) {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL_CASE_DETAIL,
       query: {
         ...route.query,
         caseId: record.caseId,

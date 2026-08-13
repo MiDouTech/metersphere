@@ -29,6 +29,10 @@ public interface AgentExecutionMapper {
 
     AgentRunnerDTO selectRunnerById(@Param("id") String id);
 
+    List<AgentRunnerDTO> selectRunnersByOrganization(@Param("organizationId") String organizationId,
+                                                      @Param("now") long now,
+                                                      @Param("staleBefore") long staleBefore);
+
     AgentRunnerLeaseDTO selectLeaseById(@Param("id") String id);
 
     AgentExecutionArtifactDTO selectArtifactById(@Param("id") String id);
@@ -56,6 +60,26 @@ public interface AgentExecutionMapper {
 
     AgentExecutionTaskDTO selectQueuedTaskForRunner(@Param("organizationId") String organizationId,
                                                     @Param("runnerId") String runnerId);
+
+    List<AgentExecutionTaskDTO> selectQueuedTasksForAgent(@Param("projectId") String projectId,
+                                                          @Param("agentType") String agentType,
+                                                          @Param("limit") int limit);
+
+    long countTasks(@Param("projectId") String projectId,
+                    @Param("keyword") String keyword,
+                    @Param("likeKeyword") String likeKeyword,
+                    @Param("status") String status,
+                    @Param("verdict") String verdict,
+                    @Param("executionMode") String executionMode);
+
+    List<AgentExecutionTaskDTO> searchTasks(@Param("projectId") String projectId,
+                                            @Param("keyword") String keyword,
+                                            @Param("likeKeyword") String likeKeyword,
+                                            @Param("status") String status,
+                                            @Param("verdict") String verdict,
+                                            @Param("executionMode") String executionMode,
+                                            @Param("offset") int offset,
+                                            @Param("limit") int limit);
 
     List<AgentExecutionCaseDTO> selectCasesByTaskIdAndStatuses(@Param("taskId") String taskId,
                                                                @Param("statuses") List<String> statuses);
@@ -108,6 +132,11 @@ public interface AgentExecutionMapper {
                           @Param("toStatus") String toStatus,
                           @Param("updateTime") long updateTime);
 
+    int updateTaskContext(@Param("id") String id,
+                          @Param("contextSnapshot") String contextSnapshot,
+                          @Param("contextSnapshotHash") String contextSnapshotHash,
+                          @Param("updateTime") long updateTime);
+
     int updateLeaseEventSequence(@Param("id") String id,
                                  @Param("runnerId") String runnerId,
                                  @Param("version") int version,
@@ -121,10 +150,21 @@ public interface AgentExecutionMapper {
                          @Param("status") String status,
                          @Param("updateTime") long updateTime);
 
-    int expireTaskLease(@Param("taskId") String taskId,
-                        @Param("leaseId") String leaseId,
-                        @Param("status") String status,
-                        @Param("updateTime") long updateTime);
+    int recoverExpiredTaskLease(@Param("taskId") String taskId,
+                                @Param("leaseId") String leaseId,
+                                @Param("updateTime") long updateTime);
+
+    int releaseTaskLease(@Param("taskId") String taskId,
+                         @Param("leaseId") String leaseId,
+                         @Param("reason") String reason,
+                         @Param("updateTime") long updateTime);
+
+    int finalizeHumanBlockedTask(@Param("taskId") String taskId,
+                                 @Param("fromStatus") String fromStatus,
+                                 @Param("version") int version,
+                                 @Param("reason") String reason,
+                                 @Param("updateUser") String updateUser,
+                                 @Param("updateTime") long updateTime);
 
     int markStepStarted(@Param("taskId") String taskId, @Param("stepId") String stepId,
                         @Param("attempt") int attempt, @Param("updateTime") long updateTime);
@@ -154,6 +194,7 @@ public interface AgentExecutionMapper {
                                   @Param("updateTime") long updateTime);
 
     int finalizeExecutionTask(@Param("taskId") String taskId, @Param("status") String status,
+                              @Param("verdict") String verdict, @Param("verdictReason") String verdictReason,
                               @Param("successCount") int successCount, @Param("failedCount") int failedCount,
                               @Param("blockedCount") int blockedCount, @Param("skippedCount") int skippedCount,
                               @Param("unexecutedCount") int unexecutedCount,
@@ -162,6 +203,10 @@ public interface AgentExecutionMapper {
                               @Param("updateUser") String updateUser, @Param("updateTime") long updateTime);
 
     int countAvailableArtifacts(@Param("taskId") String taskId);
+    int countTerminalSteps(@Param("taskId") String taskId);
+    int countTerminalStepsWithArtifacts(@Param("taskId") String taskId);
+    int sumHealingCount(@Param("taskId") String taskId);
+    int sumRetryCount(@Param("taskId") String taskId);
 
     void insertEvent(AgentExecutionEventDTO event);
 

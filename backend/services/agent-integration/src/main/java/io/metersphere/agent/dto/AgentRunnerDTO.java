@@ -1,5 +1,6 @@
 package io.metersphere.agent.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 @Data
@@ -13,6 +14,7 @@ public class AgentRunnerDTO {
     private String operatingSystem;
     private String browserCapabilities;
     private String environmentLabels;
+    @JsonIgnore
     private String authTokenHash;
     private Integer maxConcurrency;
     private Integer activeCount;

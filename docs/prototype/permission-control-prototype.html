@@ -1,0 +1,1414 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MeterSphere 权限控制原型</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --line: #e5e8ef;
+      --text: #1f2430;
+      --muted: #6b7280;
+      --primary: #3370ff;
+      --primary-soft: #eef4ff;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --disabled: #f1f3f7;
+      --shadow: 0 8px 24px rgba(31, 36, 48, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 232px 1fr;
+    }
+    .sidebar {
+      background: #172033;
+      color: #cbd5e1;
+      padding: 18px 14px;
+    }
+    .brand {
+      color: #fff;
+      font-weight: 700;
+      font-size: 18px;
+      margin: 4px 8px 22px;
+    }
+    .nav-group {
+      margin-top: 18px;
+      color: #718096;
+      font-size: 12px;
+      padding: 0 8px;
+    }
+    .nav-item {
+      margin-top: 6px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: #d4d9e5;
+    }
+    .nav-item.active {
+      background: rgba(51,112,255,.18);
+      color: #fff;
+    }
+    .main {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .topbar {
+      height: 56px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+    .crumb { color: var(--muted); }
+    .content {
+      padding: 20px 24px 32px;
+    }
+    .tabs {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .tab-head {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--line);
+      padding: 0 18px;
+      background: #fbfcff;
+    }
+    .tab-btn {
+      border: 0;
+      background: transparent;
+      padding: 15px 18px;
+      cursor: pointer;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      font: inherit;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 600;
+    }
+    .tab-body { padding: 18px; }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .search {
+      width: 280px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+    }
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .btn.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .btn.danger {
+      color: var(--danger);
+    }
+    .role-layout {
+      display: grid;
+      grid-template-columns: 280px minmax(320px, 1fr) minmax(420px, 1.35fr);
+      gap: 14px;
+      min-height: 620px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+    .panel-title {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fbfcff;
+    }
+    .role-list {
+      padding: 8px;
+    }
+    .role-card {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      background: #fff;
+    }
+    .role-card.active {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .role-name {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 1px 8px;
+      font-size: 12px;
+      background: #edf2f7;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .badge.green { background: #eaf8ef; color: var(--success); }
+    .badge.blue { background: var(--primary-soft); color: var(--primary); }
+    .badge.orange { background: #fff7ed; color: var(--warning); }
+    .badge.red { background: #fef2f2; color: var(--danger); }
+    .meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .form {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+    .field label {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font: inherit;
+      background: #fff;
+    }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .member-box {
+      border-top: 1px solid var(--line);
+      padding: 14px;
+    }
+    .member-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      padding: 9px 0;
+    }
+    .member-row:last-child { border-bottom: 0; }
+    .tree {
+      padding: 10px 14px 16px;
+      max-height: 560px;
+      overflow: auto;
+    }
+    .tree-node {
+      border-bottom: 1px solid #f0f2f6;
+      padding: 10px 0;
+    }
+    .tree-line {
+      display: grid;
+      grid-template-columns: 1fr 70px 76px;
+      gap: 8px;
+      align-items: center;
+    }
+    .tree-child { margin-left: 18px; }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    input[type="checkbox"] {
+      accent-color: var(--primary);
+    }
+    .disabled-row {
+      color: var(--muted);
+      background: var(--disabled);
+      border-radius: 6px;
+      padding: 6px;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+    .flow-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr 340px;
+      gap: 14px;
+      min-height: 620px;
+    }
+    .status-list {
+      padding: 10px;
+    }
+    .flow-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .flow-card.active {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .flow-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+    .sub-title {
+      margin: 14px 10px 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #fff;
+    }
+    .matrix-wrap {
+      overflow: auto;
+      padding: 14px;
+    }
+    .matrix {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+    }
+    .matrix th, .matrix td {
+      border: 1px solid var(--line);
+      padding: 10px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .matrix th {
+      background: #fbfcff;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .cell-ok {
+      background: #f0fdf4;
+      color: var(--success);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cell-deny {
+      background: #f8fafc;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+    .cell-selected {
+      outline: 2px solid var(--primary);
+      outline-offset: -2px;
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .rule-panel {
+      padding: 14px;
+    }
+    .role-perm {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .role-perm-row {
+      display: grid;
+      grid-template-columns: 1fr 70px 70px;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .role-perm-row:last-child { border-bottom: 0; }
+    .role-type {
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: 4px;
+    }
+    .note {
+      padding: 10px 12px;
+      background: #fff7ed;
+      color: #9a3412;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    .legacy {
+      padding: 10px 12px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+    @media (max-width: 1180px) {
+      .role-layout, .flow-layout { grid-template-columns: 1fr; }
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">MeterSphere</div>
+      <div class="nav-group">项目</div>
+      <div class="nav-item">工作台</div>
+      <div class="nav-item">项目管理</div>
+      <div class="nav-item">测试计划</div>
+      <div class="nav-item">用例管理</div>
+      <div class="nav-item">接口测试</div>
+      <div class="nav-item">缺陷管理</div>
+      <div class="nav-group">系统</div>
+      <div class="nav-item active">系统设置</div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <strong>系统设置</strong>
+          <span class="crumb"> / 系统 / 权限控制</span>
+        </div>
+        <div class="badge blue">管理员：全部权限</div>
+      </header>
+      <section class="content">
+        <div class="tabs">
+          <div class="tab-head">
+            <button class="tab-btn active" data-tab="role">角色设置</button>
+            <button class="tab-btn" data-tab="flow">流程控制</button>
+            <button class="tab-btn" data-tab="compat">兼容策略</button>
+          </div>
+          <div class="tab-body">
+            <section id="tab-role">
+              <div class="toolbar">
+                <input class="search" value="全部模块权限" aria-label="搜索角色" />
+                <div>
+                  <button class="btn">导入岗位映射</button>
+                  <button class="btn primary">新增角色</button>
+                </div>
+              </div>
+              <div class="role-layout">
+                <div class="panel">
+                  <div class="panel-title">角色列表 <span class="badge">5 个角色</span></div>
+                  <div class="role-list">
+                    <div class="role-card">
+                      <div class="role-name">系统管理员 <span class="badge orange">内置</span></div>
+                      <div class="meta">不可删除，不可禁用，拥有所有权限</div>
+                    </div>
+                    <div class="role-card active">
+                      <div class="role-name">缺陷负责人 <span class="badge green">启用</span></div>
+                      <div class="meta">18 名成员 · 项目级 · 自定义</div>
+                    </div>
+                    <div class="role-card">
+                      <div class="role-name">缺陷观察员 <span class="badge green">启用</span></div>
+                      <div class="meta">42 名成员 · 只读 + 评论</div>
+                    </div>
+                    <div class="role-card">
+                      <div class="role-name">测试经理 <span class="badge green">启用</span></div>
+                      <div class="meta">8 名成员 · 用例/缺陷/报告</div>
+                    </div>
+                    <div class="role-card">
+                      <div class="role-name">外部协作方 <span class="badge red">禁用</span></div>
+                      <div class="meta">0 名成员 · 暂停生效</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-title">
+                    角色基础信息
+                    <div>
+                      <button class="btn danger">删除</button>
+                      <button class="btn">禁用</button>
+                      <button class="btn primary">保存</button>
+                    </div>
+                  </div>
+                  <div class="form">
+                    <div class="split">
+                      <div class="field">
+                        <label>角色名称</label>
+                        <input value="缺陷负责人" />
+                      </div>
+                      <div class="field">
+                        <label>角色编码</label>
+                        <input value="project_bug_owner" />
+                      </div>
+                    </div>
+                    <div class="split">
+                      <div class="field">
+                        <label>作用范围</label>
+                        <select>
+                          <option>项目级</option>
+                          <option>组织级</option>
+                          <option>系统级</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label>状态</label>
+                        <select>
+                          <option>启用</option>
+                          <option>禁用</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label>说明</label>
+                      <textarea rows="3">负责缺陷处理、状态流转、评论和编辑。</textarea>
+                    </div>
+                  </div>
+                  <div class="member-box">
+                    <div class="panel-title" style="padding:0 0 10px;border:0;background:transparent;">成员与岗位分配</div>
+                    <div class="split">
+                      <div class="field">
+                        <label>组织架构</label>
+                        <select>
+                          <option>产品研发中心 / 测试部</option>
+                          <option>产品研发中心 / 后端组</option>
+                          <option>交付中心 / 实施组</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label>岗位</label>
+                        <select>
+                          <option>测试负责人</option>
+                          <option>测试工程师</option>
+                          <option>开发负责人</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style="margin:10px 0;">
+                      <button class="btn">按岗位加入成员</button>
+                      <button class="btn">手动选择成员</button>
+                    </div>
+                    <div class="member-row">
+                      <span>王敏 <span class="meta">测试负责人</span></span>
+                      <button class="btn">移除</button>
+                    </div>
+                    <div class="member-row">
+                      <span>张强 <span class="meta">后端负责人</span></span>
+                      <button class="btn">移除</button>
+                    </div>
+                    <div class="member-row">
+                      <span>李娜 <span class="meta">测试工程师</span></span>
+                      <button class="btn">移除</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-title">
+                    权限设置
+                    <span class="badge blue">页面 / Tab / 按钮</span>
+                  </div>
+                  <div class="tree">
+                    <div class="note">权限资源按“模块 → 页面 → Tab → 按钮”维护。顶部业务 Tab、页面内二级 Tab、详情页 Tab 都作为 TAB 资源独立控制可见性；按钮可用必须同时具备对应接口权限。</div>
+                    <div class="tree-node">
+                      <div class="tree-line">
+                        <strong>工作台</strong>
+                        <label class="check"><input type="checkbox" checked /> 可见</label>
+                        <span></span>
+                      </div>
+                      <div class="tree-child">
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>工作台首页</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>我的待办 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>我关注的 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>最近访问 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>统计概览 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>刷新按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" checked /> 可用</label>
+                            </div>
+                            <div class="tree-line">
+                              <span>导出工作台数据按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tree-node">
+                      <div class="tree-line">
+                        <strong>项目管理</strong>
+                        <label class="check"><input type="checkbox" checked /> 可见</label>
+                        <span></span>
+                      </div>
+                      <div class="tree-child">
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>项目列表页</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>全部项目 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>我参与的 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>项目模板 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>新建项目按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" checked /> 可用</label>
+                            </div>
+                            <div class="tree-line">
+                              <span>归档项目按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>项目详情页</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>项目概览 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>成员与岗位 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>应用模块 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>环境配置 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>添加成员按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" checked /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tree-node">
+                      <div class="tree-line">
+                        <strong>测试计划</strong>
+                        <label class="check"><input type="checkbox" checked /> 可见</label>
+                        <span></span>
+                      </div>
+                      <div class="tree-child">
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>测试计划列表页</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>全部计划 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>我负责的 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>归档计划 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>新建计划按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" checked /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>计划详情页</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>功能用例 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>接口用例 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>缺陷 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>测试报告 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>添加用例按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" checked /> 可用</label>
+                            </div>
+                            <div class="tree-line">
+                              <span>批量执行按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tree-node">
+                      <div class="tree-line">
+                        <strong>缺陷管理</strong>
+                        <label class="check"><input type="checkbox" checked /> 可见</label>
+                        <span></span>
+                      </div>
+                      <div class="tree-child">
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>缺陷列表页</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                        </div>
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>缺陷详情页</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>基础信息 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                              <div class="tree-child">
+                                <div class="tree-line">
+                                  <span>编辑按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                                <div class="tree-line">
+                                  <span>分享按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                                <div class="tree-line">
+                                  <span>关注按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>关联用例 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                              <div class="tree-child">
+                                <div class="tree-line">
+                                  <span>关联用例按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                                <div class="tree-line">
+                                  <span>取消关联按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" /> 可用</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>变更历史 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                            </div>
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>评论 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                              <div class="tree-child">
+                                <div class="tree-line">
+                                  <span>评论入口</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="tree-line">
+                              <span>删除按钮（页面级）</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tree-node">
+                      <div class="tree-line">
+                        <strong>用例管理</strong>
+                        <label class="check"><input type="checkbox" checked /> 可见</label>
+                        <span></span>
+                      </div>
+                      <div class="tree-child">
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>测试用例页面</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>用例 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                              <div class="tree-child">
+                                <div class="tree-line">
+                                  <span>执行用例 Tab</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <span></span>
+                                </div>
+                                <div class="tree-line">
+                                  <span>Xmind 用例 Tab</span>
+                                  <label class="check"><input type="checkbox" /> 可见</label>
+                                  <span></span>
+                                </div>
+                                <div class="tree-line">
+                                  <span>用例列表 Tab</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <span></span>
+                                </div>
+                                <div class="tree-line">
+                                  <span>用例详情 Tab</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <span></span>
+                                </div>
+                                <div class="tree-line">
+                                  <span>新建用例按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                                <div class="tree-line">
+                                  <span>导入按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" /> 可用</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>生成用例 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                              <div class="tree-child">
+                                <div class="tree-line">
+                                  <span>AI 生成用例按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                                <div class="tree-line">
+                                  <span>需求文档导入按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" /> 可用</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="tree-line">
+                              <span>自动化执行 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>评审 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>测试报告 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="disabled-row">示例：顶部业务 Tab 与页面内二级 Tab 都作为 TAB 资源，可独立控制可见性。</div>
+                    </div>
+                    <div class="tree-node">
+                      <div class="tree-line">
+                        <strong>接口测试</strong>
+                        <label class="check"><input type="checkbox" checked /> 可见</label>
+                        <span></span>
+                      </div>
+                      <div class="tree-child">
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>接口测试页面</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>接口列表 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                              <div class="tree-child">
+                                <div class="tree-line">
+                                  <span>新增接口按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                                <div class="tree-line">
+                                  <span>导入接口按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" /> 可用</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>接口用例 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                              <div class="tree-child">
+                                <div class="tree-line">
+                                  <span>新增接口用例按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                                <div class="tree-line">
+                                  <span>批量执行按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" /> 可用</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="tree-node">
+                              <div class="tree-line">
+                                <span>接口场景 Tab</span>
+                                <label class="check"><input type="checkbox" checked /> 可见</label>
+                                <span></span>
+                              </div>
+                              <div class="tree-child">
+                                <div class="tree-line">
+                                  <span>新建场景按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" checked /> 可用</label>
+                                </div>
+                                <div class="tree-line">
+                                  <span>调试场景按钮</span>
+                                  <label class="check"><input type="checkbox" checked /> 可见</label>
+                                  <label class="check"><input type="checkbox" /> 可用</label>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="tree-line">
+                              <span>接口报告 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>接口详情页</span>
+                            <label class="check"><input type="checkbox" checked /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>基础信息 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>请求参数 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>后置操作 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>断言规则 Tab</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>保存接口按钮</span>
+                              <label class="check"><input type="checkbox" checked /> 可见</label>
+                              <label class="check"><input type="checkbox" checked /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="tree-node">
+                      <div class="tree-line">
+                        <strong>系统设置</strong>
+                        <label class="check"><input type="checkbox" /> 可见</label>
+                        <span></span>
+                      </div>
+                      <div class="tree-child">
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>用户与组织页</span>
+                            <label class="check"><input type="checkbox" /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>用户管理 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>组织架构 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>岗位管理 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>新增用户按钮</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <label class="check"><input type="checkbox" /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>系统配置页</span>
+                            <label class="check"><input type="checkbox" /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>系统参数 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>认证设置 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>消息通知 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>插件管理 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>保存系统配置按钮</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <label class="check"><input type="checkbox" /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="tree-node">
+                          <div class="tree-line">
+                            <span>权限控制页</span>
+                            <label class="check"><input type="checkbox" /> 可见</label>
+                            <span></span>
+                          </div>
+                          <div class="tree-child">
+                            <div class="tree-line">
+                              <span>角色设置 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>流程控制 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>兼容策略 Tab</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <span></span>
+                            </div>
+                            <div class="tree-line">
+                              <span>新增角色按钮</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <label class="check"><input type="checkbox" /> 可用</label>
+                            </div>
+                            <div class="tree-line">
+                              <span>流程保存按钮</span>
+                              <label class="check"><input type="checkbox" /> 可见</label>
+                              <label class="check"><input type="checkbox" /> 可用</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section id="tab-flow" hidden>
+              <div class="toolbar">
+                <div>
+                  <select class="search" aria-label="流程模块">
+                    <option>缺陷管理</option>
+                  </select>
+                </div>
+                <div>
+                  <button class="btn primary">新建流程</button>
+                  <button class="btn">添加流程角色</button>
+                  <button class="btn">同步组织模板</button>
+                  <button class="btn primary">保存流程</button>
+                </div>
+              </div>
+              <div class="flow-layout">
+                <div class="panel">
+                  <div class="panel-title">流程列表 <span class="badge">3 个流程</span></div>
+                  <div class="status-list">
+                    <div class="flow-card active">
+                      <div class="flow-card-title">默认缺陷流程 <span class="badge blue">默认</span></div>
+                      <div class="meta">6 个状态 · 9 条流转 · 4 个流程角色</div>
+                    </div>
+                    <div class="flow-card">
+                      <div class="flow-card-title">线上缺陷紧急流程 <span class="badge green">启用</span></div>
+                      <div class="meta">5 个状态 · 7 条流转 · 3 个流程角色</div>
+                    </div>
+                    <div class="flow-card">
+                      <div class="flow-card-title">外部协作流程 <span class="badge red">禁用</span></div>
+                      <div class="meta">4 个状态 · 5 条流转 · 2 个流程角色</div>
+                    </div>
+                    <div class="sub-title">当前流程状态</div>
+                    <div class="status-item"><span>新建</span><span class="badge blue">开始</span></div>
+                    <div class="status-item"><span>处理中</span><span class="badge">中间</span></div>
+                    <div class="status-item"><span>挂起</span><span class="badge">中间</span></div>
+                    <div class="status-item"><span>已解决</span><span class="badge">中间</span></div>
+                    <div class="status-item"><span>已关闭</span><span class="badge green">结束</span></div>
+                    <div class="status-item"><span>已拒绝</span><span class="badge red">结束</span></div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-title">默认缺陷流程 / 流转矩阵 <span class="badge blue">点击单元格配置角色授权</span></div>
+                  <div class="matrix-wrap">
+                    <div class="note">支持从已有流程复制后新建流程；流程启用后可配置状态、流转关系和流程角色。</div>
+                    <table class="matrix">
+                      <thead>
+                        <tr>
+                          <th>当前 \ 目标</th>
+                          <th>新建</th>
+                          <th>处理中</th>
+                          <th>挂起</th>
+                          <th>已解决</th>
+                          <th>已关闭</th>
+                          <th>已拒绝</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <th>新建</th>
+                          <td>-</td>
+                          <td class="cell-ok cell-selected">允许</td>
+                          <td class="cell-ok">允许</td>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-ok">允许</td>
+                        </tr>
+                        <tr>
+                          <th>处理中</th>
+                          <td class="cell-deny">禁止</td>
+                          <td>-</td>
+                          <td class="cell-ok">允许</td>
+                          <td class="cell-ok">允许</td>
+                          <td class="cell-ok">允许</td>
+                          <td class="cell-ok">允许</td>
+                        </tr>
+                        <tr>
+                          <th>挂起</th>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-ok">允许</td>
+                          <td>-</td>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-deny">禁止</td>
+                        </tr>
+                        <tr>
+                          <th>已解决</th>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-ok">允许</td>
+                          <td class="cell-deny">禁止</td>
+                          <td>-</td>
+                          <td class="cell-ok">允许</td>
+                          <td class="cell-deny">禁止</td>
+                        </tr>
+                        <tr>
+                          <th>已关闭</th>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-ok">允许</td>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-deny">禁止</td>
+                          <td>-</td>
+                          <td class="cell-deny">禁止</td>
+                        </tr>
+                        <tr>
+                          <th>已拒绝</th>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-ok">允许</td>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-deny">禁止</td>
+                          <td class="cell-deny">禁止</td>
+                          <td>-</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-title">流转规则：新建 → 处理中</div>
+                  <div class="rule-panel">
+                    <div class="split">
+                      <div class="field">
+                        <label>流程名称</label>
+                        <input value="默认缺陷流程" />
+                      </div>
+                      <div class="field">
+                        <label>流程编码</label>
+                        <input value="BUG_DEFAULT_FLOW" />
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label>启用状态</label>
+                      <select>
+                        <option>启用</option>
+                        <option>禁用</option>
+                      </select>
+                    </div>
+                    <div class="field" style="margin-top:12px;">
+                      <label>说明</label>
+                      <textarea rows="3">缺陷确认后进入处理阶段。</textarea>
+                    </div>
+                    <div class="role-perm">
+                      <div class="role-perm-row" style="font-weight:600;background:#fbfcff;">
+                        <span>流程角色</span>
+                        <span>可见</span>
+                        <span>可执行</span>
+                      </div>
+                      <div class="role-perm-row">
+                        <span>系统管理员 <span class="role-type">SYSTEM_ROLE</span></span>
+                        <input type="checkbox" checked disabled />
+                        <input type="checkbox" checked disabled />
+                      </div>
+                      <div class="role-perm-row">
+                        <span>缺陷负责人 <span class="role-type">SYSTEM_ROLE</span></span>
+                        <input type="checkbox" checked />
+                        <input type="checkbox" checked />
+                      </div>
+                      <div class="role-perm-row">
+                        <span>测试经理 <span class="role-type">SYSTEM_ROLE</span></span>
+                        <input type="checkbox" checked />
+                        <input type="checkbox" checked />
+                      </div>
+                      <div class="role-perm-row">
+                        <span>当前处理人 <span class="role-type">FIELD_USER: handle_user</span></span>
+                        <input type="checkbox" checked />
+                        <input type="checkbox" checked />
+                      </div>
+                      <div class="role-perm-row">
+                        <span>缺陷观察员 <span class="role-type">SYSTEM_ROLE</span></span>
+                        <input type="checkbox" checked />
+                        <input type="checkbox" />
+                      </div>
+                    </div>
+                    <div class="legacy">
+                      新增流程角色示例：缺陷负责人（映射系统角色）、当前处理人（映射字段 handle_user）、创建人（映射字段 create_user）。
+                    </div>
+                    <div class="legacy">后端状态变更接口必须校验 status_flow_role_permission；前端下拉过滤只作为体验优化。</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section id="tab-compat" hidden>
+              <div class="panel">
+                <div class="panel-title">新旧权限兼容策略</div>
+                <div class="rule-panel">
+                  <div class="note">旧权限代码不删除。迁移期间使用适配层隔离，已迁移页面走资源目录，未迁移页面继续走旧权限。</div>
+                  <table class="matrix" style="min-width:0;">
+                    <thead>
+                      <tr>
+                        <th>场景</th>
+                        <th>旧逻辑</th>
+                        <th>新逻辑</th>
+                        <th>处理策略</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>页面访问</td>
+                        <td>route.meta.roles</td>
+                        <td>resourceCode + 页面可见</td>
+                        <td>有 resourceCode 优先新逻辑，否则旧逻辑兜底</td>
+                      </tr>
+                      <tr>
+                        <td>按钮隐藏</td>
+                        <td>v-permission</td>
+                        <td>v-visible-permission</td>
+                        <td>迁移页面添加注释标记，保留接口权限</td>
+                      </tr>
+                      <tr>
+                        <td>按钮禁用</td>
+                        <td>多数页面无统一能力</td>
+                        <td>v-operable-permission</td>
+                        <td>新逻辑必须同时校验旧 permissionId</td>
+                      </tr>
+                      <tr>
+                        <td>接口安全</td>
+                        <td>@RequiresPermissions</td>
+                        <td>继续使用</td>
+                        <td>不允许前端 UI 权限替代后端权限</td>
+                      </tr>
+                      <tr>
+                        <td>流程流转</td>
+                        <td>status_flow</td>
+                        <td>status_flow + role permission</td>
+                        <td>新增授权表，后端执行时强校验</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script>
+    const buttons = document.querySelectorAll('.tab-btn');
+    const tabs = {
+      role: document.getElementById('tab-role'),
+      flow: document.getElementById('tab-flow'),
+      compat: document.getElementById('tab-compat')
+    };
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        buttons.forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        Object.values(tabs).forEach((tab) => tab.hidden = true);
+        tabs[button.dataset.tab].hidden = false;
+      });
+    });
+    document.querySelectorAll('.matrix td').forEach((cell) => {
+      cell.addEventListener('click', () => {
+        document.querySelectorAll('.cell-selected').forEach((item) => item.classList.remove('cell-selected'));
+        if (cell.classList.contains('cell-ok') || cell.classList.contains('cell-deny')) {
+          cell.classList.add('cell-selected');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

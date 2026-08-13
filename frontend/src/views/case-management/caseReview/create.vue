@@ -232,7 +232,7 @@
   import { filterTreeNode } from '@/utils';
 
   import type { BaseAssociateCaseRequest, ReviewPassRule } from '@/models/caseManagement/caseReview';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
 
   import type { FormInstance } from '@arco-design/web-vue';
 
@@ -372,14 +372,14 @@
           if (isGoReview) {
             // 是否去评审，是的话先保存然后直接跳转至该评审详情页进行评审
             router.replace({
-              name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
+              name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL,
               query: {
                 id: res.id,
               },
             });
           } else {
             router.replace({
-              name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW,
+              name: TestPlanRouteEnum.TEST_PLAN_REVIEW,
             });
           }
         } catch (error) {

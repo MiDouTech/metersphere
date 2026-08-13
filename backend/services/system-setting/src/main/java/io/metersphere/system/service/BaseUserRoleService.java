@@ -151,6 +151,9 @@ public class BaseUserRoleService {
         userRole.setId(IDGenerator.nextStr());
         userRole.setCreateTime(System.currentTimeMillis());
         userRole.setUpdateTime(System.currentTimeMillis());
+        if (userRole.getEnabled() == null) {
+            userRole.setEnabled(true);
+        }
         userRoleMapper.insert(userRole);
         if (StringUtils.equals(userRole.getType(), UserRoleType.PROJECT.name())) {
             // 项目级别用户组, 初始化基本信息权限

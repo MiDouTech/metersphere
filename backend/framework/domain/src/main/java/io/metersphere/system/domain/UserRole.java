@@ -46,6 +46,9 @@ public class UserRole implements Serializable {
     @Size(min = 1, max = 50, message = "{user_role.scope_id.length_range}", groups = {Created.class, Updated.class})
     private String scopeId;
 
+    @Schema(description = "是否启用")
+    private Boolean enabled;
+
     private static final long serialVersionUID = 1L;
 
     public enum Column {
@@ -57,7 +60,8 @@ public class UserRole implements Serializable {
         createTime("create_time", "createTime", "BIGINT", false),
         updateTime("update_time", "updateTime", "BIGINT", false),
         createUser("create_user", "createUser", "VARCHAR", false),
-        scopeId("scope_id", "scopeId", "VARCHAR", false);
+        scopeId("scope_id", "scopeId", "VARCHAR", false),
+        enabled("enabled", "enabled", "BIT", false);
 
         private static final String BEGINNING_DELIMITER = "`";
 

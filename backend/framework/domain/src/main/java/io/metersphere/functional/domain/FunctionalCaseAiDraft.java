@@ -28,6 +28,15 @@ public class FunctionalCaseAiDraft implements Serializable {
     private Boolean duplicate;
     private String validationStatus;
     private String draftStatus;
+    private String reviewStatus;
+    private String reviewComment;
+    private String reviewedBy;
+    private Long reviewedAt;
+    private String publishMode;
+    private String targetCaseId;
+    private String baselineSnapshot;
+    private String contentHash;
+    private String reviewedContentHash;
     private String formalCaseId;
     private Boolean deleted;
     private Integer version;

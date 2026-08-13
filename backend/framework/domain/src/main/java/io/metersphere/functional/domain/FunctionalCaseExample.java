@@ -208,6 +208,26 @@ public class FunctionalCaseExample {
             return (Criteria) this;
         }
 
+        public Criteria andWorkspaceIdIsNull() {
+            addCriterion("workspace_id is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andWorkspaceIdIsNotNull() {
+            addCriterion("workspace_id is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andWorkspaceIdEqualTo(String value) {
+            addCriterion("workspace_id =", value, "workspaceId");
+            return (Criteria) this;
+        }
+
+        public Criteria andWorkspaceIdIn(List<String> values) {
+            addCriterion("workspace_id in", values, "workspaceId");
+            return (Criteria) this;
+        }
+
         public Criteria andNumIsNull() {
             addCriterion("num is null");
             return (Criteria) this;
@@ -405,6 +425,46 @@ public class FunctionalCaseExample {
 
         public Criteria andProjectIdNotBetween(String value1, String value2) {
             addCriterion("project_id not between", value1, value2, "projectId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSystemIdIsNull() {
+            addCriterion("system_id is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andSystemIdIsNotNull() {
+            addCriterion("system_id is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andSystemIdEqualTo(String value) {
+            addCriterion("system_id =", value, "systemId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSystemIdIn(List<String> values) {
+            addCriterion("system_id in", values, "systemId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSystemModuleIdIsNull() {
+            addCriterion("system_module_id is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andSystemModuleIdIsNotNull() {
+            addCriterion("system_module_id is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andSystemModuleIdEqualTo(String value) {
+            addCriterion("system_module_id =", value, "systemModuleId");
+            return (Criteria) this;
+        }
+
+        public Criteria andSystemModuleIdIn(List<String> values) {
+            addCriterion("system_module_id in", values, "systemModuleId");
             return (Criteria) this;
         }
 

@@ -610,7 +610,7 @@
 
   function goReviewDetail(review: FunctionalCaseReviewOverview) {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL,
       query: {
         id: review.id,
       },

@@ -31,7 +31,8 @@ public class PermissionResourceController {
     @RequiresPermissions(value = {
             PermissionConstants.SYSTEM_USER_ROLE_READ,
             PermissionConstants.ORGANIZATION_USER_ROLE_READ,
-            PermissionConstants.PROJECT_GROUP_READ
+            PermissionConstants.PROJECT_GROUP_READ,
+            PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ
     }, logical = Logical.OR)
     public List<PermissionResourceDTO> tree(@Parameter(description = "SYSTEM / ORGANIZATION / PROJECT")
                                             @RequestParam String scopeType) {
@@ -43,7 +44,8 @@ public class PermissionResourceController {
     @RequiresPermissions(value = {
             PermissionConstants.SYSTEM_USER_ROLE_READ,
             PermissionConstants.ORGANIZATION_USER_ROLE_READ,
-            PermissionConstants.PROJECT_GROUP_READ
+            PermissionConstants.PROJECT_GROUP_READ,
+            PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ
     }, logical = Logical.OR)
     public List<UserRoleUiPermission> roleUiPermissions(@PathVariable String roleId) {
         return permissionUiService.getRoleUiPermissions(roleId);

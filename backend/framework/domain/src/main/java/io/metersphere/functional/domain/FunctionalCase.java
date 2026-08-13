@@ -16,18 +16,28 @@ public class FunctionalCase implements Serializable {
     @Size(min = 1, max = 50, message = "{functional_case.id.length_range}", groups = {Created.class, Updated.class})
     private String id;
 
+    @Schema(description = "workspace id")
+    @Size(min = 0, max = 50, message = "{functional_case.workspace_id.length_range}", groups = {Created.class, Updated.class})
+    private String workspaceId;
+
     @Schema(description = "业务ID")
     private Long num;
 
     @Schema(description = "模块ID", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotBlank(message = "{functional_case.module_id.not_blank}", groups = {Created.class})
     @Size(min = 1, max = 50, message = "{functional_case.module_id.length_range}", groups = {Created.class, Updated.class})
     private String moduleId;
 
     @Schema(description = "项目ID", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotBlank(message = "{functional_case.project_id.not_blank}", groups = {Created.class})
     @Size(min = 1, max = 50, message = "{functional_case.project_id.length_range}", groups = {Created.class, Updated.class})
     private String projectId;
+
+    @Schema(description = "business system id")
+    @Size(min = 0, max = 50, message = "{functional_case.system_id.length_range}", groups = {Created.class, Updated.class})
+    private String systemId;
+
+    @Schema(description = "business system module id")
+    @Size(min = 0, max = 50, message = "{functional_case.system_module_id.length_range}", groups = {Created.class, Updated.class})
+    private String systemModuleId;
 
     @Schema(description = "模板ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{functional_case.template_id.not_blank}", groups = {Created.class})
@@ -120,9 +130,12 @@ public class FunctionalCase implements Serializable {
 
     public enum Column {
         id("id", "id", "VARCHAR", false),
+        workspaceId("workspace_id", "workspaceId", "VARCHAR", false),
         num("num", "num", "BIGINT", false),
         moduleId("module_id", "moduleId", "VARCHAR", false),
         projectId("project_id", "projectId", "VARCHAR", false),
+        systemId("system_id", "systemId", "VARCHAR", false),
+        systemModuleId("system_module_id", "systemModuleId", "VARCHAR", false),
         templateId("template_id", "templateId", "VARCHAR", false),
         name("name", "name", "VARCHAR", true),
         reviewStatus("review_status", "reviewStatus", "VARCHAR", false),

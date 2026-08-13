@@ -81,6 +81,24 @@
         ]
       },
       {
+        "id": "SYSTEM_PERMISSION_CONTROL",
+        "name": "permission.system_permission_control.name",
+        "permissions": [
+          {
+            "id": "SYSTEM_PERMISSION_CONTROL:READ"
+          },
+          {
+            "id": "SYSTEM_PERMISSION_CONTROL:READ+ADD"
+          },
+          {
+            "id": "SYSTEM_PERMISSION_CONTROL:READ+UPDATE"
+          },
+          {
+            "id": "SYSTEM_PERMISSION_CONTROL:READ+DELETE"
+          }
+        ]
+      },
+      {
         "id": "SYSTEM_TEST_RESOURCE_POOL",
         "name": "permission.system_test_resource_pool.name",
         "permissions": [

@@ -10,6 +10,7 @@ import io.metersphere.system.domain.UserRolePermission;
 import io.metersphere.system.dto.sdk.SessionUser;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.session.Session;
@@ -171,6 +172,7 @@ public class SessionUtils {
     public static Set<String> getSystemPermissions(Map<String, List<UserRolePermission>> userRolePermissions, Map<String, UserRole> role, SessionUser user) {
         return user.getUserRoleRelations().stream()
                 .filter(ug -> role.get(ug.getId()) != null && StringUtils.equalsIgnoreCase(role.get(ug.getId()).getType(), UserRoleType.SYSTEM.name()))
+                .filter(ug -> BooleanUtils.isNotFalse(role.get(ug.getId()).getEnabled()))
                 .filter(ug -> StringUtils.equalsIgnoreCase(ug.getSourceId(), UserRoleScope.SYSTEM))
                 .flatMap(ug -> userRolePermissions.get(ug.getId()).stream())
                 .map(UserRolePermission::getPermissionId)
@@ -180,6 +182,7 @@ public class SessionUtils {
     public static Set<String> getCurrentOrganizationPermissions(Map<String, List<UserRolePermission>> userRolePermissions, String organizationId, Map<String, UserRole> role, SessionUser user) {
         return user.getUserRoleRelations().stream()
                 .filter(ug -> role.get(ug.getId()) != null && StringUtils.equalsIgnoreCase(role.get(ug.getId()).getType(), UserRoleType.ORGANIZATION.name()))
+                .filter(ug -> BooleanUtils.isNotFalse(role.get(ug.getId()).getEnabled()))
                 .filter(ug -> StringUtils.equalsIgnoreCase(ug.getSourceId(), organizationId))
                 .flatMap(ug -> userRolePermissions.get(ug.getId()).stream())
                 .map(UserRolePermission::getPermissionId)
@@ -189,6 +192,7 @@ public class SessionUtils {
     public static Set<String> getCurrentProjectPermissions(Map<String, List<UserRolePermission>> userRolePermissions, String projectId, Map<String, UserRole> role, SessionUser user) {
         return user.getUserRoleRelations().stream()
                 .filter(ug -> role.get(ug.getId()) != null && StringUtils.equalsIgnoreCase(role.get(ug.getId()).getType(), UserRoleType.PROJECT.name()))
+                .filter(ug -> BooleanUtils.isNotFalse(role.get(ug.getId()).getEnabled()))
                 .filter(ug -> StringUtils.equalsIgnoreCase(ug.getSourceId(), projectId))
                 .flatMap(ug -> userRolePermissions.get(ug.getId()).stream())
                 .map(UserRolePermission::getPermissionId)

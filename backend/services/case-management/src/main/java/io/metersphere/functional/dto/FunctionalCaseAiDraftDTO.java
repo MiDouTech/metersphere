@@ -45,6 +45,17 @@ public class FunctionalCaseAiDraftDTO {
     private String validationStatus;
     @Schema(description = "Draft status")
     private String draftStatus;
+    @Schema(description = "Review status")
+    private String reviewStatus;
+    private String reviewComment;
+    private String reviewedBy;
+    private Long reviewedAt;
+    @Schema(description = "CREATE/UPDATE/DEPRECATE")
+    private String publishMode;
+    private String targetCaseId;
+    private String baselineSnapshot;
+    private String contentHash;
+    private String reviewedContentHash;
     @Schema(description = "Official functional case ID")
     private String formalCaseId;
     @Schema(description = "Deleted flag")

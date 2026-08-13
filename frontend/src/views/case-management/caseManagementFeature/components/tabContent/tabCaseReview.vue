@@ -57,7 +57,7 @@
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
 
   import { ReviewCaseItem, ReviewStatus } from '@/models/caseManagement/caseReview';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
   import { TableKeyEnum } from '@/enums/tableEnum';
 
   import { statusIconMap } from '../utils';
@@ -157,7 +157,7 @@
   // 去用例评审页面
   function review(record: ReviewCaseItem) {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL_CASE_DETAIL,
       query: {
         ...route.query,
         caseId: record.caseId,

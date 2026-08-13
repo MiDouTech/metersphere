@@ -24,6 +24,9 @@ public interface FunctionalCaseAiDraftMapper {
                                             @Param("projectId") String projectId,
                                             @Param("createUser") String createUser);
 
+    List<FunctionalCaseAiDraft> selectByIdsInProject(@Param("ids") List<String> ids,
+                                                     @Param("projectId") String projectId);
+
     List<FunctionalCaseAiDraft> selectByProjectAndCreateUser(@Param("projectId") String projectId,
                                                              @Param("createUser") String createUser,
                                                              @Param("draftStatus") String draftStatus,
@@ -34,8 +37,35 @@ public interface FunctionalCaseAiDraftMapper {
                                      @Param("createUser") String createUser,
                                      @Param("draftStatus") String draftStatus);
 
+    List<FunctionalCaseAiDraft> selectReviewQueue(@Param("projectId") String projectId,
+                                                   @Param("draftStatus") String draftStatus,
+                                                   @Param("offset") long offset,
+                                                   @Param("pageSize") long pageSize);
+
+    long countReviewQueue(@Param("projectId") String projectId,
+                          @Param("draftStatus") String draftStatus);
+
     long countDuplicateByFingerprint(@Param("projectId") String projectId,
                                      @Param("createUser") String createUser,
                                      @Param("fingerprint") String fingerprint,
                                      @Param("excludeId") String excludeId);
+
+    int updateReview(@Param("id") String id,
+                     @Param("projectId") String projectId,
+                     @Param("version") Integer version,
+                     @Param("reviewStatus") String reviewStatus,
+                     @Param("reviewComment") String reviewComment,
+                     @Param("reviewedBy") String reviewedBy,
+                     @Param("reviewedAt") Long reviewedAt,
+                     @Param("reviewedContentHash") String reviewedContentHash,
+                     @Param("updateTime") Long updateTime);
+
+    void insertReviewHistory(@Param("id") String id,
+                             @Param("draftId") String draftId,
+                             @Param("projectId") String projectId,
+                             @Param("action") String action,
+                             @Param("comment") String comment,
+                             @Param("contentHash") String contentHash,
+                             @Param("reviewer") String reviewer,
+                             @Param("createTime") Long createTime);
 }

@@ -160,7 +160,7 @@
   // 去用例评审页面
   function review(record: CommentItem) {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL_CASE_DETAIL,
       query: {
         ...route.query,
         caseId: record.caseId,

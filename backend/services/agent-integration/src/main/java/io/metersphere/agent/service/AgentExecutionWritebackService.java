@@ -1,6 +1,7 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.constants.AgentExecutionStatus;
+import io.metersphere.agent.constants.AgentExecutionVerdict;
 import io.metersphere.agent.dto.AgentExecutionCaseDTO;
 import io.metersphere.agent.dto.AgentExecutionEventDTO;
 import io.metersphere.agent.dto.AgentExecutionStepDTO;
@@ -22,6 +23,8 @@ public class AgentExecutionWritebackService {
     private AgentExecutionMapper executionMapper;
     @Resource
     private AgentExecutionCaseWritebackService caseWritebackService;
+    @Resource
+    private AgentEvaluationService evaluationService;
 
     public void writeback(String taskId) {
         AgentExecutionTaskDTO task = executionMapper.selectTaskById(taskId);
@@ -47,10 +50,12 @@ public class AgentExecutionWritebackService {
                         "执行结果回写失败", Map.of("category", "WRITEBACK_FAILED"));
             }
         }
-        finalizeTask(task, cases, writebackSuccess, writebackFailed);
+        finalizeTask(task, cases, steps.values().stream().flatMap(List::stream).toList(),
+                writebackSuccess, writebackFailed);
     }
 
     private void finalizeTask(AgentExecutionTaskDTO task, List<AgentExecutionCaseDTO> cases,
+                              List<AgentExecutionStepDTO> steps,
                               int writebackSuccess, int writebackFailed) {
         int success = (int) cases.stream().filter(item -> AgentExecutionStatus.SUCCESS.equals(item.getStatus())).count();
         int failed = (int) cases.stream().filter(item -> List.of(AgentExecutionStatus.FAILED,
@@ -60,24 +65,58 @@ public class AgentExecutionWritebackService {
         int unexecuted = Math.max(0, cases.size() - success - failed - blocked - skipped);
         int artifactCount = executionMapper.countAvailableArtifacts(task.getId());
 
-        String status;
-        if (unexecuted > 0 || writebackSuccess == 0) {
-            status = AgentExecutionStatus.FAILED;
-        } else if (writebackFailed > 0 || failed > 0 || blocked > 0 || skipped > 0 || artifactCount == 0) {
-            status = success > 0 ? AgentExecutionStatus.PARTIAL_SUCCESS : AgentExecutionStatus.FAILED;
-        } else {
-            status = AgentExecutionStatus.SUCCESS;
-        }
+        boolean technicalIssue = unexecuted > 0 || writebackFailed > 0 || writebackSuccess == 0 || artifactCount == 0;
+        int completed = success + failed + blocked + skipped;
+        String status = technicalIssue
+                ? (completed > 0 ? AgentExecutionStatus.PARTIAL_SUCCESS : AgentExecutionStatus.FAILED)
+                : AgentExecutionStatus.SUCCESS;
+        String verdict = determineVerdict(failed, blocked, skipped, unexecuted, writebackFailed,
+                artifactCount, steps);
+        String verdictReason = "success=" + success + ",failed=" + failed + ",blocked=" + blocked
+                + ",skipped=" + skipped + ",unexecuted=" + unexecuted + ",writebackFailed=" + writebackFailed
+                + ",artifacts=" + artifactCount;
         String writebackStatus = writebackFailed == 0 ? "SUCCESS" : writebackSuccess > 0 ? "PARTIAL_SUCCESS" : "FAILED";
         String artifactStatus = artifactCount > 0 ? "AVAILABLE" : "MISSING";
-        int updated = executionMapper.finalizeExecutionTask(task.getId(), status, success, failed, blocked, skipped,
+        int updated = executionMapper.finalizeExecutionTask(task.getId(), status, verdict, verdictReason,
+                success, failed, blocked, skipped,
                 unexecuted, writebackStatus, artifactStatus, "system:ai-webui-writeback", System.currentTimeMillis());
         if (updated != 1) {
             throw new IllegalStateException("WRITEBACK_TASK_STATE_CONFLICT");
         }
         appendEvent(task, null, "SUCCESS".equals(status) ? "INFO" : "WARN", "TASK_WRITEBACK_COMPLETED",
                 "结果回写与证据对账完成", Map.of("status", status, "writebackStatus", writebackStatus,
-                        "artifactStatus", artifactStatus));
+                        "artifactStatus", artifactStatus, "verdict", verdict));
+        evaluationService.calculate(task.getId());
+    }
+
+    private String determineVerdict(int failed, int blocked, int skipped, int unexecuted,
+                                    int writebackFailed, int artifactCount,
+                                    List<AgentExecutionStepDTO> steps) {
+        if (unexecuted > 0 || writebackFailed > 0 || artifactCount == 0) {
+            return AgentExecutionVerdict.AGENT_FAILED;
+        }
+        if (blocked > 0) {
+            return AgentExecutionVerdict.BLOCKED;
+        }
+        if (failed > 0) {
+            List<String> categories = steps.stream().map(AgentExecutionStepDTO::getFailureCategory)
+                    .filter(StringUtils::isNotBlank).map(String::toUpperCase).toList();
+            if (categories.stream().anyMatch(category -> category.startsWith("ENV_"))) {
+                return AgentExecutionVerdict.ENV_FAILED;
+            }
+            if (categories.stream().anyMatch(category -> category.startsWith("DATA_"))) {
+                return AgentExecutionVerdict.DATA_FAILED;
+            }
+            if (categories.stream().anyMatch(category -> category.startsWith("AGENT_")
+                    || category.startsWith("RUNNER_") || category.startsWith("SCOPE_"))) {
+                return AgentExecutionVerdict.AGENT_FAILED;
+            }
+            return AgentExecutionVerdict.PRODUCT_FAILED;
+        }
+        if (skipped > 0) {
+            return AgentExecutionVerdict.INCONCLUSIVE;
+        }
+        return AgentExecutionVerdict.PASSED;
     }
 
     private void appendEvent(AgentExecutionTaskDTO task, String caseId, String level, String eventType,

@@ -2,6 +2,7 @@ package io.metersphere.functional.service;
 
 import io.metersphere.functional.constants.AiSourceDocumentParseStatus;
 import io.metersphere.functional.domain.AiSourceDocument;
+import io.metersphere.functional.event.TestAssetDocumentPublishedEvent;
 import io.metersphere.functional.mapper.AiSourceDocumentMapper;
 import io.metersphere.project.domain.FileMetadata;
 import io.metersphere.project.service.FileMetadataService;
@@ -20,6 +21,7 @@ import org.apache.tika.parser.ParseContext;
 import org.apache.tika.sax.BodyContentHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -59,6 +61,8 @@ public class AiSourceDocumentParserService {
     private AiSourceDocumentEventService eventService;
     @Resource
     private AiAuditService aiAuditService;
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @PreDestroy
     void shutdownParserExecutor() {
@@ -104,6 +108,13 @@ public class AiSourceDocumentParserService {
             update.setErrorMessage(StringUtils.EMPTY);
             update.setUpdateTime(System.currentTimeMillis());
             aiSourceDocumentMapper.updateByPrimaryKeySelective(update);
+            AiSourceDocument published = aiSourceDocumentMapper.selectByPrimaryKey(documentId);
+            applicationEventPublisher.publishEvent(new TestAssetDocumentPublishedEvent(
+                    published, JSON.toJSONString(java.util.Map.of(
+                    "document", published,
+                    "parserType", result.getParserType(),
+                    "summary", StringUtils.defaultString(result.getSummary()),
+                    "sections", result.getSections()))));
             eventService.publish(document.getProjectId(), document.getCreateUser(), documentId,
                     AiSourceDocumentParseStatus.PARSED.name(), null);
             audit("PARSE", document.getProjectId(), document.getCreateUser(), "documentId=" + documentId + ",chunks=" + result.getSections().size());

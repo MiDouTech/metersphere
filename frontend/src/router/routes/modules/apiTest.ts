@@ -41,6 +41,7 @@ const ApiTest: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.apiTest.management',
         roles: ['PROJECT_API_DEFINITION:READ'],
+        resourceCode: 'API_DEFINITION_LIST_TAB',
         isTopMenu: true,
       },
     },
@@ -72,6 +73,7 @@ const ApiTest: AppRouteRecordRaw = {
         locale: 'menu.apiTest.scenario',
         isTopMenu: true,
         roles: ['PROJECT_API_SCENARIO:READ'],
+        resourceCode: 'API_SCENARIO_TAB',
       },
     },
 
@@ -104,6 +106,7 @@ const ApiTest: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.apiTest.report',
         roles: ['PROJECT_API_REPORT:READ'],
+        resourceCode: 'API_REPORT_TAB',
         isTopMenu: true,
       },
     },

@@ -14,6 +14,7 @@ import io.metersphere.functional.dto.CaseGenerationResult;
 import io.metersphere.functional.dto.FunctionalCaseAiDTO;
 import io.metersphere.functional.dto.FunctionalCaseAiDraftDTO;
 import io.metersphere.functional.dto.FunctionalCaseStepDTO;
+import io.metersphere.functional.event.TestAssetCasePublishedEvent;
 import io.metersphere.functional.mapper.FunctionalCaseAiDraftMapper;
 import io.metersphere.functional.mapper.FunctionalCaseAiGenerationMapper;
 import io.metersphere.functional.mapper.FunctionalCaseMapper;
@@ -23,6 +24,7 @@ import io.metersphere.functional.request.FunctionalCaseAiDraftBatchDeleteRequest
 import io.metersphere.functional.request.FunctionalCaseAiDraftBatchSaveRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftPageRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftRegenerateRequest;
+import io.metersphere.functional.request.FunctionalCaseAiDraftReviewRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftUpsertRequest;
 import io.metersphere.functional.request.FunctionalCaseAiGenerateRequest;
 import io.metersphere.functional.request.FunctionalCaseAiGenerationCancelRequest;
@@ -56,6 +58,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -101,6 +104,8 @@ public class FunctionalCaseAiDraftService {
     private AiProviderAdapter aiProviderAdapter;
     @Resource
     private PlatformTransactionManager transactionManager;
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public FunctionalCaseAiGenerateResponse generate(FunctionalCaseAiGenerateRequest request, String userId) {
@@ -223,6 +228,17 @@ public class FunctionalCaseAiDraftService {
         return response;
     }
 
+    public FunctionalCaseAiDraftPageResponse reviewQueue(FunctionalCaseAiDraftPageRequest request) {
+        int current = Math.max(1, request.getCurrent() == null ? 1 : request.getCurrent());
+        int pageSize = Math.min(100, Math.max(1, request.getPageSize() == null ? 20 : request.getPageSize()));
+        String status = StringUtils.equalsIgnoreCase(request.getDraftStatus(), "ALL") ? null : request.getDraftStatus();
+        FunctionalCaseAiDraftPageResponse response = new FunctionalCaseAiDraftPageResponse();
+        response.setTotal(draftMapper.countReviewQueue(request.getProjectId(), status));
+        response.setRecords(draftMapper.selectReviewQueue(request.getProjectId(), status,
+                (long) (current - 1) * pageSize, pageSize).stream().map(this::toDTO).toList());
+        return response;
+    }
+
     public FunctionalCaseAiDraftDTO get(String id, String projectId, String userId) {
         FunctionalCaseAiDraft draft = requireDraft(id, projectId, userId);
         return toDTO(draft);
@@ -247,8 +263,13 @@ public class FunctionalCaseAiDraftService {
         update.setTags(request.getTags());
         update.setCustomFields(request.getCustomFields());
         update.setDraftStatus(FunctionalCaseAiDraftStatus.DRAFT.name());
+        update.setReviewStatus(FunctionalCaseAiDraftStatus.PENDING_REVIEW.name());
+        update.setPublishMode(normalizePublishMode(request.getPublishMode()));
+        update.setTargetCaseId(StringUtils.trimToNull(request.getTargetCaseId()));
+        update.setBaselineSnapshot(buildTargetBaseline(request.getProjectId(), update.getPublishMode(), update.getTargetCaseId()));
         update.setUpdateTime(System.currentTimeMillis());
         validateDraft(update, existing.getId(), request.getProjectId(), userId);
+        update.setContentHash(contentHash(update));
         int affected = draftMapper.updateByPrimaryKeyAndVersionSelective(update, request.getVersion());
         if (affected == 0) {
             throw new MSException("草稿已被其他窗口更新，请刷新后重试");
@@ -263,6 +284,47 @@ public class FunctionalCaseAiDraftService {
             draftMapper.markDeleted(id, request.getProjectId(), userId, now);
         }
         audit("DELETE_DRAFT", request.getProjectId(), userId, "draftIds=" + request.getDraftIds());
+    }
+
+    public List<FunctionalCaseAiDraftDTO> review(FunctionalCaseAiDraftReviewRequest request, String reviewer) {
+        String action = StringUtils.upperCase(StringUtils.trim(request.getAction()));
+        String reviewStatus = switch (action) {
+            case "SUBMIT" -> FunctionalCaseAiDraftStatus.PENDING_REVIEW.name();
+            case "APPROVE" -> FunctionalCaseAiDraftStatus.APPROVED.name();
+            case "REQUEST_CHANGES" -> FunctionalCaseAiDraftStatus.CHANGES_REQUESTED.name();
+            case "REJECT" -> FunctionalCaseAiDraftStatus.REJECTED.name();
+            default -> throw new MSException("review action 仅支持 SUBMIT/APPROVE/REQUEST_CHANGES/REJECT");
+        };
+        if (List.of("REQUEST_CHANGES", "REJECT").contains(action) && StringUtils.isBlank(request.getComment())) {
+            throw new MSException("退回或驳回必须填写审核意见");
+        }
+        Map<String, FunctionalCaseAiDraft> byId = new HashMap<>();
+        draftMapper.selectByIdsInProject(request.getDraftIds(), request.getProjectId())
+                .forEach(draft -> byId.put(draft.getId(), draft));
+        List<FunctionalCaseAiDraftDTO> results = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (String id : request.getDraftIds()) {
+            FunctionalCaseAiDraft draft = byId.get(id);
+            if (draft == null) {
+                throw new MSException("草稿不存在或不属于当前项目: " + id);
+            }
+            validateDraft(draft);
+            if ("APPROVE".equals(action) && FunctionalCaseAiDraftStatus.INVALID.name().equals(draft.getValidationStatus())) {
+                throw new MSException("校验未通过的草稿不能审核通过: " + draft.getName());
+            }
+            String hash = contentHash(draft);
+            int updated = draftMapper.updateReview(id, request.getProjectId(), draft.getVersion(), reviewStatus,
+                    StringUtils.abbreviate(StringUtils.trimToNull(request.getComment()), 2000), reviewer, now,
+                    "APPROVE".equals(action) ? hash : null, now);
+            if (updated != 1) {
+                throw new MSException("草稿已被修改，请刷新后重新审核: " + draft.getName());
+            }
+            draftMapper.insertReviewHistory(IDGenerator.nextStr(), id, request.getProjectId(), action,
+                    StringUtils.abbreviate(StringUtils.trimToNull(request.getComment()), 2000), hash, reviewer, now);
+            results.add(toDTO(draftMapper.selectByPrimaryKey(id)));
+        }
+        audit("REVIEW_" + action, request.getProjectId(), reviewer, "draftIds=" + request.getDraftIds());
+        return results;
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -283,19 +345,22 @@ public class FunctionalCaseAiDraftService {
     public FunctionalCaseAiBatchSaveResponse batchSave(FunctionalCaseAiDraftBatchSaveRequest request,
                                                        String userId,
                                                        String organizationId) {
-        List<FunctionalCaseAiDraft> drafts = draftMapper.selectByIds(request.getDraftIds(), request.getProjectId(), userId);
+        List<FunctionalCaseAiDraft> drafts = draftMapper.selectByIdsInProject(request.getDraftIds(), request.getProjectId());
         Map<String, FunctionalCaseAiDraft> draftMap = new HashMap<>();
         drafts.forEach(draft -> draftMap.put(draft.getId(), draft));
         FunctionalCaseAiBatchSaveResponse response = new FunctionalCaseAiBatchSaveResponse();
         for (String draftId : request.getDraftIds()) {
             FunctionalCaseAiBatchSaveResponse.ItemResult itemResult = new FunctionalCaseAiBatchSaveResponse.ItemResult();
             itemResult.setDraftId(draftId);
+            boolean publishStarted = false;
             try {
                 FunctionalCaseAiDraft draft = draftMap.get(draftId);
                 if (draft == null) {
                     throw new MSException("草稿不存在或无权限访问");
                 }
                 itemResult.setName(draft.getName());
+                validatePublishPreconditions(draft);
+                publishStarted = true;
                 TransactionTemplate itemTransaction = new TransactionTemplate(transactionManager);
                 itemTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
                 FunctionalCase created = itemTransaction.execute(status ->
@@ -310,7 +375,9 @@ public class FunctionalCaseAiDraftService {
                 itemResult.setSuccess(false);
                 itemResult.setMessage(ex.getMessage());
                 response.setFailureCount(response.getFailureCount() + 1);
-                markDraftFailed(draftMap.get(draftId), ex.getMessage());
+                if (publishStarted) {
+                    markDraftFailed(draftMap.get(draftId), ex.getMessage());
+                }
             }
             response.getResults().add(itemResult);
         }
@@ -322,13 +389,7 @@ public class FunctionalCaseAiDraftService {
                                               FunctionalCaseAiDraftBatchSaveRequest request,
                                               String userId,
                                               String organizationId) {
-        if (FunctionalCaseAiDraftStatus.SAVED.name().equals(draft.getDraftStatus())) {
-            throw new MSException("草稿已保存为正式用例");
-        }
-        validateDraft(draft);
-        if (FunctionalCaseAiDraftStatus.INVALID.name().equals(draft.getValidationStatus())) {
-            throw new MSException(StringUtils.defaultIfBlank(draft.getValidationMessage(), "草稿校验未通过"));
-        }
+        validatePublishPreconditions(draft);
         String moduleId = StringUtils.defaultIfBlank(draft.getModuleId(), request.getModuleId());
         moduleId = StringUtils.defaultIfBlank(moduleId, ModuleConstants.DEFAULT_NODE_ID);
         String templateId = StringUtils.defaultIfBlank(draft.getTemplateId(), request.getTemplateId());
@@ -368,6 +429,16 @@ public class FunctionalCaseAiDraftService {
         addRequest.setAiCreate(true);
         FunctionalCase created = functionalCaseService.addFunctionalCase(addRequest, new ArrayList<>(), userId, resolvedOrganizationId);
 
+        applicationEventPublisher.publishEvent(new TestAssetCasePublishedEvent(
+                draft, created, JSON.toJSONString(Map.of(
+                "case", created,
+                "prerequisite", StringUtils.defaultString(draft.getPrerequisite()),
+                "steps", StringUtils.defaultString(draft.getSteps()),
+                "expectedResult", StringUtils.defaultString(draft.getExpectedResult()),
+                "sourceReferences", StringUtils.defaultString(draft.getSourceReferences()),
+                "generationId", draft.getGenerationId(),
+                "draftId", draft.getId())), userId));
+
         FunctionalCaseAiDraft saved = new FunctionalCaseAiDraft();
         saved.setId(draft.getId());
         saved.setFormalCaseId(created.getId());
@@ -376,6 +447,24 @@ public class FunctionalCaseAiDraftService {
         saved.setUpdateTime(System.currentTimeMillis());
         draftMapper.updateByPrimaryKeySelective(saved);
         return created;
+    }
+
+    private void validatePublishPreconditions(FunctionalCaseAiDraft draft) {
+        if (FunctionalCaseAiDraftStatus.SAVED.name().equals(draft.getDraftStatus())) {
+            throw new MSException("草稿已保存为正式用例");
+        }
+        String currentHash = contentHash(draft);
+        if (!FunctionalCaseAiDraftStatus.APPROVED.name().equals(draft.getReviewStatus())
+                || !StringUtils.equals(currentHash, draft.getReviewedContentHash())) {
+            throw new MSException("草稿尚未审核通过，或审核后内容已发生变化");
+        }
+        if (!"CREATE".equals(normalizePublishMode(draft.getPublishMode()))) {
+            throw new MSException("当前版本仅允许发布新增建议；修改/废弃建议尚未完成领域版本接入");
+        }
+        validateDraft(draft);
+        if (FunctionalCaseAiDraftStatus.INVALID.name().equals(draft.getValidationStatus())) {
+            throw new MSException(StringUtils.defaultIfBlank(draft.getValidationMessage(), "草稿校验未通过"));
+        }
     }
 
     private FunctionalCaseAiGeneration createGeneration(FunctionalCaseAiGenerateRequest request, String userId, long now) {
@@ -523,8 +612,8 @@ public class FunctionalCaseAiDraftService {
         if (CollectionUtils.isEmpty(request.getSourceDocumentIds())) {
             return StringUtils.EMPTY;
         }
-        List<AiSourceDocument> documents = aiSourceDocumentMapper.selectByIds(
-                request.getSourceDocumentIds(), request.getProjectId(), userId);
+        List<AiSourceDocument> documents = aiSourceDocumentMapper.selectByIdsInProject(
+                request.getSourceDocumentIds(), request.getProjectId());
         if (CollectionUtils.isEmpty(documents)) {
             return StringUtils.EMPTY;
         }
@@ -621,6 +710,9 @@ public class FunctionalCaseAiDraftService {
         draft.setId(IDGenerator.nextStr());
         draft.setGenerationId(generationId);
         draft.setProjectId(request.getProjectId());
+        if (CollectionUtils.isNotEmpty(request.getSourceDocumentIds())) {
+            draft.setSourceDocumentId(request.getSourceDocumentIds().getFirst());
+        }
         draft.setModuleId(StringUtils.defaultIfBlank(item.getModuleId(), request.getModuleId()));
         draft.setTemplateId(StringUtils.defaultIfBlank(item.getTemplateId(), request.getTemplateId()));
         draft.setName(StringUtils.trim(item.getName()));
@@ -635,11 +727,14 @@ public class FunctionalCaseAiDraftService {
         draft.setCustomFields(JSON.toJSONString(new ArrayList<CaseCustomFieldDTO>()));
         draft.setSourceReferences(JSON.toJSONString(CollectionUtils.emptyIfNull(item.getSourceReferences())));
         draft.setDraftStatus(FunctionalCaseAiDraftStatus.DRAFT.name());
+        draft.setReviewStatus(FunctionalCaseAiDraftStatus.PENDING_REVIEW.name());
+        draft.setPublishMode("CREATE");
         draft.setDeleted(false);
         draft.setVersion(0);
         draft.setCreateUser(userId);
         draft.setCreateTime(now);
         draft.setUpdateTime(now);
+        draft.setContentHash(contentHash(draft));
         return draft;
     }
 
@@ -718,6 +813,47 @@ public class FunctionalCaseAiDraftService {
             return null;
         }
         return DigestUtils.sha256Hex(projectId + ":" + StringUtils.deleteWhitespace(name).toLowerCase());
+    }
+
+    private String normalizePublishMode(String mode) {
+        String normalized = StringUtils.defaultIfBlank(StringUtils.upperCase(mode), "CREATE");
+        if (!List.of("CREATE", "UPDATE", "DEPRECATE").contains(normalized)) {
+            throw new MSException("publishMode 仅支持 CREATE/UPDATE/DEPRECATE");
+        }
+        return normalized;
+    }
+
+    private String buildTargetBaseline(String projectId, String mode, String targetCaseId) {
+        if ("CREATE".equals(mode)) {
+            return null;
+        }
+        if (StringUtils.isBlank(targetCaseId)) {
+            throw new MSException(mode + " 建议必须选择目标正式用例");
+        }
+        FunctionalCase target = functionalCaseMapper.selectByPrimaryKey(targetCaseId);
+        if (target == null || !StringUtils.equals(projectId, target.getProjectId())
+                || Boolean.TRUE.equals(target.getDeleted()) || !Boolean.TRUE.equals(target.getLatest())) {
+            throw new MSException("目标正式用例不存在、已删除或不属于当前项目");
+        }
+        return JSON.toJSONString(target);
+    }
+
+    private String contentHash(FunctionalCaseAiDraft draft) {
+        Map<String, Object> content = new java.util.LinkedHashMap<>();
+        content.put("moduleId", draft.getModuleId());
+        content.put("templateId", draft.getTemplateId());
+        content.put("name", draft.getName());
+        content.put("caseLevel", draft.getCaseLevel());
+        content.put("editType", draft.getEditType());
+        content.put("prerequisite", draft.getPrerequisite());
+        content.put("steps", draft.getSteps());
+        content.put("expectedResult", draft.getExpectedResult());
+        content.put("tags", draft.getTags());
+        content.put("customFields", draft.getCustomFields());
+        content.put("sourceReferences", draft.getSourceReferences());
+        content.put("publishMode", normalizePublishMode(draft.getPublishMode()));
+        content.put("targetCaseId", draft.getTargetCaseId());
+        return DigestUtils.sha256Hex(JSON.toJSONString(content));
     }
 
     private boolean isJsonArray(String value) {
@@ -830,6 +966,15 @@ public class FunctionalCaseAiDraftService {
         dto.setDuplicate(draft.getDuplicate());
         dto.setValidationStatus(draft.getValidationStatus());
         dto.setDraftStatus(draft.getDraftStatus());
+        dto.setReviewStatus(draft.getReviewStatus());
+        dto.setReviewComment(draft.getReviewComment());
+        dto.setReviewedBy(draft.getReviewedBy());
+        dto.setReviewedAt(draft.getReviewedAt());
+        dto.setPublishMode(draft.getPublishMode());
+        dto.setTargetCaseId(draft.getTargetCaseId());
+        dto.setBaselineSnapshot(draft.getBaselineSnapshot());
+        dto.setContentHash(draft.getContentHash());
+        dto.setReviewedContentHash(draft.getReviewedContentHash());
         dto.setFormalCaseId(draft.getFormalCaseId());
         dto.setDeleted(draft.getDeleted());
         dto.setVersion(draft.getVersion());

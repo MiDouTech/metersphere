@@ -17,6 +17,7 @@ public final class AgentExecutionStateMachine {
             AgentExecutionStatus.QUEUED,
             AgentExecutionStatus.PREPARING_BROWSER,
             AgentExecutionStatus.WAITING_LOGIN,
+            AgentExecutionStatus.WAITING_HUMAN,
             AgentExecutionStatus.RUNNING,
             AgentExecutionStatus.PAUSED,
             AgentExecutionStatus.WRITING_BACK
@@ -43,6 +44,7 @@ public final class AgentExecutionStateMachine {
                     AgentExecutionStatus.FAILED)),
             Map.entry(AgentExecutionStatus.PREPARING_BROWSER, Set.of(
                     AgentExecutionStatus.WAITING_LOGIN,
+                    AgentExecutionStatus.WAITING_HUMAN,
                     AgentExecutionStatus.RUNNING,
                     AgentExecutionStatus.PAUSED,
                     AgentExecutionStatus.FAILED,
@@ -52,7 +54,13 @@ public final class AgentExecutionStateMachine {
                     AgentExecutionStatus.PAUSED,
                     AgentExecutionStatus.EXPIRED,
                     AgentExecutionStatus.FAILED)),
+            Map.entry(AgentExecutionStatus.WAITING_HUMAN, Set.of(
+                    AgentExecutionStatus.RUNNING,
+                    AgentExecutionStatus.PAUSED,
+                    AgentExecutionStatus.EXPIRED,
+                    AgentExecutionStatus.FAILED)),
             Map.entry(AgentExecutionStatus.RUNNING, Set.of(
+                    AgentExecutionStatus.WAITING_HUMAN,
                     AgentExecutionStatus.PAUSED,
                     AgentExecutionStatus.WRITING_BACK,
                     AgentExecutionStatus.FAILED,

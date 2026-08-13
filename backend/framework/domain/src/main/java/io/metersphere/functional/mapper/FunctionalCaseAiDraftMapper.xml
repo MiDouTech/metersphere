@@ -24,6 +24,15 @@
         <result column="duplicate" jdbcType="BIT" property="duplicate"/>
         <result column="validation_status" jdbcType="VARCHAR" property="validationStatus"/>
         <result column="draft_status" jdbcType="VARCHAR" property="draftStatus"/>
+        <result column="review_status" jdbcType="VARCHAR" property="reviewStatus"/>
+        <result column="review_comment" jdbcType="VARCHAR" property="reviewComment"/>
+        <result column="reviewed_by" jdbcType="VARCHAR" property="reviewedBy"/>
+        <result column="reviewed_at" jdbcType="BIGINT" property="reviewedAt"/>
+        <result column="publish_mode" jdbcType="VARCHAR" property="publishMode"/>
+        <result column="target_case_id" jdbcType="VARCHAR" property="targetCaseId"/>
+        <result column="baseline_snapshot" jdbcType="LONGVARCHAR" property="baselineSnapshot"/>
+        <result column="content_hash" jdbcType="VARCHAR" property="contentHash"/>
+        <result column="reviewed_content_hash" jdbcType="VARCHAR" property="reviewedContentHash"/>
         <result column="formal_case_id" jdbcType="VARCHAR" property="formalCaseId"/>
         <result column="deleted" jdbcType="BIT" property="deleted"/>
         <result column="version" jdbcType="INTEGER" property="version"/>
@@ -36,7 +45,9 @@
         insert into functional_case_ai_draft (id, generation_id, conversation_id, request_id, source_document_id, project_id, module_id,
                                               template_id, name, case_level, edit_type, prerequisite, steps,
                                               expected_result, tags, custom_fields, source_references, validation_message, fingerprint,
-                                              duplicate, validation_status, draft_status, formal_case_id, deleted,
+                                              duplicate, validation_status, draft_status, review_status, review_comment,
+                                              reviewed_by, reviewed_at, publish_mode, target_case_id, baseline_snapshot,
+                                              content_hash, reviewed_content_hash, formal_case_id, deleted,
                                               version, create_user, create_time, update_time)
         values (#{id,jdbcType=VARCHAR}, #{generationId,jdbcType=VARCHAR}, #{conversationId,jdbcType=VARCHAR},
                 #{requestId,jdbcType=VARCHAR}, #{sourceDocumentId,jdbcType=VARCHAR},
@@ -46,7 +57,11 @@
                 #{expectedResult,jdbcType=LONGVARCHAR}, #{tags,jdbcType=LONGVARCHAR},
                 #{customFields,jdbcType=LONGVARCHAR}, #{sourceReferences,jdbcType=LONGVARCHAR}, #{validationMessage,jdbcType=LONGVARCHAR},
                 #{fingerprint,jdbcType=VARCHAR}, #{duplicate,jdbcType=BIT}, #{validationStatus,jdbcType=VARCHAR},
-                #{draftStatus,jdbcType=VARCHAR}, #{formalCaseId,jdbcType=VARCHAR}, #{deleted,jdbcType=BIT}, #{version,jdbcType=INTEGER},
+                #{draftStatus,jdbcType=VARCHAR}, COALESCE(#{reviewStatus,jdbcType=VARCHAR}, 'PENDING_REVIEW'),
+                #{reviewComment,jdbcType=VARCHAR}, #{reviewedBy,jdbcType=VARCHAR}, #{reviewedAt,jdbcType=BIGINT},
+                COALESCE(#{publishMode,jdbcType=VARCHAR}, 'CREATE'), #{targetCaseId,jdbcType=VARCHAR},
+                #{baselineSnapshot,jdbcType=LONGVARCHAR}, #{contentHash,jdbcType=VARCHAR},
+                #{reviewedContentHash,jdbcType=VARCHAR}, #{formalCaseId,jdbcType=VARCHAR}, #{deleted,jdbcType=BIT}, #{version,jdbcType=INTEGER},
                 #{createUser,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT})
     </insert>
 
@@ -81,6 +96,15 @@
             <if test="duplicate != null">duplicate = #{duplicate,jdbcType=BIT},</if>
             <if test="validationStatus != null">validation_status = #{validationStatus,jdbcType=VARCHAR},</if>
             <if test="draftStatus != null">draft_status = #{draftStatus,jdbcType=VARCHAR},</if>
+            <if test="reviewStatus != null">review_status = #{reviewStatus,jdbcType=VARCHAR},</if>
+            <if test="reviewComment != null">review_comment = #{reviewComment,jdbcType=VARCHAR},</if>
+            <if test="reviewedBy != null">reviewed_by = #{reviewedBy,jdbcType=VARCHAR},</if>
+            <if test="reviewedAt != null">reviewed_at = #{reviewedAt,jdbcType=BIGINT},</if>
+            <if test="publishMode != null">publish_mode = #{publishMode,jdbcType=VARCHAR},</if>
+            <if test="targetCaseId != null">target_case_id = #{targetCaseId,jdbcType=VARCHAR},</if>
+            <if test="baselineSnapshot != null">baseline_snapshot = #{baselineSnapshot,jdbcType=LONGVARCHAR},</if>
+            <if test="contentHash != null">content_hash = #{contentHash,jdbcType=VARCHAR},</if>
+            <if test="reviewedContentHash != null">reviewed_content_hash = #{reviewedContentHash,jdbcType=VARCHAR},</if>
             <if test="formalCaseId != null">formal_case_id = #{formalCaseId,jdbcType=VARCHAR},</if>
             <if test="deleted != null">deleted = #{deleted,jdbcType=BIT},</if>
             <if test="version != null">version = #{version,jdbcType=INTEGER},</if>
@@ -111,6 +135,11 @@
             <if test="record.duplicate != null">duplicate = #{record.duplicate,jdbcType=BIT},</if>
             <if test="record.validationStatus != null">validation_status = #{record.validationStatus,jdbcType=VARCHAR},</if>
             <if test="record.draftStatus != null">draft_status = #{record.draftStatus,jdbcType=VARCHAR},</if>
+            <if test="record.reviewStatus != null">review_status = #{record.reviewStatus,jdbcType=VARCHAR},</if>
+            <if test="record.publishMode != null">publish_mode = #{record.publishMode,jdbcType=VARCHAR},</if>
+            <if test="record.targetCaseId != null">target_case_id = #{record.targetCaseId,jdbcType=VARCHAR},</if>
+            <if test="record.baselineSnapshot != null">baseline_snapshot = #{record.baselineSnapshot,jdbcType=LONGVARCHAR},</if>
+            <if test="record.contentHash != null">content_hash = #{record.contentHash,jdbcType=VARCHAR},</if>
             <if test="record.formalCaseId != null">formal_case_id = #{record.formalCaseId,jdbcType=VARCHAR},</if>
             <if test="record.deleted != null">deleted = #{record.deleted,jdbcType=BIT},</if>
             <if test="record.updateTime != null">update_time = #{record.updateTime,jdbcType=BIGINT},</if>
@@ -156,6 +185,38 @@
         </foreach>
     </select>
 
+    <select id="selectReviewQueue" resultMap="BaseResultMap">
+        select *
+        from functional_case_ai_draft
+        where project_id = #{projectId}
+          and deleted = 0
+          and review_status = 'PENDING_REVIEW'
+          and draft_status not in ('SAVING', 'SAVED')
+        <if test="draftStatus != null and draftStatus != ''">
+          and draft_status = #{draftStatus}
+        </if>
+        order by update_time asc, id asc
+        limit #{offset}, #{pageSize}
+    </select>
+
+    <select id="countReviewQueue" resultType="long">
+        select count(1)
+        from functional_case_ai_draft
+        where project_id = #{projectId}
+          and deleted = 0
+          and review_status = 'PENDING_REVIEW'
+          and draft_status not in ('SAVING', 'SAVED')
+        <if test="draftStatus != null and draftStatus != ''">
+          and draft_status = #{draftStatus}
+        </if>
+    </select>
+
+    <select id="selectByIdsInProject" resultMap="BaseResultMap">
+        select * from functional_case_ai_draft
+        where project_id = #{projectId} and deleted = 0 and id in
+        <foreach collection="ids" item="id" open="(" close=")" separator=",">#{id}</foreach>
+    </select>
+
     <select id="countDuplicateByFingerprint" resultType="long">
         select count(1)
         from functional_case_ai_draft
@@ -178,4 +239,19 @@
           and create_user = #{createUser}
           and deleted = 0
     </update>
+
+    <update id="updateReview">
+        update functional_case_ai_draft
+        set review_status = #{reviewStatus}, review_comment = #{reviewComment},
+            reviewed_by = #{reviewedBy}, reviewed_at = #{reviewedAt},
+            reviewed_content_hash = #{reviewedContentHash}, update_time = #{updateTime}, version = version + 1
+        where id = #{id} and project_id = #{projectId} and version = #{version} and deleted = 0
+          and draft_status not in ('SAVING', 'SAVED')
+    </update>
+
+    <insert id="insertReviewHistory">
+        insert into functional_case_ai_review_history
+        (id, draft_id, project_id, action, comment, content_hash, reviewer, create_time)
+        values (#{id}, #{draftId}, #{projectId}, #{action}, #{comment}, #{contentHash}, #{reviewer}, #{createTime})
+    </insert>
 </mapper>

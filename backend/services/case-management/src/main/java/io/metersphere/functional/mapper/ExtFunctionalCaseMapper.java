@@ -24,6 +24,10 @@ public interface ExtFunctionalCaseMapper {
 
     Long getPos(@Param("projectId") String projectId);
 
+    Long getWorkspacePos(@Param("workspaceId") String workspaceId);
+
+    Long getWorkspaceMaxNum(@Param("workspaceId") String workspaceId);
+
     void updateFunctionalCaseModule(@Param("refId") String refId, @Param("moduleId") String moduleId);
 
     List<FunctionalCaseVersionDTO> getFunctionalCaseByRefId(@Param("refId") String refId);

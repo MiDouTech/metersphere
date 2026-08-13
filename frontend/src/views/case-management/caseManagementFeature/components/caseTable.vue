@@ -7,11 +7,11 @@
       class="case-view-tabs no-content mb-[8px]"
       @change="handleCaseViewTabChange"
     >
-      <a-tab-pane key="list" :title="t('caseManagement.featureCase.caseListTab')" />
-      <a-tab-pane key="detail" :title="detailTabTitle" :disabled="!activeDetailId" />
+      <a-tab-pane v-if="canShowCaseListTab" key="list" :title="t('caseManagement.featureCase.caseListTab')" />
+      <a-tab-pane v-if="canShowCaseDetailTab" key="detail" :title="detailTabTitle" :disabled="!activeDetailId" />
     </a-tabs>
     <div
-      v-show="caseViewTab === 'list' || showType === 'minder'"
+      v-show="(caseViewTab === 'list' && canShowCaseListTab) || showType === 'minder'"
       class="h-full"
       :class="{ 'h-[calc(100%-46px)]': showType === 'list' }"
     >
@@ -364,7 +364,10 @@
         </div>
       </keep-alive>
     </div>
-    <div v-if="showType === 'list' && caseViewTab === 'detail' && activeDetailId" class="h-[calc(100%-46px)]">
+    <div
+      v-if="showType === 'list' && caseViewTab === 'detail' && canShowCaseDetailTab && activeDetailId"
+      class="h-[calc(100%-46px)]"
+    >
       <CaseDetailDrawer
         ref="caseDetailDrawerRef"
         v-model:visible="showDetailDrawer"
@@ -703,7 +706,7 @@
     getGenerateId,
     mapTree,
   } from '@/utils';
-  import { hasAnyPermission } from '@/utils/permission';
+  import { hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
   import { AiCaseTransformResult } from '@/models/ai';
   import type {
@@ -747,6 +750,7 @@
     moduleName: string;
     offspringIds: string[]; // 当前选中文件夹的所有子孙节点id
     moduleCountIsInit: boolean;
+    dimension?: 'project' | 'system';
   }>();
 
   const emit = defineEmits<{
@@ -1610,7 +1614,7 @@
   );
   async function initTableParams() {
     let moduleIds: string[] = [];
-    if (props.activeFolder !== 'all' && !isAdvancedSearchMode.value) {
+    if (props.activeFolder !== 'all' && props.activeFolder !== 'unclassified-system' && !isAdvancedSearchMode.value) {
       moduleIds = [props.activeFolder];
       const getAllChildren = await tableStore.getSubShow(TableKeyEnum.CASE_MANAGEMENT_TABLE);
       if (getAllChildren) {
@@ -1618,8 +1622,12 @@
       }
     }
 
+    const dimension = (props.dimension === 'system' ? 'SYSTEM' : 'PROJECT') as 'SYSTEM' | 'PROJECT';
     return {
       moduleIds,
+      dimension,
+      workspaceId: appStore.currentOrgId,
+      unclassifiedSystem: props.activeFolder === 'unclassified-system',
       projectId: currentProjectId.value,
       excludeIds: batchParams.value.excludeIds || [],
       selectAll: batchParams.value.selectAll,
@@ -1640,6 +1648,9 @@
         pageSize: propsRes.value.msPagination?.pageSize,
         filter: propsRes.value.filter,
         projectId: currentProjectId.value,
+        dimension: props.dimension === 'system' ? 'SYSTEM' : 'PROJECT',
+        workspaceId: appStore.currentOrgId,
+        unclassifiedSystem: props.activeFolder === 'unclassified-system',
         keyword: showType.value === 'list' ? keyword.value : '',
       },
       refreshModule
@@ -1683,6 +1694,8 @@
   const activeCaseIndex = ref<number>(0);
   const caseViewTab = ref<'list' | 'detail'>('list');
   const detailTabTitle = computed(() => t('caseManagement.featureCase.caseDetailTab'));
+  const canShowCaseListTab = computed(() => hasTabVisible('FUNCTIONAL_CASE_LIST_TAB', ['PROJECT']));
+  const canShowCaseDetailTab = computed(() => hasTabVisible('FUNCTIONAL_CASE_DETAIL_TAB', ['PROJECT']));
 
   function handleCaseViewTabChange(key: string | number) {
     if (key === 'list') {
@@ -1706,6 +1719,9 @@
 
   // 打开用例详情（同页 Tab，不再使用抽屉）
   function showCaseDetail(id: string, index: number) {
+    if (!canShowCaseDetailTab.value) {
+      return;
+    }
     activeDetailId.value = id;
     activeCaseIndex.value = index;
     showDetailDrawer.value = true;
@@ -1720,7 +1736,9 @@
 
   /** 左侧模块树切换时回到用例列表 Tab */
   function switchToListTab() {
-    caseViewTab.value = 'list';
+    if (canShowCaseListTab.value) {
+      caseViewTab.value = 'list';
+    }
     showDetailDrawer.value = false;
   }
   const isEdit = ref<boolean>(false);
@@ -2709,6 +2727,7 @@
     isAdvancedSearchMode,
     emitTableParams,
     initData,
+    refresh: initData,
     refreshOpenDetail,
     exitAdvancedSearchAndRefresh,
     switchToListTab,

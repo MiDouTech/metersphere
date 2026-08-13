@@ -10,7 +10,8 @@
         </div>
       </div>
       <div class="flex flex-wrap gap-[8px]">
-        <a-button :disabled="!executionTaskId" @click="refreshAll">{{ t('common.refresh') }}</a-button>
+        <a-button v-if="executionTaskId" @click="backToTaskList">返回任务列表</a-button>
+        <a-button @click="refreshAll">{{ t('common.refresh') }}</a-button>
         <a-button
           v-if="task?.confirmRequired || task?.status === 'WAITING_CONFIRMATION'"
           type="primary"
@@ -39,7 +40,76 @@
       </div>
     </div>
 
-    <div class="automation-execution-workbench">
+    <section v-if="!executionTaskId" class="task-center-panel">
+      <div class="mb-[12px] flex flex-wrap items-center gap-[8px]">
+        <a-input-search
+          v-model:model-value="taskSearch.keyword"
+          class="w-[260px]"
+          allow-clear
+          placeholder="搜索任务名称、目标或 ID"
+          @search="reloadTaskList"
+          @press-enter="reloadTaskList"
+        />
+        <a-select v-model:model-value="taskSearch.status" class="w-[160px]" allow-clear placeholder="运行状态">
+          <a-option v-for="status in taskStatuses" :key="status" :value="status">{{ status }}</a-option>
+        </a-select>
+        <a-select v-model:model-value="taskSearch.verdict" class="w-[170px]" allow-clear placeholder="业务结论">
+          <a-option v-for="verdict in taskVerdicts" :key="verdict" :value="verdict">{{ verdict }}</a-option>
+        </a-select>
+        <a-select v-model:model-value="taskSearch.executionMode" class="w-[130px]" allow-clear placeholder="执行方式">
+          <a-option value="RUNNER">RUNNER</a-option>
+          <a-option value="AGENT">AGENT</a-option>
+        </a-select>
+        <a-button type="primary" :loading="taskListLoading" @click="reloadTaskList">查询</a-button>
+      </div>
+      <a-table
+        :data="taskList"
+        :loading="taskListLoading"
+        :pagination="false"
+        row-key="id"
+        @row-click="openTask"
+      >
+        <template #columns>
+          <a-table-column title="任务" :width="280">
+            <template #cell="{ record }">
+              <div class="font-medium">{{ record.name || record.id }}</div>
+              <div class="mt-[2px] truncate text-[12px] text-[var(--color-text-3)]">{{ record.objective || record.id }}</div>
+            </template>
+          </a-table-column>
+          <a-table-column title="运行状态" data-index="status" :width="150" />
+          <a-table-column title="业务结论" :width="170">
+            <template #cell="{ record }">
+              <a-tag :color="verdictColor(record.verdict)">{{ record.verdict || '待判定' }}</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="执行器" :width="150">
+            <template #cell="{ record }">{{ record.executionMode }} / {{ record.agentType || record.runnerId || '-' }}</template>
+          </a-table-column>
+          <a-table-column title="进度" :width="130">
+            <template #cell="{ record }">{{ (record.successCount || 0) + (record.failedCount || 0) }}/{{ record.totalCount || 0 }}</template>
+          </a-table-column>
+          <a-table-column title="尝试" :width="90">
+            <template #cell="{ record }">{{ record.attemptCount || 0 }}/{{ record.maxAttempts || 3 }}</template>
+          </a-table-column>
+          <a-table-column title="创建时间" :width="180">
+            <template #cell="{ record }">{{ formatTime(record.createTime) }}</template>
+          </a-table-column>
+        </template>
+      </a-table>
+      <div class="mt-[12px] flex justify-end">
+        <a-pagination
+          v-model:current="taskSearch.current"
+          v-model:page-size="taskSearch.pageSize"
+          :total="taskListTotal"
+          show-total
+          show-page-size
+          @change="reloadTaskList"
+          @page-size-change="reloadTaskList"
+        />
+      </div>
+    </section>
+
+    <div v-else class="automation-execution-workbench">
       <section class="automation-panel">
         <div class="panel-title">{{ t('bugManagement.automationExecution.conversation') }}</div>
         <a-form :model="draftForm" layout="vertical" class="mb-[12px]">
@@ -204,6 +274,12 @@
             <a-descriptions-item :label="t('bugManagement.automationExecution.status')">
               <a-tag>{{ task.status }}</a-tag>
             </a-descriptions-item>
+            <a-descriptions-item label="业务结论">
+              <a-tag :color="verdictColor(task.verdict)">{{ task.verdict || '待判定' }}</a-tag>
+            </a-descriptions-item>
+            <a-descriptions-item label="结论说明">
+              {{ task.verdictReason || '-' }}
+            </a-descriptions-item>
             <a-descriptions-item :label="t('bugManagement.automationExecution.project')">
               {{ task.projectId }}
             </a-descriptions-item>
@@ -325,7 +401,7 @@
 <script setup lang="ts">
   import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
-  import { Message } from '@arco-design/web-vue';
+  import { Message, type TableData } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
   import {
@@ -347,6 +423,7 @@
     pauseAiExecutionTask,
     resolveAiExecutionScope,
     retryAiExecutionTask,
+    searchAiExecutionTasks,
   } from '@/api/modules/ai-execution';
   import { useI18n } from '@/hooks/useI18n';
   import { useAppStore } from '@/store';
@@ -363,6 +440,40 @@
   const resolveLoading = ref(false);
   const createLoading = ref(false);
   const task = ref<AiExecutionTask>();
+  const taskListLoading = ref(false);
+  const taskList = ref<AiExecutionTask[]>([]);
+  const taskListTotal = ref(0);
+  const taskSearch = reactive({
+    keyword: '',
+    status: undefined as string | undefined,
+    verdict: undefined as string | undefined,
+    executionMode: undefined as AiExecutionMode | undefined,
+    current: 1,
+    pageSize: 20,
+  });
+  const taskStatuses = [
+    'WAITING_CONFIRMATION',
+    'QUEUED',
+    'PREPARING_BROWSER',
+    'WAITING_LOGIN',
+    'WAITING_HUMAN',
+    'RUNNING',
+    'PAUSED',
+    'WRITING_BACK',
+    'SUCCESS',
+    'PARTIAL_SUCCESS',
+    'FAILED',
+    'CANCELED',
+  ];
+  const taskVerdicts = [
+    'PASSED',
+    'PRODUCT_FAILED',
+    'ENV_FAILED',
+    'DATA_FAILED',
+    'AGENT_FAILED',
+    'BLOCKED',
+    'INCONCLUSIVE',
+  ];
   const events = ref<AiExecutionEvent[]>([]);
   const artifacts = ref<AiExecutionArtifact[]>([]);
   const agentOptions = ref<AiExecutionAgentOption[]>([]);
@@ -447,6 +558,44 @@
     return 'blue';
   }
 
+  function verdictColor(verdict?: string) {
+    if (verdict === 'PASSED') return 'green';
+    if (verdict === 'PRODUCT_FAILED') return 'red';
+    if (verdict === 'BLOCKED' || verdict === 'INCONCLUSIVE') return 'orange';
+    if (verdict) return 'purple';
+    return 'gray';
+  }
+
+  async function reloadTaskList() {
+    if (!appStore.currentProjectId || executionTaskId.value) return;
+    taskListLoading.value = true;
+    try {
+      const response = await searchAiExecutionTasks({
+        projectId: appStore.currentProjectId,
+        keyword: taskSearch.keyword.trim() || undefined,
+        status: taskSearch.status,
+        verdict: taskSearch.verdict,
+        executionMode: taskSearch.executionMode,
+        current: taskSearch.current,
+        pageSize: taskSearch.pageSize,
+      });
+      taskList.value = response.items || [];
+      taskListTotal.value = response.total || 0;
+    } finally {
+      taskListLoading.value = false;
+    }
+  }
+
+  async function openTask(record: TableData) {
+    await router.push({ query: { ...route.query, executionTaskId: String(record.id) } });
+  }
+
+  async function backToTaskList() {
+    const query = { ...route.query };
+    delete query.executionTaskId;
+    await router.push({ query });
+  }
+
   async function loadTask() {
     if (!executionTaskId.value) {
       task.value = undefined;
@@ -491,6 +640,10 @@
   }
 
   async function refreshAll() {
+    if (!executionTaskId.value) {
+      await reloadTaskList();
+      return;
+    }
     await loadTask();
     await loadEvents(true);
     await loadArtifacts();
@@ -717,6 +870,14 @@
   );
 
   watch(
+    () => [taskSearch.status, taskSearch.verdict, taskSearch.executionMode],
+    () => {
+      taskSearch.current = 1;
+      reloadTaskList();
+    }
+  );
+
+  watch(
     () => modelOptions.value,
     (vals) => {
       if (!vals.length) return;
@@ -757,6 +918,14 @@
     grid-template-columns: 35% 1fr;
     gap: 12px;
     min-height: 0;
+    flex: 1;
+  }
+  .task-center-panel {
+    overflow: auto;
+    padding: 16px;
+    min-height: 0;
+    border-radius: 8px;
+    background: var(--color-bg-1);
     flex: 1;
   }
   .automation-panel {
