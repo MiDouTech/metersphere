@@ -12,6 +12,13 @@ public class PermissionConstants {
     public static final String SYSTEM_USER_ROLE_DELETE = "SYSTEM_USER_ROLE:READ+DELETE";
     /*------ end: SYSTEM_USER_ROLE ------*/
 
+    /*------ start: SYSTEM_PERMISSION_CONTROL ------*/
+    public static final String SYSTEM_PERMISSION_CONTROL_READ = "SYSTEM_PERMISSION_CONTROL:READ";
+    public static final String SYSTEM_PERMISSION_CONTROL_ADD = "SYSTEM_PERMISSION_CONTROL:READ+ADD";
+    public static final String SYSTEM_PERMISSION_CONTROL_UPDATE = "SYSTEM_PERMISSION_CONTROL:READ+UPDATE";
+    public static final String SYSTEM_PERMISSION_CONTROL_DELETE = "SYSTEM_PERMISSION_CONTROL:READ+DELETE";
+    /*------ end: SYSTEM_PERMISSION_CONTROL ------*/
+
     /*------ start: SYSTEM_ORGANIZATION_PROJECT ------*/
     public static final String SYSTEM_ORGANIZATION_PROJECT_READ = "SYSTEM_ORGANIZATION_PROJECT:READ";
     public static final String SYSTEM_ORGANIZATION_PROJECT_READ_ADD = "SYSTEM_ORGANIZATION_PROJECT:READ+ADD";
@@ -227,11 +234,18 @@ public class PermissionConstants {
     public static final String FUNCTIONAL_CASE_READ_EXPORT = "FUNCTIONAL_CASE:READ+EXPORT";
     public static final String FUNCTIONAL_CASE_READ_IMPORT = "FUNCTIONAL_CASE:READ+IMPORT";
     public static final String FUNCTIONAL_CASE_READ_MINDER = "FUNCTIONAL_CASE:READ+MINDER";
+    public static final String FUNCTIONAL_CASE_PROJECT_TAB = "FUNCTIONAL_CASE_PROJECT_TAB";
+    public static final String FUNCTIONAL_CASE_SYSTEM_TAB = "FUNCTIONAL_CASE_SYSTEM_TAB";
+    public static final String FUNCTIONAL_CASE_WORKSPACE_READ = "FUNCTIONAL_CASE_WORKSPACE:READ";
+    public static final String FUNCTIONAL_CASE_WORKSPACE_ADD = "FUNCTIONAL_CASE_WORKSPACE:ADD";
+    public static final String FUNCTIONAL_CASE_WORKSPACE_UPDATE = "FUNCTIONAL_CASE_WORKSPACE:UPDATE";
+    public static final String FUNCTIONAL_CASE_SYSTEM_CLASSIFY = "FUNCTIONAL_CASE_SYSTEM:CLASSIFY";
     /*------ start: FUNCTIONAL_CASE_AI (独立 AI 生成用例权限) ------*/
     public static final String FUNCTIONAL_CASE_AI_READ = "FUNCTIONAL_CASE_AI:READ";
     public static final String FUNCTIONAL_CASE_AI_GENERATE = "FUNCTIONAL_CASE_AI:GENERATE";
     public static final String FUNCTIONAL_CASE_AI_UPLOAD = "FUNCTIONAL_CASE_AI:UPLOAD";
     public static final String FUNCTIONAL_CASE_AI_SAVE = "FUNCTIONAL_CASE_AI:SAVE";
+    public static final String FUNCTIONAL_CASE_AI_REVIEW = "FUNCTIONAL_CASE_AI:REVIEW";
     public static final String FUNCTIONAL_CASE_AI_CONFIG = "FUNCTIONAL_CASE_AI:CONFIG";
     /*------ end: FUNCTIONAL_CASE_AI ------*/
 
@@ -342,6 +356,11 @@ public class PermissionConstants {
     public static final String TEST_PLAN_REPORT_READ_SHARE = "PROJECT_TEST_PLAN_REPORT:READ+SHARE";
     public static final String TEST_PLAN_REPORT_READ_DELETE = "PROJECT_TEST_PLAN_REPORT:READ+DELETE";
     public static final String TEST_PLAN_REPORT_READ_EXPORT = "PROJECT_TEST_PLAN_REPORT:READ+EXPORT";
+    public static final String TEST_PLAN_REVIEW_TAB = "TEST_PLAN_REVIEW_TAB";
+    public static final String TEST_PLAN_TEST_REPORT_TAB = "TEST_PLAN_TEST_REPORT_TAB";
+    public static final String PROJECT_LIST_PAGE = "PROJECT_LIST_PAGE";
+    public static final String PROJECT_DETAIL_PAGE = "PROJECT_DETAIL_PAGE";
+    public static final String PROJECT_SWITCH = "PROJECT_SWITCH";
     /*------ end: TEST_PLAN ------*/
 
     /*------ start: SYSTEM_TASK_CENTER ------*/

@@ -52,10 +52,15 @@ export interface AiExecutionTask {
   id: string;
   projectId: string;
   testPlanId?: string;
+  name?: string;
+  objective?: string;
   source?: string;
   status: string;
+  verdict?: 'PASSED' | 'PRODUCT_FAILED' | 'ENV_FAILED' | 'DATA_FAILED' | 'AGENT_FAILED' | 'BLOCKED' | 'INCONCLUSIVE';
+  verdictReason?: string;
   providerId?: string;
   executionMode?: AiExecutionMode;
+  dispatchMode?: 'PUSH' | 'PULL';
   agentType?: AiExecutionAgentType;
   agentGatewayId?: string;
   environmentId?: string;
@@ -77,7 +82,205 @@ export interface AiExecutionTask {
   caseSnapshotHash?: string;
   writebackStatus?: string;
   artifactStatus?: string;
+  requiredCapabilities?: string;
+  contextSnapshotHash?: string;
+  timeoutAt?: number;
+  maxAttempts?: number;
+  attemptCount?: number;
+  finishedAt?: number;
   cases?: AiExecutionCase[];
+}
+
+export interface AiExecutionTaskSearchRequest {
+  projectId: string;
+  keyword?: string;
+  status?: string;
+  verdict?: string;
+  executionMode?: AiExecutionMode;
+  current?: number;
+  pageSize?: number;
+}
+
+export interface AiExecutionTaskSearchResponse {
+  total: number;
+  current: number;
+  pageSize: number;
+  items: AiExecutionTask[];
+}
+
+export interface AiRunner {
+  id: string;
+  name: string;
+  runnerVersion?: string;
+  contractVersion?: string;
+  status: 'ONLINE' | 'OFFLINE' | 'STALE';
+  operatingSystem?: string;
+  browserCapabilities?: string;
+  environmentLabels?: string;
+  maxConcurrency?: number;
+  activeCount?: number;
+  lastHeartbeatTime?: number;
+}
+
+export interface AiExecutionOperations {
+  health: 'HEALTHY' | 'DEGRADED';
+  onlineRunnerCount: number;
+  staleRunnerCount: number;
+  activeLeaseCount: number;
+  queuedTaskCount: number;
+  stuckTaskCount: number;
+  writebackBacklogCount: number;
+  artifactBacklogCount: number;
+  expiredArtifactCount: number;
+  generatedAt: number;
+}
+
+export interface AiExecutionEvaluation {
+  id: string;
+  taskId: string;
+  projectId: string;
+  executorType?: string;
+  executorId?: string;
+  operationalStatus?: string;
+  businessVerdict?: string;
+  completionRate?: number;
+  evidenceRate?: number;
+  healingCount?: number;
+  retryCount?: number;
+  durationMs?: number;
+  manualScore?: number;
+  manualComment?: string;
+  updatedAt?: number;
+}
+
+export interface AiEvaluationSummary {
+  executorType?: string;
+  executorId?: string;
+  sampleCount?: number;
+  successfulRuns?: number;
+  productFailures?: number;
+  environmentFailures?: number;
+  dataFailures?: number;
+  agentFailures?: number;
+  blockedRuns?: number;
+  averageCompletionRate?: number;
+  averageEvidenceRate?: number;
+  averageDurationMs?: number;
+  averageManualScore?: number;
+}
+
+export interface AiEvaluationPage {
+  list: AiExecutionEvaluation[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+export interface AiTaskTrigger {
+  id: string;
+  projectId: string;
+  name: string;
+  triggerType: 'CRON' | 'EVENT' | 'MANUAL';
+  cronExpression?: string;
+  timezone?: string;
+  eventType?: string;
+  eventFilter?: string;
+  concurrencyPolicy?: 'FORBID' | 'ALLOW';
+  missedPolicy?: 'SKIP' | 'FIRE_ONCE';
+  taskTemplate: string;
+  enabled: boolean;
+  nextFireAt?: number;
+  lastFireAt?: number;
+  lastFireStatus?: string;
+  lastError?: string;
+  webhookSecret?: string;
+  version?: number;
+}
+
+export interface AiTaskTriggerHistory {
+  id: string;
+  triggerId: string;
+  taskId?: string;
+  eventId?: string;
+  scheduledAt?: number;
+  fireTime?: number;
+  status: string;
+  message?: string;
+}
+
+export interface AiTaskTriggerRequest {
+  projectId: string;
+  name: string;
+  triggerType: 'CRON' | 'EVENT' | 'MANUAL';
+  cronExpression?: string;
+  timezone?: string;
+  eventType?: string;
+  eventFilter?: string;
+  concurrencyPolicy?: 'FORBID' | 'ALLOW';
+  missedPolicy?: 'SKIP' | 'FIRE_ONCE';
+  enabled?: boolean;
+  taskTemplate: AiExecutionCreateParams & { name?: string; objective?: string; projectWide?: boolean; confirmed?: boolean };
+}
+
+export interface TestAssetPage<T> {
+  list: T[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+export interface TestAssetDocument {
+  id: string;
+  projectId: string;
+  originalName: string;
+  mimeType?: string;
+  fileSize?: number;
+  sha256?: string;
+  duplicate?: boolean;
+  parseStatus: string;
+  parserType?: string;
+  summary?: string;
+  errorMessage?: string;
+  createUser?: string;
+  createTime?: number;
+  updateTime?: number;
+  assetVersionId?: string;
+  assetVersionNo?: number;
+}
+
+export interface TestAssetVersion {
+  id: string;
+  projectId: string;
+  assetType: string;
+  assetId: string;
+  assetName?: string;
+  versionNo: number;
+  sourceVersion?: string;
+  contentHash: string;
+  status: string;
+  createdBy?: string;
+  createdAt?: number;
+  publishedBy?: string;
+  publishedAt?: number;
+}
+
+export interface TestAssetRelation {
+  id: string;
+  projectId: string;
+  relationType: string;
+  sourceAssetType: string;
+  sourceAssetId: string;
+  sourceAssetName?: string;
+  sourceVersionId?: string;
+  sourceVersionNo?: number;
+  targetAssetType: string;
+  targetAssetId: string;
+  targetAssetName?: string;
+  targetVersionId?: string;
+  targetVersionNo?: number;
+  metadata?: string;
+  createdBy?: string;
+  createdAt?: number;
 }
 
 export interface AiExecutionEvent {
@@ -173,6 +376,10 @@ export function getAiExecutionTask(id: string) {
   return MSR.get<AiExecutionTask>({ url: `${AiExecutionTaskDetailUrl}/${id}` });
 }
 
+export function searchAiExecutionTasks(data: AiExecutionTaskSearchRequest) {
+  return MSR.post<AiExecutionTaskSearchResponse>({ url: `${AiExecutionTaskUrl}/search`, data });
+}
+
 export function getAiExecutionEvents(id: string, params?: { cursor?: number; limit?: number }) {
   return MSR.get<AiExecutionEventsResponse>({
     url: `${AiExecutionTaskDetailUrl}/${id}/events`,
@@ -205,4 +412,80 @@ export function pauseAiExecutionTask(id: string, reason?: string) {
 
 export function retryAiExecutionTask(id: string, reason?: string) {
   return MSR.post<AiExecutionTask>({ url: `${AiExecutionTaskDetailUrl}/${id}/retry`, data: { reason } });
+}
+
+export function getAiRunners() {
+  return MSR.get<AiRunner[]>({ url: '/ai/runner' });
+}
+
+export function getAiExecutionOperations() {
+  return MSR.get<AiExecutionOperations>({ url: '/ai/execution/operations/summary' });
+}
+
+export function getAiExecutionEvaluations(projectId: string, current = 1, pageSize = 20) {
+  return MSR.get<AiEvaluationPage>({
+    url: '/ai/execution/evaluations',
+    params: { projectId, current, pageSize },
+  });
+}
+
+export function getAiEvaluationSummary(projectId: string) {
+  return MSR.get<AiEvaluationSummary[]>({ url: '/ai/execution/evaluations/summary', params: { projectId } });
+}
+
+export function listAiTaskTriggers(projectId: string) {
+  return MSR.get<AiTaskTrigger[]>({ url: '/ai/execution/triggers', params: { projectId } });
+}
+
+export function createAiTaskTrigger(data: AiTaskTriggerRequest) {
+  return MSR.post<AiTaskTrigger>({ url: '/ai/execution/triggers', data });
+}
+
+export function updateAiTaskTrigger(id: string, data: AiTaskTriggerRequest) {
+  return MSR.put<AiTaskTrigger>({ url: `/ai/execution/triggers/${id}`, data });
+}
+
+export function fireAiTaskTrigger(id: string) {
+  return MSR.post<AiTaskTriggerHistory>({ url: `/ai/execution/triggers/${id}/fire` });
+}
+
+export function rotateAiTaskTriggerSecret(id: string) {
+  return MSR.post<AiTaskTrigger>({ url: `/ai/execution/triggers/${id}/rotate-secret` });
+}
+
+export function listAiTaskTriggerHistory(id: string, limit = 50) {
+  return MSR.get<AiTaskTriggerHistory[]>({ url: `/ai/execution/triggers/${id}/history`, params: { limit } });
+}
+
+export function pageTestAssetDocuments(params: {
+  projectId: string;
+  parseStatus?: string;
+  keyword?: string;
+  current?: number;
+  pageSize?: number;
+}) {
+  return MSR.get<TestAssetPage<TestAssetDocument>>({ url: '/test-assets/documents', params });
+}
+
+export function pageTestAssetVersions(params: {
+  projectId: string;
+  assetType?: string;
+  assetId?: string;
+  keyword?: string;
+  current?: number;
+  pageSize?: number;
+}) {
+  return MSR.get<TestAssetPage<TestAssetVersion>>({ url: '/test-assets/versions', params });
+}
+
+export function pageTestAssetRelations(params: {
+  projectId: string;
+  assetType?: string;
+  assetId?: string;
+  relationType?: string;
+  keyword?: string;
+  current?: number;
+  pageSize?: number;
+}) {
+  return MSR.get<TestAssetPage<TestAssetRelation>>({ url: '/test-assets/relations', params });
 }

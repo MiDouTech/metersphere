@@ -7,7 +7,12 @@ import io.metersphere.agent.dto.AgentExecutionEventsResponse;
 import io.metersphere.agent.dto.AgentExecutionResolveRequest;
 import io.metersphere.agent.dto.AgentExecutionResolveResponse;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
+import io.metersphere.agent.dto.AgentExecutionTaskSearchRequest;
+import io.metersphere.agent.dto.AgentExecutionTaskSearchResponse;
+import io.metersphere.agent.dto.AgentHumanRequestDTO;
+import io.metersphere.agent.dto.AgentHumanResponseRequest;
 import io.metersphere.agent.service.AgentExecutionService;
+import io.metersphere.agent.service.AgentHumanRequestService;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.dto.request.ai.AiAgentGatewayCapabilityDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import io.metersphere.system.utils.SessionUtils;
 
 import java.util.List;
 
@@ -31,6 +37,8 @@ import java.util.List;
 public class AgentExecutionController {
     @Resource
     private AgentExecutionService agentExecutionService;
+    @Resource
+    private AgentHumanRequestService humanRequestService;
 
     @GetMapping("/agents")
     @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
@@ -51,6 +59,13 @@ public class AgentExecutionController {
     @Operation(summary = "创建 AI 自动化执行任务")
     public AgentExecutionTaskDTO create(@RequestBody @Valid AgentExecutionCreateRequest request) {
         return agentExecutionService.create(request);
+    }
+
+    @PostMapping("/task/search")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    @Operation(summary = "分页查询 AI 自动化执行任务")
+    public AgentExecutionTaskSearchResponse search(@RequestBody AgentExecutionTaskSearchRequest request) {
+        return agentExecutionService.searchTasks(request);
     }
 
     @GetMapping("/task/{id}")
@@ -101,5 +116,23 @@ public class AgentExecutionController {
     @Operation(summary = "重试失败或阻塞的 AI 自动化执行用例")
     public AgentExecutionTaskDTO retry(@PathVariable String id, @RequestBody(required = false) AgentExecutionActionRequest request) {
         return agentExecutionService.retry(id, request == null ? null : request.getReason());
+    }
+
+    @GetMapping("/task/{id}/human-requests")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    public List<AgentHumanRequestDTO> humanRequests(@PathVariable String id) {
+        agentExecutionService.get(id);
+        return humanRequestService.list(id);
+    }
+
+    @PostMapping("/task/{taskId}/human-requests/{requestId}/respond")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    public AgentHumanRequestDTO respondHumanRequest(@PathVariable String taskId,
+                                                    @PathVariable String requestId,
+                                                    @RequestBody @Valid AgentHumanResponseRequest request) {
+        agentExecutionService.get(taskId);
+        agentExecutionService.respondHumanRequest(taskId, requestId, request);
+        return humanRequestService.list(taskId).stream()
+                .filter(item -> requestId.equals(item.getId())).findFirst().orElseThrow();
     }
 }

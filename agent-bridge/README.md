@@ -46,3 +46,37 @@ or fabricate signing credentials.
 For development, extract the package and run `scripts/windows/install.ps1`. This registers the protocol and a
 current-user auto-start entry. Use `scripts/windows/uninstall.ps1`; add `-RemoveApplicationData` only when device
 identity recovery is not required. A production release should wrap the same actions in a signed MSIX/EXE.
+
+### Internal unsigned distribution
+
+For an internal deployment, an unsigned ZIP is sufficient. Build it on Windows with an x64 Node.js 20+ runtime:
+
+```powershell
+.\scripts\windows\build-package.ps1 `
+  -OutputDirectory C:\tmp\metersphere-agent-release `
+  -NodeRuntimeDirectory C:\path\to\node-runtime
+```
+
+The output contains the ZIP, a JSON manifest, and a `.sha256` file. Publish all three files from an internal HTTPS
+location and configure the platform with either the Spring property or its environment-variable form:
+
+```properties
+ms.ai.user-agent.bridge.windows-download-url=https://internal.example.com/metersphere-agent-windows-x64.zip
+```
+
+```text
+MS_AI_USER_AGENT_BRIDGE_WINDOWS_DOWNLOAD_URL=https://internal.example.com/metersphere-agent-windows-x64.zip
+```
+
+The user extracts the ZIP and double-clicks `Install-MeterSphere-Agent.cmd`. Installation is per-user under
+`%LOCALAPPDATA%\MeterSphere\Agent`; it does not require administrator rights. The wrapper uses a process-scoped
+PowerShell execution-policy bypass because files downloaded from an internal site can retain the Windows zone mark.
+Organizations that prohibit this must distribute or approve the script through their endpoint-management policy.
+
+After installation, return to MeterSphere and select **Installed — detect again**. The browser protocol request pairs
+the device and starts the Bridge. A successful first-phase deployment has all of the following:
+
+- `HKCU\Software\Classes\metersphere-agent` exists.
+- The Gateway accepts WebSocket upgrades on `/ai/agent-bridge/ws` over WSS.
+- The device appears as `ONLINE` in the personal Agent page.
+- The selected Provider CLI is installed locally and can complete its official sign-in.

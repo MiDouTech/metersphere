@@ -399,7 +399,7 @@
     [MessageResourceType.BUG_TASK]: BugManagementRouteEnum.BUG_MANAGEMENT_INDEX,
     [MessageResourceType.BUG_SYNC_TASK]: BugManagementRouteEnum.BUG_MANAGEMENT_INDEX,
     [MessageResourceType.FUNCTIONAL_CASE_TASK]: CaseManagementRouteEnum.CASE_MANAGEMENT_CASE,
-    [MessageResourceType.CASE_REVIEW_TASK]: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
+    [MessageResourceType.CASE_REVIEW_TASK]: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL,
     [MessageResourceType.API_DEFINITION_TASK]: ApiTestRouteEnum.API_TEST_MANAGEMENT,
     [MessageResourceType.API_SCENARIO_TASK]: ApiTestRouteEnum.API_TEST_SCENARIO,
     [MessageResourceType.TEST_PLAN_TASK]: TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL,

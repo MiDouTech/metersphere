@@ -60,6 +60,8 @@ public class AgentRunnerService {
     private AgentExecLogService execLogService;
     @Resource
     private AgentExecutionWritebackService writebackService;
+    @Resource
+    private AgentHumanRequestService humanRequestService;
 
     public AgentRunnerRegisterResponse register(AgentRunnerRegisterRequest request) {
         if (!CONTRACT_VERSION.equals(request.getContractVersion())) {
@@ -96,6 +98,16 @@ public class AgentRunnerService {
         return response;
     }
 
+    @Transactional(readOnly = true)
+    public List<AgentRunnerDTO> list() {
+        String organizationId = SessionUtils.getCurrentOrganizationId();
+        if (StringUtils.isBlank(organizationId)) {
+            throw new MSException("Unable to resolve current organization");
+        }
+        long now = System.currentTimeMillis();
+        return executionMapper.selectRunnersByOrganization(organizationId, now, now - RUNNER_HEARTBEAT_STALE_MS);
+    }
+
     public void heartbeat(String authorization, AgentRunnerHeartbeatRequest request) {
         AgentRunnerDTO runner = authenticate(authorization, request.getRunnerId());
         int active = request.getActiveCount() == null ? 0 : request.getActiveCount();
@@ -127,6 +139,9 @@ public class AgentRunnerService {
         lease.setId(IDGenerator.nextStr());
         lease.setTaskId(task.getId());
         lease.setRunnerId(runner.getId());
+        lease.setExecutorType("RUNNER");
+        lease.setExecutorId(runner.getId());
+        lease.setAttempt((task.getAttemptCount() == null ? 0 : task.getAttemptCount()) + 1);
         lease.setStatus("ACTIVE");
         lease.setLeaseTokenHash(hash(leaseToken));
         lease.setAcceptedTime(now);
@@ -181,6 +196,7 @@ public class AgentRunnerService {
             case AgentExecutionStatus.CANCELED -> "CANCEL";
             case AgentExecutionStatus.PAUSED -> "PAUSE";
             case AgentExecutionStatus.WAITING_LOGIN -> "WAIT_LOGIN";
+            case AgentExecutionStatus.WAITING_HUMAN -> "WAIT_HUMAN";
             case AgentExecutionStatus.RUNNING -> "CONTINUE";
             default -> "NONE";
         };
@@ -262,6 +278,7 @@ public class AgentRunnerService {
         AgentExecutionTaskDTO task = requireLeaseTaskActive(lease);
         String toStatus = StringUtils.upperCase(request.getStatus());
         if (!List.of(AgentExecutionStatus.RUNNING, AgentExecutionStatus.WAITING_LOGIN,
+                AgentExecutionStatus.WAITING_HUMAN,
                 AgentExecutionStatus.WRITING_BACK, AgentExecutionStatus.FAILED).contains(toStatus)) {
             throw new MSException("UNSUPPORTED_CONTRACT_VALUE: runner task status");
         }
@@ -271,6 +288,11 @@ public class AgentRunnerService {
                 "runner:" + lease.getRunnerId(), System.currentTimeMillis());
         if (updated != 1) {
             throw new MSException("RUNNER_TASK_STATE_CONFLICT");
+        }
+        if (AgentExecutionStatus.WAITING_LOGIN.equals(toStatus)) {
+            humanRequestService.create(task.getId(), task.getProjectId(), "LOGIN", "需要人工登录",
+                    sanitize(request.getReason()), "MEDIUM", "executor:" + lease.getRunnerId(),
+                    task.getExecutedBy(), task.getTimeoutAt());
         }
         execLogService.audit("AI_RUNNER_TASK_STATE", task.getId(),
                 task.getStatus() + "->" + toStatus + ";" + sanitize(request.getReason()));
@@ -316,9 +338,12 @@ public class AgentRunnerService {
     public void expireLeases() {
         long now = System.currentTimeMillis();
         for (AgentRunnerLeaseDTO lease : executionMapper.selectExpiredActiveLeases(now, 100)) {
-            executionMapper.expireTaskLease(lease.getTaskId(), lease.getId(), AgentExecutionStatus.EXPIRED, now);
+            int recovered = executionMapper.recoverExpiredTaskLease(lease.getTaskId(), lease.getId(), now);
             executionMapper.closeRunnerLease(lease.getId(), lease.getRunnerId(), normalizedVersion(lease), "EXPIRED", now);
-            execLogService.audit("AI_RUNNER_LEASE_EXPIRED", lease.getTaskId(), "leaseId=" + lease.getId());
+            AgentExecutionTaskDTO recoveredTask = executionMapper.selectTaskById(lease.getTaskId());
+            String outcome = recoveredTask == null ? "MISSING" : recoveredTask.getStatus();
+            execLogService.audit("AI_RUNNER_LEASE_EXPIRED", lease.getTaskId(),
+                    "leaseId=" + lease.getId() + ";recovered=" + recovered + ";outcome=" + outcome);
         }
     }
 

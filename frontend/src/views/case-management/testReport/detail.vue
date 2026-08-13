@@ -17,19 +17,19 @@
           <a-tag v-if="planLabel" size="small" color="arcoblue">{{ planLabel }}</a-tag>
         </div>
         <div v-if="!isStandaloneView" class="flex items-center gap-[8px]">
-          <MsButton v-permission="['FUNCTIONAL_CASE:READ+UPDATE']" :loading="refreshLoading" @click="handleRefresh">
+          <MsButton v-permission="['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']" :loading="refreshLoading" @click="handleRefresh">
             {{ t('caseManagement.testReport.refreshStats') }}
           </MsButton>
           <a-button
             v-if="isEdit"
-            v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
+            v-permission="['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']"
             type="primary"
             :loading="saveLoading"
             @click="handleSave"
           >
             {{ t('caseManagement.testReport.save') }}
           </a-button>
-          <a-button v-else v-permission="['FUNCTIONAL_CASE:READ+UPDATE']" type="primary" @click="switchToEdit">
+          <a-button v-else v-permission="['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']" type="primary" @click="switchToEdit">
             {{ t('common.edit') }}
           </a-button>
         </div>
@@ -326,10 +326,10 @@
     TestReportStats,
   } from '@/models/caseManagement/testReport';
   import type { LoginRes } from '@/models/user';
-  import { CaseManagementRouteEnum, ShareEnum } from '@/enums/routeEnum';
+  import { ShareEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
   defineOptions({
-    name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
+    name: TestPlanRouteEnum.TEST_PLAN_TEST_REPORT_DETAIL,
   });
 
   const { t } = useI18n();
@@ -601,7 +601,7 @@
         console.log(error);
       }
       await router.replace({
-        name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
+        name: TestPlanRouteEnum.TEST_PLAN_TEST_REPORT_DETAIL,
         query: {
           ...route.query,
           orgId: appStore.currentOrgId,
@@ -629,7 +629,7 @@
 
   async function loadDetail() {
     if (!reportId.value) {
-      router.replace({ name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT });
+      router.replace({ name: TestPlanRouteEnum.TEST_PLAN_TEST_REPORT });
       return;
     }
     loading.value = true;
@@ -659,7 +659,7 @@
 
   function switchToEdit() {
     router.replace({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
+      name: TestPlanRouteEnum.TEST_PLAN_TEST_REPORT_DETAIL,
       query: { id: reportId.value, mode: 'edit' },
     });
   }

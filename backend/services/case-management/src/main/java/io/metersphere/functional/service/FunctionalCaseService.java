@@ -9,6 +9,7 @@ import io.metersphere.functional.constants.FunctionalCaseTypeConstants;
 import io.metersphere.functional.domain.*;
 import io.metersphere.functional.dto.*;
 import io.metersphere.functional.excel.domain.FunctionalCaseExcelData;
+import io.metersphere.functional.event.TestAssetFunctionalCaseChangedEvent;
 import io.metersphere.functional.mapper.*;
 import io.metersphere.functional.request.*;
 import io.metersphere.functional.result.CaseManagementResultCode;
@@ -24,6 +25,7 @@ import io.metersphere.project.dto.ModuleCountDTO;
 import io.metersphere.project.mapper.ExtBaseProjectVersionMapper;
 import io.metersphere.project.mapper.FileAssociationMapper;
 import io.metersphere.project.mapper.ProjectApplicationMapper;
+import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.project.service.ProjectService;
 import io.metersphere.project.service.ProjectTemplateService;
 import io.metersphere.provider.BaseCaseProvider;
@@ -62,6 +64,7 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -168,6 +171,8 @@ public class FunctionalCaseService {
     @Resource
     private ProjectApplicationMapper projectApplicationMapper;
     @Resource
+    private ProjectMapper projectMapper;
+    @Resource
     private OperationHistoryMapper operationHistoryMapper;
 
     @Resource
@@ -187,6 +192,8 @@ public class FunctionalCaseService {
     @Lazy
     @Resource
     private io.metersphere.system.edit.service.ResourceEditService resourceEditService;
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     public FunctionalCase addFunctionalCase(FunctionalCaseAddRequest request, List<MultipartFile> files, String userId, String organizationId) {
         String caseId = IDGenerator.nextStr();
@@ -194,14 +201,18 @@ public class FunctionalCaseService {
         FunctionalCase functionalCase = addCase(caseId, request, userId);
 
         //上传文件
-        List<String> uploadFileIds = functionalCaseAttachmentService.uploadFile(request.getProjectId(), caseId, files, true, userId);
+        List<String> uploadFileIds = StringUtils.isBlank(request.getProjectId())
+                ? new ArrayList<>()
+                : functionalCaseAttachmentService.uploadFile(request.getProjectId(), caseId, files, true, userId);
 
         //上传富文本里的文件
-        filterCaseDetailTmpFile(request);
-        functionalCaseAttachmentService.uploadMinioFile(caseId, request.getProjectId(), request.getCaseDetailFileIds(), userId, CaseFileSourceType.CASE_DETAIL.toString());
+        if (StringUtils.isNotBlank(request.getProjectId())) {
+            filterCaseDetailTmpFile(request);
+            functionalCaseAttachmentService.uploadMinioFile(caseId, request.getProjectId(), request.getCaseDetailFileIds(), userId, CaseFileSourceType.CASE_DETAIL.toString());
+        }
 
         //关联附件
-        if (CollectionUtils.isNotEmpty(request.getRelateFileMetaIds())) {
+        if (StringUtils.isNotBlank(request.getProjectId()) && CollectionUtils.isNotEmpty(request.getRelateFileMetaIds())) {
             functionalCaseAttachmentService.association(request.getRelateFileMetaIds(), caseId, userId, ADD_FUNCTIONAL_CASE_FILE_LOG_URL, request.getProjectId());
         }
 
@@ -217,6 +228,9 @@ public class FunctionalCaseService {
         saveAddDataLog(functionalCase, new FunctionalCaseHistoryLogDTO(), historyLogDTO, userId, organizationId, OperationLogType.ADD.name(), OperationLogModule.CASE_MANAGEMENT_CASE_CASE);
 
         triggerHubCaseSync(request.getProjectId(), functionalCase.getId(), userId);
+        if (!Boolean.TRUE.equals(functionalCase.getAiCreate())) {
+            publishTestAssetCaseChange(functionalCase, userId);
+        }
         return functionalCase;
     }
 
@@ -320,10 +334,11 @@ public class FunctionalCaseService {
     private FunctionalCase addCase(String caseId, FunctionalCaseAddRequest request, String userId) {
         FunctionalCase functionalCase = new FunctionalCase();
         BeanUtils.copyBean(functionalCase, request);
+        resolveWorkspaceId(functionalCase, request.getProjectId());
         functionalCase.setId(caseId);
-        functionalCase.setNum(getNextNum(request.getProjectId()));
+        functionalCase.setNum(getNextNumForWorkspaceCase(request.getProjectId(), functionalCase.getWorkspaceId()));
         functionalCase.setReviewStatus(FunctionalCaseReviewStatus.UN_REVIEWED.name());
-        functionalCase.setPos(getNextOrder(request.getProjectId()));
+        functionalCase.setPos(getNextOrderForWorkspaceCase(request.getProjectId(), functionalCase.getWorkspaceId()));
         functionalCase.setRefId(caseId);
         functionalCase.setLastExecuteResult(ExecStatus.PENDING.name());
         functionalCase.setLatest(true);
@@ -331,7 +346,7 @@ public class FunctionalCaseService {
         functionalCase.setUpdateUser(userId);
         functionalCase.setCreateTime(System.currentTimeMillis());
         functionalCase.setUpdateTime(System.currentTimeMillis());
-        functionalCase.setVersionId(StringUtils.defaultIfBlank(request.getVersionId(), extBaseProjectVersionMapper.getDefaultVersion(request.getProjectId())));
+        functionalCase.setVersionId(StringUtils.defaultIfBlank(request.getVersionId(), getDefaultVersionForWorkspaceCase(request.getProjectId())));
         functionalCase.setTags(request.getTags());
         functionalCase.setAiCreate(request.getAiCreate());
         functionalCaseMapper.insertSelective(functionalCase);
@@ -351,6 +366,43 @@ public class FunctionalCaseService {
             functionalCaseCustomFieldService.saveCustomField(caseId, customFields);
         }
         return functionalCase;
+    }
+
+    private void resolveWorkspaceId(FunctionalCase functionalCase, String projectId) {
+        if (StringUtils.isNotBlank(functionalCase.getWorkspaceId())) {
+            return;
+        }
+        if (StringUtils.isNotBlank(projectId)) {
+            Project project = projectMapper.selectByPrimaryKey(projectId);
+            if (project != null) {
+                functionalCase.setWorkspaceId(project.getOrganizationId());
+                return;
+            }
+        }
+        functionalCase.setWorkspaceId(SessionUtils.getCurrentOrganizationId());
+    }
+
+    private Long getNextNumForWorkspaceCase(String projectId, String workspaceId) {
+        if (StringUtils.isNotBlank(projectId)) {
+            return getNextNum(projectId);
+        }
+        Long maxNum = extFunctionalCaseMapper.getWorkspaceMaxNum(workspaceId);
+        return (maxNum == null ? 100000L : maxNum) + 1;
+    }
+
+    private Long getNextOrderForWorkspaceCase(String projectId, String workspaceId) {
+        if (StringUtils.isNotBlank(projectId)) {
+            return getNextOrder(projectId);
+        }
+        Long pos = extFunctionalCaseMapper.getWorkspacePos(workspaceId);
+        return (pos == null ? 0 : pos) + ServiceUtils.POS_STEP;
+    }
+
+    private String getDefaultVersionForWorkspaceCase(String projectId) {
+        if (StringUtils.isBlank(projectId)) {
+            return "workspace-default";
+        }
+        return extBaseProjectVersionMapper.getDefaultVersion(projectId);
     }
 
 
@@ -625,8 +677,39 @@ public class FunctionalCaseService {
         handleReviewStatus(request, functionalCaseBlob, checked.getName(), userId);
 
         triggerHubCaseSync(request.getProjectId(), request.getId(), userId);
+        publishTestAssetCaseChange(functionalCaseMapper.selectByPrimaryKey(request.getId()), userId);
         return functionalCase;
 
+    }
+
+    private void publishTestAssetCaseChange(FunctionalCase functionalCase, String userId) {
+        if (functionalCase == null || StringUtils.isBlank(functionalCase.getProjectId())) {
+            return;
+        }
+        FunctionalCaseBlob blob = functionalCaseBlobMapper.selectByPrimaryKey(functionalCase.getId());
+        Map<String, Object> caseContent = new LinkedHashMap<>();
+        caseContent.put("caseId", functionalCase.getId());
+        caseContent.put("refId", functionalCase.getRefId());
+        caseContent.put("name", functionalCase.getName());
+        caseContent.put("moduleId", functionalCase.getModuleId());
+        caseContent.put("templateId", functionalCase.getTemplateId());
+        caseContent.put("versionId", functionalCase.getVersionId());
+        caseContent.put("tags", functionalCase.getTags());
+        caseContent.put("caseEditType", functionalCase.getCaseEditType());
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        // Runtime execution status and timestamps must not create false content versions.
+        snapshot.put("case", caseContent);
+        snapshot.put("prerequisite", blobText(blob == null ? null : blob.getPrerequisite()));
+        snapshot.put("steps", blobText(blob == null ? null : blob.getSteps()));
+        snapshot.put("textDescription", blobText(blob == null ? null : blob.getTextDescription()));
+        snapshot.put("expectedResult", blobText(blob == null ? null : blob.getExpectedResult()));
+        snapshot.put("description", blobText(blob == null ? null : blob.getDescription()));
+        applicationEventPublisher.publishEvent(new TestAssetFunctionalCaseChangedEvent(
+                functionalCase, JSON.toJSONString(snapshot), userId));
+    }
+
+    private String blobText(byte[] value) {
+        return value == null ? StringUtils.EMPTY : new String(value, StandardCharsets.UTF_8);
     }
 
     private void handleReviewStatus(FunctionalCaseEditRequest request, FunctionalCaseBlob blob, String name, String userId) {
@@ -806,8 +889,8 @@ public class FunctionalCaseService {
             return new ArrayList<>();
         }
         //处理自定义字段值
-        List<FunctionalCasePageDTO> result = handleCustomFields(functionalCaseLists, request.getProjectId());
-        String projectId = StringUtils.defaultIfBlank(request.getProjectId(), result.get(0).getProjectId());
+        String projectId = StringUtils.defaultIfBlank(request.getProjectId(), functionalCaseLists.get(0).getProjectId());
+        List<FunctionalCasePageDTO> result = handleCustomFields(functionalCaseLists, projectId);
         enrichFunctionalCasePageOverview(result, projectId, SessionUtils.getUserId());
         return result;
     }
@@ -884,7 +967,9 @@ public class FunctionalCaseService {
     }
 
     public Map<String, List<FunctionalCaseCustomFieldDTO>> getCaseCustomFiledMap(List<String> ids, String projectId) {
-        List<CustomFieldOption> memberCustomOption = projectTemplateService.getMemberOptions(projectId);
+        List<CustomFieldOption> memberCustomOption = StringUtils.isBlank(projectId)
+                ? new ArrayList<>()
+                : projectTemplateService.getMemberOptions(projectId);
         List<FunctionalCaseCustomFieldDTO> customFields = functionalCaseCustomFieldService.getCustomFieldsByCaseIds(ids);
         customFields.forEach(customField -> {
             if (customField.getInternal()) {

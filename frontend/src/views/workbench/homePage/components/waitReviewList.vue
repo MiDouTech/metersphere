@@ -110,7 +110,7 @@
   import useAppStore from '@/store/modules/app';
 
   import type { SelectedCardItem, TimeFormParams } from '@/models/workbench/homePage';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
 
   const { openNewPage } = useOpenNewPage();
 
@@ -223,7 +223,7 @@
   }
 
   function openDetail(id: number) {
-    openNewPage(CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL, { id });
+    openNewPage(TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL, { id });
   }
 
   function changeProject() {

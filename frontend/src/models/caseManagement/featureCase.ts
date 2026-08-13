@@ -287,6 +287,13 @@ export interface FunctionalCaseOverview {
 export interface CaseModuleQueryParams extends TableQueryParams {
   moduleIds: string[];
   projectId: string;
+  workspaceId?: string;
+  dimension?: 'PROJECT' | 'SYSTEM';
+  projectIds?: string[];
+  unassignedProject?: boolean;
+  systemId?: string;
+  systemModuleId?: string;
+  unclassifiedSystem?: boolean;
 }
 
 export interface TabItemType {

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.agent.mapper.AgentTaskTriggerMapper">
+    <resultMap id="triggerMap" type="io.metersphere.agent.dto.AgentTaskTriggerDTO">
+        <id column="id" property="id"/>
+        <result column="org_id" property="organizationId"/>
+        <result column="project_id" property="projectId"/>
+        <result column="trigger_type" property="triggerType"/>
+        <result column="cron_expression" property="cronExpression"/>
+        <result column="event_type" property="eventType"/>
+        <result column="event_filter" property="eventFilter"/>
+        <result column="webhook_secret_cipher" property="webhookSecretCipher"/>
+        <result column="concurrency_policy" property="concurrencyPolicy"/>
+        <result column="missed_policy" property="missedPolicy"/>
+        <result column="task_template" property="taskTemplate"/>
+        <result column="next_fire_at" property="nextFireAt"/>
+        <result column="last_fire_at" property="lastFireAt"/>
+        <result column="last_fire_status" property="lastFireStatus"/>
+        <result column="last_error" property="lastError"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_by" property="updatedBy"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+    <resultMap id="historyMap" type="io.metersphere.agent.dto.AgentTaskTriggerHistoryDTO">
+        <id column="id" property="id"/>
+        <result column="trigger_id" property="triggerId"/>
+        <result column="task_id" property="taskId"/>
+        <result column="event_id" property="eventId"/>
+        <result column="scheduled_at" property="scheduledAt"/>
+        <result column="fire_time" property="fireTime"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+    <insert id="insert">
+        INSERT INTO ai_task_trigger
+        (id, org_id, project_id, name, trigger_type, cron_expression, timezone, event_type, event_filter,
+         webhook_secret_cipher, concurrency_policy, missed_policy, task_template, enabled, next_fire_at,
+         created_by, created_at, updated_by, updated_at, version)
+        VALUES
+        (#{id}, #{organizationId}, #{projectId}, #{name}, #{triggerType}, #{cronExpression}, #{timezone}, #{eventType},
+         #{eventFilter}, #{webhookSecretCipher}, #{concurrencyPolicy}, #{missedPolicy}, #{taskTemplate}, #{enabled},
+         #{nextFireAt}, #{createdBy}, #{createdAt}, #{updatedBy}, #{updatedAt}, 0)
+    </insert>
+    <select id="selectById" resultMap="triggerMap">
+        SELECT * FROM ai_task_trigger WHERE id = #{id}
+    </select>
+    <select id="selectByProject" resultMap="triggerMap">
+        SELECT * FROM ai_task_trigger WHERE project_id = #{projectId} ORDER BY created_at DESC
+    </select>
+    <select id="selectDue" resultMap="triggerMap">
+        SELECT * FROM ai_task_trigger
+        WHERE enabled = 1 AND trigger_type = 'CRON' AND next_fire_at IS NOT NULL AND next_fire_at &lt;= #{now}
+        ORDER BY next_fire_at ASC LIMIT #{limit}
+    </select>
+    <update id="update">
+        UPDATE ai_task_trigger SET name=#{name}, trigger_type=#{triggerType}, cron_expression=#{cronExpression},
+            timezone=#{timezone}, event_type=#{eventType}, event_filter=#{eventFilter},
+            webhook_secret_cipher=COALESCE(#{webhookSecretCipher}, webhook_secret_cipher),
+            concurrency_policy=#{concurrencyPolicy}, missed_policy=#{missedPolicy}, task_template=#{taskTemplate},
+            enabled=#{enabled}, next_fire_at=#{nextFireAt}, updated_by=#{updatedBy}, updated_at=#{updatedAt}, version=version+1
+        WHERE id=#{id} AND version=#{version}
+    </update>
+    <update id="claimScheduledFire">
+        UPDATE ai_task_trigger SET next_fire_at=#{nextFireAt}, updated_at=#{updatedAt}, version=version+1
+        WHERE id=#{id} AND version=#{version} AND enabled=1 AND trigger_type='CRON' AND next_fire_at=#{scheduledAt}
+    </update>
+    <update id="updateFireResult">
+        UPDATE ai_task_trigger SET last_fire_at=#{fireAt}, last_fire_status=#{status}, last_error=#{error},
+            updated_at=#{fireAt} WHERE id=#{id}
+    </update>
+    <select id="countActiveTasks" resultType="int">
+        SELECT COUNT(*) FROM ai_execution_task
+        WHERE source = CONCAT('TRIGGER:', #{triggerId})
+          AND status NOT IN ('SUCCESS','PARTIAL_SUCCESS','FAILED','CANCELED','EXPIRED')
+    </select>
+    <insert id="insertHistory">
+        INSERT INTO ai_task_trigger_history
+        (id, trigger_id, task_id, event_id, scheduled_at, fire_time, status, message, created_at)
+        VALUES (#{id}, #{triggerId}, #{taskId}, #{eventId}, #{scheduledAt}, #{fireTime}, #{status}, #{message}, #{createdAt})
+    </insert>
+    <select id="selectHistory" resultMap="historyMap">
+        SELECT * FROM ai_task_trigger_history WHERE trigger_id=#{triggerId} ORDER BY fire_time DESC LIMIT #{limit}
+    </select>
+    <select id="selectHistoryByEvent" resultMap="historyMap">
+        SELECT * FROM ai_task_trigger_history WHERE trigger_id=#{triggerId} AND event_id=#{eventId}
+    </select>
+</mapper>

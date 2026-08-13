@@ -1,15 +1,21 @@
 <template>
   <MsCard simple no-content-padding>
     <a-tabs v-model:active-key="activeTab" class="no-content" @change="handleTabChange">
-      <a-tab-pane key="execute" :title="t('menu.caseManagement.executeCase')" />
-      <a-tab-pane key="xmind" :title="t('menu.caseManagement.xmindCase')" />
+      <a-tab-pane v-if="canShowExecuteTab" key="execute" :title="t('menu.caseManagement.executeCase')" />
+      <a-tab-pane v-if="canShowXmindTab" key="xmind" :title="t('menu.caseManagement.xmindCase')" />
       <template #extra>
         <MsModuleRefresh :on-refresh="refreshModule" />
       </template>
     </a-tabs>
     <a-divider margin="0" />
     <!-- 用 v-show 保留执行用例树/表状态，避免切到 Xmind 再回来时因 keep-alive 缓存跳过 mountedLoad 导致无数据 -->
-    <div v-show="activeTab === 'execute'" class="h-full">
+    <div v-show="activeTab === 'execute' && canShowExecuteTab" class="h-full">
+      <div class="px-[16px] pt-[12px]">
+        <a-tabs v-model:active-key="activeDimension" type="rounded" size="small" @change="handleDimensionChange">
+          <a-tab-pane v-if="canShowProjectDimension" key="project" :title="t('caseManagement.featureCase.projectDimension')" />
+          <a-tab-pane v-if="canShowSystemDimension" key="system" :title="t('caseManagement.featureCase.systemDimension')" />
+        </a-tabs>
+      </div>
       <!-- 高级搜索时仍展示左侧树，便于点模块退出高级搜索并刷新列表 -->
       <MsSplitBox :not-show-first="false">
         <template #first>
@@ -86,6 +92,18 @@
                   </MsPopConfirm>
                 </div>
               </div>
+              <div v-if="activeDimension === 'system'" class="case h-[38px] min-w-0">
+                <div
+                  class="flex min-w-0 flex-1 items-center"
+                  :class="getActiveClass('unclassified-system')"
+                  @click="setActiveFolder('unclassified-system')"
+                >
+                  <MsIcon type="icon-icon_folder_filled1" class="folder-icon shrink-0" />
+                  <div class="folder-name mx-[4px] truncate">
+                    {{ t('caseManagement.featureCase.unclassifiedSystem') }}
+                  </div>
+                </div>
+              </div>
               <div class="h-[calc(100vh-220px)]">
                 <FeatureCaseTree
                   ref="caseTreeRef"
@@ -95,6 +113,7 @@
                   :active-folder="activeFolder"
                   :is-expand-all="isExpandAll"
                   :modules-count="modulesCount"
+                  :dimension="activeDimension"
                   :is-modal="false"
                   @case-node-select="caseNodeSelect"
                   @init="setRootModules"
@@ -123,6 +142,7 @@
               :offspring-ids="offspringIds"
               :module-name="activeFolderName"
               :module-count-is-init="moduleCountIsInit"
+              :dimension="activeDimension"
               @init="initModulesCount"
               @init-modules="initModules"
               @set-active-folder="(options) => setActiveFolder('all', options)"
@@ -132,7 +152,7 @@
       </MsSplitBox>
     </div>
     <!-- Xmind 同样用 v-show，避免切 Tab 销毁重建后列表请求被路由守卫取消 -->
-    <div v-show="activeTab === 'xmind'" class="h-full">
+    <div v-show="activeTab === 'xmind' && canShowXmindTab" class="h-full">
       <XmindCasePage :active="activeTab === 'xmind'" />
     </div>
   </MsCard>
@@ -161,7 +181,7 @@
   import type { ModuleRefreshContext, ModuleRefreshResult } from '@/hooks/useModuleRefresh';
   import useAppStore from '@/store/modules/app';
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
-  import { hasAnyPermission } from '@/utils/permission';
+  import { hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
   import type { CreateOrUpdateModule } from '@/models/caseManagement/featureCase';
   import { TableQueryParams } from '@/models/common';
@@ -183,7 +203,13 @@
   const featureCaseStore = useFeatureCaseStore();
 
   type CaseSubTab = 'execute' | 'xmind';
+  type CaseDimension = 'project' | 'system';
+  const canShowExecuteTab = computed(() => hasTabVisible('FUNCTIONAL_CASE_EXECUTE_CASE_TAB', ['PROJECT']));
+  const canShowXmindTab = computed(() => hasTabVisible('FUNCTIONAL_CASE_XMIND_CASE_TAB', ['PROJECT']));
+  const canShowProjectDimension = computed(() => hasTabVisible('FUNCTIONAL_CASE_PROJECT_TAB', ['PROJECT']));
+  const canShowSystemDimension = computed(() => hasTabVisible('FUNCTIONAL_CASE_SYSTEM_TAB', ['PROJECT']));
   const activeTab = ref<CaseSubTab>((route.query.tab as CaseSubTab) === 'xmind' ? 'xmind' : 'execute');
+  const activeDimension = ref<CaseDimension>((route.query.dimension as CaseDimension) === 'system' ? 'system' : 'project');
 
   function handleTabChange(key: string | number) {
     activeTab.value = key as CaseSubTab;
@@ -198,6 +224,47 @@
       router.replace({ query });
     });
   }
+
+
+  function handleDimensionChange(key: string | number) {
+    activeDimension.value = key as CaseDimension;
+    activeFolder.value = 'all';
+    offspringIds.value = [];
+    nextTick(() => {
+      const query: Record<string, any> = { ...route.query, dimension: String(key) };
+      if (key === 'project') {
+        delete query.dimension;
+      }
+      router.replace({ query });
+      caseTableRef.value?.refresh?.();
+    });
+  }
+
+  watch(
+    [canShowExecuteTab, canShowXmindTab],
+    ([showExecute, showXmind]) => {
+      if (activeTab.value === 'execute' && !showExecute && showXmind) {
+        activeTab.value = 'xmind';
+      }
+      if (activeTab.value === 'xmind' && !showXmind && showExecute) {
+        activeTab.value = 'execute';
+      }
+    },
+    { immediate: true }
+  );
+
+  watch(
+    [canShowProjectDimension, canShowSystemDimension],
+    ([showProject, showSystem]) => {
+      if (activeDimension.value === 'project' && !showProject && showSystem) {
+        activeDimension.value = 'system';
+      }
+      if (activeDimension.value === 'system' && !showSystem && showProject) {
+        activeDimension.value = 'project';
+      }
+    },
+    { immediate: true }
+  );
 
   const isExpandAll = ref(false);
   const activeCaseType = ref<'folder' | 'module'>('folder'); // 激活用例类型

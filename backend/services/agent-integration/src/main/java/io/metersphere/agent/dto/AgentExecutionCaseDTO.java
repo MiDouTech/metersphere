@@ -18,6 +18,7 @@ public class AgentExecutionCaseDTO {
     private String testPlanId;
     private String testPlanCaseId;
     private String caseVersion;
+    private String assetVersionId;
     private String caseSnapshot;
     private String status;
     private String result;

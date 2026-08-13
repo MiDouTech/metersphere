@@ -196,7 +196,7 @@
   } from '@/models/caseManagement/caseReview';
   import { ModuleTreeNode } from '@/models/common';
   import { FilterType, ViewTypeEnum } from '@/enums/advancedFilterEnum';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
   import { TableKeyEnum } from '@/enums/tableEnum';
   import { FilterRemoteMethodsEnum, FilterSlotNameEnum } from '@/enums/tableFilterEnum';
 
@@ -243,7 +243,7 @@
       };
     });
   });
-  const isActivated = computed(() => cacheStore.cacheViews.includes(CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW));
+  const isActivated = computed(() => cacheStore.cacheViews.includes(TestPlanRouteEnum.TEST_PLAN_REVIEW));
 
   async function mountedLoad() {
     try {
@@ -647,7 +647,7 @@
 
   function editReview(record: ReviewItem) {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_CREATE,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_CREATE,
       query: {
         id: record.id,
       },
@@ -778,7 +778,7 @@
 
   function openDetail(id: string) {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL,
       query: {
         id,
       },

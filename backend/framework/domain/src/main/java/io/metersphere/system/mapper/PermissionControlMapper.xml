@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.system.mapper.PermissionControlMapper">
+  <resultMap id="RoleAssignmentRuleMap" type="io.metersphere.system.domain.RoleAssignmentRule">
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="role_id" property="roleId" jdbcType="VARCHAR"/>
+    <result column="organization_id" property="organizationId" jdbcType="VARCHAR"/>
+    <result column="department_id" property="departmentId" jdbcType="VARCHAR"/>
+    <result column="position_id" property="positionId" jdbcType="VARCHAR"/>
+    <result column="enabled" property="enabled" jdbcType="BIT"/>
+    <result column="sync_mode" property="syncMode" jdbcType="VARCHAR"/>
+    <result column="create_time" property="createTime" jdbcType="BIGINT"/>
+    <result column="update_time" property="updateTime" jdbcType="BIGINT"/>
+  </resultMap>
+
+  <resultMap id="WorkflowDefinitionMap" type="io.metersphere.system.domain.WorkflowDefinition">
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="code" property="code" jdbcType="VARCHAR"/>
+    <result column="name" property="name" jdbcType="VARCHAR"/>
+    <result column="scene" property="scene" jdbcType="VARCHAR"/>
+    <result column="scope_type" property="scopeType" jdbcType="VARCHAR"/>
+    <result column="scope_id" property="scopeId" jdbcType="VARCHAR"/>
+    <result column="default_flow" property="defaultFlow" jdbcType="BIT"/>
+    <result column="enabled" property="enabled" jdbcType="BIT"/>
+    <result column="description" property="description" jdbcType="VARCHAR"/>
+    <result column="create_time" property="createTime" jdbcType="BIGINT"/>
+    <result column="update_time" property="updateTime" jdbcType="BIGINT"/>
+  </resultMap>
+
+  <resultMap id="WorkflowRoleMap" type="io.metersphere.system.domain.WorkflowRole">
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="flow_id" property="flowId" jdbcType="VARCHAR"/>
+    <result column="code" property="code" jdbcType="VARCHAR"/>
+    <result column="name" property="name" jdbcType="VARCHAR"/>
+    <result column="role_type" property="roleType" jdbcType="VARCHAR"/>
+    <result column="role_id" property="roleId" jdbcType="VARCHAR"/>
+    <result column="field_key" property="fieldKey" jdbcType="VARCHAR"/>
+    <result column="enabled" property="enabled" jdbcType="BIT"/>
+    <result column="create_time" property="createTime" jdbcType="BIGINT"/>
+    <result column="update_time" property="updateTime" jdbcType="BIGINT"/>
+  </resultMap>
+
+  <resultMap id="StatusFlowRolePermissionMap" type="io.metersphere.system.domain.StatusFlowRolePermission">
+    <id column="id" property="id" jdbcType="VARCHAR"/>
+    <result column="flow_id" property="flowId" jdbcType="VARCHAR"/>
+    <result column="status_flow_id" property="statusFlowId" jdbcType="VARCHAR"/>
+    <result column="workflow_role_id" property="workflowRoleId" jdbcType="VARCHAR"/>
+    <result column="visible" property="visible" jdbcType="BIT"/>
+    <result column="operable" property="operable" jdbcType="BIT"/>
+    <result column="enabled" property="enabled" jdbcType="BIT"/>
+    <result column="create_time" property="createTime" jdbcType="BIGINT"/>
+    <result column="update_time" property="updateTime" jdbcType="BIGINT"/>
+  </resultMap>
+
+  <insert id="insertRoleAssignmentRule" parameterType="io.metersphere.system.domain.RoleAssignmentRule">
+    insert into role_assignment_rule
+      (id, role_id, organization_id, department_id, position_id, enabled, sync_mode, create_time, update_time)
+    values
+      (#{id}, #{roleId}, #{organizationId}, #{departmentId}, #{positionId}, #{enabled}, #{syncMode}, #{createTime}, #{updateTime})
+  </insert>
+
+  <select id="selectRoleAssignmentRules" resultMap="RoleAssignmentRuleMap">
+    select id, role_id, organization_id, department_id, position_id, enabled, sync_mode, create_time, update_time
+    from role_assignment_rule
+    where role_id = #{roleId}
+    order by create_time desc
+  </select>
+
+  <select id="selectUsersByPosition" resultType="io.metersphere.system.domain.User">
+    select *
+    from user
+    where deleted = b'0'
+      and last_organization_id = #{organizationId}
+      <if test="departmentId != null and departmentId != ''">
+        and department_id = #{departmentId}
+      </if>
+      <if test="positionId != null and positionId != ''">
+        and `position` = #{positionId}
+      </if>
+  </select>
+
+  <select id="selectExistingRoleRelations" resultType="io.metersphere.system.domain.UserRoleRelation">
+    select *
+    from user_role_relation
+    where role_id = #{roleId}
+      <if test="userIds != null and userIds.size() > 0">
+        and user_id in
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+          #{userId}
+        </foreach>
+      </if>
+  </select>
+
+  <insert id="insertWorkflowDefinition" parameterType="io.metersphere.system.domain.WorkflowDefinition">
+    insert into workflow_definition
+      (id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, create_time, update_time)
+    values
+      (#{id}, #{code}, #{name}, #{scene}, #{scopeType}, #{scopeId}, #{defaultFlow}, #{enabled}, #{description}, #{createTime}, #{updateTime})
+  </insert>
+
+  <update id="updateWorkflowDefinition" parameterType="io.metersphere.system.domain.WorkflowDefinition">
+    update workflow_definition
+    <set>
+      <if test="code != null">code = #{code},</if>
+      <if test="name != null">name = #{name},</if>
+      <if test="scene != null">scene = #{scene},</if>
+      <if test="scopeType != null">scope_type = #{scopeType},</if>
+      <if test="scopeId != null">scope_id = #{scopeId},</if>
+      <if test="defaultFlow != null">default_flow = #{defaultFlow},</if>
+      <if test="enabled != null">enabled = #{enabled},</if>
+      <if test="description != null">description = #{description},</if>
+      update_time = #{updateTime}
+    </set>
+    where id = #{id}
+  </update>
+
+  <select id="selectWorkflowDefinitions" resultMap="WorkflowDefinitionMap">
+    select id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, create_time, update_time
+    from workflow_definition
+    where scene = #{scene}
+      <if test="scopeType != null and scopeType != ''">
+        and scope_type = #{scopeType}
+      </if>
+      <if test="scopeId != null and scopeId != ''">
+        and scope_id = #{scopeId}
+      </if>
+    order by default_flow desc, create_time asc
+  </select>
+
+  <select id="selectWorkflowDefinitionById" resultMap="WorkflowDefinitionMap">
+    select id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, create_time, update_time
+    from workflow_definition
+    where id = #{id}
+  </select>
+
+  <delete id="deleteWorkflowDefinition">
+    delete from workflow_definition where id = #{id}
+  </delete>
+
+  <insert id="insertWorkflowRole" parameterType="io.metersphere.system.domain.WorkflowRole">
+    insert into workflow_role
+      (id, flow_id, code, name, role_type, role_id, field_key, enabled, create_time, update_time)
+    values
+      (#{id}, #{flowId}, #{code}, #{name}, #{roleType}, #{roleId}, #{fieldKey}, #{enabled}, #{createTime}, #{updateTime})
+  </insert>
+
+  <update id="updateWorkflowRole" parameterType="io.metersphere.system.domain.WorkflowRole">
+    update workflow_role
+    <set>
+      <if test="code != null">code = #{code},</if>
+      <if test="name != null">name = #{name},</if>
+      <if test="roleType != null">role_type = #{roleType},</if>
+      <if test="roleId != null">role_id = #{roleId},</if>
+      <if test="fieldKey != null">field_key = #{fieldKey},</if>
+      <if test="enabled != null">enabled = #{enabled},</if>
+      update_time = #{updateTime}
+    </set>
+    where id = #{id}
+  </update>
+
+  <delete id="deleteWorkflowRole">
+    delete from workflow_role where id = #{id}
+  </delete>
+
+  <select id="selectWorkflowRoles" resultMap="WorkflowRoleMap">
+    select id, flow_id, code, name, role_type, role_id, field_key, enabled, create_time, update_time
+    from workflow_role
+    where flow_id = #{flowId}
+    order by create_time asc
+  </select>
+
+  <select id="selectWorkflowRoleById" resultMap="WorkflowRoleMap">
+    select id, flow_id, code, name, role_type, role_id, field_key, enabled, create_time, update_time
+    from workflow_role
+    where id = #{id}
+  </select>
+
+  <insert id="insertStatusFlowRolePermission" parameterType="io.metersphere.system.domain.StatusFlowRolePermission">
+    insert into status_flow_role_permission
+      (id, flow_id, status_flow_id, workflow_role_id, visible, operable, enabled, create_time, update_time)
+    values
+      (#{id}, #{flowId}, #{statusFlowId}, #{workflowRoleId}, #{visible}, #{operable}, #{enabled}, #{createTime}, #{updateTime})
+  </insert>
+
+  <delete id="deleteStatusFlowRolePermissionsByFlowId">
+    delete from status_flow_role_permission where flow_id = #{flowId}
+  </delete>
+
+  <select id="selectStatusFlowRolePermissions" resultMap="StatusFlowRolePermissionMap">
+    select id, flow_id, status_flow_id, workflow_role_id, visible, operable, enabled, create_time, update_time
+    from status_flow_role_permission
+    where flow_id = #{flowId}
+  </select>
+
+  <select id="selectOperableTransitionPermissions" resultMap="StatusFlowRolePermissionMap">
+    select p.id, p.flow_id, p.status_flow_id, p.workflow_role_id, p.visible, p.operable, p.enabled, p.create_time, p.update_time
+    from status_flow_role_permission p
+      inner join workflow_definition wd on wd.id = p.flow_id
+      inner join status_flow sf on sf.id = p.status_flow_id
+    where wd.scene = #{scene}
+      and wd.scope_type = #{scopeType}
+      and wd.scope_id = #{scopeId}
+      and wd.enabled = b'1'
+      and p.enabled = b'1'
+      and p.operable = b'1'
+      and sf.from_id = #{fromStatusId}
+      and sf.to_id = #{toStatusId}
+  </select>
+</mapper>

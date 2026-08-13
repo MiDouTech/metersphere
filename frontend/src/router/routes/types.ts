@@ -2,7 +2,7 @@ import { defineComponent } from 'vue';
 
 import type { BreadcrumbItem } from '@/components/business/ms-breadcrumb/types';
 
-import type { NavigationGuard } from 'vue-router';
+import type { NavigationGuard, RouteRecordRedirectOption } from 'vue-router';
 
 export type Component<T = any> =
   | ReturnType<typeof defineComponent>
@@ -30,7 +30,7 @@ export interface AppRouteRecordRaw {
   path: string;
   name?: string | symbol;
   meta?: RouteMeta;
-  redirect?: string;
+  redirect?: RouteRecordRedirectOption;
   component: Component | string;
   children?: AppRouteRecordRaw[];
   alias?: string | string[];

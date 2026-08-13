@@ -112,12 +112,17 @@ export default {
   'ms.personal.userAgent.signingIn': '登录',
   'ms.personal.userAgent.completed': '完成',
   'ms.personal.userAgent.detectingMessage': '正在检测本机 MeterSphere Agent…',
-  'ms.personal.userAgent.installRequired': '未检测到 MeterSphere Agent。首次使用请完成安装，安装后将自动继续。',
+  'ms.personal.userAgent.installRequired': '未检测到 MeterSphere Agent。首次使用请完成安装，然后返回此处重新检测。',
   'ms.personal.userAgent.installNotice':
     'MeterSphere Agent 仅用于安全连接本机 AI 服务，不会上传账号密码、Cookie 或登录 Token。',
-  'ms.personal.userAgent.downloadInstall': '下载并安装',
+  'ms.personal.userAgent.downloadInstall': '下载安装包',
   'ms.personal.userAgent.installedRetry': '我已安装，重新检测',
   'ms.personal.userAgent.waitingForAgent': '正在等待 MeterSphere Agent 启动并建立安全连接…',
+  'ms.personal.userAgent.protocolLaunchFallback':
+    '未检测到 MeterSphere Agent 启动。如果浏览器没有显示打开提示，请先下载安装，完成后点击“我已安装，重新检测”。',
+  'ms.personal.userAgent.downloadUnavailable': '内部安装包下载地址尚未配置，请联系管理员发布安装包。',
+  'ms.personal.userAgent.downloadStarted':
+    '安装包已开始下载。请解压后双击 Install-MeterSphere-Agent.cmd，完成后返回此处重新检测。',
   'ms.personal.userAgent.startingSignIn': '本机连接成功，正在启动官方账号登录…',
   'ms.personal.userAgent.setupExpired': '本次连接请求已过期，请关闭后重新创建连接。',
 };

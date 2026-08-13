@@ -7,16 +7,25 @@
         <result column="organization_id" property="organizationId"/>
         <result column="project_id" property="projectId"/>
         <result column="test_plan_id" property="testPlanId"/>
+        <result column="name" property="name"/>
+        <result column="objective" property="objective"/>
         <result column="source" property="source"/>
         <result column="selection_mode" property="selectionMode"/>
         <result column="prompt" property="prompt"/>
         <result column="resolved_filter" property="resolvedFilter"/>
         <result column="case_snapshot_hash" property="caseSnapshotHash"/>
         <result column="policy_snapshot" property="policySnapshot"/>
+        <result column="context_snapshot" property="contextSnapshot"/>
+        <result column="context_snapshot_hash" property="contextSnapshotHash"/>
+        <result column="approval_policy" property="approvalPolicy"/>
         <result column="status" property="status"/>
+        <result column="verdict" property="verdict"/>
+        <result column="verdict_reason" property="verdictReason"/>
         <result column="execution_mode" property="executionMode"/>
+        <result column="dispatch_mode" property="dispatchMode"/>
         <result column="agent_type" property="agentType"/>
         <result column="agent_gateway_id" property="agentGatewayId"/>
+        <result column="required_capabilities" property="requiredCapabilities"/>
         <result column="runner_id" property="runnerId"/>
         <result column="runner_lease_id" property="runnerLeaseId"/>
         <result column="provider_id" property="providerId"/>
@@ -27,6 +36,10 @@
         <result column="idempotency_key" property="idempotencyKey"/>
         <result column="confirm_required" property="confirmRequired"/>
         <result column="confirmation_reason" property="confirmationReason"/>
+        <result column="timeout_at" property="timeoutAt"/>
+        <result column="max_attempts" property="maxAttempts"/>
+        <result column="attempt_count" property="attemptCount"/>
+        <result column="finished_at" property="finishedAt"/>
         <result column="total_count" property="totalCount"/>
         <result column="success_count" property="successCount"/>
         <result column="failed_count" property="failedCount"/>
@@ -53,6 +66,7 @@
         <result column="test_plan_id" property="testPlanId"/>
         <result column="test_plan_case_id" property="testPlanCaseId"/>
         <result column="case_version" property="caseVersion"/>
+        <result column="asset_version_id" property="assetVersionId"/>
         <result column="case_snapshot" property="caseSnapshot"/>
         <result column="status" property="status"/>
         <result column="result" property="result"/>
@@ -157,6 +171,9 @@
         <id column="id" property="id"/>
         <result column="task_id" property="taskId"/>
         <result column="runner_id" property="runnerId"/>
+        <result column="executor_type" property="executorType"/>
+        <result column="executor_id" property="executorId"/>
+        <result column="attempt" property="attempt"/>
         <result column="status" property="status"/>
         <result column="lease_token_hash" property="leaseTokenHash"/>
         <result column="accepted_time" property="acceptedTime"/>
@@ -224,6 +241,24 @@
         SELECT * FROM ai_runner WHERE id = #{id}
     </select>
 
+    <select id="selectRunnersByOrganization" resultMap="runnerMap">
+        SELECT r.id, r.organization_id, r.name, r.runner_version, r.contract_version,
+               CASE
+                   WHEN r.status = 'ONLINE' AND r.last_heartbeat_time &gt;= #{staleBefore} THEN 'ONLINE'
+                   WHEN r.last_heartbeat_time IS NULL THEN 'OFFLINE'
+                   ELSE 'STALE'
+               END AS status,
+               r.operating_system, r.browser_capabilities, r.environment_labels,
+               r.max_concurrency,
+               (SELECT COUNT(1) FROM ai_runner_lease l
+                WHERE l.runner_id = r.id AND l.status = 'ACTIVE' AND l.expire_time &gt;= #{now}) AS active_count,
+               r.last_heartbeat_time, r.create_time, r.update_time, r.create_user, r.update_user
+        FROM ai_runner r
+        WHERE r.organization_id = #{organizationId}
+        ORDER BY CASE WHEN r.status = 'ONLINE' AND r.last_heartbeat_time &gt;= #{staleBefore} THEN 0 ELSE 1 END,
+                 r.update_time DESC, r.id DESC
+    </select>
+
     <select id="selectLeaseById" resultMap="runnerLeaseMap">
         SELECT * FROM ai_runner_lease WHERE id = #{id}
     </select>
@@ -270,7 +305,7 @@
              WHERE t.organization_id = #{organizationId} AND t.status = 'QUEUED') AS queuedTaskCount,
           (SELECT COUNT(1) FROM ai_execution_task t
              WHERE t.organization_id = #{organizationId}
-               AND t.status IN ('PREPARING_BROWSER','WAITING_LOGIN','RUNNING','PAUSED','WRITING_BACK')
+               AND t.status IN ('PREPARING_BROWSER','WAITING_LOGIN','WAITING_HUMAN','RUNNING','PAUSED','WRITING_BACK')
                AND t.update_time &lt; #{taskStuckBefore}) AS stuckTaskCount,
           (SELECT COUNT(1) FROM ai_execution_task t
              WHERE t.organization_id = #{organizationId}
@@ -304,10 +339,67 @@
         SELECT * FROM ai_execution_task
         WHERE organization_id = #{organizationId}
           AND status = 'QUEUED'
+          AND execution_mode = 'RUNNER'
+          AND attempt_count &lt; max_attempts
+          AND (timeout_at IS NULL OR timeout_at &gt; UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000)
           AND (runner_id IS NULL OR runner_id = '' OR runner_id = #{runnerId})
         ORDER BY create_time ASC, id ASC
         LIMIT 1
         FOR UPDATE SKIP LOCKED
+    </select>
+    <select id="countTerminalSteps" resultType="int">
+        SELECT COUNT(*) FROM ai_execution_step
+        WHERE task_id=#{taskId} AND status IN ('SUCCESS','FAILED','BLOCKED','SKIPPED','NEEDS_REVIEW','ERROR')
+    </select>
+    <select id="countTerminalStepsWithArtifacts" resultType="int">
+        SELECT COUNT(DISTINCT s.id)
+        FROM ai_execution_step s
+        JOIN ai_execution_artifact a ON a.task_id=s.task_id AND a.step_id=s.id AND a.status='AVAILABLE'
+        WHERE s.task_id=#{taskId} AND s.status IN ('SUCCESS','FAILED','BLOCKED','SKIPPED','NEEDS_REVIEW','ERROR')
+    </select>
+    <select id="sumHealingCount" resultType="int">
+        SELECT COALESCE(SUM(CASE WHEN healed=1 THEN 1 ELSE 0 END), 0) FROM ai_execution_step WHERE task_id=#{taskId}
+    </select>
+    <select id="sumRetryCount" resultType="int">
+        SELECT COALESCE(SUM(retry_count), 0) FROM ai_execution_step WHERE task_id=#{taskId}
+    </select>
+
+    <select id="selectQueuedTasksForAgent" resultMap="taskMap">
+        SELECT * FROM ai_execution_task
+        WHERE project_id = #{projectId}
+          AND status = 'QUEUED'
+          AND execution_mode = 'AGENT'
+          AND dispatch_mode = 'PULL'
+          AND attempt_count &lt; max_attempts
+          AND (timeout_at IS NULL OR timeout_at &gt; UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000)
+          <if test="agentType != null and agentType != ''">
+              AND agent_type = #{agentType}
+          </if>
+        ORDER BY create_time ASC, id ASC
+        LIMIT #{limit}
+        FOR UPDATE SKIP LOCKED
+    </select>
+
+    <sql id="taskSearchWhere">
+        WHERE project_id = #{projectId}
+        <if test="keyword != null and keyword != ''">
+            AND (LOWER(name) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '!'
+                 OR LOWER(objective) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '!'
+                 OR id = #{keyword})
+        </if>
+        <if test="status != null and status != ''">AND status = #{status}</if>
+        <if test="verdict != null and verdict != ''">AND verdict = #{verdict}</if>
+        <if test="executionMode != null and executionMode != ''">AND execution_mode = #{executionMode}</if>
+    </sql>
+
+    <select id="countTasks" resultType="long">
+        SELECT COUNT(*) FROM ai_execution_task <include refid="taskSearchWhere"/>
+    </select>
+
+    <select id="searchTasks" resultMap="taskMap">
+        SELECT * FROM ai_execution_task <include refid="taskSearchWhere"/>
+        ORDER BY create_time DESC, id DESC
+        LIMIT #{offset}, #{limit}
     </select>
 
     <select id="selectCasesByTaskIdAndStatuses" resultMap="caseMap">
@@ -338,19 +430,23 @@
 
     <insert id="insertTask" parameterType="io.metersphere.agent.dto.AgentExecutionTaskDTO">
         INSERT INTO ai_execution_task (
-            id, organization_id, project_id, test_plan_id, source, selection_mode, prompt, resolved_filter,
-            case_snapshot_hash, policy_snapshot, status, execution_mode, agent_type, agent_gateway_id,
+            id, organization_id, project_id, test_plan_id, name, objective, source, selection_mode, prompt, resolved_filter,
+            case_snapshot_hash, policy_snapshot, context_snapshot, context_snapshot_hash, approval_policy,
+            status, verdict, verdict_reason, execution_mode, dispatch_mode, agent_type, agent_gateway_id, required_capabilities,
             runner_id, runner_lease_id, provider_id,
             environment_id, target_url, browser_type, login_mode, idempotency_key, confirm_required,
-            confirmation_reason, total_count, success_count, failed_count, blocked_count, skipped_count,
+            confirmation_reason, timeout_at, max_attempts, attempt_count, finished_at,
+            total_count, success_count, failed_count, blocked_count, skipped_count,
             unexecuted_count, writeback_status, artifact_status, executed_by, create_time, update_time,
             create_user, update_user, version
         ) VALUES (
-            #{id}, #{organizationId}, #{projectId}, #{testPlanId}, #{source}, #{selectionMode}, #{prompt}, #{resolvedFilter},
-            #{caseSnapshotHash}, #{policySnapshot}, #{status}, #{executionMode}, #{agentType}, #{agentGatewayId},
+            #{id}, #{organizationId}, #{projectId}, #{testPlanId}, #{name}, #{objective}, #{source}, #{selectionMode}, #{prompt}, #{resolvedFilter},
+            #{caseSnapshotHash}, #{policySnapshot}, #{contextSnapshot}, #{contextSnapshotHash}, #{approvalPolicy},
+            #{status}, #{verdict}, #{verdictReason}, #{executionMode}, #{dispatchMode}, #{agentType}, #{agentGatewayId}, #{requiredCapabilities},
             #{runnerId}, #{runnerLeaseId}, #{providerId},
             #{environmentId}, #{targetUrl}, #{browserType}, #{loginMode}, #{idempotencyKey}, #{confirmRequired},
-            #{confirmationReason}, #{totalCount}, #{successCount}, #{failedCount}, #{blockedCount}, #{skippedCount},
+            #{confirmationReason}, #{timeoutAt}, COALESCE(#{maxAttempts}, 3), COALESCE(#{attemptCount}, 0), #{finishedAt},
+            #{totalCount}, #{successCount}, #{failedCount}, #{blockedCount}, #{skippedCount},
             #{unexecutedCount}, #{writebackStatus}, #{artifactStatus}, #{executedBy}, #{createTime}, #{updateTime},
             #{createUser}, #{updateUser}, COALESCE(#{version}, 0)
         )
@@ -358,11 +454,11 @@
 
     <insert id="insertCase" parameterType="io.metersphere.agent.dto.AgentExecutionCaseDTO">
         INSERT INTO ai_execution_case (
-            id, task_id, project_id, case_id, test_plan_id, test_plan_case_id, case_version, case_snapshot,
+            id, task_id, project_id, case_id, test_plan_id, test_plan_case_id, case_version, asset_version_id, case_snapshot,
             status, result, pos, retry_count, heal_count, healed, error_message, failure_category,
             writeback_status, create_time, update_time, version
         ) VALUES (
-            #{id}, #{taskId}, #{projectId}, #{caseId}, #{testPlanId}, #{testPlanCaseId}, #{caseVersion}, #{caseSnapshot},
+            #{id}, #{taskId}, #{projectId}, #{caseId}, #{testPlanId}, #{testPlanCaseId}, #{caseVersion}, #{assetVersionId}, #{caseSnapshot},
             #{status}, #{result}, #{pos}, #{retryCount}, COALESCE(#{healCount}, 0), COALESCE(#{healed}, 0),
             #{errorMessage}, #{failureCategory}, #{writebackStatus}, #{createTime}, #{updateTime}, COALESCE(#{version}, 0)
         )
@@ -408,10 +504,11 @@
 
     <insert id="insertRunnerLease" parameterType="io.metersphere.agent.dto.AgentRunnerLeaseDTO">
         INSERT INTO ai_runner_lease (
-            id, task_id, runner_id, status, lease_token_hash, accepted_time, expire_time,
+            id, task_id, runner_id, executor_type, executor_id, attempt, status, lease_token_hash, accepted_time, expire_time,
             last_heartbeat_time, last_event_sequence, create_time, update_time, version
         ) VALUES (
-            #{id}, #{taskId}, #{runnerId}, #{status}, #{leaseTokenHash}, #{acceptedTime}, #{expireTime},
+            #{id}, #{taskId}, #{runnerId}, COALESCE(#{executorType}, 'RUNNER'), #{executorId}, COALESCE(#{attempt}, 1),
+            #{status}, #{leaseTokenHash}, #{acceptedTime}, #{expireTime},
             #{lastHeartbeatTime}, #{lastEventSequence}, #{createTime}, #{updateTime}, COALESCE(#{version}, 0)
         )
     </insert>
@@ -459,8 +556,17 @@
     <update id="assignRunnerLease">
         UPDATE ai_execution_task
         SET runner_id = #{runnerId}, runner_lease_id = #{leaseId}, status = #{toStatus},
+            attempt_count = attempt_count + 1, verdict = NULL, verdict_reason = NULL,
             version = version + 1, update_time = #{updateTime}
         WHERE id = #{taskId} AND status = #{fromStatus} AND version = #{version}
+          AND attempt_count &lt; max_attempts
+    </update>
+
+    <update id="updateTaskContext">
+        UPDATE ai_execution_task
+        SET context_snapshot = #{contextSnapshot}, context_snapshot_hash = #{contextSnapshotHash},
+            update_time = #{updateTime}, version = version + 1
+        WHERE id = #{id} AND status IN ('CREATED', 'WAITING_CONFIRMATION')
     </update>
 
     <update id="updateLeaseEventSequence">
@@ -476,11 +582,41 @@
         WHERE id = #{id} AND runner_id = #{runnerId} AND status = 'ACTIVE'
     </update>
 
-    <update id="expireTaskLease">
+    <update id="recoverExpiredTaskLease">
         UPDATE ai_execution_task
-        SET status = #{status}, update_time = #{updateTime}, version = version + 1
+        SET status = CASE WHEN attempt_count &lt; max_attempts THEN 'QUEUED' ELSE 'FAILED' END,
+            verdict = CASE WHEN attempt_count &lt; max_attempts THEN NULL ELSE 'AGENT_FAILED' END,
+            verdict_reason = CASE WHEN attempt_count &lt; max_attempts
+                                  THEN CONCAT('LEASE_EXPIRED_REQUEUED:', attempt_count, '/', max_attempts)
+                                  ELSE CONCAT('LEASE_EXPIRED_MAX_ATTEMPTS:', attempt_count, '/', max_attempts) END,
+            runner_lease_id = NULL,
+            runner_id = CASE WHEN attempt_count &lt; max_attempts THEN NULL ELSE runner_id END,
+            finished_at = CASE WHEN attempt_count &lt; max_attempts THEN NULL ELSE #{updateTime} END,
+            update_time = #{updateTime}, version = version + 1
         WHERE id = #{taskId} AND runner_lease_id = #{leaseId}
-          AND status IN ('PREPARING_BROWSER', 'WAITING_LOGIN', 'RUNNING', 'PAUSED')
+          AND status IN ('PREPARING_BROWSER', 'WAITING_LOGIN', 'WAITING_HUMAN', 'RUNNING', 'PAUSED')
+    </update>
+
+    <update id="releaseTaskLease">
+        UPDATE ai_execution_task
+        SET status = CASE WHEN attempt_count &lt; max_attempts THEN 'QUEUED' ELSE 'FAILED' END,
+            verdict = CASE WHEN attempt_count &lt; max_attempts THEN NULL ELSE 'AGENT_FAILED' END,
+            verdict_reason = CASE WHEN attempt_count &lt; max_attempts
+                                  THEN CONCAT('AGENT_RELEASED: ', COALESCE(#{reason}, 'no reason'))
+                                  ELSE CONCAT('AGENT_RELEASED_MAX_ATTEMPTS: ', COALESCE(#{reason}, 'no reason')) END,
+            runner_lease_id = NULL,
+            runner_id = CASE WHEN attempt_count &lt; max_attempts THEN NULL ELSE runner_id END,
+            finished_at = CASE WHEN attempt_count &lt; max_attempts THEN NULL ELSE #{updateTime} END,
+            update_time = #{updateTime}, version = version + 1
+        WHERE id = #{taskId} AND runner_lease_id = #{leaseId}
+          AND status IN ('PREPARING_BROWSER', 'WAITING_LOGIN', 'WAITING_HUMAN', 'RUNNING', 'PAUSED')
+    </update>
+
+    <update id="finalizeHumanBlockedTask">
+        UPDATE ai_execution_task
+        SET status = 'CANCELED', verdict = 'BLOCKED', verdict_reason = #{reason},
+            finished_at = #{updateTime}, update_user = #{updateUser}, update_time = #{updateTime}, version = version + 1
+        WHERE id = #{taskId} AND status = #{fromStatus} AND version = #{version}
     </update>
 
     <update id="markStepStarted">
@@ -534,10 +670,11 @@
 
     <update id="finalizeExecutionTask">
         UPDATE ai_execution_task
-        SET status = #{status}, success_count = #{successCount}, failed_count = #{failedCount},
+        SET status = #{status}, verdict = #{verdict}, verdict_reason = #{verdictReason},
+            success_count = #{successCount}, failed_count = #{failedCount},
             blocked_count = #{blockedCount}, skipped_count = #{skippedCount}, unexecuted_count = #{unexecutedCount},
             writeback_status = #{writebackStatus}, artifact_status = #{artifactStatus},
-            update_user = #{updateUser}, update_time = #{updateTime}, version = version + 1
+            finished_at = #{updateTime}, update_user = #{updateUser}, update_time = #{updateTime}, version = version + 1
         WHERE id = #{taskId} AND status = 'WRITING_BACK'
     </update>
 
@@ -564,6 +701,22 @@
     <update id="transitionTaskStatus">
         UPDATE ai_execution_task
         SET status = #{toStatus},
+            verdict = CASE
+                WHEN #{toStatus} = 'CANCELED' AND verdict IS NULL THEN 'BLOCKED'
+                WHEN #{toStatus} = 'EXPIRED' AND verdict IS NULL THEN 'BLOCKED'
+                WHEN #{toStatus} = 'FAILED' AND verdict IS NULL THEN 'AGENT_FAILED'
+                ELSE verdict
+            END,
+            verdict_reason = CASE
+                WHEN #{toStatus} = 'CANCELED' AND verdict_reason IS NULL THEN 'TASK_CANCELED'
+                WHEN #{toStatus} = 'EXPIRED' AND verdict_reason IS NULL THEN 'TASK_EXPIRED'
+                WHEN #{toStatus} = 'FAILED' AND verdict_reason IS NULL THEN 'EXECUTION_FAILED'
+                ELSE verdict_reason
+            END,
+            finished_at = CASE
+                WHEN #{toStatus} IN ('SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'CANCELED', 'EXPIRED') THEN #{updateTime}
+                ELSE finished_at
+            END,
             version = version + 1,
             update_user = #{updateUser},
             update_time = #{updateTime}

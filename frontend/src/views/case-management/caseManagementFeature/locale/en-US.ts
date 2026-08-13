@@ -1,4 +1,7 @@
 export default {
+  'caseManagement.featureCase.projectDimension': 'Project',
+  'caseManagement.featureCase.systemDimension': 'System',
+  'caseManagement.featureCase.unclassifiedSystem': 'Unclassified',
   'caseManagement.featureCase.creatingCase': 'Create Case',
   'caseManagement.featureCase.importCase': 'Import Case',
   'caseManagement.featureCase.importExcel': 'Import Excel',

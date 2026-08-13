@@ -39,7 +39,7 @@ public class AgentExecLogService {
         log.setStepsSnapshot(stepsSnapshot);
         log.setContent(formatContent(request.getExecutedBy(), request.getContent()));
         log.setCreateTime(System.currentTimeMillis());
-        log.setCreateUser(SessionUtils.getUserId());
+        log.setCreateUser(StringUtils.defaultIfBlank(SessionUtils.getUserId(), AgentExecutionActorContext.get()));
         agentExecLogMapper.insert(log);
         return log.getId();
     }
@@ -55,7 +55,7 @@ public class AgentExecLogService {
         log.setExecutedBy("agent-audit");
         log.setContent(content);
         log.setCreateTime(System.currentTimeMillis());
-        log.setCreateUser(SessionUtils.getUserId());
+        log.setCreateUser(StringUtils.defaultIfBlank(SessionUtils.getUserId(), AgentExecutionActorContext.get()));
         agentExecLogMapper.insert(log);
         return log.getId();
     }

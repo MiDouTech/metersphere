@@ -76,6 +76,9 @@
       <div v-if="wizardStep === 2" class="mb-4 rounded bg-[var(--color-fill-2)] p-3 text-sm">
         {{ t('ms.personal.userAgent.installNotice') }}
       </div>
+      <a-alert v-if="wizardStep === 2 && installInfo && !installInfo.windowsDownloadUrl" type="warning" class="mb-4">
+        {{ t('ms.personal.userAgent.downloadUnavailable') }}
+      </a-alert>
       <div class="flex justify-end gap-2">
         <a-button @click="closeWizard">{{ t('common.cancel') }}</a-button>
         <a-button v-if="wizardStep === 2" :disabled="!installInfo?.windowsDownloadUrl" @click="downloadAgent">
@@ -126,6 +129,7 @@
   const pendingPairingExpiry = ref(0);
   let setupCompleting = false;
   let pollingTimer: number | undefined;
+  let launchFallbackTimer: number | undefined;
   const providerDefinitions = [
     {
       id: 'WORKBUDDY' as const,
@@ -183,6 +187,7 @@
   }
 
   async function beginSetup(provider: UserAgentProvider) {
+    window.clearTimeout(launchFallbackTimer);
     wizardVisible.value = true;
     wizardStep.value = 1;
     wizardError.value = '';
@@ -202,10 +207,12 @@
   }
 
   function launchAgent() {
+    window.clearTimeout(launchFallbackTimer);
     if (!pendingPairingCode.value || Date.now() >= pendingPairingExpiry.value) {
       wizardError.value = t('ms.personal.userAgent.setupExpired');
       return;
     }
+    wizardError.value = '';
     const scheme = installInfo.value?.protocolScheme || 'metersphere-agent';
     const query = new URLSearchParams({
       platformUrl: window.location.origin,
@@ -214,10 +221,22 @@
     });
     window.location.href = `${scheme}://pair?${query.toString()}`;
     wizardMessage.value = t('ms.personal.userAgent.waitingForAgent');
+    launchFallbackTimer = window.setTimeout(() => {
+      if (wizardVisible.value && wizardStep.value === 2 && onlineDevices.value.length === 0) {
+        wizardMessage.value = installInfo.value?.windowsDownloadUrl
+          ? t('ms.personal.userAgent.protocolLaunchFallback')
+          : t('ms.personal.userAgent.downloadUnavailable');
+      }
+    }, 3000);
   }
 
   function downloadAgent() {
-    if (installInfo.value?.windowsDownloadUrl) window.open(installInfo.value.windowsDownloadUrl, '_blank', 'noopener');
+    if (!installInfo.value?.windowsDownloadUrl) {
+      wizardError.value = t('ms.personal.userAgent.downloadUnavailable');
+      return;
+    }
+    window.open(installInfo.value.windowsDownloadUrl, '_blank', 'noopener');
+    wizardMessage.value = t('ms.personal.userAgent.downloadStarted');
   }
 
   async function continueSetupIfReady() {
@@ -225,6 +244,7 @@
     const device = onlineDevices.value[0];
     if (!device) return;
     setupCompleting = true;
+    window.clearTimeout(launchFallbackTimer);
     wizardStep.value = 3;
     wizardMessage.value = t('ms.personal.userAgent.startingSignIn');
     try {
@@ -244,6 +264,7 @@
   }
 
   function closeWizard() {
+    window.clearTimeout(launchFallbackTimer);
     wizardVisible.value = false;
     pendingPairingCode.value = '';
     sessionStorage.removeItem('ms-user-agent-setup');
@@ -268,20 +289,17 @@
       try {
         const saved = JSON.parse(savedSetup) as { provider: UserAgentProvider; expiresAt: number };
         if (saved.expiresAt > Date.now()) {
-          pendingProvider.value = saved.provider;
-          wizardVisible.value = true;
-          wizardStep.value = 2;
-          wizardMessage.value = t('ms.personal.userAgent.waitingForAgent');
-          getAgentBridgeInstallInfo().then((value) => {
-            installInfo.value = value;
-          });
+          beginSetup(saved.provider);
         } else sessionStorage.removeItem('ms-user-agent-setup');
       } catch {
         sessionStorage.removeItem('ms-user-agent-setup');
       }
     }
     reload();
-    pollingTimer = window.setInterval(() => reload(true), 10_000);
+    pollingTimer = window.setInterval(() => reload(true), 5_000);
   });
-  onBeforeUnmount(() => window.clearInterval(pollingTimer));
+  onBeforeUnmount(() => {
+    window.clearInterval(pollingTimer);
+    window.clearTimeout(launchFallbackTimer);
+  });
 </script>

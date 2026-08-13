@@ -221,7 +221,7 @@ public class AgentProjectService {
     }
 
     private String requireUserId() {
-        String userId = SessionUtils.getUserId();
+        String userId = StringUtils.defaultIfBlank(SessionUtils.getUserId(), AgentExecutionActorContext.get());
         if (StringUtils.isBlank(userId)) {
             throw new MSException("Cannot resolve user bound to Agent Token");
         }

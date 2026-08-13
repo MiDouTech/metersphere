@@ -11,7 +11,7 @@
           @press-enter="searchList"
           @clear="searchList"
         />
-        <MsButton v-permission="['FUNCTIONAL_CASE:READ+ADD']" @click="openGenerateModal">
+        <MsButton v-permission="['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']" @click="openGenerateModal">
           {{ t('caseManagement.testReport.generate') }}
         </MsButton>
       </div>
@@ -26,25 +26,25 @@
         </template>
         <template #action="{ record }">
           <MsButton
-            v-permission="['FUNCTIONAL_CASE:READ']"
+            v-permission="['PROJECT_TEST_PLAN_REPORT:READ']"
             type="text"
             class="!mr-0"
             @click="openDetail(record.id, false)"
           >
             {{ t('common.detail') }}
           </MsButton>
-          <a-divider v-permission="['FUNCTIONAL_CASE:READ']" direction="vertical" :margin="8" />
+          <a-divider v-permission="['PROJECT_TEST_PLAN_REPORT:READ']" direction="vertical" :margin="8" />
           <MsButton
-            v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
+            v-permission="['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']"
             type="text"
             class="!mr-0"
             @click="openDetail(record.id, true)"
           >
             {{ t('common.edit') }}
           </MsButton>
-          <a-divider v-permission="['FUNCTIONAL_CASE:READ+DELETE']" direction="vertical" :margin="8" />
+          <a-divider v-permission="['PROJECT_TEST_PLAN_REPORT:READ+DELETE']" direction="vertical" :margin="8" />
           <MsButton
-            v-permission="['FUNCTIONAL_CASE:READ+DELETE']"
+            v-permission="['PROJECT_TEST_PLAN_REPORT:READ+DELETE']"
             type="text"
             class="!mr-0"
             @click="handleDelete(record)"
@@ -55,7 +55,7 @@
         <template v-if="keyword.trim() === ''" #empty>
           <div class="flex w-full items-center justify-center p-[8px] text-[var(--color-text-4)]">
             {{ t('caseManagement.testReport.tableNoData') }}
-            <MsButton v-permission="['FUNCTIONAL_CASE:READ+ADD']" class="ml-[8px]" @click="openGenerateModal">
+            <MsButton v-permission="['PROJECT_TEST_PLAN_REPORT:READ+UPDATE']" class="ml-[8px]" @click="openGenerateModal">
               {{ t('caseManagement.testReport.generate') }}
             </MsButton>
           </div>
@@ -132,13 +132,13 @@
   import { characterLimit } from '@/utils';
 
   import { TestReportItem } from '@/models/caseManagement/testReport';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
   import { TableKeyEnum } from '@/enums/tableEnum';
 
   import type { FormInstance } from '@arco-design/web-vue';
 
   defineOptions({
-    name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT,
+    name: TestPlanRouteEnum.TEST_PLAN_TEST_REPORT,
   });
 
   const { t } = useI18n();
@@ -241,7 +241,7 @@
 
   function openDetail(id: string, edit: boolean) {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
+      name: TestPlanRouteEnum.TEST_PLAN_TEST_REPORT_DETAIL,
       query: { id, mode: edit ? 'edit' : 'view' },
     });
   }

@@ -127,6 +127,7 @@
     allNames?: string[]; // 所有的模块name列表
     modulesCount?: Record<string, number>; // 模块数量统计对象
     groupKeyword: string; // 搜索关键字
+    dimension?: 'project' | 'system';
   }>();
 
   const emits = defineEmits([
@@ -185,6 +186,12 @@
   async function initModules(isSetDefaultKey = false) {
     try {
       loading.value = true;
+      if (props.dimension === 'system') {
+        caseTree.value = [];
+        featureCaseStore.setModulesTree(caseTree.value);
+        emits('init', []);
+        return;
+      }
       const res = await getCaseModuleTree({ projectId: currentProjectId.value });
       caseTree.value = mapTree<ModuleTreeNode>(res, (e) => {
         return {

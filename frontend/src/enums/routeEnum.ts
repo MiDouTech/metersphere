@@ -68,6 +68,12 @@ export enum TestPlanRouteEnum {
   TEST_PLAN_INDEX_DETAIL = 'testPlanIndexDetail',
   TEST_PLAN_INDEX_CONFIG = 'testPlanIndexConfig',
   TEST_PLAN_INDEX_DETAIL_FEATURE_CASE_DETAIL = 'testPlanIndexDetailFeatureCaseDetail',
+  TEST_PLAN_REVIEW = 'testPlanReview',
+  TEST_PLAN_REVIEW_CREATE = 'testPlanReviewCreate',
+  TEST_PLAN_REVIEW_DETAIL = 'testPlanReviewDetail',
+  TEST_PLAN_REVIEW_DETAIL_CASE_DETAIL = 'testPlanReviewDetailCaseDetail',
+  TEST_PLAN_TEST_REPORT = 'testPlanTestReport',
+  TEST_PLAN_TEST_REPORT_DETAIL = 'testPlanTestReportDetail',
   TEST_PLAN_REPORT = 'testPlanReport',
   TEST_PLAN_REPORT_DETAIL = 'testPlanReportDetail',
 }
@@ -84,11 +90,28 @@ export enum WorkbenchRouteEnum {
   WORKBENCH_INDEX_CREATED = 'workstationIndexCreated',
 }
 
+export enum AgentRouteEnum {
+  AGENT = 'agent',
+  AGENT_LIST = 'agentList',
+  AGENT_CAPABILITY = 'agentCapability',
+  AGENT_QUEUE = 'agentQueue',
+  AGENT_EVALUATION = 'agentEvaluation',
+  AGENT_ACCESS = 'agentAccess',
+}
+
+export enum TestAssetRouteEnum {
+  TEST_ASSET = 'testAsset',
+  TEST_ASSET_DOCUMENTS = 'testAssetDocuments',
+  TEST_ASSET_VERSIONS = 'testAssetVersions',
+  TEST_ASSET_RELATIONS = 'testAssetRelations',
+}
+
 export enum SettingRouteEnum {
   SETTING = 'setting',
   SETTING_SYSTEM = 'settingSystem',
   SETTING_SYSTEM_USER_SINGLE = 'settingSystemUser',
   SETTING_SYSTEM_USER_GROUP = 'settingSystemUserGroup',
+  SETTING_SYSTEM_PERMISSION_CONTROL = 'settingSystemPermissionControl',
   SETTING_SYSTEM_ORGANIZATION = 'settingSystemOrganization',
   SETTING_SYSTEM_ORG_STRUCTURE = 'settingSystemOrgStructure',
   SETTING_SYSTEM_PARAMETER = 'settingSystemParameter',
@@ -142,6 +165,8 @@ export const RouteEnum = {
   ...TestPlanRouteEnum,
   ...UITestRouteEnum,
   ...WorkbenchRouteEnum,
+  ...AgentRouteEnum,
+  ...TestAssetRouteEnum,
   ...ShareEnum,
   ...FullPageEnum,
 };

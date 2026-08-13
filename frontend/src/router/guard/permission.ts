@@ -2,7 +2,7 @@ import { getTestReportProject } from '@/api/modules/case-management/testReport';
 import usePermission from '@/hooks/usePermission';
 import useAppStore from '@/store/modules/app';
 
-import { CaseManagementRouteEnum, ShareEnum } from '@/enums/routeEnum';
+import { ShareEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
 import { featureRouteMap, NO_RESOURCE_ROUTE_NAME, WHITE_LIST } from '../constants';
 import NProgress from 'nprogress'; // progress bar
@@ -11,7 +11,7 @@ import type { Router } from 'vue-router';
 export default function setupPermissionGuard(router: Router) {
   router.beforeEach(async (to, from, next) => {
     const appStore = useAppStore();
-    if (to.name === CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL && to.query.id) {
+    if (to.name === TestPlanRouteEnum.TEST_PLAN_TEST_REPORT_DETAIL && to.query.id) {
       try {
         const { projectId, hasProjectPermission } = await getTestReportProject(to.query.id as string);
         if (!hasProjectPermission) {

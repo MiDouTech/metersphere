@@ -123,12 +123,18 @@ export default {
   'ms.personal.userAgent.completed': 'Done',
   'ms.personal.userAgent.detectingMessage': 'Detecting MeterSphere Agent on this computer…',
   'ms.personal.userAgent.installRequired':
-    'MeterSphere Agent was not detected. Install it once and setup will continue automatically.',
+    'MeterSphere Agent was not detected. Install it once, then return here and detect again.',
   'ms.personal.userAgent.installNotice':
     'MeterSphere Agent securely connects local AI services and never uploads passwords, cookies, or sign-in tokens.',
-  'ms.personal.userAgent.downloadInstall': 'Download and install',
+  'ms.personal.userAgent.downloadInstall': 'Download installer',
   'ms.personal.userAgent.installedRetry': 'Installed — detect again',
   'ms.personal.userAgent.waitingForAgent': 'Waiting for MeterSphere Agent to start and establish a secure connection…',
+  'ms.personal.userAgent.protocolLaunchFallback':
+    'MeterSphere Agent did not start. If the browser did not ask to open it, download and install it first, then select “Installed — detect again”.',
+  'ms.personal.userAgent.downloadUnavailable':
+    'The internal installer download URL has not been configured. Ask an administrator to publish the package.',
+  'ms.personal.userAgent.downloadStarted':
+    'The package download has started. Extract it, run Install-MeterSphere-Agent.cmd, then return here and detect again.',
   'ms.personal.userAgent.startingSignIn': 'Local connection established. Starting the official account sign-in…',
   'ms.personal.userAgent.setupExpired':
     'This connection request expired. Close this dialog and create the connection again.',

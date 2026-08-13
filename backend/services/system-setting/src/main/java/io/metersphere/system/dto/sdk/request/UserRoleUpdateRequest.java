@@ -37,4 +37,7 @@ public class UserRoleUpdateRequest implements Serializable {
     @EnumValue(enumClass = UserRoleType.class, groups = {Created.class, Updated.class})
     @Size(min = 1, max = 20, message = "{user_role.type.length_range}", groups = {Created.class, Updated.class})
     private String type;
+
+    @Schema(description = "是否启用")
+    private Boolean enabled = true;
 }

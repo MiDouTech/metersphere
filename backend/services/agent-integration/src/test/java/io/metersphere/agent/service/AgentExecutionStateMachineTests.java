@@ -39,4 +39,18 @@ class AgentExecutionStateMachineTests {
         Assertions.assertFalse(AgentExecutionStateMachine.canTransition(
                 AgentExecutionStatus.FAILED, AgentExecutionStatus.CANCELED));
     }
+
+    @Test
+    void shouldSupportHumanInTheLoopPath() {
+        Assertions.assertTrue(AgentExecutionStateMachine.canTransition(
+                AgentExecutionStatus.PREPARING_BROWSER, AgentExecutionStatus.WAITING_HUMAN));
+        Assertions.assertTrue(AgentExecutionStateMachine.canTransition(
+                AgentExecutionStatus.RUNNING, AgentExecutionStatus.WAITING_HUMAN));
+        Assertions.assertTrue(AgentExecutionStateMachine.canTransition(
+                AgentExecutionStatus.WAITING_HUMAN, AgentExecutionStatus.RUNNING));
+        Assertions.assertTrue(AgentExecutionStateMachine.canTransition(
+                AgentExecutionStatus.WAITING_HUMAN, AgentExecutionStatus.PAUSED));
+        Assertions.assertTrue(AgentExecutionStateMachine.canTransition(
+                AgentExecutionStatus.WAITING_HUMAN, AgentExecutionStatus.CANCELED));
+    }
 }

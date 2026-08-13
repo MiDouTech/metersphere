@@ -98,7 +98,13 @@
       <div class="case-generate-resizer" @mousedown="startResize('left', $event)" />
 
       <section class="case-generate-panel">
-        <div class="case-generate-panel-title">{{ t('caseManagement.caseGenerate.draftList') }}</div>
+        <div class="case-generate-panel-title flex items-center justify-between gap-2">
+          <span>{{ t('caseManagement.caseGenerate.draftList') }}</span>
+          <a-radio-group v-model="draftScope" size="mini" type="button" @change="changeDraftScope">
+            <a-radio value="OWN">我的草稿</a-radio>
+            <a-radio v-permission="['FUNCTIONAL_CASE_AI:REVIEW']" value="REVIEW">待我审核</a-radio>
+          </a-radio-group>
+        </div>
         <div class="mb-[12px] flex items-center gap-[8px]">
           <a-select v-model:model-value="statusFilter" class="min-w-0 flex-1" @change="handleStatusFilterChange">
             <a-option value="ALL">{{ t('caseManagement.caseGenerate.statusAll') }}</a-option>
@@ -113,21 +119,37 @@
           </a-checkbox>
         </div>
         <div class="mb-[12px] flex gap-[8px]">
-          <a-button size="small" :disabled="checkedDraftIds.length === 0" @click="deleteChecked">
+          <a-button size="small" :disabled="draftScope === 'REVIEW' || checkedDraftIds.length === 0" @click="deleteChecked">
             {{ t('caseManagement.caseGenerate.delete') }}
           </a-button>
           <a-button
             size="small"
-            :disabled="!activeDraft || !chatModelId.trim() || selectedResource?.resourceType !== 'MODEL_API'"
+            :disabled="draftScope === 'REVIEW' || !activeDraft || !chatModelId.trim() || selectedResource?.resourceType !== 'MODEL_API'"
             @click="regenerateActive"
           >
             {{ t('caseManagement.caseGenerate.regenerate') }}
           </a-button>
           <a-button
+            v-permission="['FUNCTIONAL_CASE_AI:REVIEW']"
+            size="small"
+            :disabled="checkedDraftIds.length === 0"
+            @click="openReview('APPROVE')"
+          >
+            审核通过
+          </a-button>
+          <a-button
+            v-permission="['FUNCTIONAL_CASE_AI:REVIEW']"
+            size="small"
+            :disabled="checkedDraftIds.length === 0"
+            @click="openReview('REQUEST_CHANGES')"
+          >
+            退回修改
+          </a-button>
+          <a-button
             size="small"
             type="primary"
             :loading="saving"
-            :disabled="checkedDraftIds.length === 0"
+            :disabled="checkedDraftIds.length === 0 || !selectedCanPublish"
             @click="batchSave"
           >
             {{ t('caseManagement.caseGenerate.batchSave') }}
@@ -151,6 +173,12 @@
                 }}</a-tag>
                 <a-tag v-if="draft.validationStatus === 'INVALID'" size="small" color="red">Invalid</a-tag>
                 <a-tag v-if="draft.duplicate" size="small" color="orange">Duplicate</a-tag>
+                <a-tag size="small" :color="getReviewStatusColor(draft.reviewStatus)">
+                  {{ getReviewStatusText(draft.reviewStatus) }}
+                </a-tag>
+              </div>
+              <div v-if="draft.reviewComment" class="mt-[4px] truncate text-[12px] text-[var(--color-text-3)]">
+                审核意见：{{ draft.reviewComment }}
               </div>
               <div
                 v-if="draft.validationMessage"
@@ -185,20 +213,38 @@
       <div class="case-generate-resizer" @mousedown="startResize('middle', $event)" />
 
       <section class="case-generate-panel case-generate-detail-panel">
-        <DraftDetailForm v-if="activeDraft" v-model:draft="activeDraft" />
+        <DraftDetailForm v-if="activeDraft" v-model:draft="activeDraft" :readonly="draftScope === 'REVIEW'" />
         <a-empty v-else :description="t('caseManagement.caseGenerate.noDraft')" />
       </section>
     </div>
 
     <a-drawer v-model:visible="detailDrawerVisible" :width="520" :title="t('caseManagement.caseGenerate.detail')">
-      <DraftDetailForm v-if="activeDraft" v-model:draft="activeDraft" />
+      <DraftDetailForm v-if="activeDraft" v-model:draft="activeDraft" :readonly="draftScope === 'REVIEW'" />
     </a-drawer>
+    <a-modal
+      v-model:visible="reviewModalVisible"
+      :title="reviewAction === 'APPROVE' ? '确认审核通过' : '退回修改'"
+      :ok-loading="reviewing"
+      @before-ok="submitReview"
+    >
+      <a-alert class="mb-[12px]" type="info">
+        将处理选中的 {{ checkedDraftIds.length }} 条草稿。审核通过只锁定当前内容，后续编辑会自动失效。
+      </a-alert>
+      <a-textarea
+        v-model:model-value="reviewComment"
+        :placeholder="reviewAction === 'REQUEST_CHANGES' ? '请填写需要修改的内容（必填）' : '审核意见（选填）'"
+        :max-length="2000"
+        show-word-limit
+        :auto-size="{ minRows: 3, maxRows: 6 }"
+      />
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed, onBeforeUnmount, ref, watch } from 'vue';
   import { Message, Modal } from '@arco-design/web-vue';
+  import { useRoute } from 'vue-router';
 
   import DraftDetailForm from './components/DraftDetailForm.vue';
 
@@ -218,8 +264,10 @@
     listAiCaseAgentResources,
     pageAiCaseAgentMessages,
     pageAiCaseDraft,
+    pageAiCaseDraftReviewQueue,
     pageAiSourceDocument,
     regenerateAiCaseDraft,
+    reviewAiCaseDraft,
     retryAiSourceDocument,
     streamAiCaseAgentChat,
     subscribeAiSourceDocumentEvents,
@@ -230,6 +278,7 @@
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import useAppStore from '@/store/modules/app';
+  import { pageTestAssetDocuments } from '@/api/modules/ai-execution';
 
   import type { AiCaseDraft, AiDraftStatus, AiSourceDocument } from '@/models/caseManagement/caseGenerate';
   import { CaseManagementRouteEnum } from '@/enums/routeEnum';
@@ -251,6 +300,7 @@
   const { t } = useI18n();
   const { openModal } = useModal();
   const appStore = useAppStore();
+  const route = useRoute();
   const currentProjectId = computed(() => appStore.currentProjectId || '');
   const currentOrgId = computed(() => appStore.currentOrgId || '');
   const localStateKey = computed(() => `case-generate-workbench:${currentProjectId.value || 'none'}`);
@@ -267,6 +317,10 @@
   const generating = ref(false);
   const activeGenerationId = ref('');
   const saving = ref(false);
+  const reviewing = ref(false);
+  const reviewModalVisible = ref(false);
+  const reviewAction = ref<'APPROVE' | 'REQUEST_CHANGES'>('APPROVE');
+  const reviewComment = ref('');
   const statusFilter = ref<'ALL' | AiDraftStatus>('ALL');
   const draftPage = ref(1);
   const draftPageSize = ref(20);
@@ -276,6 +330,7 @@
   const sourceDocuments = ref<AiSourceDocument[]>([]);
   const selectedSourceDocumentIds = ref<string[]>([]);
   const activeDraftId = ref('');
+  const draftScope = ref<'OWN' | 'REVIEW'>('OWN');
   const checkedDraftIds = ref<string[]>([]);
   const detailDrawerVisible = ref(false);
   const fileInputRef = ref<HTMLInputElement>();
@@ -287,6 +342,10 @@
   let abortAgentStream: (() => void) | undefined;
 
   const selectedResource = computed(() => availableResources.value.find((item) => item.id === chatModelId.value));
+  const selectedCanPublish = computed(() => {
+    const selected = drafts.value.filter((draft) => checkedDraftIds.value.includes(draft.id));
+    return selected.length > 0 && selected.every((draft) => draft.reviewStatus === 'APPROVED');
+  });
   const modelOptions = computed(() => {
     const groups = [
       {
@@ -556,7 +615,8 @@
       draftTotal.value = 0;
       return;
     }
-    const response = await pageAiCaseDraft({
+    const loader = draftScope.value === 'REVIEW' ? pageAiCaseDraftReviewQueue : pageAiCaseDraft;
+    const response = await loader({
       projectId: currentProjectId.value,
       draftStatus: statusFilter.value === 'ALL' ? undefined : statusFilter.value,
       current: draftPage.value,
@@ -592,6 +652,21 @@
       pageSize: 20,
     });
     sourceDocuments.value = response.records || [];
+    const requestedSourceDocumentId = String(route.query.sourceDocumentId || '');
+    if (requestedSourceDocumentId && !sourceDocuments.value.some((document) => document.id === requestedSourceDocumentId)) {
+      const projectDocuments = await pageTestAssetDocuments({
+        projectId: currentProjectId.value,
+        keyword: requestedSourceDocumentId,
+        current: 1,
+        pageSize: 20,
+      });
+      const requested = projectDocuments.list?.find((document) => document.id === requestedSourceDocumentId);
+      if (requested) sourceDocuments.value.unshift(requested as AiSourceDocument);
+    }
+    if (requestedSourceDocumentId
+        && sourceDocuments.value.some((document) => document.id === requestedSourceDocumentId && document.parseStatus === 'PARSED')) {
+      selectedSourceDocumentIds.value = [requestedSourceDocumentId];
+    }
     selectedSourceDocumentIds.value = selectedSourceDocumentIds.value.filter((id) =>
       sourceDocuments.value.some((document) => document.id === id && document.parseStatus === 'PARSED')
     );
@@ -775,6 +850,47 @@
     await reloadSourceDocuments();
   }
 
+  function changeDraftScope() {
+    draftPage.value = 1;
+    activeDraftId.value = '';
+    checkedDraftIds.value = [];
+    reloadDrafts();
+  }
+
+  function openReview(action: 'APPROVE' | 'REQUEST_CHANGES') {
+    reviewAction.value = action;
+    reviewComment.value = '';
+    reviewModalVisible.value = true;
+  }
+
+  async function submitReview(done: (closed: boolean) => void) {
+    if (!currentProjectId.value || checkedDraftIds.value.length === 0) {
+      done(false);
+      return;
+    }
+    if (reviewAction.value === 'REQUEST_CHANGES' && !reviewComment.value.trim()) {
+      Message.warning('退回修改必须填写审核意见');
+      done(false);
+      return;
+    }
+    reviewing.value = true;
+    try {
+      await reviewAiCaseDraft({
+        projectId: currentProjectId.value,
+        draftIds: checkedDraftIds.value,
+        action: reviewAction.value,
+        comment: reviewComment.value.trim() || undefined,
+      });
+      Message.success(reviewAction.value === 'APPROVE' ? '审核已通过' : '已退回修改');
+      await reloadDrafts();
+      done(true);
+    } catch (error) {
+      done(false);
+    } finally {
+      reviewing.value = false;
+    }
+  }
+
   function batchSave() {
     if (!currentProjectId.value || checkedDraftIds.value.length === 0) {
       return;
@@ -837,6 +953,25 @@
       FAILED: 'red',
     };
     return map[status] || 'gray';
+  }
+
+  function getReviewStatusText(status?: AiCaseDraft['reviewStatus']) {
+    const map = {
+      PENDING_REVIEW: '待审核',
+      APPROVED: '已通过',
+      CHANGES_REQUESTED: '待修改',
+      REJECTED: '已驳回',
+    } as const;
+    return status ? map[status] || status : '待审核';
+  }
+
+  function getReviewStatusColor(status?: AiCaseDraft['reviewStatus']) {
+    return {
+      PENDING_REVIEW: 'blue',
+      APPROVED: 'green',
+      CHANGES_REQUESTED: 'orange',
+      REJECTED: 'red',
+    }[status || 'PENDING_REVIEW'];
   }
 
   function getDocumentStatusText(status: AiSourceDocument['parseStatus']) {

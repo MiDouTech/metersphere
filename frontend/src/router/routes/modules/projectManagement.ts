@@ -69,6 +69,7 @@ const ProjectManagement: AppRouteRecordRaw = {
           meta: {
             locale: 'project.permission.basicInfo',
             roles: ['PROJECT_BASE_INFO:READ'],
+            resourceCode: 'PROJECT_DETAIL_OVERVIEW_TAB',
           },
         },
         // 菜单管理
@@ -107,6 +108,7 @@ const ProjectManagement: AppRouteRecordRaw = {
           meta: {
             locale: 'project.permission.member',
             roles: ['PROJECT_USER:READ'],
+            resourceCode: 'PROJECT_DETAIL_MEMBER_TAB',
           },
         },
         // 用户组
@@ -129,6 +131,7 @@ const ProjectManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.projectManagement.templateManager',
         roles: ['PROJECT_TEMPLATE:READ'],
+        resourceCode: 'PROJECT_TEMPLATE_TAB',
         isTopMenu: true,
       },
     },
@@ -365,6 +368,7 @@ const ProjectManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.projectManagement.environmentManagement',
         roles: ['PROJECT_ENVIRONMENT:READ'],
+        resourceCode: 'PROJECT_DETAIL_ENV_TAB',
         isTopMenu: true,
       },
     },

@@ -15,6 +15,7 @@ const Setting: AppRouteRecordRaw = {
     roles: [
       'SYSTEM_USER:READ',
       'SYSTEM_USER_ROLE:READ',
+      'SYSTEM_PERMISSION_CONTROL:READ',
       'SYSTEM_ORGANIZATION_PROJECT:READ',
       'SYSTEM_PARAMETER_SETTING_BASE:READ',
       'SYSTEM_PARAMETER_SETTING_DISPLAY:READ',
@@ -47,6 +48,7 @@ const Setting: AppRouteRecordRaw = {
         roles: [
           'SYSTEM_USER:READ',
           'SYSTEM_USER_ROLE:READ',
+          'SYSTEM_PERMISSION_CONTROL:READ',
           'SYSTEM_ORGANIZATION_PROJECT:READ',
           'SYSTEM_PARAMETER_SETTING_BASE:READ',
           'SYSTEM_PARAMETER_SETTING_DISPLAY:READ',
@@ -80,6 +82,17 @@ const Setting: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.settings.system.usergroup',
             roles: ['SYSTEM_USER_ROLE:READ'],
+            isTopMenu: true,
+          },
+        },
+        {
+          path: 'permission-control',
+          name: SettingRouteEnum.SETTING_SYSTEM_PERMISSION_CONTROL,
+          component: () => import('@/views/setting/system/permissionControl/index.vue'),
+          meta: {
+            locale: 'menu.settings.system.permissionControl',
+            roles: ['SYSTEM_PERMISSION_CONTROL:READ'],
+            resourceCode: 'SYSTEM_PERMISSION_CONTROL_PAGE',
             isTopMenu: true,
           },
         },

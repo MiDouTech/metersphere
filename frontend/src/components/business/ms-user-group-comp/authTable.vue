@@ -62,7 +62,7 @@
       </a-table>
     </div>
     <div v-if="uiTableData.length > 0" class="group-auth-table ui-auth-table">
-      <div class="mb-2 font-medium text-[var(--color-text-1)]">页面 / 按钮 UI 权限</div>
+      <div class="mb-2 font-medium text-[var(--color-text-1)]">页面 / Tab / 按钮 UI 权限</div>
       <a-table
         :scroll="props.scroll"
         :data="uiTableData"
@@ -92,7 +92,7 @@
             <template #cell="{ record }">
               <a-checkbox
                 :model-value="record.operable"
-                :disabled="systemAdminDisabled || disabled"
+                :disabled="systemAdminDisabled || disabled || !canSetUiOperable(record)"
                 @change="(value) => handleUiOperableChange(record, Boolean(value))"
               />
             </template>
@@ -282,12 +282,15 @@
         parentCode: resource.parentCode,
         permissionId: resource.permissionId,
         level,
-        visible: configured?.visible ?? false,
-        operable: configured?.operable ?? false,
+        visible: configured?.visible ?? resource.visibleDefault ?? false,
+        operable: canSetUiOperable(resource) ? configured?.operable ?? resource.operableDefault ?? false : false,
       };
       return [current, ...flattenUiResources(resource.children || [], permissionMap, level + 1)];
     });
   };
+
+  const canSetUiOperable = (record: Pick<UiPermissionTableItem | PermissionResourceItem, 'type'>) =>
+    ['BUTTON', 'API'].includes(record.type);
 
   const initUiPermissionData = async (id: string) => {
     try {
@@ -348,6 +351,10 @@
   };
 
   const handleUiOperableChange = (record: UiPermissionTableItem, value: boolean) => {
+    if (!canSetUiOperable(record)) {
+      record.operable = false;
+      return;
+    }
     record.operable = value;
     if (value) {
       record.visible = true;

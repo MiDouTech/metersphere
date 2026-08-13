@@ -16,6 +16,27 @@ public class BaseFunctionalCaseBatchDTO extends TableBatchProcessDTO implements 
     @Serial
     private static final long serialVersionUID = 1L;
 
+    @Schema(description = "workspace id")
+    private String workspaceId;
+
+    @Schema(description = "dimension: PROJECT/SYSTEM")
+    private String dimension = "PROJECT";
+
+    @Schema(description = "project ids")
+    private List<String> projectIds;
+
+    @Schema(description = "include cases without project")
+    private Boolean unassignedProject;
+
+    @Schema(description = "business system id")
+    private String systemId;
+
+    @Schema(description = "business system module id")
+    private String systemModuleId;
+
+    @Schema(description = "include unclassified system cases")
+    private Boolean unclassifiedSystem;
+
     @Schema(description = "模块id")
     private List<String> moduleIds;
 

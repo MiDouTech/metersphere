@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.agent.mapper.TestAssetMapper">
+    <select id="selectByHash" resultType="io.metersphere.agent.dto.TestAssetVersionDTO">
+        SELECT id, project_id AS projectId, asset_type AS assetType, asset_id AS assetId,
+               version_no AS versionNo, source_version AS sourceVersion, content_hash AS contentHash,
+               content_snapshot AS contentSnapshot, status, created_by AS createdBy, created_at AS createdAt,
+               published_by AS publishedBy, published_at AS publishedAt
+        FROM test_asset_version
+        WHERE project_id = #{projectId} AND asset_type = #{assetType} AND asset_id = #{assetId}
+          AND content_hash = #{contentHash}
+        ORDER BY version_no DESC LIMIT 1
+    </select>
+
+    <select id="selectMaxVersion" resultType="int">
+        SELECT COALESCE(MAX(version_no), 0) FROM test_asset_version
+        WHERE project_id = #{projectId} AND asset_type = #{assetType} AND asset_id = #{assetId}
+        FOR UPDATE
+    </select>
+
+    <select id="selectLatest" resultType="io.metersphere.agent.dto.TestAssetVersionDTO">
+        SELECT id, project_id AS projectId, asset_type AS assetType, asset_id AS assetId,
+               version_no AS versionNo, source_version AS sourceVersion, content_hash AS contentHash,
+               content_snapshot AS contentSnapshot, status, created_by AS createdBy, created_at AS createdAt,
+               published_by AS publishedBy, published_at AS publishedAt
+        FROM test_asset_version
+        WHERE project_id = #{projectId} AND asset_type = #{assetType} AND asset_id = #{assetId}
+        ORDER BY version_no DESC LIMIT 1
+    </select>
+
+    <sql id="AssetNameExpression">
+        COALESCE(d.original_name, fc.name, task.name, v.asset_id)
+    </sql>
+
+    <sql id="DocumentWhere">
+        WHERE d.project_id = #{projectId} AND d.deleted = 0
+        <if test="parseStatus != null and parseStatus != ''">
+            AND d.parse_status = #{parseStatus}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (LOWER(d.original_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(d.id) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(COALESCE(d.summary, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))
+        </if>
+    </sql>
+
+    <select id="selectDocuments" resultType="io.metersphere.agent.dto.TestAssetDocumentDTO">
+        SELECT d.id, d.project_id AS projectId, d.original_name AS originalName, d.mime_type AS mimeType,
+               d.file_size AS fileSize, d.sha256, d.duplicate, d.parse_status AS parseStatus,
+               d.parser_type AS parserType, d.summary, d.error_message AS errorMessage,
+               d.create_user AS createUser, d.create_time AS createTime, d.update_time AS updateTime,
+               v.id AS assetVersionId, v.version_no AS assetVersionNo
+        FROM ai_source_document d
+        LEFT JOIN test_asset_version v ON v.id = (
+            SELECT iv.id FROM test_asset_version iv
+            WHERE iv.project_id = d.project_id AND iv.asset_type = 'DOCUMENT' AND iv.asset_id = d.id
+            ORDER BY iv.version_no DESC LIMIT 1
+        )
+        <include refid="DocumentWhere"/>
+        ORDER BY d.update_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countDocuments" resultType="long">
+        SELECT COUNT(1) FROM ai_source_document d
+        <include refid="DocumentWhere"/>
+    </select>
+
+    <sql id="VersionFrom">
+        FROM test_asset_version v
+        LEFT JOIN ai_source_document d
+               ON v.asset_type = 'DOCUMENT' AND d.id = v.asset_id AND d.project_id = v.project_id
+        LEFT JOIN functional_case fc
+               ON v.asset_type = 'CASE' AND fc.ref_id = v.asset_id AND fc.project_id = v.project_id
+              AND fc.latest = 1 AND fc.deleted = 0
+        LEFT JOIN ai_execution_task task
+               ON v.asset_type = 'TASK' AND task.id = v.asset_id AND task.project_id = v.project_id
+    </sql>
+
+    <sql id="VersionWhere">
+        WHERE v.project_id = #{projectId}
+        <if test="assetType != null and assetType != ''">AND v.asset_type = #{assetType}</if>
+        <if test="assetId != null and assetId != ''">AND v.asset_id = #{assetId}</if>
+        <if test="keyword != null and keyword != ''">
+            AND (LOWER(v.asset_id) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(COALESCE(d.original_name, fc.name, task.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))
+        </if>
+    </sql>
+
+    <select id="selectVersions" resultType="io.metersphere.agent.dto.TestAssetVersionDTO">
+        SELECT v.id, v.project_id AS projectId, v.asset_type AS assetType, v.asset_id AS assetId,
+               <include refid="AssetNameExpression"/> AS assetName,
+               v.version_no AS versionNo, v.source_version AS sourceVersion, v.content_hash AS contentHash,
+               v.status, v.created_by AS createdBy, v.created_at AS createdAt,
+               v.published_by AS publishedBy, v.published_at AS publishedAt
+        <include refid="VersionFrom"/>
+        <include refid="VersionWhere"/>
+        ORDER BY v.published_at DESC, v.version_no DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countVersions" resultType="long">
+        SELECT COUNT(DISTINCT v.id)
+        <include refid="VersionFrom"/>
+        <include refid="VersionWhere"/>
+    </select>
+
+    <sql id="RelationWhere">
+        WHERE r.project_id = #{projectId}
+        <if test="assetType != null and assetType != ''">
+            AND (r.source_asset_type = #{assetType} OR r.target_asset_type = #{assetType})
+        </if>
+        <if test="assetId != null and assetId != ''">
+            AND (r.source_asset_id = #{assetId} OR r.target_asset_id = #{assetId})
+        </if>
+        <if test="relationType != null and relationType != ''">AND r.relation_type = #{relationType}</if>
+        <if test="keyword != null and keyword != ''">
+            AND (LOWER(r.source_asset_id) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(r.target_asset_id) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(COALESCE(sd.original_name, sfc.name, st.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(COALESCE(td.original_name, tfc.name, tt.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))
+        </if>
+    </sql>
+
+    <select id="selectRelations" resultType="io.metersphere.agent.dto.TestAssetRelationDTO">
+        SELECT r.id, r.project_id AS projectId, r.relation_type AS relationType,
+               r.source_asset_type AS sourceAssetType, r.source_asset_id AS sourceAssetId,
+               COALESCE(sd.original_name, sfc.name, st.name, r.source_asset_id) AS sourceAssetName,
+               r.source_version_id AS sourceVersionId, sv.version_no AS sourceVersionNo,
+               r.target_asset_type AS targetAssetType, r.target_asset_id AS targetAssetId,
+               COALESCE(td.original_name, tfc.name, tt.name, r.target_asset_id) AS targetAssetName,
+               r.target_version_id AS targetVersionId, tv.version_no AS targetVersionNo,
+               r.metadata, r.created_by AS createdBy, r.created_at AS createdAt
+        FROM test_asset_relation r
+        LEFT JOIN test_asset_version sv ON sv.id = r.source_version_id
+        LEFT JOIN test_asset_version tv ON tv.id = r.target_version_id
+        LEFT JOIN ai_source_document sd ON r.source_asset_type = 'DOCUMENT' AND sd.id = r.source_asset_id
+        LEFT JOIN functional_case sfc ON r.source_asset_type = 'CASE' AND sfc.ref_id = r.source_asset_id AND sfc.latest = 1 AND sfc.deleted = 0
+        LEFT JOIN ai_execution_task st ON r.source_asset_type = 'TASK' AND st.id = r.source_asset_id
+        LEFT JOIN ai_source_document td ON r.target_asset_type = 'DOCUMENT' AND td.id = r.target_asset_id
+        LEFT JOIN functional_case tfc ON r.target_asset_type = 'CASE' AND tfc.ref_id = r.target_asset_id AND tfc.latest = 1 AND tfc.deleted = 0
+        LEFT JOIN ai_execution_task tt ON r.target_asset_type = 'TASK' AND tt.id = r.target_asset_id
+        <include refid="RelationWhere"/>
+        ORDER BY r.created_at DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countRelations" resultType="long">
+        SELECT COUNT(DISTINCT r.id)
+        FROM test_asset_relation r
+        LEFT JOIN ai_source_document sd ON r.source_asset_type = 'DOCUMENT' AND sd.id = r.source_asset_id
+        LEFT JOIN functional_case sfc ON r.source_asset_type = 'CASE' AND sfc.ref_id = r.source_asset_id AND sfc.latest = 1 AND sfc.deleted = 0
+        LEFT JOIN ai_execution_task st ON r.source_asset_type = 'TASK' AND st.id = r.source_asset_id
+        LEFT JOIN ai_source_document td ON r.target_asset_type = 'DOCUMENT' AND td.id = r.target_asset_id
+        LEFT JOIN functional_case tfc ON r.target_asset_type = 'CASE' AND tfc.ref_id = r.target_asset_id AND tfc.latest = 1 AND tfc.deleted = 0
+        LEFT JOIN ai_execution_task tt ON r.target_asset_type = 'TASK' AND tt.id = r.target_asset_id
+        <include refid="RelationWhere"/>
+    </select>
+
+    <select id="selectDocumentContextForCases" resultType="io.metersphere.agent.dto.TestAssetContextDocumentDTO">
+        SELECT DISTINCT v.id AS versionId, v.asset_id AS documentId,
+               COALESCE(d.original_name, v.asset_id) AS documentName,
+               v.version_no AS versionNo, v.source_version AS sourceVersion,
+               v.content_hash AS contentHash, v.content_snapshot AS contentSnapshot
+        FROM test_asset_relation r
+        JOIN test_asset_version v
+          ON v.id = r.source_version_id AND v.project_id = r.project_id
+        LEFT JOIN ai_source_document d
+          ON d.id = v.asset_id AND d.project_id = v.project_id
+        WHERE r.project_id = #{projectId}
+          AND r.relation_type = 'DERIVED_FROM'
+          AND r.source_asset_type = 'DOCUMENT'
+          AND r.target_asset_type = 'CASE'
+          AND r.target_asset_id IN
+        <foreach collection="caseAssetIds" item="caseAssetId" open="(" close=")" separator=",">
+            #{caseAssetId}
+        </foreach>
+        ORDER BY v.version_no DESC, v.id
+    </select>
+
+    <insert id="insertVersion" parameterType="io.metersphere.agent.dto.TestAssetVersionDTO">
+        INSERT INTO test_asset_version
+        (id, project_id, asset_type, asset_id, version_no, source_version, content_hash, content_snapshot,
+         status, created_by, created_at, published_by, published_at)
+        VALUES
+        (#{id}, #{projectId}, #{assetType}, #{assetId}, #{versionNo}, #{sourceVersion}, #{contentHash},
+         #{contentSnapshot}, #{status}, #{createdBy}, #{createdAt}, #{publishedBy}, #{publishedAt})
+    </insert>
+
+    <insert id="insertRelation">
+        INSERT IGNORE INTO test_asset_relation
+        (id, project_id, relation_type, source_asset_type, source_asset_id, source_version_id,
+         target_asset_type, target_asset_id, target_version_id, metadata, created_by, created_at)
+        VALUES
+        (#{id}, #{projectId}, #{relationType}, #{sourceAssetType}, #{sourceAssetId},
+         COALESCE(#{sourceVersionId}, ''), #{targetAssetType}, #{targetAssetId},
+         COALESCE(#{targetVersionId}, ''), #{metadata}, #{createdBy}, #{createdAt})
+    </insert>
+</mapper>

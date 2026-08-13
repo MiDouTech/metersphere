@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.agent.mapper.AgentHumanRequestMapper">
+    <resultMap id="humanRequestMap" type="io.metersphere.agent.dto.AgentHumanRequestDTO">
+        <id column="id" property="id"/>
+        <result column="request_key" property="requestKey"/>
+        <result column="task_id" property="taskId"/>
+        <result column="project_id" property="projectId"/>
+        <result column="request_type" property="requestType"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="risk_level" property="riskLevel"/>
+        <result column="status" property="status"/>
+        <result column="requested_by" property="requestedBy"/>
+        <result column="assigned_to" property="assignedTo"/>
+        <result column="response" property="response"/>
+        <result column="responded_by" property="respondedBy"/>
+        <result column="responded_at" property="respondedAt"/>
+        <result column="expires_at" property="expiresAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+    <insert id="insert" parameterType="io.metersphere.agent.dto.AgentHumanRequestDTO">
+        INSERT INTO ai_execution_human_request
+        (id, request_key, task_id, project_id, request_type, title, content, risk_level, status, requested_by,
+         assigned_to, expires_at, created_at, updated_at)
+        VALUES
+        (#{id}, #{requestKey}, #{taskId}, #{projectId}, #{requestType}, #{title}, #{content}, #{riskLevel}, #{status},
+         #{requestedBy}, #{assignedTo}, #{expiresAt}, #{createdAt}, #{updatedAt})
+        ON DUPLICATE KEY UPDATE updated_at = updated_at
+    </insert>
+    <select id="selectById" resultMap="humanRequestMap">
+        SELECT * FROM ai_execution_human_request WHERE id = #{id}
+    </select>
+    <select id="selectByTaskAndKey" resultMap="humanRequestMap">
+        SELECT * FROM ai_execution_human_request WHERE task_id = #{taskId} AND request_key = #{requestKey}
+    </select>
+    <select id="selectByTaskId" resultMap="humanRequestMap">
+        SELECT * FROM ai_execution_human_request WHERE task_id = #{taskId} ORDER BY created_at DESC
+    </select>
+    <select id="countPendingByTaskId" resultType="int">
+        SELECT COUNT(*) FROM ai_execution_human_request WHERE task_id = #{taskId} AND status = 'PENDING'
+    </select>
+    <update id="respond">
+        UPDATE ai_execution_human_request
+        SET status = #{status}, response = #{response}, responded_by = #{respondedBy},
+            responded_at = #{respondedAt}, updated_at = #{respondedAt}
+        WHERE id = #{id} AND status = 'PENDING'
+    </update>
+    <update id="closePendingByTaskAndType">
+        UPDATE ai_execution_human_request
+        SET status = #{status}, response = #{response}, responded_by = #{respondedBy},
+            responded_at = #{respondedAt}, updated_at = #{respondedAt}
+        WHERE task_id = #{taskId} AND request_type = #{requestType} AND status = 'PENDING'
+    </update>
+</mapper>

@@ -1,7 +1,8 @@
-import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
 import { DEFAULT_LAYOUT } from '../base';
 import type { AppRouteRecordRaw } from '../types';
+import type { RouteLocationGeneric } from 'vue-router';
 
 const CaseManagement: AppRouteRecordRaw = {
   path: '/case-management',
@@ -25,6 +26,7 @@ const CaseManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.caseManagementShort',
         roles: ['FUNCTIONAL_CASE:READ'],
+        resourceCode: 'FUNCTIONAL_CASE_CASE_TAB',
         isTopMenu: true,
         keepModuleAlive: true,
       },
@@ -37,6 +39,7 @@ const CaseManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.caseManagement.caseGenerate',
         roles: ['FUNCTIONAL_CASE_AI:READ'],
+        resourceCode: 'FUNCTIONAL_CASE_AI_GENERATE_TAB',
         isTopMenu: true,
         keepModuleAlive: true,
       },
@@ -49,6 +52,7 @@ const CaseManagement: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.bugManagement.automationExecution',
         roles: ['AI_EXECUTION:READ'],
+        resourceCode: 'FUNCTIONAL_CASE_AUTOMATION_EXECUTION_TAB',
         isTopMenu: true,
         keepModuleAlive: true,
       },
@@ -115,114 +119,66 @@ const CaseManagement: AppRouteRecordRaw = {
     {
       path: 'caseManagementReview',
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW,
-      component: () => import('@/views/case-management/caseReview/index.vue'),
+      redirect: (to: RouteLocationGeneric) => ({ name: TestPlanRouteEnum.TEST_PLAN_REVIEW, query: to.query }),
+      component: null,
       meta: {
-        locale: 'menu.caseManagement.caseManagementReviewShort',
-        roles: ['CASE_REVIEW:READ'],
-        isTopMenu: true,
-        keepModuleAlive: true,
+        hideInMenu: true,
       },
     },
     // 创建评审
     {
       path: 'caseManagementReviewCreate',
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_CREATE,
-      component: () => import('@/views/case-management/caseReview/create.vue'),
+      redirect: (to: RouteLocationGeneric) => ({ name: TestPlanRouteEnum.TEST_PLAN_REVIEW_CREATE, query: to.query }),
+      component: null,
       meta: {
-        locale: 'menu.caseManagement.caseManagementReviewCreate',
-        roles: ['CASE_REVIEW:READ+ADD', 'CASE_REVIEW:READ+UPDATE'],
-        breadcrumbs: [
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW,
-            locale: 'menu.caseManagement.caseManagementReview',
-          },
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_CREATE,
-            locale: 'menu.caseManagement.caseManagementReviewCreate',
-            editTag: 'id',
-            editLocale: 'menu.caseManagement.caseManagementCaseReviewEdit',
-          },
-        ],
+        hideInMenu: true,
       },
     },
     // 评审详情
     {
       path: 'caseManagementReviewDetail',
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
-      component: () => import('@/views/case-management/caseReview/detail.vue'),
+      redirect: (to: RouteLocationGeneric) => ({ name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL, query: to.query }),
+      component: null,
       meta: {
-        locale: 'menu.caseManagement.caseManagementReviewDetail',
-        roles: ['CASE_REVIEW:READ'],
-        breadcrumbs: [
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW,
-            locale: 'menu.caseManagement.caseManagementReview',
-          },
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
-            locale: 'menu.caseManagement.caseManagementReviewDetail',
-          },
-        ],
+        hideInMenu: true,
       },
     },
     // 评审详情-用例详情
     {
       path: 'caseManagementReviewDetailCaseDetail',
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL,
-      component: () => import('@/views/case-management/caseReview/caseDetail.vue'),
+      redirect: (to: RouteLocationGeneric) => ({
+        name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL_CASE_DETAIL,
+        query: to.query,
+      }),
+      component: null,
       meta: {
-        locale: 'menu.caseManagement.caseManagementCaseDetail',
-        roles: ['CASE_REVIEW:READ'],
-        breadcrumbs: [
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW,
-            locale: 'menu.caseManagement.caseManagementReview',
-          },
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
-            locale: 'menu.caseManagement.caseManagementReviewDetail',
-            isBack: true,
-            query: ['id'],
-          },
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL_CASE_DETAIL,
-            locale: 'menu.caseManagement.caseManagementCaseDetail',
-          },
-        ],
+        hideInMenu: true,
       },
     },
     // 测试报告
     {
       path: 'testReport',
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT,
-      component: () => import('@/views/case-management/testReport/index.vue'),
+      redirect: (to: RouteLocationGeneric) => ({ name: TestPlanRouteEnum.TEST_PLAN_TEST_REPORT, query: to.query }),
+      component: null,
       meta: {
-        locale: 'menu.caseManagement.testReport',
-        roles: ['FUNCTIONAL_CASE:READ'],
-        isTopMenu: true,
-        keepModuleAlive: true,
+        hideInMenu: true,
       },
     },
     // 测试报告详情/编辑
     {
       path: 'testReportDetail',
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
-      component: () => import('@/views/case-management/testReport/detail.vue'),
+      redirect: (to: RouteLocationGeneric) => ({
+        name: TestPlanRouteEnum.TEST_PLAN_TEST_REPORT_DETAIL,
+        query: to.query,
+      }),
+      component: null,
       meta: {
-        locale: 'menu.caseManagement.testReportDetail',
-        roles: ['FUNCTIONAL_CASE:READ'],
-        breadcrumbs: [
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT,
-            locale: 'menu.caseManagement.testReport',
-          },
-          {
-            name: CaseManagementRouteEnum.CASE_MANAGEMENT_TEST_REPORT_DETAIL,
-            locale: 'menu.caseManagement.testReportDetail',
-            editTag: 'id',
-            editLocale: 'menu.caseManagement.testReportEdit',
-          },
-        ],
+        hideInMenu: true,
       },
     },
   ],

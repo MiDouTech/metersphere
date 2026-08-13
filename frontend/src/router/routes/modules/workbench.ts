@@ -25,6 +25,7 @@ const TestPlan: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.workbenchHomeSort',
         roles: ['*'],
+        resourceCode: 'WORKBENCH_HOME_PAGE',
         isTopMenu: true,
       },
     },

@@ -1,4 +1,5 @@
 export type AiDraftStatus = 'DRAFT' | 'VALIDATING' | 'INVALID' | 'READY' | 'SAVING' | 'SAVED' | 'FAILED';
+export type AiDraftReviewStatus = 'PENDING_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED' | 'REJECTED';
 
 export interface AiCaseDraft {
   id: string;
@@ -21,6 +22,15 @@ export interface AiCaseDraft {
   duplicate?: boolean;
   validationStatus?: string;
   draftStatus: AiDraftStatus;
+  reviewStatus?: AiDraftReviewStatus;
+  reviewComment?: string;
+  reviewedBy?: string;
+  reviewedAt?: number;
+  publishMode?: 'CREATE' | 'UPDATE' | 'DEPRECATE';
+  targetCaseId?: string;
+  baselineSnapshot?: string;
+  contentHash?: string;
+  reviewedContentHash?: string;
   formalCaseId?: string;
   deleted?: boolean;
   version?: number;
@@ -93,6 +103,13 @@ export interface AiDraftBatchSaveResponse {
     success: boolean;
     message?: string;
   }>;
+}
+
+export interface AiDraftReviewRequest {
+  projectId: string;
+  draftIds: string[];
+  action: 'SUBMIT' | 'APPROVE' | 'REQUEST_CHANGES' | 'REJECT';
+  comment?: string;
 }
 
 export interface AiSourceDocument {

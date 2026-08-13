@@ -10,7 +10,7 @@ export interface PathMapItem {
   key: PathMapKey | string; // 系统设置
   locale: string;
   route: PathMapRoute | string;
-  permission?: [];
+  permission?: string[];
   level: (typeof MENU_LEVEL)[number]; // 系统设置里有系统级别也有组织级别，按最低权限级别配置
   children?: PathMapItem[];
   routeQuery?: Record<string, any>;
@@ -28,6 +28,32 @@ export interface PathMapItem {
  * children 是子路由/tab集合
  */
 export const pathMap: PathMapItem[] = [
+  {
+    key: 'TEST_ASSET',
+    locale: 'menu.testAsset',
+    route: RouteEnum.TEST_ASSET,
+    permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
+    level: MENU_LEVEL[2],
+    children: [
+      { key: 'TEST_ASSET_DOCUMENTS', locale: 'menu.testAsset.documents', route: RouteEnum.TEST_ASSET_DOCUMENTS, permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'], level: MENU_LEVEL[2] },
+      { key: 'TEST_ASSET_VERSIONS', locale: 'menu.testAsset.versions', route: RouteEnum.TEST_ASSET_VERSIONS, permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'], level: MENU_LEVEL[2] },
+      { key: 'TEST_ASSET_RELATIONS', locale: 'menu.testAsset.relations', route: RouteEnum.TEST_ASSET_RELATIONS, permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'], level: MENU_LEVEL[2] },
+    ],
+  },
+  {
+    key: 'AGENT',
+    locale: 'Agent',
+    route: RouteEnum.AGENT,
+    permission: ['AI_EXECUTION:READ'],
+    level: MENU_LEVEL[2],
+    children: [
+      { key: 'AGENT_LIST', locale: 'Agent 列表', route: RouteEnum.AGENT_LIST, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
+      { key: 'AGENT_CAPABILITY', locale: '能力与授权', route: RouteEnum.AGENT_CAPABILITY, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
+      { key: 'AGENT_QUEUE', locale: '调度队列', route: RouteEnum.AGENT_QUEUE, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
+      { key: 'AGENT_EVALUATION', locale: '执行评价', route: RouteEnum.AGENT_EVALUATION, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
+      { key: 'AGENT_ACCESS', locale: '接入配置', route: RouteEnum.AGENT_ACCESS, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
+    ],
+  },
   {
     key: 'API_TEST', // 接口测试
     locale: 'menu.apiTest',
@@ -255,36 +281,6 @@ export const pathMap: PathMapItem[] = [
         permission: [],
         level: MENU_LEVEL[2],
       },
-      {
-        key: 'CASE_MANAGEMENT_REVIEW', // 功能测试-功能用例-用例评审
-        locale: 'menu.caseManagement.caseManagementReview',
-        route: RouteEnum.CASE_MANAGEMENT_REVIEW,
-        permission: [],
-        level: MENU_LEVEL[2],
-        children: [
-          {
-            key: 'CASE_MANAGEMENT_REVIEW_REVIEW', // 功能测试-功能用例-用例评审
-            locale: 'menu.caseManagement.caseManagementReview',
-            route: RouteEnum.CASE_MANAGEMENT_REVIEW,
-            permission: [],
-            level: MENU_LEVEL[2],
-          },
-          {
-            key: 'CASE_MANAGEMENT_REVIEW_DETAIL', // 功能测试-功能用例-评审详情
-            locale: 'menu.caseManagement.caseManagementReviewDetail',
-            route: RouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
-            permission: [],
-            level: MENU_LEVEL[2],
-          },
-          {
-            key: 'CASE_MANAGEMENT_REVIEW_REVIEW_MODULE', // 功能测试-功能用例-用例评审-模块
-            locale: 'common.module',
-            route: RouteEnum.CASE_MANAGEMENT_REVIEW,
-            permission: [],
-            level: MENU_LEVEL[2],
-          },
-        ],
-      },
     ],
   },
   {
@@ -313,6 +309,13 @@ export const pathMap: PathMapItem[] = [
             locale: 'menu.settings.system.usergroup',
             route: RouteEnum.SETTING_SYSTEM_USER_GROUP,
             permission: [],
+            level: MENU_LEVEL[0],
+          },
+          {
+            key: 'SETTING_SYSTEM_PERMISSION_CONTROL', // 系统设置-系统-权限控制
+            locale: 'menu.settings.system.permissionControl',
+            route: RouteEnum.SETTING_SYSTEM_PERMISSION_CONTROL,
+            permission: ['SYSTEM_PERMISSION_CONTROL:READ'],
             level: MENU_LEVEL[0],
           },
           {
@@ -834,11 +837,59 @@ export const pathMap: PathMapItem[] = [
         level: MENU_LEVEL[2],
       },
       {
+        key: 'TEST_PLAN_REVIEW',
+        locale: 'menu.caseManagement.caseManagementReview',
+        route: RouteEnum.TEST_PLAN_REVIEW,
+        permission: [],
+        level: MENU_LEVEL[2],
+        children: [
+          {
+            key: 'TEST_PLAN_REVIEW_REVIEW',
+            locale: 'menu.caseManagement.caseManagementReview',
+            route: RouteEnum.TEST_PLAN_REVIEW,
+            permission: [],
+            level: MENU_LEVEL[2],
+          },
+          {
+            key: 'TEST_PLAN_REVIEW_DETAIL',
+            locale: 'menu.caseManagement.caseManagementReviewDetail',
+            route: RouteEnum.TEST_PLAN_REVIEW_DETAIL,
+            permission: [],
+            level: MENU_LEVEL[2],
+          },
+          {
+            key: 'TEST_PLAN_REVIEW_REVIEW_MODULE',
+            locale: 'common.module',
+            route: RouteEnum.TEST_PLAN_REVIEW,
+            permission: [],
+            level: MENU_LEVEL[2],
+          },
+        ],
+      },
+      {
+        key: 'TEST_PLAN_TEST_REPORT',
+        locale: 'menu.caseManagement.testReport',
+        route: RouteEnum.TEST_PLAN_TEST_REPORT,
+        permission: [],
+        level: MENU_LEVEL[2],
+        children: [
+          {
+            key: 'TEST_PLAN_TEST_REPORT_DETAIL',
+            locale: 'menu.caseManagement.testReportDetail',
+            route: RouteEnum.TEST_PLAN_TEST_REPORT_DETAIL,
+            permission: [],
+            level: MENU_LEVEL[2],
+          },
+        ],
+      },
+
+      {
         key: 'TEST_PLAN_REPORT', // 测试计划报告
         locale: 'menu.apiTest.report',
         route: RouteEnum.TEST_PLAN_REPORT,
         permission: [],
         level: MENU_LEVEL[2],
+        hideInModule: true,
         children: [
           {
             key: 'TEST_PLAN_REPORT_TEST_PLAN', // 测试计划报告

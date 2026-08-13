@@ -2,7 +2,6 @@ package io.metersphere.functional.request;
 
 import io.metersphere.system.dto.sdk.BasePageRequest;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serial;
@@ -19,8 +18,21 @@ public class FunctionalCasePageRequest extends BasePageRequest implements Serial
     private static final long serialVersionUID = 1L;
 
     @Schema(description = "项目ID", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotBlank(message = "{functional_case.project_id.not_blank}")
+    private String workspaceId;
+
+    private String dimension = "PROJECT";
+
     private String projectId;
+
+    private List<String> projectIds;
+
+    private Boolean unassignedProject;
+
+    private String systemId;
+
+    private String systemModuleId;
+
+    private Boolean unclassifiedSystem;
 
     @Schema(description = "版本id")
     private String versionId;

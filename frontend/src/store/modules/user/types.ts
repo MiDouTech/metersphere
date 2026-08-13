@@ -10,6 +10,7 @@ export interface UserRole {
   name: string;
   scopeId: string; // 项目/组织/系统 id
   type: SystemScopeType;
+  enabled?: boolean;
 }
 
 export interface permissionsItem {

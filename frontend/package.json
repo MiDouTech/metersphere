@@ -14,6 +14,7 @@
     "report": "cross-env REPORT=true npm run build",
     "preview": "npm run build && vite preview --host",
     "type:check": "vue-tsc --noEmit --skipLibCheck",
+    "test:route-tabs": "node ./scripts/verify-route-tabs.mjs",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "lint:styles": "stylelint 'src/**/*.{vue,html,css,scss,less}' --fix",
     "lint-staged": "npx lint-staged",

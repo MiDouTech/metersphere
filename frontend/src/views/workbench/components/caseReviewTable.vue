@@ -78,7 +78,7 @@
   import useOpenNewPage from '@/hooks/useOpenNewPage';
 
   import { ReviewStatus } from '@/models/caseManagement/caseReview';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
   import { FilterSlotNameEnum } from '@/enums/tableFilterEnum';
 
   const props = defineProps<{
@@ -185,14 +185,14 @@
   });
 
   function openDetail(id: number) {
-    openNewPage(CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL, { id });
+    openNewPage(TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL, { id });
   }
 
   function goCaseReview() {
     if (props.type === 'my_todo') {
       return;
     }
-    openNewPage(CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW, {
+    openNewPage(TestPlanRouteEnum.TEST_PLAN_REVIEW, {
       view: props.type,
       pId: props.project,
     });

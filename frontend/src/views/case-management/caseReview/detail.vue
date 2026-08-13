@@ -168,10 +168,10 @@
 
   import type { BaseAssociateCaseRequest, ReviewItem, ReviewStatus } from '@/models/caseManagement/caseReview';
   import { ModuleTreeNode } from '@/models/common';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
   defineOptions({
-    name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_DETAIL,
+    name: TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL,
   });
   const router = useRouter();
   const route = useRoute();
@@ -262,7 +262,7 @@
 
   function editReview() {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_CREATE,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_CREATE,
       query: {
         id: reviewId.value,
       },
@@ -363,13 +363,13 @@
 
   function backToTable() {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW,
     });
   }
 
   function copyReview() {
     router.push({
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_REVIEW_CREATE,
+      name: TestPlanRouteEnum.TEST_PLAN_REVIEW_CREATE,
       query: {
         copyId: reviewId.value,
       },

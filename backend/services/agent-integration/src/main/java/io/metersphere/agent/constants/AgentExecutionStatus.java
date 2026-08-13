@@ -9,6 +9,7 @@ public final class AgentExecutionStatus {
     public static final String QUEUED = "QUEUED";
     public static final String PREPARING_BROWSER = "PREPARING_BROWSER";
     public static final String WAITING_LOGIN = "WAITING_LOGIN";
+    public static final String WAITING_HUMAN = "WAITING_HUMAN";
     public static final String RUNNING = "RUNNING";
     public static final String PAUSED = "PAUSED";
     public static final String WRITING_BACK = "WRITING_BACK";
@@ -28,7 +29,7 @@ public final class AgentExecutionStatus {
 
     public static final List<String> TERMINAL = List.of(SUCCESS, PARTIAL_SUCCESS, FAILED, CANCELED, EXPIRED);
     public static final List<String> HOLDING = List.of(
-            RESOLVING_SCOPE, WAITING_CONFIRMATION, QUEUED, PREPARING_BROWSER, WAITING_LOGIN, PAUSED);
+            RESOLVING_SCOPE, WAITING_CONFIRMATION, QUEUED, PREPARING_BROWSER, WAITING_LOGIN, WAITING_HUMAN, PAUSED);
     public static final List<String> CASE_TERMINAL = List.of(
             SUCCESS, FAILED, CASE_BLOCKED, CASE_SKIPPED, CASE_NEEDS_REVIEW, CASE_ERROR);
 

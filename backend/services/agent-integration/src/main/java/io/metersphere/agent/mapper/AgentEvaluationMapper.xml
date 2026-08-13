@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.metersphere.agent.mapper.AgentEvaluationMapper">
+    <resultMap id="evaluationMap" type="io.metersphere.agent.dto.AgentExecutionEvaluationDTO">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="project_id" property="projectId"/>
+        <result column="executor_type" property="executorType"/>
+        <result column="executor_id" property="executorId"/>
+        <result column="operational_status" property="operationalStatus"/>
+        <result column="business_verdict" property="businessVerdict"/>
+        <result column="completion_rate" property="completionRate"/>
+        <result column="evidence_rate" property="evidenceRate"/>
+        <result column="healing_count" property="healingCount"/>
+        <result column="retry_count" property="retryCount"/>
+        <result column="duration_ms" property="durationMs"/>
+        <result column="manual_score" property="manualScore"/>
+        <result column="manual_comment" property="manualComment"/>
+        <result column="evaluated_by" property="evaluatedBy"/>
+        <result column="evaluated_at" property="evaluatedAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+    <insert id="upsert">
+        INSERT INTO ai_execution_evaluation
+        (id, task_id, project_id, executor_type, executor_id, operational_status, business_verdict,
+         completion_rate, evidence_rate, healing_count, retry_count, duration_ms, created_at, updated_at)
+        VALUES
+        (#{id}, #{taskId}, #{projectId}, #{executorType}, #{executorId}, #{operationalStatus}, #{businessVerdict},
+         #{completionRate}, #{evidenceRate}, #{healingCount}, #{retryCount}, #{durationMs}, #{createdAt}, #{updatedAt})
+        ON DUPLICATE KEY UPDATE operational_status=VALUES(operational_status),
+            business_verdict=VALUES(business_verdict), completion_rate=VALUES(completion_rate),
+            evidence_rate=VALUES(evidence_rate), healing_count=VALUES(healing_count),
+            retry_count=VALUES(retry_count), duration_ms=VALUES(duration_ms), updated_at=VALUES(updated_at)
+    </insert>
+    <select id="selectByTaskId" resultMap="evaluationMap">
+        SELECT * FROM ai_execution_evaluation WHERE task_id=#{taskId}
+    </select>
+    <select id="selectByProject" resultMap="evaluationMap">
+        SELECT * FROM ai_execution_evaluation WHERE project_id=#{projectId}
+        ORDER BY created_at DESC LIMIT #{offset}, #{limit}
+    </select>
+    <select id="countByProject" resultType="long">
+        SELECT COUNT(*) FROM ai_execution_evaluation WHERE project_id=#{projectId}
+    </select>
+    <select id="summarize" resultType="io.metersphere.agent.dto.AgentEvaluationSummaryDTO">
+        SELECT executor_type AS executorType, executor_id AS executorId, COUNT(*) AS sampleCount,
+               SUM(operational_status='SUCCESS') AS successfulRuns,
+               SUM(business_verdict='PRODUCT_FAILED') AS productFailures,
+               SUM(business_verdict='ENV_FAILED') AS environmentFailures,
+               SUM(business_verdict='DATA_FAILED') AS dataFailures,
+               SUM(business_verdict='AGENT_FAILED') AS agentFailures,
+               SUM(business_verdict='BLOCKED') AS blockedRuns,
+               AVG(completion_rate) AS averageCompletionRate,
+               AVG(evidence_rate) AS averageEvidenceRate,
+               AVG(duration_ms) AS averageDurationMs,
+               AVG(manual_score) AS averageManualScore
+        FROM ai_execution_evaluation
+        WHERE project_id=#{projectId}
+        <if test="fromTime != null">AND created_at &gt;= #{fromTime}</if>
+        <if test="toTime != null">AND created_at &lt;= #{toTime}</if>
+        GROUP BY executor_type, executor_id
+        ORDER BY sampleCount DESC, executor_id ASC
+    </select>
+    <update id="updateManual">
+        UPDATE ai_execution_evaluation
+        SET manual_score=#{score}, manual_comment=#{comment}, evaluated_by=#{evaluatedBy},
+            evaluated_at=#{evaluatedAt}, updated_at=#{evaluatedAt}
+        WHERE task_id=#{taskId}
+    </update>
+    <select id="selectTerminalTasksWithoutEvaluation" resultType="string">
+        SELECT t.id FROM ai_execution_task t
+        LEFT JOIN ai_execution_evaluation e ON e.task_id=t.id
+        WHERE e.id IS NULL AND t.status IN ('SUCCESS','PARTIAL_SUCCESS','FAILED','CANCELED','EXPIRED')
+        ORDER BY t.update_time ASC LIMIT #{limit}
+    </select>
+</mapper>

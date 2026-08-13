@@ -87,7 +87,7 @@ public class AgentFunctionalCaseSearchService {
 
     public AgentCaseDTO getById(String caseId, boolean includeSteps, String testPlanId) {
         String projectId = requireProjectId();
-        String userId = SessionUtils.getUserId();
+        String userId = StringUtils.defaultIfBlank(SessionUtils.getUserId(), AgentExecutionActorContext.get());
         FunctionalCaseDetailDTO detail = functionalCaseService.getFunctionalCaseDetail(caseId, userId, false);
         AgentCaseDTO agentCase = new AgentCaseDTO();
         agentCase.setCaseId(detail.getId());

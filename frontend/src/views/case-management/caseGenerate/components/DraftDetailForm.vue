@@ -14,7 +14,7 @@
         </a-tag>
       </div>
     </div>
-    <a-form :model="props.draft" layout="vertical">
+    <a-form :model="props.draft" layout="vertical" :class="{ 'pointer-events-none opacity-90': props.readonly }">
       <a-form-item :label="t('caseManagement.caseGenerate.name')">
         <a-input :model-value="props.draft.name" @update:model-value="(value: string) => updateField('name', value)" />
       </a-form-item>
@@ -120,6 +120,7 @@
 
   const props = defineProps<{
     draft: AiCaseDraft;
+    readonly?: boolean;
   }>();
 
   const emit = defineEmits<{

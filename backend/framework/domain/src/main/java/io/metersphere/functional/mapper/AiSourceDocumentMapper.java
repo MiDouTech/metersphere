@@ -20,6 +20,9 @@ public interface AiSourceDocumentMapper {
                                        @Param("projectId") String projectId,
                                        @Param("createUser") String createUser);
 
+    List<AiSourceDocument> selectByIdsInProject(@Param("ids") List<String> ids,
+                                                @Param("projectId") String projectId);
+
     List<AiSourceDocument> selectByProjectAndCreateUser(@Param("projectId") String projectId,
                                                         @Param("createUser") String createUser,
                                                         @Param("parseStatus") String parseStatus,
