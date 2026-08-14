@@ -62,6 +62,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -1146,6 +1147,7 @@ public class PermissionControlService {
 
     public WorkflowRole addFlowRole(WorkflowRole request) {
         assertDraftWorkflow(request.getFlowId());
+        validateWorkflowRole(request);
         WorkflowRole workflowRole = new WorkflowRole();
         BeanUtils.copyBean(workflowRole, request);
         workflowRole.setId(StringUtils.defaultIfBlank(workflowRole.getId(), IDGenerator.nextStr()));
@@ -1164,6 +1166,7 @@ public class PermissionControlService {
         if (current == null) throw new MSException("流程角色不存在");
         assertDraftWorkflow(current.getFlowId());
         request.setFlowId(current.getFlowId());
+        validateWorkflowRole(request);
         request.setUpdateTime(System.currentTimeMillis());
         permissionControlMapper.updateWorkflowRole(request);
         return permissionControlMapper.selectWorkflowRoleById(request.getId());
@@ -1292,6 +1295,10 @@ public class PermissionControlService {
             }
             return false;
         }
+        if (StringUtils.equals(role.getRoleType(), "POSITION")) {
+            return SessionUtils.getUser() != null
+                    && matchesPositionRule(SessionUtils.getUser().getPosition(), role.getFieldKey());
+        }
         if (StringUtils.equals(role.getRoleType(), "SYSTEM_ROLE") && StringUtils.isNotBlank(role.getRoleId())) {
             return SessionUtils.getUser() != null
                     && CollectionUtils.isNotEmpty(SessionUtils.getUser().getUserRoleRelations())
@@ -1301,6 +1308,35 @@ public class PermissionControlService {
                             || StringUtils.equals(relation.getSourceId(), UserRoleScope.SYSTEM)));
         }
         return false;
+    }
+
+    private void validateWorkflowRole(WorkflowRole role) {
+        if (!Set.of("FIELD_USER", "SYSTEM_ROLE", "POSITION").contains(role.getRoleType())) {
+            throw new MSException("不支持的流程角色类型");
+        }
+        if (StringUtils.equals(role.getRoleType(), "FIELD_USER")
+                && !Set.of("create_user", "handle_user").contains(role.getFieldKey())) {
+            throw new MSException("业务字段用户仅支持创建人或当前处理人");
+        }
+        if (StringUtils.equals(role.getRoleType(), "SYSTEM_ROLE") && StringUtils.isBlank(role.getRoleId())) {
+            throw new MSException("系统角色不能为空");
+        }
+        if (StringUtils.equals(role.getRoleType(), "POSITION") && StringUtils.isBlank(role.getFieldKey())) {
+            throw new MSException("职位关键词不能为空");
+        }
+    }
+
+    static boolean matchesPositionRule(String position, String rule) {
+        if (StringUtils.isBlank(position) || StringUtils.isBlank(rule)) {
+            return false;
+        }
+        if (StringUtils.equals(StringUtils.trim(rule), "*")) {
+            return true;
+        }
+        return Arrays.stream(StringUtils.split(rule, '|'))
+                .map(StringUtils::trim)
+                .filter(StringUtils::isNotBlank)
+                .anyMatch(keyword -> StringUtils.containsIgnoreCase(position, keyword));
     }
 
     private Set<String> parseUserIds(String raw) {

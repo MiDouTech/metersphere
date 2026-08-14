@@ -38,6 +38,7 @@ import io.metersphere.system.service.*;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.RateCalculateUtils;
 import io.metersphere.system.utils.ServiceUtils;
+import io.metersphere.system.event.TestReportGeneratedEvent;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -49,6 +50,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -129,6 +131,8 @@ public class TestPlanReportService {
     private ExecTaskMapper execTaskMapper;
     @Resource
     private UserLoginService userLoginService;
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     private static final int MAX_REPORT_NAME_LENGTH = 300;
 
@@ -283,13 +287,14 @@ public class TestPlanReportService {
      * @param request     请求参数
      * @param currentUser 当前用户
      */
+    @Transactional(rollbackFor = Exception.class)
     public String genReportByManual(TestPlanReportManualRequest request, String currentUser) {
         /*
          * 1. 生成报告 (全量生成; 暂不根据布局来选择生成报告预览数据, 因为影响分析汇总)
          * 2. 保存报告布局组件 (只对当前生成的计划/组有效, 不会对下面的子计划报告生效)
          * 3. 处理富文本图片
          */
-        Map<String, String> reportMap = genReport(IDGenerator.nextStr(), request, true, currentUser, request.getReportName());
+        Map<String, String> reportMap = genReport(IDGenerator.nextStr(), null, request, true, currentUser, request.getReportName(), "MANUAL");
         String genReportId = reportMap.get(request.getTestPlanId());
         List<TestPlanReportComponentSaveRequest> components = request.getComponents();
         if (CollectionUtils.isNotEmpty(components)) {
@@ -323,8 +328,9 @@ public class TestPlanReportService {
      * @param request     请求参数
      * @param currentUser 当前用户
      */
+    @Transactional(rollbackFor = Exception.class)
     public String genReportByAuto(TestPlanReportGenRequest request, String currentUser) {
-        Map<String, String> reportMap = genReport(IDGenerator.nextStr(), request, true, currentUser, null);
+        Map<String, String> reportMap = genReport(IDGenerator.nextStr(), null, request, true, currentUser, null, "AUTO");
         return reportMap.get(request.getTestPlanId());
     }
 
@@ -337,11 +343,23 @@ public class TestPlanReportService {
      */
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
     public Map<String, String> genReportByExecution(String prepareReportId, String taskId, TestPlanReportGenRequest request, String currentUser) {
-        return genReport(prepareReportId, taskId, request, false, currentUser, null);
+        return genReport(prepareReportId, taskId, request, false, currentUser, null, "AUTO");
+    }
+
+    private void publishGeneratedReport(String reportId, String currentUser, String mode) {
+        if (StringUtils.isBlank(reportId)) {
+            return;
+        }
+        TestPlanReport report = testPlanReportMapper.selectByPrimaryKey(reportId);
+        if (report != null) {
+            applicationEventPublisher.publishEvent(new TestReportGeneratedEvent(
+                    "TEST_REPORT_GENERATED:" + reportId, reportId, report.getTestPlanId(), report.getProjectId(),
+                    report.getName(), currentUser, mode, System.currentTimeMillis()));
+        }
     }
 
     public Map<String, String> genReport(String prepareReportId, TestPlanReportGenRequest request, boolean manual, String currentUser, String manualReportName) {
-        return genReport(prepareReportId, null, request, manual, currentUser, manualReportName);
+        return genReport(prepareReportId, null, request, manual, currentUser, manualReportName, manual ? "MANUAL" : "AUTO");
     }
 
     /**
@@ -354,6 +372,12 @@ public class TestPlanReportService {
      * @param manualReportName 手动生成报告名称
      */
     public Map<String, String> genReport(String prepareReportId, String taskId, TestPlanReportGenRequest request, boolean manual, String currentUser, String manualReportName) {
+        return genReport(prepareReportId, taskId, request, manual, currentUser, manualReportName, manual ? "MANUAL" : "AUTO");
+    }
+
+    private Map<String, String> genReport(String prepareReportId, String taskId, TestPlanReportGenRequest request,
+                                          boolean manual, String currentUser, String manualReportName,
+                                          String generationMode) {
         Map<String, String> preReportMap = Maps.newHashMapWithExpectedSize(8);
         TestPlanReportManualParam reportManualParam = TestPlanReportManualParam.builder().manualName(manualReportName).targetId(request.getTestPlanId()).build();
         try {
@@ -401,6 +425,10 @@ public class TestPlanReportService {
             });
         } catch (Exception e) {
             LogUtils.error("Generate report exception: " + e.getMessage());
+        }
+
+        if (manual) {
+            preReportMap.values().forEach(reportId -> publishGeneratedReport(reportId, currentUser, generationMode));
         }
 
         return preReportMap;
@@ -719,6 +747,7 @@ public class TestPlanReportService {
      *
      * @param postParam 后置处理参数
      */
+    @Transactional(rollbackFor = Exception.class)
     public void postHandleReport(TestPlanReportPostParam postParam, boolean useManual) {
         /*
          * 处理报告(执行状态, 结束时间)
@@ -754,6 +783,10 @@ public class TestPlanReportService {
         }
 
         testPlanReportMapper.updateByPrimaryKeySelective(planReport);
+
+        if (!useManual && StringUtils.equals(postParam.getExecStatus(), ExecStatus.COMPLETED.name())) {
+            publishGeneratedReport(planReport.getId(), planReport.getCreateUser(), "AUTO");
+        }
 
         // 发送计划执行通知
         if (!useManual) {

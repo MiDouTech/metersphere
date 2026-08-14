@@ -56,7 +56,7 @@ public class BugExportService {
             this.generateExcelFile(list, headerModel.getXlsxFileNamePrefix() + index + ".xlsx", filesFolder, headerModel);
         } catch (Exception e) {
             LogUtils.error(e.getMessage());
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
         return filesFolder;
     }

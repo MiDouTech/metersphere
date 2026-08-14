@@ -48,7 +48,7 @@ public class HarParserApiDefinition extends HttpApiDefinitionImportAbstractParse
             har = HarUtils.read(source);
         } catch (Exception e) {
             LogUtils.error(e.getMessage(), e);
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
         if (ObjectUtils.isEmpty(har) || har.log == null) {
             throw new MSException("解析失败，请确认选择的是 Har 格式！");

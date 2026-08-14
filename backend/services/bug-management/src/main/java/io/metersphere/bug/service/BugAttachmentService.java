@@ -301,7 +301,7 @@ public class BugAttachmentService {
                     bytes = in.readAllBytes();
                     FileCenter.getDefaultRepository().saveFile(bytes, buildBugFileRequest(projectId, bugId, fileId, fileName, false));
                 } catch (Exception e) {
-                    throw new MSException(e.getMessage());
+                    throw new MSException(e);
                 }
                 // save bug attachment relation
                 BugLocalAttachment localAttachment = new BugLocalAttachment();
@@ -317,7 +317,7 @@ public class BugAttachmentService {
             });
         } catch (Exception e) {
             LogUtils.error(e.getMessage());
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
     }
 
@@ -356,7 +356,7 @@ public class BugAttachmentService {
                             BugFileDTO bugFileDTO = localFileMap.get(deleteLocalId);
                             FileCenter.getDefaultRepository().delete(buildBugFileRequest(projectId, bugId, bugFileDTO.getFileId(), bugFileDTO.getFileName(), false));
                         } catch (Exception e) {
-                            throw new MSException(e.getMessage());
+                            throw new MSException(e);
                         }
                     });
                     BugLocalAttachmentExample example = new BugLocalAttachmentExample();
@@ -366,7 +366,7 @@ public class BugAttachmentService {
             }
         } catch (Exception e) {
             LogUtils.error(e.getMessage());
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
     }
 

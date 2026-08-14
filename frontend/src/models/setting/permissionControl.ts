@@ -21,7 +21,7 @@ export interface WorkflowRole {
   flowId: string;
   code: string;
   name: string;
-  roleType: 'SYSTEM_ROLE' | 'FIELD_USER';
+  roleType: 'SYSTEM_ROLE' | 'FIELD_USER' | 'POSITION';
   roleId?: string;
   fieldKey?: string;
   enabled?: boolean;

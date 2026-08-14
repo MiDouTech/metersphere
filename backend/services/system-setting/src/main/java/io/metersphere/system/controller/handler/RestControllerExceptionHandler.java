@@ -7,6 +7,7 @@ import io.metersphere.system.controller.handler.result.MsHttpResultCode;
 import io.metersphere.system.utils.ServiceUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolationException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.UnauthorizedException;
 import org.apache.shiro.lang.ShiroException;
@@ -14,18 +15,26 @@ import org.eclipse.jetty.io.EofException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 
 @RestControllerAdvice
@@ -34,6 +43,11 @@ public class RestControllerExceptionHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestControllerExceptionHandler.class);
     private static final String REQUEST_ID_HEADER = "X-Request-ID";
     private static final String INTERNAL_ERROR_MESSAGE = "Internal server error";
+    private static final List<Pattern> SENSITIVE_ERROR_PATTERNS = List.of(
+            Pattern.compile("(?:java|org|com)\\.[\\w.$]+(?:Exception|Error)", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("(?:select|insert|update|delete)\\s.+\\s(?:from|into|set)\\s", Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
+            Pattern.compile("(?:mapper\\.xml|mybatis|jdbc|sqlstate|stack trace|caused by:)", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("at\\s+[\\w.$]+\\([^)]*\\.java:\\d+\\)", Pattern.CASE_INSENSITIVE));
 
     /**
      * 处理数据校验异常
@@ -89,16 +103,29 @@ public class RestControllerExceptionHandler {
     public ResponseEntity<ResultHolder> handlerMSException(MSException e, HttpServletRequest request,
                                                             HttpServletResponse response) {
         IResultCode errorCode = e.getErrorCode();
-        if (errorCode == null) {
-            // 如果抛出异常没有设置状态码，则返回错误 message
+        if (!isSafeBusinessException(e)) {
             String requestId = recordInternalError(request, response, e);
+            if (errorCode != null && (!(errorCode instanceof MsHttpResultCode) || errorCode.getCode() % 1000 < 500)) {
+                int httpStatus = errorCode instanceof MsHttpResultCode ? errorCode.getCode() % 1000
+                        : HttpStatus.UNPROCESSABLE_ENTITY.value();
+                String safeMessage = Translator.get(errorCode.getMessage(), errorCode.getMessage());
+                return ResponseEntity.status(httpStatus)
+                        .body(ResultHolder.structuredError(errorCode.getCode(), messageKey(errorCode), safeMessage,
+                                requestId, false, Map.of()));
+            }
             return ResponseEntity.internalServerError()
                     .body(ResultHolder.structuredError(MsHttpResultCode.FAILED.getCode(), "api.internalError",
                             INTERNAL_ERROR_MESSAGE, requestId, true, Map.of()));
         }
+        if (errorCode == null) {
+            String message = Translator.get(e.getMessage(), e.getMessage());
+            return ResponseEntity.unprocessableEntity()
+                    .body(ResultHolder.structuredError(MsHttpResultCode.UNPROCESSABLE_ENTITY.getCode(), "api.businessError",
+                            message, ensureRequestId(request, response), false, Map.of()));
+        }
 
         int code = errorCode.getCode();
-        String message = errorCode.getMessage();
+        String message = StringUtils.defaultIfBlank(e.getMessage(), errorCode.getMessage());
         message = Translator.get(message, message);
 
         if (errorCode instanceof MsHttpResultCode) {
@@ -110,11 +137,9 @@ public class RestControllerExceptionHandler {
                     .body(ResultHolder.structuredError(code, messageKey(errorCode), message,
                             ensureRequestId(request, response), code % 1000 >= 500, Map.of()));
         } else {
-            // 响应码返回 500，设置业务状态码
-            recordInternalError(request, response, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ResultHolder.structuredError(code, messageKey(errorCode), Translator.get(message, message),
-                            ensureRequestId(request, response), true, Map.of()));
+            return ResponseEntity.unprocessableEntity()
+                    .body(ResultHolder.structuredError(code, messageKey(errorCode), message,
+                            ensureRequestId(request, response), false, Map.of()));
         }
     }
 
@@ -145,12 +170,10 @@ public class RestControllerExceptionHandler {
     }
 
     @ExceptionHandler({EofException.class})
-    public ResponseEntity<Object> handleEofException(HttpServletRequest request, HttpServletResponse response, Exception e) {
-        String requestURI = request.getRequestURI();
-        String requestId = recordInternalError(request, response, e);
-        return ResponseEntity.internalServerError()
-                .body(ResultHolder.structuredError(MsHttpResultCode.FAILED.getCode(), "api.internalError",
-                        INTERNAL_ERROR_MESSAGE, requestId, true, Map.of()));
+    public ResponseEntity<Void> handleEofException(HttpServletRequest request, Exception e) {
+        LOGGER.debug("Client disconnected before the response completed, method={}, uri={}",
+                request == null ? "" : request.getMethod(), request == null ? "" : request.getRequestURI());
+        return ResponseEntity.noContent().build();
     }
 
     /*=========== Shiro 异常拦截==============*/
@@ -201,5 +224,26 @@ public class RestControllerExceptionHandler {
         if (errorCode == MsHttpResultCode.UNAUTHORIZED) return "api.unauthorized";
         if (errorCode == MsHttpResultCode.FORBIDDEN) return "api.forbidden";
         return "api.businessError";
+    }
+
+    @ExceptionHandler({BindException.class, ConstraintViolationException.class,
+            HandlerMethodValidationException.class, MethodArgumentTypeMismatchException.class,
+            HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
+            MissingServletRequestPartException.class})
+    public ResponseEntity<ResultHolder> handleClientInputException(Exception exception, HttpServletRequest request,
+                                                                    HttpServletResponse response) {
+        return ResponseEntity.badRequest().body(ResultHolder.structuredError(
+                MsHttpResultCode.VALIDATE_FAILED.getCode(), "api.validationFailed", "Invalid request parameters",
+                ensureRequestId(request, response), false, Map.of()));
+    }
+
+    private boolean isSafeBusinessException(MSException exception) {
+        if (exception.getCause() != null) {
+            return false;
+        }
+        String effectiveMessage = exception.getMessage();
+        if (StringUtils.isBlank(effectiveMessage)) return exception.getErrorCode() != null;
+        return SENSITIVE_ERROR_PATTERNS.stream()
+                .noneMatch(pattern -> pattern.matcher(effectiveMessage).find());
     }
 }

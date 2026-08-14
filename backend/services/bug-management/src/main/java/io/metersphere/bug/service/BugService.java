@@ -57,6 +57,8 @@ import io.metersphere.system.controller.handler.result.MsHttpResultCode;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.uid.NumGenerator;
 import io.metersphere.system.utils.ServiceUtils;
+import io.metersphere.system.utils.SessionUtils;
+import io.metersphere.system.event.BugExpectedResolutionChangedEvent;
 import jakarta.annotation.Resource;
 import jodd.util.StringUtil;
 import org.apache.commons.collections4.CollectionUtils;
@@ -71,6 +73,7 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -177,6 +180,8 @@ public class BugService {
     @Lazy
     @Resource
     private io.metersphere.system.edit.service.ResourceEditService resourceEditService;
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     public static final Long INTERVAL_POS = 5000L;
 
@@ -212,6 +217,10 @@ public class BugService {
 
     private Bug addOrUpdate(BugEditRequest request, List<MultipartFile> files, String currentUser, String currentOrgId,
                             boolean isUpdate, boolean workflowTransition) {
+        if (isUpdate) {
+            Bug existing = checkBugExist(request.getId());
+            assertBugProject(existing, request.getProjectId(), PermissionConstants.PROJECT_BUG_UPDATE);
+        }
         assertStatusMutationUsesWorkflow(request, isUpdate, workflowTransition);
         request.setTags(ServiceUtils.parseTags(request.getTags()));
         /*
@@ -256,6 +265,8 @@ public class BugService {
         handleRichTextTmpFile(request, bug.getId(), currentUser);
         // 处理用例关联关系
         handleAndSaveCaseRelation(request, isUpdate, bug, currentUser);
+
+        applicationEventPublisher.publishEvent(new BugExpectedResolutionChangedEvent(bug.getId(), System.currentTimeMillis()));
 
         return bug;
     }
@@ -314,6 +325,7 @@ public class BugService {
      */
     public BugDetailDTO get(String id, String currentUser, String language) {
         Bug bug = checkBugExist(id);
+        assertBugPermission(bug, PermissionConstants.PROJECT_BUG_READ);
         TemplateDTO template = getTemplate(bug.getTemplateId(), bug.getProjectId(), null, null, StringUtils.equals(bug.getPlatform(), BugPlatform.LOCAL.getName()), language);
         List<BugCustomFieldDTO> allCustomFields = extBugCustomFieldMapper.getBugAllCustomFields(List.of(id), bug.getProjectId());
         BugDetailDTO detail = new BugDetailDTO();
@@ -403,6 +415,7 @@ public class BugService {
      */
     public void delete(String id, String currentUser) {
         Bug bug = checkById(id);
+        assertBugPermission(bug, PermissionConstants.PROJECT_BUG_DELETE);
         if (StringUtils.equals(bug.getPlatform(), BugPlatform.LOCAL.getName())) {
             Bug record = new Bug();
             record.setId(id);
@@ -428,6 +441,7 @@ public class BugService {
             bugCommonService.clearAssociateResource(bug.getProjectId(), List.of(id));
             bugMapper.deleteByPrimaryKey(id);
         }
+        applicationEventPublisher.publishEvent(new BugExpectedResolutionChangedEvent(id, System.currentTimeMillis()));
     }
 
     /**
@@ -437,6 +451,7 @@ public class BugService {
      */
     public void recover(String id) {
         Bug bug = checkById(id);
+        assertBugPermission(bug, PermissionConstants.PROJECT_BUG_DELETE);
         if (!StringUtils.equals(bug.getPlatform(), BugPlatform.LOCAL.getName())) {
             throw new MSException(NOT_LOCAL_BUG_ERROR);
         }
@@ -444,6 +459,7 @@ public class BugService {
         record.setId(id);
         record.setDeleted(false);
         bugMapper.updateByPrimaryKeySelective(record);
+        applicationEventPublisher.publishEvent(new BugExpectedResolutionChangedEvent(id, System.currentTimeMillis()));
     }
 
     /**
@@ -453,10 +469,12 @@ public class BugService {
      */
     public void deleteTrash(String id) {
         Bug bug = checkById(id);
+        assertBugPermission(bug, PermissionConstants.PROJECT_BUG_DELETE);
         if (!StringUtils.equals(bug.getPlatform(), BugPlatform.LOCAL.getName())) {
             throw new MSException(NOT_LOCAL_BUG_ERROR);
         }
         bugMapper.deleteByPrimaryKey(id);
+        applicationEventPublisher.publishEvent(new BugExpectedResolutionChangedEvent(id, System.currentTimeMillis()));
     }
 
     /**
@@ -493,9 +511,15 @@ public class BugService {
      */
     public void batchDelete(BugBatchRequest request, String currentUser) {
         List<String> batchIds = getBatchIdsByRequest(request);
+        if (CollectionUtils.isEmpty(batchIds)) {
+            return;
+        }
         BugExample example = new BugExample();
         example.createCriteria().andIdIn(batchIds);
         List<Bug> bugs = bugMapper.selectByExample(example);
+        if (CollectionUtils.isEmpty(bugs)) {
+            return;
+        }
         String currentPlatform = projectApplicationService.getPlatformName(bugs.getFirst().getProjectId());
         List<String> platformBugIds = new ArrayList<>();
         List<String> platformBugKeys = new ArrayList<>();
@@ -632,7 +656,8 @@ public class BugService {
      * @param currentUser 当前用户
      */
     public void follow(String id, String currentUser) {
-        checkBugExist(id);
+        Bug bug = checkBugExist(id);
+        assertBugPermission(bug, PermissionConstants.PROJECT_BUG_READ);
         BugFollower bugFollower = new BugFollower();
         bugFollower.setBugId(id);
         bugFollower.setUserId(currentUser);
@@ -646,7 +671,8 @@ public class BugService {
      * @param currentUser 当前用户
      */
     public void unfollow(String id, String currentUser) {
-        checkBugExist(id);
+        Bug bug = checkBugExist(id);
+        assertBugPermission(bug, PermissionConstants.PROJECT_BUG_READ);
         BugFollowerExample example = new BugFollowerExample();
         example.createCriteria().andBugIdEqualTo(id).andUserIdEqualTo(currentUser);
         bugFollowerMapper.deleteByExample(example);
@@ -1102,9 +1128,11 @@ public class BugService {
         Optional<BugCustomFieldDTO> statusField = request.getCustomFields().stream().filter(field -> StringUtils.equals(field.getId(), BugTemplateCustomField.STATUS.getId())).findFirst();
         if (statusField.isPresent()) {
             if (StringUtils.isBlank(statusField.get().getValue()) && StringUtils.equalsIgnoreCase(BugPlatform.LOCAL.getName(), platformName)) {
-                // Local平台设置状态默认值为状态流-开始状态
-                List<SelectOption> localStartStatusItem = bugStatusService.getToStatusItemOptionOnLocal(request.getProjectId(), StringUtils.EMPTY);
-                bug.setStatus(localStartStatusItem.getFirst().getValue());
+                if (StringUtils.isNotBlank(request.getId())) {
+                    throw new MSException(Translator.get("bug_status_can_not_be_empty"));
+                }
+                // 新建本地缺陷时由 bindPublishedWorkflow 统一绑定已发布流程的唯一初始状态。
+                bug.setStatus(null);
             } else {
                 bug.setStatus(statusField.get().getValue());
             }
@@ -1298,7 +1326,9 @@ public class BugService {
     public boolean checkExist(String id) {
         BugExample bugExample = new BugExample();
         bugExample.createCriteria().andIdEqualTo(id).andDeletedEqualTo(false);
-        return bugMapper.countByExample(bugExample) > 0;
+        List<Bug> bugs = bugMapper.selectByExample(bugExample);
+        return !bugs.isEmpty() && SessionUtils.hasPermission(null, bugs.getFirst().getProjectId(),
+                PermissionConstants.PROJECT_BUG_READ);
     }
 
     /**
@@ -1779,7 +1809,7 @@ public class BugService {
                         // 第三方平台下载的图片默认不压缩
                         FileCenter.getDefaultRepository().saveFile(bytes, buildBugFileRequest(syncBug.getProjectId(), syncBug.getId(), fileId, fileName));
                     } catch (Exception e) {
-                        throw new MSException(e.getMessage());
+                        throw new MSException(e);
                     }
                     // 保存缺陷附件关系
                     BugLocalAttachment localAttachment = new BugLocalAttachment();
@@ -2063,7 +2093,27 @@ public class BugService {
             if (CollectionUtils.isEmpty(request.getSelectIds())) {
                 return new ArrayList<>();
             }
-            return request.getSelectIds();
+            List<String> requestedIds = request.getSelectIds().stream().filter(StringUtils::isNotBlank).distinct().toList();
+            BugExample example = new BugExample();
+            example.createCriteria().andIdIn(requestedIds).andProjectIdEqualTo(request.getProjectId());
+            List<String> projectIds = bugMapper.selectByExample(example).stream().map(Bug::getId).toList();
+            if (projectIds.size() != requestedIds.size()) {
+                throw new MSException(MsHttpResultCode.FORBIDDEN, "请求中包含不属于当前项目的缺陷");
+            }
+            return projectIds;
+        }
+    }
+
+    private void assertBugProject(Bug bug, String projectId, String permission) {
+        if (!StringUtils.equals(bug.getProjectId(), projectId)) {
+            throw new MSException(MsHttpResultCode.FORBIDDEN, "缺陷不属于当前项目");
+        }
+        assertBugPermission(bug, permission);
+    }
+
+    private void assertBugPermission(Bug bug, String permission) {
+        if (!SessionUtils.hasPermission(null, bug.getProjectId(), permission)) {
+            throw new MSException(MsHttpResultCode.FORBIDDEN, "无权访问当前缺陷所属项目");
         }
     }
 

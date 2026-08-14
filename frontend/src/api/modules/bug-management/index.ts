@@ -103,7 +103,7 @@ export function getBugDetail(id: string) {
 }
 /** 删除单个文件 */
 export function deleteSingleBug(data: TableQueryParams) {
-  return MSR.get({ url: `${bugURL.getDeleteBugUrl}${data.id}` });
+  return MSR.delete({ url: `${bugURL.getDeleteBugUrl}${data.id}` });
 }
 /** 批量删除文件 */
 export function deleteBatchBug(data: TableQueryParams) {
@@ -160,9 +160,9 @@ export function getAssociatedFileList(data: TableQueryParams) {
 // 关注/取消关注 缺陷
 export function followBug(id: string, isFollow: boolean) {
   if (isFollow) {
-    return MSR.get({ url: `${bugURL.getUnFollowBugUrl}${id}` });
+    return MSR.delete({ url: `${bugURL.getUnFollowBugUrl}${id}` });
   }
-  return MSR.get({ url: `${bugURL.getFollowBugUrl}${id}` });
+  return MSR.post({ url: `${bugURL.getFollowBugUrl}${id}` });
 }
 
 // 创建评论
@@ -178,7 +178,7 @@ export function getCommentList(bugId: string) {
 }
 // 删除评论
 export function deleteComment(commentId: string) {
-  return MSR.get({ url: `${bugURL.getDeleteCommentUrl}${commentId}` });
+  return MSR.delete({ url: `${bugURL.getDeleteCommentUrl}${commentId}` });
 }
 
 export function getCustomFieldHeader(projectId: string) {
@@ -240,7 +240,7 @@ export function getRecycleList(data: TableQueryParams) {
 }
 // 单个恢复
 export function recoverSingleByRecycle(id: string) {
-  return MSR.get({ url: `${bugURL.getRecoverSingleUrl}${id}` });
+  return MSR.post({ url: `${bugURL.getRecoverSingleUrl}${id}` });
 }
 // 批量恢复
 export function recoverBatchByRecycle(data: TableQueryParams) {
@@ -248,7 +248,7 @@ export function recoverBatchByRecycle(data: TableQueryParams) {
 }
 // 删除
 export function deleteSingleByRecycle(id: string) {
-  return MSR.get({ url: `${bugURL.getDeleteSingleUrl}${id}` });
+  return MSR.delete({ url: `${bugURL.getDeleteSingleUrl}${id}` });
 }
 // 批量删除
 export function deleteBatchByRecycle(data: TableQueryParams) {
@@ -284,7 +284,7 @@ export function batchAssociation(data: TableQueryParams) {
 
 // 取消关联
 export function cancelAssociation(id: string) {
-  return MSR.get({ url: `${bugURL.getCancelDemandUrl}/${id}` });
+  return MSR.delete({ url: `${bugURL.getCancelDemandUrl}/${id}` });
 }
 
 // 缺陷管理-变更历史-列表

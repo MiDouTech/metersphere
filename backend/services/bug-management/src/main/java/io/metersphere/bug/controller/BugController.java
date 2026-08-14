@@ -185,7 +185,7 @@ public class BugController {
         return bugService.get(id, SessionUtils.getUserId(), Objects.requireNonNull(SessionUtils.getUser()).getLanguage());
     }
 
-    @GetMapping("/delete/{id}")
+    @DeleteMapping("/delete/{id}")
     @Operation(summary = "缺陷管理-列表-删除缺陷")
     @RequiresPermissions(PermissionConstants.PROJECT_BUG_DELETE)
     @Log(type = OperationLogType.DELETE, expression = "#msClass.deleteLog(#id)", msClass = BugLogService.class)
@@ -281,14 +281,14 @@ public class BugController {
         return bugService.getTemplate(request.getId(), request.getProjectId(), request.getFromStatusId(), request.getPlatformBugKey(), request.getShowLocal(), Objects.requireNonNull(SessionUtils.getUser()).getLanguage());
     }
 
-    @GetMapping("/follow/{id}")
+    @PostMapping("/follow/{id}")
     @Operation(summary = "缺陷管理-详情-关注缺陷")
     @RequiresPermissions(PermissionConstants.PROJECT_BUG_READ)
     public void follow(@PathVariable String id) {
         bugService.follow(id, SessionUtils.getUserId());
     }
 
-    @GetMapping("/unfollow/{id}")
+    @DeleteMapping("/unfollow/{id}")
     @Operation(summary = "缺陷管理-详情-取消关注缺陷")
     @RequiresPermissions(PermissionConstants.PROJECT_BUG_READ)
     public void unfollow(@PathVariable String id) {

@@ -109,13 +109,13 @@ public class ScheduleService {
                 scheduleManager.addOrUpdateCronJob(jobKey, triggerKey, clazz, cronExpression,
                         scheduleManager.getDefaultJobDataMap(request, cronExpression, request.getCreateUser()));
             } catch (SchedulerException e) {
-                throw new MSException("定时任务开启异常: " + e.getMessage());
+                throw new MSException(e);
             }
         } else {
             try {
                 scheduleManager.removeJob(jobKey, triggerKey);
             } catch (Exception e) {
-                throw new MSException("定时任务关闭异常: " + e.getMessage());
+                throw new MSException(e);
             }
         }
     }

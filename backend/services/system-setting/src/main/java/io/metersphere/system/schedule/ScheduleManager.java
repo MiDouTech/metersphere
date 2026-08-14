@@ -3,8 +3,10 @@ package io.metersphere.system.schedule;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.domain.Schedule;
+import io.metersphere.system.controller.handler.result.MsHttpResultCode;
 import jakarta.annotation.Resource;
 import org.quartz.*;
+import java.util.TimeZone;
 
 /**
  * @Description: 定时任务管理类
@@ -36,6 +38,9 @@ public class ScheduleManager {
      * 添加 cronJob
      */
     public void addCronJob(JobKey jobKey, TriggerKey triggerKey, Class<? extends Job> jobClass, String cron, JobDataMap jobDataMap) {
+        if (!CronExpression.isValidExpression(cron)) {
+            throw new MSException(MsHttpResultCode.UNPROCESSABLE_ENTITY, "Cron 表达式格式不正确");
+        }
         try {
             LogUtils.info("addCronJob: " + triggerKey.getName() + "," + triggerKey.getGroup());
             JobBuilder jobBuilder = JobBuilder.newJob(jobClass).withIdentity(jobKey);
@@ -52,7 +57,7 @@ public class ScheduleManager {
 
         } catch (Exception e) {
             LogUtils.error(e);
-            throw new MSException("定时任务配置异常: " + e.getMessage());
+            throw new MSException(e);
         }
     }
 
@@ -64,6 +69,8 @@ public class ScheduleManager {
      * 修改 cronTrigger
      */
     public void modifyCronJobTime(TriggerKey triggerKey, String cron) throws SchedulerException {
+
+        validateCron(cron);
 
         LogUtils.info("modifyCronJobTime: " + triggerKey.getName() + "," + triggerKey.getGroup());
         try {
@@ -129,6 +136,7 @@ public class ScheduleManager {
      */
     public void addOrUpdateCronJob(JobKey jobKey, TriggerKey triggerKey, Class jobClass, String cron, JobDataMap jobDataMap)
             throws SchedulerException {
+        validateCron(cron);
         LogUtils.info("AddOrUpdateCronJob: " + jobKey.getName() + "," + triggerKey.getGroup());
 
         if (scheduler.checkExists(triggerKey)) {
@@ -142,6 +150,26 @@ public class ScheduleManager {
         addOrUpdateCronJob(jobKey, triggerKey, jobClass, cron, null);
     }
 
+    public void addOrUpdateCronJob(JobKey jobKey, TriggerKey triggerKey, Class<? extends Job> jobClass,
+                                   String cron, String timezone, JobDataMap jobDataMap) throws SchedulerException {
+        validateCron(cron);
+        CronScheduleBuilder schedule = CronScheduleBuilder.cronSchedule(cron)
+                .inTimeZone(TimeZone.getTimeZone(timezone))
+                .withMisfireHandlingInstructionDoNothing();
+        CronTrigger trigger = TriggerBuilder.newTrigger().withIdentity(triggerKey).startNow().withSchedule(schedule).build();
+        if (scheduler.checkExists(jobKey)) {
+            scheduler.addJob(JobBuilder.newJob(jobClass).withIdentity(jobKey).usingJobData(jobDataMap).storeDurably().build(), true);
+            scheduler.rescheduleJob(triggerKey, trigger);
+        } else {
+            scheduler.scheduleJob(JobBuilder.newJob(jobClass).withIdentity(jobKey).usingJobData(jobDataMap).build(), trigger);
+        }
+    }
+
+    public Long getNextFireTime(TriggerKey triggerKey) throws SchedulerException {
+        Trigger trigger = scheduler.getTrigger(triggerKey);
+        return trigger == null || trigger.getNextFireTime() == null ? null : trigger.getNextFireTime().getTime();
+    }
+
     public JobDataMap getDefaultJobDataMap(Schedule schedule, String expression, String userId) {
         JobDataMap jobDataMap = new JobDataMap();
         jobDataMap.put("resourceId", schedule.getResourceId());
@@ -150,5 +178,11 @@ public class ScheduleManager {
         jobDataMap.put("config", schedule.getConfig());
         jobDataMap.put("projectId", schedule.getProjectId());
         return jobDataMap;
+    }
+
+    private void validateCron(String cron) {
+        if (!CronExpression.isValidExpression(cron)) {
+            throw new MSException(MsHttpResultCode.UNPROCESSABLE_ENTITY, "Cron 表达式格式不正确");
+        }
     }
 }

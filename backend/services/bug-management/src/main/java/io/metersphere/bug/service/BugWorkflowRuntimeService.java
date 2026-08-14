@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 
+import static io.metersphere.bug.enums.result.BugResultCode.BUG_WORKFLOW_INITIAL_STATUS_INVALID;
+import static io.metersphere.bug.enums.result.BugResultCode.BUG_WORKFLOW_NOT_PUBLISHED;
+
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class BugWorkflowRuntimeService {
@@ -48,12 +51,12 @@ public class BugWorkflowRuntimeService {
         List<Map<String, Object>> flows = jdbcTemplate.queryForList("SELECT id, version FROM workflow_definition "
                 + "WHERE scene = 'BUG' AND scope_type = 'SYSTEM' AND scope_id = 'system' "
                 + "AND lifecycle = 'PUBLISHED' AND default_flow = b'1' AND enabled = b'1' LIMIT 1");
-        if (flows.isEmpty()) throw new MSException("未发布全局缺陷流程，请先在权限控制/流程控制中发布流程");
+        if (flows.isEmpty()) throw new MSException(BUG_WORKFLOW_NOT_PUBLISHED);
         Map<String, Object> flow = flows.getFirst();
         String flowId = String.valueOf(flow.get("id"));
         List<Map<String, Object>> initial = jdbcTemplate.queryForList("SELECT id FROM status_item WHERE flow_id = ? "
                 + "AND initial_status = b'1' AND enabled = b'1'", flowId);
-        if (initial.size() != 1) throw new MSException("已发布全局缺陷流程的初始状态无效");
+        if (initial.size() != 1) throw new MSException(BUG_WORKFLOW_INITIAL_STATUS_INVALID);
         bug.setWorkflowId(flowId);
         bug.setWorkflowVersion(((Number) flow.get("version")).intValue());
         if (StringUtils.equalsIgnoreCase(bug.getPlatform(), BugPlatform.LOCAL.getName())) {

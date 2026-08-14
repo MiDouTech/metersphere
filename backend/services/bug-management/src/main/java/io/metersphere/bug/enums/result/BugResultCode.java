@@ -16,7 +16,17 @@ public enum BugResultCode implements IResultCode {
     /**
      * 非Local缺陷异常
      */
-    NOT_LOCAL_BUG_ERROR(108002, "not_local_bug_error");
+    NOT_LOCAL_BUG_ERROR(108002, "not_local_bug_error"),
+
+    /**
+     * No usable global default bug workflow has been published.
+     */
+    BUG_WORKFLOW_NOT_PUBLISHED(108003, "bug_workflow_not_published"),
+
+    /**
+     * The published bug workflow does not have exactly one enabled initial status.
+     */
+    BUG_WORKFLOW_INITIAL_STATUS_INVALID(108004, "bug_workflow_initial_status_invalid");
 
     private final int code;
     private final String message;

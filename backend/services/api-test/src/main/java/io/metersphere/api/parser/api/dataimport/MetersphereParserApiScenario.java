@@ -31,7 +31,7 @@ public class MetersphereParserApiScenario implements ApiScenarioImportParser {
             metersphereApiScenarioExportResponse = ApiDataUtils.parseObject(source, MetersphereApiScenarioExportResponse.class);
         } catch (Exception e) {
             LogUtils.error(e.getMessage(), e);
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
         if (metersphereApiScenarioExportResponse == null) {
             throw new MSException("解析失败，请确认是否是正确的文件");

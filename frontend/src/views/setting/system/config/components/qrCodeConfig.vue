@@ -1,114 +1,139 @@
 <template>
-  <MsCard simple class="mb-[16px]" auto-height :loading="loading">
-    <div class="outer-wrapper">
-      <div class="mb-[16px] flex justify-between">
-        <div class="font-medium text-[var(--color-text-1)]">{{ t('organization.service.integrationList') }}</div>
-      </div>
-      <div class="ms-card-wrap">
-        <a-scrollbar
-          :style="{
-            overflow: 'auto',
-            height: `calc(100vh - 196px)`,
-          }"
-        >
-          <div v-if="filterList.length" class="list">
-            <div v-for="item of filterList" :key="item.key" class="item">
-              <div class="flex">
-                <span class="float-left mr-2 h-[40px] w-[40px] rounded">
-                  <MsIcon :type="item.logo" size="40"></MsIcon>
-                </span>
-                <div class="flex flex-col justify-start">
-                  <p>
-                    <span class="mr-4 font-semibold">{{ item.title }}</span>
-                    <span v-if="!item.hasConfig" class="ms-enable">{{ t('organization.service.unconfigured') }}</span>
-                    <span
-                      v-else
-                      class="ms-enable active"
-                      :style="{
-                        background: 'rgb(var(--success-1))',
-                        color: 'rgb(var(--success-6))',
-                      }"
-                      >{{ t('organization.service.configured') }}</span
-                    >
-                  </p>
-                  <p class="mt-2 text-sm text-[var(--color-text-4)]">{{ item.description }}</p>
-                </div>
-              </div>
-              <div class="flex justify-between">
-                <a-space>
-                  <a-tooltip v-if="!item.hasConfig" :content="t('organization.service.unconfiguredTip')" position="tl">
-                    <span>
-                      <a-button
+  <a-tabs v-model:active-key="notificationTab">
+    <a-tab-pane
+      v-if="licenseStore.hasLicense()"
+      key="integrations"
+      :title="t('system.config.qrCodeConfig')"
+      data-resource-code="SYSTEM_CONFIG_NOTIFICATION_TAB"
+    >
+      <MsCard simple class="mb-[16px]" auto-height :loading="loading">
+        <div class="outer-wrapper">
+          <div class="mb-[16px] flex justify-between">
+            <div class="font-medium text-[var(--color-text-1)]">{{ t('organization.service.integrationList') }}</div>
+          </div>
+          <div class="ms-card-wrap">
+            <a-scrollbar
+              :style="{
+                overflow: 'auto',
+                height: `calc(100vh - 196px)`,
+              }"
+            >
+              <div v-if="filterList.length" class="list">
+                <div v-for="item of filterList" :key="item.key" class="item">
+                  <div class="flex">
+                    <span class="float-left mr-2 h-[40px] w-[40px] rounded">
+                      <MsIcon :type="item.logo" size="40"></MsIcon>
+                    </span>
+                    <div class="flex flex-col justify-start">
+                      <p>
+                        <span class="mr-4 font-semibold">{{ item.title }}</span>
+                        <span v-if="!item.hasConfig" class="ms-enable">{{
+                          t('organization.service.unconfigured')
+                        }}</span>
+                        <span
+                          v-else
+                          class="ms-enable active"
+                          :style="{
+                            background: 'rgb(var(--success-1))',
+                            color: 'rgb(var(--success-6))',
+                          }"
+                          >{{ t('organization.service.configured') }}</span
+                        >
+                      </p>
+                      <p class="mt-2 text-sm text-[var(--color-text-4)]">{{ item.description }}</p>
+                    </div>
+                  </div>
+                  <div class="flex justify-between">
+                    <a-space>
+                      <a-tooltip
                         v-if="!item.hasConfig"
-                        type="outline"
-                        class="arco-btn-outline--secondary"
-                        size="mini"
+                        :content="t('organization.service.unconfiguredTip')"
+                        position="tl"
+                      >
+                        <span>
+                          <a-button
+                            v-if="!item.hasConfig"
+                            type="outline"
+                            class="arco-btn-outline--secondary"
+                            size="mini"
+                            :disabled="
+                              !item.hasConfig || !hasAnyPermission(['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE'])
+                            "
+                            @click="getValidateHandler(item.key)"
+                            >{{ t('organization.service.testLink') }}</a-button
+                          ></span
+                        >
+                      </a-tooltip>
+                      <a-button
+                        v-else
                         :disabled="
                           !item.hasConfig || !hasAnyPermission(['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE'])
                         "
+                        type="outline"
+                        class="arco-btn-outline--secondary"
+                        size="mini"
                         @click="getValidateHandler(item.key)"
-                        >{{ t('organization.service.testLink') }}</a-button
-                      ></span
-                    >
-                  </a-tooltip>
-                  <a-button
-                    v-else
-                    :disabled="!item.hasConfig || !hasAnyPermission(['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE'])"
-                    type="outline"
-                    class="arco-btn-outline--secondary"
-                    size="mini"
-                    @click="getValidateHandler(item.key)"
-                    >{{ t('organization.service.testLink') }}
-                  </a-button>
-                  <a-button
-                    v-if="item.edit"
-                    v-permission="['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE']"
-                    type="outline"
-                    class="arco-btn-outline--secondary"
-                    size="mini"
-                    @click="editHandler(item.key)"
-                    >{{ t('organization.service.edit') }}
-                  </a-button>
-                  <a-button
-                    v-else
-                    v-permission="['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE']"
-                    type="outline"
-                    class="arco-btn-outline--secondary"
-                    size="mini"
-                    @click="editHandler(item.key)"
-                    >{{ t('common.add') }}
-                  </a-button>
-                </a-space>
-                <span>
-                  <a-tooltip v-if="!item.valid" :content="t('organization.service.unconfiguredTip')" position="br">
-                    <span
-                      ><a-switch
+                        >{{ t('organization.service.testLink') }}
+                      </a-button>
+                      <a-button
+                        v-if="item.edit"
+                        v-permission="['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE']"
+                        type="outline"
+                        class="arco-btn-outline--secondary"
+                        size="mini"
+                        @click="editHandler(item.key)"
+                        >{{ t('organization.service.edit') }}
+                      </a-button>
+                      <a-button
+                        v-else
+                        v-permission="['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE']"
+                        type="outline"
+                        class="arco-btn-outline--secondary"
+                        size="mini"
+                        @click="editHandler(item.key)"
+                        >{{ t('common.add') }}
+                      </a-button>
+                    </a-space>
+                    <span>
+                      <a-tooltip v-if="!item.valid" :content="t('organization.service.unconfiguredTip')" position="br">
+                        <span
+                          ><a-switch
+                            v-model="item.enable"
+                            size="small"
+                            :disabled="true"
+                            @change="(v: string | number | boolean) => changeStatus(v, item.key)"
+                        /></span>
+                      </a-tooltip>
+                      <a-switch
+                        v-else
                         v-model="item.enable"
                         size="small"
-                        :disabled="true"
+                        :disabled="!hasAnyPermission(['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE'])"
                         @change="(v: string | number | boolean) => changeStatus(v, item.key)"
-                    /></span>
-                  </a-tooltip>
-                  <a-switch
-                    v-else
-                    v-model="item.enable"
-                    size="small"
-                    :disabled="!hasAnyPermission(['SYSTEM_PARAMETER_SETTING_QRCODE:READ+UPDATE'])"
-                    @change="(v: string | number | boolean) => changeStatus(v, item.key)"
-                  />
-                </span>
+                      />
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
+              <a-empty v-if="!filterList.length" class="mt-20"></a-empty>
+            </a-scrollbar>
           </div>
-          <a-empty v-if="!filterList.length" class="mt-20"></a-empty>
-        </a-scrollbar>
-      </div>
-    </div>
-  </MsCard>
-  <we-com-modal v-model:visible="showWeComModal" @success="loadList()" />
-  <ding-talk-modal v-model:visible="showDingTalkModal" @success="loadList()" />
-  <lark-modal v-model:visible="showLarkModal" @success="loadList()" />
-  <lark-suite-modal v-model:visible="showLarkSuiteModal" @success="loadList()" />
+        </div>
+      </MsCard>
+      <we-com-modal v-model:visible="showWeComModal" @success="loadList()" />
+      <ding-talk-modal v-model:visible="showDingTalkModal" @success="loadList()" />
+      <lark-modal v-model:visible="showLarkModal" @success="loadList()" />
+      <lark-suite-modal v-model:visible="showLarkSuiteModal" @success="loadList()" />
+    </a-tab-pane>
+    <a-tab-pane
+      v-if="hasAnyPermission(['SYSTEM_CONFIG_WECOM_BOT:READ'])"
+      key="wecomBot"
+      :title="t('system.config.wecomBotConfig')"
+      data-resource-code="SYSTEM_CONFIG_WECOM_BOT_TAB"
+    >
+      <wecom-bot-config />
+    </a-tab-pane>
+  </a-tabs>
 </template>
 
 <script setup lang="ts">
@@ -119,6 +144,7 @@
   import DingTalkModal from '@/views/setting/system/config/components/dingTalkModal.vue';
   import LarkModal from '@/views/setting/system/config/components/larkModal.vue';
   import LarkSuiteModal from '@/views/setting/system/config/components/larkSuiteModal.vue';
+  import WecomBotConfig from '@/views/setting/system/config/components/wecomBotConfig.vue';
   import WeComModal from '@/views/setting/system/config/components/weComModal.vue';
 
   import {
@@ -137,6 +163,7 @@
     validateWeComConfig,
   } from '@/api/modules/setting/qrCode';
   import { useI18n } from '@/hooks/useI18n';
+  import useLicenseStore from '@/store/modules/setting/license';
   import { hasAnyPermission } from '@/utils/permission';
 
   import {
@@ -153,6 +180,8 @@
   import Message from '@arco-design/web-vue/es/message';
 
   const { t } = useI18n();
+  const licenseStore = useLicenseStore();
+  const notificationTab = ref(licenseStore.hasLicense() ? 'integrations' : 'wecomBot');
 
   const filterList = ref<PlatformConfigList>([
     {
@@ -338,7 +367,7 @@
   };
 
   onBeforeMount(() => {
-    loadList();
+    if (licenseStore.hasLicense()) loadList();
   });
 </script>
 

@@ -1,0 +1,56 @@
+services:
+  wecom-bot-bridge:
+    container_name: wecom-bot-bridge
+    build:
+      context: ../wecom-bot-bridge
+      dockerfile: Dockerfile
+    image: metersphere/wecom-bot-bridge:1.0.0
+    restart: unless-stopped
+    read_only: true
+    init: true
+    user: "10001:10001"
+    environment:
+      MS_WECOM_BRIDGE_PORT: "8095"
+      MS_WECOM_BOT_ENABLED: "false"
+      MS_WECOM_IDEMPOTENCY_FILE: "/var/lib/wecom-bot/idempotency.json"
+      MS_WECOM_CALLBACK_BASE_URL: "http://metersphere:8081"
+      MS_WECOM_BRIDGE_TOKEN_FILE: "/run/secrets/wecom_bridge_token"
+      MS_WECOM_BRIDGE_CALLBACK_TOKEN_FILE: "/run/secrets/wecom_callback_token"
+    secrets:
+      - wecom_bridge_token
+      - wecom_callback_token
+    networks:
+      - metersphere-internal
+    volumes:
+      - wecom-bot-data:/var/lib/wecom-bot
+    expose:
+      - "8095"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8095/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+    logging:
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+secrets:
+  wecom_bridge_token:
+    file: ${MS_WECOM_BRIDGE_TOKEN_FILE:?set token file path}
+  wecom_callback_token:
+    file: ${MS_WECOM_BRIDGE_CALLBACK_TOKEN_FILE:?set callback token file path}
+
+networks:
+  metersphere-internal:
+    external: true
+
+volumes:
+  wecom-bot-data:

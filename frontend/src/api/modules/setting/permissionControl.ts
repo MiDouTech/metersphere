@@ -25,11 +25,11 @@ export function getPermissionControlRoles() {
   return MSR.get<PermissionControlRole[]>({ url: urls.roleListUrl });
 }
 export function getPermissionControlRole(roleId: string) {
-  return MSR.get<PermissionControlRole>({ url: `/permission/control/role/get/${roleId}` });
+  return MSR.get<PermissionControlRole>({ url: `/permission-control/role/get/${roleId}` });
 }
 
 export function deletePermissionControlRole(roleId: string) {
-  return MSR.post<void>({ url: urls.roleDeleteUrl, params: { roleId } });
+  return MSR.post<void>({ url: urls.roleDeleteUrl, params: { roleId } }, { joinParamsToUrl: true });
 }
 
 export function getPermissionControlResourceTree(scopeType: string) {
@@ -117,7 +117,7 @@ export function enablePermissionControlFlow(data: Pick<WorkflowDefinition, 'id' 
 }
 
 export function deletePermissionControlFlow(flowId: string) {
-  return MSR.post<void>({ url: urls.flowDeleteUrl, params: { flowId } });
+  return MSR.post<void>({ url: urls.flowDeleteUrl, params: { flowId } }, { joinParamsToUrl: true });
 }
 
 export function getPermissionControlFlowRoles(flowId: string) {
@@ -141,10 +141,13 @@ export function validatePermissionControlFlow(flowId: string) {
 }
 
 export function publishPermissionControlFlow(flowId: string, expectedVersion: number) {
-  return MSR.post<WorkflowDefinition>({
-    url: `/permission-control/flow/${flowId}/publish`,
-    params: { expectedVersion },
-  });
+  return MSR.post<WorkflowDefinition>(
+    {
+      url: `/permission-control/flow/${flowId}/publish`,
+      params: { expectedVersion },
+    },
+    { joinParamsToUrl: true }
+  );
 }
 
 export function archivePermissionControlFlow(flowId: string) {
@@ -214,7 +217,7 @@ export function updatePermissionControlFlowRole(data: WorkflowRole) {
 }
 
 export function deletePermissionControlFlowRole(roleId: string) {
-  return MSR.post<void>({ url: urls.flowRoleDeleteUrl, params: { roleId } });
+  return MSR.post<void>({ url: urls.flowRoleDeleteUrl, params: { roleId } }, { joinParamsToUrl: true });
 }
 
 export function getPermissionControlFlowRolePermissions(flowId: string) {

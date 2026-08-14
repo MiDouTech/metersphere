@@ -37,4 +37,24 @@ public class BugPageRequest extends BasePageRequest {
 
     @Schema(description = "工作台参数: 是否遗留的")
     private Boolean unresolved = false;
+
+    public void setRelatedToPlan(Boolean relatedToPlan) {
+        this.relatedToPlan = Boolean.TRUE.equals(relatedToPlan);
+    }
+
+    public void setCreateByMe(Boolean createByMe) {
+        this.createByMe = Boolean.TRUE.equals(createByMe);
+    }
+
+    public void setAssignedToMe(Boolean assignedToMe) {
+        this.assignedToMe = Boolean.TRUE.equals(assignedToMe);
+    }
+
+    public void setBoardCount(Boolean boardCount) {
+        this.boardCount = Boolean.TRUE.equals(boardCount);
+    }
+
+    public void setUnresolved(Boolean unresolved) {
+        this.unresolved = Boolean.TRUE.equals(unresolved);
+    }
 }

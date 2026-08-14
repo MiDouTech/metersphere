@@ -47,7 +47,7 @@ public class BugCommentController {
         return bugCommentService.updateComment(request, SessionUtils.getUserId());
     }
 
-    @GetMapping("/delete/{commentId}")
+    @DeleteMapping("/delete/{commentId}")
     @Operation(summary = "缺陷管理-评论-删除评论")
     @RequiresPermissions(PermissionConstants.PROJECT_BUG_COMMENT)
     public void delete(@PathVariable String commentId) {
