@@ -157,6 +157,7 @@
         <result column="operating_system" property="operatingSystem"/>
         <result column="browser_capabilities" property="browserCapabilities"/>
         <result column="environment_labels" property="environmentLabels"/>
+        <result column="isolation_mode" property="isolationMode"/>
         <result column="auth_token_hash" property="authTokenHash"/>
         <result column="max_concurrency" property="maxConcurrency"/>
         <result column="active_count" property="activeCount"/>
@@ -248,7 +249,7 @@
                    WHEN r.last_heartbeat_time IS NULL THEN 'OFFLINE'
                    ELSE 'STALE'
                END AS status,
-               r.operating_system, r.browser_capabilities, r.environment_labels,
+               r.operating_system, r.browser_capabilities, r.environment_labels, r.isolation_mode,
                r.max_concurrency,
                (SELECT COUNT(1) FROM ai_runner_lease l
                 WHERE l.runner_id = r.id AND l.status = 'ACTIVE' AND l.expire_time &gt;= #{now}) AS active_count,
@@ -261,6 +262,14 @@
 
     <select id="selectLeaseById" resultMap="runnerLeaseMap">
         SELECT * FROM ai_runner_lease WHERE id = #{id}
+    </select>
+
+    <select id="selectLeasesByOrganization" resultMap="runnerLeaseMap">
+        SELECT l.* FROM ai_runner_lease l
+        JOIN ai_execution_task t ON t.id=l.task_id
+        WHERE t.organization_id=#{organizationId}
+          AND (#{status} IS NULL OR l.status=#{status})
+        ORDER BY l.update_time DESC LIMIT #{limit}
     </select>
 
     <select id="selectArtifactById" resultMap="artifactMap">
@@ -493,11 +502,11 @@
     <insert id="insertRunner" parameterType="io.metersphere.agent.dto.AgentRunnerDTO">
         INSERT INTO ai_runner (
             id, organization_id, name, runner_version, contract_version, status, operating_system,
-            browser_capabilities, environment_labels, auth_token_hash, max_concurrency, active_count, last_heartbeat_time,
+            browser_capabilities, environment_labels, isolation_mode, auth_token_hash, max_concurrency, active_count, last_heartbeat_time,
             create_time, update_time, create_user, update_user
         ) VALUES (
             #{id}, #{organizationId}, #{name}, #{runnerVersion}, #{contractVersion}, #{status}, #{operatingSystem},
-            #{browserCapabilities}, #{environmentLabels}, #{authTokenHash}, #{maxConcurrency}, #{activeCount}, #{lastHeartbeatTime},
+            #{browserCapabilities}, #{environmentLabels}, #{isolationMode}, #{authTokenHash}, #{maxConcurrency}, #{activeCount}, #{lastHeartbeatTime},
             #{createTime}, #{updateTime}, #{createUser}, #{updateUser}
         )
     </insert>

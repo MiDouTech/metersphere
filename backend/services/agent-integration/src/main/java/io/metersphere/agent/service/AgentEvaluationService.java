@@ -2,6 +2,7 @@ package io.metersphere.agent.service;
 
 import io.metersphere.agent.constants.AgentExecutionStatus;
 import io.metersphere.agent.dto.AgentEvaluationRequest;
+import io.metersphere.agent.dto.AgentEvaluationHistoryDTO;
 import io.metersphere.agent.dto.AgentEvaluationSummaryDTO;
 import io.metersphere.agent.dto.AgentExecutionEvaluationDTO;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
@@ -74,12 +76,28 @@ public class AgentEvaluationService {
         return evaluation;
     }
 
-    public Pager<List<AgentExecutionEvaluationDTO>> page(String projectId, Integer current, Integer pageSize) {
+    public Pager<List<AgentExecutionEvaluationDTO>> page(String projectId, String operationalStatus,
+                                                         String businessVerdict, String executorType,
+                                                         Integer current, Integer pageSize) {
         String resolved = agentProjectService.resolveProjectId(projectId);
+        String status = normalizeFilter(operationalStatus, Set.of(
+                AgentExecutionStatus.CREATED, AgentExecutionStatus.RESOLVING_SCOPE,
+                AgentExecutionStatus.WAITING_CONFIRMATION, AgentExecutionStatus.QUEUED,
+                AgentExecutionStatus.PREPARING_BROWSER, AgentExecutionStatus.WAITING_LOGIN,
+                AgentExecutionStatus.WAITING_HUMAN, AgentExecutionStatus.RUNNING,
+                AgentExecutionStatus.PAUSED, AgentExecutionStatus.WRITING_BACK,
+                AgentExecutionStatus.SUCCESS, AgentExecutionStatus.PARTIAL_SUCCESS,
+                AgentExecutionStatus.FAILED, AgentExecutionStatus.CANCELED, AgentExecutionStatus.EXPIRED),
+                "operationalStatus");
+        String verdict = normalizeFilter(businessVerdict,
+                Set.of("PASSED", "PRODUCT_FAILED", "ENV_FAILED", "DATA_FAILED", "AGENT_FAILED", "BLOCKED", "CANCELED"),
+                "businessVerdict");
+        String executor = normalizeFilter(executorType, Set.of("RUNNER", "AGENT"), "executorType");
         int page = Math.max(current == null ? 1 : current, 1);
         int size = Math.min(Math.max(pageSize == null ? 20 : pageSize, 1), 100);
-        long total = mapper.countByProject(resolved);
-        return new Pager<>(mapper.selectByProject(resolved, (page - 1) * size, size), total, size, page);
+        long total = mapper.countByProject(resolved, status, verdict, executor);
+        return new Pager<>(mapper.selectByProject(resolved, status, verdict, executor,
+                (page - 1) * size, size), total, size, page);
     }
 
     public List<AgentEvaluationSummaryDTO> summary(String projectId, Long fromTime, Long toTime) {
@@ -102,9 +120,31 @@ public class AgentEvaluationService {
         if (updated != 1) {
             throw new MSException("执行评价更新失败");
         }
+        AgentEvaluationHistoryDTO history = new AgentEvaluationHistoryDTO();
+        history.setId(IDGenerator.nextStr());
+        history.setTaskId(taskId);
+        history.setProjectId(evaluation.getProjectId());
+        history.setScore(request.getScore());
+        history.setComment(StringUtils.abbreviate(request.getComment(), 2000));
+        history.setEvaluatedBy(userId);
+        history.setEvaluatedAt(System.currentTimeMillis());
+        mapper.insertHistory(history);
         execLogService.audit("AI_EXECUTION_MANUAL_EVALUATION", taskId,
                 "score=" + request.getScore());
         return mapper.selectByTaskId(taskId);
+    }
+
+    public List<AgentEvaluationHistoryDTO> history(String taskId, Integer limit) {
+        executionService.get(taskId);
+        return mapper.selectHistory(taskId, Math.min(Math.max(limit == null ? 50 : limit, 1), 200));
+    }
+
+    private String normalizeFilter(String value, Set<String> allowed, String field) {
+        String normalized = StringUtils.upperCase(StringUtils.trimToNull(value));
+        if (normalized != null && !allowed.contains(normalized)) {
+            throw new MSException(field + " 不支持: " + normalized);
+        }
+        return normalized;
     }
 
     @Scheduled(fixedDelay = 60_000L)

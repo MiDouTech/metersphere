@@ -20,6 +20,7 @@ import io.metersphere.agent.dto.AgentProjectSearchRequest;
 import io.metersphere.agent.dto.AgentTestPlanAssociateRequest;
 import io.metersphere.agent.dto.AgentTestPlanCreateRequest;
 import io.metersphere.agent.dto.AgentTestPlanSearchRequest;
+import io.metersphere.agent.dto.AgentTaskTriggerRequest;
 import io.metersphere.agent.service.AgentBugWriteService;
 import io.metersphere.agent.service.AgentCaseReviewWriteService;
 import io.metersphere.agent.service.AgentCaseWriteService;
@@ -29,6 +30,7 @@ import io.metersphere.agent.service.AgentFunctionalCaseSubmitService;
 import io.metersphere.agent.service.AgentProjectService;
 import io.metersphere.agent.service.AgentTestPlanQueryService;
 import io.metersphere.agent.service.AgentTestPlanWriteService;
+import io.metersphere.agent.service.AgentTaskTriggerService;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import org.apache.commons.lang3.BooleanUtils;
@@ -270,6 +272,42 @@ public class BuiltinAgentMcpToolConfig {
                 AgentTokenScope.AI_EXECUTION_RUN, false,
                 Map.of("type", "object", "additionalProperties", true),
                 args -> service.create(convert(args, AgentExecutionCreateRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionTriggerCreateTool(AgentTaskTriggerService service) {
+        return tool("metersphere.execution.trigger.create",
+                "Create a CRON, EVENT, or MANUAL execution trigger. The backend validates project access and the frozen task template.",
+                AgentTokenScope.AI_EXECUTION_RUN, false,
+                Map.of("type", "object", "additionalProperties", true),
+                args -> service.create(convert(args, AgentTaskTriggerRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionTriggerUpdateTool(AgentTaskTriggerService service) {
+        return tool("metersphere.execution.trigger.update", "Update an existing execution trigger.",
+                AgentTokenScope.AI_EXECUTION_RUN, false,
+                Map.of("type", "object", "properties", Map.of(
+                        "triggerId", stringSchema(), "request", Map.of("type", "object", "additionalProperties", true)),
+                        "required", List.of("triggerId", "request")),
+                args -> service.update(requiredString(args, "triggerId"),
+                        convert((Map<String, Object>) args.get("request"), AgentTaskTriggerRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionTriggerListTool(AgentTaskTriggerService service) {
+        return tool("metersphere.execution.trigger.list", "List execution triggers for a project.",
+                AgentTokenScope.AI_EXECUTION_READ, true,
+                objectSchema(Map.of("projectId", stringSchema()), List.of("projectId")),
+                args -> service.list(requiredString(args, "projectId")));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionTriggerFireTool(AgentTaskTriggerService service) {
+        return tool("metersphere.execution.trigger.fire", "Immediately fire an existing execution trigger.",
+                AgentTokenScope.AI_EXECUTION_RUN, false,
+                objectSchema(Map.of("triggerId", stringSchema()), List.of("triggerId")),
+                args -> service.manualFire(requiredString(args, "triggerId")));
     }
 
     @Bean

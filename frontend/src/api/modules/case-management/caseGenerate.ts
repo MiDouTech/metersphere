@@ -3,7 +3,6 @@ import { getToken } from '@/utils/auth';
 
 import type {
   AiCaseDraft,
-  AiCaseGenerateRequest,
   AiCaseGenerateResponse,
   AiDraftBatchSaveRequest,
   AiDraftBatchSaveResponse,
@@ -18,15 +17,6 @@ import type {
 
 const BaseUrl = '/functional/case/ai/draft';
 const AgentBaseUrl = '/functional/case/ai/agent';
-
-export interface AiCaseAgentModel {
-  id: string;
-  name: string;
-  provider: string;
-  baseName: string;
-  supportsStream: boolean;
-  supportsTools: boolean;
-}
 
 export type AiResourceType = 'MODEL_API' | 'USER_AGENT';
 
@@ -88,10 +78,6 @@ export interface AiCaseAgentExecution {
   errorMessage?: string;
 }
 
-export function listAiCaseAgentModels(projectId: string) {
-  return MSR.get<AiCaseAgentModel[]>({ url: `${AgentBaseUrl}/models`, params: { projectId } });
-}
-
 export function listAiCaseAgentResources(projectId: string) {
   return MSR.get<AiSelectableResource[]>({ url: `${AgentBaseUrl}/resources`, params: { projectId } });
 }
@@ -109,10 +95,6 @@ export function createAiCaseAgentConversation(data: {
 
 export function getAiCaseAgentConversation(id: string, projectId: string) {
   return MSR.get<AiCaseAgentConversation>({ url: `${AgentBaseUrl}/conversation/${id}`, params: { projectId } });
-}
-
-export function switchAiCaseAgentModel(data: { projectId: string; conversationId: string; modelSourceId: string }) {
-  return MSR.post<AiCaseAgentConversation>({ url: `${AgentBaseUrl}/conversation/model`, data });
 }
 
 export function switchAiCaseAgentResource(data: {
@@ -163,6 +145,7 @@ export function streamAiCaseAgentChat(
     resourceType?: AiResourceType;
     resourceId?: string;
     modelSourceId?: string;
+    sourceDocumentIds?: string[];
   },
   onEvent: (event: AiCaseAgentEvent) => void
 ) {
@@ -210,14 +193,6 @@ export function streamAiCaseAgentChat(
   return { abort: () => controller.abort(), promise };
 }
 
-export function generateAiCaseDraft(data: AiCaseGenerateRequest) {
-  return MSR.post<AiCaseGenerateResponse>({ url: `${BaseUrl}/generation/structured`, data });
-}
-
-export function cancelAiCaseGeneration(data: { projectId: string; generationId: string }) {
-  return MSR.post({ url: `${BaseUrl}/generation/cancel`, data });
-}
-
 export function pageAiCaseDraft(data: AiDraftPageRequest) {
   return MSR.post<AiDraftPageResponse>({ url: `${BaseUrl}/page`, data });
 }
@@ -262,12 +237,23 @@ export function pageAiSourceDocument(data: {
   return MSR.post<AiSourceDocumentPageResponse>({ url: '/functional/case/ai/document/page', data });
 }
 
+export function getAiSourceDocument(id: string, projectId: string) {
+  return MSR.get<AiSourceDocument>({ url: `/functional/case/ai/document/${id}`, params: { projectId } });
+}
+
 export function retryAiSourceDocument(data: { projectId: string; id: string }) {
   return MSR.post({ url: '/functional/case/ai/document/retry', data });
 }
 
 export function deleteAiSourceDocument(data: { projectId: string; id: string }) {
   return MSR.post({ url: '/functional/case/ai/document/delete', data });
+}
+
+export function downloadAiSourceDocument(data: { projectId: string; id: string }) {
+  return MSR.post<BlobPart>(
+    { url: '/functional/case/ai/document/download', data, responseType: 'blob' },
+    { isTransformResponse: false }
+  );
 }
 
 export function subscribeAiSourceDocumentEvents(

@@ -76,7 +76,7 @@ export default {
   'system.user.inviteSendEmail': '发送邮件',
   'system.user.inviteSuccess': '邀请成功',
   'system.user.importModalTitle': '导入用户',
-  'system.user.importModalTip': '用户组仅支持添加系统存在的用户组',
+  'system.user.importModalTip': '请按模板填写用户信息；新用户默认加入成员角色',
   'system.user.importDownload': '下载模板',
   'system.user.importModalDragText': '拖拽或点击此区域选择文件',
   'system.user.importModalFileTip': '只支持 xls/xlsx 格式文件，文件大小不超过 {size}M',

@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class AiCaseAgentChatRequest {
     @NotBlank
@@ -21,4 +23,6 @@ public class AiCaseAgentChatRequest {
     @NotBlank
     @Size(max = 20000)
     private String message;
+    @Size(max = 20)
+    private List<@NotBlank @Size(max = 50) String> sourceDocumentIds;
 }

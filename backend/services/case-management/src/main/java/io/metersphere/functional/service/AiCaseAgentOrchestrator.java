@@ -72,6 +72,8 @@ public class AiCaseAgentOrchestrator {
     @Resource
     private AiCaseDocumentSearchService documentSearchService;
     @Resource
+    private AiCaseDocumentContextService documentContextService;
+    @Resource
     private FunctionalCaseAiDraftService draftService;
 
     private final Map<String, ActiveExecution> activeExecutions = new ConcurrentHashMap<>();
@@ -96,6 +98,9 @@ public class AiCaseAgentOrchestrator {
         retry.setConversationId(previous.getConversationId());
         retry.setRequestId(request.getNewRequestId());
         retry.setMessage(previousUserMessage.getContent());
+        if (StringUtils.isNotBlank(previous.getSourceDocumentIds())) {
+            retry.setSourceDocumentIds(JSON.parseArray(previous.getSourceDocumentIds(), String.class));
+        }
         return chatInternal(retry, userId, previous.getRequestId());
     }
 
@@ -122,10 +127,18 @@ public class AiCaseAgentOrchestrator {
 
         List<AiCaseMessageDTO> history = repository.listMessages(conversation.getId(), request.getProjectId(),
                 userId, null, null, HISTORY_MESSAGE_LIMIT);
-        String providerPrompt = promptService.buildUserPrompt(history, request.getMessage());
+        AiCaseDocumentContextService.ResolvedContext sourceContext = documentContextService.resolve(
+                request.getProjectId(), request.getSourceDocumentIds());
+        String providerPrompt = promptService.buildUserPrompt(history, request.getMessage())
+                + sourceContext.promptContext();
+        boolean toolsSupported = selection.supportsTools();
+        if ("USER_AGENT".equals(selection.resourceType())) {
+            toolsSupported = toolsSupported && governanceService.get(request.getProjectId()).isAllowLocalAgentTools();
+        }
+        boolean admittedToolsSupported = toolsSupported;
         AtomicReference<ActiveExecution> admitted = new AtomicReference<>();
         Runnable create = () -> admitted.set(createExecution(request, conversation, providerPrompt, userId,
-                retryOfRequestId, selection));
+                retryOfRequestId, selection, sourceContext.documentIds(), admittedToolsSupported));
         if ("USER_AGENT".equals(selection.resourceType())) {
             governanceService.admitAgentExecution(request.getProjectId(), userId,
                     selection.agentConnectionId(), selection.provider(), create);
@@ -179,9 +192,10 @@ public class AiCaseAgentOrchestrator {
 
     private ActiveExecution createExecution(AiCaseAgentChatRequest request, AiCaseConversationDTO conversation,
                                             String providerPrompt, String userId, String retryOfRequestId,
-                                            AiResourceSelection selection) {
+                                            AiResourceSelection selection, List<String> sourceDocumentIds,
+                                            boolean toolsSupported) {
         ActiveExecution active = new ActiveExecution(request.getRequestId(), request.getProjectId(), userId,
-                conversation.getId(), selection, providerPrompt);
+                conversation.getId(), selection, providerPrompt, sourceDocumentIds, toolsSupported);
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             if (!repository.lockConversation(conversation.getId(), request.getProjectId(), userId)) {
                 throw new MSException("会话不存在或无权限");
@@ -215,6 +229,7 @@ public class AiCaseAgentOrchestrator {
             execution.setRequestedModelSourceId(conversation.getModelSourceId());
             execution.setCancelRequested(false);
             execution.setRetryOfRequestId(retryOfRequestId);
+            execution.setSourceDocumentIds(JSON.toJSONString(sourceDocumentIds));
             execution.setTokenEstimated(true);
             execution.setCreateTime(now);
             execution.setUpdateTime(now);
@@ -225,7 +240,8 @@ public class AiCaseAgentOrchestrator {
                     "conversationId", conversation.getId(),
                     "resourceType", selection.resourceType(),
                     "resourceId", selection.resourceId(),
-                    "promptVersion", AiCaseAgentPromptService.VERSION)));
+                    "promptVersion", AiCaseAgentPromptService.VERSION,
+                    "sourceDocumentIds", sourceDocumentIds)));
             active.initialEvents.add(appendEvent(active, "message-start", Map.of(
                     "messageId", assistantMessage.getId(), "role", "ASSISTANT")));
         });
@@ -367,7 +383,7 @@ public class AiCaseAgentOrchestrator {
     private void handleAgentToolCall(ActiveExecution active, Map<String, Object> payload) {
         String toolCallId = StringUtils.left((String) payload.get("toolCallId"), 128);
         String toolName = StringUtils.left((String) payload.get("toolName"), 128);
-        if (StringUtils.isAnyBlank(toolCallId, toolName)
+        if (!active.toolsSupported || StringUtils.isAnyBlank(toolCallId, toolName)
                 || !List.of("search_product_documents", "create_case_drafts").contains(toolName)) {
             userAgentConnector.sendToolResult(active.requestId, StringUtils.defaultString(toolCallId), false,
                     Map.of(), "AI_AGENT_TOOL_NOT_ALLOWED");
@@ -601,6 +617,7 @@ public class AiCaseAgentOrchestrator {
         private volatile String agentDeviceId;
         private volatile String actualModelSourceId;
         private final String providerPrompt;
+        private final List<String> sourceDocumentIds;
         private final boolean toolsSupported;
         private final StringBuilder content = new StringBuilder();
         private final List<AiCaseExecutionEventDTO> initialEvents = new ArrayList<>();
@@ -618,7 +635,8 @@ public class AiCaseAgentOrchestrator {
         private boolean usageEstimated = true;
 
         private ActiveExecution(String requestId, String projectId, String userId, String conversationId,
-                                AiResourceSelection selection, String providerPrompt) {
+                                AiResourceSelection selection, String providerPrompt,
+                                List<String> sourceDocumentIds, boolean toolsSupported) {
             this.requestId = requestId;
             this.projectId = projectId;
             this.userId = userId;
@@ -630,7 +648,8 @@ public class AiCaseAgentOrchestrator {
             this.agentConnectionId = selection.agentConnectionId();
             this.provider = selection.provider();
             this.providerPrompt = providerPrompt;
-            this.toolsSupported = selection.supportsTools();
+            this.sourceDocumentIds = List.copyOf(sourceDocumentIds);
+            this.toolsSupported = toolsSupported;
         }
 
         private void emit(AiCaseExecutionEventDTO event) {
@@ -665,7 +684,7 @@ public class AiCaseAgentOrchestrator {
                     "arguments", arguments)));
             try {
                 String result = documentSearchService.search(active.projectId, active.conversationId,
-                        active.userId, query, maxResults);
+                        active.userId, active.sourceDocumentIds, query, maxResults);
                 long now = System.currentTimeMillis();
                 AiCaseMessageDTO toolMessage = new AiCaseMessageDTO();
                 toolMessage.setId(IDGenerator.nextStr());

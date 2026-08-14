@@ -3,6 +3,7 @@ package io.metersphere.system.mapper;
 import io.metersphere.system.domain.UserRoleRelation;
 import io.metersphere.system.dto.request.GlobalUserRoleRelationQueryRequest;
 import io.metersphere.system.dto.user.UserRoleOptionDto;
+import io.metersphere.system.dto.user.UserExcludeOptionDTO;
 import io.metersphere.system.dto.user.UserRoleRelationUserDTO;
 import org.apache.ibatis.annotations.Param;
 
@@ -16,6 +17,14 @@ public interface ExtUserRoleRelationMapper {
     List<UserRoleRelation> selectGlobalRoleByUserId(String userId);
 
     List<UserRoleRelationUserDTO> listGlobal(@Param("request") GlobalUserRoleRelationQueryRequest request);
+
+    List<UserRoleRelationUserDTO> selectRoleMembers(@Param("roleId") String roleId,
+                                                    @Param("sourceId") String sourceId,
+                                                    @Param("keyword") String keyword);
+
+    List<UserExcludeOptionDTO> selectRoleMemberOptions(@Param("roleId") String roleId,
+                                                       @Param("sourceId") String sourceId,
+                                                       @Param("keyword") String keyword);
 
     List<UserRoleOptionDto> selectUserRoleByUserIds(@Param("userIds") List<String> userIds, @Param("orgId") String orgId);
 

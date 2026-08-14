@@ -33,7 +33,17 @@ scripts/edge-keepalive/.auth/
 .playwright-cli/
 output/
 tmp/
+frontend/playwright-report/
+frontend/test-results/
+test-results/
 *.log
+
+# Local assistant/workbench state; may contain private tokens or environment notes.
+.workbuddy/
+({i
+
+# Local build packages generated for manual distribution.
+agent-bridge/dist/
 
 # 常见密钥/证书误提交防护
 *.pem

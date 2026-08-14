@@ -9,7 +9,12 @@
           </div>
         </div>
         <div class="personal-agent-integration__actions mt-3">
-          <a-button class="shrink-0" type="primary" @click="openCreateModal">
+          <a-button
+            v-permission="['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT']"
+            class="shrink-0"
+            type="primary"
+            @click="openCreateModal"
+          >
             {{ t('system.agentIntegration.createToken') }}
           </a-button>
           <a-button
@@ -42,7 +47,12 @@
       <div class="personal-agent-integration__table">
         <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
           <template #enable="{ record }">
-            <a-switch :model-value="record.enable" size="small" :before-change="(val) => toggleEnable(val, record)" />
+            <a-switch
+              v-permission="['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT']"
+              :model-value="record.enable"
+              size="small"
+              :before-change="(val) => toggleEnable(val, record)"
+            />
           </template>
           <template #scopes="{ record }">
             {{ formatScopeLabel(record.scopes) }}
@@ -52,10 +62,14 @@
           </template>
           <template #action="{ record }">
             <div class="flex gap-2">
-              <MsButton @click="openEditModal(record)">
+              <MsButton v-permission="['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT']" @click="openEditModal(record)">
                 {{ t('system.agentIntegration.tokenSettings') }}
               </MsButton>
-              <MsButton status="danger" @click="removeToken(record)">
+              <MsButton
+                v-permission="['SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE']"
+                status="danger"
+                @click="removeToken(record)"
+              >
                 {{ t('common.delete') }}
               </MsButton>
             </div>

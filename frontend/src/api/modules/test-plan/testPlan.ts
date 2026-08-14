@@ -143,6 +143,8 @@ import type {
   UseCountType,
 } from '@/models/testPlan/testPlan';
 
+import type { RequestOptions } from '#/axios';
+
 // 获取模块树
 export function getTestPlanModule(params: TableQueryParams) {
   return MSR.get<ModuleTreeNode[]>({ url: `${GetTestPlanModuleUrl}/${params.projectId}` });
@@ -201,8 +203,8 @@ export function getTestPlanListWithoutPage(projectId: string) {
 }
 
 // 创建测试计划
-export function addTestPlan(data: AddTestPlanParams) {
-  return MSR.post({ url: AddTestPlanUrl, data });
+export function addTestPlan(data: AddTestPlanParams, options?: RequestOptions) {
+  return MSR.post({ url: AddTestPlanUrl, data }, options);
 }
 // 功能用例列表
 export function getTestPlanCaseList(data: TableQueryParams) {
@@ -219,8 +221,8 @@ export function getTestPlanDetail(id: string) {
 }
 
 //  更新测试计划
-export function updateTestPlan(data: AddTestPlanParams) {
-  return MSR.post({ url: UpdateTestPlanUrl, data });
+export function updateTestPlan(data: AddTestPlanParams, options?: RequestOptions) {
+  return MSR.post({ url: UpdateTestPlanUrl, data }, options);
 }
 // 批量删除测试计划
 export function batchDeletePlan(data: TableQueryParams) {
@@ -267,8 +269,8 @@ export function getPlanPassRate(data: (string | undefined)[]) {
   return MSR.post<PassRateCountDetail[]>({ url: planPassRateUrl, data });
 }
 // 计划详情-功能用例列表
-export function getPlanDetailFeatureCaseList(data: PlanDetailFeatureCaseListQueryParams) {
-  return MSR.post<CommonList<PlanDetailFeatureCaseItem>>({ url: GetPlanDetailFeatureCaseListUrl, data });
+export function getPlanDetailFeatureCaseList(data: PlanDetailFeatureCaseListQueryParams, options?: RequestOptions) {
+  return MSR.post<CommonList<PlanDetailFeatureCaseItem>>({ url: GetPlanDetailFeatureCaseListUrl, data }, options);
 }
 // 计划详情-功能用例-获取模块数量
 export function getFeatureCaseModuleCount(data: PlanDetailFeatureCaseListQueryParams) {
@@ -315,8 +317,8 @@ export function runFeatureCase(data: RunFeatureCaseParams) {
   return MSR.post({ url: RunFeatureCaseUrl, data });
 }
 // 计划详情-功能用例-详情
-export function getCaseDetail(id: string) {
-  return MSR.get<TestPlanCaseDetail>({ url: `${TestPlanCaseDetailUrl}/${id}` });
+export function getCaseDetail(id: string, options?: RequestOptions) {
+  return MSR.get<TestPlanCaseDetail>({ url: `${TestPlanCaseDetailUrl}/${id}` }, options);
 }
 // 测试计划-用例详情-缺陷列表
 export function associatedBugPage(data: TableQueryParams) {

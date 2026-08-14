@@ -120,9 +120,20 @@ export default {
   'ms.personal.userAgent.waitingForAgent': '正在等待 MeterSphere Agent 启动并建立安全连接…',
   'ms.personal.userAgent.protocolLaunchFallback':
     '未检测到 MeterSphere Agent 启动。如果浏览器没有显示打开提示，请先下载安装，完成后点击“我已安装，重新检测”。',
-  'ms.personal.userAgent.downloadUnavailable': '内部安装包下载地址尚未配置，请联系管理员发布安装包。',
+  'ms.personal.userAgent.downloadUnavailable': '管理员尚未发布可用的内部安装包，请联系管理员。',
   'ms.personal.userAgent.downloadStarted':
     '安装包已开始下载。请解压后双击 Install-MeterSphere-Agent.cmd，完成后返回此处重新检测。',
   'ms.personal.userAgent.startingSignIn': '本机连接成功，正在启动官方账号登录…',
   'ms.personal.userAgent.setupExpired': '本次连接请求已过期，请关闭后重新创建连接。',
+  'ms.personal.userAgent.completedMessage': 'MeterSphere Agent 已连接，官方账号授权状态已确认。',
+  'ms.personal.userAgent.versionUnsupported': '检测到版本过低的 Bridge，请升级到 {version} 或更高版本后再连接。',
+  'ms.personal.userAgent.deleteTitle': '删除 Agent 连接记录',
+  'ms.personal.userAgent.deleteImpact':
+    '该连接关联 {conversationCount} 个会话、{executionCount} 次执行，其中 {activeExecutionCount} 次仍在运行。仅已撤销且无活动执行的连接可删除。',
+  'ms.personal.userAgent.selectDevice': '选择要连接的本机设备',
+  'ms.personal.userAgent.details': '详情',
+  'ms.personal.userAgent.reauthorize': '重新授权',
+  'ms.personal.userAgent.detailTitle': 'Agent 连接详情',
+  'ms.personal.userAgent.capabilities': '已授权能力',
+  'ms.personal.userAgent.references': '引用与删除影响',
 };

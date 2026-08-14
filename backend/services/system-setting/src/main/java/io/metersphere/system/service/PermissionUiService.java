@@ -49,6 +49,10 @@ public class PermissionUiService {
         return buildTree(resources);
     }
 
+    public List<PermissionResourceDTO> getAllResourceTree() {
+        return buildTree(permissionResourceMapper.selectEnabled());
+    }
+
     public List<UserRoleUiPermission> getRoleUiPermissions(String roleId) {
         return userRoleUiPermissionMapper.selectByRoleId(roleId);
     }
@@ -74,11 +78,34 @@ public class PermissionUiService {
         if (resourceCount != resourceCodes.size()) {
             throw new MSException("存在无效或已禁用的 UI 权限资源");
         }
-        Map<String, PermissionResource> resourceMap = permissionResourceMapper.selectEnabledByCodes(resourceCodes).stream()
+        List<PermissionResource> allResources = permissionResourceMapper.selectEnabled();
+        Map<String, PermissionResource> resourceMap = allResources.stream()
                 .collect(Collectors.toMap(PermissionResource::getCode, item -> item, (a, b) -> a));
 
+        Map<String, RoleUiPermissionDTO> normalized = uiPermissions.stream()
+                .filter(item -> StringUtils.isNotBlank(item.getResourceCode()))
+                .collect(Collectors.toMap(RoleUiPermissionDTO::getResourceCode, item -> item, (a, b) -> b, LinkedHashMap::new));
+        List<RoleUiPermissionDTO> selected = new ArrayList<>(normalized.values());
+        for (RoleUiPermissionDTO item : selected) {
+            PermissionResource resource = resourceMap.get(item.getResourceCode());
+            if (resource == null || (!BooleanUtils.isTrue(item.getVisible()) && !BooleanUtils.isTrue(item.getOperable()))) {
+                continue;
+            }
+            String parentCode = resource.getParentCode();
+            while (StringUtils.isNotBlank(parentCode)) {
+                RoleUiPermissionDTO parent = normalized.computeIfAbsent(parentCode, code -> {
+                    RoleUiPermissionDTO value = new RoleUiPermissionDTO();
+                    value.setResourceCode(code);
+                    return value;
+                });
+                parent.setVisible(true);
+                PermissionResource parentResource = resourceMap.get(parentCode);
+                parentCode = parentResource == null ? null : parentResource.getParentCode();
+            }
+        }
+
         List<UserRoleUiPermission> records = new ArrayList<>();
-        for (RoleUiPermissionDTO item : uiPermissions) {
+        for (RoleUiPermissionDTO item : normalized.values()) {
             if (StringUtils.isBlank(item.getResourceCode())) {
                 continue;
             }
@@ -130,17 +157,29 @@ public class PermissionUiService {
                 oldPermissionsByRole, uiPermissionsByRole, relation -> {
                     UserRole role = rolesById.get(relation.getRoleId());
                     return role != null
-                            && StringUtils.equals(role.getType(), UserRoleType.ORGANIZATION.name())
-                            && StringUtils.equals(relation.getSourceId(), userDTO.getLastOrganizationId());
+                            && ((StringUtils.equals(role.getType(), UserRoleType.ORGANIZATION.name())
+                            && StringUtils.equals(relation.getSourceId(), userDTO.getLastOrganizationId()))
+                            || isGlobalSystemRole(relation, role));
                 });
         mergeScope(result.getProject(), resourcesByScope.get(UserRoleType.PROJECT.name()), userDTO, rolesById,
                 oldPermissionsByRole, uiPermissionsByRole, relation -> {
                     UserRole role = rolesById.get(relation.getRoleId());
                     return role != null
-                            && StringUtils.equals(role.getType(), UserRoleType.PROJECT.name())
-                            && StringUtils.equals(relation.getSourceId(), userDTO.getLastProjectId());
+                            && ((StringUtils.equals(role.getType(), UserRoleType.PROJECT.name())
+                            && (StringUtils.equals(relation.getSourceId(), userDTO.getLastProjectId())
+                            || isMissingProjectContext(userDTO.getLastProjectId())))
+                            || isGlobalSystemRole(relation, role));
                 });
         return result;
+    }
+
+    private boolean isMissingProjectContext(String projectId) {
+        return StringUtils.isBlank(projectId) || StringUtils.equals(projectId, "no_such_project");
+    }
+
+    private boolean isGlobalSystemRole(UserRoleRelation relation, UserRole role) {
+        return StringUtils.equals(role.getType(), UserRoleType.SYSTEM.name())
+                && StringUtils.equals(relation.getSourceId(), "system");
     }
 
     private void mergeScope(UiPermissionSetDTO target,
@@ -175,15 +214,20 @@ public class PermissionUiService {
                     .collect(Collectors.toMap(UserRoleUiPermission::getResourceCode, item -> item, (a, b) -> a));
             Set<String> oldPermissions = oldPermissionsByRole.getOrDefault(roleId, Set.of());
             for (PermissionResource resource : resources) {
+                registerManagedButtonPermission(target, resource);
+                registerManagedRoute(target, resource);
                 UserRoleUiPermission uiPermission = configured.get(resource.getCode());
                 if (uiPermission != null) {
                     if (BooleanUtils.isTrue(uiPermission.getVisible()) || BooleanUtils.isTrue(uiPermission.getOperable())) {
                         target.getVisible().add(resource.getCode());
-                        addParentsVisible(target.getVisible(), resourceMap, resource);
+                        addVisibleRoute(target, resource);
+                        addButtonPermission(target.getVisibleButtonPermissions(), resource);
+                        addParentsVisible(target, resourceMap, resource);
                     }
                     if (BooleanUtils.isTrue(uiPermission.getOperable())
                             && (StringUtils.equals(resource.getType(), "BUTTON") || StringUtils.equals(resource.getType(), "API"))) {
                         target.getOperable().add(resource.getCode());
+                        addButtonPermission(target.getOperableButtonPermissions(), resource);
                     }
                     continue;
                 }
@@ -194,9 +238,14 @@ public class PermissionUiService {
 
     private void addAllScopePermissions(UiPermissionSetDTO target, List<PermissionResource> resources) {
         for (PermissionResource resource : resources) {
+            registerManagedButtonPermission(target, resource);
+            registerManagedRoute(target, resource);
             target.getVisible().add(resource.getCode());
+            addVisibleRoute(target, resource);
+            addButtonPermission(target.getVisibleButtonPermissions(), resource);
             if (StringUtils.equals(resource.getType(), "BUTTON") || StringUtils.equals(resource.getType(), "API")) {
                 target.getOperable().add(resource.getCode());
+                addButtonPermission(target.getOperableButtonPermissions(), resource);
             }
         }
     }
@@ -210,17 +259,47 @@ public class PermissionUiService {
             return;
         }
         target.getVisible().add(resource.getCode());
+        addVisibleRoute(target, resource);
+        addButtonPermission(target.getVisibleButtonPermissions(), resource);
         if (StringUtils.equals(resource.getType(), "BUTTON") || StringUtils.equals(resource.getType(), "API")) {
             target.getOperable().add(resource.getCode());
-            addParentsVisible(target.getVisible(), resourceMap, resource);
+            addButtonPermission(target.getOperableButtonPermissions(), resource);
+            addParentsVisible(target, resourceMap, resource);
         }
     }
 
-    private void addParentsVisible(Set<String> visible, Map<String, PermissionResource> resourceMap, PermissionResource resource) {
+    private void registerManagedButtonPermission(UiPermissionSetDTO target, PermissionResource resource) {
+        if (StringUtils.equals(resource.getType(), "BUTTON") && StringUtils.isNotBlank(resource.getPermissionId())) {
+            target.getManagedButtonPermissions().add(resource.getPermissionId());
+        }
+    }
+
+    private void addButtonPermission(Set<String> target, PermissionResource resource) {
+        if (StringUtils.equals(resource.getType(), "BUTTON") && StringUtils.isNotBlank(resource.getPermissionId())) {
+            target.add(resource.getPermissionId());
+        }
+    }
+
+    private void registerManagedRoute(UiPermissionSetDTO target, PermissionResource resource) {
+        if (StringUtils.isNotBlank(resource.getRouteName())) {
+            target.getManagedRoutes().add(resource.getRouteName());
+        }
+    }
+
+    private void addVisibleRoute(UiPermissionSetDTO target, PermissionResource resource) {
+        if (StringUtils.isNotBlank(resource.getRouteName())) {
+            target.getVisibleRoutes().add(resource.getRouteName());
+        }
+    }
+
+    private void addParentsVisible(UiPermissionSetDTO target, Map<String, PermissionResource> resourceMap, PermissionResource resource) {
         String parentCode = resource.getParentCode();
         while (StringUtils.isNotBlank(parentCode)) {
-            visible.add(parentCode);
+            target.getVisible().add(parentCode);
             PermissionResource parent = resourceMap.get(parentCode);
+            if (parent != null) {
+                addVisibleRoute(target, parent);
+            }
             parentCode = parent == null ? null : parent.getParentCode();
         }
     }

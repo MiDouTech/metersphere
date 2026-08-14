@@ -4,6 +4,7 @@ import io.metersphere.agent.dto.AgentExecutionCaseDTO;
 import io.metersphere.agent.dto.AgentExecutionStepDTO;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
 import io.metersphere.agent.dto.TestAssetContextDocumentDTO;
+import io.metersphere.agent.dto.TestAssetContextDTO;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.sdk.exception.MSException;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -25,6 +26,14 @@ public class AgentExecutionContextService {
                                  List<AgentExecutionCaseDTO> cases,
                                  List<AgentExecutionStepDTO> steps,
                                  List<TestAssetContextDocumentDTO> documents) {
+        return build(task, cases, steps, documents, List.of());
+    }
+
+    public ContextSnapshot build(AgentExecutionTaskDTO task,
+                                 List<AgentExecutionCaseDTO> cases,
+                                 List<AgentExecutionStepDTO> steps,
+                                 List<TestAssetContextDocumentDTO> documents,
+                                 List<TestAssetContextDTO> assets) {
         Map<String, List<AgentExecutionStepDTO>> stepsByCase = steps.stream()
                 .collect(Collectors.groupingBy(AgentExecutionStepDTO::getExecutionCaseId));
         List<Map<String, Object>> caseContexts = cases.stream().map(executionCase -> {
@@ -64,6 +73,17 @@ public class AgentExecutionContextService {
             value.put("sourceVersion", document.getSourceVersion());
             value.put("contentHash", document.getContentHash());
             value.put("snapshot", parseJsonOrText(document.getContentSnapshot()));
+            return value;
+        }).toList());
+        context.put("assets", assets.stream().map(asset -> {
+            Map<String, Object> value = new LinkedHashMap<>();
+            value.put("assetType", asset.getAssetType());
+            value.put("assetId", asset.getAssetId());
+            value.put("assetName", asset.getAssetName());
+            value.put("versionId", asset.getVersionId());
+            value.put("versionNo", asset.getVersionNo());
+            value.put("contentHash", asset.getContentHash());
+            value.put("snapshot", parseJsonOrText(asset.getContentSnapshot()));
             return value;
         }).toList());
         context.put("cases", caseContexts);

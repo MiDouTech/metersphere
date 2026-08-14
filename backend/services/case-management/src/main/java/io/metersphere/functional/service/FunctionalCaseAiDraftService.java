@@ -264,9 +264,11 @@ public class FunctionalCaseAiDraftService {
         update.setCustomFields(request.getCustomFields());
         update.setDraftStatus(FunctionalCaseAiDraftStatus.DRAFT.name());
         update.setReviewStatus(FunctionalCaseAiDraftStatus.PENDING_REVIEW.name());
-        update.setPublishMode(normalizePublishMode(request.getPublishMode()));
-        update.setTargetCaseId(StringUtils.trimToNull(request.getTargetCaseId()));
-        update.setBaselineSnapshot(buildTargetBaseline(request.getProjectId(), update.getPublishMode(), update.getTargetCaseId()));
+        // UPDATE/DEPRECATE remain database-only compatibility fields until their full UI and versioned
+        // domain workflow is implemented. Public draft editing is intentionally CREATE-only.
+        update.setPublishMode("CREATE");
+        update.setTargetCaseId(null);
+        update.setBaselineSnapshot(null);
         update.setUpdateTime(System.currentTimeMillis());
         validateDraft(update, existing.getId(), request.getProjectId(), userId);
         update.setContentHash(contentHash(update));
@@ -970,9 +972,6 @@ public class FunctionalCaseAiDraftService {
         dto.setReviewComment(draft.getReviewComment());
         dto.setReviewedBy(draft.getReviewedBy());
         dto.setReviewedAt(draft.getReviewedAt());
-        dto.setPublishMode(draft.getPublishMode());
-        dto.setTargetCaseId(draft.getTargetCaseId());
-        dto.setBaselineSnapshot(draft.getBaselineSnapshot());
         dto.setContentHash(draft.getContentHash());
         dto.setReviewedContentHash(draft.getReviewedContentHash());
         dto.setFormalCaseId(draft.getFormalCaseId());

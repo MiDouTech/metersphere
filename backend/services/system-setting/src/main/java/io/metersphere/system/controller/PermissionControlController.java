@@ -7,23 +7,37 @@ import io.metersphere.system.domain.StatusFlowRolePermission;
 import io.metersphere.system.domain.UserRole;
 import io.metersphere.system.domain.WorkflowDefinition;
 import io.metersphere.system.domain.WorkflowRole;
+import io.metersphere.system.domain.UserRoleUiPermission;
+import io.metersphere.system.dto.permission.PermissionDefinitionItem;
 import io.metersphere.system.dto.permission.PermissionResourceDTO;
 import io.metersphere.system.dto.permission.control.PermissionControlFlowMatrixDTO;
 import io.metersphere.system.dto.permission.control.RoleAssignmentRuleRequest;
+import io.metersphere.system.dto.permission.control.RoleDeleteImpactDTO;
 import io.metersphere.system.dto.permission.control.RoleEnableRequest;
 import io.metersphere.system.dto.permission.control.RoleMemberUpdateRequest;
+import io.metersphere.system.dto.permission.control.RoleSaveRequest;
 import io.metersphere.system.dto.permission.control.WorkflowRolePermissionRequest;
+import io.metersphere.system.dto.permission.control.UnknownPermissionDiagnosticRequest;
 import io.metersphere.system.dto.request.GlobalUserRoleRelationQueryRequest;
 import io.metersphere.system.dto.sdk.request.PermissionSettingUpdateRequest;
+import io.metersphere.system.dto.sdk.OptionDTO;
 import io.metersphere.system.dto.sdk.request.UserRoleUpdateRequest;
+import io.metersphere.system.dto.user.UserExcludeOptionDTO;
 import io.metersphere.system.dto.user.UserRoleRelationUserDTO;
 import io.metersphere.system.service.PermissionControlService;
+import io.metersphere.system.service.GlobalUserRoleLogService;
+import io.metersphere.system.log.annotation.Log;
+import io.metersphere.system.log.constants.OperationLogType;
+import io.metersphere.system.utils.Pager;
+import io.metersphere.system.utils.SessionUtils;
+import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.validation.groups.Created;
 import io.metersphere.validation.groups.Updated;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.apache.shiro.authz.annotation.Logical;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,6 +64,43 @@ public class PermissionControlController {
         return permissionControlService.listRoles();
     }
 
+    @GetMapping("/role/get/{roleId}")
+    @Operation(summary = "权限控制-角色设置-角色详情")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public UserRole getRole(@PathVariable String roleId) {
+        return permissionControlService.getRole(roleId);
+    }
+
+    @GetMapping("/role/permission/{roleId}")
+    @Operation(summary = "权限控制-角色设置-接口权限")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<PermissionDefinitionItem> getRolePermission(@PathVariable String roleId) {
+        return permissionControlService.getRolePermission(roleId);
+    }
+
+    @GetMapping("/role/permission-definition")
+    @Operation(summary = "权限控制-角色设置-指定范围完整权限定义")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<PermissionDefinitionItem> getPermissionDefinition(@RequestParam String roleType) {
+        return permissionControlService.getPermissionDefinition(roleType);
+    }
+
+    @PostMapping("/role/save")
+    @Operation(summary = "权限控制-角色设置-原子保存角色及权限")
+    @RequiresPermissions(value = {PermissionConstants.SYSTEM_PERMISSION_CONTROL_ADD,
+            PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE}, logical = Logical.OR)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.saveLog(#request)", msClass = GlobalUserRoleLogService.class)
+    public UserRole saveRole(@Validated @RequestBody RoleSaveRequest request) {
+        return permissionControlService.saveRole(request);
+    }
+
+    @GetMapping("/role/ui-permission/{roleId}")
+    @Operation(summary = "权限控制-角色设置-UI 资源权限")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<UserRoleUiPermission> getRoleUiPermission(@PathVariable String roleId) {
+        return permissionControlService.getRoleUiPermission(roleId);
+    }
+
     @PostMapping("/role/add")
     @Operation(summary = "权限控制-角色设置-新增角色")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_ADD)
@@ -60,6 +111,7 @@ public class PermissionControlController {
     @PostMapping("/role/update")
     @Operation(summary = "权限控制-角色设置-修改角色")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.updateLog(#request)", msClass = GlobalUserRoleLogService.class)
     public UserRole updateRole(@Validated({Updated.class}) @RequestBody UserRoleUpdateRequest request) {
         return permissionControlService.updateRole(request);
     }
@@ -67,6 +119,7 @@ public class PermissionControlController {
     @PostMapping("/role/enable")
     @Operation(summary = "权限控制-角色设置-启用禁用角色")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.enableLog(#request)", msClass = GlobalUserRoleLogService.class)
     public UserRole enableRole(@Validated @RequestBody RoleEnableRequest request) {
         return permissionControlService.enableRole(request.getRoleId(), request.getEnabled());
     }
@@ -74,20 +127,46 @@ public class PermissionControlController {
     @PostMapping("/role/delete")
     @Operation(summary = "权限控制-角色设置-删除角色")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_DELETE)
+    @Log(type = OperationLogType.DELETE, expression = "#msClass.deleteLog(#roleId)", msClass = GlobalUserRoleLogService.class)
     public void deleteRole(@RequestParam String roleId) {
         permissionControlService.deleteRole(roleId);
+    }
+
+    @GetMapping("/role/delete-impact/{roleId}")
+    @Operation(summary = "权限控制-角色设置-删除影响")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public RoleDeleteImpactDTO getRoleDeleteImpact(@PathVariable String roleId) {
+        return permissionControlService.getRoleDeleteImpact(roleId);
     }
 
     @PostMapping("/role/member/list")
     @Operation(summary = "权限控制-角色设置-成员列表")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
-    public List<UserRoleRelationUserDTO> listRoleMembers(@Validated @RequestBody GlobalUserRoleRelationQueryRequest request) {
+    public Pager<List<UserRoleRelationUserDTO>> listRoleMembers(@Validated @RequestBody GlobalUserRoleRelationQueryRequest request) {
         return permissionControlService.listRoleMembers(request);
+    }
+
+    @GetMapping("/role/member/options/{roleId}")
+    @Operation(summary = "权限控制-角色设置-可添加成员选项")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<UserExcludeOptionDTO> getRoleMemberOptions(@PathVariable String roleId,
+                                                            @RequestParam(required = false) String sourceId,
+                                                            @RequestParam(required = false) String keyword) {
+        return permissionControlService.getRoleMemberOptions(roleId, sourceId, keyword);
+    }
+
+    @GetMapping("/role/member/scope/options/{roleId}")
+    @Operation(summary = "权限控制-角色设置-可管理成员作用域选项")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<OptionDTO> getRoleMemberScopeOptions(@PathVariable String roleId,
+                                                      @RequestParam(required = false) String keyword) {
+        return permissionControlService.getRoleMemberScopeOptions(roleId, keyword);
     }
 
     @PostMapping("/role/member/add")
     @Operation(summary = "权限控制-角色设置-添加成员")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.ADD, expression = "#msClass.memberLog(#request)", msClass = GlobalUserRoleLogService.class)
     public void addRoleMembers(@Validated @RequestBody RoleMemberUpdateRequest request) {
         permissionControlService.addRoleMembers(request);
     }
@@ -95,8 +174,18 @@ public class PermissionControlController {
     @PostMapping("/role/member/remove")
     @Operation(summary = "权限控制-角色设置-移除成员")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.DELETE, expression = "#msClass.memberLog(#request)", msClass = GlobalUserRoleLogService.class)
     public void removeRoleMembers(@Validated @RequestBody RoleMemberUpdateRequest request) {
         permissionControlService.removeRoleMembers(request);
+    }
+
+    @PostMapping("/diagnostic/unknown-permission")
+    @Operation(summary = "权限控制-上报未知权限中文映射")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public void reportUnknownPermission(@Validated @RequestBody UnknownPermissionDiagnosticRequest request) {
+        LogUtils.warn("权限中文化映射缺失: kind=" + request.getKind()
+                + ", code=" + request.getCode() + ", context=" + request.getContext()
+                + ", reporter=" + SessionUtils.getUserId());
     }
 
     @PostMapping("/role/member/assign-by-position")
@@ -123,6 +212,7 @@ public class PermissionControlController {
     @PostMapping("/role/permission/save")
     @Operation(summary = "权限控制-角色设置-保存角色权限")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.updateLog(#request)", msClass = GlobalUserRoleLogService.class)
     public void saveRolePermission(@Validated @RequestBody PermissionSettingUpdateRequest request) {
         permissionControlService.saveRolePermission(request);
     }

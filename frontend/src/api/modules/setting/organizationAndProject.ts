@@ -13,6 +13,8 @@ import {
 } from '@/models/setting/system/orgAndProject';
 import { AddUserToOrgOrProjectParams } from '@/models/setting/systemOrg';
 
+import type { RequestOptions } from '#/axios';
+
 // 组织与项目-公共
 // 系统-组织及项目，获取管理员下拉选项
 export function getAdminByOrgOrProject() {
@@ -112,8 +114,8 @@ export function getSystemOrgOption() {
 }
 
 // 创建或更新项目
-export function createOrUpdateProject(data: Partial<OrgProjectTableItem>) {
-  return MSR.post({ url: data.id ? orgUrl.postModifyProjectUrl : orgUrl.postAddProjectUrl, data });
+export function createOrUpdateProject(data: Partial<OrgProjectTableItem>, options?: RequestOptions) {
+  return MSR.post({ url: data.id ? orgUrl.postModifyProjectUrl : orgUrl.postAddProjectUrl, data }, options);
 }
 // 修改项目名称
 export function renameProject(data: { id: string; name: string; organizationId: string }) {
@@ -152,8 +154,8 @@ export function revokeDeleteProjectByOrg(id: string) {
 }
 
 // 组织-创建或更新项目
-export function createOrUpdateProjectByOrg(data: CreateOrUpdateOrgProjectParams) {
-  return MSR.post({ url: data.id ? orgUrl.postModifyProjectByOrgUrl : orgUrl.postAddProjectByOrgUrl, data });
+export function createOrUpdateProjectByOrg(data: CreateOrUpdateOrgProjectParams, options?: RequestOptions) {
+  return MSR.post({ url: data.id ? orgUrl.postModifyProjectByOrgUrl : orgUrl.postAddProjectByOrgUrl, data }, options);
 }
 
 // 修改项目名称

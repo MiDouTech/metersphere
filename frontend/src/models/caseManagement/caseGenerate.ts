@@ -26,9 +26,6 @@ export interface AiCaseDraft {
   reviewComment?: string;
   reviewedBy?: string;
   reviewedAt?: number;
-  publishMode?: 'CREATE' | 'UPDATE' | 'DEPRECATE';
-  targetCaseId?: string;
-  baselineSnapshot?: string;
   contentHash?: string;
   reviewedContentHash?: string;
   formalCaseId?: string;

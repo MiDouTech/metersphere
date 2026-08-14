@@ -20,7 +20,36 @@ public interface PermissionControlMapper {
                                      @Param("positionId") String positionId);
 
     List<UserRoleRelation> selectExistingRoleRelations(@Param("roleId") String roleId,
+                                                       @Param("sourceId") String sourceId,
                                                        @Param("userIds") List<String> userIds);
+
+    List<String> selectRoleMemberUserIds(@Param("roleId") String roleId,
+                                         @Param("sourceId") String sourceId);
+
+    int countUsersInScope(@Param("sourceId") String sourceId, @Param("userIds") List<String> userIds);
+
+    int batchInsertRoleRelations(@Param("relations") List<UserRoleRelation> relations);
+
+    int deleteRoleRelations(@Param("roleId") String roleId,
+                            @Param("sourceId") String sourceId,
+                            @Param("userIds") List<String> userIds);
+
+    long countRoleMembers(@Param("roleId") String roleId);
+
+    long countUsersWithoutOtherBusinessRole(@Param("roleId") String roleId);
+
+    long countMemberInitialization(@Param("roleId") String roleId, @Param("initVersion") String initVersion);
+
+    int insertMemberInitialization(@Param("roleId") String roleId,
+                                   @Param("initVersion") String initVersion,
+                                   @Param("initializedTime") long initializedTime);
+
+    int insertMigrationFailure(@Param("migrationVersion") String migrationVersion,
+                               @Param("sourceRoleId") String sourceRoleId,
+                               @Param("userId") String userId,
+                               @Param("failureStage") String failureStage,
+                               @Param("failureReason") String failureReason,
+                               @Param("executeTime") long executeTime);
 
     int insertWorkflowDefinition(WorkflowDefinition workflowDefinition);
 
@@ -40,6 +69,8 @@ public interface PermissionControlMapper {
 
     int deleteWorkflowRole(@Param("id") String id);
 
+    int deleteWorkflowRolesByFlowId(@Param("flowId") String flowId);
+
     List<WorkflowRole> selectWorkflowRoles(@Param("flowId") String flowId);
 
     WorkflowRole selectWorkflowRoleById(@Param("id") String id);
@@ -47,6 +78,8 @@ public interface PermissionControlMapper {
     int insertStatusFlowRolePermission(StatusFlowRolePermission permission);
 
     int deleteStatusFlowRolePermissionsByFlowId(@Param("flowId") String flowId);
+
+    int deleteStatusFlowRolePermissionsByWorkflowRoleId(@Param("workflowRoleId") String workflowRoleId);
 
     List<StatusFlowRolePermission> selectStatusFlowRolePermissions(@Param("flowId") String flowId);
 

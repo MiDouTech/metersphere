@@ -10,10 +10,20 @@
         </div>
       </div>
       <div class="flex flex-wrap gap-[8px]">
+        <a-button
+          v-if="!executionTaskId && !isCreating"
+          v-permission="['AI_EXECUTION:RUN']"
+          type="primary"
+          @click="startCreating"
+        >
+          创建执行任务
+        </a-button>
         <a-button v-if="executionTaskId" @click="backToTaskList">返回任务列表</a-button>
+        <a-button v-if="isCreating" @click="backToTaskList">返回任务列表</a-button>
         <a-button @click="refreshAll">{{ t('common.refresh') }}</a-button>
         <a-button
           v-if="task?.confirmRequired || task?.status === 'WAITING_CONFIRMATION'"
+          v-permission="['AI_EXECUTION:RUN']"
           type="primary"
           :loading="actionLoading"
           @click="handleConfirm"
@@ -22,25 +32,42 @@
         </a-button>
         <a-button
           v-if="task?.status === 'WAITING_LOGIN' || task?.status === 'PAUSED'"
+          v-permission="['AI_EXECUTION:RUN']"
           type="primary"
           :loading="actionLoading"
           @click="handleLoginReady"
         >
           {{ t('bugManagement.automationExecution.loginReady') }}
         </a-button>
-        <a-button :disabled="!canPause" :loading="actionLoading" @click="handlePause">
+        <a-button
+          v-permission="['AI_EXECUTION:RUN']"
+          :disabled="!canPause"
+          :loading="actionLoading"
+          @click="handlePause"
+        >
           {{ t('bugManagement.automationExecution.pause') }}
         </a-button>
-        <a-button status="danger" :disabled="!canCancel" :loading="actionLoading" @click="handleCancel">
+        <a-button
+          v-permission="['AI_EXECUTION:CANCEL']"
+          status="danger"
+          :disabled="!canCancel"
+          :loading="actionLoading"
+          @click="handleCancel"
+        >
           {{ t('bugManagement.automationExecution.stop') }}
         </a-button>
-        <a-button :disabled="!canRetry" :loading="actionLoading" @click="handleRetry">
+        <a-button
+          v-permission="['AI_EXECUTION:RUN']"
+          :disabled="!canRetry"
+          :loading="actionLoading"
+          @click="handleRetry"
+        >
           {{ t('bugManagement.automationExecution.retryFailed') }}
         </a-button>
       </div>
     </div>
 
-    <section v-if="!executionTaskId" class="task-center-panel">
+    <section v-if="!executionTaskId && !isCreating" class="task-center-panel">
       <div class="mb-[12px] flex flex-wrap items-center gap-[8px]">
         <a-input-search
           v-model:model-value="taskSearch.keyword"
@@ -62,18 +89,14 @@
         </a-select>
         <a-button type="primary" :loading="taskListLoading" @click="reloadTaskList">查询</a-button>
       </div>
-      <a-table
-        :data="taskList"
-        :loading="taskListLoading"
-        :pagination="false"
-        row-key="id"
-        @row-click="openTask"
-      >
+      <a-table :data="taskList" :loading="taskListLoading" :pagination="false" row-key="id" @row-click="openTask">
         <template #columns>
           <a-table-column title="任务" :width="280">
             <template #cell="{ record }">
               <div class="font-medium">{{ record.name || record.id }}</div>
-              <div class="mt-[2px] truncate text-[12px] text-[var(--color-text-3)]">{{ record.objective || record.id }}</div>
+              <div class="mt-[2px] truncate text-[12px] text-[var(--color-text-3)]">{{
+                record.objective || record.id
+              }}</div>
             </template>
           </a-table-column>
           <a-table-column title="运行状态" data-index="status" :width="150" />
@@ -83,10 +106,14 @@
             </template>
           </a-table-column>
           <a-table-column title="执行器" :width="150">
-            <template #cell="{ record }">{{ record.executionMode }} / {{ record.agentType || record.runnerId || '-' }}</template>
+            <template #cell="{ record }"
+              >{{ record.executionMode }} / {{ record.agentType || record.runnerId || '-' }}</template
+            >
           </a-table-column>
           <a-table-column title="进度" :width="130">
-            <template #cell="{ record }">{{ (record.successCount || 0) + (record.failedCount || 0) }}/{{ record.totalCount || 0 }}</template>
+            <template #cell="{ record }"
+              >{{ (record.successCount || 0) + (record.failedCount || 0) }}/{{ record.totalCount || 0 }}</template
+            >
           </a-table-column>
           <a-table-column title="尝试" :width="90">
             <template #cell="{ record }">{{ record.attemptCount || 0 }}/{{ record.maxAttempts || 3 }}</template>
@@ -144,7 +171,41 @@
             <a-input v-model:model-value="draftForm.targetUrl" :placeholder="'https://...'" :max-length="500" />
           </a-form-item>
           <a-form-item :label="t('bugManagement.automationExecution.environment')">
-            <a-input v-model:model-value="draftForm.environmentId" :max-length="100" />
+            <a-select
+              v-model:model-value="draftForm.environmentId"
+              allow-search
+              allow-clear
+              :filter-option="false"
+              placeholder="选择当前项目的测试环境"
+              @change="handleEnvironmentChange"
+              @search="loadEnvironmentOptions"
+              @popup-visible-change="(visible: boolean) => visible && loadEnvironmentOptions()"
+            >
+              <a-option v-for="item in environmentOptions" :key="item.id" :value="item.id">
+                {{ item.name }}{{ item.status ? `（${item.status}）` : '' }}
+              </a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="任务资产">
+            <div class="w-full">
+              <div class="mb-[8px] flex flex-wrap gap-[8px]">
+                <a-tag
+                  v-for="item in selectedAssetRefs"
+                  :key="`${item.assetType}:${item.assetId}`"
+                  closable
+                  @close="removeAssetRef(item)"
+                >
+                  {{ item.assetName }}（{{ item.assetType }}）{{ item.versionId ? '·固定版本' : '·创建时固定' }}
+                </a-tag>
+                <span v-if="selectedAssetRefs.length === 0" class="text-[var(--color-text-3)]"
+                  >尚未选择扩展测试资产</span
+                >
+              </div>
+              <a-button v-permission="['AI_EXECUTION:RUN']" size="small" @click="openAssetPicker"
+                >选择测试资产</a-button
+              >
+              <span class="ml-[8px] text-[12px] text-[var(--color-text-3)]">最多 50 项，创建任务时固定版本</span>
+            </div>
           </a-form-item>
         </a-form>
         <div class="message-list">
@@ -166,6 +227,7 @@
             {{ t('bugManagement.automationExecution.resolveScope') }}
           </a-button>
           <a-button
+            v-permission="['AI_EXECUTION:RUN']"
             type="primary"
             :loading="createLoading"
             :disabled="
@@ -338,6 +400,44 @@
           />
           <a-alert class="mt-[12px]" type="info" :content="t('bugManagement.automationExecution.runnerPlaceholder')" />
 
+          <div v-if="humanRequests.length" class="mt-[12px]">
+            <div class="panel-subtitle mb-[8px]">人工介入请求</div>
+            <a-card v-for="request in humanRequests" :key="request.id" class="mb-[8px]" :bordered="true">
+              <div class="flex items-start justify-between gap-[12px]">
+                <div
+                  ><div class="font-medium">{{ request.title }}</div
+                  ><div class="mt-[4px] text-[12px] text-[var(--color-text-3)]">{{ request.content || '-' }}</div></div
+                >
+                <a-tag :color="request.status === 'PENDING' ? 'orange' : 'gray'">{{ request.status }}</a-tag>
+              </div>
+              <div v-if="request.status === 'PENDING'" class="mt-[8px] flex justify-end gap-[8px]">
+                <a-button v-permission="['AI_EXECUTION:RUN']" @click="respondHuman(request.id, 'CANCEL')"
+                  >取消请求</a-button
+                >
+                <a-button
+                  v-permission="['AI_EXECUTION:RUN']"
+                  status="danger"
+                  @click="respondHuman(request.id, 'REJECT')"
+                  >拒绝</a-button
+                >
+                <a-button
+                  v-if="request.requestType === 'INPUT'"
+                  v-permission="['AI_EXECUTION:RUN']"
+                  type="primary"
+                  @click="openHumanAnswer(request)"
+                  >输入并恢复</a-button
+                >
+                <a-button
+                  v-else
+                  v-permission="['AI_EXECUTION:RUN']"
+                  type="primary"
+                  @click="respondHuman(request.id, 'APPROVE')"
+                  >批准并恢复</a-button
+                >
+              </div>
+            </a-card>
+          </div>
+
           <div class="mt-[12px] flex items-center justify-between">
             <div class="panel-subtitle">{{ t('bugManagement.automationExecution.caseProgress') }}</div>
           </div>
@@ -395,6 +495,46 @@
         </a-spin>
       </section>
     </div>
+    <a-modal v-model:visible="assetPickerVisible" title="选择测试资产" :width="860" :footer="false" unmount-on-close>
+      <div class="mb-[12px] flex gap-[8px]">
+        <a-select v-model:model-value="assetPicker.assetType" class="w-[180px]" @change="searchAssetPicker">
+          <a-option v-for="item in assetTypeOptions" :key="item.value" :value="item.value">{{ item.label }}</a-option>
+        </a-select>
+        <a-input-search
+          v-model:model-value="assetPicker.keyword"
+          allow-clear
+          placeholder="搜索名称、ID 或摘要"
+          @search="searchAssetPicker"
+          @clear="searchAssetPicker"
+        />
+      </div>
+      <a-table :data="assetPickerRecords" :loading="assetPickerLoading" row-key="id" :pagination="false">
+        <a-table-column title="名称" data-index="name" />
+        <a-table-column title="类型" data-index="category" :width="140" />
+        <a-table-column title="状态" data-index="status" :width="120" />
+        <a-table-column title="版本" :width="90">
+          <template #cell="{ record }">v{{ record.assetVersionNo || 1 }}</template>
+        </a-table-column>
+        <a-table-column title="操作" :width="90">
+          <template #cell="{ record }">
+            <a-link v-if="!hasAssetRef(record.assetType, record.id)" @click="addAssetRecord(record)">添加</a-link>
+            <span v-else class="text-[var(--color-text-3)]">已添加</span>
+          </template>
+        </a-table-column>
+      </a-table>
+      <div class="mt-[12px] flex justify-end">
+        <a-pagination
+          v-model:current="assetPicker.current"
+          v-model:page-size="assetPicker.pageSize"
+          :total="assetPickerTotal"
+          show-total
+          @change="loadAssetPicker"
+        />
+      </div>
+    </a-modal>
+    <a-modal v-model:visible="humanAnswerVisible" title="补充人工输入" @before-ok="submitHumanAnswer">
+      <a-textarea v-model="humanAnswer" :max-length="4000" show-word-limit :auto-size="{ minRows: 4, maxRows: 8 }" />
+    </a-modal>
   </div>
 </template>
 
@@ -412,6 +552,7 @@
     type AiExecutionMode,
     type AiExecutionResolveResult,
     type AiExecutionTask,
+    type AiHumanRequest,
     cancelAiExecutionTask,
     confirmAiExecutionTask,
     createAiExecutionTask,
@@ -419,11 +560,16 @@
     getAiExecutionArtifacts,
     getAiExecutionEvents,
     getAiExecutionTask,
+    getAiHumanRequests,
     loginReadyAiExecutionTask,
+    pageTestAssetCatalog,
     pauseAiExecutionTask,
     resolveAiExecutionScope,
+    respondAiHumanRequest,
     retryAiExecutionTask,
     searchAiExecutionTasks,
+    type TestAssetCatalogItem,
+    type TestAssetCatalogType,
   } from '@/api/modules/ai-execution';
   import { useI18n } from '@/hooks/useI18n';
   import { useAppStore } from '@/store';
@@ -476,6 +622,10 @@
   ];
   const events = ref<AiExecutionEvent[]>([]);
   const artifacts = ref<AiExecutionArtifact[]>([]);
+  const humanRequests = ref<AiHumanRequest[]>([]);
+  const humanAnswerVisible = ref(false);
+  const humanAnswerRequestId = ref('');
+  const humanAnswer = ref('');
   const agentOptions = ref<AiExecutionAgentOption[]>([]);
   const eventCursor = ref(0);
   const eventLevel = ref('ALL');
@@ -486,6 +636,27 @@
     targetUrl: '',
     environmentId: '',
   });
+  type SelectedAssetRef = {
+    assetType: TestAssetCatalogType;
+    assetId: string;
+    assetName: string;
+    versionId?: string;
+  };
+  const selectedAssetRefs = ref<SelectedAssetRef[]>([]);
+  const environmentOptions = ref<TestAssetCatalogItem[]>([]);
+  const assetPickerVisible = ref(false);
+  const assetPickerLoading = ref(false);
+  const assetPickerRecords = ref<TestAssetCatalogItem[]>([]);
+  const assetPickerTotal = ref(0);
+  const assetPicker = reactive({ assetType: 'DATASET' as TestAssetCatalogType, keyword: '', current: 1, pageSize: 10 });
+  const assetTypeOptions: Array<{ label: string; value: TestAssetCatalogType }> = [
+    { label: '测试数据', value: 'DATASET' },
+    { label: '测试环境', value: 'ENVIRONMENT' },
+    { label: '公共步骤', value: 'COMMON_STEP' },
+    { label: '接口定义', value: 'API_DEFINITION' },
+    { label: '执行证据', value: 'EVIDENCE' },
+    { label: '缺陷', value: 'BUG' },
+  ];
   const resolveResult = ref<AiExecutionResolveResult>();
   const resolveConfirmed = ref(false);
   const chatModelId = ref(localStorage.getItem('aiChatModel') || '');
@@ -494,6 +665,99 @@
   let pollTimer: number | undefined;
 
   const executionTaskId = computed(() => (route.query.executionTaskId as string | undefined) || undefined);
+  const isCreating = computed(() => route.query.creating === '1');
+  const selectedAssetRef = computed(() => {
+    const assetType = String(route.query.assetType || '');
+    const assetId = String(route.query.assetId || '');
+    if (!assetType || !assetId) return undefined;
+    return {
+      assetType: assetType as import('@/api/modules/ai-execution').TestAssetCatalogType,
+      assetId,
+      assetName: String(route.query.assetName || assetId),
+      versionId: String(route.query.assetVersionId || '') || undefined,
+    };
+  });
+
+  function hasAssetRef(assetType: TestAssetCatalogType, assetId: string) {
+    return selectedAssetRefs.value.some((item) => item.assetType === assetType && item.assetId === assetId);
+  }
+
+  function addAssetRef(item: SelectedAssetRef) {
+    if (hasAssetRef(item.assetType, item.assetId)) return;
+    if (selectedAssetRefs.value.length >= 50) {
+      Message.warning('单个任务最多选择 50 个扩展测试资产');
+      return;
+    }
+    if (item.assetType === 'ENVIRONMENT') {
+      selectedAssetRefs.value = selectedAssetRefs.value.filter((existing) => existing.assetType !== 'ENVIRONMENT');
+      draftForm.environmentId = item.assetId;
+    }
+    selectedAssetRefs.value.push(item);
+  }
+
+  function addAssetRecord(item: TestAssetCatalogItem) {
+    addAssetRef({
+      assetType: item.assetType,
+      assetId: item.id,
+      assetName: item.name,
+      versionId: item.assetVersionId,
+    });
+  }
+
+  function removeAssetRef(item: SelectedAssetRef) {
+    selectedAssetRefs.value = selectedAssetRefs.value.filter(
+      (existing) => existing.assetType !== item.assetType || existing.assetId !== item.assetId
+    );
+    if (item.assetType === 'ENVIRONMENT' && draftForm.environmentId === item.assetId) draftForm.environmentId = '';
+  }
+
+  async function loadEnvironmentOptions(keyword = '') {
+    if (!appStore.currentProjectId) return;
+    const result = await pageTestAssetCatalog({
+      projectId: appStore.currentProjectId,
+      assetType: 'ENVIRONMENT',
+      keyword: keyword.trim() || undefined,
+      current: 1,
+      pageSize: 100,
+    });
+    environmentOptions.value = result.list || [];
+  }
+
+  function handleEnvironmentChange(value?: unknown) {
+    const environmentId = typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+    selectedAssetRefs.value = selectedAssetRefs.value.filter((item) => item.assetType !== 'ENVIRONMENT');
+    if (!environmentId) return;
+    const environment = environmentOptions.value.find((item) => item.id === environmentId);
+    if (environment) addAssetRecord(environment);
+  }
+
+  async function loadAssetPicker() {
+    if (!appStore.currentProjectId) return;
+    assetPickerLoading.value = true;
+    try {
+      const result = await pageTestAssetCatalog({
+        projectId: appStore.currentProjectId,
+        assetType: assetPicker.assetType,
+        keyword: assetPicker.keyword.trim() || undefined,
+        current: assetPicker.current,
+        pageSize: assetPicker.pageSize,
+      });
+      assetPickerRecords.value = result.list || [];
+      assetPickerTotal.value = result.total || 0;
+    } finally {
+      assetPickerLoading.value = false;
+    }
+  }
+
+  function searchAssetPicker() {
+    assetPicker.current = 1;
+    loadAssetPicker();
+  }
+
+  function openAssetPicker() {
+    assetPickerVisible.value = true;
+    loadAssetPicker();
+  }
   const modelOptions = computed(() =>
     (aiStore.aiSourceNameList || []).map((item) => ({
       label: item.name,
@@ -593,7 +857,52 @@
   async function backToTaskList() {
     const query = { ...route.query };
     delete query.executionTaskId;
+    delete query.creating;
+    delete query.caseIds;
+    delete query.assetType;
+    delete query.assetId;
+    delete query.assetName;
+    delete query.assetVersionId;
     await router.push({ query });
+  }
+
+  async function startCreating() {
+    await router.push({ query: { creating: '1' } });
+  }
+
+  function hydrateExplicitCasesFromRoute() {
+    if (!isCreating.value) return;
+    const raw = Array.isArray(route.query.caseIds) ? route.query.caseIds.join(',') : String(route.query.caseIds || '');
+    const caseIds = [
+      ...new Set(
+        raw
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+      ),
+    ];
+    if (!caseIds.length) return;
+    const confirmationRequired = caseIds.length > 20;
+    resolveResult.value = {
+      status: confirmationRequired ? 'WAITING_CONFIRMATION' : 'CREATED',
+      executable: true,
+      confirmationRequired,
+      confirmationReason: confirmationRequired ? '执行范围超过 20 条，需要确认后继续' : undefined,
+      projectId: appStore.currentProjectId,
+      total: caseIds.length,
+      selectionMode: 'MANUAL',
+      message: `已接收 ${caseIds.length} 条已发布用例`,
+      cases: caseIds.map((caseId) => ({ caseId, name: caseId })),
+    };
+    resolveConfirmed.value = false;
+    lastResolvedPrompt.value = '执行刚发布的 AI 用例';
+    messages.value = [
+      {
+        id: `${Date.now()}_a`,
+        role: 'assistant',
+        content: `已载入 ${caseIds.length} 条正式用例，请配置执行环境后创建任务。`,
+      },
+    ];
   }
 
   async function loadTask() {
@@ -639,6 +948,47 @@
     artifacts.value = executionTaskId.value ? await getAiExecutionArtifacts(executionTaskId.value) : [];
   }
 
+  async function loadHumanRequests() {
+    humanRequests.value = executionTaskId.value ? await getAiHumanRequests(executionTaskId.value) : [];
+  }
+
+  async function respondHuman(requestId: string, action: 'APPROVE' | 'REJECT' | 'CANCEL', response?: string) {
+    if (!executionTaskId.value) return;
+    await respondAiHumanRequest(executionTaskId.value, requestId, action, response);
+    await Promise.all([loadTask(), loadHumanRequests(), loadEvents()]);
+    const successMessage = {
+      APPROVE: '已批准，任务恢复执行',
+      REJECT: '已拒绝人工请求',
+      CANCEL: '人工请求已取消',
+    }[action];
+    Message.success(successMessage);
+  }
+  function openHumanAnswer(request: AiHumanRequest) {
+    humanAnswerRequestId.value = request.id;
+    humanAnswer.value = '';
+    humanAnswerVisible.value = true;
+  }
+  async function submitHumanAnswer(done: (closed: boolean) => void) {
+    if (!humanAnswer.value.trim() || !executionTaskId.value) {
+      Message.warning('补充输入不能为空');
+      done(false);
+      return;
+    }
+    try {
+      await respondAiHumanRequest(
+        executionTaskId.value,
+        humanAnswerRequestId.value,
+        'ANSWER',
+        humanAnswer.value.trim()
+      );
+      await Promise.all([loadTask(), loadHumanRequests(), loadEvents()]);
+      Message.success('已提交人工输入，任务恢复执行');
+      done(true);
+    } catch {
+      done(false);
+    }
+  }
+
   async function refreshAll() {
     if (!executionTaskId.value) {
       await reloadTaskList();
@@ -647,6 +997,7 @@
     await loadTask();
     await loadEvents(true);
     await loadArtifacts();
+    await loadHumanRequests();
   }
 
   function resetEvents() {
@@ -747,6 +1098,9 @@
         providerId: draftForm.executionMode === 'RUNNER' ? chatModelId.value || undefined : undefined,
         executionMode: draftForm.executionMode,
         agentType: draftForm.executionMode === 'AGENT' ? draftForm.agentType : undefined,
+        assetRefs: selectedAssetRefs.value.length
+          ? selectedAssetRefs.value.map(({ assetType, assetId, versionId }) => ({ assetType, assetId, versionId }))
+          : undefined,
         environmentId: draftForm.environmentId || undefined,
         targetUrl: draftForm.targetUrl || undefined,
         browserType: 'chromium',
@@ -755,10 +1109,7 @@
       });
       Message.success(t('bugManagement.automationExecution.taskCreated'));
       await router.replace({
-        query: {
-          ...route.query,
-          executionTaskId: taskCreated.id,
-        },
+        query: { executionTaskId: taskCreated.id },
       });
     } finally {
       createLoading.value = false;
@@ -863,9 +1214,26 @@
     { immediate: true }
   );
 
+  watch(() => [route.query.creating, route.query.caseIds, appStore.currentProjectId], hydrateExplicitCasesFromRoute, {
+    immediate: true,
+  });
+
   watch(
     () => appStore.currentProjectId,
-    (projectId) => loadExecutionAgents(projectId),
+    (projectId) => {
+      loadExecutionAgents(projectId);
+      selectedAssetRefs.value = [];
+      draftForm.environmentId = '';
+      loadEnvironmentOptions();
+    },
+    { immediate: true }
+  );
+
+  watch(
+    selectedAssetRef,
+    (value) => {
+      if (value) addAssetRef(value);
+    },
     { immediate: true }
   );
 

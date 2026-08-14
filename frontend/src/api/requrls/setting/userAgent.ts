@@ -4,4 +4,6 @@ export default {
   pairing: '/ai/agent-bridge/pairing',
   devices: '/ai/agent-bridge/devices',
   installInfo: '/ai/agent-bridge/install-info',
+  packages: '/ai/agent-bridge/packages',
+  download: '/ai/agent-bridge/download',
 };

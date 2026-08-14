@@ -11,19 +11,21 @@
 
   import MsCard from '@/components/pure/ms-card/index.vue';
 
-  import { hasAnyPermission } from '@/utils/permission';
+  import { hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
   const props = defineProps<{
     activeTab: string;
     title?: string;
-    tabList: { key: string; title: string; permission?: string[] }[];
+    tabList: { key: string; title: string; permission?: string[]; resourceCode?: string; typeList?: string[] }[];
   }>();
   const emit = defineEmits(['update:activeTab']);
 
   const innerTab = ref(props.activeTab);
 
   const permissionTabList = computed(() => {
-    return props.tabList.filter((item: any) => hasAnyPermission(item.permission));
+    return props.tabList.filter(
+      (item) => hasAnyPermission(item.permission || []) && hasTabVisible(item.resourceCode, item.typeList)
+    );
   });
 
   watch(

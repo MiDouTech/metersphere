@@ -9,7 +9,7 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 @Configuration
-@ConditionalOnProperty(prefix = "ms.ai.user-agent", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "ms.ai.user-agent", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class AiAgentBridgeRedisBusConfig {
     @Bean
     public RedisMessageListenerContainer aiAgentBridgeRedisMessageListenerContainer(

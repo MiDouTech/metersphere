@@ -222,6 +222,7 @@
         functional_case.num,
         functional_case.NAME,
         functional_case.module_id,
+        functional_case_module.name as moduleName,
         functional_case.version_id,
         project_version.name as versionName,
         functional_case.case_edit_type,
@@ -245,6 +246,7 @@
         FROM
             functional_case
         LEFT JOIN project_version ON  functional_case.version_id = project_version.id
+        LEFT JOIN functional_case_module ON functional_case_module.id = functional_case.module_id
         where functional_case.deleted = #{deleted}
         <include refid="queryWorkspaceAndDimensionCondition"/>
         <include refid="queryWhereCondition"/>

@@ -42,12 +42,7 @@
     const routerList = router.getRoutes();
     for (let i = 0; i < routerList.length; i++) {
       const rou = routerList[i];
-      if (
-        [
-          ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PERMISSION_MEMBER,
-          ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PERMISSION_USER_GROUP,
-        ].includes(rou.name as ProjectManagementRouteEnum)
-      ) {
+      if (rou.name === ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PERMISSION_MEMBER) {
         show = permission.accessRouter(rou);
       }
       if (show) {
@@ -95,12 +90,6 @@
       title: t('project.permission.member'),
       level: 2,
       name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PERMISSION_MEMBER,
-    },
-    {
-      key: 'projectUserGroup',
-      title: t('project.permission.userGroup'),
-      level: 2,
-      name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PERMISSION_USER_GROUP,
     },
   ]);
   const menuList = computed(() => {

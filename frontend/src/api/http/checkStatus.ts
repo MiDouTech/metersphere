@@ -14,7 +14,8 @@ export default function checkStatus(
   status: number,
   msg: string,
   code?: number,
-  errorMessageMode: ErrorMessageMode = 'message'
+  errorMessageMode?: ErrorMessageMode,
+  context?: Record<string, unknown>
 ): void {
   const { t } = useI18n();
   const licenseStore = useLicenseStore();
@@ -40,7 +41,13 @@ export default function checkStatus(
     }
     case 403:
       if (router.currentRoute.value.name !== NO_RESOURCE_ROUTE_NAME) {
-        router.push({ name: NO_RESOURCE_ROUTE_NAME });
+        router.push({
+          name: NO_RESOURCE_ROUTE_NAME,
+          query: {
+            redirect: router.currentRoute.value.fullPath,
+            permission: typeof context?.permissionCode === 'string' ? context.permissionCode : undefined,
+          },
+        });
       }
       break;
     // 404请求不存在
@@ -148,7 +155,7 @@ export default function checkStatus(
   if (errMessage) {
     if (errorMessageMode === 'modal') {
       showHttpErrorMessage(errMessage, { mode: 'modal', title: t('api.errorTip') });
-    } else if (errorMessageMode === 'message') {
+    } else if ((errorMessageMode || 'message') === 'message') {
       showHttpErrorMessage(errMessage, { duration: HTTP_MESSAGE_DURATION });
     }
   }

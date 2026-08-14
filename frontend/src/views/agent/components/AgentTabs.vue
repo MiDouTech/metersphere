@@ -18,7 +18,7 @@
     { key: 'capability', title: '能力与授权' },
     { key: 'queue', title: '调度队列' },
     { key: 'evaluation', title: '执行评价' },
-    { key: 'access', title: '接入配置' },
+    { key: 'access', title: 'Agent 集成' },
   ];
   const activeKey = computed(() => route.path.split('/').filter(Boolean).at(-1) || 'list');
 

@@ -25,19 +25,6 @@
           retain-input-value
         />
       </a-form-item>
-      <a-form-item class="mb-0" field="userGroup" :label="t('system.user.createUserUserGroup')">
-        <a-select v-model="emailForm.userGroup" multiple :placeholder="t('system.user.createUserUserGroupPlaceholder')">
-          <a-option
-            v-for="item of userGroupOptions"
-            :key="item.id"
-            :tag-props="{ closable: emailForm.userGroup.length > 1 }"
-            :value="item.id"
-            :disabled="emailForm.userGroup.includes(item.id) && emailForm.userGroup.length === 1"
-          >
-            {{ item.name }}
-          </a-option>
-        </a-select>
-      </a-form-item>
     </a-form>
     <template #footer>
       <a-button type="secondary" :disabled="inviteLoading" @click="cancelInvite">
@@ -64,20 +51,18 @@
   import useAppStore from '@/store/modules/app';
   import { validateEmail } from '@/utils/validate';
 
-  import { ProjectUserOption } from '@/models/projectManagement/projectAndPermission';
-  import type { SystemRole } from '@/models/setting/user';
-
   const appStore = useAppStore();
   const { t } = useI18n();
 
   const props = withDefaults(
     defineProps<{
       visible: boolean;
-      userGroupOptions: (SystemRole | ProjectUserOption)[];
+      userGroupOptions?: unknown[];
       range?: 'system' | 'organization' | 'project';
     }>(),
     {
       range: 'system',
+      userGroupOptions: () => [],
     }
   );
 
@@ -88,7 +73,7 @@
   const inviteFormRef = ref<FormInstance | null>(null);
   const defaultInviteForm = {
     emails: [] as string[],
-    userGroup: [] as string[],
+    userGroup: ['permission_member'] as string[],
   };
   const emailForm = ref(cloneDeep(defaultInviteForm));
 
@@ -106,20 +91,11 @@
     }
   );
 
-  watch(
-    () => props.userGroupOptions,
-    (arr) => {
-      if (arr.length) {
-        if (props.range === 'system') {
-          emailForm.value.userGroup = (arr as SystemRole[]).filter((e) => e.selected === true).map((e) => e.id);
-        } else if (props.range === 'project') {
-          emailForm.value.userGroup = ['project_member'];
-        } else if (props.range === 'organization') {
-          emailForm.value.userGroup = ['org_member'];
-        }
-      }
-    }
-  );
+  function defaultMemberRole() {
+    if (props.range === 'project') return ['project_member'];
+    if (props.range === 'organization') return ['org_member'];
+    return ['permission_member'];
+  }
 
   function validateInputEmailTag(value: string) {
     if (validateEmail(value)) {
@@ -133,15 +109,7 @@
     inviteVisible.value = false;
     inviteFormRef.value?.resetFields();
     emailForm.value.emails = [];
-    if (props.range === 'system') {
-      emailForm.value.userGroup = (props.userGroupOptions as SystemRole[])
-        .filter((e) => e.selected === true)
-        .map((e) => e.id);
-    } else if (props.range === 'project') {
-      emailForm.value.userGroup = ['project_member'];
-    } else if (props.range === 'organization') {
-      emailForm.value.userGroup = ['org_member'];
-    }
+    emailForm.value.userGroup = defaultMemberRole();
   }
 
   function handleInviteError(error: any) {

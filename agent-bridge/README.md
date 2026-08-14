@@ -38,10 +38,12 @@ The user-facing product name is **MeterSphere Agent**. The web UI detects it thr
 `metersphere-agent://` protocol and keeps the one-time pairing code out of visible UI and browser storage.
 
 Release packaging is driven by `scripts/windows/build-package.ps1` and requires an official Windows Node.js runtime
-directory so end users do not need Node.js installed. Publish the ZIP and its SHA-256 manifest from a
-trusted HTTPS location, configure `ms.ai.user-agent.bridge.windows-download-url`, and sign the delivered executable
-installer in the release pipeline with the organization's code-signing certificate. The repository does not contain
-or fabricate signing credentials.
+directory so end users do not need Node.js installed. Publish the ZIP through **System Settings > Agent Integration >
+Agent Package Management**. MeterSphere stores the package in its MinIO file repository and serves the active
+package through an authenticated download endpoint, so package releases remain independent from backend builds. The
+legacy `ms.ai.user-agent.bridge.windows-download-url` setting remains available as a fallback. Sign a production
+executable installer in the release pipeline with the organization's code-signing certificate. The repository does
+not contain or fabricate signing credentials.
 
 For development, extract the package and run `scripts/windows/install.ps1`. This registers the protocol and a
 current-user auto-start entry. Use `scripts/windows/uninstall.ps1`; add `-RemoveApplicationData` only when device
@@ -57,8 +59,9 @@ For an internal deployment, an unsigned ZIP is sufficient. Build it on Windows w
   -NodeRuntimeDirectory C:\path\to\node-runtime
 ```
 
-The output contains the ZIP, a JSON manifest, and a `.sha256` file. Publish all three files from an internal HTTPS
-location and configure the platform with either the Spring property or its environment-variable form:
+The output contains the ZIP, a JSON manifest, and a `.sha256` file. Upload the ZIP in the system administration page,
+enter the version from the manifest, and compare the SHA-256 shown after upload with the generated manifest. The old
+external HTTPS mode can still be configured with either the Spring property or its environment-variable form:
 
 ```properties
 ms.ai.user-agent.bridge.windows-download-url=https://internal.example.com/metersphere-agent-windows-x64.zip
@@ -73,7 +76,7 @@ The user extracts the ZIP and double-clicks `Install-MeterSphere-Agent.cmd`. Ins
 PowerShell execution-policy bypass because files downloaded from an internal site can retain the Windows zone mark.
 Organizations that prohibit this must distribute or approve the script through their endpoint-management policy.
 
-After installation, return to MeterSphere and select **Installed — detect again**. The browser protocol request pairs
+After installation, return to MeterSphere and select **Installed - detect again**. The browser protocol request pairs
 the device and starts the Bridge. A successful first-phase deployment has all of the following:
 
 - `HKCU\Software\Classes\metersphere-agent` exists.

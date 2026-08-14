@@ -1,230 +1,304 @@
 <template>
   <div>
-    <MsCard simple>
-      <div
-        class="mb-4 gap-3"
-        :class="compact ? 'flex flex-col items-stretch' : 'flex flex-wrap items-center justify-between'"
-      >
-        <div>
-          <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
-          <div class="mt-1 text-sm text-[var(--color-text-3)]">
-            {{ t('system.agentIntegration.myTokensDesc') }}
+    <template v-if="canReadTokens">
+      <MsCard simple>
+        <div
+          class="mb-4 gap-3"
+          :class="compact ? 'flex flex-col items-stretch' : 'flex flex-wrap items-center justify-between'"
+        >
+          <div>
+            <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
+            <div class="mt-1 text-sm text-[var(--color-text-3)]">
+              {{ t('system.agentIntegration.myTokensDesc') }}
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2" :class="compact ? 'justify-end' : ''">
+            <a-input-search
+              v-model:model-value="keyword"
+              :placeholder="t('system.agentIntegration.searchToken')"
+              :class="compact ? 'min-w-[220px] flex-1' : 'w-[260px]'"
+              allow-clear
+              @search="searchParams"
+              @press-enter="searchParams"
+              @clear="searchParams"
+            />
+            <a-button
+              v-visible-permission="{
+                code: 'AGENT_TOKEN_CREATE_BUTTON',
+                permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
+                typeList: ['SYSTEM'],
+              }"
+              v-operable-permission="{
+                code: 'AGENT_TOKEN_CREATE_BUTTON',
+                permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
+                typeList: ['SYSTEM'],
+              }"
+              type="primary"
+              @click="openCreateModal"
+            >
+              {{ t('system.agentIntegration.createToken') }}
+            </a-button>
+            <a-button
+              v-visible-permission="{
+                code: 'AGENT_TOKEN_DOWNLOAD_BUTTON',
+                permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ'],
+                typeList: ['SYSTEM'],
+              }"
+              v-operable-permission="{
+                code: 'AGENT_TOKEN_DOWNLOAD_BUTTON',
+                permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ'],
+                typeList: ['SYSTEM'],
+              }"
+              :loading="downloadLoading"
+              type="outline"
+              @click="handleDownload"
+            >
+              {{ t('system.agentIntegration.mcpDownload') }}
+            </a-button>
           </div>
         </div>
-        <div class="flex flex-wrap items-center gap-2" :class="compact ? 'justify-end' : ''">
-          <a-input-search
-            v-model:model-value="keyword"
-            :placeholder="t('system.agentIntegration.searchToken')"
-            :class="compact ? 'min-w-[220px] flex-1' : 'w-[260px]'"
-            allow-clear
-            @search="searchParams"
-            @press-enter="searchParams"
-            @clear="searchParams"
-          />
-          <a-button type="primary" @click="openCreateModal">
-            {{ t('system.agentIntegration.createToken') }}
-          </a-button>
-          <a-button :loading="downloadLoading" type="outline" @click="handleDownload">
-            {{ t('system.agentIntegration.mcpDownload') }}
-          </a-button>
-        </div>
-      </div>
 
-      <a-alert type="info" class="mb-4">
-        {{ t('system.agentIntegration.myTokensSecretTip') }}
-      </a-alert>
+        <a-alert type="info" class="mb-4">
+          {{ t('system.agentIntegration.myTokensSecretTip') }}
+        </a-alert>
 
-      <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
-        <template #enable="{ record }">
-          <a-switch :model-value="record.enable" size="small" :before-change="(val) => toggleEnable(val, record)" />
-        </template>
-        <template #scopes="{ record }">
-          {{ formatScopeLabel(record.scopes) }}
-        </template>
-        <template #lastUsedAt="{ record }">
-          {{ formatTime(record.lastUsedAt) }}
-        </template>
-        <template #action="{ record }">
-          <div class="flex gap-2">
-            <MsButton @click="openEditModal(record)">
-              {{ t('system.agentIntegration.tokenSettings') }}
-            </MsButton>
-            <MsButton status="danger" @click="removeToken(record)">
-              {{ t('common.delete') }}
-            </MsButton>
-          </div>
-        </template>
-      </ms-base-table>
-    </MsCard>
+        <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
+          <template #enable="{ record }">
+            <a-switch
+              v-visible-permission="{
+                code: 'AGENT_TOKEN_UPDATE_BUTTON',
+                permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
+                typeList: ['SYSTEM'],
+              }"
+              v-operable-permission="{
+                code: 'AGENT_TOKEN_UPDATE_BUTTON',
+                permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
+                typeList: ['SYSTEM'],
+              }"
+              :model-value="record.enable"
+              size="small"
+              :before-change="(val) => toggleEnable(val, record)"
+            />
+          </template>
+          <template #scopes="{ record }">
+            {{ formatScopeLabel(record.scopes) }}
+          </template>
+          <template #lastUsedAt="{ record }">
+            {{ formatTime(record.lastUsedAt) }}
+          </template>
+          <template #action="{ record }">
+            <div class="flex gap-2">
+              <MsButton
+                v-visible-permission="{
+                  code: 'AGENT_TOKEN_UPDATE_BUTTON',
+                  permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
+                  typeList: ['SYSTEM'],
+                }"
+                v-operable-permission="{
+                  code: 'AGENT_TOKEN_UPDATE_BUTTON',
+                  permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
+                  typeList: ['SYSTEM'],
+                }"
+                @click="openEditModal(record)"
+              >
+                {{ t('system.agentIntegration.tokenSettings') }}
+              </MsButton>
+              <MsButton
+                v-visible-permission="{
+                  code: 'AGENT_TOKEN_DELETE_BUTTON',
+                  permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE'],
+                  typeList: ['SYSTEM'],
+                }"
+                v-operable-permission="{
+                  code: 'AGENT_TOKEN_DELETE_BUTTON',
+                  permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE'],
+                  typeList: ['SYSTEM'],
+                }"
+                status="danger"
+                @click="removeToken(record)"
+              >
+                {{ t('common.delete') }}
+              </MsButton>
+            </div>
+          </template>
+        </ms-base-table>
+      </MsCard>
 
-    <McpOnboardingPanel class="mt-4" @create-token="openCreateModal" />
+      <McpOnboardingPanel v-if="canConnectTokens" class="mt-4" @create-token="openCreateModal" />
 
-    <a-modal
-      v-model:visible="createVisible"
-      :title="t('system.agentIntegration.createToken')"
-      :ok-loading="createLoading"
-      unmount-on-close
-      @ok="handleCreate"
-      @cancel="resetCreateForm"
-    >
-      <a-form ref="createFormRef" :model="createForm" layout="vertical">
-        <a-form-item
-          field="name"
-          :label="t('system.agentIntegration.tokenName')"
-          required
-          :rules="[{ required: true, message: t('system.agentIntegration.tokenNameRequired') }]"
-        >
-          <a-input v-model="createForm.name" />
-        </a-form-item>
-
-        <a-form-item field="clientType" :label="t('system.agentIntegration.clientType')">
-          <a-select v-model="createForm.clientType">
-            <a-option value="CHATGPT">ChatGPT</a-option>
-            <a-option value="CURSOR">Cursor</a-option>
-            <a-option value="WORKBUDDY">WorkBuddy</a-option>
-            <a-option value="GENERIC">{{ t('system.agentIntegration.clientOther') }}</a-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item
-          field="projectIds"
-          :label="t('system.agentIntegration.projectIds')"
-          :extra="t('system.agentIntegration.projectIdsHelp')"
-        >
-          <a-select
-            v-model="createForm.projectIds"
-            multiple
-            allow-search
-            allow-clear
-            :filter-option="false"
-            :placeholder="t('system.agentIntegration.projectIdsPlaceholder')"
-            :loading="projectLoading"
-            @search="searchProjects"
-            @popup-visible-change="(visible: boolean) => visible && searchProjects('')"
-          >
-            <a-option v-for="p in projectOptions" :key="p.id" :value="p.id" :label="p.name">
-              {{ p.name }}
-            </a-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item
-          field="scopes"
-          :label="t('system.agentIntegration.scopes')"
-          required
-          :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
-        >
-          <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <button
-              v-for="scope in scopeOptions"
-              :key="scope.value"
-              type="button"
-              class="rounded border p-3 text-left"
-              :class="
-                createForm.scopes === scope.value
-                  ? 'border-[rgb(var(--primary-6))] bg-[var(--color-primary-light-1)]'
-                  : 'border-[var(--color-border-2)]'
-              "
-              @click="createForm.scopes = scope.value"
-            >
-              <div class="font-medium">{{ scope.label }}</div>
-              <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.desc }}</div>
-            </button>
-          </div>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <a-modal
-      v-model:visible="editVisible"
-      :title="t('system.agentIntegration.tokenSettings')"
-      :ok-loading="editLoading"
-      unmount-on-close
-      @ok="handleUpdate"
-      @cancel="resetEditForm"
-    >
-      <a-form ref="editFormRef" :model="editForm" layout="vertical">
-        <a-form-item
-          field="name"
-          :label="t('system.agentIntegration.tokenName')"
-          required
-          :rules="[{ required: true, message: t('system.agentIntegration.tokenNameRequired') }]"
-        >
-          <a-input v-model="editForm.name" />
-        </a-form-item>
-
-        <a-form-item
-          field="projectIds"
-          :label="t('system.agentIntegration.projectIds')"
-          :extra="t('system.agentIntegration.projectIdsHelp')"
-        >
-          <a-select
-            v-model="editForm.projectIds"
-            multiple
-            allow-search
-            allow-clear
-            :filter-option="false"
-            :placeholder="t('system.agentIntegration.projectIdsPlaceholder')"
-            :loading="projectLoading"
-            @search="searchProjects"
-            @popup-visible-change="(visible: boolean) => visible && searchProjects('')"
-          >
-            <a-option v-for="p in projectOptions" :key="p.id" :value="p.id" :label="p.name">
-              {{ p.name }}
-            </a-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item
-          field="scopes"
-          :label="t('system.agentIntegration.scopes')"
-          required
-          :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
-        >
-          <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <button
-              v-for="scope in scopeOptions"
-              :key="scope.value"
-              type="button"
-              class="rounded border p-3 text-left"
-              :class="
-                editForm.scopes === scope.value
-                  ? 'border-[rgb(var(--primary-6))] bg-[var(--color-primary-light-1)]'
-                  : 'border-[var(--color-border-2)]'
-              "
-              @click="editForm.scopes = scope.value"
-            >
-              <div class="font-medium">{{ scope.label }}</div>
-              <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.desc }}</div>
-            </button>
-          </div>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <a-modal
-      v-model:visible="tokenVisible"
-      :title="t('system.agentIntegration.tokenCreated')"
-      :footer="false"
-      :mask-closable="false"
-    >
-      <a-alert type="warning" class="mb-4">
-        {{ createdToken?.warning }}
-      </a-alert>
-      <div class="mb-2 font-medium">{{ t('system.agentIntegration.fullToken') }}</div>
-      <div class="break-all rounded bg-[var(--color-fill-2)] p-3 text-sm">{{ createdToken?.token }}</div>
-      <div class="mt-3 flex justify-end">
-        <a-button type="primary" @click="copyToken">{{ t('system.agentIntegration.copyToken') }}</a-button>
-      </div>
-      <div class="mb-2 mt-4 font-medium">{{ t('system.agentIntegration.mcpConfig') }}</div>
-      <pre
-        class="max-h-[220px] overflow-auto whitespace-pre-wrap break-all rounded bg-[var(--color-fill-2)] p-3 text-xs"
-        >{{ currentMcpConfig }}</pre
+      <a-modal
+        v-model:visible="createVisible"
+        :title="t('system.agentIntegration.createToken')"
+        :ok-loading="createLoading"
+        unmount-on-close
+        @ok="handleCreate"
+        @cancel="resetCreateForm"
       >
-      <div class="mt-3 flex justify-end">
-        <a-button type="primary" @click="copyMcpConfig">{{ t('system.agentIntegration.copyMcpConfig') }}</a-button>
-      </div>
-    </a-modal>
+        <a-form ref="createFormRef" :model="createForm" layout="vertical">
+          <a-form-item
+            field="name"
+            :label="t('system.agentIntegration.tokenName')"
+            required
+            :rules="[{ required: true, message: t('system.agentIntegration.tokenNameRequired') }]"
+          >
+            <a-input v-model="createForm.name" />
+          </a-form-item>
+
+          <a-form-item field="clientType" :label="t('system.agentIntegration.clientType')">
+            <a-select v-model="createForm.clientType">
+              <a-option value="CHATGPT">ChatGPT</a-option>
+              <a-option value="CURSOR">Cursor</a-option>
+              <a-option value="WORKBUDDY">WorkBuddy</a-option>
+              <a-option value="GENERIC">{{ t('system.agentIntegration.clientOther') }}</a-option>
+            </a-select>
+          </a-form-item>
+
+          <a-form-item
+            field="projectIds"
+            :label="t('system.agentIntegration.projectIds')"
+            :extra="t('system.agentIntegration.projectIdsHelp')"
+          >
+            <a-select
+              v-model="createForm.projectIds"
+              multiple
+              allow-search
+              allow-clear
+              :filter-option="false"
+              :placeholder="t('system.agentIntegration.projectIdsPlaceholder')"
+              :loading="projectLoading"
+              @search="searchProjects"
+              @popup-visible-change="(visible: boolean) => visible && searchProjects('')"
+            >
+              <a-option v-for="p in projectOptions" :key="p.id" :value="p.id" :label="p.name">
+                {{ p.name }}
+              </a-option>
+            </a-select>
+          </a-form-item>
+
+          <a-form-item
+            field="scopes"
+            :label="t('system.agentIntegration.scopes')"
+            required
+            :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
+          >
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <button
+                v-for="scope in scopeOptions"
+                :key="scope.value"
+                type="button"
+                class="rounded border p-3 text-left"
+                :class="
+                  createForm.scopes === scope.value
+                    ? 'border-[rgb(var(--primary-6))] bg-[var(--color-primary-light-1)]'
+                    : 'border-[var(--color-border-2)]'
+                "
+                @click="createForm.scopes = scope.value"
+              >
+                <div class="font-medium">{{ scope.label }}</div>
+                <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.desc }}</div>
+              </button>
+            </div>
+          </a-form-item>
+        </a-form>
+      </a-modal>
+
+      <a-modal
+        v-model:visible="editVisible"
+        :title="t('system.agentIntegration.tokenSettings')"
+        :ok-loading="editLoading"
+        unmount-on-close
+        @ok="handleUpdate"
+        @cancel="resetEditForm"
+      >
+        <a-form ref="editFormRef" :model="editForm" layout="vertical">
+          <a-form-item
+            field="name"
+            :label="t('system.agentIntegration.tokenName')"
+            required
+            :rules="[{ required: true, message: t('system.agentIntegration.tokenNameRequired') }]"
+          >
+            <a-input v-model="editForm.name" />
+          </a-form-item>
+
+          <a-form-item
+            field="projectIds"
+            :label="t('system.agentIntegration.projectIds')"
+            :extra="t('system.agentIntegration.projectIdsHelp')"
+          >
+            <a-select
+              v-model="editForm.projectIds"
+              multiple
+              allow-search
+              allow-clear
+              :filter-option="false"
+              :placeholder="t('system.agentIntegration.projectIdsPlaceholder')"
+              :loading="projectLoading"
+              @search="searchProjects"
+              @popup-visible-change="(visible: boolean) => visible && searchProjects('')"
+            >
+              <a-option v-for="p in projectOptions" :key="p.id" :value="p.id" :label="p.name">
+                {{ p.name }}
+              </a-option>
+            </a-select>
+          </a-form-item>
+
+          <a-form-item
+            field="scopes"
+            :label="t('system.agentIntegration.scopes')"
+            required
+            :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
+          >
+            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <button
+                v-for="scope in scopeOptions"
+                :key="scope.value"
+                type="button"
+                class="rounded border p-3 text-left"
+                :class="
+                  editForm.scopes === scope.value
+                    ? 'border-[rgb(var(--primary-6))] bg-[var(--color-primary-light-1)]'
+                    : 'border-[var(--color-border-2)]'
+                "
+                @click="editForm.scopes = scope.value"
+              >
+                <div class="font-medium">{{ scope.label }}</div>
+                <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.desc }}</div>
+              </button>
+            </div>
+          </a-form-item>
+        </a-form>
+      </a-modal>
+
+      <a-modal
+        v-model:visible="tokenVisible"
+        :title="t('system.agentIntegration.tokenCreated')"
+        :footer="false"
+        :mask-closable="false"
+      >
+        <a-alert type="warning" class="mb-4">
+          {{ createdToken?.warning }}
+        </a-alert>
+        <div class="mb-2 font-medium">{{ t('system.agentIntegration.fullToken') }}</div>
+        <div class="break-all rounded bg-[var(--color-fill-2)] p-3 text-sm">{{ createdToken?.token }}</div>
+        <div class="mt-3 flex justify-end">
+          <a-button type="primary" @click="copyToken">{{ t('system.agentIntegration.copyToken') }}</a-button>
+        </div>
+        <div class="mb-2 mt-4 font-medium">{{ t('system.agentIntegration.mcpConfig') }}</div>
+        <pre
+          class="max-h-[220px] overflow-auto whitespace-pre-wrap break-all rounded bg-[var(--color-fill-2)] p-3 text-xs"
+          >{{ currentMcpConfig }}</pre
+        >
+        <div class="mt-3 flex justify-end">
+          <a-button type="primary" @click="copyMcpConfig">{{ t('system.agentIntegration.copyMcpConfig') }}</a-button>
+        </div>
+      </a-modal>
+    </template>
+
+    <a-alert v-else type="warning">当前账号没有个人 Agent 接入读取权限。</a-alert>
+
+    <AgentPackagePanel v-if="!compact && canManagePackages" class="mt-4" />
+
+    <AgentTokenGovernancePanel v-if="!compact && canGovernTokens" class="mt-4" />
   </div>
 </template>
 
@@ -238,6 +312,8 @@
   import MsBaseTable from '@/components/pure/ms-table/base-table.vue';
   import type { MsTableColumn } from '@/components/pure/ms-table/type';
   import useTable from '@/components/pure/ms-table/useTable';
+  import AgentPackagePanel from './components/AgentPackagePanel.vue';
+  import AgentTokenGovernancePanel from './components/AgentTokenGovernancePanel.vue';
   import McpOnboardingPanel from './components/McpOnboardingPanel.vue';
 
   import {
@@ -257,6 +333,7 @@
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import { downloadByteFile } from '@/utils';
+  import { hasAnyPermission } from '@/utils/permission';
 
   withDefaults(
     defineProps<{
@@ -269,6 +346,8 @@
 
   const { t } = useI18n();
   const { openModal } = useModal();
+  const canManagePackages = computed(() => hasAnyPermission(['SYSTEM_AGENT_PACKAGE:READ'], ['SYSTEM']));
+  const canGovernTokens = computed(() => hasAnyPermission(['SYSTEM_USER:READ'], ['SYSTEM']));
 
   const keyword = ref('');
   const createVisible = ref(false);
@@ -276,6 +355,8 @@
   const editVisible = ref(false);
   const editLoading = ref(false);
   const downloadLoading = ref(false);
+  const canReadTokens = hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM']);
+  const canConnectTokens = hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'], ['SYSTEM']);
   const tokenVisible = ref(false);
   const manifest = ref<AgentMcpManifest>();
   const createdToken = ref<AgentTokenCreateResult>();
@@ -606,6 +687,7 @@
   }
 
   onMounted(async () => {
+    if (!canReadTokens) return;
     try {
       manifest.value = await getAgentMcpManifest();
     } catch {

@@ -549,10 +549,17 @@
         condition: !isNew && hasAnyPermission(['PROJECT_API_DEFINITION_CASE:READ']),
         value: 'case',
         label: t('apiTestManagement.case'),
+        resourceCode: 'API_CASE_TAB',
       },
       { condition: !isNew && protocol === 'HTTP', value: 'mock', label: 'MOCK' },
     ];
-    return tabs.filter((tab) => tab.condition).map((tab) => ({ value: tab.value, label: tab.label }));
+    return tabs
+      .filter((tab) => tab.condition)
+      .map((tab) => ({
+        value: tab.value,
+        label: tab.label,
+        resourceCode: 'resourceCode' in tab ? tab.resourceCode : undefined,
+      }));
   });
   function changeDefinitionActiveKey(val: string | number) {
     // 在定义可以添加用例，故需要切换到case时刷新数据

@@ -14,6 +14,7 @@ public class AgentRunnerDTO {
     private String operatingSystem;
     private String browserCapabilities;
     private String environmentLabels;
+    private String isolationMode;
     @JsonIgnore
     private String authTokenHash;
     private Integer maxConcurrency;

@@ -41,25 +41,6 @@
             placeholder="organization.member.selectMemberScope"
           />
         </a-form-item>
-        <a-form-item
-          field="userRoleIds"
-          :label="t('organization.member.tableColunmUsergroup')"
-          asterisk-position="end"
-          :rules="[{ required: true, message: t('organization.member.selectUserEmptyTip') }]"
-        >
-          <MsSelect
-            v-model:model-value="form.userRoleIds"
-            :options="props.userGroupOptions"
-            :allow-search="true"
-            allow-clear
-            :search-keys="['name']"
-            value-key="id"
-            label-key="name"
-            class="w-full"
-            :multiple="true"
-            :placeholder="t('organization.member.selectUserScope')"
-          />
-        </a-form-item>
       </a-form>
     </div>
     <template #footer>
@@ -75,7 +56,6 @@
   import { ref, watch, watchEffect } from 'vue';
   import { FormInstance, Message, ValidatedError } from '@arco-design/web-vue';
 
-  import MsSelect from '@/components/business/ms-select';
   import MsUserSelector from '@/components/business/ms-user-selector/index.vue';
   import { UserRequestTypeEnum } from '@/components/business/ms-user-selector/utils';
 
@@ -83,14 +63,13 @@
   import { useI18n } from '@/hooks/useI18n';
   import { useAppStore } from '@/store';
 
-  import type { LinkList, MemberItem } from '@/models/setting/member';
+  import type { MemberItem } from '@/models/setting/member';
 
   const { t } = useI18n();
   const appStore = useAppStore();
   const lastOrganizationId = computed(() => appStore.currentOrgId);
   const props = defineProps<{
     visible: boolean;
-    userGroupOptions: LinkList;
   }>();
   const dialogVisible = ref<boolean>(false);
   const title = ref<string>('');

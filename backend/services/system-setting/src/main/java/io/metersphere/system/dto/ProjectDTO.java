@@ -14,6 +14,10 @@ import java.util.List;
 public class ProjectDTO extends Project implements Serializable {
     @Schema(description =  "项目成员数量", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private Long memberCount;
+    @Schema(description = "成员姓名预览")
+    private List<String> memberPreview;
+    @Schema(description = "是否可添加项目成员")
+    private Boolean canAddMember;
     @Schema(description = "所属组织", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String organizationName;
     @Schema(description = "管理员", requiredMode = Schema.RequiredMode.NOT_REQUIRED)

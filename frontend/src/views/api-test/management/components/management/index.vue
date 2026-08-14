@@ -83,6 +83,18 @@
       @handle-adv-search="(val) => emit('handleAdvSearch', val)"
     />
   </keep-alive>
+  <doc
+    v-if="activeApiTab.id === 'all' && currentTab === 'doc'"
+    :active-module="props.activeModule"
+    :offspring-ids="props.offspringIds"
+    :selected-protocols="props.selectedProtocols"
+    @open="
+      (record) => {
+        currentTab = 'api';
+        openDocDefinition(record);
+      }
+    "
+  />
 </template>
 
 <script setup lang="ts">
@@ -94,6 +106,7 @@
   import MsEnvironmentSelect from '@/components/business/ms-environment-select/index.vue';
   import api from './api/index.vue';
   import apiCase from './case/index.vue';
+  import doc from './doc.vue';
   import apiMethodName from '@/views/api-test/components/apiMethodName.vue';
   import { RequestParam } from '@/views/api-test/components/requestComposition/index.vue';
 
@@ -106,7 +119,7 @@
   import { hasAnyPermission } from '@/utils/permission';
 
   import { ProtocolItem } from '@/models/apiTest/common';
-  import { ApiCaseDetail } from '@/models/apiTest/management';
+  import { ApiCaseDetail, ApiDefinitionDetail } from '@/models/apiTest/management';
   import { MockDetail } from '@/models/apiTest/mock';
   import { ModuleTreeNode } from '@/models/common';
   import {
@@ -146,6 +159,9 @@
     { label: 'API', value: 'api' },
     ...(hasAnyPermission(['PROJECT_API_DEFINITION_CASE:READ']) ? [{ label: 'CASE', value: 'case' }] : []),
     ...(hasAnyPermission(['PROJECT_API_DEFINITION_MOCK:READ']) ? [{ label: 'MOCK', value: 'mock' }] : []),
+    ...(hasAnyPermission(['PROJECT_API_DEFINITION_DOC:READ'])
+      ? [{ label: t('apiTestManagement.doc'), value: 'doc' }]
+      : []),
   ];
 
   const apiRef = ref<InstanceType<typeof api>>();
@@ -165,6 +181,10 @@
 
   function newCaseTab(id: string) {
     caseRef.value?.openCaseTab(id);
+  }
+
+  function openDocDefinition(record: ApiDefinitionDetail) {
+    apiRef.value?.openApiTab({ apiInfo: record });
   }
 
   const apiTabs = ref<RequestParam[]>([

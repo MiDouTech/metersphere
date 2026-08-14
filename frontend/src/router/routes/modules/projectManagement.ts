@@ -6,7 +6,7 @@ import type { AppRouteRecordRaw } from '../types';
 const ProjectManagement: AppRouteRecordRaw = {
   path: '/project-management',
   name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT,
-  redirect: '/project-management/permission',
+  redirect: '/project-management/projects',
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.projectManagement',
@@ -14,28 +14,21 @@ const ProjectManagement: AppRouteRecordRaw = {
     icon: 'icon-icon_project-settings-filled',
     order: 1,
     hideChildrenInMenu: true,
-    roles: [
-      'PROJECT_BASE_INFO:READ',
-      'PROJECT_TEMPLATE:READ',
-      'PROJECT_FILE_MANAGEMENT:READ',
-      'PROJECT_MESSAGE:READ',
-      'PROJECT_CUSTOM_FUNCTION:READ',
-      'PROJECT_LOG:READ',
-      'PROJECT_ENVIRONMENT:READ',
-      // 菜单管理
-      'PROJECT_APPLICATION_WORKSTATION:READ',
-      'PROJECT_APPLICATION_TEST_PLAN:READ',
-      'PROJECT_APPLICATION_BUG:READ',
-      'PROJECT_APPLICATION_CASE:READ',
-      'PROJECT_APPLICATION_API:READ',
-      'PROJECT_APPLICATION_UI:READ',
-      'PROJECT_APPLICATION_PERFORMANCE_TEST:READ',
-      // 菜单管理
-      'PROJECT_USER:READ',
-      'PROJECT_GROUP:READ',
-    ],
+    roles: [],
   },
   children: [
+    {
+      path: 'projects',
+      name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PROJECTS,
+      component: () => import('@/views/project-management/projectList/index.vue'),
+      meta: {
+        locale: 'menu.projectManagement.projectList',
+        roles: [],
+        resourceCode: 'PROJECT_LIST_PAGE',
+        isTopMenu: true,
+        keepModuleAlive: true,
+      },
+    },
     // 项目与权限
     {
       path: 'permission',
@@ -56,7 +49,6 @@ const ProjectManagement: AppRouteRecordRaw = {
           'PROJECT_APPLICATION_PERFORMANCE_TEST:READ',
           // 菜单管理
           'PROJECT_USER:READ',
-          'PROJECT_GROUP:READ',
         ],
         isTopMenu: true,
       },
@@ -109,16 +101,6 @@ const ProjectManagement: AppRouteRecordRaw = {
             locale: 'project.permission.member',
             roles: ['PROJECT_USER:READ'],
             resourceCode: 'PROJECT_DETAIL_MEMBER_TAB',
-          },
-        },
-        // 用户组
-        {
-          path: 'projectUserGroup',
-          name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PERMISSION_USER_GROUP,
-          component: () => import('@/views/project-management/projectAndPermission/userGroup/projectUserGroup.vue'),
-          meta: {
-            locale: 'project.permission.userGroup',
-            roles: ['PROJECT_GROUP:READ'],
           },
         },
       ],

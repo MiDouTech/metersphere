@@ -132,6 +132,17 @@
                 and (name like concat('%', #{keyword}, '%')
                 or user_id like concat('%', #{keyword}, '%'))
             </if>
+            <if test="status != null and status != ''">
+                <choose>
+                    <when test="status == 'EXPIRED'">
+                        and expire_time is not null and expire_time &lt; #{now}
+                    </when>
+                    <otherwise>
+                        and status = #{status}
+                        and (expire_time is null or expire_time &gt;= #{now})
+                    </otherwise>
+                </choose>
+            </if>
         </where>
         order by create_time desc
         limit #{offset}, #{pageSize}
@@ -144,6 +155,17 @@
             <if test="keyword != null and keyword != ''">
                 and (name like concat('%', #{keyword}, '%')
                 or user_id like concat('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null and status != ''">
+                <choose>
+                    <when test="status == 'EXPIRED'">
+                        and expire_time is not null and expire_time &lt; #{now}
+                    </when>
+                    <otherwise>
+                        and status = #{status}
+                        and (expire_time is null or expire_time &gt;= #{now})
+                    </otherwise>
+                </choose>
             </if>
         </where>
     </select>

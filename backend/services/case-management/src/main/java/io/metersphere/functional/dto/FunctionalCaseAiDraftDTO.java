@@ -50,10 +50,6 @@ public class FunctionalCaseAiDraftDTO {
     private String reviewComment;
     private String reviewedBy;
     private Long reviewedAt;
-    @Schema(description = "CREATE/UPDATE/DEPRECATE")
-    private String publishMode;
-    private String targetCaseId;
-    private String baselineSnapshot;
     private String contentHash;
     private String reviewedContentHash;
     @Schema(description = "Official functional case ID")

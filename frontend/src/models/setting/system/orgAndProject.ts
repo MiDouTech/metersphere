@@ -59,6 +59,9 @@ export interface OrgProjectTableItem {
   updateTime: number;
   createTime: number;
   memberCount: number;
+  memberPreview?: string[];
+  canAddMember?: boolean;
+  createUser?: string;
   userIds: string[];
   resourcePoolIds: string[];
   orgAdmins: Record<string, any>;

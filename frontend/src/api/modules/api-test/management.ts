@@ -37,6 +37,7 @@ import {
   DebugCaseUrl,
   DebugDefinitionUrl,
   DebugFileCopyUrl,
+  DefinitionDocPageUrl,
   DefinitionFileCopyUrl,
   DefinitionMockPageUrl,
   DefinitionPageUrl,
@@ -229,6 +230,10 @@ export function deleteModule(id: string) {
 // 获取接口定义列表
 export function getDefinitionPage(data: ApiDefinitionPageParams) {
   return MSR.post<CommonList<ApiDefinitionDetail>>({ url: DefinitionPageUrl, data });
+}
+
+export function getDefinitionDocPage(data: ApiDefinitionPageParams) {
+  return MSR.post<CommonList<ApiDefinitionDetail>>({ url: DefinitionDocPageUrl, data });
 }
 
 // 添加接口定义

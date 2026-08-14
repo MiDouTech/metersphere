@@ -3,6 +3,7 @@ package io.metersphere.project.controller;
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.dto.ProjectRequest;
 import io.metersphere.project.request.ProjectSwitchRequest;
+import io.metersphere.project.request.ProjectPageRequest;
 import io.metersphere.project.service.ProjectLogService;
 import io.metersphere.project.service.ProjectService;
 import io.metersphere.sdk.constants.PermissionConstants;
@@ -13,6 +14,8 @@ import io.metersphere.system.dto.user.UserExtendDTO;
 import io.metersphere.system.log.annotation.Log;
 import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.security.CheckOwner;
+import io.metersphere.system.utils.PageUtils;
+import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
 import io.metersphere.validation.groups.Updated;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +27,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 
 @RestController
 @Tag(name = "项目管理")
@@ -47,6 +52,20 @@ public class ProjectController {
         return projectService.getUserProject(organizationId, SessionUtils.getUserId());
     }
 
+    @PostMapping("/page")
+    @Operation(summary = "项目管理-当前用户可访问项目分页列表")
+    public Pager<List<ProjectDTO>> pageUserProject(@Validated @RequestBody ProjectPageRequest request) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
+        return PageUtils.setPageInfo(page, projectService.pageUserProject(request, SessionUtils.getUserId()));
+    }
+
+    @PostMapping("/case-asset/page")
+    @Operation(summary = "测试资产-具备用例读取权限的可访问项目分页列表")
+    public Pager<List<ProjectDTO>> pageCaseAssetProject(@Validated @RequestBody ProjectPageRequest request) {
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
+        return PageUtils.setPageInfo(page, projectService.pageCaseAssetProject(request, SessionUtils.getUserId()));
+    }
+
     @GetMapping("/list/options/{organizationId}/{module}")
     @Operation(summary = "根据组织ID获取所有开启某个模块的所有有权限的项目")
     @CheckOwner(resourceId = "#organizationId", resourceType = "organization")
@@ -58,8 +77,10 @@ public class ProjectController {
     @Operation(summary = "切换项目")
     // 切换目标项目权限由 CheckOwner 校验；勿用当前 PROJECT 请求头上的 PROJECT_BASE_INFO:READ，
     // 否则从系统设置新建项目后进入新项目会因「当前上下文无项目权限」失败。
-    @CheckOwner(resourceId = "#request.projectId", resourceType = "project")
     public UserDTO switchProject(@RequestBody ProjectSwitchRequest request) {
+        if (!projectService.canAccessProject(request.getProjectId(), SessionUtils.getUserId())) {
+            throw new io.metersphere.sdk.exception.MSException("无权进入该项目");
+        }
         return projectService.switchProject(request, SessionUtils.getUserId());
     }
 

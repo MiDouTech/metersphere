@@ -55,6 +55,7 @@ class AiCaseAgentOrchestratorTests {
         AiCaseConversationService conversationService = mock(AiCaseConversationService.class);
         AiCaseAvailableResourceService resourceService = mock(AiCaseAvailableResourceService.class);
         AiGovernanceService governanceService = mock(AiGovernanceService.class);
+        AiCaseDocumentContextService documentContextService = mock(AiCaseDocumentContextService.class);
         PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
         when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
         doAnswer(invocation -> {
@@ -68,6 +69,8 @@ class AiCaseAgentOrchestratorTests {
         when(resourceService.requireAllowed("project-1", "MODEL_API", "model-1", "model-1", "user-1"))
                 .thenReturn(availableResource);
         when(repository.lockConversation("conversation-1", "project-1", "user-1")).thenReturn(true);
+        when(documentContextService.resolve(eq("project-1"), any()))
+                .thenReturn(new AiCaseDocumentContextService.ResolvedContext(List.of(), ""));
         when(repository.listMessages("conversation-1", "project-1", "user-1", null, null, 30))
                 .thenReturn(List.of());
         AtomicLong sequence = new AtomicLong();
@@ -88,6 +91,7 @@ class AiCaseAgentOrchestratorTests {
         ReflectionTestUtils.setField(orchestrator, "providerAdapter", providerAdapter);
         ReflectionTestUtils.setField(orchestrator, "userAgentConnector", userAgentConnector);
         ReflectionTestUtils.setField(orchestrator, "governanceService", governanceService);
+        ReflectionTestUtils.setField(orchestrator, "documentContextService", documentContextService);
         ReflectionTestUtils.setField(orchestrator, "transactionManager", transactionManager);
     }
 
@@ -147,12 +151,12 @@ class AiCaseAgentOrchestratorTests {
     void rejectsToolCallThatArrivesAfterCancellation() throws Exception {
         Class<?> activeClass = Class.forName(AiCaseAgentOrchestrator.class.getName() + "$ActiveExecution");
         Constructor<?> constructor = activeClass.getDeclaredConstructor(String.class, String.class, String.class,
-                String.class, AiResourceSelection.class, String.class);
+                String.class, AiResourceSelection.class, String.class, List.class, boolean.class);
         constructor.setAccessible(true);
         AiResourceSelection selection = new AiResourceSelection(
                 "USER_AGENT", "connection-1", null, "connection-1", "CODEX", true);
         Object active = constructor.newInstance(
-                "request-1", "project-1", "user-1", "conversation-1", selection, "prompt");
+                "request-1", "project-1", "user-1", "conversation-1", selection, "prompt", List.of(), true);
         AtomicBoolean cancelRequested = (AtomicBoolean) ReflectionTestUtils.getField(active, "cancelRequested");
         cancelRequested.set(true);
         AgentStreamEvent event = new AgentStreamEvent("tool.call", "request-1", 3,

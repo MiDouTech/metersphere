@@ -29,7 +29,6 @@ const Setting: AppRouteRecordRaw = {
       'SYSTEM_CASE_TASK_CENTER:READ',
       'SYSTEM_SCHEDULE_TASK_CENTER:READ',
       'ORGANIZATION_MEMBER:READ',
-      'ORGANIZATION_USER_ROLE:READ',
       'ORGANIZATION_PROJECT:READ',
       'SYSTEM_SERVICE_INTEGRATION:READ',
       'ORGANIZATION_TEMPLATE:READ',
@@ -72,16 +71,6 @@ const Setting: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.settings.system.user',
             roles: ['SYSTEM_USER:READ'],
-            isTopMenu: true,
-          },
-        },
-        {
-          path: 'usergroup',
-          name: SettingRouteEnum.SETTING_SYSTEM_USER_GROUP,
-          component: () => import('@/views/setting/system/usergroup/systemUserGroup.vue'),
-          meta: {
-            locale: 'menu.settings.system.usergroup',
-            roles: ['SYSTEM_USER_ROLE:READ'],
             isTopMenu: true,
           },
         },
@@ -204,16 +193,6 @@ const Setting: AppRouteRecordRaw = {
             isTopMenu: true,
           },
         },
-        {
-          path: 'agent-integration',
-          name: SettingRouteEnum.SETTING_SYSTEM_AGENT_INTEGRATION,
-          component: () => import('@/views/setting/system/agentIntegration/index.vue'),
-          meta: {
-            locale: 'menu.settings.system.agentIntegration',
-            roles: ['SYSTEM_USER:READ'],
-            isTopMenu: true,
-          },
-        },
       ],
     },
     {
@@ -225,7 +204,6 @@ const Setting: AppRouteRecordRaw = {
         locale: 'menu.settings.organization',
         roles: [
           'ORGANIZATION_MEMBER:READ',
-          'ORGANIZATION_USER_ROLE:READ',
           'ORGANIZATION_PROJECT:READ',
           'SYSTEM_SERVICE_INTEGRATION:READ',
           'ORGANIZATION_TEMPLATE:READ',
@@ -253,16 +231,6 @@ const Setting: AppRouteRecordRaw = {
           meta: {
             locale: 'menu.settings.organization.orgStructure',
             roles: ['ORGANIZATION_MEMBER:READ'],
-            isTopMenu: true,
-          },
-        },
-        {
-          path: 'usergroup',
-          name: SettingRouteEnum.SETTING_ORGANIZATION_USER_GROUP,
-          component: () => import('@/views/setting/organization/usergroup/orgUserGroup.vue'),
-          meta: {
-            locale: 'menu.settings.organization.userGroup',
-            roles: ['ORGANIZATION_USER_ROLE:READ'],
             isTopMenu: true,
           },
         },

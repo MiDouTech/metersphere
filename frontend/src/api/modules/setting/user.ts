@@ -38,7 +38,7 @@ import type {
   UserListItem,
 } from '@/models/setting/user';
 
-import { Result } from '#/axios';
+import type { RequestOptions, Result } from '#/axios';
 
 // 获取用户列表
 export function getUserList(data: TableQueryParams) {
@@ -46,13 +46,13 @@ export function getUserList(data: TableQueryParams) {
 }
 
 // 批量创建用户
-export function batchCreateUser(data: CreateUserParams) {
-  return MSR.post<CreateUserResult>({ url: CreateUserUrl, data });
+export function batchCreateUser(data: CreateUserParams, options?: RequestOptions) {
+  return MSR.post<CreateUserResult>({ url: CreateUserUrl, data }, options);
 }
 
 // 更新用户信息
-export function updateUserInfo(data: UpdateUserInfoParams) {
-  return MSR.post({ url: UpdateUserUrl, data });
+export function updateUserInfo(data: UpdateUserInfoParams, options?: RequestOptions) {
+  return MSR.post({ url: UpdateUserUrl, data }, options);
 }
 
 // 更新用户启用/禁用状态

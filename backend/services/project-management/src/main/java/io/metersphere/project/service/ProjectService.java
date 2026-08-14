@@ -8,7 +8,9 @@ import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.project.mapper.ProjectTestResourcePoolMapper;
 import io.metersphere.project.mapper.ProjectVersionMapper;
 import io.metersphere.project.request.ProjectSwitchRequest;
+import io.metersphere.project.request.ProjectPageRequest;
 import io.metersphere.sdk.constants.InternalUserRole;
+import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.BeanUtils;
 import io.metersphere.sdk.util.CommonBeanFactory;
@@ -105,6 +107,39 @@ public class ProjectService {
                     return temp;
                 })
                 .orElse(allProject);
+    }
+
+    public List<ProjectDTO> pageUserProject(ProjectPageRequest request, String userId) {
+        List<ProjectDTO> projects = commonProjectService.buildUserInfo(
+                extProjectMapper.pageUserProject(request, userId, canViewAllProjects(userId)));
+        projects.forEach(project -> project.setCanAddMember(SessionUtils.hasPermission(
+                null, project.getId(), PermissionConstants.PROJECT_USER_ADD)));
+        return projects;
+    }
+
+    /**
+     * Returns only projects that are both accessible to the current user and grant functional-case read.
+     * The intersection is evaluated in SQL so PageHelper totals and pages cannot include unauthorized projects.
+     */
+    public List<ProjectDTO> pageCaseAssetProject(ProjectPageRequest request, String userId) {
+        return commonProjectService.buildUserInfo(extProjectMapper.pageCaseAssetProject(
+                request, userId, isSystemAdmin(userId), PermissionConstants.FUNCTIONAL_CASE_READ));
+    }
+
+    private boolean canViewAllProjects(String userId) {
+        return isSystemAdmin(userId)
+                || SessionUtils.hasPermission(null, null, PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_READ);
+    }
+
+    private boolean isSystemAdmin(String userId) {
+        UserRoleRelationExample example = new UserRoleRelationExample();
+        example.createCriteria().andUserIdEqualTo(userId).andRoleIdEqualTo(InternalUserRole.ADMIN.getValue());
+        return userRoleRelationMapper.countByExample(example) > 0;
+    }
+
+    public boolean canAccessProject(String projectId, String userId) {
+        return extProjectMapper.projectIsActive(projectId)
+                && (canViewAllProjects(userId) || extProjectMapper.userHasProjectRelation(projectId, userId));
     }
 
     private void checkOrg(String organizationId) {

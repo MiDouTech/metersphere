@@ -28,8 +28,167 @@
         ORDER BY version_no DESC LIMIT 1
     </select>
 
+    <select id="selectVersionById" resultType="io.metersphere.agent.dto.TestAssetVersionDTO">
+        SELECT id, project_id AS projectId, asset_type AS assetType, asset_id AS assetId,
+               version_no AS versionNo, source_version AS sourceVersion, content_hash AS contentHash,
+               content_snapshot AS contentSnapshot, status, created_by AS createdBy, created_at AS createdAt,
+               published_by AS publishedBy, published_at AS publishedAt
+        FROM test_asset_version WHERE id = #{id}
+    </select>
+
+    <sql id="CatalogUnion">
+        SELECT COALESCE(NULLIF(f.ref_id, ''), f.id) AS id, f.project_id, 'DATASET' AS asset_type,
+               f.name, COALESCE(f.type, 'FILE') AS category,
+               CASE WHEN f.enable = 0 THEN 'DISABLED' ELSE 'ACTIVE' END AS status,
+               f.description AS summary, COALESCE(f.update_user, f.create_user) AS owner,
+               COALESCE(f.update_time, f.create_time) AS update_time, f.file_version AS source_version,
+               NULL AS related_id
+        FROM file_metadata f
+        WHERE f.project_id = #{projectId} AND f.latest = 1
+          AND UPPER(COALESCE(f.type, '')) IN ('CSV', 'JSON', 'XLS', 'XLSX')
+        UNION ALL
+        SELECT e.id, e.project_id, 'ENVIRONMENT', e.name,
+               CASE WHEN e.mock = 1 THEN 'MOCK' ELSE 'TEST' END, 'ACTIVE', e.description,
+               COALESCE(e.update_user, e.create_user), COALESCE(e.update_time, e.create_time),
+               CAST(COALESCE(e.update_time, e.create_time) AS CHAR), NULL
+        FROM environment e WHERE e.project_id = #{projectId}
+        UNION ALL
+        SELECT c.id, c.project_id, 'COMMON_STEP', c.name, COALESCE(c.type, 'SCRIPT'),
+               COALESCE(c.status, 'DRAFT'), c.description, COALESCE(c.update_user, c.create_user),
+               COALESCE(c.update_time, c.create_time), CAST(COALESCE(c.update_time, c.create_time) AS CHAR), NULL
+        FROM custom_function c WHERE c.project_id = #{projectId}
+        UNION ALL
+        SELECT COALESCE(NULLIF(a.ref_id, ''), a.id), a.project_id, 'API_DEFINITION', a.name,
+               CONCAT(COALESCE(a.protocol, ''), '/', COALESCE(a.method, '')), COALESCE(a.status, 'ACTIVE'),
+               CONCAT(COALESCE(a.method, ''), ' ', COALESCE(a.path, '')), COALESCE(a.update_user, a.create_user),
+               COALESCE(a.update_time, a.create_time), a.version_id, NULL
+        FROM api_definition a WHERE a.project_id = #{projectId} AND a.latest = 1 AND a.deleted = 0
+        UNION ALL
+        SELECT ar.id, t.project_id, 'EVIDENCE', ar.file_name, ar.purpose, ar.status,
+               CONCAT('task=', ar.task_id, '; sha256=', COALESCE(ar.sha256, '')), ar.create_user,
+               ar.create_time, ar.sha256, ar.task_id
+        FROM ai_execution_artifact ar JOIN ai_execution_task t ON t.id = ar.task_id
+        WHERE t.project_id = #{projectId}
+        UNION ALL
+        SELECT b.id, b.project_id, 'BUG', b.title, COALESCE(b.platform, 'LOCAL'), b.status,
+               CONCAT('BUG-', COALESCE(b.num, '')), COALESCE(b.update_user, b.create_user),
+               COALESCE(b.update_time, b.create_time), CAST(COALESCE(b.update_time, b.create_time) AS CHAR), NULL
+        FROM bug b WHERE b.project_id = #{projectId} AND b.deleted = 0
+    </sql>
+
+    <sql id="CatalogWhere">
+        WHERE catalog.asset_type = #{assetType}
+        <if test="status != null and status != ''">AND catalog.status = #{status}</if>
+        <if test="keyword != null and keyword != ''">
+            AND (LOWER(catalog.id) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(catalog.name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(COALESCE(catalog.summary, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))
+        </if>
+    </sql>
+
+    <select id="selectCatalog" resultType="io.metersphere.agent.dto.TestAssetCatalogItemDTO">
+        SELECT catalog.id, catalog.project_id AS projectId, catalog.asset_type AS assetType,
+               catalog.name, catalog.category, catalog.status, catalog.summary, catalog.owner,
+               catalog.update_time AS updateTime, catalog.source_version AS sourceVersion, catalog.related_id AS relatedId,
+               v.id AS assetVersionId, v.version_no AS assetVersionNo, v.content_hash AS contentHash
+        FROM (<include refid="CatalogUnion"/>) catalog
+        LEFT JOIN test_asset_version v ON v.id = (
+            SELECT iv.id FROM test_asset_version iv
+            WHERE iv.project_id = catalog.project_id AND iv.asset_type = catalog.asset_type AND iv.asset_id = catalog.id
+            ORDER BY iv.version_no DESC LIMIT 1
+        )
+        <include refid="CatalogWhere"/>
+        ORDER BY catalog.update_time DESC, catalog.id
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countCatalog" resultType="long">
+        SELECT COUNT(1) FROM (<include refid="CatalogUnion"/>) catalog
+        <include refid="CatalogWhere"/>
+    </select>
+
+    <select id="selectCatalogItem" resultType="io.metersphere.agent.dto.TestAssetCatalogItemDTO">
+        SELECT catalog.id, catalog.project_id AS projectId, catalog.asset_type AS assetType,
+               catalog.name, catalog.category, catalog.status, catalog.summary, catalog.owner,
+               catalog.update_time AS updateTime, catalog.source_version AS sourceVersion, catalog.related_id AS relatedId,
+               v.id AS assetVersionId, v.version_no AS assetVersionNo, v.content_hash AS contentHash
+        FROM (<include refid="CatalogUnion"/>) catalog
+        LEFT JOIN test_asset_version v ON v.id = (
+            SELECT iv.id FROM test_asset_version iv
+            WHERE iv.project_id = catalog.project_id AND iv.asset_type = catalog.asset_type AND iv.asset_id = catalog.id
+            ORDER BY iv.version_no DESC LIMIT 1
+        )
+        WHERE catalog.asset_type = #{assetType} AND catalog.id = #{assetId}
+        LIMIT 1
+    </select>
+
+    <select id="selectExecutableSnapshot" resultType="io.metersphere.agent.dto.TestAssetExecutableSnapshotDTO">
+        <choose>
+            <when test="assetType == 'DATASET'">
+                SELECT f.id AS fileId, COALESCE(NULLIF(f.original_name, ''), f.name) AS fileName,
+                       f.type AS fileType, f.size AS fileSize, f.storage, f.path AS filePath,
+                       f.module_id AS moduleId, CAST(f.tags AS CHAR) AS tagsJson
+                FROM file_metadata f
+                WHERE f.project_id = #{projectId} AND f.latest = 1
+                  AND COALESCE(NULLIF(f.ref_id, ''), f.id) = #{assetId}
+                LIMIT 1
+            </when>
+            <when test="assetType == 'ENVIRONMENT'">
+                SELECT eb.config AS environmentConfig
+                FROM environment e
+                LEFT JOIN environment_blob eb ON eb.id = e.id
+                WHERE e.project_id = #{projectId} AND e.id = #{assetId}
+                LIMIT 1
+            </when>
+            <when test="assetType == 'COMMON_STEP'">
+                SELECT cb.params AS commonParams,
+                       cb.script AS commonScript,
+                       cb.result AS commonResult,
+                       CAST(c.tags AS CHAR) AS tagsJson
+                FROM custom_function c
+                LEFT JOIN custom_function_blob cb ON cb.id = c.id
+                WHERE c.project_id = #{projectId} AND c.id = #{assetId}
+                LIMIT 1
+            </when>
+            <when test="assetType == 'API_DEFINITION'">
+                SELECT a.protocol, a.method AS httpMethod, a.path AS apiPath, a.module_id AS moduleId,
+                       CAST(a.tags AS CHAR) AS tagsJson,
+                       ab.request AS apiRequest, ab.response AS apiResponse
+                FROM api_definition a
+                LEFT JOIN api_definition_blob ab ON ab.id = a.id
+                WHERE a.project_id = #{projectId} AND a.latest = 1 AND a.deleted = 0
+                  AND COALESCE(NULLIF(a.ref_id, ''), a.id) = #{assetId}
+                LIMIT 1
+            </when>
+            <when test="assetType == 'EVIDENCE'">
+                SELECT ar.task_id AS taskId, ar.execution_case_id AS executionCaseId, ar.case_id AS caseId,
+                       ar.step_id AS stepId, ar.purpose, ar.content_type AS contentType,
+                       ar.size_bytes AS sizeBytes, ar.sha256, ar.redacted, ar.retention_until AS retentionUntil,
+                       ar.file_name AS fileName
+                FROM ai_execution_artifact ar
+                JOIN ai_execution_task t ON t.id = ar.task_id
+                WHERE t.project_id = #{projectId} AND ar.id = #{assetId}
+                LIMIT 1
+            </when>
+            <when test="assetType == 'BUG'">
+                SELECT b.num AS bugNumber, bc.description AS bugDescription,
+                       b.handle_user AS handleUser, CAST(b.tags AS CHAR) AS tagsJson
+                FROM bug b
+                LEFT JOIN bug_content bc ON bc.bug_id = b.id
+                WHERE b.project_id = #{projectId} AND b.deleted = 0 AND b.id = #{assetId}
+                LIMIT 1
+            </when>
+            <otherwise>
+                SELECT NULL AS fileId WHERE 1 = 0
+            </otherwise>
+        </choose>
+    </select>
+
     <sql id="AssetNameExpression">
-        COALESCE(d.original_name, fc.name, task.name, v.asset_id)
+        COALESCE(d.original_name, fc.name, task.name,
+                 CONCAT('Step ', step_asset.pos, ': ', LEFT(step_asset.instruction, 120)),
+                 dataset.name, env.name, common_step.name,
+                 api_asset.name, evidence.file_name, bug_asset.title, v.asset_id)
     </sql>
 
     <sql id="DocumentWhere">
@@ -75,15 +234,40 @@
               AND fc.latest = 1 AND fc.deleted = 0
         LEFT JOIN ai_execution_task task
                ON v.asset_type = 'TASK' AND task.id = v.asset_id AND task.project_id = v.project_id
+        LEFT JOIN ai_execution_step step_asset
+               ON v.asset_type = 'STEP' AND step_asset.id = v.asset_id
+              AND EXISTS (SELECT 1 FROM ai_execution_task step_task
+                          WHERE step_task.id = step_asset.task_id AND step_task.project_id = v.project_id)
+        LEFT JOIN file_metadata dataset
+               ON v.asset_type = 'DATASET' AND COALESCE(NULLIF(dataset.ref_id, ''), dataset.id) = v.asset_id
+              AND dataset.project_id = v.project_id AND dataset.latest = 1
+        LEFT JOIN environment env
+               ON v.asset_type = 'ENVIRONMENT' AND env.id = v.asset_id AND env.project_id = v.project_id
+        LEFT JOIN custom_function common_step
+               ON v.asset_type = 'COMMON_STEP' AND common_step.id = v.asset_id AND common_step.project_id = v.project_id
+        LEFT JOIN api_definition api_asset
+               ON v.asset_type = 'API_DEFINITION' AND COALESCE(NULLIF(api_asset.ref_id, ''), api_asset.id) = v.asset_id
+              AND api_asset.project_id = v.project_id AND api_asset.latest = 1 AND api_asset.deleted = 0
+        LEFT JOIN ai_execution_artifact evidence
+               ON v.asset_type = 'EVIDENCE' AND evidence.id = v.asset_id
+        LEFT JOIN bug bug_asset
+               ON v.asset_type = 'BUG' AND bug_asset.id = v.asset_id AND bug_asset.project_id = v.project_id
     </sql>
 
     <sql id="VersionWhere">
         WHERE v.project_id = #{projectId}
+        AND v.asset_type IN
+        <foreach collection="allowedTypes" item="allowedType" open="(" close=")" separator=",">
+            #{allowedType}
+        </foreach>
         <if test="assetType != null and assetType != ''">AND v.asset_type = #{assetType}</if>
         <if test="assetId != null and assetId != ''">AND v.asset_id = #{assetId}</if>
         <if test="keyword != null and keyword != ''">
             AND (LOWER(v.asset_id) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                 OR LOWER(COALESCE(d.original_name, fc.name, task.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))
+                 OR LOWER(COALESCE(d.original_name, fc.name, task.name,
+                    CONCAT('Step ', step_asset.pos, ': ', LEFT(step_asset.instruction, 120)), dataset.name, env.name,
+                    common_step.name, api_asset.name, evidence.file_name, bug_asset.title, ''))
+                    LIKE CONCAT('%', LOWER(#{keyword}), '%'))
         </if>
     </sql>
 
@@ -107,6 +291,14 @@
 
     <sql id="RelationWhere">
         WHERE r.project_id = #{projectId}
+        AND r.source_asset_type IN
+        <foreach collection="allowedTypes" item="allowedType" open="(" close=")" separator=",">
+            #{allowedType}
+        </foreach>
+        AND r.target_asset_type IN
+        <foreach collection="allowedTypes" item="allowedType" open="(" close=")" separator=",">
+            #{allowedType}
+        </foreach>
         <if test="assetType != null and assetType != ''">
             AND (r.source_asset_type = #{assetType} OR r.target_asset_type = #{assetType})
         </if>
@@ -117,18 +309,28 @@
         <if test="keyword != null and keyword != ''">
             AND (LOWER(r.source_asset_id) LIKE CONCAT('%', LOWER(#{keyword}), '%')
                  OR LOWER(r.target_asset_id) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                 OR LOWER(COALESCE(sd.original_name, sfc.name, st.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')
-                 OR LOWER(COALESCE(td.original_name, tfc.name, tt.name, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))
+                 OR LOWER(COALESCE(sd.original_name, sfc.name, st.name,
+                    CONCAT('Step ', ss.pos, ': ', LEFT(ss.instruction, 120)),
+                    CASE WHEN JSON_VALID(sv.content_snapshot) THEN JSON_UNQUOTE(JSON_EXTRACT(sv.content_snapshot, '$.name')) END, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                 OR LOWER(COALESCE(td.original_name, tfc.name, tt.name,
+                    CONCAT('Step ', ts.pos, ': ', LEFT(ts.instruction, 120)),
+                    CASE WHEN JSON_VALID(tv.content_snapshot) THEN JSON_UNQUOTE(JSON_EXTRACT(tv.content_snapshot, '$.name')) END, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))
         </if>
     </sql>
 
     <select id="selectRelations" resultType="io.metersphere.agent.dto.TestAssetRelationDTO">
         SELECT r.id, r.project_id AS projectId, r.relation_type AS relationType,
                r.source_asset_type AS sourceAssetType, r.source_asset_id AS sourceAssetId,
-               COALESCE(sd.original_name, sfc.name, st.name, r.source_asset_id) AS sourceAssetName,
+               COALESCE(sd.original_name, sfc.name, st.name,
+                        CONCAT('Step ', ss.pos, ': ', LEFT(ss.instruction, 120)),
+                        CASE WHEN JSON_VALID(sv.content_snapshot) THEN JSON_UNQUOTE(JSON_EXTRACT(sv.content_snapshot, '$.name')) END,
+                        r.source_asset_id) AS sourceAssetName,
                r.source_version_id AS sourceVersionId, sv.version_no AS sourceVersionNo,
                r.target_asset_type AS targetAssetType, r.target_asset_id AS targetAssetId,
-               COALESCE(td.original_name, tfc.name, tt.name, r.target_asset_id) AS targetAssetName,
+               COALESCE(td.original_name, tfc.name, tt.name,
+                        CONCAT('Step ', ts.pos, ': ', LEFT(ts.instruction, 120)),
+                        CASE WHEN JSON_VALID(tv.content_snapshot) THEN JSON_UNQUOTE(JSON_EXTRACT(tv.content_snapshot, '$.name')) END,
+                        r.target_asset_id) AS targetAssetName,
                r.target_version_id AS targetVersionId, tv.version_no AS targetVersionNo,
                r.metadata, r.created_by AS createdBy, r.created_at AS createdAt
         FROM test_asset_relation r
@@ -137,9 +339,11 @@
         LEFT JOIN ai_source_document sd ON r.source_asset_type = 'DOCUMENT' AND sd.id = r.source_asset_id
         LEFT JOIN functional_case sfc ON r.source_asset_type = 'CASE' AND sfc.ref_id = r.source_asset_id AND sfc.latest = 1 AND sfc.deleted = 0
         LEFT JOIN ai_execution_task st ON r.source_asset_type = 'TASK' AND st.id = r.source_asset_id
+        LEFT JOIN ai_execution_step ss ON r.source_asset_type = 'STEP' AND ss.id = r.source_asset_id
         LEFT JOIN ai_source_document td ON r.target_asset_type = 'DOCUMENT' AND td.id = r.target_asset_id
         LEFT JOIN functional_case tfc ON r.target_asset_type = 'CASE' AND tfc.ref_id = r.target_asset_id AND tfc.latest = 1 AND tfc.deleted = 0
         LEFT JOIN ai_execution_task tt ON r.target_asset_type = 'TASK' AND tt.id = r.target_asset_id
+        LEFT JOIN ai_execution_step ts ON r.target_asset_type = 'STEP' AND ts.id = r.target_asset_id
         <include refid="RelationWhere"/>
         ORDER BY r.created_at DESC
         LIMIT #{offset}, #{pageSize}
@@ -148,12 +352,16 @@
     <select id="countRelations" resultType="long">
         SELECT COUNT(DISTINCT r.id)
         FROM test_asset_relation r
+        LEFT JOIN test_asset_version sv ON sv.id = r.source_version_id
+        LEFT JOIN test_asset_version tv ON tv.id = r.target_version_id
         LEFT JOIN ai_source_document sd ON r.source_asset_type = 'DOCUMENT' AND sd.id = r.source_asset_id
         LEFT JOIN functional_case sfc ON r.source_asset_type = 'CASE' AND sfc.ref_id = r.source_asset_id AND sfc.latest = 1 AND sfc.deleted = 0
         LEFT JOIN ai_execution_task st ON r.source_asset_type = 'TASK' AND st.id = r.source_asset_id
+        LEFT JOIN ai_execution_step ss ON r.source_asset_type = 'STEP' AND ss.id = r.source_asset_id
         LEFT JOIN ai_source_document td ON r.target_asset_type = 'DOCUMENT' AND td.id = r.target_asset_id
         LEFT JOIN functional_case tfc ON r.target_asset_type = 'CASE' AND tfc.ref_id = r.target_asset_id AND tfc.latest = 1 AND tfc.deleted = 0
         LEFT JOIN ai_execution_task tt ON r.target_asset_type = 'TASK' AND tt.id = r.target_asset_id
+        LEFT JOIN ai_execution_step ts ON r.target_asset_type = 'STEP' AND ts.id = r.target_asset_id
         <include refid="RelationWhere"/>
     </select>
 

@@ -33,6 +33,8 @@ public class AgentExecutionCreateRequest {
     private String approvalPolicy;
     @Schema(description = "执行器必须具备的能力编码")
     private List<String> requiredCapabilities;
+    @Schema(description = "显式选择并冻结到任务上下文的测试资产引用")
+    private List<TestAssetRefDTO> assetRefs;
     private String environmentId;
     private String targetUrl;
     private String browserType;

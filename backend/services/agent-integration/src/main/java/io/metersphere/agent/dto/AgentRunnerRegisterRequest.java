@@ -15,6 +15,7 @@ public class AgentRunnerRegisterRequest {
     private String operatingSystem;
     private String browserCapabilities;
     private String environmentLabels;
+    private String isolationMode = "UNDECLARED";
     @Min(1)
     @Max(20)
     private Integer maxConcurrency = 1;

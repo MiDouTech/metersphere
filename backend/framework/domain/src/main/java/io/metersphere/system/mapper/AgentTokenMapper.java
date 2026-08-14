@@ -26,10 +26,14 @@ public interface AgentTokenMapper {
     int deleteByPrimaryKey(@Param("id") String id);
 
     List<AgentToken> selectPage(@Param("keyword") String keyword,
+                              @Param("status") String status,
+                              @Param("now") long now,
                               @Param("offset") long offset,
                               @Param("pageSize") long pageSize);
 
-    long countPage(@Param("keyword") String keyword);
+    long countPage(@Param("keyword") String keyword,
+                   @Param("status") String status,
+                   @Param("now") long now);
 
     List<AgentToken> selectUserPage(@Param("userId") String userId,
                                     @Param("keyword") String keyword,

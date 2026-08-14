@@ -1,0 +1,158 @@
+{
+  "frontendApiExceptions": [],
+  "backendEndpoints": [
+    { "method": "GET", "path": "/functional/case/ai/document/events", "type": "UI", "frontend": ["subscribeAiSourceDocumentEvents"] },
+    { "method": "POST", "path": "/functional/case/ai/document/upload", "type": "UI", "frontend": ["uploadAiSourceDocument"] },
+    { "method": "POST", "path": "/functional/case/ai/document/page", "type": "UI", "frontend": ["pageAiSourceDocument"] },
+    { "method": "GET", "path": "/functional/case/ai/document/{id}", "type": "UI", "frontend": ["getAiSourceDocument"] },
+    { "method": "POST", "path": "/functional/case/ai/document/retry", "type": "UI", "frontend": ["retryAiSourceDocument"] },
+    { "method": "POST", "path": "/functional/case/ai/document/delete", "type": "UI", "frontend": ["deleteAiSourceDocument"] },
+    { "method": "POST", "path": "/functional/case/ai/document/download", "type": "UI", "frontend": ["downloadAiSourceDocument"] },
+    { "method": "POST", "path": "/personal/agent-tokens", "type": "UI", "frontend": ["createAgentToken"] },
+    { "method": "GET", "path": "/personal/agent-tokens", "type": "UI", "frontend": ["getAgentTokenPage"] },
+    { "method": "PATCH", "path": "/personal/agent-tokens/{id}", "type": "UI", "frontend": ["updateAgentToken"] },
+    { "method": "POST", "path": "/personal/agent-tokens/{id}/disable", "type": "UI", "frontend": ["disableAgentToken"] },
+    { "method": "POST", "path": "/personal/agent-tokens/{id}/enable", "type": "UI", "frontend": ["enableAgentToken"] },
+    { "method": "DELETE", "path": "/personal/agent-tokens/{id}", "type": "UI", "frontend": ["deleteAgentToken"] },
+    { "method": "GET", "path": "/admin/agent-tokens", "type": "UI", "frontend": ["getAdminAgentTokenPage"] },
+    { "method": "POST", "path": "/admin/agent-tokens/{id}/revoke", "type": "UI", "frontend": ["revokeAdminAgentToken"] },
+    { "method": "GET", "path": "/admin/agent-tokens/audit/export", "type": "UI", "frontend": ["exportAdminAgentTokenAudit"] },
+    { "method": "GET", "path": "/test-assets/catalog", "type": "UI", "frontend": ["pageTestAssetCatalog"] },
+    { "method": "GET", "path": "/test-assets/catalog/{assetType}/{assetId}", "type": "UI", "frontend": ["getTestAssetCatalogDetail"] },
+    { "method": "GET", "path": "/test-assets/documents", "type": "UI", "frontend": ["pageTestAssetDocuments"] },
+    { "method": "GET", "path": "/test-assets/versions", "type": "UI", "frontend": ["pageTestAssetVersions"] },
+    { "method": "GET", "path": "/test-assets/relations", "type": "UI", "frontend": ["pageTestAssetRelations"] },
+    { "method": "GET", "path": "/ai/agent-bridge/packages", "type": "UI", "frontend": ["listAgentBridgePackages"] },
+    { "method": "POST", "path": "/ai/agent-bridge/packages", "type": "UI", "frontend": ["uploadAgentBridgePackage"] },
+    { "method": "POST", "path": "/ai/agent-bridge/packages/{id}/activate", "type": "UI", "frontend": ["activateAgentBridgePackage"] },
+    { "method": "POST", "path": "/ai/agent-bridge/packages/{id}/deactivate", "type": "UI", "frontend": ["deactivateAgentBridgePackage"] },
+    { "method": "DELETE", "path": "/ai/agent-bridge/packages/{id}", "type": "UI", "frontend": ["deleteAgentBridgePackage"] },
+    { "method": "GET", "path": "/ai/agent-bridge/packages/{id}/download", "type": "UI", "frontend": ["downloadAgentBridgePackageById"] },
+    { "method": "GET", "path": "/ai/agent-bridge/download", "type": "UI", "frontend": ["downloadManagedAgentBridge"] }
+  ],
+  "capabilities": [
+    {
+      "name": "AI generation source document scope",
+      "type": "UI",
+      "backend": ["sourceDocumentIds", "AiCaseDocumentContextService"],
+      "frontend": ["selectedSourceDocumentIds", "sourceDocumentIds:"]
+    },
+    {
+      "name": "AI case publish follow-up actions",
+      "type": "UI",
+      "backend": ["/batch-save", "@PostMapping(\"/associate\")", "create(AgentExecutionCreateRequest"],
+      "frontend": ["associatePublishedCases", "createExecutionFromPublishedCases", "hydrateExplicitCasesFromRoute"]
+    },
+    {
+      "name": "Project AI governance",
+      "type": "UI",
+      "backend": ["@RequestMapping(\"/ai/governance\")", "allowLocalAgentTools"],
+      "frontend": ["getAiProjectGovernance", "AiGovernancePanel"]
+    },
+    {
+      "name": "Personal Agent connection lifecycle",
+      "type": "UI",
+      "backend": ["connections/{id}/impact", "@DeleteMapping(\"/ai/user-agent/connections/{id}\")"],
+      "frontend": ["getUserAgentConnectionImpact", "openConnectionDetail", "deleteUserAgentConnection"]
+    },
+    {
+      "name": "Agent package management and download",
+      "type": "UI",
+      "backend": ["@PostMapping(\"/packages\")", "@GetMapping(\"/download\")"],
+      "frontend": ["uploadAgentBridgePackage", "downloadManagedAgentBridge", "AgentPackagePanel"]
+    },
+    {
+      "name": "Runner registration and isolation declaration",
+      "type": "UI",
+      "backend": ["@PostMapping(\"/register\")", "RUNNER_ISOLATION_MODE_INVALID"],
+      "frontend": ["registerAiRunner", "注册 Runner", "isolationMode"]
+    },
+    {
+      "name": "Execution leases operations view",
+      "type": "UI",
+      "backend": ["@GetMapping(\"/leases\")", "selectLeasesByOrganization"],
+      "frontend": ["getAiExecutionLeases", "queueTab === 'leases'"]
+    },
+    {
+      "name": "Human request response",
+      "type": "UI",
+      "backend": ["human-requests/{requestId}/respond", "AgentHumanRequestService"],
+      "frontend": ["respondAiHumanRequest", "humanRequests"]
+    },
+    {
+      "name": "Manual execution evaluation",
+      "type": "UI",
+      "backend": ["/task/{taskId}/manual", "manualEvaluate"],
+      "frontend": ["manualEvaluateAiExecution", "getAiEvaluationHistory", "evaluationVisible"]
+    },
+    {
+      "name": "Execution trigger management",
+      "type": "UI",
+      "backend": ["AgentTaskTriggerController", "AgentTaskTriggerService"],
+      "frontend": ["createAiTaskTrigger", "listAiTaskTriggers", "fireAiTaskTrigger"]
+    },
+    {
+      "name": "Bridge pairing and provider protocol",
+      "type": "PROTOCOL",
+      "backend": ["/ai/agent-bridge/pairing/consume", "/ai/agent-bridge/authenticate"],
+      "tests": ["outdatedBridgeCannotConsumePairing"]
+    },
+    {
+      "name": "Agent managed execution triggers",
+      "type": "PROTOCOL",
+      "backend": ["metersphere.execution.trigger.create", "metersphere.execution.trigger.fire"],
+      "tests": ["triggerToolsExposeReadAndWriteScopesConsistently"]
+    },
+    {
+      "name": "Signed event trigger",
+      "type": "WEBHOOK",
+      "backend": ["WEBHOOK_SIGNATURE_HEADERS_REQUIRED", "HmacSHA256"],
+      "tests": ["webhookRejectsExpiredRequestBeforeDispatch", "webhookRequiresSignedHeaders"]
+    },
+    {
+      "name": "AI case update and deprecate compatibility fields",
+      "type": "RESERVED",
+      "backend": ["仅支持 CREATE"]
+    },
+    {
+      "name": "Business source document operation lifecycle",
+      "type": "UI",
+      "backend": ["@PostMapping(\"/retry\")", "@PostMapping(\"/delete\")", "@PostMapping(\"/download\")", "markDeletedInProject"],
+      "frontend": ["getAiSourceDocument", "downloadAiSourceDocument", "retryAiSourceDocument", "deleteAiSourceDocument", "detailVisible"]
+    },
+    {
+      "name": "Personal Agent Token permission lifecycle",
+      "type": "UI",
+      "backend": ["SYSTEM_PERSONAL_AI_AGENT_CONNECT", "SYSTEM_PERSONAL_AI_AGENT_REVOKE", "PersonalAgentTokenController"],
+      "frontend": ["SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT", "SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE", "getAgentTokenPage"]
+    },
+    {
+      "name": "Administrator Agent Token governance",
+      "type": "UI",
+      "backend": ["AdminAgentTokenController", "@GetMapping(\"/audit/export\")", "@PostMapping(\"/{id}/revoke\")", "private String status;", "status == 'EXPIRED'"],
+      "frontend": ["AgentTokenGovernancePanel", "getAdminAgentTokenPage", "revokeAdminAgentToken", "exportAdminAgentTokenAudit", "query.status"],
+      "tests": ["globalPageShouldPassExpiredStatusAndCurrentTimeToMapper"]
+    },
+    {
+      "name": "Extended six-type test asset catalog",
+      "type": "UI",
+      "backend": ["@GetMapping(\"/catalog\")", "@GetMapping(\"/catalog/{assetType}/{assetId}\")", "selectExecutableSnapshot", "decodeBlob", "DATASET", "ENVIRONMENT", "COMMON_STEP", "API_DEFINITION", "EVIDENCE", "BUG"],
+      "frontend": ["pageTestAssetCatalog", "getTestAssetCatalogDetail", "TEST_ASSET_DATASETS", "TEST_ASSET_ENVIRONMENTS", "TEST_ASSET_COMMON_STEPS", "TEST_ASSET_APIS", "TEST_ASSET_EVIDENCE", "TEST_ASSET_BUGS"],
+      "tests": ["catalogShouldPublishExecutableSnapshotsForEverySupportedAssetTypeAndRedactSecrets"]
+    },
+    {
+      "name": "Task pinned extended asset context",
+      "type": "UI",
+      "backend": ["private List<TestAssetRefDTO> assetRefs", "resolveContext", "selectedAssets", "\"USES\""],
+      "frontend": ["assetRefs:", "selectedAssetRefs", "用于任务"],
+      "tests": ["legacyEnvironmentIdShouldBecomeVersionableAssetReference", "resolveContextShouldRejectCrossProjectPinnedVersion"]
+    },
+    {
+      "name": "Execution evidence preview and traceability",
+      "type": "UI",
+      "backend": ["publishAssetRelations", "publishBugRelations", "\"STEP\"", "\"REPORTS\"", "detectArtifact"],
+      "frontend": ["previewText", "value=\"STEP\"", "value=\"REPORTS\"", "downloadAiExecutionArtifact"],
+      "tests": ["artifactShouldPublishTaskStepAndCaseRelations", "createdBugShouldPublishCaseReportsBugRelation", "artifactTypeShouldAllowUtf8TextButRejectHtmlAndBinaryPayloads"]
+    }
+  ]
+}

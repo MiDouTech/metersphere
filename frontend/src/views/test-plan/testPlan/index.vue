@@ -32,11 +32,17 @@
 
           <div class="test-plan h-[100%]">
             <div class="case h-[38px]">
-              <div class="flex items-center" :class="getActiveClass('all')" @click="setActiveFolder('all')">
+              <button
+                type="button"
+                class="folder-trigger flex items-center"
+                :class="getActiveClass('all')"
+                :aria-current="activeFolder === 'all' ? 'true' : undefined"
+                @click="setActiveFolder('all')"
+              >
                 <MsIcon type="icon-icon_folder_filled1" class="folder-icon" />
                 <div class="folder-name mx-[4px]">{{ t('testPlan.testPlanIndex.allTestPlan') }}</div>
-                <div class="folder-count">({{ modulesCount.all || 0 }})</div></div
-              >
+                <div class="folder-count">({{ modulesCount.all || 0 }})</div>
+              </button>
               <div class="ml-auto flex items-center">
                 <a-tooltip :content="isExpandAll ? t('common.collapseAllSubModule') : t('common.expandAllSubModule')">
                   <MsButton type="icon" status="secondary" class="!mr-0 p-[4px]" position="top" @click="expandHandler">
@@ -141,7 +147,7 @@
 
   import { createPlanModuleTree, getPlanModulesCount } from '@/api/modules/test-plan/testPlan';
   import { useI18n } from '@/hooks/useI18n';
-  import type { ModuleRefreshContext, ModuleRefreshResult } from '@/hooks/useModuleRefresh';
+  import type { ModuleRefreshResult } from '@/hooks/useModuleRefresh';
   import useAppStore from '@/store/modules/app';
 
   import type { CreateOrUpdateModule } from '@/models/caseManagement/featureCase';
@@ -312,7 +318,7 @@
     setActiveFolder('all');
   }
 
-  async function refreshModule(_context: ModuleRefreshContext): Promise<ModuleRefreshResult> {
+  async function refreshModule(): Promise<ModuleRefreshResult> {
     await Promise.allSettled([planTreeRef.value?.initModules?.(), planTableRef.value?.refreshPreserveState?.()]);
     return {
       refreshedAt: Date.now(),
@@ -327,6 +333,13 @@
     @apply flex cursor-pointer  items-center justify-between;
     &:hover {
       background-color: rgb(var(--primary-1));
+    }
+    .folder-trigger {
+      min-width: 0;
+      border: 0;
+      color: inherit;
+      background: transparent;
+      cursor: pointer;
     }
     .folder-icon {
       margin-right: 4px;

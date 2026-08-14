@@ -1,7 +1,6 @@
 import { RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
 
-import { useUserStore } from '@/store';
-import { hasAnyPermission, hasPageVisible, topLevelMenuHasPermission } from '@/utils/permission';
+import { hasAnyPermission, hasPageVisible, hasRouteVisible, topLevelMenuHasPermission } from '@/utils/permission';
 
 /**
  * 用户权限
@@ -17,12 +16,6 @@ export default function usePermission() {
      * @returns 是否
      */
     accessRouter(route: RouteLocationNormalized | RouteRecordRaw) {
-      if (
-        (useUserStore().lastProjectId === 'no_such_project' || useUserStore().lastProjectId === '') &&
-        route.name === 'projectManagement'
-      ) {
-        return false;
-      }
       if (firstLevelMenu.includes(route.name as string)) {
         // 一级菜单: 创建项目时 被勾选的模块
         return topLevelMenuHasPermission(route);
@@ -31,7 +24,9 @@ export default function usePermission() {
         route.meta?.requiresAuth === false ||
         !route.meta?.roles ||
         route.meta?.roles?.includes('*') ||
-        (hasPageVisible(route.meta?.resourceCode) && hasAnyPermission(route.meta?.roles || []))
+        (hasPageVisible(route.meta?.resourceCode) &&
+          hasRouteVisible(route.name) &&
+          hasAnyPermission(route.meta?.roles || []))
       );
     },
     // You can add any rules you want

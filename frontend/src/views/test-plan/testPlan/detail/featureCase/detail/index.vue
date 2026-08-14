@@ -1,8 +1,8 @@
 <template>
-  <MsCard :min-width="1100" has-breadcrumb simple no-content-padding>
-    <div class="flex h-full w-full">
+  <MsCard :min-width="0" has-breadcrumb simple no-content-padding>
+    <div class="execution-case-layout flex h-full w-full min-w-0">
       <!-- 左侧 -->
-      <div class="flex h-full w-[318px] flex-col border-r border-[var(--color-text-n8)] p-[16px]">
+      <div class="execution-case-sidebar flex h-full flex-col border-r border-[var(--color-text-n8)] p-[16px]">
         <a-tooltip :content="`[${planDetail.num}]${planDetail.name}`">
           <div class="one-line-text w-full gap-[4px] font-medium">
             <span>[{{ planDetail.num }}]</span>
@@ -32,10 +32,12 @@
         </div>
         <a-spin :loading="caseListLoading" class="w-full flex-1 overflow-hidden">
           <div class="case-list">
-            <div
+            <button
               v-for="item of caseList"
               :key="item.id"
+              type="button"
               :class="['case-item', activeId === item.id ? 'case-item--active' : '']"
+              :aria-current="activeId === item.id ? 'true' : undefined"
               @click="changeActiveCase(item)"
             >
               <div class="mb-[8px] flex items-center justify-between">
@@ -45,7 +47,7 @@
               <a-tooltip :content="item.name">
                 <div class="one-line-text">{{ item.name }}</div>
               </a-tooltip>
-            </div>
+            </button>
             <MsEmpty v-if="caseList.length === 0" />
           </div>
           <MsPagination
@@ -61,11 +63,18 @@
         </a-spin>
       </div>
       <!-- 右侧 -->
-      <a-spin :loading="caseDetailLoading" class="relative flex h-full flex-1 flex-col overflow-hidden">
+      <a-spin :loading="caseDetailLoading" class="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <div v-if="!caseList.length" class="flex h-full items-center justify-center">
-          <MsEmpty v-if="!caseList.length" />
+          <MsErrorNotice v-if="caseListError" :error="caseListError" @retry="loadCaseList" />
+          <MsEmpty v-else />
         </div>
         <template v-else>
+          <MsErrorNotice
+            v-if="caseDetailError"
+            class="mx-[16px] mt-[16px]"
+            :error="caseDetailError"
+            @retry="loadCaseDetail"
+          />
           <div class="flex px-[16px] pt-[16px]">
             <div class="mr-[24px] flex flex-1 items-center overflow-hidden">
               <MsStatusTag :status="caseDetail.lastExecuteResult || 'PREPARED'" />
@@ -257,6 +266,7 @@
   import MsCheckboxDropdown from '@/components/pure/ms-checkbox-dropdown/index.vue';
   import MsDescription, { Description } from '@/components/pure/ms-description/index.vue';
   import MsEmpty from '@/components/pure/ms-empty/index.vue';
+  import MsErrorNotice from '@/components/pure/ms-error-notice/index.vue';
   import MsPagination from '@/components/pure/ms-pagination/index';
   import MsTab from '@/components/pure/ms-tab/index.vue';
   import ExecuteResult from '@/components/business/ms-case-associate/executeResult.vue';
@@ -282,6 +292,7 @@
   import { useI18n } from '@/hooks/useI18n';
   import useOpenNewPage from '@/hooks/useOpenNewPage';
   import useAppStore from '@/store/modules/app';
+  import { type AppError, ensureAppError } from '@/utils/appError';
   import { hasAllPermission, hasAnyPermission } from '@/utils/permission';
 
   import type { TableQueryParams } from '@/models/common';
@@ -337,26 +348,30 @@
   });
   const otherListQueryParams = ref<Record<string, any>>({});
   const caseListLoading = ref(false);
+  const caseListError = ref<AppError>();
   // 加载用例列表
   async function loadCaseList() {
     try {
       caseListLoading.value = true;
-      const res = await getPlanDetailFeatureCaseList({
-        testPlanId: route.query.id as string,
-        keyword: keyword.value,
-        current: pageNation.value.current || 1,
-        pageSize: pageNation.value.pageSize,
-        filter: {
-          ...tableFilter.value,
-          lastExecResult: lastExecResult.value,
+      caseListError.value = undefined;
+      const res = await getPlanDetailFeatureCaseList(
+        {
+          testPlanId: route.query.id as string,
+          keyword: keyword.value,
+          current: pageNation.value.current || 1,
+          pageSize: pageNation.value.pageSize,
+          filter: {
+            ...tableFilter.value,
+            lastExecResult: lastExecResult.value,
+          },
+          ...otherListQueryParams.value,
         },
-        ...otherListQueryParams.value,
-      });
+        { errorMessageMode: 'none' }
+      );
       caseList.value = res.list;
       pageNation.value.total = res.total;
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      caseListError.value = ensureAppError(error, t('common.loadFailedMessage'));
     } finally {
       caseListLoading.value = false;
     }
@@ -375,6 +390,7 @@
 
   const caseDetail = ref<any>({});
   const caseDetailLoading = ref(false);
+  const caseDetailError = ref<AppError>();
   const activeTab = ref('detail');
   const editCaseVisible = ref(false);
   const contentTabList = ref([
@@ -416,7 +432,8 @@
   async function loadCaseDetail() {
     try {
       caseDetailLoading.value = true;
-      const res = await getCaseDetail(activeId.value);
+      caseDetailError.value = undefined;
+      const res = await getCaseDetail(activeId.value, { errorMessageMode: 'none' });
       caseDetail.value = res;
       descriptions.value = [
         {
@@ -457,8 +474,7 @@
         },
       ];
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      caseDetailError.value = ensureAppError(error, t('common.loadFailedMessage'));
       loadCaseList();
     } finally {
       caseDetailLoading.value = false;
@@ -703,6 +719,11 @@
 </script>
 
 <style lang="less" scoped>
+  .execution-case-sidebar {
+    flex: 0 1 318px;
+    width: clamp(240px, 26vw, 318px);
+    min-width: 220px;
+  }
   .case-list {
     @apply flex flex-col  overflow-y-auto;
 
@@ -711,11 +732,13 @@
     gap: 8px;
     .ms-scroll-bar();
     .case-item {
-      @apply cursor-pointer;
+      @apply w-full cursor-pointer text-left;
 
       padding: 8px;
       border: 1px solid var(--color-text-n8);
       border-radius: var(--border-radius-small);
+      color: inherit;
+      background: transparent;
       &:hover {
         border: 1px solid rgb(var(--primary-4));
       }
@@ -736,5 +759,20 @@
 
     padding: 16px;
     .ms-scroll-bar();
+  }
+
+  @media (max-width: 1024px) {
+    .execution-case-layout {
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .execution-case-sidebar {
+      flex: none;
+      width: 100%;
+      min-width: 0;
+      height: min(38vh, 360px);
+      border-right: 0;
+      border-bottom: 1px solid var(--color-text-n8);
+    }
   }
 </style>

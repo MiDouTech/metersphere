@@ -123,7 +123,7 @@
   function goProjectManagement() {
     window.open(
       `${window.location.origin}#${
-        router.resolve({ name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PERMISSION_USER_GROUP }).fullPath
+        router.resolve({ name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PERMISSION_MEMBER }).fullPath
       }`
     );
   }

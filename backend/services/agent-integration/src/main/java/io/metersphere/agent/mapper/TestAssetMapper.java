@@ -4,6 +4,8 @@ import io.metersphere.agent.dto.TestAssetVersionDTO;
 import io.metersphere.agent.dto.TestAssetDocumentDTO;
 import io.metersphere.agent.dto.TestAssetRelationDTO;
 import io.metersphere.agent.dto.TestAssetContextDocumentDTO;
+import io.metersphere.agent.dto.TestAssetCatalogItemDTO;
+import io.metersphere.agent.dto.TestAssetExecutableSnapshotDTO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -22,6 +24,28 @@ public interface TestAssetMapper {
                                      @Param("assetType") String assetType,
                                      @Param("assetId") String assetId);
 
+    TestAssetVersionDTO selectVersionById(@Param("id") String id);
+
+    List<TestAssetCatalogItemDTO> selectCatalog(@Param("projectId") String projectId,
+                                                @Param("assetType") String assetType,
+                                                @Param("keyword") String keyword,
+                                                @Param("status") String status,
+                                                @Param("offset") long offset,
+                                                @Param("pageSize") int pageSize);
+
+    long countCatalog(@Param("projectId") String projectId,
+                      @Param("assetType") String assetType,
+                      @Param("keyword") String keyword,
+                      @Param("status") String status);
+
+    TestAssetCatalogItemDTO selectCatalogItem(@Param("projectId") String projectId,
+                                              @Param("assetType") String assetType,
+                                              @Param("assetId") String assetId);
+
+    TestAssetExecutableSnapshotDTO selectExecutableSnapshot(@Param("projectId") String projectId,
+                                                            @Param("assetType") String assetType,
+                                                            @Param("assetId") String assetId);
+
     List<TestAssetDocumentDTO> selectDocuments(@Param("projectId") String projectId,
                                                @Param("parseStatus") String parseStatus,
                                                @Param("keyword") String keyword,
@@ -33,6 +57,7 @@ public interface TestAssetMapper {
                         @Param("keyword") String keyword);
 
     List<TestAssetVersionDTO> selectVersions(@Param("projectId") String projectId,
+                                             @Param("allowedTypes") List<String> allowedTypes,
                                              @Param("assetType") String assetType,
                                              @Param("assetId") String assetId,
                                              @Param("keyword") String keyword,
@@ -40,11 +65,13 @@ public interface TestAssetMapper {
                                              @Param("pageSize") int pageSize);
 
     long countVersions(@Param("projectId") String projectId,
+                       @Param("allowedTypes") List<String> allowedTypes,
                        @Param("assetType") String assetType,
                        @Param("assetId") String assetId,
                        @Param("keyword") String keyword);
 
     List<TestAssetRelationDTO> selectRelations(@Param("projectId") String projectId,
+                                               @Param("allowedTypes") List<String> allowedTypes,
                                                @Param("assetType") String assetType,
                                                @Param("assetId") String assetId,
                                                @Param("relationType") String relationType,
@@ -53,6 +80,7 @@ public interface TestAssetMapper {
                                                @Param("pageSize") int pageSize);
 
     long countRelations(@Param("projectId") String projectId,
+                        @Param("allowedTypes") List<String> allowedTypes,
                         @Param("assetType") String assetType,
                         @Param("assetId") String assetId,
                         @Param("relationType") String relationType,

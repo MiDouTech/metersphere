@@ -126,9 +126,9 @@ public class AiSourceDocumentService {
         int pageSize = Math.min(100, Math.max(1, request.getPageSize() == null ? 20 : request.getPageSize()));
         String status = StringUtils.equalsIgnoreCase(request.getParseStatus(), "ALL") ? null : request.getParseStatus();
         AiSourceDocumentPageResponse response = new AiSourceDocumentPageResponse();
-        response.setTotal(aiSourceDocumentMapper.countByProjectAndCreateUser(request.getProjectId(), userId, status));
-        response.setRecords(aiSourceDocumentMapper.selectByProjectAndCreateUser(
-                request.getProjectId(), userId, status, (long) (current - 1) * pageSize, pageSize)
+        response.setTotal(aiSourceDocumentMapper.countByProject(request.getProjectId(), status));
+        response.setRecords(aiSourceDocumentMapper.selectByProject(
+                request.getProjectId(), status, (long) (current - 1) * pageSize, pageSize)
                 .stream().map(this::toDTO).toList());
         return response;
     }
@@ -138,14 +138,24 @@ public class AiSourceDocumentService {
     }
 
     public void retry(AiSourceDocumentIdRequest request, String userId) {
-        requireDocument(request.getId(), request.getProjectId(), userId);
+        AiSourceDocument document = requireDocument(request.getId(), request.getProjectId(), userId);
+        if ("PARSING".equals(document.getParseStatus())) {
+            throw new MSException("文档正在解析，不能重复提交");
+        }
         parserService.parseAsync(request.getId());
         audit("RETRY_PARSE", request.getProjectId(), userId, "documentId=" + request.getId());
     }
 
     public void delete(AiSourceDocumentIdRequest request, String userId) {
-        requireDocument(request.getId(), request.getProjectId(), userId);
-        aiSourceDocumentMapper.markDeleted(request.getId(), request.getProjectId(), userId, System.currentTimeMillis());
+        AiSourceDocument document = requireDocument(request.getId(), request.getProjectId(), userId);
+        if ("PARSING".equals(document.getParseStatus())) {
+            throw new MSException("文档正在解析，不能删除");
+        }
+        int affected = aiSourceDocumentMapper.markDeletedInProject(
+                request.getId(), request.getProjectId(), System.currentTimeMillis());
+        if (affected != 1) {
+            throw new MSException("来源文档删除失败，文档状态可能已发生变化");
+        }
         audit("DELETE", request.getProjectId(), userId, "documentId=" + request.getId());
     }
 
@@ -159,9 +169,8 @@ public class AiSourceDocumentService {
         AiSourceDocument document = aiSourceDocumentMapper.selectByPrimaryKey(id);
         if (document == null
                 || Boolean.TRUE.equals(document.getDeleted())
-                || !StringUtils.equals(projectId, document.getProjectId())
-                || !StringUtils.equals(userId, document.getCreateUser())) {
-            throw new MSException("来源文档不存在或无权限访问");
+                  || !StringUtils.equals(projectId, document.getProjectId())) {
+              throw new MSException("来源文档不存在或无权限访问");
         }
         return document;
     }

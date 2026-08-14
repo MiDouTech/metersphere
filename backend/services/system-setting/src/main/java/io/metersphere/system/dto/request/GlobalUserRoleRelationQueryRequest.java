@@ -16,4 +16,7 @@ public class GlobalUserRoleRelationQueryRequest extends BasePageRequest {
     @NotBlank
     @Schema(description =  "用户组ID", requiredMode = Schema.RequiredMode.REQUIRED)
     private String roleId;
+
+    @Schema(description = "成员关系作用域；系统角色固定为 system，组织/项目角色分别传组织或项目 ID")
+    private String sourceId;
 }

@@ -18,6 +18,9 @@ public class FunctionalCasePageDTO extends FunctionalCase {
     @Schema(description = "版本名称")
     private String versionName;
 
+    @Schema(description = "所属模块名称")
+    private String moduleName;
+
     @Schema(description = "创建人名称")
     private String createUserName;
 

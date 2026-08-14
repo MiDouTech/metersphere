@@ -152,6 +152,7 @@
 
   import { createOrUpdateProjectByOrg, getSystemOrgOption } from '@/api/modules/setting/organizationAndProject';
   import { useI18n } from '@/hooks/useI18n';
+  import useServerFieldErrors from '@/hooks/useServerFieldErrors';
   import { useAppStore, useUserStore } from '@/store';
   import useLicenseStore from '@/store/modules/setting/license';
 
@@ -165,6 +166,7 @@
   });
 
   const { t } = useI18n();
+  const { applyError: applyServerFieldErrors, clearAll: clearServerFieldErrors } = useServerFieldErrors();
   const props = defineProps<{
     currentProject?: CreateOrUpdateSystemProjectParams;
   }>();
@@ -229,6 +231,7 @@
   });
 
   const formReset = () => {
+    clearServerFieldErrors();
     form.name = '';
     form.userIds = userStore.id ? [userStore.id] : [];
     form.organizationId = currentOrgId.value;
@@ -261,6 +264,7 @@
     }
   };
   const handleCancel = (shouldSearch: boolean) => {
+    clearServerFieldErrors();
     formRef.value?.resetFields();
     emit('cancel', shouldSearch);
   };
@@ -272,7 +276,11 @@
       }
       try {
         loading.value = true;
-        const res = await createOrUpdateProjectByOrg({ id: isEdit.value ? props.currentProject?.id : '', ...form });
+        clearServerFieldErrors();
+        const res = await createOrUpdateProjectByOrg(
+          { id: isEdit.value ? props.currentProject?.id : '', ...form },
+          { errorMessageMode: 'none' }
+        );
         // 创建人已写入项目管理员：刷新项目列表与权限缓存，进入项目时无需 F5
         await appStore.initProjectList();
         if (!isEdit.value) {
@@ -281,8 +289,8 @@
         showUpdateOrCreateMessage(isEdit.value, res.id, res.organizationId || form.organizationId);
         handleCancel(true);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error(error);
+        const fields = applyServerFieldErrors(error);
+        if (fields) formRef.value?.setFields(fields);
       } finally {
         loading.value = false;
       }

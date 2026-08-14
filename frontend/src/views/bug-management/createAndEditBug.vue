@@ -134,7 +134,7 @@
         }
       }
     } catch (error) {
-      console.log(error);
+      bugDetailRef.value?.applyServerError(error);
     } finally {
       loading.value = false;
     }

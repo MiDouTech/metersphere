@@ -155,6 +155,7 @@
     updateTestPlan,
   } from '@/api/modules/test-plan/testPlan';
   import { useI18n } from '@/hooks/useI18n';
+  import useServerFieldErrors from '@/hooks/useServerFieldErrors';
   import useAppStore from '@/store/modules/app';
   import { filterTreeNode } from '@/utils';
 
@@ -180,6 +181,10 @@
   }>();
 
   const { t } = useI18n();
+  const { applyError: applyServerFieldErrors, clearAll: clearServerFieldErrors } = useServerFieldErrors({
+    plannedStartTime: 'cycle',
+    plannedEndTime: 'cycle',
+  });
   const appStore = useAppStore();
   const router = useRouter();
 
@@ -285,6 +290,7 @@
   ];
 
   function handleCancel() {
+    clearServerFieldErrors();
     innerVisible.value = false;
     formRef.value?.resetFields();
     form.value = cloneDeep(initForm);
@@ -306,6 +312,7 @@
         drawerLoading.value = true;
         let res = null;
         try {
+          clearServerFieldErrors();
           const params: AddTestPlanParams = {
             ...cloneDeep(form.value),
             plannedStartTime: form.value.cycle ? form.value.cycle[0] : undefined,
@@ -316,16 +323,16 @@
             delete params.groupId;
           }
           if (!props.planId?.length) {
-            res = await addTestPlan(params);
+            res = await addTestPlan(params, { errorMessageMode: 'none' });
             Message.success(t('common.createSuccess'));
           } else {
-            await updateTestPlan(params);
+            await updateTestPlan(params, { errorMessageMode: 'none' });
             Message.success(t('common.updateSuccess'));
           }
           emit('loadPlanList');
         } catch (error) {
-          // eslint-disable-next-line no-console
-          console.log(error);
+          const fields = applyServerFieldErrors(error);
+          if (fields) formRef.value?.setFields(fields);
         } finally {
           drawerLoading.value = false;
         }

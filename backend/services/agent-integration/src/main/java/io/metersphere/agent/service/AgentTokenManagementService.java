@@ -106,11 +106,21 @@ public class AgentTokenManagementService {
         long current = Math.max(request.getCurrent(), 1);
         long pageSize = Math.max(request.getPageSize(), 1);
         long offset = (current - 1) * pageSize;
-        long total = agentTokenMapper.countPage(request.getKeyword());
-        List<AgentTokenListItemDTO> list = agentTokenMapper.selectPage(request.getKeyword(), offset, pageSize).stream()
+        String status = normalizePageStatus(request.getStatus());
+        long now = System.currentTimeMillis();
+        long total = agentTokenMapper.countPage(request.getKeyword(), status, now);
+        List<AgentTokenListItemDTO> list = agentTokenMapper.selectPage(request.getKeyword(), status, now, offset, pageSize).stream()
                 .map(this::toListItem)
                 .collect(Collectors.toList());
         return new Pager<>(list, total, pageSize, current);
+    }
+
+    private String normalizePageStatus(String status) {
+        String normalized = StringUtils.upperCase(StringUtils.trimToNull(status));
+        if (normalized != null && !Set.of("ACTIVE", "DISABLED", "REVOKED", "EXPIRED").contains(normalized)) {
+            throw new MSException("不支持的 Token 状态：" + normalized);
+        }
+        return normalized;
     }
 
     public Pager<List<AgentTokenListItemDTO>> pagePersonal(AgentTokenPageRequest request) {
@@ -183,10 +193,6 @@ public class AgentTokenManagementService {
         update.setRevokedAt(System.currentTimeMillis());
         update.setRevokedBy(SessionUtils.getUserId());
         agentTokenMapper.updateByPrimaryKeySelective(update);
-    }
-
-    public AgentTokenListItemDTO testPersonal(String id) {
-        return toListItem(requirePersonalToken(id));
     }
 
     public void delete(String id) {

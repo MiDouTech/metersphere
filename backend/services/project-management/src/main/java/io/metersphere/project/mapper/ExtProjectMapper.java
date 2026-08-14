@@ -2,12 +2,27 @@ package io.metersphere.project.mapper;
 
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.domain.ProjectTestResourcePool;
+import io.metersphere.project.request.ProjectPageRequest;
+import io.metersphere.system.dto.ProjectDTO;
 import io.metersphere.system.domain.TestResourcePool;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
 public interface ExtProjectMapper {
+
+    List<ProjectDTO> pageUserProject(@Param("request") ProjectPageRequest request,
+                                     @Param("userId") String userId,
+                                     @Param("admin") boolean admin);
+
+    List<ProjectDTO> pageCaseAssetProject(@Param("request") ProjectPageRequest request,
+                                          @Param("userId") String userId,
+                                          @Param("admin") boolean admin,
+                                          @Param("permissionId") String permissionId);
+
+    boolean userHasProjectRelation(@Param("projectId") String projectId, @Param("userId") String userId);
+
+    boolean projectIsActive(@Param("projectId") String projectId);
 
     List<Project> getUserProject(@Param("organizationId") String organizationId, @Param("userId") String userId);
 

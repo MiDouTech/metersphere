@@ -18,7 +18,7 @@
 
   import { useI18n } from '@/hooks/useI18n';
   import useLicenseStore from '@/store/modules/setting/license';
-  import { hasAnyPermission } from '@/utils/permission';
+  import { hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
   // 异步组件加载
   const baseConfig = defineAsyncComponent(() => import('./components/baseConfig.vue'));
@@ -38,7 +38,12 @@
   const isInitQrCodeConfig = ref(activeTab.value === 'qrCodeConfig');
   const isInitModelConfig = ref(activeTab.value === 'modelConfig');
   const tabList = ref([
-    { key: 'baseConfig', title: t('system.config.baseConfig'), permission: ['SYSTEM_PARAMETER_SETTING_BASE:READ'] },
+    {
+      key: 'baseConfig',
+      title: t('system.config.baseConfig'),
+      permission: ['SYSTEM_PARAMETER_SETTING_BASE:READ'],
+      resourceCode: 'SYSTEM_CONFIG_BASE_TAB',
+    },
     { key: 'pageConfig', title: t('system.config.pageConfig'), permission: ['SYSTEM_PARAMETER_SETTING_DISPLAY:READ'] },
     {
       key: 'modelConfig',
@@ -49,8 +54,14 @@
       key: 'qrCodeConfig',
       title: t('system.config.qrCodeConfig'),
       permission: ['SYSTEM_PARAMETER_SETTING_QRCODE:READ'],
+      resourceCode: 'SYSTEM_CONFIG_NOTIFICATION_TAB',
     },
-    { key: 'authConfig', title: t('system.config.authConfig'), permission: ['SYSTEM_PARAMETER_SETTING_AUTH:READ'] },
+    {
+      key: 'authConfig',
+      title: t('system.config.authConfig'),
+      permission: ['SYSTEM_PARAMETER_SETTING_AUTH:READ'],
+      resourceCode: 'SYSTEM_CONFIG_AUTH_TAB',
+    },
     {
       key: 'memoryCleanup',
       title: t('system.config.memoryCleanup'),
@@ -89,8 +100,13 @@
 
   onBeforeMount(() => {
     getXpackTab();
-    const firstHasPermissionTab = tabList.value.find((item: any) => hasAnyPermission(item.permission));
-    activeTab.value = (route.query.tab as string) || firstHasPermissionTab?.key || 'baseConfig';
+    const visibleTabs = tabList.value.filter(
+      (item: any) => hasAnyPermission(item.permission) && hasTabVisible(item.resourceCode, ['SYSTEM'])
+    );
+    const requestedTab = route.query.tab as string;
+    activeTab.value = visibleTabs.some((item: any) => item.key === requestedTab)
+      ? requestedTab
+      : (visibleTabs[0] as any)?.key || 'baseConfig';
   });
 </script>
 

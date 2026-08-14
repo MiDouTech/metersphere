@@ -58,6 +58,10 @@ public class BaseUserRoleService {
      * @return
      */
     public List<PermissionDefinitionItem> getPermissionSetting(UserRole userRole) {
+        return getPermissionSetting(userRole, false);
+    }
+
+    protected List<PermissionDefinitionItem> getPermissionSetting(UserRole userRole, boolean includeAllTypes) {
         // 获取该用户组拥有的权限
         Set<String> permissionIds = baseUserRolePermissionService.getPermissionIdSetByRoleId(userRole.getId());
         // 获取所有的权限
@@ -67,7 +71,9 @@ public class BaseUserRoleService {
 
         // 过滤该用户组级别的菜单，例如系统级别 (管理员返回所有权限位)
         permissionDefinition = permissionDefinition.stream()
-                .filter(item -> StringUtils.equals(item.getType(), userRole.getType()) || StringUtils.equals(userRole.getId(), InternalUserRole.ADMIN.getValue()))
+                .filter(item -> includeAllTypes
+                        || StringUtils.equals(item.getType(), userRole.getType())
+                        || StringUtils.equals(userRole.getId(), InternalUserRole.ADMIN.getValue()))
                 .sorted(Comparator.comparing(PermissionDefinitionItem::getOrder))
 
 
