@@ -39,6 +39,46 @@ export function getCustomOptionHeader(projectId: string) {
 export function updateBug(data: { request: BugEditFormObject; fileList: File[] }) {
   return MSR.uploadFile({ url: bugURL.postUpdateBugUrl }, data, '', true);
 }
+
+export interface BugTransitionRuntime {
+  bugId: string;
+  workflowId?: string;
+  workflowVersion?: number;
+  currentStatus: { id: string; name: string };
+  updateTime: number;
+  unavailableReason?: string;
+  transitions: Array<{
+    transitionId: string;
+    targetStatus: { id: string; name: string };
+    visible: boolean;
+    operable: boolean;
+    overrideRequired: boolean;
+    matchedRoles: string[];
+    disabledReason?: string;
+  }>;
+}
+
+export function getBugTransitions(bugId: string) {
+  return MSR.get<BugTransitionRuntime>({ url: `/bug/${bugId}/transitions` });
+}
+
+export function getBugTransitionsBatch(bugIds: string[]) {
+  return MSR.post<Record<string, BugTransitionRuntime>>({ url: '/bug/transitions/batch', data: { bugIds } });
+}
+
+export function transitionBug(
+  bugId: string,
+  data: {
+    transitionId: string;
+    targetStatusId: string;
+    expectedUpdateTime: number;
+    comment?: string;
+    override?: boolean;
+    overrideReason?: string;
+  }
+) {
+  return MSR.post<BugTransitionRuntime>({ url: `/bug/${bugId}/transition`, data });
+}
 /**
  * 批量更新
  * @param data

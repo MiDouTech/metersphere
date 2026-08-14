@@ -3,13 +3,10 @@
     <a-button type="outline" @click="openImport">{{ t('common.import') }}</a-button>
     <a-radio-group v-model="importMode" type="button" size="small">
       <a-radio value="excel">{{ t('caseManagement.featureCase.importExcelTab') }}</a-radio>
-      <a-radio value="defaultHub" :disabled="hubModeDisabled">
+      <a-radio value="asset">
         {{ t('caseManagement.featureCase.importHubTab') }}
       </a-radio>
     </a-radio-group>
-    <a-tooltip v-if="hubModeDisabled" :content="hubDisabledTip">
-      <icon-info-circle class="text-[var(--color-text-4)]" />
-    </a-tooltip>
   </div>
   <!-- Excel 导入 -->
   <ExportExcelModal
@@ -42,14 +39,13 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from 'vue';
+  import { computed, ref } from 'vue';
 
   import ExportExcelModal from './exportCaseModal.vue';
   import ImportFromDefaultModal from './importFromDefaultModal.vue';
   import ValidateModal from './validateModal.vue';
   import ValidateResult from './validateResult.vue';
 
-  import { getDefaultHubProjectId } from '@/api/modules/case-management/defaultHub';
   import { importExcelOrXMindCase, importExcelOrXMindChecked } from '@/api/modules/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
@@ -75,8 +71,7 @@
   const appStore = useAppStore();
   const { t } = useI18n();
 
-  const importMode = ref<'excel' | 'defaultHub'>('excel');
-  const hubProjectId = ref('');
+  const importMode = ref<'excel' | 'asset'>('excel');
   const showExcelModal = ref<boolean>(false);
   const showHubModal = ref(false);
 
@@ -88,23 +83,8 @@
     return id;
   });
 
-  const hubModeDisabled = computed(() => !!hubProjectId.value && hubProjectId.value === appStore.currentProjectId);
-  const hubDisabledTip = computed(() => t('caseManagement.featureCase.importHubDisabledCurrent'));
-
-  async function loadHubProjectId() {
-    try {
-      hubProjectId.value = (await getDefaultHubProjectId()) || '';
-    } catch {
-      hubProjectId.value = '';
-    }
-  }
-
   function openImport() {
-    if (importMode.value === 'defaultHub') {
-      if (hubModeDisabled.value) {
-        Message.warning(hubDisabledTip.value);
-        return;
-      }
+    if (importMode.value === 'asset') {
       showHubModal.value = true;
       return;
     }
@@ -234,19 +214,6 @@
       importLoading.value = false;
     }
   }
-
-  watch(
-    () => appStore.currentProjectId,
-    () => {
-      if (hubModeDisabled.value && importMode.value === 'defaultHub') {
-        importMode.value = 'excel';
-      }
-    }
-  );
-
-  onMounted(() => {
-    loadHubProjectId();
-  });
 
   defineExpose({
     importCase,

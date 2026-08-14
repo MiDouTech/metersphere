@@ -40,7 +40,7 @@ test-results/
 
 # Local assistant/workbench state; may contain private tokens or environment notes.
 .workbuddy/
-({i
+([{]i
 
 # Local build packages generated for manual distribution.
 agent-bridge/dist/

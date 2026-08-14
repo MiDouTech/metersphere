@@ -15,7 +15,8 @@ public enum MsHttpResultCode implements IResultCode {
     UNAUTHORIZED(100401, "http_result_unauthorized"),
     FORBIDDEN(100403, "http_result_forbidden"),
     NOT_FOUND(100404, "http_result_not_found"),
-    CONFLICT(100409, "http_result_conflict");
+    CONFLICT(100409, "http_result_conflict"),
+    UNPROCESSABLE_ENTITY(100422, "http_result_validate");
 
     private int code;
     private String message;

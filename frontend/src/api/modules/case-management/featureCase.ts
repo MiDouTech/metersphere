@@ -162,7 +162,127 @@ export function getCaseList(data: TableQueryParams) {
   return MSR.post<CommonList<CaseManagementTable>>({ url: GetCaseListUrl, data });
 }
 export function getCaseAssetList(data: TableQueryParams) {
-  return MSR.post<CommonList<CaseManagementTable>>({ url: '/functional/case/asset/page', data });
+  return MSR.post<CommonList<CaseManagementTable>>({ url: '/case-asset/case/page', data });
+}
+export function getCaseAssetOptions(data: { ids: string[]; targetProjectId?: string; scene?: string }) {
+  return MSR.post<CaseManagementTable[]>({ url: '/case-asset/case/options', data });
+}
+export interface CaseAssetCatalog {
+  id: string;
+  name: string;
+  source: 'MANUAL' | 'PROJECT' | 'MIGRATION';
+  relatedProjectCount: number;
+  hubModuleId: string;
+  updateTime: number;
+}
+export interface CaseAssetSaveParams {
+  id?: string;
+  catalogId: string;
+  name: string;
+  caseEditType?: 'STEP' | 'TEXT';
+  prerequisite?: string;
+  steps?: string;
+  textDescription?: string;
+  expectedResult?: string;
+  description?: string;
+  tags?: string[];
+  customFields?: Array<{ fieldId: string; value?: string }>;
+  attachments?: Array<{ id: string; fileName: string; size?: number; local?: boolean; deleted?: boolean }>;
+}
+export function pageCaseAssetCatalogs(data: { current: number; pageSize: number; keyword?: string }) {
+  return MSR.post<CommonList<CaseAssetCatalog>>({ url: '/case-asset/catalog/page', data });
+}
+export function createCaseAssetCatalog(name: string) {
+  return MSR.post<CaseAssetCatalog>({ url: '/case-asset/catalog', data: { name } });
+}
+export function updateCaseAssetCatalog(id: string, name: string) {
+  return MSR.put<CaseAssetCatalog>({ url: '/case-asset/catalog', data: { id, name } });
+}
+export function deleteCaseAssetCatalog(id: string) {
+  return MSR.delete({ url: `/case-asset/catalog/${id}` });
+}
+export function backfillCaseAssetCatalogs() {
+  return MSR.post<{
+    total: number;
+    success: number;
+    failed: number;
+    failures: Array<{ projectId: string; reason: string }>;
+  }>({
+    url: '/case-asset/catalog/backfill',
+  });
+}
+export function createCaseAsset(data: CaseAssetSaveParams) {
+  return MSR.post<CaseManagementTable>({ url: '/case-asset/case', data });
+}
+export function updateCaseAsset(data: CaseAssetSaveParams) {
+  return MSR.put<CaseManagementTable>({ url: '/case-asset/case', data });
+}
+export function getCaseAssetDetail(catalogId: string, caseId: string) {
+  return MSR.get<CaseManagementTable>({ url: `/case-asset/case/${caseId}`, params: { catalogId } });
+}
+export function getCaseAssetReferencedProjects(catalogId: string, caseId: string, current = 1, pageSize = 20) {
+  return MSR.get<CommonList<{ id: string; name: string }>>({
+    url: `/case-asset/case/${caseId}/referenced-projects`,
+    params: { catalogId, current, pageSize },
+  });
+}
+export function deleteCaseAsset(catalogId: string, caseId: string) {
+  return MSR.delete({ url: `/case-asset/case/${caseId}`, params: { catalogId } });
+}
+export function uploadCaseAssetAttachment(catalogId: string, caseId: string, file: File) {
+  return MSR.uploadFile({ url: `/case-asset/case/${caseId}/attachment`, params: { catalogId } }, { fileList: [file] });
+}
+export function deleteCaseAssetAttachment(catalogId: string, caseId: string, fileId: string, local = true) {
+  return MSR.delete({ url: `/case-asset/case/${caseId}/attachment/${fileId}`, params: { catalogId, local } });
+}
+export function downloadCaseAssetAttachment(catalogId: string, caseId: string, fileId: string, local = true) {
+  return MSR.get(
+    { url: `/case-asset/case/${caseId}/attachment/${fileId}`, params: { catalogId, local }, responseType: 'blob' },
+    { isTransformResponse: false }
+  );
+}
+export function importCaseAssetFile(catalogId: string, file: File, type: 'excel' | 'xmind', cover: boolean) {
+  return MSR.uploadFile<{ jobId: string; status: string }>(
+    { url: `/case-asset/case/import/${type}/${catalogId}` },
+    { request: { projectId: 'CASE_ASSET', moduleId: 'CASE_ASSET', cover, count: '0' }, fileList: [file] },
+    ''
+  );
+}
+export interface CaseAssetFileImportJob {
+  id: string;
+  catalogId: string;
+  fileName: string;
+  conflictStrategy: string;
+  status: 'RUNNING' | 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED';
+  totalCount: number;
+  successCount: number;
+  failCount: number;
+  errorDetail?: string;
+}
+export function getCaseAssetFileImportJob(jobId: string) {
+  return MSR.get<CaseAssetFileImportJob>({ url: `/case-asset/case/import/job/${jobId}` });
+}
+export function importCasesFromAssets(data: {
+  targetProjectId: string;
+  selectMode: 'CASE_IDS';
+  ids: string[];
+  conflictStrategy: 'SKIP' | 'OVERWRITE';
+  targetModuleId?: string;
+  idempotencyKey: string;
+  copyAttachments?: boolean;
+}) {
+  return MSR.post<{ jobId: string; status: string; progress: number }>({ url: '/case-asset/import/project', data });
+}
+export interface CaseAssetImportItemResult {
+  sourceCaseId: string;
+  targetCaseId?: string;
+  targetProjectId: string;
+  status: 'SUCCESS' | 'SKIPPED' | 'FAILED';
+  action?: 'CREATED' | 'OVERWRITTEN' | 'SKIPPED';
+  errorMessage?: string;
+}
+export function getCaseAssetImportResult(jobId: string) {
+  return MSR.get<CaseAssetImportItemResult[]>({ url: `/case-asset/import/job/${jobId}/result` });
 }
 // 删除用例
 export function deleteCaseRequest(data: DeleteCaseType) {

@@ -7,6 +7,8 @@ import io.metersphere.agent.dto.AgentBugRelateCaseRequest;
 import io.metersphere.agent.dto.AgentBugSearchRequest;
 import io.metersphere.agent.dto.AgentBugSearchResponse;
 import io.metersphere.agent.dto.AgentBugUpdateRequest;
+import io.metersphere.bug.dto.request.BugTransitionRequest;
+import io.metersphere.bug.dto.response.BugTransitionDTO;
 import io.metersphere.agent.security.AgentScopeAssert;
 import io.metersphere.agent.service.AgentBugWriteService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,6 +55,21 @@ public class AgentBugController {
     public AgentBugDTO update(@RequestBody @Valid AgentBugUpdateRequest request) {
         AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE);
         return agentBugWriteService.update(request);
+    }
+
+    @GetMapping("/{projectId}/{bugId}/transitions")
+    @Operation(summary = "获取缺陷当前可执行流转")
+    public BugTransitionDTO transitions(@PathVariable String projectId, @PathVariable String bugId) {
+        AgentScopeAssert.assertScope(AgentTokenScope.BUG_READ);
+        return agentBugWriteService.getTransitions(projectId, bugId);
+    }
+
+    @PostMapping("/{projectId}/{bugId}/transition")
+    @Operation(summary = "按流转 ID 更新缺陷状态")
+    public BugTransitionDTO transition(@PathVariable String projectId, @PathVariable String bugId,
+                                       @RequestBody @Valid BugTransitionRequest request) {
+        AgentScopeAssert.assertScope(AgentTokenScope.BUG_WRITE);
+        return agentBugWriteService.transition(projectId, bugId, request);
     }
 
     @PostMapping("/relate-case")

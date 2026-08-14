@@ -39,6 +39,7 @@ public class DefaultHubSyncController {
     @GetMapping("/sync/{jobId}")
     @Operation(summary = "查询枢纽同步/导入任务进度")
     public DefaultHubJobResponse getSyncJob(@PathVariable String jobId) {
+        defaultHubSyncAccessService.assertJobAccess(SessionUtils.getUserId(), jobId);
         return defaultHubSyncJobService.getJob(jobId);
     }
 }

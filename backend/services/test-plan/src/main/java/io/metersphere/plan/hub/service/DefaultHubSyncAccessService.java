@@ -2,6 +2,8 @@ package io.metersphere.plan.hub.service;
 
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.mapper.ProjectMapper;
+import io.metersphere.functional.hub.dao.DefaultHubSyncJobDao;
+import io.metersphere.functional.hub.dto.DefaultHubSyncJobRow;
 import io.metersphere.sdk.constants.InternalUserRole;
 import io.metersphere.sdk.constants.UserRoleType;
 import io.metersphere.sdk.exception.MSException;
@@ -21,6 +23,15 @@ public class DefaultHubSyncAccessService {
     private PermissionCheckService permissionCheckService;
     @Resource
     private ProjectMapper projectMapper;
+    @Resource
+    private DefaultHubSyncJobDao defaultHubSyncJobDao;
+
+    public void assertJobAccess(String userId, String jobId) {
+        DefaultHubSyncJobRow job = defaultHubSyncJobDao.findById(jobId);
+        if (job == null) throw new MSException("job not found");
+        if (StringUtils.equals(userId, job.getCreateUser())) return;
+        assertManualSyncPermission(userId, job.getScopeProjectId());
+    }
 
     public void assertManualSyncPermission(String userId, String projectId) {
         UserDTO user = permissionCheckService.getUserDTO(userId);

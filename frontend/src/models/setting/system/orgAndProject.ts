@@ -27,6 +27,7 @@ export interface CreateOrUpdateSystemProjectParams {
   resourcePoolIds: string[];
   // 列表里的
   allResourcePool: boolean; // 默认全部资源池
+  confirmAssetCatalogRename?: boolean;
 }
 
 export interface CreateOrUpdateOrgProjectParams {
@@ -37,6 +38,7 @@ export interface CreateOrUpdateOrgProjectParams {
   userIds?: string[];
   organizationId?: string;
   resourcePoolIds?: string[];
+  confirmAssetCatalogRename?: boolean;
 }
 
 export interface SystemOrgOption {

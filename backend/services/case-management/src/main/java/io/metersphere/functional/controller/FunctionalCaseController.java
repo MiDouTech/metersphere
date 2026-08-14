@@ -163,7 +163,7 @@ public class FunctionalCaseController {
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public Pager<List<FunctionalCasePageDTO>> getFunctionalCasePage(@Validated @RequestBody FunctionalCasePageRequest request) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
-                StringUtils.isNotBlank(request.getSortString()) ? request.getSortString() : "pos desc");
+                StringUtils.isNotBlank(request.getSortString()) ? request.getSortString() : "functional_case.pos desc");
         return PageUtils.setPageInfo(page, functionalCaseService.getFunctionalCasePage(request, false, true));
     }
 

@@ -16,15 +16,18 @@ import io.metersphere.agent.security.AgentTokenProjectAccess;
 import io.metersphere.bug.domain.Bug;
 import io.metersphere.bug.dto.request.BugEditRequest;
 import io.metersphere.bug.dto.request.BugPageRequest;
+import io.metersphere.bug.dto.request.BugTransitionRequest;
 import io.metersphere.bug.dto.response.BugCustomFieldDTO;
 import io.metersphere.bug.dto.response.BugDTO;
 import io.metersphere.bug.dto.response.BugDetailDTO;
+import io.metersphere.bug.dto.response.BugTransitionDTO;
 import io.metersphere.bug.enums.BugAttachmentSourceType;
 import io.metersphere.bug.mapper.BugMapper;
 import io.metersphere.bug.service.BugAttachmentService;
 import io.metersphere.bug.service.BugHistoryService;
 import io.metersphere.bug.service.BugRelateCaseCommonService;
 import io.metersphere.bug.service.BugService;
+import io.metersphere.bug.service.BugWorkflowRuntimeService;
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.project.service.ProjectTemplateService;
@@ -84,6 +87,8 @@ public class AgentBugWriteService {
     private TestAssetVersionService testAssetVersionService;
     @Resource
     private FunctionalCaseMapper functionalCaseMapper;
+    @Resource
+    private BugWorkflowRuntimeService bugWorkflowRuntimeService;
 
     public AgentBugSearchResponse search(AgentBugSearchRequest request) {
         String projectId = resolveAndAssertProject(request.getProjectId());
@@ -121,6 +126,18 @@ public class AgentBugWriteService {
         BugDetailDTO detail = bugService.get(bugId, userId, "zh_CN");
         assertProjectAllowed(detail.getProjectId());
         return toDetailDto(detail);
+    }
+
+    public BugTransitionDTO getTransitions(String projectId, String bugId) {
+        requireBugInProject(projectId, bugId);
+        return bugWorkflowRuntimeService.getTransitions(bugId);
+    }
+
+    public BugTransitionDTO transition(String projectId, String bugId, BugTransitionRequest request) {
+        requireBugInProject(projectId, bugId);
+        BugTransitionDTO result = bugWorkflowRuntimeService.transition(bugId, request);
+        agentExecLogService.audit("BUG_TRANSITION", bugId, JSON.toJSONString(request));
+        return result;
     }
 
     public Object getTemplate(String projectId, String templateId) {

@@ -3,25 +3,36 @@ package io.metersphere.functional.hub.service;
 import io.metersphere.functional.constants.FunctionalCaseReviewStatus;
 import io.metersphere.functional.domain.FunctionalCase;
 import io.metersphere.functional.domain.FunctionalCaseBlob;
+import io.metersphere.functional.domain.FunctionalCaseAttachment;
+import io.metersphere.functional.domain.FunctionalCaseAttachmentExample;
 import io.metersphere.functional.domain.FunctionalCaseExample;
 import io.metersphere.functional.hub.dao.DefaultHubSyncJobDao;
 import io.metersphere.functional.hub.dto.DefaultHubCaseImportRequest;
 import io.metersphere.functional.hub.dto.DefaultHubJobResponse;
 import io.metersphere.functional.hub.dto.DefaultHubSyncJobRow;
 import io.metersphere.functional.mapper.FunctionalCaseBlobMapper;
+import io.metersphere.functional.mapper.FunctionalCaseAttachmentMapper;
 import io.metersphere.functional.mapper.FunctionalCaseMapper;
-import io.metersphere.functional.service.FunctionalCaseCustomFieldService;
 import io.metersphere.functional.service.FunctionalCaseModuleService;
 import io.metersphere.functional.service.FunctionalCaseService;
+import io.metersphere.functional.service.FunctionalCaseAttachmentService;
+import io.metersphere.project.domain.FileAssociation;
 import io.metersphere.project.mapper.ExtBaseProjectVersionMapper;
+import io.metersphere.project.service.ProjectTemplateService;
 import io.metersphere.sdk.constants.ApplicationNumScope;
 import io.metersphere.sdk.constants.DefaultHubConstants;
+import io.metersphere.sdk.constants.DefaultRepositoryDir;
 import io.metersphere.sdk.constants.ExecStatus;
 import io.metersphere.sdk.constants.ModuleConstants;
+import io.metersphere.sdk.constants.TemplateScene;
 import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.file.FileCenter;
+import io.metersphere.sdk.file.FileCopyRequest;
+import io.metersphere.sdk.file.FileRepository;
 import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.dto.sdk.BaseTreeNode;
 import io.metersphere.system.service.DefaultHubProjectService;
+import io.metersphere.system.dto.sdk.TemplateDTO;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.uid.NumGenerator;
 import jakarta.annotation.Resource;
@@ -61,12 +72,16 @@ public class DefaultHubCaseImportService {
     @Resource
     private FunctionalCaseBlobMapper functionalCaseBlobMapper;
     @Resource
-    private FunctionalCaseCustomFieldService functionalCaseCustomFieldService;
+    private FunctionalCaseAttachmentMapper functionalCaseAttachmentMapper;
+    @Resource
+    private FunctionalCaseAttachmentService functionalCaseAttachmentService;
     @Lazy
     @Resource
     private FunctionalCaseService functionalCaseService;
     @Resource
     private ExtBaseProjectVersionMapper extBaseProjectVersionMapper;
+    @Resource
+    private ProjectTemplateService projectTemplateService;
     @Resource
     private TransactionTemplate transactionTemplate;
     @Resource
@@ -93,7 +108,7 @@ public class DefaultHubCaseImportService {
             throw new MSException("未选择可导入的用例");
         }
         String jobId = defaultHubSyncJobDao.createJob(DefaultHubConstants.JOB_TYPE_IMPORT_CASE,
-                request.getTargetProjectId(), operator);
+                request.getTargetProjectId(), operator, request.getIdempotencyKey());
         // 经代理调用以保证 @Async 生效
         self.executeImportAsync(jobId, hubProjectId, request, sourceCaseIds, operator);
         DefaultHubJobResponse resp = new DefaultHubJobResponse();
@@ -129,7 +144,14 @@ public class DefaultHubCaseImportService {
         resp.setSuccessCount(row.getSuccessCount());
         resp.setFailCount(row.getFailCount());
         resp.setErrorMessage(row.getErrorMessage());
+        resp.setItems(getImportResults(jobId));
         return resp;
+    }
+
+    public List<Map<String, Object>> getImportResults(String jobId) {
+        return jdbcTemplate.queryForList("SELECT source_case_id sourceCaseId, target_case_id targetCaseId, "
+                + "target_project_id targetProjectId, status, action, error_message errorMessage "
+                + "FROM case_asset_import_result WHERE job_id=? ORDER BY create_time, source_case_id", jobId);
     }
 
     @Async
@@ -139,31 +161,35 @@ public class DefaultHubCaseImportService {
             return;
         }
         int total = sourceCaseIds.size();
-        try {
-            transactionTemplate.executeWithoutResult(status -> {
-                int success = 0;
-                int index = 0;
-                for (String hubCaseId : sourceCaseIds) {
-                    importOne(hubProjectId, hubCaseId, request, operator);
-                    success++;
-                    index++;
-                    int progress = (int) (index * 100L / total);
-                    defaultHubSyncJobDao.updateProgress(jobId, progress, success, 0);
-                }
-                defaultHubSyncJobDao.finish(jobId, DefaultHubConstants.JOB_STATUS_SUCCESS, 100, success, 0, null);
-            });
-        } catch (Exception e) {
-            LogUtils.error("default hub case import failed, job=" + jobId, e);
-            defaultHubSyncJobDao.finish(jobId, DefaultHubConstants.JOB_STATUS_FAILED, 0, 0, total,
-                    StringUtils.defaultString(e.getMessage()));
-            throw e;
+        int success = 0;
+        int fail = 0;
+        String lastError = null;
+        for (int index = 0; index < total; index++) {
+            String hubCaseId = sourceCaseIds.get(index);
+            try {
+                transactionTemplate.executeWithoutResult(status -> {
+                    ImportOutcome outcome = importOne(jobId, hubProjectId, hubCaseId, request, operator);
+                    recordImportResult(jobId, hubCaseId, outcome.targetCaseId(), request.getTargetProjectId(),
+                            outcome.skipped() ? "SKIPPED" : "SUCCESS", outcome.action(), null);
+                });
+                success++;
+            } catch (Exception e) {
+                fail++;
+                lastError = StringUtils.defaultString(e.getMessage());
+                LogUtils.error("case asset import item failed, job=" + jobId + ", case=" + hubCaseId, e);
+                recordImportResult(jobId, hubCaseId, null, request.getTargetProjectId(), "FAILED", null, lastError);
+            }
+            defaultHubSyncJobDao.updateProgress(jobId, (int) ((index + 1) * 100L / total), success, fail);
         }
+        String status = fail == 0 ? DefaultHubConstants.JOB_STATUS_SUCCESS
+                : success == 0 ? DefaultHubConstants.JOB_STATUS_FAILED : DefaultHubConstants.JOB_STATUS_PARTIAL_SUCCESS;
+        defaultHubSyncJobDao.finish(jobId, status, 100, success, fail, lastError);
     }
 
-    private void importOne(String hubProjectId, String hubCaseId, DefaultHubCaseImportRequest request, String operator) {
+    private ImportOutcome importOne(String jobId, String hubProjectId, String hubCaseId, DefaultHubCaseImportRequest request, String operator) {
         FunctionalCase hubCase = functionalCaseMapper.selectByPrimaryKey(hubCaseId);
         if (hubCase == null || Boolean.TRUE.equals(hubCase.getDeleted())) {
-            return;
+            throw new MSException("资产用例不存在或已删除: " + hubCaseId);
         }
         String targetModuleId = defaultHubModuleResolver.resolveTargetModuleId(
                 hubProjectId, hubCase.getModuleId(), request.getTargetProjectId(), operator, request.getTargetModuleId());
@@ -173,22 +199,30 @@ public class DefaultHubCaseImportService {
         List<FunctionalCase> exists = functionalCaseMapper.selectByExample(example);
         if (CollectionUtils.isNotEmpty(exists)) {
             if (DefaultHubConstants.CONFLICT_SKIP.equals(request.getConflictStrategy())) {
-                return;
+                saveLineage(hubCaseId, exists.getFirst().getId(), request.getTargetProjectId(), jobId,
+                        request.getConflictStrategy(), operator);
+                return new ImportOutcome(exists.getFirst().getId(), "SKIPPED", true);
             }
-            overwriteCase(exists.getFirst(), hubCaseId, operator);
-            return;
+            overwriteCase(exists.getFirst(), hubCaseId, hubProjectId, request, operator);
+            saveLineage(hubCaseId, exists.getFirst().getId(), request.getTargetProjectId(), jobId,
+                    request.getConflictStrategy(), operator);
+            return new ImportOutcome(exists.getFirst().getId(), "OVERWRITTEN", false);
         }
-        createImportedCase(hubCase, hubCaseId, request.getTargetProjectId(), targetModuleId, operator);
+        String targetCaseId = createImportedCase(hubCase, hubCaseId, hubProjectId, request, targetModuleId, operator);
+        saveLineage(hubCaseId, targetCaseId, request.getTargetProjectId(), jobId, request.getConflictStrategy(), operator);
+        return new ImportOutcome(targetCaseId, "CREATED", false);
     }
 
-    private void createImportedCase(FunctionalCase hubCase, String hubCaseId, String targetProjectId,
-                                    String targetModuleId, String operator) {
+    private String createImportedCase(FunctionalCase hubCase, String hubCaseId, String hubProjectId,
+                                      DefaultHubCaseImportRequest request, String targetModuleId, String operator) {
+        String targetProjectId = request.getTargetProjectId();
         String newId = IDGenerator.nextStr();
         FunctionalCase target = new FunctionalCase();
+        TemplateDTO targetTemplate = projectTemplateService.getDefaultTemplateDTO(targetProjectId, TemplateScene.FUNCTIONAL.name());
         target.setId(newId);
         target.setProjectId(targetProjectId);
         target.setModuleId(targetModuleId);
-        target.setTemplateId(hubCase.getTemplateId());
+        target.setTemplateId(targetTemplate.getId());
         target.setName(hubCase.getName());
         target.setTags(hubCase.getTags());
         target.setCaseEditType(hubCase.getCaseEditType());
@@ -211,10 +245,25 @@ public class DefaultHubCaseImportService {
         functionalCaseMapper.insertSelective(target);
         jdbcTemplate.update("UPDATE functional_case SET imported_from_hub_case_id = ? WHERE id = ?", hubCaseId, newId);
         copyBlob(hubCaseId, newId, true);
-        functionalCaseCustomFieldService.copyCustomField(hubCaseId, newId);
+        copyCompatibleCustomFields(hubCaseId, newId, targetTemplate.getId());
+        if (Boolean.TRUE.equals(request.getCopyAttachments())) {
+            copyAttachments(hubProjectId, hubCaseId, targetProjectId, newId, operator, false);
+        }
+        return newId;
     }
 
-    private void overwriteCase(FunctionalCase target, String hubCaseId, String operator) {
+    private void saveLineage(String sourceCaseId, String targetCaseId, String targetProjectId,
+                             String jobId, String conflictStrategy, String operator) {
+        long now = System.currentTimeMillis();
+        jdbcTemplate.update("INSERT INTO case_asset_lineage (id, source_case_id, target_case_id, target_project_id, "
+                        + "import_batch_id, conflict_strategy, create_user, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "ON DUPLICATE KEY UPDATE source_case_id=VALUES(source_case_id), target_project_id=VALUES(target_project_id), "
+                        + "import_batch_id=VALUES(import_batch_id), conflict_strategy=VALUES(conflict_strategy), update_time=VALUES(update_time)",
+                IDGenerator.nextStr(), sourceCaseId, targetCaseId, targetProjectId, jobId, conflictStrategy, operator, now, now);
+    }
+
+    private void overwriteCase(FunctionalCase target, String hubCaseId, String hubProjectId,
+                               DefaultHubCaseImportRequest request, String operator) {
         FunctionalCase hubCase = functionalCaseMapper.selectByPrimaryKey(hubCaseId);
         FunctionalCase update = new FunctionalCase();
         update.setId(target.getId());
@@ -228,9 +277,80 @@ public class DefaultHubCaseImportService {
         update.setUpdateTime(System.currentTimeMillis());
         functionalCaseMapper.updateByPrimaryKeySelective(update);
         copyBlob(hubCaseId, target.getId(), false);
-        functionalCaseCustomFieldService.copyCustomField(hubCaseId, target.getId());
+        String targetTemplateId = StringUtils.defaultIfBlank(target.getTemplateId(),
+                projectTemplateService.getDefaultTemplateDTO(request.getTargetProjectId(), TemplateScene.FUNCTIONAL.name()).getId());
+        copyCompatibleCustomFields(hubCaseId, target.getId(), targetTemplateId);
+        if (Boolean.TRUE.equals(request.getCopyAttachments())) {
+            copyAttachments(hubProjectId, hubCaseId, request.getTargetProjectId(), target.getId(), operator, true);
+        }
         jdbcTemplate.update("UPDATE functional_case SET imported_from_hub_case_id = ? WHERE id = ?", hubCaseId, target.getId());
     }
+
+    private void copyAttachments(String sourceProjectId, String sourceCaseId, String targetProjectId,
+                                 String targetCaseId, String operator, boolean replace) {
+        if (replace) {
+            FunctionalCaseAttachmentExample targetExample = new FunctionalCaseAttachmentExample();
+            targetExample.createCriteria().andCaseIdEqualTo(targetCaseId);
+            functionalCaseAttachmentMapper.deleteByExample(targetExample);
+        }
+        FunctionalCaseAttachmentExample sourceExample = new FunctionalCaseAttachmentExample();
+        sourceExample.createCriteria().andCaseIdEqualTo(sourceCaseId);
+        List<FunctionalCaseAttachment> attachments = functionalCaseAttachmentMapper.selectByExample(sourceExample);
+        FileRepository repository = FileCenter.getDefaultRepository();
+        for (FunctionalCaseAttachment source : attachments) {
+            if (Boolean.TRUE.equals(source.getLocal())) {
+                FileCopyRequest copy = new FileCopyRequest();
+                copy.setCopyFolder(DefaultRepositoryDir.getFunctionalCaseDir(sourceProjectId, sourceCaseId) + "/" + source.getFileId());
+                copy.setCopyfileName(source.getFileName());
+                copy.setFolder(DefaultRepositoryDir.getFunctionalCaseDir(targetProjectId, targetCaseId) + "/" + source.getFileId());
+                copy.setFileName(source.getFileName());
+                try {
+                    repository.copyFile(copy);
+                } catch (Exception e) {
+                    throw new MSException("复制资产用例附件失败: " + source.getFileName(), e);
+                }
+            }
+            FunctionalCaseAttachment target = new FunctionalCaseAttachment();
+            target.setId(IDGenerator.nextStr());
+            target.setCaseId(targetCaseId);
+            target.setFileId(source.getFileId());
+            target.setFileName(source.getFileName());
+            target.setFileSource(source.getFileSource());
+            target.setSize(source.getSize());
+            target.setLocal(source.getLocal());
+            target.setCreateUser(operator);
+            target.setCreateTime(System.currentTimeMillis());
+            functionalCaseAttachmentMapper.insertSelective(target);
+        }
+        List<FileAssociation> sourceAssociations = functionalCaseAttachmentService
+                .getFileAssociationByCaseIds(List.of(sourceCaseId)).getOrDefault(sourceCaseId, List.of());
+        if (replace) {
+            List<FileAssociation> targetAssociations = functionalCaseAttachmentService
+                    .getFileAssociationByCaseIds(List.of(targetCaseId)).getOrDefault(targetCaseId, List.of());
+            List<String> targetFileIds = targetAssociations.stream().map(FileAssociation::getFileId).distinct().toList();
+            if (!targetFileIds.isEmpty()) {
+                functionalCaseAttachmentService.unAssociation(targetCaseId, targetFileIds,
+                        "/case-asset/import/project", operator, targetProjectId);
+            }
+        }
+        List<String> sourceFileIds = sourceAssociations.stream().map(FileAssociation::getFileId).distinct().toList();
+        if (!sourceFileIds.isEmpty()) {
+            functionalCaseAttachmentService.association(sourceFileIds, targetCaseId, operator,
+                    "/case-asset/import/project", targetProjectId);
+        }
+    }
+
+    private void recordImportResult(String jobId, String sourceCaseId, String targetCaseId, String targetProjectId,
+                                    String status, String action, String errorMessage) {
+        jdbcTemplate.update("INSERT INTO case_asset_import_result (id, job_id, source_case_id, target_case_id, "
+                        + "target_project_id, status, action, error_message, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "ON DUPLICATE KEY UPDATE target_case_id=VALUES(target_case_id), status=VALUES(status), "
+                        + "action=VALUES(action), error_message=VALUES(error_message)",
+                IDGenerator.nextStr(), jobId, sourceCaseId, targetCaseId, targetProjectId, status, action,
+                StringUtils.left(errorMessage, 2000), System.currentTimeMillis());
+    }
+
+    private record ImportOutcome(String targetCaseId, String action, boolean skipped) { }
 
     private void copyBlob(String fromId, String toId, boolean insertIfMissing) {
         FunctionalCaseBlob src = functionalCaseBlobMapper.selectByPrimaryKey(fromId);
@@ -248,6 +368,19 @@ public class DefaultHubCaseImportService {
         } else {
             functionalCaseBlobMapper.updateByPrimaryKeyWithBLOBs(blob);
         }
+    }
+
+    private void copyCompatibleCustomFields(String sourceCaseId, String targetCaseId, String targetTemplateId) {
+        jdbcTemplate.update("DELETE FROM functional_case_custom_field WHERE case_id=?", targetCaseId);
+        jdbcTemplate.update("INSERT INTO functional_case_custom_field (case_id,field_id,value) "
+                        + "SELECT ?,source.field_id,source.value FROM functional_case_custom_field source "
+                        + "JOIN template_custom_field target_field ON target_field.field_id=source.field_id "
+                        + "AND target_field.template_id=? WHERE source.case_id=?",
+                targetCaseId, targetTemplateId, sourceCaseId);
+        jdbcTemplate.update("INSERT INTO functional_case_custom_field (case_id,field_id,value) "
+                        + "SELECT ?,field_id,default_value FROM template_custom_field target_field WHERE template_id=? "
+                        + "AND NOT EXISTS (SELECT 1 FROM functional_case_custom_field saved WHERE saved.case_id=? "
+                        + "AND saved.field_id=target_field.field_id)", targetCaseId, targetTemplateId, targetCaseId);
     }
 
     private List<String> resolveSourceCaseIds(String hubProjectId, DefaultHubCaseImportRequest request) {

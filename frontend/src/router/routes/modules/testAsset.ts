@@ -6,6 +6,7 @@ import { DEFAULT_LAYOUT } from '../base';
 import type { AppRouteRecordRaw } from '../types';
 
 const readRoles = [
+  'CASE_ASSET:READ',
   'FUNCTIONAL_CASE:READ',
   'FUNCTIONAL_CASE_AI:READ',
   'PROJECT_FILE_MANAGEMENT:READ',
@@ -49,6 +50,43 @@ const TestAsset: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'cases',
+      name: TestAssetRouteEnum.TEST_ASSET_CASES,
+      redirect: '/test-assets/cases/project',
+      component: () => import('@/views/test-asset/cases.vue'),
+      meta: {
+        locale: 'menu.testAsset.cases',
+        roles: ['CASE_ASSET:READ'],
+        resourceCode: 'TEST_ASSET_CASES_PAGE',
+        isTopMenu: true,
+        keepModuleAlive: true,
+      },
+    },
+    {
+      path: 'datasets',
+      name: TestAssetRouteEnum.TEST_ASSET_DATASETS,
+      component: () => import('@/views/test-asset/datasets.vue'),
+      meta: {
+        locale: 'menu.testAsset.datasets',
+        roles: ['PROJECT_FILE_MANAGEMENT:READ'],
+        resourceCode: 'TEST_ASSET_DATASETS_PAGE',
+        isTopMenu: true,
+        keepModuleAlive: true,
+      },
+    },
+    {
+      path: 'environments',
+      name: TestAssetRouteEnum.TEST_ASSET_ENVIRONMENTS,
+      component: () => import('@/views/test-asset/environments.vue'),
+      meta: {
+        locale: 'menu.testAsset.environments',
+        roles: ['PROJECT_ENVIRONMENT:READ'],
+        resourceCode: 'TEST_ASSET_ENVIRONMENTS_PAGE',
+        isTopMenu: true,
+        keepModuleAlive: true,
+      },
+    },
+    {
       path: 'versions',
       name: TestAssetRouteEnum.TEST_ASSET_VERSIONS,
       component: () => import('@/views/test-asset/versions.vue'),
@@ -68,41 +106,6 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.relations',
         roles: readRoles,
         resourceCode: 'TEST_ASSET_RELATIONS_PAGE',
-        isTopMenu: true,
-        keepModuleAlive: true,
-      },
-    },
-    {
-      path: 'cases',
-      name: TestAssetRouteEnum.TEST_ASSET_CASES,
-      redirect: '/test-assets/cases/project',
-      component: () => import('@/views/test-asset/cases.vue'),
-      meta: {
-        locale: 'menu.testAsset.cases',
-        roles: ['FUNCTIONAL_CASE:READ'],
-        resourceCode: 'TEST_ASSET_CASES_PAGE',
-        isTopMenu: true,
-        keepModuleAlive: true,
-      },
-    },
-    {
-      path: 'datasets',
-      name: TestAssetRouteEnum.TEST_ASSET_DATASETS,
-      component: () => import('@/views/test-asset/datasets.vue'),
-      meta: {
-        locale: 'menu.testAsset.datasets',
-        roles: ['PROJECT_FILE_MANAGEMENT:READ'],
-        isTopMenu: true,
-        keepModuleAlive: true,
-      },
-    },
-    {
-      path: 'environments',
-      name: TestAssetRouteEnum.TEST_ASSET_ENVIRONMENTS,
-      component: () => import('@/views/test-asset/environments.vue'),
-      meta: {
-        locale: 'menu.testAsset.environments',
-        roles: ['PROJECT_ENVIRONMENT:READ'],
         isTopMenu: true,
         keepModuleAlive: true,
       },
@@ -147,7 +150,7 @@ const TestAsset: AppRouteRecordRaw = {
       component: () => import('@/views/test-asset/cases.vue'),
       meta: {
         locale: 'menu.testAsset.cases',
-        roles: ['FUNCTIONAL_CASE:READ'],
+        roles: ['CASE_ASSET:READ'],
         resourceCode: 'TEST_ASSET_CASE_PROJECT_TAB',
         hideInMenu: true,
         activeMenu: TestAssetRouteEnum.TEST_ASSET_CASES,
@@ -159,8 +162,19 @@ const TestAsset: AppRouteRecordRaw = {
       component: () => import('@/views/test-asset/cases.vue'),
       meta: {
         locale: 'menu.testAsset.cases',
-        roles: ['FUNCTIONAL_CASE:READ'],
+        roles: ['CASE_ASSET:READ'],
         resourceCode: 'TEST_ASSET_CASE_SYSTEM_TAB',
+        hideInMenu: true,
+        activeMenu: TestAssetRouteEnum.TEST_ASSET_CASES,
+      },
+    },
+    {
+      path: 'cases/:catalogId/:caseId',
+      name: TestAssetRouteEnum.TEST_ASSET_CASE_DETAIL,
+      component: () => import('@/views/test-asset/asset-case-detail.vue'),
+      meta: {
+        locale: 'menu.testAsset.cases',
+        roles: ['CASE_ASSET:READ'],
         hideInMenu: true,
         activeMenu: TestAssetRouteEnum.TEST_ASSET_CASES,
       },

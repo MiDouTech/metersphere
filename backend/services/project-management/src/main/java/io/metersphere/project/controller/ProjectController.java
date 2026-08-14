@@ -27,6 +27,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 
@@ -91,6 +92,14 @@ public class ProjectController {
     @CheckOwner(resourceId = "#request.getId()", resourceType = "project")
     public ProjectDTO updateProject(@RequestBody @Validated({Updated.class}) ProjectRequest request) {
         return projectService.update(request, SessionUtils.getUserId());
+    }
+
+    @GetMapping("/{projectId}/case-asset-catalog")
+    @Operation(summary = "查询项目关联的用例资产目录")
+    @RequiresPermissions(PermissionConstants.PROJECT_BASE_INFO_READ)
+    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    public Map<String, Object> relatedCaseAssetCatalog(@PathVariable String projectId) {
+        return projectService.getRelatedCaseAssetCatalog(projectId);
     }
 
     @GetMapping("/pool-options/{type}/{projectId}")

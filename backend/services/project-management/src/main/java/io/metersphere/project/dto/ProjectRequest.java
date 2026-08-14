@@ -34,4 +34,7 @@ public class ProjectRequest {
     @Size(min = 1, max = 50, message = "{project.id.length_range}", groups = {Updated.class})
     private String id;
 
+    @Schema(description = "是否已确认关联用例资产目录的项目改名提示")
+    private Boolean confirmAssetCatalogRename;
+
 }

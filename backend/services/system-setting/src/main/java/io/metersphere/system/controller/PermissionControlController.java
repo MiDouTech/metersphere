@@ -17,6 +17,10 @@ import io.metersphere.system.dto.permission.control.RoleEnableRequest;
 import io.metersphere.system.dto.permission.control.RoleMemberUpdateRequest;
 import io.metersphere.system.dto.permission.control.RoleSaveRequest;
 import io.metersphere.system.dto.permission.control.WorkflowRolePermissionRequest;
+import io.metersphere.system.dto.permission.control.WorkflowDesignerDTO;
+import io.metersphere.system.dto.permission.control.WorkflowValidationDTO;
+import io.metersphere.system.dto.permission.control.WorkflowMigrationPreviewDTO;
+import io.metersphere.system.dto.permission.control.WorkflowMigrationRequest;
 import io.metersphere.system.dto.permission.control.UnknownPermissionDiagnosticRequest;
 import io.metersphere.system.dto.request.GlobalUserRoleRelationQueryRequest;
 import io.metersphere.system.dto.sdk.request.PermissionSettingUpdateRequest;
@@ -26,6 +30,7 @@ import io.metersphere.system.dto.user.UserExcludeOptionDTO;
 import io.metersphere.system.dto.user.UserRoleRelationUserDTO;
 import io.metersphere.system.service.PermissionControlService;
 import io.metersphere.system.service.GlobalUserRoleLogService;
+import io.metersphere.system.service.PermissionControlFlowLogService;
 import io.metersphere.system.log.annotation.Log;
 import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.utils.Pager;
@@ -48,6 +53,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "系统设置-系统-权限控制")
 @RestController
@@ -229,6 +235,7 @@ public class PermissionControlController {
     @PostMapping("/flow/add")
     @Operation(summary = "权限控制-流程控制-新建流程")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_ADD)
+    @Log(type = OperationLogType.ADD, expression = "#msClass.add(#request)", msClass = PermissionControlFlowLogService.class)
     public WorkflowDefinition addFlow(@RequestBody WorkflowDefinition request) {
         return permissionControlService.addFlow(request);
     }
@@ -236,6 +243,7 @@ public class PermissionControlController {
     @PostMapping("/flow/update")
     @Operation(summary = "权限控制-流程控制-修改流程")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.update(#request)", msClass = PermissionControlFlowLogService.class)
     public WorkflowDefinition updateFlow(@RequestBody WorkflowDefinition request) {
         return permissionControlService.updateFlow(request);
     }
@@ -313,5 +321,89 @@ public class PermissionControlController {
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
     public void saveFlowRolePermissions(@Validated @RequestBody WorkflowRolePermissionRequest request) {
         permissionControlService.saveFlowRolePermissions(request);
+    }
+
+    @GetMapping("/flow/{flowId}/designer")
+    @Operation(summary = "权限控制-流程控制-读取流程设计")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public WorkflowDesignerDTO getFlowDesigner(@PathVariable String flowId) {
+        return permissionControlService.getWorkflowDesigner(flowId);
+    }
+
+    @PostMapping("/flow/{flowId}/designer")
+    @Operation(summary = "权限控制-流程控制-保存流程设计草稿")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.designer(#flowId,#request)", msClass = PermissionControlFlowLogService.class)
+    public WorkflowDesignerDTO saveFlowDesigner(@PathVariable String flowId, @RequestBody WorkflowDesignerDTO request) {
+        return permissionControlService.saveWorkflowDesigner(flowId, request);
+    }
+
+    @PostMapping("/flow/{flowId}/validate")
+    @Operation(summary = "权限控制-流程控制-发布前校验")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public WorkflowValidationDTO validateFlow(@PathVariable String flowId) {
+        return permissionControlService.validateWorkflow(flowId);
+    }
+
+    @PostMapping("/flow/{flowId}/publish")
+    @Operation(summary = "权限控制-流程控制-发布全局流程")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.publish(#flowId)", msClass = PermissionControlFlowLogService.class)
+    public WorkflowDefinition publishFlow(@PathVariable String flowId, @RequestParam Integer expectedVersion) {
+        return permissionControlService.publishWorkflow(flowId, expectedVersion);
+    }
+
+    @PostMapping("/flow/{flowId}/archive")
+    @Operation(summary = "权限控制-流程控制-归档流程")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.archive(#flowId)", msClass = PermissionControlFlowLogService.class)
+    public WorkflowDefinition archiveFlow(@PathVariable String flowId) {
+        return permissionControlService.archiveWorkflow(flowId);
+    }
+
+    @PostMapping("/flow/{flowId}/copy")
+    @Operation(summary = "权限控制-流程控制-复制为新版本草稿")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_ADD)
+    @Log(type = OperationLogType.ADD, expression = "#msClass.copy(#flowId)", msClass = PermissionControlFlowLogService.class)
+    public WorkflowDefinition copyFlow(@PathVariable String flowId) {
+        return permissionControlService.copyWorkflow(flowId);
+    }
+
+    @GetMapping("/flow/{flowId}/migration/preview")
+    @Operation(summary = "权限控制-流程控制-历史缺陷迁移预检")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public WorkflowMigrationPreviewDTO previewMigration(@PathVariable String flowId) {
+        return permissionControlService.previewWorkflowMigration(flowId);
+    }
+
+    @PostMapping("/flow/migration")
+    @Operation(summary = "权限控制-流程控制-显式迁移历史缺陷")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.migration(#request)", msClass = PermissionControlFlowLogService.class)
+    public Map<String, Object> migrate(@Validated @RequestBody WorkflowMigrationRequest request) {
+        return permissionControlService.migrateWorkflow(request);
+    }
+
+    @GetMapping("/flow/migration/{batchId}")
+    @Operation(summary = "权限控制-流程控制-查询迁移批次")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public Map<String, Object> migrationBatch(@PathVariable String batchId) {
+        return permissionControlService.getWorkflowMigrationBatch(batchId);
+    }
+
+    @PostMapping("/flow/migration/{batchId}/resume")
+    @Operation(summary = "权限控制-流程控制-断点续跑迁移批次")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.batch(#batchId)", msClass = PermissionControlFlowLogService.class)
+    public Map<String, Object> resumeMigration(@PathVariable String batchId) {
+        return permissionControlService.resumeWorkflowMigration(batchId);
+    }
+
+    @PostMapping("/flow/migration/{batchId}/rollback")
+    @Operation(summary = "权限控制-流程控制-回滚迁移批次")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.batch(#batchId)", msClass = PermissionControlFlowLogService.class)
+    public Map<String, Object> rollbackMigration(@PathVariable String batchId) {
+        return permissionControlService.rollbackWorkflowMigration(batchId);
     }
 }

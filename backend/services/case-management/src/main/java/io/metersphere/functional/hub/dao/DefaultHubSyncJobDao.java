@@ -7,6 +7,7 @@ import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -21,13 +22,34 @@ public class DefaultHubSyncJobDao {
     private JdbcTemplate jdbcTemplate;
 
     public String createJob(String jobType, String scopeProjectId, String createUser) {
+        return createJob(jobType, scopeProjectId, createUser, null);
+    }
+
+    public String createJob(String jobType, String scopeProjectId, String createUser, String idempotencyKey) {
+        if (StringUtils.isNotBlank(idempotencyKey)) {
+            String existing = findIdByIdempotencyKey(jobType, scopeProjectId, idempotencyKey);
+            if (existing != null) return existing;
+        }
         String id = IDGenerator.nextStr();
         long now = System.currentTimeMillis();
-        jdbcTemplate.update(
-                "INSERT INTO default_hub_sync_job (id, job_type, scope_project_id, status, progress, success_count, fail_count, create_user, create_time, update_time) " +
-                        "VALUES (?,?,?,?,0,0,0,?,?,?)",
-                id, jobType, scopeProjectId, DefaultHubConstants.JOB_STATUS_PENDING, createUser, now, now);
+        try {
+            jdbcTemplate.update(
+                    "INSERT INTO default_hub_sync_job (id, job_type, scope_project_id, idempotency_key, status, progress, success_count, fail_count, create_user, create_time, update_time) " +
+                            "VALUES (?,?,?,?,?,0,0,0,?,?,?)",
+                    id, jobType, scopeProjectId, idempotencyKey, DefaultHubConstants.JOB_STATUS_PENDING, createUser, now, now);
+        } catch (DuplicateKeyException e) {
+            String existing = findIdByIdempotencyKey(jobType, scopeProjectId, idempotencyKey);
+            if (existing != null) return existing;
+            throw e;
+        }
         return id;
+    }
+
+    private String findIdByIdempotencyKey(String jobType, String scopeProjectId, String idempotencyKey) {
+        List<String> ids = jdbcTemplate.queryForList(
+                "SELECT id FROM default_hub_sync_job WHERE job_type=? AND scope_project_id=? AND idempotency_key=? LIMIT 1",
+                String.class, jobType, scopeProjectId, idempotencyKey);
+        return ids.isEmpty() ? null : ids.getFirst();
     }
 
     public DefaultHubSyncJobRow findById(String jobId) {

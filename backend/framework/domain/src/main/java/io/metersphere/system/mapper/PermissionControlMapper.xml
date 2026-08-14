@@ -23,6 +23,11 @@
     <result column="default_flow" property="defaultFlow" jdbcType="BIT"/>
     <result column="enabled" property="enabled" jdbcType="BIT"/>
     <result column="description" property="description" jdbcType="VARCHAR"/>
+    <result column="version" property="version" jdbcType="INTEGER"/>
+    <result column="lifecycle" property="lifecycle" jdbcType="VARCHAR"/>
+    <result column="published_time" property="publishedTime" jdbcType="BIGINT"/>
+    <result column="published_by" property="publishedBy" jdbcType="VARCHAR"/>
+    <result column="source_flow_id" property="sourceFlowId" jdbcType="VARCHAR"/>
     <result column="create_time" property="createTime" jdbcType="BIGINT"/>
     <result column="update_time" property="updateTime" jdbcType="BIGINT"/>
   </resultMap>
@@ -166,9 +171,11 @@
 
   <insert id="insertWorkflowDefinition" parameterType="io.metersphere.system.domain.WorkflowDefinition">
     insert into workflow_definition
-      (id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, create_time, update_time)
+      (id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, version, lifecycle,
+       published_time, published_by, source_flow_id, create_time, update_time)
     values
-      (#{id}, #{code}, #{name}, #{scene}, #{scopeType}, #{scopeId}, #{defaultFlow}, #{enabled}, #{description}, #{createTime}, #{updateTime})
+      (#{id}, #{code}, #{name}, #{scene}, #{scopeType}, #{scopeId}, #{defaultFlow}, #{enabled}, #{description},
+       #{version}, #{lifecycle}, #{publishedTime}, #{publishedBy}, #{sourceFlowId}, #{createTime}, #{updateTime})
   </insert>
 
   <update id="updateWorkflowDefinition" parameterType="io.metersphere.system.domain.WorkflowDefinition">
@@ -182,13 +189,19 @@
       <if test="defaultFlow != null">default_flow = #{defaultFlow},</if>
       <if test="enabled != null">enabled = #{enabled},</if>
       <if test="description != null">description = #{description},</if>
+      <if test="version != null">version = #{version},</if>
+      <if test="lifecycle != null">lifecycle = #{lifecycle},</if>
+      <if test="publishedTime != null">published_time = #{publishedTime},</if>
+      <if test="publishedBy != null">published_by = #{publishedBy},</if>
+      <if test="sourceFlowId != null">source_flow_id = #{sourceFlowId},</if>
       update_time = #{updateTime}
     </set>
     where id = #{id}
   </update>
 
   <select id="selectWorkflowDefinitions" resultMap="WorkflowDefinitionMap">
-    select id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, create_time, update_time
+    select id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, version, lifecycle,
+           published_time, published_by, source_flow_id, create_time, update_time
     from workflow_definition
     where scene = #{scene}
       <if test="scopeType != null and scopeType != ''">
@@ -197,11 +210,12 @@
       <if test="scopeId != null and scopeId != ''">
         and scope_id = #{scopeId}
       </if>
-    order by default_flow desc, create_time asc
+    order by default_flow desc, code asc, version desc, create_time asc
   </select>
 
   <select id="selectWorkflowDefinitionById" resultMap="WorkflowDefinitionMap">
-    select id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, create_time, update_time
+    select id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, version, lifecycle,
+           published_time, published_by, source_flow_id, create_time, update_time
     from workflow_definition
     where id = #{id}
   </select>

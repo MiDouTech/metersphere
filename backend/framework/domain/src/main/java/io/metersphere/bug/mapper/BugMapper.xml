@@ -15,6 +15,8 @@
     <result column="template_id" jdbcType="VARCHAR" property="templateId" />
     <result column="platform" jdbcType="VARCHAR" property="platform" />
     <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="workflow_id" jdbcType="VARCHAR" property="workflowId" />
+    <result column="workflow_version" jdbcType="INTEGER" property="workflowVersion" />
     <result column="tags" jdbcType="VARCHAR" property="tags" typeHandler="io.metersphere.handler.ListTypeHandler" />
     <result column="platform_bug_id" jdbcType="VARCHAR" property="platformBugId" />
     <result column="delete_user" jdbcType="VARCHAR" property="deleteUser" />
@@ -120,7 +122,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, num, title, handle_users, handle_user, create_user, create_time, update_user, 
-    update_time, project_id, template_id, platform, `status`, tags, platform_bug_id, 
+    update_time, project_id, template_id, platform, `status`, workflow_id, workflow_version, tags, platform_bug_id,
     delete_user, delete_time, deleted, pos
   </sql>
   <select id="selectByExample" parameterType="io.metersphere.bug.domain.BugExample" resultMap="BaseResultMap">
@@ -158,14 +160,15 @@
       handle_users, handle_user, create_user, 
       create_time, update_user, update_time, 
       project_id, template_id, platform, 
-      `status`, tags, 
+      `status`, workflow_id, workflow_version, tags,
       platform_bug_id, delete_user, delete_time, 
       deleted, pos)
     values (#{id,jdbcType=VARCHAR}, #{num,jdbcType=INTEGER}, #{title,jdbcType=VARCHAR}, 
       #{handleUsers,jdbcType=VARCHAR}, #{handleUser,jdbcType=VARCHAR}, #{createUser,jdbcType=VARCHAR}, 
       #{createTime,jdbcType=BIGINT}, #{updateUser,jdbcType=VARCHAR}, #{updateTime,jdbcType=BIGINT}, 
       #{projectId,jdbcType=VARCHAR}, #{templateId,jdbcType=VARCHAR}, #{platform,jdbcType=VARCHAR}, 
-      #{status,jdbcType=VARCHAR}, #{tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler}, 
+      #{status,jdbcType=VARCHAR}, #{workflowId,jdbcType=VARCHAR}, #{workflowVersion,jdbcType=INTEGER},
+      #{tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler},
       #{platformBugId,jdbcType=VARCHAR}, #{deleteUser,jdbcType=VARCHAR}, #{deleteTime,jdbcType=BIGINT}, 
       #{deleted,jdbcType=BIT}, #{pos,jdbcType=BIGINT})
   </insert>
@@ -210,6 +213,12 @@
       </if>
       <if test="status != null">
         `status`,
+      </if>
+      <if test="workflowId != null">
+        workflow_id,
+      </if>
+      <if test="workflowVersion != null">
+        workflow_version,
       </if>
       <if test="tags != null">
         tags,
@@ -269,6 +278,12 @@
       </if>
       <if test="status != null">
         #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="workflowId != null">
+        #{workflowId,jdbcType=VARCHAR},
+      </if>
+      <if test="workflowVersion != null">
+        #{workflowVersion,jdbcType=INTEGER},
       </if>
       <if test="tags != null">
         #{tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler},
@@ -425,6 +440,12 @@
       <if test="status != null">
         `status` = #{status,jdbcType=VARCHAR},
       </if>
+      <if test="workflowId != null">
+        workflow_id = #{workflowId,jdbcType=VARCHAR},
+      </if>
+      <if test="workflowVersion != null">
+        workflow_version = #{workflowVersion,jdbcType=INTEGER},
+      </if>
       <if test="tags != null">
         tags = #{tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler},
       </if>
@@ -460,6 +481,8 @@
       template_id = #{templateId,jdbcType=VARCHAR},
       platform = #{platform,jdbcType=VARCHAR},
       `status` = #{status,jdbcType=VARCHAR},
+      workflow_id = #{workflowId,jdbcType=VARCHAR},
+      workflow_version = #{workflowVersion,jdbcType=INTEGER},
       tags = #{tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler},
       platform_bug_id = #{platformBugId,jdbcType=VARCHAR},
       delete_user = #{deleteUser,jdbcType=VARCHAR},
@@ -471,7 +494,7 @@
   <insert id="batchInsert" parameterType="map">
     insert into bug
     (id, num, title, handle_users, handle_user, create_user, create_time, update_user, 
-      update_time, project_id, template_id, platform, `status`, tags, platform_bug_id, 
+      update_time, project_id, template_id, platform, `status`, workflow_id, workflow_version, tags, platform_bug_id,
       delete_user, delete_time, deleted, pos)
     values
     <foreach collection="list" item="item" separator=",">
@@ -479,7 +502,8 @@
         #{item.handleUsers,jdbcType=VARCHAR}, #{item.handleUser,jdbcType=VARCHAR}, #{item.createUser,jdbcType=VARCHAR}, 
         #{item.createTime,jdbcType=BIGINT}, #{item.updateUser,jdbcType=VARCHAR}, #{item.updateTime,jdbcType=BIGINT}, 
         #{item.projectId,jdbcType=VARCHAR}, #{item.templateId,jdbcType=VARCHAR}, #{item.platform,jdbcType=VARCHAR}, 
-        #{item.status,jdbcType=VARCHAR}, #{item.tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler}, 
+        #{item.status,jdbcType=VARCHAR}, #{item.workflowId,jdbcType=VARCHAR}, #{item.workflowVersion,jdbcType=INTEGER},
+        #{item.tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler},
         #{item.platformBugId,jdbcType=VARCHAR}, #{item.deleteUser,jdbcType=VARCHAR}, #{item.deleteTime,jdbcType=BIGINT}, 
         #{item.deleted,jdbcType=BIT}, #{item.pos,jdbcType=BIGINT})
     </foreach>
@@ -532,6 +556,12 @@
         </if>
         <if test="'status'.toString() == column.value">
           #{item.status,jdbcType=VARCHAR}
+        </if>
+        <if test="'workflow_id'.toString() == column.value">
+          #{item.workflowId,jdbcType=VARCHAR}
+        </if>
+        <if test="'workflow_version'.toString() == column.value">
+          #{item.workflowVersion,jdbcType=INTEGER}
         </if>
         <if test="'tags'.toString() == column.value">
           #{item.tags,jdbcType=VARCHAR,typeHandler=io.metersphere.handler.ListTypeHandler}

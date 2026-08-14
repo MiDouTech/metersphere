@@ -8,6 +8,12 @@ export interface WorkflowDefinition {
   defaultFlow?: boolean;
   enabled?: boolean;
   description?: string;
+  version?: number;
+  lifecycle?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  publishedTime?: number;
+  publishedBy?: string;
+  sourceFlowId?: string;
+  copyFromFlowId?: string;
 }
 
 export interface WorkflowRole {
@@ -33,7 +39,13 @@ export interface StatusFlowRolePermission {
 
 export interface PermissionControlStatus {
   id: string;
+  code?: string;
   name: string;
+  remark?: string;
+  initial?: boolean;
+  terminal?: boolean;
+  enabled?: boolean;
+  pos?: number;
   statusFlowTargets?: string[];
 }
 
@@ -41,6 +53,12 @@ export interface PermissionControlStatusFlow {
   id: string;
   fromId: string;
   toId: string;
+  enabled?: boolean;
+}
+
+export interface WorkflowValidationResult {
+  valid: boolean;
+  errors: string[];
 }
 
 export interface PermissionControlFlowMatrix {

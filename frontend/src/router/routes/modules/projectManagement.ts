@@ -245,27 +245,6 @@ const ProjectManagement: AppRouteRecordRaw = {
         ],
       },
     },
-    // 模板列表-模板管理-工作流
-    {
-      path: 'templateWorkFlow',
-      name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_TEMPLATE_MANAGEMENT_WORKFLOW,
-      component: () => import('@/views/project-management/template/components/workFlowTableIndex.vue'),
-      meta: {
-        locale: 'menu.settings.organization.templateManagementWorkFlow',
-        roles: ['PROJECT_TEMPLATE:READ'],
-        breadcrumbs: [
-          {
-            name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_TEMPLATE,
-            locale: 'menu.projectManagement.templateManager',
-          },
-          {
-            name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_TEMPLATE_MANAGEMENT_WORKFLOW,
-            locale: 'menu.settings.organization.templateManagementWorkFlow',
-            query: ['type'],
-          },
-        ],
-      },
-    },
     // 文件管理
     {
       path: 'fileManagement',

@@ -26,4 +26,11 @@ public class DefaultHubCaseImportRequest {
 
     @Schema(description = "目标模块ID（左树选中文件夹；空则按原逻辑落到项目自建根/导入文件夹）")
     private String targetModuleId;
+
+    @NotBlank
+    @Schema(description = "客户端生成的幂等键；同一目标项目重复提交只执行一次")
+    private String idempotencyKey;
+
+    @Schema(description = "是否复制资产用例附件")
+    private Boolean copyAttachments = true;
 }

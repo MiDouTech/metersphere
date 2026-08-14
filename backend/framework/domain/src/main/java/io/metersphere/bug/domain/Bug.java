@@ -67,6 +67,12 @@ public class Bug implements Serializable {
     @Size(min = 1, max = 50, message = "{bug.status.length_range}", groups = {Created.class, Updated.class})
     private String status;
 
+    @Schema(description = "创建时绑定的缺陷流程 ID")
+    private String workflowId;
+
+    @Schema(description = "创建时绑定的缺陷流程版本")
+    private Integer workflowVersion;
+
     @Schema(description = "标签")
     private java.util.List<String> tags;
 
@@ -103,6 +109,8 @@ public class Bug implements Serializable {
         templateId("template_id", "templateId", "VARCHAR", false),
         platform("platform", "platform", "VARCHAR", false),
         status("status", "status", "VARCHAR", true),
+        workflowId("workflow_id", "workflowId", "VARCHAR", false),
+        workflowVersion("workflow_version", "workflowVersion", "INTEGER", false),
         tags("tags", "tags", "VARCHAR", false),
         platformBugId("platform_bug_id", "platformBugId", "VARCHAR", false),
         deleteUser("delete_user", "deleteUser", "VARCHAR", false),

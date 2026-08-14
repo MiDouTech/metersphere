@@ -40,11 +40,11 @@ export default {
   'caseManagement.featureCase.folderDeleteTipTitle': 'Delete folder {name}?',
   'caseManagement.featureCase.deleteFolderCascadeTip':
     'This will cascade delete child folders, modules and cases. Cases can be restored from recycle bin.',
-  'caseManagement.featureCase.importFromDefaultProject': 'Import from default project',
+  'caseManagement.featureCase.importFromDefaultProject': 'Import from case assets',
   'caseManagement.featureCase.importExcelTab': 'Import from Excel',
-  'caseManagement.featureCase.importHubTab': 'Import from default project',
+  'caseManagement.featureCase.importHubTab': 'Import from case assets',
   'caseManagement.featureCase.importHubTip':
-    'Source is fixed to the company default project. Copies body and steps only; no attachments or links.',
+    'Selected case assets are copied into the current project and their source lineage is retained.',
   'caseManagement.featureCase.importHubPlannedOnly':
     'Only cases classified under modules/folders can be imported; unplanned cases are not allowed.',
   'caseManagement.featureCase.importHubConflict': 'Conflict strategy',

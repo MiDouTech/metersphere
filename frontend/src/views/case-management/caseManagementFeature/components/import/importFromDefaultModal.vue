@@ -1,155 +1,83 @@
 <template>
   <a-modal
     v-model:visible="dialogVisible"
-    title-align="start"
-    class="ms-modal-form ms-modal-medium"
-    :title="t('caseManagement.featureCase.importFromDefaultProject')"
+    title="从用例资产导入"
+    class="ms-modal-form"
+    :width="980"
     :footer="false"
     unmount-on-close
     @cancel="handleCancel"
   >
-    <a-alert type="info" class="mb-4">{{ t('caseManagement.featureCase.importHubTip') }}</a-alert>
-    <a-alert type="warning" class="mb-4">{{ t('caseManagement.featureCase.importHubPlannedOnly') }}</a-alert>
-    <a-form :model="form" layout="vertical">
-      <a-form-item :label="t('caseManagement.featureCase.importHubConflict')">
-        <a-radio-group v-model="form.conflictStrategy">
-          <a-radio value="SKIP">{{ t('caseManagement.featureCase.importHubSkip') }}</a-radio>
-          <a-radio value="OVERWRITE">{{ t('caseManagement.featureCase.importHubOverwrite') }}</a-radio>
-        </a-radio-group>
+    <a-alert type="info" class="mb-3"
+      >选中的资产用例将复制到当前项目，并保留资产来源血缘；后续修改项目副本不会回写源资产。</a-alert
+    >
+    <a-form :model="{ conflictStrategy }" layout="vertical">
+      <a-form-item label="重名用例处理">
+        <a-radio-group v-model="conflictStrategy"
+          ><a-radio value="SKIP">跳过</a-radio><a-radio value="OVERWRITE">覆盖当前项目副本</a-radio></a-radio-group
+        >
       </a-form-item>
-      <div class="max-h-[320px] overflow-auto rounded border border-[var(--color-text-n8)] p-2">
-        <a-spin :loading="treeLoading" class="w-full">
-          <a-tree
-            v-model:checked-keys="checkedKeys"
-            checkable
-            :check-strictly="false"
-            :data="moduleTree"
-            :field-names="{ key: 'id', title: 'name', children: 'children' }"
-          />
-        </a-spin>
-      </div>
-      <div class="mt-2 text-[12px] text-[var(--color-text-4)]">
-        {{ t('caseManagement.featureCase.importHubLimit') }}
-        <span v-if="selectedCaseIds.length > 0" class="ml-2">
-          {{ t('caseManagement.featureCase.importHubSelectedCount', { count: selectedCaseIds.length }) }}
-        </span>
-      </div>
-      <div v-if="jobProgress !== null" class="mt-3">
-        <a-progress :percent="jobProgress" />
-        <div class="mt-1 text-[12px] text-[var(--color-text-3)]">{{ jobStatus }}</div>
-      </div>
+      <a-form-item label="附件"><a-checkbox v-model="copyAttachments">同时复制附件</a-checkbox></a-form-item>
     </a-form>
-    <div class="mt-4 flex justify-end gap-[8px]">
-      <a-button @click="handleCancel">{{ t('common.cancel') }}</a-button>
-      <a-button v-if="canImport" type="primary" :loading="submitting" @click="handleImport">
-        {{ t('common.import') }}
-      </a-button>
-    </div>
+    <CaseAssetSelector
+      :selected-ids="selectedIds"
+      :target-project-id="appStore.currentProjectId"
+      scene="PROJECT_IMPORT"
+      @change="onSelectionChange"
+    />
+    <div v-if="jobProgress !== null" class="mt-3"
+      ><a-progress :percent="jobProgress" /><div class="mt-1 text-xs">{{ jobStatus }}</div></div
+    >
+    <div class="mt-4 flex justify-end gap-2"
+      ><a-button @click="handleCancel">{{ t('common.cancel') }}</a-button
+      ><a-button type="primary" :disabled="!selectedIds.length" :loading="submitting" @click="handleImport"
+        >导入选中用例</a-button
+      ></div
+    >
   </a-modal>
 </template>
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue';
 
+  import CaseAssetSelector from '@/components/business/case-asset-selector/index.vue';
+
   import {
-    getDefaultHubImportTree,
+    getCaseAssetImportResult,
     getDefaultHubJob,
-    importCaseFromDefaultProject,
+    importCasesFromAssets,
   } from '@/api/modules/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
-  import { mapTree } from '@/utils';
-
-  import { ModuleTreeNode } from '@/models/common';
 
   import Message from '@arco-design/web-vue/es/message';
 
-  const MAX_IMPORT = 500;
-
   const props = defineProps<{ visible: boolean; targetModuleId?: string }>();
-  const emit = defineEmits<{
-    (e: 'update:visible', val: boolean): void;
-    (e: 'success'): void;
-  }>();
-
+  const emit = defineEmits<{ (e: 'update:visible', val: boolean): void; (e: 'success'): void }>();
   const { t } = useI18n();
   const appStore = useAppStore();
-
-  const dialogVisible = computed({
-    get: () => props.visible,
-    set: (val) => emit('update:visible', val),
-  });
-
-  const form = ref({
-    conflictStrategy: 'SKIP',
-  });
-  const checkedKeys = ref<string[]>([]);
-  const moduleTree = ref<ModuleTreeNode[]>([]);
-  const treeLoading = ref(false);
+  const dialogVisible = computed({ get: () => props.visible, set: (val) => emit('update:visible', val) });
+  const selectedIds = ref<string[]>([]);
+  const conflictStrategy = ref<'SKIP' | 'OVERWRITE'>('SKIP');
+  const copyAttachments = ref(true);
+  const idempotencyKey = ref(crypto.randomUUID());
   const submitting = ref(false);
   const jobProgress = ref<number | null>(null);
   const jobStatus = ref('');
   let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-  function collectCaseIds(nodes: ModuleTreeNode[], checked: Set<string>, out: string[]) {
-    nodes.forEach((node) => {
-      if ((node as any).type === 'CASE' && checked.has(node.id)) {
-        out.push(node.id);
-      }
-      if (node.children?.length) {
-        collectCaseIds(node.children as ModuleTreeNode[], checked, out);
-      }
-    });
+  function onSelectionChange(ids: string[]) {
+    selectedIds.value = ids;
   }
-
-  const selectedCaseIds = computed(() => {
-    const ids: string[] = [];
-    collectCaseIds(moduleTree.value, new Set(checkedKeys.value), ids);
-    return ids;
-  });
-
-  const canImport = computed(() => {
-    const count = selectedCaseIds.value.length;
-    return count >= 1 && count <= MAX_IMPORT;
-  });
-
   function stopPoll() {
     if (pollTimer) {
       clearInterval(pollTimer);
       pollTimer = null;
     }
   }
-
-  async function loadHubTree() {
-    try {
-      treeLoading.value = true;
-      const res = await getDefaultHubImportTree();
-      moduleTree.value = mapTree(res || [], (e) => ({ ...e }));
-    } catch {
-      Message.error(t('caseManagement.featureCase.importHubTreeFail'));
-    } finally {
-      treeLoading.value = false;
-    }
-  }
-
-  watch(
-    () => props.visible,
-    (val) => {
-      if (val) {
-        form.value = { conflictStrategy: 'SKIP' };
-        checkedKeys.value = [];
-        jobProgress.value = null;
-        jobStatus.value = '';
-        loadHubTree();
-      } else {
-        stopPoll();
-      }
-    }
-  );
-
   function pollJob(jobId: string): Promise<boolean> {
     return new Promise((resolve) => {
       stopPoll();
+      const deadline = Date.now() + 5 * 60 * 1000;
       pollTimer = setInterval(async () => {
         try {
           const job = await getDefaultHubJob(jobId);
@@ -158,9 +86,17 @@
           if (job.status === 'SUCCESS') {
             stopPoll();
             resolve(true);
+          } else if (job.status === 'PARTIAL_SUCCESS') {
+            stopPoll();
+            Message.warning(job.errorMessage || '部分用例导入失败，请查看结果');
+            resolve(true);
           } else if (job.status === 'FAILED') {
             stopPoll();
-            Message.error(job.errorMessage || t('caseManagement.featureCase.importHubFail'));
+            Message.error(job.errorMessage || '导入失败');
+            resolve(false);
+          } else if (Date.now() >= deadline) {
+            stopPoll();
+            Message.warning('导入仍在后台执行，可稍后重新打开并使用相同选择重试');
             resolve(false);
           }
         } catch {
@@ -170,38 +106,48 @@
       }, 1000);
     });
   }
-
   async function handleImport() {
-    if (!canImport.value) return;
-    if (selectedCaseIds.value.length > MAX_IMPORT) {
-      Message.warning(t('caseManagement.featureCase.importHubLimit'));
-      return;
-    }
+    if (!selectedIds.value.length) return;
+    submitting.value = true;
     try {
-      submitting.value = true;
-      const result = await importCaseFromDefaultProject({
+      const result = await importCasesFromAssets({
         targetProjectId: appStore.currentProjectId,
         selectMode: 'CASE_IDS',
-        ids: selectedCaseIds.value,
-        conflictStrategy: form.value.conflictStrategy,
+        ids: selectedIds.value,
+        conflictStrategy: conflictStrategy.value,
         targetModuleId: props.targetModuleId || undefined,
+        copyAttachments: copyAttachments.value,
+        idempotencyKey: idempotencyKey.value,
       });
-      Message.success(t('caseManagement.featureCase.importHubSuccess'));
       jobProgress.value = 0;
-      const ok = await pollJob(result.jobId);
-      if (ok) {
+      if (await pollJob(result.jobId)) {
+        const items = await getCaseAssetImportResult(result.jobId);
+        const failed = items.filter((item) => item.status === 'FAILED');
+        if (failed.length)
+          Message.warning(`导入完成：成功 ${items.length - failed.length} 条，失败 ${failed.length} 条`);
+        else Message.success('用例资产导入成功');
         emit('success');
         dialogVisible.value = false;
       }
-    } catch {
-      Message.error(t('caseManagement.featureCase.importHubFail'));
     } finally {
       submitting.value = false;
     }
   }
-
   function handleCancel() {
     stopPoll();
     dialogVisible.value = false;
   }
+  watch(
+    () => props.visible,
+    (visible) => {
+      if (visible) {
+        selectedIds.value = [];
+        conflictStrategy.value = 'SKIP';
+        copyAttachments.value = true;
+        idempotencyKey.value = crypto.randomUUID();
+        jobProgress.value = null;
+        jobStatus.value = '';
+      } else stopPoll();
+    }
+  );
 </script>

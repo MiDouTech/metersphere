@@ -2,16 +2,17 @@
   <div>
     <template v-if="canReadTokens">
       <MsCard simple>
+        <div class="mb-3">
+          <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
+          <div class="mt-1 text-sm text-[var(--color-text-3)]">
+            {{ t('system.agentIntegration.myTokensDesc') }}
+          </div>
+        </div>
+        <McpOnboardingPanel v-if="canConnectTokens" class="mb-4" @create-token="openCreateModal" />
         <div
           class="mb-4 gap-3"
           :class="compact ? 'flex flex-col items-stretch' : 'flex flex-wrap items-center justify-between'"
         >
-          <div>
-            <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
-            <div class="mt-1 text-sm text-[var(--color-text-3)]">
-              {{ t('system.agentIntegration.myTokensDesc') }}
-            </div>
-          </div>
           <div class="flex flex-wrap items-center gap-2" :class="compact ? 'justify-end' : ''">
             <a-input-search
               v-model:model-value="keyword"
@@ -123,8 +124,6 @@
           </template>
         </ms-base-table>
       </MsCard>
-
-      <McpOnboardingPanel v-if="canConnectTokens" class="mt-4" @create-token="openCreateModal" />
 
       <a-modal
         v-model:visible="createVisible"
@@ -296,8 +295,6 @@
 
     <a-alert v-else type="warning">当前账号没有个人 Agent 接入读取权限。</a-alert>
 
-    <AgentPackagePanel v-if="!compact && canManagePackages" class="mt-4" />
-
     <AgentTokenGovernancePanel v-if="!compact && canGovernTokens" class="mt-4" />
   </div>
 </template>
@@ -312,7 +309,6 @@
   import MsBaseTable from '@/components/pure/ms-table/base-table.vue';
   import type { MsTableColumn } from '@/components/pure/ms-table/type';
   import useTable from '@/components/pure/ms-table/useTable';
-  import AgentPackagePanel from './components/AgentPackagePanel.vue';
   import AgentTokenGovernancePanel from './components/AgentTokenGovernancePanel.vue';
   import McpOnboardingPanel from './components/McpOnboardingPanel.vue';
 
@@ -346,7 +342,6 @@
 
   const { t } = useI18n();
   const { openModal } = useModal();
-  const canManagePackages = computed(() => hasAnyPermission(['SYSTEM_AGENT_PACKAGE:READ'], ['SYSTEM']));
   const canGovernTokens = computed(() => hasAnyPermission(['SYSTEM_USER:READ'], ['SYSTEM']));
 
   const keyword = ref('');

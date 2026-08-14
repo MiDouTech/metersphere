@@ -64,6 +64,17 @@
         ]
       },
       {
+        "id": "CASE_ASSET",
+        "name": "用例资产",
+        "permissions": [
+          { "id": "CASE_ASSET:READ" },
+          { "id": "CASE_ASSET:READ+ADD" },
+          { "id": "CASE_ASSET:READ+UPDATE" },
+          { "id": "CASE_ASSET:READ+DELETE" },
+          { "id": "CASE_ASSET:READ+IMPORT" }
+        ]
+      },
+      {
         "id": "CASE_REVIEW",
         "name": "permission.case_review.name",
         "permissions": [

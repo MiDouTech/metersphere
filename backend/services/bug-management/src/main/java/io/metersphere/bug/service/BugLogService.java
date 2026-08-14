@@ -6,6 +6,7 @@ import io.metersphere.bug.domain.BugContentExample;
 import io.metersphere.bug.domain.BugExample;
 import io.metersphere.bug.dto.request.BugBatchRequest;
 import io.metersphere.bug.dto.request.BugEditRequest;
+import io.metersphere.bug.dto.request.BugTransitionRequest;
 import io.metersphere.bug.dto.response.BugCustomFieldDTO;
 import io.metersphere.bug.dto.response.BugDTO;
 import io.metersphere.bug.mapper.BugContentMapper;
@@ -75,6 +76,21 @@ public class BugLogService {
         dto.setMethod(HttpMethodConstants.POST.name());
         dto.setModifiedValue(JSON.toJSONBytes(request));
         dto.setOriginalValue(JSON.toJSONBytes(history));
+        return dto;
+    }
+
+    @SuppressWarnings("unused")
+    public LogDTO transitionLog(String bugId, BugTransitionRequest request) {
+        Bug bug = bugMapper.selectByPrimaryKey(bugId);
+        if (bug == null) {
+            return null;
+        }
+        LogDTO dto = new LogDTO(bug.getProjectId(), null, bugId, null, OperationLogType.UPDATE.name(),
+                OperationLogModule.BUG_MANAGEMENT_INDEX, bug.getTitle());
+        dto.setHistory(true);
+        dto.setPath("/bug/" + bugId + "/transition");
+        dto.setMethod(HttpMethodConstants.POST.name());
+        dto.setModifiedValue(JSON.toJSONBytes(request));
         return dto;
     }
 

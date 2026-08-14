@@ -33,8 +33,8 @@ includesAll(testAssetRoutes, [
   "path: 'cases'", "path: 'cases/project'", "path: 'cases/system'",
   "resourceCode: 'TEST_ASSET_CASE_PROJECT_TAB'", "resourceCode: 'TEST_ASSET_CASE_SYSTEM_TAB'",
 ], 'test asset routes');
-includesAll(caseAssets, ['pageCaseAssetProjects', 'projectQuery', 'caseQuery', '系统级用例资产暂未开放'], 'case asset page');
-check(!caseAssets.includes('pageAccessibleProjects'), 'case assets must not call the generic accessible-project endpoint');
+includesAll(caseAssets, ['pageCaseAssetCatalogs', 'catalogQuery', 'caseQuery', '用例项目仅是资产分类目录', 'CaseAssetFileImport'], 'case asset page');
+excludesAll(caseAssets, ['pageAccessibleProjects', '系统级用例资产暂未开放'], 'case asset page');
 
 const agentRoutes = readFrontend('src/router/routes/modules/agent.ts');
 const agentAccess = readFrontend('src/views/agent/access.vue');
@@ -78,12 +78,17 @@ excludesAll(organizationMemberModalTemplate, ['field="userRoleIds"'], 'organizat
 excludesAll(projectMemberModalTemplate, ['field="roleIds"'], 'project add-member legacy group controls');
 
 const rolePage = readFrontend('src/views/setting/system/permissionControl/index.vue');
+const roleEditor = readFrontend('src/views/setting/system/permissionControl/role/editor.vue');
+includesAll(roleEditor, [
+  'savePermissionControlRole({', '<a-select',
+  '角色名称', '权限范围', '启用状态',
+], 'permission control role editor page');
 includesAll(rolePage, [
-  ':on-before-ok="saveRole"', 'savePermissionControlRole({', 'getPermissionControlRoleMemberScopeOptions',
-  '<a-select', 'pagePermissionControlRoleMembers', 'addPermissionControlRoleMembers', 'removePermissionControlRoleMembers',
-  'title="角色名称"', 'title="权限范围"', 'title="启用状态"', 'title="编辑"',
-], 'permission control role page');
-excludesAll(rolePage, ['addPermissionControlRole(', 'updatePermissionControlRole(', 'savePermissionControlRolePermissions('], 'atomic role page');
+  'getPermissionControlRoleMemberScopeOptions', 'pagePermissionControlRoleMembers',
+  'addPermissionControlRoleMembers', 'removePermissionControlRoleMembers',
+  "name: 'settingSystemPermissionControlRoleDetail'", "name: 'settingSystemPermissionControlRoleCreate'",
+], 'permission control role entry and member modal');
+excludesAll(rolePage, [':on-before-ok="saveRole"', 'addPermissionControlRole(', 'updatePermissionControlRole(', 'savePermissionControlRolePermissions('], 'atomic role page');
 
 const roleController = readRepository('backend/services/system-setting/src/main/java/io/metersphere/system/controller/GlobalUserRoleController.java');
 const roleService = readRepository('backend/services/system-setting/src/main/java/io/metersphere/system/service/PermissionControlService.java');
