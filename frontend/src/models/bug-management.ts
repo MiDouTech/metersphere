@@ -16,6 +16,7 @@ export interface BugListItem {
   updateUser: string; // 更新人
   createTime: string; // 创建时间
   updateTime: string; // 更新时间
+  expectedResolveTime?: number | null; // 预计解决时间
   deleted: boolean; // 删除标志
   testPlanId: string; // 测试计划ID
 }

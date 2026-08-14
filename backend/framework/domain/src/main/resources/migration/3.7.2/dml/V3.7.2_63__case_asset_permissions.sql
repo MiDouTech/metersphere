@@ -15,13 +15,13 @@ WHERE NOT EXISTS (
     WHERE existing.role_id = source.role_id AND existing.permission_id = mapping.target_permission
 );
 
-UPDATE user_role_permission_resource
+UPDATE permission_resource
 SET permission_id = 'CASE_ASSET:READ', scope_type = 'ORGANIZATION', description = '组织级用例资产库'
 WHERE code IN ('TEST_ASSET_CASES_PAGE', 'TEST_ASSET_CASE_PROJECT_TAB', 'TEST_ASSET_CASE_SYSTEM_TAB');
 
-INSERT INTO user_role_permission_resource
+INSERT INTO permission_resource
 (id, code, name, type, scope_type, parent_code, route_name, permission_id,
- visible_default, operable_default, pos, enabled, description)
+ visible_default, operable_default, sort, enabled, description)
 VALUES
 ('CASE_ASSET_ADD_BUTTON', 'CASE_ASSET_ADD_BUTTON', '新建资产用例/目录', 'BUTTON', 'ORGANIZATION',
  'TEST_ASSET_CASES_PAGE', NULL, 'CASE_ASSET:READ+ADD', b'1', b'1', 567, b'1', '新建资产目录和资产用例'),

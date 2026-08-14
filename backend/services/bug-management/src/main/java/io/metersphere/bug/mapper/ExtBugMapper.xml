@@ -3,6 +3,7 @@
 <mapper namespace="io.metersphere.bug.mapper.ExtBugMapper">
     <resultMap id="BugDTO" type="io.metersphere.bug.dto.response.BugDTO">
         <result column="tags" jdbcType="VARCHAR" property="tags" typeHandler="io.metersphere.handler.ListTypeHandler" />
+        <result column="expected_resolve_time" jdbcType="BIGINT" property="expectedResolveTime" />
     </resultMap>
 
     <resultMap id="BugTagEditDTO" type="io.metersphere.bug.dto.response.BugTagEditDTO">
@@ -14,7 +15,8 @@
     </resultMap>
 
     <select id="list" resultMap="BugDTO">
-        select b.id, b.num, b.title, b.handle_user, b.create_user, b.create_time, b.update_user, b.update_time, b.delete_user, b.delete_time,
+        select b.id, b.num, b.title, b.handle_user, b.create_user, b.create_time, b.update_user, b.update_time,
+               b.expected_resolve_time, b.delete_user, b.delete_time,
                b.project_id, b.template_id, b.platform, b.status, b.tags, bc.description from bug b
         left join bug_content bc on b.id = bc.bug_id
         <include refid="queryWhereCondition"/>
@@ -41,6 +43,7 @@
         create_user,
         create_time,
         update_time,
+        expected_resolve_time,
         delete_time,
         delete_user,
         project_id,
@@ -537,6 +540,10 @@
         SET handle_time = #{handleTime},
             close_time = #{closeTime}
         WHERE id = #{id}
+    </update>
+
+    <update id="updateExpectedResolveTime">
+        UPDATE bug SET expected_resolve_time = #{expectedResolveTime,jdbcType=BIGINT} WHERE id = #{id}
     </update>
 
 </mapper>

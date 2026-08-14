@@ -73,6 +73,9 @@ public class BugDetailDTO {
     @Schema(description = "创建时间")
     private Long createTime;
 
+    @Schema(description = "预计解决时间")
+    private Long expectedResolveTime;
+
     @Schema(description = "处理人ID")
     private String handleUser;
 

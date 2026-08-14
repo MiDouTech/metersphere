@@ -28,6 +28,26 @@
             :disabled="!hasAnyPermission(['PROJECT_BUG:READ+UPDATE']) || props.currentPlatform !== detailInfo.platform"
             @change="handleFormCreateChange"
           />
+          <a-form
+            :model="detailInfo"
+            :label-col-props="{ span: 9 }"
+            :wrapper-col-props="{ span: 15 }"
+            label-align="left"
+          >
+            <a-form-item field="expectedResolveTime" :label="t('bugManagement.expectedResolveTime')">
+              <a-date-picker
+                v-model="detailInfo.expectedResolveTime"
+                class="w-full"
+                show-time
+                allow-clear
+                value-format="timestamp"
+                :disabled="
+                  !hasAnyPermission(['PROJECT_BUG:READ+UPDATE']) || props.currentPlatform !== detailInfo.platform
+                "
+                @change="saveHandler"
+              />
+            </a-form-item>
+          </a-form>
           <!-- 自定义字段结束 -->
           <div v-if="!props.isPlatformDefaultTemplate" class="baseItem">
             <a-form
@@ -189,6 +209,7 @@
       projectId: appStore.currentProjectId,
       id: detailInfo.value.id,
       templateId: detailInfo.value.templateId,
+      expectedResolveTime: detailInfo.value.expectedResolveTime ?? null,
       tags: innerTags.value,
       deleteLocalFileIds: [],
       unLinkRefIds: [],

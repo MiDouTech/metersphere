@@ -26,6 +26,7 @@ export default {
     updateUser: '更新人',
     createTime: '创建时间',
     updateTime: '更新时间',
+    expectedResolveTime: '预计解决时间',
     sync: '同步',
     synchronizing: '正在同步中',
     syncSuccess: '同步成功',

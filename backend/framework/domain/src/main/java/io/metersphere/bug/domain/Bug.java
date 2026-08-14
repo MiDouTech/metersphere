@@ -47,6 +47,9 @@ public class Bug implements Serializable {
     @Schema(description = "更新时间")
     private Long updateTime;
 
+    @Schema(description = "预计解决时间")
+    private Long expectedResolveTime;
+
     @Schema(description = "项目ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{bug.project_id.not_blank}", groups = {Created.class})
     @Size(min = 1, max = 50, message = "{bug.project_id.length_range}", groups = {Created.class, Updated.class})
@@ -105,6 +108,7 @@ public class Bug implements Serializable {
         createTime("create_time", "createTime", "BIGINT", false),
         updateUser("update_user", "updateUser", "VARCHAR", false),
         updateTime("update_time", "updateTime", "BIGINT", false),
+        expectedResolveTime("expected_resolve_time", "expectedResolveTime", "BIGINT", false),
         projectId("project_id", "projectId", "VARCHAR", false),
         templateId("template_id", "templateId", "VARCHAR", false),
         platform("platform", "platform", "VARCHAR", false),
