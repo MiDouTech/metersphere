@@ -109,6 +109,18 @@
         </foreach>
     </select>
 
+    <select id="selectByProject" resultMap="BaseResultMap">
+        select *
+        from ai_source_document
+        where project_id = #{projectId}
+          and deleted = 0
+        <if test="parseStatus != null and parseStatus != ''">
+          and parse_status = #{parseStatus}
+        </if>
+        order by create_time desc
+        limit #{offset}, #{pageSize}
+    </select>
+
     <select id="selectByIdsInProject" resultMap="BaseResultMap">
         select *
         from ai_source_document
@@ -131,6 +143,16 @@
         </if>
     </select>
 
+    <select id="countByProject" resultType="long">
+        select count(1)
+        from ai_source_document
+        where project_id = #{projectId}
+          and deleted = 0
+        <if test="parseStatus != null and parseStatus != ''">
+          and parse_status = #{parseStatus}
+        </if>
+    </select>
+
     <update id="markDeleted">
         update ai_source_document
         set deleted = 1,
@@ -138,6 +160,15 @@
         where id = #{id}
           and project_id = #{projectId}
           and create_user = #{createUser}
+          and deleted = 0
+    </update>
+
+    <update id="markDeletedInProject">
+        update ai_source_document
+        set deleted = 1,
+            update_time = #{updateTime}
+        where id = #{id}
+          and project_id = #{projectId}
           and deleted = 0
     </update>
 </mapper>

@@ -165,10 +165,10 @@ public class AiCaseAgentRepository {
                         (id, request_id, conversation_id, project_id, user_id, user_message_id,
                          assistant_message_id, execution_type, status, resource_type, requested_resource_id,
                          actual_resource_id, agent_connection_id, agent_device_id, requested_model_source_id,
-                         actual_model_source_id, cancel_requested, retry_of_request_id, input_tokens,
+                         actual_model_source_id, cancel_requested, retry_of_request_id, source_document_ids, input_tokens,
                          output_tokens, token_estimated, error_code, error_message, start_time,
                          first_token_time, finish_time, duration_ms, event_sequence, create_time, update_time)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 execution.getId(), execution.getRequestId(), execution.getConversationId(), execution.getProjectId(),
                 execution.getUserId(), execution.getUserMessageId(), execution.getAssistantMessageId(),
@@ -177,7 +177,7 @@ public class AiCaseAgentRepository {
                 execution.getAgentConnectionId(), execution.getAgentDeviceId(),
                 execution.getRequestedModelSourceId(),
                 execution.getActualModelSourceId(), Boolean.TRUE.equals(execution.getCancelRequested()),
-                execution.getRetryOfRequestId(), defaultLong(execution.getInputTokens()),
+                execution.getRetryOfRequestId(), execution.getSourceDocumentIds(), defaultLong(execution.getInputTokens()),
                 defaultLong(execution.getOutputTokens()), Boolean.TRUE.equals(execution.getTokenEstimated()),
                 execution.getErrorCode(), execution.getErrorMessage(), execution.getStartTime(),
                 execution.getFirstTokenTime(), execution.getFinishTime(), execution.getDurationMs(),
@@ -415,6 +415,7 @@ public class AiCaseAgentRepository {
         dto.setActualModelSourceId(rs.getString("actual_model_source_id"));
         dto.setCancelRequested(rs.getBoolean("cancel_requested"));
         dto.setRetryOfRequestId(rs.getString("retry_of_request_id"));
+        dto.setSourceDocumentIds(rs.getString("source_document_ids"));
         dto.setInputTokens(rs.getLong("input_tokens"));
         dto.setOutputTokens(rs.getLong("output_tokens"));
         dto.setTokenEstimated(rs.getBoolean("token_estimated"));

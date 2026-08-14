@@ -12,7 +12,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 
 @Configuration
 @EnableWebSocket
-@ConditionalOnProperty(prefix = "ms.ai.user-agent", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "ms.ai.user-agent", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class AiAgentBridgeWebSocketConfig implements WebSocketConfigurer {
     private final AgentBridgeSessionRegistry sessionRegistry;
     private final AiUserAgentService userAgentService;

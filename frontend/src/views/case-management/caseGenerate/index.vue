@@ -22,6 +22,7 @@
             <a-select
               v-model:model-value="chatModelId"
               :options="modelOptions"
+              :disabled="!canGenerate"
               allow-search
               :placeholder="t('caseManagement.caseGenerate.resourcePlaceholder')"
             />
@@ -31,7 +32,13 @@
           </a-form-item>
         </a-form>
         <input ref="fileInputRef" class="hidden" type="file" @change="handleFileChange" />
-        <a-button class="mb-[12px] w-full" :loading="uploading" :disabled="!chatModelId" @click="fileInputRef?.click()">
+        <a-button
+          v-permission="['FUNCTIONAL_CASE_AI:UPLOAD']"
+          class="mb-[12px] w-full"
+          :loading="uploading"
+          :disabled="!chatModelId"
+          @click="fileInputRef?.click()"
+        >
           {{ t('caseManagement.caseGenerate.uploadDesign') }}
         </a-button>
         <div class="case-generate-source-list">
@@ -56,6 +63,7 @@
             </div>
             <a-button
               v-if="document.parseStatus === 'FAILED'"
+              v-permission="['FUNCTIONAL_CASE_AI:UPLOAD']"
               type="text"
               size="mini"
               @click.stop="retrySourceDocument(document.id)"
@@ -75,16 +83,18 @@
         </div>
         <a-textarea
           v-model:model-value="prompt"
+          :disabled="!canGenerate"
           :placeholder="t('caseManagement.caseGenerate.inputPlaceholder')"
           :auto-size="{ minRows: 4, maxRows: 8 }"
           :max-length="4000"
           show-word-limit
         />
         <div class="mt-[12px] flex justify-end gap-[8px]">
-          <a-button :disabled="!generating" @click="stopGenerate">
+          <a-button v-permission="['FUNCTIONAL_CASE_AI:GENERATE']" :disabled="!generating" @click="stopGenerate">
             {{ t('caseManagement.caseGenerate.stop') }}
           </a-button>
           <a-button
+            v-permission="['FUNCTIONAL_CASE_AI:GENERATE']"
             type="primary"
             :loading="generating"
             :disabled="!prompt.trim() || !chatModelId.trim()"
@@ -119,12 +129,23 @@
           </a-checkbox>
         </div>
         <div class="mb-[12px] flex gap-[8px]">
-          <a-button size="small" :disabled="draftScope === 'REVIEW' || checkedDraftIds.length === 0" @click="deleteChecked">
+          <a-button
+            v-permission="['FUNCTIONAL_CASE_AI:GENERATE']"
+            size="small"
+            :disabled="draftScope === 'REVIEW' || checkedDraftIds.length === 0"
+            @click="deleteChecked"
+          >
             {{ t('caseManagement.caseGenerate.delete') }}
           </a-button>
           <a-button
+            v-permission="['FUNCTIONAL_CASE_AI:GENERATE']"
             size="small"
-            :disabled="draftScope === 'REVIEW' || !activeDraft || !chatModelId.trim() || selectedResource?.resourceType !== 'MODEL_API'"
+            :disabled="
+              draftScope === 'REVIEW' ||
+              !activeDraft ||
+              !chatModelId.trim() ||
+              selectedResource?.resourceType !== 'MODEL_API'
+            "
             @click="regenerateActive"
           >
             {{ t('caseManagement.caseGenerate.regenerate') }}
@@ -146,6 +167,7 @@
             退回修改
           </a-button>
           <a-button
+            v-permission="['FUNCTIONAL_CASE_AI:SAVE']"
             size="small"
             type="primary"
             :loading="saving"
@@ -213,13 +235,13 @@
       <div class="case-generate-resizer" @mousedown="startResize('middle', $event)" />
 
       <section class="case-generate-panel case-generate-detail-panel">
-        <DraftDetailForm v-if="activeDraft" v-model:draft="activeDraft" :readonly="draftScope === 'REVIEW'" />
+        <DraftDetailForm v-if="activeDraft" v-model:draft="activeDraft" :readonly="draftReadonly" />
         <a-empty v-else :description="t('caseManagement.caseGenerate.noDraft')" />
       </section>
     </div>
 
     <a-drawer v-model:visible="detailDrawerVisible" :width="520" :title="t('caseManagement.caseGenerate.detail')">
-      <DraftDetailForm v-if="activeDraft" v-model:draft="activeDraft" :readonly="draftScope === 'REVIEW'" />
+      <DraftDetailForm v-if="activeDraft" v-model:draft="activeDraft" :readonly="draftReadonly" />
     </a-drawer>
     <a-modal
       v-model:visible="reviewModalVisible"
@@ -238,16 +260,47 @@
         :auto-size="{ minRows: 3, maxRows: 6 }"
       />
     </a-modal>
+    <a-modal v-model:visible="publishedActionVisible" title="用例已发布" :footer="false" width="520px">
+      <a-alert type="success" show-icon>
+        已生成 {{ publishedCaseIds.length }} 条正式用例。可继续加入测试计划，或以这些用例创建自动化执行任务。
+      </a-alert>
+      <a-form class="mt-[16px]" :model="publishedActionForm" layout="vertical">
+        <a-form-item v-permission="['PROJECT_TEST_PLAN:READ+ASSOCIATION']" label="加入测试计划">
+          <a-select
+            v-model:model-value="selectedTestPlanId"
+            :loading="testPlanLoading"
+            :options="testPlanOptions"
+            allow-search
+            placeholder="选择未归档的测试计划"
+          />
+        </a-form-item>
+      </a-form>
+      <div class="flex justify-end gap-[8px]">
+        <a-button @click="publishedActionVisible = false">稍后处理</a-button>
+        <a-button
+          v-permission="['PROJECT_TEST_PLAN:READ+ASSOCIATION']"
+          :loading="associatingTestPlan"
+          :disabled="!selectedTestPlanId"
+          @click="associatePublishedCases"
+        >
+          加入测试计划
+        </a-button>
+        <a-button v-permission="['AI_EXECUTION:RUN']" type="primary" @click="createExecutionFromPublishedCases">
+          创建执行任务
+        </a-button>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed, onBeforeUnmount, ref, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import { Message, Modal } from '@arco-design/web-vue';
-  import { useRoute } from 'vue-router';
 
   import DraftDetailForm from './components/DraftDetailForm.vue';
 
+  import { pageTestAssetDocuments } from '@/api/modules/ai-execution';
   import type {
     AiCaseAgentEvent,
     AiResourceType,
@@ -267,18 +320,19 @@
     pageAiCaseDraftReviewQueue,
     pageAiSourceDocument,
     regenerateAiCaseDraft,
-    reviewAiCaseDraft,
     retryAiSourceDocument,
+    reviewAiCaseDraft,
     streamAiCaseAgentChat,
     subscribeAiSourceDocumentEvents,
     switchAiCaseAgentResource,
     updateAiCaseDraft,
     uploadAiSourceDocument,
   } from '@/api/modules/case-management/caseGenerate';
+  import { associateFunctionalCase, getTestPlanListWithoutPage } from '@/api/modules/test-plan/testPlan';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import useAppStore from '@/store/modules/app';
-  import { pageTestAssetDocuments } from '@/api/modules/ai-execution';
+  import { hasAnyPermission } from '@/utils/permission';
 
   import type { AiCaseDraft, AiDraftStatus, AiSourceDocument } from '@/models/caseManagement/caseGenerate';
   import { CaseManagementRouteEnum } from '@/enums/routeEnum';
@@ -301,6 +355,7 @@
   const { openModal } = useModal();
   const appStore = useAppStore();
   const route = useRoute();
+  const router = useRouter();
   const currentProjectId = computed(() => appStore.currentProjectId || '');
   const currentOrgId = computed(() => appStore.currentOrgId || '');
   const localStateKey = computed(() => `case-generate-workbench:${currentProjectId.value || 'none'}`);
@@ -318,6 +373,13 @@
   const activeGenerationId = ref('');
   const saving = ref(false);
   const reviewing = ref(false);
+  const publishedActionVisible = ref(false);
+  const publishedCaseIds = ref<string[]>([]);
+  const publishedActionForm = {};
+  const selectedTestPlanId = ref('');
+  const testPlanLoading = ref(false);
+  const associatingTestPlan = ref(false);
+  const testPlanOptions = ref<Array<{ label: string; value: string }>>([]);
   const reviewModalVisible = ref(false);
   const reviewAction = ref<'APPROVE' | 'REQUEST_CHANGES'>('APPROVE');
   const reviewComment = ref('');
@@ -342,6 +404,9 @@
   let abortAgentStream: (() => void) | undefined;
 
   const selectedResource = computed(() => availableResources.value.find((item) => item.id === chatModelId.value));
+  const canGenerate = computed(() => hasAnyPermission(['FUNCTIONAL_CASE_AI:GENERATE']));
+  const canAssociateTestPlan = computed(() => hasAnyPermission(['PROJECT_TEST_PLAN:READ+ASSOCIATION']));
+  const draftReadonly = computed(() => draftScope.value === 'REVIEW' || !canGenerate.value);
   const selectedCanPublish = computed(() => {
     const selected = drafts.value.filter((draft) => checkedDraftIds.value.includes(draft.id));
     return selected.length > 0 && selected.every((draft) => draft.reviewStatus === 'APPROVED');
@@ -653,7 +718,10 @@
     });
     sourceDocuments.value = response.records || [];
     const requestedSourceDocumentId = String(route.query.sourceDocumentId || '');
-    if (requestedSourceDocumentId && !sourceDocuments.value.some((document) => document.id === requestedSourceDocumentId)) {
+    if (
+      requestedSourceDocumentId &&
+      !sourceDocuments.value.some((document) => document.id === requestedSourceDocumentId)
+    ) {
       const projectDocuments = await pageTestAssetDocuments({
         projectId: currentProjectId.value,
         keyword: requestedSourceDocumentId,
@@ -663,8 +731,12 @@
       const requested = projectDocuments.list?.find((document) => document.id === requestedSourceDocumentId);
       if (requested) sourceDocuments.value.unshift(requested as AiSourceDocument);
     }
-    if (requestedSourceDocumentId
-        && sourceDocuments.value.some((document) => document.id === requestedSourceDocumentId && document.parseStatus === 'PARSED')) {
+    if (
+      requestedSourceDocumentId &&
+      sourceDocuments.value.some(
+        (document) => document.id === requestedSourceDocumentId && document.parseStatus === 'PARSED'
+      )
+    ) {
       selectedSourceDocumentIds.value = [requestedSourceDocumentId];
     }
     selectedSourceDocumentIds.value = selectedSourceDocumentIds.value.filter((id) =>
@@ -712,6 +784,7 @@
           resourceType: selectedResource.value?.resourceType,
           resourceId: selectedResource.value?.id,
           modelSourceId: selectedResource.value?.resourceType === 'MODEL_API' ? selectedResource.value.id : undefined,
+          sourceDocumentIds: selectedSourceDocumentIds.value,
         },
         (event) => {
           if (event.sequence <= eventSequence.value) return;
@@ -908,6 +981,22 @@
     });
   }
 
+  async function loadTestPlanOptions() {
+    if (!currentProjectId.value) return;
+    testPlanLoading.value = true;
+    try {
+      const plans = await getTestPlanListWithoutPage(currentProjectId.value);
+      testPlanOptions.value = (plans || [])
+        .filter((plan) => plan.status !== 'ARCHIVED')
+        .map((plan) => ({ label: plan.name, value: plan.id }));
+    } catch {
+      // 发布已经成功；无测试计划读取权限时不应把后续可选动作误报为发布失败。
+      testPlanOptions.value = [];
+    } finally {
+      testPlanLoading.value = false;
+    }
+  }
+
   async function executeBatchSave() {
     saving.value = true;
     try {
@@ -923,10 +1012,48 @@
       } else {
         Message.success(t('common.saveSuccess'));
       }
+      publishedCaseIds.value = response.results
+        .filter((item) => item.success && item.formalCaseId)
+        .map((item) => item.formalCaseId as string);
+      if (publishedCaseIds.value.length > 0) {
+        selectedTestPlanId.value = '';
+        publishedActionVisible.value = true;
+        if (canAssociateTestPlan.value) {
+          await loadTestPlanOptions();
+        }
+      }
       await reloadDrafts();
     } finally {
       saving.value = false;
     }
+  }
+
+  async function associatePublishedCases() {
+    if (!currentProjectId.value || !selectedTestPlanId.value || publishedCaseIds.value.length === 0) return;
+    associatingTestPlan.value = true;
+    try {
+      await associateFunctionalCase({
+        projectId: currentProjectId.value,
+        testPlanId: selectedTestPlanId.value,
+        selectIds: publishedCaseIds.value,
+        selectAll: false,
+        excludeIds: [],
+        condition: {},
+      });
+      Message.success('已加入测试计划');
+      publishedActionVisible.value = false;
+    } finally {
+      associatingTestPlan.value = false;
+    }
+  }
+
+  async function createExecutionFromPublishedCases() {
+    if (publishedCaseIds.value.length === 0) return;
+    publishedActionVisible.value = false;
+    await router.push({
+      name: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
+      query: { creating: '1', caseIds: publishedCaseIds.value.join(',') },
+    });
   }
 
   function getStatusText(status: AiDraftStatus) {

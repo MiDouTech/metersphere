@@ -39,6 +39,7 @@ export enum PerformanceTestRouteEnum {
 
 export enum ProjectManagementRouteEnum {
   PROJECT_MANAGEMENT = 'projectManagement',
+  PROJECT_MANAGEMENT_PROJECTS = 'projectManagementProjects',
   PROJECT_MANAGEMENT_FILE_MANAGEMENT = 'projectManagementFileManageMent',
   PROJECT_MANAGEMENT_MESSAGE_MANAGEMENT = 'projectManagementMessageManagement',
   PROJECT_MANAGEMENT_COMMON_SCRIPT = 'projectManagementCommonScript',
@@ -56,7 +57,6 @@ export enum ProjectManagementRouteEnum {
   PROJECT_MANAGEMENT_TEMPLATE_MANAGEMENT_WORKFLOW = 'projectManagementTemplateManagementWorkFlow',
   PROJECT_MANAGEMENT_TEMPLATE_FIELD_SETTING = 'projectManagementTemplateFiledSetting',
   PROJECT_MANAGEMENT_PERMISSION_VERSION = 'projectManagementPermissionVersion',
-  PROJECT_MANAGEMENT_PERMISSION_USER_GROUP = 'projectManagementPermissionUserGroup',
   PROJECT_MANAGEMENT_PERMISSION_MEMBER = 'projectManagementPermissionMember',
   PROJECT_MANAGEMENT_MENU_MANAGEMENT_ERROR_REPORT_RULE = 'projectManagementMenuManagementErrorReportRule',
   PROJECT_MANAGEMENT_ENVIRONMENT_MANAGEMENT = 'projectManagementEnvironmentManagement',
@@ -104,13 +104,21 @@ export enum TestAssetRouteEnum {
   TEST_ASSET_DOCUMENTS = 'testAssetDocuments',
   TEST_ASSET_VERSIONS = 'testAssetVersions',
   TEST_ASSET_RELATIONS = 'testAssetRelations',
+  TEST_ASSET_CASES = 'testAssetCases',
+  TEST_ASSET_CASES_PROJECT = 'testAssetCasesProject',
+  TEST_ASSET_CASES_SYSTEM = 'testAssetCasesSystem',
+  TEST_ASSET_DATASETS = 'testAssetDatasets',
+  TEST_ASSET_ENVIRONMENTS = 'testAssetEnvironments',
+  TEST_ASSET_COMMON_STEPS = 'testAssetCommonSteps',
+  TEST_ASSET_APIS = 'testAssetApis',
+  TEST_ASSET_EVIDENCE = 'testAssetEvidence',
+  TEST_ASSET_BUGS = 'testAssetBugs',
 }
 
 export enum SettingRouteEnum {
   SETTING = 'setting',
   SETTING_SYSTEM = 'settingSystem',
   SETTING_SYSTEM_USER_SINGLE = 'settingSystemUser',
-  SETTING_SYSTEM_USER_GROUP = 'settingSystemUserGroup',
   SETTING_SYSTEM_PERMISSION_CONTROL = 'settingSystemPermissionControl',
   SETTING_SYSTEM_ORGANIZATION = 'settingSystemOrganization',
   SETTING_SYSTEM_ORG_STRUCTURE = 'settingSystemOrgStructure',
@@ -125,7 +133,6 @@ export enum SettingRouteEnum {
   SETTING_ORGANIZATION = 'settingOrganization',
   SETTING_ORGANIZATION_MEMBER = 'settingOrganizationMember',
   SETTING_ORGANIZATION_ORG_STRUCTURE = 'settingOrganizationOrgStructure',
-  SETTING_ORGANIZATION_USER_GROUP = 'settingOrganizationUserGroup',
   SETTING_ORGANIZATION_PROJECT = 'settingOrganizationProject',
   SETTING_ORGANIZATION_TEMPLATE = 'settingOrganizationTemplate',
   SETTING_ORGANIZATION_TEMPLATE_FILED_SETTING = 'settingOrganizationTemplateFiledSetting',

@@ -83,6 +83,9 @@
     select *
     from user_role_relation
     where role_id = #{roleId}
+      <if test="sourceId != null and sourceId != ''">
+        and source_id = #{sourceId}
+      </if>
       <if test="userIds != null and userIds.size() > 0">
         and user_id in
         <foreach collection="userIds" item="userId" open="(" separator="," close=")">
@@ -90,6 +93,76 @@
         </foreach>
       </if>
   </select>
+
+  <select id="selectRoleMemberUserIds" resultType="java.lang.String">
+    select distinct user_id from user_role_relation
+    where role_id = #{roleId}
+    <if test="sourceId != null and sourceId != ''">and source_id = #{sourceId}</if>
+  </select>
+
+  <select id="countUsersInScope" resultType="java.lang.Integer">
+    select count(distinct user_id) from user_role_relation
+    where source_id = #{sourceId} and user_id in
+    <foreach collection="userIds" item="userId" open="(" separator="," close=")">#{userId}</foreach>
+  </select>
+
+  <insert id="batchInsertRoleRelations">
+    insert ignore into user_role_relation
+      (id, user_id, role_id, source_id, organization_id, create_time, create_user)
+    values
+    <foreach collection="relations" item="item" separator=",">
+      (#{item.id}, #{item.userId}, #{item.roleId}, #{item.sourceId}, #{item.organizationId}, #{item.createTime}, #{item.createUser})
+    </foreach>
+  </insert>
+
+  <delete id="deleteRoleRelations">
+    delete from user_role_relation
+    where role_id = #{roleId} and source_id = #{sourceId} and user_id in
+    <foreach collection="userIds" item="userId" open="(" separator="," close=")">#{userId}</foreach>
+  </delete>
+
+  <select id="countRoleMembers" resultType="java.lang.Long">
+    select count(distinct user_id)
+    from user_role_relation
+    where role_id = #{roleId}
+  </select>
+
+  <select id="countUsersWithoutOtherBusinessRole" resultType="java.lang.Long">
+    select count(*)
+    from (
+      select target.user_id, target.source_id
+      from user_role_relation target
+      where target.role_id = #{roleId}
+        and not exists (
+          select 1
+          from user_role_relation other_rel
+          inner join user_role other_role on other_role.id = other_rel.role_id
+          where other_rel.user_id = target.user_id
+            and other_rel.source_id = target.source_id
+            and other_rel.role_id &lt;&gt; #{roleId}
+            and other_role.enabled = b'1'
+            and other_role.id &lt;&gt; 'member'
+        )
+      group by target.user_id, target.source_id
+    ) impacted
+  </select>
+
+  <select id="countMemberInitialization" resultType="java.lang.Long">
+    select count(*) from permission_member_initialization
+    where role_id = #{roleId} and init_version = #{initVersion}
+  </select>
+
+  <insert id="insertMemberInitialization">
+    insert into permission_member_initialization (role_id, init_version, initialized_time)
+    values (#{roleId}, #{initVersion}, #{initializedTime})
+  </insert>
+
+  <insert id="insertMigrationFailure">
+    insert into permission_role_migration_failure
+      (id, migration_version, source_role_id, user_id, failure_stage, failure_reason, execute_time)
+    values
+      (UUID_SHORT(), #{migrationVersion}, #{sourceRoleId}, #{userId}, #{failureStage}, #{failureReason}, #{executeTime})
+  </insert>
 
   <insert id="insertWorkflowDefinition" parameterType="io.metersphere.system.domain.WorkflowDefinition">
     insert into workflow_definition
@@ -162,6 +235,10 @@
     delete from workflow_role where id = #{id}
   </delete>
 
+  <delete id="deleteWorkflowRolesByFlowId">
+    delete from workflow_role where flow_id = #{flowId}
+  </delete>
+
   <select id="selectWorkflowRoles" resultMap="WorkflowRoleMap">
     select id, flow_id, code, name, role_type, role_id, field_key, enabled, create_time, update_time
     from workflow_role
@@ -184,6 +261,10 @@
 
   <delete id="deleteStatusFlowRolePermissionsByFlowId">
     delete from status_flow_role_permission where flow_id = #{flowId}
+  </delete>
+
+  <delete id="deleteStatusFlowRolePermissionsByWorkflowRoleId">
+    delete from status_flow_role_permission where workflow_role_id = #{workflowRoleId}
   </delete>
 
   <select id="selectStatusFlowRolePermissions" resultMap="StatusFlowRolePermissionMap">

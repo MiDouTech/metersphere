@@ -2,6 +2,81 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="io.metersphere.project.mapper.ExtProjectMapper">
 
+    <select id="pageUserProject" resultType="io.metersphere.system.dto.ProjectDTO">
+        SELECT p.*, o.name AS organization_name
+        FROM project p
+        INNER JOIN organization o ON o.id = p.organization_id
+        WHERE p.deleted = 0
+        <if test="!admin">
+            AND EXISTS (
+                SELECT 1
+                FROM user_role_relation urr
+                INNER JOIN user_role ur ON ur.id = urr.role_id
+                WHERE urr.source_id = p.id
+                  AND urr.user_id = #{userId}
+                  AND ur.type = 'PROJECT'
+                  AND ur.enabled = b'1'
+            )
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            AND (p.name LIKE CONCAT('%', #{request.keyword}, '%')
+                OR p.id LIKE CONCAT('%', #{request.keyword}, '%')
+                OR CAST(p.num AS CHAR) LIKE CONCAT('%', #{request.keyword}, '%'))
+        </if>
+        <if test="request.enable != null">
+            AND p.enable = #{request.enable}
+        </if>
+        ORDER BY p.create_time DESC
+    </select>
+
+    <select id="pageCaseAssetProject" resultType="io.metersphere.system.dto.ProjectDTO">
+        SELECT p.*, o.name AS organization_name
+        FROM project p
+        INNER JOIN organization o ON o.id = p.organization_id
+        WHERE p.deleted = b'0'
+          AND p.enable = b'1'
+        <if test="!admin">
+            AND EXISTS (
+                SELECT 1
+                FROM user_role_relation urr
+                INNER JOIN user_role ur ON ur.id = urr.role_id
+                INNER JOIN user_role_permission urp ON urp.role_id = ur.id
+                WHERE urr.source_id = p.id
+                  AND urr.user_id = #{userId}
+                  AND ur.type = 'PROJECT'
+                  AND ur.enabled = b'1'
+                  AND urp.permission_id = #{permissionId}
+            )
+        </if>
+        <if test="request.keyword != null and request.keyword != ''">
+            AND (p.name LIKE CONCAT('%', #{request.keyword}, '%')
+                OR p.id LIKE CONCAT('%', #{request.keyword}, '%')
+                OR CAST(p.num AS CHAR) LIKE CONCAT('%', #{request.keyword}, '%'))
+        </if>
+        ORDER BY p.create_time DESC
+    </select>
+
+    <select id="userHasProjectRelation" resultType="boolean">
+        SELECT count(1) > 0
+        FROM user_role_relation urr
+        INNER JOIN user_role ur ON ur.id = urr.role_id
+        INNER JOIN project p ON p.id = urr.source_id
+        WHERE urr.source_id = #{projectId}
+          AND urr.user_id = #{userId}
+          AND ur.type = 'PROJECT'
+          AND ur.enabled = b'1'
+          AND p.deleted = b'0'
+          AND p.enable = b'1'
+    </select>
+
+    <select id="projectIsActive" resultType="boolean">
+        SELECT count(1) > 0
+        FROM project
+        WHERE id = #{projectId}
+          AND deleted = b'0'
+          AND enable = b'1'
+    </select>
+
 
     <select id="getUserProject" resultType="io.metersphere.project.domain.Project">
         SELECT DISTINCT p.*

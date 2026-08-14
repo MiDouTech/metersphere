@@ -1,6 +1,6 @@
 import { DirectiveBinding } from 'vue';
 
-import { hasAllPermission, hasAnyPermission } from '@/utils/permission';
+import { hasAllButtonPermission, hasAnyButtonPermission } from '@/utils/permission';
 
 /**
  * 权限指令
@@ -12,7 +12,7 @@ function checkPermission(el: HTMLElement, binding: DirectiveBinding) {
   if (Array.isArray(value)) {
     if (value.length > 0) {
       // 如果有 all 修饰符，表示需要全部权限；否则只需要其中一个权限
-      const hasPermission = modifiers.all ? hasAllPermission(value) : hasAnyPermission(value);
+      const hasPermission = modifiers.all ? hasAllButtonPermission(value) : hasAnyButtonPermission(value);
       if (!hasPermission && el.parentNode) {
         el.parentNode.removeChild(el);
       }

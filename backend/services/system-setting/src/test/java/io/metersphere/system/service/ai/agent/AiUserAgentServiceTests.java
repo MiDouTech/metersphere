@@ -38,7 +38,9 @@ class AiUserAgentServiceTests {
         ReflectionTestUtils.setField(flags, "enabled", true);
         ReflectionTestUtils.setField(flags, "workbuddyEnabled", true);
         ReflectionTestUtils.setField(flags, "codexEnabled", true);
+        ReflectionTestUtils.setField(flags, "codexVerified", true);
         ReflectionTestUtils.setField(flags, "cursorEnabled", false);
+        ReflectionTestUtils.setField(flags, "minimumBridgeVersion", "0.1.0");
         service = new AiUserAgentService(repository, flags, auditService);
     }
 
@@ -80,6 +82,14 @@ class AiUserAgentServiceTests {
         AiAgentPairingCreateRequest request = new AiAgentPairingCreateRequest();
         request.setProvider("CURSOR");
         assertThrows(MSException.class, () -> service.createPairing(request, "user-a"));
+    }
+
+    @Test
+    void outdatedBridgeCannotConsumePairing() {
+        AiAgentPairingConsumeRequest request = consumeRequest();
+        request.setBridgeVersion("0.0.9");
+        MSException error = assertThrows(MSException.class, () -> service.consumePairing(request));
+        assertTrue(error.getMessage().contains("版本不得低于"));
     }
 
     private AiAgentPairingConsumeRequest consumeRequest() {

@@ -6,7 +6,7 @@
     @change="(val) => handleTabClick(val as string)"
   >
     <a-tab-pane
-      v-for="item of props.contentTabList"
+      v-for="item of visibleContentTabList"
       :key="item.value"
       :title="`${item.label}`"
       :disabled="props.disabled"
@@ -31,7 +31,7 @@
   </a-tabs>
   <div v-else class="ms-tab--button">
     <div
-      v-for="item of props.contentTabList"
+      v-for="item of visibleContentTabList"
       :key="item.value"
       class="ms-tab-button-item"
       :class="[
@@ -46,10 +46,14 @@
 </template>
 
 <script setup lang="ts">
+  import { computed } from 'vue';
+
+  import { hasTabVisible } from '@/utils/permission';
+
   const props = withDefaults(
     defineProps<{
       mode?: 'origin' | 'button';
-      contentTabList: { label: string | number; value: string | number }[];
+      contentTabList: { label: string | number; value: string | number; resourceCode?: string; typeList?: string[] }[];
       class?: string;
       getTextFunc?: (value: any) => string;
       noContent?: boolean;
@@ -69,6 +73,10 @@
   const emit = defineEmits<{
     (e: 'change', value: string | number): void;
   }>();
+
+  const visibleContentTabList = computed(() =>
+    props.contentTabList.filter((item) => hasTabVisible(item.resourceCode, item.typeList))
+  );
 
   // 实际值，用于最终确认修改的 tab 值
   const activeKey = defineModel<string | number>('activeKey', {

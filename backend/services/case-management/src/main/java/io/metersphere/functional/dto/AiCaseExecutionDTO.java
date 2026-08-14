@@ -22,6 +22,7 @@ public class AiCaseExecutionDTO {
     private String actualModelSourceId;
     private Boolean cancelRequested;
     private String retryOfRequestId;
+    private String sourceDocumentIds;
     private Long inputTokens;
     private Long outputTokens;
     private Boolean tokenEstimated;

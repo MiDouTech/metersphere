@@ -108,6 +108,7 @@ public class AiUserAgentService {
     }
 
     public Map<String, Object> consumePairing(AiAgentPairingConsumeRequest request) {
+        featureService.assertBridgeVersionSupported(request.getBridgeVersion());
         long now = System.currentTimeMillis();
         String normalizedCode = StringUtils.upperCase(StringUtils.trim(request.getPairingCode()));
         Map<String, Object> pairing = repository.findUsablePairing(DigestUtils.sha256Hex(normalizedCode), now);
@@ -133,6 +134,26 @@ public class AiUserAgentService {
                         "osType", request.getOsType()));
         return Map.of("deviceId", deviceId, "accessToken", token,
                 "accessTokenExpiresAt", now + ACCESS_TOKEN_TTL_MS);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> pairingStatus(String id, String userId) {
+        Map<String, Object> pairing = repository.findPairing(id, userId);
+        if (pairing == null) {
+            throw new MSException("配对请求不存在或无权限");
+        }
+        long expiresAt = ((Number) pairing.get("expires_at")).longValue();
+        String storedStatus = (String) pairing.get("status");
+        String status = "PENDING".equals(storedStatus) && expiresAt < System.currentTimeMillis()
+                ? "EXPIRED" : storedStatus;
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("pairingId", pairing.get("id"));
+        result.put("provider", pairing.get("provider"));
+        result.put("status", status);
+        result.put("expiresAt", expiresAt);
+        result.put("deviceId", pairing.get("device_id"));
+        result.put("consumedAt", pairing.get("consumed_at"));
+        return result;
     }
 
     public Map<String, Object> createChallenge(String deviceId) {
@@ -217,6 +238,33 @@ public class AiUserAgentService {
         }
         auditService.record(null, null, userId, id, "DELETE", "AI_USER_AGENT_CONNECTION_REVOKE",
                 "/ai/user-agent/connections/{id}/revoke", "POST", Map.of());
+    }
+
+    @Transactional(readOnly = true)
+    public AiUserAgentConnectionDTO getConnection(String id, String userId) {
+        AiUserAgentConnectionDTO connection = repository.findConnection(id, userId);
+        if (connection == null) throw new MSException("Agent 连接不存在或无权限");
+        return connection;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> connectionImpact(String id, String userId) {
+        getConnection(id, userId);
+        return repository.connectionImpact(id, userId);
+    }
+
+    public void deleteConnection(String id, String userId) {
+        AiUserAgentConnectionDTO connection = getConnection(id, userId);
+        if (!"REVOKED".equals(connection.getStatus())) {
+            throw new MSException("请先撤销 Agent 连接，再删除记录");
+        }
+        Map<String, Object> impact = repository.connectionImpact(id, userId);
+        if (((Number) impact.get("activeExecutionCount")).intValue() > 0
+                || repository.deleteRevokedConnection(id, userId, System.currentTimeMillis()) != 1) {
+            throw new MSException("Agent 连接仍被活动执行使用，不能删除");
+        }
+        auditService.record(null, null, userId, id, "DELETE", "AI_USER_AGENT_CONNECTION_DELETE",
+                "/ai/user-agent/connections/{id}", "DELETE", impact);
     }
 
     public void revokeDevice(String id, String userId) {

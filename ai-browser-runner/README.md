@@ -4,7 +4,7 @@
 
 ## 本地启动
 
-1. 管理员调用 `POST /ai/runner/register`，保存仅返回一次的 `runnerId/runnerToken`。
+1. 管理员调用 `POST /ai/runner/register`，保存仅返回一次的 `runnerId/runnerToken`；按部署边界填写 `isolationMode=PROCESS/CONTAINER/VM`，未声明时平台会明确显示 `UNDECLARED`。
 2. 复制 `.env.example` 中的变量到安全的进程环境；`MS_RUNNER_ALLOWED_ORIGINS` 必须显式列出被测站点 Origin。
 3. 执行 `npm ci && npm run install-browser && npm run build && npm start`。
 

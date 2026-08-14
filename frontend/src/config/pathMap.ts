@@ -32,12 +32,88 @@ export const pathMap: PathMapItem[] = [
     key: 'TEST_ASSET',
     locale: 'menu.testAsset',
     route: RouteEnum.TEST_ASSET,
-    permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
+    permission: [
+      'FUNCTIONAL_CASE:READ',
+      'FUNCTIONAL_CASE_AI:READ',
+      'PROJECT_FILE_MANAGEMENT:READ',
+      'PROJECT_ENVIRONMENT:READ',
+      'PROJECT_API_SCENARIO:READ',
+      'PROJECT_API_DEFINITION:READ',
+      'AI_EXECUTION:READ',
+      'PROJECT_BUG:READ',
+    ],
     level: MENU_LEVEL[2],
     children: [
-      { key: 'TEST_ASSET_DOCUMENTS', locale: 'menu.testAsset.documents', route: RouteEnum.TEST_ASSET_DOCUMENTS, permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'], level: MENU_LEVEL[2] },
-      { key: 'TEST_ASSET_VERSIONS', locale: 'menu.testAsset.versions', route: RouteEnum.TEST_ASSET_VERSIONS, permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'], level: MENU_LEVEL[2] },
-      { key: 'TEST_ASSET_RELATIONS', locale: 'menu.testAsset.relations', route: RouteEnum.TEST_ASSET_RELATIONS, permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'], level: MENU_LEVEL[2] },
+      {
+        key: 'TEST_ASSET_DOCUMENTS',
+        locale: 'menu.testAsset.documents',
+        route: RouteEnum.TEST_ASSET_DOCUMENTS,
+        permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_VERSIONS',
+        locale: 'menu.testAsset.versions',
+        route: RouteEnum.TEST_ASSET_VERSIONS,
+        permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_RELATIONS',
+        locale: 'menu.testAsset.relations',
+        route: RouteEnum.TEST_ASSET_RELATIONS,
+        permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_CASES',
+        locale: 'menu.testAsset.cases',
+        route: RouteEnum.TEST_ASSET_CASES,
+        permission: ['FUNCTIONAL_CASE:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_DATASETS',
+        locale: 'menu.testAsset.datasets',
+        route: RouteEnum.TEST_ASSET_DATASETS,
+        permission: ['PROJECT_FILE_MANAGEMENT:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_ENVIRONMENTS',
+        locale: 'menu.testAsset.environments',
+        route: RouteEnum.TEST_ASSET_ENVIRONMENTS,
+        permission: ['PROJECT_ENVIRONMENT:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_COMMON_STEPS',
+        locale: 'menu.testAsset.commonSteps',
+        route: RouteEnum.TEST_ASSET_COMMON_STEPS,
+        permission: ['PROJECT_API_SCENARIO:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_APIS',
+        locale: 'menu.testAsset.apis',
+        route: RouteEnum.TEST_ASSET_APIS,
+        permission: ['PROJECT_API_DEFINITION:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_EVIDENCE',
+        locale: 'menu.testAsset.evidence',
+        route: RouteEnum.TEST_ASSET_EVIDENCE,
+        permission: ['AI_EXECUTION:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_BUGS',
+        locale: 'menu.testAsset.bugs',
+        route: RouteEnum.TEST_ASSET_BUGS,
+        permission: ['PROJECT_BUG:READ'],
+        level: MENU_LEVEL[2],
+      },
     ],
   },
   {
@@ -47,11 +123,41 @@ export const pathMap: PathMapItem[] = [
     permission: ['AI_EXECUTION:READ'],
     level: MENU_LEVEL[2],
     children: [
-      { key: 'AGENT_LIST', locale: 'Agent 列表', route: RouteEnum.AGENT_LIST, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
-      { key: 'AGENT_CAPABILITY', locale: '能力与授权', route: RouteEnum.AGENT_CAPABILITY, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
-      { key: 'AGENT_QUEUE', locale: '调度队列', route: RouteEnum.AGENT_QUEUE, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
-      { key: 'AGENT_EVALUATION', locale: '执行评价', route: RouteEnum.AGENT_EVALUATION, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
-      { key: 'AGENT_ACCESS', locale: '接入配置', route: RouteEnum.AGENT_ACCESS, permission: ['AI_EXECUTION:READ'], level: MENU_LEVEL[2] },
+      {
+        key: 'AGENT_LIST',
+        locale: 'Agent 列表',
+        route: RouteEnum.AGENT_LIST,
+        permission: ['AI_EXECUTION:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'AGENT_CAPABILITY',
+        locale: '能力与授权',
+        route: RouteEnum.AGENT_CAPABILITY,
+        permission: ['AI_EXECUTION:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'AGENT_QUEUE',
+        locale: '调度队列',
+        route: RouteEnum.AGENT_QUEUE,
+        permission: ['AI_EXECUTION:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'AGENT_EVALUATION',
+        locale: '执行评价',
+        route: RouteEnum.AGENT_EVALUATION,
+        permission: ['AI_EXECUTION:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'AGENT_ACCESS',
+        locale: 'Agent 集成',
+        route: RouteEnum.AGENT_ACCESS,
+        permission: ['AI_EXECUTION:READ'],
+        level: MENU_LEVEL[2],
+      },
     ],
   },
   {
@@ -305,13 +411,6 @@ export const pathMap: PathMapItem[] = [
             level: MENU_LEVEL[0],
           },
           {
-            key: 'SETTING_SYSTEM_USER_GROUP', // 系统设置-系统-用户组
-            locale: 'menu.settings.system.usergroup',
-            route: RouteEnum.SETTING_SYSTEM_USER_GROUP,
-            permission: [],
-            level: MENU_LEVEL[0],
-          },
-          {
             key: 'SETTING_SYSTEM_PERMISSION_CONTROL', // 系统设置-系统-权限控制
             locale: 'menu.settings.system.permissionControl',
             route: RouteEnum.SETTING_SYSTEM_PERMISSION_CONTROL,
@@ -409,13 +508,6 @@ export const pathMap: PathMapItem[] = [
             key: 'SETTING_ORGANIZATION_MEMBER', // 系统设置-组织-成员
             locale: 'menu.settings.organization.member',
             route: RouteEnum.SETTING_ORGANIZATION_MEMBER,
-            permission: [],
-            level: MENU_LEVEL[1],
-          },
-          {
-            key: 'SETTING_ORGANIZATION_USER_ROLE', // 系统设置-组织-用户组
-            locale: 'menu.settings.organization.userGroup',
-            route: RouteEnum.SETTING_ORGANIZATION_USER_GROUP,
             permission: [],
             level: MENU_LEVEL[1],
           },
@@ -572,6 +664,13 @@ export const pathMap: PathMapItem[] = [
     level: MENU_LEVEL[2],
     children: [
       {
+        key: 'PROJECT_MANAGEMENT_PROJECTS',
+        locale: 'menu.projectManagement.projectList',
+        route: RouteEnum.PROJECT_MANAGEMENT_PROJECTS,
+        permission: [],
+        level: MENU_LEVEL[2],
+      },
+      {
         key: 'PROJECT_MANAGEMENT_PERMISSION', // 项目管理-项目与权限
         locale: 'menu.projectManagement.projectPermission',
         route: RouteEnum.PROJECT_MANAGEMENT_PERMISSION,
@@ -612,13 +711,6 @@ export const pathMap: PathMapItem[] = [
             key: 'PROJECT_MANAGEMENT_PERMISSION_MEMBER', // 项目管理-项目与权限-成员
             locale: 'project.permission.member',
             route: RouteEnum.PROJECT_MANAGEMENT_PERMISSION_MEMBER,
-            permission: [],
-            level: MENU_LEVEL[2],
-          },
-          {
-            key: 'PROJECT_MANAGEMENT_PERMISSION_USER_GROUP', // 项目管理-项目与权限-用户组
-            locale: 'project.permission.userGroup',
-            route: RouteEnum.PROJECT_MANAGEMENT_PERMISSION_USER_GROUP,
             permission: [],
             level: MENU_LEVEL[2],
           },

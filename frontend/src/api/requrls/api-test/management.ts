@@ -10,6 +10,7 @@ export const DeleteModuleUrl = '/api/definition/module/delete'; // 删除模块
  * 接口定义
  */
 export const DefinitionPageUrl = '/api/definition/page'; // 接口定义列表
+export const DefinitionDocPageUrl = '/api/definition/page-doc'; // 接口定义文档列表
 export const AddDefinitionUrl = '/api/definition/add'; // 添加接口定义
 export const UpdateDefinitionUrl = '/api/definition/update'; // 更新接口定义
 export const StopApiExportUrl = '/api/definition/stop';

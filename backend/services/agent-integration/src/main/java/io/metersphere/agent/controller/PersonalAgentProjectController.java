@@ -3,9 +3,11 @@ package io.metersphere.agent.controller;
 import io.metersphere.agent.dto.AgentProjectDTO;
 import io.metersphere.agent.dto.AgentProjectSearchRequest;
 import io.metersphere.agent.service.AgentProjectService;
+import io.metersphere.sdk.constants.PermissionConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +23,7 @@ public class PersonalAgentProjectController {
     private AgentProjectService agentProjectService;
 
     @GetMapping
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_READ)
     @Operation(summary = "List current user's accessible projects for personal Agent Token")
     public List<AgentProjectDTO> list(@RequestParam(required = false) String keyword,
                                       @RequestParam(required = false) Integer limit) {

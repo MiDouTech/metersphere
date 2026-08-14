@@ -11,6 +11,7 @@ import java.util.List;
 public class RoleMemberUpdateRequest {
     @NotBlank
     private String roleId;
+    private String sourceId;
     @NotEmpty
     @Valid
     private List<String> userIds;

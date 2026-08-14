@@ -2,6 +2,7 @@ import { useI18n } from '@/hooks/useI18n';
 import useLocale from '@/locale/useLocale';
 import useAppStore from '@/store/modules/app';
 import { deepMerge, setObjToUrlParams } from '@/utils';
+import { AppError, formatAppErrorMessage, localizeAppError, normalizeAppError } from '@/utils/appError';
 import { getToken } from '@/utils/auth';
 import { showHttpErrorMessage } from '@/utils/httpMessage';
 import { isString } from '@/utils/is';
@@ -149,7 +150,8 @@ const transform: AxiosTransform = {
     const { t } = useI18n();
     const { response, code, message, config } = error || {};
     const errorMessageMode = config?.requestOptions?.errorMessageMode || 'none';
-    const msg: string = response?.data?.message ?? '';
+    const appError = localizeAppError(normalizeAppError(response, t('api.apiRequestFailed')), t);
+    const msg = formatAppErrorMessage(appError);
     const err: string = error?.toString?.() ?? '';
     let errMessage = '';
 
@@ -167,15 +169,16 @@ const transform: AxiosTransform = {
         } else if (errorMessageMode === 'message') {
           showHttpErrorMessage(errMessage);
         }
-        return Promise.reject(error);
+        const networkError = new AppError({ message: errMessage, retryable: true });
+        return Promise.reject(
+          response?.config?.requestOptions?.isReturnNativeResponse ? response?.data || error : networkError
+        );
       }
     } catch (e) {
-      throw new Error(e as unknown as string);
+      return Promise.reject(new AppError({ message: t('api.apiRequestFailed'), retryable: true }));
     }
-    checkStatus(response?.status, msg, response?.data?.code, errorMessageMode);
-    return Promise.reject(
-      response?.config?.requestOptions?.isReturnNativeResponse ? response?.data : response?.data?.message || error
-    );
+    checkStatus(response?.status, msg, response?.data?.code, errorMessageMode, appError.context);
+    return Promise.reject(response?.config?.requestOptions?.isReturnNativeResponse ? response?.data : appError);
   },
 };
 

@@ -161,12 +161,13 @@
     <select id="getProjectExtendDTOList" resultType="io.metersphere.system.dto.ProjectDTO">
         select p.id, count(distinct temp.id) as memberCount
         FROM project p
-        LEFT JOIN (SELECT ur.source_id, u.id
-        from user_role_relation ur
-        left join user u on u.id = ur.user_id
+        LEFT JOIN (SELECT relation.source_id, u.id
+        from user_role_relation relation
+        inner join user_role role on role.id = relation.role_id and role.type = 'PROJECT' and role.enabled = b'1'
+        inner join user u on u.id = relation.user_id and u.deleted = b'0'
         <where>
             <if test="projectIds != null and projectIds.size > 0 ">
-                ur.source_id in
+                relation.source_id in
                 <foreach collection="projectIds" item="projectId" open="(" separator="," close=")">
                     #{projectId}
                 </foreach>
@@ -174,6 +175,29 @@
         </where>
         ) temp on p.id = temp.source_id
         group by p.id
+    </select>
+    <select id="getProjectMemberPreviewList" resultType="io.metersphere.system.dto.user.UserExtendDTO">
+        SELECT preview.id, preview.name, preview.source_id
+        FROM (
+            SELECT members.id, members.name, members.source_id,
+                   ROW_NUMBER() OVER (PARTITION BY members.source_id ORDER BY members.name, members.id) AS row_num
+            FROM (
+                SELECT DISTINCT u.id, u.name, urr.source_id
+                FROM user_role_relation urr
+                INNER JOIN user_role role ON role.id = urr.role_id
+                INNER JOIN `user` u ON u.id = urr.user_id
+                WHERE u.deleted = 0
+                  AND u.enable = 1
+                  AND role.type = 'PROJECT'
+                  AND role.enabled = b'1'
+                  AND urr.source_id IN
+                  <foreach collection="projectIds" item="projectId" open="(" separator="," close=")">
+                      #{projectId}
+                  </foreach>
+            ) members
+        ) preview
+        WHERE preview.row_num &lt;= 5
+        ORDER BY preview.source_id, preview.row_num
     </select>
     <select id="getProjectResourcePoolDTOList" resultType="io.metersphere.system.dto.ProjectResourcePoolDTO">
         SELECT p.project_id, t.*

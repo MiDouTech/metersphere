@@ -47,3 +47,87 @@ export interface PermissionControlFlowMatrix {
   statuses: PermissionControlStatus[];
   transitions: PermissionControlStatusFlow[];
 }
+
+export interface PermissionControlRole {
+  id: string;
+  name: string;
+  description?: string;
+  internal: boolean;
+  type: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT';
+  scopeId: string;
+  enabled?: boolean;
+}
+
+export interface PermissionResourceNode {
+  id: string;
+  code: string;
+  name: string;
+  type: 'MENU' | 'PAGE' | 'TAB' | 'BUTTON' | 'API';
+  scopeType: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT';
+  parentCode?: string;
+  permissionId?: string;
+  visibleDefault: boolean;
+  operableDefault: boolean;
+  children?: PermissionResourceNode[];
+}
+
+export interface RoleUiPermissionValue {
+  resourceCode: string;
+  visible: boolean;
+  operable: boolean;
+}
+
+export interface RolePermissionItem {
+  id: string;
+  name: string;
+  enable: boolean;
+  permissions?: RolePermissionItem[];
+  children?: RolePermissionItem[];
+}
+
+export interface RoleSavePayload {
+  id?: string;
+  name: string;
+  description?: string;
+  type: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT';
+  enabled: boolean;
+  permissions: Array<{ id: string; enable: boolean }>;
+  uiPermissions: RoleUiPermissionValue[];
+}
+
+export interface RoleDeleteImpact {
+  memberCount: number;
+  usersWithoutOtherBusinessRoleCount: number;
+}
+
+export interface PermissionControlRoleMember {
+  id: string;
+  userId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface PermissionControlRoleMemberOption {
+  id: string;
+  name: string;
+  email?: string;
+  exclude?: boolean;
+}
+
+export interface PermissionControlRoleMemberScopeOption {
+  id: string;
+  name: string;
+}
+
+export interface RoleAssignmentRule {
+  id?: string;
+  roleId: string;
+  organizationId: string;
+  departmentId?: string;
+  positionId?: string;
+  enabled: boolean;
+  syncMode: 'MANUAL' | 'AUTO';
+  createTime?: number;
+  updateTime?: number;
+}

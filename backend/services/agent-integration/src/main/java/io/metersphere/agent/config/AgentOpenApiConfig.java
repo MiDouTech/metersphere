@@ -13,8 +13,6 @@ public class AgentOpenApiConfig {
                 .pathsToMatch(
                         "/agent/v1/**",
                         "/api/agent/v1/**",
-                        "/agent/token/**",
-                        "/api/agent/token/**",
                         "/agent/mcp/**",
                         "/api/agent/mcp/**",
                         "/personal/agent-tokens/**",

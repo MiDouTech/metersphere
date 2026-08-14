@@ -64,6 +64,7 @@ public class AiSourceDocumentController {
     @GetMapping("/{id}")
     @Operation(summary = "查询 AI 来源文档详情")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_READ)
+    @CheckOwner(resourceId = "#projectId", resourceType = "project")
     public AiSourceDocumentDTO get(@PathVariable String id, @RequestParam String projectId) {
         return aiSourceDocumentService.get(id, projectId, SessionUtils.getUserId());
     }

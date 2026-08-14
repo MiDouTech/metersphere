@@ -84,7 +84,7 @@ export function createAgentToken(data: AgentTokenCreateParams) {
 
 export function updateAgentToken(data: AgentTokenUpdateParams) {
   const { id, ...payload } = data;
-  return MSR.post({ url: `${AgentTokenUrl}/${id}`, data: payload });
+  return MSR.request({ url: `${AgentTokenUrl}/${id}`, method: 'PATCH', data: payload });
 }
 
 export function enableAgentToken(id: string) {
@@ -99,10 +99,6 @@ export function deleteAgentToken(id: string) {
   return MSR.delete({ url: `${AgentTokenUrl}/${id}` });
 }
 
-export function testAgentToken(id: string) {
-  return MSR.post<AgentTokenListItem>({ url: `${AgentTokenUrl}/${id}/test` });
-}
-
 export function getAgentMcpManifest() {
   return MSR.get<AgentMcpManifest>({ url: AgentMcpManifestUrl });
 }
@@ -113,4 +109,19 @@ export function downloadAgentMcpBundle() {
 
 export function getPersonalAgentProjectList(keyword: string) {
   return MSR.get<PersonalAgentProject[]>({ url: PersonalAgentProjectUrl, params: { keyword, limit: 50 } });
+}
+
+export function getAdminAgentTokenPage(data: TableQueryParams) {
+  return MSR.get<CommonList<AgentTokenListItem>>({ url: '/admin/agent-tokens', params: data });
+}
+
+export function revokeAdminAgentToken(id: string) {
+  return MSR.post({ url: `/admin/agent-tokens/${id}/revoke` });
+}
+
+export function exportAdminAgentTokenAudit(params: Record<string, unknown>) {
+  return MSR.get<BlobPart>(
+    { url: '/admin/agent-tokens/audit/export', params, responseType: 'blob' },
+    { isTransformResponse: false }
+  );
 }

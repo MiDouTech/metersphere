@@ -28,6 +28,8 @@ import io.metersphere.bug.service.BugService;
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.project.service.ProjectTemplateService;
+import io.metersphere.functional.domain.FunctionalCase;
+import io.metersphere.functional.mapper.FunctionalCaseMapper;
 import io.metersphere.request.AssociateOtherCaseRequest;
 import io.metersphere.sdk.constants.CaseType;
 import io.metersphere.sdk.constants.TemplateScene;
@@ -78,6 +80,10 @@ public class AgentBugWriteService {
     private AgentTempAttachmentService agentTempAttachmentService;
     @Resource
     private AgentExecLogService agentExecLogService;
+    @Resource
+    private TestAssetVersionService testAssetVersionService;
+    @Resource
+    private FunctionalCaseMapper functionalCaseMapper;
 
     public AgentBugSearchResponse search(AgentBugSearchRequest request) {
         String projectId = resolveAndAssertProject(request.getProjectId());
@@ -185,6 +191,7 @@ public class AgentBugWriteService {
         Bug bug = bugService.addOrUpdate(editRequest, new ArrayList<>(), userId, project.getOrganizationId(), false);
         attachTempFiles(bug.getId(), projectId, request.getAttachmentIds());
         relateAdditionalCases(projectId, bug.getId(), request.getAddCaseIds(), request.getCaseType());
+        publishBugRelations(bug, request, userId);
         agentExecLogService.audit("BUG_CREATE", bug.getId(), JSON.toJSONString(request));
 
         AgentBugDTO dto = new AgentBugDTO();
@@ -195,6 +202,35 @@ public class AgentBugWriteService {
         dto.setStatus(bug.getStatus());
         dto.setCaseId(request.getCaseId());
         return dto;
+    }
+
+    void publishBugRelations(Bug bug, AgentBugCreateRequest request, String userId) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("assetType", "BUG");
+        snapshot.put("assetId", bug.getId());
+        snapshot.put("name", bug.getTitle());
+        snapshot.put("bugNumber", bug.getNum());
+        snapshot.put("status", bug.getStatus());
+        snapshot.put("description", StringUtils.defaultString(request.getDescription()));
+        snapshot.put("handleUser", bug.getHandleUser());
+        snapshot.put("tags", bug.getTags());
+        Long sourceTime = bug.getUpdateTime() != null ? bug.getUpdateTime() : bug.getCreateTime();
+        var bugVersion = testAssetVersionService.publish(bug.getProjectId(), "BUG", bug.getId(),
+                sourceTime == null ? null : String.valueOf(sourceTime),
+                JSON.toJSONString(snapshot), userId);
+        List<String> caseIds = new ArrayList<>();
+        if (StringUtils.isNotBlank(request.getCaseId())) caseIds.add(request.getCaseId());
+        if (CollectionUtils.isNotEmpty(request.getAddCaseIds())) caseIds.addAll(request.getAddCaseIds());
+        caseIds.stream().filter(StringUtils::isNotBlank).distinct().forEach(caseId -> {
+            FunctionalCase functionalCase = functionalCaseMapper.selectByPrimaryKey(caseId);
+            if (functionalCase == null || !StringUtils.equals(bug.getProjectId(), functionalCase.getProjectId())) return;
+            String stableCaseId = StringUtils.defaultIfBlank(functionalCase.getRefId(), functionalCase.getId());
+            var caseVersion = testAssetVersionService.publish(bug.getProjectId(), "CASE", stableCaseId,
+                    functionalCase.getVersionId(), JSON.toJSONString(functionalCase), userId);
+            testAssetVersionService.relate(bug.getProjectId(), "REPORTS", "CASE", stableCaseId,
+                    caseVersion.getId(), "BUG", bug.getId(), bugVersion.getId(),
+                    JSON.toJSONString(Map.of("source", "AGENT_BUG_CREATE")), userId);
+        });
     }
 
     public AgentBugDTO update(AgentBugUpdateRequest request) {

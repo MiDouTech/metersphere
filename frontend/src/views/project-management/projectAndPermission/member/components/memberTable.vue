@@ -9,15 +9,7 @@
           {{ t('system.user.emailInvite') }}
         </a-button>
       </div>
-      <div>
-        <a-select v-model="roleIds" @change="changeSelect">
-          <a-option v-for="item of userGroupAll" :key="item.id" :value="item.id">{{ t(item.name) }}</a-option>
-          <template #prefix>
-            <span>{{ t('project.member.tableColumnUserGroup') }}</span>
-          </template>
-        </a-select>
-      </div>
-      <div>
+      <div class="col-span-2">
         <a-input-search
           v-model="keyword"
           :max-length="255"
@@ -38,39 +30,6 @@
       v-on="propsEvent"
       @batch-action="handleTableBatch"
     >
-      <template #userRoles="{ record }">
-        <MsTagGroup
-          v-if="!record.showUserSelect"
-          :tag-list="record.userRoles || []"
-          type="primary"
-          theme="outline"
-          allow-edit
-          show-table
-          @click="changeUser(record)"
-        />
-        <MsSelect
-          v-else
-          v-model:model-value="record.selectUserList"
-          v-model:loading="dialogLoading"
-          :max-tag-count="1"
-          class="w-full"
-          :options="userGroupOptions"
-          :search-keys="['name']"
-          value-key="id"
-          label-key="name"
-          allow-search
-          :multiple="true"
-          :placeholder="t('common.pleaseSelect')"
-          :at-least-one="true"
-          :fallback-option="
-              (val:any) => ({
-                label: userGroupOptions.find((e) => e.id === val)?.name || (val as string),
-                value: val,
-              })
-            "
-          @popup-visible-change="(value:boolean) => userGroupChange(value as boolean, record)"
-        />
-      </template>
       <template #enable="{ record }">
         <div v-if="record.enable" class="flex items-center">
           <icon-check-circle-fill class="mr-[2px] text-[rgb(var(--success-6))]" />
@@ -93,23 +52,13 @@
       </template>
     </MsBaseTable>
   </div>
-  <AddMemberModal
-    ref="projectMemberRef"
-    v-model:visible="addMemberVisible"
-    :user-group-options="userGroupOptions"
-    @success="initData()"
-  />
-  <MsBatchModal
-    ref="batchModalRef"
-    v-model:visible="batchVisible"
-    :action="batchAction"
-    :current-select-count="batchParams.currentSelectCount"
-    @add-user-group="addUserGroup"
-  />
-  <inviteModal v-model:visible="inviteVisible" :user-group-options="userGroupOptions" range="project"></inviteModal>
+  <AddMemberModal ref="projectMemberRef" v-model:visible="addMemberVisible" @success="initData()" />
+  <inviteModal v-model:visible="inviteVisible" range="project"></inviteModal>
 </template>
 
 <script setup lang="ts">
+  import { onMounted } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
   import { isEqual } from 'lodash-es';
 
@@ -146,6 +95,8 @@
   import { TableKeyEnum } from '@/enums/tableEnum';
 
   const appStore = useAppStore();
+  const route = useRoute();
+  const router = useRouter();
   const { t } = useI18n();
   const { openModal } = useModal();
   const tableStore = useTableStore();
@@ -176,15 +127,6 @@
       width: 200,
     },
     {
-      title: 'project.member.tableColumnUserGroup',
-      slotName: 'userRoles',
-      dataIndex: 'userRoles',
-      showDrag: true,
-      isTag: true,
-      allowEditTag: true,
-      width: 300,
-    },
-    {
       title: 'project.member.tableColumnStatus',
       slotName: 'enable',
       dataIndex: 'enable',
@@ -203,11 +145,6 @@
 
   const tableBatchActions = {
     baseAction: [
-      {
-        label: 'project.member.batchActionAddUserGroup',
-        eventTag: 'batchAddUserGroup',
-        permission: ['PROJECT_USER:READ+UPDATE'],
-      },
       {
         label: 'project.member.batchActionRemove',
         eventTag: 'batchActionRemove',
@@ -378,11 +315,6 @@
     if (event.eventTag === 'batchActionRemove') {
       batchRemoveHandler();
     }
-    if (event.eventTag === 'batchAddUserGroup') {
-      batchVisible.value = true;
-      batchAction.value = event.eventTag;
-      batchModalRef.value.getTreeList(getProjectUserGroup, lastProjectId.value);
-    }
   };
 
   // 添加项目成员
@@ -393,6 +325,16 @@
     addMemberVisible.value = true;
     projectMemberRef.value.initProjectMemberOptions();
   };
+
+  onMounted(() => {
+    if (route.query.action === 'add-member' && hasAnyPermission(['PROJECT_USER:READ+ADD'])) {
+      addMemberVisible.value = true;
+      nextTick(() => projectMemberRef.value?.initProjectMemberOptions());
+      const query = { ...route.query };
+      delete query.action;
+      router.replace({ query });
+    }
+  });
   const dialogLoading = ref(false);
 
   // 编辑项目成员
@@ -447,7 +389,6 @@
   const inviteVisible = ref(false);
 
   onBeforeMount(async () => {
-    await initOptions();
     initData();
   });
 

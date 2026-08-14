@@ -266,6 +266,7 @@ public class AgentExecutionService {
         }
         String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         String userId = requireUserId();
+        normalizeEnvironmentAssetRef(request);
         String executionMode = AgentExecutionMode.normalizeMode(request.getExecutionMode());
         String dispatchMode = AgentExecutionMode.AGENT.equals(executionMode)
                 ? StringUtils.defaultIfBlank(StringUtils.upperCase(request.getDispatchMode()), "PUSH") : "PULL";
@@ -434,9 +435,16 @@ public class AgentExecutionService {
                             "position", item.getPos())), userId);
             allStepSnapshots.addAll(stepSnapshots);
         }
+        List<io.metersphere.agent.dto.TestAssetContextDTO> selectedAssets =
+                testAssetCatalogService.resolveContext(projectId, request.getAssetRefs());
+        for (io.metersphere.agent.dto.TestAssetContextDTO asset : selectedAssets) {
+            testAssetVersionService.relate(projectId, "USES", "TASK", task.getId(), null,
+                    asset.getAssetType(), asset.getAssetId(), asset.getVersionId(),
+                    JSON.toJSONString(Map.of("versionNo", asset.getVersionNo())), userId);
+        }
         AgentExecutionContextService.ContextSnapshot contextSnapshot = executionContextService.build(
                 task, cases, allStepSnapshots,
-                testAssetCatalogService.documentContextForCases(projectId, stableCaseAssetIds));
+                testAssetCatalogService.documentContextForCases(projectId, stableCaseAssetIds), selectedAssets);
         int contextUpdated = agentExecutionMapper.updateTaskContext(task.getId(), contextSnapshot.content(),
                 contextSnapshot.sha256(), System.currentTimeMillis());
         if (contextUpdated != 1) {
@@ -815,6 +823,32 @@ public class AgentExecutionService {
             eventPublisher.publishEvent(new AgentExecutionDispatchEvent(task.getId(), task.getProjectId(),
                     task.getAgentGatewayId(), task.getAgentType(), userId));
         }
+    }
+
+    void normalizeEnvironmentAssetRef(AgentExecutionCreateRequest request) {
+        List<io.metersphere.agent.dto.TestAssetRefDTO> refs = request.getAssetRefs() == null
+                ? new ArrayList<>() : new ArrayList<>(request.getAssetRefs());
+        List<io.metersphere.agent.dto.TestAssetRefDTO> environments = refs.stream()
+                .filter(ref -> ref != null && "ENVIRONMENT".equalsIgnoreCase(StringUtils.trim(ref.getAssetType())))
+                .toList();
+        if (environments.size() > 1) {
+            throw new MSException("单个执行任务只能选择一个测试环境");
+        }
+        String environmentId = StringUtils.trimToNull(request.getEnvironmentId());
+        if (!environments.isEmpty()) {
+            String referencedEnvironmentId = StringUtils.trimToNull(environments.getFirst().getAssetId());
+            if (environmentId != null && !StringUtils.equals(environmentId, referencedEnvironmentId)) {
+                throw new MSException("environmentId 与 ENVIRONMENT 资产引用不一致");
+            }
+            request.setEnvironmentId(referencedEnvironmentId);
+        } else if (environmentId != null) {
+            io.metersphere.agent.dto.TestAssetRefDTO environmentRef = new io.metersphere.agent.dto.TestAssetRefDTO();
+            environmentRef.setAssetType("ENVIRONMENT");
+            environmentRef.setAssetId(environmentId);
+            refs.add(environmentRef);
+            request.setEnvironmentId(environmentId);
+        }
+        request.setAssetRefs(refs);
     }
 
     private List<AgentExecutionCaseDTO> resolveCreateCases(String projectId, String testPlanId, List<String> caseIds,

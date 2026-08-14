@@ -168,6 +168,20 @@ public class GlobalUserRoleService extends BaseUserRoleService {
         return getPermissionSetting(userRole);
     }
 
+    public List<PermissionDefinitionItem> getPermissionSettingForControl(String id) {
+        UserRole userRole = getWithCheck(id);
+        checkGlobalUserRole(userRole);
+        return getPermissionSetting(userRole, StringUtils.equals(userRole.getType(), UserRoleType.SYSTEM.name()));
+    }
+
+    public List<PermissionDefinitionItem> getPermissionDefinitionForControl(String roleType) {
+        UserRole transientRole = new UserRole();
+        transientRole.setId("");
+        transientRole.setType(roleType);
+        transientRole.setScopeId(UserRoleScope.GLOBAL);
+        return getPermissionSetting(transientRole, StringUtils.equals(roleType, UserRoleType.SYSTEM.name()));
+    }
+
     @Override
     public void updatePermissionSetting(PermissionSettingUpdateRequest request) {
         UserRole userRole = getWithCheck(request.getUserRoleId());

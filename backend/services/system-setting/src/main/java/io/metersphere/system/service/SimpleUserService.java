@@ -64,6 +64,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class SimpleUserService {
+    private static final String PERMISSION_MEMBER_ROLE_ID = "permission_member";
     @Resource
     private BaseUserMapper baseUserMapper;
     @Resource
@@ -116,7 +117,8 @@ public class SimpleUserService {
 
     public UserBatchCreateResponse addUser(UserBatchCreateRequest userCreateDTO, String source, String operator) {
 
-        //检查用户权限的合法性
+        // 新用户的系统角色由权限控制统一维护，用户管理页只负责创建账号。
+        userCreateDTO.setUserRoleIdList(List.of(PERMISSION_MEMBER_ROLE_ID));
         globalUserRoleService.checkRoleIsGlobalAndHaveMember(userCreateDTO.getUserRoleIdList(), true);
 
         UserBatchCreateResponse response = new UserBatchCreateResponse();
@@ -203,8 +205,6 @@ public class SimpleUserService {
     }
 
     public UserEditRequest updateUser(UserEditRequest userEditRequest, String operator) {
-        //检查用户组合法性
-        globalUserRoleService.checkRoleIsGlobalAndHaveMember(userEditRequest.getUserRoleIdList(), true);
         //检查用户邮箱的合法性
         this.checkUserEmail(userEditRequest.getId(), userEditRequest.getEmail());
 
@@ -215,7 +215,6 @@ public class SimpleUserService {
         user.setCreateUser(null);
         user.setCreateTime(null);
         userMapper.updateByPrimaryKeySelective(user);
-        userRoleRelationService.updateUserSystemGlobalRole(user, user.getUpdateUser(), userEditRequest.getUserRoleIdList());
         return userEditRequest;
     }
 
@@ -444,7 +443,8 @@ public class SimpleUserService {
         if (StringUtils.equals(inviteSource, EmailInviteSource.SYSTEM.name())) {
             logProjectId = OperationLogConstants.SYSTEM;
             logOrgId = OperationLogConstants.SYSTEM;
-            //校验角色的合法性
+            // 系统邀请只创建成员；角色变更统一从权限控制入口完成。
+            request.setUserRoleIds(List.of(PERMISSION_MEMBER_ROLE_ID));
             globalUserRoleService.checkRoleIsGlobalAndHaveMember(request.getUserRoleIds(), true);
             request.setOrganizationId(EmailInviteSource.SYSTEM.name());
             request.setProjectId(EmailInviteSource.SYSTEM.name());

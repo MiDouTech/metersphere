@@ -15,8 +15,13 @@ export interface RequestOptions {
 export interface Result<T = any> {
   code: number;
   type: 'success' | 'error' | 'warning';
+  messageKey?: string;
   message: string;
-  messageDetail?: string;
+  messageDetail?: string | Record<string, unknown>;
+  requestId?: string;
+  retryable?: boolean;
+  fieldErrors?: Record<string, string>;
+  context?: Record<string, unknown>;
   data: T;
 }
 

@@ -220,6 +220,7 @@
   import { getModules, getModulesCount } from '@/api/modules/project-management/fileManagement';
   import { EditorPreviewFileUrl } from '@/api/requrls/bug-management';
   import { useI18n } from '@/hooks/useI18n';
+  import useServerFieldErrors from '@/hooks/useServerFieldErrors';
   import useShortcutSave from '@/hooks/useShortcutSave';
   import { useAppStore } from '@/store';
   import { downloadByteFile } from '@/utils';
@@ -293,6 +294,7 @@
     },
   });
   const formRef = ref();
+  const { applyError: applyServerFieldErrors, clearAll: clearServerFieldErrors } = useServerFieldErrors();
   const formCreateRef = ref();
   // 保存后端传进来的文件(初始状态)
   const attachmentsList = ref<AttachFileInfo[]>([]);
@@ -606,6 +608,7 @@
   }
 
   async function resetForm() {
+    clearServerFieldErrors();
     // 如果是保存并继续创建
     const { templateId } = form.value;
     // 用当前模板初始化自定义字段
@@ -882,6 +885,11 @@
   defineExpose({
     saveHandler,
     resetForm,
+    applyServerError(error: unknown) {
+      const fields = applyServerFieldErrors(error);
+      if (fields) formRef.value?.setFields(fields);
+      return Boolean(fields);
+    },
   });
 </script>
 

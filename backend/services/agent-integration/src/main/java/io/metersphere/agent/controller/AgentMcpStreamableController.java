@@ -1,6 +1,7 @@
 package io.metersphere.agent.controller;
 
 import io.metersphere.agent.service.AgentMcpStreamableService;
+import io.metersphere.system.controller.handler.annotation.NoResultHolder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -25,6 +26,7 @@ public class AgentMcpStreamableController {
     private AgentMcpStreamableService agentMcpStreamableService;
 
     @PostMapping
+    @NoResultHolder
     @Operation(summary = "Streamable HTTP MCP JSON-RPC endpoint")
     public ResponseEntity<?> post(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
         if (agentMcpStreamableService.isNotification(request)) {
@@ -39,6 +41,7 @@ public class AgentMcpStreamableController {
      * 按 MCP 规范返回 405，避免 Cursor/WorkBuddy 把 401 误判为 Token 失效。
      */
     @GetMapping
+    @NoResultHolder
     @Operation(summary = "MCP endpoint does not offer SSE; use POST")
     public ResponseEntity<Map<String, Object>> get() {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
@@ -50,6 +53,7 @@ public class AgentMcpStreamableController {
     }
 
     @DeleteMapping
+    @NoResultHolder
     @Operation(summary = "MCP session close endpoint")
     public Map<String, Object> delete() {
         return Map.of("ok", true);

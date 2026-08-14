@@ -15,6 +15,8 @@
     "preview": "npm run build && vite preview --host",
     "type:check": "vue-tsc --noEmit --skipLibCheck",
     "test:route-tabs": "node ./scripts/verify-route-tabs.mjs",
+    "test:permission-resources": "node ./scripts/verify-permission-resource-coverage.mjs",
+    "test:e2e:information-architecture": "playwright test e2e/information-architecture.spec.ts",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "lint:styles": "stylelint 'src/**/*.{vue,html,css,scss,less}' --fix",
     "lint-staged": "npx lint-staged",
@@ -97,6 +99,7 @@
     "xpath": "^0.0.34"
   },
   "devDependencies": {
+    "@playwright/test": "^1.54.2",
     "@arco-plugins/vite-vue": "^1.4.5",
     "@commitlint/cli": "^17.8.1",
     "@commitlint/config-conventional": "^17.8.1",

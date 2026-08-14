@@ -1,5 +1,5 @@
 <template>
-  <MsCard simple no-content-padding>
+  <MsCard v-if="currentProjectId" simple no-content-padding>
     <a-tabs v-model:active-key="activeTab" class="no-content" @change="handleTabChange">
       <a-tab-pane v-if="canShowExecuteTab" key="execute" :title="t('menu.caseManagement.executeCase')" />
       <a-tab-pane v-if="canShowXmindTab" key="xmind" :title="t('menu.caseManagement.xmindCase')" />
@@ -10,12 +10,6 @@
     <a-divider margin="0" />
     <!-- 用 v-show 保留执行用例树/表状态，避免切到 Xmind 再回来时因 keep-alive 缓存跳过 mountedLoad 导致无数据 -->
     <div v-show="activeTab === 'execute' && canShowExecuteTab" class="h-full">
-      <div class="px-[16px] pt-[12px]">
-        <a-tabs v-model:active-key="activeDimension" type="rounded" size="small" @change="handleDimensionChange">
-          <a-tab-pane v-if="canShowProjectDimension" key="project" :title="t('caseManagement.featureCase.projectDimension')" />
-          <a-tab-pane v-if="canShowSystemDimension" key="system" :title="t('caseManagement.featureCase.systemDimension')" />
-        </a-tabs>
-      </div>
       <!-- 高级搜索时仍展示左侧树，便于点模块退出高级搜索并刷新列表 -->
       <MsSplitBox :not-show-first="false">
         <template #first>
@@ -92,18 +86,6 @@
                   </MsPopConfirm>
                 </div>
               </div>
-              <div v-if="activeDimension === 'system'" class="case h-[38px] min-w-0">
-                <div
-                  class="flex min-w-0 flex-1 items-center"
-                  :class="getActiveClass('unclassified-system')"
-                  @click="setActiveFolder('unclassified-system')"
-                >
-                  <MsIcon type="icon-icon_folder_filled1" class="folder-icon shrink-0" />
-                  <div class="folder-name mx-[4px] truncate">
-                    {{ t('caseManagement.featureCase.unclassifiedSystem') }}
-                  </div>
-                </div>
-              </div>
               <div class="h-[calc(100vh-220px)]">
                 <FeatureCaseTree
                   ref="caseTreeRef"
@@ -156,13 +138,19 @@
       <XmindCasePage :active="activeTab === 'xmind'" />
     </div>
   </MsCard>
+  <MsCard v-else simple>
+    <div class="flex min-h-[420px] flex-col items-center justify-center gap-4">
+      <a-empty description="请选择项目后查看测试用例" />
+      <a-button type="primary" @click="goProjectList">前往项目列表</a-button>
+    </div>
+  </MsCard>
 </template>
 
 <script setup lang="ts">
   /**
    * @description 功能测试-功能用例
    */
-  import { computed, nextTick, ref, watch } from 'vue';
+  import { computed, nextTick, onMounted, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
@@ -185,7 +173,7 @@
 
   import type { CreateOrUpdateModule } from '@/models/caseManagement/featureCase';
   import { TableQueryParams } from '@/models/common';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { CaseManagementRouteEnum, ProjectManagementRouteEnum } from '@/enums/routeEnum';
 
   import Message from '@arco-design/web-vue/es/message';
 
@@ -203,40 +191,36 @@
   const featureCaseStore = useFeatureCaseStore();
 
   type CaseSubTab = 'execute' | 'xmind';
-  type CaseDimension = 'project' | 'system';
+  type CaseDimension = 'project';
   const canShowExecuteTab = computed(() => hasTabVisible('FUNCTIONAL_CASE_EXECUTE_CASE_TAB', ['PROJECT']));
   const canShowXmindTab = computed(() => hasTabVisible('FUNCTIONAL_CASE_XMIND_CASE_TAB', ['PROJECT']));
-  const canShowProjectDimension = computed(() => hasTabVisible('FUNCTIONAL_CASE_PROJECT_TAB', ['PROJECT']));
-  const canShowSystemDimension = computed(() => hasTabVisible('FUNCTIONAL_CASE_SYSTEM_TAB', ['PROJECT']));
   const activeTab = ref<CaseSubTab>((route.query.tab as CaseSubTab) === 'xmind' ? 'xmind' : 'execute');
-  const activeDimension = ref<CaseDimension>((route.query.dimension as CaseDimension) === 'system' ? 'system' : 'project');
+  const activeDimension = ref<CaseDimension>('project');
+
+  function goProjectList() {
+    router.push({ name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PROJECTS });
+  }
+
+  onMounted(() => {
+    if ('dimension' in route.query) {
+      const query = { ...route.query };
+      delete query.dimension;
+      router.replace({ query });
+    }
+  });
 
   function handleTabChange(key: string | number) {
     activeTab.value = key as CaseSubTab;
     // 延后改 query，降低与列表请求并发被守卫取消的概率（列表侧已 ignoreCancelToken）
     nextTick(() => {
       const query = { ...route.query };
+      delete query.dimension;
       if (key === 'execute') {
         delete query.tab;
       } else {
         query.tab = String(key);
       }
       router.replace({ query });
-    });
-  }
-
-
-  function handleDimensionChange(key: string | number) {
-    activeDimension.value = key as CaseDimension;
-    activeFolder.value = 'all';
-    offspringIds.value = [];
-    nextTick(() => {
-      const query: Record<string, any> = { ...route.query, dimension: String(key) };
-      if (key === 'project') {
-        delete query.dimension;
-      }
-      router.replace({ query });
-      caseTableRef.value?.refresh?.();
     });
   }
 
@@ -248,19 +232,6 @@
       }
       if (activeTab.value === 'xmind' && !showXmind && showExecute) {
         activeTab.value = 'execute';
-      }
-    },
-    { immediate: true }
-  );
-
-  watch(
-    [canShowProjectDimension, canShowSystemDimension],
-    ([showProject, showSystem]) => {
-      if (activeDimension.value === 'project' && !showProject && showSystem) {
-        activeDimension.value = 'system';
-      }
-      if (activeDimension.value === 'system' && !showSystem && showProject) {
-        activeDimension.value = 'project';
       }
     },
     { immediate: true }

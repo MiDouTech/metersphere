@@ -31,6 +31,7 @@ import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.notice.annotation.SendNotice;
 import io.metersphere.system.notice.constants.NoticeConstants;
 import io.metersphere.system.security.CheckOwner;
+import io.metersphere.project.service.ProjectService;
 import io.metersphere.system.utils.PageUtils;
 import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
@@ -68,6 +69,8 @@ public class FunctionalCaseController {
     private FunctionalCaseXmindService functionalCaseXmindService;
     @Resource
     private io.metersphere.functional.hub.service.DefaultHubCaseImportService defaultHubCaseImportService;
+    @Resource
+    private ProjectService projectService;
 
     //TODO 获取模板列表(多模板功能暂时不做)
 
@@ -161,6 +164,19 @@ public class FunctionalCaseController {
     public Pager<List<FunctionalCasePageDTO>> getFunctionalCasePage(@Validated @RequestBody FunctionalCasePageRequest request) {
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
                 StringUtils.isNotBlank(request.getSortString()) ? request.getSortString() : "pos desc");
+        return PageUtils.setPageInfo(page, functionalCaseService.getFunctionalCasePage(request, false, true));
+    }
+
+    @PostMapping("/asset/page")
+    @Operation(summary = "测试资产-用例资产-指定项目用例只读列表")
+    public Pager<List<FunctionalCasePageDTO>> getFunctionalCaseAssetPage(@Validated @RequestBody FunctionalCasePageRequest request) {
+        String projectId = request.getProjectId();
+        boolean canAccessProject = projectService.canAccessProject(projectId, SessionUtils.getUserId());
+        if (!canAccessProject || !SessionUtils.hasPermission(null, projectId, PermissionConstants.FUNCTIONAL_CASE_READ)) {
+            throw new io.metersphere.sdk.exception.MSException("无权查看该项目的测试用例");
+        }
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
+                StringUtils.isNotBlank(request.getSortString()) ? request.getSortString() : "functional_case.update_time desc");
         return PageUtils.setPageInfo(page, functionalCaseService.getFunctionalCasePage(request, false, true));
     }
 

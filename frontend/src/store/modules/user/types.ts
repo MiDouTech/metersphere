@@ -45,6 +45,11 @@ export interface UserRolePermissions {
 export interface UiPermissionSet {
   visible: string[];
   operable: string[];
+  managedButtonPermissions?: string[];
+  visibleButtonPermissions?: string[];
+  operableButtonPermissions?: string[];
+  managedRoutes?: string[];
+  visibleRoutes?: string[];
 }
 
 export interface UserUiPermissions {

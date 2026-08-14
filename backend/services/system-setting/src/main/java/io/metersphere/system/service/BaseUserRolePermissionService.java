@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 /**
@@ -64,9 +65,14 @@ public class BaseUserRolePermissionService {
 
         // 再新增
         String groupId = request.getUserRoleId();
+        Set<String> existingPermissionIds = getPermissionIdSetByRoleId(groupId);
+        Set<String> insertedPermissionIds = new LinkedHashSet<>();
         permissions.forEach(permission -> {
             if (BooleanUtils.isTrue(permission.getEnable())) {
                 String permissionId = permission.getId();
+                if (existingPermissionIds.contains(permissionId) || !insertedPermissionIds.add(permissionId)) {
+                    return;
+                }
                 UserRolePermission groupPermission = new UserRolePermission();
                 groupPermission.setId(IDGenerator.nextStr());
                 groupPermission.setRoleId(groupId);

@@ -29,14 +29,21 @@
           <div class="mt-1 text-sm text-[var(--color-text-3)]">Token 只显示范围和使用状态，密钥不会再次返回。</div>
         </div>
         <a-table :data="tokens" :loading="loading" :pagination="false" row-key="id">
-          <a-table-column title="名称" data-index="name" />
-          <a-table-column title="客户端" data-index="clientType" :width="110" />
-          <a-table-column title="权限范围" data-index="scopes" />
-          <a-table-column title="状态" :width="90">
-            <template #cell="{ record }"><a-tag :color="record.enable ? 'green' : 'gray'">{{ record.enable ? '启用' : '停用' }}</a-tag></template>
-          </a-table-column>
+          <template #columns>
+            <a-table-column title="名称" data-index="name" />
+            <a-table-column title="客户端" data-index="clientType" :width="110" />
+            <a-table-column title="权限范围" data-index="scopes" />
+            <a-table-column title="状态" :width="90">
+              <template #cell="{ record }"
+                ><a-tag :color="record.enable ? 'green' : 'gray'">{{
+                  record.enable ? '启用' : '停用'
+                }}</a-tag></template
+              >
+            </a-table-column>
+          </template>
         </a-table>
       </MsCard>
+      <AiGovernancePanel v-permission="['FUNCTIONAL_CASE_AI:CONFIG']" class="lg:col-span-2" />
     </div>
   </AgentPage>
 </template>
@@ -45,10 +52,12 @@
   import { onMounted, ref } from 'vue';
 
   import AgentPage from './components/AgentPage.vue';
-  import { getAiExecutionAgents } from '@/api/modules/ai-execution';
+  import AiGovernancePanel from './components/AiGovernancePanel.vue';
+
   import type { AiExecutionAgentOption } from '@/api/modules/ai-execution';
-  import { getAgentTokenPage } from '@/api/modules/setting/agentIntegration';
+  import { getAiExecutionAgents } from '@/api/modules/ai-execution';
   import type { AgentTokenListItem } from '@/api/modules/setting/agentIntegration';
+  import { getAgentTokenPage } from '@/api/modules/setting/agentIntegration';
   import { useAppStore } from '@/store';
 
   const appStore = useAppStore();

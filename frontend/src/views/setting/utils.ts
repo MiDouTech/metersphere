@@ -74,9 +74,12 @@ export async function enterProject(projectId: string, organizationId?: string) {
         pId: projectId,
       },
     });
+    return true;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.log(error);
+    Message.error('进入项目失败，请确认项目状态和访问权限');
+    return false;
   } finally {
     appStore.hideLoading();
   }

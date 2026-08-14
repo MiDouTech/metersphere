@@ -39,39 +39,6 @@
       @batch-action="handleTableBatch"
       @enable-change="enableChange"
     >
-      <template #userGroup="{ record }">
-        <MsTagGroup
-          v-if="!record.selectUserGroupVisible"
-          :tag-list="record.userRoleList"
-          type="primary"
-          theme="outline"
-          allow-edit
-          show-table
-          @click="handleTagClick(record)"
-        />
-        <MsSelect
-          v-else
-          v-model:model-value="record.userRoleList"
-          :placeholder="t('system.user.createUserUserGroupPlaceholder')"
-          :options="userGroupOptions"
-          :search-keys="['name']"
-          :loading="record.selectUserGroupLoading"
-          :disabled="record.selectUserGroupLoading"
-          :fallback-option="(val) => ({
-              label: (val as Record<string, any>).name,
-              value: val,
-            })"
-          value-key="id"
-          label-key="name"
-          class="w-full max-w-[300px]"
-          allow-clear
-          :multiple="true"
-          :at-least-one="true"
-          :object-value="true"
-          @popup-visible-change="(value) => handleUserGroupChange(value, record)"
-        >
-        </MsSelect>
-      </template>
       <template #action="{ record }">
         <template v-if="!record.enable">
           <MsButton v-permission="['SYSTEM_USER:READ+DELETE']" @click="deleteUser(record)">
@@ -117,33 +84,6 @@
         max-height="250px"
         @change="handleBatchFormChange"
       ></MsBatchForm>
-      <a-form-item
-        class="mb-0"
-        field="userGroup"
-        :label="t('system.user.createUserUserGroup')"
-        :rules="[{ required: true, message: t('system.user.createUserUserGroupNotNull') }]"
-        asterisk-position="end"
-      >
-        <MsSelect
-          v-model:model-value="userForm.userGroup"
-          :multiple="true"
-          :placeholder="t('system.user.createUserUserGroupPlaceholder')"
-          :options="userGroupOptions"
-          :search-keys="['name']"
-          :fallback-option="(val) => ({
-              label: (val as Record<string, any>).name,
-              value: val,
-            })"
-          class="w-full"
-          :object-value="true"
-          value-key="id"
-          label-key="name"
-          allow-clear
-          :at-least-one="true"
-          :should-calculate-max-tag="false"
-        >
-        </MsSelect>
-      </a-form-item>
     </a-form>
     <template #footer>
       <a-button type="secondary" :disabled="loading" @click="handleBeforeClose">
@@ -251,7 +191,7 @@
       </a-button>
     </template>
   </a-modal>
-  <inviteModal v-model:visible="inviteVisible" :user-group-options="userGroupOptions"></inviteModal>
+  <inviteModal v-model:visible="inviteVisible"></inviteModal>
   <batchModal
     v-model:visible="showBatchModal"
     :table-selected="tableSelected"
@@ -311,7 +251,6 @@
   import {
     batchCreateUser,
     deleteUserInfo,
-    getSystemRoles,
     getUserList,
     importUserInfo,
     resetUserPassword,
@@ -320,19 +259,21 @@
   } from '@/api/modules/setting/user';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
+  import useServerFieldErrors from '@/hooks/useServerFieldErrors';
   import useLocale from '@/locale/useLocale';
   import { useTableStore } from '@/store';
   import { characterLimit, formatPhoneNumber } from '@/utils';
   import { hasAllPermission, hasAnyPermission } from '@/utils/permission';
   import { validateEmail, validatePhone } from '@/utils/validate';
 
-  import type { SimpleUserInfo, SystemRole, UserListItem } from '@/models/setting/user';
+  import type { SimpleUserInfo, UserListItem } from '@/models/setting/user';
   import { TableKeyEnum } from '@/enums/tableEnum';
 
   import type { FileItem, FormInstance, ValidatedError } from '@arco-design/web-vue';
   import type { FieldData } from '@arco-design/web-vue/es/form/interface';
 
   const { t } = useI18n();
+  const { applyError: applyServerFieldErrors, clearAll: clearServerFieldErrors } = useServerFieldErrors();
   const { currentLocale } = useLocale();
   const route = useRoute();
 
@@ -368,15 +309,6 @@
       isTag: true,
       showDrag: true,
       tagPrimary: 'default',
-      width: 300,
-    },
-    {
-      title: 'system.user.tableColumnUserGroup',
-      dataIndex: 'userRoleList',
-      slotName: 'userGroup',
-      isTag: true,
-      showDrag: true,
-      allowEditTag: true,
       width: 300,
     },
     {
@@ -619,11 +551,6 @@
         ],
       },
       {
-        label: 'system.user.batchActionAddUserGroup',
-        eventTag: 'batchAddUserGroup',
-        permission: ['SYSTEM_USER:READ+UPDATE', 'SYSTEM_USER_ROLE:READ'],
-      },
-      {
         label: 'system.user.batchActionAddOrganization',
         eventTag: 'batchAddOrganization',
         permission: [
@@ -674,7 +601,6 @@
     tableSelected.value = params?.selectedIds || [];
     switch (event.eventTag) {
       case 'batchAddProject':
-      case 'batchAddUserGroup':
       case 'batchAddOrganization':
         batchAction.value = event.eventTag;
         batchModalParams.value = params;
@@ -733,29 +659,15 @@
         phone: '',
       },
     ],
-    userGroup: [],
+    userGroup: [{ id: 'permission_member' }],
   };
   const userForm = ref<UserForm>(cloneDeep(defaultUserForm));
-  const userGroupOptions = ref<SystemRole[]>([]);
-
-  async function init() {
-    try {
-      userGroupOptions.value = await getSystemRoles();
-      if (userGroupOptions.value.length) {
-        userForm.value.userGroup = userGroupOptions.value.filter((e: SystemRole) => e.selected === true);
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    }
-  }
 
   onBeforeMount(async () => {
     setKeyword(keyword.value);
     if (route.query.id) {
       setKeyword(route.query.id as string);
     }
-    init();
     loadList();
   });
 
@@ -763,9 +675,10 @@
    * 重置用户表单
    */
   function resetUserForm() {
+    clearServerFieldErrors();
     userForm.value.list = [];
     userFormRef.value?.resetFields();
-    userForm.value.userGroup = userGroupOptions.value.filter((e: SystemRole) => e.selected === true);
+    userForm.value.userGroup = [{ id: 'permission_member' }];
   }
 
   /**
@@ -774,6 +687,7 @@
    * @param record 编辑时传入的用户信息
    */
   function showUserModal(mode: UserModalMode, record?: UserListItem) {
+    clearServerFieldErrors();
     visible.value = true;
     userFormMode.value = mode;
     if (mode === 'edit' && record) {
@@ -874,7 +788,7 @@
       phone: activeUser.phone,
       userRoleIdList: userForm.value.userGroup.map((e) => e.id),
     };
-    await updateUserInfo(params);
+    await updateUserInfo(params, { errorMessageMode: 'none' });
     Message.success(t('system.user.updateUserSuccess'));
     visible.value = false;
     loadList();
@@ -919,9 +833,9 @@
   async function createUser(isContinue?: boolean) {
     const params = {
       userInfoList: userForm.value.list,
-      userRoleIdList: userForm.value.userGroup.map((e) => e.id),
+      userRoleIdList: ['permission_member'],
     };
-    const res = await batchCreateUser(params);
+    const res = await batchCreateUser(params, { errorMessageMode: 'none' });
     if (res.errorEmails !== null) {
       const errData: Record<string, FieldData> = {};
       Object.keys(res.errorEmails).forEach((key) => {
@@ -955,11 +869,24 @@
       batchFormRef.value?.formValidate(async (list: any) => {
         try {
           loading.value = true;
+          clearServerFieldErrors();
           userForm.value.list = [...list];
           await cb();
         } catch (error) {
-          // eslint-disable-next-line no-console
-          console.log(error);
+          const fields = applyServerFieldErrors(error);
+          if (fields) {
+            const formFields: Record<string, FieldData> = {};
+            const batchFields: Record<string, FieldData> = {};
+            Object.entries(fields).forEach(([field, fieldData]) => {
+              if (field.startsWith('list[')) {
+                batchFields[field] = fieldData;
+              } else {
+                formFields[field] = fieldData;
+              }
+            });
+            if (Object.keys(formFields).length) userFormRef.value?.setFields(formFields);
+            if (Object.keys(batchFields).length) batchFormRef.value?.setFields(batchFields);
+          }
         } finally {
           loading.value = false;
         }

@@ -102,6 +102,52 @@ export function hasPageVisible(resourceCode?: string, typeList = ['PROJECT', 'OR
   return hasUiVisible(resourceCode, typeList);
 }
 
+export function hasRouteVisible(routeName?: string | symbol | null, typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']) {
+  if (!routeName) return true;
+  const userStore = useUserStore();
+  if (userStore.isAdmin) return true;
+  const sets = getUiPermissionSets(typeList);
+  if (!sets) return true;
+  const normalizedName = String(routeName);
+  const managed = sets.some((set) => set?.managedRoutes?.includes(normalizedName));
+  if (!managed) return true;
+  return sets.some((set) => set?.visibleRoutes?.includes(normalizedName));
+}
+
+function hasRouteResourceVisible(route: RouteLocationNormalized | RouteRecordRaw | RouteRecordNormalized) {
+  return hasPageVisible(route.meta?.resourceCode as string | undefined) && hasRouteVisible(route.name);
+}
+
+function hasManagedButtonPermission(
+  permission: string,
+  typeList: string[],
+  field: 'visibleButtonPermissions' | 'operableButtonPermissions'
+) {
+  const sets = getUiPermissionSets(typeList);
+  if (!sets) return true;
+  const managed = sets.some((set) => set?.managedButtonPermissions?.includes(permission));
+  if (!managed) return true;
+  return sets.some((set) => set?.[field]?.includes(permission));
+}
+
+export function hasAnyButtonPermission(permissions: string[], typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']) {
+  if (!permissions || permissions.length === 0) return true;
+  return permissions.some(
+    (permission) =>
+      hasPermission(permission, typeList) &&
+      hasManagedButtonPermission(permission, typeList, 'visibleButtonPermissions')
+  );
+}
+
+export function hasAllButtonPermission(permissions: string[], typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']) {
+  if (!permissions || permissions.length === 0) return true;
+  return permissions.every(
+    (permission) =>
+      hasPermission(permission, typeList) &&
+      hasManagedButtonPermission(permission, typeList, 'visibleButtonPermissions')
+  );
+}
+
 export function hasTabVisible(resourceCode?: string, typeList = ['PROJECT', 'ORGANIZATION', 'SYSTEM']) {
   return hasUiVisible(resourceCode, typeList);
 }
@@ -214,7 +260,7 @@ export function topLevelMenuHasPermission(route: RouteLocationNormalized | Route
     // 如果是系统管理员, 包含项目, 组织, 系统层级所有菜单权限
     return true;
   }
-  if (!hasPageVisible(route.meta?.resourceCode as string | undefined)) {
+  if (!hasRouteResourceVisible(route)) {
     return false;
   }
   return hasAnyPermission(route.meta?.roles || []);
@@ -223,7 +269,7 @@ export function topLevelMenuHasPermission(route: RouteLocationNormalized | Route
 // 有权限的第一个路由名，如果没有找到则返回IndexRoute
 export function getFirstRouteNameByPermission(routerList: RouteRecordNormalized[]) {
   const currentRoute = routerList
-    .filter((item) => hasPageVisible(item.meta.resourceCode) && hasAnyPermission(item.meta.roles || [])) // 排除没有权限的路由
+    .filter((item) => hasRouteResourceVisible(item) && hasAnyPermission(item.meta.roles || [])) // 排除没有权限的路由
     .sort((a, b) => {
       // 如果 a 和 b 都有 order，按照 order 的值进行升序排序
       if (a.meta.order !== undefined && b.meta.order !== undefined) {
@@ -247,7 +293,7 @@ export function getFirstRouteNameByPermission(routerList: RouteRecordNormalized[
 export function routerNameHasPermission(routerName: string, routerList: RouteRecordNormalized[]) {
   const currentRoute = routerList.find((item) => item.name === routerName);
   return currentRoute
-    ? hasPageVisible(currentRoute.meta?.resourceCode) && hasAnyPermission(currentRoute.meta?.roles || [])
+    ? hasRouteResourceVisible(currentRoute) && hasAnyPermission(currentRoute.meta?.roles || [])
     : false;
 }
 
@@ -273,7 +319,7 @@ export function getFirstRouterNameByCurrentRoute(parentName: string) {
   const currentRoute = findRouteByName(parentName);
   if (currentRoute) {
     const hasAuthChildrenRouter = currentRoute.children.find(
-      (item) => hasPageVisible(item.meta?.resourceCode) && hasAnyPermission(item.meta?.roles || [])
+      (item) => hasRouteResourceVisible(item) && hasAnyPermission(item.meta?.roles || [])
     );
     return hasAuthChildrenRouter ? hasAuthChildrenRouter.name : parentName;
   }

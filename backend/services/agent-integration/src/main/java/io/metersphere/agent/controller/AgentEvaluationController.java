@@ -1,6 +1,7 @@
 package io.metersphere.agent.controller;
 
 import io.metersphere.agent.dto.AgentEvaluationRequest;
+import io.metersphere.agent.dto.AgentEvaluationHistoryDTO;
 import io.metersphere.agent.dto.AgentEvaluationSummaryDTO;
 import io.metersphere.agent.dto.AgentExecutionEvaluationDTO;
 import io.metersphere.agent.service.AgentEvaluationService;
@@ -28,9 +29,12 @@ public class AgentEvaluationController {
     @GetMapping
     @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
     public Pager<List<AgentExecutionEvaluationDTO>> page(@RequestParam String projectId,
+                                                        @RequestParam(required = false) String operationalStatus,
+                                                        @RequestParam(required = false) String businessVerdict,
+                                                        @RequestParam(required = false) String executorType,
                                                         @RequestParam(required = false) Integer current,
                                                         @RequestParam(required = false) Integer pageSize) {
-        return service.page(projectId, current, pageSize);
+        return service.page(projectId, operationalStatus, businessVerdict, executorType, current, pageSize);
     }
 
     @GetMapping("/summary")
@@ -52,5 +56,12 @@ public class AgentEvaluationController {
     public AgentExecutionEvaluationDTO manual(@PathVariable String taskId,
                                               @RequestBody @Valid AgentEvaluationRequest request) {
         return service.manualEvaluate(taskId, request);
+    }
+
+    @GetMapping("/task/{taskId}/history")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    public List<AgentEvaluationHistoryDTO> history(@PathVariable String taskId,
+                                                   @RequestParam(required = false) Integer limit) {
+        return service.history(taskId, limit);
     }
 }

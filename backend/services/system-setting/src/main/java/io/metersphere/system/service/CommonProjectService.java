@@ -253,6 +253,8 @@ public class CommonProjectService {
             Map<String, ProjectDTO> projectMap = projectDTOList.stream().collect(Collectors.toMap(ProjectDTO::getId, projectDTO -> projectDTO));
             //根据sourceId分组
             Map<String, List<UserExtendDTO>> userMapList = users.stream().collect(Collectors.groupingBy(UserExtendDTO::getSourceId));
+            Map<String, List<UserExtendDTO>> memberPreviewMap = extSystemProjectMapper.getProjectMemberPreviewList(projectIds)
+                    .stream().collect(Collectors.groupingBy(UserExtendDTO::getSourceId));
             //获取资源池
             List<ProjectResourcePoolDTO> projectResourcePoolDTOList = extSystemProjectMapper.getProjectResourcePoolDTOList(projectIds);
             //根据projectId分组 key为项目id 值为资源池TestResourcePool
@@ -263,6 +265,8 @@ public class CommonProjectService {
                     projectDTO.setModuleIds(JSON.parseArray(projectDTO.getModuleSetting(), String.class));
                 }
                 projectDTO.setMemberCount(projectMap.get(projectDTO.getId()).getMemberCount());
+                projectDTO.setMemberPreview(memberPreviewMap.getOrDefault(projectDTO.getId(), List.of()).stream()
+                        .map(UserExtendDTO::getName).toList());
                 List<UserExtendDTO> userExtendDTOS = userMapList.get(projectDTO.getId());
                 if (CollectionUtils.isNotEmpty(userExtendDTOS)) {
                     projectDTO.setAdminList(userExtendDTOS);

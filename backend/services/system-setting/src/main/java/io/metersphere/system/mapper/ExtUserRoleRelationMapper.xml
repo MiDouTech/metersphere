@@ -48,6 +48,36 @@
         </if>
         order by urr.create_time desc
     </select>
+    <select id="selectRoleMembers" resultType="io.metersphere.system.dto.user.UserRoleRelationUserDTO">
+        select urr.id, u.id as userId, u.name, u.email, u.phone, u.wecom_userid as wecomUserid
+        from user_role_relation urr
+        inner join user u on u.id = urr.user_id and u.deleted = b'0'
+        where urr.role_id = #{roleId} and urr.source_id = #{sourceId}
+        <if test="keyword != null and keyword != ''">
+            and (u.name like concat('%', #{keyword}, '%')
+              or u.email like concat('%', #{keyword}, '%')
+              or u.phone like concat('%', #{keyword}, '%')
+              or u.wecom_userid like concat('%', #{keyword}, '%')
+              or u.id like concat('%', #{keyword}, '%'))
+        </if>
+        order by urr.create_time desc
+    </select>
+    <select id="selectRoleMemberOptions" resultType="io.metersphere.system.dto.user.UserExcludeOptionDTO">
+        select distinct u.id, u.name, u.email,
+          case when existing.id is null then b'0' else b'1' end as exclude
+        from user u
+        <if test="sourceId != 'system'">
+            inner join user_role_relation scope_rel on scope_rel.user_id = u.id and scope_rel.source_id = #{sourceId}
+        </if>
+        left join user_role_relation existing
+          on existing.user_id = u.id and existing.role_id = #{roleId} and existing.source_id = #{sourceId}
+        where u.deleted = b'0' and u.enable = b'1'
+        <if test="keyword != null and keyword != ''">
+            and (u.name like concat('%', #{keyword}, '%') or u.email like concat('%', #{keyword}, '%') or u.id like concat('%', #{keyword}, '%'))
+        </if>
+        order by u.name asc
+        limit 50
+    </select>
 
     <select id="selectUserRoleByUserIds" resultType="io.metersphere.system.dto.user.UserRoleOptionDto">
         SELECT DISTINCT

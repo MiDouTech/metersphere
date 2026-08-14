@@ -52,6 +52,7 @@ public class AgentRunnerService {
             "ACTION_COMPLETED", "ASSERTION_FAILED", "HEALING_STARTED", "HEALING_COMPLETED",
             "STEP_COMPLETED", "CASE_COMPLETED", "RUNNER_FAILED", "TASK_EXECUTION_COMPLETED",
             "PAGE_ERROR", "CONSOLE_ERROR");
+    private static final Set<String> ISOLATION_MODES = Set.of("UNDECLARED", "PROCESS", "CONTAINER", "VM");
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Resource
@@ -80,6 +81,11 @@ public class AgentRunnerService {
         runner.setOperatingSystem(StringUtils.trimToNull(request.getOperatingSystem()));
         runner.setBrowserCapabilities(StringUtils.trimToNull(request.getBrowserCapabilities()));
         runner.setEnvironmentLabels(StringUtils.trimToNull(request.getEnvironmentLabels()));
+        String isolationMode = StringUtils.upperCase(StringUtils.defaultIfBlank(request.getIsolationMode(), "UNDECLARED"));
+        if (!ISOLATION_MODES.contains(isolationMode)) {
+            throw new MSException("RUNNER_ISOLATION_MODE_INVALID: only UNDECLARED/PROCESS/CONTAINER/VM are supported");
+        }
+        runner.setIsolationMode(isolationMode);
         runner.setAuthTokenHash(hash(token));
         runner.setMaxConcurrency(request.getMaxConcurrency() == null ? 1 : request.getMaxConcurrency());
         runner.setActiveCount(0);

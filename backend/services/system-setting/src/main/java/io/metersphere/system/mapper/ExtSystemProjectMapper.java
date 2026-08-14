@@ -28,6 +28,8 @@ public interface ExtSystemProjectMapper {
 
     List<ProjectDTO> getProjectExtendDTOList(@Param("projectIds") List<String> projectIds);
 
+    List<UserExtendDTO> getProjectMemberPreviewList(@Param("projectIds") List<String> projectIds);
+
     List<ProjectResourcePoolDTO> getProjectResourcePoolDTOList(@Param("projectIds") List<String> projectIds);
 
     String selectModuleSettingsByResourceIdAndTable(@Param("resourceId") String resourceId, @Param("resourceTable") String resourceTable);

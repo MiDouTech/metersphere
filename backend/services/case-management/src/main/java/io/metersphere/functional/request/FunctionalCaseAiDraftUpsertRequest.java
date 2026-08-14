@@ -60,12 +60,6 @@ public class FunctionalCaseAiDraftUpsertRequest {
     @Schema(description = "Draft status")
     private String draftStatus;
 
-    @Schema(description = "Publish mode: CREATE/UPDATE/DEPRECATE")
-    private String publishMode;
-
-    @Schema(description = "Target official case ID for UPDATE/DEPRECATE")
-    private String targetCaseId;
-
     @Schema(description = "Optimistic lock version")
     private Integer version;
 }

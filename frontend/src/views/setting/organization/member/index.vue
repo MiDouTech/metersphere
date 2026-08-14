@@ -79,40 +79,6 @@
           @popup-visible-change="(value) => visibleChange(value, record, 'project')"
         />
       </template>
-      <template #userRoleIdNameMap="{ record }">
-        <MsTagGroup
-          v-if="!record.showUserSelect"
-          :tag-list="record.userRoleIdNameMap || []"
-          type="primary"
-          theme="outline"
-          allow-edit
-          show-table
-          @click="changeUserOrProject(record, 'user')"
-        >
-        </MsTagGroup>
-        <MsSelect
-          v-else
-          v-model:model-value="record.selectUserList"
-          v-model:loading="dialogLoading"
-          :max-tag-count="1"
-          class="w-full"
-          :options="userGroupOptions"
-          :search-keys="['name']"
-          value-key="id"
-          label-key="name"
-          allow-search
-          :multiple="true"
-          :placeholder="t('common.pleaseSelect')"
-          :at-least-one="true"
-          :fallback-option="
-              (val) => ({
-                label: userGroupOptions.find((e) => e.id === val)?.name || (val as string),
-                value: val,
-              })
-            "
-          @popup-visible-change="(value) => visibleChange(value, record, 'user')"
-        />
-      </template>
       <template #enable="{ record }">
         <div v-if="record.enable" class="flex items-center">
           <icon-check-circle-fill class="mr-[2px] text-[rgb(var(--success-6))]" />
@@ -142,7 +108,6 @@
     ref="AddMemberRef"
     v-model:visible="addMemberVisible"
     :project-list="projectOptions"
-    :user-group-options="userGroupOptions"
     @success="initData()"
   />
   <MSBatchModal
@@ -151,13 +116,8 @@
     :action="batchAction"
     :current-select-count="batchParams.currentSelectCount"
     @add-project="addProjectOrAddUserGroup"
-    @add-user-group="addProjectOrAddUserGroup"
   />
-  <inviteModal
-    v-model:visible="inviteVisible"
-    :user-group-options="userGroupOptions"
-    range="organization"
-  ></inviteModal>
+  <inviteModal v-model:visible="inviteVisible" range="organization"></inviteModal>
 </template>
 
 <script setup lang="ts">
@@ -249,16 +209,6 @@
       allowEditTag: true,
     },
     {
-      title: 'organization.member.tableColunmUsergroup',
-      slotName: 'userRoleIdNameMap',
-      dataIndex: 'userRoleIdNameMap',
-      showInTable: true,
-      isTag: true,
-      showDrag: true,
-      allowEditTag: true,
-      width: 300,
-    },
-    {
       title: 'organization.member.tableColunmStatus',
       slotName: 'enable',
       dataIndex: 'enable',
@@ -283,11 +233,6 @@
       {
         label: 'organization.member.batchActionAddProject',
         eventTag: 'batchAddProject',
-        permission: ['ORGANIZATION_MEMBER:READ+UPDATE'],
-      },
-      {
-        label: 'organization.member.batchActionAddUserGroup',
-        eventTag: 'batchAddUserGroup',
         permission: ['ORGANIZATION_MEMBER:READ+UPDATE'],
       },
       {
@@ -467,7 +412,6 @@
     showBatchModal.value = true;
     if (event.eventTag) batchAction.value = event.eventTag;
     if (event.eventTag === 'batchAddProject') getData(getProjectList);
-    if (event.eventTag === 'batchAddUserGroup') getData(getGlobalUserGroup);
   };
   // 列表编辑更新用户组和项目
   const updateUserOrProject = async (record: MemberItem) => {
@@ -536,7 +480,6 @@
   const projectOptions = ref<LinkList>([]);
   const getLinkList = async () => {
     if (lastOrganizationId.value) {
-      userGroupOptions.value = await getGlobalUserGroup(lastOrganizationId.value);
       if (hasAnyPermission(['ORGANIZATION_PROJECT:READ'])) {
         projectOptions.value = await getProjectList(lastOrganizationId.value);
       }

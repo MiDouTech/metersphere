@@ -1,6 +1,7 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.dto.AgentExecutionOperationsDTO;
+import io.metersphere.agent.dto.AgentRunnerLeaseDTO;
 import io.metersphere.agent.mapper.AgentExecutionMapper;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.utils.SessionUtils;
@@ -33,6 +34,21 @@ public class AgentExecutionOperationsService {
         result.setGeneratedAt(now);
         result.setHealth(isDegraded(result) ? "DEGRADED" : "HEALTHY");
         return result;
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<AgentRunnerLeaseDTO> leases(String status, Integer limit) {
+        String organizationId = SessionUtils.getCurrentOrganizationId();
+        if (StringUtils.isBlank(organizationId)) {
+            throw new MSException("无法解析当前组织");
+        }
+        String normalized = StringUtils.trimToNull(status);
+        if (normalized != null && !java.util.Set.of("ACTIVE", "COMPLETED", "FAILED", "EXPIRED", "RELEASED")
+                .contains(StringUtils.upperCase(normalized))) {
+            throw new MSException("租约状态不支持");
+        }
+        return executionMapper.selectLeasesByOrganization(organizationId,
+                StringUtils.upperCase(normalized), Math.min(200, Math.max(1, limit == null ? 50 : limit)));
     }
 
     private boolean isDegraded(AgentExecutionOperationsDTO result) {

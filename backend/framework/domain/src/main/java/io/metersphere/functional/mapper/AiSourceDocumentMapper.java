@@ -29,12 +29,24 @@ public interface AiSourceDocumentMapper {
                                                         @Param("offset") long offset,
                                                         @Param("pageSize") long pageSize);
 
+    List<AiSourceDocument> selectByProject(@Param("projectId") String projectId,
+                                           @Param("parseStatus") String parseStatus,
+                                           @Param("offset") long offset,
+                                           @Param("pageSize") long pageSize);
+
     long countByProjectAndCreateUser(@Param("projectId") String projectId,
                                      @Param("createUser") String createUser,
                                      @Param("parseStatus") String parseStatus);
+
+    long countByProject(@Param("projectId") String projectId,
+                        @Param("parseStatus") String parseStatus);
 
     int markDeleted(@Param("id") String id,
                     @Param("projectId") String projectId,
                     @Param("createUser") String createUser,
                     @Param("updateTime") Long updateTime);
+
+    int markDeletedInProject(@Param("id") String id,
+                             @Param("projectId") String projectId,
+                             @Param("updateTime") Long updateTime);
 }

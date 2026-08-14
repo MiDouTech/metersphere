@@ -20,17 +20,25 @@ public class AiCaseDocumentSearchService {
     @Resource
     private JdbcTemplate jdbcTemplate;
 
-    public String search(String projectId, String conversationId, String userId, String query, Integer maxResults) {
+    public String search(String projectId, String conversationId, String userId, List<String> sourceDocumentIds,
+                         String query, Integer maxResults) {
         int limit = Math.min(ABSOLUTE_MAX_RESULTS, Math.max(1, maxResults == null ? 5 : maxResults));
         List<String> terms = tokenize(query);
         List<Map<String, Object>> candidates = new ArrayList<>();
+        if (sourceDocumentIds == null || sourceDocumentIds.isEmpty()) {
+            return emptyResult(query);
+        }
+        String placeholders = String.join(",", java.util.Collections.nCopies(sourceDocumentIds.size(), "?"));
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(projectId);
+        parameters.addAll(sourceDocumentIds);
         List<Map<String, Object>> documents = jdbcTemplate.queryForList("""
                 SELECT id, original_name, summary, section_index
                 FROM ai_source_document
-                WHERE project_id=? AND create_user=? AND deleted=0 AND parse_status='PARSED'
-                  AND (conversation_id=? OR conversation_id IS NULL)
+                WHERE project_id=? AND deleted=0 AND parse_status='PARSED'
+                  AND id IN (%s)
                 ORDER BY update_time DESC LIMIT 50
-                """, projectId, userId, conversationId);
+                """.formatted(placeholders), parameters.toArray());
         for (Map<String, Object> document : documents) {
             String sectionIndex = (String) document.get("section_index");
             List<AiSourceDocumentParserService.Section> sections = StringUtils.isBlank(sectionIndex)
@@ -62,6 +70,13 @@ public class AiCaseDocumentSearchService {
                 "query", StringUtils.left(query, 500),
                 "results", candidates.stream().limit(limit).toList(),
                 "resultCount", Math.min(limit, candidates.size())));
+    }
+
+    private String emptyResult(String query) {
+        return JSON.toJSONString(Map.of(
+                "query", StringUtils.left(StringUtils.defaultString(query), 500),
+                "results", List.of(),
+                "resultCount", 0));
     }
 
     private List<String> tokenize(String query) {

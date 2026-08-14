@@ -161,6 +161,9 @@ export function deleteCaseModuleTree(id: string) {
 export function getCaseList(data: TableQueryParams) {
   return MSR.post<CommonList<CaseManagementTable>>({ url: GetCaseListUrl, data });
 }
+export function getCaseAssetList(data: TableQueryParams) {
+  return MSR.post<CommonList<CaseManagementTable>>({ url: '/functional/case/asset/page', data });
+}
 // 删除用例
 export function deleteCaseRequest(data: DeleteCaseType) {
   return MSR.post({ url: `${DeleteCaseUrl}`, data });

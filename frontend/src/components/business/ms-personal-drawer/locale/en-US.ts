@@ -132,10 +132,23 @@ export default {
   'ms.personal.userAgent.protocolLaunchFallback':
     'MeterSphere Agent did not start. If the browser did not ask to open it, download and install it first, then select “Installed — detect again”.',
   'ms.personal.userAgent.downloadUnavailable':
-    'The internal installer download URL has not been configured. Ask an administrator to publish the package.',
+    'No internal package is currently available. Ask an administrator to publish one.',
   'ms.personal.userAgent.downloadStarted':
     'The package download has started. Extract it, run Install-MeterSphere-Agent.cmd, then return here and detect again.',
   'ms.personal.userAgent.startingSignIn': 'Local connection established. Starting the official account sign-in…',
   'ms.personal.userAgent.setupExpired':
     'This connection request expired. Close this dialog and create the connection again.',
+  'ms.personal.userAgent.completedMessage':
+    'MeterSphere Agent is connected and the official account authorization is confirmed.',
+  'ms.personal.userAgent.versionUnsupported':
+    'An outdated Bridge was detected. Upgrade to {version} or later before connecting.',
+  'ms.personal.userAgent.deleteTitle': 'Delete Agent connection record',
+  'ms.personal.userAgent.deleteImpact':
+    'This connection is referenced by {conversationCount} conversations and {executionCount} executions; {activeExecutionCount} are active. Only revoked connections without active executions can be deleted.',
+  'ms.personal.userAgent.selectDevice': 'Select the local device to connect',
+  'ms.personal.userAgent.details': 'Details',
+  'ms.personal.userAgent.reauthorize': 'Reauthorize',
+  'ms.personal.userAgent.detailTitle': 'Agent connection details',
+  'ms.personal.userAgent.capabilities': 'Authorized capabilities',
+  'ms.personal.userAgent.references': 'References and deletion impact',
 };

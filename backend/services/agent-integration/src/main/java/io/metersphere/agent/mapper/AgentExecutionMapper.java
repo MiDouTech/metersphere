@@ -35,6 +35,10 @@ public interface AgentExecutionMapper {
 
     AgentRunnerLeaseDTO selectLeaseById(@Param("id") String id);
 
+    List<AgentRunnerLeaseDTO> selectLeasesByOrganization(@Param("organizationId") String organizationId,
+                                                         @Param("status") String status,
+                                                         @Param("limit") int limit);
+
     AgentExecutionArtifactDTO selectArtifactById(@Param("id") String id);
 
     AgentExecutionArtifactDTO selectArtifactByIdentity(@Param("taskId") String taskId,

@@ -2,6 +2,7 @@ package io.metersphere.functional.service;
 
 import io.metersphere.functional.domain.FunctionalCaseAiDraft;
 import io.metersphere.functional.mapper.FunctionalCaseAiDraftMapper;
+import io.metersphere.functional.mapper.FunctionalCaseMapper;
 import io.metersphere.functional.request.FunctionalCaseAiDraftBatchSaveRequest;
 import io.metersphere.system.log.service.OperationLogService;
 import org.junit.jupiter.api.Test;
@@ -25,9 +26,12 @@ class FunctionalCaseAiDraftBatchSaveTransactionTests {
         FunctionalCaseAiDraftMapper draftMapper = mock(FunctionalCaseAiDraftMapper.class);
         PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
         when(transactionManager.getTransaction(any())).thenAnswer(ignored -> new SimpleTransactionStatus());
-        when(draftMapper.selectByIds(List.of("draft-1", "draft-2"), "project-1", "user-1"))
-                .thenReturn(List.of(savedDraft("draft-1"), savedDraft("draft-2")));
+        FunctionalCaseAiDraft first = publishableDraft(service, "draft-1");
+        FunctionalCaseAiDraft second = publishableDraft(service, "draft-2");
+        when(draftMapper.selectByIdsInProject(List.of("draft-1", "draft-2"), "project-1"))
+                .thenReturn(List.of(first, second));
         ReflectionTestUtils.setField(service, "draftMapper", draftMapper);
+        ReflectionTestUtils.setField(service, "functionalCaseMapper", mock(FunctionalCaseMapper.class));
         ReflectionTestUtils.setField(service, "transactionManager", transactionManager);
         ReflectionTestUtils.setField(service, "operationLogService", mock(OperationLogService.class));
         FunctionalCaseAiDraftBatchSaveRequest request = new FunctionalCaseAiDraftBatchSaveRequest();
@@ -43,13 +47,19 @@ class FunctionalCaseAiDraftBatchSaveTransactionTests {
         verify(transactionManager, times(2)).rollback(any());
     }
 
-    private FunctionalCaseAiDraft savedDraft(String id) {
+    private FunctionalCaseAiDraft publishableDraft(FunctionalCaseAiDraftService service, String id) {
         FunctionalCaseAiDraft draft = new FunctionalCaseAiDraft();
         draft.setId(id);
         draft.setProjectId("project-1");
         draft.setName(id);
-        draft.setDraftStatus("SAVED");
+        draft.setDraftStatus("READY");
+        draft.setReviewStatus("APPROVED");
+        draft.setCaseLevel("P1");
+        draft.setEditType("STEP");
+        draft.setSteps("[]");
+        draft.setPublishMode("CREATE");
         draft.setCreateUser("user-1");
+        draft.setReviewedContentHash(ReflectionTestUtils.invokeMethod(service, "contentHash", draft));
         return draft;
     }
 }

@@ -48,6 +48,30 @@ public class AiUserAgentRepository {
         return listConnections(userId).stream().filter(item -> item.getId().equals(id)).findFirst().orElse(null);
     }
 
+    public Map<String, Object> connectionImpact(String id, String userId) {
+        Map<String, Object> impact = new java.util.LinkedHashMap<>();
+        impact.put("conversationCount", jdbcTemplate.queryForObject("""
+                SELECT COUNT(1) FROM ai_case_conversation WHERE agent_connection_id=? AND user_id=?
+                """, Integer.class, id, userId));
+        impact.put("executionCount", jdbcTemplate.queryForObject("""
+                SELECT COUNT(1) FROM ai_case_execution WHERE agent_connection_id=? AND user_id=?
+                """, Integer.class, id, userId));
+        impact.put("activeExecutionCount", jdbcTemplate.queryForObject("""
+                SELECT COUNT(1) FROM ai_case_execution WHERE agent_connection_id=? AND user_id=?
+                  AND status IN ('CREATED','RUNNING','WAITING_CONFIRMATION')
+                """, Integer.class, id, userId));
+        return impact;
+    }
+
+    public int deleteRevokedConnection(String id, String userId, long now) {
+        return jdbcTemplate.update("""
+                UPDATE ai_user_agent_connection SET deleted=1, version=version+1, update_time=?
+                WHERE id=? AND user_id=? AND deleted=0 AND status='REVOKED'
+                  AND NOT EXISTS (SELECT 1 FROM ai_case_execution e WHERE e.agent_connection_id=?
+                    AND e.user_id=? AND e.status IN ('CREATED','RUNNING','WAITING_CONFIRMATION'))
+                """, now, id, userId, id, userId);
+    }
+
     public List<Map<String, Object>> listConnectionRoutes(String deviceId) {
         return jdbcTemplate.queryForList("""
                 SELECT id,provider FROM ai_user_agent_connection
@@ -133,6 +157,14 @@ public class AiUserAgentRepository {
                 SELECT id,user_id,provider,expected_device_name FROM ai_agent_bridge_pairing
                 WHERE code_hash=? AND status='PENDING' AND expires_at>=?
                 """, codeHash, now);
+        return rows.isEmpty() ? null : rows.getFirst();
+    }
+
+    public Map<String, Object> findPairing(String id, String userId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT id,provider,status,expires_at,consumed_at,device_id
+                FROM ai_agent_bridge_pairing WHERE id=? AND user_id=?
+                """, id, userId);
         return rows.isEmpty() ? null : rows.getFirst();
     }
 

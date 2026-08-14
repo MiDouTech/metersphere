@@ -223,6 +223,13 @@ export default function useAutoSaveEditor(options: UseAutoSaveEditorOptions) {
     }
   }
 
+  function onBeforeUnload(e: BeforeUnloadEvent) {
+    const blocked = status.value === 'error' || status.value === 'dirty' || status.value === 'saving';
+    if (!blocked) return;
+    e.preventDefault();
+    e.returnValue = '';
+  }
+
   function blockLeave(next: (ok?: boolean) => void) {
     const blocked = status.value === 'error' || status.value === 'dirty' || status.value === 'saving';
     if (!blocked) {
@@ -310,10 +317,12 @@ export default function useAutoSaveEditor(options: UseAutoSaveEditorOptions) {
 
   onMounted(() => {
     document.addEventListener('keydown', onKeydown);
+    window.addEventListener('beforeunload', onBeforeUnload);
   });
 
   onBeforeUnmount(() => {
     document.removeEventListener('keydown', onKeydown);
+    window.removeEventListener('beforeunload', onBeforeUnload);
     releaseHeldLock();
   });
 

@@ -6,10 +6,7 @@ import io.metersphere.functional.request.FunctionalCaseAiDraftBatchSaveRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftPageRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftRegenerateRequest;
 import io.metersphere.functional.request.FunctionalCaseAiDraftReviewRequest;
-import io.metersphere.functional.dto.FunctionalCaseAiDraftDTO;
 import io.metersphere.functional.request.FunctionalCaseAiDraftUpsertRequest;
-import io.metersphere.functional.request.FunctionalCaseAiGenerateRequest;
-import io.metersphere.functional.request.FunctionalCaseAiGenerationCancelRequest;
 import io.metersphere.functional.response.FunctionalCaseAiBatchSaveResponse;
 import io.metersphere.functional.response.FunctionalCaseAiDraftPageResponse;
 import io.metersphere.functional.response.FunctionalCaseAiGenerateResponse;
@@ -36,14 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class FunctionalCaseAiDraftController {
     @Resource
     private FunctionalCaseAiDraftService functionalCaseAiDraftService;
-
-    @PostMapping("/generation/structured")
-    @Operation(summary = "结构化生成 AI 用例草稿")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
-    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
-    public FunctionalCaseAiGenerateResponse generate(@Validated @RequestBody FunctionalCaseAiGenerateRequest request) {
-        return functionalCaseAiDraftService.generate(request, SessionUtils.getUserId());
-    }
 
     @PostMapping("/page")
     @Operation(summary = "分页查询 AI 用例草稿")
@@ -83,14 +72,6 @@ public class FunctionalCaseAiDraftController {
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public void delete(@Validated @RequestBody FunctionalCaseAiDraftBatchDeleteRequest request) {
         functionalCaseAiDraftService.delete(request, SessionUtils.getUserId());
-    }
-
-    @PostMapping("/generation/cancel")
-    @Operation(summary = "取消 AI 结构化生成任务")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
-    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
-    public void cancel(@Validated @RequestBody FunctionalCaseAiGenerationCancelRequest request) {
-        functionalCaseAiDraftService.cancel(request, SessionUtils.getUserId());
     }
 
     @PostMapping("/regenerate")

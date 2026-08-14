@@ -378,11 +378,13 @@
         value: 'featureCase',
         label: t('testPlan.testPlanDetail.testCase'), // 测试用例（始终展示，便于无用例时关联）
         show: true,
+        resourceCode: 'TEST_PLAN_DETAIL_FUNCTIONAL_CASE_TAB',
       },
       {
         value: 'apiCase',
         label: t('testPlan.testPlanIndex.apiCase'),
         show: detail.value?.apiCaseCount,
+        resourceCode: 'TEST_PLAN_DETAIL_API_CASE_TAB',
       },
       {
         value: 'apiScenario',
@@ -393,6 +395,7 @@
         value: 'defectList',
         label: t('caseManagement.featureCase.defectList'), // 缺陷列表
         show: true,
+        resourceCode: 'TEST_PLAN_DETAIL_BUG_TAB',
       },
       {
         value: 'executeHistory',

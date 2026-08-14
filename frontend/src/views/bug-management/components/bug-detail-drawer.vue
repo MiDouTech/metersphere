@@ -470,14 +470,17 @@
     {
       value: 'detail',
       label: t('bugManagement.detail.detail'),
+      resourceCode: 'BUG_DETAIL_BASE_INFO_TAB',
     },
     {
       value: 'case',
       label: t('bugManagement.detail.case'),
+      resourceCode: 'BUG_DETAIL_CASE_TAB',
     },
     {
       value: 'history',
       label: t('bugManagement.detail.changeHistory'),
+      resourceCode: 'BUG_DETAIL_HISTORY_TAB',
     },
   ];
 

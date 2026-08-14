@@ -5,6 +5,9 @@ import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.domain.UserRole;
 import io.metersphere.system.dto.sdk.request.PermissionSettingUpdateRequest;
 import io.metersphere.system.dto.sdk.request.UserRoleUpdateRequest;
+import io.metersphere.system.dto.permission.control.RoleSaveRequest;
+import io.metersphere.system.dto.permission.control.RoleEnableRequest;
+import io.metersphere.system.dto.permission.control.RoleMemberUpdateRequest;
 import io.metersphere.system.log.constants.OperationLogModule;
 import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.log.dto.LogDTO;
@@ -81,6 +84,35 @@ public class GlobalUserRoleLogService {
 
             dto.setOriginalValue(JSON.toJSONBytes(request));
         }
+        return dto;
+    }
+
+    public LogDTO saveLog(RoleSaveRequest request) {
+        UserRole userRole = request.getId() == null ? null : baseUserRoleService.get(request.getId());
+        String resourceId = userRole == null ? request.getId() : userRole.getId();
+        String resourceName = userRole == null ? request.getName() : userRole.getName();
+        LogDTO dto = new LogDTO(OperationLogConstants.SYSTEM, OperationLogConstants.SYSTEM,
+                resourceId, null, OperationLogType.UPDATE.name(),
+                OperationLogModule.SETTING_SYSTEM_USER_GROUP, resourceName);
+        dto.setOriginalValue(JSON.toJSONBytes(request));
+        return dto;
+    }
+
+    public LogDTO enableLog(RoleEnableRequest request) {
+        UserRole userRole = baseUserRoleService.get(request.getRoleId());
+        LogDTO dto = new LogDTO(OperationLogConstants.SYSTEM, OperationLogConstants.SYSTEM,
+                request.getRoleId(), null, OperationLogType.UPDATE.name(),
+                OperationLogModule.SETTING_SYSTEM_USER_GROUP, userRole == null ? request.getRoleId() : userRole.getName());
+        dto.setOriginalValue(JSON.toJSONBytes(request));
+        return dto;
+    }
+
+    public LogDTO memberLog(RoleMemberUpdateRequest request) {
+        UserRole userRole = baseUserRoleService.get(request.getRoleId());
+        LogDTO dto = new LogDTO(OperationLogConstants.SYSTEM, OperationLogConstants.SYSTEM,
+                request.getRoleId(), null, OperationLogType.UPDATE.name(),
+                OperationLogModule.SETTING_SYSTEM_USER_GROUP, userRole == null ? request.getRoleId() : userRole.getName());
+        dto.setOriginalValue(JSON.toJSONBytes(request));
         return dto;
     }
 
