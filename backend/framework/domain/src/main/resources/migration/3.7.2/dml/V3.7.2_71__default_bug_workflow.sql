@@ -1,6 +1,10 @@
 -- Provide a usable global bug workflow for installations that do not have one yet.
 -- Fixed identifiers make the migration idempotent and keep later workflow copies stable.
-SET @default_bug_flow_id = 'builtin_bug_workflow_v1';
+-- Keep the fixed identifier on the same collation as MeterSphere workflow tables.
+-- MySQL 8 defaults connection variables to utf8mb4_0900_ai_ci on some installations,
+-- while existing MeterSphere tables use utf8mb4_general_ci. Without an explicit
+-- collation, comparisons such as workflow_definition.id = @default_bug_flow_id fail.
+SET @default_bug_flow_id = _utf8mb4'builtin_bug_workflow_v1' COLLATE utf8mb4_general_ci;
 SET @now_ms = UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000;
 
 -- Fail this migration immediately when the prerequisite V3.7.2.60 or V3.7.2.68 schema is missing.
