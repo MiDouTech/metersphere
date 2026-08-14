@@ -91,31 +91,13 @@
           </a-button>
         </template>
         <template #statusName="{ record }">
-          <a-dropdown
-            v-if="canEditBugStatus(record)"
-            trigger="click"
-            position="bl"
-            :disabled="statusUpdatingIds.includes(record.id)"
-            @select="(value) => handleStatusChange(record, value as string)"
-          >
-            <button
-              type="button"
-              class="bug-status-button"
-              :class="getBugStatusClass(record.statusName || record.status)"
-            >
-              {{ record.statusName || '-' }}
-            </button>
-            <template #content>
-              <a-doption v-for="item in statusOption" :key="item.value" :value="item.value">
-                <span class="bug-status-button bug-status-option" :class="getBugStatusClass(item.text || item.value)">
-                  {{ item.text }}
-                </span>
-              </a-doption>
-            </template>
-          </a-dropdown>
-          <span v-else class="bug-status-button" :class="getBugStatusClass(record.statusName || record.status)">
-            {{ record.statusName || '-' }}
-          </span>
+          <BugStatusTransitionSelect
+            :bug-id="record.id"
+            :status="record.status"
+            :status-name="record.statusName"
+            :initial-runtime="transitionRuntimeMap[record.id]"
+            @success="(runtime) => handleTransitionSuccess(record.id, runtime)"
+          />
         </template>
         <template #handleUserTitle>
           <div class="flex items-center text-[var(--color-text-3)]">
@@ -227,21 +209,23 @@
   import { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsModuleRefresh from '@/components/business/ms-module-refresh/index.vue';
   import BugDetailDrawer from './components/bug-detail-drawer.vue';
+  import BugStatusTransitionSelect from './components/BugStatusTransitionSelect.vue';
   import BugNamePopover from '@/views/case-management/caseManagementFeature/components/tabContent/tabBug/bugNamePopover.vue';
 
   import {
+    type BugTransitionRuntime,
     checkBugExist,
     deleteBatchBug,
     deleteSingleBug,
     exportBug,
     getBugList,
+    getBugTransitionsBatch,
     getCustomFieldHeader,
     getCustomOptionHeader,
     getExportConfig,
     getPlatform,
     getSyncStatus,
     syncBugEnterprise,
-    updateBug,
   } from '@/api/modules/bug-management';
   import { getPlatformOptions } from '@/api/modules/project-management/menuManagement';
   import { NAV_NAVIGATION } from '@/config/workbench';
@@ -261,7 +245,6 @@
   import { TableKeyEnum } from '@/enums/tableEnum';
   import { WorkNavValueEnum } from '@/enums/workbenchEnum';
 
-  import getBugStatusClass from './utils/bugStatusStyle';
   import { makeColumns } from '@/views/case-management/caseManagementFeature/components/utils';
 
   defineOptions({
@@ -301,6 +284,7 @@
   const currentSelectParams = ref<BatchActionQueryParams>({ selectAll: false, currentSelectCount: 0 });
   // 排序
   const sort = ref<{ [key: string]: string }>({});
+  const transitionRuntimeMap = ref<Record<string, BugTransitionRuntime>>({});
 
   const syncObject = reactive({
     time: 0,
@@ -544,73 +528,33 @@
     };
   }
 
-  function searchData() {
+  async function loadPageTransitions() {
+    if (!hasAnyPermission(['PROJECT_BUG:READ+UPDATE'])) {
+      transitionRuntimeMap.value = {};
+      return;
+    }
+    const ids = (propsRes.value.data || []).map((item: TableData) => String(item.id)).filter(Boolean);
+    transitionRuntimeMap.value = ids.length ? await getBugTransitionsBatch(ids) : {};
+  }
+
+  async function searchData() {
     setLoadListParams(initTableParams());
-    loadList();
+    await loadList();
+    await loadPageTransitions();
   }
 
   const fetchData = async (v = '') => {
     setKeyword(v);
-    searchData();
+    await searchData();
   };
 
+  async function handleTransitionSuccess(bugId: string, runtime: BugTransitionRuntime) {
+    transitionRuntimeMap.value = { ...transitionRuntimeMap.value, [bugId]: runtime };
+    await fetchData();
+  }
+
   const statusOption = ref<BugOptionItem[]>([]);
-  const statusUpdatingIds = ref<string[]>([]);
   const handleUserOption = ref<BugOptionItem[]>([]);
-
-  function canEditBugStatus(record: TableData) {
-    return (
-      hasAnyPermission(['PROJECT_BUG:READ+UPDATE']) &&
-      currentPlatform.value === record.platform &&
-      statusOption.value.length > 0
-    );
-  }
-
-  async function handleStatusChange(record: TableData, status: string) {
-    if (!status || status === record.status || statusUpdatingIds.value.includes(record.id)) {
-      return;
-    }
-    const previousStatus = record.status;
-    const previousStatusName = record.statusName;
-    const nextStatusName = statusOption.value.find((item) => item.value === status)?.text || status;
-    statusUpdatingIds.value = [...statusUpdatingIds.value, record.id];
-    record.status = status;
-    record.statusName = nextStatusName;
-    try {
-      await updateBug({
-        request: {
-          id: record.id,
-          projectId: projectId.value,
-          templateId: record.templateId,
-          title: record.title,
-          description: record.description,
-          tags: record.tags || [],
-          customFields: [
-            {
-              id: 'status',
-              value: status,
-            },
-            {
-              id: 'handleUser',
-              value: record.handleUser,
-            },
-          ],
-          deleteLocalFileIds: [],
-          unLinkRefIds: [],
-          linkFileIds: [],
-          richTextTmpFileIds: [],
-        },
-        fileList: [] as unknown as File[],
-      });
-      Message.success(t('common.editSuccess'));
-      fetchData();
-    } catch (error) {
-      record.status = previousStatus;
-      record.statusName = previousStatusName;
-    } finally {
-      statusUpdatingIds.value = statusUpdatingIds.value.filter((id) => id !== record.id);
-    }
-  }
 
   const platformOption = ref<PoolOption[]>([]);
   const initPlatformOption = async () => {

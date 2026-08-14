@@ -18,10 +18,14 @@ import {
   StatusFlowRolePermission,
   WorkflowDefinition,
   WorkflowRole,
+  WorkflowValidationResult,
 } from '@/models/setting/permissionControl';
 
 export function getPermissionControlRoles() {
   return MSR.get<PermissionControlRole[]>({ url: urls.roleListUrl });
+}
+export function getPermissionControlRole(roleId: string) {
+  return MSR.get<PermissionControlRole>({ url: `/permission/control/role/get/${roleId}` });
 }
 
 export function deletePermissionControlRole(roleId: string) {
@@ -122,6 +126,83 @@ export function getPermissionControlFlowRoles(flowId: string) {
 
 export function getPermissionControlFlowMatrix(params: { scene?: string; scopeId?: string }) {
   return MSR.get<PermissionControlFlowMatrix>({ url: urls.flowMatrixUrl, params });
+}
+
+export function getPermissionControlFlowDesigner(flowId: string) {
+  return MSR.get<PermissionControlFlowMatrix>({ url: `/permission-control/flow/${flowId}/designer` });
+}
+
+export function savePermissionControlFlowDesigner(flowId: string, data: PermissionControlFlowMatrix) {
+  return MSR.post<PermissionControlFlowMatrix>({ url: `/permission-control/flow/${flowId}/designer`, data });
+}
+
+export function validatePermissionControlFlow(flowId: string) {
+  return MSR.post<WorkflowValidationResult>({ url: `/permission-control/flow/${flowId}/validate` });
+}
+
+export function publishPermissionControlFlow(flowId: string, expectedVersion: number) {
+  return MSR.post<WorkflowDefinition>({
+    url: `/permission-control/flow/${flowId}/publish`,
+    params: { expectedVersion },
+  });
+}
+
+export function archivePermissionControlFlow(flowId: string) {
+  return MSR.post<WorkflowDefinition>({ url: `/permission-control/flow/${flowId}/archive` });
+}
+
+export function copyPermissionControlFlow(flowId: string) {
+  return MSR.post<WorkflowDefinition>({ url: `/permission-control/flow/${flowId}/copy` });
+}
+
+export interface WorkflowMigrationPreview {
+  targetFlowId: string;
+  targetVersion: number;
+  affectedBugCount: number;
+  suggestedMappings: Record<string, string>;
+  unresolvedStatusIds: string[];
+  targetStatuses: Array<{ id: string; code: string; name: string }>;
+  projects: Array<{
+    projectId: string;
+    projectName: string;
+    bugCount: number;
+    sourceStatusIds: string[];
+    unresolvedStatusIds: string[];
+  }>;
+}
+
+export function previewPermissionControlFlowMigration(flowId: string) {
+  return MSR.get<WorkflowMigrationPreview>({ url: `/permission-control/flow/${flowId}/migration/preview` });
+}
+
+export function migratePermissionControlFlow(data: {
+  targetFlowId: string;
+  dryRun: boolean;
+  statusMappings: Record<string, string>;
+}) {
+  return MSR.post<{ batchId: string; total: number; status?: string; migrated: number; skipped?: number }>({
+    url: '/permission-control/flow/migration',
+    data,
+  });
+}
+
+export interface WorkflowMigrationBatch {
+  id: string;
+  status: string;
+  totalCount: number;
+  successCount: number;
+  skippedCount: number;
+  failedCount: number;
+  failures: Array<{ bugId: string; sourceStatus: string; failureCode: string; failureReason: string }>;
+}
+export function getPermissionControlFlowMigrationBatch(batchId: string) {
+  return MSR.get<WorkflowMigrationBatch>({ url: `/permission-control/flow/migration/${batchId}` });
+}
+export function resumePermissionControlFlowMigration(batchId: string) {
+  return MSR.post({ url: `/permission-control/flow/migration/${batchId}/resume` });
+}
+export function rollbackPermissionControlFlowMigration(batchId: string) {
+  return MSR.post<WorkflowMigrationBatch>({ url: `/permission-control/flow/migration/${batchId}/rollback` });
 }
 
 export function addPermissionControlFlowRole(data: WorkflowRole) {

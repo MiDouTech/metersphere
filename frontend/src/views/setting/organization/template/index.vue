@@ -26,7 +26,6 @@
             mode="organization"
             @field-setting="fieldSetting"
             @template-management="templateManagement"
-            @workflow-setup="workflowSetup"
             @update-state="updateState"
           />
         </template>
@@ -89,17 +88,6 @@
   const templateManagement = (key: string) => {
     router.push({
       name: SettingRouteEnum.SETTING_ORGANIZATION_TEMPLATE_MANAGEMENT,
-      query: {
-        ...route.query,
-        type: key,
-      },
-    });
-  };
-
-  // 工作流
-  const workflowSetup = (key: string) => {
-    router.push({
-      name: SettingRouteEnum.SETTING_ORGANIZATION_TEMPLATE_MANAGEMENT_WORKFLOW,
       query: {
         ...route.query,
         type: key,

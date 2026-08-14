@@ -139,14 +139,18 @@
 <script lang="ts" setup>
   import { computed, reactive, ref, watchEffect } from 'vue';
   import { useIntervalFn } from '@vueuse/core';
-  import { Message } from '@arco-design/web-vue';
+  import { Message, Modal } from '@arco-design/web-vue';
 
   import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsSystemPool from '@/components/business/ms-system-pool/MsSystemPool.vue';
   import MsUserSelector from '@/components/business/ms-user-selector/index.vue';
   import { UserRequestTypeEnum } from '@/components/business/ms-user-selector/utils';
 
-  import { createOrUpdateProject, getSystemOrgOption } from '@/api/modules/setting/organizationAndProject';
+  import {
+    createOrUpdateProject,
+    getProjectCaseAssetCatalog,
+    getSystemOrgOption,
+  } from '@/api/modules/setting/organizationAndProject';
   import { useI18n } from '@/hooks/useI18n';
   import useServerFieldErrors from '@/hooks/useServerFieldErrors';
   import { useUserStore } from '@/store';
@@ -253,8 +257,25 @@
       try {
         loading.value = true;
         clearServerFieldErrors();
+        let confirmAssetCatalogRename = false;
+        if (isEdit.value && props.currentProject?.id && props.currentProject.name !== form.name) {
+          const catalog = await getProjectCaseAssetCatalog(props.currentProject.id);
+          if (catalog) {
+            const confirmed = await new Promise<boolean>((resolve) => {
+              Modal.warning({
+                title: '项目改名确认',
+                content: `该项目已关联测试资产：${catalog.name}，是否确认改名`,
+                hideCancel: false,
+                onOk: () => resolve(true),
+                onCancel: () => resolve(false),
+              });
+            });
+            if (!confirmed) return;
+            confirmAssetCatalogRename = true;
+          }
+        }
         const res = await createOrUpdateProject(
-          { id: isEdit.value ? props.currentProject?.id : '', ...form },
+          { id: isEdit.value ? props.currentProject?.id : '', ...form, confirmAssetCatalogRename },
           { errorMessageMode: 'none' }
         );
         // 创建人已写入项目管理员：刷新项目列表与权限缓存，进入项目时无需 F5

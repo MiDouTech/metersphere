@@ -19,6 +19,9 @@ import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotEmpty;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.jdbc.core.JdbcTemplate;
+import io.metersphere.sdk.exception.MSException;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +37,8 @@ public class OrganizationStatusFlowSettingController {
 
     @Resource
     private OrganizationStatusFlowSettingService organizationStatusFlowSettingService;
+    @Resource
+    private JdbcTemplate jdbcTemplate;
 
     @GetMapping("/get/{organizationId}/{scene}")
     @Operation(summary = "系统设置-组织-状态流设置-获取状态流设置")
@@ -51,6 +56,7 @@ public class OrganizationStatusFlowSettingController {
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.updateStatusDefinitionLog(#request)", msClass = OrganizationStatusFlowSettingLogService.class)
     @CheckOrgOwner(resourceId = "#request.getStatusId()", resourceType = "status_item", resourceCol = "scope_id")
     public void updateStatusDefinition(@Validated @RequestBody StatusDefinitionUpdateRequest request) {
+        assertLegacyBugWorkflowClosed(request.getStatusId());
         organizationStatusFlowSettingService.updateStatusDefinition(request);
     }
 
@@ -59,6 +65,7 @@ public class OrganizationStatusFlowSettingController {
     @RequiresPermissions(PermissionConstants.ORGANIZATION_TEMPLATE_UPDATE)
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.addStatusItemLog(#request)", msClass = OrganizationStatusFlowSettingLogService.class)
     public StatusItem addStatusItem(@Validated @RequestBody StatusItemAddRequest request) {
+        assertLegacyBugWorkflowClosedByScene(request.getScene());
         return organizationStatusFlowSettingService.addStatusItem(request);
     }
 
@@ -68,6 +75,7 @@ public class OrganizationStatusFlowSettingController {
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.updateStatusItemLog(#request)", msClass = OrganizationStatusFlowSettingLogService.class)
     @CheckOrgOwner(resourceId = "#request.getId()", resourceType = "status_item", resourceCol = "scope_id")
     public StatusItem updateStatusItem(@Validated @RequestBody StatusItemUpdateRequest request) {
+        assertLegacyBugWorkflowClosed(request.getId());
         return organizationStatusFlowSettingService.updateStatusItem(request);
     }
 
@@ -80,6 +88,7 @@ public class OrganizationStatusFlowSettingController {
                                @RequestBody
                                @NotEmpty
                                List<String> statusIds) {
+        assertLegacyBugWorkflowClosedByScene(scene);
         organizationStatusFlowSettingService.sortStatusItem(organizationId, scene, statusIds);
     }
 
@@ -89,6 +98,7 @@ public class OrganizationStatusFlowSettingController {
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.deleteStatusItemLog(#id)", msClass = OrganizationStatusFlowSettingLogService.class)
     @CheckOrgOwner(resourceId = "#id", resourceType = "status_item", resourceCol = "scope_id")
     public void deleteStatusItem(@PathVariable String id) {
+        assertLegacyBugWorkflowClosed(id);
         organizationStatusFlowSettingService.deleteStatusItem(id);
     }
 
@@ -98,6 +108,18 @@ public class OrganizationStatusFlowSettingController {
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.updateStatusFlowLog(#request)", msClass = OrganizationStatusFlowSettingLogService.class)
     @CheckOrgOwner(resourceId = "#request.getFromId()", resourceType = "status_item", resourceCol = "scope_id")
     public void updateStatusFlow(@Validated @RequestBody StatusFlowUpdateRequest request) {
+        assertLegacyBugWorkflowClosed(request.getFromId());
         organizationStatusFlowSettingService.updateStatusFlow(request);
+    }
+
+    private void assertLegacyBugWorkflowClosed(String statusId) {
+        List<String> scenes = jdbcTemplate.queryForList("SELECT scene FROM status_item WHERE id = ?", String.class, statusId);
+        if (!scenes.isEmpty()) assertLegacyBugWorkflowClosedByScene(scenes.getFirst());
+    }
+
+    private void assertLegacyBugWorkflowClosedByScene(String scene) {
+        if (StringUtils.equalsIgnoreCase(scene, "BUG")) {
+            throw new MSException("缺陷工作流已迁移至【系统设置 / 权限控制 / 流程控制】，旧入口不再允许写入");
+        }
     }
 }

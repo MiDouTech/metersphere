@@ -423,7 +423,16 @@ public class FunctionalCaseService {
      * @return FunctionalCaseDetailDTO
      */
     public FunctionalCaseDetailDTO getFunctionalCaseDetail(String functionalCaseId, String userId, boolean checkDetailCount) {
-        FunctionalCase functionalCase = checkFunctionalCase(functionalCaseId);
+        return getFunctionalCaseDetail(functionalCaseId, userId, checkDetailCount, false);
+    }
+
+    public FunctionalCaseDetailDTO getFunctionalCaseDetail(String functionalCaseId, String userId,
+                                                            boolean checkDetailCount, boolean includeDeleted) {
+        FunctionalCase functionalCase = includeDeleted ? functionalCaseMapper.selectByPrimaryKey(functionalCaseId)
+                : checkFunctionalCase(functionalCaseId);
+        if (functionalCase == null) {
+            throw new MSException(CaseManagementResultCode.FUNCTIONAL_CASE_NOT_FOUND);
+        }
         FunctionalCaseDetailDTO functionalCaseDetailDTO = new FunctionalCaseDetailDTO();
         BeanUtils.copyBean(functionalCaseDetailDTO, functionalCase);
         FunctionalCaseBlob caseBlob = functionalCaseBlobMapper.selectByPrimaryKey(functionalCaseId);

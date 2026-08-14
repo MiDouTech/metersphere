@@ -9,6 +9,8 @@ import io.metersphere.agent.dto.AgentTaskTriggerRequest;
 import io.metersphere.agent.mapper.AgentTaskTriggerMapper;
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.mapper.ProjectMapper;
+import io.metersphere.functional.domain.FunctionalCase;
+import io.metersphere.functional.mapper.FunctionalCaseMapper;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.EncryptUtils;
 import io.metersphere.sdk.util.JSON;
@@ -54,6 +56,8 @@ public class AgentTaskTriggerService {
     private AgentExecutionService executionService;
     @Resource
     private AgentExecLogService execLogService;
+    @Resource
+    private FunctionalCaseMapper functionalCaseMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public AgentTaskTriggerDTO create(AgentTaskTriggerRequest request) {
@@ -234,6 +238,7 @@ public class AgentTaskTriggerService {
         trigger.setMissedPolicy(normalizeEnum(source.getMissedPolicy(), "FIRE_ONCE", MISSED_POLICIES, "missedPolicy"));
         trigger.setEnabled(source.getEnabled() == null || source.getEnabled());
         source.getTaskTemplate().setProjectId(projectId);
+        validateProjectCaseIds(projectId, source.getTaskTemplate().getCaseIds());
         source.getTaskTemplate().setIdempotencyKey(null);
         source.getTaskTemplate().setSource(null);
         trigger.setTaskTemplate(JSON.toJSONString(source.getTaskTemplate()));
@@ -252,6 +257,17 @@ public class AgentTaskTriggerService {
         trigger.setUpdatedBy(userId);
         trigger.setUpdatedAt(now);
         return trigger;
+    }
+
+    private void validateProjectCaseIds(String projectId, List<String> caseIds) {
+        if (caseIds == null || caseIds.isEmpty()) return;
+        for (String caseId : caseIds.stream().filter(StringUtils::isNotBlank).distinct().toList()) {
+            FunctionalCase functionalCase = functionalCaseMapper.selectByPrimaryKey(caseId);
+            if (functionalCase == null || Boolean.TRUE.equals(functionalCase.getDeleted())
+                    || !StringUtils.equals(functionalCase.getProjectId(), projectId)) {
+                throw new MSException("调度规则只能保存当前项目中未删除的用例 ID，无效 ID: " + caseId);
+            }
+        }
     }
 
     private Long nextFire(String expression, String timezone, long after) {

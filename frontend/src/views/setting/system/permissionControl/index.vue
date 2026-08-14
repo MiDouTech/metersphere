@@ -10,6 +10,7 @@
                 <div class="muted mt-1">角色负责权限，成员关系仅负责用户归属；管理员角色为只读保护角色。</div>
               </div>
               <a-button
+                v-if="canAddRole"
                 v-visible-permission="{
                   code: 'PERMISSION_ROLE_ADD_BUTTON',
                   permissions: ['SYSTEM_PERMISSION_CONTROL:READ+ADD'],
@@ -104,6 +105,14 @@
                 <a-list-item-meta :title="flow.name" :description="flow.description || flow.code" />
                 <template #actions>
                   <a-tag v-if="flow.defaultFlow" color="blue">默认</a-tag>
+                  <a-tag
+                    :color="
+                      flow.lifecycle === 'PUBLISHED' ? 'green' : flow.lifecycle === 'ARCHIVED' ? 'gray' : 'orange'
+                    "
+                  >
+                    {{ flow.lifecycle === 'PUBLISHED' ? '已发布' : flow.lifecycle === 'ARCHIVED' ? '已归档' : '草稿' }}
+                    v{{ flow.version || 1 }}
+                  </a-tag>
                   <a-switch
                     v-operable-permission="{
                       code: 'PERMISSION_FLOW_SAVE_BUTTON',
@@ -134,24 +143,44 @@
           <a-card class="flow-card matrix-card" :bordered="false">
             <template #title>
               <div class="card-title">
-                <span>{{ selectedFlow?.name || '流转矩阵' }}</span>
-                <a-button
-                  v-visible-permission="{
-                    code: 'PERMISSION_FLOW_ROLE_ADD_BUTTON',
-                    permissions: ['SYSTEM_PERMISSION_CONTROL:READ+ADD'],
-                    typeList: ['SYSTEM'],
-                  }"
-                  :disabled="!selectedFlow?.id"
-                  @click="() => openFlowRoleModal()"
-                >
-                  添加流程角色
-                </a-button>
+                <div>
+                  <div>{{ selectedFlow?.name || '流转矩阵' }}</div>
+                  <div class="muted">系统全局生效；已发布版本不可原地修改，历史缺陷继续绑定原版本。</div>
+                </div>
+                <a-space wrap>
+                  <a-button :disabled="!isDraftFlow" @click="openStatusModal()">添加状态</a-button>
+                  <a-button :disabled="!isDraftFlow || !designerDirty" @click="saveDesigner">保存草稿</a-button>
+                  <a-button :disabled="!selectedFlow?.id" @click="validateDesigner">校验</a-button>
+                  <a-button v-if="isDraftFlow" type="primary" :disabled="designerDirty" @click="publishDesigner"
+                    >发布</a-button
+                  >
+                  <a-button v-else-if="selectedFlow?.id" @click="copyDesigner">复制新版本</a-button>
+                  <a-button v-if="selectedFlow?.lifecycle === 'DRAFT'" status="warning" @click="archiveDesigner"
+                    >归档</a-button
+                  >
+                  <a-button v-if="selectedFlow?.lifecycle === 'PUBLISHED'" @click="openMigrationPreview"
+                    >迁移历史缺陷</a-button
+                  >
+                  <a-button v-if="selectedFlow?.lifecycle === 'ARCHIVED'" disabled>已归档</a-button>
+                </a-space>
               </div>
             </template>
 
             <a-alert class="mb-4" type="info">
-              点击允许流转的单元格，在右侧为该流转配置流程角色的可见/可执行权限；未配置授权时后端兼容旧状态流。
+              点击“禁止”可新增流转；选择“允许”后在右侧配置角色。每条启用流转必须配置可执行角色才能发布。
             </a-alert>
+
+            <div class="mb-3 flex flex-wrap gap-2">
+              <a-tag
+                v-for="status in flowMatrix.statuses"
+                :key="status.id"
+                :color="status.initial ? 'blue' : status.terminal ? 'green' : undefined"
+                :checkable="isDraftFlow"
+                @check="() => isDraftFlow && openStatusModal(status)"
+              >
+                {{ status.name }}{{ status.initial ? '（初始）' : '' }}{{ status.terminal ? '（结束）' : '' }}
+              </a-tag>
+            </div>
 
             <div class="matrix-wrap">
               <table class="flow-matrix">
@@ -176,6 +205,14 @@
                         <span>允许</span>
                         <small>{{ getTransitionAuthSummary(findTransition(fromStatus.id, toStatus.id)?.id) }}</small>
                       </button>
+                      <button
+                        v-else-if="isDraftFlow"
+                        class="matrix-cell cell-deny"
+                        type="button"
+                        @click="addTransition(fromStatus.id, toStatus.id)"
+                      >
+                        禁止
+                      </button>
                       <span v-else class="cell-deny">禁止</span>
                     </td>
                   </tr>
@@ -188,18 +225,21 @@
             <template #title>
               <div class="card-title">
                 <span>流转规则</span>
-                <a-button
-                  v-operable-permission="{
-                    code: 'PERMISSION_FLOW_SAVE_BUTTON',
-                    permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
-                    typeList: ['SYSTEM'],
-                  }"
-                  type="primary"
-                  :disabled="!selectedFlow?.id"
-                  @click="saveTransitionPermissions"
-                >
-                  保存授权
-                </a-button>
+                <a-space>
+                  <a-button :disabled="!isDraftFlow" @click="() => openFlowRoleModal()">添加流程角色</a-button>
+                  <a-button
+                    v-operable-permission="{
+                      code: 'PERMISSION_FLOW_SAVE_BUTTON',
+                      permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
+                      typeList: ['SYSTEM'],
+                    }"
+                    type="primary"
+                    :disabled="!selectedFlow?.id || !isDraftFlow"
+                    @click="saveTransitionPermissions"
+                  >
+                    保存授权
+                  </a-button>
+                </a-space>
               </div>
             </template>
 
@@ -211,6 +251,10 @@
                 }}</a-descriptions-item>
                 <a-descriptions-item label="目标状态">{{ getStatusName(selectedTransition.toId) }}</a-descriptions-item>
               </a-descriptions>
+
+              <a-button v-if="isDraftFlow" class="mt-3" status="danger" @click="removeSelectedTransition"
+                >删除此流转</a-button
+              >
 
               <a-table class="mt-4" :data="flowRoles" :pagination="false" size="small" row-key="id">
                 <template #columns>
@@ -224,6 +268,7 @@
                     <template #cell="{ record }">
                       <a-checkbox
                         :model-value="getRolePermissionValue(record.id, 'visible')"
+                        :disabled="!isDraftFlow"
                         @change="(value) => updateRolePermission(record.id, 'visible', Boolean(value))"
                       />
                     </template>
@@ -232,6 +277,7 @@
                     <template #cell="{ record }">
                       <a-checkbox
                         :model-value="getRolePermissionValue(record.id, 'operable')"
+                        :disabled="!isDraftFlow"
                         @change="(value) => updateRolePermission(record.id, 'operable', Boolean(value))"
                       />
                     </template>
@@ -286,6 +332,82 @@
           <a-textarea v-model="flowForm.description" />
         </a-form-item>
       </a-form>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="statusModalVisible"
+      :title="statusForm.id ? '编辑状态' : '添加状态'"
+      :ok-button-props="{ disabled: !isDraftFlow }"
+      @ok="saveStatusDraft"
+    >
+      <a-form :model="statusForm" layout="vertical">
+        <a-form-item label="状态名称" required><a-input v-model="statusForm.name" /></a-form-item>
+        <a-form-item label="稳定编码" required
+          ><a-input v-model="statusForm.code" :disabled="Boolean(statusForm.id)"
+        /></a-form-item>
+        <a-form-item label="说明"><a-textarea v-model="statusForm.remark" /></a-form-item>
+        <a-space>
+          <a-checkbox v-model="statusForm.initial">初始状态（唯一）</a-checkbox>
+          <a-checkbox v-model="statusForm.terminal">结束状态</a-checkbox>
+          <a-checkbox v-model="statusForm.enabled">启用</a-checkbox>
+        </a-space>
+      </a-form>
+      <template #footer>
+        <a-button v-if="statusForm.id" status="danger" @click="deleteStatusDraft">删除状态</a-button>
+        <a-button @click="statusModalVisible = false">取消</a-button>
+        <a-button type="primary" :disabled="!isDraftFlow" @click="saveStatusDraft">确定</a-button>
+      </template>
+    </a-modal>
+
+    <a-modal
+      v-model:visible="migrationVisible"
+      title="历史缺陷流程迁移预览"
+      :width="760"
+      :ok-loading="migrationLoading"
+      :ok-button-props="{ disabled: Boolean(migrationUnresolved.length) }"
+      ok-text="确认执行迁移"
+      @ok="executeMigration"
+    >
+      <a-alert class="mb-4" type="warning">
+        此操作只迁移尚未绑定流程版本的历史缺陷；新发布流程不会自动影响历史数据。执行前已完成 dry-run 预检。
+      </a-alert>
+      <a-descriptions v-if="migrationPreview" :column="2" bordered>
+        <a-descriptions-item label="目标版本">v{{ migrationPreview.targetVersion }}</a-descriptions-item>
+        <a-descriptions-item label="影响缺陷">{{ migrationPreview.affectedBugCount }}</a-descriptions-item>
+        <a-descriptions-item label="自动映射">{{
+          Object.keys(migrationPreview.suggestedMappings).length
+        }}</a-descriptions-item>
+        <a-descriptions-item label="未映射状态">{{ migrationPreview.unresolvedStatusIds.length }}</a-descriptions-item>
+      </a-descriptions>
+      <div v-if="migrationPreview?.unresolvedStatusIds.length" class="mt-4">
+        <a-alert class="mb-2" type="warning">请为以下历史状态选择目标状态，全部映射后方可执行。</a-alert>
+        <a-form :model="migrationMappings" layout="vertical">
+          <a-form-item v-for="sourceId in migrationPreview.unresolvedStatusIds" :key="sourceId" :label="sourceId">
+            <a-select v-model="migrationMappings[sourceId]" placeholder="选择目标状态" allow-clear>
+              <a-option v-for="status in migrationPreview.targetStatuses" :key="status.id" :value="status.id"
+                >{{ status.name }}（{{ status.code }}）</a-option
+              >
+            </a-select>
+          </a-form-item>
+        </a-form>
+      </div>
+      <a-alert v-if="migrationBatch" class="mt-4" :type="migrationBatch.failedCount ? 'warning' : 'success'">
+        批次 {{ migrationBatch.id }}：{{ migrationBatch.status }}；成功 {{ migrationBatch.successCount }}，失败
+        {{ migrationBatch.failedCount }}，跳过 {{ migrationBatch.skippedCount }}
+      </a-alert>
+      <a-space v-if="migrationBatch && ['FAILED', 'PARTIAL_SUCCESS'].includes(migrationBatch.status)" class="mt-2">
+        <a-button @click="resumeMigrationBatch">重试失败项</a-button
+        ><a-button status="danger" @click="rollbackMigrationBatch">回滚已迁移项</a-button>
+      </a-space>
+      <a-table v-if="migrationPreview" class="mt-4" :data="migrationPreview.projects" :pagination="false" size="small">
+        <template #columns>
+          <a-table-column title="项目" data-index="projectName" />
+          <a-table-column title="缺陷数" data-index="bugCount" :width="100" />
+          <a-table-column title="未映射状态" :width="240">
+            <template #cell="{ record }">{{ record.unresolvedStatusIds.join('、') || '-' }}</template>
+          </a-table-column>
+        </template>
+      </a-table>
     </a-modal>
 
     <a-modal
@@ -467,160 +589,52 @@
         </template>
       </a-table>
     </a-modal>
-
-    <a-drawer
-      v-model:visible="roleEditorVisible"
-      :width="920"
-      :title="roleEditorReadonly ? '查看角色' : roleForm.id ? '编辑角色' : '新增角色'"
-      :footer="!roleEditorReadonly"
-      unmount-on-close
-      :on-before-cancel="confirmDiscardRoleChanges"
-      :on-before-ok="saveRole"
-    >
-      <a-alert v-if="roleEditorReadonly" class="mb-4" type="info"
-        >管理员角色受保护；或当前账号只有查看权限，本页面不可修改。</a-alert
-      >
-      <a-form :model="roleForm" layout="vertical">
-        <div class="grid grid-cols-2 gap-4">
-          <a-form-item field="name" label="角色名称" required>
-            <a-input v-model="roleForm.name" :disabled="roleEditorReadonly" placeholder="请输入角色名称" />
-          </a-form-item>
-          <a-form-item field="type" label="权限范围" required>
-            <a-select
-              v-model="roleForm.type"
-              :disabled="roleEditorReadonly || Boolean(roleForm.id)"
-              @change="handleRoleTypeChange"
-            >
-              <a-option value="SYSTEM">系统</a-option>
-              <a-option value="ORGANIZATION">组织</a-option>
-              <a-option value="PROJECT">项目</a-option>
-            </a-select>
-          </a-form-item>
-        </div>
-        <a-form-item field="description" label="描述">
-          <a-textarea v-model="roleForm.description" :disabled="roleEditorReadonly" :max-length="1000" />
-        </a-form-item>
-        <a-form-item field="enabled" label="启用状态">
-          <a-switch v-model="roleForm.enabled" :disabled="roleEditorReadonly" />
-        </a-form-item>
-      </a-form>
-
-      <a-divider>页面、页签与按钮权限</a-divider>
-      <a-table
-        :data="flatResources"
-        :loading="rolePermissionLoading"
-        :pagination="false"
-        size="small"
-        row-key="code"
-        :scroll="{ y: 330 }"
-      >
-        <template #columns>
-          <a-table-column title="权限资源" :width="260">
-            <template #cell="{ record }">
-              <div :style="{ paddingLeft: `${record.depth * 16}px` }">{{ resourceNameText(record.name) }}</div>
-            </template>
-          </a-table-column>
-          <a-table-column title="类型" :width="90">
-            <template #cell="{ record }">{{ resourceTypeText(record.type) }}</template>
-          </a-table-column>
-          <a-table-column title="关联接口权限" :width="250">
-            <template #cell="{ record }">{{ resourcePermissionText(record) }}</template>
-          </a-table-column>
-          <a-table-column title="可见" :width="80">
-            <template #cell="{ record }">
-              <a-checkbox
-                v-model="resourcePermissionMap[record.code].visible"
-                :disabled="roleEditorReadonly"
-                @change="syncResourcePermission(record.code)"
-              />
-            </template>
-          </a-table-column>
-          <a-table-column title="可操作" :width="90">
-            <template #cell="{ record }">
-              <a-checkbox
-                v-if="record.type === 'BUTTON' || record.type === 'API'"
-                v-model="resourcePermissionMap[record.code].operable"
-                :disabled="roleEditorReadonly"
-                @change="syncResourcePermission(record.code, true)"
-              />
-              <span v-else>-</span>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-
-      <a-divider>数据操作权限</a-divider>
-      <a-table
-        :data="flatDataPermissions"
-        :loading="rolePermissionLoading"
-        :pagination="false"
-        size="small"
-        row-key="id"
-        :scroll="{ y: 280 }"
-      >
-        <template #columns>
-          <a-table-column title="业务模块" data-index="groupName" :width="220" />
-          <a-table-column title="操作权限">
-            <template #cell="{ record }">{{ dataPermissionText(record) }}</template>
-          </a-table-column>
-          <a-table-column title="授权" :width="90">
-            <template #cell="{ record }">
-              <a-switch
-                v-model="dataPermissionMap[record.id]"
-                :disabled="roleEditorReadonly"
-                @change="syncDataPermission(record.id)"
-              />
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-    </a-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-  import { onBeforeRouteLeave } from 'vue-router';
+  import { useRouter } from 'vue-router';
   import { Message, Modal } from '@arco-design/web-vue';
 
   import {
     addPermissionControlFlow,
     addPermissionControlFlowRole,
     addPermissionControlRoleMembers,
+    archivePermissionControlFlow,
     assignPermissionControlRoleByPosition,
+    copyPermissionControlFlow,
     deletePermissionControlFlow,
     deletePermissionControlFlowRole,
     deletePermissionControlRole,
     enablePermissionControlFlow,
     enablePermissionControlRole,
-    getPermissionControlFlowMatrix,
+    getPermissionControlFlowDesigner,
+    getPermissionControlFlowMigrationBatch,
     getPermissionControlFlowRolePermissions,
     getPermissionControlFlowRoles,
     getPermissionControlFlows,
-    getPermissionControlPermissionDefinition,
-    getPermissionControlResourceTree,
     getPermissionControlRoleAssignmentRules,
     getPermissionControlRoleDeleteImpact,
     getPermissionControlRoleMemberOptions,
     getPermissionControlRoleMemberScopeOptions,
-    getPermissionControlRolePermissions,
     getPermissionControlRoles,
-    getPermissionControlRoleUiPermissions,
+    migratePermissionControlFlow,
     pagePermissionControlRoleMembers,
+    previewPermissionControlFlowMigration,
+    publishPermissionControlFlow,
     removePermissionControlRoleMembers,
     reportUnknownPermissionDiagnostic,
+    resumePermissionControlFlowMigration,
+    rollbackPermissionControlFlowMigration,
+    savePermissionControlFlowDesigner,
     savePermissionControlFlowRolePermissions,
-    savePermissionControlRole,
     updatePermissionControlFlowRole,
+    validatePermissionControlFlow,
+    type WorkflowMigrationBatch,
+    type WorkflowMigrationPreview,
   } from '@/api/modules/setting/permissionControl';
-  import {
-    getPermissionText,
-    getResourceNameText,
-    getResourceTypeText,
-    getRoleScopeText,
-    isWritePermission,
-    setUnknownPermissionReporter,
-  } from '@/config/permissionLocale';
+  import { getRoleScopeText, setUnknownPermissionReporter } from '@/config/permissionLocale';
   import { useAppStore } from '@/store';
   import { hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
@@ -630,10 +644,9 @@
     PermissionControlRoleMember,
     PermissionControlRoleMemberOption,
     PermissionControlRoleMemberScopeOption,
+    PermissionControlStatus,
     PermissionControlStatusFlow,
-    PermissionResourceNode,
     RoleAssignmentRule,
-    RolePermissionItem,
     StatusFlowRolePermission,
     WorkflowDefinition,
     WorkflowRole,
@@ -646,6 +659,7 @@
   };
   const isProtectedAdmin = (role: PermissionControlRole) => role.id === 'admin';
   const appStore = useAppStore();
+  const router = useRouter();
   const canAddRole = computed(() => hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+ADD'], ['SYSTEM']));
   const canUpdateRole = computed(() => hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'], ['SYSTEM']));
 
@@ -656,24 +670,6 @@
     const keyword = roleKeyword.value.trim().toLowerCase();
     return keyword ? roles.value.filter((role) => role.name.toLowerCase().includes(keyword)) : roles.value;
   });
-  const roleEditorVisible = ref(false);
-  const roleEditorReadonly = ref(false);
-  const rolePermissionLoading = ref(false);
-  const roleEditorSnapshot = ref('');
-  const loadedRoleType = ref<PermissionControlRole['type']>('SYSTEM');
-  const roleForm = reactive<Partial<PermissionControlRole>>({
-    id: undefined,
-    name: '',
-    description: '',
-    type: 'SYSTEM',
-    enabled: true,
-  });
-  const permissionResources = ref<PermissionResourceNode[]>([]);
-  const roleDataPermissions = ref<RolePermissionItem[]>([]);
-  const resourcePermissionMap = reactive<Record<string, { visible: boolean; operable: boolean }>>({});
-  const dataPermissionMap = reactive<Record<string, boolean>>({});
-  const serializeRoleEditor = () =>
-    JSON.stringify({ role: roleForm, data: dataPermissionMap, ui: resourcePermissionMap });
   const roleMemberVisible = ref(false);
   const addRoleMemberVisible = ref(false);
   const roleMemberLoading = ref(false);
@@ -708,36 +704,6 @@
     showPageSize: true,
   }));
 
-  type FlatResource = PermissionResourceNode & { depth: number };
-  type FlatDataPermission = RolePermissionItem & { groupName: string };
-  const flatResources = computed<FlatResource[]>(() => {
-    const result: FlatResource[] = [];
-    const walk = (nodes: PermissionResourceNode[], depth = 0) => {
-      nodes.forEach((node) => {
-        result.push({ ...node, depth });
-        walk(node.children || [], depth + 1);
-      });
-    };
-    walk(permissionResources.value);
-    return result;
-  });
-  const flatDataPermissions = computed<FlatDataPermission[]>(() => {
-    const result: FlatDataPermission[] = [];
-    roleDataPermissions.value.forEach((first) => {
-      (first.children || []).forEach((second) => {
-        (second.permissions || []).forEach((permission) => result.push({ ...permission, groupName: second.name }));
-      });
-    });
-    return result;
-  });
-  const permissionSubjectMap = computed(() => {
-    const result = new Map<string, string>();
-    flatDataPermissions.value.forEach((permission) => {
-      const subjectCode = permission.id.split(':')[0];
-      if (subjectCode && !result.has(subjectCode)) result.set(subjectCode, permission.groupName);
-    });
-    return result;
-  });
   const flows = ref<WorkflowDefinition[]>([]);
   const flowRoles = ref<WorkflowRole[]>([]);
   const flowPermissions = ref<StatusFlowRolePermission[]>([]);
@@ -745,6 +711,27 @@
   const selectedFlow = ref<WorkflowDefinition>();
   const selectedTransition = ref<PermissionControlStatusFlow>();
   const flowModalVisible = ref(false);
+  const statusModalVisible = ref(false);
+  const designerDirty = ref(false);
+  const migrationVisible = ref(false);
+  const migrationLoading = ref(false);
+  const migrationPreview = ref<WorkflowMigrationPreview>();
+  const migrationMappings = ref<Record<string, string>>({});
+  const migrationBatch = ref<WorkflowMigrationBatch>();
+  const migrationUnresolved = computed(() =>
+    (migrationPreview.value?.unresolvedStatusIds || []).filter((id) => !migrationMappings.value[id])
+  );
+  const statusForm = reactive({
+    id: '',
+    code: '',
+    name: '',
+    remark: '',
+    initial: false,
+    terminal: false,
+    enabled: true,
+    pos: 0,
+  });
+  const isDraftFlow = computed(() => selectedFlow.value?.lifecycle === 'DRAFT');
   const flowRoleModalVisible = ref(false);
 
   const flowForm = reactive({
@@ -768,15 +755,6 @@
   };
 
   const roleScopeText = getRoleScopeText;
-  const resourceTypeText = getResourceTypeText;
-  const resourceNameText = getResourceNameText;
-  const permissionText = getPermissionText;
-  const dataPermissionText = (permission: FlatDataPermission) => permissionText(permission.id, permission.groupName);
-  const resourcePermissionText = (resource: FlatResource) => {
-    const subjectCode = resource.permissionId?.split(':')[0] || '';
-    const subjectName = permissionSubjectMap.value.get(subjectCode) || resourceNameText(resource.name);
-    return permissionText(resource.permissionId, subjectName, resource.code);
-  };
 
   async function loadRoleMembers() {
     if (!currentMemberRole.value?.id) return;
@@ -957,237 +935,12 @@
     });
   }
 
-  function clearRolePermissionState() {
-    Object.keys(resourcePermissionMap).forEach((key) => delete resourcePermissionMap[key]);
-    Object.keys(dataPermissionMap).forEach((key) => delete dataPermissionMap[key]);
-  }
-
-  async function loadRolePermissions(resetSnapshot = true) {
-    if (!roleForm.type) return;
-    rolePermissionLoading.value = true;
-    try {
-      const [resources, dataPermissions, uiPermissions] = await Promise.all([
-        getPermissionControlResourceTree(roleForm.type),
-        roleForm.id
-          ? getPermissionControlRolePermissions(roleForm.id)
-          : getPermissionControlPermissionDefinition(roleForm.type),
-        roleForm.id ? getPermissionControlRoleUiPermissions(roleForm.id) : Promise.resolve([]),
-      ]);
-      permissionResources.value = resources || [];
-      roleDataPermissions.value = dataPermissions || [];
-      clearRolePermissionState();
-      const uiMap = new Map(uiPermissions.map((item) => [item.resourceCode, item]));
-      flatResources.value.forEach((resource) => {
-        const configured = uiMap.get(resource.code);
-        resourcePermissionMap[resource.code] = {
-          visible: roleEditorReadonly.value || Boolean(configured?.visible),
-          operable: roleEditorReadonly.value || Boolean(configured?.operable),
-        };
-      });
-      flatDataPermissions.value.forEach((permission) => {
-        dataPermissionMap[permission.id] = roleEditorReadonly.value || permission.enable;
-      });
-      if (resetSnapshot) roleEditorSnapshot.value = serializeRoleEditor();
-      if (resetSnapshot) loadedRoleType.value = roleForm.type || 'SYSTEM';
-    } finally {
-      rolePermissionLoading.value = false;
-    }
-  }
-
   async function openRoleEditor(role?: PermissionControlRole) {
-    roleForm.id = role?.id;
-    roleForm.name = role?.name || '';
-    roleForm.description = role?.description || '';
-    roleForm.type = role?.type || 'SYSTEM';
-    roleForm.enabled = role?.enabled !== false;
-    roleEditorReadonly.value = role ? isProtectedAdmin(role) || !canUpdateRole.value : !canAddRole.value;
-    roleEditorVisible.value = true;
-    await loadRolePermissions();
-  }
-
-  async function handleRoleTypeChange() {
-    if (
-      roleEditorSnapshot.value &&
-      serializeRoleEditor() !== roleEditorSnapshot.value &&
-      !window.confirm('切换权限范围会清空当前未保存的权限配置，是否继续？')
-    ) {
-      roleForm.type = loadedRoleType.value;
-      return;
-    }
-    await loadRolePermissions(false);
-    loadedRoleType.value = roleForm.type || 'SYSTEM';
-  }
-
-  function findResource(code?: string) {
-    return code ? flatResources.value.find((item) => item.code === code) : undefined;
-  }
-
-  function isDescendant(item: FlatResource, ancestorCode: string) {
-    let current: FlatResource | undefined = item;
-    const visited = new Set<string>();
-    while (current?.parentCode && !visited.has(current.code)) {
-      if (current.parentCode === ancestorCode) return true;
-      visited.add(current.code);
-      current = findResource(current.parentCode);
-    }
-    return false;
-  }
-
-  function setAncestorsVisible(code: string) {
-    let resource = findResource(code);
-    while (resource?.parentCode) {
-      const parent = resourcePermissionMap[resource.parentCode];
-      if (parent) parent.visible = true;
-      resource = findResource(resource.parentCode);
-    }
-  }
-
-  function disableDescendants(code: string) {
-    const descendants = flatResources.value.filter((item) => isDescendant(item, code));
-    descendants.forEach((item) => {
-      resourcePermissionMap[item.code].visible = false;
-      resourcePermissionMap[item.code].operable = false;
-    });
-  }
-
-  function syncDataPermission(permissionId: string) {
-    const prefix = permissionId.split(':')[0];
-    if (isWritePermission(permissionId) && dataPermissionMap[permissionId]) {
-      const readId = `${prefix}:READ`;
-      if (readId in dataPermissionMap) dataPermissionMap[readId] = true;
-    } else if (permissionId.endsWith(':READ') && !dataPermissionMap[permissionId]) {
-      flatDataPermissions.value
-        .filter((item) => item.id.startsWith(`${prefix}:`) && isWritePermission(item.id))
-        .forEach((item) => {
-          dataPermissionMap[item.id] = false;
-        });
-    }
-    if (!dataPermissionMap[permissionId]) {
-      flatResources.value
-        .filter((resource) => resource.permissionId === permissionId)
-        .forEach((resource) => {
-          resourcePermissionMap[resource.code].operable = false;
-        });
-    }
-  }
-
-  function syncResourcePermission(code: string, operableChanged = false) {
-    const value = resourcePermissionMap[code];
-    const changedResource = findResource(code);
-    if (operableChanged && value.operable) {
-      value.visible = true;
-      const permissionId = findResource(code)?.permissionId;
-      if (permissionId && permissionId in dataPermissionMap) {
-        dataPermissionMap[permissionId] = true;
-        syncDataPermission(permissionId);
-      }
-    }
-    if (value.visible) setAncestorsVisible(code);
-    if (!value.visible) value.operable = false;
-    // 未显式接入资源码的旧按钮通过 permissionId 兼容收口；同一接口权限必须作为一个按钮能力组同步，
-    // 避免配置页显示为可分别设置而运行时只能按关联权限统一判断。
-    if (changedResource?.type === 'BUTTON' && changedResource.permissionId) {
-      flatResources.value
-        .filter(
-          (item) => item.type === 'BUTTON' && item.permissionId === changedResource.permissionId && item.code !== code
-        )
-        .forEach((item) => {
-          resourcePermissionMap[item.code].visible = value.visible;
-          resourcePermissionMap[item.code].operable = value.operable;
-          if (value.visible) setAncestorsVisible(item.code);
-        });
-    }
-    if (!value.visible) {
-      const affected = flatResources.value.filter(
-        (item) => resourcePermissionMap[item.code]?.visible && isDescendant(item, code)
-      );
-      if (affected.length) {
-        value.visible = true;
-        Modal.warning({
-          title: '关闭父资源权限',
-          content: `将同时关闭 ${affected.length} 个子资源权限：${affected
-            .slice(0, 5)
-            .map((item) => item.name)
-            .join('、')}${affected.length > 5 ? '等' : ''}。是否继续？`,
-          hideCancel: false,
-          onOk: () => {
-            value.visible = false;
-            value.operable = false;
-            disableDescendants(code);
-          },
-        });
-      }
-    }
-  }
-
-  function getRoleChangeSummary() {
-    if (!roleEditorSnapshot.value) return { added: 0, removed: 0, roleChanged: 0 };
-    const original = JSON.parse(roleEditorSnapshot.value) as {
-      role: Partial<PermissionControlRole>;
-      data: Record<string, boolean>;
-      ui: Record<string, { visible: boolean; operable: boolean }>;
-    };
-    let added = 0;
-    let removed = 0;
-    Object.keys(dataPermissionMap).forEach((key) => {
-      if (!original.data[key] && dataPermissionMap[key]) added += 1;
-      if (original.data[key] && !dataPermissionMap[key]) removed += 1;
-    });
-    Object.keys(resourcePermissionMap).forEach((key) => {
-      const before = original.ui[key] || { visible: false, operable: false };
-      const after = resourcePermissionMap[key];
-      if (!before.visible && after.visible) added += 1;
-      if (before.visible && !after.visible) removed += 1;
-      if (!before.operable && after.operable) added += 1;
-      if (before.operable && !after.operable) removed += 1;
-    });
-    const roleChanged = ['name', 'description', 'type', 'enabled'].filter(
-      (key) => original.role[key as keyof PermissionControlRole] !== roleForm[key as keyof PermissionControlRole]
-    ).length;
-    return { added, removed, roleChanged };
-  }
-
-  function confirmDiscardRoleChanges() {
-    if (roleEditorReadonly.value || serializeRoleEditor() === roleEditorSnapshot.value) return true;
-    return window.confirm('存在未保存修改，关闭后本次角色和权限修改将丢失，是否继续？');
-  }
-
-  async function saveRole() {
-    if (!roleForm.name?.trim() || !roleForm.type) {
-      Message.error('角色名称和权限范围不能为空');
-      return false;
-    }
-    const permissions = flatDataPermissions.value.map((permission) => ({
-      id: permission.id,
-      enable: Boolean(dataPermissionMap[permission.id]),
-    }));
-    const uiPermissions = flatResources.value.map((resource) => ({
-      resourceCode: resource.code,
-      ...resourcePermissionMap[resource.code],
-    }));
-    const changeSummary = getRoleChangeSummary();
-    const confirmed = await new Promise<boolean>((resolve) => {
-      Modal.confirm({
-        title: '保存角色权限',
-        content: `变更摘要：新增 ${changeSummary.added} 项权限，移除 ${changeSummary.removed} 项权限，修改 ${changeSummary.roleChanged} 项基础信息。保存后立即生效。`,
-        onOk: () => resolve(true),
-        onCancel: () => resolve(false),
-      });
-    });
-    if (!confirmed) return false;
-    await savePermissionControlRole({
-      id: roleForm.id,
-      name: roleForm.name.trim(),
-      description: roleForm.description,
-      type: roleForm.type,
-      enabled: roleForm.enabled !== false,
-      permissions,
-      uiPermissions,
-    });
-    Message.success('角色及权限已保存');
-    roleEditorVisible.value = false;
-    await fetchRoles();
-    return true;
+    await router.push(
+      role
+        ? { name: 'settingSystemPermissionControlRoleDetail', params: { roleId: role.id }, query: { tab: 'role' } }
+        : { name: 'settingSystemPermissionControlRoleCreate', query: { tab: 'role' } }
+    );
   }
 
   async function confirmDeleteRole(role: PermissionControlRole) {
@@ -1207,13 +960,14 @@
   const fetchFlowConfig = async (flowId: string) => {
     const [rolesResult, matrixResult, permissionsResult] = await Promise.all([
       getPermissionControlFlowRoles(flowId),
-      getPermissionControlFlowMatrix({ scene: flowScope.scene, scopeId: flowScope.scopeId }),
+      getPermissionControlFlowDesigner(flowId),
       getPermissionControlFlowRolePermissions(flowId),
     ]);
     flowRoles.value = rolesResult;
     flowMatrix.value = matrixResult || { statuses: [], transitions: [] };
     flowPermissions.value = permissionsResult || [];
     [selectedTransition.value] = flowMatrix.value.transitions;
+    designerDirty.value = false;
   };
 
   const selectFlow = async (flow: WorkflowDefinition) => {
@@ -1272,6 +1026,194 @@
     await enablePermissionControlFlow({ id: flow.id, enabled });
     Message.success(enabled ? '流程已启用' : '流程已禁用');
     await fetchFlows();
+  };
+
+  const openStatusModal = (status?: PermissionControlStatus) => {
+    statusForm.id = status?.id || '';
+    statusForm.code = status?.code || `BUG_STATUS_${Date.now()}`;
+    statusForm.name = status?.name || '';
+    statusForm.remark = status?.remark || '';
+    statusForm.initial = Boolean(status?.initial);
+    statusForm.terminal = Boolean(status?.terminal);
+    statusForm.enabled = status?.enabled !== false;
+    statusForm.pos = status?.pos ?? flowMatrix.value.statuses.length;
+    statusModalVisible.value = true;
+  };
+
+  const saveStatusDraft = () => {
+    if (!statusForm.name.trim() || !statusForm.code.trim()) {
+      Message.error('状态名称和稳定编码不能为空');
+      return false;
+    }
+    if (statusForm.initial) {
+      flowMatrix.value.statuses.forEach((item) => {
+        item.initial = false;
+      });
+    }
+    const existing = flowMatrix.value.statuses.find((item) => item.id === statusForm.id);
+    const value: PermissionControlStatus = {
+      ...statusForm,
+      id: statusForm.id || `draft-status-${Date.now()}`,
+      code: statusForm.code.trim(),
+      name: statusForm.name.trim(),
+    };
+    if (existing) Object.assign(existing, value);
+    else flowMatrix.value.statuses.push(value);
+    designerDirty.value = true;
+    statusModalVisible.value = false;
+    return true;
+  };
+
+  const deleteStatusDraft = () => {
+    if (!statusForm.id) return;
+    flowMatrix.value.statuses = flowMatrix.value.statuses.filter((item) => item.id !== statusForm.id);
+    const removedTransitionIds = flowMatrix.value.transitions
+      .filter((item) => item.fromId === statusForm.id || item.toId === statusForm.id)
+      .map((item) => item.id);
+    flowMatrix.value.transitions = flowMatrix.value.transitions.filter(
+      (item) => item.fromId !== statusForm.id && item.toId !== statusForm.id
+    );
+    flowPermissions.value = flowPermissions.value.filter((item) => !removedTransitionIds.includes(item.statusFlowId));
+    selectedTransition.value = undefined;
+    designerDirty.value = true;
+    statusModalVisible.value = false;
+  };
+
+  const findTransition = (fromId: string, toId: string) => {
+    return flowMatrix.value.transitions.find((transition) => transition.fromId === fromId && transition.toId === toId);
+  };
+
+  const addTransition = (fromId: string, toId: string) => {
+    if (!isDraftFlow.value || findTransition(fromId, toId)) return;
+    const transition: PermissionControlStatusFlow = {
+      id: `draft-transition-${Date.now()}`,
+      fromId,
+      toId,
+      enabled: true,
+    };
+    flowMatrix.value.transitions.push(transition);
+    selectedTransition.value = transition;
+    designerDirty.value = true;
+  };
+
+  const removeSelectedTransition = () => {
+    if (!selectedTransition.value) return;
+    const { id } = selectedTransition.value;
+    flowMatrix.value.transitions = flowMatrix.value.transitions.filter((item) => item.id !== id);
+    flowPermissions.value = flowPermissions.value.filter((item) => item.statusFlowId !== id);
+    selectedTransition.value = undefined;
+    designerDirty.value = true;
+  };
+
+  const saveDesigner = async () => {
+    if (!selectedFlow.value?.id) return;
+    flowMatrix.value = await savePermissionControlFlowDesigner(selectedFlow.value.id, flowMatrix.value);
+    designerDirty.value = false;
+    Message.success('流程草稿已保存');
+  };
+
+  const validateDesigner = async () => {
+    if (!selectedFlow.value?.id) return;
+    if (designerDirty.value) {
+      Message.warning('请先保存草稿再执行校验');
+      return;
+    }
+    const result = await validatePermissionControlFlow(selectedFlow.value.id);
+    if (result.valid) Message.success('流程完整性校验通过');
+    else Modal.error({ title: '流程校验未通过', content: result.errors.join('；') });
+  };
+
+  const publishDesigner = async () => {
+    if (!selectedFlow.value?.id || selectedFlow.value.version == null || designerDirty.value) return;
+    const published = await publishPermissionControlFlow(selectedFlow.value.id, selectedFlow.value.version);
+    Message.success('全局缺陷流程已发布，新建缺陷将绑定此版本');
+    await fetchFlows();
+    await selectFlow(published);
+  };
+
+  const copyDesigner = async () => {
+    if (!selectedFlow.value?.id) return;
+    const draft = await copyPermissionControlFlow(selectedFlow.value.id);
+    Message.success('已复制为新版本草稿');
+    await fetchFlows();
+    await selectFlow(draft);
+  };
+
+  const archiveDesigner = async () => {
+    if (!selectedFlow.value?.id) return;
+    Modal.warning({
+      title: '归档流程草稿',
+      content: `归档后“${selectedFlow.value.name}”将不可继续编辑，确认归档？`,
+      hideCancel: false,
+      onBeforeOk: async () => {
+        const archived = await archivePermissionControlFlow(selectedFlow.value!.id!);
+        Message.success('流程已归档');
+        await fetchFlows();
+        await selectFlow(archived);
+        return true;
+      },
+    });
+  };
+
+  const openMigrationPreview = async () => {
+    if (!selectedFlow.value?.id) return;
+    migrationLoading.value = true;
+    migrationVisible.value = true;
+    try {
+      migrationPreview.value = await previewPermissionControlFlowMigration(selectedFlow.value.id);
+      migrationMappings.value = { ...migrationPreview.value.suggestedMappings };
+      migrationBatch.value = undefined;
+    } finally {
+      migrationLoading.value = false;
+    }
+  };
+
+  const waitForMigration = async (batchId: string, deadline: number): Promise<void> => {
+    migrationBatch.value = await getPermissionControlFlowMigrationBatch(batchId);
+    if (['COMPLETED', 'FAILED', 'PARTIAL_SUCCESS'].includes(migrationBatch.value.status) || Date.now() >= deadline) {
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 1000);
+    });
+    await waitForMigration(batchId, deadline);
+  };
+
+  const executeMigration = async () => {
+    if (!migrationPreview.value || migrationUnresolved.value.length) return false;
+    migrationLoading.value = true;
+    try {
+      await migratePermissionControlFlow({
+        targetFlowId: migrationPreview.value.targetFlowId,
+        dryRun: true,
+        statusMappings: migrationMappings.value,
+      });
+      const result = await migratePermissionControlFlow({
+        targetFlowId: migrationPreview.value.targetFlowId,
+        dryRun: false,
+        statusMappings: migrationMappings.value,
+      });
+      const deadline = Date.now() + 5 * 60 * 1000;
+      await waitForMigration(result.batchId, deadline);
+      if (migrationBatch.value?.status === 'COMPLETED')
+        Message.success(`迁移完成：成功 ${migrationBatch.value.successCount} 条`);
+      else Message.warning('迁移未全部成功，可在当前窗口重试失败项或回滚');
+      return false;
+    } finally {
+      migrationLoading.value = false;
+    }
+  };
+
+  const resumeMigrationBatch = async () => {
+    if (!migrationBatch.value) return;
+    await resumePermissionControlFlowMigration(migrationBatch.value.id);
+    Message.success('已提交失败项重试，请稍后刷新批次状态');
+    migrationBatch.value = await getPermissionControlFlowMigrationBatch(migrationBatch.value.id);
+  };
+  const rollbackMigrationBatch = async () => {
+    if (!migrationBatch.value) return;
+    migrationBatch.value = await rollbackPermissionControlFlowMigration(migrationBatch.value.id);
+    Message.success('回滚已执行，请核对冲突数');
   };
 
   const confirmDeleteFlow = (flow: WorkflowDefinition) => {
@@ -1334,10 +1276,6 @@
         await fetchFlowConfig(selectedFlow.value!.id!);
       },
     });
-  };
-
-  const findTransition = (fromId: string, toId: string) => {
-    return flowMatrix.value.transitions.find((transition) => transition.fromId === fromId && transition.toId === toId);
   };
 
   const selectTransition = (fromId: string, toId: string) => {
@@ -1433,11 +1371,6 @@
   });
 
   onUnmounted(() => setUnknownPermissionReporter());
-
-  onBeforeRouteLeave(async () => {
-    if (!roleEditorVisible.value || roleEditorReadonly.value) return true;
-    return confirmDiscardRoleChanges();
-  });
 </script>
 
 <style scoped lang="less">

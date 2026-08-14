@@ -15,6 +15,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,8 @@ public class BugStatusService {
     private ProjectApplicationService projectApplicationService;
     @Resource
     private BaseStatusFlowSettingService baseStatusFlowSettingService;
+    @Resource
+    private JdbcTemplate jdbcTemplate;
 
     /**
      * 获取表头缺陷状态选项
@@ -94,6 +97,17 @@ public class BugStatusService {
     * @return 选项集合
     */
    public List<SelectOption> getToStatusItemOptionOnLocal(String projectId, String fromStatusId) {
+       String flowId = getPublishedGlobalFlowId();
+       if (StringUtils.isNotBlank(flowId)) {
+           if (StringUtils.isBlank(fromStatusId)) {
+               return jdbcTemplate.query("SELECT id, name FROM status_item WHERE flow_id = ? AND initial_status = b'1' "
+                               + "AND enabled = b'1' ORDER BY pos", (rs, rowNum) -> new SelectOption(rs.getString("name"), rs.getString("id")), flowId);
+           }
+           return jdbcTemplate.query("SELECT target.id, target.name FROM status_flow sf "
+                           + "JOIN status_item target ON target.id = sf.to_id AND target.flow_id = sf.flow_id "
+                           + "WHERE sf.flow_id = ? AND sf.from_id = ? AND sf.enabled = b'1' AND target.enabled = b'1' ORDER BY target.pos",
+                   (rs, rowNum) -> new SelectOption(rs.getString("name"), rs.getString("id")), flowId, fromStatusId);
+       }
        return baseStatusFlowSettingService.getStatusTransitions(projectId, TemplateScene.BUG.name(), fromStatusId);
    }
 
@@ -103,7 +117,19 @@ public class BugStatusService {
      * @return 状态流选项
      */
    public List<SelectOption> getAllLocalStatusOptions(String projectId) {
+       String flowId = getPublishedGlobalFlowId();
+       if (StringUtils.isNotBlank(flowId)) {
+           return jdbcTemplate.query("SELECT id, name FROM status_item WHERE flow_id = ? AND enabled = b'1' ORDER BY pos",
+                   (rs, rowNum) -> new SelectOption(rs.getString("name"), rs.getString("id")), flowId);
+       }
        return baseStatusFlowSettingService.getAllStatusOption(projectId, TemplateScene.BUG.name());
+   }
+
+   private String getPublishedGlobalFlowId() {
+       List<String> ids = jdbcTemplate.query("SELECT id FROM workflow_definition WHERE scene = 'BUG' AND scope_type = 'SYSTEM' "
+                       + "AND scope_id = 'system' AND lifecycle = 'PUBLISHED' AND default_flow = b'1' AND enabled = b'1' LIMIT 1",
+               (rs, rowNum) -> rs.getString(1));
+       return ids.isEmpty() ? null : ids.getFirst();
    }
 
     /**

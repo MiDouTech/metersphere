@@ -33,6 +33,7 @@ export const pathMap: PathMapItem[] = [
     locale: 'menu.testAsset',
     route: RouteEnum.TEST_ASSET,
     permission: [
+      'CASE_ASSET:READ',
       'FUNCTIONAL_CASE:READ',
       'FUNCTIONAL_CASE_AI:READ',
       'PROJECT_FILE_MANAGEMENT:READ',
@@ -52,24 +53,10 @@ export const pathMap: PathMapItem[] = [
         level: MENU_LEVEL[2],
       },
       {
-        key: 'TEST_ASSET_VERSIONS',
-        locale: 'menu.testAsset.versions',
-        route: RouteEnum.TEST_ASSET_VERSIONS,
-        permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
-        level: MENU_LEVEL[2],
-      },
-      {
-        key: 'TEST_ASSET_RELATIONS',
-        locale: 'menu.testAsset.relations',
-        route: RouteEnum.TEST_ASSET_RELATIONS,
-        permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
-        level: MENU_LEVEL[2],
-      },
-      {
         key: 'TEST_ASSET_CASES',
         locale: 'menu.testAsset.cases',
         route: RouteEnum.TEST_ASSET_CASES,
-        permission: ['FUNCTIONAL_CASE:READ'],
+        permission: ['CASE_ASSET:READ'],
         level: MENU_LEVEL[2],
       },
       {
@@ -84,6 +71,20 @@ export const pathMap: PathMapItem[] = [
         locale: 'menu.testAsset.environments',
         route: RouteEnum.TEST_ASSET_ENVIRONMENTS,
         permission: ['PROJECT_ENVIRONMENT:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_VERSIONS',
+        locale: 'menu.testAsset.versions',
+        route: RouteEnum.TEST_ASSET_VERSIONS,
+        permission: ['CASE_ASSET:READ', 'FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
+        key: 'TEST_ASSET_RELATIONS',
+        locale: 'menu.testAsset.relations',
+        route: RouteEnum.TEST_ASSET_RELATIONS,
+        permission: ['CASE_ASSET:READ', 'FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
         level: MENU_LEVEL[2],
       },
       {

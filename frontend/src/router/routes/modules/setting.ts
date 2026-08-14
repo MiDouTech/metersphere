@@ -75,6 +75,28 @@ const Setting: AppRouteRecordRaw = {
           },
         },
         {
+          path: 'permission-control/roles/new',
+          name: SettingRouteEnum.SETTING_SYSTEM_PERMISSION_CONTROL_ROLE_CREATE,
+          component: () => import('@/views/setting/system/permissionControl/role/editor.vue'),
+          meta: {
+            locale: 'menu.settings.system.permissionControl',
+            roles: ['SYSTEM_PERMISSION_CONTROL:READ+ADD'],
+            hideInMenu: true,
+            activeMenu: SettingRouteEnum.SETTING_SYSTEM_PERMISSION_CONTROL,
+          },
+        },
+        {
+          path: 'permission-control/roles/:roleId',
+          name: SettingRouteEnum.SETTING_SYSTEM_PERMISSION_CONTROL_ROLE_DETAIL,
+          component: () => import('@/views/setting/system/permissionControl/role/editor.vue'),
+          meta: {
+            locale: 'menu.settings.system.permissionControl',
+            roles: ['SYSTEM_PERMISSION_CONTROL:READ'],
+            hideInMenu: true,
+            activeMenu: SettingRouteEnum.SETTING_SYSTEM_PERMISSION_CONTROL,
+          },
+        },
+        {
           path: 'permission-control',
           name: SettingRouteEnum.SETTING_SYSTEM_PERMISSION_CONTROL,
           component: () => import('@/views/setting/system/permissionControl/index.vue'),
@@ -388,27 +410,6 @@ const Setting: AppRouteRecordRaw = {
                 locale: 'system.orgTemplate.createDefectTemplate',
                 editTag: 'id',
                 editLocale: 'system.orgTemplate.updateDefectTemplate',
-                query: ['type'],
-              },
-            ],
-          },
-        },
-        // 模板列表-模板管理-工作流
-        {
-          path: 'templateWorkFlow',
-          name: SettingRouteEnum.SETTING_ORGANIZATION_TEMPLATE_MANAGEMENT_WORKFLOW,
-          component: () => import('@/views/setting/organization/template/components/workFlowTableIndex.vue'),
-          meta: {
-            locale: 'menu.settings.organization.templateManagementWorkFlow',
-            roles: ['ORGANIZATION_TEMPLATE:READ'],
-            breadcrumbs: [
-              {
-                name: SettingRouteEnum.SETTING_ORGANIZATION_TEMPLATE,
-                locale: 'menu.settings.organization.template',
-              },
-              {
-                name: SettingRouteEnum.SETTING_ORGANIZATION_TEMPLATE_MANAGEMENT_WORKFLOW,
-                locale: 'menu.settings.organization.templateManagementWorkFlow',
                 query: ['type'],
               },
             ],

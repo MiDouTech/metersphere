@@ -244,6 +244,13 @@ public class PermissionConstants {
     public static final String FUNCTIONAL_CASE_WORKSPACE_ADD = "FUNCTIONAL_CASE_WORKSPACE:ADD";
     public static final String FUNCTIONAL_CASE_WORKSPACE_UPDATE = "FUNCTIONAL_CASE_WORKSPACE:UPDATE";
     public static final String FUNCTIONAL_CASE_SYSTEM_CLASSIFY = "FUNCTIONAL_CASE_SYSTEM:CLASSIFY";
+    /*------ start: CASE_ASSET (organization asset library, independent from project cases) ------*/
+    public static final String CASE_ASSET_READ = "CASE_ASSET:READ";
+    public static final String CASE_ASSET_ADD = "CASE_ASSET:READ+ADD";
+    public static final String CASE_ASSET_UPDATE = "CASE_ASSET:READ+UPDATE";
+    public static final String CASE_ASSET_DELETE = "CASE_ASSET:READ+DELETE";
+    public static final String CASE_ASSET_IMPORT = "CASE_ASSET:READ+IMPORT";
+    /*------ end: CASE_ASSET ------*/
     /*------ start: FUNCTIONAL_CASE_AI (独立 AI 生成用例权限) ------*/
     public static final String FUNCTIONAL_CASE_AI_READ = "FUNCTIONAL_CASE_AI:READ";
     public static final String FUNCTIONAL_CASE_AI_GENERATE = "FUNCTIONAL_CASE_AI:GENERATE";

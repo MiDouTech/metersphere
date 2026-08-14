@@ -19,6 +19,7 @@ import io.metersphere.plugin.platform.dto.request.*;
 import io.metersphere.plugin.platform.dto.response.PlatformBugDTO;
 import io.metersphere.plugin.platform.dto.response.PlatformBugUpdateDTO;
 import io.metersphere.plugin.platform.dto.response.PlatformCustomFieldItemDTO;
+import io.metersphere.plugin.platform.dto.response.PlatformStatusDTO;
 import io.metersphere.plugin.platform.enums.PlatformCustomFieldType;
 import io.metersphere.plugin.platform.enums.SyncAttachmentType;
 import io.metersphere.plugin.platform.spi.Platform;
@@ -52,6 +53,7 @@ import io.metersphere.system.log.service.OperationLogService;
 import io.metersphere.system.mapper.BaseUserMapper;
 import io.metersphere.system.mapper.TemplateMapper;
 import io.metersphere.system.service.*;
+import io.metersphere.system.controller.handler.result.MsHttpResultCode;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.uid.NumGenerator;
 import io.metersphere.system.utils.ServiceUtils;
@@ -165,7 +167,7 @@ public class BugService {
     @Resource
     private BugStatusService bugStatusService;
     @Resource
-    private PermissionControlService permissionControlService;
+    private BugWorkflowRuntimeService bugWorkflowRuntimeService;
     @Resource
     private BugAttachmentService bugAttachmentService;
     @Resource
@@ -205,6 +207,12 @@ public class BugService {
      * @return 缺陷
      */
     public Bug addOrUpdate(BugEditRequest request, List<MultipartFile> files, String currentUser, String currentOrgId, boolean isUpdate) {
+        return addOrUpdate(request, files, currentUser, currentOrgId, isUpdate, false);
+    }
+
+    private Bug addOrUpdate(BugEditRequest request, List<MultipartFile> files, String currentUser, String currentOrgId,
+                            boolean isUpdate, boolean workflowTransition) {
+        assertStatusMutationUsesWorkflow(request, isUpdate, workflowTransition);
         request.setTags(ServiceUtils.parseTags(request.getTags()));
         /*
          *  缺陷创建或者修改逻辑:
@@ -239,7 +247,7 @@ public class BugService {
             }
         }
         // 处理基础字段
-        Bug bug = handleAndSaveBugAndNotice(request, currentUser, platformName, platformBug);
+        Bug bug = handleAndSaveBugAndNotice(request, currentUser, platformName, platformBug, workflowTransition);
         // 处理自定义字段
         handleAndSaveCustomFields(request, isUpdate, platformBug);
         // 处理附件
@@ -250,6 +258,52 @@ public class BugService {
         handleAndSaveCaseRelation(request, isUpdate, bug, currentUser);
 
         return bug;
+    }
+
+    /**
+     * Reject a generic status update before invoking a third-party connector. This prevents a remote status from
+     * being changed first and the local transaction being rejected afterwards.
+     */
+    private void assertStatusMutationUsesWorkflow(BugEditRequest request, boolean isUpdate, boolean workflowTransition) {
+        if (!isUpdate || workflowTransition || StringUtils.isBlank(request.getId()) || request.getCustomFields() == null) {
+            return;
+        }
+        Bug current = bugMapper.selectByPrimaryKey(request.getId());
+        if (current == null || BooleanUtils.isTrue(current.getDeleted())) {
+            throw new MSException(MsHttpResultCode.NOT_FOUND, "缺陷不存在");
+        }
+        request.getCustomFields().stream()
+                .filter(field -> StringUtils.equals(field.getId(), BugTemplateCustomField.STATUS.getId()))
+                .map(BugCustomFieldDTO::getValue)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .filter(value -> !StringUtils.equals(value, current.getStatus()))
+                .ifPresent(value -> {
+                    throw new MSException(MsHttpResultCode.CONFLICT, "缺陷状态必须通过专用流程流转接口修改");
+                });
+    }
+
+    public Bug transitionThirdPartyStatus(Bug bug, String targetStatusId, String currentUser, String currentOrgId) {
+        BugDetailDTO detail = get(bug.getId(), currentUser, "zh_CN");
+        BugEditRequest request = new BugEditRequest();
+        request.setId(bug.getId());
+        request.setProjectId(bug.getProjectId());
+        request.setTemplateId(detail.getTemplateId());
+        request.setTitle(detail.getTitle());
+        request.setDescription(StringUtils.defaultString(detail.getDescription()));
+        request.setTags(detail.getTags());
+        List<BugCustomFieldDTO> fields = new ArrayList<>(ListUtils.emptyIfNull(detail.getCustomFields()));
+        BugCustomFieldDTO status = fields.stream()
+                .filter(field -> StringUtils.equals(field.getId(), BugTemplateCustomField.STATUS.getId()))
+                .findFirst().orElseGet(() -> {
+                    BugCustomFieldDTO item = new BugCustomFieldDTO();
+                    item.setId(BugTemplateCustomField.STATUS.getId());
+                    fields.add(item);
+                    return item;
+                });
+        status.setValue(targetStatusId);
+        request.setCustomFields(fields);
+        return addOrUpdate(request, List.of(), currentUser, currentOrgId, true, true);
     }
 
     /**
@@ -714,6 +768,10 @@ public class BugService {
                 Bug bug = new Bug();
                 BeanUtils.copyBean(bug, updateBug);
                 batchBugMapper.updateByPrimaryKeySelective(bug);
+                Bug original = subBugs.stream()
+                        .filter(item -> StringUtils.equals(item.getId(), updateBug.getId())).findFirst().orElse(null);
+                bugWorkflowRuntimeService.recordTrustedThirdPartySync(original, bug,
+                        original == null ? "system" : StringUtils.defaultIfBlank(original.getUpdateUser(), "system"));
                 BugContent bugContent = new BugContent();
                 bugContent.setBugId(updateBug.getId());
                 bugContent.setDescription(updateBug.getDescription());
@@ -1034,7 +1092,8 @@ public class BugService {
      * @param currentUser  当前用户ID
      * @param platformName 第三方平台名称
      */
-    private Bug handleAndSaveBugAndNotice(BugEditRequest request, String currentUser, String platformName, PlatformBugUpdateDTO platformBug) {
+    private Bug handleAndSaveBugAndNotice(BugEditRequest request, String currentUser, String platformName,
+                                          PlatformBugUpdateDTO platformBug, boolean workflowTransition) {
         Bug bug = new Bug();
         BeanUtils.copyBean(bug, request);
         bug.setPlatform(platformName);
@@ -1103,6 +1162,7 @@ public class BugService {
             bug.setUpdateTime(System.currentTimeMillis());
             bug.setDeleted(false);
             bug.setPos(getNextPos(request.getProjectId()));
+            bugWorkflowRuntimeService.bindPublishedWorkflow(bug);
             bugMapper.insert(bug);
             request.setId(bug.getId());
             BugContent bugContent = new BugContent();
@@ -1130,10 +1190,7 @@ public class BugService {
                 handleTimeToSet = System.currentTimeMillis();
             }
             if (!StringUtils.equals(originalBug.getStatus(), bug.getStatus())) {
-                if (StringUtils.equalsIgnoreCase(BugPlatform.LOCAL.getName(), platformName)) {
-                    permissionControlService.assertBugTransitionOperable(request.getProjectId(),
-                            originalBug.getStatus(), bug.getStatus(), originalBug.getCreateUser(), originalBug.getHandleUser());
-                }
+                if (!workflowTransition) throw new MSException("缺陷状态必须通过专用流程流转接口修改");
                 if (isEndStatus(request.getProjectId(), bug.getStatus())) {
                     closeTimeToSet = System.currentTimeMillis();
                 } else {
@@ -1573,6 +1630,17 @@ public class BugService {
         // TITLE, DESCRIPTION 传到平台插件处理
         platformRequest.setTitle(request.getTitle());
         platformRequest.setDescription(request.getDescription());
+        if (CollectionUtils.isNotEmpty(request.getCustomFields())) {
+            request.getCustomFields().stream()
+                    .filter(field -> StringUtils.equals(field.getId(), BugTemplateCustomField.STATUS.getId()))
+                    .filter(field -> StringUtils.isNotBlank(field.getValue()))
+                    .findFirst().ifPresent(field -> {
+                        PlatformStatusDTO transition = new PlatformStatusDTO();
+                        transition.setId(field.getValue());
+                        transition.setName(StringUtils.defaultIfBlank(field.getText(), field.getValue()));
+                        platformRequest.setTransitions(transition);
+                    });
+        }
         if (CollectionUtils.isNotEmpty(request.getRichTextTmpFileIds())) {
             request.getRichTextTmpFileIds().forEach(tmpFileId -> {
                 // 目前只支持富文本图片临时文件的下载, 并同步至第三方平台 (后续支持富文本其他类型文件)
@@ -2183,6 +2251,9 @@ public class BugService {
             }
             Bug bug = new Bug();
             BeanUtils.copyBean(bug, platformBug);
+            if (originalBug == null) {
+                bugWorkflowRuntimeService.bindPublishedWorkflow(bug);
+            }
             // 如果缺陷需要同步第三方的富文本文件
             List<BugLocalAttachment> richTextAttachments = syncRichTextPicToMs(platformBug, saveModel.getPlatform());
             BugContent bugContent = new BugContent();
@@ -2229,6 +2300,8 @@ public class BugService {
                 batchBugMapper.updateByPrimaryKeySelective(bug);
                 batchBugContentMapper.updateByPrimaryKeyWithBLOBs(bugContent);
                 handleAndSaveCustomFields(customEditRequest, true, null);
+                bugWorkflowRuntimeService.recordTrustedThirdPartySync(originalBug, bug,
+                        StringUtils.defaultIfBlank(originalBug.getUpdateUser(), "system"));
             }
             if (CollectionUtils.isNotEmpty(richTextAttachments)) {
                 extBugLocalAttachmentMapper.batchInsert(richTextAttachments);

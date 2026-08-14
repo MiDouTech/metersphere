@@ -17,11 +17,11 @@
   const router = useRouter();
   const tabs = computed(() => [
     ...(hasAnyPermission(['FUNCTIONAL_CASE_AI:READ']) ? [{ key: 'documents', title: '业务文档' }] : []),
-    { key: 'versions', title: '资产版本' },
-    { key: 'relations', title: '关联追溯' },
-    ...(hasAnyPermission(['FUNCTIONAL_CASE:READ']) ? [{ key: 'cases', title: '用例资产' }] : []),
+    ...(hasAnyPermission(['CASE_ASSET:READ']) ? [{ key: 'cases', title: '用例资产' }] : []),
     ...(hasAnyPermission(['PROJECT_FILE_MANAGEMENT:READ']) ? [{ key: 'datasets', title: '测试数据' }] : []),
     ...(hasAnyPermission(['PROJECT_ENVIRONMENT:READ']) ? [{ key: 'environments', title: '测试环境' }] : []),
+    { key: 'versions', title: '资产版本' },
+    { key: 'relations', title: '关联追溯' },
     ...(hasAnyPermission(['PROJECT_API_SCENARIO:READ']) ? [{ key: 'common-steps', title: '公共步骤' }] : []),
     ...(hasAnyPermission(['PROJECT_API_DEFINITION:READ']) ? [{ key: 'apis', title: '接口资产' }] : []),
     ...(hasAnyPermission(['AI_EXECUTION:READ']) ? [{ key: 'evidence', title: '执行证据' }] : []),

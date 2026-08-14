@@ -224,14 +224,36 @@
             ><a-input v-model="triggerForm.targetUrl" placeholder="https://test.example.com"
           /></a-form-item>
         </div>
-        <a-form-item label="用例 ID" required extra="多个 ID 用逗号或换行分隔；触发时会再次按项目权限和快照规则校验。"
-          ><a-textarea v-model="triggerForm.caseIds" :auto-size="{ minRows: 3, maxRows: 6 }"
-        /></a-form-item>
+        <a-form-item
+          label="用例 ID"
+          required
+          extra="规则最终只保存当前项目用例 ID；选中资产后会在保存规则前先导入当前项目。"
+        >
+          <div class="w-full">
+            <a-textarea v-model="triggerForm.caseIds" :auto-size="{ minRows: 3, maxRows: 6 }" />
+            <div class="mt-2 flex items-center gap-2"
+              ><a-button size="small" @click="assetSelectorVisible = true">从用例资产导入</a-button
+              ><span v-if="pendingAssetIds.length" class="text-xs text-[var(--color-text-3)]"
+                >待导入 {{ pendingAssetIds.length }} 条</span
+              ></div
+            >
+          </div>
+        </a-form-item>
         <a-form-item label="任务目标"
           ><a-textarea v-model="triggerForm.objective" :auto-size="{ minRows: 2, maxRows: 4 }"
         /></a-form-item>
         <a-form-item label="启用"><a-switch v-model="triggerForm.enabled" /></a-form-item>
       </a-form>
+    </a-modal>
+
+    <a-modal v-model:visible="assetSelectorVisible" title="从用例资产选择" :width="980" @ok="confirmAssetSelection">
+      <CaseAssetSelector
+        :selected-ids="draftAssetIds"
+        :target-project-id="appStore.currentProjectId"
+        scene="SCHEDULE_RULE"
+        @change="onAssetSelectionChange"
+      />
+      <a-alert class="mt-3">此处显示的是待导入资产，不会把资产 ID 当作项目用例 ID 保存。</a-alert>
     </a-modal>
 
     <a-modal v-model:visible="secretVisible" title="Webhook 密钥（仅展示一次）" :footer="false" :mask-closable="false">
@@ -260,6 +282,7 @@
   import { Message } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
+  import CaseAssetSelector from '@/components/business/case-asset-selector/index.vue';
   import AgentPage from './components/AgentPage.vue';
 
   import type {
@@ -281,6 +304,11 @@
     searchAiExecutionTasks,
     updateAiTaskTrigger,
   } from '@/api/modules/ai-execution';
+  import {
+    getCaseAssetImportResult,
+    getDefaultHubJob,
+    importCasesFromAssets,
+  } from '@/api/modules/case-management/featureCase';
   import { useAppStore } from '@/store';
 
   const appStore = useAppStore();
@@ -317,6 +345,10 @@
   const triggerLoading = ref(false);
   const triggerSaving = ref(false);
   const triggerVisible = ref(false);
+  const assetSelectorVisible = ref(false);
+  const draftAssetIds = ref<string[]>([]);
+  const pendingAssetIds = ref<string[]>([]);
+  const assetImportIdempotencyKey = ref(crypto.randomUUID());
   const secretVisible = ref(false);
   const oneTimeSecret = ref('');
   const triggers = ref<AiTaskTrigger[]>([]);
@@ -449,6 +481,62 @@
       targetUrl: '',
       caseIds: '',
     });
+    draftAssetIds.value = [];
+    pendingAssetIds.value = [];
+  }
+  function onAssetSelectionChange(ids: string[]) {
+    draftAssetIds.value = ids;
+  }
+  function confirmAssetSelection() {
+    pendingAssetIds.value = [...draftAssetIds.value];
+    assetImportIdempotencyKey.value = crypto.randomUUID();
+    return true;
+  }
+
+  async function importPendingAssets() {
+    if (!pendingAssetIds.value.length) return;
+    const job = await importCasesFromAssets({
+      targetProjectId: appStore.currentProjectId,
+      selectMode: 'CASE_IDS',
+      ids: pendingAssetIds.value,
+      conflictStrategy: 'SKIP',
+      copyAttachments: true,
+      idempotencyKey: assetImportIdempotencyKey.value,
+    });
+    await new Promise<void>((resolve, reject) => {
+      const deadline = Date.now() + 5 * 60 * 1000;
+      const timer = setInterval(async () => {
+        try {
+          const status = await getDefaultHubJob(job.jobId);
+          if (status.status === 'SUCCESS' || status.status === 'PARTIAL_SUCCESS') {
+            clearInterval(timer);
+            resolve();
+          } else if (status.status === 'FAILED') {
+            clearInterval(timer);
+            reject(new Error(status.errorMessage || '资产用例导入失败'));
+          } else if (Date.now() >= deadline) {
+            clearInterval(timer);
+            reject(new Error('资产用例导入超时，任务仍可能在后台执行，请稍后重试'));
+          }
+        } catch (error) {
+          clearInterval(timer);
+          reject(error);
+        }
+      }, 800);
+    });
+    const result = await getCaseAssetImportResult(job.jobId);
+    const targetIds = result.filter((item) => item.targetCaseId).map((item) => item.targetCaseId as string);
+    const failedIds = result.filter((item) => item.status === 'FAILED').map((item) => item.sourceCaseId);
+    triggerForm.caseIds = [...new Set([...parseCaseIds(triggerForm.caseIds), ...targetIds])].join('\n');
+    pendingAssetIds.value = failedIds;
+    draftAssetIds.value = failedIds;
+    if (failedIds.length) {
+      assetImportIdempotencyKey.value = crypto.randomUUID();
+      throw new Error(`有 ${failedIds.length} 条资产导入失败，成功项已保留；请重试失败项后再保存规则`);
+    }
+    pendingAssetIds.value = [];
+    draftAssetIds.value = [];
+    Message.success(`已导入 ${targetIds.length} 条项目用例，继续保存调度规则`);
   }
   function openTrigger(record?: AiTaskTrigger) {
     resetTriggerForm();
@@ -481,6 +569,17 @@
     triggerVisible.value = true;
   }
   async function saveTrigger(done: (closed: boolean) => void) {
+    if (pendingAssetIds.value.length) {
+      try {
+        triggerSaving.value = true;
+        await importPendingAssets();
+      } catch (error: any) {
+        Message.error(error?.message || '资产用例导入失败，未保存调度规则');
+        triggerSaving.value = false;
+        done(false);
+        return;
+      }
+    }
     const caseIds = parseCaseIds(triggerForm.caseIds);
     if (!triggerForm.name.trim() || !triggerForm.taskName.trim() || caseIds.length === 0) {
       Message.warning('请填写规则名称、任务名称和至少一个用例 ID');

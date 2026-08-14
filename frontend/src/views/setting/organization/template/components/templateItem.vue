@@ -21,20 +21,6 @@
               <span @click="templateManagement">{{ t('system.orgTemplate.TemplateManagementList') }}</span>
               <a-divider v-if="isShow" direction="vertical" />
             </span>
-            <!-- 工作流 -->
-            <span v-if="props.cardItem.key === 'BUG'" class="operation hover:text-[rgb(var(--primary-5))]">
-              <span @click="workflowSetup">{{ t('system.orgTemplate.workflowSetup') }}</span>
-              <a-divider
-                v-if="
-                  hasEnablePermission &&
-                  props.mode === 'organization' &&
-                  !isEnableProject &&
-                  props.cardItem.key === 'BUG'
-                "
-                v-permission="['ORGANIZATION_TEMPLATE:READ+ENABLE']"
-                direction="vertical"
-              />
-            </span>
             <!-- 启用项目模板 只有组织可以启用 -->
             <span
               v-if="hasEnablePermission && props.mode === 'organization' && !isEnableProject"
@@ -125,7 +111,6 @@
   const emit = defineEmits<{
     (e: 'fieldSetting', key: string): void;
     (e: 'templateManagement', key: string): void;
-    (e: 'workflowSetup', key: string): void;
     (e: 'updateState'): void;
   }>();
 
@@ -194,10 +179,6 @@
 
   const templateManagement = () => {
     emit('templateManagement', props.cardItem.key);
-  };
-
-  const workflowSetup = () => {
-    emit('workflowSetup', props.cardItem.key);
   };
 
   const templateCardInfo = ref<Record<string, any>>({});

@@ -13,6 +13,9 @@ import io.metersphere.bug.service.BugLogService;
 import io.metersphere.bug.service.BugNoticeService;
 import io.metersphere.bug.service.BugService;
 import io.metersphere.bug.service.BugSyncService;
+import io.metersphere.bug.service.BugWorkflowRuntimeService;
+import io.metersphere.bug.service.BugWorkflowBatchService;
+import io.metersphere.bug.dto.response.BugTransitionDTO;
 import io.metersphere.project.dto.ProjectTemplateOptionDTO;
 import io.metersphere.project.service.ProjectApplicationService;
 import io.metersphere.project.service.ProjectTemplateService;
@@ -45,6 +48,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
 
 /**
  * @author song-cc-rock
@@ -62,6 +66,48 @@ public class BugController {
     private ProjectTemplateService projectTemplateService;
     @Resource
     private ProjectApplicationService projectApplicationService;
+    @Resource
+    private BugWorkflowRuntimeService bugWorkflowRuntimeService;
+    @Resource
+    private BugWorkflowBatchService bugWorkflowBatchService;
+
+    @GetMapping("/{bugId}/transitions")
+    @Operation(summary = "缺陷管理-查询当前用户可执行流转")
+    @RequiresPermissions(PermissionConstants.PROJECT_BUG_READ)
+    public BugTransitionDTO transitions(@PathVariable String bugId) {
+        return bugWorkflowRuntimeService.getTransitions(bugId);
+    }
+
+    @PostMapping("/transitions/batch")
+    @Operation(summary = "缺陷管理-批量查询当前用户可执行流转")
+    @RequiresPermissions(PermissionConstants.PROJECT_BUG_READ)
+    public Map<String, BugTransitionDTO> transitions(@Validated @RequestBody BugTransitionBatchRequest request) {
+        return bugWorkflowRuntimeService.getTransitions(request.getBugIds());
+    }
+
+    @PostMapping("/transitions/execute-batch")
+    @Operation(summary = "缺陷管理-逐条校验并批量执行状态流转")
+    @RequiresPermissions(PermissionConstants.PROJECT_BUG_UPDATE)
+    public Map<String, Object> executeTransitions(@Validated @RequestBody BugTransitionBatchExecuteRequest request) {
+        return bugWorkflowBatchService.execute(request);
+    }
+
+    @PostMapping("/{bugId}/transition")
+    @Operation(summary = "缺陷管理-执行状态流转")
+    @RequiresPermissions(PermissionConstants.PROJECT_BUG_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.transitionLog(#bugId, #request)", msClass = BugLogService.class)
+    @SendNotice(taskType = NoticeConstants.TaskType.BUG_TASK, event = NoticeConstants.Event.UPDATE,
+            target = "#targetClass.getNoticeById(#bugId)", targetClass = BugNoticeService.class)
+    public BugTransitionDTO transition(@PathVariable String bugId, @Validated @RequestBody BugTransitionRequest request) {
+        return bugWorkflowRuntimeService.transition(bugId, request);
+    }
+
+    @GetMapping("/{bugId}/transition-history")
+    @Operation(summary = "缺陷管理-查询状态流转历史")
+    @RequiresPermissions(PermissionConstants.PROJECT_BUG_READ)
+    public List<Map<String, Object>> transitionHistory(@PathVariable String bugId) {
+        return bugWorkflowRuntimeService.history(bugId);
+    }
 
     @GetMapping("/current-platform/{projectId}")
     @Operation(summary = "缺陷管理-列表-获取当前项目所属平台")

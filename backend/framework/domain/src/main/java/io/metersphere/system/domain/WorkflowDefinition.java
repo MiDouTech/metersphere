@@ -17,6 +17,11 @@ public class WorkflowDefinition implements Serializable {
     private Boolean defaultFlow;
     private Boolean enabled;
     private String description;
+    private Integer version;
+    private String lifecycle;
+    private Long publishedTime;
+    private String publishedBy;
+    private String sourceFlowId;
     private Long createTime;
     private Long updateTime;
 

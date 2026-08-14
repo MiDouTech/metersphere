@@ -8,12 +8,21 @@
       >
         <!-- 自定义字段开始 -->
         <div class="inline-block w-full break-words">
+          <div class="baseItem">
+            <span class="label">{{ t('bugManagement.status') }}</span>
+            <BugStatusTransitionSelect
+              :bug-id="detailInfo.id"
+              :status="detailInfo.status"
+              :status-name="detailInfo.statusName"
+              @success="handleTransitionSuccess"
+            />
+          </div>
           <MsFormCreate
-            v-if="props.formRule.length"
+            v-if="filteredFormRule.length"
             ref="formCreateRef"
             v-model:form-item="innerFormItem"
             v-model:api="fApi"
-            v-model:form-rule="innerFormRules"
+            :form-rule="filteredFormRule"
             class="w-full"
             :option="options"
             :disabled="!hasAnyPermission(['PROJECT_BUG:READ+UPDATE']) || props.currentPlatform !== detailInfo.platform"
@@ -82,6 +91,7 @@
   import MsFormCreate from '@/components/pure/ms-form-create/ms-form-create.vue';
   import type { FormItem, FormRuleItem } from '@/components/pure/ms-form-create/types';
   import MsTagsInput from '@/components/pure/ms-tags-input/index.vue';
+  import BugStatusTransitionSelect from './BugStatusTransitionSelect.vue';
 
   import { createOrUpdateBug } from '@/api/modules/bug-management';
   import { useI18n } from '@/hooks/useI18n';
@@ -121,6 +131,7 @@
   const innerFormRules = defineModel<FormItem[]>('formRule', { default: [] });
   const innerFormItem = defineModel<FormRuleItem[]>('formItem', { default: [] });
   const innerTags = defineModel<string[]>('tags', { default: [] });
+  const filteredFormRule = computed(() => innerFormRules.value.filter((item) => item.name !== 'status'));
   // 表单配置项
   const options = {
     resetBtn: false, // 不展示默认配置的重置和提交
@@ -154,7 +165,15 @@
   }
 
   async function makeParams() {
-    const customFields = await makeCustomFieldsParams(innerFormItem.value, props.currentCustomFields);
+    const customFields = (await makeCustomFieldsParams(innerFormItem.value, props.currentCustomFields)).filter(
+      (item) => item.id !== 'status'
+    );
+    customFields.push({
+      id: 'status',
+      name: 'status',
+      type: 'SELECT',
+      value: detailInfo.value.status,
+    });
     if (props.isPlatformDefaultTemplate) {
       // 平台系统默认字段插入自定义集合
       props.platformSystemFields.forEach((item) => {
@@ -182,6 +201,12 @@
       params.title = detailInfo.value.title;
     }
     return params;
+  }
+
+  function handleTransitionSuccess(runtime: { currentStatus: { id: string; name: string } }) {
+    detailInfo.value.status = runtime.currentStatus.id;
+    detailInfo.value.statusName = runtime.currentStatus.name;
+    emit('updateSuccess');
   }
 
   function saveHandler() {

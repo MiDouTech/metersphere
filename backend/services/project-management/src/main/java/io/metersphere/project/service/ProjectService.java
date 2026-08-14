@@ -40,6 +40,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,6 +77,8 @@ public class ProjectService {
     public static final Long ORDER_STEP = 5000L;
     @Resource
     private BaseTaskHubService baseTaskHubService;
+    @Resource
+    private JdbcTemplate jdbcTemplate;
 
 
     public List<Project> getUserProject(String organizationId, String userId) {
@@ -171,6 +174,12 @@ public class ProjectService {
     }
 
     public ProjectDTO update(ProjectRequest updateProjectDto, String updateUser) {
+        Project existingProject = checkProjectNotExist(updateProjectDto.getId());
+        boolean renamed = !StringUtils.equals(existingProject.getName(), updateProjectDto.getName());
+        Map<String, Object> relatedCatalog = renamed ? getRelatedCaseAssetCatalog(updateProjectDto.getId()) : null;
+        if (relatedCatalog != null && !Boolean.TRUE.equals(updateProjectDto.getConfirmAssetCatalogRename())) {
+            throw new MSException("该项目已关联测试资产：" + relatedCatalog.get("name") + "，是否确认改名");
+        }
         Project project = new Project();
         ProjectDTO projectDTO = new ProjectDTO();
         project.setId(updateProjectDto.getId());
@@ -188,7 +197,29 @@ public class ProjectService {
         BeanUtils.copyBean(projectDTO, project);
 
         projectMapper.updateByPrimaryKeySelective(project);
+        if (relatedCatalog != null) synchronizeCatalogNameAfterProjectRename(relatedCatalog, project, updateUser);
         return projectDTO;
+    }
+
+    public Map<String, Object> getRelatedCaseAssetCatalog(String projectId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT c.id, c.name, c.manually_renamed manuallyRenamed, "
+                + "c.hub_module_id hubModuleId, (SELECT COUNT(*) FROM case_asset_catalog_project_rel x WHERE x.catalog_id=c.id) relatedProjectCount "
+                + "FROM case_asset_catalog_project_rel r JOIN case_asset_catalog c ON c.id=r.catalog_id AND c.deleted=b'0' "
+                + "WHERE r.project_id=? LIMIT 1", projectId);
+        return rows.isEmpty() ? null : rows.getFirst();
+    }
+
+    private void synchronizeCatalogNameAfterProjectRename(Map<String, Object> catalog, Project project, String operator) {
+        Number count = (Number) catalog.get("relatedProjectCount");
+        boolean manuallyRenamed = Boolean.TRUE.equals(catalog.get("manuallyRenamed"))
+                || (catalog.get("manuallyRenamed") instanceof Number value && value.intValue() == 1);
+        if (count == null || count.intValue() != 1 || manuallyRenamed) return;
+        String normalized = project.getName().trim().replaceAll("\\s+", " ").toLowerCase(java.util.Locale.ROOT);
+        long now = System.currentTimeMillis();
+        jdbcTemplate.update("UPDATE case_asset_catalog SET name=?, normalized_name=?, update_user=?, update_time=? WHERE id=?",
+                project.getName().trim(), normalized, operator, now, catalog.get("id"));
+        jdbcTemplate.update("UPDATE functional_case_module SET name=?, update_user=?, update_time=? WHERE id=?",
+                project.getName().trim(), operator, now, catalog.get("hubModuleId"));
     }
 
     private void checkProjectExistByName(Project project) {

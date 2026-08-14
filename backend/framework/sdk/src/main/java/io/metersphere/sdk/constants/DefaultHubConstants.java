@@ -36,6 +36,7 @@ public final class DefaultHubConstants {
     public static final String JOB_STATUS_PENDING = "PENDING";
     public static final String JOB_STATUS_RUNNING = "RUNNING";
     public static final String JOB_STATUS_SUCCESS = "SUCCESS";
+    public static final String JOB_STATUS_PARTIAL_SUCCESS = "PARTIAL_SUCCESS";
     public static final String JOB_STATUS_FAILED = "FAILED";
 
     /** 每日 0 点对账 Cron（Asia/Shanghai 由 JVM 时区配置） */

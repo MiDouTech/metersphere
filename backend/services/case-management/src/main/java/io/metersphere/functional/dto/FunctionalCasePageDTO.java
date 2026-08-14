@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author wx
@@ -41,5 +42,11 @@ public class FunctionalCasePageDTO extends FunctionalCase {
 
     @Schema(description = "当前用户个人执行进度")
     private FunctionalCasePersonalProgressDTO personalProgress;
+
+    @Schema(description = "已引用项目数（只统计已进入测试计划的项目副本）")
+    private Integer referencedProjectCount;
+
+    @Schema(description = "已引用项目摘要")
+    private List<Map<String, Object>> referencedProjects;
 
 }
