@@ -30,6 +30,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -265,5 +266,19 @@ class PermissionControlServiceTests {
         }
 
         verify(extUserRoleRelationMapper, never()).selectRoleMembers(any(), any(), any());
+    }
+
+    @Test
+    void positionRuleMatchesWecomPositionByCaseInsensitiveKeyword() {
+        assertTrue(PermissionControlService.matchesPositionRule("高级QA工程师", "测试|质量|QA"));
+        assertTrue(PermissionControlService.matchesPositionRule("Product Manager", "产品|product"));
+        assertFalse(PermissionControlService.matchesPositionRule("研发工程师", "测试|质量|QA"));
+    }
+
+    @Test
+    void wildcardPositionRuleRequiresANonBlankSyncedPosition() {
+        assertTrue(PermissionControlService.matchesPositionRule("其他职位", "*"));
+        assertFalse(PermissionControlService.matchesPositionRule("", "*"));
+        assertFalse(PermissionControlService.matchesPositionRule(null, "*"));
     }
 }

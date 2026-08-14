@@ -206,6 +206,20 @@
         ]
       },
       {
+        "id": "SYSTEM_WECOM_BOT",
+        "name": "permission.system_wecom_bot.name",
+        "permissions": [
+          { "id": "SYSTEM_CONFIG_WECOM_BOT:READ", "name": "permission.system_wecom_bot.read" },
+          { "id": "SYSTEM_CONFIG_WECOM_BOT:UPDATE", "name": "permission.system_wecom_bot.update" },
+          { "id": "SYSTEM_NOTIFICATION_RULE:READ", "name": "permission.system_wecom_rule.read" },
+          { "id": "SYSTEM_NOTIFICATION_RULE:CREATE", "name": "permission.system_wecom_rule.create" },
+          { "id": "SYSTEM_NOTIFICATION_RULE:UPDATE", "name": "permission.system_wecom_rule.update" },
+          { "id": "SYSTEM_NOTIFICATION_RULE:DELETE", "name": "permission.system_wecom_rule.delete" },
+          { "id": "SYSTEM_NOTIFICATION_LOG:READ", "name": "permission.system_wecom_log.read" },
+          { "id": "SYSTEM_NOTIFICATION_LOG:RETRY", "name": "permission.system_wecom_log.retry" }
+        ]
+      },
+      {
         "id": "SYSTEM_AUTHORIZATION_MANAGEMENT",
         "name": "permission.system_auth",
         "permissions": [

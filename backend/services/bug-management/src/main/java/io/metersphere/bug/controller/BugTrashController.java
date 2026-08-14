@@ -42,7 +42,7 @@ public class BugTrashController {
         return PageUtils.setPageInfo(page, bugService.list(request));
     }
 
-    @GetMapping("/recover/{id}")
+    @PostMapping("/recover/{id}")
     @Operation(summary = "缺陷管理-回收站-恢复")
     @RequiresPermissions(PermissionConstants.PROJECT_BUG_DELETE)
     @Log(type = OperationLogType.RECOVER, expression = "#msClass.recoverLog(#id)", msClass = BugLogService.class)
@@ -50,7 +50,7 @@ public class BugTrashController {
         bugService.recover(id);
     }
 
-    @GetMapping("/delete/{id}")
+    @DeleteMapping("/delete/{id}")
     @Operation(summary = "缺陷管理-回收站-彻底删除")
     @RequiresPermissions(PermissionConstants.PROJECT_BUG_DELETE)
     @Log(type = OperationLogType.DELETE, expression = "#msClass.deleteTrashLog(#id)", msClass = BugLogService.class)

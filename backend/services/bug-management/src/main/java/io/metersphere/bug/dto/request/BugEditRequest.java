@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -52,7 +53,11 @@ public class BugEditRequest implements Serializable {
     private boolean expectedResolveTimePresent;
 
     @Schema(description = "自定义字段集合")
-    private List<BugCustomFieldDTO> customFields;
+    private List<BugCustomFieldDTO> customFields = new ArrayList<>();
+
+    public void setCustomFields(List<BugCustomFieldDTO> customFields) {
+        this.customFields = customFields == null ? new ArrayList<>() : customFields;
+    }
 
     @Schema(description = "删除的本地附件集合, {文件ID")
     private List<String> deleteLocalFileIds;

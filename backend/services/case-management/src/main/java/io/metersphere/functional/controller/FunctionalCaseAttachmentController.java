@@ -150,7 +150,7 @@ public class FunctionalCaseAttachmentController {
             fileId = fileAssociationService.transferAndAssociation(fileAssociationDTO);
             functionalCaseAttachmentService.deleteCaseAttachment(Arrays.asList(request.getFileId()), request.getCaseId(), request.getProjectId());
         } catch (MSException e) {
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         } catch (Exception e) {
             throw new MSException(Translator.get("file.transfer.failed"));
         }

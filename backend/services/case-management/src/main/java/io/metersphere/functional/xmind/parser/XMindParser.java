@@ -83,7 +83,7 @@ public class XMindParser {
                 contents = getXMindLegacyContent(res);
             }
         } catch (Exception e) {
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         } finally {
             if (res != null) {
                 FileUtils.deleteDirectory(new File(res));

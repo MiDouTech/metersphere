@@ -40,7 +40,7 @@ public class HarParserApiScenario implements ApiScenarioImportParser {
         try {
             har = HarUtils.read(inputSource);
         } catch (Exception e) {
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
 
         if (ObjectUtils.isEmpty(har)) {

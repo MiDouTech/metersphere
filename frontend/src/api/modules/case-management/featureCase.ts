@@ -227,13 +227,16 @@ export function getCaseAssetReferencedProjects(catalogId: string, caseId: string
   });
 }
 export function deleteCaseAsset(catalogId: string, caseId: string) {
-  return MSR.delete({ url: `/case-asset/case/${caseId}`, params: { catalogId } });
+  return MSR.delete({ url: `/case-asset/case/${caseId}`, params: { catalogId } }, { joinParamsToUrl: true });
 }
 export function uploadCaseAssetAttachment(catalogId: string, caseId: string, file: File) {
   return MSR.uploadFile({ url: `/case-asset/case/${caseId}/attachment`, params: { catalogId } }, { fileList: [file] });
 }
 export function deleteCaseAssetAttachment(catalogId: string, caseId: string, fileId: string, local = true) {
-  return MSR.delete({ url: `/case-asset/case/${caseId}/attachment/${fileId}`, params: { catalogId, local } });
+  return MSR.delete(
+    { url: `/case-asset/case/${caseId}/attachment/${fileId}`, params: { catalogId, local } },
+    { joinParamsToUrl: true }
+  );
 }
 export function downloadCaseAssetAttachment(catalogId: string, caseId: string, fileId: string, local = true) {
   return MSR.get(

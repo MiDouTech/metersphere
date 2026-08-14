@@ -84,7 +84,7 @@ public class BugRelateCaseController {
         return PageUtils.setPageInfo(page, bugRelateCaseCommonService.page(request));
     }
 
-    @GetMapping("/un-relate/{id}")
+    @DeleteMapping("/un-relate/{id}")
     @Operation(summary = "缺陷管理-关联用例-取消关联用例")
     @RequiresPermissions(PermissionConstants.PROJECT_BUG_UPDATE)
     @Parameter(name = "id", description = "ID", schema = @Schema(requiredMode = Schema.RequiredMode.REQUIRED))

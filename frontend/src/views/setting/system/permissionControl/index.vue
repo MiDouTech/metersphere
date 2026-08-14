@@ -426,6 +426,7 @@
           <a-radio-group v-model="flowRoleForm.roleType">
             <a-radio value="FIELD_USER">业务字段用户</a-radio>
             <a-radio value="SYSTEM_ROLE">系统角色</a-radio>
+            <a-radio value="POSITION">企微职位</a-radio>
           </a-radio-group>
         </a-form-item>
         <a-form-item v-if="flowRoleForm.roleType === 'FIELD_USER'" field="fieldKey" label="业务字段">
@@ -434,10 +435,14 @@
             <a-option value="create_user">创建人</a-option>
           </a-select>
         </a-form-item>
-        <a-form-item v-else field="roleId" label="系统角色">
+        <a-form-item v-else-if="flowRoleForm.roleType === 'SYSTEM_ROLE'" field="roleId" label="系统角色">
           <a-select v-model="flowRoleForm.roleId" allow-search>
             <a-option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</a-option>
           </a-select>
+        </a-form-item>
+        <a-form-item v-else field="fieldKey" label="职位关键词">
+          <a-input v-model="flowRoleForm.fieldKey" placeholder="多个关键词用 | 分隔，例如：测试|质量|QA" />
+          <template #extra>匹配企微同步的职位名称；填写 * 表示所有非空职位。</template>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -1253,7 +1258,9 @@
       name: flowRoleForm.name,
       roleType: flowRoleForm.roleType,
       roleId: flowRoleForm.roleType === 'SYSTEM_ROLE' ? flowRoleForm.roleId : undefined,
-      fieldKey: flowRoleForm.roleType === 'FIELD_USER' ? flowRoleForm.fieldKey : undefined,
+      fieldKey: flowRoleForm.roleType === 'FIELD_USER' || flowRoleForm.roleType === 'POSITION'
+        ? flowRoleForm.fieldKey
+        : undefined,
       enabled: true,
     };
     if (flowRoleForm.id) await updatePermissionControlFlowRole(payload);
@@ -1289,6 +1296,9 @@
   const getWorkflowRoleMapping = (role: WorkflowRole) => {
     if (role.roleType === 'FIELD_USER') {
       return role.fieldKey === 'create_user' ? '业务字段：创建人' : '业务字段：当前处理人';
+    }
+    if (role.roleType === 'POSITION') {
+      return `企微职位：${role.fieldKey || '-'}`;
     }
     return `系统角色：${roles.value.find((item) => item.id === role.roleId)?.name || role.roleId || '-'}`;
   };

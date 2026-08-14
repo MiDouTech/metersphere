@@ -33,7 +33,7 @@ export const uploadOrAssociationFileUrl = '/bug/attachment/upload';
 // 转存文件
 export const transferFileUrl = '/bug/attachment/transfer';
 // 获取文件转存目录
-export const getTransferTreeUrl = '/bug/attachment/transfer/options/';
+export const getTransferTreeUrl = '/bug/attachment/transfer/options';
 // 预览文件
 export const previewFileUrl = '/bug/attachment/preview';
 // 下载文件

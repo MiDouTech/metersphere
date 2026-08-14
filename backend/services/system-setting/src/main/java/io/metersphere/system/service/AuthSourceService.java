@@ -196,7 +196,7 @@ public class AuthSourceService {
             DirContext ctx = new InitialDirContext(env);
             ctx.close();
         } catch (Exception e) {
-            throw new MSException("LDAP 连接失败: " + e.getMessage());
+            throw new MSException(e);
         }
     }
 

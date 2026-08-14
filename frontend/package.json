@@ -14,6 +14,7 @@
     "report": "cross-env REPORT=true npm run build",
     "preview": "npm run build && vite preview --host",
     "type:check": "vue-tsc --noEmit --skipLibCheck",
+    "test:api-contracts": "node ./scripts/verify-api-contracts.mjs",
     "test:route-tabs": "node ./scripts/verify-route-tabs.mjs",
     "test:permission-resources": "node ./scripts/verify-permission-resource-coverage.mjs",
     "test:e2e:information-architecture": "playwright test e2e/information-architecture.spec.ts",

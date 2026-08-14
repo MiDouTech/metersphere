@@ -53,8 +53,7 @@
     {
       key: 'qrCodeConfig',
       title: t('system.config.qrCodeConfig'),
-      permission: ['SYSTEM_PARAMETER_SETTING_QRCODE:READ'],
-      resourceCode: 'SYSTEM_CONFIG_NOTIFICATION_TAB',
+      permission: ['SYSTEM_PARAMETER_SETTING_QRCODE:READ', 'SYSTEM_CONFIG_WECOM_BOT:READ'],
     },
     {
       key: 'authConfig',
@@ -93,7 +92,7 @@
   async function getXpackTab() {
     await licenseStore.getValidateLicense();
     if (!licenseStore.hasLicense()) {
-      const excludes = ['baseConfig', 'memoryCleanup', 'modelConfig'];
+      const excludes = ['baseConfig', 'memoryCleanup', 'modelConfig', 'qrCodeConfig'];
       tabList.value = tabList.value.filter((item: any) => excludes.includes(item.key));
     }
   }

@@ -136,7 +136,7 @@ public class FunctionalCaseXmindFileService {
         } catch (MSException e) {
             throw e;
         } catch (Exception e) {
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         } finally {
             FileUtils.deleteQuietly(temp);
         }

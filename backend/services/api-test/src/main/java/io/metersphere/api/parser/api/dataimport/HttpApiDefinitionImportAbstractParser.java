@@ -67,7 +67,7 @@ public abstract class HttpApiDefinitionImportAbstractParser<T> implements ApiDef
             source.close();
         } catch (Exception e) {
             LogUtils.error(e.getMessage(), e);
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
         return StringUtils.isNotBlank(testStr) ? testStr.toString() : StringUtils.EMPTY;
     }

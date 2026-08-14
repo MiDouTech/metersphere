@@ -372,6 +372,14 @@ public class PermissionConstants {
     public static final String PROJECT_LIST_PAGE = "PROJECT_LIST_PAGE";
     public static final String PROJECT_DETAIL_PAGE = "PROJECT_DETAIL_PAGE";
     public static final String PROJECT_SWITCH = "PROJECT_SWITCH";
+    public static final String SYSTEM_CONFIG_WECOM_BOT_READ = "SYSTEM_CONFIG_WECOM_BOT:READ";
+    public static final String SYSTEM_CONFIG_WECOM_BOT_UPDATE = "SYSTEM_CONFIG_WECOM_BOT:UPDATE";
+    public static final String SYSTEM_NOTIFICATION_RULE_READ = "SYSTEM_NOTIFICATION_RULE:READ";
+    public static final String SYSTEM_NOTIFICATION_RULE_CREATE = "SYSTEM_NOTIFICATION_RULE:CREATE";
+    public static final String SYSTEM_NOTIFICATION_RULE_UPDATE = "SYSTEM_NOTIFICATION_RULE:UPDATE";
+    public static final String SYSTEM_NOTIFICATION_RULE_DELETE = "SYSTEM_NOTIFICATION_RULE:DELETE";
+    public static final String SYSTEM_NOTIFICATION_LOG_READ = "SYSTEM_NOTIFICATION_LOG:READ";
+    public static final String SYSTEM_NOTIFICATION_LOG_RETRY = "SYSTEM_NOTIFICATION_LOG:RETRY";
     /*------ end: TEST_PLAN ------*/
 
     /*------ start: SYSTEM_TASK_CENTER ------*/

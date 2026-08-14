@@ -1,0 +1,17 @@
+{
+  "name": "metersphere-wecom-bot-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MeterSphere internal bridge for WeCom AI Bot WebSocket connections",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/main.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@wecom/aibot-node-sdk": "1.0.7"
+  }
+}

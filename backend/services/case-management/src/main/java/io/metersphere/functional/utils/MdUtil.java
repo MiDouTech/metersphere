@@ -70,7 +70,7 @@ public class MdUtil {
 
 			return caseDTO;
 		} catch (Exception e) {
-			throw new MSException(e.getMessage());
+			throw new MSException(e);
 		}
 	}
 

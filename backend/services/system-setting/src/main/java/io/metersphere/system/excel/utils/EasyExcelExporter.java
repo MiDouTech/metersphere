@@ -38,7 +38,7 @@ public class EasyExcelExporter {
                     .doWrite(data);
         } catch (IOException e) {
             LogUtils.error(e);
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
     }
 
@@ -52,7 +52,7 @@ public class EasyExcelExporter {
                     .doWrite(data);
         } catch (IOException e) {
             LogUtils.error(e);
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
     }
 
@@ -63,7 +63,7 @@ public class EasyExcelExporter {
             response.setHeader("Content-disposition", "attachment;filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()) + ".xlsx");
         } catch (IOException e) {
             LogUtils.error(e);
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
     }
 
@@ -78,7 +78,7 @@ public class EasyExcelExporter {
                     .doWrite(data);
         } catch (IOException e) {
             LogUtils.error(e);
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
     }
 
@@ -94,7 +94,7 @@ public class EasyExcelExporter {
                     .doWrite(data);
         } catch (IOException e) {
             LogUtils.error(e);
-            throw new MSException(e.getMessage());
+            throw new MSException(e);
         }
     }
 
@@ -108,7 +108,7 @@ public class EasyExcelExporter {
                 field.set(excel2007, Integer.MAX_VALUE);
             } catch (Exception e) {
                 LogUtils.error(e);
-                throw new MSException(e.getMessage());
+                throw new MSException(e);
             }
         }
     }
