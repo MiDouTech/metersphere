@@ -153,4 +153,6 @@ public interface ExtBugMapper {
      */
     void updateBugExtraTimes(@Param("id") String id, @Param("handleTime") Long handleTime, @Param("closeTime") Long closeTime);
 
+    void updateExpectedResolveTime(@Param("id") String id, @Param("expectedResolveTime") Long expectedResolveTime);
+
 }

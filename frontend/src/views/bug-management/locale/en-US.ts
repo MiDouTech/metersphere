@@ -23,6 +23,7 @@ export default {
     updateUser: 'Updater',
     createTime: 'Create Time',
     updateTime: 'Update Time',
+    expectedResolveTime: 'Expected Resolution Time',
     index: 'Bug',
     addBug: 'Create Bug',
     editBug: 'Edit Bug',

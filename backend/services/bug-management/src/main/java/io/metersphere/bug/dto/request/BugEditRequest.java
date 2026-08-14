@@ -1,5 +1,7 @@
 package io.metersphere.bug.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import io.metersphere.bug.dto.response.BugCustomFieldDTO;
 import io.metersphere.bug.dto.response.BugFileDTO;
 import io.metersphere.validation.groups.Created;
@@ -43,6 +45,12 @@ public class BugEditRequest implements Serializable {
     @Schema(description = "缺陷内容")
     private String description;
 
+    @Schema(description = "预计解决时间")
+    private Long expectedResolveTime;
+
+    @JsonIgnore
+    private boolean expectedResolveTimePresent;
+
     @Schema(description = "自定义字段集合")
     private List<BugCustomFieldDTO> customFields;
 
@@ -72,4 +80,10 @@ public class BugEditRequest implements Serializable {
 
     @Schema(description = "富文本临时文件ID")
     private List<String> richTextTmpFileIds;
+
+    @JsonSetter("expectedResolveTime")
+    public void setExpectedResolveTime(Long expectedResolveTime) {
+        this.expectedResolveTime = expectedResolveTime;
+        this.expectedResolveTimePresent = true;
+    }
 }

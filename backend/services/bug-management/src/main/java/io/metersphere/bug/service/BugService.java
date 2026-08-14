@@ -370,6 +370,7 @@ public class BugService {
         // 创建人/处理人及时间元数据
         detail.setCreateUser(bug.getCreateUser());
         detail.setCreateTime(bug.getCreateTime());
+        detail.setExpectedResolveTime(bug.getExpectedResolveTime());
         detail.setHandleUser(bug.getHandleUser());
         List<String> handleUserIds = parseHandleUserIds(bug.getHandleUser());
         List<String> userIds = Stream.concat(Stream.of(bug.getCreateUser()), handleUserIds.stream())
@@ -1203,6 +1204,9 @@ public class BugService {
             bug.setUpdateUser(currentUser);
             bug.setUpdateTime(System.currentTimeMillis());
             bugMapper.updateByPrimaryKeySelective(bug);
+            if (request.isExpectedResolveTimePresent()) {
+                extBugMapper.updateExpectedResolveTime(bug.getId(), request.getExpectedResolveTime());
+            }
             BugContent bugContent = new BugContent();
             bugContent.setBugId(bug.getId());
             bugContent.setDescription(StringUtils.isEmpty(request.getDescription()) ? StringUtils.EMPTY : request.getDescription());

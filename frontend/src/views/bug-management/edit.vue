@@ -149,6 +149,15 @@
           </a-skeleton>
           <a-form v-else :model="form" layout="vertical">
             <div style="display: inline-block; width: 100%; word-wrap: break-word">
+              <a-form-item field="expectedResolveTime" :label="t('bugManagement.expectedResolveTime')">
+                <a-date-picker
+                  v-model="form.expectedResolveTime"
+                  class="w-full"
+                  show-time
+                  allow-clear
+                  value-format="timestamp"
+                />
+              </a-form-item>
               <MsFormCreate ref="formCreateRef" v-model:formItem="formItem" v-model:api="fApi" :form-rule="formRules" />
             </div>
 
@@ -276,6 +285,7 @@
     projectId: appStore.currentProjectId,
     title: '',
     description: '',
+    expectedResolveTime: undefined,
     templateId: '',
     tags: [],
     deleteLocalFileIds: [],
@@ -590,6 +600,7 @@
     }
     const tmpObj: BugEditFormObject = {
       ...form.value,
+      expectedResolveTime: form.value.expectedResolveTime ?? null,
       customFields,
       copyFiles,
       richTextTmpFileIds: isPlatformDefaultTemplate.value ? getDescriptionFileId() : descriptionFileIds.value,
@@ -616,6 +627,7 @@
       projectId: appStore.currentProjectId, // 取当前项目id
       title: '',
       description: '',
+      expectedResolveTime: undefined,
       templateId,
       tags: [],
       platformSystemFields: {},
@@ -797,6 +809,7 @@
         id: res.id,
         title: props.isCopyBug ? copyName : res.title,
         description: res.description,
+        expectedResolveTime: res.expectedResolveTime,
         templateId: res.templateId,
         tags: res.tags || [],
         projectId: res.projectId,

@@ -99,6 +99,9 @@
             @success="(runtime) => handleTransitionSuccess(record.id, runtime)"
           />
         </template>
+        <template #expectedResolveTime="{ record }">
+          {{ formatExpectedResolveTime(record.expectedResolveTime) }}
+        </template>
         <template #handleUserTitle>
           <div class="flex items-center text-[var(--color-text-3)]">
             {{ t('bugManagement.handleMan') }}
@@ -197,6 +200,7 @@
   import { useRoute } from 'vue-router';
   import { useIntervalFn } from '@vueuse/core';
   import { Message, TableData } from '@arco-design/web-vue';
+  import dayjs from 'dayjs';
 
   import { getFilterCustomFields, MsAdvanceFilter, timeSelectOptions } from '@/components/pure/ms-advance-filter';
   import { FilterFormItem, FilterResult } from '@/components/pure/ms-advance-filter/type';
@@ -285,6 +289,8 @@
   // 排序
   const sort = ref<{ [key: string]: string }>({});
   const transitionRuntimeMap = ref<Record<string, BugTransitionRuntime>>({});
+  const formatExpectedResolveTime = (value?: number | null) =>
+    value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
 
   const syncObject = reactive({
     time: 0,
@@ -369,6 +375,14 @@
         options: [],
         labelKey: 'text',
       },
+      showDrag: true,
+      showInTable: true,
+    },
+    {
+      title: 'bugManagement.expectedResolveTime',
+      dataIndex: 'expectedResolveTime',
+      slotName: 'expectedResolveTime',
+      width: 199,
       showDrag: true,
       showInTable: true,
     },
