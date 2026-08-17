@@ -154,6 +154,48 @@ export function archivePermissionControlFlow(flowId: string) {
   return MSR.post<WorkflowDefinition>({ url: `/permission-control/flow/${flowId}/archive` });
 }
 
+export function activatePermissionControlFlow(flowId: string) {
+  return MSR.post<WorkflowDefinition>({ url: `/permission-control/flow/${flowId}/activate` });
+}
+
+export interface WorkflowImpact {
+  associatedBugCount: number;
+  transitionHistoryCount: number;
+  activeForNew: boolean;
+  deletable: boolean;
+  archiveRequired: boolean;
+  reason?: string;
+}
+export function getPermissionControlFlowImpact(flowId: string) {
+  return MSR.get<WorkflowImpact>({ url: `/permission-control/flow/${flowId}/impact` });
+}
+
+export function previewPermissionControlWecomPositions(flowId: string) {
+  return MSR.get<Array<{ position: string; sourceKey: string; memberCount: number; existing: boolean }>>({
+    url: `/permission-control/flow/${flowId}/wecom-positions/preview`,
+  });
+}
+
+export function syncPermissionControlWecomPositions(flowId: string) {
+  return MSR.post<{ batchId: string; total: number; created: number; updated: number; disabled: number }>({
+    url: `/permission-control/flow/${flowId}/wecom-positions/sync`,
+  });
+}
+
+export function getPermissionControlWecomPositionSyncResults(flowId: string) {
+  return MSR.get<
+    Array<{
+      batchId: string;
+      total: number;
+      created: number;
+      updated: number;
+      disabled: number;
+      createUser: string;
+      createTime: number;
+    }>
+  >({ url: `/permission-control/flow/${flowId}/wecom-positions/sync-results` });
+}
+
 export function copyPermissionControlFlow(flowId: string) {
   return MSR.post<WorkflowDefinition>({ url: `/permission-control/flow/${flowId}/copy` });
 }
@@ -178,10 +220,47 @@ export function previewPermissionControlFlowMigration(flowId: string) {
   return MSR.get<WorkflowMigrationPreview>({ url: `/permission-control/flow/${flowId}/migration/preview` });
 }
 
+export interface WorkflowMigrationCandidateQuery {
+  current: number;
+  pageSize: number;
+  keyword?: string;
+  projectIds?: string[];
+  sourceStatusIds?: string[];
+  createTimeStart?: number;
+  createTimeEnd?: number;
+}
+
+export interface WorkflowMigrationCandidate {
+  id: string;
+  num: number | string;
+  title: string;
+  projectId: string;
+  projectName: string;
+  sourceStatusId: string;
+  sourceStatusName: string;
+  createTime: number;
+}
+
+export function pagePermissionControlFlowMigrationCandidates(flowId: string, data: WorkflowMigrationCandidateQuery) {
+  return MSR.post<CommonList<WorkflowMigrationCandidate>>({
+    url: `/permission-control/flow/${flowId}/migration/candidates`,
+    data,
+  });
+}
+
+export function getPermissionControlFlowMigrationCandidateIds(flowId: string, data: WorkflowMigrationCandidateQuery) {
+  return MSR.post<{ ids: string[]; total: number }>({
+    url: `/permission-control/flow/${flowId}/migration/candidate-ids`,
+    data,
+  });
+}
+
 export function migratePermissionControlFlow(data: {
   targetFlowId: string;
   dryRun: boolean;
   statusMappings: Record<string, string>;
+  bugIds?: string[];
+  projectIds?: string[];
 }) {
   return MSR.post<{ batchId: string; total: number; status?: string; migrated: number; skipped?: number }>({
     url: '/permission-control/flow/migration',
@@ -191,12 +270,20 @@ export function migratePermissionControlFlow(data: {
 
 export interface WorkflowMigrationBatch {
   id: string;
+  targetFlowId?: string;
+  dryRun?: boolean;
   status: string;
   totalCount: number;
   successCount: number;
   skippedCount: number;
   failedCount: number;
-  failures: Array<{ bugId: string; sourceStatus: string; failureCode: string; failureReason: string }>;
+  createTime?: number;
+  updateTime?: number;
+  finishTime?: number;
+  failures?: Array<{ bugId: string; sourceStatus: string; failureCode: string; failureReason: string }>;
+}
+export function listPermissionControlFlowMigrationBatches(flowId: string) {
+  return MSR.get<WorkflowMigrationBatch[]>({ url: `/permission-control/flow/${flowId}/migration/batches` });
 }
 export function getPermissionControlFlowMigrationBatch(batchId: string) {
   return MSR.get<WorkflowMigrationBatch>({ url: `/permission-control/flow/migration/${batchId}` });

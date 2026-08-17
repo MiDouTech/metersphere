@@ -8,7 +8,7 @@
             >用例项目仅是资产分类目录，不会创建可进入的业务项目。</div
           >
         </div>
-        <a-space>
+        <a-space class="asset-toolbar-actions">
           <a-button
             v-if="canAdd"
             v-visible-permission="{
@@ -23,7 +23,7 @@
             }"
             :loading="backfillLoading"
             @click="backfillCatalogs"
-            >补建历史项目目录</a-button
+            >同步历史项目及用例</a-button
           >
           <a-button
             v-if="canAdd"
@@ -43,6 +43,24 @@
           >
         </a-space>
       </div>
+      <a-alert v-if="historySyncJob" class="mt-3" :type="historySyncJob.failed ? 'warning' : 'info'">
+        历史同步 {{ historySyncJob.status }}：项目成功 {{ historySyncJob.success || 0 }}/{{
+          historySyncJob.total || 0
+        }}， 用例新增 {{ historySyncJob.caseCreated || 0 }}、更新 {{ historySyncJob.caseUpdated || 0 }}、跳过
+        {{ historySyncJob.caseSkipped || 0 }}
+        <a-button
+          v-if="canAdd && ['FAILED', 'PARTIAL_SUCCESS'].includes(historySyncJob.status)"
+          v-operable-permission="{
+            code: 'CASE_ASSET_ADD_BUTTON',
+            permissions: ['CASE_ASSET:READ+ADD'],
+            typeList: ['ORGANIZATION'],
+          }"
+          class="ml-2"
+          size="mini"
+          @click="retryHistorySync"
+          >重试失败项</a-button
+        >
+      </a-alert>
 
       <div class="asset-layout">
         <aside class="catalog-panel">
@@ -115,7 +133,7 @@
               @search="searchCases"
               @clear="searchCases"
             />
-            <div class="ml-auto flex gap-2">
+            <div class="asset-toolbar-actions ml-auto flex gap-2">
               <a-button
                 v-if="canAdd"
                 v-operable-permission="{
@@ -267,16 +285,20 @@
   import MsCard from '@/components/pure/ms-card/index.vue';
   import CaseAssetFileImport from './components/CaseAssetFileImport.vue';
 
-  import type { CaseAssetCatalog } from '@/api/modules/case-management/featureCase';
   import {
     backfillCaseAssetCatalogs,
+    type CaseAssetCatalog,
+    type CaseAssetHistorySyncJob,
     createCaseAsset,
     createCaseAssetCatalog,
     deleteCaseAsset,
     deleteCaseAssetCatalog,
+    getCaseAssetHistorySyncJob,
     getCaseAssetList,
     getCaseAssetReferencedProjects,
+    getLatestCaseAssetHistorySyncJob,
     pageCaseAssetCatalogs,
+    retryCaseAssetHistorySyncJob,
     updateCaseAssetCatalog,
   } from '@/api/modules/case-management/featureCase';
   import { hasAnyPermission } from '@/utils/permission';
@@ -291,6 +313,7 @@
   const canImport = hasAnyPermission(['CASE_ASSET:READ+IMPORT']);
   const catalogLoading = ref(false);
   const backfillLoading = ref(false);
+  const historySyncJob = ref<CaseAssetHistorySyncJob>();
   const caseLoading = ref(false);
   const catalogs = ref<CaseAssetCatalog[]>([]);
   const catalogTotal = ref(0);
@@ -399,15 +422,54 @@
     catalogName.value = '';
     catalogModalVisible.value = true;
   }
+  const waitHistorySync = async (jobId: string, deadline = Date.now() + 10 * 60 * 1000): Promise<void> => {
+    historySyncJob.value = await getCaseAssetHistorySyncJob(jobId);
+    if (['SUCCESS', 'FAILED', 'PARTIAL_SUCCESS'].includes(historySyncJob.value.status)) {
+      if (historySyncJob.value.failed) Message.warning('历史同步部分失败，可点击“重试失败项”继续');
+      else Message.success('历史项目及用例同步完成');
+      await loadCatalogs();
+      return;
+    }
+    if (Date.now() >= deadline) {
+      Message.warning('历史同步仍在后台执行，请稍后刷新查看');
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 1000);
+    });
+    await waitHistorySync(jobId, deadline);
+  };
   async function backfillCatalogs() {
     backfillLoading.value = true;
     try {
       const result = await backfillCaseAssetCatalogs();
-      if (result.failed) Message.warning(`补建完成：成功 ${result.success}/${result.total}，失败 ${result.failed}`);
-      else Message.success(`补建完成，共处理 ${result.total} 个项目`);
-      await loadCatalogs();
+      Message.success(`历史同步任务已提交，共 ${result.total} 个项目`);
+      await waitHistorySync(result.jobId);
     } finally {
       backfillLoading.value = false;
+    }
+  }
+  async function retryHistorySync() {
+    if (!historySyncJob.value) return;
+    await retryCaseAssetHistorySyncJob(historySyncJob.value.jobId);
+    backfillLoading.value = true;
+    try {
+      await waitHistorySync(historySyncJob.value.jobId);
+    } finally {
+      backfillLoading.value = false;
+    }
+  }
+
+  async function restoreLatestHistorySync() {
+    const latest = await getLatestCaseAssetHistorySyncJob();
+    historySyncJob.value = 'jobId' in latest ? latest : undefined;
+    if (historySyncJob.value?.status === 'RUNNING' || historySyncJob.value?.status === 'PENDING') {
+      backfillLoading.value = true;
+      try {
+        await waitHistorySync(historySyncJob.value.jobId);
+      } finally {
+        backfillLoading.value = false;
+      }
     }
   }
   function openCatalogEdit(item: CaseAssetCatalog) {
@@ -502,13 +564,25 @@
     referencedQuery.current = current;
     loadReferencedProjects();
   }
-  onMounted(loadCatalogs);
+  onMounted(async () => {
+    await loadCatalogs();
+    await restoreLatestHistorySync();
+  });
 </script>
 
 <style scoped lang="less">
   .asset-layout {
     display: flex;
     gap: 16px;
+  }
+  .asset-toolbar-actions {
+    margin-right: 100px;
+  }
+  @media (max-width: 1200px) {
+    .asset-toolbar-actions {
+      margin-right: 0;
+      flex-wrap: wrap;
+    }
   }
   .catalog-panel {
     padding-right: 16px;

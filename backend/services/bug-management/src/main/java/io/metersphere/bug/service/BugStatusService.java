@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BugStatusService {
@@ -117,17 +119,29 @@ public class BugStatusService {
      * @return 状态流选项
      */
    public List<SelectOption> getAllLocalStatusOptions(String projectId) {
-       String flowId = getPublishedGlobalFlowId();
-       if (StringUtils.isNotBlank(flowId)) {
-           return jdbcTemplate.query("SELECT id, name FROM status_item WHERE flow_id = ? AND enabled = b'1' ORDER BY pos",
-                   (rs, rowNum) -> new SelectOption(rs.getString("name"), rs.getString("id")), flowId);
+       Map<String, SelectOption> options = new LinkedHashMap<>();
+       String activeFlowId = getPublishedGlobalFlowId();
+       if (StringUtils.isNotBlank(activeFlowId)) {
+           jdbcTemplate.query("SELECT id, name FROM status_item WHERE flow_id = ? AND enabled = b'1' ORDER BY pos",
+                           (rs, rowNum) -> new SelectOption(rs.getString("name"), rs.getString("id")), activeFlowId)
+                   .forEach(option -> options.putIfAbsent(option.getValue(), option));
        }
-       return baseStatusFlowSettingService.getAllStatusOption(projectId, TemplateScene.BUG.name());
+       jdbcTemplate.query("SELECT si.id,si.name FROM status_item si JOIN workflow_definition wd ON wd.id=si.flow_id "
+                       + "WHERE wd.scene='BUG' AND wd.scope_type='SYSTEM' AND wd.scope_id='system' "
+                       + "AND wd.lifecycle IN ('PUBLISHED','ARCHIVED') AND wd.enabled=b'1' AND si.enabled=b'1' "
+                       + "ORDER BY wd.active_for_new DESC,wd.update_time DESC,si.pos",
+               (rs, rowNum) -> new SelectOption(rs.getString("name"), rs.getString("id")))
+               .forEach(option -> options.putIfAbsent(option.getValue(), option));
+       List<SelectOption> legacyOptions = baseStatusFlowSettingService.getAllStatusOption(projectId, TemplateScene.BUG.name());
+       if (legacyOptions != null) {
+           legacyOptions.forEach(option -> options.putIfAbsent(option.getValue(), option));
+       }
+       return new ArrayList<>(options.values());
    }
 
    private String getPublishedGlobalFlowId() {
        List<String> ids = jdbcTemplate.query("SELECT id FROM workflow_definition WHERE scene = 'BUG' AND scope_type = 'SYSTEM' "
-                       + "AND scope_id = 'system' AND lifecycle = 'PUBLISHED' AND default_flow = b'1' AND enabled = b'1' LIMIT 1",
+                       + "AND scope_id = 'system' AND lifecycle = 'PUBLISHED' AND active_for_new = b'1' AND enabled = b'1' LIMIT 1",
                (rs, rowNum) -> rs.getString(1));
        return ids.isEmpty() ? null : ids.getFirst();
    }

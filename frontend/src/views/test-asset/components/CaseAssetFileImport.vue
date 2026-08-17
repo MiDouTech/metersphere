@@ -24,19 +24,23 @@
     >
       导入状态：{{ job.status }}；成功 {{ job.successCount || 0 }} 条，失败 {{ job.failCount || 0 }} 条
       <template v-if="job.errorDetail"><br />{{ job.errorDetail }}</template>
+      <template v-if="job.errorDetail"><br /><a-link @click="downloadErrors">下载错误明细</a-link></template>
     </a-alert>
   </a-modal>
 </template>
 
 <script setup lang="ts">
-  import { onBeforeUnmount, ref } from 'vue';
+  import { onBeforeUnmount, ref, watch } from 'vue';
   import { Message } from '@arco-design/web-vue';
 
   import {
     type CaseAssetFileImportJob,
+    downloadCaseAssetFileImportErrors,
     getCaseAssetFileImportJob,
+    getLatestCaseAssetFileImportJob,
     importCaseAssetFile,
   } from '@/api/modules/case-management/featureCase';
+  import { downloadByteFile } from '@/utils';
 
   import type { FileItem } from '@arco-design/web-vue';
 
@@ -49,7 +53,6 @@
   let pollTimer: ReturnType<typeof setTimeout> | undefined;
   let pollDeadline = 0;
   onBeforeUnmount(() => pollTimer && clearTimeout(pollTimer));
-
   async function pollJob(jobId: string) {
     try {
       job.value = await getCaseAssetFileImportJob(jobId);
@@ -73,8 +76,26 @@
     else Message.error(job.value.errorDetail || '导入失败');
     if (job.value.status !== 'FAILED') emit('success');
   }
+  watch(
+    () => [props.visible, props.catalogId] as const,
+    async ([visible, catalogId]) => {
+      if (!visible || !catalogId || loading.value) return;
+      const latest = await getLatestCaseAssetFileImportJob(catalogId);
+      job.value = latest.exists === false ? undefined : latest;
+      if (job.value?.status === 'RUNNING') {
+        pollDeadline = Date.now() + 5 * 60 * 1000;
+        await pollJob(job.value.id);
+      }
+    },
+    { immediate: true }
+  );
   function onFileChange(fileList: FileItem[]) {
     file.value = fileList[0]?.file;
+  }
+  async function downloadErrors() {
+    if (!job.value?.id) return;
+    const content = await downloadCaseAssetFileImportErrors(job.value.id);
+    downloadByteFile(content, `case-asset-import-errors-${job.value.id}.txt`);
   }
   async function submit() {
     if (!file.value) {

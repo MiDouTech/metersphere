@@ -7,22 +7,13 @@
           <div class="mt-1 text-sm text-[var(--color-text-3)]">
             {{ t('system.agentIntegration.myTokensDesc') }}
           </div>
+          <p class="mt-2 whitespace-pre-line text-sm text-[var(--color-text-3)]">{{ mcpPlainText }}</p>
         </div>
-        <McpOnboardingPanel v-if="canConnectTokens" class="mb-4" @create-token="openCreateModal" />
         <div
           class="mb-4 gap-3"
           :class="compact ? 'flex flex-col items-stretch' : 'flex flex-wrap items-center justify-between'"
         >
           <div class="flex flex-wrap items-center gap-2" :class="compact ? 'justify-end' : ''">
-            <a-input-search
-              v-model:model-value="keyword"
-              :placeholder="t('system.agentIntegration.searchToken')"
-              :class="compact ? 'min-w-[220px] flex-1' : 'w-[260px]'"
-              allow-clear
-              @search="searchParams"
-              @press-enter="searchParams"
-              @clear="searchParams"
-            />
             <a-button
               v-visible-permission="{
                 code: 'AGENT_TOKEN_CREATE_BUTTON',
@@ -51,11 +42,21 @@
                 typeList: ['SYSTEM'],
               }"
               :loading="downloadLoading"
+              :disabled="!manifest?.available"
               type="outline"
               @click="handleDownload"
             >
               {{ t('system.agentIntegration.mcpDownload') }}
             </a-button>
+            <a-input-search
+              v-model:model-value="keyword"
+              :placeholder="t('system.agentIntegration.searchToken')"
+              :class="compact ? 'min-w-[220px] flex-1' : 'w-[260px]'"
+              allow-clear
+              @search="searchParams"
+              @press-enter="searchParams"
+              @clear="searchParams"
+            />
           </div>
         </div>
 
@@ -310,7 +311,6 @@
   import type { MsTableColumn } from '@/components/pure/ms-table/type';
   import useTable from '@/components/pure/ms-table/useTable';
   import AgentTokenGovernancePanel from './components/AgentTokenGovernancePanel.vue';
-  import McpOnboardingPanel from './components/McpOnboardingPanel.vue';
 
   import {
     type AgentMcpManifest,
@@ -351,9 +351,20 @@
   const editLoading = ref(false);
   const downloadLoading = ref(false);
   const canReadTokens = hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM']);
-  const canConnectTokens = hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'], ['SYSTEM']);
   const tokenVisible = ref(false);
   const manifest = ref<AgentMcpManifest>();
+  const mcpPlainText = `MCP 技能包
+下载技能包交给 AI（如 Cursor），使其学会调用本平台 Agent/MCP 接口。平台侧只需：下载技能包 + 创建 Token。
+技能包暂不可用，请联系管理员重新打包部署
+AI 技能包用于指导 AI 连接远程 MCP，不包含 Token。创建 Token 后复制 MCP 配置到对应客户端。
+内置平台地址
+测试环境：https://msp.ebcone.net
+正式环境：https://msp.ebcone.cn
+常用 Scope（创建 Token 时选择）
+全部 Agent 权限：包含查询、执行、用例、计划、评审、缺陷和项目相关能力，仍受本人 RBAC 限制。
+项目查看：允许检索和查看可访问项目；迁移期 FUNCTIONAL_READ 仍临时覆盖本权限。
+测试用例管理：用例读取、结果提交、测试计划和评审相关操作。
+缺陷管理：缺陷检索、详情查看、创建和更新。`;
   const createdToken = ref<AgentTokenCreateResult>();
   const createdClientType = ref('CHATGPT');
   const createFormRef = ref<FormInstance>();

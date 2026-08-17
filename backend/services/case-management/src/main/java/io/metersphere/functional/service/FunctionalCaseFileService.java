@@ -296,7 +296,8 @@ public class FunctionalCaseFileService {
             response.setFailCount(eventListener.getErrList().size());
         } catch (Exception e) {
             LogUtils.error("checkImportExcel error", e);
-            throw new MSException(Translator.get("check_import_excel_error"));
+            throw new MSException(Translator.get("check_import_excel_error") + ": "
+                    + StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), e);
         }
     }
 
@@ -333,7 +334,8 @@ public class FunctionalCaseFileService {
             return response;
         } catch (Exception e) {
             LogUtils.error("checkImportExcel error", e);
-            throw new MSException(Translator.get("check_import_excel_error"));
+            throw new MSException(Translator.get("check_import_excel_error") + ": "
+                    + StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), e);
         }
     }
 
@@ -356,7 +358,7 @@ public class FunctionalCaseFileService {
                 request.setVersionId(extBaseProjectVersionMapper.getDefaultVersion(request.getProjectId()));
             }
             Long nextPos = functionalCaseService.getNextOrder(request.getProjectId());
-            Long lasePos = nextPos + (ServiceUtils.POS_STEP * Integer.parseInt(request.getCount()));
+            Long lasePos = nextPos + (ServiceUtils.POS_STEP * parseImportCount(request.getCount()));
             //根据本地语言环境选择用哪种数据对象进行存放读取的数据
             Class clazz = new FunctionalCaseExcelDataFactory().getExcelDataByLocal();
             //获取当前项目默认模板的自定义字段
@@ -373,7 +375,8 @@ public class FunctionalCaseFileService {
             return response;
         } catch (Exception e) {
             LogUtils.error("checkImportExcel error", e);
-            throw new MSException(Translator.get("check_import_excel_error"));
+            throw new MSException(Translator.get("check_import_excel_error") + ": "
+                    + StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), e);
         }
     }
 
@@ -389,7 +392,7 @@ public class FunctionalCaseFileService {
                 request.setVersionId(extBaseProjectVersionMapper.getDefaultVersion(request.getProjectId()));
             }
             Long nextPos = functionalCaseService.getNextOrder(request.getProjectId());
-            Long lasePos = nextPos + ((long) ServiceUtils.POS_STEP * Integer.parseInt(request.getCount()));
+            Long lasePos = nextPos + ((long) ServiceUtils.POS_STEP * parseImportCount(request.getCount()));
             //获取当前项目默认模板的自定义字段
             List<TemplateCustomFieldDTO> customFields = getCustomFields(request.getProjectId());
             XMindCaseParser xmindParser = new XMindCaseParser(request, customFields, user, lasePos);
@@ -410,7 +413,19 @@ public class FunctionalCaseFileService {
             return response;
         } catch (Exception e) {
             LogUtils.error("checkImportExcel error", e);
-            throw new MSException(Translator.get("check_import_excel_error"));
+            throw new MSException(Translator.get("check_import_excel_error") + ": "
+                    + StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), e);
+        }
+    }
+
+    private int parseImportCount(String count) {
+        if (StringUtils.isBlank(count)) {
+            return 0;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(count));
+        } catch (NumberFormatException e) {
+            throw new MSException("导入数量格式不正确: " + count, e);
         }
     }
 

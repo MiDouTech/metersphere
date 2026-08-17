@@ -76,6 +76,27 @@ public class CaseAssetController {
         return caseAssetService.backfillProjectCatalogs();
     }
 
+    @GetMapping("/catalog/backfill/{jobId}")
+    @Operation(summary = "查询历史项目与用例同步任务")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
+    public Map<String, Object> historySyncJob(@PathVariable String jobId) {
+        return caseAssetService.getHistorySyncJob(jobId);
+    }
+
+    @GetMapping("/catalog/backfill/latest")
+    @Operation(summary = "查询最近一次历史项目与用例同步任务")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
+    public Map<String, Object> latestHistorySyncJob() {
+        return caseAssetService.getLatestHistorySyncJob();
+    }
+
+    @PostMapping("/catalog/backfill/{jobId}/retry")
+    @Operation(summary = "重试历史项目与用例同步失败项")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_ADD)
+    public Map<String, Object> retryHistorySyncJob(@PathVariable String jobId) {
+        return caseAssetService.retryHistorySyncJob(jobId);
+    }
+
     @PostMapping("/case/page")
     @Operation(summary = "资产用例分页")
     @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
@@ -177,6 +198,20 @@ public class CaseAssetController {
     @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
     public Map<String, Object> fileImportJob(@PathVariable String jobId) {
         return caseAssetService.fileImportJob(jobId);
+    }
+
+    @GetMapping("/case/import/job/latest")
+    @Operation(summary = "查询当前资产目录最近一次文件导入任务")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
+    public Map<String, Object> latestFileImportJob(@RequestParam String catalogId) {
+        return caseAssetService.latestFileImportJob(catalogId);
+    }
+
+    @GetMapping("/case/import/job/{jobId}/errors/download")
+    @Operation(summary = "下载资产用例文件导入错误明细")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
+    public ResponseEntity<byte[]> downloadFileImportErrors(@PathVariable String jobId) {
+        return caseAssetService.downloadFileImportErrors(jobId);
     }
 
     @PostMapping("/import/project")

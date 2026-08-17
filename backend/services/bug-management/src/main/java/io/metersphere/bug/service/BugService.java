@@ -77,6 +77,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -182,6 +183,8 @@ public class BugService {
     private io.metersphere.system.edit.service.ResourceEditService resourceEditService;
     @Resource
     private ApplicationEventPublisher applicationEventPublisher;
+    @Resource
+    private JdbcTemplate jdbcTemplate;
 
     public static final Long INTERVAL_POS = 5000L;
 
@@ -336,6 +339,17 @@ public class BugService {
         detail.setPlatform(bug.getPlatform());
         detail.setPlatformDefault(template.getPlatformDefault());
         detail.setStatus(bug.getStatus());
+        List<Map<String, Object>> statusRows = StringUtils.isBlank(bug.getWorkflowId()) ? List.of()
+                : jdbcTemplate.queryForList("SELECT name,status_code FROM status_item WHERE id=? AND flow_id=? LIMIT 1",
+                bug.getStatus(), bug.getWorkflowId());
+        if (!statusRows.isEmpty()) {
+            detail.setStatusName(String.valueOf(statusRows.getFirst().get("name")));
+            detail.setStatusCode(StringUtils.defaultString((String) statusRows.getFirst().get("status_code"), bug.getStatus()));
+        } else {
+            String legacyName = bugCommonService.getAllStatusMap(bug.getProjectId()).get(bug.getStatus());
+            detail.setStatusName(StringUtils.defaultIfBlank(legacyName, "未知状态"));
+            detail.setStatusCode(bug.getStatus());
+        }
         detail.setPlatformBugId(bug.getPlatformBugId());
         detail.setTitle(bug.getTitle());
         if (!detail.getPlatformDefault()) {
@@ -1764,6 +1778,19 @@ public class BugService {
         Map<String, String> localHandleUserMap = localOptions.stream().collect(Collectors.toMap(SelectOption::getValue, SelectOption::getText));
 
         Map<String, String> allStatusMap = bugCommonService.getAllStatusMap(projectId);
+        Map<String, String> workflowStatusNames = new HashMap<>();
+        Map<String, String> workflowStatusCodes = new HashMap<>();
+        List<String> statusIds = bugs.stream().map(BugDTO::getStatus).filter(StringUtils::isNotBlank).distinct().toList();
+        if (!statusIds.isEmpty()) {
+            String marks = statusIds.stream().map(id -> "?").collect(Collectors.joining(","));
+            jdbcTemplate.queryForList("SELECT id,name,status_code FROM status_item WHERE id IN (" + marks + ")", statusIds.toArray())
+                    .forEach(row -> {
+                        String statusId = String.valueOf(row.get("id"));
+                        workflowStatusNames.put(statusId, String.valueOf(row.get("name")));
+                        workflowStatusCodes.put(statusId,
+                                StringUtils.defaultString((String) row.get("status_code"), statusId));
+                    });
+        }
         final Map<String, String> tmpHandleUserMap = headerHandleUserMap;
         bugs.forEach(bug -> {
             bug.setCustomFields(customFieldMap.get(bug.getId()));
@@ -1779,7 +1806,9 @@ public class BugService {
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.joining(","));
             bug.setHandleUserName(StringUtils.isNotBlank(handleNames) ? handleNames : bug.getHandleUser());
-            bug.setStatusName(allStatusMap.get(bug.getStatus()));
+            String statusName = workflowStatusNames.getOrDefault(bug.getStatus(), allStatusMap.get(bug.getStatus()));
+            bug.setStatusName(StringUtils.defaultIfBlank(statusName, "未知状态"));
+            bug.setStatusCode(workflowStatusCodes.getOrDefault(bug.getStatus(), bug.getStatus()));
         });
         return bugs;
     }

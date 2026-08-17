@@ -266,8 +266,9 @@ public abstract class TestPlanResourceService extends TestPlanSortService {
     protected Map<String, List<TestPlanCaseBugDTO>> queryCaseAssociateBug(List<String> ids, String projectId) {
         List<TestPlanCaseBugDTO> associateBugs = extTestPlanBugMapper.getCaseRelatedBug(ids);
         List<SelectOption> statusOption = bugStatusService.getHeaderStatusOption(projectId);
-        Map<String, String> statusMap = statusOption.stream().collect(Collectors.toMap(SelectOption::getValue, SelectOption::getText));
-        associateBugs.forEach(bug -> bug.setStatus(statusMap.get(bug.getStatus())));
+        Map<String, String> statusMap = statusOption.stream()
+                .collect(Collectors.toMap(SelectOption::getValue, SelectOption::getText, (left, right) -> left));
+        associateBugs.forEach(bug -> bug.setStatus(statusMap.getOrDefault(bug.getStatus(), "未知状态")));
         return associateBugs.stream().collect(Collectors.groupingBy(TestPlanCaseBugDTO::getPlanCaseRefId));
     }
 

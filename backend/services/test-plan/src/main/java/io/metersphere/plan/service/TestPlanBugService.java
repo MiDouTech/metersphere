@@ -3,6 +3,7 @@ package io.metersphere.plan.service;
 import io.metersphere.bug.domain.BugRelationCaseExample;
 import io.metersphere.bug.mapper.BugRelationCaseMapper;
 import io.metersphere.bug.service.BugCommonService;
+import io.metersphere.bug.service.BugStatusService;
 import io.metersphere.plan.dto.TestPlanBugCaseDTO;
 import io.metersphere.plan.dto.TestPlanCollectionDTO;
 import io.metersphere.plan.dto.TestPlanResourceExecResultDTO;
@@ -37,6 +38,8 @@ public class TestPlanBugService extends TestPlanResourceService {
     private BugRelationCaseMapper bugRelationCaseMapper;
     @Resource
     private BugCommonService bugCommonService;
+    @Resource
+    private BugStatusService bugStatusService;
 
     public List<TestPlanBugPageResponse> page(TestPlanBugPageRequest request) {
         List<TestPlanBugPageResponse> bugList = extTestPlanBugMapper.list(request);
@@ -112,12 +115,13 @@ public class TestPlanBugService extends TestPlanResourceService {
         List<SelectOption> localOptions = bugCommonService.getLocalHandlerOption(projectId);
         Map<String, String> localHandleUserMap = localOptions.stream().collect(Collectors.toMap(SelectOption::getValue, SelectOption::getText));
 
-        Map<String, String> allStatusMap = bugCommonService.getAllStatusMap(projectId);
+        Map<String, String> allStatusMap = bugStatusService.getHeaderStatusOption(projectId).stream()
+                .collect(Collectors.toMap(SelectOption::getValue, SelectOption::getText, (left, right) -> left));
         bugList.forEach(bug -> {
             // 解析处理人, 状态
             bug.setHandleUser(headerHandleUserMap.containsKey(bug.getHandleUser()) ?
                     headerHandleUserMap.get(bug.getHandleUser()) : localHandleUserMap.get(bug.getHandleUser()));
-            bug.setStatus(allStatusMap.get(bug.getStatus()));
+            bug.setStatus(allStatusMap.getOrDefault(bug.getStatus(), "未知状态"));
         });
     }
 

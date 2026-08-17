@@ -1494,6 +1494,9 @@ public class FunctionalCaseService {
         }
         functionalCase.setModuleId(resolvedModuleId);
         functionalCase.setProjectId(request.getProjectId());
+        functionalCase.setWorkspaceId(StringUtils.defaultIfBlank(request.getWorkspaceId(),
+                Optional.ofNullable(projectMapper.selectByPrimaryKey(request.getProjectId()))
+                        .map(Project::getOrganizationId).orElse(SessionUtils.getCurrentOrganizationId())));
         functionalCase.setTemplateId(defaultTemplateDTO.getId());
         functionalCase.setName(functionalCaseExcelData.getName().toString());
         functionalCase.setReviewStatus(FunctionalCaseReviewStatus.UN_REVIEWED.name());

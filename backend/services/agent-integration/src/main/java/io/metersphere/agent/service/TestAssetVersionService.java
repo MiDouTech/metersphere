@@ -8,6 +8,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DuplicateKeyException;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
@@ -39,8 +40,28 @@ public class TestAssetVersionService {
         version.setCreatedAt(now);
         version.setPublishedBy(userId);
         version.setPublishedAt(now);
-        mapper.insertVersion(version);
-        return version;
+        try {
+            mapper.insertVersion(version);
+            return version;
+        } catch (DuplicateKeyException concurrentPublish) {
+            TestAssetVersionDTO published = mapper.selectByHash(projectId, assetType, assetId, hash);
+            if (published != null) {
+                return published;
+            }
+            Integer retryMax = mapper.selectMaxVersion(projectId, assetType, assetId);
+            version.setId(IDGenerator.nextStr());
+            version.setVersionNo((retryMax == null ? 0 : retryMax) + 1);
+            try {
+                mapper.insertVersion(version);
+                return version;
+            } catch (DuplicateKeyException secondCollision) {
+                TestAssetVersionDTO retryPublished = mapper.selectByHash(projectId, assetType, assetId, hash);
+                if (retryPublished != null) {
+                    return retryPublished;
+                }
+                throw secondCollision;
+            }
+        }
     }
 
     public void relate(String projectId, String relationType,

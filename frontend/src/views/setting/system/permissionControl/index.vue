@@ -104,7 +104,7 @@
               >
                 <a-list-item-meta :title="flow.name" :description="flow.description || flow.code" />
                 <template #actions>
-                  <a-tag v-if="flow.defaultFlow" color="blue">默认</a-tag>
+                  <a-tag v-if="flow.activeForNew" color="blue">使用中</a-tag>
                   <a-tag
                     :color="
                       flow.lifecycle === 'PUBLISHED' ? 'green' : flow.lifecycle === 'ARCHIVED' ? 'gray' : 'orange'
@@ -113,19 +113,8 @@
                     {{ flow.lifecycle === 'PUBLISHED' ? '已发布' : flow.lifecycle === 'ARCHIVED' ? '已归档' : '草稿' }}
                     v{{ flow.version || 1 }}
                   </a-tag>
-                  <a-switch
-                    v-operable-permission="{
-                      code: 'PERMISSION_FLOW_SAVE_BUTTON',
-                      permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
-                      typeList: ['SYSTEM'],
-                    }"
-                    :model-value="flow.enabled !== false"
-                    :disabled="flow.defaultFlow"
-                    @click.stop
-                    @change="(value) => handleFlowEnable(flow, Boolean(value))"
-                  />
                   <a-link
-                    v-if="!flow.defaultFlow"
+                    v-if="!flow.activeForNew"
                     v-visible-permission="{
                       code: 'PERMISSION_FLOW_DELETE_BUTTON',
                       permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
@@ -148,18 +137,35 @@
                   <div class="muted">系统全局生效；已发布版本不可原地修改，历史缺陷继续绑定原版本。</div>
                 </div>
                 <a-space wrap>
-                  <a-button :disabled="!isDraftFlow" @click="openStatusModal()">添加状态</a-button>
-                  <a-button :disabled="!isDraftFlow || !designerDirty" @click="saveDesigner">保存草稿</a-button>
+                  <a-button v-if="canUpdateRole" :disabled="!isDraftFlow" @click="openStatusModal()">添加状态</a-button>
+                  <a-button v-if="canUpdateRole" :disabled="!isDraftFlow || !designerDirty" @click="saveDesigner"
+                    >保存草稿</a-button
+                  >
                   <a-button :disabled="!selectedFlow?.id" @click="validateDesigner">校验</a-button>
-                  <a-button v-if="isDraftFlow" type="primary" :disabled="designerDirty" @click="publishDesigner"
+                  <a-button
+                    v-if="isDraftFlow && canUpdateRole"
+                    type="primary"
+                    :disabled="designerDirty"
+                    @click="publishDesigner"
                     >发布</a-button
                   >
-                  <a-button v-else-if="selectedFlow?.id" @click="copyDesigner">复制新版本</a-button>
-                  <a-button v-if="selectedFlow?.lifecycle === 'DRAFT'" status="warning" @click="archiveDesigner"
+                  <a-button
+                    v-if="canUpdateRole && selectedFlow?.lifecycle === 'PUBLISHED' && !selectedFlow.activeForNew"
+                    type="primary"
+                    @click="activateDesigner"
+                    >开启使用</a-button
+                  >
+                  <a-button v-if="canAddRole && selectedFlow?.id && !isDraftFlow" @click="copyDesigner"
+                    >复制新版本</a-button
+                  >
+                  <a-button
+                    v-if="canUpdateRole && selectedFlow?.lifecycle === 'PUBLISHED' && !selectedFlow.activeForNew"
+                    status="warning"
+                    @click="archiveDesigner"
                     >归档</a-button
                   >
-                  <a-button v-if="selectedFlow?.lifecycle === 'PUBLISHED'" @click="openMigrationPreview"
-                    >迁移历史缺陷</a-button
+                  <a-button v-if="canUpdateRole && selectedFlow?.activeForNew" @click="openMigrationPreview"
+                    >关联历史缺陷</a-button
                   >
                   <a-button v-if="selectedFlow?.lifecycle === 'ARCHIVED'" disabled>已归档</a-button>
                 </a-space>
@@ -175,8 +181,8 @@
                 v-for="status in flowMatrix.statuses"
                 :key="status.id"
                 :color="status.initial ? 'blue' : status.terminal ? 'green' : undefined"
-                :checkable="isDraftFlow"
-                @check="() => isDraftFlow && openStatusModal(status)"
+                :checkable="isDraftFlow && canUpdateRole"
+                @check="() => isDraftFlow && canUpdateRole && openStatusModal(status)"
               >
                 {{ status.name }}{{ status.initial ? '（初始）' : '' }}{{ status.terminal ? '（结束）' : '' }}
               </a-tag>
@@ -206,7 +212,7 @@
                         <small>{{ getTransitionAuthSummary(findTransition(fromStatus.id, toStatus.id)?.id) }}</small>
                       </button>
                       <button
-                        v-else-if="isDraftFlow"
+                        v-else-if="isDraftFlow && canUpdateRole"
                         class="matrix-cell cell-deny"
                         type="button"
                         @click="addTransition(fromStatus.id, toStatus.id)"
@@ -226,7 +232,12 @@
               <div class="card-title">
                 <span>流转规则</span>
                 <a-space>
-                  <a-button :disabled="!isDraftFlow" @click="() => openFlowRoleModal()">添加流程角色</a-button>
+                  <a-button v-if="canUpdateRole && isDraftFlow" @click="openWecomPositionPreview"
+                    >同步企微岗位</a-button
+                  >
+                  <a-button v-if="canAddRole" :disabled="!isDraftFlow" @click="() => openFlowRoleModal()"
+                    >添加流程角色</a-button
+                  >
                   <a-button
                     v-operable-permission="{
                       code: 'PERMISSION_FLOW_SAVE_BUTTON',
@@ -252,7 +263,11 @@
                 <a-descriptions-item label="目标状态">{{ getStatusName(selectedTransition.toId) }}</a-descriptions-item>
               </a-descriptions>
 
-              <a-button v-if="isDraftFlow" class="mt-3" status="danger" @click="removeSelectedTransition"
+              <a-button
+                v-if="isDraftFlow && canUpdateRole"
+                class="mt-3"
+                status="danger"
+                @click="removeSelectedTransition"
                 >删除此流转</a-button
               >
 
@@ -268,7 +283,7 @@
                     <template #cell="{ record }">
                       <a-checkbox
                         :model-value="getRolePermissionValue(record.id, 'visible')"
-                        :disabled="!isDraftFlow"
+                        :disabled="!isDraftFlow || !canUpdateRole"
                         @change="(value) => updateRolePermission(record.id, 'visible', Boolean(value))"
                       />
                     </template>
@@ -277,7 +292,7 @@
                     <template #cell="{ record }">
                       <a-checkbox
                         :model-value="getRolePermissionValue(record.id, 'operable')"
-                        :disabled="!isDraftFlow"
+                        :disabled="!isDraftFlow || !canUpdateRole"
                         @change="(value) => updateRolePermission(record.id, 'operable', Boolean(value))"
                       />
                     </template>
@@ -286,6 +301,7 @@
                     <template #cell="{ record }">
                       <a-space>
                         <a-link
+                          v-if="isDraftFlow && canUpdateRole"
                           v-visible-permission="{
                             code: 'PERMISSION_FLOW_ROLE_UPDATE_BUTTON',
                             permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
@@ -295,6 +311,7 @@
                           >编辑</a-link
                         >
                         <a-link
+                          v-if="isDraftFlow && canDeleteRole"
                           v-visible-permission="{
                             code: 'PERMISSION_FLOW_ROLE_DELETE_BUTTON',
                             permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
@@ -335,9 +352,59 @@
     </a-modal>
 
     <a-modal
+      v-model:visible="wecomPreviewVisible"
+      title="同步企微岗位"
+      :width="760"
+      :ok-loading="wecomSyncLoading"
+      ok-text="确认同步"
+      @ok="syncWecomPositions"
+    >
+      <a-alert class="mb-3" type="info"
+        >仅同步平台已保存的真实企微岗位；同步后仍需在流转矩阵中配置可见和可操作权限。</a-alert
+      >
+      <a-table
+        :data="wecomPositions"
+        :loading="wecomPreviewLoading"
+        :pagination="false"
+        row-key="sourceKey"
+        size="small"
+      >
+        <template #columns>
+          <a-table-column title="岗位" data-index="position" />
+          <a-table-column title="人数" data-index="memberCount" :width="100" />
+          <a-table-column title="同步状态" :width="120">
+            <template #cell="{ record }"
+              ><a-tag :color="record.existing ? 'green' : 'blue'">{{
+                record.existing ? '已存在' : '待新增'
+              }}</a-tag></template
+            >
+          </a-table-column>
+        </template>
+      </a-table>
+      <a-divider v-if="wecomSyncResults.length">最近同步结果</a-divider>
+      <a-table
+        v-if="wecomSyncResults.length"
+        :data="wecomSyncResults"
+        :pagination="false"
+        row-key="batchId"
+        size="small"
+      >
+        <template #columns>
+          <a-table-column title="时间" :width="180"
+            ><template #cell="{ record }">{{ new Date(record.createTime).toLocaleString() }}</template></a-table-column
+          >
+          <a-table-column title="总数" data-index="total" :width="80" />
+          <a-table-column title="新增" data-index="created" :width="80" />
+          <a-table-column title="更新" data-index="updated" :width="80" />
+          <a-table-column title="停用" data-index="disabled" :width="80" />
+        </template>
+      </a-table>
+    </a-modal>
+
+    <a-modal
       v-model:visible="statusModalVisible"
       :title="statusForm.id ? '编辑状态' : '添加状态'"
-      :ok-button-props="{ disabled: !isDraftFlow }"
+      :ok-button-props="{ disabled: !isDraftFlow || !canUpdateRole }"
       @ok="saveStatusDraft"
     >
       <a-form :model="statusForm" layout="vertical">
@@ -353,23 +420,25 @@
         </a-space>
       </a-form>
       <template #footer>
-        <a-button v-if="statusForm.id" status="danger" @click="deleteStatusDraft">删除状态</a-button>
+        <a-button v-if="statusForm.id && isDraftFlow && canUpdateRole" status="danger" @click="deleteStatusDraft"
+          >删除状态</a-button
+        >
         <a-button @click="statusModalVisible = false">取消</a-button>
-        <a-button type="primary" :disabled="!isDraftFlow" @click="saveStatusDraft">确定</a-button>
+        <a-button type="primary" :disabled="!isDraftFlow || !canUpdateRole" @click="saveStatusDraft">确定</a-button>
       </template>
     </a-modal>
 
     <a-modal
       v-model:visible="migrationVisible"
-      title="历史缺陷流程迁移预览"
-      :width="760"
+      title="批量关联历史缺陷"
+      :width="1080"
       :ok-loading="migrationLoading"
-      :ok-button-props="{ disabled: Boolean(migrationUnresolved.length) }"
+      :ok-button-props="{ disabled: !migrationBugIds.length }"
       ok-text="确认执行迁移"
       @ok="executeMigration"
     >
       <a-alert class="mb-4" type="warning">
-        此操作只迁移尚未绑定流程版本的历史缺陷；新发布流程不会自动影响历史数据。执行前已完成 dry-run 预检。
+        此操作只关联尚未绑定流程版本的历史缺陷到当前使用中的流程；请选择需要处理的项目并确认状态映射。
       </a-alert>
       <a-descriptions v-if="migrationPreview" :column="2" bordered>
         <a-descriptions-item label="目标版本">v{{ migrationPreview.targetVersion }}</a-descriptions-item>
@@ -391,20 +460,100 @@
           </a-form-item>
         </a-form>
       </div>
+      <div class="mt-4 grid grid-cols-4 gap-3">
+        <a-input-search
+          v-model="migrationCandidateQuery.keyword"
+          allow-clear
+          placeholder="缺陷 ID、编号或标题"
+          @search="searchMigrationCandidates"
+          @clear="searchMigrationCandidates"
+        />
+        <a-select
+          v-model="migrationCandidateQuery.projectIds"
+          multiple
+          allow-clear
+          placeholder="筛选项目"
+          @change="searchMigrationCandidates"
+        >
+          <a-option
+            v-for="project in migrationPreview?.projects || []"
+            :key="project.projectId"
+            :value="project.projectId"
+          >
+            {{ project.projectName }}
+          </a-option>
+        </a-select>
+        <a-select
+          v-model="migrationCandidateQuery.sourceStatusIds"
+          multiple
+          allow-clear
+          placeholder="筛选原状态"
+          @change="searchMigrationCandidates"
+        >
+          <a-option v-for="statusId in migrationSourceStatusIds" :key="statusId" :value="statusId">{{
+            statusId
+          }}</a-option>
+        </a-select>
+        <a-range-picker v-model="migrationCreateTimeRange" show-time @change="searchMigrationCandidates" />
+      </div>
+      <div class="mt-3 flex items-center justify-between">
+        <span class="muted">共 {{ migrationCandidateTotal }} 条，已跨页选择 {{ migrationBugIds.length }} 条</span>
+        <a-space>
+          <a-button @click="selectAllMigrationCandidates">选择当前筛选全部</a-button>
+          <a-button @click="migrationBugIds = []">清空选择</a-button>
+        </a-space>
+      </div>
       <a-alert v-if="migrationBatch" class="mt-4" :type="migrationBatch.failedCount ? 'warning' : 'success'">
         批次 {{ migrationBatch.id }}：{{ migrationBatch.status }}；成功 {{ migrationBatch.successCount }}，失败
         {{ migrationBatch.failedCount }}，跳过 {{ migrationBatch.skippedCount }}
       </a-alert>
-      <a-space v-if="migrationBatch && ['FAILED', 'PARTIAL_SUCCESS'].includes(migrationBatch.status)" class="mt-2">
-        <a-button @click="resumeMigrationBatch">重试失败项</a-button
+      <a-space
+        v-if="migrationBatch && ['COMPLETED', 'FAILED', 'PARTIAL_SUCCESS'].includes(migrationBatch.status)"
+        class="mt-2"
+      >
+        <a-button v-if="['FAILED', 'PARTIAL_SUCCESS'].includes(migrationBatch.status)" @click="resumeMigrationBatch"
+          >重试失败项</a-button
         ><a-button status="danger" @click="rollbackMigrationBatch">回滚已迁移项</a-button>
       </a-space>
-      <a-table v-if="migrationPreview" class="mt-4" :data="migrationPreview.projects" :pagination="false" size="small">
+      <a-table
+        v-if="migrationBatches.length"
+        class="mt-3"
+        :data="migrationBatches"
+        :pagination="false"
+        row-key="id"
+        size="mini"
+      >
         <template #columns>
-          <a-table-column title="项目" data-index="projectName" />
-          <a-table-column title="缺陷数" data-index="bugCount" :width="100" />
-          <a-table-column title="未映射状态" :width="240">
-            <template #cell="{ record }">{{ record.unresolvedStatusIds.join('、') || '-' }}</template>
+          <a-table-column title="最近迁移批次" data-index="id" ellipsis tooltip />
+          <a-table-column title="状态" data-index="status" :width="140" />
+          <a-table-column title="成功/失败" :width="120">
+            <template #cell="{ record }">{{ record.successCount || 0 }}/{{ record.failedCount || 0 }}</template>
+          </a-table-column>
+          <a-table-column title="操作" :width="80">
+            <template #cell="{ record }"><a-link @click="viewMigrationBatch(record.id)">查看</a-link></template>
+          </a-table-column>
+        </template>
+      </a-table>
+      <a-table
+        v-if="migrationPreview"
+        v-model:selected-keys="migrationBugIds"
+        class="mt-4"
+        :data="migrationCandidates"
+        :loading="migrationCandidateLoading"
+        :pagination="migrationCandidatePagination"
+        :row-selection="{ type: 'checkbox', showCheckedAll: true }"
+        row-key="id"
+        size="small"
+        @page-change="changeMigrationCandidatePage"
+        @page-size-change="changeMigrationCandidatePageSize"
+      >
+        <template #columns>
+          <a-table-column title="缺陷编号" data-index="num" :width="110" />
+          <a-table-column title="标题" data-index="title" ellipsis tooltip />
+          <a-table-column title="项目" data-index="projectName" :width="180" ellipsis tooltip />
+          <a-table-column title="原状态" data-index="sourceStatusName" :width="140" />
+          <a-table-column title="创建时间" :width="180">
+            <template #cell="{ record }">{{ new Date(record.createTime).toLocaleString() }}</template>
           </a-table-column>
         </template>
       </a-table>
@@ -603,6 +752,7 @@
   import { Message, Modal } from '@arco-design/web-vue';
 
   import {
+    activatePermissionControlFlow,
     addPermissionControlFlow,
     addPermissionControlFlowRole,
     addPermissionControlRoleMembers,
@@ -612,10 +762,11 @@
     deletePermissionControlFlow,
     deletePermissionControlFlowRole,
     deletePermissionControlRole,
-    enablePermissionControlFlow,
     enablePermissionControlRole,
     getPermissionControlFlowDesigner,
+    getPermissionControlFlowImpact,
     getPermissionControlFlowMigrationBatch,
+    getPermissionControlFlowMigrationCandidateIds,
     getPermissionControlFlowRolePermissions,
     getPermissionControlFlowRoles,
     getPermissionControlFlows,
@@ -624,9 +775,13 @@
     getPermissionControlRoleMemberOptions,
     getPermissionControlRoleMemberScopeOptions,
     getPermissionControlRoles,
+    getPermissionControlWecomPositionSyncResults,
+    listPermissionControlFlowMigrationBatches,
     migratePermissionControlFlow,
+    pagePermissionControlFlowMigrationCandidates,
     pagePermissionControlRoleMembers,
     previewPermissionControlFlowMigration,
+    previewPermissionControlWecomPositions,
     publishPermissionControlFlow,
     removePermissionControlRoleMembers,
     reportUnknownPermissionDiagnostic,
@@ -634,9 +789,11 @@
     rollbackPermissionControlFlowMigration,
     savePermissionControlFlowDesigner,
     savePermissionControlFlowRolePermissions,
+    syncPermissionControlWecomPositions,
     updatePermissionControlFlowRole,
     validatePermissionControlFlow,
     type WorkflowMigrationBatch,
+    type WorkflowMigrationCandidate,
     type WorkflowMigrationPreview,
   } from '@/api/modules/setting/permissionControl';
   import { getRoleScopeText, setUnknownPermissionReporter } from '@/config/permissionLocale';
@@ -667,6 +824,7 @@
   const router = useRouter();
   const canAddRole = computed(() => hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+ADD'], ['SYSTEM']));
   const canUpdateRole = computed(() => hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'], ['SYSTEM']));
+  const canDeleteRole = computed(() => hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+DELETE'], ['SYSTEM']));
 
   const activeTab = ref('role');
   const roles = ref<PermissionControlRole[]>([]);
@@ -723,9 +881,36 @@
   const migrationPreview = ref<WorkflowMigrationPreview>();
   const migrationMappings = ref<Record<string, string>>({});
   const migrationBatch = ref<WorkflowMigrationBatch>();
-  const migrationUnresolved = computed(() =>
-    (migrationPreview.value?.unresolvedStatusIds || []).filter((id) => !migrationMappings.value[id])
+  const migrationBatches = ref<WorkflowMigrationBatch[]>([]);
+  const migrationBugIds = ref<string[]>([]);
+  const migrationCandidates = ref<WorkflowMigrationCandidate[]>([]);
+  const migrationCandidateTotal = ref(0);
+  const migrationCandidateLoading = ref(false);
+  const migrationCreateTimeRange = ref<string[]>([]);
+  const migrationCandidateQuery = reactive({
+    current: 1,
+    pageSize: 20,
+    keyword: '',
+    projectIds: [] as string[],
+    sourceStatusIds: [] as string[],
+  });
+  const migrationSourceStatusIds = computed(() => [
+    ...new Set((migrationPreview.value?.projects || []).flatMap((item) => item.sourceStatusIds)),
+  ]);
+  const migrationCandidatePagination = computed(() => ({
+    current: migrationCandidateQuery.current,
+    pageSize: migrationCandidateQuery.pageSize,
+    total: migrationCandidateTotal.value,
+    showTotal: true,
+    showPageSize: true,
+  }));
+  const wecomPreviewVisible = ref(false);
+  const wecomPreviewLoading = ref(false);
+  const wecomSyncLoading = ref(false);
+  const wecomPositions = ref<Array<{ position: string; sourceKey: string; memberCount: number; existing: boolean }>>(
+    []
   );
+  const wecomSyncResults = ref<any[]>([]);
   const statusForm = reactive({
     id: '',
     code: '',
@@ -1027,13 +1212,8 @@
     return true;
   };
 
-  const handleFlowEnable = async (flow: WorkflowDefinition, enabled: boolean) => {
-    await enablePermissionControlFlow({ id: flow.id, enabled });
-    Message.success(enabled ? '流程已启用' : '流程已禁用');
-    await fetchFlows();
-  };
-
   const openStatusModal = (status?: PermissionControlStatus) => {
+    if (!isDraftFlow.value || !canUpdateRole.value) return;
     statusForm.id = status?.id || '';
     statusForm.code = status?.code || `BUG_STATUS_${Date.now()}`;
     statusForm.name = status?.name || '';
@@ -1046,6 +1226,7 @@
   };
 
   const saveStatusDraft = () => {
+    if (!isDraftFlow.value || !canUpdateRole.value) return false;
     if (!statusForm.name.trim() || !statusForm.code.trim()) {
       Message.error('状态名称和稳定编码不能为空');
       return false;
@@ -1070,7 +1251,7 @@
   };
 
   const deleteStatusDraft = () => {
-    if (!statusForm.id) return;
+    if (!statusForm.id || !isDraftFlow.value || !canUpdateRole.value) return;
     flowMatrix.value.statuses = flowMatrix.value.statuses.filter((item) => item.id !== statusForm.id);
     const removedTransitionIds = flowMatrix.value.transitions
       .filter((item) => item.fromId === statusForm.id || item.toId === statusForm.id)
@@ -1089,7 +1270,7 @@
   };
 
   const addTransition = (fromId: string, toId: string) => {
-    if (!isDraftFlow.value || findTransition(fromId, toId)) return;
+    if (!isDraftFlow.value || !canUpdateRole.value || findTransition(fromId, toId)) return;
     const transition: PermissionControlStatusFlow = {
       id: `draft-transition-${Date.now()}`,
       fromId,
@@ -1102,7 +1283,7 @@
   };
 
   const removeSelectedTransition = () => {
-    if (!selectedTransition.value) return;
+    if (!selectedTransition.value || !isDraftFlow.value || !canUpdateRole.value) return;
     const { id } = selectedTransition.value;
     flowMatrix.value.transitions = flowMatrix.value.transitions.filter((item) => item.id !== id);
     flowPermissions.value = flowPermissions.value.filter((item) => item.statusFlowId !== id);
@@ -1111,7 +1292,7 @@
   };
 
   const saveDesigner = async () => {
-    if (!selectedFlow.value?.id) return;
+    if (!selectedFlow.value?.id || !isDraftFlow.value || !canUpdateRole.value) return;
     flowMatrix.value = await savePermissionControlFlowDesigner(selectedFlow.value.id, flowMatrix.value);
     designerDirty.value = false;
     Message.success('流程草稿已保存');
@@ -1131,9 +1312,54 @@
   const publishDesigner = async () => {
     if (!selectedFlow.value?.id || selectedFlow.value.version == null || designerDirty.value) return;
     const published = await publishPermissionControlFlow(selectedFlow.value.id, selectedFlow.value.version);
-    Message.success('全局缺陷流程已发布，新建缺陷将绑定此版本');
+    Message.success('流程已发布；请手动点击“开启使用”后再用于新建缺陷');
     await fetchFlows();
     await selectFlow(published);
+  };
+
+  const activateDesigner = async () => {
+    if (!selectedFlow.value?.id) return;
+    Modal.warning({
+      title: '开启使用缺陷流程',
+      content: '开启后，新建缺陷将使用此流程。已有缺陷不会自动切换，原使用中流程不会归档，仅停止接收新缺陷。',
+      hideCancel: false,
+      onBeforeOk: async () => {
+        const active = await activatePermissionControlFlow(selectedFlow.value!.id!);
+        Message.success('流程已开启使用');
+        await fetchFlows();
+        await selectFlow(active);
+        return true;
+      },
+    });
+  };
+
+  const openWecomPositionPreview = async () => {
+    if (!selectedFlow.value?.id || !isDraftFlow.value) return;
+    wecomPreviewVisible.value = true;
+    wecomPreviewLoading.value = true;
+    try {
+      [wecomPositions.value, wecomSyncResults.value] = await Promise.all([
+        previewPermissionControlWecomPositions(selectedFlow.value.id),
+        getPermissionControlWecomPositionSyncResults(selectedFlow.value.id),
+      ]);
+    } finally {
+      wecomPreviewLoading.value = false;
+    }
+  };
+
+  const syncWecomPositions = async () => {
+    if (!selectedFlow.value?.id || !isDraftFlow.value) return false;
+    wecomSyncLoading.value = true;
+    try {
+      const result = await syncPermissionControlWecomPositions(selectedFlow.value.id);
+      Message.success(`企微岗位同步完成：新增 ${result.created}，更新 ${result.updated}，停用 ${result.disabled}`);
+      await fetchFlowConfig(selectedFlow.value.id);
+      wecomPositions.value = await previewPermissionControlWecomPositions(selectedFlow.value.id);
+      wecomSyncResults.value = await getPermissionControlWecomPositionSyncResults(selectedFlow.value.id);
+      return true;
+    } finally {
+      wecomSyncLoading.value = false;
+    }
   };
 
   const copyDesigner = async () => {
@@ -1147,7 +1373,7 @@
   const archiveDesigner = async () => {
     if (!selectedFlow.value?.id) return;
     Modal.warning({
-      title: '归档流程草稿',
+      title: '归档缺陷流程',
       content: `归档后“${selectedFlow.value.name}”将不可继续编辑，确认归档？`,
       hideCancel: false,
       onBeforeOk: async () => {
@@ -1160,6 +1386,32 @@
     });
   };
 
+  const migrationCandidatePayload = () => ({
+    ...migrationCandidateQuery,
+    keyword: migrationCandidateQuery.keyword.trim() || undefined,
+    createTimeStart: migrationCreateTimeRange.value[0]
+      ? new Date(migrationCreateTimeRange.value[0]).getTime()
+      : undefined,
+    createTimeEnd: migrationCreateTimeRange.value[1]
+      ? new Date(migrationCreateTimeRange.value[1]).getTime()
+      : undefined,
+  });
+
+  async function loadMigrationCandidates() {
+    if (!migrationPreview.value) return;
+    migrationCandidateLoading.value = true;
+    try {
+      const result = await pagePermissionControlFlowMigrationCandidates(
+        migrationPreview.value.targetFlowId,
+        migrationCandidatePayload()
+      );
+      migrationCandidates.value = result.list || [];
+      migrationCandidateTotal.value = result.total || 0;
+    } finally {
+      migrationCandidateLoading.value = false;
+    }
+  }
+
   const openMigrationPreview = async () => {
     if (!selectedFlow.value?.id) return;
     migrationLoading.value = true;
@@ -1167,11 +1419,45 @@
     try {
       migrationPreview.value = await previewPermissionControlFlowMigration(selectedFlow.value.id);
       migrationMappings.value = { ...migrationPreview.value.suggestedMappings };
+      migrationBugIds.value = [];
+      migrationCandidateQuery.current = 1;
+      migrationCandidateQuery.keyword = '';
+      migrationCandidateQuery.projectIds = [];
+      migrationCandidateQuery.sourceStatusIds = [];
+      migrationCreateTimeRange.value = [];
       migrationBatch.value = undefined;
+      migrationBatches.value = await listPermissionControlFlowMigrationBatches(selectedFlow.value.id);
+      await loadMigrationCandidates();
     } finally {
       migrationLoading.value = false;
     }
   };
+
+  function searchMigrationCandidates() {
+    migrationCandidateQuery.current = 1;
+    loadMigrationCandidates();
+  }
+
+  function changeMigrationCandidatePage(current: number) {
+    migrationCandidateQuery.current = current;
+    loadMigrationCandidates();
+  }
+
+  function changeMigrationCandidatePageSize(pageSize: number) {
+    migrationCandidateQuery.current = 1;
+    migrationCandidateQuery.pageSize = pageSize;
+    loadMigrationCandidates();
+  }
+
+  async function selectAllMigrationCandidates() {
+    if (!migrationPreview.value) return;
+    const result = await getPermissionControlFlowMigrationCandidateIds(
+      migrationPreview.value.targetFlowId,
+      migrationCandidatePayload()
+    );
+    migrationBugIds.value = result.ids;
+    Message.success(`已选择当前筛选结果 ${result.total} 条`);
+  }
 
   const waitForMigration = async (batchId: string, deadline: number): Promise<void> => {
     migrationBatch.value = await getPermissionControlFlowMigrationBatch(batchId);
@@ -1185,23 +1471,29 @@
   };
 
   const executeMigration = async () => {
-    if (!migrationPreview.value || migrationUnresolved.value.length) return false;
+    if (!migrationPreview.value || !migrationBugIds.value.length) {
+      Message.warning('请选择需要关联的缺陷');
+      return false;
+    }
     migrationLoading.value = true;
     try {
       await migratePermissionControlFlow({
         targetFlowId: migrationPreview.value.targetFlowId,
         dryRun: true,
         statusMappings: migrationMappings.value,
+        bugIds: migrationBugIds.value,
       });
       const result = await migratePermissionControlFlow({
         targetFlowId: migrationPreview.value.targetFlowId,
         dryRun: false,
         statusMappings: migrationMappings.value,
+        bugIds: migrationBugIds.value,
       });
       const deadline = Date.now() + 5 * 60 * 1000;
       await waitForMigration(result.batchId, deadline);
+      migrationBatches.value = await listPermissionControlFlowMigrationBatches(migrationPreview.value.targetFlowId);
       if (migrationBatch.value?.status === 'COMPLETED')
-        Message.success(`迁移完成：成功 ${migrationBatch.value.successCount} 条`);
+        Message.success(`关联完成：成功 ${migrationBatch.value.successCount} 条`);
       else Message.warning('迁移未全部成功，可在当前窗口重试失败项或回滚');
       return false;
     } finally {
@@ -1214,18 +1506,40 @@
     await resumePermissionControlFlowMigration(migrationBatch.value.id);
     Message.success('已提交失败项重试，请稍后刷新批次状态');
     migrationBatch.value = await getPermissionControlFlowMigrationBatch(migrationBatch.value.id);
+    if (migrationPreview.value)
+      migrationBatches.value = await listPermissionControlFlowMigrationBatches(migrationPreview.value.targetFlowId);
   };
   const rollbackMigrationBatch = async () => {
     if (!migrationBatch.value) return;
-    migrationBatch.value = await rollbackPermissionControlFlowMigration(migrationBatch.value.id);
-    Message.success('回滚已执行，请核对冲突数');
+    const batchId = migrationBatch.value.id;
+    Modal.warning({
+      title: '确认回滚历史缺陷关联',
+      content: '仅仍保持迁移后流程和状态的缺陷会被回滚；已被其他人员修改的缺陷将记录为冲突，不会覆盖。是否继续？',
+      hideCancel: false,
+      onBeforeOk: async () => {
+        migrationBatch.value = await rollbackPermissionControlFlowMigration(batchId);
+        if (migrationPreview.value)
+          migrationBatches.value = await listPermissionControlFlowMigrationBatches(migrationPreview.value.targetFlowId);
+        Message.success('回滚已执行，请核对冲突数');
+        return true;
+      },
+    });
   };
 
-  const confirmDeleteFlow = (flow: WorkflowDefinition) => {
-    if (!flow.id || flow.defaultFlow) return;
+  const viewMigrationBatch = async (batchId: string) => {
+    migrationBatch.value = await getPermissionControlFlowMigrationBatch(batchId);
+  };
+
+  const confirmDeleteFlow = async (flow: WorkflowDefinition) => {
+    if (!flow.id || flow.activeForNew) return;
+    const impact = await getPermissionControlFlowImpact(flow.id);
+    if (!impact.deletable) {
+      Message.warning(impact.reason || '该流程不可删除');
+      return;
+    }
     Modal.warning({
       title: `删除流程“${flow.name}”`,
-      content: '流程及其角色、流转授权将被删除，是否继续？',
+      content: `该流程未关联缺陷和流转历史。流程及其角色、流转授权将被删除，是否继续？`,
       hideCancel: false,
       onBeforeOk: async () => {
         await deletePermissionControlFlow(flow.id!);
@@ -1237,6 +1551,7 @@
   };
 
   const openFlowRoleModal = (role?: WorkflowRole) => {
+    if (!isDraftFlow.value || (role ? !canUpdateRole.value : !canAddRole.value)) return;
     flowRoleForm.id = role?.id;
     flowRoleForm.code = role?.code || `BUG_HANDLER_${Date.now()}`;
     flowRoleForm.name = role?.name || '当前处理人';
@@ -1247,6 +1562,7 @@
   };
 
   const handleSaveFlowRole = async () => {
+    if (!isDraftFlow.value || (flowRoleForm.id ? !canUpdateRole.value : !canAddRole.value)) return false;
     if (!selectedFlow.value?.id || !flowRoleForm.name || !flowRoleForm.code) {
       Message.error('流程角色名称和编码不能为空');
       return false;
@@ -1258,9 +1574,10 @@
       name: flowRoleForm.name,
       roleType: flowRoleForm.roleType,
       roleId: flowRoleForm.roleType === 'SYSTEM_ROLE' ? flowRoleForm.roleId : undefined,
-      fieldKey: flowRoleForm.roleType === 'FIELD_USER' || flowRoleForm.roleType === 'POSITION'
-        ? flowRoleForm.fieldKey
-        : undefined,
+      fieldKey:
+        flowRoleForm.roleType === 'FIELD_USER' || flowRoleForm.roleType === 'POSITION'
+          ? flowRoleForm.fieldKey
+          : undefined,
       enabled: true,
     };
     if (flowRoleForm.id) await updatePermissionControlFlowRole(payload);
@@ -1272,7 +1589,7 @@
   };
 
   const confirmDeleteFlowRole = (role: WorkflowRole) => {
-    if (!role.id || !selectedFlow.value?.id) return;
+    if (!role.id || !selectedFlow.value?.id || !isDraftFlow.value || !canDeleteRole.value) return;
     Modal.warning({
       title: `删除流程角色“${role.name}”`,
       content: '该角色在流转矩阵中的授权将同时删除，是否继续？',
@@ -1331,6 +1648,7 @@
   };
 
   const updateRolePermission = (workflowRoleId: string, field: 'visible' | 'operable', value: boolean) => {
+    if (!isDraftFlow.value || !canUpdateRole.value) return;
     const permission = ensureRolePermission(workflowRoleId);
     if (field === 'operable' && value) {
       permission.visible = true;
@@ -1355,7 +1673,7 @@
   };
 
   const saveTransitionPermissions = async () => {
-    if (!selectedFlow.value?.id) return;
+    if (!selectedFlow.value?.id || !isDraftFlow.value || !canUpdateRole.value) return;
     await savePermissionControlFlowRolePermissions({
       flowId: selectedFlow.value.id,
       permissions: flowPermissions.value

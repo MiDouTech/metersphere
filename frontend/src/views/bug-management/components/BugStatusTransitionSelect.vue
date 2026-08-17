@@ -27,9 +27,12 @@
       </a-doption>
     </template>
   </a-dropdown>
-  <span v-else class="bug-status-button" :class="getBugStatusClass(displayName)" :title="runtime?.unavailableReason">
-    {{ displayName || '-' }}
-  </span>
+  <a-tooltip v-else :content="runtime?.unavailableReason || noTransitionReason">
+    <span class="bug-status-button inline-flex items-center gap-1" :class="getBugStatusClass(displayName)">
+      {{ displayName || '-' }}
+      <icon-info-circle v-if="canUpdate && loaded" />
+    </span>
+  </a-tooltip>
 
   <a-modal
     v-model:visible="overrideVisible"
@@ -70,7 +73,10 @@
   const overrideVisible = ref(false);
   const overrideReason = ref('');
   const canUpdate = hasAnyPermission(['PROJECT_BUG:READ+UPDATE']);
-  const displayName = computed(() => runtime.value?.currentStatus.name || props.statusName || props.status);
+  const displayName = computed(() => runtime.value?.currentStatus.name || props.statusName || '未知状态');
+  const noTransitionReason = computed(() =>
+    canUpdate && loaded.value ? '当前状态没有可执行的下一步；请联系管理员检查流程角色和流转规则' : '当前用户无修改权限'
+  );
 
   async function load() {
     loading.value = true;

@@ -27,8 +27,10 @@ public class CaseAssetImportWorker {
                     ? functionalCaseFileService.importXMind(request, user, file)
                     : functionalCaseFileService.importExcel(request, user, file);
             jobService.complete(jobId, response);
-        } catch (RuntimeException e) {
-            jobService.fail(jobId, e);
+        } catch (Exception e) {
+            RuntimeException failure = e instanceof RuntimeException runtime ? runtime
+                    : new io.metersphere.sdk.exception.MSException("资产用例导入失败: " + e.getMessage(), e);
+            jobService.fail(jobId, failure);
         }
     }
 

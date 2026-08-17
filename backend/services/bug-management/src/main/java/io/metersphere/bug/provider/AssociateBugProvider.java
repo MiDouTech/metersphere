@@ -117,7 +117,9 @@ public class AssociateBugProvider implements BaseAssociateBugProvider {
         List<SelectOption> statusOption = bugStatusService.getHeaderStatusOption(projectId);
         associateBugs.forEach(item -> {
             headerHandlerOption.stream().filter(option -> StringUtils.equals(option.getValue(), item.getHandleUser())).findFirst().ifPresent(option -> item.setHandleUserName(option.getText()));
-            statusOption.stream().filter(option -> StringUtils.equals(option.getValue(), item.getStatus())).findFirst().ifPresent(option -> item.setStatusName(option.getText()));
+            item.setStatusName(statusOption.stream()
+                    .filter(option -> StringUtils.equals(option.getValue(), item.getStatus()))
+                    .map(SelectOption::getText).findFirst().orElse("未知状态"));
         });
         return associateBugs;
     }

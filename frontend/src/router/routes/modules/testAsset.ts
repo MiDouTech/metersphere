@@ -117,6 +117,7 @@ const TestAsset: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.testAsset.commonSteps',
         roles: ['PROJECT_API_SCENARIO:READ'],
+        resourceCode: 'TEST_ASSET_COMMON_STEPS_PAGE',
         isTopMenu: true,
         keepModuleAlive: true,
       },
@@ -128,6 +129,7 @@ const TestAsset: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.testAsset.apis',
         roles: ['PROJECT_API_DEFINITION:READ'],
+        resourceCode: 'TEST_ASSET_APIS_PAGE',
         isTopMenu: true,
         keepModuleAlive: true,
       },
@@ -136,13 +138,25 @@ const TestAsset: AppRouteRecordRaw = {
       path: 'evidence',
       name: TestAssetRouteEnum.TEST_ASSET_EVIDENCE,
       component: () => import('@/views/test-asset/evidence.vue'),
-      meta: { locale: 'menu.testAsset.evidence', roles: ['AI_EXECUTION:READ'], isTopMenu: true, keepModuleAlive: true },
+      meta: {
+        locale: 'menu.testAsset.evidence',
+        roles: ['AI_EXECUTION:READ'],
+        resourceCode: 'TEST_ASSET_EVIDENCE_PAGE',
+        isTopMenu: true,
+        keepModuleAlive: true,
+      },
     },
     {
       path: 'bugs',
       name: TestAssetRouteEnum.TEST_ASSET_BUGS,
       component: () => import('@/views/test-asset/bugs.vue'),
-      meta: { locale: 'menu.testAsset.bugs', roles: ['PROJECT_BUG:READ'], isTopMenu: true, keepModuleAlive: true },
+      meta: {
+        locale: 'menu.testAsset.bugs',
+        roles: ['PROJECT_BUG:READ'],
+        resourceCode: 'TEST_ASSET_BUGS_PAGE',
+        isTopMenu: true,
+        keepModuleAlive: true,
+      },
     },
     {
       path: 'cases/project',

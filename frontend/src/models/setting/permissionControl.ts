@@ -6,6 +6,7 @@ export interface WorkflowDefinition {
   scopeType: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT';
   scopeId: string;
   defaultFlow?: boolean;
+  activeForNew?: boolean;
   enabled?: boolean;
   description?: string;
   version?: number;
@@ -24,6 +25,9 @@ export interface WorkflowRole {
   roleType: 'SYSTEM_ROLE' | 'FIELD_USER' | 'POSITION';
   roleId?: string;
   fieldKey?: string;
+  sourceType?: 'MANUAL' | 'WECOM_POSITION';
+  sourceKey?: string;
+  matchMode?: 'CONTAINS' | 'EXACT';
   enabled?: boolean;
 }
 

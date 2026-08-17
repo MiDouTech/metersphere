@@ -16,6 +16,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import jakarta.servlet.http.HttpServletRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -215,6 +216,36 @@ class RestControllerExceptionHandlerTests {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/assets/app.js");
 
         ResponseEntity<Void> responseEntity = handler.handleEofException(request, new EofException());
+
+        assertEquals(204, responseEntity.getStatusCode().value());
+        assertEquals(null, responseEntity.getBody());
+    }
+
+    @Test
+    void shouldNotMaskOriginalExceptionWhenAsyncRequestHasNoShiroContext() {
+        RestControllerExceptionHandler handler = new RestControllerExceptionHandler();
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        org.mockito.Mockito.when(request.getMethod()).thenReturn("GET");
+        org.mockito.Mockito.when(request.getRequestURI()).thenReturn("/functional/case/ai/document/events");
+        org.mockito.Mockito.when(request.getUserPrincipal())
+                .thenThrow(new org.apache.shiro.UnavailableSecurityManagerException("no context"));
+
+        ResponseEntity<ResultHolder> result = handler.handleException(
+                new IllegalStateException("original failure"), request, response);
+
+        assertEquals(500, result.getStatusCode().value());
+        assertNotNull(result.getBody());
+        assertEquals("api.internalError", result.getBody().getMessageKey());
+        assertNotNull(result.getBody().getRequestId());
+    }
+
+    @Test
+    void shouldTreatAsyncTimeoutAsCompletedStreamingRequest() {
+        RestControllerExceptionHandler handler = new RestControllerExceptionHandler();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/functional/case/ai/document/events");
+
+        ResponseEntity<Void> responseEntity = handler.handleAsyncRequestTimeout(request);
 
         assertEquals(204, responseEntity.getStatusCode().value());
         assertEquals(null, responseEntity.getBody());

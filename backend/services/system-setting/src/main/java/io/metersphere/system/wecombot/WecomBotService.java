@@ -627,7 +627,7 @@ public class WecomBotService {
     }
 
     public List<Map<String, Object>> bugTerminalStatuses() {
-        return jdbc.queryForList("SELECT si.id,si.name,si.status_code FROM status_item si JOIN workflow_definition wd ON wd.id=si.flow_id WHERE wd.scene='BUG' AND wd.lifecycle='PUBLISHED' AND wd.default_flow=1 AND wd.enabled=1 AND si.enabled=1 AND si.terminal_status=1 ORDER BY si.pos");
+        return jdbc.queryForList("SELECT si.id,si.name,si.status_code FROM status_item si JOIN workflow_definition wd ON wd.id=si.flow_id WHERE wd.scene='BUG' AND wd.lifecycle='PUBLISHED' AND wd.active_for_new=1 AND wd.enabled=1 AND si.enabled=1 AND si.terminal_status=1 ORDER BY si.pos");
     }
 
     private Set<String> resolveRecipientUsers(Map<String, Object> rule, Map<String, Object> recipient) {
