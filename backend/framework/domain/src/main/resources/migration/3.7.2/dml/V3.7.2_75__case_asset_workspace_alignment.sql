@@ -9,7 +9,6 @@ WITH RECURSIVE asset_module (organization_id, module_id) AS (
     SELECT parent.organization_id, child.id
     FROM functional_case_module child
     JOIN asset_module parent ON child.parent_id = parent.module_id
-    WHERE child.deleted = b'0'
 )
 UPDATE functional_case fc
 JOIN asset_module asset ON asset.module_id = fc.module_id
