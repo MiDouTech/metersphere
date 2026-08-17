@@ -15,6 +15,7 @@ public class WorkflowDefinition implements Serializable {
     private String scopeType;
     private String scopeId;
     private Boolean defaultFlow;
+    private Boolean activeForNew;
     private Boolean enabled;
     private String description;
     private Integer version;

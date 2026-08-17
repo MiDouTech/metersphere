@@ -20,7 +20,10 @@ public class PermissionControlFlowLogService {
     public LogDTO update(WorkflowDefinition request) { return flow(request.getId(), OperationLogType.UPDATE, request); }
     public LogDTO designer(String flowId, WorkflowDesignerDTO request) { return flow(flowId, OperationLogType.UPDATE, request); }
     public LogDTO publish(String flowId) { return flow(flowId, OperationLogType.UPDATE, "PUBLISH"); }
+    public LogDTO activate(String flowId) { return flow(flowId, OperationLogType.UPDATE, "ACTIVATE_FOR_NEW_BUGS"); }
     public LogDTO archive(String flowId) { return flow(flowId, OperationLogType.UPDATE, "ARCHIVE"); }
+    public LogDTO delete(String flowId) { return flow(flowId, OperationLogType.DELETE, "DELETE"); }
+    public LogDTO syncPositions(String flowId) { return flow(flowId, OperationLogType.UPDATE, "SYNC_WECOM_POSITIONS"); }
     public LogDTO copy(String flowId) { return flow(flowId, OperationLogType.ADD, "COPY_VERSION"); }
     public LogDTO migration(WorkflowMigrationRequest request) { return flow(request.getTargetFlowId(), OperationLogType.UPDATE, request); }
     public LogDTO batch(String batchId) { return value(batchId, batchId, OperationLogType.UPDATE, batchId); }

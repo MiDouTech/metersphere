@@ -23,6 +23,9 @@ public class FunctionalCaseAddRequest implements Serializable {
     @NotBlank(message = "{functional_case.project_id.not_blank}")
     private String projectId;
 
+    @Schema(description = "工作空间/组织 ID；为空时根据项目自动解析")
+    private String workspaceId;
+
     @Schema(description = "模板id", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{functional_case.template_id.not_blank}")
     private String templateId;

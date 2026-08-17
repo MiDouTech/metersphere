@@ -15,6 +15,9 @@ public class WorkflowRole implements Serializable {
     private String roleType;
     private String roleId;
     private String fieldKey;
+    private String sourceType;
+    private String sourceKey;
+    private String matchMode;
     private Boolean enabled;
     private Long createTime;
     private Long updateTime;

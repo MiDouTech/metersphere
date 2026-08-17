@@ -21,6 +21,7 @@ import io.metersphere.system.dto.permission.control.WorkflowDesignerDTO;
 import io.metersphere.system.dto.permission.control.WorkflowValidationDTO;
 import io.metersphere.system.dto.permission.control.WorkflowMigrationPreviewDTO;
 import io.metersphere.system.dto.permission.control.WorkflowMigrationRequest;
+import io.metersphere.system.dto.permission.control.WorkflowMigrationCandidateRequest;
 import io.metersphere.system.dto.permission.control.UnknownPermissionDiagnosticRequest;
 import io.metersphere.system.dto.request.GlobalUserRoleRelationQueryRequest;
 import io.metersphere.system.dto.sdk.request.PermissionSettingUpdateRequest;
@@ -261,6 +262,7 @@ public class PermissionControlController {
     @PostMapping("/flow/delete")
     @Operation(summary = "权限控制-流程控制-删除流程")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_DELETE)
+    @Log(type = OperationLogType.DELETE, expression = "#msClass.delete(#flowId)", msClass = PermissionControlFlowLogService.class)
     public void deleteFlow(@RequestParam String flowId) {
         permissionControlService.deleteFlow(flowId);
     }
@@ -353,6 +355,43 @@ public class PermissionControlController {
         return permissionControlService.publishWorkflow(flowId, expectedVersion);
     }
 
+    @PostMapping("/flow/{flowId}/activate")
+    @Operation(summary = "权限控制-流程控制-开启流程用于新建缺陷")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.activate(#flowId)", msClass = PermissionControlFlowLogService.class)
+    public WorkflowDefinition activateFlow(@PathVariable String flowId) {
+        return permissionControlService.activateWorkflow(flowId);
+    }
+
+    @GetMapping("/flow/{flowId}/wecom-positions/preview")
+    @Operation(summary = "权限控制-流程控制-预览企微岗位")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<Map<String, Object>> previewWecomPositions(@PathVariable String flowId) {
+        return permissionControlService.previewWecomPositions(flowId);
+    }
+
+    @PostMapping("/flow/{flowId}/wecom-positions/sync")
+    @Operation(summary = "权限控制-流程控制-同步企微岗位")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.syncPositions(#flowId)", msClass = PermissionControlFlowLogService.class)
+    public Map<String, Object> syncWecomPositions(@PathVariable String flowId) {
+        return permissionControlService.syncWecomPositions(flowId);
+    }
+
+    @GetMapping("/flow/{flowId}/wecom-positions/sync-results")
+    @Operation(summary = "权限控制-流程控制-查询企微岗位同步结果")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<Map<String, Object>> wecomPositionSyncResults(@PathVariable String flowId) {
+        return permissionControlService.listWecomPositionSyncResults(flowId);
+    }
+
+    @GetMapping("/flow/{flowId}/impact")
+    @Operation(summary = "权限控制-流程控制-流程引用影响")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public Map<String, Object> flowImpact(@PathVariable String flowId) {
+        return permissionControlService.getFlowImpact(flowId);
+    }
+
     @PostMapping("/flow/{flowId}/archive")
     @Operation(summary = "权限控制-流程控制-归档流程")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
@@ -376,6 +415,22 @@ public class PermissionControlController {
         return permissionControlService.previewWorkflowMigration(flowId);
     }
 
+    @PostMapping("/flow/{flowId}/migration/candidates")
+    @Operation(summary = "权限控制-流程控制-分页查询历史缺陷候选项")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public Map<String, Object> migrationCandidates(@PathVariable String flowId,
+                                                   @RequestBody WorkflowMigrationCandidateRequest request) {
+        return permissionControlService.pageWorkflowMigrationCandidates(flowId, request, false);
+    }
+
+    @PostMapping("/flow/{flowId}/migration/candidate-ids")
+    @Operation(summary = "权限控制-流程控制-查询筛选范围内历史缺陷 ID")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public Map<String, Object> migrationCandidateIds(@PathVariable String flowId,
+                                                     @RequestBody WorkflowMigrationCandidateRequest request) {
+        return permissionControlService.pageWorkflowMigrationCandidates(flowId, request, true);
+    }
+
     @PostMapping("/flow/migration")
     @Operation(summary = "权限控制-流程控制-显式迁移历史缺陷")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
@@ -389,6 +444,13 @@ public class PermissionControlController {
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
     public Map<String, Object> migrationBatch(@PathVariable String batchId) {
         return permissionControlService.getWorkflowMigrationBatch(batchId);
+    }
+
+    @GetMapping("/flow/{flowId}/migration/batches")
+    @Operation(summary = "权限控制-流程控制-查询最近迁移批次")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<Map<String, Object>> migrationBatches(@PathVariable String flowId) {
+        return permissionControlService.listWorkflowMigrationBatches(flowId);
     }
 
     @PostMapping("/flow/migration/{batchId}/resume")

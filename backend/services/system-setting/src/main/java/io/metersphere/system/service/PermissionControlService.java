@@ -32,6 +32,7 @@ import io.metersphere.system.dto.permission.control.WorkflowDesignerDTO;
 import io.metersphere.system.dto.permission.control.WorkflowValidationDTO;
 import io.metersphere.system.dto.permission.control.WorkflowMigrationPreviewDTO;
 import io.metersphere.system.dto.permission.control.WorkflowMigrationRequest;
+import io.metersphere.system.dto.permission.control.WorkflowMigrationCandidateRequest;
 import io.metersphere.system.dto.StatusItemDTO;
 import io.metersphere.system.dto.request.GlobalUserRoleRelationQueryRequest;
 import io.metersphere.system.dto.sdk.request.GlobalUserRoleRelationUpdateRequest;
@@ -68,6 +69,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -682,7 +685,8 @@ public class PermissionControlService {
         workflowDefinition.setScopeType(StringUtils.defaultIfBlank(workflowDefinition.getScopeType(), UserRoleType.SYSTEM.name()));
         workflowDefinition.setScopeId(StringUtils.defaultIfBlank(workflowDefinition.getScopeId(), UserRoleScope.SYSTEM));
         workflowDefinition.setEnabled(BooleanUtils.isNotFalse(workflowDefinition.getEnabled()));
-        workflowDefinition.setDefaultFlow(BooleanUtils.isTrue(workflowDefinition.getDefaultFlow()));
+        workflowDefinition.setDefaultFlow(false);
+        workflowDefinition.setActiveForNew(false);
         workflowDefinition.setVersion(request.getVersion() == null ? 1 : request.getVersion());
         workflowDefinition.setLifecycle("DRAFT");
         workflowDefinition.setSourceFlowId(request.getCopyFromFlowId());
@@ -779,18 +783,36 @@ public class PermissionControlService {
         if (workflowDefinition == null) {
             return;
         }
-        if (BooleanUtils.isTrue(workflowDefinition.getDefaultFlow())) {
-            throw new MSException("默认流程不可删除，请先切换默认流程");
-        }
-        if (!StringUtils.equals(workflowDefinition.getLifecycle(), "DRAFT")) {
-            throw new MSException("仅草稿流程可删除");
-        }
+        Map<String, Object> impact = getFlowImpact(flowId);
+        if (!Boolean.TRUE.equals(impact.get("deletable"))) throw new MSException(String.valueOf(impact.get("reason")));
         jdbcTemplate.update("DELETE FROM status_flow_role_permission WHERE flow_id = ?", flowId);
         jdbcTemplate.update("DELETE FROM status_flow WHERE flow_id = ?", flowId);
         jdbcTemplate.update("DELETE FROM status_item WHERE flow_id = ?", flowId);
         permissionControlMapper.deleteStatusFlowRolePermissionsByFlowId(flowId);
         permissionControlMapper.deleteWorkflowRolesByFlowId(flowId);
         permissionControlMapper.deleteWorkflowDefinition(flowId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getFlowImpact(String flowId) {
+        WorkflowDefinition flow = getWorkflowWithCheck(flowId);
+        Long bugCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM bug WHERE workflow_id=?", Long.class, flowId);
+        Long historyCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM bug_status_transition_history WHERE workflow_id=?",
+                Long.class, flowId);
+        long associated = bugCount == null ? 0 : bugCount;
+        long history = historyCount == null ? 0 : historyCount;
+        boolean active = BooleanUtils.isTrue(flow.getActiveForNew());
+        boolean deletable = !active && associated == 0 && history == 0;
+        String reason = deletable ? "" : active ? "当前使用中的流程不可删除，请先开启替代流程"
+                : "该流程已关联缺陷或流转历史，只能归档";
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("associatedBugCount", associated);
+        result.put("transitionHistoryCount", history);
+        result.put("activeForNew", active);
+        result.put("deletable", deletable);
+        result.put("archiveRequired", !active && !deletable);
+        result.put("reason", reason);
+        return result;
     }
 
     public WorkflowDesignerDTO getWorkflowDesigner(String flowId) {
@@ -929,8 +951,6 @@ public class PermissionControlService {
     }
 
     public WorkflowDefinition publishWorkflow(String flowId, Integer expectedVersion) {
-        jdbcTemplate.queryForList("SELECT id FROM workflow_definition WHERE scene='BUG' AND scope_type='SYSTEM' "
-                + "AND scope_id='system' FOR UPDATE", String.class);
         WorkflowDefinition flow = getWorkflowWithCheck(flowId);
         if (expectedVersion == null || !Objects.equals(flow.getVersion(), expectedVersion)) {
             throw new MSException(MsHttpResultCode.CONFLICT, "流程版本已变化，请刷新后重试");
@@ -938,21 +958,37 @@ public class PermissionControlService {
         if (!StringUtils.equals(flow.getLifecycle(), "DRAFT")) throw new MSException("仅草稿流程可发布");
         WorkflowValidationDTO validation = validateWorkflow(flowId);
         if (!validation.isValid()) throw new MSException("流程发布校验失败: " + String.join("；", validation.getErrors()));
-        jdbcTemplate.update("UPDATE workflow_definition SET lifecycle = 'ARCHIVED', default_flow = b'0', update_time = ? "
-                + "WHERE scene = 'BUG' AND lifecycle = 'PUBLISHED' AND default_flow = b'1' AND id<>?", System.currentTimeMillis(), flowId);
-        int published = jdbcTemplate.update("UPDATE workflow_definition SET lifecycle = 'PUBLISHED', default_flow = b'1', enabled = b'1', "
+        int published = jdbcTemplate.update("UPDATE workflow_definition SET lifecycle = 'PUBLISHED', default_flow = b'0', "
+                        + "active_for_new = b'0', enabled = b'1', "
                         + "published_time = ?, published_by = ?, update_time = ? WHERE id = ? AND lifecycle = 'DRAFT'",
                 System.currentTimeMillis(), SessionUtils.getUserId(), System.currentTimeMillis(), flowId);
         if (published != 1) throw new MSException(MsHttpResultCode.CONFLICT, "流程已被其他操作修改，请刷新后重试");
         return getWorkflowWithCheck(flowId);
     }
 
+    public WorkflowDefinition activateWorkflow(String flowId) {
+        jdbcTemplate.queryForList("SELECT id FROM workflow_definition WHERE scene='BUG' AND scope_type='SYSTEM' "
+                + "AND scope_id='system' FOR UPDATE", String.class);
+        WorkflowDefinition flow = getWorkflowWithCheck(flowId);
+        if (!StringUtils.equals(flow.getLifecycle(), "PUBLISHED")) throw new MSException("仅已发布流程可开启使用");
+        if (BooleanUtils.isFalse(flow.getEnabled())) throw new MSException("已禁用流程不可开启使用");
+        long now = System.currentTimeMillis();
+        jdbcTemplate.update("UPDATE workflow_definition SET active_for_new=b'0', default_flow=b'0', update_time=? "
+                + "WHERE scene='BUG' AND scope_type='SYSTEM' AND scope_id='system' AND active_for_new=b'1'", now);
+        int updated = jdbcTemplate.update("UPDATE workflow_definition SET active_for_new=b'1', default_flow=b'1', update_time=? "
+                + "WHERE id=? AND lifecycle='PUBLISHED' AND enabled=b'1'", now, flowId);
+        if (updated != 1) throw new MSException(MsHttpResultCode.CONFLICT, "流程状态已变化，请刷新后重试");
+        return getWorkflowWithCheck(flowId);
+    }
+
     public WorkflowDefinition archiveWorkflow(String flowId) {
         WorkflowDefinition flow = getWorkflowWithCheck(flowId);
-        if (BooleanUtils.isTrue(flow.getDefaultFlow()) && StringUtils.equals(flow.getLifecycle(), "PUBLISHED")) {
-            throw new MSException("当前默认发布流程不可归档，请先发布替代版本");
+        if (BooleanUtils.isTrue(flow.getActiveForNew())) throw new MSException("当前使用中的流程不可归档，请先开启替代流程");
+        if (StringUtils.equals(flow.getLifecycle(), "ARCHIVED")) return flow;
+        if (!StringUtils.equals(flow.getLifecycle(), "PUBLISHED")) {
+            throw new MSException("仅已发布且未使用的流程可归档");
         }
-        jdbcTemplate.update("UPDATE workflow_definition SET lifecycle = 'ARCHIVED', default_flow = b'0', update_time = ? WHERE id = ?",
+        jdbcTemplate.update("UPDATE workflow_definition SET lifecycle = 'ARCHIVED', default_flow = b'0', active_for_new=b'0', update_time = ? WHERE id = ?",
                 System.currentTimeMillis(), flowId);
         return getWorkflowWithCheck(flowId);
     }
@@ -982,8 +1018,8 @@ public class PermissionControlService {
 
     public WorkflowMigrationPreviewDTO previewWorkflowMigration(String targetFlowId) {
         WorkflowDefinition target = getWorkflowWithCheck(targetFlowId);
-        if (!StringUtils.equals(target.getLifecycle(), "PUBLISHED")) {
-            throw new MSException("仅可将历史缺陷迁移到已发布流程");
+        if (!StringUtils.equals(target.getLifecycle(), "PUBLISHED") || !BooleanUtils.isTrue(target.getActiveForNew())) {
+            throw new MSException("仅可将历史缺陷关联到当前使用中的已发布流程");
         }
         WorkflowMigrationPreviewDTO preview = new WorkflowMigrationPreviewDTO();
         preview.setTargetFlowId(target.getId());
@@ -1000,12 +1036,17 @@ public class PermissionControlService {
             if (StringUtils.startsWithIgnoreCase(code, "BUG_")) targetByKey.put(code.substring(4).toLowerCase(), id);
             preview.getTargetStatuses().add(Map.of("id", id, "code", code, "name", name));
         });
-        List<Map<String, Object>> sourceStatuses = jdbcTemplate.queryForList("SELECT DISTINCT b.status status_id, si.name status_name "
+        List<Map<String, Object>> sourceStatuses = jdbcTemplate.queryForList("SELECT DISTINCT b.status status_id, si.status_code, si.name status_name "
                 + "FROM bug b LEFT JOIN status_item si ON si.id = b.status WHERE b.deleted = b'0' AND b.workflow_id IS NULL");
         for (Map<String, Object> source : sourceStatuses) {
             String sourceId = String.valueOf(source.get("status_id"));
-            String sourceName = StringUtils.defaultString((String) source.get("status_name"), sourceId);
-            String targetId = targetByKey.get(sourceName.toLowerCase());
+            String sourceCode = StringUtils.defaultString((String) source.get("status_code"));
+            String sourceName = StringUtils.defaultString((String) source.get("status_name"));
+            String targetId = targetByKey.get(sourceCode.toLowerCase());
+            if (targetId == null) targetId = targetByKey.get(sourceName.toLowerCase());
+            if (targetId == null && StringUtils.startsWithIgnoreCase(sourceCode, "BUG_")) {
+                targetId = targetByKey.get(sourceCode.substring(4).toLowerCase());
+            }
             if (targetId == null) targetId = targetByKey.get(sourceId.toLowerCase());
             if (targetId == null) preview.getUnresolvedStatusIds().add(sourceId);
             else preview.getSuggestedMappings().put(sourceId, targetId);
@@ -1031,13 +1072,74 @@ public class PermissionControlService {
         return preview;
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, Object> pageWorkflowMigrationCandidates(String targetFlowId,
+                                                               WorkflowMigrationCandidateRequest request,
+                                                               boolean idsOnly) {
+        WorkflowDefinition target = getWorkflowWithCheck(targetFlowId);
+        if (!StringUtils.equals(target.getLifecycle(), "PUBLISHED") || !BooleanUtils.isTrue(target.getActiveForNew())) {
+            throw new MSException("仅可查询当前使用中流程的历史缺陷候选项");
+        }
+        List<Object> args = new ArrayList<>();
+        StringBuilder where = new StringBuilder(" WHERE b.deleted=b'0' AND b.workflow_id IS NULL");
+        if (CollectionUtils.isNotEmpty(request.getProjectIds())) {
+            where.append(" AND b.project_id IN (")
+                    .append(request.getProjectIds().stream().map(id -> "?").collect(Collectors.joining(","))).append(")");
+            args.addAll(request.getProjectIds());
+        }
+        if (CollectionUtils.isNotEmpty(request.getSourceStatusIds())) {
+            where.append(" AND b.status IN (")
+                    .append(request.getSourceStatusIds().stream().map(id -> "?").collect(Collectors.joining(","))).append(")");
+            args.addAll(request.getSourceStatusIds());
+        }
+        if (request.getCreateTimeStart() != null) {
+            where.append(" AND b.create_time>=?");
+            args.add(request.getCreateTimeStart());
+        }
+        if (request.getCreateTimeEnd() != null) {
+            where.append(" AND b.create_time<=?");
+            args.add(request.getCreateTimeEnd());
+        }
+        if (StringUtils.isNotBlank(request.getKeyword())) {
+            where.append(" AND (b.id LIKE ? OR b.title LIKE ? OR CAST(b.num AS CHAR) LIKE ?)");
+            String keyword = "%" + StringUtils.trim(request.getKeyword()) + "%";
+            args.add(keyword);
+            args.add(keyword);
+            args.add(keyword);
+        }
+        if (idsOnly) {
+            List<String> ids = jdbcTemplate.query("SELECT b.id FROM bug b" + where + " ORDER BY b.create_time,b.id LIMIT 10000",
+                    (rs, rowNum) -> rs.getString(1), args.toArray());
+            Long total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM bug b" + where, Long.class, args.toArray());
+            if (total != null && total > 10000) throw new MSException("当前筛选结果超过 10000 条，请缩小筛选范围后再全选");
+            return Map.of("ids", ids, "total", total == null ? 0 : total);
+        }
+        int current = Math.max(1, request.getCurrent());
+        int pageSize = Math.min(100, Math.max(1, request.getPageSize()));
+        Long total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM bug b" + where, Long.class, args.toArray());
+        List<Object> pageArgs = new ArrayList<>(args);
+        pageArgs.add(pageSize);
+        pageArgs.add((current - 1) * pageSize);
+        List<Map<String, Object>> list = jdbcTemplate.queryForList("SELECT b.id,b.num,b.title,b.project_id projectId," +
+                        "p.name projectName,b.status sourceStatusId,COALESCE(si.name,'未知状态') sourceStatusName," +
+                        "b.create_time createTime FROM bug b JOIN project p ON p.id=b.project_id " +
+                        "LEFT JOIN status_item si ON si.id=b.status" + where + " ORDER BY b.create_time,b.id LIMIT ? OFFSET ?",
+                pageArgs.toArray());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("list", list);
+        result.put("total", total == null ? 0 : total);
+        result.put("current", current);
+        result.put("pageSize", pageSize);
+        return result;
+    }
+
     public Map<String, Object> migrateWorkflow(WorkflowMigrationRequest request) {
+        if (CollectionUtils.isEmpty(request.getBugIds())) {
+            throw new MSException("请选择需要关联的历史缺陷，禁止空选择执行关联");
+        }
         WorkflowMigrationPreviewDTO preview = previewWorkflowMigration(request.getTargetFlowId());
         Map<String, String> mappings = request.getStatusMappings() == null || request.getStatusMappings().isEmpty()
                 ? preview.getSuggestedMappings() : request.getStatusMappings();
-        Set<String> unresolved = new HashSet<>(preview.getUnresolvedStatusIds());
-        unresolved.removeAll(mappings.keySet());
-        if (!unresolved.isEmpty()) throw new MSException("存在未映射状态，禁止迁移: " + String.join(",", unresolved));
         String batchId = IDGenerator.nextStr();
         long now = System.currentTimeMillis();
         WorkflowDefinition target = getWorkflowWithCheck(request.getTargetFlowId());
@@ -1048,17 +1150,43 @@ public class PermissionControlService {
                 throw new MSException("目标状态不属于目标流程: " + mapping.getValue());
             }
         }
+        List<Object> selectionArgs = new ArrayList<>();
+        StringBuilder selectionSql = new StringBuilder("SELECT id,status,workflow_id,workflow_version FROM bug "
+                + "WHERE deleted=b'0' AND workflow_id IS NULL");
+        if (CollectionUtils.isNotEmpty(request.getBugIds())) {
+            selectionSql.append(" AND id IN (").append(request.getBugIds().stream().map(id -> "?").collect(Collectors.joining(","))).append(")");
+            selectionArgs.addAll(request.getBugIds());
+        }
+        if (CollectionUtils.isNotEmpty(request.getProjectIds())) {
+            selectionSql.append(" AND project_id IN (").append(request.getProjectIds().stream().map(id -> "?").collect(Collectors.joining(","))).append(")");
+            selectionArgs.addAll(request.getProjectIds());
+        }
+        selectionSql.append(" ORDER BY id");
+        List<Map<String, Object>> migrationItems = jdbcTemplate.queryForList(selectionSql.toString(), selectionArgs.toArray());
+        Set<String> requestedBugIds = request.getBugIds().stream().filter(StringUtils::isNotBlank)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<String> eligibleBugIds = migrationItems.stream().map(item -> String.valueOf(item.get("id")))
+                .collect(Collectors.toSet());
+        if (requestedBugIds.isEmpty()) {
+            throw new MSException("请选择需要关联的历史缺陷，禁止空选择执行关联");
+        }
+        if (!eligibleBugIds.containsAll(requestedBugIds)) {
+            requestedBugIds.removeAll(eligibleBugIds);
+            throw new MSException("部分选中缺陷已删除、已关联流程或不在筛选范围，请刷新后重试: "
+                    + String.join(",", requestedBugIds));
+        }
+        Set<String> selectedSourceStatuses = migrationItems.stream().map(item -> String.valueOf(item.get("status"))).collect(Collectors.toSet());
+        Set<String> selectedUnresolved = selectedSourceStatuses.stream().filter(status -> !mappings.containsKey(status)).collect(Collectors.toSet());
+        if (!selectedUnresolved.isEmpty()) throw new MSException("选中缺陷存在未映射状态，禁止关联: " + String.join(",", selectedUnresolved));
         jdbcTemplate.update("INSERT INTO workflow_migration_batch "
                         + "(id, target_flow_id, dry_run, status, mapping_snapshot, total_count, create_user, create_time, update_time) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", batchId, request.getTargetFlowId(), request.isDryRun(),
                 request.isDryRun() ? "PREVIEWED" : "PENDING", io.metersphere.sdk.util.JSON.toJSONString(mappings),
-                preview.getAffectedBugCount(), SessionUtils.getUserId(), now, now);
+                migrationItems.size(), SessionUtils.getUserId(), now, now);
         if (request.isDryRun()) {
             jdbcTemplate.update("UPDATE workflow_migration_batch SET status = 'COMPLETED', update_time=?, finish_time = ? WHERE id = ?", now, now, batchId);
-            return Map.of("batchId", batchId, "dryRun", true, "total", preview.getAffectedBugCount(), "migrated", 0);
+            return Map.of("batchId", batchId, "dryRun", true, "total", migrationItems.size(), "migrated", 0);
         }
-        List<Map<String, Object>> migrationItems = jdbcTemplate.queryForList(
-                "SELECT id,status,workflow_id,workflow_version FROM bug WHERE deleted=b'0' AND workflow_id IS NULL ORDER BY id");
         jdbcTemplate.batchUpdate("INSERT INTO workflow_migration_item (id,batch_id,bug_id,source_status_id,source_workflow_id,"
                         + "source_workflow_version,target_status_id,target_workflow_id,target_workflow_version,status,create_time,update_time) "
                         + "VALUES (?,?,?,?,?,?,?,?,?,'PENDING',?,?)", migrationItems, 500, (statement, item) -> {
@@ -1086,6 +1214,12 @@ public class PermissionControlService {
     @Transactional(readOnly = true)
     public Map<String, Object> getWorkflowMigrationBatch(String batchId) {
         return workflowMigrationService.getBatch(batchId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listWorkflowMigrationBatches(String flowId) {
+        getWorkflowWithCheck(flowId);
+        return workflowMigrationService.listBatches(flowId);
     }
 
     public Map<String, Object> resumeWorkflowMigration(String batchId) {
@@ -1151,6 +1285,8 @@ public class PermissionControlService {
         WorkflowRole workflowRole = new WorkflowRole();
         BeanUtils.copyBean(workflowRole, request);
         workflowRole.setId(StringUtils.defaultIfBlank(workflowRole.getId(), IDGenerator.nextStr()));
+        workflowRole.setSourceType(StringUtils.defaultIfBlank(workflowRole.getSourceType(), "MANUAL"));
+        workflowRole.setMatchMode(StringUtils.defaultIfBlank(workflowRole.getMatchMode(), "CONTAINS"));
         workflowRole.setEnabled(BooleanUtils.isNotFalse(workflowRole.getEnabled()));
         workflowRole.setCreateTime(System.currentTimeMillis());
         workflowRole.setUpdateTime(System.currentTimeMillis());
@@ -1182,6 +1318,94 @@ public class PermissionControlService {
 
     public List<StatusFlowRolePermission> listFlowRolePermissions(String flowId) {
         return permissionControlMapper.selectStatusFlowRolePermissions(flowId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> previewWecomPositions(String flowId) {
+        getWorkflowWithCheck(flowId);
+        List<Map<String, Object>> positions = jdbcTemplate.queryForList("SELECT TRIM(position) position, "
+                + "LOWER(TRIM(position)) sourceKey, COUNT(*) memberCount FROM user "
+                + "WHERE deleted=b'0' AND enable=b'1' AND wecom_userid IS NOT NULL AND wecom_userid<>'' "
+                + "AND position IS NOT NULL AND TRIM(position)<>'' GROUP BY TRIM(position), LOWER(TRIM(position)) ORDER BY position");
+        Set<String> existing = permissionControlMapper.selectWorkflowRoles(flowId).stream()
+                .filter(role -> StringUtils.equals(role.getSourceType(), "WECOM_POSITION"))
+                .map(WorkflowRole::getSourceKey).filter(StringUtils::isNotBlank).collect(Collectors.toSet());
+        positions.forEach(item -> item.put("existing", existing.contains(String.valueOf(item.get("sourceKey")))));
+        return positions;
+    }
+
+    public Map<String, Object> syncWecomPositions(String flowId) {
+        assertDraftWorkflow(flowId);
+        List<Map<String, Object>> positions = previewWecomPositions(flowId);
+        long now = System.currentTimeMillis();
+        Set<String> activeKeys = positions.stream().map(item -> String.valueOf(item.get("sourceKey"))).collect(Collectors.toSet());
+        List<Map<String, Object>> details = new ArrayList<>();
+        int disabled = 0;
+        for (WorkflowRole role : permissionControlMapper.selectWorkflowRoles(flowId)) {
+            if (StringUtils.equals(role.getSourceType(), "WECOM_POSITION") && !activeKeys.contains(role.getSourceKey())
+                    && BooleanUtils.isNotFalse(role.getEnabled())) {
+                role.setEnabled(false);
+                role.setUpdateTime(now);
+                permissionControlMapper.updateWorkflowRole(role);
+                details.add(Map.of("action", "DISABLED", "roleId", role.getId(), "name", role.getName(),
+                        "sourceKey", StringUtils.defaultString(role.getSourceKey())));
+                disabled++;
+            }
+        }
+        int created = 0;
+        int updated = 0;
+        for (Map<String, Object> item : positions) {
+            String name = String.valueOf(item.get("position"));
+            String key = String.valueOf(item.get("sourceKey"));
+            List<WorkflowRole> matches = permissionControlMapper.selectWorkflowRoles(flowId).stream()
+                    .filter(role -> StringUtils.equals(role.getSourceType(), "WECOM_POSITION")
+                            && StringUtils.equals(role.getSourceKey(), key)).toList();
+            if (matches.isEmpty()) {
+                WorkflowRole role = new WorkflowRole();
+                role.setFlowId(flowId);
+                role.setCode("WECOM_" + org.apache.commons.codec.digest.DigestUtils.sha256Hex(key).substring(0, 16).toUpperCase(Locale.ROOT));
+                role.setName(name);
+                role.setRoleType("POSITION");
+                role.setFieldKey(name);
+                role.setSourceType("WECOM_POSITION");
+                role.setSourceKey(key);
+                role.setMatchMode("EXACT");
+                role.setEnabled(true);
+                WorkflowRole createdRole = addFlowRole(role);
+                details.add(Map.of("action", "CREATED", "roleId", createdRole.getId(), "name", name, "sourceKey", key));
+                created++;
+            } else {
+                WorkflowRole role = matches.getFirst();
+                role.setName(name);
+                role.setFieldKey(name);
+                role.setMatchMode("EXACT");
+                role.setEnabled(true);
+                role.setUpdateTime(now);
+                permissionControlMapper.updateWorkflowRole(role);
+                details.add(Map.of("action", "UPDATED", "roleId", role.getId(), "name", name, "sourceKey", key));
+                updated++;
+            }
+        }
+        String batchId = IDGenerator.nextStr();
+        jdbcTemplate.update("INSERT INTO workflow_position_sync_log (id,flow_id,total_count,created_count,updated_count," +
+                        "disabled_count,detail_json,create_user,create_time) VALUES (?,?,?,?,?,?,?,?,?)",
+                batchId, flowId, positions.size(), created, updated, disabled,
+                io.metersphere.sdk.util.JSON.toJSONString(details), SessionUtils.getUserId(), now);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("batchId", batchId);
+        result.put("total", positions.size());
+        result.put("created", created);
+        result.put("updated", updated);
+        result.put("disabled", disabled);
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listWecomPositionSyncResults(String flowId) {
+        getWorkflowWithCheck(flowId);
+        return jdbcTemplate.queryForList("SELECT id batchId,total_count total,created_count created," +
+                        "updated_count updated,disabled_count disabled,detail_json detailJson,create_user createUser,create_time createTime " +
+                        "FROM workflow_position_sync_log WHERE flow_id=? ORDER BY create_time DESC LIMIT 20", flowId);
     }
 
     public void saveFlowRolePermissions(WorkflowRolePermissionRequest request) {
@@ -1296,8 +1520,12 @@ public class PermissionControlService {
             return false;
         }
         if (StringUtils.equals(role.getRoleType(), "POSITION")) {
-            return SessionUtils.getUser() != null
-                    && matchesPositionRule(SessionUtils.getUser().getPosition(), role.getFieldKey());
+            if (SessionUtils.getUser() == null) return false;
+            if (StringUtils.equals(role.getMatchMode(), "EXACT")) {
+                return StringUtils.equalsIgnoreCase(StringUtils.trim(SessionUtils.getUser().getPosition()),
+                        StringUtils.trim(role.getFieldKey()));
+            }
+            return matchesPositionRule(SessionUtils.getUser().getPosition(), role.getFieldKey());
         }
         if (StringUtils.equals(role.getRoleType(), "SYSTEM_ROLE") && StringUtils.isNotBlank(role.getRoleId())) {
             return SessionUtils.getUser() != null

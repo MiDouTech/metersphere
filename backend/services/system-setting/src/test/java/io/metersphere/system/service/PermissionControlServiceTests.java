@@ -2,6 +2,7 @@ package io.metersphere.system.service;
 
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.domain.UserRole;
+import io.metersphere.system.domain.WorkflowDefinition;
 import io.metersphere.system.dto.permission.Permission;
 import io.metersphere.system.dto.permission.PermissionDefinitionItem;
 import io.metersphere.system.dto.permission.PermissionResourceDTO;
@@ -9,6 +10,7 @@ import io.metersphere.system.dto.permission.RoleUiPermissionDTO;
 import io.metersphere.system.dto.permission.control.RoleDeleteImpactDTO;
 import io.metersphere.system.dto.permission.control.RoleMemberUpdateRequest;
 import io.metersphere.system.dto.permission.control.RoleSaveRequest;
+import io.metersphere.system.dto.permission.control.WorkflowMigrationRequest;
 import io.metersphere.system.dto.request.GlobalUserRoleRelationQueryRequest;
 import io.metersphere.system.dto.sdk.request.PermissionSettingUpdateRequest;
 import io.metersphere.system.dto.user.UserRoleRelationUserDTO;
@@ -26,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 
@@ -58,6 +61,8 @@ class PermissionControlServiceTests {
     private PermissionSessionRefreshService permissionSessionRefreshService;
     @Mock
     private ProjectMapper projectMapper;
+    @Mock
+    private JdbcTemplate jdbcTemplate;
 
     private PermissionControlService service;
 
@@ -72,6 +77,7 @@ class PermissionControlServiceTests {
         ReflectionTestUtils.setField(service, "extUserRoleRelationMapper", extUserRoleRelationMapper);
         ReflectionTestUtils.setField(service, "permissionSessionRefreshService", permissionSessionRefreshService);
         ReflectionTestUtils.setField(service, "projectMapper", projectMapper);
+        ReflectionTestUtils.setField(service, "jdbcTemplate", jdbcTemplate);
     }
 
     @Test
@@ -280,5 +286,48 @@ class PermissionControlServiceTests {
         assertTrue(PermissionControlService.matchesPositionRule("其他职位", "*"));
         assertFalse(PermissionControlService.matchesPositionRule("", "*"));
         assertFalse(PermissionControlService.matchesPositionRule(null, "*"));
+    }
+
+    @Test
+    void archiveRejectsDraftWorkflow() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-draft");
+        flow.setLifecycle("DRAFT");
+        flow.setActiveForNew(false);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-draft")).thenReturn(flow);
+
+        assertThrows(RuntimeException.class, () -> service.archiveWorkflow("flow-draft"));
+    }
+
+    @Test
+    void activateOnlySwitchesActiveFlagsAndDoesNotArchivePreviousWorkflow() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-new");
+        flow.setLifecycle("PUBLISHED");
+        flow.setEnabled(true);
+        flow.setActiveForNew(false);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-new")).thenReturn(flow);
+        when(jdbcTemplate.queryForList(any(String.class), org.mockito.ArgumentMatchers.eq(String.class)))
+                .thenReturn(List.of("flow-old", "flow-new"));
+        when(jdbcTemplate.update(org.mockito.ArgumentMatchers.contains("active_for_new=b'0'"), any(Long.class)))
+                .thenReturn(1);
+        when(jdbcTemplate.update(org.mockito.ArgumentMatchers.contains("active_for_new=b'1'"), any(Long.class),
+                org.mockito.ArgumentMatchers.eq("flow-new"))).thenReturn(1);
+
+        service.activateWorkflow("flow-new");
+
+        verify(jdbcTemplate, never()).update(org.mockito.ArgumentMatchers.contains("ARCHIVED"),
+                org.mockito.ArgumentMatchers.<Object[]>any());
+    }
+
+    @Test
+    void migrateWorkflowRejectsEmptyManualSelectionBeforeQueryingCandidates() {
+        WorkflowMigrationRequest request = new WorkflowMigrationRequest();
+        request.setTargetFlowId("flow-active");
+        request.setBugIds(List.of());
+
+        assertThrows(RuntimeException.class, () -> service.migrateWorkflow(request));
+
+        verify(permissionControlMapper, never()).selectWorkflowDefinitionById(any());
     }
 }

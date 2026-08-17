@@ -45,7 +45,6 @@
   import { useVModel } from '@vueuse/core';
 
   import MsMenuPanel from '@/components/pure/ms-menu-panel/index.vue';
-  import AgentIntegration from './components/agentIntegration.vue';
   import apiKey from './components/apiKey.vue';
   import baseInfo from './components/baseInfo.vue';
   import localExec from './components/localExec.vue';
@@ -53,6 +52,7 @@
   import setPsw from './components/setPsw.vue';
   import tripartite from './components/tripartite.vue';
   import userAgent from './components/userAgent.vue';
+  import AgentIntegration from '@/views/setting/system/agentIntegration/index.vue';
 
   import { getUserAgentFeatures } from '@/api/modules/setting/userAgent';
   import { useI18n } from '@/hooks/useI18n';

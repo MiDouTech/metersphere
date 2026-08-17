@@ -61,6 +61,12 @@ public class BugDetailDTO {
     @Schema(description = "缺陷状态")
     private String status;
 
+    @Schema(description = "缺陷状态名称")
+    private String statusName;
+
+    @Schema(description = "缺陷状态稳定编码")
+    private String statusCode;
+
     @Schema(description = "缺陷关联的用例数")
     private long linkCaseCount;
 

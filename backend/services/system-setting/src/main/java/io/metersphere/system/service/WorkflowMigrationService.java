@@ -1,12 +1,16 @@
 package io.metersphere.system.service;
 
 import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.uid.IDGenerator;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
@@ -16,6 +20,21 @@ import java.util.Map;
 public class WorkflowMigrationService {
     @Resource private JdbcTemplate jdbcTemplate;
     @Resource private TransactionTemplate transactionTemplate;
+
+    /**
+     * Async invocations do not survive a process restart. Keep interrupted batches
+     * recoverable so an administrator can resume them instead of seeing RUNNING forever.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void recoverInterruptedBatches() {
+        try {
+            long now = System.currentTimeMillis();
+            jdbcTemplate.update("UPDATE workflow_migration_batch SET status='FAILED',finish_time=?,update_time=? "
+                    + "WHERE status='RUNNING'", now, now);
+        } catch (Exception e) {
+            LogUtils.error("Recover interrupted workflow migration batches failed", e);
+        }
+    }
 
     @Async
     public void execute(String batchId, String targetFlowId, int targetVersion, Map<String, String> mappings) {
@@ -43,7 +62,12 @@ public class WorkflowMigrationService {
                     int updated = jdbcTemplate.update("UPDATE bug SET status=?, workflow_id=?, workflow_version=?, update_time=? "
                                     + "WHERE id=? AND deleted=b'0' AND workflow_id IS NULL AND status=?",
                             targetStatus, targetFlowId, targetVersion, System.currentTimeMillis(), bugId, sourceStatus);
-                    if (updated != 1) throw new MSException("缺陷已被并发修改");
+                    if (updated != 1) {
+                        jdbcTemplate.update("UPDATE workflow_migration_item SET status='SKIPPED',update_time=? "
+                                        + "WHERE batch_id=? AND bug_id=?",
+                                System.currentTimeMillis(), batchId, bugId);
+                        return false;
+                    }
                     jdbcTemplate.update("UPDATE workflow_migration_item SET status='SUCCESS',update_time=? WHERE batch_id=? AND bug_id=?",
                             System.currentTimeMillis(), batchId, bugId);
                     return true;
@@ -77,9 +101,28 @@ public class WorkflowMigrationService {
         return result;
     }
 
+    public List<Map<String, Object>> listBatches(String targetFlowId) {
+        return jdbcTemplate.queryForList("SELECT id,target_flow_id targetFlowId,dry_run dryRun,status,"
+                + "total_count totalCount,success_count successCount,skipped_count skippedCount,failed_count failedCount,"
+                + "create_user createUser,create_time createTime,update_time updateTime,finish_time finishTime "
+                + "FROM workflow_migration_batch WHERE target_flow_id=? AND dry_run=b'0' "
+                + "ORDER BY create_time DESC LIMIT 20", targetFlowId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public void rollback(String batchId) {
         Map<String, Object> batch = getBatch(batchId);
         if (Boolean.TRUE.equals(batch.get("dryRun"))) throw new MSException("预检批次无需回滚");
+        String currentStatus = String.valueOf(batch.get("status"));
+        if (!StringUtils.equalsAny(currentStatus, "COMPLETED", "FAILED", "PARTIAL_SUCCESS")) {
+            throw new MSException("仅已完成、失败或部分成功的批次可以回滚，当前状态: " + currentStatus);
+        }
+        int acquired = jdbcTemplate.update("UPDATE workflow_migration_batch SET status='ROLLING_BACK',update_time=? "
+                        + "WHERE id=? AND status IN ('COMPLETED','FAILED','PARTIAL_SUCCESS')",
+                System.currentTimeMillis(), batchId);
+        if (acquired != 1) {
+            throw new MSException("迁移批次状态已变化，请刷新后重试");
+        }
         List<Map<String, Object>> items = jdbcTemplate.queryForList("SELECT * FROM workflow_migration_item "
                 + "WHERE batch_id=? AND status='SUCCESS' ORDER BY create_time DESC", batchId);
         long rolledBack = 0;

@@ -203,13 +203,40 @@ export function deleteCaseAssetCatalog(id: string) {
 }
 export function backfillCaseAssetCatalogs() {
   return MSR.post<{
+    jobId: string;
+    status: string;
     total: number;
-    success: number;
-    failed: number;
-    failures: Array<{ projectId: string; reason: string }>;
   }>({
     url: '/case-asset/catalog/backfill',
   });
+}
+export interface CaseAssetHistorySyncJob {
+  jobId: string;
+  status: string;
+  total: number;
+  success: number;
+  skipped: number;
+  failed: number;
+  caseCreated: number;
+  caseUpdated: number;
+  caseSkipped: number;
+  items: Array<{
+    projectId: string;
+    status: string;
+    caseCreated: number;
+    caseUpdated: number;
+    caseSkipped: number;
+    failureReason?: string;
+  }>;
+}
+export function getCaseAssetHistorySyncJob(jobId: string) {
+  return MSR.get<CaseAssetHistorySyncJob>({ url: `/case-asset/catalog/backfill/${jobId}` });
+}
+export function getLatestCaseAssetHistorySyncJob() {
+  return MSR.get<CaseAssetHistorySyncJob | { exists: false }>({ url: '/case-asset/catalog/backfill/latest' });
+}
+export function retryCaseAssetHistorySyncJob(jobId: string) {
+  return MSR.post<CaseAssetHistorySyncJob>({ url: `/case-asset/catalog/backfill/${jobId}/retry` });
 }
 export function createCaseAsset(data: CaseAssetSaveParams) {
   return MSR.post<CaseManagementTable>({ url: '/case-asset/case', data });
@@ -264,6 +291,18 @@ export interface CaseAssetFileImportJob {
 }
 export function getCaseAssetFileImportJob(jobId: string) {
   return MSR.get<CaseAssetFileImportJob>({ url: `/case-asset/case/import/job/${jobId}` });
+}
+export function getLatestCaseAssetFileImportJob(catalogId: string) {
+  return MSR.get<CaseAssetFileImportJob & { exists?: boolean }>({
+    url: '/case-asset/case/import/job/latest',
+    params: { catalogId },
+  });
+}
+export function downloadCaseAssetFileImportErrors(jobId: string) {
+  return MSR.get<Blob>(
+    { url: `/case-asset/case/import/job/${jobId}/errors/download`, responseType: 'blob' },
+    { isTransformResponse: false }
+  );
 }
 export function importCasesFromAssets(data: {
   targetProjectId: string;

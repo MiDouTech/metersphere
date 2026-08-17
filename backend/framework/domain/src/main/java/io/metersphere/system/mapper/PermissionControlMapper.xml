@@ -21,6 +21,7 @@
     <result column="scope_type" property="scopeType" jdbcType="VARCHAR"/>
     <result column="scope_id" property="scopeId" jdbcType="VARCHAR"/>
     <result column="default_flow" property="defaultFlow" jdbcType="BIT"/>
+    <result column="active_for_new" property="activeForNew" jdbcType="BIT"/>
     <result column="enabled" property="enabled" jdbcType="BIT"/>
     <result column="description" property="description" jdbcType="VARCHAR"/>
     <result column="version" property="version" jdbcType="INTEGER"/>
@@ -40,6 +41,9 @@
     <result column="role_type" property="roleType" jdbcType="VARCHAR"/>
     <result column="role_id" property="roleId" jdbcType="VARCHAR"/>
     <result column="field_key" property="fieldKey" jdbcType="VARCHAR"/>
+    <result column="source_type" property="sourceType" jdbcType="VARCHAR"/>
+    <result column="source_key" property="sourceKey" jdbcType="VARCHAR"/>
+    <result column="match_mode" property="matchMode" jdbcType="VARCHAR"/>
     <result column="enabled" property="enabled" jdbcType="BIT"/>
     <result column="create_time" property="createTime" jdbcType="BIGINT"/>
     <result column="update_time" property="updateTime" jdbcType="BIGINT"/>
@@ -171,10 +175,10 @@
 
   <insert id="insertWorkflowDefinition" parameterType="io.metersphere.system.domain.WorkflowDefinition">
     insert into workflow_definition
-      (id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, version, lifecycle,
+      (id, code, name, scene, scope_type, scope_id, default_flow, active_for_new, enabled, description, version, lifecycle,
        published_time, published_by, source_flow_id, create_time, update_time)
     values
-      (#{id}, #{code}, #{name}, #{scene}, #{scopeType}, #{scopeId}, #{defaultFlow}, #{enabled}, #{description},
+      (#{id}, #{code}, #{name}, #{scene}, #{scopeType}, #{scopeId}, #{defaultFlow}, #{activeForNew}, #{enabled}, #{description},
        #{version}, #{lifecycle}, #{publishedTime}, #{publishedBy}, #{sourceFlowId}, #{createTime}, #{updateTime})
   </insert>
 
@@ -187,6 +191,7 @@
       <if test="scopeType != null">scope_type = #{scopeType},</if>
       <if test="scopeId != null">scope_id = #{scopeId},</if>
       <if test="defaultFlow != null">default_flow = #{defaultFlow},</if>
+      <if test="activeForNew != null">active_for_new = #{activeForNew},</if>
       <if test="enabled != null">enabled = #{enabled},</if>
       <if test="description != null">description = #{description},</if>
       <if test="version != null">version = #{version},</if>
@@ -200,7 +205,7 @@
   </update>
 
   <select id="selectWorkflowDefinitions" resultMap="WorkflowDefinitionMap">
-    select id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, version, lifecycle,
+    select id, code, name, scene, scope_type, scope_id, default_flow, active_for_new, enabled, description, version, lifecycle,
            published_time, published_by, source_flow_id, create_time, update_time
     from workflow_definition
     where scene = #{scene}
@@ -210,11 +215,11 @@
       <if test="scopeId != null and scopeId != ''">
         and scope_id = #{scopeId}
       </if>
-    order by default_flow desc, code asc, version desc, create_time asc
+    order by active_for_new desc, code asc, version desc, create_time asc
   </select>
 
   <select id="selectWorkflowDefinitionById" resultMap="WorkflowDefinitionMap">
-    select id, code, name, scene, scope_type, scope_id, default_flow, enabled, description, version, lifecycle,
+    select id, code, name, scene, scope_type, scope_id, default_flow, active_for_new, enabled, description, version, lifecycle,
            published_time, published_by, source_flow_id, create_time, update_time
     from workflow_definition
     where id = #{id}
@@ -226,9 +231,9 @@
 
   <insert id="insertWorkflowRole" parameterType="io.metersphere.system.domain.WorkflowRole">
     insert into workflow_role
-      (id, flow_id, code, name, role_type, role_id, field_key, enabled, create_time, update_time)
+      (id, flow_id, code, name, role_type, role_id, field_key, source_type, source_key, match_mode, enabled, create_time, update_time)
     values
-      (#{id}, #{flowId}, #{code}, #{name}, #{roleType}, #{roleId}, #{fieldKey}, #{enabled}, #{createTime}, #{updateTime})
+      (#{id}, #{flowId}, #{code}, #{name}, #{roleType}, #{roleId}, #{fieldKey}, #{sourceType}, #{sourceKey}, #{matchMode}, #{enabled}, #{createTime}, #{updateTime})
   </insert>
 
   <update id="updateWorkflowRole" parameterType="io.metersphere.system.domain.WorkflowRole">
@@ -239,6 +244,9 @@
       <if test="roleType != null">role_type = #{roleType},</if>
       <if test="roleId != null">role_id = #{roleId},</if>
       <if test="fieldKey != null">field_key = #{fieldKey},</if>
+      <if test="sourceType != null">source_type = #{sourceType},</if>
+      <if test="sourceKey != null">source_key = #{sourceKey},</if>
+      <if test="matchMode != null">match_mode = #{matchMode},</if>
       <if test="enabled != null">enabled = #{enabled},</if>
       update_time = #{updateTime}
     </set>
@@ -254,14 +262,14 @@
   </delete>
 
   <select id="selectWorkflowRoles" resultMap="WorkflowRoleMap">
-    select id, flow_id, code, name, role_type, role_id, field_key, enabled, create_time, update_time
+    select id, flow_id, code, name, role_type, role_id, field_key, source_type, source_key, match_mode, enabled, create_time, update_time
     from workflow_role
     where flow_id = #{flowId}
     order by create_time asc
   </select>
 
   <select id="selectWorkflowRoleById" resultMap="WorkflowRoleMap">
-    select id, flow_id, code, name, role_type, role_id, field_key, enabled, create_time, update_time
+    select id, flow_id, code, name, role_type, role_id, field_key, source_type, source_key, match_mode, enabled, create_time, update_time
     from workflow_role
     where id = #{id}
   </select>

@@ -35,6 +35,9 @@ public class BugDTO extends Bug {
     @Schema(description = "状态名称")
     private String statusName;
 
+    @Schema(description = "状态稳定编码")
+    private String statusCode;
+
     @Schema(description = "自定义字段集合")
     private List<BugCustomFieldDTO> customFields;
 }

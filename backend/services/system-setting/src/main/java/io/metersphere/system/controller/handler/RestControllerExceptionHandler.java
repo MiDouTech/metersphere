@@ -26,6 +26,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
@@ -176,6 +177,13 @@ public class RestControllerExceptionHandler {
         return ResponseEntity.noContent().build();
     }
 
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    public ResponseEntity<Void> handleAsyncRequestTimeout(HttpServletRequest request) {
+        LOGGER.debug("Async request timed out, method={}, uri={}",
+                request == null ? "" : request.getMethod(), request == null ? "" : request.getRequestURI());
+        return ResponseEntity.noContent().build();
+    }
+
     /*=========== Shiro 异常拦截==============*/
     @ExceptionHandler(ShiroException.class)
     public ResultHolder exceptionHandler(HttpServletRequest request, HttpServletResponse response, Exception exception) {
@@ -203,10 +211,23 @@ public class RestControllerExceptionHandler {
         String requestId = ensureRequestId(request, response);
         LOGGER.error("Unhandled request error, requestId={}, method={}, uri={}, user={}, organization={}, project={}",
                 requestId, request == null ? "" : request.getMethod(), request == null ? "" : request.getRequestURI(),
-                request == null || request.getUserPrincipal() == null ? "" : request.getUserPrincipal().getName(),
+                safePrincipalName(request),
                 request == null ? "" : request.getHeader("ORGANIZATION"),
                 request == null ? "" : request.getHeader("PROJECT"), exception);
         return requestId;
+    }
+
+    private String safePrincipalName(HttpServletRequest request) {
+        if (request == null) {
+            return "";
+        }
+        try {
+            return request.getUserPrincipal() == null ? "" : request.getUserPrincipal().getName();
+        } catch (RuntimeException unavailableSecurityContext) {
+            LOGGER.debug("Unable to resolve request principal while handling an exception: {}",
+                    unavailableSecurityContext.getClass().getSimpleName());
+            return "";
+        }
     }
 
     private String ensureRequestId(HttpServletRequest request, HttpServletResponse response) {

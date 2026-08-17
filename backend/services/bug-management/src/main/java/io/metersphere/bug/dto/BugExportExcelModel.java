@@ -51,7 +51,8 @@ public class BugExportExcelModel {
 					case "name" -> excelRow.put(key, bugDTO.getTitle());
 					case "num" -> excelRow.put(key, bugDTO.getNum().toString());
 					case "content" -> excelRow.put(key, this.getBugContent(bugContents, bugDTO.getId()));
-					case "status" -> excelRow.put(key, headerModel.getStatusMap().get(bugDTO.getStatus()));
+					case "status" -> excelRow.put(key, StringUtils.defaultIfBlank(bugDTO.getStatusName(),
+							headerModel.getStatusMap().getOrDefault(bugDTO.getStatus(), "未知状态")));
 					case "handle_user" -> excelRow.put(key, headerModel.getHandleUserMap().get(bugDTO.getHandleUser()));
 					case "create_user" -> excelRow.put(key, bugDTO.getCreateUserName());
 					case "create_time" -> excelRow.put(key, DateUtils.getTimeString(bugDTO.getCreateTime()));

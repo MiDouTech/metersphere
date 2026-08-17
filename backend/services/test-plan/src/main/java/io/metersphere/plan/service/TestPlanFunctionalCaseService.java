@@ -294,7 +294,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
     private List<CaseRelateBugDTO> handleStatus(List<CaseRelateBugDTO> bugDTOList, Map<String, String> statusMap) {
         bugDTOList.forEach(bugDTO -> {
-            bugDTO.setStatus(statusMap.get(bugDTO.getStatus()));
+            bugDTO.setStatus(statusMap.getOrDefault(bugDTO.getStatus(), "未知状态"));
         });
         return bugDTOList;
     }

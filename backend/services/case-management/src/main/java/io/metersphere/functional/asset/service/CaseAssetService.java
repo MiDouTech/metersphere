@@ -9,6 +9,7 @@ import io.metersphere.functional.asset.dto.CaseAssetSaveRequest;
 import io.metersphere.functional.domain.FunctionalCase;
 import io.metersphere.functional.dto.FunctionalCaseDetailDTO;
 import io.metersphere.functional.dto.FunctionalCasePageDTO;
+import io.metersphere.functional.dto.CaseCustomFieldDTO;
 import io.metersphere.functional.dto.response.FunctionalCaseImportResponse;
 import io.metersphere.functional.hub.service.DefaultHubModuleResolver;
 import io.metersphere.functional.hub.service.DefaultHubCaseImportService;
@@ -42,17 +43,23 @@ import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 @Service
@@ -69,6 +76,8 @@ public class CaseAssetService {
     @Resource private DefaultHubCaseImportService defaultHubCaseImportService;
     @Resource private CaseAssetImportJobService caseAssetImportJobService;
     @Resource private CaseAssetImportWorker caseAssetImportWorker;
+    @Lazy
+    @Resource private CaseAssetHistorySyncWorker caseAssetHistorySyncWorker;
     @Resource private FunctionalCaseAttachmentService functionalCaseAttachmentService;
 
     @Transactional(readOnly = true)
@@ -191,6 +200,7 @@ public class CaseAssetService {
         FunctionalCaseAddRequest add = new FunctionalCaseAddRequest();
         copySaveFields(request, add);
         add.setProjectId(hubProjectId);
+        add.setWorkspaceId(requireOrganization());
         add.setModuleId(String.valueOf(catalog.get("hubModuleId")));
         add.setTemplateId(template.getId());
         return functionalCaseService.addFunctionalCase(add, List.of(), SessionUtils.getUserId(), requireOrganization());
@@ -264,6 +274,19 @@ public class CaseAssetService {
 
     private Map<String, Object> submitFileImport(String catalogId, FunctionalCaseImportRequest request,
                                                  MultipartFile file, String type) {
+        if (file == null || file.isEmpty()) {
+            throw new MSException("导入文件不能为空");
+        }
+        String fileName = StringUtils.lowerCase(StringUtils.defaultString(file.getOriginalFilename()));
+        boolean validExtension = "xmind".equalsIgnoreCase(type) ? fileName.endsWith(".xmind")
+                : fileName.endsWith(".xlsx") || fileName.endsWith(".xls");
+        if (!validExtension) {
+            throw new MSException("xmind".equalsIgnoreCase(type)
+                    ? "请选择 .xmind 格式文件" : "请选择 .xlsx 或 .xls 格式文件");
+        }
+        if (file.getSize() > 50L * 1024 * 1024) {
+            throw new MSException("导入文件不能超过 50 MB");
+        }
         prepareImport(catalogId, request);
         String jobId = caseAssetImportJobService.create(catalogId, file, request.isCover() ? "OVERWRITE" : "SKIP");
         try {
@@ -280,6 +303,32 @@ public class CaseAssetService {
     @Transactional(readOnly = true)
     public Map<String, Object> fileImportJob(String jobId) {
         return caseAssetImportJobService.get(jobId, requireOrganization());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> latestFileImportJob(String catalogId) {
+        requireCatalog(catalogId);
+        return caseAssetImportJobService.getLatest(catalogId, requireOrganization());
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> downloadFileImportErrors(String jobId) {
+        Map<String, Object> job = caseAssetImportJobService.get(jobId, requireOrganization());
+        String detail = job.get("errorDetail") == null ? null : String.valueOf(job.get("errorDetail"));
+        if (StringUtils.isBlank(detail)) {
+            throw new MSException("该导入任务没有可下载的错误明细");
+        }
+        String content = "\uFEFF导入任务: " + jobId + System.lineSeparator()
+                + "文件: " + StringUtils.defaultString((String) job.get("fileName"), "-") + System.lineSeparator()
+                + "状态: " + job.get("status") + System.lineSeparator()
+                + "成功: " + job.get("successCount") + "，失败: " + job.get("failCount") + System.lineSeparator()
+                + System.lineSeparator() + detail;
+        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/plain;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=case-asset-import-errors-" + jobId + ".txt")
+                .body(bytes);
     }
 
     public DefaultHubJobResponse importToProject(DefaultHubCaseImportRequest request) {
@@ -333,20 +382,172 @@ public class CaseAssetService {
 
     public Map<String, Object> backfillProjectCatalogs() {
         String organizationId = requireOrganization();
+        String operator = SessionUtils.getUserId();
+        List<String> runningJobs = jdbcTemplate.queryForList("SELECT id FROM case_asset_history_sync_job "
+                        + "WHERE organization_id=? AND status IN ('PENDING','RUNNING') ORDER BY create_time DESC LIMIT 1",
+                String.class, organizationId);
+        if (!runningJobs.isEmpty()) {
+            return getHistorySyncJob(runningJobs.getFirst());
+        }
         List<String> projectIds = jdbcTemplate.queryForList("SELECT id FROM project WHERE organization_id = ? AND deleted = b'0'",
                 String.class, organizationId);
-        int success = 0;
-        List<Map<String, String>> failures = new ArrayList<>();
+        String jobId = IDGenerator.nextStr();
+        long now = System.currentTimeMillis();
+        jdbcTemplate.update("INSERT INTO case_asset_history_sync_job (id,organization_id,status,total_count,create_user," +
+                        "create_time,update_time) VALUES (?,?,'PENDING',?,?,?,?)",
+                jobId, organizationId, projectIds.size(), operator, now, now);
         for (String projectId : projectIds) {
-            try {
-                upsertForProject(projectId);
-                success++;
-            } catch (RuntimeException e) {
-                failures.add(Map.of("projectId", projectId, "reason", StringUtils.defaultString(e.getMessage(), e.getClass().getSimpleName())));
-            }
+            jdbcTemplate.update("INSERT INTO case_asset_history_sync_item (id,job_id,project_id,status,create_time,update_time) " +
+                    "VALUES (?,?,?,'PENDING',?,?)", IDGenerator.nextStr(), jobId, projectId, now, now);
         }
-        return Map.of("organizationId", organizationId, "total", projectIds.size(), "success", success,
-                "failed", failures.size(), "failures", failures);
+        runAfterCommit(() -> caseAssetHistorySyncWorker.execute(jobId, organizationId, operator));
+        return Map.of("jobId", jobId, "status", "PENDING", "total", projectIds.size());
+    }
+
+    public Map<String, Integer> syncHistoricalProject(String projectId, String organizationId, String operator) {
+        Project sourceProject = projectMapper.selectByPrimaryKey(projectId);
+        if (sourceProject == null || !StringUtils.equals(sourceProject.getOrganizationId(), organizationId)
+                || defaultHubProjectService.isDefaultProject(projectId)) {
+            return Map.of("created", 0, "updated", 0, "skipped", 1);
+        }
+        Map<String, Object> catalog = upsertCatalog(organizationId, sourceProject.getName(), "PROJECT", projectId, operator);
+        return syncHistoricalCases(sourceProject, catalog, organizationId, operator);
+    }
+
+    private Map<String, Integer> syncHistoricalCases(Project sourceProject, Map<String, Object> catalog,
+                                                     String organizationId, String operator) {
+        String hubProjectId = requireHubProjectId();
+        if (StringUtils.equals(sourceProject.getId(), hubProjectId)) return Map.of("created", 0, "updated", 0, "skipped", 0);
+        List<Map<String, Object>> sources = jdbcTemplate.queryForList("SELECT fc.id,COALESCE(NULLIF(fc.ref_id,''),fc.id) sourceRefId,"
+                + "fc.name,fc.case_edit_type caseEditType,"
+                + "fc.tags,fc.update_time updateTime,rel.asset_case_id assetCaseId,rel.source_update_time sourceSyncedTime "
+                + "FROM functional_case fc LEFT JOIN case_asset_source_relation rel "
+                + "ON rel.source_project_id=fc.project_id "
+                + "AND rel.source_case_id=COALESCE(NULLIF(fc.ref_id,''),fc.id) "
+                + "WHERE fc.project_id=? AND fc.deleted=b'0' AND fc.latest=b'1' "
+                + "AND (rel.id IS NULL OR COALESCE(fc.update_time,0)>COALESCE(rel.source_update_time,0)) "
+                + "ORDER BY fc.create_time,fc.id", sourceProject.getId());
+        TemplateDTO template = projectTemplateService.getDefaultTemplateDTO(hubProjectId, TemplateScene.FUNCTIONAL.name());
+        int created = 0;
+        int updated = 0;
+        for (Map<String, Object> source : sources) {
+            String sourceCaseId = String.valueOf(source.get("id"));
+            String sourceRefId = String.valueOf(source.get("sourceRefId"));
+            List<Map<String, Object>> blobs = jdbcTemplate.queryForList("SELECT prerequisite,steps,text_description textDescription,"
+                    + "expected_result expectedResult,description FROM functional_case_blob WHERE id=?", sourceCaseId);
+            Map<String, Object> blob = blobs.isEmpty() ? Map.of() : blobs.getFirst();
+            FunctionalCase sourceCase = functionalCaseMapper.selectByPrimaryKey(sourceCaseId);
+            FunctionalCaseAddRequest add = new FunctionalCaseAddRequest();
+            add.setProjectId(hubProjectId);
+            add.setWorkspaceId(organizationId);
+            add.setModuleId(String.valueOf(catalog.get("hubModuleId")));
+            add.setTemplateId(template.getId());
+            add.setName(String.valueOf(source.get("name")));
+            add.setCaseEditType(StringUtils.defaultIfBlank((String) source.get("caseEditType"), "STEP"));
+            add.setPrerequisite(blobText(blob.get("prerequisite")));
+            add.setSteps(blobText(blob.get("steps")));
+            add.setTextDescription(blobText(blob.get("textDescription")));
+            add.setExpectedResult(blobText(blob.get("expectedResult")));
+            add.setDescription(blobText(blob.get("description")));
+            add.setTags(sourceCase == null ? List.of() : sourceCase.getTags());
+            List<CaseCustomFieldDTO> customFields = jdbcTemplate.query(
+                    "SELECT field_id,value FROM functional_case_custom_field WHERE case_id=?",
+                    (rs, rowNum) -> {
+                        CaseCustomFieldDTO field = new CaseCustomFieldDTO();
+                        field.setFieldId(rs.getString("field_id"));
+                        field.setValue(rs.getString("value"));
+                        return field;
+                    }, sourceCaseId);
+            if (!customFields.isEmpty()) {
+                List<String> targetFieldIds = template.getCustomFields() == null ? List.of()
+                        : template.getCustomFields().stream().map(item -> item.getFieldId()).toList();
+                add.setCustomFields(customFields.stream().filter(field -> targetFieldIds.contains(field.getFieldId())).toList());
+            }
+            add.setPublicCase("false");
+            String existingAssetCaseId = source.get("assetCaseId") == null ? null : String.valueOf(source.get("assetCaseId"));
+            FunctionalCase current = StringUtils.isBlank(existingAssetCaseId)
+                    ? null : functionalCaseMapper.selectByPrimaryKey(existingAssetCaseId);
+            FunctionalCase asset;
+            if (current == null || Boolean.TRUE.equals(current.getDeleted())) {
+                asset = functionalCaseService.addFunctionalCase(add, List.of(), operator, organizationId);
+            } else {
+                FunctionalCaseEditRequest edit = new FunctionalCaseEditRequest();
+                org.springframework.beans.BeanUtils.copyProperties(add, edit);
+                edit.setId(existingAssetCaseId);
+                edit.setVersionId(current.getVersionId());
+                asset = functionalCaseService.updateFunctionalCase(edit, List.of(), operator);
+            }
+            long now = System.currentTimeMillis();
+            jdbcTemplate.update("INSERT INTO case_asset_source_relation (id,asset_case_id,source_project_id,source_case_id," +
+                            "source_update_time,create_user,create_time,update_time) VALUES (?,?,?,?,?,?,?,?) " +
+                            "ON DUPLICATE KEY UPDATE asset_case_id=VALUES(asset_case_id),source_update_time=VALUES(source_update_time),update_time=VALUES(update_time)",
+                    IDGenerator.nextStr(), asset.getId(), sourceProject.getId(), sourceRefId, source.get("updateTime"), operator, now, now);
+            jdbcTemplate.update("INSERT IGNORE INTO case_asset_lineage (id,source_case_id,target_case_id,target_project_id,"
+                            + "import_batch_id,conflict_strategy,create_user,create_time,update_time) VALUES (?,?,?,?,NULL,'HISTORY_BACKFILL',?,?,?)",
+                    IDGenerator.nextStr(), asset.getId(), sourceCaseId, sourceProject.getId(), operator, now, now);
+            if (current == null || Boolean.TRUE.equals(current.getDeleted())) created++; else updated++;
+        }
+        Integer total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM functional_case WHERE project_id=? AND deleted=b'0' AND latest=b'1'",
+                Integer.class, sourceProject.getId());
+        return Map.of("created", created, "updated", updated,
+                "skipped", Math.max(0, (total == null ? 0 : total) - created - updated));
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getHistorySyncJob(String jobId) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT id jobId,status,total_count total,success_count success," +
+                        "skipped_count skipped,failed_count failed,case_created_count caseCreated,case_updated_count caseUpdated," +
+                        "case_skipped_count caseSkipped,create_time createTime,update_time updateTime,finish_time finishTime " +
+                        "FROM case_asset_history_sync_job WHERE id=? AND organization_id=?", jobId, requireOrganization());
+        if (rows.isEmpty()) throw new MSException("历史用例同步任务不存在");
+        Map<String, Object> result = new LinkedHashMap<>(rows.getFirst());
+        result.put("items", jdbcTemplate.queryForList("SELECT project_id projectId,status,case_created_count caseCreated," +
+                "case_updated_count caseUpdated,case_skipped_count caseSkipped,failure_reason failureReason " +
+                "FROM case_asset_history_sync_item WHERE job_id=? ORDER BY create_time,project_id", jobId));
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getLatestHistorySyncJob() {
+        List<String> ids = jdbcTemplate.queryForList("SELECT id FROM case_asset_history_sync_job "
+                        + "WHERE organization_id=? ORDER BY create_time DESC LIMIT 1",
+                String.class, requireOrganization());
+        if (ids.isEmpty()) return Map.of("exists", false);
+        Map<String, Object> result = getHistorySyncJob(ids.getFirst());
+        result.put("exists", true);
+        return result;
+    }
+
+    public Map<String, Object> retryHistorySyncJob(String jobId) {
+        Map<String, Object> job = getHistorySyncJob(jobId);
+        String status = String.valueOf(job.get("status"));
+        if (!StringUtils.equalsAny(status, "FAILED", "PARTIAL_SUCCESS")) {
+            throw new MSException("仅失败或部分成功的历史同步任务可以重试");
+        }
+        jdbcTemplate.update("UPDATE case_asset_history_sync_item SET status='PENDING',failure_reason=NULL,update_time=? " +
+                "WHERE job_id=? AND status='FAILED'", System.currentTimeMillis(), jobId);
+        jdbcTemplate.update("UPDATE case_asset_history_sync_job SET status='PENDING',failed_count=0,finish_time=NULL,update_time=? WHERE id=?",
+                System.currentTimeMillis(), jobId);
+        String organizationId = requireOrganization();
+        String operator = SessionUtils.getUserId();
+        runAfterCommit(() -> caseAssetHistorySyncWorker.execute(jobId, organizationId, operator));
+        return getHistorySyncJob(jobId);
+    }
+
+    private void runAfterCommit(Runnable action) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            action.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCommit() { action.run(); }
+        });
+    }
+
+    private String blobText(Object value) {
+        if (value == null) return StringUtils.EMPTY;
+        if (value instanceof byte[] bytes) return new String(bytes, StandardCharsets.UTF_8);
+        return String.valueOf(value);
     }
 
     private Map<String, Object> upsertCatalog(String orgId, String rawName, String source, String projectId, String operator) {
@@ -390,6 +591,7 @@ public class CaseAssetService {
     private void prepareImport(String catalogId, FunctionalCaseImportRequest request) {
         Map<String, Object> catalog = requireCatalog(catalogId);
         request.setProjectId(requireHubProjectId());
+        request.setWorkspaceId(requireOrganization());
         request.setModuleId(String.valueOf(catalog.get("hubModuleId")));
     }
 

@@ -50,7 +50,7 @@ public class BugWorkflowRuntimeService {
         if (bug == null) return;
         List<Map<String, Object>> flows = jdbcTemplate.queryForList("SELECT id, version FROM workflow_definition "
                 + "WHERE scene = 'BUG' AND scope_type = 'SYSTEM' AND scope_id = 'system' "
-                + "AND lifecycle = 'PUBLISHED' AND default_flow = b'1' AND enabled = b'1' LIMIT 1");
+                + "AND lifecycle = 'PUBLISHED' AND active_for_new = b'1' AND enabled = b'1' LIMIT 1");
         if (flows.isEmpty()) throw new MSException(BUG_WORKFLOW_NOT_PUBLISHED);
         Map<String, Object> flow = flows.getFirst();
         String flowId = String.valueOf(flow.get("id"));
@@ -238,7 +238,7 @@ public class BugWorkflowRuntimeService {
     private String resolveStatusName(String statusId) {
         if (StringUtils.isBlank(statusId)) return StringUtils.EMPTY;
         List<String> names = jdbcTemplate.query("SELECT name FROM status_item WHERE id = ?", (rs, rowNum) -> rs.getString(1), statusId);
-        return names.isEmpty() ? statusId : names.getFirst();
+        return names.isEmpty() ? "未知状态" : names.getFirst();
     }
 
     private String resolveWorkflowStatusId(Bug bug) {

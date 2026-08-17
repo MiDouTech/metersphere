@@ -15,7 +15,6 @@
     <select id="selectMaxVersion" resultType="int">
         SELECT COALESCE(MAX(version_no), 0) FROM test_asset_version
         WHERE project_id = #{projectId} AND asset_type = #{assetType} AND asset_id = #{assetId}
-        FOR UPDATE
     </select>
 
     <select id="selectLatest" resultType="io.metersphere.agent.dto.TestAssetVersionDTO">
@@ -37,43 +36,63 @@
     </select>
 
     <sql id="CatalogUnion">
-        SELECT COALESCE(NULLIF(f.ref_id, ''), f.id) AS id, f.project_id, 'DATASET' AS asset_type,
-               f.name, COALESCE(f.type, 'FILE') AS category,
-               CASE WHEN f.enable = 0 THEN 'DISABLED' ELSE 'ACTIVE' END AS status,
-               f.description AS summary, COALESCE(f.update_user, f.create_user) AS owner,
-               COALESCE(f.update_time, f.create_time) AS update_time, f.file_version AS source_version,
-               NULL AS related_id
-        FROM file_metadata f
-        WHERE f.project_id = #{projectId} AND f.latest = 1
-          AND UPPER(COALESCE(f.type, '')) IN ('CSV', 'JSON', 'XLS', 'XLSX')
-        UNION ALL
-        SELECT e.id, e.project_id, 'ENVIRONMENT', e.name,
-               CASE WHEN e.mock = 1 THEN 'MOCK' ELSE 'TEST' END, 'ACTIVE', e.description,
-               COALESCE(e.update_user, e.create_user), COALESCE(e.update_time, e.create_time),
-               CAST(COALESCE(e.update_time, e.create_time) AS CHAR), NULL
-        FROM environment e WHERE e.project_id = #{projectId}
-        UNION ALL
-        SELECT c.id, c.project_id, 'COMMON_STEP', c.name, COALESCE(c.type, 'SCRIPT'),
-               COALESCE(c.status, 'DRAFT'), c.description, COALESCE(c.update_user, c.create_user),
-               COALESCE(c.update_time, c.create_time), CAST(COALESCE(c.update_time, c.create_time) AS CHAR), NULL
-        FROM custom_function c WHERE c.project_id = #{projectId}
-        UNION ALL
-        SELECT COALESCE(NULLIF(a.ref_id, ''), a.id), a.project_id, 'API_DEFINITION', a.name,
-               CONCAT(COALESCE(a.protocol, ''), '/', COALESCE(a.method, '')), COALESCE(a.status, 'ACTIVE'),
-               CONCAT(COALESCE(a.method, ''), ' ', COALESCE(a.path, '')), COALESCE(a.update_user, a.create_user),
-               COALESCE(a.update_time, a.create_time), a.version_id, NULL
-        FROM api_definition a WHERE a.project_id = #{projectId} AND a.latest = 1 AND a.deleted = 0
-        UNION ALL
-        SELECT ar.id, t.project_id, 'EVIDENCE', ar.file_name, ar.purpose, ar.status,
-               CONCAT('task=', ar.task_id, '; sha256=', COALESCE(ar.sha256, '')), ar.create_user,
-               ar.create_time, ar.sha256, ar.task_id
-        FROM ai_execution_artifact ar JOIN ai_execution_task t ON t.id = ar.task_id
-        WHERE t.project_id = #{projectId}
-        UNION ALL
-        SELECT b.id, b.project_id, 'BUG', b.title, COALESCE(b.platform, 'LOCAL'), b.status,
-               CONCAT('BUG-', COALESCE(b.num, '')), COALESCE(b.update_user, b.create_user),
-               COALESCE(b.update_time, b.create_time), CAST(COALESCE(b.update_time, b.create_time) AS CHAR), NULL
-        FROM bug b WHERE b.project_id = #{projectId} AND b.deleted = 0
+        <choose>
+            <when test="assetType == 'DATASET'">
+                SELECT COALESCE(NULLIF(f.ref_id, ''), f.id) AS id, f.project_id, 'DATASET' AS asset_type,
+                       f.name, COALESCE(f.type, 'FILE') AS category,
+                       CASE WHEN f.enable = 0 THEN 'DISABLED' ELSE 'ACTIVE' END AS status,
+                       f.description AS summary, COALESCE(f.update_user, f.create_user) AS owner,
+                       COALESCE(f.update_time, f.create_time) AS update_time, f.file_version AS source_version,
+                       NULL AS related_id
+                FROM file_metadata f
+                WHERE f.project_id = #{projectId} AND f.latest = 1
+                  AND UPPER(COALESCE(f.type, '')) IN ('CSV', 'JSON', 'XLS', 'XLSX')
+            </when>
+            <when test="assetType == 'ENVIRONMENT'">
+                SELECT e.id, e.project_id, 'ENVIRONMENT' AS asset_type, e.name,
+                       CASE WHEN e.mock = 1 THEN 'MOCK' ELSE 'TEST' END AS category, 'ACTIVE' AS status,
+                       e.description AS summary, COALESCE(e.update_user, e.create_user) AS owner,
+                       COALESCE(e.update_time, e.create_time) AS update_time,
+                       CAST(COALESCE(e.update_time, e.create_time) AS CHAR) AS source_version, NULL AS related_id
+                FROM environment e WHERE e.project_id = #{projectId}
+            </when>
+            <when test="assetType == 'COMMON_STEP'">
+                SELECT c.id, c.project_id, 'COMMON_STEP' AS asset_type, c.name,
+                       COALESCE(c.type, 'SCRIPT') AS category, COALESCE(c.status, 'DRAFT') AS status,
+                       c.description AS summary, COALESCE(c.update_user, c.create_user) AS owner,
+                       COALESCE(c.update_time, c.create_time) AS update_time,
+                       CAST(COALESCE(c.update_time, c.create_time) AS CHAR) AS source_version, NULL AS related_id
+                FROM custom_function c WHERE c.project_id = #{projectId}
+            </when>
+            <when test="assetType == 'API_DEFINITION'">
+                SELECT COALESCE(NULLIF(a.ref_id, ''), a.id) AS id, a.project_id, 'API_DEFINITION' AS asset_type, a.name,
+                       CONCAT(COALESCE(a.protocol, ''), '/', COALESCE(a.method, '')) AS category,
+                       COALESCE(a.status, 'ACTIVE') AS status,
+                       CONCAT(COALESCE(a.method, ''), ' ', COALESCE(a.path, '')) AS summary,
+                       COALESCE(a.update_user, a.create_user) AS owner,
+                       COALESCE(a.update_time, a.create_time) AS update_time, a.version_id AS source_version,
+                       NULL AS related_id
+                FROM api_definition a WHERE a.project_id = #{projectId} AND a.latest = 1 AND a.deleted = 0
+            </when>
+            <when test="assetType == 'EVIDENCE'">
+                SELECT ar.id, t.project_id, 'EVIDENCE' AS asset_type, ar.file_name AS name,
+                       ar.purpose AS category, ar.status,
+                       CONCAT('task=', ar.task_id, '; sha256=', COALESCE(ar.sha256, '')) AS summary,
+                       ar.create_user AS owner, ar.create_time AS update_time, ar.sha256 AS source_version,
+                       ar.task_id AS related_id
+                FROM ai_execution_artifact ar JOIN ai_execution_task t ON t.id = ar.task_id
+                WHERE t.project_id = #{projectId}
+            </when>
+            <otherwise>
+                SELECT b.id, b.project_id, 'BUG' AS asset_type, b.title AS name,
+                       COALESCE(b.platform, 'LOCAL') AS category, b.status,
+                       CONCAT('BUG-', COALESCE(b.num, '')) AS summary,
+                       COALESCE(b.update_user, b.create_user) AS owner,
+                       COALESCE(b.update_time, b.create_time) AS update_time,
+                       CAST(COALESCE(b.update_time, b.create_time) AS CHAR) AS source_version, NULL AS related_id
+                FROM bug b WHERE b.project_id = #{projectId} AND b.deleted = 0
+            </otherwise>
+        </choose>
     </sql>
 
     <sql id="CatalogWhere">
