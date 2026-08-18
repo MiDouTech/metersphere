@@ -19,6 +19,7 @@ import io.metersphere.project.domain.Project;
 import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.system.utils.SessionUtils;
 import io.metersphere.system.utils.Pager;
+import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.mapper.ExtUserRoleRelationMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -318,6 +320,57 @@ class PermissionControlServiceTests {
 
         verify(jdbcTemplate, never()).update(org.mockito.ArgumentMatchers.contains("ARCHIVED"),
                 org.mockito.ArgumentMatchers.<Object[]>any());
+    }
+
+    @Test
+    void syncWecomPositionsAllowsPublishedWorkflow() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-published");
+        flow.setLifecycle("PUBLISHED");
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-published")).thenReturn(flow);
+        when(permissionControlMapper.selectWorkflowRoles("flow-published")).thenReturn(List.of());
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("LOWER(TRIM(position))")))
+                .thenReturn(List.of());
+
+        try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class);
+             MockedStatic<IDGenerator> ids = mockStatic(IDGenerator.class)) {
+            session.when(SessionUtils::getUserId).thenReturn("admin");
+            ids.when(IDGenerator::nextStr).thenReturn("sync-batch-1");
+            Map<String, Object> result = service.syncWecomPositions("flow-published");
+            assertEquals(0, result.get("total"));
+            assertEquals("sync-batch-1", result.get("batchId"));
+        }
+    }
+
+    @Test
+    void syncWecomPositionsRejectsArchivedWorkflow() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-archived");
+        flow.setLifecycle("ARCHIVED");
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-archived")).thenReturn(flow);
+
+        assertThrows(RuntimeException.class, () -> service.syncWecomPositions("flow-archived"));
+        verify(permissionControlMapper, never()).insertWorkflowRole(any());
+    }
+
+    @Test
+    void deleteUnpublishedWorkflowRemovesPositionSyncHistory() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-draft-delete");
+        flow.setLifecycle("DRAFT");
+        flow.setActiveForNew(false);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-draft-delete")).thenReturn(flow);
+        when(jdbcTemplate.queryForObject(org.mockito.ArgumentMatchers.contains("FROM bug WHERE workflow_id"),
+                org.mockito.ArgumentMatchers.eq(Long.class), org.mockito.ArgumentMatchers.eq("flow-draft-delete")))
+                .thenReturn(0L);
+        when(jdbcTemplate.queryForObject(org.mockito.ArgumentMatchers.contains("bug_status_transition_history"),
+                org.mockito.ArgumentMatchers.eq(Long.class), org.mockito.ArgumentMatchers.eq("flow-draft-delete")))
+                .thenReturn(0L);
+
+        service.deleteFlow("flow-draft-delete");
+
+        verify(jdbcTemplate).update("DELETE FROM workflow_position_sync_log WHERE flow_id = ?", "flow-draft-delete");
+        verify(permissionControlMapper).deleteWorkflowDefinition("flow-draft-delete");
     }
 
     @Test

@@ -778,6 +778,7 @@ public class PermissionControlService {
         return permissionControlMapper.selectWorkflowDefinitionById(request.getId());
     }
 
+    @Transactional
     public void deleteFlow(String flowId) {
         WorkflowDefinition workflowDefinition = permissionControlMapper.selectWorkflowDefinitionById(flowId);
         if (workflowDefinition == null) {
@@ -785,6 +786,7 @@ public class PermissionControlService {
         }
         Map<String, Object> impact = getFlowImpact(flowId);
         if (!Boolean.TRUE.equals(impact.get("deletable"))) throw new MSException(String.valueOf(impact.get("reason")));
+        jdbcTemplate.update("DELETE FROM workflow_position_sync_log WHERE flow_id = ?", flowId);
         jdbcTemplate.update("DELETE FROM status_flow_role_permission WHERE flow_id = ?", flowId);
         jdbcTemplate.update("DELETE FROM status_flow WHERE flow_id = ?", flowId);
         jdbcTemplate.update("DELETE FROM status_item WHERE flow_id = ?", flowId);
@@ -809,6 +811,8 @@ public class PermissionControlService {
         result.put("associatedBugCount", associated);
         result.put("transitionHistoryCount", history);
         result.put("activeForNew", active);
+        result.put("lifecycle", flow.getLifecycle());
+        result.put("unpublished", StringUtils.equals(flow.getLifecycle(), "DRAFT"));
         result.put("deletable", deletable);
         result.put("archiveRequired", !active && !deletable);
         result.put("reason", reason);
@@ -1334,8 +1338,9 @@ public class PermissionControlService {
         return positions;
     }
 
+    @Transactional
     public Map<String, Object> syncWecomPositions(String flowId) {
-        assertDraftWorkflow(flowId);
+        assertWecomPositionSyncAllowed(flowId);
         List<Map<String, Object>> positions = previewWecomPositions(flowId);
         long now = System.currentTimeMillis();
         Set<String> activeKeys = positions.stream().map(item -> String.valueOf(item.get("sourceKey"))).collect(Collectors.toSet());
@@ -1371,8 +1376,11 @@ public class PermissionControlService {
                 role.setSourceKey(key);
                 role.setMatchMode("EXACT");
                 role.setEnabled(true);
-                WorkflowRole createdRole = addFlowRole(role);
-                details.add(Map.of("action", "CREATED", "roleId", createdRole.getId(), "name", name, "sourceKey", key));
+                role.setId(IDGenerator.nextStr());
+                role.setCreateTime(now);
+                role.setUpdateTime(now);
+                permissionControlMapper.insertWorkflowRole(role);
+                details.add(Map.of("action", "CREATED", "roleId", role.getId(), "name", name, "sourceKey", key));
                 created++;
             } else {
                 WorkflowRole role = matches.getFirst();
@@ -1439,6 +1447,13 @@ public class PermissionControlService {
         WorkflowDefinition flow = getWorkflowWithCheck(flowId);
         if (!StringUtils.equals(flow.getLifecycle(), "DRAFT")) {
             throw new MSException("仅草稿流程可修改角色与流转授权");
+        }
+    }
+
+    private void assertWecomPositionSyncAllowed(String flowId) {
+        WorkflowDefinition flow = getWorkflowWithCheck(flowId);
+        if (StringUtils.equals(flow.getLifecycle(), "ARCHIVED")) {
+            throw new MSException("归档流程保留历史岗位配置，不允许继续同步企微岗位");
         }
     }
 

@@ -232,9 +232,14 @@
               <div class="card-title">
                 <span>流转规则</span>
                 <a-space>
-                  <a-button v-if="canUpdateRole && isDraftFlow" @click="openWecomPositionPreview"
-                    >同步企微岗位</a-button
-                  >
+                  <a-tooltip :content="isArchivedFlow ? '归档流程保留历史配置，不再同步岗位' : '同步平台当前企微岗位'">
+                    <a-button
+                      v-if="canUpdateRole && selectedFlow?.id"
+                      :disabled="isArchivedFlow"
+                      @click="openWecomPositionPreview"
+                      >同步企微岗位</a-button
+                    >
+                  </a-tooltip>
                   <a-button v-if="canAddRole" :disabled="!isDraftFlow" @click="() => openFlowRoleModal()"
                     >添加流程角色</a-button
                   >
@@ -271,61 +276,63 @@
                 >删除此流转</a-button
               >
 
-              <a-table class="mt-4" :data="flowRoles" :pagination="false" size="small" row-key="id">
-                <template #columns>
-                  <a-table-column title="流程角色">
-                    <template #cell="{ record }">
-                      <div>{{ record.name }}</div>
-                      <div class="muted">{{ getWorkflowRoleMapping(record) }}</div>
-                    </template>
-                  </a-table-column>
-                  <a-table-column :width="76" title="可见">
-                    <template #cell="{ record }">
-                      <a-checkbox
-                        :model-value="getRolePermissionValue(record.id, 'visible')"
-                        :disabled="!isDraftFlow || !canUpdateRole"
-                        @change="(value) => updateRolePermission(record.id, 'visible', Boolean(value))"
-                      />
-                    </template>
-                  </a-table-column>
-                  <a-table-column :width="76" title="可执行">
-                    <template #cell="{ record }">
-                      <a-checkbox
-                        :model-value="getRolePermissionValue(record.id, 'operable')"
-                        :disabled="!isDraftFlow || !canUpdateRole"
-                        @change="(value) => updateRolePermission(record.id, 'operable', Boolean(value))"
-                      />
-                    </template>
-                  </a-table-column>
-                  <a-table-column :width="110" title="操作">
-                    <template #cell="{ record }">
-                      <a-space>
-                        <a-link
-                          v-if="isDraftFlow && canUpdateRole"
-                          v-visible-permission="{
-                            code: 'PERMISSION_FLOW_ROLE_UPDATE_BUTTON',
-                            permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
-                            typeList: ['SYSTEM'],
-                          }"
-                          @click="openFlowRoleModal(record)"
-                          >编辑</a-link
-                        >
-                        <a-link
-                          v-if="isDraftFlow && canDeleteRole"
-                          v-visible-permission="{
-                            code: 'PERMISSION_FLOW_ROLE_DELETE_BUTTON',
-                            permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
-                            typeList: ['SYSTEM'],
-                          }"
-                          status="danger"
-                          @click="confirmDeleteFlowRole(record)"
-                          >删除</a-link
-                        >
-                      </a-space>
-                    </template>
-                  </a-table-column>
-                </template>
-              </a-table>
+              <div class="flow-role-table-wrap">
+                <a-table :data="flowRoles" :pagination="false" size="small" row-key="id" sticky-header>
+                  <template #columns>
+                    <a-table-column title="流程角色">
+                      <template #cell="{ record }">
+                        <div>{{ record.name }}</div>
+                        <div class="muted">{{ getWorkflowRoleMapping(record) }}</div>
+                      </template>
+                    </a-table-column>
+                    <a-table-column :width="76" title="可见">
+                      <template #cell="{ record }">
+                        <a-checkbox
+                          :model-value="getRolePermissionValue(record.id, 'visible')"
+                          :disabled="!isDraftFlow || !canUpdateRole"
+                          @change="(value) => updateRolePermission(record.id, 'visible', Boolean(value))"
+                        />
+                      </template>
+                    </a-table-column>
+                    <a-table-column :width="76" title="可执行">
+                      <template #cell="{ record }">
+                        <a-checkbox
+                          :model-value="getRolePermissionValue(record.id, 'operable')"
+                          :disabled="!isDraftFlow || !canUpdateRole"
+                          @change="(value) => updateRolePermission(record.id, 'operable', Boolean(value))"
+                        />
+                      </template>
+                    </a-table-column>
+                    <a-table-column :width="110" title="操作">
+                      <template #cell="{ record }">
+                        <a-space>
+                          <a-link
+                            v-if="isDraftFlow && canUpdateRole"
+                            v-visible-permission="{
+                              code: 'PERMISSION_FLOW_ROLE_UPDATE_BUTTON',
+                              permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
+                              typeList: ['SYSTEM'],
+                            }"
+                            @click="openFlowRoleModal(record)"
+                            >编辑</a-link
+                          >
+                          <a-link
+                            v-if="isDraftFlow && canDeleteRole"
+                            v-visible-permission="{
+                              code: 'PERMISSION_FLOW_ROLE_DELETE_BUTTON',
+                              permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
+                              typeList: ['SYSTEM'],
+                            }"
+                            status="danger"
+                            @click="confirmDeleteFlowRole(record)"
+                            >删除</a-link
+                          >
+                        </a-space>
+                      </template>
+                    </a-table-column>
+                  </template>
+                </a-table>
+              </div>
             </template>
           </a-card>
         </div>
@@ -922,6 +929,7 @@
     pos: 0,
   });
   const isDraftFlow = computed(() => selectedFlow.value?.lifecycle === 'DRAFT');
+  const isArchivedFlow = computed(() => selectedFlow.value?.lifecycle === 'ARCHIVED');
   const flowRoleModalVisible = ref(false);
 
   const flowForm = reactive({
@@ -1334,7 +1342,7 @@
   };
 
   const openWecomPositionPreview = async () => {
-    if (!selectedFlow.value?.id || !isDraftFlow.value) return;
+    if (!selectedFlow.value?.id || isArchivedFlow.value) return;
     wecomPreviewVisible.value = true;
     wecomPreviewLoading.value = true;
     try {
@@ -1348,7 +1356,7 @@
   };
 
   const syncWecomPositions = async () => {
-    if (!selectedFlow.value?.id || !isDraftFlow.value) return false;
+    if (!selectedFlow.value?.id || isArchivedFlow.value) return false;
     wecomSyncLoading.value = true;
     try {
       const result = await syncPermissionControlWecomPositions(selectedFlow.value.id);
@@ -1741,6 +1749,14 @@
   }
   .matrix-wrap {
     overflow: auto;
+  }
+  .flow-role-table-wrap {
+    overflow-y: auto;
+    margin-top: 16px;
+    min-height: 220px;
+    max-height: calc(100vh - 430px);
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
   }
   .flow-matrix {
     width: 100%;

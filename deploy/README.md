@@ -56,9 +56,16 @@ chmod +x deploy/seed-nacos-prod.sh
 ### 2. 准备宿主机目录
 
 ```bash
-mkdir -p /opt/metersphere/conf /opt/metersphere/logs
+install -d -m 755 /opt/metersphere/conf /opt/metersphere/logs
+install -d -m 700 /opt/metersphere/secrets
 cp deploy/conf/redisson.yml.example /opt/metersphere/conf/redisson.yml
 vim /opt/metersphere/conf/redisson.yml   # 填写 Redis 地址和密码
+
+umask 077
+openssl rand -hex 32 > /opt/metersphere/secrets/wecom_bridge_token
+openssl rand -hex 32 > /opt/metersphere/secrets/wecom_callback_token
+openssl rand -base64 48 > /opt/metersphere/secrets/wecom_master_key
+chmod 600 /opt/metersphere/secrets/wecom_*
 ```
 
 ### 3. 准备运行环境变量
@@ -82,15 +89,18 @@ NACOS_PASSWORD=your-password
 ### 4. 启动容器
 
 ```bash
-chmod +x deploy/docker-run.sh
-./deploy/docker-run.sh /opt/metersphere/env.prod
+docker compose --env-file /opt/metersphere/env.prod -f deploy/docker-compose.yml up -d --build
 ```
+
+该命令会同时启动 MeterSphere 后端与企微 Bridge，并自动创建两者共用的内部网络。首次启动后，两个服务均使用
+`restart: unless-stopped`，服务器重启或进程异常退出时无需再单独启动 Bridge。
 
 ### 5. 验证
 
 ```bash
 docker ps
 docker logs -f metersphere
+docker logs -f wecom-bot-bridge
 curl -I http://127.0.0.1:8081/
 ```
 
@@ -104,9 +114,11 @@ curl -I http://127.0.0.1:8081/
 | Nacos 连接失败 | 地址/认证/namespace 错误 | 检查 `NACOS_*` 环境变量 |
 | MySQL 连接失败 | Nacos 中 datasource 配置错误 | 在 Nacos 控制台核对 `metersphere.properties` |
 | Redis 连接失败 | `redisson.yml` 未挂载或密码错误 | 检查 `/opt/metersphere/conf/redisson.yml` |
+| Bridge 无法连接 | 运行密钥缺失或 Bridge 未健康 | 执行 `docker compose ... ps` 并检查 Bridge 日志 |
 
 ## 说明
 
 - `redisson.yml` 不走 Nacos，通过卷挂载到 `/opt/metersphere/conf/redisson.yml`
 - 日志目录挂载到 `/opt/metersphere/logs`
 - 业务配置（MySQL/Kafka/MinIO 等）统一由 Nacos `metersphere.properties` 管理
+- `deploy/docker-run.sh` 保留用于不启用企微 Bridge 的兼容部署；正式一体化部署使用 `deploy/docker-compose.yml`
