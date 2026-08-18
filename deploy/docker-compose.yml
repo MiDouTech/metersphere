@@ -1,0 +1,92 @@
+services:
+  metersphere:
+    container_name: ${MS_CONTAINER_NAME:-metersphere}
+    image: ${MS_IMAGE:?MS_IMAGE is required}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      wecom-bot-bridge:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-nacos}
+      NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR:?NACOS_SERVER_ADDR is required}
+      NACOS_NAMESPACE: ${NACOS_NAMESPACE:-prod}
+      NACOS_GROUP: ${NACOS_GROUP:-METERSPHERE}
+      NACOS_USERNAME: ${NACOS_USERNAME:-}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:-}
+      MS_WECOM_BRIDGE_URL: http://wecom-bot-bridge:8095
+      MS_WECOM_BRIDGE_TOKEN_FILE: /run/secrets/wecom_bridge_token
+      MS_WECOM_BRIDGE_CALLBACK_TOKEN_FILE: /run/secrets/wecom_callback_token
+      MS_WECOM_SECRET_MASTER_KEY_FILE: /run/secrets/wecom_master_key
+    ports:
+      - "${MS_HTTP_PORT:-8081}:8081"
+      - "${MS_TCP_PORT:-7071}:7071"
+    volumes:
+      - ${MS_CONF_DIR:-/opt/metersphere/conf}:/opt/metersphere/conf
+      - ${MS_LOG_DIR:-/opt/metersphere/logs}:/opt/metersphere/logs
+    secrets:
+      - wecom_bridge_token
+      - wecom_callback_token
+      - wecom_master_key
+    networks:
+      - metersphere-internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  wecom-bot-bridge:
+    container_name: wecom-bot-bridge
+    build:
+      context: ../wecom-bot-bridge
+      dockerfile: Dockerfile
+    image: ${MS_WECOM_BRIDGE_IMAGE:-metersphere/wecom-bot-bridge:1.0.0}
+    restart: unless-stopped
+    read_only: true
+    init: true
+    user: "10001:10001"
+    cpus: "${MS_WECOM_BRIDGE_CPUS:-0.25}"
+    mem_limit: ${MS_WECOM_BRIDGE_MEMORY:-192m}
+    environment:
+      MS_WECOM_BRIDGE_PORT: "8095"
+      MS_WECOM_BOT_ENABLED: "false"
+      MS_WECOM_IDEMPOTENCY_FILE: /var/lib/wecom-bot/idempotency.json
+      MS_WECOM_CALLBACK_BASE_URL: http://metersphere:8081
+      MS_WECOM_BRIDGE_TOKEN_FILE: /run/secrets/wecom_bridge_token
+      MS_WECOM_BRIDGE_CALLBACK_TOKEN_FILE: /run/secrets/wecom_callback_token
+    secrets:
+      - wecom_bridge_token
+      - wecom_callback_token
+    networks:
+      - metersphere-internal
+    volumes:
+      - wecom-bot-data:/var/lib/wecom-bot
+    expose:
+      - "8095"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8095/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+secrets:
+  wecom_bridge_token:
+    file: ${MS_WECOM_BRIDGE_TOKEN_FILE:?MS_WECOM_BRIDGE_TOKEN_FILE is required}
+  wecom_callback_token:
+    file: ${MS_WECOM_BRIDGE_CALLBACK_TOKEN_FILE:?MS_WECOM_BRIDGE_CALLBACK_TOKEN_FILE is required}
+  wecom_master_key:
+    file: ${MS_WECOM_SECRET_MASTER_KEY_FILE:?MS_WECOM_SECRET_MASTER_KEY_FILE is required}
+
+networks:
+  metersphere-internal:
+    driver: bridge
+
+volumes:
+  wecom-bot-data:

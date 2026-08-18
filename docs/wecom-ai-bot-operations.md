@@ -18,18 +18,17 @@ MS_WECOM_BRIDGE_CALLBACK_TOKEN_FILE=/run/secrets/wecom_callback_token
 MS_WECOM_SECRET_MASTER_KEY_FILE=/run/secrets/wecom_master_key
 ```
 
-Bridge 容器使用 `deploy/docker-compose.wecom-bot.yml`，并设置 `MS_WECOM_IDEMPOTENCY_FILE=/var/lib/wecom-bot/idempotency.json`，通过持久化卷保存请求幂等记录。Token 文件必须与 Java 侧使用同一份。Bot Secret 推荐在页面保存引用 `env:MS_WECOM_BOT_SECRET`，Java 容器配置 `MS_WECOM_BOT_SECRET_FILE`；也可启用主密钥后由页面提交新 Secret，加密落库。现有 `deploy/docker-run.sh` 会把 Java 后端加入 Bridge 网络并挂载上述三项运行时 Secret。
+正式部署使用 `deploy/docker-compose.yml` 一次启动 Java 后端和 Bridge，并设置 `MS_WECOM_IDEMPOTENCY_FILE=/var/lib/wecom-bot/idempotency.json`，通过持久化卷保存请求幂等记录。Token 文件由同一份 Compose Secret 同时挂载到两侧。Bot Secret 推荐在页面提交并使用主密钥加密落库；如使用 `env:MS_WECOM_BOT_SECRET` 引用，则还需自行把该环境变量或文件注入 Java 容器。
 
-启动前先创建内部网络，并将 MeterSphere 后端加入该网络：
+准备三个权限为 `600` 的运行密钥文件后，一条命令统一启动；Compose 会自动创建内部网络：
 
 ```bash
-docker network create metersphere-internal
-docker compose -f deploy/docker-compose.wecom-bot.yml config
-docker compose -f deploy/docker-compose.wecom-bot.yml up -d --build
-docker compose -f deploy/docker-compose.wecom-bot.yml ps
+docker compose --env-file /opt/metersphere/env.prod -f deploy/docker-compose.yml config
+docker compose --env-file /opt/metersphere/env.prod -f deploy/docker-compose.yml up -d --build
+docker compose --env-file /opt/metersphere/env.prod -f deploy/docker-compose.yml ps
 ```
 
-不要在命令行直接写 Secret 值，三个 `*_FILE` 变量应指向宿主机权限为 600 的 Secret 文件。
+不要在命令行直接写 Secret 值，三个 `*_FILE` 变量应指向宿主机权限为 600 的 Secret 文件。后端和 Bridge 均配置 `restart: unless-stopped`，首次启动后无需单独维护 Bridge 启动动作。
 
 ## 3. 初次配置与群发现
 
