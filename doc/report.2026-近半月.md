@@ -17,7 +17,7 @@
 timeline
     title 关键更新脉络 (06-14 ~ 06-29)
     section 06-26 周四
-      本地开发基建 : Docker/Nacos/一键脚本
+      本地开发基建 : Docker/文件配置/一键脚本
       任务文档体系 : task000~011 分阶段规划
       task001 后端 : Community License/UserXpack
       UI/SQL 修复 : 用例管理布局与 Mapper
@@ -34,9 +34,9 @@ timeline
 
 > **价值**：降低 MeterSphere V3 源码在 Windows 上的启动门槛，使后续 task 开发可本地闭环验证。
 
-- `dev/docker-compose.yml`：MySQL / Redis / Kafka / MinIO / Nacos
+- `dev/docker-compose.yml`：MySQL / Redis / Kafka / MinIO
 - `start.ps1` / `stop.ps1` / `scripts/*.ps1`：环境检查、依赖启动、前后端启停
-- `deploy/nacos/dev|prod/metersphere.properties`：配置模板
+- `dev/conf/metersphere.properties.example`：本地配置模板
 - `backend/app`：`application-local.properties`、`application.properties`、本地路径默认值
 - `frontend/.env.development`：指向 `localhost:8081`
 
@@ -141,7 +141,7 @@ timeline
 1. **MeterSphere V3 用户 CRUD 依赖 Xpack 扩展点**：Community 实现必须承担企业版落库职责，否则接口成功但无数据。  
 2. **Spring Boot 3.5.7 与 Spring Cloud Alibaba 版本冲突**：已通过 `spring.cloud.compatibility-verifier.enabled=false` 规避。  
 3. **Maven 构建依赖 `frontend/dist`**：纯后端编译需加 `-DskipAntRunForJenkins=true`。  
-4. **`deploy/nacos/dev` 含开发默认密码**：仅用于本地 Docker，生产需独立配置。
+4. **本地配置模板含开发默认密码**：仅用于本地 Docker，生产需独立配置。
 
 ---
 

@@ -678,7 +678,7 @@ def main():
             "docker": "docker exec -it ms-dev-mysql mysql -uroot -pPassword123@mysql metersphere",
             "config_files": [
                 "dev/docker-compose.yml",
-                "deploy/nacos/dev/metersphere.properties",
+                "dev/conf/metersphere.properties.example",
                 "local-runtime/conf/metersphere.properties",
             ],
         },
@@ -759,7 +759,7 @@ def main():
     md.append(schema["connection_local"]["jdbc"])
     md.append("```")
     md.append("")
-    md.append("配置：`deploy/nacos/dev/metersphere.properties` → `local-runtime/conf/metersphere.properties`。")
+    md.append("配置：`dev/conf/metersphere.properties.example` → `local-runtime/conf/metersphere.properties`。")
     md.append("")
     md.append("栈：MyBatis + HikariCP；Flyway 历史表 `metersphere_version`；脚本目录 `backend/framework/domain/src/main/resources/migration/`。")
     md.append("")

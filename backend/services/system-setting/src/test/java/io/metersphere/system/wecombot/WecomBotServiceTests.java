@@ -18,12 +18,16 @@ import static org.mockito.Mockito.when;
 
 class WecomBotServiceTests {
     private JdbcTemplate jdbc;
+    private WecomSecretService secrets;
+    private WecomBotBridgeClient bridge;
     private WecomBotService service;
 
     @BeforeEach
     void setUp() {
         jdbc = mock(JdbcTemplate.class);
-        service = new WecomBotService(jdbc, mock(WecomSecretService.class), mock(WecomBotBridgeClient.class),
+        secrets = mock(WecomSecretService.class);
+        bridge = mock(WecomBotBridgeClient.class);
+        service = new WecomBotService(jdbc, secrets, bridge,
                 mock(NotificationTriggerProviderRegistry.class), mock(WecomNotificationCronScheduleService.class),
                 mock(ApplicationEventPublisher.class));
     }
@@ -52,5 +56,23 @@ class WecomBotServiceTests {
     void rendersOnlySupportedTemplateVariables() {
         assertEquals("Rule: daily", service.render("Rule: ${ruleName}", Map.of("ruleName", "daily")));
         assertThrows(MSException.class, () -> service.render("${secret}", Map.of("secret", "must-not-render")));
+    }
+
+    @Test
+    void restoresEnabledBotConnectionAfterApplicationStartup() {
+        Map<String, Object> config = Map.of(
+                "id", "config-1",
+                "bot_id", "bot-1",
+                "secret_ciphertext", "ciphertext",
+                "enabled", true);
+        when(jdbc.queryForList("SELECT * FROM wecom_bot_config ORDER BY create_time LIMIT 1"))
+                .thenReturn(List.of(config));
+        when(secrets.resolve(null, "ciphertext")).thenReturn("secret");
+
+        service.restoreConnection();
+
+        verify(bridge).configure("bot-1", "secret", true);
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("status='CONNECTING'"),
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.eq("config-1"));
     }
 }

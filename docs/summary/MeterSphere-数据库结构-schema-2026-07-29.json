@@ -14,7 +14,7 @@
     "docker": "docker exec -it ms-dev-mysql mysql -uroot -pPassword123@mysql metersphere",
     "config_files": [
       "dev/docker-compose.yml",
-      "deploy/nacos/dev/metersphere.properties",
+      "dev/conf/metersphere.properties.example",
       "local-runtime/conf/metersphere.properties"
     ]
   },

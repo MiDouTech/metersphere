@@ -233,7 +233,7 @@ x-cds-signals:
   source: "manual-from-local-dev+deploy"
   notes:
     - "auto-scan 将 frontend 误判为 Java，且未读取 legacy/local-dev/dev/docker-compose.yml"
-    - "灰度默认使用 local profile + 文件配置，不启 Nacos"
+    - "灰度默认使用 local profile + 文件配置"
     - "未纳入 metersphere-mcp（Cursor 工具链，非产品预览必需）"
     - "2026-07-15 二次接入：set -eu + frontend cd /repo/frontend"
     - "2026-07-15 Redisson：改用 printf 生成合法 YAML（勿 sed 剥全部缩进）"

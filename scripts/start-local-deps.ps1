@@ -12,7 +12,7 @@ if ($Stop) {
     exit 0
 }
 
-Write-Host "Starting local dependencies (MySQL, Redis, Kafka, MinIO, Nacos)..."
+Write-Host "Starting local dependencies (MySQL, Redis, Kafka, MinIO)..."
 docker compose -f $ComposeFile up -d
 
 Write-Host "Waiting for services to become healthy..."
@@ -33,4 +33,3 @@ Write-Host "  MySQL  : localhost:3306 (root / Password123@mysql, db=metersphere)
 Write-Host "  Redis  : localhost:6379 (Password123@redis)"
 Write-Host "  Kafka  : localhost:9092"
 Write-Host "  MinIO  : http://localhost:9000 (admin / Password123@minio, console :9001)"
-Write-Host "  Nacos  : http://localhost:8848/nacos (nacos / nacos)"

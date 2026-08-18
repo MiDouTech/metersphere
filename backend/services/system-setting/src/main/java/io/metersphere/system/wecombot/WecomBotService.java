@@ -11,6 +11,8 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import io.metersphere.system.event.BugExpectedResolutionChangedEvent;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -126,6 +128,25 @@ public class WecomBotService {
     public boolean isEnabled() {
         Map<String, Object> row = configRow();
         return row != null && bool(row, "enabled");
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void restoreConnection() {
+        Map<String, Object> row = configRow();
+        if (row == null || !bool(row, "enabled")) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        try {
+            String secret = secrets.resolve(str(row, "secret_ref"), str(row, "secret_ciphertext"));
+            bridge.configure(str(row, "bot_id"), secret, true);
+            jdbc.update("UPDATE wecom_bot_config SET status='CONNECTING',last_error_code=NULL,last_error_message=NULL,update_time=? WHERE id=?",
+                    now, str(row, "id"));
+        } catch (Exception e) {
+            jdbc.update("UPDATE wecom_bot_config SET status='OFFLINE',last_error_code='RESTORE_FAILED',last_error_message=?,update_time=? WHERE id=?",
+                    safeError(e.getMessage()), now, str(row, "id"));
+            LogUtils.warn("Unable to restore WeCom Bot connection after application startup");
+        }
     }
 
     public WecomBotModels.StatusView testConnection() {
@@ -690,7 +711,7 @@ public class WecomBotService {
     }
 
     private Map<String, Object> one(String sql, Object... args) {
-        List<Map<String, Object>> rows = jdbc.queryForList(sql, args);
+        List<Map<String, Object>> rows = args.length == 0 ? jdbc.queryForList(sql) : jdbc.queryForList(sql, args);
         return rows.isEmpty() ? null : rows.getFirst();
     }
 

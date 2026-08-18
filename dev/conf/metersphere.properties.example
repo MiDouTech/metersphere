@@ -1,27 +1,20 @@
-# MeterSphere local development config (publish to Nacos: namespace=dev, group=METERSPHERE, dataId=metersphere.properties)
-# 以下为本地/dev 默认口令，禁止用于生产；生产请用环境变量覆盖且勿把真实密钥回写仓库。
+# MeterSphere local development configuration.
+# Copy this file to local-runtime/conf/metersphere.properties.
 
-# MySQL
 spring.datasource.url=jdbc:mysql://127.0.0.1:3306/metersphere?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai&sessionVariables=sql_mode%3D%27STRICT_TRANS_TABLES%2CNO_ZERO_IN_DATE%2CNO_ZERO_DATE%2CERROR_FOR_DIVISION_BY_ZERO%2CNO_ENGINE_SUBSTITUTION%27
 spring.datasource.username=root
 spring.datasource.password=Password123@mysql
 
-# Kafka
 kafka.bootstrap-servers=127.0.0.1:9092
 
-# MinIO
 minio.endpoint=http://127.0.0.1:9000
 minio.access-key=admin
 minio.secret-key=Password123@minio
 
-# Local paths (relative to project root when started from repo root)
 logging.file.path=./local-runtime/logs/metersphere
 spring.redis.redisson.file=file:./local-runtime/conf/redisson.yml
 jmeter.home=./local-runtime/jmeter
 
-# Local development mode
 run.mode=local
-
-# Logging
 logger.level=INFO
 logger.sql.level=debug

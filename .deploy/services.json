@@ -8,6 +8,8 @@
     "build_output": "backend/app/target/dependency",
     "watch_paths": [
       "backend",
+      "wecom-bot-bridge",
+      "deploy/run-with-wecom-bridge.sh",
       "pom.xml",
       "Dockerfile.backend"
     ]

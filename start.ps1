@@ -3,21 +3,19 @@
   MeterSphere 本地一键启动脚本（chenqifen 分支）
 
 .DESCRIPTION
-  依次完成：环境检查 → Docker 中间件 → 本地配置 → Nacos 推送（可选）→ 后端 → 前端
+  依次完成：环境检查 → Docker 中间件 → 本地配置 → 后端 → 前端
 
 .EXAMPLE
   .\start.ps1              # 全量启动
   .\start.ps1 -Stop        # 停止前后端
   .\start.ps1 -SkipDeps    # 跳过 Docker（中间件已运行时使用）
   .\start.ps1 -BackendOnly # 仅启动后端
-  .\start.ps1 -UseNacos     # 从 Nacos 读取配置（需 Nacos 已启动且认证正确）
 #>
 param(
     [switch]$Stop,
     [switch]$SkipDeps,
     [switch]$BackendOnly,
     [switch]$FrontendOnly,
-    [switch]$UseNacos,
     [switch]$NoFrontendInstall
 )
 
@@ -109,7 +107,7 @@ function Start-DockerDeps {
         }
         docker compose -f $ComposeFile up -d
         Write-Host "  Waiting for middleware ports..."
-        $ports = @{3306="MySQL"; 6379="Redis"; 8848="Nacos"; 9000="MinIO"; 9092="Kafka"}
+        $ports = @{3306="MySQL"; 6379="Redis"; 9000="MinIO"; 9092="Kafka"}
         $deadline = (Get-Date).AddMinutes(4)
         while ((Get-Date) -lt $deadline) {
             $allReady = $true
@@ -145,44 +143,9 @@ singleServerConfig:
 "@ | Set-Content -Path $redissonFile -Encoding UTF8
     }
 
-    Copy-Item -Force (Join-Path $ProjectRoot "deploy\nacos\dev\metersphere.properties") `
+    Copy-Item -Force (Join-Path $ProjectRoot "dev\conf\metersphere.properties.example") `
         (Join-Path $RuntimeConfDir "metersphere.properties")
     Write-Host "  Config: local-runtime\conf\metersphere.properties"
-}
-
-function Publish-NacosConfig {
-    if (-not $UseNacos) {
-        Write-Step "Using local profile (local-runtime/conf)"
-        Write-Host "  Tip: add -UseNacos to load config from Nacos"
-        return
-    }
-    $env:NACOS_SERVER_ADDR = if ($env:NACOS_SERVER_ADDR) { $env:NACOS_SERVER_ADDR } else { "127.0.0.1:8848" }
-    $env:NACOS_NAMESPACE = if ($env:NACOS_NAMESPACE) { $env:NACOS_NAMESPACE } else { "dev" }
-    $env:NACOS_GROUP = if ($env:NACOS_GROUP) { $env:NACOS_GROUP } else { "METERSPHERE" }
-    Write-Step "Publishing config to Nacos"
-    if (-not (Test-PortOpen 8848)) {
-        Write-Host "  Nacos not reachable. Using local file fallback." -ForegroundColor Yellow
-        return
-    }
-    try {
-        $resp = Invoke-RestMethod -Uri "http://127.0.0.1:8848/nacos/v1/console/health/readiness" -TimeoutSec 5
-        if ($resp -ne "OK") { throw "Nacos not ready" }
-        $content = Get-Content (Join-Path $ProjectRoot "deploy\nacos\dev\metersphere.properties") -Raw -Encoding UTF8
-        $params = @{
-            dataId   = "metersphere.properties"
-            group    = $env:NACOS_GROUP
-            tenant   = $env:NACOS_NAMESPACE
-            type     = "properties"
-            content  = $content
-            username = $env:NACOS_USERNAME
-            password = $env:NACOS_PASSWORD
-        }
-        Invoke-RestMethod -Uri "http://127.0.0.1:8848/nacos/v1/cs/configs" -Method Post -Body $params | Out-Null
-        Write-Host "  Published metersphere.properties -> Nacos namespace=$($env:NACOS_NAMESPACE)"
-    } catch {
-        Write-Host "  Nacos publish failed: $($_.Exception.Message)" -ForegroundColor Yellow
-        Write-Host "  Backend will use local-runtime/conf/metersphere.properties" -ForegroundColor Yellow
-    }
 }
 
 function Wait-HttpReady([string]$Url, [int]$TimeoutSec = 300) {
@@ -212,13 +175,8 @@ function Start-Backend {
         "-f", (Join-Path $ProjectRoot "backend\app\pom.xml"),
         "spring-boot:run",
         "-DskipTests", "-DskipAntRunForJenkins=true",
-        "-Dspring-boot.run.jvmArguments=-Dnacos.logging.default.config.enabled=false"
+        "-Dspring-boot.run.profiles=local"
     )
-    if (-not $UseNacos) {
-        $args += "-Dspring-boot.run.profiles=local"
-    } else {
-        $args += "-Dspring-boot.run.profiles=nacos"
-    }
     $proc = Start-Process -FilePath $mvnw -ArgumentList $args `
         -WorkingDirectory $ProjectRoot -PassThru `
         -RedirectStandardOutput $BackendLog -RedirectStandardError "$BackendLog.err" `
@@ -312,7 +270,6 @@ Ensure-Prerequisites
 . (Join-Path $ProjectRoot "dev\env.ps1")
 Start-DockerDeps
 Initialize-LocalConfig
-Publish-NacosConfig
 
 $pids = @()
 if (-not $FrontendOnly) {
@@ -330,6 +287,5 @@ if ($pids.Count -gt 0) {
 Write-Step "Startup complete"
 Write-Host "  Backend : http://localhost:8081"
 Write-Host "  Frontend: http://localhost:5173"
-Write-Host "  Nacos   : http://localhost:8848/nacos"
 Write-Host ""
 Write-Host "Stop all: .\stop.cmd"

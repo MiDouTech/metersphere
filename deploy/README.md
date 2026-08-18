@@ -1,124 +1,105 @@
-# MeterSphere 生产部署（方案 A：Nacos）
+# MeterSphere 单容器部署（文件配置）
 
-## 独立发布平台（推荐）
+本项目测试、正式环境均使用本地文件配置。企微 AI 机器人连接器已经内置到后端镜像中，不需要单独部署 Bridge、创建 Docker 网络或维护 Bridge 密钥。
 
-若使用独立发布平台拉取 CNB 镜像部署，**无需改 Dockerfile**，只需在发布平台增加一项环境变量：
+## 部署结构
+
+- 一个 `metersphere` 容器
+- `/opt/metersphere/conf/metersphere.properties`：MySQL、Kafka、MinIO 等配置
+- `/opt/metersphere/conf/redisson.yml`：Redis 配置
+- `/opt/metersphere/logs`：日志目录
+- 企微连接器随主容器自动启动，仅监听容器内的 `127.0.0.1:8095`
+
+## 发布平台部署
+
+发布平台继续使用后端镜像：
+
+```text
+docker.cnb.cool/miduoyanfa/middleground/metersphere/metersphere-backend:latest
+```
+
+容器环境变量设置为：
 
 ```env
-SPRING_PROFILES_ACTIVE=nacos
+SPRING_PROFILES_ACTIVE=local
+MS_CONFIG_DIR=/opt/metersphere/conf
+MS_REDISSON_CONFIG=file:/opt/metersphere/conf/redisson.yml
 ```
 
-其余 `NACOS_*`、卷挂载、端口保持平台现有配置不变。  
-详细参数见：[publish-platform.md](./publish-platform.md)
+保留原有端口和目录挂载：
 
-> **注意**：仅合并代码并发布镜像，若不加上述环境变量，启动失败不会自动修复。
-
-## 前置条件
-
-1. Nacos 已部署并可访问（如 `aliy-centos7-nacos-redis-mq`）
-2. MySQL / Redis / Kafka / MinIO 已就绪
-3. 服务器已拉取镜像：
-   `docker.cnb.cool/miduoyanfa/middleground/metersphere/metersphere-backend:latest`
-
-## 部署步骤
-
-### 1. 准备 Nacos 配置
-
-编辑 `deploy/nacos/prod/metersphere.properties`，将占位符替换为真实地址：
-
-```properties
-spring.datasource.url=jdbc:mysql://10.0.1.x:3306/metersphere?...
-spring.datasource.username=...
-spring.datasource.password=...
-kafka.bootstrap-servers=10.0.1.x:9092
-minio.endpoint=http://10.0.1.x:9000
-...
+```text
+8081:8081
+7071:7071
+/opt/metersphere/conf:/opt/metersphere/conf
+/opt/metersphere/logs:/opt/metersphere/logs
 ```
 
-推送到 Nacos（在仓库根目录执行）：
+不要配置 `MS_WECOM_BRIDGE_URL` 或 Bridge Token。
 
-```bash
-export NACOS_SERVER_ADDR=10.0.1.1:8848
-export NACOS_NAMESPACE=prod
-export NACOS_USERNAME=nacos
-export NACOS_PASSWORD=your-password
+## 首次准备配置文件
 
-chmod +x deploy/seed-nacos-prod.sh
-./deploy/seed-nacos-prod.sh deploy/nacos/prod/metersphere.properties
-```
-
-在 Nacos 控制台确认：
-
-- namespace: `prod`
-- group: `METERSPHERE`
-- dataId: `metersphere.properties`
-
-### 2. 准备宿主机目录
+在仓库根目录执行：
 
 ```bash
 install -d -m 755 /opt/metersphere/conf /opt/metersphere/logs
-install -d -m 700 /opt/metersphere/secrets
+cp deploy/conf/metersphere.properties.example /opt/metersphere/conf/metersphere.properties
 cp deploy/conf/redisson.yml.example /opt/metersphere/conf/redisson.yml
-vim /opt/metersphere/conf/redisson.yml   # 填写 Redis 地址和密码
-
-umask 077
-openssl rand -hex 32 > /opt/metersphere/secrets/wecom_bridge_token
-openssl rand -hex 32 > /opt/metersphere/secrets/wecom_callback_token
-openssl rand -base64 48 > /opt/metersphere/secrets/wecom_master_key
-chmod 600 /opt/metersphere/secrets/wecom_*
 ```
 
-### 3. 准备运行环境变量
+编辑两个文件，填写测试环境真实的 MySQL、Kafka、MinIO、Redis 地址和密码：
+
+```bash
+vim /opt/metersphere/conf/metersphere.properties
+vim /opt/metersphere/conf/redisson.yml
+```
+
+如果文件中使用 `${MYSQL_HOST}` 等占位符，应在发布平台配置对应环境变量；也可以直接将真实值写入 `metersphere.properties`。
+
+## 命令行部署
+
+准备环境变量文件：
 
 ```bash
 cp deploy/env.prod.example /opt/metersphere/env.prod
 vim /opt/metersphere/env.prod
 ```
 
-关键项：
+启动单个容器：
 
 ```bash
-SPRING_PROFILES_ACTIVE=nacos
-NACOS_SERVER_ADDR=10.0.1.1:8848
-NACOS_NAMESPACE=prod
-NACOS_GROUP=METERSPHERE
-NACOS_USERNAME=nacos
-NACOS_PASSWORD=your-password
+chmod +x deploy/docker-run.sh
+./deploy/docker-run.sh /opt/metersphere/env.prod
 ```
 
-### 4. 启动容器
+该脚本只启动一个 `metersphere` 容器。企微连接器由镜像启动脚本自动管理，容器重启后会自动恢复，无需额外操作。
+
+## 验证
 
 ```bash
-docker compose --env-file /opt/metersphere/env.prod -f deploy/docker-compose.yml up -d --build
-```
-
-该命令会同时启动 MeterSphere 后端与企微 Bridge，并自动创建两者共用的内部网络。首次启动后，两个服务均使用
-`restart: unless-stopped`，服务器重启或进程异常退出时无需再单独启动 Bridge。
-
-### 5. 验证
-
-```bash
-docker ps
-docker logs -f metersphere
-docker logs -f wecom-bot-bridge
+docker ps --filter name=metersphere
+docker logs --tail 300 metersphere
 curl -I http://127.0.0.1:8081/
 ```
 
-启动成功时，日志中不应再出现 `No spring.config.import property has been defined`。
+正常日志应同时包含：
 
-## 故障排查
+```text
+wecom bot bridge listening
+Started Application
+```
 
-| 现象 | 可能原因 | 处理 |
-|------|----------|------|
-| `No spring.config.import` | 未设置 `SPRING_PROFILES_ACTIVE=nacos` | 检查 `env.prod` 并重启 |
-| Nacos 连接失败 | 地址/认证/namespace 错误 | 检查 `NACOS_*` 环境变量 |
-| MySQL 连接失败 | Nacos 中 datasource 配置错误 | 在 Nacos 控制台核对 `metersphere.properties` |
-| Redis 连接失败 | `redisson.yml` 未挂载或密码错误 | 检查 `/opt/metersphere/conf/redisson.yml` |
-| Bridge 无法连接 | 运行密钥缺失或 Bridge 未健康 | 执行 `docker compose ... ps` 并检查 Bridge 日志 |
+这里的 `bridge listening` 是主容器内部组件日志，不代表需要部署第二个服务。
 
-## 说明
+## 常见问题
 
-- `redisson.yml` 不走 Nacos，通过卷挂载到 `/opt/metersphere/conf/redisson.yml`
-- 日志目录挂载到 `/opt/metersphere/logs`
-- 业务配置（MySQL/Kafka/MinIO 等）统一由 Nacos `metersphere.properties` 管理
-- `deploy/docker-run.sh` 保留用于不启用企微 Bridge 的兼容部署；正式一体化部署使用 `deploy/docker-compose.yml`
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 数据库连接失败 | `metersphere.properties` 中 MySQL 配置错误 | 检查文件及 `MYSQL_*` 环境变量 |
+| Redis 连接失败 | `redisson.yml` 地址或密码错误 | 检查挂载文件 |
+| 企微机器人离线 | Bot ID/Secret 不正确或服务器无法访问企微 WebSocket | 在系统页面执行“测试连接”并查看同一个容器日志 |
+| 找不到配置文件 | 未挂载 `/opt/metersphere/conf` | 按本文准备并挂载两个配置文件 |
+
+## 升级说明
+
+升级只需发布新的后端镜像并重建 `metersphere` 容器。`/opt/metersphere/conf` 必须持久化，其中 `.wecom-master-key` 由镜像首次启动时自动生成，用于加密平台页面保存的企微 Secret，请勿删除。
