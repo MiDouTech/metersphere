@@ -65,6 +65,11 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class CaseAssetService {
+    static final String REFERENCED_PROJECTS_FROM_SQL = " FROM case_asset_lineage l "
+            + "JOIN test_plan_functional_case tpc ON tpc.functional_case_id = l.target_case_id "
+            + "JOIN test_plan tp ON tp.id = tpc.test_plan_id "
+            + "JOIN project p ON p.id = tp.project_id AND p.deleted = b'0' ";
+
     @Resource private JdbcTemplate jdbcTemplate;
     @Resource private DefaultHubProjectService defaultHubProjectService;
     @Resource private DefaultHubModuleResolver defaultHubModuleResolver;
@@ -621,10 +626,8 @@ public class CaseAssetService {
         if (rows.isEmpty()) return;
         String placeholders = rows.stream().map(item -> "?").collect(Collectors.joining(","));
         List<Object> ids = rows.stream().map(FunctionalCasePageDTO::getId).collect(Collectors.toList());
-        List<Map<String, Object>> refs = jdbcTemplate.queryForList("SELECT DISTINCT l.source_case_id sourceCaseId, p.id, p.name "
-                + "FROM case_asset_lineage l JOIN test_plan_functional_case tpc ON tpc.functional_case_id = l.target_case_id "
-                + "JOIN test_plan tp ON tp.id = tpc.test_plan_id AND tp.deleted = b'0' "
-                + "JOIN project p ON p.id = tp.project_id AND p.deleted = b'0' "
+        List<Map<String, Object>> refs = jdbcTemplate.queryForList("SELECT DISTINCT l.source_case_id sourceCaseId, p.id, p.name"
+                + REFERENCED_PROJECTS_FROM_SQL
                 + "WHERE l.source_case_id IN (" + placeholders + ")", ids.toArray());
         Map<String, List<Map<String, Object>>> grouped = refs.stream().collect(Collectors.groupingBy(
                 row -> String.valueOf(row.get("sourceCaseId")), LinkedHashMap::new, Collectors.toList()));
@@ -640,10 +643,7 @@ public class CaseAssetService {
         requireAssetCase(caseId, catalogId, true);
         int safeCurrent = Math.max(current, 1);
         int safePageSize = Math.min(Math.max(pageSize, 1), 100);
-        String base = " FROM (SELECT DISTINCT p.id, p.name FROM case_asset_lineage l "
-                + "JOIN test_plan_functional_case tpc ON tpc.functional_case_id=l.target_case_id "
-                + "JOIN test_plan tp ON tp.id=tpc.test_plan_id AND tp.deleted=b'0' "
-                + "JOIN project p ON p.id=tp.project_id AND p.deleted=b'0' "
+        String base = " FROM (SELECT DISTINCT p.id, p.name" + REFERENCED_PROJECTS_FROM_SQL
                 + "WHERE l.source_case_id=? AND p.organization_id=?) refs";
         Integer total = jdbcTemplate.queryForObject("SELECT COUNT(*)" + base, Integer.class, caseId, requireOrganization());
         List<Map<String, Object>> list = jdbcTemplate.queryForList("SELECT id, name" + base + " ORDER BY name LIMIT ? OFFSET ?",
