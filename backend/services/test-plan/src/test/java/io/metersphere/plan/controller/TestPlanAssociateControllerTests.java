@@ -52,6 +52,11 @@ public class TestPlanAssociateControllerTests extends BaseTest {
         ResultHolder resultHolder = JSON.parseObject(returnData, ResultHolder.class);
         Assertions.assertNotNull(resultHolder);
 
+        request.setSort(new HashMap<>() {{
+            put("pos", "desc");
+        }});
+        this.requestPostWithOkAndReturn(FUNCTIONAL_CASE_ASSOCIATION_URL, request);
+
 
         request.setCombineSearch(
                 new CombineSearch() {{

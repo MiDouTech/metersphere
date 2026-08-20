@@ -73,17 +73,11 @@ https://msp.ebcone.cn
 1. 打开正式 MeterSphere **后端**应用配置。
 2. 写入上表全部键值（Secret 用平台密钥/密文变量）。
 3. **重建或重启后端容器**（只保存不重启通常不生效）。
-4. 保留现有 Nacos 相关变量（`SPRING_PROFILES_ACTIVE`、`NACOS_*` 等）不变。
+4. 保持 `SPRING_PROFILES_ACTIVE=local`，并确认 `/opt/metersphere/conf` 已挂载。
 
-### 2.2 备选：Nacos
+### 2.2 备选：挂载配置文件
 
-| 项 | 建议（以现网为准） |
-|----|-------------------|
-| namespace | `prod` 或现网实际值 |
-| group | `METERSPHERE` |
-| dataId | `metersphere.properties` |
-
-追加（占位勿提交真实 Secret）：
+在 `/opt/metersphere/conf/metersphere.properties` 中追加（占位勿提交真实 Secret）：
 
 ```properties
 miduo.sso.enabled=true
@@ -173,7 +167,7 @@ curl -sS "https://msp.ebcone.cn/api/auth/miduo/bridge-url"
 任选其一并重启后端：
 
 - `MIDUO_SSO_ENABLED=false`（或删除全部 `MIDUO_SSO_*`）
-- Nacos：`miduo.sso.enabled=false`
+- 挂载配置文件：`miduo.sso.enabled=false`
 
 回滚后登录页不再强制走米多桥；不影响既有运维账密入口（以现网前端为准）。
 

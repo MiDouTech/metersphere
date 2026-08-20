@@ -89,7 +89,7 @@ miduo.sso.redirect-uri=${MIDUO_SSO_REDIRECT_URI:}
 |------|--------------|
 | 本地 | `.env` / `local-runtime`（gitignore） |
 | CDS 灰度 | CDS 项目 env 或 compose `environment` |
-| 生产 | Nacos / 发布平台环境变量 |
+| 生产 | 发布平台环境变量 / 挂载配置文件 |
 
 ---
 

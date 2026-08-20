@@ -344,7 +344,6 @@ myTapd **无**文件导入，需在 MS 自研：
 |------|------|
 | 前端 | http://localhost:5173 |
 | 后端 | http://localhost:8081 |
-| Nacos | http://localhost:8848/nacos |
 
 环境要求：JDK 21、Node 20+、Docker Desktop、Maven。
 

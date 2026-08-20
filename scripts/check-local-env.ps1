@@ -38,13 +38,11 @@ Test-Port "MySQL" 3306
 Test-Port "Redis" 6379
 Test-Port "Kafka" 9092
 Test-Port "MinIO" 9000
-Test-Port "Nacos" 8848
 Test-Port "Backend" 8081
 Test-Port "Frontend" 5173
 
 Write-Host ""
 Write-Host "=== HTTP checks ==="
-Test-Http "Nacos console" "http://127.0.0.1:8848/nacos"
 Test-Http "MinIO health" "http://127.0.0.1:9000/minio/health/live"
 
 Write-Host ""
@@ -52,7 +50,7 @@ Write-Host "=== Local files ==="
 $files = @(
     (Join-Path $ProjectRoot "local-runtime\conf\metersphere.properties"),
     (Join-Path $ProjectRoot "local-runtime\conf\redisson.yml"),
-    (Join-Path $ProjectRoot "deploy\nacos\dev\metersphere.properties")
+    (Join-Path $ProjectRoot "dev\conf\metersphere.properties.example")
 )
 foreach ($f in $files) {
     if (Test-Path $f) { Write-Host "[OK]   $f" } else { Write-Host "[MISS] $f"; $ok = $false }

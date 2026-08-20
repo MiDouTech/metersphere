@@ -167,7 +167,7 @@ signature = Base64(HMAC_SHA256(appSecret, canonical))
 
 | 层级 | 建议路径 | 职责 |
 |---|---|---|
-| 配置 | `miduo.sso.enabled/base-url/app-code/app-secret/redirect-uri` | 环境变量 / Nacos，Secret 禁止入库明文 |
+| 配置 | `miduo.sso.enabled/base-url/app-code/app-secret/redirect-uri` | 环境变量 / 挂载配置文件，Secret 禁止入库明文 |
 | 客户端 | `.../sso/miduo/MiduoSsoClient` | 签名 + 三接口 + bridge URL |
 | 应用服务 | `.../sso/miduo/MiduoSsoApplicationService` | state、validate、用户匹配、存 sessionToken、建 Shiro 登录 |
 | Shiro 扩展 | `.../sso/miduo/MiduoSsoShiroFilterChainExtender` | 注册 `/auth/miduo/**` anon（参考 Agent 扩展方式） |

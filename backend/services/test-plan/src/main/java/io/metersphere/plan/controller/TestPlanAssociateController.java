@@ -63,9 +63,13 @@ public class TestPlanAssociateController {
         if (StringUtils.isNotBlank(request.getTestPlanId())) {
             isRepeat = testPlanConfigService.isRepeatCase(request.getTestPlanId());
         }
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
-                StringUtils.isNotBlank(request.getSortString()) ? request.getSortString() : "pos desc");
+        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(), functionalCaseSort(request));
         return PageUtils.setPageInfo(page, functionalCaseService.getFunctionalCasePage(request, false, isRepeat));
+    }
+
+    static String functionalCaseSort(FunctionalCasePageRequest request) {
+        String sort = request.getSortString("id", "functional_case");
+        return StringUtils.defaultIfBlank(sort, "functional_case.pos desc");
     }
 
     @PostMapping("/api/page")

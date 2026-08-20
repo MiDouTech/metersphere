@@ -1,5 +1,5 @@
-# MeterSphere production config template (publish to Nacos: namespace=prod, group=METERSPHERE, dataId=metersphere.properties)
-# Replace placeholders before uploading.
+# MeterSphere standalone configuration. Copy to:
+# /opt/metersphere/conf/metersphere.properties
 
 spring.datasource.url=jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/metersphere?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai
 spring.datasource.username=${MYSQL_USER:root}
@@ -23,6 +23,5 @@ spring.redis.redisson.file=file:/opt/metersphere/conf/redisson.yml
 jmeter.home=/opt/jmeter
 
 run.mode=standalone
-
 logger.level=INFO
 logger.sql.level=info

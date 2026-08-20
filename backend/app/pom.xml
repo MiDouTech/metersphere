@@ -10,16 +10,7 @@
     <artifactId>app</artifactId>
     <version>${revision}</version>
     <name>app</name>
-    <properties>
-        <spring-cloud-alibaba.version>2023.0.3.3</spring-cloud-alibaba.version>
-    </properties>
-
     <dependencies>
-        <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
-            <version>${spring-cloud-alibaba.version}</version>
-        </dependency>
         <dependency>
             <groupId>io.metersphere</groupId>
             <artifactId>metersphere-sdk</artifactId>

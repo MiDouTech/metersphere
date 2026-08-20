@@ -19,7 +19,7 @@
 timeline
     title 关键更新脉络 (06-15 ~ 07-06)
     section 06-26
-      本地基建 : Docker/Nacos/一键脚本
+      本地基建 : Docker/文件配置/一键脚本
       任务体系 : task000~011 规划文档
       task001 : Community License/UserXpack
       UI/SQL修复 : 用例管理/Mapper
@@ -79,7 +79,7 @@ timeline
 
 ### 5. 本地开发与文档体系 ✅ 已提交 + 持续更新
 
-- **一键启停**：`start.ps1` / `stop.ps1`、`dev/docker-compose.yml`、`deploy/nacos/`
+- **一键启停**：`start.ps1` / `stop.ps1`、`dev/docker-compose.yml`、`dev/conf/`
 - **任务文档**：`docs/task/task000` ~ `task011`（10/11 已完成）
 - **开发日志**：27 份 `develop_logs`（含 8 份 buglist、3 份 details）
 

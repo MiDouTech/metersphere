@@ -1,67 +1,38 @@
-# 企微智能机器人部署与运维
+# 企微 AI 机器人运维说明
 
-## 1. 运行边界
+## 部署方式
 
-- Bridge 首期只运行 1 个副本，仅需出站访问 `openws.work.weixin.qq.com:443`。
-- 8095 端口只在 MeterSphere 内部网络开放，不映射公网。
-- Java 管理接口继续使用登录、CSRF 和权限控制；`/internal/wecom-bot/events/**` 不使用用户会话，但控制器强制校验 5 分钟时间窗、HMAC-SHA256、nonce 和 eventId。
-- Bot Secret、Bridge Token、Callback Token、加密主密钥均使用 Docker/Kubernetes Secret 或受控环境变量，禁止写入 Git、Nacos 明文和日志。
+企微连接器已经内置到 MeterSphere 后端镜像。运维侧只部署一个 `metersphere` 容器，不需要：
 
-## 2. 必需配置
+- 单独部署 `wecom-bot-bridge`；
+- 创建 Bridge Docker 网络；
+- 创建 Bridge Token 或 Callback Token；
+- 对外开放 8095 端口。
 
-MeterSphere Java 容器：
+容器启动时会自动启动内部连接器并生成内部通信 Token。企微 Secret 的加密主密钥首次启动时自动写入：
 
 ```text
-MS_WECOM_BRIDGE_URL=http://wecom-bot-bridge:8095
-MS_WECOM_BRIDGE_TOKEN_FILE=/run/secrets/wecom_bridge_token
-MS_WECOM_BRIDGE_CALLBACK_TOKEN_FILE=/run/secrets/wecom_callback_token
-MS_WECOM_SECRET_MASTER_KEY_FILE=/run/secrets/wecom_master_key
+/opt/metersphere/conf/.wecom-master-key
 ```
 
-正式部署使用 `deploy/docker-compose.yml` 一次启动 Java 后端和 Bridge，并设置 `MS_WECOM_IDEMPOTENCY_FILE=/var/lib/wecom-bot/idempotency.json`，通过持久化卷保存请求幂等记录。Token 文件由同一份 Compose Secret 同时挂载到两侧。Bot Secret 推荐在页面提交并使用主密钥加密落库；如使用 `env:MS_WECOM_BOT_SECRET` 引用，则还需自行把该环境变量或文件注入 Java 容器。
+因此必须持久化挂载 `/opt/metersphere/conf`，并且不要删除该文件。
 
-准备三个权限为 `600` 的运行密钥文件后，一条命令统一启动；Compose 会自动创建内部网络：
+## 平台配置
+
+进入系统设置中的企微机器人配置页面，填写企业微信 AI Bot 的 Bot ID 和 Secret，保存后执行“测试连接”，测试成功后启用。
+
+## 状态检查
+
+所有日志均在主容器中查看：
 
 ```bash
-docker compose --env-file /opt/metersphere/env.prod -f deploy/docker-compose.yml config
-docker compose --env-file /opt/metersphere/env.prod -f deploy/docker-compose.yml up -d --build
-docker compose --env-file /opt/metersphere/env.prod -f deploy/docker-compose.yml ps
+docker logs --tail 500 metersphere | grep -Ei 'wecom|bot|websocket|error'
 ```
 
-不要在命令行直接写 Secret 值，三个 `*_FILE` 变量应指向宿主机权限为 600 的 Secret 文件。后端和 Bridge 均配置 `restart: unless-stopped`，首次启动后无需单独维护 Bridge 启动动作。
+主容器内的连接器只监听 `127.0.0.1:8095`，外部无法直接访问。
 
-## 3. 初次配置与群发现
+## 升级与重启
 
-1. 在企微管理端创建智能机器人，确认可见范围并取得 BotID/Secret。
-2. 在“系统设置 → 系统参数 → 企微智能机器人”保存名称、BotID 和 Secret 引用。
-3. 点击测试连接，状态应依次为 `CONNECTING`、`ONLINE`。
-4. 将 Bot 加入内部群并 @Bot 发送任意消息；群会话出现在“群目标”后由管理员启用。
-5. 新建规则时只能选择已发现且启用的群，不允许输入 chatid。
+重启或升级 `metersphere` 容器后，内部连接器会自动启动，并从数据库读取平台已保存的配置。无需单独启动任何进程。
 
-## 4. 健康检查与排障
-
-```bash
-docker exec wecom-bot-bridge node -e "fetch('http://127.0.0.1:8095/health/live').then(async r=>console.log(r.status,await r.text()))"
-docker exec wecom-bot-bridge node -e "fetch('http://127.0.0.1:8095/health/ready').then(async r=>console.log(r.status,await r.text()))"
-docker logs --since 10m wecom-bot-bridge
-```
-
-- `AUTH_FAILED`：核对 BotID/Secret 与可见范围，轮换 Secret 后重新测试并启用。
-- `OFFLINE`：检查 DNS、TLS、代理和到企微 WSS 的 443 出站网络。
-- `FAILED/DEAD`：在投递日志查看脱敏错误；修复后人工重试。永久目标错误不会自动无限重试。
-- Outbox 积压：查询 `wecom_notification_outbox` 中 `PENDING/FAILED` 数量及最早 `create_time`；超过 10 分钟告警。
-- Timer 积压：查询 `wecom_notification_timer` 中 `WAITING AND next_fire_at < 当前时间` 的数量。
-
-建议告警阈值：Bot 离线 5 分钟、出现认证失败、最老 Outbox 超过 10 分钟、到期 Timer 超过 100 条。结构化日志按 requestId/outboxId 关联检索，严禁输出完整目标 ID、Token 或 Secret。
-
-## 5. Secret 轮换与紧急停用
-
-轮换时先更新 Secret 文件或页面 Secret，再点击“测试连接”；成功后启用。Token 轮换需同时更新 Java 与 Bridge Secret 并滚动重启，避免只更新单侧。
-
-紧急停用顺序：先在页面停用 Bot，再停用相关规则，最后停止 Bridge。停用会阻止新规则触发和发送；历史 Outbox 保留用于审计。
-
-## 6. 回滚与数据保留
-
-应用回滚时保留六张 `wecom_*` 表，禁用 Bot/规则即可停止功能，不要回滚已经成功执行的 Flyway 记录。Outbox 和 callback 去重记录可按合规周期离线归档后分批清理；清理前保留失败审计数据。
-
-真实企微的消息字段、群 @ 展示、错误码和限流行为必须在预发布环境用最小可见范围账号完成 task001/task015 验收，凭据不得提交到仓库。
+如果 `.wecom-master-key` 丢失，历史加密的企微 Secret 将无法解密，需要在页面重新填写 Secret。因此应将整个 `/opt/metersphere/conf` 纳入备份。

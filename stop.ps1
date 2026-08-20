@@ -3,7 +3,7 @@
   MeterSphere 本地一键停止脚本（chenqifen 分支）
 
 .DESCRIPTION
-  停止前端、后端，并可选停止 Docker 中间件（MySQL / Redis / Kafka / MinIO / Nacos）
+  停止前端、后端，并可选停止 Docker 中间件（MySQL / Redis / Kafka / MinIO）
 
 .EXAMPLE
   .\stop.ps1              # 停止前后端 + Docker 中间件

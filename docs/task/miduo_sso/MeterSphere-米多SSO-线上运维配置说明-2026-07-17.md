@@ -46,15 +46,15 @@ GET https://msp.ebcone.net/api/auth/miduo/bridge-url
 
 ## 2. 重要结论（请运维先读）
 
-1. **CDS 环境变量覆盖 ≠ 线上生效**。线上通过阿里云运维平台部署，必须在该平台（或线上 Nacos）单独配置。
+1. **CDS 环境变量覆盖 ≠ 线上生效**。线上通过阿里云运维平台部署，必须在该平台单独配置。
 2. **不必为「启用 SSO」单独改业务代码并发版**（当前线上已具备 `/api/auth/miduo/**` 接口）。需要的是注入运行时配置并重启后端。
-3. **Secret 禁止入库**；优先放在运维平台「容器环境变量 / 密钥管理」，其次才考虑 Nacos。
+3. **Secret 禁止入库**；应放在运维平台「容器环境变量 / 密钥管理」。
 
 ---
 
 ## 3. 必配项（请完整配置）
 
-应用名建议：MeterSphere **后端**容器 / 服务（读 Nacos、对外提供 `/api` 的那套）。
+应用名建议：MeterSphere **后端**容器 / 服务（对外提供 `/api` 的那套）。
 
 | 环境变量名 | 值 | 说明 |
 |------------|----|------|
@@ -71,23 +71,13 @@ GET https://msp.ebcone.net/api/auth/miduo/bridge-url
 1. 打开线上 MeterSphere **后端**应用/容器配置。
 2. 在「环境变量」中新增上表全部键值（`APP_SECRET` 走平台密钥/密文变量更佳）。
 3. **重建或重启后端容器**（仅保存变量不重启，通常不生效）。
-4. 保持现有 Nacos 相关变量不变（示例，以平台已有值为准）：
-   - `SPRING_PROFILES_ACTIVE=nacos`
-   - `NACOS_SERVER_ADDR` / `NACOS_NAMESPACE` / `NACOS_GROUP` / `NACOS_USERNAME` / `NACOS_PASSWORD`
+4. 保持 `SPRING_PROFILES_ACTIVE=local`，并确认 `/opt/metersphere/conf` 已挂载。
 
 参考文档：仓库内 `deploy/publish-platform.md`。
 
-### 3.2 备选做法：Nacos 配置中心
+### 3.2 备选做法：挂载配置文件
 
-若平台习惯用 Nacos，在线上 Nacos 中编辑（**不要整文件用仓库模板覆盖已有生产配置**）：
-
-| 项 | 建议值（以现网为准） |
-|----|----------------------|
-| namespace | `prod`（或现网实际 namespace） |
-| group | `METERSPHERE` |
-| dataId | `metersphere.properties` |
-
-追加内容：
+在 `/opt/metersphere/conf/metersphere.properties` 追加：
 
 ```properties
 miduo.sso.enabled=true
@@ -99,9 +89,7 @@ miduo.sso.shortcut-id=81
 miduo.sso.organization-id=100001
 ```
 
-发布配置后 **重启后端容器**（该类配置建议重启，勿假设热更新一定生效）。
-
-> 安全建议：`app-secret` 仍优先放运维平台环境变量，减少 Nacos 明文接触面。
+修改配置后 **重启后端容器**。`app-secret` 仍应优先使用运维平台密钥变量，避免写入明文文件。
 
 ---
 
@@ -110,7 +98,7 @@ miduo.sso.organization-id=100001
 ```text
 ① 向研发索取 MIDUO_SSO_APP_SECRET（线下安全渠道）
 ② 在阿里云运维平台为「后端」注入 MIDUO_SSO_*（推荐）
-   或写入 Nacos metersphere.properties（备选）
+   或写入挂载的 metersphere.properties（备选）
 ③ 重建 / 重启后端容器
 ④ 执行本文第 5 节验收接口
 ⑤ 通知业务方验证：打开 https://msp.ebcone.net/#/login 应跳转米多登录
@@ -171,7 +159,7 @@ curl -sS "https://msp.ebcone.net/api/auth/miduo/bridge-url"
 若启用后异常，任选其一并重启后端：
 
 - 将 `MIDUO_SSO_ENABLED` 改为 `false`（或删除全部 `MIDUO_SSO_*`）
-- Nacos 中将 `miduo.sso.enabled=false`
+- 在挂载配置文件中将 `miduo.sso.enabled=false`
 
 回滚后登录页不再走米多桥；不影响既有账密/其他登录方式（以现网前端行为为准）。
 

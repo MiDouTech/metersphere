@@ -37,7 +37,7 @@ docker exec -it ms-dev-mysql mysql -uroot -pPassword123@mysql metersphere
 jdbc:mysql://127.0.0.1:3306/metersphere?autoReconnect=false&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8&zeroDateTimeBehavior=convertToNull&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Shanghai
 ```
 
-配置：`deploy/nacos/dev/metersphere.properties` → `local-runtime/conf/metersphere.properties`。
+配置：`dev/conf/metersphere.properties.example` → `local-runtime/conf/metersphere.properties`。
 
 栈：MyBatis + HikariCP；Flyway 历史表 `metersphere_version`；脚本目录 `backend/framework/domain/src/main/resources/migration/`。
 

@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$ConfigTemplate = Join-Path $ProjectRoot "deploy\nacos\dev\metersphere.properties"
+$ConfigTemplate = Join-Path $ProjectRoot "dev\conf\metersphere.properties.example"
 $RedissonTemplate = Join-Path $ProjectRoot "local-runtime\conf\redisson.yml"
 $RuntimeConfDir = Join-Path $ProjectRoot "local-runtime\conf"
 $RuntimeLogDir = Join-Path $ProjectRoot "local-runtime\logs\metersphere"
@@ -34,5 +34,3 @@ singleServerConfig:
 Copy-Item -Force $ConfigTemplate (Join-Path $RuntimeConfDir "metersphere.properties")
 
 Write-Host "Local runtime directories initialized."
-Write-Host "Seeding Nacos config..."
-& (Join-Path $PSScriptRoot "seed-nacos-config.ps1")
