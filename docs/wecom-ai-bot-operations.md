@@ -43,6 +43,8 @@ chmod 600 /opt/metersphere/conf/.wecom-master-key
 
 通知规则保存成功后才会出现在列表中。投递日志只在已启用规则实际触发并尝试发送后产生；新建但尚未触发的规则没有投递日志属于正常现象。
 
+规则列表和投递日志接口使用平台统一响应结构。前端兼容 HTTP 层已解包的数据以及 `{code, data}` 原始响应包，避免接口已有数据但表格仍为空。个人或群测试消息进入队列后会立即产生投递记录；发送失败时日志保留企业微信返回的原始 `errcode` 和 `errmsg`，不再统一显示无法定位的 `SEND_FAILED`。
+
 ## 状态检查
 
 所有日志均在主容器中查看：
@@ -99,3 +101,11 @@ Started Application
 | `Test report notification requires at least one enabled group target` | 测试报告规则没有选择已启用群 | 先通过真实群消息发现并启用群，再选择该群保存 |
 | `Dynamic business recipient roles ... are only supported ...` | 非缺陷规则携带了缺陷动态角色 | 重新选择通知类型或清除动态业务角色；新版页面会自动清理 |
 | 前端控制台出现 `Invalid linked format` | 旧版企微文案中的 `@` 或模板占位符被 Vue I18n 当作语法解析 | 升级包含企微文案转义修复的前端资源，并清除浏览器缓存后重试 |
+| 投递日志为 `SEND_FAILED / WeCom send failed` | 旧版 Bridge 丢失了企微 WebSocket 回执中的具体错误 | 升级新版镜像；新版会在投递日志中保留企微原始 `errcode/errmsg`。旧版可从容器日志搜索 `Reply ack error` 临时定位 |
+| `846607 / aibot send msg frequency limit exceeded` | 企微侧 AI Bot 消息发送频率已超过限制 | 停止连续测试并等待企微限流窗口恢复；系统会按 1 分钟、5 分钟、15 分钟自动重试，最多投递 4 次。若持续出现，需在企微侧核实该 Bot 的发送配额和使用情况 |
+
+查看企微发送回执的现场错误：
+
+```bash
+docker logs --timestamps --since 2h metersphere 2>&1 | grep -E 'Reply ack error|Failed to send reply|bridge request failed|SEND_FAILED'
+```

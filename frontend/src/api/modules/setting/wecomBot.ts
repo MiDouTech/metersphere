@@ -1,5 +1,17 @@
 import MSR from '@/api/http/index';
 
+interface ApiEnvelope<T> {
+  code: number;
+  data: T;
+}
+
+function unwrapApiData<T>(response: T | ApiEnvelope<T>): T {
+  if (response && typeof response === 'object' && 'code' in response && 'data' in response) {
+    return (response as ApiEnvelope<T>).data;
+  }
+  return response as T;
+}
+
 export interface WecomBotConfig {
   id?: string;
   name: string;
@@ -50,28 +62,42 @@ export interface WecomRuleRequest {
 
 const base = '/wecom-bot';
 
-export const getWecomBotConfig = () => MSR.get<WecomBotConfig>({ url: `${base}/config` });
+export const getWecomBotConfig = async () =>
+  unwrapApiData(await MSR.get<WecomBotConfig | ApiEnvelope<WecomBotConfig>>({ url: `${base}/config` }));
 export const saveWecomBotConfig = (data: { name: string; botId: string; secret?: string; secretRef?: string }) =>
   MSR.post<WecomBotConfig>({ url: `${base}/config`, data });
 export const testWecomBotConnection = () => MSR.post({ url: `${base}/config/test-connection` });
 export const setWecomBotEnabled = (enabled: boolean) =>
   MSR.post({ url: `${base}/config/${enabled ? 'enable' : 'disable'}` });
-export const getWecomBotStatus = () => MSR.get({ url: `${base}/status` });
-export const getWecomChats = () => MSR.get<WecomChat[]>({ url: `${base}/chats` });
-export const getWecomRecipientUsers = (projectId?: string) =>
-  MSR.get<{ id: string; name: string; mapped: boolean | number }[]>({
-    url: `${base}/recipient-options/users`,
-    params: { projectId },
-  });
-export const getWecomRecipientRoles = (projectId?: string) =>
-  MSR.get<{ id: string; name: string; type: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT'; scope_id: string }[]>({
-    url: `${base}/recipient-options/roles`,
-    params: { projectId },
-  });
-export const getWecomBugTerminalStatuses = () =>
-  MSR.get<{ id: string; name: string; status_code: string }[]>({
-    url: `${base}/recipient-options/bug-terminal-statuses`,
-  });
+export const getWecomBotStatus = async () => unwrapApiData(await MSR.get({ url: `${base}/status` }));
+export const getWecomChats = async () =>
+  unwrapApiData(await MSR.get<WecomChat[] | ApiEnvelope<WecomChat[]>>({ url: `${base}/chats` }));
+export const getWecomRecipientUsers = async (projectId?: string) => {
+  type RecipientUser = { id: string; name: string; mapped: boolean | number };
+  return unwrapApiData(
+    await MSR.get<RecipientUser[] | ApiEnvelope<RecipientUser[]>>({
+      url: `${base}/recipient-options/users`,
+      params: { projectId },
+    })
+  );
+};
+export const getWecomRecipientRoles = async (projectId?: string) => {
+  type RecipientRole = { id: string; name: string; type: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT'; scope_id: string };
+  return unwrapApiData(
+    await MSR.get<RecipientRole[] | ApiEnvelope<RecipientRole[]>>({
+      url: `${base}/recipient-options/roles`,
+      params: { projectId },
+    })
+  );
+};
+export const getWecomBugTerminalStatuses = async () => {
+  type BugTerminalStatus = { id: string; name: string; status_code: string };
+  return unwrapApiData(
+    await MSR.get<BugTerminalStatus[] | ApiEnvelope<BugTerminalStatus[]>>({
+      url: `${base}/recipient-options/bug-terminal-statuses`,
+    })
+  );
+};
 export const renameWecomChat = (id: string, name: string) =>
   MSR.post({ url: `${base}/chats/${id}/rename`, data: { name } });
 export const setWecomChatEnabled = (id: string, enabled: boolean) =>
@@ -80,7 +106,10 @@ export const testWecomGroup = (chatId: string, content: string) =>
   MSR.post({ url: `${base}/messages/test-group`, data: { chatId, content } });
 export const testWecomUser = (userId: string, content: string) =>
   MSR.post({ url: `${base}/messages/test-user`, data: { userId, content } });
-export const getWecomRules = () => MSR.get<Record<string, any>[]>({ url: `${base}/notification-rules` });
+export const getWecomRules = async () =>
+  unwrapApiData(
+    await MSR.get<Record<string, any>[] | ApiEnvelope<Record<string, any>[]>>({ url: `${base}/notification-rules` })
+  );
 export const createWecomRule = (data: WecomRuleRequest) =>
   MSR.post<string>({ url: `${base}/notification-rules`, data }, { errorMessageMode: 'none' });
 export const updateWecomRule = (id: string, data: WecomRuleRequest) =>
@@ -91,7 +120,7 @@ export const setWecomRuleEnabled = (id: string, enabled: boolean) =>
 export const previewWecomRule = (id: string, variables: Record<string, unknown> = {}) =>
   MSR.post<string>({ url: `${base}/notification-rules/${id}/preview`, data: { variables } });
 export const runWecomRule = (id: string) => MSR.post<string[]>({ url: `${base}/notification-rules/${id}/run-once` });
-export const getWecomLogs = (params: {
+export const getWecomLogs = async (params: {
   page: number;
   pageSize: number;
   status?: string;
@@ -100,6 +129,12 @@ export const getWecomLogs = (params: {
   ruleId?: string;
   startAt?: number;
   endAt?: number;
-}) => MSR.get<{ list: Record<string, any>[]; total: number }>({ url: `${base}/messages/logs`, params });
+}) => {
+  type LogPage = { list: Record<string, any>[]; total: number };
+  return unwrapApiData(await MSR.get<LogPage | ApiEnvelope<LogPage>>({ url: `${base}/messages/logs`, params }));
+};
 export const retryWecomMessage = (id: string) => MSR.post({ url: `${base}/messages/${id}/retry` });
-export const getWecomMessage = (id: string) => MSR.get<Record<string, any>>({ url: `${base}/messages/${id}` });
+export const getWecomMessage = async (id: string) =>
+  unwrapApiData(
+    await MSR.get<Record<string, any> | ApiEnvelope<Record<string, any>>>({ url: `${base}/messages/${id}` })
+  );
