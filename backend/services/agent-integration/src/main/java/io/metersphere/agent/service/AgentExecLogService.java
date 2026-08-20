@@ -3,6 +3,7 @@ package io.metersphere.agent.service;
 import io.metersphere.agent.dto.AgentCaseSubmitRequest;
 import io.metersphere.agent.dto.AgentExecLogDTO;
 import io.metersphere.agent.dto.AgentExecLogPageRequest;
+import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.domain.AgentExecLog;
 import io.metersphere.system.mapper.AgentExecLogMapper;
 import io.metersphere.system.uid.IDGenerator;
@@ -10,7 +11,10 @@ import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +25,9 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentExecLogService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AgentExecLogService.class);
     private static final long EXPORT_MAX = 5000;
+    static final int AUDIT_ACTION_MAX_LENGTH = 128;
 
     @Resource
     private AgentExecLogMapper agentExecLogMapper;
@@ -48,15 +54,31 @@ public class AgentExecLogService {
      * 高危写操作审计（复用 agent_exec_log；case_id 存资源 ID，last_exec_result 存动作码）。
      */
     public String audit(String action, String resourceId, String content) {
+        String normalizedAction = StringUtils.defaultIfBlank(action, "AUDIT");
+        int actionLength = normalizedAction.codePointCount(0, normalizedAction.length());
+        if (actionLength > AUDIT_ACTION_MAX_LENGTH) {
+            throw new MSException("审计动作码过长：当前长度 " + actionLength
+                    + "，最大允许 " + AUDIT_ACTION_MAX_LENGTH + " 个字符，请缩短动作码后重试");
+        }
         AgentExecLog log = new AgentExecLog();
         log.setId(IDGenerator.nextStr());
         log.setCaseId(StringUtils.defaultIfBlank(resourceId, "AUDIT"));
-        log.setLastExecResult(StringUtils.defaultIfBlank(action, "AUDIT"));
+        log.setLastExecResult(normalizedAction);
         log.setExecutedBy("agent-audit");
         log.setContent(content);
         log.setCreateTime(System.currentTimeMillis());
         log.setCreateUser(StringUtils.defaultIfBlank(SessionUtils.getUserId(), AgentExecutionActorContext.get()));
-        agentExecLogMapper.insert(log);
+        try {
+            agentExecLogMapper.insert(log);
+        } catch (DataIntegrityViolationException exception) {
+            if (StringUtils.containsIgnoreCase(exception.getMessage(), "last_exec_result")) {
+                LOGGER.error("Failed to persist audit action because last_exec_result is too small, action={}, length={}",
+                        normalizedAction, actionLength, exception);
+                throw new MSException("审计动作码保存失败：数据库字段 last_exec_result 容量不足，"
+                        + "请联系管理员确认数据库迁移已执行（当前动作码长度：" + actionLength + "）");
+            }
+            throw exception;
+        }
         return log.getId();
     }
 
