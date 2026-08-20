@@ -6,10 +6,17 @@ spring.datasource.username=root
 spring.datasource.password=Password123@mysql
 
 kafka.bootstrap-servers=127.0.0.1:9092
+kafka.topic-prefix=metersphere-dev
+kafka.topic.plugin=${kafka.topic-prefix}.PLUGIN
+kafka.topic.export=${kafka.topic-prefix}.EXPORT
+kafka.topic.api-report=${kafka.topic-prefix}.API_REPORT_TOPIC
+kafka.topic.api-report-task=${kafka.topic-prefix}.API_REPORT_TASK_TOPIC
+kafka.topic.api-report-debug=${kafka.topic-prefix}.API_REPORT_DEBUG_TOPIC
 
 minio.endpoint=http://127.0.0.1:9000
 minio.access-key=admin
 minio.secret-key=Password123@minio
+minio.bucket=metersphere-dev
 
 logging.file.path=./local-runtime/logs/metersphere
 spring.redis.redisson.file=file:./local-runtime/conf/redisson.yml

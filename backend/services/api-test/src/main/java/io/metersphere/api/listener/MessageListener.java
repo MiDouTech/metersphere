@@ -10,7 +10,6 @@ import io.metersphere.api.service.queue.ApiExecutionQueueService;
 import io.metersphere.api.service.scenario.ApiScenarioBatchRunService;
 import io.metersphere.sdk.constants.ApiExecuteResourceType;
 import io.metersphere.sdk.constants.ExecStatus;
-import io.metersphere.sdk.constants.KafkaTopicConstants;
 import io.metersphere.sdk.constants.ResultStatus;
 import io.metersphere.sdk.dto.api.notice.ApiNoticeDTO;
 import io.metersphere.sdk.dto.queue.ExecutionQueue;
@@ -44,7 +43,7 @@ public class MessageListener {
     @Resource
     private ApiScenarioReportMapper apiScenarioReportMapper;
 
-    @KafkaListener(id = MESSAGE_CONSUME_ID, topics = KafkaTopicConstants.API_REPORT_TASK_TOPIC, groupId = MESSAGE_CONSUME_ID)
+    @KafkaListener(id = MESSAGE_CONSUME_ID, topics = "${kafka.topic.api-report-task:API_REPORT_TASK_TOPIC}", groupId = MESSAGE_CONSUME_ID)
     public void messageConsume(ConsumerRecord<?, String> record) {
         try {
             if (ObjectUtils.isNotEmpty(record.value())) {
