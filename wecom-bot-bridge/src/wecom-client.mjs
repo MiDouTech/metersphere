@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 
 import { logger, mask, sdkLogger } from './logger.mjs';
 
-const retryableCodes = new Set([-1, 45009, 60020]);
+const retryableCodes = new Set([-1, 45009, 60020, 846607]);
 
 export class BridgeError extends Error {
   constructor(message, code = 'BRIDGE_ERROR', retryable = false) {
@@ -164,6 +164,13 @@ export class WecomBotClient {
       return { accepted: true, success: true, requestId: request.requestId, wecomRequestId: frame?.headers?.req_id };
     } catch (error) {
       if (error instanceof BridgeError) throw error;
+      if (error?.errcode !== undefined && error?.errcode !== null) {
+        throw new BridgeError(
+          error.errmsg || `WeCom rejected the message (code: ${error.errcode})`,
+          error.errcode,
+          retryableCodes.has(Number(error.errcode)),
+        );
+      }
       throw new BridgeError(error?.message || 'WeCom send failed', 'SEND_FAILED', true);
     }
   }
