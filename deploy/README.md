@@ -10,6 +10,8 @@
 - `/opt/metersphere/logs`：日志目录
 - 企微连接器随主容器自动启动，仅监听容器内的 `127.0.0.1:8095`
 
+Java 进程默认以 `1000:1000` 运行。若 `/opt/metersphere/conf` 以只读方式挂载，必须在宿主机预置 `.wecom-master-key`，所有者为 `1000:1000`、权限为 `600`；已有主密钥不得覆盖。
+
 ## 发布平台部署
 
 发布平台继续使用后端镜像：
@@ -90,6 +92,15 @@ Started Application
 ```
 
 这里的 `bridge listening` 是主容器内部组件日志，不代表需要部署第二个服务。
+
+还应验证 Bridge 和 Java 进程同时存在，且内部存活接口可用：
+
+```bash
+docker top metersphere -eo pid,user,comm,args
+docker exec metersphere node -e "fetch('http://127.0.0.1:8095/health/live').then(async r=>{console.log(await r.text());process.exit(r.ok?0:1)}).catch(e=>{console.error(e.message);process.exit(1)})"
+```
+
+存活接口预期返回 `{"status":"UP"}`。新版启动脚本会在 Bridge 缺少运行库、启动超时或异常退出时让主容器失败，避免容器显示运行但企微能力不可用。
 
 ## 常见问题
 
