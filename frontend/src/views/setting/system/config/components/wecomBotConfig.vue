@@ -253,7 +253,8 @@
     :title="editingRuleId ? t('system.wecomBot.editRule') : t('system.wecomBot.newRule')"
     :ok-loading="savingRule"
     width="760px"
-    @ok="saveRule"
+    :mask-closable="false"
+    @before-ok="saveRule"
   >
     <a-form :model="ruleForm" layout="vertical">
       <a-form-item :label="t('system.wecomBot.name')" required><a-input v-model="ruleForm.name" /></a-form-item>
@@ -312,7 +313,9 @@
       <a-grid v-if="ruleForm.triggerType === 'CRON'" :cols="2" :col-gap="16"
         ><a-grid-item
           ><a-form-item label="Cron" required
-            ><a-input v-model="ruleForm.cron" placeholder="0 0 9 * * ?" /></a-form-item></a-grid-item
+            ><a-input v-model="ruleForm.cron" placeholder="0 0 9 * * ?" />
+            <template #extra>{{ t('system.wecomBot.cronTip') }}</template></a-form-item
+          ></a-grid-item
         ><a-grid-item
           ><a-form-item :label="t('system.wecomBot.timezone')" required
             ><a-select v-model="ruleForm.timezone"
@@ -420,6 +423,7 @@
 </template>
 
 <script setup lang="ts">
+  import { Message, Modal } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
@@ -453,9 +457,8 @@
   } from '@/api/modules/setting/wecomBot';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
   import { hasAnyPermission } from '@/utils/permission';
-
-  import Message from '@arco-design/web-vue/es/message';
 
   const appStore = useAppStore();
   const { t } = useI18n();
@@ -498,6 +501,7 @@
   const maxCount = ref(100);
   const terminalStatuses = ref<string[]>([]);
   const reportGenerationModes = ref<string[]>(['MANUAL', 'AUTO']);
+  const DEFAULT_CRON = '0 0 9 * * ?';
   const canUpdate = computed(() => hasAnyPermission(['SYSTEM_CONFIG_WECOM_BOT:UPDATE']));
   const canReadRules = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:READ']));
   const canUpdateRules = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:UPDATE']));
@@ -517,6 +521,7 @@
     notificationType: 'BUG_EXPECTED_RESOLUTION_DUE',
     triggerType: 'DEADLINE',
     triggerConfig: {},
+    cron: DEFAULT_CRON,
     timezone: 'Asia/Shanghai',
     template: t('system.wecomBot.defaultBugTemplate'),
     recipientSpec: {
@@ -587,6 +592,53 @@
   async function loadRules() {
     rules.value = await getWecomRules();
     bugTerminalStatuses.value = await getWecomBugTerminalStatuses();
+  }
+
+  function localRuleRow(id: string) {
+    const previous = rules.value.find((item) => item.id === id) || {};
+    return {
+      ...previous,
+      id,
+      name: ruleForm.name,
+      scope_type: ruleForm.scopeType,
+      scope_id: ruleForm.scopeId,
+      notification_type: ruleForm.notificationType,
+      trigger_type: ruleForm.triggerType,
+      trigger_config: JSON.stringify(ruleForm.triggerConfig),
+      cron: ruleForm.cron,
+      timezone: ruleForm.timezone,
+      template: ruleForm.template,
+      recipient_spec: JSON.stringify(ruleForm.recipientSpec),
+      delivery_mode: ruleForm.deliveryMode,
+      stop_config: JSON.stringify(ruleForm.stopConfig),
+      start_at: ruleForm.startAt,
+      end_at: ruleForm.endAt,
+      enabled: previous.enabled ?? 0,
+      update_time: Date.now(),
+    };
+  }
+
+  function upsertLocalRule(record: Record<string, any>) {
+    const index = rules.value.findIndex((item) => item.id === record.id);
+    if (index >= 0) rules.value.splice(index, 1, record);
+    else rules.value.unshift(record);
+  }
+
+  function ruleMatchesForm(record: Record<string, any>) {
+    return (
+      record.name === ruleForm.name &&
+      record.scope_type === ruleForm.scopeType &&
+      (record.scope_id || undefined) === ruleForm.scopeId &&
+      record.notification_type === ruleForm.notificationType &&
+      record.trigger_type === ruleForm.triggerType &&
+      record.timezone === ruleForm.timezone &&
+      record.template === ruleForm.template &&
+      record.delivery_mode === ruleForm.deliveryMode
+    );
+  }
+
+  function showRuleValidation(message: string) {
+    Modal.warning({ title: t('system.wecomBot.validationFailed'), content: message });
   }
   async function loadLogs() {
     const result = await getWecomLogs({
@@ -659,11 +711,14 @@
       CUSTOM_CRON: 'CRON',
     } as const;
     ruleForm.triggerType = map[ruleForm.notificationType];
+    ruleForm.recipientSpec.businessRoles =
+      ruleForm.notificationType === 'BUG_EXPECTED_RESOLUTION_DUE' ? ['BUG_CREATOR', 'BUG_HANDLER'] : [];
     if (ruleForm.notificationType === 'TEST_REPORT_GENERATED') {
       ruleForm.deliveryMode = 'CHAT';
       ruleForm.template = t('system.wecomBot.defaultReportTemplate');
     } else if (ruleForm.notificationType === 'CUSTOM_CRON') {
       ruleForm.deliveryMode = 'BOTH';
+      ruleForm.cron ||= DEFAULT_CRON;
       ruleForm.template = ['customTitle', 'customContent'].map(variableLabel).join('\n');
     } else {
       ruleForm.deliveryMode = 'BOTH';
@@ -723,6 +778,9 @@
       terminalStatuses.value = trigger.terminalStatuses ?? [];
       reportGenerationModes.value = trigger.generationModes ?? ['MANUAL', 'AUTO'];
     }
+    if (ruleForm.notificationType !== 'BUG_EXPECTED_RESOLUTION_DUE') {
+      ruleForm.recipientSpec.businessRoles = [];
+    }
     ruleVisible.value = true;
     loadRecipientUsers();
   }
@@ -731,13 +789,40 @@
     editingRuleId.value = '';
     ruleForm.name = `${record.name} - ${t('common.copy')}`;
   }
-  async function saveRule() {
-    if (!ruleForm.name || !ruleForm.template || (ruleForm.scopeType === 'PROJECT' && !ruleForm.scopeId))
-      return Message.warning(t('system.wecomBot.required'));
-    if (ruleForm.triggerType === 'EVENT' && !reportGenerationModes.value.length)
-      return Message.warning(t('system.wecomBot.required'));
-    if (ruleForm.startAt && ruleForm.endAt && ruleForm.startAt >= ruleForm.endAt)
-      return Message.warning(t('system.wecomBot.invalidPeriod'));
+  async function saveRule(done: (closed: boolean) => void) {
+    if (!ruleForm.name || !ruleForm.template || (ruleForm.scopeType === 'PROJECT' && !ruleForm.scopeId)) {
+      showRuleValidation(t('system.wecomBot.required'));
+      done(false);
+      return;
+    }
+    if (ruleForm.triggerType === 'EVENT' && !reportGenerationModes.value.length) {
+      showRuleValidation(t('system.wecomBot.required'));
+      done(false);
+      return;
+    }
+    if (ruleForm.startAt && ruleForm.endAt && ruleForm.startAt >= ruleForm.endAt) {
+      showRuleValidation(t('system.wecomBot.invalidPeriod'));
+      done(false);
+      return;
+    }
+    if (ruleForm.triggerType === 'CRON') {
+      const cron = ruleForm.cron?.trim() || '';
+      const fieldCount = cron ? cron.split(/\s+/).length : 0;
+      if (fieldCount < 6 || fieldCount > 7) {
+        showRuleValidation(t('system.wecomBot.invalidCron'));
+        done(false);
+        return;
+      }
+      ruleForm.cron = cron;
+    }
+    if (ruleForm.notificationType === 'TEST_REPORT_GENERATED' && !ruleForm.recipientSpec.chatIds.length) {
+      showRuleValidation(t('system.wecomBot.reportGroupRequired'));
+      done(false);
+      return;
+    }
+    if (ruleForm.notificationType !== 'BUG_EXPECTED_RESOLUTION_DUE') {
+      ruleForm.recipientSpec.businessRoles = [];
+    }
     if (ruleForm.triggerType === 'DEADLINE') {
       ruleForm.triggerConfig = {
         leadTime: leadAmount.value,
@@ -755,12 +840,43 @@
       ruleForm.triggerConfig = {};
     }
     savingRule.value = true;
+    const knownRuleIds = new Set(rules.value.map((item) => item.id));
     try {
-      if (editingRuleId.value) await updateWecomRule(editingRuleId.value, ruleForm);
-      else await createWecomRule(ruleForm);
+      let savedId = editingRuleId.value;
+      if (savedId) await updateWecomRule(savedId, ruleForm);
+      else savedId = await createWecomRule(ruleForm);
+
+      const savedRule = localRuleRow(savedId);
+      upsertLocalRule(savedRule);
+      try {
+        await loadRules();
+        if (!rules.value.some((item) => item.id === savedId)) upsertLocalRule(savedRule);
+      } catch {
+        upsertLocalRule(savedRule);
+      }
       Message.success(t('common.saveSuccess'));
-      ruleVisible.value = false;
-      await loadRules();
+      done(true);
+    } catch (error) {
+      try {
+        const latestRules = await getWecomRules();
+        rules.value = latestRules;
+        const persistedRule = editingRuleId.value
+          ? latestRules.find((item) => item.id === editingRuleId.value && ruleMatchesForm(item))
+          : latestRules.find((item) => !knownRuleIds.has(item.id) && ruleMatchesForm(item));
+        if (persistedRule) {
+          Message.success(t('common.saveSuccess'));
+          done(true);
+          return;
+        }
+      } catch {
+        // Preserve the original save error when the recovery query is unavailable.
+      }
+      const appError = ensureAppError(error, t('api.apiRequestFailed'));
+      Modal.error({
+        title: t('system.wecomBot.saveFailed'),
+        content: formatAppErrorMessage(appError),
+      });
+      done(false);
     } finally {
       savingRule.value = false;
     }

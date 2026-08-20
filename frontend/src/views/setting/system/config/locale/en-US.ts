@@ -1,3 +1,5 @@
+const templateLiteral = (variable: string) => ["{'$", `{${variable}}'}`].join('');
+
 export default {
   'system.config.wecomBotConfig': 'WeCom AI Bot',
   'system.wecomBot.configTab': 'Bot Configuration',
@@ -22,7 +24,7 @@ export default {
   'system.wecomBot.enabled': 'Enabled',
   'system.wecomBot.disabled': 'Disabled',
   'system.wecomBot.groupTip':
-    'Add the Bot to an internal group and @Bot first. Groups can only be discovered from real events; chatid cannot be entered manually.',
+    "Add the Bot to an internal group and {'@'}Bot first. Groups can only be discovered from real events; chatid cannot be entered manually.",
   'system.wecomBot.groupName': 'Group remark',
   'system.wecomBot.type': 'Type',
   'system.wecomBot.lastSeen': 'Last discovered',
@@ -36,6 +38,11 @@ export default {
   'system.wecomBot.notificationType': 'Notification type',
   'system.wecomBot.trigger': 'Trigger',
   'system.wecomBot.timezone': 'Timezone',
+  'system.wecomBot.cronTip': 'Use Quartz Cron (6 or 7 fields), for example every 5 minutes: 0 0/5 * * * ?',
+  'system.wecomBot.invalidCron': 'Invalid Cron. Use the Quartz 6/7-field format, for example: 0 0/5 * * * ?',
+  'system.wecomBot.reportGroupRequired': 'Test report notifications require at least one enabled group target',
+  'system.wecomBot.validationFailed': 'Notification rule validation failed',
+  'system.wecomBot.saveFailed': 'Failed to save notification rule',
   'system.wecomBot.startAt': 'Start time',
   'system.wecomBot.endAt': 'End time',
   'system.wecomBot.terminalStatuses': 'Terminal status IDs',
@@ -92,16 +99,22 @@ export default {
   'system.wecomBot.autoGeneration': 'Automatic/execution generation',
   'system.wecomBot.unmapped': ' (WeCom not mapped)',
   'system.wecomBot.markdownTemplate': 'Markdown template',
-  'system.wecomBot.templateTip': 'Use ${variable} as documented. Unknown variables are rejected by the server.',
+  'system.wecomBot.templateTip': `Use ${templateLiteral(
+    'variable'
+  )} as documented. Unknown variables are rejected by the server.`,
   'system.wecomBot.required': 'Complete all required fields',
   'system.wecomBot.testSuccess': 'Connection test succeeded',
   'system.wecomBot.testMessage': 'MeterSphere WeCom AI Bot test message',
   'system.wecomBot.queued': 'Message added to the delivery queue',
   'system.wecomBot.emptyPreview': 'Template preview is empty',
-  'system.wecomBot.defaultBugTemplate':
-    'Bug #${bugNum} ${bugTitle}\nExpected resolution: ${expectedResolveTime}\n${resourceUrl}',
-  'system.wecomBot.defaultReportTemplate':
-    'Test report ${reportName} generated\nProject: ${projectName}\nPlan: ${testPlanName}\n${reportUrl}',
+  'system.wecomBot.defaultBugTemplate': `Bug #${templateLiteral('bugNum')} ${templateLiteral(
+    'bugTitle'
+  )}\nExpected resolution: ${templateLiteral('expectedResolveTime')}\n${templateLiteral('resourceUrl')}`,
+  'system.wecomBot.defaultReportTemplate': `Test report ${templateLiteral(
+    'reportName'
+  )} generated\nProject: ${templateLiteral('projectName')}\nPlan: ${templateLiteral('testPlanName')}\n${templateLiteral(
+    'reportUrl'
+  )}`,
   'system.config.parameterConfig': 'System Parameters Configuration',
   'system.config.baseConfig': 'Basic Settings',
   'system.config.pageConfig': 'Interface settings',

@@ -1,3 +1,5 @@
+const templateLiteral = (variable: string) => ["{'$", `{${variable}}'}`].join('');
+
 export default {
   'system.config.wecomBotConfig': '企微智能机器人',
   'system.wecomBot.configTab': 'Bot 配置',
@@ -20,7 +22,7 @@ export default {
   'system.wecomBot.testUser': '测试个人消息',
   'system.wecomBot.enabled': '已启用',
   'system.wecomBot.disabled': '已停用',
-  'system.wecomBot.groupTip': '请先将 Bot 加入内部群并 @Bot。群会话只能由真实消息事件发现，不能手工填写 chatid。',
+  'system.wecomBot.groupTip': "请先将 Bot 加入内部群并 {'@'}Bot。群会话只能由真实消息事件发现，不能手工填写 chatid。",
   'system.wecomBot.groupName': '群备注',
   'system.wecomBot.type': '类型',
   'system.wecomBot.lastSeen': '最近发现',
@@ -34,6 +36,11 @@ export default {
   'system.wecomBot.notificationType': '通知类型',
   'system.wecomBot.trigger': '触发方式',
   'system.wecomBot.timezone': '时区',
+  'system.wecomBot.cronTip': '使用 Quartz Cron（6 或 7 段），例如每 5 分钟：0 0/5 * * * ?',
+  'system.wecomBot.invalidCron': 'Cron 格式无效，请使用 Quartz 6/7 段格式，例如：0 0/5 * * * ?',
+  'system.wecomBot.reportGroupRequired': '测试报告通知至少需要选择一个已启用的群目标',
+  'system.wecomBot.validationFailed': '通知规则校验未通过',
+  'system.wecomBot.saveFailed': '通知规则保存失败',
   'system.wecomBot.startAt': '开始时间',
   'system.wecomBot.endAt': '结束时间',
   'system.wecomBot.terminalStatuses': '停止状态 ID',
@@ -80,7 +87,7 @@ export default {
   'system.wecomBot.noRecipient': '未解析到有效接收人',
   'system.wecomBot.secretExclusive': 'Secret 引用和 Secret 明文只能填写一项',
   'system.wecomBot.reportRecipientsTip':
-    '报告通知只向所选群各发送一条；用户用于群内 @，留空时动态 @ 当前项目全部有效且已映射企微的成员。',
+    "报告通知只向所选群各发送一条；用户用于群内 {'@'}，留空时动态 {'@'} 当前项目全部有效且已映射企微的成员。",
   'system.wecomBot.deliveryMode': '投递方式',
   'system.wecomBot.deliveryUser': '个人消息',
   'system.wecomBot.deliveryChat': '群消息',
@@ -90,16 +97,18 @@ export default {
   'system.wecomBot.autoGeneration': '自动/执行生成',
   'system.wecomBot.unmapped': '（未映射企微）',
   'system.wecomBot.markdownTemplate': 'Markdown 模板',
-  'system.wecomBot.templateTip': '模板变量按文档使用 ${variable}；未知变量会由后端拒绝。',
+  'system.wecomBot.templateTip': `模板变量按文档使用 ${templateLiteral('variable')}；未知变量会由后端拒绝。`,
   'system.wecomBot.required': '请填写必填项',
   'system.wecomBot.testSuccess': '连接测试成功',
   'system.wecomBot.testMessage': 'MeterSphere 企微智能机器人测试消息',
   'system.wecomBot.queued': '消息已进入投递队列',
   'system.wecomBot.emptyPreview': '模板预览为空',
-  'system.wecomBot.defaultBugTemplate':
-    '缺陷 #${bugNum} ${bugTitle}\n预计解决时间：${expectedResolveTime}\n${resourceUrl}',
-  'system.wecomBot.defaultReportTemplate':
-    '测试报告 ${reportName} 已生成\n项目：${projectName}\n计划：${testPlanName}\n${reportUrl}',
+  'system.wecomBot.defaultBugTemplate': `缺陷 #${templateLiteral('bugNum')} ${templateLiteral(
+    'bugTitle'
+  )}\n预计解决时间：${templateLiteral('expectedResolveTime')}\n${templateLiteral('resourceUrl')}`,
+  'system.wecomBot.defaultReportTemplate': `测试报告 ${templateLiteral('reportName')} 已生成\n项目：${templateLiteral(
+    'projectName'
+  )}\n计划：${templateLiteral('testPlanName')}\n${templateLiteral('reportUrl')}`,
   'system.config.parameterConfig': '系统参数配置',
   'system.config.baseConfig': '基础设置',
   'system.config.pageConfig': '界面设置',
