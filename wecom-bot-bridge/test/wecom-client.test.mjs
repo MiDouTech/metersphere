@@ -61,3 +61,61 @@ test('invalid target is permanent and does not reach SDK', async () => {
     (error) => error instanceof BridgeError && error.code === 'INVALID_TARGET' && !error.retryable,
   );
 });
+
+test('WeCom acknowledgement errors retain errcode and errmsg in delivery result', async () => {
+  const callbacks = [];
+  const fake = new FakeClient();
+  fake.sendMessage = async () => Promise.reject({ errcode: 93000, errmsg: 'invalid userid' });
+  const client = new WecomBotClient(
+    config(),
+    { post: async (path, body) => callbacks.push({ path, body }) },
+    () => fake,
+  );
+  await client.start();
+  fake.emit('authenticated');
+
+  await assert.rejects(
+    () =>
+      client.sendWithDelivery({
+        requestId: 'r-error',
+        outboxId: 'o-error',
+        target: { type: 'USER', id: 'invalid-user' },
+        message: { type: 'markdown', content: 'test' },
+      }),
+    (error) => error instanceof BridgeError && error.code === '93000' && error.message === 'invalid userid',
+  );
+  assert.equal(
+    callbacks.some(
+      (item) =>
+        item.path.endsWith('/delivery') &&
+        item.body.outboxId === 'o-error' &&
+        item.body.errorCode === '93000' &&
+        item.body.errorMessage === 'invalid userid' &&
+        item.body.retryable === false,
+    ),
+    true,
+  );
+});
+
+test('WeCom frequency limit acknowledgement remains retryable', async () => {
+  const fake = new FakeClient();
+  fake.sendMessage = async () =>
+    Promise.reject({ errcode: 846607, errmsg: 'aibot send msg frequency limit exceeded' });
+  const client = new WecomBotClient(config(), { post: async () => {} }, () => fake);
+  await client.start();
+  fake.emit('authenticated');
+
+  await assert.rejects(
+    () =>
+      client.send({
+        requestId: 'r-rate-limit',
+        target: { type: 'USER', id: 'user-1' },
+        message: { type: 'markdown', content: 'test' },
+      }),
+    (error) =>
+      error instanceof BridgeError &&
+      error.code === '846607' &&
+      error.message === 'aibot send msg frequency limit exceeded' &&
+      error.retryable === true,
+  );
+});
