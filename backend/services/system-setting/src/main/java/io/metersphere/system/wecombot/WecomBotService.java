@@ -507,7 +507,8 @@ public class WecomBotService {
             throw new MSException("Unsupported delivery mode");
         }
         if ("CRON".equals(request.triggerType()) && !CronExpression.isValidExpression(request.cron())) {
-            throw new MSException("Invalid Cron expression");
+            throw new MSException("Invalid Quartz Cron expression: " + request.cron()
+                    + ". Expected 6 or 7 fields, for example: 0 0/5 * * * ?");
         }
         try {
             ZoneId.of(request.timezone());
@@ -548,6 +549,10 @@ public class WecomBotService {
             recipients = new HashMap<>(recipients);
             recipients.put("businessRoles", List.of("BUG_CREATOR", "BUG_HANDLER"));
         }
+        if ("TEST_REPORT_GENERATED".equals(request.notificationType())
+                && strings(recipients.get("chatIds")).isEmpty()) {
+            throw new MSException("Test report notification requires at least one enabled group target");
+        }
         requireActiveRecipient(json(recipients));
         validateDeliveryRecipients(request.deliveryMode(), recipients);
         validateRecipientSelectors(request, recipients);
@@ -555,9 +560,6 @@ public class WecomBotService {
                 && strings(recipients.get("chatIds")).isEmpty() && strings(recipients.get("userIds")).isEmpty()
                 && !List.of("USER", "BOTH").contains(request.deliveryMode())) {
             throw new MSException("Default bug creator and handler recipients require personal delivery");
-        }
-        if ("TEST_REPORT_GENERATED".equals(request.notificationType()) && strings(recipients.get("chatIds")).isEmpty()) {
-            throw new MSException("Test report notification requires at least one enabled group");
         }
         if ("TEST_REPORT_GENERATED".equals(request.notificationType()) && "USER".equals(request.deliveryMode())) {
             throw new MSException("Test report notification must be delivered to a group");
@@ -602,7 +604,8 @@ public class WecomBotService {
         List<String> businessRoles = strings(recipient.get("businessRoles"));
         if (!businessRoles.isEmpty() && (!"BUG_EXPECTED_RESOLUTION_DUE".equals(request.notificationType())
                 || businessRoles.stream().anyMatch(value -> !Set.of("BUG_CREATOR", "BUG_HANDLER").contains(value)))) {
-            throw new MSException("Invalid dynamic business recipient role");
+            throw new MSException("Dynamic business recipient roles BUG_CREATOR/BUG_HANDLER are only supported "
+                    + "by bug expected-resolution notifications; clear businessRoles for " + request.notificationType());
         }
         Set<String> roleIds = new LinkedHashSet<>(strings(recipient.get("projectRoleIds")));
         roleIds.addAll(strings(recipient.get("userGroupIds")));

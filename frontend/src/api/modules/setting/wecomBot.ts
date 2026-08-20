@@ -81,9 +81,10 @@ export const testWecomGroup = (chatId: string, content: string) =>
 export const testWecomUser = (userId: string, content: string) =>
   MSR.post({ url: `${base}/messages/test-user`, data: { userId, content } });
 export const getWecomRules = () => MSR.get<Record<string, any>[]>({ url: `${base}/notification-rules` });
-export const createWecomRule = (data: WecomRuleRequest) => MSR.post({ url: `${base}/notification-rules`, data });
+export const createWecomRule = (data: WecomRuleRequest) =>
+  MSR.post<string>({ url: `${base}/notification-rules`, data }, { errorMessageMode: 'none' });
 export const updateWecomRule = (id: string, data: WecomRuleRequest) =>
-  MSR.put({ url: `${base}/notification-rules/${id}`, data });
+  MSR.put({ url: `${base}/notification-rules/${id}`, data }, { errorMessageMode: 'none' });
 export const deleteWecomRule = (id: string) => MSR.delete({ url: `${base}/notification-rules/${id}` });
 export const setWecomRuleEnabled = (id: string, enabled: boolean) =>
   MSR.post({ url: `${base}/notification-rules/${id}/${enabled ? 'enable' : 'disable'}` });

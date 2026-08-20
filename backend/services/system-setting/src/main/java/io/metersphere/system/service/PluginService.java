@@ -31,6 +31,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.PluginDescriptor;
 import org.pf4j.PluginWrapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,6 +68,8 @@ public class PluginService {
     private JdbcDriverPluginService jdbcDriverPluginService;
     @Resource
     private KafkaTemplate<String, String> kafkaTemplate;
+    @Value("${kafka.topic.plugin:PLUGIN}")
+    private String pluginTopic;
     @Resource
     private UserLoginService userLoginService;
     @Resource
@@ -205,7 +208,7 @@ public class PluginService {
         pluginNotifiedDTO.setOperate(operate);
         pluginNotifiedDTO.setPluginId(pluginId);
         pluginNotifiedDTO.setFileName(fileName);
-        kafkaTemplate.send(KafkaTopicConstants.PLUGIN, JSON.toJSONString(pluginNotifiedDTO));
+        kafkaTemplate.send(pluginTopic, JSON.toJSONString(pluginNotifiedDTO));
     }
 
     /**
