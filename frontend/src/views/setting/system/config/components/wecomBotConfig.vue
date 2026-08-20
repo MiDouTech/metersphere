@@ -73,42 +73,44 @@
       <a-tab-pane key="chats" :title="t('system.wecomBot.chatsTab')">
         <a-alert class="mb-4">{{ t('system.wecomBot.groupTip') }}</a-alert>
         <a-table :data="chats" row-key="id" :pagination="false">
-          <a-table-column :title="t('system.wecomBot.groupName')">
-            <template #cell="{ record }"><a-input v-model="record.display_name" :disabled="!canUpdate" /></template>
-          </a-table-column>
-          <a-table-column title="chatid" :width="150"
-            ><template #cell="{ record }">{{ maskId(record.chat_id) }}</template></a-table-column
-          >
-          <a-table-column :title="t('system.wecomBot.type')" data-index="chat_type" :width="100" />
-          <a-table-column :title="t('system.wecomBot.firstSeen')" :width="180"
-            ><template #cell="{ record }">{{ formatTime(record.first_seen_at) }}</template></a-table-column
-          >
-          <a-table-column :title="t('system.wecomBot.lastSeen')" :width="180"
-            ><template #cell="{ record }">{{ formatTime(record.last_seen_at) }}</template></a-table-column
-          >
-          <a-table-column :title="t('system.wecomBot.lastDelivery')" data-index="last_delivery_status" :width="120" />
-          <a-table-column :title="t('system.wecomBot.enable')" :width="90"
-            ><template #cell="{ record }"
-              ><a-switch
-                :model-value="asBool(record.active)"
-                :disabled="!canUpdate"
-                @change="(value) => toggleChat(record, value)" /></template
-          ></a-table-column>
-          <a-table-column :title="t('common.operation')" :width="180">
-            <template #cell="{ record }">
-              <a-space
-                ><a-button type="text" :disabled="!canUpdate" @click="saveChatName(record)">{{
-                  t('system.wecomBot.saveRemark')
-                }}</a-button
-                ><a-button
-                  type="text"
-                  :disabled="!canUpdate || !asBool(record.active)"
-                  @click="sendGroupTest(record)"
-                  >{{ t('system.wecomBot.testSend') }}</a-button
-                ></a-space
-              >
-            </template>
-          </a-table-column>
+          <template #columns>
+            <a-table-column :title="t('system.wecomBot.groupName')">
+              <template #cell="{ record }"><a-input v-model="record.display_name" :disabled="!canUpdate" /></template>
+            </a-table-column>
+            <a-table-column title="chatid" :width="150"
+              ><template #cell="{ record }">{{ maskId(record.chat_id) }}</template></a-table-column
+            >
+            <a-table-column :title="t('system.wecomBot.type')" data-index="chat_type" :width="100" />
+            <a-table-column :title="t('system.wecomBot.firstSeen')" :width="180"
+              ><template #cell="{ record }">{{ formatTime(record.first_seen_at) }}</template></a-table-column
+            >
+            <a-table-column :title="t('system.wecomBot.lastSeen')" :width="180"
+              ><template #cell="{ record }">{{ formatTime(record.last_seen_at) }}</template></a-table-column
+            >
+            <a-table-column :title="t('system.wecomBot.lastDelivery')" data-index="last_delivery_status" :width="120" />
+            <a-table-column :title="t('system.wecomBot.enable')" :width="90"
+              ><template #cell="{ record }"
+                ><a-switch
+                  :model-value="asBool(record.active)"
+                  :disabled="!canUpdate"
+                  @change="(value) => toggleChat(record, value)" /></template
+            ></a-table-column>
+            <a-table-column :title="t('common.operation')" :width="180">
+              <template #cell="{ record }">
+                <a-space
+                  ><a-button type="text" :disabled="!canUpdate" @click="saveChatName(record)">{{
+                    t('system.wecomBot.saveRemark')
+                  }}</a-button
+                  ><a-button
+                    type="text"
+                    :disabled="!canUpdate || !asBool(record.active)"
+                    @click="sendGroupTest(record)"
+                    >{{ t('system.wecomBot.testSend') }}</a-button
+                  ></a-space
+                >
+              </template>
+            </a-table-column>
+          </template>
         </a-table>
       </a-tab-pane>
 
@@ -124,44 +126,50 @@
           }}</a-button></div
         >
         <a-table :data="rules" row-key="id" :pagination="false" :scroll="{ x: 1200 }">
-          <a-table-column :title="t('system.wecomBot.name')" data-index="name" :width="180" />
-          <a-table-column :title="t('system.wecomBot.notificationType')" data-index="notification_type" :width="230" />
-          <a-table-column :title="t('system.wecomBot.trigger')" data-index="trigger_type" :width="100" />
-          <a-table-column :title="t('system.wecomBot.timezone')" data-index="timezone" :width="130" />
-          <a-table-column :title="t('system.wecomBot.nextFire')" :width="180"
-            ><template #cell="{ record }">{{ formatTime(record.next_fire_time) }}</template></a-table-column
-          >
-          <a-table-column :title="t('system.wecomBot.enable')" :width="90"
-            ><template #cell="{ record }"
-              ><a-switch
-                :model-value="asBool(record.enabled)"
-                :disabled="!canUpdateRules"
-                @change="(value) => toggleRule(record, value)" /></template
-          ></a-table-column>
-          <a-table-column :title="t('common.operation')" fixed="right" :width="240">
-            <template #cell="{ record }"
-              ><a-space
-                ><a-button type="text" :disabled="!canUpdateRules" @click="openRule(record)">{{
-                  t('common.edit')
-                }}</a-button
-                ><a-button type="text" :disabled="!canUpdateRules" @click="copyRule(record)">{{
-                  t('common.copy')
-                }}</a-button
-                ><a-button type="text" @click="previewRule(record)">{{ t('system.wecomBot.preview') }}</a-button
-                ><a-button
-                  v-if="record.notification_type === 'CUSTOM_CRON'"
-                  type="text"
-                  :disabled="!canUpdateRules || !asBool(record.enabled)"
-                  @click="runRule(record)"
-                  >{{ t('system.wecomBot.runOnce') }}</a-button
-                ><a-popconfirm :content="t('system.wecomBot.deleteConfirm')" @ok="removeRule(record)"
-                  ><a-button type="text" status="danger" :disabled="!canDeleteRules">{{
-                    t('common.delete')
-                  }}</a-button></a-popconfirm
-                ></a-space
-              ></template
+          <template #columns>
+            <a-table-column :title="t('system.wecomBot.name')" data-index="name" :width="180" />
+            <a-table-column
+              :title="t('system.wecomBot.notificationType')"
+              data-index="notification_type"
+              :width="230"
+            />
+            <a-table-column :title="t('system.wecomBot.trigger')" data-index="trigger_type" :width="100" />
+            <a-table-column :title="t('system.wecomBot.timezone')" data-index="timezone" :width="130" />
+            <a-table-column :title="t('system.wecomBot.nextFire')" :width="180"
+              ><template #cell="{ record }">{{ formatTime(record.next_fire_time) }}</template></a-table-column
             >
-          </a-table-column>
+            <a-table-column :title="t('system.wecomBot.enable')" :width="90"
+              ><template #cell="{ record }"
+                ><a-switch
+                  :model-value="asBool(record.enabled)"
+                  :disabled="!canUpdateRules"
+                  @change="(value) => toggleRule(record, value)" /></template
+            ></a-table-column>
+            <a-table-column :title="t('common.operation')" fixed="right" :width="240">
+              <template #cell="{ record }"
+                ><a-space
+                  ><a-button type="text" :disabled="!canUpdateRules" @click="openRule(record)">{{
+                    t('common.edit')
+                  }}</a-button
+                  ><a-button type="text" :disabled="!canUpdateRules" @click="copyRule(record)">{{
+                    t('common.copy')
+                  }}</a-button
+                  ><a-button type="text" @click="previewRule(record)">{{ t('system.wecomBot.preview') }}</a-button
+                  ><a-button
+                    v-if="record.notification_type === 'CUSTOM_CRON'"
+                    type="text"
+                    :disabled="!canUpdateRules || !asBool(record.enabled)"
+                    @click="runRule(record)"
+                    >{{ t('system.wecomBot.runOnce') }}</a-button
+                  ><a-popconfirm :content="t('system.wecomBot.deleteConfirm')" @ok="removeRule(record)"
+                    ><a-button type="text" status="danger" :disabled="!canDeleteRules">{{
+                      t('common.delete')
+                    }}</a-button></a-popconfirm
+                  ></a-space
+                ></template
+              >
+            </a-table-column>
+          </template>
         </a-table>
       </a-tab-pane>
 
@@ -216,33 +224,40 @@
           /><a-button @click="loadLogs">{{ t('common.refresh') }}</a-button></div
         >
         <a-table :data="logs" row-key="id" :pagination="logPagination" @page-change="changeLogPage">
-          <a-table-column :title="t('system.wecomBot.time')" :width="180"
-            ><template #cell="{ record }">{{ formatTime(record.create_time) }}</template></a-table-column
-          >
-          <a-table-column :title="t('system.wecomBot.type')" data-index="event_type" :width="210" />
-          <a-table-column :title="t('system.wecomBot.target')" data-index="target_type" :width="90" />
-          <a-table-column :title="t('system.wecomBot.messagePreview')" data-index="payload_preview" ellipsis tooltip />
-          <a-table-column :title="t('system.wecomBot.status')" data-index="status" :width="110" />
-          <a-table-column :title="t('system.wecomBot.attempts')" data-index="attempts" :width="100" />
-          <a-table-column :title="t('system.wecomBot.error')" ellipsis tooltip
-            ><template #cell="{ record }">{{
-              [record.error_code, record.error_message].filter(Boolean).join(': ') || '-'
-            }}</template></a-table-column
-          >
-          <a-table-column :title="t('common.operation')" :width="150"
-            ><template #cell="{ record }"
-              ><a-space
-                ><a-button type="text" @click="openLogDetail(record)">{{ t('system.wecomBot.detail') }}</a-button
-                ><a-button
-                  v-if="record.status === 'FAILED' && asBool(record.retryable)"
-                  type="text"
-                  :disabled="!canRetry"
-                  @click="retryMessage(record)"
-                  >{{ t('system.wecomBot.retry') }}</a-button
-                ></a-space
-              ></template
-            ></a-table-column
-          >
+          <template #columns>
+            <a-table-column :title="t('system.wecomBot.time')" :width="180"
+              ><template #cell="{ record }">{{ formatTime(record.create_time) }}</template></a-table-column
+            >
+            <a-table-column :title="t('system.wecomBot.type')" data-index="event_type" :width="210" />
+            <a-table-column :title="t('system.wecomBot.target')" data-index="target_type" :width="90" />
+            <a-table-column
+              :title="t('system.wecomBot.messagePreview')"
+              data-index="payload_preview"
+              ellipsis
+              tooltip
+            />
+            <a-table-column :title="t('system.wecomBot.status')" data-index="status" :width="110" />
+            <a-table-column :title="t('system.wecomBot.attempts')" data-index="attempts" :width="100" />
+            <a-table-column :title="t('system.wecomBot.error')" ellipsis tooltip
+              ><template #cell="{ record }">{{
+                [record.error_code, record.error_message].filter(Boolean).join(': ') || '-'
+              }}</template></a-table-column
+            >
+            <a-table-column :title="t('common.operation')" :width="150"
+              ><template #cell="{ record }"
+                ><a-space
+                  ><a-button type="text" @click="openLogDetail(record)">{{ t('system.wecomBot.detail') }}</a-button
+                  ><a-button
+                    v-if="record.status === 'FAILED' && asBool(record.retryable)"
+                    type="text"
+                    :disabled="!canRetry"
+                    @click="retryMessage(record)"
+                    >{{ t('system.wecomBot.retry') }}</a-button
+                  ></a-space
+                ></template
+              ></a-table-column
+            >
+          </template>
         </a-table>
       </a-tab-pane>
     </a-tabs>
