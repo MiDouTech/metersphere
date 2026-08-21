@@ -481,9 +481,34 @@ public class FunctionalCaseControllerTests extends BaseTest {
         request.setPageSize(10);
         this.requestPost(FUNCTIONAL_CASE_LIST_URL, request);
         request.setProjectId(DEFAULT_PROJECT_ID);
+        request.setWorkspaceId(DEFAULT_ORGANIZATION_ID);
         request.setSort(new HashMap<>() {{
             put("createTime", "desc");
         }});
+
+        FunctionalCase crossProjectCase = functionalCaseMapper.selectByPrimaryKey(functionalCaseId);
+        Assertions.assertNotNull(crossProjectCase);
+        String crossProjectCaseId = IDGenerator.nextStr();
+        crossProjectCase.setId(crossProjectCaseId);
+        crossProjectCase.setNum(IDGenerator.nextNum());
+        crossProjectCase.setName("cross-project-isolation-regression-case");
+        crossProjectCase.setProjectId("cross-project-isolation-regression-project");
+        crossProjectCase.setWorkspaceId(DEFAULT_ORGANIZATION_ID);
+        crossProjectCase.setCreateTime(System.currentTimeMillis() + 1000);
+        crossProjectCase.setUpdateTime(System.currentTimeMillis() + 1000);
+        functionalCaseMapper.insert(crossProjectCase);
+        try {
+            MvcResult isolationResult = this.requestPostWithOkAndReturn(FUNCTIONAL_CASE_LIST_URL, request);
+            Pager<List<FunctionalCasePageDTO>> isolationPage = JSON.parseObject(JSON.toJSONString(
+                            JSON.parseObject(isolationResult.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class).getData()),
+                    Pager.class);
+            List<FunctionalCasePageDTO> isolationCases = JSON.parseArray(JSON.toJSONString(isolationPage.getList()), FunctionalCasePageDTO.class);
+            Assertions.assertFalse(isolationCases.stream().anyMatch(item -> StringUtils.equals(item.getId(), crossProjectCaseId)));
+            Assertions.assertTrue(isolationCases.stream().allMatch(item -> StringUtils.equals(item.getProjectId(), DEFAULT_PROJECT_ID)));
+        } finally {
+            functionalCaseMapper.deleteByPrimaryKey(crossProjectCaseId);
+        }
+
         MvcResult mvcResult = this.requestPostWithOkAndReturn(FUNCTIONAL_CASE_LIST_URL, request);
         String returnData = mvcResult.getResponse().getContentAsString(StandardCharsets.UTF_8);
         ResultHolder resultHolder = JSON.parseObject(returnData, ResultHolder.class);
