@@ -253,10 +253,7 @@ public class PermissionControlController {
     @Operation(summary = "权限控制-流程控制-启用禁用流程")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)
     public WorkflowDefinition enableFlow(@RequestBody WorkflowDefinition request) {
-        WorkflowDefinition update = new WorkflowDefinition();
-        update.setId(request.getId());
-        update.setEnabled(request.getEnabled());
-        return permissionControlService.updateFlow(update);
+        return permissionControlService.enableWorkflow(request.getId(), request.getEnabled());
     }
 
     @PostMapping("/flow/delete")

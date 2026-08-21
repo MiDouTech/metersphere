@@ -3,6 +3,8 @@ package io.metersphere.system.service;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.domain.UserRole;
 import io.metersphere.system.domain.WorkflowDefinition;
+import io.metersphere.system.domain.WorkflowRole;
+import io.metersphere.system.domain.StatusFlowRolePermission;
 import io.metersphere.system.dto.permission.Permission;
 import io.metersphere.system.dto.permission.PermissionDefinitionItem;
 import io.metersphere.system.dto.permission.PermissionResourceDTO;
@@ -10,7 +12,9 @@ import io.metersphere.system.dto.permission.RoleUiPermissionDTO;
 import io.metersphere.system.dto.permission.control.RoleDeleteImpactDTO;
 import io.metersphere.system.dto.permission.control.RoleMemberUpdateRequest;
 import io.metersphere.system.dto.permission.control.RoleSaveRequest;
+import io.metersphere.system.dto.permission.control.WorkflowMigrationPreviewDTO;
 import io.metersphere.system.dto.permission.control.WorkflowMigrationRequest;
+import io.metersphere.system.dto.permission.control.WorkflowRolePermissionRequest;
 import io.metersphere.system.dto.request.GlobalUserRoleRelationQueryRequest;
 import io.metersphere.system.dto.sdk.request.PermissionSettingUpdateRequest;
 import io.metersphere.system.dto.user.UserRoleRelationUserDTO;
@@ -31,6 +35,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -354,6 +359,100 @@ class PermissionControlServiceTests {
     }
 
     @Test
+    void addFlowRoleAllowsPublishedWorkflowAndGrantsEveryTransitionByDefault() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-published");
+        flow.setLifecycle("PUBLISHED");
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-published")).thenReturn(flow);
+        when(jdbcTemplate.queryForObject(
+                org.mockito.ArgumentMatchers.contains("workflow_position_sync_log"),
+                org.mockito.ArgumentMatchers.eq(Integer.class),
+                org.mockito.ArgumentMatchers.eq("flow-published"))).thenReturn(0);
+        when(jdbcTemplate.queryForList(
+                org.mockito.ArgumentMatchers.contains("SELECT id FROM status_flow"),
+                org.mockito.ArgumentMatchers.eq(String.class),
+                org.mockito.ArgumentMatchers.eq("flow-published"))).thenReturn(List.of("transition-1"));
+        when(jdbcTemplate.queryForObject(
+                org.mockito.ArgumentMatchers.contains("status_flow_role_permission"),
+                org.mockito.ArgumentMatchers.eq(Integer.class),
+                org.mockito.ArgumentMatchers.eq("flow-published"),
+                org.mockito.ArgumentMatchers.eq("transition-1"),
+                org.mockito.ArgumentMatchers.eq("role-1"))).thenReturn(0);
+
+        WorkflowRole request = new WorkflowRole();
+        request.setFlowId("flow-published");
+        request.setCode("HANDLER");
+        request.setName("当前处理人");
+        request.setRoleType("FIELD_USER");
+        request.setFieldKey("handle_user");
+
+        try (MockedStatic<IDGenerator> ids = mockStatic(IDGenerator.class)) {
+            ids.when(IDGenerator::nextStr).thenReturn("role-1", "permission-1");
+            service.addFlowRole(request);
+        }
+
+        ArgumentCaptor<StatusFlowRolePermission> captor = ArgumentCaptor.forClass(StatusFlowRolePermission.class);
+        verify(permissionControlMapper).insertStatusFlowRolePermission(captor.capture());
+        assertEquals("transition-1", captor.getValue().getStatusFlowId());
+        assertEquals("role-1", captor.getValue().getWorkflowRoleId());
+        assertTrue(captor.getValue().getVisible());
+        assertTrue(captor.getValue().getOperable());
+    }
+
+    @Test
+    void saveFlowRolePermissionsAllowsPublishedWorkflow() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-published");
+        flow.setLifecycle("PUBLISHED");
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-published")).thenReturn(flow);
+        when(jdbcTemplate.queryForObject(
+                org.mockito.ArgumentMatchers.contains("workflow_position_sync_log"),
+                org.mockito.ArgumentMatchers.eq(Integer.class),
+                org.mockito.ArgumentMatchers.eq("flow-published"))).thenReturn(1);
+        WorkflowRolePermissionRequest request = new WorkflowRolePermissionRequest();
+        request.setFlowId("flow-published");
+        request.setPermissions(List.of());
+
+        service.saveFlowRolePermissions(request);
+
+        verify(permissionControlMapper).deleteStatusFlowRolePermissionsByFlowId("flow-published");
+    }
+
+    @Test
+    void disableActivePublishedWorkflowAlsoStopsItFromReceivingNewBugs() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-active");
+        flow.setLifecycle("PUBLISHED");
+        flow.setEnabled(true);
+        flow.setActiveForNew(true);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-active")).thenReturn(flow);
+
+        service.enableWorkflow("flow-active", false);
+
+        verify(jdbcTemplate).update(
+                org.mockito.ArgumentMatchers.contains("enabled=b'0', active_for_new=b'0'"),
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.eq("flow-active"));
+    }
+
+    @Test
+    void archivedWorkflowRemainsReadOnly() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-archived");
+        flow.setLifecycle("ARCHIVED");
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-archived")).thenReturn(flow);
+
+        WorkflowRole request = new WorkflowRole();
+        request.setFlowId("flow-archived");
+        request.setRoleType("FIELD_USER");
+        request.setFieldKey("handle_user");
+
+        assertThrows(RuntimeException.class, () -> service.addFlowRole(request));
+        assertThrows(RuntimeException.class, () -> service.enableWorkflow("flow-archived", true));
+        verify(permissionControlMapper, never()).insertWorkflowRole(any());
+    }
+
+    @Test
     void deleteUnpublishedWorkflowRemovesPositionSyncHistory() {
         WorkflowDefinition flow = new WorkflowDefinition();
         flow.setId("flow-draft-delete");
@@ -382,5 +481,49 @@ class PermissionControlServiceTests {
         assertThrows(RuntimeException.class, () -> service.migrateWorkflow(request));
 
         verify(permissionControlMapper, never()).selectWorkflowDefinitionById(any());
+    }
+
+    @Test
+    void migrationPreviewReturnsRecognizableSourceStatusMetadataWithoutLosingInternalIds() {
+        WorkflowDefinition target = new WorkflowDefinition();
+        target.setId("flow-active");
+        target.setVersion(3);
+        target.setLifecycle("PUBLISHED");
+        target.setActiveForNew(true);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-active")).thenReturn(target);
+        when(jdbcTemplate.queryForList(
+                org.mockito.ArgumentMatchers.startsWith("SELECT id, status_code, name FROM status_item"),
+                org.mockito.ArgumentMatchers.eq("flow-active")))
+                .thenReturn(List.of(Map.of("id", "target-created", "status_code", "CREATED", "name", "创建")));
+
+        Map<String, Object> processing = new HashMap<>();
+        processing.put("status_id", "source-processing");
+        processing.put("status_code", "PROCESSING");
+        processing.put("status_name", "处理中");
+        processing.put("bug_count", 7L);
+        processing.put("project_count", 2L);
+        Map<String, Object> missing = new HashMap<>();
+        missing.put("status_id", "source-missing");
+        missing.put("status_code", null);
+        missing.put("status_name", null);
+        missing.put("bug_count", 3L);
+        missing.put("project_count", 1L);
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.startsWith("SELECT b.status status_id")))
+                .thenReturn(List.of(processing, missing));
+        when(jdbcTemplate.queryForObject(
+                org.mockito.ArgumentMatchers.startsWith("SELECT COUNT(*) FROM bug"),
+                org.mockito.ArgumentMatchers.eq(Long.class)))
+                .thenReturn(10L);
+
+        WorkflowMigrationPreviewDTO preview = service.previewWorkflowMigration("flow-active");
+
+        assertEquals(2, preview.getSourceStatuses().size());
+        assertEquals("处理中", preview.getSourceStatuses().getFirst().getName());
+        assertEquals(7L, preview.getSourceStatuses().getFirst().getBugCount());
+        assertEquals(2L, preview.getSourceStatuses().getFirst().getProjectCount());
+        assertFalse(preview.getSourceStatuses().getFirst().isAutoMapped());
+        assertEquals("未知历史状态", preview.getSourceStatuses().get(1).getName());
+        assertTrue(preview.getSourceStatuses().get(1).isNameMissing());
+        assertTrue(preview.getUnresolvedStatusIds().containsAll(List.of("source-processing", "source-missing")));
     }
 }
