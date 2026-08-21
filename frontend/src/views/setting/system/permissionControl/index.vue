@@ -105,6 +105,7 @@
                 <a-list-item-meta :title="flow.name" :description="flow.description || flow.code" />
                 <template #actions>
                   <a-tag v-if="flow.activeForNew" color="blue">使用中</a-tag>
+                  <a-tag v-if="flow.enabled === false" color="red">已禁用</a-tag>
                   <a-tag
                     :color="
                       flow.lifecycle === 'PUBLISHED' ? 'green' : flow.lifecycle === 'ARCHIVED' ? 'gray' : 'orange'
@@ -113,6 +114,18 @@
                     {{ flow.lifecycle === 'PUBLISHED' ? '已发布' : flow.lifecycle === 'ARCHIVED' ? '已归档' : '草稿' }}
                     v{{ flow.version || 1 }}
                   </a-tag>
+                  <a-switch
+                    v-if="flow.lifecycle !== 'ARCHIVED' && canUpdateRole"
+                    v-operable-permission="{
+                      code: 'PERMISSION_FLOW_SAVE_BUTTON',
+                      permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
+                      typeList: ['SYSTEM'],
+                    }"
+                    :model-value="flow.enabled !== false"
+                    size="small"
+                    @click.stop
+                    @change="(value) => handleFlowEnable(flow, Boolean(value))"
+                  />
                   <a-link
                     v-if="!flow.activeForNew"
                     v-visible-permission="{
@@ -134,23 +147,24 @@
               <div class="card-title">
                 <div>
                   <div>{{ selectedFlow?.name || '流转矩阵' }}</div>
-                  <div class="muted">系统全局生效；已发布版本不可原地修改，历史缺陷继续绑定原版本。</div>
+                  <div class="muted">系统全局生效；草稿和已发布流程均可修改，已归档流程只读。</div>
                 </div>
                 <a-space wrap>
-                  <a-button v-if="canUpdateRole" :disabled="!isDraftFlow" @click="openStatusModal()">添加状态</a-button>
-                  <a-button v-if="canUpdateRole" :disabled="!isDraftFlow || !designerDirty" @click="saveDesigner"
-                    >保存草稿</a-button
+                  <a-button v-if="canUpdateRole" :disabled="!isEditableFlow" @click="openStatusModal()"
+                    >添加状态</a-button
+                  >
+                  <a-button v-if="canUpdateRole" :disabled="!isEditableFlow || !designerDirty" @click="saveDesigner"
+                    >保存流程</a-button
                   >
                   <a-button :disabled="!selectedFlow?.id" @click="validateDesigner">校验</a-button>
+                  <a-button v-if="isDraftFlow && canUpdateRole" type="primary" @click="publishDesigner">发布</a-button>
                   <a-button
-                    v-if="isDraftFlow && canUpdateRole"
-                    type="primary"
-                    :disabled="designerDirty"
-                    @click="publishDesigner"
-                    >发布</a-button
-                  >
-                  <a-button
-                    v-if="canUpdateRole && selectedFlow?.lifecycle === 'PUBLISHED' && !selectedFlow.activeForNew"
+                    v-if="
+                      canUpdateRole &&
+                      selectedFlow?.lifecycle === 'PUBLISHED' &&
+                      selectedFlow.enabled !== false &&
+                      !selectedFlow.activeForNew
+                    "
                     type="primary"
                     @click="activateDesigner"
                     >开启使用</a-button
@@ -181,8 +195,8 @@
                 v-for="status in flowMatrix.statuses"
                 :key="status.id"
                 :color="status.initial ? 'blue' : status.terminal ? 'green' : undefined"
-                :checkable="isDraftFlow && canUpdateRole"
-                @check="() => isDraftFlow && canUpdateRole && openStatusModal(status)"
+                :checkable="isEditableFlow && canUpdateRole"
+                @check="() => isEditableFlow && canUpdateRole && openStatusModal(status)"
               >
                 {{ status.name }}{{ status.initial ? '（初始）' : '' }}{{ status.terminal ? '（结束）' : '' }}
               </a-tag>
@@ -212,7 +226,7 @@
                         <small>{{ getTransitionAuthSummary(findTransition(fromStatus.id, toStatus.id)?.id) }}</small>
                       </button>
                       <button
-                        v-else-if="isDraftFlow && canUpdateRole"
+                        v-else-if="isEditableFlow && canUpdateRole"
                         class="matrix-cell cell-deny"
                         type="button"
                         @click="addTransition(fromStatus.id, toStatus.id)"
@@ -240,7 +254,7 @@
                       >同步企微岗位</a-button
                     >
                   </a-tooltip>
-                  <a-button v-if="canAddRole" :disabled="!isDraftFlow" @click="() => openFlowRoleModal()"
+                  <a-button v-if="canAddRole" :disabled="!isEditableFlow" @click="() => openFlowRoleModal()"
                     >添加流程角色</a-button
                   >
                   <a-button
@@ -250,7 +264,7 @@
                       typeList: ['SYSTEM'],
                     }"
                     type="primary"
-                    :disabled="!selectedFlow?.id || !isDraftFlow"
+                    :disabled="!selectedFlow?.id || !isEditableFlow"
                     @click="saveTransitionPermissions"
                   >
                     保存授权
@@ -269,7 +283,7 @@
               </a-descriptions>
 
               <a-button
-                v-if="isDraftFlow && canUpdateRole"
+                v-if="isEditableFlow && canUpdateRole"
                 class="mt-3"
                 status="danger"
                 @click="removeSelectedTransition"
@@ -289,7 +303,7 @@
                       <template #cell="{ record }">
                         <a-checkbox
                           :model-value="getRolePermissionValue(record.id, 'visible')"
-                          :disabled="!isDraftFlow || !canUpdateRole"
+                          :disabled="!isEditableFlow || !canUpdateRole"
                           @change="(value) => updateRolePermission(record.id, 'visible', Boolean(value))"
                         />
                       </template>
@@ -298,7 +312,7 @@
                       <template #cell="{ record }">
                         <a-checkbox
                           :model-value="getRolePermissionValue(record.id, 'operable')"
-                          :disabled="!isDraftFlow || !canUpdateRole"
+                          :disabled="!isEditableFlow || !canUpdateRole"
                           @change="(value) => updateRolePermission(record.id, 'operable', Boolean(value))"
                         />
                       </template>
@@ -307,7 +321,7 @@
                       <template #cell="{ record }">
                         <a-space>
                           <a-link
-                            v-if="isDraftFlow && canUpdateRole"
+                            v-if="isEditableFlow && canUpdateRole"
                             v-visible-permission="{
                               code: 'PERMISSION_FLOW_ROLE_UPDATE_BUTTON',
                               permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
@@ -317,7 +331,7 @@
                             >编辑</a-link
                           >
                           <a-link
-                            v-if="isDraftFlow && canDeleteRole"
+                            v-if="isEditableFlow && canDeleteRole"
                             v-visible-permission="{
                               code: 'PERMISSION_FLOW_ROLE_DELETE_BUTTON',
                               permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
@@ -411,7 +425,7 @@
     <a-modal
       v-model:visible="statusModalVisible"
       :title="statusForm.id ? '编辑状态' : '添加状态'"
-      :ok-button-props="{ disabled: !isDraftFlow || !canUpdateRole }"
+      :ok-button-props="{ disabled: !isEditableFlow || !canUpdateRole }"
       @ok="saveStatusDraft"
     >
       <a-form :model="statusForm" layout="vertical">
@@ -427,11 +441,11 @@
         </a-space>
       </a-form>
       <template #footer>
-        <a-button v-if="statusForm.id && isDraftFlow && canUpdateRole" status="danger" @click="deleteStatusDraft"
+        <a-button v-if="statusForm.id && isEditableFlow && canUpdateRole" status="danger" @click="deleteStatusDraft"
           >删除状态</a-button
         >
         <a-button @click="statusModalVisible = false">取消</a-button>
-        <a-button type="primary" :disabled="!isDraftFlow || !canUpdateRole" @click="saveStatusDraft">确定</a-button>
+        <a-button type="primary" :disabled="!isEditableFlow || !canUpdateRole" @click="saveStatusDraft">确定</a-button>
       </template>
     </a-modal>
 
@@ -440,7 +454,7 @@
       title="批量关联历史缺陷"
       :width="1080"
       :ok-loading="migrationLoading"
-      :ok-button-props="{ disabled: !migrationBugIds.length }"
+      :ok-button-props="{ disabled: !migrationBugIds.length || !migrationMappingsComplete }"
       ok-text="确认执行迁移"
       @ok="executeMigration"
     >
@@ -453,15 +467,22 @@
         <a-descriptions-item label="自动映射">{{
           Object.keys(migrationPreview.suggestedMappings).length
         }}</a-descriptions-item>
-        <a-descriptions-item label="未映射状态">{{ migrationPreview.unresolvedStatusIds.length }}</a-descriptions-item>
+        <a-descriptions-item label="未映射状态">{{ migrationUnresolvedStatuses.length }}</a-descriptions-item>
       </a-descriptions>
-      <div v-if="migrationPreview?.unresolvedStatusIds.length" class="mt-4">
+      <div v-if="migrationUnresolvedStatuses.length" class="mt-4">
         <a-alert class="mb-2" type="warning">请为以下历史状态选择目标状态，全部映射后方可执行。</a-alert>
         <a-form :model="migrationMappings" layout="vertical">
-          <a-form-item v-for="sourceId in migrationPreview.unresolvedStatusIds" :key="sourceId" :label="sourceId">
-            <a-select v-model="migrationMappings[sourceId]" placeholder="选择目标状态" allow-clear>
-              <a-option v-for="status in migrationPreview.targetStatuses" :key="status.id" :value="status.id"
-                >{{ status.name }}（{{ status.code }}）</a-option
+          <a-form-item
+            v-for="status in migrationUnresolvedStatuses"
+            :key="status.id"
+            :label="`${status.name}（${status.bugCount} 个缺陷，${status.projectCount} 个项目）`"
+          >
+            <a-select v-model="migrationMappings[status.id]" placeholder="选择目标状态" allow-clear>
+              <a-option
+                v-for="targetStatus in migrationPreview?.targetStatuses || []"
+                :key="targetStatus.id"
+                :value="targetStatus.id"
+                >{{ targetStatus.name }}</a-option
               >
             </a-select>
           </a-form-item>
@@ -497,9 +518,9 @@
           placeholder="筛选原状态"
           @change="searchMigrationCandidates"
         >
-          <a-option v-for="statusId in migrationSourceStatusIds" :key="statusId" :value="statusId">{{
-            statusId
-          }}</a-option>
+          <a-option v-for="status in migrationSourceStatuses" :key="status.id" :value="status.id">
+            {{ status.name }}（{{ status.bugCount }}）
+          </a-option>
         </a-select>
         <a-range-picker v-model="migrationCreateTimeRange" show-time @change="searchMigrationCandidates" />
       </div>
@@ -769,6 +790,7 @@
     deletePermissionControlFlow,
     deletePermissionControlFlowRole,
     deletePermissionControlRole,
+    enablePermissionControlFlow,
     enablePermissionControlRole,
     getPermissionControlFlowDesigner,
     getPermissionControlFlowImpact,
@@ -901,9 +923,29 @@
     projectIds: [] as string[],
     sourceStatusIds: [] as string[],
   });
-  const migrationSourceStatusIds = computed(() => [
-    ...new Set((migrationPreview.value?.projects || []).flatMap((item) => item.sourceStatusIds)),
-  ]);
+  const migrationSourceStatuses = computed(() => {
+    const statuses = migrationPreview.value?.sourceStatuses;
+    if (statuses?.length) return statuses;
+    const sourceStatusIds = [
+      ...new Set((migrationPreview.value?.projects || []).flatMap((item) => item.sourceStatusIds)),
+    ];
+    return sourceStatusIds.map((id) => ({
+      id,
+      code: '',
+      name: '未知历史状态',
+      bugCount: 0,
+      projectCount: 0,
+      nameMissing: true,
+      suggestedTargetStatusId: migrationPreview.value?.suggestedMappings[id],
+      autoMapped: Boolean(migrationPreview.value?.suggestedMappings[id]),
+    }));
+  });
+  const migrationUnresolvedStatuses = computed(() =>
+    migrationSourceStatuses.value.filter((status) => !status.autoMapped)
+  );
+  const migrationMappingsComplete = computed(() =>
+    migrationUnresolvedStatuses.value.every((status) => Boolean(migrationMappings.value[status.id]))
+  );
   const migrationCandidatePagination = computed(() => ({
     current: migrationCandidateQuery.current,
     pageSize: migrationCandidateQuery.pageSize,
@@ -930,6 +972,7 @@
   });
   const isDraftFlow = computed(() => selectedFlow.value?.lifecycle === 'DRAFT');
   const isArchivedFlow = computed(() => selectedFlow.value?.lifecycle === 'ARCHIVED');
+  const isEditableFlow = computed(() => Boolean(selectedFlow.value?.id) && !isArchivedFlow.value);
   const flowRoleModalVisible = ref(false);
 
   const flowForm = reactive({
@@ -1188,6 +1231,27 @@
     await fetchRoles();
   };
 
+  const handleFlowEnable = async (flow: WorkflowDefinition, enabled: boolean) => {
+    if (!flow.id || !canUpdateRole.value) return;
+    const apply = async () => {
+      const updated = await enablePermissionControlFlow({ id: flow.id, enabled });
+      Message.success(enabled ? '流程已启用；如需用于新建缺陷，请点击“开启使用”' : '流程已禁用');
+      await fetchFlows();
+      if (selectedFlow.value?.id === flow.id) await selectFlow(updated);
+      return true;
+    };
+    if (!enabled && flow.activeForNew) {
+      Modal.warning({
+        title: '禁用当前使用中的流程',
+        content: '禁用后该流程将停止用于新建缺陷，请随后开启其他已发布流程。已有缺陷仍保留原流程。',
+        hideCancel: false,
+        onBeforeOk: apply,
+      });
+      return;
+    }
+    await apply();
+  };
+
   const openFlowModal = () => {
     const index = flows.value.length + 1;
     flowForm.code = `BUG_CUSTOM_FLOW_${Date.now()}`;
@@ -1221,7 +1285,7 @@
   };
 
   const openStatusModal = (status?: PermissionControlStatus) => {
-    if (!isDraftFlow.value || !canUpdateRole.value) return;
+    if (!isEditableFlow.value || !canUpdateRole.value) return;
     statusForm.id = status?.id || '';
     statusForm.code = status?.code || `BUG_STATUS_${Date.now()}`;
     statusForm.name = status?.name || '';
@@ -1234,7 +1298,7 @@
   };
 
   const saveStatusDraft = () => {
-    if (!isDraftFlow.value || !canUpdateRole.value) return false;
+    if (!isEditableFlow.value || !canUpdateRole.value) return false;
     if (!statusForm.name.trim() || !statusForm.code.trim()) {
       Message.error('状态名称和稳定编码不能为空');
       return false;
@@ -1259,7 +1323,7 @@
   };
 
   const deleteStatusDraft = () => {
-    if (!statusForm.id || !isDraftFlow.value || !canUpdateRole.value) return;
+    if (!statusForm.id || !isEditableFlow.value || !canUpdateRole.value) return;
     flowMatrix.value.statuses = flowMatrix.value.statuses.filter((item) => item.id !== statusForm.id);
     const removedTransitionIds = flowMatrix.value.transitions
       .filter((item) => item.fromId === statusForm.id || item.toId === statusForm.id)
@@ -1278,7 +1342,7 @@
   };
 
   const addTransition = (fromId: string, toId: string) => {
-    if (!isDraftFlow.value || !canUpdateRole.value || findTransition(fromId, toId)) return;
+    if (!isEditableFlow.value || !canUpdateRole.value || findTransition(fromId, toId)) return;
     const transition: PermissionControlStatusFlow = {
       id: `draft-transition-${Date.now()}`,
       fromId,
@@ -1291,7 +1355,7 @@
   };
 
   const removeSelectedTransition = () => {
-    if (!selectedTransition.value || !isDraftFlow.value || !canUpdateRole.value) return;
+    if (!selectedTransition.value || !isEditableFlow.value || !canUpdateRole.value) return;
     const { id } = selectedTransition.value;
     flowMatrix.value.transitions = flowMatrix.value.transitions.filter((item) => item.id !== id);
     flowPermissions.value = flowPermissions.value.filter((item) => item.statusFlowId !== id);
@@ -1300,25 +1364,41 @@
   };
 
   const saveDesigner = async () => {
-    if (!selectedFlow.value?.id || !isDraftFlow.value || !canUpdateRole.value) return;
+    if (!selectedFlow.value?.id || !isEditableFlow.value || !canUpdateRole.value) return;
     flowMatrix.value = await savePermissionControlFlowDesigner(selectedFlow.value.id, flowMatrix.value);
     designerDirty.value = false;
-    Message.success('流程草稿已保存');
+    Message.success('流程已保存');
+  };
+
+  const persistTransitionPermissions = async () => {
+    if (!selectedFlow.value?.id || !isEditableFlow.value || !canUpdateRole.value) return;
+    await savePermissionControlFlowRolePermissions({
+      flowId: selectedFlow.value.id,
+      permissions: flowPermissions.value
+        .filter((permission) => permission.statusFlowId && permission.workflowRoleId)
+        .map((permission) => ({
+          ...permission,
+          flowId: selectedFlow.value?.id || '',
+          visible: Boolean(permission.visible || permission.operable),
+          operable: Boolean(permission.visible && permission.operable),
+          enabled: permission.enabled !== false,
+        })),
+    });
   };
 
   const validateDesigner = async () => {
     if (!selectedFlow.value?.id) return;
-    if (designerDirty.value) {
-      Message.warning('请先保存草稿再执行校验');
-      return;
-    }
+    if (designerDirty.value) await saveDesigner();
+    await persistTransitionPermissions();
     const result = await validatePermissionControlFlow(selectedFlow.value.id);
     if (result.valid) Message.success('流程完整性校验通过');
     else Modal.error({ title: '流程校验未通过', content: result.errors.join('；') });
   };
 
   const publishDesigner = async () => {
-    if (!selectedFlow.value?.id || selectedFlow.value.version == null || designerDirty.value) return;
+    if (!selectedFlow.value?.id || selectedFlow.value.version == null || !isDraftFlow.value) return;
+    if (designerDirty.value) await saveDesigner();
+    await persistTransitionPermissions();
     const published = await publishPermissionControlFlow(selectedFlow.value.id, selectedFlow.value.version);
     Message.success('流程已发布；请手动点击“开启使用”后再用于新建缺陷');
     await fetchFlows();
@@ -1483,6 +1563,10 @@
       Message.warning('请选择需要关联的缺陷');
       return false;
     }
+    if (!migrationMappingsComplete.value) {
+      Message.warning('请先为全部历史状态选择目标状态');
+      return false;
+    }
     migrationLoading.value = true;
     try {
       await migratePermissionControlFlow({
@@ -1559,7 +1643,7 @@
   };
 
   const openFlowRoleModal = (role?: WorkflowRole) => {
-    if (!isDraftFlow.value || (role ? !canUpdateRole.value : !canAddRole.value)) return;
+    if (!isEditableFlow.value || (role ? !canUpdateRole.value : !canAddRole.value)) return;
     flowRoleForm.id = role?.id;
     flowRoleForm.code = role?.code || `BUG_HANDLER_${Date.now()}`;
     flowRoleForm.name = role?.name || '当前处理人';
@@ -1570,7 +1654,7 @@
   };
 
   const handleSaveFlowRole = async () => {
-    if (!isDraftFlow.value || (flowRoleForm.id ? !canUpdateRole.value : !canAddRole.value)) return false;
+    if (!isEditableFlow.value || (flowRoleForm.id ? !canUpdateRole.value : !canAddRole.value)) return false;
     if (!selectedFlow.value?.id || !flowRoleForm.name || !flowRoleForm.code) {
       Message.error('流程角色名称和编码不能为空');
       return false;
@@ -1597,7 +1681,7 @@
   };
 
   const confirmDeleteFlowRole = (role: WorkflowRole) => {
-    if (!role.id || !selectedFlow.value?.id || !isDraftFlow.value || !canDeleteRole.value) return;
+    if (!role.id || !selectedFlow.value?.id || !isEditableFlow.value || !canDeleteRole.value) return;
     Modal.warning({
       title: `删除流程角色“${role.name}”`,
       content: '该角色在流转矩阵中的授权将同时删除，是否继续？',
@@ -1656,7 +1740,7 @@
   };
 
   const updateRolePermission = (workflowRoleId: string, field: 'visible' | 'operable', value: boolean) => {
-    if (!isDraftFlow.value || !canUpdateRole.value) return;
+    if (!isEditableFlow.value || !canUpdateRole.value) return;
     const permission = ensureRolePermission(workflowRoleId);
     if (field === 'operable' && value) {
       permission.visible = true;
@@ -1681,20 +1765,9 @@
   };
 
   const saveTransitionPermissions = async () => {
-    if (!selectedFlow.value?.id || !isDraftFlow.value || !canUpdateRole.value) return;
-    await savePermissionControlFlowRolePermissions({
-      flowId: selectedFlow.value.id,
-      permissions: flowPermissions.value
-        .filter((permission) => permission.statusFlowId && permission.workflowRoleId)
-        .map((permission) => ({
-          ...permission,
-          flowId: selectedFlow.value?.id || '',
-          visible: Boolean(permission.visible || permission.operable),
-          operable: Boolean(permission.visible && permission.operable),
-          enabled: permission.enabled !== false,
-        })),
-    });
+    await persistTransitionPermissions();
     Message.success('流转授权已保存');
+    if (!selectedFlow.value?.id) return;
     await fetchFlowConfig(selectedFlow.value.id);
   };
 
