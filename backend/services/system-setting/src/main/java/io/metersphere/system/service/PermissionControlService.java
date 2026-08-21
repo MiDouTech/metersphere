@@ -770,8 +770,8 @@ public class PermissionControlService {
         if (current == null) {
             throw new MSException("流程不存在");
         }
-        if (!StringUtils.equals(current.getLifecycle(), "DRAFT")) {
-            throw new MSException("已发布或已归档流程不可直接修改，请复制为新草稿");
+        if (StringUtils.equals(current.getLifecycle(), "ARCHIVED")) {
+            throw new MSException("已归档流程不可修改");
         }
         request.setUpdateTime(System.currentTimeMillis());
         permissionControlMapper.updateWorkflowDefinition(request);
@@ -848,9 +848,7 @@ public class PermissionControlService {
 
     public WorkflowDesignerDTO saveWorkflowDesigner(String flowId, WorkflowDesignerDTO request) {
         WorkflowDefinition flow = getWorkflowWithCheck(flowId);
-        if (!StringUtils.equals(flow.getLifecycle(), "DRAFT")) {
-            throw new MSException("仅草稿流程可编辑");
-        }
+        assertEditableWorkflow(flowId);
         List<WorkflowDesignerDTO.Status> statuses = request.getStatuses() == null ? List.of() : request.getStatuses();
         List<WorkflowDesignerDTO.Transition> transitions = request.getTransitions() == null ? List.of() : request.getTransitions();
         Map<String, String> statusIdMap = new LinkedHashMap<>();
@@ -902,6 +900,7 @@ public class PermissionControlService {
                     transition.getId(), flowId, transition.getFromId(), transition.getToId(),
                     BooleanUtils.isNotFalse(transition.getEnabled()));
         }
+        grantAllRolesToUnconfiguredTransitionsByDefault(flowId);
         return getWorkflowDesigner(flowId);
     }
 
@@ -960,6 +959,7 @@ public class PermissionControlService {
             throw new MSException(MsHttpResultCode.CONFLICT, "流程版本已变化，请刷新后重试");
         }
         if (!StringUtils.equals(flow.getLifecycle(), "DRAFT")) throw new MSException("仅草稿流程可发布");
+        grantAllRolesToUnconfiguredTransitionsByDefault(flowId);
         WorkflowValidationDTO validation = validateWorkflow(flowId);
         if (!validation.isValid()) throw new MSException("流程发布校验失败: " + String.join("；", validation.getErrors()));
         int published = jdbcTemplate.update("UPDATE workflow_definition SET lifecycle = 'PUBLISHED', default_flow = b'0', "
@@ -982,6 +982,22 @@ public class PermissionControlService {
         int updated = jdbcTemplate.update("UPDATE workflow_definition SET active_for_new=b'1', default_flow=b'1', update_time=? "
                 + "WHERE id=? AND lifecycle='PUBLISHED' AND enabled=b'1'", now, flowId);
         if (updated != 1) throw new MSException(MsHttpResultCode.CONFLICT, "流程状态已变化，请刷新后重试");
+        return getWorkflowWithCheck(flowId);
+    }
+
+    public WorkflowDefinition enableWorkflow(String flowId, Boolean enabled) {
+        WorkflowDefinition flow = getWorkflowWithCheck(flowId);
+        if (StringUtils.equals(flow.getLifecycle(), "ARCHIVED")) {
+            throw new MSException("已归档流程不可启用或禁用");
+        }
+        boolean targetEnabled = BooleanUtils.isNotFalse(enabled);
+        long now = System.currentTimeMillis();
+        if (!targetEnabled) {
+            jdbcTemplate.update("UPDATE workflow_definition SET enabled=b'0', active_for_new=b'0', "
+                    + "default_flow=b'0', update_time=? WHERE id=?", now, flowId);
+        } else {
+            jdbcTemplate.update("UPDATE workflow_definition SET enabled=b'1', update_time=? WHERE id=?", now, flowId);
+        }
         return getWorkflowWithCheck(flowId);
     }
 
@@ -1035,23 +1051,39 @@ public class PermissionControlService {
             String id = String.valueOf(row.get("id"));
             String code = StringUtils.defaultString((String) row.get("status_code"));
             String name = StringUtils.defaultString((String) row.get("name"));
-            targetByKey.put(code.toLowerCase(), id);
-            targetByKey.put(name.toLowerCase(), id);
+            if (StringUtils.isNotBlank(code)) targetByKey.put(code.trim().toLowerCase(), id);
+            if (StringUtils.isNotBlank(name)) targetByKey.put(name.trim().toLowerCase(), id);
             if (StringUtils.startsWithIgnoreCase(code, "BUG_")) targetByKey.put(code.substring(4).toLowerCase(), id);
             preview.getTargetStatuses().add(Map.of("id", id, "code", code, "name", name));
         });
-        List<Map<String, Object>> sourceStatuses = jdbcTemplate.queryForList("SELECT DISTINCT b.status status_id, si.status_code, si.name status_name "
-                + "FROM bug b LEFT JOIN status_item si ON si.id = b.status WHERE b.deleted = b'0' AND b.workflow_id IS NULL");
+        List<Map<String, Object>> sourceStatuses = jdbcTemplate.queryForList("SELECT b.status status_id, si.status_code, "
+                + "si.name status_name, COUNT(*) bug_count, COUNT(DISTINCT b.project_id) project_count "
+                + "FROM bug b LEFT JOIN status_item si ON si.id = b.status "
+                + "WHERE b.deleted = b'0' AND b.workflow_id IS NULL "
+                + "GROUP BY b.status, si.status_code, si.name ORDER BY si.name, b.status");
         for (Map<String, Object> source : sourceStatuses) {
             String sourceId = String.valueOf(source.get("status_id"));
             String sourceCode = StringUtils.defaultString((String) source.get("status_code"));
             String sourceName = StringUtils.defaultString((String) source.get("status_name"));
-            String targetId = targetByKey.get(sourceCode.toLowerCase());
-            if (targetId == null) targetId = targetByKey.get(sourceName.toLowerCase());
+            String targetId = StringUtils.isBlank(sourceCode) ? null : targetByKey.get(sourceCode.trim().toLowerCase());
+            if (targetId == null && StringUtils.isNotBlank(sourceName)) {
+                targetId = targetByKey.get(sourceName.trim().toLowerCase());
+            }
             if (targetId == null && StringUtils.startsWithIgnoreCase(sourceCode, "BUG_")) {
                 targetId = targetByKey.get(sourceCode.substring(4).toLowerCase());
             }
             if (targetId == null) targetId = targetByKey.get(sourceId.toLowerCase());
+
+            WorkflowMigrationPreviewDTO.SourceStatus sourceStatus = new WorkflowMigrationPreviewDTO.SourceStatus();
+            sourceStatus.setId(sourceId);
+            sourceStatus.setCode(sourceCode);
+            sourceStatus.setName(StringUtils.defaultIfBlank(sourceName, "未知历史状态"));
+            sourceStatus.setNameMissing(StringUtils.isBlank(sourceName));
+            sourceStatus.setBugCount(((Number) source.get("bug_count")).longValue());
+            sourceStatus.setProjectCount(((Number) source.get("project_count")).longValue());
+            sourceStatus.setSuggestedTargetStatusId(targetId);
+            sourceStatus.setAutoMapped(targetId != null);
+            preview.getSourceStatuses().add(sourceStatus);
             if (targetId == null) preview.getUnresolvedStatusIds().add(sourceId);
             else preview.getSuggestedMappings().put(sourceId, targetId);
         }
@@ -1284,7 +1316,7 @@ public class PermissionControlService {
     }
 
     public WorkflowRole addFlowRole(WorkflowRole request) {
-        assertDraftWorkflow(request.getFlowId());
+        assertEditableWorkflow(request.getFlowId());
         validateWorkflowRole(request);
         WorkflowRole workflowRole = new WorkflowRole();
         BeanUtils.copyBean(workflowRole, request);
@@ -1295,6 +1327,7 @@ public class PermissionControlService {
         workflowRole.setCreateTime(System.currentTimeMillis());
         workflowRole.setUpdateTime(System.currentTimeMillis());
         permissionControlMapper.insertWorkflowRole(workflowRole);
+        grantRoleToAllTransitionsByDefault(workflowRole);
         return workflowRole;
     }
 
@@ -1304,7 +1337,7 @@ public class PermissionControlService {
         }
         WorkflowRole current = permissionControlMapper.selectWorkflowRoleById(request.getId());
         if (current == null) throw new MSException("流程角色不存在");
-        assertDraftWorkflow(current.getFlowId());
+        assertEditableWorkflow(current.getFlowId());
         request.setFlowId(current.getFlowId());
         validateWorkflowRole(request);
         request.setUpdateTime(System.currentTimeMillis());
@@ -1315,7 +1348,7 @@ public class PermissionControlService {
     public void deleteFlowRole(String roleId) {
         WorkflowRole current = permissionControlMapper.selectWorkflowRoleById(roleId);
         if (current == null) return;
-        assertDraftWorkflow(current.getFlowId());
+        assertEditableWorkflow(current.getFlowId());
         permissionControlMapper.deleteStatusFlowRolePermissionsByWorkflowRoleId(roleId);
         permissionControlMapper.deleteWorkflowRole(roleId);
     }
@@ -1417,9 +1450,10 @@ public class PermissionControlService {
     }
 
     public void saveFlowRolePermissions(WorkflowRolePermissionRequest request) {
-        assertDraftWorkflow(request.getFlowId());
+        assertEditableWorkflow(request.getFlowId());
         permissionControlMapper.deleteStatusFlowRolePermissionsByFlowId(request.getFlowId());
         if (CollectionUtils.isEmpty(request.getPermissions())) {
+            grantAllRolesToUnconfiguredTransitionsByDefault(request.getFlowId());
             return;
         }
         for (StatusFlowRolePermission permission : request.getPermissions()) {
@@ -1441,13 +1475,75 @@ public class PermissionControlService {
             permission.setUpdateTime(System.currentTimeMillis());
             permissionControlMapper.insertStatusFlowRolePermission(permission);
         }
+        grantAllRolesToUnconfiguredTransitionsByDefault(request.getFlowId());
     }
 
-    private void assertDraftWorkflow(String flowId) {
+    private void assertEditableWorkflow(String flowId) {
         WorkflowDefinition flow = getWorkflowWithCheck(flowId);
-        if (!StringUtils.equals(flow.getLifecycle(), "DRAFT")) {
-            throw new MSException("仅草稿流程可修改角色与流转授权");
+        if (StringUtils.equals(flow.getLifecycle(), "ARCHIVED")) {
+            throw new MSException("已归档流程不可修改角色、流程与流转授权");
         }
+    }
+
+    private boolean hasWecomPositionSync(String flowId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM workflow_position_sync_log WHERE flow_id=?", Integer.class, flowId);
+        return count != null && count > 0;
+    }
+
+    private void grantRoleToAllTransitionsByDefault(WorkflowRole role) {
+        if (role == null || StringUtils.isBlank(role.getFlowId()) || hasWecomPositionSync(role.getFlowId())) {
+            return;
+        }
+        List<String> transitionIds = jdbcTemplate.queryForList(
+                "SELECT id FROM status_flow WHERE flow_id=? AND enabled=b'1'", String.class, role.getFlowId());
+        for (String transitionId : transitionIds) {
+            insertDefaultFlowRolePermission(role.getFlowId(), transitionId, role.getId());
+        }
+    }
+
+    private void grantAllRolesToUnconfiguredTransitionsByDefault(String flowId) {
+        if (hasWecomPositionSync(flowId)) {
+            return;
+        }
+        List<String> roleIds = permissionControlMapper.selectWorkflowRoles(flowId).stream()
+                .filter(role -> BooleanUtils.isNotFalse(role.getEnabled()))
+                .map(WorkflowRole::getId)
+                .filter(StringUtils::isNotBlank)
+                .toList();
+        if (roleIds.isEmpty()) {
+            return;
+        }
+        List<String> unconfiguredTransitionIds = jdbcTemplate.queryForList(
+                "SELECT sf.id FROM status_flow sf WHERE sf.flow_id=? AND sf.enabled=b'1' "
+                        + "AND NOT EXISTS (SELECT 1 FROM status_flow_role_permission p "
+                        + "WHERE p.flow_id=sf.flow_id AND p.status_flow_id=sf.id)",
+                String.class, flowId);
+        for (String transitionId : unconfiguredTransitionIds) {
+            for (String roleId : roleIds) {
+                insertDefaultFlowRolePermission(flowId, transitionId, roleId);
+            }
+        }
+    }
+
+    private void insertDefaultFlowRolePermission(String flowId, String transitionId, String roleId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM status_flow_role_permission WHERE flow_id=? AND status_flow_id=? AND workflow_role_id=?",
+                Integer.class, flowId, transitionId, roleId);
+        if (count != null && count > 0) {
+            return;
+        }
+        StatusFlowRolePermission permission = new StatusFlowRolePermission();
+        permission.setId(IDGenerator.nextStr());
+        permission.setFlowId(flowId);
+        permission.setStatusFlowId(transitionId);
+        permission.setWorkflowRoleId(roleId);
+        permission.setVisible(true);
+        permission.setOperable(true);
+        permission.setEnabled(true);
+        permission.setCreateTime(System.currentTimeMillis());
+        permission.setUpdateTime(System.currentTimeMillis());
+        permissionControlMapper.insertStatusFlowRolePermission(permission);
     }
 
     private void assertWecomPositionSyncAllowed(String flowId) {

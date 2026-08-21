@@ -205,6 +205,17 @@ export interface WorkflowMigrationPreview {
   targetVersion: number;
   affectedBugCount: number;
   suggestedMappings: Record<string, string>;
+  sourceStatuses?: Array<{
+    id: string;
+    code: string;
+    name: string;
+    bugCount: number;
+    projectCount: number;
+    nameMissing: boolean;
+    suggestedTargetStatusId?: string;
+    autoMapped: boolean;
+  }>;
+  /** @deprecated Kept for compatibility with older backends. */
   unresolvedStatusIds: string[];
   targetStatuses: Array<{ id: string; code: string; name: string }>;
   projects: Array<{
