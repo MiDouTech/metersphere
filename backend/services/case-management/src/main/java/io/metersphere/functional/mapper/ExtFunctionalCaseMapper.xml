@@ -269,12 +269,15 @@
     </select>
 
     <sql id="queryWorkspaceAndDimensionCondition">
-        <if test="request.workspaceId != null and request.workspaceId != ''">
-            and functional_case.workspace_id = #{request.workspaceId}
-        </if>
-        <if test="(request.workspaceId == null or request.workspaceId == '') and request.projectId != null and request.projectId != ''">
-            and functional_case.project_id = #{request.projectId}
-        </if>
+        <choose>
+            <!-- Project case APIs must remain project-scoped even when legacy clients also send workspaceId. -->
+            <when test="request.projectId != null and request.projectId != ''">
+                and functional_case.project_id = #{request.projectId}
+            </when>
+            <when test="request.workspaceId != null and request.workspaceId != ''">
+                and functional_case.workspace_id = #{request.workspaceId}
+            </when>
+        </choose>
         <if test="request.projectIds != null and request.projectIds.size() > 0">
             and functional_case.project_id in
             <foreach collection="request.projectIds" item="projectId" separator="," open="(" close=")">
@@ -296,12 +299,15 @@
     </sql>
 
     <sql id="queryWorkspaceAndDimensionConditionByBaseBatch">
-        <if test="request.workspaceId != null and request.workspaceId != ''">
-            and functional_case.workspace_id = #{request.workspaceId}
-        </if>
-        <if test="(request.workspaceId == null or request.workspaceId == '') and projectId != null and projectId != ''">
-            and functional_case.project_id = #{projectId}
-        </if>
+        <choose>
+            <!-- Keep select-all and batch operations within the authorized project. -->
+            <when test="projectId != null and projectId != ''">
+                and functional_case.project_id = #{projectId}
+            </when>
+            <when test="request.workspaceId != null and request.workspaceId != ''">
+                and functional_case.workspace_id = #{request.workspaceId}
+            </when>
+        </choose>
         <if test="request.projectIds != null and request.projectIds.size() > 0">
             and functional_case.project_id in
             <foreach collection="request.projectIds" item="projectId" separator="," open="(" close=")">

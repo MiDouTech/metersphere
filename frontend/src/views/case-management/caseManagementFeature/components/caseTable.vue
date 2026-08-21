@@ -1622,13 +1622,14 @@
       }
     }
 
-    const dimension = (props.dimension === 'system' ? 'SYSTEM' : 'PROJECT') as 'SYSTEM' | 'PROJECT';
+    const isSystemDimension = props.dimension === 'system';
+    const dimension = (isSystemDimension ? 'SYSTEM' : 'PROJECT') as 'SYSTEM' | 'PROJECT';
     return {
       moduleIds,
       dimension,
-      workspaceId: appStore.currentOrgId,
-      unclassifiedSystem: props.activeFolder === 'unclassified-system',
-      projectId: currentProjectId.value,
+      workspaceId: isSystemDimension ? appStore.currentOrgId : undefined,
+      unclassifiedSystem: isSystemDimension && props.activeFolder === 'unclassified-system',
+      projectId: isSystemDimension ? '' : currentProjectId.value,
       excludeIds: batchParams.value.excludeIds || [],
       selectAll: batchParams.value.selectAll,
       selectIds: batchParams.value.selectedIds || [],
@@ -1640,6 +1641,7 @@
   async function emitTableParams(refreshModule = false) {
     if (isAdvancedSearchMode.value) return;
     const tableParams: CaseModuleQueryParams = await initTableParams();
+    const isSystemDimension = props.dimension === 'system';
     emit(
       'init',
       {
@@ -1647,10 +1649,10 @@
         current: propsRes.value.msPagination?.current,
         pageSize: propsRes.value.msPagination?.pageSize,
         filter: propsRes.value.filter,
-        projectId: currentProjectId.value,
-        dimension: props.dimension === 'system' ? 'SYSTEM' : 'PROJECT',
-        workspaceId: appStore.currentOrgId,
-        unclassifiedSystem: props.activeFolder === 'unclassified-system',
+        projectId: isSystemDimension ? '' : currentProjectId.value,
+        dimension: isSystemDimension ? 'SYSTEM' : 'PROJECT',
+        workspaceId: isSystemDimension ? appStore.currentOrgId : undefined,
+        unclassifiedSystem: isSystemDimension && props.activeFolder === 'unclassified-system',
         keyword: showType.value === 'list' ? keyword.value : '',
       },
       refreshModule
