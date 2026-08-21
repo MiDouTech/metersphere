@@ -804,15 +804,19 @@ public class PermissionControlService {
         long associated = bugCount == null ? 0 : bugCount;
         long history = historyCount == null ? 0 : historyCount;
         boolean active = BooleanUtils.isTrue(flow.getActiveForNew());
-        boolean deletable = !active && associated == 0 && history == 0;
+        boolean deleteStateAllowed = !active && (BooleanUtils.isFalse(flow.getEnabled())
+                || !StringUtils.equals(flow.getLifecycle(), "PUBLISHED"));
+        boolean deletable = deleteStateAllowed && associated == 0 && history == 0;
         String reason = deletable ? "" : active ? "当前使用中的流程不可删除，请先开启替代流程"
-                : "该流程已关联缺陷或流转历史，只能归档";
+                : !deleteStateAllowed ? "已发布且启用的流程不可删除，请先禁用流程"
+                : "该流程已关联缺陷或流转历史，为保证历史数据完整性不可删除";
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("associatedBugCount", associated);
         result.put("transitionHistoryCount", history);
         result.put("activeForNew", active);
         result.put("lifecycle", flow.getLifecycle());
         result.put("unpublished", StringUtils.equals(flow.getLifecycle(), "DRAFT"));
+        result.put("deleteStateAllowed", deleteStateAllowed);
         result.put("deletable", deletable);
         result.put("archiveRequired", !active && !deletable);
         result.put("reason", reason);
@@ -1427,6 +1431,7 @@ public class PermissionControlService {
                 updated++;
             }
         }
+        grantAllEnabledRolesToAllTransitions(flowId);
         String batchId = IDGenerator.nextStr();
         jdbcTemplate.update("INSERT INTO workflow_position_sync_log (id,flow_id,total_count,created_count,updated_count," +
                         "disabled_count,detail_json,create_user,create_time) VALUES (?,?,?,?,?,?,?,?,?)",
@@ -1492,13 +1497,37 @@ public class PermissionControlService {
     }
 
     private void grantRoleToAllTransitionsByDefault(WorkflowRole role) {
-        if (role == null || StringUtils.isBlank(role.getFlowId()) || hasWecomPositionSync(role.getFlowId())) {
+        if (role == null || StringUtils.isBlank(role.getFlowId())) {
             return;
         }
         List<String> transitionIds = jdbcTemplate.queryForList(
                 "SELECT id FROM status_flow WHERE flow_id=? AND enabled=b'1'", String.class, role.getFlowId());
         for (String transitionId : transitionIds) {
             insertDefaultFlowRolePermission(role.getFlowId(), transitionId, role.getId());
+        }
+    }
+
+    private void grantAllEnabledRolesToAllTransitions(String flowId) {
+        List<String> roleIds = permissionControlMapper.selectWorkflowRoles(flowId).stream()
+                .filter(role -> BooleanUtils.isNotFalse(role.getEnabled()))
+                .map(WorkflowRole::getId)
+                .filter(StringUtils::isNotBlank)
+                .toList();
+        if (roleIds.isEmpty()) {
+            return;
+        }
+        List<String> transitionIds = jdbcTemplate.queryForList(
+                "SELECT id FROM status_flow WHERE flow_id=? AND enabled=b'1'", String.class, flowId);
+        long now = System.currentTimeMillis();
+        for (String transitionId : transitionIds) {
+            for (String roleId : roleIds) {
+                int updated = jdbcTemplate.update("UPDATE status_flow_role_permission SET visible=b'1', operable=b'1', "
+                                + "enabled=b'1', update_time=? WHERE flow_id=? AND status_flow_id=? AND workflow_role_id=?",
+                        now, flowId, transitionId, roleId);
+                if (updated == 0) {
+                    insertDefaultFlowRolePermission(flowId, transitionId, roleId);
+                }
+            }
         }
     }
 

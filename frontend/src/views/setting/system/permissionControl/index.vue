@@ -76,7 +76,7 @@
 
       <a-tab-pane v-if="hasTabVisible('PERMISSION_FLOW_CONTROL_TAB', ['SYSTEM'])" key="flow" title="流程控制">
         <div class="flow-layout">
-          <a-card class="flow-card" :bordered="false">
+          <a-card class="flow-card flow-list-card" :bordered="false">
             <template #title>
               <div class="card-title">
                 <span>缺陷流程</span>
@@ -94,52 +94,56 @@
               </div>
             </template>
 
-            <a-list :bordered="false">
-              <a-list-item
-                v-for="flow in flows"
-                :key="flow.id"
-                class="flow-list-item"
-                :class="{ selected: selectedFlow?.id === flow.id }"
-                @click="selectFlow(flow)"
-              >
-                <a-list-item-meta :title="flow.name" :description="flow.description || flow.code" />
-                <template #actions>
-                  <a-tag v-if="flow.activeForNew" color="blue">使用中</a-tag>
-                  <a-tag v-if="flow.enabled === false" color="red">已禁用</a-tag>
-                  <a-tag
-                    :color="
-                      flow.lifecycle === 'PUBLISHED' ? 'green' : flow.lifecycle === 'ARCHIVED' ? 'gray' : 'orange'
-                    "
-                  >
-                    {{ flow.lifecycle === 'PUBLISHED' ? '已发布' : flow.lifecycle === 'ARCHIVED' ? '已归档' : '草稿' }}
-                    v{{ flow.version || 1 }}
-                  </a-tag>
-                  <a-switch
-                    v-if="flow.lifecycle !== 'ARCHIVED' && canUpdateRole"
-                    v-operable-permission="{
-                      code: 'PERMISSION_FLOW_SAVE_BUTTON',
-                      permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
-                      typeList: ['SYSTEM'],
-                    }"
-                    :model-value="flow.enabled !== false"
-                    size="small"
-                    @click.stop
-                    @change="(value) => handleFlowEnable(flow, Boolean(value))"
-                  />
-                  <a-link
-                    v-if="!flow.activeForNew"
-                    v-visible-permission="{
-                      code: 'PERMISSION_FLOW_DELETE_BUTTON',
-                      permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
-                      typeList: ['SYSTEM'],
-                    }"
-                    status="danger"
-                    @click.stop="confirmDeleteFlow(flow)"
-                    >删除</a-link
-                  >
-                </template>
-              </a-list-item>
-            </a-list>
+            <div class="flow-list-scroll">
+              <a-list :bordered="false">
+                <a-list-item
+                  v-for="flow in flows"
+                  :key="flow.id"
+                  class="flow-list-item"
+                  :class="{ selected: selectedFlow?.id === flow.id }"
+                  @click="selectFlow(flow)"
+                >
+                  <a-list-item-meta :title="flow.name" :description="flow.description || flow.code" />
+                  <template #actions>
+                    <a-tag v-if="flow.activeForNew" color="blue">使用中</a-tag>
+                    <a-tag v-if="flow.enabled === false" color="red">已禁用</a-tag>
+                    <a-tag
+                      :color="
+                        flow.lifecycle === 'PUBLISHED' ? 'green' : flow.lifecycle === 'ARCHIVED' ? 'gray' : 'orange'
+                      "
+                    >
+                      {{
+                        flow.lifecycle === 'PUBLISHED' ? '已发布' : flow.lifecycle === 'ARCHIVED' ? '已归档' : '草稿'
+                      }}
+                      v{{ flow.version || 1 }}
+                    </a-tag>
+                    <a-switch
+                      v-if="flow.lifecycle !== 'ARCHIVED' && canUpdateRole"
+                      v-operable-permission="{
+                        code: 'PERMISSION_FLOW_SAVE_BUTTON',
+                        permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
+                        typeList: ['SYSTEM'],
+                      }"
+                      :model-value="flow.enabled !== false"
+                      size="small"
+                      @click.stop
+                      @change="(value) => handleFlowEnable(flow, Boolean(value))"
+                    />
+                    <a-link
+                      v-if="isFlowDeleteCandidate(flow)"
+                      v-visible-permission="{
+                        code: 'PERMISSION_FLOW_DELETE_BUTTON',
+                        permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
+                        typeList: ['SYSTEM'],
+                      }"
+                      status="danger"
+                      @click.stop="confirmDeleteFlow(flow)"
+                      >删除</a-link
+                    >
+                  </template>
+                </a-list-item>
+              </a-list>
+            </div>
           </a-card>
 
           <a-card class="flow-card matrix-card" :bordered="false">
@@ -1622,8 +1626,11 @@
     migrationBatch.value = await getPermissionControlFlowMigrationBatch(batchId);
   };
 
+  const isFlowDeleteCandidate = (flow: WorkflowDefinition) =>
+    !flow.activeForNew && (flow.enabled === false || flow.lifecycle !== 'PUBLISHED');
+
   const confirmDeleteFlow = async (flow: WorkflowDefinition) => {
-    if (!flow.id || flow.activeForNew) return;
+    if (!flow.id || !isFlowDeleteCandidate(flow)) return;
     const impact = await getPermissionControlFlowImpact(flow.id);
     if (!impact.deletable) {
       Message.warning(impact.reason || '该流程不可删除');
@@ -1800,6 +1807,7 @@
     display: grid;
     grid-template-columns: 300px minmax(520px, 1fr) 360px;
     gap: 16px;
+    min-height: 0;
   }
   .flow-card {
     min-height: 560px;
@@ -1813,6 +1821,14 @@
   .flow-list-item {
     cursor: pointer;
     border-radius: 6px;
+  }
+  .flow-list-scroll {
+    overflow-y: auto;
+    padding-right: 4px;
+    min-height: 480px;
+    max-height: calc(100vh - 250px);
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
   }
   .selected {
     background: var(--color-fill-2);

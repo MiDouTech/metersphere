@@ -162,6 +162,7 @@ export interface WorkflowImpact {
   associatedBugCount: number;
   transitionHistoryCount: number;
   activeForNew: boolean;
+  deleteStateAllowed?: boolean;
   deletable: boolean;
   archiveRequired: boolean;
   reason?: string;
