@@ -47,6 +47,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -348,6 +349,59 @@ class PermissionControlServiceTests {
     }
 
     @Test
+    void syncWecomPositionsGrantsEveryEnabledRoleOperablePermissionOnEveryTransition() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-published");
+        flow.setLifecycle("PUBLISHED");
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-published")).thenReturn(flow);
+        WorkflowRole handler = new WorkflowRole();
+        handler.setId("role-handler");
+        handler.setEnabled(true);
+        WorkflowRole reviewer = new WorkflowRole();
+        reviewer.setId("role-reviewer");
+        reviewer.setEnabled(true);
+        when(permissionControlMapper.selectWorkflowRoles("flow-published")).thenReturn(List.of(handler, reviewer));
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("LOWER(TRIM(position))")))
+                .thenReturn(List.of());
+        when(jdbcTemplate.queryForList(
+                org.mockito.ArgumentMatchers.contains("SELECT id FROM status_flow"),
+                org.mockito.ArgumentMatchers.eq(String.class),
+                org.mockito.ArgumentMatchers.eq("flow-published")))
+                .thenReturn(List.of("transition-1", "transition-2"));
+        when(jdbcTemplate.update(
+                org.mockito.ArgumentMatchers.startsWith("UPDATE status_flow_role_permission"),
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.eq("flow-published"),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(0);
+        when(jdbcTemplate.queryForObject(
+                org.mockito.ArgumentMatchers.contains("SELECT COUNT(*) FROM status_flow_role_permission"),
+                org.mockito.ArgumentMatchers.eq(Integer.class),
+                org.mockito.ArgumentMatchers.eq("flow-published"),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(0);
+
+        try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class);
+             MockedStatic<IDGenerator> ids = mockStatic(IDGenerator.class)) {
+            session.when(SessionUtils::getUserId).thenReturn("admin");
+            ids.when(IDGenerator::nextStr).thenReturn(
+                    "permission-1", "permission-2", "permission-3", "permission-4", "sync-batch-1");
+            service.syncWecomPositions("flow-published");
+        }
+
+        ArgumentCaptor<StatusFlowRolePermission> captor = ArgumentCaptor.forClass(StatusFlowRolePermission.class);
+        verify(permissionControlMapper, times(4)).insertStatusFlowRolePermission(captor.capture());
+        assertTrue(captor.getAllValues().stream().allMatch(permission ->
+                Boolean.TRUE.equals(permission.getVisible()) && Boolean.TRUE.equals(permission.getOperable())));
+        assertTrue(captor.getAllValues().stream().anyMatch(permission ->
+                "transition-1".equals(permission.getStatusFlowId())
+                        && "role-handler".equals(permission.getWorkflowRoleId())));
+        assertTrue(captor.getAllValues().stream().anyMatch(permission ->
+                "transition-2".equals(permission.getStatusFlowId())
+                        && "role-reviewer".equals(permission.getWorkflowRoleId())));
+    }
+
+    @Test
     void syncWecomPositionsRejectsArchivedWorkflow() {
         WorkflowDefinition flow = new WorkflowDefinition();
         flow.setId("flow-archived");
@@ -364,10 +418,6 @@ class PermissionControlServiceTests {
         flow.setId("flow-published");
         flow.setLifecycle("PUBLISHED");
         when(permissionControlMapper.selectWorkflowDefinitionById("flow-published")).thenReturn(flow);
-        when(jdbcTemplate.queryForObject(
-                org.mockito.ArgumentMatchers.contains("workflow_position_sync_log"),
-                org.mockito.ArgumentMatchers.eq(Integer.class),
-                org.mockito.ArgumentMatchers.eq("flow-published"))).thenReturn(0);
         when(jdbcTemplate.queryForList(
                 org.mockito.ArgumentMatchers.contains("SELECT id FROM status_flow"),
                 org.mockito.ArgumentMatchers.eq(String.class),
@@ -416,6 +466,47 @@ class PermissionControlServiceTests {
         service.saveFlowRolePermissions(request);
 
         verify(permissionControlMapper).deleteStatusFlowRolePermissionsByFlowId("flow-published");
+    }
+
+    @Test
+    void saveFlowRolePermissionsPersistsEditedPermissionForEnabledPublishedWorkflow() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-active");
+        flow.setLifecycle("PUBLISHED");
+        flow.setEnabled(true);
+        flow.setActiveForNew(true);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-active")).thenReturn(flow);
+        WorkflowRole role = new WorkflowRole();
+        role.setId("role-handler");
+        role.setFlowId("flow-active");
+        when(permissionControlMapper.selectWorkflowRoleById("role-handler")).thenReturn(role);
+        when(jdbcTemplate.queryForObject(
+                org.mockito.ArgumentMatchers.contains("SELECT COUNT(*) FROM status_flow WHERE"),
+                org.mockito.ArgumentMatchers.eq(Integer.class),
+                org.mockito.ArgumentMatchers.eq("transition-1"),
+                org.mockito.ArgumentMatchers.eq("flow-active"))).thenReturn(1);
+        when(jdbcTemplate.queryForObject(
+                org.mockito.ArgumentMatchers.contains("workflow_position_sync_log"),
+                org.mockito.ArgumentMatchers.eq(Integer.class),
+                org.mockito.ArgumentMatchers.eq("flow-active"))).thenReturn(1);
+        StatusFlowRolePermission permission = new StatusFlowRolePermission();
+        permission.setStatusFlowId("transition-1");
+        permission.setWorkflowRoleId("role-handler");
+        permission.setVisible(true);
+        permission.setOperable(false);
+        WorkflowRolePermissionRequest request = new WorkflowRolePermissionRequest();
+        request.setFlowId("flow-active");
+        request.setPermissions(List.of(permission));
+
+        try (MockedStatic<IDGenerator> ids = mockStatic(IDGenerator.class)) {
+            ids.when(IDGenerator::nextStr).thenReturn("permission-1");
+            service.saveFlowRolePermissions(request);
+        }
+
+        ArgumentCaptor<StatusFlowRolePermission> captor = ArgumentCaptor.forClass(StatusFlowRolePermission.class);
+        verify(permissionControlMapper).insertStatusFlowRolePermission(captor.capture());
+        assertTrue(captor.getValue().getVisible());
+        assertFalse(captor.getValue().getOperable());
     }
 
     @Test
@@ -470,6 +561,50 @@ class PermissionControlServiceTests {
 
         verify(jdbcTemplate).update("DELETE FROM workflow_position_sync_log WHERE flow_id = ?", "flow-draft-delete");
         verify(permissionControlMapper).deleteWorkflowDefinition("flow-draft-delete");
+    }
+
+    @Test
+    void publishedEnabledWorkflowMustBeDisabledBeforeDeletion() {
+        WorkflowDefinition flow = new WorkflowDefinition();
+        flow.setId("flow-enabled");
+        flow.setLifecycle("PUBLISHED");
+        flow.setEnabled(true);
+        flow.setActiveForNew(false);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-enabled")).thenReturn(flow);
+        when(jdbcTemplate.queryForObject(org.mockito.ArgumentMatchers.contains("FROM bug WHERE workflow_id"),
+                org.mockito.ArgumentMatchers.eq(Long.class), org.mockito.ArgumentMatchers.eq("flow-enabled")))
+                .thenReturn(0L);
+        when(jdbcTemplate.queryForObject(org.mockito.ArgumentMatchers.contains("bug_status_transition_history"),
+                org.mockito.ArgumentMatchers.eq(Long.class), org.mockito.ArgumentMatchers.eq("flow-enabled")))
+                .thenReturn(0L);
+
+        Map<String, Object> impact = service.getFlowImpact("flow-enabled");
+
+        assertFalse((Boolean) impact.get("deleteStateAllowed"));
+        assertFalse((Boolean) impact.get("deletable"));
+    }
+
+    @Test
+    void disabledOrArchivedWorkflowWithoutHistoryCanBeDeleted() {
+        WorkflowDefinition disabled = new WorkflowDefinition();
+        disabled.setId("flow-disabled");
+        disabled.setLifecycle("PUBLISHED");
+        disabled.setEnabled(false);
+        disabled.setActiveForNew(false);
+        WorkflowDefinition archived = new WorkflowDefinition();
+        archived.setId("flow-archived-delete");
+        archived.setLifecycle("ARCHIVED");
+        archived.setEnabled(true);
+        archived.setActiveForNew(false);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-disabled")).thenReturn(disabled);
+        when(permissionControlMapper.selectWorkflowDefinitionById("flow-archived-delete")).thenReturn(archived);
+        when(jdbcTemplate.queryForObject(org.mockito.ArgumentMatchers.contains("FROM bug WHERE workflow_id"),
+                org.mockito.ArgumentMatchers.eq(Long.class), org.mockito.ArgumentMatchers.anyString())).thenReturn(0L);
+        when(jdbcTemplate.queryForObject(org.mockito.ArgumentMatchers.contains("bug_status_transition_history"),
+                org.mockito.ArgumentMatchers.eq(Long.class), org.mockito.ArgumentMatchers.anyString())).thenReturn(0L);
+
+        assertTrue((Boolean) service.getFlowImpact("flow-disabled").get("deletable"));
+        assertTrue((Boolean) service.getFlowImpact("flow-archived-delete").get("deletable"));
     }
 
     @Test
