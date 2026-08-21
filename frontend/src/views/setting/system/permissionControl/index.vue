@@ -103,44 +103,51 @@
                   :class="{ selected: selectedFlow?.id === flow.id }"
                   @click="selectFlow(flow)"
                 >
-                  <a-list-item-meta :title="flow.name" :description="flow.description || flow.code" />
-                  <template #actions>
-                    <a-tag v-if="flow.activeForNew" color="blue">使用中</a-tag>
-                    <a-tag v-if="flow.enabled === false" color="red">已禁用</a-tag>
-                    <a-tag
-                      :color="
-                        flow.lifecycle === 'PUBLISHED' ? 'green' : flow.lifecycle === 'ARCHIVED' ? 'gray' : 'orange'
-                      "
-                    >
-                      {{
-                        flow.lifecycle === 'PUBLISHED' ? '已发布' : flow.lifecycle === 'ARCHIVED' ? '已归档' : '草稿'
-                      }}
-                      v{{ flow.version || 1 }}
-                    </a-tag>
-                    <a-switch
-                      v-if="flow.lifecycle !== 'ARCHIVED' && canUpdateRole"
-                      v-operable-permission="{
-                        code: 'PERMISSION_FLOW_SAVE_BUTTON',
-                        permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
-                        typeList: ['SYSTEM'],
-                      }"
-                      :model-value="flow.enabled !== false"
-                      size="small"
-                      @click.stop
-                      @change="(value) => handleFlowEnable(flow, Boolean(value))"
-                    />
-                    <a-link
-                      v-if="isFlowDeleteCandidate(flow)"
-                      v-visible-permission="{
-                        code: 'PERMISSION_FLOW_DELETE_BUTTON',
-                        permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
-                        typeList: ['SYSTEM'],
-                      }"
-                      status="danger"
-                      @click.stop="confirmDeleteFlow(flow)"
-                      >删除</a-link
-                    >
-                  </template>
+                  <div class="flow-list-item-content">
+                    <div class="flow-list-item-info">
+                      <div class="flow-list-item-name" :title="flow.name">{{ flow.name }}</div>
+                      <div class="flow-list-item-description" :title="flow.description || flow.code">
+                        {{ flow.description || flow.code }}
+                      </div>
+                    </div>
+                    <div class="flow-list-item-actions">
+                      <a-tag v-if="flow.activeForNew" color="blue">使用中</a-tag>
+                      <a-tag v-if="flow.enabled === false" color="red">已禁用</a-tag>
+                      <a-tag
+                        :color="
+                          flow.lifecycle === 'PUBLISHED' ? 'green' : flow.lifecycle === 'ARCHIVED' ? 'gray' : 'orange'
+                        "
+                      >
+                        {{
+                          flow.lifecycle === 'PUBLISHED' ? '已发布' : flow.lifecycle === 'ARCHIVED' ? '已归档' : '草稿'
+                        }}
+                        v{{ flow.version || 1 }}
+                      </a-tag>
+                      <a-switch
+                        v-if="flow.lifecycle !== 'ARCHIVED' && canUpdateRole"
+                        v-operable-permission="{
+                          code: 'PERMISSION_FLOW_SAVE_BUTTON',
+                          permissions: ['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'],
+                          typeList: ['SYSTEM'],
+                        }"
+                        :model-value="flow.enabled !== false"
+                        size="small"
+                        @click.stop
+                        @change="(value) => handleFlowEnable(flow, Boolean(value))"
+                      />
+                      <a-link
+                        v-if="isFlowDeleteCandidate(flow)"
+                        v-visible-permission="{
+                          code: 'PERMISSION_FLOW_DELETE_BUTTON',
+                          permissions: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
+                          typeList: ['SYSTEM'],
+                        }"
+                        status="danger"
+                        @click.stop="confirmDeleteFlow(flow)"
+                        >删除</a-link
+                      >
+                    </div>
+                  </div>
                 </a-list-item>
               </a-list>
             </div>
@@ -249,7 +256,7 @@
             <template #title>
               <div class="card-title">
                 <span>流转规则</span>
-                <a-space>
+                <a-space wrap>
                   <a-tooltip :content="isArchivedFlow ? '归档流程保留历史配置，不再同步岗位' : '同步平台当前企微岗位'">
                     <a-button
                       v-if="canUpdateRole && selectedFlow?.id"
@@ -1791,8 +1798,10 @@
 
 <style scoped lang="less">
   .permission-control-page {
-    overflow: hidden;
+    overflow: auto;
     height: 100%;
+    min-height: 0;
+    max-width: 100%;
   }
   .role-layout {
     display: grid;
@@ -1808,19 +1817,52 @@
     grid-template-columns: 300px minmax(520px, 1fr) 360px;
     gap: 16px;
     min-height: 0;
+    min-width: 0;
+    align-items: start;
   }
   .flow-card {
     min-height: 560px;
+    min-width: 0;
   }
   .card-title {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
+    min-width: 0;
   }
   .flow-list-item {
     cursor: pointer;
     border-radius: 6px;
+  }
+  .flow-list-item-content {
+    width: 100%;
+    min-width: 0;
+  }
+  .flow-list-item-info {
+    min-width: 0;
+  }
+  .flow-list-item-name {
+    overflow-wrap: anywhere;
+    font-weight: 500;
+    line-height: 22px;
+    color: var(--color-text-1);
+  }
+  .flow-list-item-description {
+    overflow-wrap: anywhere;
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 20px;
+    color: var(--color-text-3);
+  }
+  .flow-list-item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    width: 100%;
+    margin-top: 10px;
   }
   .flow-list-scroll {
     overflow-y: auto;
@@ -1840,7 +1882,7 @@
     overflow: auto;
   }
   .flow-role-table-wrap {
-    overflow-y: auto;
+    overflow: auto;
     margin-top: 16px;
     min-height: 220px;
     max-height: calc(100vh - 430px);
