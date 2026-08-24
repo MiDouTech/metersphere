@@ -32,7 +32,15 @@ public final class WecomBotModels {
                               Map<String, Object> triggerConfig, String cron, @NotBlank String timezone,
                               @NotBlank String template, Map<String, Object> recipientSpec,
                               @NotBlank String deliveryMode, Map<String, Object> stopConfig,
-                              Long startAt, Long endAt) {
+                              Long startAt, Long endAt, List<ScheduleRequest> schedules) {
+    }
+
+    public record ScheduleRequest(String id, @NotBlank String cycleType, List<Integer> weekdays,
+                                  @NotBlank String executionTime, @NotBlank String timezone,
+                                  Boolean enabled) {
+    }
+
+    public record TemplateVariable(String key, String name, String description, String example) {
     }
 
     public record PreviewRequest(Map<String, Object> variables) {

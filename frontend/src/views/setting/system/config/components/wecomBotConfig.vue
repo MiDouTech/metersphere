@@ -127,7 +127,14 @@
         >
         <a-table :data="rules" row-key="id" :pagination="false" :scroll="{ x: 1200 }">
           <template #columns>
-            <a-table-column :title="t('system.wecomBot.name')" data-index="name" :width="180" />
+            <a-table-column :title="t('system.wecomBot.name')" :width="220">
+              <template #cell="{ record }">
+                <div>{{ record.name }}</div>
+                <a-tooltip v-if="record.config_status === 'NEEDS_ATTENTION'" :content="record.config_warning">
+                  <a-tag color="orange">{{ t('system.wecomBot.needsAttention') }}</a-tag>
+                </a-tooltip>
+              </template>
+            </a-table-column>
             <a-table-column
               :title="t('system.wecomBot.notificationType')"
               data-index="notification_type"
@@ -142,7 +149,7 @@
               ><template #cell="{ record }"
                 ><a-switch
                   :model-value="asBool(record.enabled)"
-                  :disabled="!canUpdateRules"
+                  :disabled="!canUpdateRules || record.config_status === 'NEEDS_ATTENTION'"
                   @change="(value) => toggleRule(record, value)" /></template
             ></a-table-column>
             <a-table-column :title="t('common.operation')" fixed="right" :width="240">
@@ -155,12 +162,16 @@
                     t('common.copy')
                   }}</a-button
                   ><a-button type="text" @click="previewRule(record)">{{ t('system.wecomBot.preview') }}</a-button
-                  ><a-button
-                    v-if="record.notification_type === 'CUSTOM_CRON'"
-                    type="text"
-                    :disabled="!canUpdateRules || !asBool(record.enabled)"
-                    @click="runRule(record)"
-                    >{{ t('system.wecomBot.runOnce') }}</a-button
+                  ><a-button v-if="canReadLogs" type="text" @click="openScheduleExecutions(record)">{{
+                    t('system.wecomBot.executionRecords')
+                  }}</a-button
+                  ><a-popconfirm
+                    v-if="record.notification_type !== 'TEST_REPORT_GENERATED'"
+                    :content="t('system.wecomBot.runOnceConfirm')"
+                    @ok="runRule(record)"
+                    ><a-button type="text" :disabled="!canUpdateRules">{{
+                      t('system.wecomBot.runOnce')
+                    }}</a-button></a-popconfirm
                   ><a-popconfirm :content="t('system.wecomBot.deleteConfirm')" @ok="removeRule(record)"
                     ><a-button type="text" status="danger" :disabled="!canDeleteRules">{{
                       t('common.delete')
@@ -186,9 +197,11 @@
             :placeholder="t('system.wecomBot.status')"
             class="w-[150px]"
             @change="loadLogs"
-            ><a-option v-for="item in ['PENDING', 'SENDING', 'SUCCESS', 'RETRY', 'FAILED', 'CANCELLED']" :key="item">{{
-              item
-            }}</a-option></a-select
+            ><a-option
+              v-for="item in ['PENDING', 'SENDING', 'SUCCESS', 'PARTIAL_SUCCESS', 'RETRY', 'FAILED', 'CANCELLED']"
+              :key="item"
+              >{{ item }}</a-option
+            ></a-select
           ><a-select
             v-model="logEventType"
             allow-clear
@@ -206,7 +219,8 @@
             :placeholder="t('system.wecomBot.target')"
             class="w-[130px]"
             @change="loadLogs"
-            ><a-option value="USER">USER</a-option><a-option value="CHAT">CHAT</a-option></a-select
+            ><a-option value="USER">USER</a-option><a-option value="CHAT">CHAT</a-option
+            ><a-option value="MENTION">MENTION</a-option></a-select
           ><a-select
             v-if="canReadRules"
             v-model="logRuleId"
@@ -272,6 +286,13 @@
     @before-ok="saveRule"
   >
     <a-form :model="ruleForm" layout="vertical">
+      <a-alert
+        v-if="editingRuleWarning"
+        class="mb-4"
+        type="warning"
+        :title="t('system.wecomBot.needsAttention')"
+        :content="editingRuleWarning"
+      />
       <a-form-item :label="t('system.wecomBot.name')" required><a-input v-model="ruleForm.name" /></a-form-item>
       <a-grid :cols="2" :col-gap="16"
         ><a-grid-item
@@ -325,6 +346,45 @@
           ><a-form-item :label="t('system.wecomBot.maxCount')"
             ><a-input-number v-model="maxCount" :min="1" :max="100" /></a-form-item></a-grid-item
       ></a-grid>
+      <div v-if="ruleForm.notificationType === 'BUG_EXPECTED_RESOLUTION_DUE'" class="schedule-panel">
+        <div class="mb-3 flex items-center justify-between">
+          <strong>{{ t('system.wecomBot.notificationSchedules') }}</strong>
+          <a-button size="small" type="outline" @click="addSchedule">{{ t('system.wecomBot.addSchedule') }}</a-button>
+        </div>
+        <a-alert v-if="!ruleForm.schedules.length" class="mb-3">{{ t('system.wecomBot.noScheduleTip') }}</a-alert>
+        <div v-for="(schedule, index) in ruleForm.schedules" :key="schedule.id || index" class="schedule-row">
+          <a-select v-model="schedule.cycleType" class="schedule-cycle" @change="normalizeSchedule(schedule)">
+            <a-option value="DAILY">{{ t('system.wecomBot.daily') }}</a-option>
+            <a-option value="WEEKLY">{{ t('system.wecomBot.weekly') }}</a-option>
+          </a-select>
+          <a-select
+            v-if="schedule.cycleType === 'WEEKLY'"
+            v-model="schedule.weekdays"
+            multiple
+            class="schedule-weekdays"
+          >
+            <a-option v-for="day in weekdayOptions" :key="day.value" :value="day.value">{{ day.label }}</a-option>
+          </a-select>
+          <a-time-picker v-model="schedule.executionTime" format="HH:mm" value-format="HH:mm" class="schedule-time" />
+          <a-select v-model="schedule.timezone" class="schedule-zone">
+            <a-option value="Asia/Shanghai">Asia/Shanghai</a-option><a-option value="UTC">UTC</a-option>
+          </a-select>
+          <a-switch :model-value="schedule.enabled" @change="(value) => toggleSchedule(schedule, Boolean(value))" />
+          <a-tooltip v-if="schedule.id" :content="scheduleRuntimeTip(schedule)">
+            <span class="schedule-runtime">{{ formatTime(schedule.nextFireTime) }}</span>
+          </a-tooltip>
+          <a-button v-if="editingRuleId" type="text" @click="saveSchedule(schedule)">{{ t('common.save') }}</a-button>
+          <a-popconfirm
+            v-if="schedule.id"
+            :content="t('system.wecomBot.runOnceConfirm')"
+            @ok="runScheduleOnce(schedule.id)"
+            ><a-button type="text">{{ t('system.wecomBot.runOnce') }}</a-button></a-popconfirm
+          >
+          <a-popconfirm :content="t('system.wecomBot.deleteScheduleConfirm')" @ok="removeSchedule(index)">
+            <a-button type="text" status="danger">{{ t('common.delete') }}</a-button>
+          </a-popconfirm>
+        </div>
+      </div>
       <a-grid v-if="ruleForm.triggerType === 'CRON'" :cols="2" :col-gap="16"
         ><a-grid-item
           ><a-form-item label="Cron" required
@@ -345,7 +405,7 @@
           ><a-option value="AUTO">{{ t('system.wecomBot.autoGeneration') }}</a-option></a-select
         ></a-form-item
       >
-      <a-grid :cols="2" :col-gap="16"
+      <a-grid v-if="ruleForm.notificationType === 'CUSTOM_CRON'" :cols="2" :col-gap="16"
         ><a-grid-item
           ><a-form-item :label="t('system.wecomBot.startAt')"
             ><a-date-picker v-model="ruleForm.startAt" show-time value-format="timestamp" /></a-form-item></a-grid-item
@@ -369,8 +429,9 @@
       >
       <a-form-item :label="t('system.wecomBot.users')"
         ><a-select v-model="ruleForm.recipientSpec.userIds" multiple allow-search
-          ><a-option v-for="user in recipientUsers" :key="user.id" :value="user.id" :disabled="!asBool(user.mapped)"
-            >{{ user.name }}{{ asBool(user.mapped) ? '' : t('system.wecomBot.unmapped') }}</a-option
+          ><a-option v-for="user in recipientUsers" :key="user.id" :value="user.id"
+            >{{ user.name }}{{ asBool(user.projectMember) ? '' : t('system.wecomBot.nonProjectMember')
+            }}{{ asBool(user.mapped) ? '' : t('system.wecomBot.unmapped') }}</a-option
           ></a-select
         ></a-form-item
       >
@@ -388,14 +449,18 @@
           t('system.wecomBot.allProjectMembers')
         }}</a-checkbox>
       </a-form-item>
-      <a-form-item v-if="ruleForm.scopeType === 'PROJECT'" :label="t('system.wecomBot.projectRoles')">
-        <a-select v-model="ruleForm.recipientSpec.projectRoleIds" multiple allow-search>
-          <a-option v-for="role in projectRoles" :key="role.id" :value="role.id">{{ role.name }}</a-option>
+      <a-form-item :label="t('system.wecomBot.positions')">
+        <a-select v-model="ruleForm.recipientSpec.positionIds" multiple allow-search>
+          <a-option v-for="position in recipientPositions" :key="position.id" :value="position.id"
+            >{{ position.name }} ({{ position.memberCount }})</a-option
+          >
         </a-select>
       </a-form-item>
-      <a-form-item :label="t('system.wecomBot.userGroups')">
-        <a-select v-model="ruleForm.recipientSpec.userGroupIds" multiple allow-search>
-          <a-option v-for="role in userGroups" :key="role.id" :value="role.id">{{ role.name }}</a-option>
+      <a-form-item :label="t('system.wecomBot.roles')">
+        <a-select v-model="ruleForm.recipientSpec.roleIds" multiple allow-search>
+          <a-option v-for="role in recipientRoles" :key="role.id" :value="role.id"
+            >{{ role.name }} ({{ roleTypeLabel(role.type) }})</a-option
+          >
         </a-select>
       </a-form-item>
       <a-alert v-if="ruleForm.notificationType === 'TEST_REPORT_GENERATED'" class="mb-4">{{
@@ -408,15 +473,31 @@
           ><a-option value="BOTH">{{ t('system.wecomBot.deliveryBoth') }}</a-option></a-select
         ></a-form-item
       >
+      <a-button class="mb-4" type="outline" @click="showRecipientPreview">{{
+        t('system.wecomBot.recipientPreview')
+      }}</a-button>
       <a-form-item :label="t('system.wecomBot.markdownTemplate')" required>
         <div class="w-full"
           ><a-space wrap class="mb-2"
             ><a-button
               v-for="variable in templateVariables"
-              :key="variable"
+              :key="variable.key"
               size="mini"
-              @click="insertVariable(variable)"
-              >{{ variableLabel(variable) }}</a-button
+              @click="insertVariable(variable.key)"
+              ><a-tooltip
+                :content="`${variable.name}：${variable.description}；${t('system.wecomBot.example')}：${
+                  variable.example
+                }`"
+              >
+                {{ variable.name }} {{ variableLabel(variable.key) }}
+              </a-tooltip></a-button
+            ><a-button
+              v-for="variable in templateVariables"
+              :key="`${variable.key}-copy`"
+              size="mini"
+              type="text"
+              @click="copyVariable(variable.key)"
+              >{{ t('common.copy') }} {{ variable.name }}</a-button
             ></a-space
           ><a-textarea
             v-model="ruleForm.template"
@@ -427,6 +508,29 @@
       </a-form-item>
       <a-alert>{{ t('system.wecomBot.templateTip') }}</a-alert>
     </a-form>
+  </a-modal>
+  <a-modal
+    v-model:visible="scheduleExecutionVisible"
+    :title="t('system.wecomBot.executionRecords')"
+    :footer="false"
+    width="960px"
+  >
+    <a-table :data="scheduleExecutions" row-key="id" :pagination="false" :scroll="{ x: 900, y: 480 }">
+      <template #columns>
+        <a-table-column :title="t('system.wecomBot.time')" :width="180">
+          <template #cell="{ record }">{{ formatTime(record.planned_fire_time) }}</template>
+        </a-table-column>
+        <a-table-column :title="t('system.wecomBot.trigger')" data-index="trigger_mode" :width="110" />
+        <a-table-column :title="t('system.wecomBot.status')" data-index="status" :width="110" />
+        <a-table-column :title="t('system.wecomBot.attempts')" data-index="attempts" :width="90" />
+        <a-table-column :title="t('system.wecomBot.targetCount')" data-index="target_count" :width="100" />
+        <a-table-column :title="t('system.wecomBot.error')" ellipsis tooltip>
+          <template #cell="{ record }">{{
+            [record.error_code, record.error_message].filter(Boolean).join(': ') || '-'
+          }}</template>
+        </a-table-column>
+      </template>
+    </a-table>
   </a-modal>
   <a-modal v-model:visible="logDetailVisible" :title="t('system.wecomBot.logDetail')" :footer="false" width="680px">
     <a-descriptions v-if="logDetail" :column="1" bordered>
@@ -445,30 +549,43 @@
 
   import {
     createWecomRule,
+    createWecomSchedule,
     deleteWecomRule,
+    deleteWecomSchedule,
     getWecomBotConfig,
     getWecomBugTerminalStatuses,
     getWecomChats,
     getWecomLogs,
     getWecomMessage,
+    getWecomRecipientPositions,
     getWecomRecipientRoles,
     getWecomRecipientUsers,
     getWecomRules,
+    getWecomScheduleExecutions,
+    getWecomSchedules,
+    getWecomTemplateVariables,
+    previewWecomRecipients,
     previewWecomRule,
     renameWecomChat,
     retryWecomMessage,
     runWecomRule,
+    runWecomSchedule,
     saveWecomBotConfig,
     setWecomBotEnabled,
     setWecomChatEnabled,
     setWecomRuleEnabled,
+    setWecomScheduleEnabled,
     testWecomBotConnection,
     testWecomGroup,
     testWecomUser,
     updateWecomRule,
+    updateWecomSchedule,
     type WecomBotConfig,
     type WecomChat,
+    type WecomNotificationSchedule,
     type WecomRuleRequest,
+    type WecomScheduleExecution,
+    type WecomTemplateVariable,
   } from '@/api/modules/setting/wecomBot';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
@@ -490,15 +607,21 @@
   const configForm = reactive({ name: '', botId: '', secret: '', secretRef: '' });
   const chats = ref<WecomChat[]>([]);
   const rules = ref<Record<string, any>[]>([]);
-  const recipientUsers = ref<{ id: string; name: string; mapped: boolean | number }[]>([]);
+  const recipientUsers = ref<
+    { id: string; name: string; mapped: boolean | number; projectMember?: boolean | number }[]
+  >([]);
   const recipientRoles = ref<
     { id: string; name: string; type: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT'; scope_id: string }[]
   >([]);
+  const recipientPositions = ref<{ id: string; name: string; memberCount: number }[]>([]);
+  const templateVariables = ref<WecomTemplateVariable[]>([]);
   const bugTerminalStatuses = ref<{ id: string; name: string; status_code: string }[]>([]);
   const testUserId = ref('');
   const logs = ref<Record<string, any>[]>([]);
   const logDetailVisible = ref(false);
   const logDetail = ref<Record<string, any>>();
+  const scheduleExecutionVisible = ref(false);
+  const scheduleExecutions = ref<WecomScheduleExecution[]>([]);
   const logStatus = ref<string>();
   const logEventType = ref<string>();
   const logTargetType = ref<string>();
@@ -508,6 +631,7 @@
   const logTotal = ref(0);
   const ruleVisible = ref(false);
   const editingRuleId = ref('');
+  const editingRuleWarning = ref('');
   const savingRule = ref(false);
   const leadAmount = ref(60);
   const leadUnit = ref('MINUTE');
@@ -544,50 +668,27 @@
       userIds: [],
       businessRoles: ['BUG_CREATOR', 'BUG_HANDLER'],
       projectAllMembers: false,
-      projectRoleIds: [],
-      userGroupIds: [],
+      positionIds: [],
+      roleIds: [],
     },
     deliveryMode: 'BOTH',
     stopConfig: { statuses: [] },
+    schedules: [],
   });
   const ruleForm = reactive<WecomRuleRequest>(defaultRule());
 
   const asBool = (value: unknown) => value === true || value === 1;
   const variableLabel = (variable: string) => `\${${variable}}`;
   const enabledChats = computed(() => chats.value.filter((chat) => asBool(chat.active)));
-  const projectRoles = computed(() => recipientRoles.value.filter((role) => role.type === 'PROJECT'));
-  const userGroups = computed(() => recipientRoles.value.filter((role) => role.type !== 'PROJECT'));
-  const templateVariables = computed(() => {
-    if (ruleForm.notificationType === 'BUG_EXPECTED_RESOLUTION_DUE') {
-      return [
-        'bugNum',
-        'bugTitle',
-        'bugHandlerNames',
-        'bugCreatorName',
-        'expectedResolveTime',
-        'remainingTime',
-        'projectName',
-        'resourceUrl',
-      ];
-    }
-    if (ruleForm.notificationType === 'TEST_REPORT_GENERATED') {
-      return [
-        'projectName',
-        'testPlanName',
-        'reportName',
-        'reportGeneratorName',
-        'reportSummary',
-        'reportUrl',
-        'generatedAt',
-      ];
-    }
-    return ['customTitle', 'customContent', 'now', 'ruleName'];
-  });
+  const weekdayOptions = computed(() =>
+    [1, 2, 3, 4, 5, 6, 7].map((value) => ({ value, label: t(`system.wecomBot.weekday${value}`) }))
+  );
   const maskId = (value: string) =>
     value && value.length > 8 ? `${value.slice(0, 3)}******${value.slice(-3)}` : '******';
   const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
   const statusColor = (status: string) =>
     ({ ONLINE: 'green', CONNECTING: 'blue', AUTH_FAILED: 'red', OFFLINE: 'orange' }[status] || 'gray');
+  const roleTypeLabel = (type: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT') => t(`system.wecomBot.roleType${type}`);
   const parseJson = (value: unknown, fallback: Record<string, any>) => {
     try {
       return typeof value === 'string' ? JSON.parse(value) : value || fallback;
@@ -628,6 +729,14 @@
       stop_config: JSON.stringify(ruleForm.stopConfig),
       start_at: ruleForm.startAt,
       end_at: ruleForm.endAt,
+      schedules: ruleForm.schedules.map((schedule) => ({
+        id: schedule.id,
+        cycle_type: schedule.cycleType,
+        weekdays: schedule.weekdays.join(','),
+        execution_time: schedule.executionTime,
+        timezone: schedule.timezone,
+        enabled: schedule.enabled,
+      })),
       enabled: previous.enabled ?? 0,
       update_time: Date.now(),
     };
@@ -637,19 +746,6 @@
     const index = rules.value.findIndex((item) => item.id === record.id);
     if (index >= 0) rules.value.splice(index, 1, record);
     else rules.value.unshift(record);
-  }
-
-  function ruleMatchesForm(record: Record<string, any>) {
-    return (
-      record.name === ruleForm.name &&
-      record.scope_type === ruleForm.scopeType &&
-      (record.scope_id || undefined) === ruleForm.scopeId &&
-      record.notification_type === ruleForm.notificationType &&
-      record.trigger_type === ruleForm.triggerType &&
-      record.timezone === ruleForm.timezone &&
-      record.template === ruleForm.template &&
-      record.delivery_mode === ruleForm.deliveryMode
-    );
   }
 
   function showRuleValidation(message: string) {
@@ -719,6 +815,9 @@
     await testWecomGroup(chat.id, t('system.wecomBot.testMessage'));
     Message.success(t('system.wecomBot.queued'));
   }
+  async function loadTemplateVariables() {
+    templateVariables.value = await getWecomTemplateVariables(ruleForm.notificationType);
+  }
   function syncTrigger() {
     const map = {
       BUG_EXPECTED_RESOLUTION_DUE: 'DEADLINE',
@@ -729,9 +828,11 @@
     ruleForm.recipientSpec.businessRoles =
       ruleForm.notificationType === 'BUG_EXPECTED_RESOLUTION_DUE' ? ['BUG_CREATOR', 'BUG_HANDLER'] : [];
     if (ruleForm.notificationType === 'TEST_REPORT_GENERATED') {
+      ruleForm.schedules = [];
       ruleForm.deliveryMode = 'CHAT';
       ruleForm.template = t('system.wecomBot.defaultReportTemplate');
     } else if (ruleForm.notificationType === 'CUSTOM_CRON') {
+      ruleForm.schedules = [];
       ruleForm.deliveryMode = 'BOTH';
       ruleForm.cron ||= DEFAULT_CRON;
       ruleForm.template = ['customTitle', 'customContent'].map(variableLabel).join('\n');
@@ -739,24 +840,28 @@
       ruleForm.deliveryMode = 'BOTH';
       ruleForm.template = defaultRule().template;
     }
+    loadTemplateVariables();
   }
   async function loadRecipientUsers() {
     const projectId = ruleForm.scopeType === 'PROJECT' ? ruleForm.scopeId : undefined;
-    [recipientUsers.value, recipientRoles.value] = await Promise.all([
+    [recipientUsers.value, recipientRoles.value, recipientPositions.value] = await Promise.all([
       getWecomRecipientUsers(projectId),
       getWecomRecipientRoles(projectId),
+      getWecomRecipientPositions(projectId),
     ]);
   }
   async function changeScope() {
     ruleForm.scopeId = undefined;
     ruleForm.recipientSpec.userIds = [];
-    ruleForm.recipientSpec.projectRoleIds = [];
+    ruleForm.recipientSpec.positionIds = [];
+    ruleForm.recipientSpec.roleIds = [];
     ruleForm.recipientSpec.projectAllMembers = false;
     await loadRecipientUsers();
   }
   function openRule(record?: Record<string, any>) {
     Object.assign(ruleForm, defaultRule());
     editingRuleId.value = record?.id || '';
+    editingRuleWarning.value = record?.config_status === 'NEEDS_ATTENTION' ? record.config_warning || '' : '';
     leadAmount.value = 60;
     leadUnit.value = 'MINUTE';
     repeatAmount.value = 0;
@@ -784,6 +889,16 @@
         stopConfig: parseJson(record.stop_config, {}),
         startAt: record.start_at,
         endAt: record.end_at,
+        schedules: (record.schedules || []).map((schedule: Record<string, any>) => ({
+          id: schedule.id,
+          cycleType: schedule.cycle_type,
+          weekdays: schedule.weekdays ? String(schedule.weekdays).split(',').map(Number) : [],
+          executionTime: schedule.execution_time,
+          timezone: schedule.timezone,
+          enabled: asBool(schedule.enabled),
+          nextFireTime: schedule.next_fire_time,
+          lastFireTime: schedule.last_fire_time,
+        })),
       });
       leadAmount.value = trigger.leadTime ?? trigger.beforeMinutes ?? 60;
       leadUnit.value = trigger.leadUnit ?? 'MINUTE';
@@ -797,7 +912,7 @@
       ruleForm.recipientSpec.businessRoles = [];
     }
     ruleVisible.value = true;
-    loadRecipientUsers();
+    Promise.all([loadRecipientUsers(), loadTemplateVariables()]);
   }
   function copyRule(record: Record<string, any>) {
     openRule(record);
@@ -815,7 +930,12 @@
       done(false);
       return;
     }
-    if (ruleForm.startAt && ruleForm.endAt && ruleForm.startAt >= ruleForm.endAt) {
+    if (
+      ruleForm.notificationType === 'CUSTOM_CRON' &&
+      ruleForm.startAt &&
+      ruleForm.endAt &&
+      ruleForm.startAt >= ruleForm.endAt
+    ) {
       showRuleValidation(t('system.wecomBot.invalidPeriod'));
       done(false);
       return;
@@ -837,6 +957,22 @@
     }
     if (ruleForm.notificationType !== 'BUG_EXPECTED_RESOLUTION_DUE') {
       ruleForm.recipientSpec.businessRoles = [];
+      ruleForm.schedules = [];
+    } else if (
+      ruleForm.schedules.some(
+        (schedule) =>
+          !schedule.executionTime ||
+          !schedule.timezone ||
+          (schedule.cycleType === 'WEEKLY' && !schedule.weekdays.length)
+      )
+    ) {
+      showRuleValidation(t('system.wecomBot.invalidSchedule'));
+      done(false);
+      return;
+    }
+    if (ruleForm.notificationType !== 'CUSTOM_CRON') {
+      ruleForm.startAt = undefined;
+      ruleForm.endAt = undefined;
     }
     if (ruleForm.triggerType === 'DEADLINE') {
       ruleForm.triggerConfig = {
@@ -855,7 +991,6 @@
       ruleForm.triggerConfig = {};
     }
     savingRule.value = true;
-    const knownRuleIds = new Set(rules.value.map((item) => item.id));
     try {
       let savedId = editingRuleId.value;
       if (savedId) await updateWecomRule(savedId, ruleForm);
@@ -872,20 +1007,7 @@
       Message.success(t('common.saveSuccess'));
       done(true);
     } catch (error) {
-      try {
-        const latestRules = await getWecomRules();
-        rules.value = latestRules;
-        const persistedRule = editingRuleId.value
-          ? latestRules.find((item) => item.id === editingRuleId.value && ruleMatchesForm(item))
-          : latestRules.find((item) => !knownRuleIds.has(item.id) && ruleMatchesForm(item));
-        if (persistedRule) {
-          Message.success(t('common.saveSuccess'));
-          done(true);
-          return;
-        }
-      } catch {
-        // Preserve the original save error when the recovery query is unavailable.
-      }
+      await loadRules().catch(() => undefined);
       const appError = ensureAppError(error, t('api.apiRequestFailed'));
       Modal.error({
         title: t('system.wecomBot.saveFailed'),
@@ -898,6 +1020,100 @@
   }
   function insertVariable(variable: string) {
     ruleForm.template += variableLabel(variable);
+  }
+  async function copyVariable(variable: string) {
+    await navigator.clipboard.writeText(variableLabel(variable));
+    Message.success(t('system.wecomBot.variableCopied'));
+  }
+  function addSchedule() {
+    ruleForm.schedules.push({
+      cycleType: 'DAILY',
+      weekdays: [],
+      executionTime: '09:00',
+      timezone: ruleForm.timezone || 'Asia/Shanghai',
+      enabled: true,
+    });
+  }
+  function normalizeSchedule(schedule: WecomNotificationSchedule) {
+    if (schedule.cycleType === 'DAILY') schedule.weekdays = [];
+  }
+  function validateSchedule(schedule: WecomNotificationSchedule) {
+    return Boolean(
+      schedule.executionTime && schedule.timezone && (schedule.cycleType === 'DAILY' || schedule.weekdays.length)
+    );
+  }
+  async function refreshCurrentSchedules() {
+    if (!editingRuleId.value) return;
+    const schedules = await getWecomSchedules(editingRuleId.value);
+    ruleForm.schedules = schedules.map((schedule) => ({
+      id: schedule.id,
+      cycleType: schedule.cycle_type,
+      weekdays: schedule.weekdays ? String(schedule.weekdays).split(',').map(Number) : [],
+      executionTime: schedule.execution_time,
+      timezone: schedule.timezone,
+      enabled: asBool(schedule.enabled),
+      nextFireTime: schedule.next_fire_time,
+      lastFireTime: schedule.last_fire_time,
+    }));
+  }
+  async function saveSchedule(schedule: WecomNotificationSchedule) {
+    if (!editingRuleId.value || !validateSchedule(schedule)) {
+      showRuleValidation(t('system.wecomBot.invalidSchedule'));
+      return;
+    }
+    if (schedule.id) await updateWecomSchedule(schedule.id, schedule);
+    else await createWecomSchedule(editingRuleId.value, schedule);
+    await Promise.all([refreshCurrentSchedules(), loadRules()]);
+    Message.success(t('common.saveSuccess'));
+  }
+  async function toggleSchedule(schedule: WecomNotificationSchedule, enabled: boolean) {
+    if (!schedule.id) {
+      schedule.enabled = enabled;
+      return;
+    }
+    const previous = schedule.enabled;
+    schedule.enabled = enabled;
+    try {
+      await setWecomScheduleEnabled(schedule.id, enabled);
+      await Promise.all([refreshCurrentSchedules(), loadRules()]);
+    } catch (error) {
+      schedule.enabled = previous;
+      throw error;
+    }
+  }
+  async function removeSchedule(index: number) {
+    const schedule = ruleForm.schedules[index];
+    if (schedule.id) await deleteWecomSchedule(schedule.id);
+    ruleForm.schedules.splice(index, 1);
+    if (schedule.id) await Promise.all([refreshCurrentSchedules(), loadRules()]);
+  }
+  function scheduleRuntimeTip(schedule: WecomNotificationSchedule) {
+    return `${t('system.wecomBot.nextFire')}: ${formatTime(schedule.nextFireTime)}; ${t(
+      'system.wecomBot.lastFire'
+    )}: ${formatTime(schedule.lastFireTime)}`;
+  }
+  async function runScheduleOnce(id: string) {
+    const ids = await runWecomSchedule(id);
+    if (!ids.length) return Message.warning(t('system.wecomBot.noRecipient'));
+    Message.success(t('system.wecomBot.queued'));
+  }
+  async function showRecipientPreview() {
+    const preview = await previewWecomRecipients(ruleForm);
+    const names =
+      preview.users
+        .map(
+          (user) =>
+            `${user.name}（${
+              asBool(user.projectMember)
+                ? t('system.wecomBot.projectMember')
+                : t('system.wecomBot.nonProjectMemberLabel')
+            }，${asBool(user.wecomMapped) ? t('system.wecomBot.wecomMapped') : t('system.wecomBot.wecomUnmapped')}）`
+        )
+        .join('\n') || t('system.wecomBot.noRecipient');
+    Modal.info({
+      title: t('system.wecomBot.recipientPreview'),
+      content: [names, ...preview.warnings].filter(Boolean).join('\n'),
+    });
   }
   async function toggleRule(record: Record<string, any>, value: string | number | boolean) {
     await setWecomRuleEnabled(record.id, Boolean(value));
@@ -915,6 +1131,10 @@
   async function openLogDetail(record: Record<string, any>) {
     logDetail.value = await getWecomMessage(record.id);
     logDetailVisible.value = true;
+  }
+  async function openScheduleExecutions(record: Record<string, any>) {
+    scheduleExecutions.value = await getWecomScheduleExecutions(record.id);
+    scheduleExecutionVisible.value = true;
   }
   async function removeRule(record: Record<string, any>) {
     await deleteWecomRule(record.id);
@@ -935,3 +1155,38 @@
     await loadActiveTab();
   });
 </script>
+
+<style scoped>
+  .schedule-panel {
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid var(--color-border-2);
+    border-radius: 4px;
+  }
+  .schedule-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    margin-top: 8px;
+  }
+  .schedule-cycle,
+  .schedule-time {
+    width: 110px;
+    flex: 0 0 110px;
+  }
+  .schedule-weekdays {
+    min-width: 220px;
+    flex: 1 0 220px;
+  }
+  .schedule-zone {
+    width: 150px;
+    flex: 0 0 150px;
+  }
+  .schedule-runtime {
+    min-width: 140px;
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--color-text-3);
+  }
+</style>

@@ -36,6 +36,33 @@ export interface WecomChat {
   last_delivery_status?: string;
 }
 
+export interface WecomNotificationSchedule {
+  id?: string;
+  cycleType: 'DAILY' | 'WEEKLY';
+  weekdays: number[];
+  executionTime: string;
+  timezone: string;
+  enabled: boolean;
+  nextFireTime?: number;
+  lastFireTime?: number;
+}
+
+export interface WecomScheduleExecution {
+  id: string;
+  schedule_id: string;
+  trigger_mode: 'SCHEDULE' | 'MANUAL';
+  planned_fire_time: number;
+  actual_start_time?: number;
+  actual_finish_time?: number;
+  status: 'RUNNING' | 'SUCCESS' | 'RETRY' | 'FAILED' | 'SKIPPED';
+  attempts: number;
+  max_attempts: number;
+  target_count?: number;
+  next_retry_at?: number;
+  error_code?: string;
+  error_message?: string;
+}
+
 export interface WecomRuleRequest {
   name: string;
   scopeType: 'SYSTEM' | 'PROJECT';
@@ -51,13 +78,21 @@ export interface WecomRuleRequest {
     userIds: string[];
     businessRoles?: string[];
     projectAllMembers?: boolean;
-    projectRoleIds?: string[];
-    userGroupIds?: string[];
+    positionIds?: string[];
+    roleIds?: string[];
   };
   deliveryMode: 'USER' | 'CHAT' | 'BOTH';
   stopConfig: Record<string, unknown>;
   startAt?: number;
   endAt?: number;
+  schedules: WecomNotificationSchedule[];
+}
+
+export interface WecomTemplateVariable {
+  key: string;
+  name: string;
+  description: string;
+  example: string;
 }
 
 const base = '/wecom-bot';
@@ -90,6 +125,28 @@ export const getWecomRecipientRoles = async (projectId?: string) => {
     })
   );
 };
+export const getWecomRecipientPositions = async (projectId?: string) => {
+  type RecipientPosition = { id: string; name: string; memberCount: number };
+  return unwrapApiData(
+    await MSR.get<RecipientPosition[] | ApiEnvelope<RecipientPosition[]>>({
+      url: `${base}/recipient-options/positions`,
+      params: { projectId },
+    })
+  );
+};
+export const previewWecomRecipients = async (data: WecomRuleRequest) =>
+  unwrapApiData(
+    await MSR.post<
+      | { users: Record<string, any>[]; warnings: string[] }
+      | ApiEnvelope<{ users: Record<string, any>[]; warnings: string[] }>
+    >({ url: `${base}/recipient-options/preview`, data })
+  );
+export const getWecomTemplateVariables = async (notificationType: WecomRuleRequest['notificationType']) =>
+  unwrapApiData(
+    await MSR.get<WecomTemplateVariable[] | ApiEnvelope<WecomTemplateVariable[]>>({
+      url: `${base}/template-variables/${notificationType}`,
+    })
+  );
 export const getWecomBugTerminalStatuses = async () => {
   type BugTerminalStatus = { id: string; name: string; status_code: string };
   return unwrapApiData(
@@ -120,6 +177,27 @@ export const setWecomRuleEnabled = (id: string, enabled: boolean) =>
 export const previewWecomRule = (id: string, variables: Record<string, unknown> = {}) =>
   MSR.post<string>({ url: `${base}/notification-rules/${id}/preview`, data: { variables } });
 export const runWecomRule = (id: string) => MSR.post<string[]>({ url: `${base}/notification-rules/${id}/run-once` });
+export const runWecomSchedule = (id: string) =>
+  MSR.post<string[]>({ url: `${base}/notification-schedules/${id}/run-once` });
+export const getWecomSchedules = async (ruleId: string) =>
+  unwrapApiData(
+    await MSR.get<Record<string, any>[] | ApiEnvelope<Record<string, any>[]>>({
+      url: `${base}/notification-rules/${ruleId}/schedules`,
+    })
+  );
+export const createWecomSchedule = (ruleId: string, data: WecomNotificationSchedule) =>
+  MSR.post<string>({ url: `${base}/notification-rules/${ruleId}/schedules`, data });
+export const updateWecomSchedule = (id: string, data: WecomNotificationSchedule) =>
+  MSR.put({ url: `${base}/notification-schedules/${id}`, data });
+export const deleteWecomSchedule = (id: string) => MSR.delete({ url: `${base}/notification-schedules/${id}` });
+export const setWecomScheduleEnabled = (id: string, enabled: boolean) =>
+  MSR.post({ url: `${base}/notification-schedules/${id}/${enabled ? 'enable' : 'disable'}` });
+export const getWecomScheduleExecutions = async (ruleId: string) =>
+  unwrapApiData(
+    await MSR.get<WecomScheduleExecution[] | ApiEnvelope<WecomScheduleExecution[]>>({
+      url: `${base}/notification-rules/${ruleId}/schedule-executions`,
+    })
+  );
 export const getWecomLogs = async (params: {
   page: number;
   pageSize: number;
