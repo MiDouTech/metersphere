@@ -21,12 +21,16 @@ public class WecomNotificationCronExecutor {
         Long end = rule.get("end_at") instanceof Number n ? n.longValue() : null;
         if (start != null && scheduledFireTime < start || end != null && scheduledFireTime > end) return;
         String content = service.render(String.valueOf(rule.get("template")), Map.of(
-                "ruleName", String.valueOf(rule.get("name")), "now", scheduledFireTime,
+                "ruleName", String.valueOf(rule.get("name")), "now", service.formatTimestamp(scheduledFireTime, String.valueOf(rule.get("timezone"))),
                 "customTitle", String.valueOf(rule.get("name")), "customContent", ""));
         try {
             service.enqueueForRule(rule, "CRON:" + ruleId + ":" + scheduledFireTime, null, null, content);
         } finally {
             service.recordCronFire(ruleId, scheduledFireTime);
         }
+    }
+
+    public void executeSchedule(String scheduleId, long scheduledFireTime) {
+        service.executeSchedule(scheduleId, scheduledFireTime);
     }
 }

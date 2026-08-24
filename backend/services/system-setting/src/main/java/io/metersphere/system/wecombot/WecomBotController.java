@@ -64,6 +64,22 @@ public class WecomBotController {
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_READ)
     public List<Map<String, Object>> roleOptions(@RequestParam(required = false) String projectId) { return service.roleOptions(projectId); }
 
+    @GetMapping("/recipient-options/positions")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_READ)
+    public List<Map<String, Object>> positionOptions(@RequestParam(required = false) String projectId) { return service.positionOptions(projectId); }
+
+    @PostMapping("/recipient-options/preview")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_READ)
+    public Map<String, Object> recipientPreview(@Valid @RequestBody WecomBotModels.RuleRequest request) {
+        return service.recipientPreview(request);
+    }
+
+    @GetMapping("/template-variables/{notificationType}")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_READ)
+    public List<WecomBotModels.TemplateVariable> templateVariables(@PathVariable String notificationType) {
+        return service.templateVariables(notificationType);
+    }
+
     @GetMapping("/recipient-options/bug-terminal-statuses")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_READ)
     public List<Map<String, Object>> bugTerminalStatuses() { return service.bugTerminalStatuses(); }
@@ -104,22 +120,22 @@ public class WecomBotController {
 
     @PutMapping("/notification-rules/{id}")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_UPDATE)
-    @Log(type = OperationLogType.UPDATE, expression = "#msClass.rule(#request)", msClass = WecomBotAuditLogService.class)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.rule(#id,#request)", msClass = WecomBotAuditLogService.class)
     public void updateRule(@PathVariable String id, @Valid @RequestBody WecomBotModels.RuleRequest request) { service.updateRule(id, request, SessionUtils.getUserId()); }
 
     @DeleteMapping("/notification-rules/{id}")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_DELETE)
-    @Log(type = OperationLogType.DELETE, expression = "#msClass.action('Delete WeCom notification rule')", msClass = WecomBotAuditLogService.class)
+    @Log(type = OperationLogType.DELETE, expression = "#msClass.ruleAction(#id,'Delete WeCom notification rule')", msClass = WecomBotAuditLogService.class)
     public void deleteRule(@PathVariable String id) { service.deleteRule(id); }
 
     @PostMapping("/notification-rules/{id}/enable")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_UPDATE)
-    @Log(type = OperationLogType.UPDATE, expression = "#msClass.action('Enable WeCom notification rule')", msClass = WecomBotAuditLogService.class)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.ruleAction(#id,'Enable WeCom notification rule')", msClass = WecomBotAuditLogService.class)
     public void enableRule(@PathVariable String id) { service.enableRule(id, true, SessionUtils.getUserId()); }
 
     @PostMapping("/notification-rules/{id}/disable")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_UPDATE)
-    @Log(type = OperationLogType.UPDATE, expression = "#msClass.action('Disable WeCom notification rule')", msClass = WecomBotAuditLogService.class)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.ruleAction(#id,'Disable WeCom notification rule')", msClass = WecomBotAuditLogService.class)
     public void disableRule(@PathVariable String id) { service.enableRule(id, false, SessionUtils.getUserId()); }
 
     @PostMapping("/notification-rules/{id}/preview")
@@ -130,8 +146,49 @@ public class WecomBotController {
 
     @PostMapping("/notification-rules/{id}/run-once")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_UPDATE)
-    @Log(type = OperationLogType.ADD, expression = "#msClass.action('Run WeCom notification rule once')", msClass = WecomBotAuditLogService.class)
-    public List<String> runOnce(@PathVariable String id) { return service.runOnce(id); }
+    @Log(type = OperationLogType.ADD, expression = "#msClass.ruleAction(#id,'Run WeCom notification rule once')", msClass = WecomBotAuditLogService.class)
+    public List<String> runOnce(@PathVariable String id) { return service.runOnce(id, SessionUtils.getUserId(), null); }
+
+    @GetMapping("/notification-rules/{id}/schedules")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_READ)
+    public List<Map<String, Object>> schedules(@PathVariable String id) { return service.schedules(id); }
+
+    @GetMapping("/notification-rules/{id}/schedule-executions")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_LOG_READ)
+    public List<Map<String, Object>> scheduleExecutions(@PathVariable String id) { return service.scheduleExecutions(id); }
+
+    @PostMapping("/notification-rules/{id}/schedules")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_UPDATE)
+    @Log(type = OperationLogType.ADD, expression = "#msClass.newSchedule(#id,#request)", msClass = WecomBotAuditLogService.class)
+    public String createSchedule(@PathVariable String id, @Valid @RequestBody WecomBotModels.ScheduleRequest request) {
+        return service.createSchedule(id, request, SessionUtils.getUserId());
+    }
+
+    @PutMapping("/notification-schedules/{id}")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.schedule(#id,#request)", msClass = WecomBotAuditLogService.class)
+    public void updateSchedule(@PathVariable String id, @Valid @RequestBody WecomBotModels.ScheduleRequest request) {
+        service.updateSchedule(id, request, SessionUtils.getUserId());
+    }
+
+    @DeleteMapping("/notification-schedules/{id}")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_DELETE)
+    @Log(type = OperationLogType.DELETE, expression = "#msClass.scheduleAction(#id,'Delete WeCom notification schedule')", msClass = WecomBotAuditLogService.class)
+    public void deleteSchedule(@PathVariable String id) { service.deleteSchedule(id); }
+
+    @PostMapping("/notification-schedules/{id}/{enabled:enable|disable}")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_UPDATE)
+    @Log(type = OperationLogType.UPDATE, expression = "#msClass.scheduleAction(#id,'Toggle WeCom notification schedule')", msClass = WecomBotAuditLogService.class)
+    public void toggleSchedule(@PathVariable String id, @PathVariable String enabled) {
+        service.enableSchedule(id, "enable".equals(enabled), SessionUtils.getUserId());
+    }
+
+    @PostMapping("/notification-schedules/{id}/run-once")
+    @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_RULE_UPDATE)
+    @Log(type = OperationLogType.ADD, expression = "#msClass.scheduleAction(#id,'Run WeCom notification schedule once')", msClass = WecomBotAuditLogService.class)
+    public List<String> runSchedule(@PathVariable String id) {
+        return service.runScheduleOnce(id, SessionUtils.getUserId());
+    }
 
     @GetMapping("/messages/logs")
     @RequiresPermissions(PermissionConstants.SYSTEM_NOTIFICATION_LOG_READ)
