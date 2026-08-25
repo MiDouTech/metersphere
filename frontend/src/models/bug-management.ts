@@ -110,6 +110,7 @@ export interface OperationFile {
   projectId: string;
   bugId: string;
   fileId?: string; // 文件id
+  fileName?: string;
   associated: boolean; // 是否是本地 还是关联
   moduleId?: string; // 文件转存模块id
 }

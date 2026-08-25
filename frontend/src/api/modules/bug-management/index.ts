@@ -205,6 +205,10 @@ export function previewFile(data: OperationFile) {
   return MSR.post({ url: bugURL.previewFileUrl, data, responseType: 'blob' }, { isTransformResponse: false });
 }
 
+export function previewDocumentFile(data: OperationFile) {
+  return MSR.post({ url: bugURL.previewDocumentFileUrl, data, responseType: 'blob' }, { isTransformResponse: false });
+}
+
 // 下载文件
 export function downloadFileRequest(data: OperationFile) {
   return MSR.post({ url: bugURL.downloadFileUrl, data, responseType: 'blob' }, { isTransformResponse: false });

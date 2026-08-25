@@ -21,4 +21,7 @@ public class BugFileSourceRequest implements Serializable {
 
     @Schema(description = "是否关联", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean associated;
+
+    @Schema(description = "文件名（文档预览时用于校验文件类型）")
+    private String fileName;
 }

@@ -26,7 +26,7 @@ ENV AB_OFF=true
 ENV MS_VERSION=${MS_VERSION}
 ENV JAVA_OPTIONS="-Dfile.encoding=utf-8 -Djava.awt.headless=true --add-opens java.base/jdk.internal.loader=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED"
 
-RUN apk add --no-cache libstdc++ libgcc \
+RUN apk add --no-cache libstdc++ libgcc libreoffice-writer font-noto-cjk \
     && node --version \
     && echo -n "${MS_VERSION}" > /tmp/MS_VERSION \
     && chmod 755 /deployments/run-with-wecom-bridge.sh
