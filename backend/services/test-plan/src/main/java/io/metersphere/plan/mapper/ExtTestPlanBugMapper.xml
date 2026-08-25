@@ -123,8 +123,11 @@
                     <choose>
                         <!-- 处理人 -->
                         <when test="key == 'handleUser'">
-                            and b.handle_user in
-                            <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                            and exists (
+                                select 1 from bug_handle_user_relation bhur
+                                where bhur.bug_id = b.id and bhur.handle_user_id in
+                                <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                            )
                         </when>
                         <!-- 状态 -->
                         <when test="key=='status'">
@@ -182,10 +185,36 @@
                         </if>
                         <!-- 处理人 -->
                         <if test="condition.name == 'handleUser'">
-                            <include refid="io.metersphere.system.mapper.BaseMapper.condition">
-                                <property name="condition" value="condition"/>
-                                <property name="column" value="b.handle_user"/>
-                            </include>
+                            <choose>
+                                <when test="condition.operator == 'EMPTY'">
+                                    not exists (select 1 from bug_handle_user_relation bhur where bhur.bug_id = b.id)
+                                </when>
+                                <when test="condition.operator == 'NOT_EMPTY'">
+                                    exists (select 1 from bug_handle_user_relation bhur where bhur.bug_id = b.id)
+                                </when>
+                                <when test="condition.operator == 'NOT_IN'">
+                                    not exists (
+                                        select 1 from bug_handle_user_relation bhur
+                                        where bhur.bug_id = b.id and bhur.handle_user_id in
+                                        <foreach collection="condition.value" item="value" separator="," open="(" close=")">#{value}</foreach>
+                                    )
+                                </when>
+                                <when test="condition.operator == 'IN'">
+                                    exists (
+                                        select 1 from bug_handle_user_relation bhur
+                                        where bhur.bug_id = b.id and bhur.handle_user_id in
+                                        <foreach collection="condition.value" item="value" separator="," open="(" close=")">#{value}</foreach>
+                                    )
+                                </when>
+                                <when test="condition.operator == 'NOT_EQUALS' or condition.operator == 'NOT_CONTAINS'">
+                                    not exists (select 1 from bug_handle_user_relation bhur
+                                                where bhur.bug_id = b.id and bhur.handle_user_id = #{condition.value})
+                                </when>
+                                <otherwise>
+                                    exists (select 1 from bug_handle_user_relation bhur
+                                            where bhur.bug_id = b.id and bhur.handle_user_id = #{condition.value})
+                                </otherwise>
+                            </choose>
                         </if>
                         <!-- 所属平台 -->
                         <if test="condition.name == 'platform'">

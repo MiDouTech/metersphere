@@ -6,7 +6,12 @@
         {{ creatorInfo.name }}
         <span v-if="props.element.replyUser">{{ t('ms.comment.reply') }} {{ replyUserName }}</span>
       </div>
-      <div v-dompurify-html="props.element.content" class="markdown-body mt-[4px] break-words break-all"></div>
+      <div
+        ref="contentRef"
+        v-dompurify-html="props.element.content"
+        class="markdown-body mt-[4px] break-words break-all"
+        @click="handleContentClick"
+      ></div>
 
       <div class="mt-[8px] flex items-center justify-between">
         <div class="text-[12px] leading-[16px] text-[var(--color-text-4)]">
@@ -35,9 +40,16 @@
       </div>
     </div>
   </div>
+  <a-image-preview-group
+    v-model:visible="previewVisible"
+    v-model:current="previewCurrent"
+    infinite
+    :src-list="previewImages"
+  />
 </template>
 
 <script lang="ts" setup>
+  import { onBeforeUnmount, ref, watch } from 'vue';
   import dayjs from 'dayjs';
 
   import MsAvatar from '@/components/pure/ms-avatar/index.vue';
@@ -64,7 +76,55 @@
     onEdit?: () => void; // 编辑
     onDelete?: () => void; // 删除
     expandKeys: Set<string | number>;
+    imagePreview?: boolean;
+    resolvePreviewImage?: (src: string) => string | Promise<string>;
   }>();
+
+  const contentRef = ref<HTMLElement>();
+  const previewVisible = ref(false);
+  const previewCurrent = ref(0);
+  const previewImages = ref<string[]>([]);
+  const generatedBlobUrls = new Set<string>();
+
+  function clearGeneratedBlobUrls() {
+    generatedBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+    generatedBlobUrls.clear();
+  }
+
+  async function handleContentClick(event: MouseEvent) {
+    if (!props.imagePreview) return;
+    const target = event.target as HTMLElement;
+    if (target.tagName !== 'IMG' || !contentRef.value) return;
+    const images = Array.from(contentRef.value.querySelectorAll<HTMLImageElement>('img'));
+    const sourceList = images.map((image) => image.currentSrc || image.src).filter(Boolean);
+    if (!sourceList.length) return;
+    clearGeneratedBlobUrls();
+    try {
+      const resolved = props.resolvePreviewImage
+        ? await Promise.all(sourceList.map((source) => props.resolvePreviewImage?.(source) || source))
+        : sourceList;
+      resolved.forEach((source, index) => {
+        if (props.resolvePreviewImage && source !== sourceList[index] && source.startsWith('blob:')) {
+          generatedBlobUrls.add(source);
+        }
+      });
+      previewImages.value = resolved;
+      previewCurrent.value = Math.max(0, images.indexOf(target as HTMLImageElement));
+      previewVisible.value = true;
+    } catch {
+      previewImages.value = sourceList;
+      previewCurrent.value = Math.max(0, images.indexOf(target as HTMLImageElement));
+      previewVisible.value = true;
+    }
+  }
+
+  onBeforeUnmount(clearGeneratedBlobUrls);
+  watch(previewVisible, (visible) => {
+    if (!visible) {
+      clearGeneratedBlobUrls();
+      previewImages.value = [];
+    }
+  });
 
   // 是否拥有编辑｜删除权限
   const hasAuth = computed(() => {
@@ -147,5 +207,8 @@
     border-radius: 4px;
     color: var(--color-text-4);
     gap: 4px;
+  }
+  .markdown-body :deep(img) {
+    cursor: zoom-in;
   }
 </style>

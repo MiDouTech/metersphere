@@ -7,6 +7,7 @@
       :comment-list="commentList"
       :upload-image="handleUploadImage"
       :permissions="['PROJECT_BUG:READ+COMMENT']"
+      image-preview
       @delete="handleDelete"
       @update-or-add="handleUpdate"
     />

@@ -178,7 +178,10 @@
                             </foreach>
                         </if>
                         <if test="request.todoParam.msUserId != null and request.todoParam.msUserId != '' and request.assignedToMe">
-                            and b.handle_user = #{request.todoParam.msUserId}
+                            and exists (
+                                select 1 from bug_handle_user_relation bhur
+                                where bhur.bug_id = b.id and bhur.handle_user_id = #{request.todoParam.msUserId}
+                            )
                         </if>
                     )
                     <if test="request.todoParam.currentPlatform != null and request.todoParam.currentPlatform != 'Local'">
@@ -193,7 +196,10 @@
                                 </foreach>
                             </if>
                             <if test="request.todoParam.platformUser != null and request.todoParam.platformUser != '' and request.assignedToMe">
-                                and b.handle_user = #{request.todoParam.platformUser}
+                                and exists (
+                                    select 1 from bug_handle_user_relation bhur
+                                    where bhur.bug_id = b.id and bhur.handle_user_id = #{request.todoParam.platformUser}
+                                )
                             </if>
                         )
                     </if>
@@ -228,8 +234,11 @@
                     <choose>
                         <!-- 处理人 -->
                         <when test="key == 'handleUser'">
-                            and b.handle_user in
-                            <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                            and exists (
+                                select 1 from bug_handle_user_relation bhur
+                                where bhur.bug_id = b.id and bhur.handle_user_id in
+                                <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                            )
                         </when>
                         <!-- 删除人 -->
                         <when test="key == 'deleteUser'">
@@ -323,10 +332,40 @@
                         </if>
                         <!-- 处理人 -->
                         <if test="condition.name == 'handleUser'">
-                            <include refid="io.metersphere.system.mapper.BaseMapper.condition">
-                                <property name="condition" value="condition"/>
-                                <property name="column" value="b.handle_user"/>
-                            </include>
+                            <choose>
+                                <when test="condition.operator == 'EMPTY'">
+                                    not exists (select 1 from bug_handle_user_relation bhur where bhur.bug_id = b.id)
+                                </when>
+                                <when test="condition.operator == 'NOT_EMPTY'">
+                                    exists (select 1 from bug_handle_user_relation bhur where bhur.bug_id = b.id)
+                                </when>
+                                <when test="condition.operator == 'NOT_IN'">
+                                    not exists (
+                                        select 1 from bug_handle_user_relation bhur
+                                        where bhur.bug_id = b.id and bhur.handle_user_id in
+                                        <foreach collection="condition.value" item="value" separator="," open="(" close=")">#{value}</foreach>
+                                    )
+                                </when>
+                                <when test="condition.operator == 'NOT_EQUALS' or condition.operator == 'NOT_CONTAINS'">
+                                    not exists (
+                                        select 1 from bug_handle_user_relation bhur
+                                        where bhur.bug_id = b.id and bhur.handle_user_id = #{condition.value}
+                                    )
+                                </when>
+                                <when test="condition.operator == 'IN'">
+                                    exists (
+                                        select 1 from bug_handle_user_relation bhur
+                                        where bhur.bug_id = b.id and bhur.handle_user_id in
+                                        <foreach collection="condition.value" item="value" separator="," open="(" close=")">#{value}</foreach>
+                                    )
+                                </when>
+                                <otherwise>
+                                    exists (
+                                        select 1 from bug_handle_user_relation bhur
+                                        where bhur.bug_id = b.id and bhur.handle_user_id = #{condition.value}
+                                    )
+                                </otherwise>
+                            </choose>
                         </if>
                         <!-- 所属平台 -->
                         <if test="condition.name == 'platform'">
@@ -446,16 +485,16 @@
 
     <select id="projectUserBugStatusCount"
             resultType="io.metersphere.project.dto.ProjectUserStatusCountDTO">
-        SELECT bug.handle_user as userId,  bug.status, count(bug.id) as count
+        SELECT relation.handle_user_id as userId, bug.status, count(distinct bug.id) as count
         FROM bug
+        JOIN bug_handle_user_relation relation ON relation.bug_id = bug.id
         WHERE bug.deleted = false
         AND bug.project_id =  #{projectId}
         <if test="startTime != null and endTime != null">
             AND bug.create_time BETWEEN #{startTime} AND #{endTime}
         </if>
-        AND bug.handle_user != ''
         <if test="userIds != null and userIds.size() > 0">
-            AND bug.handle_user IN
+            AND relation.handle_user_id IN
             <foreach collection="userIds" item="userId" separator="," open="(" close=")">
                 #{userId}
             </foreach>
@@ -464,7 +503,7 @@
         <foreach collection="platforms" item="platform" separator="," open="(" close=")">
             #{platform}
         </foreach>
-        group by bug.handle_user, bug.status order by bug.handle_user;
+        group by relation.handle_user_id, bug.status order by relation.handle_user_id;
     </select>
 
     <select id="getSimpleList" resultType="io.metersphere.bug.domain.Bug">
@@ -476,10 +515,13 @@
             AND bug.create_time BETWEEN #{startTime} AND #{endTime}
         </if>
         <if test="handleUsers != null and handleUsers.size() > 0">
-            AND bug.handle_user IN
+            AND exists (
+            SELECT 1 FROM bug_handle_user_relation relation
+            WHERE relation.bug_id = bug.id AND relation.handle_user_id IN
             <foreach collection="handleUsers" item="handleUser" separator="," open="(" close=")">
                 #{handleUser}
             </foreach>
+            )
         </if>
         <if test="createUser != null and createUser != ''">
             AND bug.create_user = #{createUser}
@@ -506,14 +548,16 @@
         and (
         ( bug.platform = 'Local'
             <if test="localHandleUser != null and localHandleUser != ''">
-              AND bug.handle_user = #{localHandleUser}
+              AND EXISTS (SELECT 1 FROM bug_handle_user_relation relation
+                          WHERE relation.bug_id = bug.id AND relation.handle_user_id = #{localHandleUser})
             </if>
             )
         <if test="thirdPlatform != null and thirdPlatform != '' and thirdPlatform != 'Local'">
             or (
             ( bug.platform = #{thirdPlatform}
             <if test="thirdHandleUser != null and thirdHandleUser != ''">
-                AND bug.handle_user = #{thirdHandleUser}
+                AND EXISTS (SELECT 1 FROM bug_handle_user_relation relation
+                            WHERE relation.bug_id = bug.id AND relation.handle_user_id = #{thirdHandleUser})
             </if>)
             )
         </if>

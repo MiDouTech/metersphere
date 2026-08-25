@@ -261,29 +261,7 @@
     :get-list-fun-params="getListFunParams"
     @save="saveSelectAssociatedFile"
   />
-  <a-modal
-    v-model:visible="attachmentPreviewVisible"
-    :title="attachmentPreviewTitle"
-    :footer="false"
-    :width="960"
-    unmount-on-close
-    @cancel="clearAttachmentPreview"
-  >
-    <a-spin :loading="attachmentPreviewLoading" class="block w-full">
-      <pre v-if="attachmentPreviewType === 'text'" class="attachment-preview-text">{{ attachmentPreviewText }}</pre>
-      <div
-        v-else-if="attachmentPreviewType === 'html'"
-        v-dompurify-html="attachmentPreviewHtml"
-        class="attachment-preview-html"
-      ></div>
-      <iframe
-        v-else-if="attachmentPreviewUrl"
-        :src="attachmentPreviewUrl"
-        class="h-[70vh] w-full rounded border border-solid border-[var(--color-text-n8)]"
-      ></iframe>
-      <a-empty v-else />
-    </a-spin>
-  </a-modal>
+  <MsBugAttachmentPreview ref="attachmentPreviewRef" :project-id="currentProjectId" :bug-id="bugId || ''" />
 </template>
 
 <script setup lang="ts">
@@ -299,6 +277,7 @@
   import AddAttachment from '@/components/business/ms-add-attachment/index.vue';
   import SaveAsFilePopover from '@/components/business/ms-add-attachment/saveAsFilePopover.vue';
   import MsAutoSaveStatus from '@/components/business/ms-auto-save-status/index.vue';
+  import MsBugAttachmentPreview from '@/components/business/ms-bug-attachment-preview/index.vue';
   import RelateFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
 
   import {
@@ -748,135 +727,9 @@
   }
 
   const activeTransferFileParams = ref<MsFileItem>();
-  const attachmentPreviewVisible = ref(false);
-  const attachmentPreviewLoading = ref(false);
-  const attachmentPreviewTitle = ref('');
-  const attachmentPreviewUrl = ref('');
-  const attachmentPreviewText = ref('');
-  const attachmentPreviewHtml = ref('');
-  const attachmentPreviewType = ref<'iframe' | 'text' | 'html'>('iframe');
-
-  function getFileName(item: MsFileItem) {
-    return item.name || item.file?.name || '';
-  }
-
-  function getFileExtension(item: MsFileItem) {
-    const fileName = getFileName(item);
-    const index = fileName.lastIndexOf('.');
-    return index > -1 ? fileName.slice(index + 1).toLowerCase() : '';
-  }
-
-  function getPreviewMimeType(item: MsFileItem) {
-    const ext = getFileExtension(item);
-    const mimeMap: Record<string, string> = {
-      pdf: 'application/pdf',
-      txt: 'text/plain;charset=utf-8',
-      log: 'text/plain;charset=utf-8',
-      csv: 'text/csv;charset=utf-8',
-      doc: 'application/msword',
-      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      xls: 'application/vnd.ms-excel',
-      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    };
-    return mimeMap[ext] || item.file?.type || 'application/octet-stream';
-  }
-
-  function isTextPreviewFile(item: MsFileItem) {
-    return ['txt', 'log', 'csv', 'md', 'markdown', 'json', 'xml', 'yml', 'yaml'].includes(getFileExtension(item));
-  }
-
-  function isSpreadsheetPreviewFile(item: MsFileItem) {
-    return ['xls', 'xlsx'].includes(getFileExtension(item));
-  }
-
-  function isWordPreviewFile(item: MsFileItem) {
-    return ['doc', 'docx'].includes(getFileExtension(item));
-  }
-
-  function clearAttachmentPreview() {
-    if (attachmentPreviewUrl.value && attachmentPreviewUrl.value.startsWith('blob:')) {
-      URL.revokeObjectURL(attachmentPreviewUrl.value);
-    }
-    attachmentPreviewUrl.value = '';
-    attachmentPreviewText.value = '';
-    attachmentPreviewHtml.value = '';
-    attachmentPreviewType.value = 'iframe';
-  }
-
-  function escapeHtml(value: string) {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  async function renderSpreadsheetPreview(blob: Blob) {
-    const XLSX = await import('xlsx');
-    const workbook = XLSX.read(await blob.arrayBuffer(), { type: 'array' });
-    attachmentPreviewType.value = 'html';
-    attachmentPreviewHtml.value = workbook.SheetNames.map((sheetName, index) => {
-      const worksheet = workbook.Sheets[sheetName];
-      const tableHtml = XLSX.utils.sheet_to_html(worksheet, {
-        id: `attachment-preview-sheet-${index}`,
-      });
-      return `<section class="attachment-preview-sheet"><h3>${escapeHtml(sheetName)}</h3>${tableHtml}</section>`;
-    }).join('');
-  }
-
-  async function renderWordPreview(blob: Blob, item: MsFileItem) {
-    if (getFileExtension(item) === 'doc') {
-      attachmentPreviewType.value = 'text';
-      attachmentPreviewText.value =
-        'This legacy .doc file cannot be reliably previewed in the browser. Please download it, or convert it to .docx for preview.';
-      return;
-    }
-    const mammoth = await import('mammoth');
-    const result = await mammoth.convertToHtml({ arrayBuffer: await blob.arrayBuffer() });
-    attachmentPreviewType.value = 'html';
-    attachmentPreviewHtml.value = result.value || '<p>No previewable content was found.</p>';
-  }
-
-  async function handleAttachmentPreview(item: MsFileItem) {
-    clearAttachmentPreview();
-    attachmentPreviewVisible.value = true;
-    attachmentPreviewLoading.value = true;
-    attachmentPreviewTitle.value = getFileName(item);
-    try {
-      if (getFileExtension(item) === 'doc' && item.url && /^https?:\/\//i.test(item.url)) {
-        attachmentPreviewType.value = 'iframe';
-        attachmentPreviewUrl.value = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(
-          item.url
-        )}`;
-        return;
-      }
-      const res = await downloadFileRequest({
-        projectId: currentProjectId.value,
-        bugId: bugId.value as string,
-        fileId: item.uid,
-        associated: !item.local,
-      });
-      const blob = new Blob([res], { type: getPreviewMimeType(item) });
-      if (isTextPreviewFile(item)) {
-        attachmentPreviewType.value = 'text';
-        attachmentPreviewText.value = await blob.text();
-      } else if (isSpreadsheetPreviewFile(item)) {
-        await renderSpreadsheetPreview(blob);
-      } else if (isWordPreviewFile(item)) {
-        await renderWordPreview(blob, item);
-      } else {
-        attachmentPreviewType.value = 'iframe';
-        attachmentPreviewUrl.value = URL.createObjectURL(blob);
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-      Message.error(t('common.operationFailed'));
-      attachmentPreviewVisible.value = false;
-    } finally {
-      attachmentPreviewLoading.value = false;
-    }
+  const attachmentPreviewRef = ref<InstanceType<typeof MsBugAttachmentPreview>>();
+  function handleAttachmentPreview(item: MsFileItem) {
+    attachmentPreviewRef.value?.open(item);
   }
 
   function transferHandler(item: MsFileItem) {
@@ -888,11 +741,6 @@
 
   watchEffect(() => {
     initCurrentDetail(props.detailInfo);
-  });
-  watch(attachmentPreviewVisible, (visible) => {
-    if (!visible) {
-      clearAttachmentPreview();
-    }
   });
   defineExpose({
     handleSave,

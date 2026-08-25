@@ -185,8 +185,11 @@
                     <choose>
                         <!-- 处理人 -->
                         <when test="key == 'handleUser'">
-                            and b.handle_user in
-                            <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                            and exists (
+                                select 1 from bug_handle_user_relation bhur
+                                where bhur.bug_id = b.id and bhur.handle_user_id in
+                                <include refid="io.metersphere.system.mapper.BaseMapper.filterInWrapper"/>
+                            )
                         </when>
                         <!-- 删除人 -->
                         <when test="key == 'deleteUser'">
