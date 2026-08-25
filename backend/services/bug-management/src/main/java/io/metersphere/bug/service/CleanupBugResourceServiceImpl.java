@@ -22,6 +22,8 @@ public class CleanupBugResourceServiceImpl implements CleanupProjectResourceServ
     private BugMapper bugMapper;
     @Resource
     private BugCommonService bugCommonService;
+    @Resource
+    private BugHandleUserRelationService bugHandleUserRelationService;
 
     /**
      * 清理当前项目相关缺陷资源
@@ -57,6 +59,7 @@ public class CleanupBugResourceServiceImpl implements CleanupProjectResourceServ
      * @param bugIds 缺陷ID集合
      */
     private void deleteBug(List<String> bugIds) {
+        bugHandleUserRelationService.deleteByBugIds(bugIds);
         BugExample example = new BugExample();
         example.createCriteria().andIdIn(bugIds);
         bugMapper.deleteByExample(example);

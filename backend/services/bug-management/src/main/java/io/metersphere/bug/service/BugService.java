@@ -173,6 +173,8 @@ public class BugService {
     @Resource
     private BugWorkflowRuntimeService bugWorkflowRuntimeService;
     @Resource
+    private BugHandleUserRelationService bugHandleUserRelationService;
+    @Resource
     private BugAttachmentService bugAttachmentService;
     @Resource
     private BugPlatformService bugPlatformService;
@@ -454,6 +456,7 @@ public class BugService {
             // 删除缺陷后, 前置操作: 删除关联用例, 删除关联附件
             bugCommonService.clearAssociateResource(bug.getProjectId(), List.of(id));
             bugMapper.deleteByPrimaryKey(id);
+            bugHandleUserRelationService.deleteByBugIds(List.of(id));
         }
         applicationEventPublisher.publishEvent(new BugExpectedResolutionChangedEvent(id, System.currentTimeMillis()));
     }
@@ -488,6 +491,7 @@ public class BugService {
             throw new MSException(NOT_LOCAL_BUG_ERROR);
         }
         bugMapper.deleteByPrimaryKey(id);
+        bugHandleUserRelationService.deleteByBugIds(List.of(id));
         applicationEventPublisher.publishEvent(new BugExpectedResolutionChangedEvent(id, System.currentTimeMillis()));
     }
 
@@ -557,6 +561,7 @@ public class BugService {
                      * 和当前项目所属平台不一致, 只删除MS缺陷, 不同步删除平台缺陷, 一致时需同步删除平台缺陷
                      */
                     bugMapper.deleteByExample(example);
+                    bugHandleUserRelationService.deleteByBugIds(bugIds);
                     platformBugIds.addAll(bugIds);
                     if (StringUtils.equals(platform, currentPlatform)) {
                         platformBugKeys.addAll(bugList.stream().map(Bug::getPlatformBugId).toList());
@@ -839,6 +844,7 @@ public class BugService {
             syncBugResult.getDeleteBugIds().forEach(deleteBugId -> {
                 bugCommonService.clearAssociateResource(project.getId(), List.of(deleteBugId));
                 bugMapper.deleteByPrimaryKey(deleteBugId);
+                bugHandleUserRelationService.deleteByBugIds(List.of(deleteBugId));
             });
 
             // 批量插入同步的三方缺陷富文本附件
@@ -852,6 +858,12 @@ public class BugService {
             }
 
             sqlSession.commit();
+            List<String> updatedIds = updateBugs.stream().map(PlatformBugDTO::getId).filter(StringUtils::isNotBlank).toList();
+            if (CollectionUtils.isNotEmpty(updatedIds)) {
+                BugExample relationExample = new BugExample();
+                relationExample.createCriteria().andIdIn(updatedIds);
+                bugHandleUserRelationService.replaceAll(bugMapper.selectByExample(relationExample));
+            }
         } catch (Exception e) {
             throw new MSException(e);
         } finally {
@@ -988,6 +1000,7 @@ public class BugService {
                 }
 
                 sqlSession.commit();
+                bugHandleUserRelationService.rebuildProject(project.getId(), platformName);
             };
             SyncAllBugRequest syncAllBugRequest = new SyncAllBugRequest();
             syncAllBugRequest.setPre(request.getPre());
@@ -1003,6 +1016,7 @@ public class BugService {
                 BugExample example = new BugExample();
                 example.createCriteria().andIdIn(syncToDeleteIds);
                 bugMapper.deleteByExample(example);
+                bugHandleUserRelationService.deleteByBugIds(syncToDeleteIds);
                 bugCommonService.clearAssociateResource(project.getId(), syncToDeleteIds);
             }
         } catch (Exception e) {
@@ -1256,6 +1270,8 @@ public class BugService {
             extBugMapper.updateBugExtraTimes(bug.getId(), handleTimeToSet, closeTimeToSet);
         }
 
+        bugHandleUserRelationService.replace(bug);
+
         // 异步发送处理人通知 (第三方不通知 && 处理人没更改不通知)；新建额外推企微机器人
         if (StringUtils.equals(platformName, BugPlatform.LOCAL.getName()) && noticeHandler) {
             bugSyncNoticeService.sendHandleUserNotice(bug, currentUser, isCreateBug);
@@ -1278,33 +1294,14 @@ public class BugService {
      * 解析处理人：兼容单值、逗号分隔、JSON 数组
      */
     private List<String> parseHandleUserIds(String raw) {
-        if (StringUtils.isBlank(raw)) {
-            return List.of();
-        }
-        String value = raw.trim();
-        try {
-            if (StringUtils.startsWith(value, "[")) {
-                List<String> ids = JSON.parseArray(value, String.class);
-                if (ids == null) {
-                    return List.of();
-                }
-                return ids.stream().filter(StringUtils::isNotBlank).distinct().toList();
-            }
-        } catch (Exception e) {
-            LogUtils.warn("parse handleUser json failed: " + value);
-        }
-        return Arrays.stream(value.split(","))
-                .map(String::trim)
-                .filter(StringUtils::isNotBlank)
-                .distinct()
-                .toList();
+        return bugHandleUserRelationService.parse(raw);
     }
 
     /**
      * 归一化为逗号分隔存储
      */
     private String normalizeHandleUserValue(String raw) {
-        return String.join(",", parseHandleUserIds(raw));
+        return bugHandleUserRelationService.normalize(raw);
     }
 
     /**

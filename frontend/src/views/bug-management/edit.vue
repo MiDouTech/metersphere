@@ -61,6 +61,7 @@
           mode="static"
           :show-delete="false"
           :get-thumbnail="getAttachmentThumbnail"
+          :handle-view="handleAttachmentPreview"
           :file-name-max-width="props.fileNameMaxWidth"
         >
           <template #actions="{ item }">
@@ -197,6 +198,7 @@
     :get-list-fun-params="getListFunParams"
     @save="saveSelectAssociatedFile"
   />
+  <MsBugAttachmentPreview ref="attachmentPreviewRef" :project-id="currentProjectId" :bug-id="bugId || ''" />
 </template>
 
 <script setup lang="ts">
@@ -212,6 +214,7 @@
   import { MsFileItem } from '@/components/pure/ms-upload/types';
   import AddAttachment from '@/components/business/ms-add-attachment/index.vue';
   import SaveAsFilePopover from '@/components/business/ms-add-attachment/saveAsFilePopover.vue';
+  import MsBugAttachmentPreview from '@/components/business/ms-bug-attachment-preview/index.vue';
   import RelateFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
 
   import {
@@ -319,6 +322,10 @@
   const acceptType = ref('none'); // 模块-上传文件类型
   const isEdit = computed(() => props.bugId && !props.isCopyBug);
   const bugId = ref<string | undefined>(props.bugId);
+  const attachmentPreviewRef = ref<InstanceType<typeof MsBugAttachmentPreview>>();
+  function handleAttachmentPreview(item: MsFileItem) {
+    attachmentPreviewRef.value?.open(item);
+  }
   const isEditOrCopy = computed(() => !!bugId.value);
   const isPlatformDefaultTemplate = ref(false);
   // 内容/富文本临时附件ID

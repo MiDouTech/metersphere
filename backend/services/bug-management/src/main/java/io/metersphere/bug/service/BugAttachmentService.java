@@ -204,6 +204,38 @@ public class BugAttachmentService {
     }
 
     /**
+     * Verifies that the requested file is attached to the requested bug and project, and returns
+     * the server-side file name. Client supplied names are never used as the authorization source.
+     */
+    public String validatePreviewSource(BugFileSourceRequest request) {
+        Bug bug = bugMapper.selectByPrimaryKey(request.getBugId());
+        if (bug == null || !StringUtils.equals(bug.getProjectId(), request.getProjectId())) {
+            throw new MSException(Translator.get("resource_not_exist"));
+        }
+        if (!Boolean.TRUE.equals(request.getAssociated())) {
+            BugLocalAttachment attachment = getLocalFile(request);
+            if (attachment == null) {
+                throw new MSException(Translator.get("file.not.exist"));
+            }
+            return attachment.getFileName();
+        }
+        FileAssociationExample associationExample = new FileAssociationExample();
+        associationExample.createCriteria()
+                .andSourceIdEqualTo(request.getBugId())
+                .andSourceTypeEqualTo(FileAssociationSourceUtil.SOURCE_TYPE_BUG)
+                .andFileIdEqualTo(request.getFileId())
+                .andDeletedEqualTo(false);
+        if (CollectionUtils.isEmpty(fileAssociationMapper.selectByExample(associationExample))) {
+            throw new MSException(Translator.get("file.not.exist"));
+        }
+        FileMetadata metadata = fileMetadataMapper.selectByPrimaryKey(request.getFileId());
+        if (metadata == null) {
+            throw new MSException(Translator.get("file.not.exist"));
+        }
+        return metadata.getName() + "." + metadata.getType();
+    }
+
+    /**
      * 转存附件至文件库
      * @param request 请求参数
      * @param currentUser 当前用户

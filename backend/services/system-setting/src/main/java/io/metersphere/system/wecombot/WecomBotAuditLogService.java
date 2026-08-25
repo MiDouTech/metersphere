@@ -33,11 +33,44 @@ public class WecomBotAuditLogService {
         return log(OperationLogType.UPDATE, action);
     }
 
+    public LogDTO ruleAction(String id, String action) {
+        LogDTO log = log(OperationLogType.UPDATE, action);
+        log.setOriginalValue(JSON.toJSONBytes(service.rule(id)));
+        return log;
+    }
+
+    public LogDTO scheduleAction(String id, String action) {
+        LogDTO log = log(OperationLogType.UPDATE, action);
+        log.setOriginalValue(JSON.toJSONBytes(service.schedule(id)));
+        return log;
+    }
+
     public LogDTO rule(WecomBotModels.RuleRequest request) {
         LogDTO log = log(OperationLogType.UPDATE, "变更企微通知规则：" + request.name());
         log.setModifiedValue(JSON.toJSONBytes(Map.of(
                 "name", request.name(), "scopeType", request.scopeType(), "notificationType", request.notificationType(),
                 "triggerType", request.triggerType(), "recipientCount", request.recipientSpec() == null ? 0 : request.recipientSpec().size())));
+        return log;
+    }
+
+    public LogDTO rule(String id, WecomBotModels.RuleRequest request) {
+        LogDTO log = rule(request);
+        log.setOriginalValue(JSON.toJSONBytes(service.rule(id)));
+        log.setModifiedValue(JSON.toJSONBytes(request));
+        return log;
+    }
+
+    public LogDTO schedule(String id, WecomBotModels.ScheduleRequest request) {
+        LogDTO log = log(OperationLogType.UPDATE, "变更企微通知计划");
+        log.setOriginalValue(JSON.toJSONBytes(service.schedule(id)));
+        log.setModifiedValue(JSON.toJSONBytes(request));
+        return log;
+    }
+
+    public LogDTO newSchedule(String ruleId, WecomBotModels.ScheduleRequest request) {
+        LogDTO log = log(OperationLogType.ADD, "新增企微通知计划");
+        log.setSourceId(ruleId);
+        log.setModifiedValue(JSON.toJSONBytes(request));
         return log;
     }
 

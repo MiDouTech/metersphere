@@ -32,6 +32,14 @@ export default defineComponent({
       type: Array as PropType<string[]>,
       default: () => [],
     },
+    imagePreview: {
+      type: Boolean,
+      default: false,
+    },
+    resolvePreviewImage: {
+      type: Function as PropType<(src: string) => string | Promise<string>>,
+      default: undefined,
+    },
   },
   emits: {
     /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -160,6 +168,9 @@ export default defineComponent({
         <div class="flex flex-col">
           <Item
             mode={'child'}
+            permissions={props.permissions}
+            imagePreview={props.imagePreview}
+            resolvePreviewImage={props.resolvePreviewImage}
             onReply={() => handleReply(item)}
             onEdit={() => handelEdit(item)}
             onDelete={() => handleDelete(item)}
@@ -182,6 +193,8 @@ export default defineComponent({
           <Item
             mode={'parent'}
             permissions={props.permissions}
+            imagePreview={props.imagePreview}
+            resolvePreviewImage={props.resolvePreviewImage}
             onReply={() => handleReply(item)}
             onEdit={() => handelEdit(item)}
             onDelete={() => handleDelete(item)}

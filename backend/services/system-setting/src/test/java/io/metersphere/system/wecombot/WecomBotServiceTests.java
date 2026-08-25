@@ -116,11 +116,20 @@ class WecomBotServiceTests {
                 + "expected-resolution notifications; clear businessRoles for CUSTOM_CRON", error.getMessage());
     }
 
+    @Test
+    void formatsTemplateTimesInTheRuleTimezoneInsteadOfExposingEpochMillis() {
+        assertEquals("2026-08-24 08:00",
+                service.formatTimestamp(1787529600000L, "Asia/Shanghai"));
+        assertEquals("2026-08-24 00:00",
+                service.formatTimestamp(1787529600000L, "UTC"));
+    }
+
     private WecomBotModels.RuleRequest rule(String notificationType, String triggerType, String cron,
                                              Map<String, Object> recipients, String deliveryMode,
                                              Map<String, Object> triggerConfig) {
+        String template = "TEST_REPORT_GENERATED".equals(notificationType) ? "${reportName}" : "${customTitle}";
         return new WecomBotModels.RuleRequest("rule", "SYSTEM", null, notificationType, triggerType,
-                triggerConfig, cron, "Asia/Shanghai", "${customTitle}", recipients, deliveryMode,
-                Map.of(), null, null);
+                triggerConfig, cron, "Asia/Shanghai", template, recipients, deliveryMode,
+                Map.of(), null, null, List.of());
     }
 }

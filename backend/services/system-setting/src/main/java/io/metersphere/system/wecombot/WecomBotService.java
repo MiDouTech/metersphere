@@ -15,12 +15,15 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import io.metersphere.system.event.BugExpectedResolutionChangedEvent;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.time.ZoneId;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import org.quartz.CronExpression;
 
 @Service
@@ -222,7 +225,14 @@ public class WecomBotService {
     }
 
     public List<Map<String, Object>> rules() {
-        return jdbc.queryForList("SELECT * FROM wecom_notification_rule ORDER BY update_time DESC");
+        List<Map<String, Object>> rules = jdbc.queryForList("SELECT * FROM wecom_notification_rule ORDER BY update_time DESC");
+        rules.forEach(rule -> {
+            List<Map<String, Object>> schedules = schedules(str(rule, "id"));
+            rule.put("schedules", schedules);
+            rule.put("next_fire_time", schedules.stream().map(item -> lng(item, "next_fire_time"))
+                    .filter(Objects::nonNull).min(Long::compareTo).orElse(lng(rule, "next_fire_time")));
+        });
+        return rules;
     }
 
     public Map<String, Object> rule(String id) {
@@ -237,11 +247,16 @@ public class WecomBotService {
         Map<String, Object> config = requiredConfig();
         long now = System.currentTimeMillis();
         String id = IDGenerator.nextStr();
-        jdbc.update("INSERT INTO wecom_notification_rule(id,name,scope_type,scope_id,bot_config_id,notification_type,trigger_type,trigger_config,cron,timezone,enabled,message_type,template,recipient_spec,delivery_mode,stop_config,misfire_policy,start_at,end_at,version,create_time,update_time,create_user,update_user) VALUES(?,?,?,?,?,?,?,?,?,?,0,'MARKDOWN',?,?,?,?, 'DO_NOTHING',?,?,1,?,?,?,?)",
+        Map<String, Object> recipients = recipientsForRule(request);
+        Long startAt = usesRulePeriod(request.notificationType()) ? request.startAt() : null;
+        Long endAt = usesRulePeriod(request.notificationType()) ? request.endAt() : null;
+        jdbc.update("INSERT INTO wecom_notification_rule(id,name,scope_type,scope_id,bot_config_id,notification_type,trigger_type,trigger_config,cron,timezone,enabled,config_status,config_warning,message_type,template,recipient_spec,delivery_mode,stop_config,misfire_policy,start_at,end_at,version,create_time,update_time,create_user,update_user) VALUES(?,?,?,?,?,?,?,?,?,?,0,'READY',NULL,'MARKDOWN',?,?,?,?, 'DO_NOTHING',?,?,1,?,?,?,?)",
                 id, request.name(), request.scopeType(), request.scopeId(), str(config, "id"), request.notificationType(),
                 request.triggerType(), json(request.triggerConfig()), request.cron(), request.timezone(), request.template(),
-                json(request.recipientSpec()), request.deliveryMode(), json(request.stopConfig()), request.startAt(), request.endAt(),
+                json(recipients), request.deliveryMode(), json(request.stopConfig()), startAt, endAt,
                 now, now, userId, userId);
+        syncSchedules(id, request.notificationType(), request.schedules(), userId, false);
+        requestScheduleReconcile(id, Set.of(), false);
         return id;
     }
 
@@ -249,22 +264,27 @@ public class WecomBotService {
     public void updateRule(String id, WecomBotModels.RuleRequest request, String userId) {
         validateRule(request, userId);
         Map<String, Object> previous = rule(id);
-        requireUpdated(jdbc.update("UPDATE wecom_notification_rule SET name=?,scope_type=?,scope_id=?,notification_type=?,trigger_type=?,trigger_config=?,cron=?,timezone=?,template=?,recipient_spec=?,delivery_mode=?,stop_config=?,start_at=?,end_at=?,version=version+1,update_time=?,update_user=? WHERE id=?",
+        Map<String, Object> recipients = recipientsForRule(request);
+        Long startAt = usesRulePeriod(request.notificationType()) ? request.startAt() : null;
+        Long endAt = usesRulePeriod(request.notificationType()) ? request.endAt() : null;
+        requireUpdated(jdbc.update("UPDATE wecom_notification_rule SET name=?,scope_type=?,scope_id=?,notification_type=?,trigger_type=?,trigger_config=?,cron=?,timezone=?,template=?,recipient_spec=?,delivery_mode=?,stop_config=?,start_at=?,end_at=?,config_status='READY',config_warning=NULL,version=version+1,update_time=?,update_user=? WHERE id=?",
                 request.name(), request.scopeType(), request.scopeId(), request.notificationType(), request.triggerType(),
-                json(request.triggerConfig()), request.cron(), request.timezone(), request.template(), json(request.recipientSpec()),
-                request.deliveryMode(), json(request.stopConfig()), request.startAt(), request.endAt(), System.currentTimeMillis(), userId, id));
+                json(request.triggerConfig()), request.cron(), request.timezone(), request.template(), json(recipients),
+                request.deliveryMode(), json(request.stopConfig()), startAt, endAt, System.currentTimeMillis(), userId, id));
+        syncSchedules(id, request.notificationType(), request.schedules(), userId, bool(previous, "enabled"));
         jdbc.update("UPDATE wecom_notification_timer SET status='CANCELLED',update_time=? WHERE rule_id=? AND status IN ('WAITING','PROCESSING')", System.currentTimeMillis(), id);
-        if ("CRON".equals(str(previous, "trigger_type")) && !"CRON".equals(request.triggerType())) cronSchedules.remove(id);
-        if (bool(previous, "enabled") && "CRON".equals(request.triggerType())) cronSchedules.schedule(id, request.cron(), request.timezone());
+        requestScheduleReconcile(id, Set.of(), false);
         if (bool(previous, "enabled") && "DEADLINE".equals(request.triggerType())) refreshDeadlineResources(id);
     }
 
     @Transactional
     public void deleteRule(String id) {
-        cronSchedules.remove(id);
+        Set<String> removedScheduleIds = schedules(id).stream().map(schedule -> str(schedule, "id")).collect(java.util.stream.Collectors.toSet());
+        jdbc.update("DELETE FROM wecom_notification_schedule WHERE rule_id=?", id);
         jdbc.update("UPDATE wecom_notification_timer SET status='CANCELLED',update_time=? WHERE rule_id=?", System.currentTimeMillis(), id);
         jdbc.update("UPDATE wecom_notification_outbox SET status='CANCELLED',next_retry_at=NULL,lease_until=NULL,update_time=? WHERE rule_id=? AND status IN ('PENDING','RETRY')", System.currentTimeMillis(), id);
         requireUpdated(jdbc.update("DELETE FROM wecom_notification_rule WHERE id=?", id));
+        requestScheduleReconcile(id, removedScheduleIds, true);
     }
 
     @Transactional
@@ -279,21 +299,20 @@ public class WecomBotService {
             row.put("recipient_spec", json(recipients));
             jdbc.update("UPDATE wecom_notification_rule SET recipient_spec=? WHERE id=?", json(recipients), id);
         }
+        if (enabled && "NEEDS_ATTENTION".equals(str(row, "config_status"))) {
+            throw new MSException(StringUtils.defaultIfBlank(str(row, "config_warning"), "Notification recipients must be completed before enabling"));
+        }
         if (enabled) requireActiveRecipient(str(row, "recipient_spec"));
         if (enabled) validateDeliveryRecipients(str(row, "delivery_mode"), recipients);
-        if (enabled && "CRON".equals(str(row, "trigger_type"))) {
-            cronSchedules.schedule(id, str(row, "cron"), str(row, "timezone"));
-        }
+        if (enabled) ensureResolvableUserRecipients(row, recipients);
         requireUpdated(jdbc.update("UPDATE wecom_notification_rule SET enabled=?,version=version+1,update_time=?,update_user=? WHERE id=?",
                 enabled, System.currentTimeMillis(), userId, id));
+        requestScheduleReconcile(id, Set.of(), false);
         if (!enabled) {
             jdbc.update("UPDATE wecom_notification_timer SET status='CANCELLED',update_time=? WHERE rule_id=? AND status IN ('WAITING','PROCESSING')", System.currentTimeMillis(), id);
             jdbc.update("UPDATE wecom_notification_outbox SET status='CANCELLED',next_retry_at=NULL,lease_until=NULL,update_time=? WHERE rule_id=? AND status IN ('PENDING','RETRY')", System.currentTimeMillis(), id);
         }
-        if ("CRON".equals(str(row, "trigger_type"))) {
-            if (!enabled) cronSchedules.remove(id);
-        }
-        if (enabled && "DEADLINE".equals(str(row, "trigger_type"))) refreshDeadlineResources(id);
+        if (enabled && "DEADLINE".equals(str(row, "trigger_type")) && enabledSchedules(id).isEmpty()) refreshDeadlineResources(id);
     }
 
     public String preview(String id, Map<String, Object> variables) {
@@ -301,18 +320,119 @@ public class WecomBotService {
     }
 
     @Transactional
-    public List<String> runOnce(String id) {
+    public List<String> runOnce(String id, String userId, String scheduleId) {
         requireBotEnabled();
         Map<String, Object> row = rule(id);
-        if (!"CUSTOM_CRON".equals(str(row, "notification_type"))) {
-            throw new MSException("Only custom Cron rules support immediate execution");
+        String notificationType = str(row, "notification_type");
+        if ("TEST_REPORT_GENERATED".equals(notificationType)) {
+            throw new MSException("Test report notifications can only be triggered by a generated report event");
         }
-        if (!bool(row, "enabled")) throw new MSException("Enable the rule before immediate execution");
-        String content = render(str(row, "template"), Map.of("ruleName", str(row, "name"), "now", System.currentTimeMillis(),
+        String triggerKey = "MANUAL:" + id + ":" + IDGenerator.nextStr();
+        if ("BUG_EXPECTED_RESOLUTION_DUE".equals(notificationType)) {
+            List<String> ids = executeBugRule(row, triggerKey, "MANUAL", userId, scheduleId, System.currentTimeMillis());
+            if (ids.isEmpty()) throw new MSException("No matching bug or valid recipient was resolved");
+            return ids;
+        }
+        String content = render(str(row, "template"), Map.of("ruleName", str(row, "name"),
+                "now", formatTimestamp(System.currentTimeMillis(), str(row, "timezone")),
                 "customTitle", str(row, "name"), "customContent", ""));
-        List<String> ids = enqueueForRule(row, "MANUAL:" + id + ":" + IDGenerator.nextStr(), null, null, content);
+        List<String> ids = enqueueForRule(row, triggerKey, null, null, content, "MANUAL", userId, scheduleId);
         if (ids.isEmpty()) throw new MSException("No valid recipient was resolved");
         return ids;
+    }
+
+    public List<String> runScheduleOnce(String scheduleId, String userId) {
+        Map<String, Object> schedule = requiredSchedule(scheduleId);
+        long now = System.currentTimeMillis();
+        String executionId = beginScheduleExecution(schedule, "MANUAL", userId, now, 1);
+        try {
+            List<String> ids = runOnce(str(schedule, "rule_id"), userId, scheduleId);
+            finishScheduleExecution(executionId, "SUCCESS", ids.size(), null, null, false);
+            return ids;
+        } catch (RuntimeException e) {
+            finishScheduleExecution(executionId, "FAILED", 0, "MANUAL_EXECUTION_FAILED", e.getMessage(), false);
+            throw e;
+        }
+    }
+
+    public void executeSchedule(String scheduleId, long scheduledFireTime) {
+        Map<String, Object> schedule = one("SELECT s.*,r.enabled rule_enabled,r.notification_type,r.name rule_name FROM wecom_notification_schedule s JOIN wecom_notification_rule r ON r.id=s.rule_id WHERE s.id=?", scheduleId);
+        if (schedule == null) return;
+        String executionId = beginScheduleExecution(schedule, "SCHEDULE", null, scheduledFireTime, 4);
+        if (executionId == null) return;
+        if (!isEnabled() || !bool(schedule, "enabled") || !bool(schedule, "rule_enabled")) {
+            finishScheduleExecution(executionId, "SKIPPED", 0, "SCHEDULE_DISABLED", "Bot, rule, or schedule is disabled", false);
+            cronSchedules.recordPlanFire(scheduleId, scheduledFireTime);
+            return;
+        }
+        Map<String, Object> rule = rule(str(schedule, "rule_id"));
+        String scheduleTriggerKey = "SCHEDULE:" + rule.get("id") + ":" + scheduledFireTime;
+        try {
+            List<String> ids = List.of();
+            if ("BUG_EXPECTED_RESOLUTION_DUE".equals(str(rule, "notification_type"))) {
+                ids = executeBugRule(rule, scheduleTriggerKey,
+                        "SCHEDULE", null, scheduleId, scheduledFireTime);
+            } else if ("CUSTOM_CRON".equals(str(rule, "notification_type"))) {
+                String content = render(str(rule, "template"), Map.of("ruleName", str(rule, "name"),
+                        "now", formatTimestamp(scheduledFireTime, str(rule, "timezone")), "customTitle", str(rule, "name"), "customContent", ""));
+                ids = enqueueForRule(rule, scheduleTriggerKey,
+                        null, null, content, "SCHEDULE", null, scheduleId);
+            }
+            finishScheduleExecution(executionId, "SUCCESS", ids.size(), null, null, false);
+        } catch (RuntimeException e) {
+            finishScheduleExecution(executionId, null, 0, "SCHEDULE_EXECUTION_FAILED", e.getMessage(), true);
+            LogUtils.error("WeCom notification schedule execution failed: " + scheduleId + ", " + e.getMessage());
+        } finally {
+            cronSchedules.recordPlanFire(scheduleId, scheduledFireTime);
+        }
+    }
+
+    private String beginScheduleExecution(Map<String, Object> schedule, String triggerMode, String triggerUserId,
+                                          long plannedFireTime, int maxAttempts) {
+        long now = System.currentTimeMillis();
+        String id = IDGenerator.nextStr();
+        try {
+            jdbc.update("INSERT INTO wecom_notification_schedule_execution(id,schedule_id,rule_id,trigger_mode,trigger_user_id,planned_fire_time,actual_start_time,status,attempts,max_attempts,create_time,update_time) VALUES(?,?,?,?,?,?,?,'RUNNING',1,?,?,?)",
+                    id, str(schedule, "id"), str(schedule, "rule_id"), triggerMode, triggerUserId,
+                    plannedFireTime, now, maxAttempts, now, now);
+            return id;
+        } catch (DuplicateKeyException duplicate) {
+            if (!"SCHEDULE".equals(triggerMode)) return null;
+            Map<String, Object> existing = one("SELECT id,status,next_retry_at FROM wecom_notification_schedule_execution WHERE schedule_id=? AND trigger_mode=? AND planned_fire_time=?",
+                    str(schedule, "id"), triggerMode, plannedFireTime);
+            if (existing == null || !"RETRY".equals(str(existing, "status"))
+                    || lng(existing, "next_retry_at") == null || lng(existing, "next_retry_at") > now) return null;
+            int claimed = jdbc.update("UPDATE wecom_notification_schedule_execution SET status='RUNNING',attempts=attempts+1,actual_start_time=?,actual_finish_time=NULL,next_retry_at=NULL,error_code=NULL,error_message=NULL,update_time=? WHERE id=? AND status='RETRY' AND next_retry_at<=?",
+                    now, now, str(existing, "id"), now);
+            return claimed == 1 ? str(existing, "id") : null;
+        }
+    }
+
+    private void finishScheduleExecution(String id, String requestedStatus, int targetCount, String errorCode,
+                                         String errorMessage, boolean retryable) {
+        if (id == null) return;
+        Map<String, Object> execution = one("SELECT attempts,max_attempts FROM wecom_notification_schedule_execution WHERE id=?", id);
+        if (execution == null) return;
+        int attempts = ((Number) execution.get("attempts")).intValue();
+        int maxAttempts = ((Number) execution.get("max_attempts")).intValue();
+        boolean retry = retryable && attempts < maxAttempts;
+        String status = requestedStatus == null ? (retry ? "RETRY" : "FAILED") : requestedStatus;
+        long now = System.currentTimeMillis();
+        long[] delays = {60_000L, 300_000L, 900_000L};
+        Long nextRetryAt = retry ? now + delays[Math.min(Math.max(attempts - 1, 0), delays.length - 1)] : null;
+        jdbc.update("UPDATE wecom_notification_schedule_execution SET status=?,actual_finish_time=?,next_retry_at=?,target_count=?,error_code=?,error_message=?,update_time=? WHERE id=?",
+                status, now, nextRetryAt, targetCount, errorCode, safeError(errorMessage), now, id);
+    }
+
+    @Scheduled(fixedDelayString = "${ms.wecom-bot.schedule-retry-scan-delay-ms:30000}")
+    public void retryScheduleExecutions() {
+        long now = System.currentTimeMillis();
+        jdbc.queryForList("SELECT schedule_id,planned_fire_time FROM wecom_notification_schedule_execution WHERE status='RETRY' AND next_retry_at<=? ORDER BY next_retry_at LIMIT 50", now)
+                .forEach(item -> executeSchedule(str(item, "schedule_id"), ((Number) item.get("planned_fire_time")).longValue()));
+    }
+
+    public List<Map<String, Object>> scheduleExecutions(String ruleId) {
+        return jdbc.queryForList("SELECT id,schedule_id,rule_id,trigger_mode,trigger_user_id,planned_fire_time,actual_start_time,actual_finish_time,status,attempts,max_attempts,next_retry_at,target_count,error_code,error_message,create_time,update_time FROM wecom_notification_schedule_execution WHERE rule_id=? ORDER BY planned_fire_time DESC LIMIT 200", ruleId);
     }
 
     public WecomBotModels.PageResult<Map<String, Object>> logs(int page, int pageSize, String status, String eventType,
@@ -321,7 +441,11 @@ public class WecomBotService {
         int offset = Math.max(page - 1, 0) * safeSize;
         StringBuilder where = new StringBuilder(" WHERE 1=1");
         List<Object> values = new ArrayList<>();
-        addFilter(where, values, "status", status);
+        if ("PARTIAL_SUCCESS".equals(status)) {
+            where.append(" AND status='SUCCESS' AND partial_failure_count>0");
+        } else {
+            addFilter(where, values, "status", status);
+        }
         addFilter(where, values, "event_type", eventType);
         addFilter(where, values, "target_type", targetType);
         addFilter(where, values, "rule_id", ruleId);
@@ -330,7 +454,7 @@ public class WecomBotService {
         List<Object> pageValues = new ArrayList<>(values);
         pageValues.add(safeSize);
         pageValues.add(offset);
-        List<Map<String, Object>> rows = jdbc.queryForList("SELECT id,rule_id,resource_type,resource_id,event_type,target_type,payload_preview,status,attempts,max_attempts,next_retry_at,error_code,error_message,retryable,create_time,update_time,sent_at FROM wecom_notification_outbox" + where + " ORDER BY create_time DESC LIMIT ? OFFSET ?", pageValues.toArray());
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT id,rule_id,resource_type,resource_id,event_type,trigger_mode,trigger_user_id,schedule_id,target_type,target_id,recipient_user_id,payload_preview,CASE WHEN status='SUCCESS' AND partial_failure_count>0 THEN 'PARTIAL_SUCCESS' ELSE status END status,status actual_status,attempts,max_attempts,next_retry_at,error_code,error_message,retryable,partial_failure_count,partial_failure_detail,create_time,update_time,sent_at FROM wecom_notification_outbox" + where + " ORDER BY create_time DESC LIMIT ? OFFSET ?", pageValues.toArray());
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM wecom_notification_outbox" + where, Long.class, values.toArray());
         return new WecomBotModels.PageResult<>(rows, total == null ? 0 : total);
     }
@@ -340,7 +464,7 @@ public class WecomBotService {
     }
 
     public Map<String, Object> log(String id) {
-        Map<String, Object> row = one("SELECT id,rule_id,resource_type,resource_id,event_type,target_type,payload_preview,payload_hash,status,attempts,max_attempts,next_retry_at,request_id,error_code,error_message,create_time,update_time,sent_at FROM wecom_notification_outbox WHERE id=?", id);
+        Map<String, Object> row = one("SELECT id,rule_id,resource_type,resource_id,event_type,trigger_mode,trigger_user_id,schedule_id,target_type,target_id,recipient_user_id,configured_recipient_spec,resolved_user_ids,mentioned_user_ids,partial_failure_count,partial_failure_detail,payload_preview,payload_hash,CASE WHEN status='SUCCESS' AND partial_failure_count>0 THEN 'PARTIAL_SUCCESS' ELSE status END status,status actual_status,attempts,max_attempts,next_retry_at,request_id,error_code,error_message,create_time,update_time,sent_at FROM wecom_notification_outbox WHERE id=?", id);
         if (row == null) throw new MSException("Notification message does not exist");
         return row;
     }
@@ -391,6 +515,13 @@ public class WecomBotService {
     @Transactional
     public String enqueue(String ruleId, String eventType, String eventId, String triggerKey, String targetType,
                           String targetId, String content, String resourceType, String resourceId) {
+        return enqueue(ruleId, eventType, eventId, triggerKey, targetType, targetId, content, resourceType, resourceId,
+                null, null, null);
+    }
+
+    public String enqueue(String ruleId, String eventType, String eventId, String triggerKey, String targetType,
+                          String targetId, String content, String resourceType, String resourceId,
+                          String triggerMode, String triggerUserId, String scheduleId) {
         if (StringUtils.isBlank(content) || content.getBytes(StandardCharsets.UTF_8).length > 20_480) {
             throw new MSException("Message content must be between 1 and 20480 bytes");
         }
@@ -398,8 +529,9 @@ public class WecomBotService {
         long now = System.currentTimeMillis();
         String payload = JSON.toJSONString(Map.of("content", content));
         try {
-            jdbc.update("INSERT INTO wecom_notification_outbox(id,rule_id,resource_type,resource_id,event_type,event_id,trigger_key,target_type,target_id,message_type,payload,payload_preview,payload_hash,status,attempts,max_attempts,next_retry_at,create_time,update_time) VALUES(?,?,?,?,?,?,?,?,?,'MARKDOWN',?,?,?,'PENDING',0,4,?,?,?)",
-                    id, ruleId, resourceType, resourceId, eventType, eventId, triggerKey, targetType, targetId, payload,
+            jdbc.update("INSERT INTO wecom_notification_outbox(id,rule_id,resource_type,resource_id,event_type,event_id,trigger_mode,trigger_user_id,schedule_id,trigger_key,target_type,target_id,message_type,payload,payload_preview,payload_hash,status,attempts,max_attempts,next_retry_at,create_time,update_time) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'MARKDOWN',?,?,?,'PENDING',0,4,?,?,?)",
+                    id, ruleId, resourceType, resourceId, eventType, eventId, triggerMode, triggerUserId, scheduleId,
+                    triggerKey, targetType, targetId, payload,
                     preview(content), DigestUtils.sha256Hex(payload), now, now, now);
             return id;
         } catch (DuplicateKeyException e) {
@@ -409,6 +541,12 @@ public class WecomBotService {
 
     public List<String> enqueueForRule(Map<String, Object> rule, String triggerKey, String resourceType,
                                        String resourceId, String content) {
+        return enqueueForRule(rule, triggerKey, resourceType, resourceId, content, null, null, null);
+    }
+
+    public List<String> enqueueForRule(Map<String, Object> rule, String triggerKey, String resourceType,
+                                       String resourceId, String content, String triggerMode,
+                                       String triggerUserId, String scheduleId) {
         if (!isEnabled()) return List.of();
         Map<String, Object> recipient = parseMap(str(rule, "recipient_spec"));
         List<String> result = new ArrayList<>();
@@ -419,20 +557,30 @@ public class WecomBotService {
         if (sendChats) {
             for (String chatId : strings(recipient.get("chatIds"))) {
                 String outboxId = enqueue(str(rule, "id"), str(rule, "notification_type"), triggerKey,
-                        triggerKey, "CHAT", chatId, content, resourceType, resourceId);
+                        triggerKey, "CHAT", chatId, content, resourceType, resourceId, triggerMode, triggerUserId, scheduleId);
                 result.add(outboxId);
                 if (!activeChat(chatId)) finishDelivery(outboxId, false, false, "INACTIVE_CHAT", "Recipient group is not discovered or enabled");
             }
         }
         if (sendUsers) {
-            for (String userId : resolveRecipientUsers(rule, recipient)) {
+            Set<String> resolvedUsers = resolveRecipientUsers(rule, recipient);
+            if (resolvedUsers.isEmpty()) {
+                String failedId = enqueue(str(rule, "id"), str(rule, "notification_type"), triggerKey,
+                        triggerKey, "USER", "UNRESOLVED:" + DigestUtils.sha256Hex(str(rule, "id")).substring(0, 16),
+                        content, resourceType, resourceId, triggerMode, triggerUserId, scheduleId);
+                finishDelivery(failedId, false, false, "NO_ACTIVE_RECIPIENT",
+                        "Configured users, positions, and roles currently resolve to no active recipient");
+                result.add(failedId);
+            }
+            for (String userId : resolvedUsers) {
                 String wecomId = mappedWecomUser(userId);
                 if (wecomId != null) {
                     result.add(enqueue(str(rule, "id"), str(rule, "notification_type"), triggerKey,
-                            triggerKey, "USER", wecomId, content, resourceType, resourceId));
+                            triggerKey, "USER", wecomId, content, resourceType, resourceId, triggerMode, triggerUserId, scheduleId));
                 } else {
                     String failedId = enqueue(str(rule, "id"), str(rule, "notification_type"), triggerKey,
-                            triggerKey, "USER", "UNMAPPED:" + DigestUtils.sha256Hex(userId).substring(0, 16), content, resourceType, resourceId);
+                            triggerKey, "USER", "UNMAPPED:" + DigestUtils.sha256Hex(userId).substring(0, 16), content,
+                            resourceType, resourceId, triggerMode, triggerUserId, scheduleId);
                     finishDelivery(failedId, false, false, "MISSING_WECOM_USERID", "Recipient has no active WeCom userid mapping");
                     result.add(failedId);
                 }
@@ -488,12 +636,6 @@ public class WecomBotService {
             if (project == null || project == 0 || owner == null || owner == 0) {
                 throw new MSException("Current user cannot manage notification rules for this project");
             }
-            if (request.recipientSpec() != null) {
-                for (String recipientId : strings(request.recipientSpec().get("userIds"))) {
-                    Long member = jdbc.queryForObject("SELECT COUNT(*) FROM user_role_relation urr JOIN user u ON u.id=urr.user_id WHERE urr.source_id=? AND urr.user_id=? AND u.enable=1 AND u.deleted=0", Long.class, request.scopeId(), recipientId);
-                    if (member == null || member == 0) throw new MSException("Recipient is not an active member of the selected project");
-                }
-            }
         }
         if ("BUG_EXPECTED_RESOLUTION_DUE".equals(request.notificationType()) && !"DEADLINE".equals(request.triggerType())
                 || "TEST_REPORT_GENERATED".equals(request.notificationType()) && !"EVENT".equals(request.triggerType())
@@ -515,7 +657,7 @@ public class WecomBotService {
         } catch (Exception e) {
             throw new MSException("Invalid timezone");
         }
-        if (request.startAt() != null && request.endAt() != null && request.startAt() >= request.endAt()) {
+        if (usesRulePeriod(request.notificationType()) && request.startAt() != null && request.endAt() != null && request.startAt() >= request.endAt()) {
             throw new MSException("Rule end time must be later than start time");
         }
         if ("DEADLINE".equals(request.triggerType())) {
@@ -541,14 +683,8 @@ public class WecomBotService {
                 throw new MSException("At least one valid report generation source is required");
             }
         }
-        validateTemplate(request.template());
-        Map<String, Object> recipients = request.recipientSpec() == null ? Map.of() : request.recipientSpec();
-        if ("BUG_EXPECTED_RESOLUTION_DUE".equals(request.notificationType())
-                && strings(recipients.get("chatIds")).isEmpty() && strings(recipients.get("userIds")).isEmpty()
-                && strings(recipients.get("businessRoles")).isEmpty()) {
-            recipients = new HashMap<>(recipients);
-            recipients.put("businessRoles", List.of("BUG_CREATOR", "BUG_HANDLER"));
-        }
+        validateTemplate(request.template(), request.notificationType());
+        Map<String, Object> recipients = recipientsForRule(request);
         if ("TEST_REPORT_GENERATED".equals(request.notificationType())
                 && strings(recipients.get("chatIds")).isEmpty()) {
             throw new MSException("Test report notification requires at least one enabled group target");
@@ -556,6 +692,20 @@ public class WecomBotService {
         requireActiveRecipient(json(recipients));
         validateDeliveryRecipients(request.deliveryMode(), recipients);
         validateRecipientSelectors(request, recipients);
+        boolean userDelivery = "USER".equals(request.deliveryMode()) || "BOTH".equals(request.deliveryMode());
+        boolean resolvableSelectors = !strings(recipients.get("userIds")).isEmpty()
+                || Boolean.TRUE.equals(recipients.get("projectAllMembers"))
+                || !strings(recipients.get("positionIds")).isEmpty()
+                || !strings(recipients.get("roleIds")).isEmpty();
+        if (userDelivery && resolvableSelectors && strings(recipients.get("businessRoles")).isEmpty()) {
+            Map<String, Object> previewRule = new HashMap<>();
+            previewRule.put("scope_type", request.scopeType());
+            previewRule.put("scope_id", request.scopeId());
+            if (resolveRecipientUsers(previewRule, recipients).isEmpty()) {
+                throw new MSException("The selected users, positions, and roles currently resolve to no active recipient");
+            }
+        }
+        validateSchedules(request.notificationType(), request.schedules(), null, null);
         if ("BUG_EXPECTED_RESOLUTION_DUE".equals(request.notificationType())
                 && strings(recipients.get("chatIds")).isEmpty() && strings(recipients.get("userIds")).isEmpty()
                 && !List.of("USER", "BOTH").contains(request.deliveryMode())) {
@@ -580,8 +730,8 @@ public class WecomBotService {
         List<String> chatIds = strings(recipient.get("chatIds"));
         List<String> userIds = strings(recipient.get("userIds"));
         boolean dynamic = Boolean.TRUE.equals(recipient.get("projectAllMembers"))
-                || !strings(recipient.get("projectRoleIds")).isEmpty()
-                || !strings(recipient.get("userGroupIds")).isEmpty()
+                || !strings(recipient.get("positionIds")).isEmpty()
+                || !strings(recipient.get("roleIds")).isEmpty()
                 || !strings(recipient.get("businessRoles")).isEmpty();
         if (chatIds.isEmpty() && userIds.isEmpty() && !dynamic) throw new MSException("At least one recipient is required");
         for (String chatId : chatIds) if (!activeChat(chatId)) throw new MSException("Recipient group is not discovered or enabled");
@@ -591,8 +741,8 @@ public class WecomBotService {
         boolean chats = !strings(recipient.get("chatIds")).isEmpty();
         boolean users = !strings(recipient.get("userIds")).isEmpty()
                 || Boolean.TRUE.equals(recipient.get("projectAllMembers"))
-                || !strings(recipient.get("projectRoleIds")).isEmpty()
-                || !strings(recipient.get("userGroupIds")).isEmpty()
+                || !strings(recipient.get("positionIds")).isEmpty()
+                || !strings(recipient.get("roleIds")).isEmpty()
                 || !strings(recipient.get("businessRoles")).isEmpty();
         if ("CHAT".equals(deliveryMode) && !chats || "USER".equals(deliveryMode) && !users
                 || "BOTH".equals(deliveryMode) && !chats && !users) {
@@ -607,20 +757,34 @@ public class WecomBotService {
             throw new MSException("Dynamic business recipient roles BUG_CREATOR/BUG_HANDLER are only supported "
                     + "by bug expected-resolution notifications; clear businessRoles for " + request.notificationType());
         }
-        Set<String> roleIds = new LinkedHashSet<>(strings(recipient.get("projectRoleIds")));
-        roleIds.addAll(strings(recipient.get("userGroupIds")));
-        if (roleIds.isEmpty()) return;
-        String placeholders = String.join(",", Collections.nCopies(roleIds.size(), "?"));
-        List<Object> args = new ArrayList<>(roleIds);
-        String sql = "SELECT COUNT(*) FROM user_role WHERE enabled=1 AND id IN (" + placeholders + ")";
-        if ("PROJECT".equals(request.scopeType())) {
-            sql += " AND (type='SYSTEM' OR (type='PROJECT' AND scope_id=?))";
-            args.add(request.scopeId());
-        } else {
-            sql += " AND type<>'PROJECT'";
+        Set<String> roleIds = new LinkedHashSet<>(strings(recipient.get("roleIds")));
+        if (!roleIds.isEmpty()) {
+            String placeholders = String.join(",", Collections.nCopies(roleIds.size(), "?"));
+            List<Object> args = new ArrayList<>(roleIds);
+            String sql = "SELECT COUNT(*) FROM user_role WHERE enabled=1 AND id IN (" + placeholders + ")";
+            if ("PROJECT".equals(request.scopeType())) {
+                sql += " AND (type='SYSTEM' OR (type='PROJECT' AND (scope_id='global' OR scope_id=?)) OR (type='ORGANIZATION' AND (scope_id='global' OR scope_id=(SELECT organization_id FROM project WHERE id=?))))";
+                args.add(request.scopeId());
+                args.add(request.scopeId());
+            } else {
+                sql += " AND type<>'PROJECT'";
+            }
+            Long count = jdbc.queryForObject(sql, Long.class, args.toArray());
+            if (count == null || count != roleIds.size()) throw new MSException("One or more recipient roles are invalid for the selected scope");
         }
-        Long count = jdbc.queryForObject(sql, Long.class, args.toArray());
-        if (count == null || count != roleIds.size()) throw new MSException("One or more recipient roles are invalid for the selected scope");
+        if (!strings(recipient.get("positionIds")).isEmpty()) refreshPositionCatalog();
+        for (String positionId : strings(recipient.get("positionIds"))) {
+            String positionSql = "SELECT COUNT(DISTINCT u.id) FROM user u";
+            List<Object> positionArgs = new ArrayList<>();
+            if ("PROJECT".equals(request.scopeType())) {
+                positionSql += " JOIN user_role_relation urr ON urr.user_id=u.id AND urr.source_id=?";
+                positionArgs.add(request.scopeId());
+            }
+            positionSql += " JOIN wecom_recipient_position rp ON LOWER(TRIM(u.position))=rp.normalized_name WHERE u.enable=1 AND u.deleted=0 AND rp.id=?";
+            positionArgs.add(positionId);
+            Long positions = jdbc.queryForObject(positionSql, Long.class, positionArgs.toArray());
+            if (positions == null || positions == 0) throw new MSException("One or more recipient positions no longer exist");
+        }
     }
 
     private boolean activeChat(String chatId) {
@@ -638,16 +802,52 @@ public class WecomBotService {
 
     public List<Map<String, Object>> userOptions(String projectId) {
         if (StringUtils.isBlank(projectId)) {
-            return jdbc.queryForList("SELECT id,name,(wecom_userid IS NOT NULL AND wecom_userid<>'') mapped FROM user WHERE enable=1 AND deleted=0 ORDER BY name LIMIT 1000");
+            return jdbc.queryForList("SELECT id,name,(wecom_userid IS NOT NULL AND wecom_userid<>'') mapped,false projectMember FROM user WHERE enable=1 AND deleted=0 ORDER BY name LIMIT 1000");
         }
-        return jdbc.queryForList("SELECT DISTINCT u.id,u.name,(u.wecom_userid IS NOT NULL AND u.wecom_userid<>'') mapped FROM user_role_relation urr JOIN user u ON u.id=urr.user_id WHERE urr.source_id=? AND u.enable=1 AND u.deleted=0 ORDER BY u.name LIMIT 1000", projectId);
+        return jdbc.queryForList("SELECT u.id,u.name,(u.wecom_userid IS NOT NULL AND u.wecom_userid<>'') mapped,EXISTS(SELECT 1 FROM user_role_relation urr WHERE urr.source_id=? AND urr.user_id=u.id) projectMember FROM user u WHERE u.enable=1 AND u.deleted=0 ORDER BY projectMember DESC,u.name LIMIT 1000", projectId);
+    }
+
+    private void ensureResolvableUserRecipients(Map<String, Object> rule, Map<String, Object> recipient) {
+        boolean userDelivery = "USER".equals(str(rule, "delivery_mode")) || "BOTH".equals(str(rule, "delivery_mode"));
+        if (!userDelivery || !strings(recipient.get("businessRoles")).isEmpty()) return;
+        if (resolveRecipientUsers(rule, recipient).isEmpty()) {
+            throw new MSException("The configured users, positions, and roles currently resolve to no active recipient");
+        }
+    }
+
+    private void validateTemplate(String template, String notificationType) {
+        validateTemplate(template);
+        Set<String> supported = new HashSet<>(providers.require(notificationType).variables());
+        supported.add("ruleName");
+        Matcher matcher = VARIABLE_PATTERN.matcher(template);
+        while (matcher.find()) {
+            if (!supported.contains(matcher.group(1))) {
+                throw new MSException("Template variable is not supported by this notification type: " + matcher.group(1));
+            }
+        }
     }
 
     public List<Map<String, Object>> roleOptions(String projectId) {
         if (StringUtils.isBlank(projectId)) {
-            return jdbc.queryForList("SELECT id,name,type,scope_id FROM user_role WHERE enabled=1 ORDER BY type,name LIMIT 1000");
+            return jdbc.queryForList("SELECT id,name,type,scope_id FROM user_role WHERE enabled=1 AND type<>'PROJECT' ORDER BY type,name LIMIT 1000");
         }
-        return jdbc.queryForList("SELECT id,name,type,scope_id FROM user_role WHERE enabled=1 AND (type='SYSTEM' OR (type='PROJECT' AND scope_id=?)) ORDER BY type,name LIMIT 1000", projectId);
+        return jdbc.queryForList("SELECT id,name,type,scope_id FROM user_role WHERE enabled=1 AND (type='SYSTEM' OR (type='PROJECT' AND (scope_id='global' OR scope_id=?)) OR (type='ORGANIZATION' AND (scope_id='global' OR scope_id=(SELECT organization_id FROM project WHERE id=?)))) ORDER BY type,name LIMIT 1000", projectId, projectId);
+    }
+
+    public List<Map<String, Object>> positionOptions(String projectId) {
+        refreshPositionCatalog();
+        if (StringUtils.isBlank(projectId)) {
+            return jdbc.queryForList("SELECT p.id,p.display_name name,COUNT(*) memberCount FROM wecom_recipient_position p JOIN user u ON LOWER(TRIM(u.position))=p.normalized_name WHERE u.enable=1 AND u.deleted=0 GROUP BY p.id,p.display_name ORDER BY name LIMIT 1000");
+        }
+        return jdbc.queryForList("SELECT p.id,p.display_name name,COUNT(DISTINCT u.id) memberCount FROM wecom_recipient_position p JOIN user u ON LOWER(TRIM(u.position))=p.normalized_name JOIN user_role_relation urr ON urr.user_id=u.id AND urr.source_id=? WHERE u.enable=1 AND u.deleted=0 GROUP BY p.id,p.display_name ORDER BY name LIMIT 1000", projectId);
+    }
+
+    private void refreshPositionCatalog() {
+        long now = System.currentTimeMillis();
+        jdbc.update("INSERT IGNORE INTO wecom_recipient_position(id,normalized_name,display_name,create_time,update_time) "
+                        + "SELECT UUID_SHORT(),LOWER(TRIM(position)),MIN(TRIM(position)),?,? FROM user "
+                        + "WHERE enable=1 AND deleted=0 AND position IS NOT NULL AND TRIM(position)<>'' GROUP BY LOWER(TRIM(position))",
+                now, now);
     }
 
     public List<Map<String, Object>> bugTerminalStatuses() {
@@ -660,14 +860,34 @@ public class WecomBotService {
         if (Boolean.TRUE.equals(recipient.get("projectAllMembers")) && StringUtils.isNotBlank(projectId)) {
             users.addAll(jdbc.queryForList("SELECT DISTINCT user_id FROM user_role_relation WHERE source_id=?", String.class, projectId));
         }
-        Set<String> roleIds = new LinkedHashSet<>(strings(recipient.get("projectRoleIds")));
-        roleIds.addAll(strings(recipient.get("userGroupIds")));
+        Set<String> roleIds = new LinkedHashSet<>(strings(recipient.get("roleIds")));
         if (!roleIds.isEmpty()) {
             String placeholders = String.join(",", Collections.nCopies(roleIds.size(), "?"));
             List<Object> args = new ArrayList<>(roleIds);
             String sql = "SELECT DISTINCT urr.user_id FROM user_role_relation urr JOIN user_role ur ON ur.id=urr.role_id AND ur.enabled=1 WHERE urr.role_id IN (" + placeholders + ")";
-            if (StringUtils.isNotBlank(projectId)) { sql += " AND (urr.source_id=? OR ur.type='SYSTEM')"; args.add(projectId); }
+            if (StringUtils.isNotBlank(projectId)) {
+                sql += " AND (ur.type='SYSTEM' OR (ur.type='PROJECT' AND urr.source_id=?) OR (ur.type='ORGANIZATION' AND (urr.organization_id=(SELECT organization_id FROM project WHERE id=?) OR urr.source_id=(SELECT organization_id FROM project WHERE id=?))))";
+                args.add(projectId);
+                args.add(projectId);
+                args.add(projectId);
+            }
             users.addAll(jdbc.queryForList(sql, String.class, args.toArray()));
+        }
+        List<String> positionIds = strings(recipient.get("positionIds"));
+        if (!positionIds.isEmpty()) {
+            String placeholders = String.join(",", Collections.nCopies(positionIds.size(), "?"));
+            List<Object> args = new ArrayList<>(positionIds);
+            String sql = "SELECT DISTINCT u.id FROM user u JOIN wecom_recipient_position rp ON LOWER(TRIM(u.position))=rp.normalized_name WHERE u.enable=1 AND u.deleted=0 AND rp.id IN (" + placeholders + ")";
+            if (StringUtils.isNotBlank(projectId)) {
+                sql += " AND EXISTS(SELECT 1 FROM user_role_relation urr WHERE urr.user_id=u.id AND urr.source_id=?)";
+                args.add(projectId);
+            }
+            users.addAll(jdbc.queryForList(sql, String.class, args.toArray()));
+        }
+        if (!users.isEmpty()) {
+            String placeholders = String.join(",", Collections.nCopies(users.size(), "?"));
+            users.retainAll(jdbc.queryForList("SELECT id FROM user WHERE enable=1 AND deleted=0 AND id IN (" + placeholders + ")",
+                    String.class, users.toArray()));
         }
         return users;
     }
@@ -675,6 +895,90 @@ public class WecomBotService {
     Set<String> resolveRecipientUsers(Map<String, Object> rule) {
         return resolveRecipientUsers(rule, parseMap(str(rule, "recipient_spec")));
     }
+
+    public List<String> enqueueTestReportForRule(Map<String, Object> rule, String projectId, String triggerKey,
+                                                  String reportId, String content) {
+        if (!isEnabled()) return List.of();
+        Map<String, Object> recipient = parseMap(str(rule, "recipient_spec"));
+        Set<String> users = new LinkedHashSet<>(resolveRecipientUsers(rule, recipient));
+        if (strings(recipient.get("userIds")).isEmpty()) {
+            users.addAll(jdbc.queryForList("SELECT DISTINCT u.id FROM user_role_relation urr JOIN user u ON u.id=urr.user_id WHERE urr.source_id=? AND u.enable=1 AND u.deleted=0",
+                    String.class, projectId));
+        }
+        Map<String, String> mapped = mappedWecomUsers(users);
+        MentionResult mentions = appendMentions(content, mapped);
+        String mentionedContent = mentions.content();
+        Map<String, String> userNames = userNamesById(users);
+        List<Map<String, Object>> mentionFailures = new ArrayList<>();
+        for (String userId : users) {
+            if (mapped.containsKey(userId) && mentions.includedUserIds().contains(userId)) continue;
+            mentionFailures.add(Map.of(
+                    "userId", userId,
+                    "userName", userNames.getOrDefault(userId, userId),
+                    "reason", mapped.containsKey(userId) ? "MENTION_LIMIT_EXCEEDED" : "MISSING_WECOM_USERID"));
+        }
+        List<String> result = new ArrayList<>();
+        for (String chatId : strings(recipient.get("chatIds"))) {
+            String outboxId = enqueue(str(rule, "id"), str(rule, "notification_type"), triggerKey,
+                    triggerKey, "CHAT", chatId, mentionedContent, "TEST_REPORT", reportId, "EVENT", null, null);
+            result.add(outboxId);
+            jdbc.update("UPDATE wecom_notification_outbox SET configured_recipient_spec=?,resolved_user_ids=?,mentioned_user_ids=?,partial_failure_count=?,partial_failure_detail=?,update_time=? WHERE id=?",
+                    json(recipient), json(users), json(mentions.includedUserIds()), mentionFailures.size(),
+                    mentionFailures.isEmpty() ? null : json(mentionFailures), System.currentTimeMillis(), outboxId);
+            if (!activeChat(chatId)) finishDelivery(outboxId, false, false, "INACTIVE_CHAT", "Recipient group is not discovered or enabled");
+        }
+        for (String userId : users) {
+            if (mapped.containsKey(userId) && mentions.includedUserIds().contains(userId)) continue;
+            boolean mappedButOmitted = mapped.containsKey(userId);
+            String failedId = enqueue(str(rule, "id"), str(rule, "notification_type"), triggerKey,
+                    triggerKey, "MENTION", (mappedButOmitted ? "OMITTED:" : "UNMAPPED:")
+                            + DigestUtils.sha256Hex(userId).substring(0, 16),
+                    content, "TEST_REPORT", reportId, "EVENT", null, null);
+            finishDelivery(failedId, false, false,
+                    mappedButOmitted ? "MENTION_LIMIT_EXCEEDED" : "MISSING_WECOM_USERID",
+                    mappedButOmitted
+                            ? "Recipient mention was omitted because the WeCom message size limit was reached"
+                            : "Selected or resolved recipient cannot be mentioned because no active WeCom userid mapping exists");
+            jdbc.update("UPDATE wecom_notification_outbox SET recipient_user_id=?,configured_recipient_spec=?,resolved_user_ids=?,mentioned_user_ids=?,update_time=? WHERE id=?",
+                    userId, json(recipient), json(users), json(mentions.includedUserIds()), System.currentTimeMillis(), failedId);
+            result.add(failedId);
+        }
+        return result;
+    }
+
+    private Map<String, String> mappedWecomUsers(Collection<String> userIds) {
+        if (userIds.isEmpty()) return Map.of();
+        String placeholders = String.join(",", Collections.nCopies(userIds.size(), "?"));
+        Map<String, String> result = new LinkedHashMap<>();
+        jdbc.queryForList("SELECT id,wecom_userid FROM user WHERE enable=1 AND deleted=0 AND wecom_userid IS NOT NULL AND wecom_userid<>'' AND id IN (" + placeholders + ")",
+                userIds.toArray()).forEach(row -> result.put(str(row, "id"), str(row, "wecom_userid")));
+        return result;
+    }
+
+    private Map<String, String> userNamesById(Collection<String> userIds) {
+        if (userIds.isEmpty()) return Map.of();
+        String placeholders = String.join(",", Collections.nCopies(userIds.size(), "?"));
+        Map<String, String> result = new LinkedHashMap<>();
+        jdbc.queryForList("SELECT id,name FROM user WHERE id IN (" + placeholders + ")", userIds.toArray())
+                .forEach(row -> result.put(str(row, "id"), str(row, "name")));
+        return result;
+    }
+
+    private MentionResult appendMentions(String content, Map<String, String> mappedUsers) {
+        if (mappedUsers.isEmpty()) return new MentionResult(content, Set.of());
+        int available = 20_480 - content.getBytes(StandardCharsets.UTF_8).length;
+        StringBuilder suffix = new StringBuilder("\n\n");
+        Set<String> included = new LinkedHashSet<>();
+        for (Map.Entry<String, String> user : mappedUsers.entrySet()) {
+            String token = "<@" + user.getValue() + "> ";
+            if ((suffix.toString() + token).getBytes(StandardCharsets.UTF_8).length > available) break;
+            suffix.append(token);
+            included.add(user.getKey());
+        }
+        return new MentionResult(suffix.length() == 2 ? content : content + suffix, included);
+    }
+
+    private record MentionResult(String content, Set<String> includedUserIds) { }
 
     private void validateTerminalStatuses(Map<String, Object> stopConfig, Map<String, Object> triggerConfig) {
         Object configured = stopConfig == null ? null : stopConfig.get("statuses");
@@ -701,6 +1005,310 @@ public class WecomBotService {
 
     public void recordCronFire(String ruleId, long fireTime) {
         cronSchedules.recordFire(ruleId, fireTime);
+    }
+
+    public List<WecomBotModels.TemplateVariable> templateVariables(String notificationType) {
+        return providers.variables(notificationType);
+    }
+
+    public Map<String, Object> recipientPreview(WecomBotModels.RuleRequest request) {
+        Map<String, Object> rule = new HashMap<>();
+        rule.put("scope_type", request.scopeType());
+        rule.put("scope_id", request.scopeId());
+        rule.put("notification_type", request.notificationType());
+        Map<String, Object> recipient = normalizeRecipients(request.recipientSpec());
+        Set<String> users = new LinkedHashSet<>(resolveRecipientUsers(rule, recipient));
+        if ("TEST_REPORT_GENERATED".equals(request.notificationType())
+                && strings(recipient.get("userIds")).isEmpty() && StringUtils.isNotBlank(request.scopeId())) {
+            users.addAll(jdbc.queryForList("SELECT DISTINCT u.id FROM user_role_relation urr JOIN user u ON u.id=urr.user_id WHERE urr.source_id=? AND u.enable=1 AND u.deleted=0",
+                    String.class, request.scopeId()));
+        }
+        if (users.isEmpty()) {
+            return Map.of("users", List.of(), "warnings", List.of("未解析到有效接收人"));
+        }
+        String placeholders = String.join(",", Collections.nCopies(users.size(), "?"));
+        List<Object> args = new ArrayList<>();
+        String projectMemberSql = StringUtils.isBlank(request.scopeId()) ? "false"
+                : "EXISTS(SELECT 1 FROM user_role_relation pm WHERE pm.user_id=u.id AND pm.source_id=?)";
+        if (StringUtils.isNotBlank(request.scopeId())) args.add(request.scopeId());
+        args.addAll(users);
+        List<Map<String, Object>> resolved = jdbc.queryForList("SELECT u.id,u.name,u.position,(u.wecom_userid IS NOT NULL AND u.wecom_userid<>'') wecomMapped," + projectMemberSql + " projectMember FROM user u WHERE u.enable=1 AND u.deleted=0 AND u.id IN (" + placeholders + ") ORDER BY u.name", args.toArray());
+        boolean groupMention = "TEST_REPORT_GENERATED".equals(request.notificationType());
+        resolved.forEach(user -> {
+            boolean mapped = bool(user, "wecomMapped");
+            user.put("willMention", groupMention && mapped);
+            user.put("unavailableReason", mapped ? null : "MISSING_WECOM_USERID");
+        });
+        List<String> warnings = resolved.stream().filter(item -> !bool(item, "wecomMapped"))
+                .map(item -> item.get("name") + " 未绑定企微账号，群消息仍会发送但无法 @ 此人").toList();
+        return Map.of("users", resolved, "warnings", warnings);
+    }
+
+    public List<Map<String, Object>> schedules(String ruleId) {
+        return jdbc.queryForList("SELECT id,rule_id,cycle_type,weekdays,execution_time,timezone,enabled,next_fire_time,last_fire_time,create_time,update_time FROM wecom_notification_schedule WHERE rule_id=? ORDER BY execution_time,create_time", ruleId);
+    }
+
+    public Map<String, Object> schedule(String id) {
+        return new LinkedHashMap<>(requiredSchedule(id));
+    }
+
+    @Transactional
+    public String createSchedule(String ruleId, WecomBotModels.ScheduleRequest request, String userId) {
+        Map<String, Object> rule = rule(ruleId);
+        validateSchedules(str(rule, "notification_type"), List.of(request), ruleId, null);
+        long now = System.currentTimeMillis();
+        String id = IDGenerator.nextStr();
+        jdbc.update("INSERT INTO wecom_notification_schedule(id,rule_id,cycle_type,weekdays,execution_time,timezone,enabled,create_time,update_time,create_user,update_user) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                id, ruleId, request.cycleType(), weekdays(request), request.executionTime(), request.timezone(),
+                !Boolean.FALSE.equals(request.enabled()), now, now, userId, userId);
+        requestScheduleReconcile(ruleId, Set.of(), false);
+        return id;
+    }
+
+    @Transactional
+    public void updateSchedule(String id, WecomBotModels.ScheduleRequest request, String userId) {
+        Map<String, Object> previous = requiredSchedule(id);
+        Map<String, Object> rule = rule(str(previous, "rule_id"));
+        validateSchedules(str(rule, "notification_type"), List.of(request), str(previous, "rule_id"), id);
+        requireUpdated(jdbc.update("UPDATE wecom_notification_schedule SET cycle_type=?,weekdays=?,execution_time=?,timezone=?,enabled=?,next_fire_time=NULL,update_time=?,update_user=? WHERE id=?",
+                request.cycleType(), weekdays(request), request.executionTime(), request.timezone(),
+                !Boolean.FALSE.equals(request.enabled()), System.currentTimeMillis(), userId, id));
+        requestScheduleReconcile(str(previous, "rule_id"), Set.of(), false);
+    }
+
+    @Transactional
+    public void deleteSchedule(String id) {
+        Map<String, Object> schedule = requiredSchedule(id);
+        requireUpdated(jdbc.update("DELETE FROM wecom_notification_schedule WHERE id=?", id));
+        requestScheduleReconcile(str(schedule, "rule_id"), Set.of(id), false);
+    }
+
+    @Transactional
+    public void enableSchedule(String id, boolean enabled, String userId) {
+        Map<String, Object> schedule = requiredSchedule(id);
+        if (enabled) validateSchedules(str(rule(str(schedule, "rule_id")), "notification_type"),
+                List.of(toScheduleRequest(schedule, true)), str(schedule, "rule_id"), id);
+        requireUpdated(jdbc.update("UPDATE wecom_notification_schedule SET enabled=?,next_fire_time=NULL,update_time=?,update_user=? WHERE id=?",
+                enabled, System.currentTimeMillis(), userId, id));
+        requestScheduleReconcile(str(schedule, "rule_id"), Set.of(), false);
+    }
+
+    private void syncSchedules(String ruleId, String notificationType, List<WecomBotModels.ScheduleRequest> requests,
+                               String userId, boolean ruleEnabled) {
+        if (requests == null) return;
+        validateSchedules(notificationType, requests, null, null);
+        Map<String, Map<String, Object>> existing = new HashMap<>();
+        schedules(ruleId).forEach(item -> existing.put(str(item, "id"), item));
+        jdbc.update("UPDATE wecom_notification_schedule SET enabled=0,next_fire_time=NULL,update_time=? WHERE rule_id=?",
+                System.currentTimeMillis(), ruleId);
+        Set<String> retained = new HashSet<>();
+        for (WecomBotModels.ScheduleRequest request : requests) {
+            if (StringUtils.isNotBlank(request.id()) && existing.containsKey(request.id())) {
+                retained.add(request.id());
+                updateSchedule(request.id(), request, userId);
+            } else {
+                retained.add(createSchedule(ruleId, request, userId));
+            }
+        }
+        Set<String> removed = existing.keySet().stream().filter(id -> !retained.contains(id)).collect(java.util.stream.Collectors.toSet());
+        removed.forEach(id -> requireUpdated(jdbc.update("DELETE FROM wecom_notification_schedule WHERE id=?", id)));
+        requestScheduleReconcile(ruleId, removed, false);
+    }
+
+    private void validateSchedules(String notificationType, List<WecomBotModels.ScheduleRequest> schedules,
+                                   String ruleId, String excludedId) {
+        if (schedules == null || schedules.isEmpty()) return;
+        if (!"BUG_EXPECTED_RESOLUTION_DUE".equals(notificationType)) {
+            throw new MSException("Daily and weekly schedules are only supported by bug expected-resolution notifications");
+        }
+        Set<String> enabledDefinitions = new HashSet<>();
+        for (WecomBotModels.ScheduleRequest schedule : schedules) {
+            if (!Set.of("DAILY", "WEEKLY").contains(schedule.cycleType())) throw new MSException("Schedule cycle must be DAILY or WEEKLY");
+            try { ZoneId.of(schedule.timezone()); } catch (Exception e) { throw new MSException("Invalid schedule timezone"); }
+            Map<String, Object> candidate = new HashMap<>();
+            candidate.put("cycle_type", schedule.cycleType());
+            candidate.put("weekdays", weekdays(schedule));
+            candidate.put("execution_time", schedule.executionTime());
+            cronSchedules.cronFor(candidate);
+            if (!Boolean.FALSE.equals(schedule.enabled())) {
+                String definition = schedule.cycleType() + "|" + weekdays(schedule) + "|" + schedule.executionTime() + "|" + schedule.timezone();
+                if (!enabledDefinitions.add(definition)) throw new MSException("Duplicate enabled notification schedule");
+                List<Object> args = new ArrayList<>(List.of(schedule.cycleType(), weekdays(schedule), schedule.executionTime(), schedule.timezone()));
+                String sql = "SELECT COUNT(*) FROM wecom_notification_schedule WHERE enabled=1 AND cycle_type=? AND COALESCE(weekdays,'')=COALESCE(?,'') AND execution_time=? AND timezone=?";
+                if (StringUtils.isNotBlank(ruleId)) { sql += " AND rule_id=?"; args.add(ruleId); }
+                if (StringUtils.isNotBlank(excludedId)) { sql += " AND id<>?"; args.add(excludedId); }
+                if (StringUtils.isNotBlank(ruleId)) {
+                    Long duplicate = jdbc.queryForObject(sql, Long.class, args.toArray());
+                    if (duplicate != null && duplicate > 0) throw new MSException("Duplicate enabled notification schedule");
+                }
+            }
+        }
+    }
+
+    private Map<String, Object> requiredSchedule(String id) {
+        Map<String, Object> schedule = one("SELECT * FROM wecom_notification_schedule WHERE id=?", id);
+        if (schedule == null) throw new MSException("Notification schedule does not exist");
+        return schedule;
+    }
+
+    private List<Map<String, Object>> enabledSchedules(String ruleId) {
+        return jdbc.queryForList("SELECT * FROM wecom_notification_schedule WHERE rule_id=? AND enabled=1", ruleId);
+    }
+
+    private void requestScheduleReconcile(String ruleId, Set<String> removedScheduleIds, boolean deleted) {
+        events.publishEvent(new WecomNotificationCronScheduleService.ReconcileRequest(ruleId, removedScheduleIds, deleted));
+    }
+
+    private String weekdays(WecomBotModels.ScheduleRequest request) {
+        if (!"WEEKLY".equals(request.cycleType())) return null;
+        if (request.weekdays() == null || request.weekdays().isEmpty()) throw new MSException("Weekly schedule requires weekdays");
+        return request.weekdays().stream().distinct().sorted().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+    }
+
+    private WecomBotModels.ScheduleRequest toScheduleRequest(Map<String, Object> schedule, boolean enabled) {
+        List<Integer> days = StringUtils.isBlank(str(schedule, "weekdays")) ? List.of()
+                : Arrays.stream(str(schedule, "weekdays").split(",")).map(Integer::valueOf).toList();
+        return new WecomBotModels.ScheduleRequest(str(schedule, "id"), str(schedule, "cycle_type"), days,
+                str(schedule, "execution_time"), str(schedule, "timezone"), enabled);
+    }
+
+    private Map<String, Object> normalizeRecipients(Map<String, Object> source) {
+        Map<String, Object> recipients = source == null ? new HashMap<>() : new HashMap<>(source);
+        recipients.remove("userGroupIds");
+        recipients.remove("projectRoleIds");
+        recipients.put("chatIds", strings(recipients.get("chatIds")));
+        recipients.put("userIds", strings(recipients.get("userIds")));
+        recipients.put("positionIds", strings(recipients.get("positionIds")));
+        recipients.put("roleIds", strings(recipients.get("roleIds")));
+        return recipients;
+    }
+
+    private Map<String, Object> recipientsForRule(WecomBotModels.RuleRequest request) {
+        Map<String, Object> recipients = normalizeRecipients(request.recipientSpec());
+        if ("BUG_EXPECTED_RESOLUTION_DUE".equals(request.notificationType())
+                && strings(recipients.get("chatIds")).isEmpty()
+                && strings(recipients.get("userIds")).isEmpty()
+                && strings(recipients.get("positionIds")).isEmpty()
+                && strings(recipients.get("roleIds")).isEmpty()
+                && strings(recipients.get("businessRoles")).isEmpty()) {
+            recipients.put("businessRoles", List.of("BUG_CREATOR", "BUG_HANDLER"));
+        }
+        return recipients;
+    }
+
+    private boolean usesRulePeriod(String notificationType) {
+        return "CUSTOM_CRON".equals(notificationType);
+    }
+
+    public boolean hasEnabledSchedule(String ruleId) {
+        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM wecom_notification_schedule WHERE rule_id=? AND enabled=1", Long.class, ruleId);
+        return count != null && count > 0;
+    }
+
+    private List<String> executeBugRule(Map<String, Object> rule, String triggerPrefix, String triggerMode,
+                                        String triggerUserId, String scheduleId, long now) {
+        StringBuilder sql = new StringBuilder("SELECT b.id,b.num,b.title,b.status,b.handle_user,b.create_user AS bug_create_user,b.expected_resolve_time,b.project_id,COALESCE(si.name,b.status) bug_status_name,p.name project_name FROM bug b JOIN project p ON p.id=b.project_id AND p.enable=1 AND p.deleted=0 LEFT JOIN status_item si ON si.id=b.status AND si.enabled=1 WHERE b.deleted=0 AND b.expected_resolve_time IS NOT NULL AND b.expected_resolve_time>?");
+        List<Object> args = new ArrayList<>();
+        args.add(now);
+        if ("PROJECT".equals(str(rule, "scope_type"))) {
+            sql.append(" AND b.project_id=?");
+            args.add(str(rule, "scope_id"));
+        }
+        sql.append(" ORDER BY b.expected_resolve_time,b.id");
+        Map<String, Object> trigger = parseMap(str(rule, "trigger_config"));
+        long leadAmount = number(trigger.get("leadTime"), number(trigger.get("beforeMinutes"), 60L));
+        long leadMillis = durationMillis(leadAmount, Objects.toString(trigger.get("leadUnit"), "MINUTE"));
+        Set<String> terminalStatuses = new HashSet<>(strings(parseMap(str(rule, "stop_config")).get("statuses")));
+        if (terminalStatuses.isEmpty()) terminalStatuses.addAll(strings(trigger.get("terminalStatuses")));
+        List<String> result = new ArrayList<>();
+        for (Map<String, Object> bug : jdbc.queryForList(sql.toString(), args.toArray())) {
+            long deadline = ((Number) bug.get("expected_resolve_time")).longValue();
+            if (leadMillis > 0 && deadline - now > leadMillis) continue;
+            if (terminalStatuses.contains(str(bug, "status"))) continue;
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("bugNum", bug.get("num"));
+            variables.put("bugTitle", bug.get("title"));
+            variables.put("bugStatus", bug.get("bug_status_name"));
+            variables.put("bugHandlerNames", userNames(userIds(bug.get("handle_user"))));
+            variables.put("bugCreatorName", userNames(userIds(bug.get("bug_create_user"))));
+            variables.put("expectedResolveTime", formatTimestamp(deadline, str(rule, "timezone")));
+            variables.put("remainingTime", formatRemaining(deadline - now));
+            variables.put("projectName", bug.get("project_name"));
+            variables.put("resourceUrl", baseUrl() + "/bug-management/detail/edit?id=" + bug.get("id"));
+            variables.put("ruleName", rule.get("name"));
+            variables.put("now", formatTimestamp(now, str(rule, "timezone")));
+            Map<String, Object> deliveryRule = withBugBusinessRecipients(rule, bug);
+            result.addAll(enqueueForRule(deliveryRule, triggerPrefix + ":" + bug.get("id"), "BUG",
+                    str(bug, "id"), render(str(rule, "template"), variables), triggerMode, triggerUserId, scheduleId));
+        }
+        return result;
+    }
+
+    private Map<String, Object> withBugBusinessRecipients(Map<String, Object> rule, Map<String, Object> bug) {
+        Map<String, Object> copy = new HashMap<>(rule);
+        Map<String, Object> recipient = normalizeRecipients(parseMap(str(rule, "recipient_spec")));
+        Set<String> users = new LinkedHashSet<>(strings(recipient.get("userIds")));
+        List<String> businessRoles = strings(recipient.get("businessRoles"));
+        if (businessRoles.isEmpty()) businessRoles = List.of("BUG_CREATOR", "BUG_HANDLER");
+        if (businessRoles.contains("BUG_CREATOR")) users.addAll(userIds(bug.get("bug_create_user")));
+        if (businessRoles.contains("BUG_HANDLER")) users.addAll(userIds(bug.get("handle_user")));
+        recipient.put("userIds", users);
+        copy.put("recipient_spec", json(recipient));
+        return copy;
+    }
+
+    private Set<String> userIds(Object raw) {
+        Set<String> result = new LinkedHashSet<>();
+        if (raw == null) return result;
+        String value = String.valueOf(raw);
+        try {
+            Object parsed = JSON.parseObject(value, Object.class);
+            if (parsed instanceof Collection<?> values) values.forEach(item -> result.add(String.valueOf(item)));
+            else if (StringUtils.isNotBlank(value)) result.add(value);
+        } catch (Exception ignored) {
+            if (StringUtils.isNotBlank(value)) result.addAll(Arrays.asList(value.split(",")));
+        }
+        result.removeIf(item -> StringUtils.isBlank(item) || "null".equalsIgnoreCase(item));
+        return result;
+    }
+
+    private String userNames(Set<String> ids) {
+        if (ids.isEmpty()) return "-";
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        List<String> names = jdbc.queryForList("SELECT name FROM user WHERE id IN (" + placeholders + ") AND enable=1 AND deleted=0 ORDER BY name",
+                String.class, ids.toArray());
+        return names.isEmpty() ? "-" : String.join(", ", names);
+    }
+
+    private long number(Object value, long fallback) {
+        return value instanceof Number n ? n.longValue() : fallback;
+    }
+
+    private long durationMillis(long value, String unit) {
+        return switch (unit) {
+            case "DAY" -> value * 86_400_000L;
+            case "HOUR" -> value * 3_600_000L;
+            default -> value * 60_000L;
+        };
+    }
+
+    String formatTimestamp(long timestamp, String timezone) {
+        ZoneId zone;
+        try { zone = ZoneId.of(StringUtils.defaultIfBlank(timezone, "Asia/Shanghai")); }
+        catch (Exception ignored) { zone = ZoneId.of("Asia/Shanghai"); }
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(zone).format(Instant.ofEpochMilli(timestamp));
+    }
+
+    String formatRemaining(long millis) {
+        long minutes = Math.max(0, millis) / 60_000L;
+        if (minutes >= 1_440) return (minutes / 1_440) + "天" + (minutes % 1_440 / 60) + "小时";
+        if (minutes >= 60) return (minutes / 60) + "小时" + (minutes % 60) + "分钟";
+        return minutes + "分钟";
+    }
+
+    private String baseUrl() {
+        List<String> values = jdbc.queryForList("SELECT param_value FROM system_parameter WHERE param_key='base.url' LIMIT 1", String.class);
+        return values.isEmpty() ? "" : StringUtils.removeEnd(values.getFirst(), "/");
     }
 
     private Map<String, Object> requiredConfig() {
