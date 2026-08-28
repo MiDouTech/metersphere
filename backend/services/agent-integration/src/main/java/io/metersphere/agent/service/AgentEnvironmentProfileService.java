@@ -35,7 +35,7 @@ public class AgentEnvironmentProfileService {
     private static final Set<String> RUNNER_TYPES = Set.of("BROWSER", "API");
 
     @Resource private JdbcTemplate jdbcTemplate;
-    @Resource private AgentProjectService projectService;
+    @Resource(name = "agentProjectService") private AgentProjectService projectService;
     @Resource private ProjectMapper projectMapper;
 
     public List<AgentEnvironmentProfileDTO> list(String projectId) {

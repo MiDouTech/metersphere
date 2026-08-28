@@ -26,7 +26,7 @@ import java.util.UUID;
 @Service
 public class AgentModelProfileService {
     @Resource private JdbcTemplate jdbcTemplate;
-    @Resource private AgentProjectService projectService;
+    @Resource(name = "agentProjectService") private AgentProjectService projectService;
     @Resource private ProjectMapper projectMapper;
     @Resource private MapGatewayClient gateway;
 

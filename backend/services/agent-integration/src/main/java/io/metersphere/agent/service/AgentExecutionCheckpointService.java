@@ -22,7 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 public class AgentExecutionCheckpointService {
     @Resource private JdbcTemplate jdbcTemplate;
     @Resource private AgentExecutionPreflightService preflightService;
-    @Resource private AgentProjectService projectService;
+    @Resource(name = "agentProjectService") private AgentProjectService projectService;
 
     private static final Set<String> CHECKPOINTABLE_STATUSES = Set.of("RUNNING", "WAITING_LOGIN", "WAITING_HUMAN");
 
