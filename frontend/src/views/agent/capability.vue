@@ -43,6 +43,43 @@
           </template>
         </a-table>
       </MsCard>
+      <MsCard simple class="lg:col-span-2">
+        <div class="mb-4 flex items-center justify-between"
+          ><div
+            ><div class="text-base font-medium">AI 执行运维告警</div
+            ><div class="mt-1 text-sm text-[var(--color-text-3)]"
+              >汇总 Gateway、Runner、凭据、阻塞任务、人工超时、清理与回写异常。</div
+            ></div
+          ><a-button :loading="alertLoading" @click="loadAlerts">刷新</a-button></div
+        >
+        <a-alert v-if="alertError" type="error" class="mb-3">{{ alertError }}</a-alert>
+        <a-table :data="alerts" :loading="alertLoading" :pagination="false" row-key="id">
+          <template #columns>
+            <a-table-column title="级别" :width="100"
+              ><template #cell="{ record }"
+                ><a-tag :color="record.severity === 'CRITICAL' ? 'red' : 'orange'">{{
+                  record.severity
+                }}</a-tag></template
+              ></a-table-column
+            >
+            <a-table-column title="类型" data-index="alertType" :width="190" />
+            <a-table-column title="说明" data-index="message" />
+            <a-table-column title="Trace ID" data-index="traceId" :width="220" />
+            <a-table-column title="状态" data-index="status" :width="130" />
+            <a-table-column title="操作" :width="100"
+              ><template #cell="{ record }"
+                ><a-link
+                  v-if="record.status === 'OPEN'"
+                  v-permission="['AI_RUNNER:MANAGE']"
+                  @click="acknowledge(record.id)"
+                  >确认</a-link
+                ></template
+              ></a-table-column
+            >
+          </template>
+          <template #empty><a-empty description="当前项目暂无运维告警" /></template>
+        </a-table>
+      </MsCard>
       <AiGovernancePanel v-permission="['FUNCTIONAL_CASE_AI:CONFIG']" class="lg:col-span-2" />
     </div>
   </AgentPage>
@@ -54,8 +91,8 @@
   import AgentPage from './components/AgentPage.vue';
   import AiGovernancePanel from './components/AiGovernancePanel.vue';
 
-  import type { AiExecutionAgentOption } from '@/api/modules/ai-execution';
-  import { getAiExecutionAgents } from '@/api/modules/ai-execution';
+  import type { AiExecutionAgentOption, AiExecutionAlert } from '@/api/modules/ai-execution';
+  import { acknowledgeAiExecutionAlert, getAiExecutionAgents, listAiExecutionAlerts } from '@/api/modules/ai-execution';
   import type { AgentTokenListItem } from '@/api/modules/setting/agentIntegration';
   import { getAgentTokenPage } from '@/api/modules/setting/agentIntegration';
   import { useAppStore } from '@/store';
@@ -64,6 +101,28 @@
   const loading = ref(false);
   const agents = ref<AiExecutionAgentOption[]>([]);
   const tokens = ref<AgentTokenListItem[]>([]);
+  const alerts = ref<AiExecutionAlert[]>([]);
+  const alertLoading = ref(false);
+  const alertError = ref('');
+  async function loadAlerts() {
+    alertLoading.value = true;
+    alertError.value = '';
+    try {
+      alerts.value = (await listAiExecutionAlerts(appStore.currentProjectId)) || [];
+    } catch (error: any) {
+      alertError.value = error?.message || '运维告警加载失败，请稍后重试';
+    } finally {
+      alertLoading.value = false;
+    }
+  }
+  async function acknowledge(id: string) {
+    try {
+      await acknowledgeAiExecutionAlert(appStore.currentProjectId, id);
+      await loadAlerts();
+    } catch (error: any) {
+      alertError.value = error?.message || '告警确认失败，请稍后重试';
+    }
+  }
   async function load() {
     loading.value = true;
     try {
@@ -77,5 +136,8 @@
       loading.value = false;
     }
   }
-  onMounted(load);
+  onMounted(() => {
+    load();
+    loadAlerts();
+  });
 </script>

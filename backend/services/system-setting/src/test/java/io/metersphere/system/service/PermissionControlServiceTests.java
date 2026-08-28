@@ -2,6 +2,7 @@ package io.metersphere.system.service;
 
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.domain.UserRole;
+import io.metersphere.system.domain.UserRoleRelation;
 import io.metersphere.system.domain.WorkflowDefinition;
 import io.metersphere.system.domain.WorkflowRole;
 import io.metersphere.system.domain.StatusFlowRolePermission;
@@ -46,7 +47,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -68,6 +68,8 @@ class PermissionControlServiceTests {
     @Mock
     private PermissionSessionRefreshService permissionSessionRefreshService;
     @Mock
+    private SimpleUserService simpleUserService;
+    @Mock
     private ProjectMapper projectMapper;
     @Mock
     private JdbcTemplate jdbcTemplate;
@@ -84,6 +86,7 @@ class PermissionControlServiceTests {
         ReflectionTestUtils.setField(service, "globalUserRoleRelationService", globalUserRoleRelationService);
         ReflectionTestUtils.setField(service, "extUserRoleRelationMapper", extUserRoleRelationMapper);
         ReflectionTestUtils.setField(service, "permissionSessionRefreshService", permissionSessionRefreshService);
+        ReflectionTestUtils.setField(service, "simpleUserService", simpleUserService);
         ReflectionTestUtils.setField(service, "projectMapper", projectMapper);
         ReflectionTestUtils.setField(service, "jdbcTemplate", jdbcTemplate);
     }
@@ -240,7 +243,7 @@ class PermissionControlServiceTests {
     }
 
     @Test
-    void addRoleMembersRejectsProtectedAdminRoleBeforeMutation() {
+    void addRoleMembersAllowsProtectedAdminRoleMembershipMutation() {
         UserRole admin = new UserRole();
         admin.setId("admin");
         admin.setType("SYSTEM");
@@ -249,12 +252,51 @@ class PermissionControlServiceTests {
         request.setRoleId("admin");
         request.setUserIds(List.of("user-1"));
         when(globalUserRoleService.getWithCheck("admin")).thenReturn(admin);
-        doThrow(new RuntimeException("管理员角色不可修改"))
-                .when(globalUserRoleService).checkAdminUserRole(admin);
+        when(permissionControlMapper.selectExistingRoleRelations("admin", "system", List.of("user-1")))
+                .thenReturn(List.of());
 
-        assertThrows(RuntimeException.class, () -> service.addRoleMembers(request));
+        try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class);
+             MockedStatic<IDGenerator> ids = mockStatic(IDGenerator.class)) {
+            session.when(SessionUtils::getUserId).thenReturn("admin");
+            ids.when(IDGenerator::nextStr).thenReturn("admin-relation");
+            service.addRoleMembers(request);
+        }
 
-        verify(globalUserRoleRelationService, never()).add(any());
+        verify(permissionControlMapper).batchInsertRoleRelations(any());
+        verify(globalUserRoleService, never()).checkAdminUserRole(admin);
+    }
+
+    @Test
+    void removeAdminRoleMemberAutomaticallyAddsMemberRole() {
+        UserRole admin = new UserRole();
+        admin.setId("admin");
+        admin.setType("SYSTEM");
+        UserRole member = new UserRole();
+        member.setId("permission_member");
+        member.setType("SYSTEM");
+        UserRoleRelation adminRelation = new UserRoleRelation();
+        adminRelation.setId("admin-relation");
+        adminRelation.setUserId("user-1");
+        adminRelation.setRoleId("admin");
+        RoleMemberUpdateRequest request = new RoleMemberUpdateRequest();
+        request.setRoleId("admin");
+        request.setUserIds(List.of("user-1"));
+        when(globalUserRoleService.getWithCheck("admin")).thenReturn(admin);
+        when(globalUserRoleService.getWithCheck("permission_member")).thenReturn(member);
+        when(permissionControlMapper.selectExistingRoleRelations("admin", "system", List.of("user-1")))
+                .thenReturn(List.of(adminRelation));
+        when(permissionControlMapper.selectExistingRoleRelations("permission_member", "system", List.of("user-1")))
+                .thenReturn(List.of());
+
+        try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class);
+             MockedStatic<IDGenerator> ids = mockStatic(IDGenerator.class)) {
+            session.when(SessionUtils::getUserId).thenReturn("admin");
+            ids.when(IDGenerator::nextStr).thenReturn("member-relation");
+            service.removeRoleMembers(request);
+        }
+
+        verify(globalUserRoleRelationService).delete("admin-relation");
+        verify(permissionControlMapper).batchInsertRoleRelations(any());
     }
 
     @Test

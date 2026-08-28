@@ -2,6 +2,8 @@ package io.metersphere.agent.service;
 
 import io.metersphere.agent.dto.AgentExecutionCreateRequest;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
+import io.metersphere.agent.dto.AgentExecutionPreflightDTO;
+import io.metersphere.agent.dto.AgentExecutionPreflightRequest;
 import io.metersphere.agent.dto.AgentTaskTriggerDTO;
 import io.metersphere.agent.dto.AgentTaskTriggerEventRequest;
 import io.metersphere.agent.dto.AgentTaskTriggerHistoryDTO;
@@ -20,6 +22,7 @@ import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.quartz.CronExpression;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,10 +36,12 @@ import java.text.ParseException;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.UUID;
 
 @Service
 public class AgentTaskTriggerService {
@@ -58,6 +63,16 @@ public class AgentTaskTriggerService {
     private AgentExecLogService execLogService;
     @Resource
     private FunctionalCaseMapper functionalCaseMapper;
+    @Resource
+    private AgentExecutionPreflightService preflightService;
+    @Resource
+    private AgentEnvironmentProfileService environmentProfileService;
+    @Resource
+    private AgentCredentialReferenceService credentialReferenceService;
+    @Resource
+    private AgentModelProfileService modelProfileService;
+    @Resource
+    private JdbcTemplate jdbcTemplate;
 
     @Transactional(rollbackFor = Exception.class)
     public AgentTaskTriggerDTO create(AgentTaskTriggerRequest request) {
@@ -171,7 +186,7 @@ public class AgentTaskTriggerService {
         return fire(trigger, eventId, null, event.getPayload());
     }
 
-    @Scheduled(fixedDelay = 30_000L)
+    @Scheduled(fixedDelayString = "${agent.execution.trigger-scan-ms:30000}")
     public void fireDueCronTriggers() {
         long now = System.currentTimeMillis();
         for (AgentTaskTriggerDTO trigger : mapper.selectDue(now, 100)) {
@@ -207,6 +222,17 @@ public class AgentTaskTriggerService {
             AgentExecutionActorContext.bind(trigger.getCreatedBy());
             SessionUtils.setCurrentProjectId(trigger.getProjectId());
             SessionUtils.setCurrentOrganizationId(trigger.getOrganizationId());
+            AgentExecutionPreflightDTO preflight = preflightService.preflight(toPreflight(trigger, request));
+            if (!"PASSED".equals(preflight.getStatus())) {
+                mapper.updateFireResult(trigger.getId(), "BLOCKED", preflight.getBlockedReason(), now);
+                notifyBlocked(trigger, preflight, now);
+                return history(trigger, null, eventId, scheduledAt, "BLOCKED", preflight.getBlockedReason());
+            }
+            request.setPreflightId(preflight.getId());
+            request.setEnvironmentProfileId(trigger.getEnvironmentProfileId());
+            request.setCredentialReferenceId(trigger.getCredentialReferenceId());
+            request.setModelProfileId(trigger.getModelProfileId());
+            request.setPromptTemplateVersionId(preflight.getPromptTemplateVersionId());
             AgentExecutionTaskDTO task = executionService.create(request);
             mapper.updateFireResult(trigger.getId(), "CREATED", null, now);
             return history(trigger, task.getId(), eventId, scheduledAt, "CREATED", null);
@@ -237,10 +263,39 @@ public class AgentTaskTriggerService {
         trigger.setConcurrencyPolicy(normalizeEnum(source.getConcurrencyPolicy(), "FORBID", CONCURRENCY_POLICIES, "concurrencyPolicy"));
         trigger.setMissedPolicy(normalizeEnum(source.getMissedPolicy(), "FIRE_ONCE", MISSED_POLICIES, "missedPolicy"));
         trigger.setEnabled(source.getEnabled() == null || source.getEnabled());
+        trigger.setTriggerVersion(1);
+        trigger.setModelProfileId(StringUtils.trimToNull(source.getModelProfileId()));
+        trigger.setPromptTemplateId(StringUtils.trimToNull(source.getPromptTemplateId()));
+        if (StringUtils.isBlank(trigger.getPromptTemplateId())) throw new MSException("PROMPT_TEMPLATE_REQUIRED");
+        trigger.setEnvironmentProfileId(StringUtils.trimToNull(source.getEnvironmentProfileId()));
+        trigger.setCredentialReferenceId(StringUtils.trimToNull(source.getCredentialReferenceId()));
+        trigger.setRunnerType(StringUtils.upperCase(StringUtils.defaultIfBlank(source.getRunnerType(), "BROWSER")));
+        trigger.setRequiredCapabilities(JSON.toJSONString(unique(source.getRequiredCapabilities())));
+        trigger.setPolicyJson(JSON.toJSONString(source.getPolicy() == null ? Map.of() : source.getPolicy()));
+        trigger.setEvidencePolicyJson(JSON.toJSONString(source.getEvidencePolicy() == null ? Map.of() : source.getEvidencePolicy()));
+        trigger.setNotificationPolicyJson(JSON.toJSONString(source.getNotificationPolicy() == null ? Map.of() : source.getNotificationPolicy()));
+        List<String> responsibleUsers = unique(source.getResponsibleUserIds());
+        if (responsibleUsers.size() != 3) throw new MSException("RESPONSIBLE_USERS_MUST_BE_EXACTLY_THREE");
+        trigger.setResponsibleUserIds(JSON.toJSONString(responsibleUsers));
+        var environmentProfile = environmentProfileService.resolveForTask(trigger.getEnvironmentProfileId(), projectId);
+        if (StringUtils.isBlank(trigger.getCredentialReferenceId())) trigger.setCredentialReferenceId(environmentProfile.getDefaultCredentialReferenceId());
+        if (StringUtils.isNotBlank(trigger.getCredentialReferenceId())) {
+            credentialReferenceService.assertUsable(trigger.getCredentialReferenceId(), projectId, null, null);
+        }
+        if (StringUtils.isBlank(trigger.getModelProfileId())) throw new MSException("MODEL_PROFILE_REQUIRED");
+        modelProfileService.assertUsable(trigger.getModelProfileId(), projectId, unique(source.getRequiredCapabilities()));
+        validateResponsibleUsers(projectId, responsibleUsers);
         source.getTaskTemplate().setProjectId(projectId);
         validateProjectCaseIds(projectId, source.getTaskTemplate().getCaseIds());
         source.getTaskTemplate().setIdempotencyKey(null);
         source.getTaskTemplate().setSource(null);
+        source.getTaskTemplate().setPreflightId(null);
+        source.getTaskTemplate().setEnvironmentProfileId(trigger.getEnvironmentProfileId());
+        source.getTaskTemplate().setCredentialReferenceId(trigger.getCredentialReferenceId());
+        source.getTaskTemplate().setModelProfileId(trigger.getModelProfileId());
+        if ("MANUAL".equalsIgnoreCase(source.getTaskTemplate().getLoginMode())) {
+            throw new MSException("SCHEDULED_MANUAL_LOGIN_FORBIDDEN");
+        }
         trigger.setTaskTemplate(JSON.toJSONString(source.getTaskTemplate()));
         if ("CRON".equals(trigger.getTriggerType())) {
             if (StringUtils.isBlank(trigger.getCronExpression())) {
@@ -332,11 +387,16 @@ public class AgentTaskTriggerService {
         AgentTaskTriggerHistoryDTO history = new AgentTaskTriggerHistoryDTO();
         history.setId(IDGenerator.nextStr());
         history.setTriggerId(trigger.getId());
+        history.setTriggerVersion(trigger.getTriggerVersion() == null ? 1 : trigger.getTriggerVersion());
         history.setTaskId(taskId);
         history.setEventId(eventId);
         history.setScheduledAt(scheduledAt);
+        history.setAttemptNo(1);
+        history.setIdempotencyKey("trigger:" + trigger.getId() + ":" + StringUtils.defaultString(eventId, String.valueOf(scheduledAt)));
+        history.setTraceId(UUID.randomUUID().toString());
         history.setFireTime(now);
         history.setStatus(status);
+        history.setBlockedReason("BLOCKED".equals(status) ? message : null);
         history.setMessage(StringUtils.abbreviate(message, 1000));
         history.setCreatedAt(now);
         try {
@@ -416,6 +476,44 @@ public class AgentTaskTriggerService {
     private void validateTimezone(String timezone) {
         if (!Set.of(TimeZone.getAvailableIDs()).contains(timezone)) {
             throw new MSException("timezone 无效: " + timezone);
+        }
+    }
+
+    private AgentExecutionPreflightRequest toPreflight(AgentTaskTriggerDTO trigger, AgentExecutionCreateRequest task) {
+        AgentExecutionPreflightRequest request = new AgentExecutionPreflightRequest();
+        request.setProjectId(trigger.getProjectId());
+        request.setTestPlanId(task.getTestPlanId());
+        request.setCaseIds(task.getCaseIds());
+        request.setEnvironmentProfileId(trigger.getEnvironmentProfileId());
+        request.setCredentialReferenceId(trigger.getCredentialReferenceId());
+        request.setModelProfileId(trigger.getModelProfileId());
+        request.setPromptTemplateId(trigger.getPromptTemplateId());
+        request.setRunnerType(trigger.getRunnerType());
+        request.setRequiredCapabilities(JSON.parseArray(trigger.getRequiredCapabilities(), String.class));
+        request.setPolicy(JSON.parseObject(trigger.getPolicyJson(), Map.class));
+        request.setTaskOrigin(io.metersphere.agent.constants.AgentTaskOrigin.PLATFORM_SCHEDULED);
+        request.setResponsibleUserIds(JSON.parseArray(trigger.getResponsibleUserIds(), String.class));
+        return request;
+    }
+
+    private List<String> unique(List<String> values) {
+        return values == null ? List.of() : values.stream().filter(StringUtils::isNotBlank).map(String::trim).distinct().sorted().toList();
+    }
+
+    private void validateResponsibleUsers(String projectId, List<String> users) {
+        String placeholders = String.join(",", java.util.Collections.nCopies(users.size(), "?"));
+        List<Object> params = new ArrayList<>(users);
+        params.add(projectId);
+        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(DISTINCT u.id) FROM user u JOIN user_role_relation urr ON urr.user_id=u.id WHERE u.enable=1 AND u.deleted=0 AND u.id IN (" + placeholders + ") AND urr.source_id=?", Integer.class, params.toArray());
+        if (count == null || count != 3) throw new MSException("RESPONSIBLE_USER_INVALID_OR_UNAUTHORIZED");
+    }
+
+    private void notifyBlocked(AgentTaskTriggerDTO trigger, AgentExecutionPreflightDTO preflight, long now) {
+        List<String> users = JSON.parseArray(trigger.getResponsibleUserIds(), String.class);
+        String content = "定时测试任务已阻塞，原因：" + preflight.getBlockedReason() + "，traceId=" + preflight.getTraceId();
+        for (String user : users) {
+            jdbcTemplate.update("INSERT INTO notification(type,receiver,subject,status,create_time,operator,operation,resource_id,project_id,organization_id,resource_type,resource_name,content) VALUES ('AI_EXECUTION',?,'定时测试任务阻塞','UNREAD',?,?,'TRIGGER_BLOCKED',?,?,?,'AI_TASK_TRIGGER',?,?)",
+                    user, now, trigger.getCreatedBy(), trigger.getId(), trigger.getProjectId(), trigger.getOrganizationId(), trigger.getName(), content);
         }
     }
 }

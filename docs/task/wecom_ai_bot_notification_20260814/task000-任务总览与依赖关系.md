@@ -1,7 +1,7 @@
 # task000 - 企业微信智能机器人通知改造任务总览
 
 > 文档类型：任务索引 / 里程碑规划  
-> 关联方案：[MeterSphere 企业微信智能机器人长连接改造方案](../../wecom-ai-bot-integration-plan.md)  
+> 关联方案：[MeterSphere 企业微信智能机器人长连接改造方案](../../summary/wecom-ai-bot-integration-plan.md)
 > 拆分日期：2026-08-14  
 > 当前状态：代码实现完成，待真实企微联调与灰度验收  
 > 任务目录：`docs/task/wecom_ai_bot_notification_20260814`

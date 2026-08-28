@@ -5,7 +5,7 @@ import { EventBuffer, RunnerClient } from "./client.js";
 import { parseAction, parseAssertions } from "./contract.js";
 import { assertAllowedUrl, resolveUploadPath, resolveValue, RunnerError, sanitize } from "./security.js";
 import type {
-  ExecutionCase, ExecutionStep, LeaseAssignment, RunnerConfig, WebAction, WebAssertion, WebLocator,
+  ExecutionCase, ExecutionStep, LeaseAssignment, RunnerConfig, TestDataLease, WebAction, WebAssertion, WebLocator,
 } from "./types.js";
 
 interface EvidencePolicy {
@@ -21,6 +21,7 @@ export async function executeAssignment(config: RunnerConfig, client: RunnerClie
   let leaseHeartbeat: NodeJS.Timeout | undefined;
   let page: Page | undefined;
   let leaseFailures = 0;
+  const dataLeases: TestDataLease[] = [];
   try {
     events.add(info("TASK_ACCEPTED", "Runner 已接受任务"));
     await events.flush();
@@ -56,14 +57,17 @@ export async function executeAssignment(config: RunnerConfig, client: RunnerClie
       await events.flush();
       await waitUntilRunnable(client, assignment);
     } else {
+      await automaticLogin(page, client, assignment, config, events);
       await client.state(assignment, "RUNNING", "浏览器准备完成");
     }
 
-    const policy = evidencePolicy(assignment.task.policySnapshot, config.sensitiveSelectors);
+    const datasetValues = await prepareDatasetValues(client, assignment, dataLeases);
+    const runtimeConfig: RunnerConfig = { ...config, values: { ...config.values, ...datasetValues } };
+    const policy = evidencePolicy(assignment.task.policySnapshot, runtimeConfig.sensitiveSelectors);
     for (const executionCase of assignment.task.cases ?? []) {
       if (executionCase.status && !["CREATED", "PENDING"].includes(executionCase.status)) continue;
       await safePoint(client, assignment);
-      await executeCase(page, executionCase, config, client, assignment, events, policy);
+      await executeCase(page, executionCase, runtimeConfig, client, assignment, events, policy);
     }
     events.add(info("TASK_EXECUTION_COMPLETED", "浏览器执行阶段完成，等待服务端回写与对账"));
     await events.flush();
@@ -71,6 +75,11 @@ export async function executeAssignment(config: RunnerConfig, client: RunnerClie
     await client.complete(assignment, "COMPLETED");
   } catch (cause) {
     const error = asRunnerError(cause);
+    if (error.category === "RUNNER_HUMAN_HANDOFF") {
+      events.add({ ...info("LOGIN_REQUIRED", "自动登录被 MFA 或验证码阻塞，已保存检查点并通知责任人"), level: "WARN" });
+      await events.flush().catch(() => undefined);
+      return;
+    }
     events.add(errorEvent("RUNNER_FAILED", `${error.category}: ${sanitize(error.message)}`));
     await events.flush().catch(() => undefined);
     const canceled = await isCanceled(client, assignment);
@@ -82,9 +91,98 @@ export async function executeAssignment(config: RunnerConfig, client: RunnerClie
     }
   } finally {
     if (leaseHeartbeat) clearInterval(leaseHeartbeat);
+    for (const lease of dataLeases) await client.releaseTestData(assignment, lease).catch(() => undefined);
     await page?.context().close().catch(() => undefined);
     await browser?.close().catch(() => undefined);
   }
+}
+
+async function prepareDatasetValues(client: RunnerClient, assignment: LeaseAssignment,
+                                    leases: TestDataLease[]): Promise<Record<string, string>> {
+  const references = new Set<string>();
+  for (const executionCase of assignment.task.cases ?? []) for (const step of executionCase.steps ?? []) {
+    try {
+      const action = parseAction(step.actionJson);
+      if (action.valueRef?.startsWith("dataset:")) references.add(action.valueRef);
+      for (const assertion of parseAssertions(step.assertionJson)) {
+        if (assertion.expected?.startsWith("dataset:")) references.add(assertion.expected);
+      }
+    } catch { /* contract parsing is repeated in the normal execution path with a user-safe error */ }
+  }
+  const values: Record<string,string> = {};
+  for (const reference of references) {
+    const match = /^dataset:([^:]+):(.+)$/.exec(reference);
+    if (!match) throw new RunnerError("TEST_DATA_REFERENCE_INVALID", `测试数据引用格式无效: ${reference}`);
+    const lease = await client.acquireTestData(assignment, match[1], match[2]);
+    leases.push(lease);
+    const content = await client.testDataContent(assignment, lease);
+    values[reference] = resolveDatasetValue(content, match[2]);
+    content.fill(0);
+  }
+  return values;
+}
+
+function resolveDatasetValue(content: Buffer, key: string): string {
+  const text = content.toString("utf8").replace(/^\uFEFF/, "");
+  try {
+    let value: unknown = JSON.parse(text);
+    for (const part of key.split(".")) {
+      if (value === null || typeof value !== "object" || !(part in value)) throw new Error();
+      value = (value as Record<string,unknown>)[part];
+    }
+    return typeof value === "string" ? value : JSON.stringify(value);
+  } catch {
+    const rows = parseCsv(text);
+    if (rows.length < 2) throw new RunnerError("TEST_DATA_KEY_NOT_FOUND", `测试数据键不存在: ${key}`);
+    const dot = /^(\d+)\.(.+)$/.exec(key); const rowIndex = dot ? Number(dot[1]) + 1 : 1; const column = dot ? dot[2] : key;
+    const columnIndex = rows[0].indexOf(column);
+    if (columnIndex < 0 || !rows[rowIndex] || rows[rowIndex][columnIndex] === undefined) throw new RunnerError("TEST_DATA_KEY_NOT_FOUND", `测试数据键不存在: ${key}`);
+    return rows[rowIndex][columnIndex];
+  }
+}
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][]=[];let row:string[]=[];let value="";let quoted=false;
+  for(let i=0;i<text.length;i+=1){const c=text[i];if(c==='"'){if(quoted&&text[i+1]==='"'){value+='"';i+=1;}else quoted=!quoted;}else if(c===','&&!quoted){row.push(value);value="";}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&text[i+1]==='\n')i+=1;row.push(value);if(row.some(cell=>cell.length>0))rows.push(row);row=[];value="";}else value+=c;}
+  row.push(value);if(row.some(cell=>cell.length>0))rows.push(row);return rows;
+}
+
+interface LoginProfileSnapshot {
+  loginType: "FORM" | "TOKEN"; loginUrl: string; usernameLocator: WebLocator; passwordLocator: WebLocator;
+  submitLocator: WebLocator; successAssertion: WebAssertion; sessionValidation?: WebAssertion;
+  mfaPolicy: "BLOCK" | "CHECKPOINT"; timeoutMs: number;
+}
+
+async function automaticLogin(page: Page, client: RunnerClient, assignment: LeaseAssignment,
+                              config: RunnerConfig, events: EventBuffer): Promise<void> {
+  const profile = parseExecutionParameters(assignment.task.executionParameterSnapshot).loginProfile as LoginProfileSnapshot | undefined;
+  if (!profile) return;
+  if (!assignment.task.credentialReferenceId) throw new RunnerError("AUTH_CREDENTIAL_REQUIRED", "自动登录缺少凭据引用");
+  if (profile.loginType !== "FORM") throw new RunnerError("AUTH_LOGIN_TYPE_UNSUPPORTED", "当前 Runner 仅支持表单自动登录");
+  const credential = await client.resolveCredential(assignment, assignment.task.credentialReferenceId);
+  try {
+    await page.goto(assertAllowedUrl(profile.loginUrl, config.allowedOrigins).toString(), { waitUntil: "domcontentloaded", timeout: profile.timeoutMs });
+    await (await uniqueLocator(page, profile.usernameLocator)).fill(credential.username, { timeout: profile.timeoutMs });
+    await (await uniqueLocator(page, profile.passwordLocator)).fill(credential.value, { timeout: profile.timeoutMs });
+    credential.value = "";
+    await (await uniqueLocator(page, profile.submitLocator)).click({ timeout: profile.timeoutMs });
+    if (await page.locator("input[autocomplete='one-time-code'], input[name*='otp' i], input[name*='captcha' i], iframe[src*='captcha' i]").count() > 0) {
+      await client.state(assignment, "WAITING_HUMAN", "MFA_OR_CAPTCHA_REQUIRED");
+      throw new RunnerError("RUNNER_HUMAN_HANDOFF", "MFA_OR_CAPTCHA_REQUIRED");
+    }
+    await executeAssertion(page, { ...profile.successAssertion, timeoutMs: profile.timeoutMs }, config);
+    events.add(info("ACTION_COMPLETED", `自动登录成功，凭据版本 ${credential.secretVersion ?? "unknown"}`));
+    await events.flush();
+  } catch (cause) {
+    if (cause instanceof RunnerError && cause.category === "RUNNER_HUMAN_HANDOFF") throw cause;
+    throw new RunnerError("AUTH_LOGIN_FAILED", "自动登录或会话断言失败", cause);
+  } finally { credential.username = ""; credential.value = ""; }
+}
+
+function parseExecutionParameters(raw?: string): Record<string, unknown> {
+  if (!raw) return {};
+  try { const value = JSON.parse(raw); if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(); return value as Record<string, unknown>; }
+  catch { throw new RunnerError("EXECUTION_PARAMETER_SNAPSHOT_INVALID", "执行参数快照格式无效"); }
 }
 
 async function executeCase(page: Page, executionCase: ExecutionCase, config: RunnerConfig,
@@ -95,7 +193,7 @@ async function executeCase(page: Page, executionCase: ExecutionCase, config: Run
   let failed = false;
   for (const step of executionCase.steps ?? []) {
     await safePoint(client, assignment);
-    if (step.status === "NEEDS_REVIEW") {
+    if (step.status === "NEEDS_REVIEW" || step.status === "SKIPPED_REVIEW_REQUIRED") {
       events.add({ ...errorEvent("STEP_COMPLETED", "步骤不可执行，需要人工补充"),
         caseId: executionCase.caseId, stepId: step.id });
       failed = true;
@@ -185,7 +283,7 @@ async function executeAction(page: Page, action: WebAction, config: RunnerConfig
     case "CHECK": await locator.check({ timeout }); break;
     case "KEYBOARD": await locator.press(resolveValue(action.value, action.valueRef, config.values), { timeout }); break;
     case "UPLOAD": {
-      const upload = resolveUploadPath(resolveValue(action.value, action.valueRef, config.values), config);
+      const upload = resolveUploadPath(resolveValue(action.value, action.fileRef ?? action.valueRef, config.values), config);
       await access(upload);
       await locator.setInputFiles(upload, { timeout });
       break;
@@ -213,8 +311,10 @@ async function executeAssertion(page: Page, assertion: WebAssertion, config: Run
           case "COUNT": actual = String(await locator.count()); break;
         }
       }
+      const expected = assertion.expected?.startsWith("dataset:")
+        ? resolveValue(undefined, assertion.expected, config.values) : assertion.expected ?? "";
       if (["TEXT", "ATTRIBUTE", "COUNT", "URL", "TITLE"].includes(assertion.type)
-          && compare(actual, assertion.expected ?? "", assertion.operator)) return;
+          && compare(actual, expected, assertion.operator)) return;
     } catch (cause) {
       actual = asRunnerError(cause).message;
     }
@@ -246,13 +346,11 @@ async function uniqueLocator(page: Page, target: WebLocator | undefined): Promis
 function locatorFor(page: Page, target: WebLocator): Locator {
   switch (target.strategy) {
     case "TEST_ID": return page.getByTestId(target.testId!);
-    case "ROLE_NAME": return page.getByRole(target.role as Parameters<Page["getByRole"]>[0], { name: target.name!, exact: true });
+    case "ROLE": return page.getByRole(target.role as Parameters<Page["getByRole"]>[0], { name: target.name!, exact: true });
     case "LABEL": return page.getByLabel(target.label!, { exact: true });
     case "PLACEHOLDER": return page.getByPlaceholder(target.placeholder!, { exact: true });
     case "TEXT": return page.getByText(target.text!, { exact: true });
-    case "SEMANTIC": return page.getByText(target.text!, { exact: true });
     case "CSS": return page.locator(target.selector!);
-    case "XPATH": return page.locator(`xpath=${target.selector!}`);
   }
 }
 

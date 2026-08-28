@@ -25,13 +25,14 @@ public final class AgentExecutionStatus {
     public static final String CASE_BLOCKED = "BLOCKED";
     public static final String CASE_SKIPPED = "SKIPPED";
     public static final String CASE_NEEDS_REVIEW = "NEEDS_REVIEW";
+    public static final String STEP_SKIPPED_REVIEW_REQUIRED = "SKIPPED_REVIEW_REQUIRED";
     public static final String CASE_ERROR = "ERROR";
 
     public static final List<String> TERMINAL = List.of(SUCCESS, PARTIAL_SUCCESS, FAILED, CANCELED, EXPIRED);
     public static final List<String> HOLDING = List.of(
             RESOLVING_SCOPE, WAITING_CONFIRMATION, QUEUED, PREPARING_BROWSER, WAITING_LOGIN, WAITING_HUMAN, PAUSED);
     public static final List<String> CASE_TERMINAL = List.of(
-            SUCCESS, FAILED, CASE_BLOCKED, CASE_SKIPPED, CASE_NEEDS_REVIEW, CASE_ERROR);
+            SUCCESS, FAILED, CASE_BLOCKED, CASE_SKIPPED, CASE_NEEDS_REVIEW, STEP_SKIPPED_REVIEW_REQUIRED, CASE_ERROR);
 
     private AgentExecutionStatus() {
     }

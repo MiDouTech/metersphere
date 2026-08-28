@@ -2,6 +2,8 @@ package io.metersphere.agent.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class AgentHumanRequestDTO {
     private String id;
@@ -21,4 +23,9 @@ public class AgentHumanRequestDTO {
     private Long expiresAt;
     private Long createdAt;
     private Long updatedAt;
+    private Integer resolutionVersion;
+    private String resolvedReason;
+    private String checkpointId;
+    private String traceId;
+    private List<String> recipientUserIds;
 }

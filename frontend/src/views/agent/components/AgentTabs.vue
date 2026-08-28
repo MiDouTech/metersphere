@@ -11,15 +11,21 @@
   import { computed } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
 
+  import { hasAnyPermission } from '@/utils/permission';
+
   const route = useRoute();
   const router = useRouter();
-  const tabs = [
-    { key: 'list', title: 'Agent 列表' },
-    { key: 'capability', title: '能力与授权' },
-    { key: 'queue', title: '调度队列' },
-    { key: 'evaluation', title: '执行评价' },
-    { key: 'access', title: 'Agent 集成' },
-  ];
+  const tabs = computed(() =>
+    [
+      { key: 'list', title: 'Agent 列表', permissions: ['AI_EXECUTION:READ'] },
+      { key: 'capability', title: '能力与授权', permissions: ['AI_EXECUTION:READ'] },
+      { key: 'environment-profile', title: '环境执行配置', permissions: ['AI_EXECUTION:READ'] },
+      { key: 'credential-reference', title: '凭据引用', permissions: ['AI_CREDENTIAL:READ_METADATA'] },
+      { key: 'queue', title: '调度队列', permissions: ['AI_EXECUTION:READ'] },
+      { key: 'evaluation', title: '执行评价', permissions: ['AI_EXECUTION:READ'] },
+      { key: 'access', title: 'Agent 集成', permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ'] },
+    ].filter((tab) => hasAnyPermission(tab.permissions))
+  );
   const activeKey = computed(() => route.path.split('/').filter(Boolean).at(-1) || 'list');
 
   function handleChange(key: string | number) {

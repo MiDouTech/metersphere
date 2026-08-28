@@ -37,6 +37,34 @@
 
     <sql id="CatalogUnion">
         <choose>
+            <when test="assetType == 'CASE'">
+                SELECT COALESCE(NULLIF(f.ref_id,''),f.id) AS id,f.project_id,'CASE' AS asset_type,f.name,
+                       COALESCE(f.case_edit_type,'STEP') AS category,COALESCE(f.review_status,'DRAFT') AS status,
+                       CAST(f.tags AS CHAR) AS summary,COALESCE(f.update_user,f.create_user) AS owner,
+                       COALESCE(f.update_time,f.create_time) AS update_time,CAST(COALESCE(f.update_time,f.create_time) AS CHAR) AS source_version,NULL AS related_id
+                FROM functional_case f WHERE f.project_id=#{projectId} AND f.latest=1 AND f.deleted=0
+            </when>
+            <when test="assetType == 'DOCUMENT'">
+                SELECT d.id,d.project_id,'DOCUMENT' AS asset_type,d.original_name AS name,d.mime_type AS category,d.parse_status AS status,
+                       LEFT(d.summary,2000) AS summary,d.create_user AS owner,d.update_time,d.sha256 AS source_version,d.file_id AS related_id
+                FROM ai_source_document d WHERE d.project_id=#{projectId} AND d.deleted=0
+            </when>
+            <when test="assetType == 'PLAN'">
+                SELECT p.id,p.project_id,'PLAN' AS asset_type,p.name,p.type AS category,p.status,p.description AS summary,
+                       COALESCE(p.update_user,p.create_user) AS owner,COALESCE(p.update_time,p.create_time) AS update_time,
+                       CAST(COALESCE(p.update_time,p.create_time) AS CHAR) AS source_version,NULL AS related_id
+                FROM test_plan p WHERE p.project_id=#{projectId} AND p.type='testPlan'
+            </when>
+            <when test="assetType == 'PAGE_OBJECT'">
+                SELECT p.id,p.project_id,'PAGE_OBJECT' AS asset_type,p.name,'WEB_UI' AS category,p.status,p.route_pattern AS summary,
+                       COALESCE(p.update_user,p.create_user) AS owner,p.update_time,CAST(p.version AS CHAR) AS source_version,NULL AS related_id
+                FROM ai_page_object p WHERE p.project_id=#{projectId}
+            </when>
+            <when test="assetType == 'BUSINESS_FLOW'">
+                SELECT b.id,b.project_id,'BUSINESS_FLOW' AS asset_type,b.name,'FLOW' AS category,b.status,b.entry_node_id AS summary,
+                       COALESCE(b.update_user,b.create_user) AS owner,b.update_time,CAST(b.version AS CHAR) AS source_version,NULL AS related_id
+                FROM ai_business_flow b WHERE b.project_id=#{projectId}
+            </when>
             <when test="assetType == 'DATASET'">
                 SELECT COALESCE(NULLIF(f.ref_id, ''), f.id) AS id, f.project_id, 'DATASET' AS asset_type,
                        f.name, COALESCE(f.type, 'FILE') AS category,
@@ -143,6 +171,32 @@
 
     <select id="selectExecutableSnapshot" resultType="io.metersphere.agent.dto.TestAssetExecutableSnapshotDTO">
         <choose>
+            <when test="assetType == 'CASE'">
+                SELECT JSON_OBJECT('id',f.id,'refId',f.ref_id,'name',f.name,'editType',f.case_edit_type,'tags',CAST(f.tags AS CHAR),
+                       'steps',CAST(b.steps AS CHAR),'textDescription',CAST(b.text_description AS CHAR),'expectedResult',CAST(b.expected_result AS CHAR)) AS rawContentJson
+                FROM functional_case f LEFT JOIN functional_case_blob b ON b.id=f.id
+                WHERE f.project_id=#{projectId} AND f.latest=1 AND f.deleted=0 AND COALESCE(NULLIF(f.ref_id,''),f.id)=#{assetId} LIMIT 1
+            </when>
+            <when test="assetType == 'DOCUMENT'">
+                SELECT JSON_OBJECT('id',d.id,'name',d.original_name,'mimeType',d.mime_type,'sha256',d.sha256,'parseStatus',d.parse_status,
+                       'summary',d.summary,'sectionIndex',d.section_index) AS rawContentJson
+                FROM ai_source_document d WHERE d.project_id=#{projectId} AND d.id=#{assetId} AND d.deleted=0 LIMIT 1
+            </when>
+            <when test="assetType == 'PLAN'">
+                SELECT JSON_OBJECT('id',p.id,'name',p.name,'status',p.status,'tags',p.tags,'description',p.description,
+                       'plannedStartTime',p.planned_start_time,'plannedEndTime',p.planned_end_time) AS rawContentJson
+                FROM test_plan p WHERE p.project_id=#{projectId} AND p.id=#{assetId} AND p.type='testPlan' LIMIT 1
+            </when>
+            <when test="assetType == 'PAGE_OBJECT'">
+                SELECT JSON_OBJECT('id',p.id,'name',p.name,'routePattern',p.route_pattern,'allowedOrigins',p.allowed_origins,'status',p.status,'version',p.version,
+                       'elements',(SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id',e.id,'name',e.name,'strategy',e.strategy,'selectorValue',e.selector_value,'fallbackLocators',e.fallback_locators,'sensitive',e.sensitive,'riskLevel',e.risk_level,'version',e.version)),JSON_ARRAY()) FROM ai_page_element e WHERE e.page_object_id=p.id)) AS rawContentJson
+                FROM ai_page_object p WHERE p.project_id=#{projectId} AND p.id=#{assetId} LIMIT 1
+            </when>
+            <when test="assetType == 'BUSINESS_FLOW'">
+                SELECT JSON_OBJECT('id',b.id,'name',b.name,'nodes',b.nodes_json,'edges',b.edges_json,'entryNodeId',b.entry_node_id,
+                       'exitConditions',b.exit_conditions,'allowedActions',b.allowed_actions,'status',b.status,'version',b.version) AS rawContentJson
+                FROM ai_business_flow b WHERE b.project_id=#{projectId} AND b.id=#{assetId} LIMIT 1
+            </when>
             <when test="assetType == 'DATASET'">
                 SELECT f.id AS fileId, COALESCE(NULLIF(f.original_name, ''), f.name) AS fileName,
                        f.type AS fileType, f.size AS fileSize, f.storage, f.path AS filePath,

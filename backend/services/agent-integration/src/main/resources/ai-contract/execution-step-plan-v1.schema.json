@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://metersphere.io/schema/ai/execution-step-plan-v1.schema.json",
+  "title": "MeterSphere AI Execution Step Plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["action", "assertions"],
+  "properties": {
+    "action": { "$ref": "execution-contract-v1.schema.json#/$defs/action" },
+    "assertions": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "$ref": "execution-contract-v1.schema.json#/$defs/assertion" } }
+  }
+}

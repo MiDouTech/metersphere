@@ -24,6 +24,12 @@ import java.util.List;
 
 public interface ExtTestPlanFunctionalCaseMapper {
 
+    String lockTestPlan(String testPlanId);
+
+    int updateSyncStatus(@Param("id") String id,
+                         @Param("lastExecResult") String lastExecResult,
+                         @Param("lastExecTime") Long lastExecTime);
+
     long updatePos(@Param("id") String id, @Param("pos") long pos);
 
     List<String> selectIdByTestPlanIdOrderByPos(String testPlanId);

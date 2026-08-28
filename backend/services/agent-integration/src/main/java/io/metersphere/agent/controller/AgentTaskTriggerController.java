@@ -27,45 +27,45 @@ public class AgentTaskTriggerController {
     private AgentTaskTriggerService service;
 
     @PostMapping
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    @RequiresPermissions(PermissionConstants.AI_TRIGGER_MANAGE)
     public AgentTaskTriggerDTO create(@RequestBody @Valid AgentTaskTriggerRequest request) {
         return service.create(request);
     }
 
     @PutMapping("/{id}")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    @RequiresPermissions(PermissionConstants.AI_TRIGGER_MANAGE)
     public AgentTaskTriggerDTO update(@PathVariable String id,
                                       @RequestBody @Valid AgentTaskTriggerRequest request) {
         return service.update(id, request);
     }
 
     @GetMapping("/{id}")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    @RequiresPermissions(PermissionConstants.AI_TRIGGER_READ)
     public AgentTaskTriggerDTO get(@PathVariable String id) {
         return service.get(id);
     }
 
     @GetMapping
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    @RequiresPermissions(PermissionConstants.AI_TRIGGER_READ)
     public List<AgentTaskTriggerDTO> list(@RequestParam String projectId) {
         return service.list(projectId);
     }
 
     @GetMapping("/{id}/history")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    @RequiresPermissions(PermissionConstants.AI_TRIGGER_READ)
     public List<AgentTaskTriggerHistoryDTO> history(@PathVariable String id,
                                                     @RequestParam(required = false) Integer limit) {
         return service.history(id, limit);
     }
 
     @PostMapping("/{id}/fire")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    @RequiresPermissions(PermissionConstants.AI_TRIGGER_MANAGE)
     public AgentTaskTriggerHistoryDTO fire(@PathVariable String id) {
         return service.manualFire(id);
     }
 
     @PostMapping("/{id}/rotate-secret")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    @RequiresPermissions(PermissionConstants.AI_TRIGGER_MANAGE)
     public AgentTaskTriggerDTO rotateSecret(@PathVariable String id) {
         return service.rotateSecret(id);
     }

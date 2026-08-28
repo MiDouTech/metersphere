@@ -48,24 +48,30 @@ public class AiUserAgentFeatureService {
 
     public java.util.Map<String, Object> flags() {
         return java.util.Map.of(
-                "enabled", enabled,
-                "workbuddy", providerEnabled("WORKBUDDY"),
-                "codex", providerEnabled("CODEX"),
-                "cursor", providerEnabled("CURSOR"),
+                "enabled", false,
+                "deprecated", true,
+                "migrationTarget", "REMOTE_MCP",
+                "workbuddy", false,
+                "codex", false,
+                "cursor", false,
                 "providers", java.util.List.of(
                         providerStatus("WORKBUDDY", workbuddyEnabled, false, workbuddyVerified,
-                                "Provider adapter is not implemented"),
+                                "Personal Agent Bridge is deprecated; use Remote MCP"),
                         providerStatus("CODEX", codexEnabled, true, codexVerified,
-                                "Provider has not passed deployment verification"),
+                                "Personal Agent Bridge is deprecated; use Remote MCP"),
                         providerStatus("CURSOR", cursorEnabled, true, cursorVerified,
-                                "Provider has not passed sandbox verification")));
+                                "Personal Agent Bridge is deprecated; use Remote MCP")));
     }
 
     private java.util.Map<String, Object> providerStatus(String provider, boolean configured, boolean implemented,
                                                           boolean verified, String unavailableReason) {
-        boolean available = enabled && configured && implemented && verified;
+        boolean available = false;
         return java.util.Map.of("provider", provider, "configured", configured, "implemented", implemented,
                 "verified", verified, "available", available, "reason", available ? "" : unavailableReason);
+    }
+
+    public void assertProvisioningAllowed() {
+        throw new MSException("AGENT_BRIDGE_DEPRECATED：个人 Agent Bridge 已停止新增，请使用 Agent Token 连接 Remote MCP");
     }
 
     public java.util.Map<String, Object> bridgeInstallInfo() {

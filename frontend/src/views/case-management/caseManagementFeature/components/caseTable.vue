@@ -52,6 +52,14 @@
                   @init-modules="emit('initModules')"
                   @confirm-import="confirmImport"
                 />
+                <a-button
+                  v-if="hasAllPermission(['FUNCTIONAL_CASE:READ', 'PROJECT_TEST_PLAN:READ+ASSOCIATION'])"
+                  class="ml-[12px]"
+                  :loading="caseSyncLoading"
+                  @click="handleSyncProjectCases"
+                >
+                  {{ t('caseManagement.featureCase.syncStatus') }}
+                </a-button>
                 <MsAiButton
                   v-if="aiStore.aiSourceNameList.length > 0"
                   class="ml-[12px]"
@@ -440,10 +448,9 @@
       :ok-button-props="{
         disabled:
           aiExecutionSubmitting ||
-          (aiExecutionForm.executionMode === 'RUNNER' && !aiExecutionForm.providerId) ||
-          !aiExecutionForm.targetUrl ||
-          !aiExecutionForm.environmentId ||
-          (aiExecutionForm.executionMode === 'AGENT' && !selectedAiExecutionAgentConfigured),
+          !aiExecutionForm.modelProfileId ||
+          !aiExecutionForm.environmentProfileId ||
+          !aiExecutionForm.promptTemplateId,
       }"
       :confirm-loading="aiExecutionSubmitting"
       :on-before-ok="submitAiExecutionTask"
@@ -455,53 +462,38 @@
       <a-alert type="warning" show-icon class="mb-[12px]">
         {{ t('caseManagement.featureCase.aiExecutionConfirmContent', { number: aiExecutionCaseIds.length }) }}
       </a-alert>
+      <a-alert type="info" show-icon class="mb-[12px]">
+        平台创建的任务固定由模型执行器运行；个人 Agent 任务仅能通过 MCP 创建。
+      </a-alert>
       <a-form :model="aiExecutionForm" layout="vertical">
-        <a-form-item :label="t('caseManagement.featureCase.aiExecutionMode')" required>
-          <a-radio-group v-model:model-value="aiExecutionForm.executionMode" type="button">
-            <a-radio value="RUNNER">{{ t('caseManagement.featureCase.aiExecutionModeRunner') }}</a-radio>
-            <a-radio value="AGENT">{{ t('caseManagement.featureCase.aiExecutionModeAgent') }}</a-radio>
-          </a-radio-group>
-        </a-form-item>
-        <a-form-item
-          v-if="aiExecutionForm.executionMode === 'AGENT'"
-          :label="t('caseManagement.featureCase.aiExecutionAgent')"
-          required
+        <a-form-item label="MAP Gateway 模型配置" required
+          ><a-select v-model="aiExecutionForm.modelProfileId"
+            ><a-option v-for="item in aiModelProfiles" :key="item.id" :value="item.id"
+              >{{ item.name }} · {{ item.logicalModelPublicId }}</a-option
+            ></a-select
+          ></a-form-item
         >
-          <a-select
-            v-model:model-value="aiExecutionForm.agentType"
-            :options="aiExecutionAgentSelectOptions"
-            :placeholder="t('caseManagement.featureCase.aiExecutionAgentPlaceholder')"
-          />
-          <div class="mt-[4px] text-[12px] text-[var(--color-text-3)]">
-            {{ t('caseManagement.featureCase.aiExecutionAgentTip') }}
-          </div>
-        </a-form-item>
-        <a-form-item
-          v-if="aiExecutionForm.executionMode === 'RUNNER'"
-          :label="t('caseManagement.featureCase.aiExecutionModel')"
-          required
+        <a-form-item label="已发布 Prompt 模板" required
+          ><a-select v-model="aiExecutionForm.promptTemplateId"
+            ><a-option v-for="item in aiPromptTemplates" :key="item.id" :value="item.promptTemplateId"
+              >{{ item.name }} · v{{ item.versionNo }}</a-option
+            ></a-select
+          ></a-form-item
         >
-          <a-select
-            v-model:model-value="aiExecutionForm.providerId"
-            :options="aiExecutionModelOptions"
-            allow-search
-            :placeholder="t('caseManagement.featureCase.aiExecutionModelPlaceholder')"
-          />
-        </a-form-item>
         <a-form-item :label="t('caseManagement.featureCase.aiExecutionEnvironment')" required>
-          <a-input
-            v-model:model-value="aiExecutionForm.environmentId"
-            :placeholder="t('caseManagement.featureCase.aiExecutionEnvironmentPlaceholder')"
-            :max-length="100"
-          />
+          <a-select v-model="aiExecutionForm.environmentProfileId" @change="selectAiEnvironment"
+            ><a-option v-for="item in aiEnvironmentProfiles" :key="item.id" :value="item.id"
+              >{{ item.name }} · {{ item.baseUrl }}</a-option
+            ></a-select
+          >
         </a-form-item>
-        <a-form-item :label="t('caseManagement.featureCase.aiExecutionTargetUrl')" required>
-          <a-input
-            v-model:model-value="aiExecutionForm.targetUrl"
-            :placeholder="t('caseManagement.featureCase.aiExecutionTargetUrlPlaceholder')"
-            :max-length="500"
-          />
-        </a-form-item>
+        <a-form-item label="凭据引用"
+          ><a-select v-model="aiExecutionForm.credentialReferenceId" allow-clear
+            ><a-option v-for="item in aiCredentialReferences" :key="item.id" :value="item.id"
+              >{{ item.name }} · {{ item.businessRole }}</a-option
+            ></a-select
+          ></a-form-item
+        >
         <a-form-item :label="t('caseManagement.featureCase.aiExecutionBrowser')">
           <a-select v-model:model-value="aiExecutionForm.browserType">
             <a-option value="chromium">Chromium</a-option>
@@ -658,12 +650,19 @@
   import ThirdDemandDrawer from './tabContent/tabDemand/thirdDemandDrawer.vue';
   import BatchUpdateExecutorModal from '@/views/test-plan/testPlan/components/batchUpdateExecutorModal.vue';
 
+  import type {
+    AiCredentialReference,
+    AiEnvironmentProfile,
+    AiModelProfile,
+    AiPromptTemplateVersion,
+  } from '@/api/modules/ai-execution';
   import {
-    type AiExecutionAgentOption,
-    type AiExecutionAgentType,
-    type AiExecutionMode,
     createAiExecutionTask,
-    getAiExecutionAgents,
+    listAiCredentialReferences,
+    listAiEnvironmentProfiles,
+    listAiModelProfiles,
+    listAiPromptTemplateVersions,
+    preflightAiExecution,
   } from '@/api/modules/ai-execution';
   import {
     batchAssociationDemand,
@@ -687,6 +686,7 @@
     updateCaseRequest,
   } from '@/api/modules/case-management/featureCase';
   import { getCaseRelatedInfo } from '@/api/modules/project-management/menuManagement';
+  import { syncProjectFunctionalCases } from '@/api/modules/test-plan/testPlan';
   import { NAV_NAVIGATION } from '@/config/workbench';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
@@ -706,7 +706,7 @@
     getGenerateId,
     mapTree,
   } from '@/utils';
-  import { hasAnyPermission, hasTabVisible } from '@/utils/permission';
+  import { hasAllPermission, hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
   import { AiCaseTransformResult } from '@/models/ai';
   import type {
@@ -1690,6 +1690,34 @@
     initData();
   }
 
+  const caseSyncLoading = ref(false);
+  function handleSyncProjectCases() {
+    openModal({
+      type: 'warning',
+      title: t('caseManagement.featureCase.syncStatus'),
+      content: t('caseManagement.featureCase.syncProjectConfirm'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      onBeforeOk: async () => {
+        try {
+          caseSyncLoading.value = true;
+          const result = await syncProjectFunctionalCases(appStore.currentProjectId);
+          Message.success(
+            t('caseManagement.featureCase.syncSuccess', {
+              plans: result.planCount,
+              updated: result.updatedCount,
+              removed: result.removedCount,
+            })
+          );
+          await initData();
+        } finally {
+          caseSyncLoading.value = false;
+        }
+      },
+      hideCancel: false,
+    });
+  }
+
   const showDetailDrawer = ref(false);
   const caseDetailDrawerRef = ref<InstanceType<typeof CaseDetailDrawer>>();
   const activeDetailId = ref<string>('');
@@ -2152,36 +2180,38 @@
   const aiExecutionVisible = ref(false);
   const aiExecutionSubmitting = ref(false);
   const aiExecutionCaseIds = ref<string[]>([]);
-  const aiExecutionAgentOptions = ref<AiExecutionAgentOption[]>([]);
   const aiExecutionForm = reactive({
-    executionMode: 'RUNNER' as AiExecutionMode,
-    agentType: undefined as AiExecutionAgentType | undefined,
-    providerId: localStorage.getItem('aiChatModel') || '',
-    environmentId: '',
-    targetUrl: '',
+    modelProfileId: '',
+    promptTemplateId: '',
+    environmentProfileId: '',
+    credentialReferenceId: '',
     browserType: 'chromium',
     loginMode: 'MANUAL',
     confirmed: false,
   });
+  const aiEnvironmentProfiles = ref<AiEnvironmentProfile[]>([]);
+  const aiCredentialReferences = ref<AiCredentialReference[]>([]);
+  const aiModelProfiles = ref<AiModelProfile[]>([]);
+  const aiPromptTemplates = ref<AiPromptTemplateVersion[]>([]);
+  async function loadAiExecutionProfiles() {
+    const [e, c, m, p] = await Promise.all([
+      listAiEnvironmentProfiles(currentProjectId.value),
+      listAiCredentialReferences(currentProjectId.value),
+      listAiModelProfiles(currentProjectId.value),
+      listAiPromptTemplateVersions(currentProjectId.value),
+    ]);
+    aiEnvironmentProfiles.value = e.filter((x) => x.enabled);
+    aiCredentialReferences.value = c.filter((x) => x.enabled && x.status === 'ACTIVE');
+    aiModelProfiles.value = m.filter((x) => x.enabled && x.lastVerifyStatus === 'SUCCESS');
+    aiPromptTemplates.value = p.filter((x) => x.status === 'PUBLISHED');
+  }
+  function selectAiEnvironment() {
+    const e = aiEnvironmentProfiles.value.find((x) => x.id === aiExecutionForm.environmentProfileId);
+    if (e?.defaultCredentialReferenceId) aiExecutionForm.credentialReferenceId = e.defaultCredentialReferenceId;
+  }
   const aiExecutionNeedsConfirm = computed(() => aiExecutionCaseIds.value.length > 20);
   const aiExecutionModelOptions = computed(() =>
     (aiStore.aiSourceNameList || []).map((item) => ({ label: item.name, value: item.id }))
-  );
-  const aiExecutionAgentSelectOptions = computed(() =>
-    aiExecutionAgentOptions.value.map((item) => ({
-      label: item.configured
-        ? item.name
-        : `${item.name} (${t('caseManagement.featureCase.aiExecutionAgentNotConfigured')})`,
-      value: item.name.toUpperCase() as AiExecutionAgentType,
-      disabled: !item.configured,
-    }))
-  );
-  const selectedAiExecutionAgentConfigured = computed(
-    () =>
-      aiExecutionForm.executionMode !== 'AGENT' ||
-      aiExecutionAgentOptions.value.some(
-        (item) => item.configured && item.name.toUpperCase() === aiExecutionForm.agentType
-      )
   );
   const selectedAiExecutionCaseIds = computed(() =>
     Array.from(propsRes.value.selectedKeys || [])
@@ -2215,21 +2245,11 @@
       return;
     }
     aiExecutionCaseIds.value = caseIds;
-    if (!aiStore.aiSourceNameList.length) {
-      await aiStore.getAISourceNameList();
-    }
-    try {
-      aiExecutionAgentOptions.value = await getAiExecutionAgents(currentProjectId.value);
-    } catch {
-      aiExecutionAgentOptions.value = [];
-    }
-    if (!aiExecutionModelOptions.value.some((item) => item.value === aiExecutionForm.providerId)) {
-      aiExecutionForm.providerId = aiExecutionModelOptions.value[0]?.value || '';
-    }
-    aiExecutionForm.environmentId = '';
-    aiExecutionForm.executionMode = 'RUNNER';
-    aiExecutionForm.agentType = undefined;
-    aiExecutionForm.targetUrl = '';
+    await loadAiExecutionProfiles();
+    aiExecutionForm.modelProfileId = aiModelProfiles.value[0]?.id || '';
+    aiExecutionForm.promptTemplateId = aiPromptTemplates.value[0]?.promptTemplateId || '';
+    aiExecutionForm.environmentProfileId = '';
+    aiExecutionForm.credentialReferenceId = '';
     aiExecutionForm.browserType = 'chromium';
     aiExecutionForm.loginMode = 'MANUAL';
     aiExecutionForm.confirmed = false;
@@ -2251,19 +2271,11 @@
   }
 
   async function submitAiExecutionTask() {
-    if (aiExecutionForm.executionMode === 'RUNNER' && !aiExecutionForm.providerId) {
+    if (!aiExecutionForm.modelProfileId || !aiExecutionForm.promptTemplateId) {
       Message.warning(t('caseManagement.featureCase.aiExecutionModelRequired'));
       return false;
     }
-    if (aiExecutionForm.executionMode === 'AGENT' && !selectedAiExecutionAgentConfigured.value) {
-      Message.warning(t('caseManagement.featureCase.aiExecutionAgentRequired'));
-      return false;
-    }
-    if (!aiExecutionForm.targetUrl?.trim()) {
-      Message.warning(t('caseManagement.featureCase.aiExecutionTargetUrlRequired'));
-      return false;
-    }
-    if (!aiExecutionForm.environmentId?.trim()) {
+    if (!aiExecutionForm.environmentProfileId) {
       Message.warning(t('caseManagement.featureCase.aiExecutionEnvironmentRequired'));
       return false;
     }
@@ -2273,6 +2285,21 @@
     }
     aiExecutionSubmitting.value = true;
     try {
+      const preflight = await preflightAiExecution({
+        projectId: currentProjectId.value,
+        caseIds: aiExecutionCaseIds.value,
+        environmentProfileId: aiExecutionForm.environmentProfileId,
+        credentialReferenceId: aiExecutionForm.credentialReferenceId || undefined,
+        modelProfileId: aiExecutionForm.modelProfileId,
+        promptTemplateId: aiExecutionForm.promptTemplateId,
+        runnerType: 'BROWSER',
+        requiredCapabilities: ['BROWSER'],
+        taskOrigin: 'PLATFORM_MANUAL',
+      });
+      if (preflight.status !== 'PASSED') {
+        Message.error(`${preflight.blockedReason}: ${preflight.blockedDetail || ''} · ${preflight.traceId}`);
+        return false;
+      }
       const task = await createAiExecutionTask({
         projectId: currentProjectId.value,
         caseIds: aiExecutionCaseIds.value,
@@ -2280,17 +2307,16 @@
         selectionMode: 'MANUAL',
         // 仅在超阈值时传 confirmed；少量勾选不默认 true，由后端按规则判定
         confirmed: aiExecutionNeedsConfirm.value ? true : undefined,
-        environmentId: aiExecutionForm.environmentId.trim(),
-        targetUrl: aiExecutionForm.targetUrl.trim(),
+        preflightId: preflight.id,
+        environmentProfileId: aiExecutionForm.environmentProfileId,
+        credentialReferenceId: aiExecutionForm.credentialReferenceId || undefined,
+        modelProfileId: aiExecutionForm.modelProfileId,
+        promptTemplateVersionId: preflight.promptTemplateVersionId,
         browserType: aiExecutionForm.browserType,
         loginMode: aiExecutionForm.loginMode,
-        providerId: aiExecutionForm.executionMode === 'RUNNER' ? aiExecutionForm.providerId : undefined,
-        executionMode: aiExecutionForm.executionMode,
-        agentType: aiExecutionForm.executionMode === 'AGENT' ? aiExecutionForm.agentType : undefined,
         idempotencyKey: `case-list-${currentProjectId.value}-${Date.now()}`,
       });
       Message.success(t('caseManagement.featureCase.aiExecutionCreated'));
-      localStorage.setItem('aiChatModel', aiExecutionForm.providerId);
       aiExecutionVisible.value = false;
       resetSelector();
       router.push({

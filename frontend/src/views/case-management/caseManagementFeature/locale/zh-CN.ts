@@ -4,6 +4,12 @@ export default {
   'caseManagement.featureCase.unclassifiedSystem': '\u5f85\u4eba\u5de5\u5206\u7c7b',
   'caseManagement.featureCase.creatingCase': '创建用例',
   'caseManagement.featureCase.importCase': '导入用例',
+  'caseManagement.featureCase.syncStatus': '同步状态至测试计划',
+  'caseManagement.featureCase.syncProjectConfirm':
+    '将当前项目中已关联用例的执行状态同步到所有未归档测试计划，并解除已删除用例的关联；新增用例不会自动加入测试计划。是否继续？',
+  'caseManagement.featureCase.syncPlanConfirm':
+    '将当前项目中已关联用例的执行状态同步到当前测试计划，并解除已删除用例的关联；新增用例不会自动加入测试计划。是否继续？',
+  'caseManagement.featureCase.syncSuccess': '同步完成：{plans} 个测试计划，更新 {updated} 条，删除 {removed} 条',
   'caseManagement.featureCase.importExcel': 'Excel 导入',
   'caseManagement.featureCase.importXmind': 'Xmind 导入',
   'caseManagement.featureCase.uploadXmind': '上传 Xmind',

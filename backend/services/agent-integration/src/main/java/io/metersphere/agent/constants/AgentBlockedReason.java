@@ -1,0 +1,6 @@
+package io.metersphere.agent.constants;
+
+public enum AgentBlockedReason {
+    BLOCKED_SCOPE, BLOCKED_ENVIRONMENT, BLOCKED_MODEL, BLOCKED_RUNNER,
+    BLOCKED_CREDENTIAL, BLOCKED_DATA, BLOCKED_POLICY, WAITING_CONFIRMATION
+}
