@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
+  import { computed, nextTick, ref, watch } from 'vue';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
   import MsCard from '@/components/pure/ms-card/index.vue';
@@ -324,6 +324,17 @@
       refreshedAt: Date.now(),
     };
   }
+
+  watch(currentProjectId, async (projectId, previousProjectId) => {
+    if (!projectId || projectId === previousProjectId) return;
+    activeFolder.value = 'all';
+    activeCaseType.value = 'folder';
+    offspringIds.value = [];
+    nodeName.value = '';
+    modulesCount.value = {};
+    await nextTick();
+    await refreshModule();
+  });
 </script>
 
 <style scoped lang="less">

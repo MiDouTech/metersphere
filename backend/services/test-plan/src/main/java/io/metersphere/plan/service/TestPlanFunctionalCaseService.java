@@ -14,6 +14,7 @@ import io.metersphere.dto.BugProviderDTO;
 import io.metersphere.functional.constants.CaseFileSourceType;
 import io.metersphere.functional.domain.FunctionalCase;
 import io.metersphere.functional.domain.FunctionalCaseBlob;
+import io.metersphere.functional.domain.FunctionalCaseExample;
 import io.metersphere.functional.domain.FunctionalCaseModule;
 import io.metersphere.functional.domain.FunctionalCaseTest;
 import io.metersphere.functional.dto.*;
@@ -118,6 +119,8 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     @Resource
     private ExtFunctionalCaseMapper extFunctionalCaseMapper;
     @Resource
+    private FunctionalCaseMapper functionalCaseMapper;
+    @Resource
     private TestPlanApiCaseService testPlanApiCaseService;
     @Resource
     private ExtFunctionalCaseTestMapper extFunctionalCaseTestMapper;
@@ -130,6 +133,119 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
     private static final String CASE_MODULE_COUNT_ALL = "all";
     private static final String EXECUTOR = "executeUserName";
+
+    /**
+     * 将当前项目的有效测试用例同步到项目下所有未归档测试计划。
+     */
+    public TestPlanFunctionalCaseSyncResponse syncProjectCases(String projectId, String userId) {
+        TestPlanExample planExample = new TestPlanExample();
+        planExample.createCriteria()
+                .andProjectIdEqualTo(projectId)
+                .andTypeEqualTo(TestPlanConstants.TEST_PLAN_TYPE_PLAN)
+                .andStatusNotEqualTo(TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED);
+        List<TestPlan> plans = testPlanMapper.selectByExample(planExample).stream()
+                .sorted(Comparator.comparing(TestPlan::getId))
+                .toList();
+
+        TestPlanFunctionalCaseSyncResponse result = new TestPlanFunctionalCaseSyncResponse();
+        for (TestPlan plan : plans) {
+            result.add(syncPlanCases(plan.getId(), projectId, userId, true));
+        }
+        return result;
+    }
+
+    /**
+     * 将测试计划所属项目的有效测试用例同步到当前测试计划。
+     */
+    public TestPlanFunctionalCaseSyncResponse syncPlanCases(String testPlanId, String userId) {
+        TestPlan plan = testPlanMapper.selectByPrimaryKey(testPlanId);
+        if (plan == null) {
+            throw new MSException(Translator.get("test_plan_not_exist"));
+        }
+        return syncPlanCases(testPlanId, plan.getProjectId(), userId, false);
+    }
+
+    private TestPlanFunctionalCaseSyncResponse syncPlanCases(String testPlanId, String projectId, String userId,
+                                                              boolean skipUnavailablePlan) {
+        TestPlanFunctionalCaseSyncResponse result = new TestPlanFunctionalCaseSyncResponse();
+        // 同一计划的项目级同步和计划级同步必须串行，避免重复插入关联行。
+        String lockedPlanId = extTestPlanFunctionalCaseMapper.lockTestPlan(testPlanId);
+        TestPlan plan = lockedPlanId == null ? null : testPlanMapper.selectByPrimaryKey(testPlanId);
+        if (plan == null || !StringUtils.equals(plan.getProjectId(), projectId)
+                || !StringUtils.equals(plan.getType(), TestPlanConstants.TEST_PLAN_TYPE_PLAN)) {
+            if (skipUnavailablePlan) {
+                result.setSkippedPlanCount(1);
+                return result;
+            }
+            throw new MSException(Translator.get("test_plan_not_exist"));
+        }
+        if (StringUtils.equals(plan.getStatus(), TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED)) {
+            if (skipUnavailablePlan) {
+                result.setSkippedPlanCount(1);
+                return result;
+            }
+            throw new MSException(Translator.get("test_plan.is.archived"));
+        }
+
+        String collectionId = extTestPlanCollectionMapper.selectDefaultCollectionId(testPlanId,
+                CaseType.FUNCTIONAL_CASE.getKey());
+        if (StringUtils.isBlank(collectionId)) {
+            if (skipUnavailablePlan) {
+                result.setSkippedPlanCount(1);
+                return result;
+            }
+            throw new MSException(Translator.get("resource_not_exist"));
+        }
+
+        FunctionalCaseExample sourceExample = new FunctionalCaseExample();
+        sourceExample.createCriteria().andProjectIdEqualTo(projectId);
+        List<FunctionalCase> sourceCases = functionalCaseMapper.selectByExample(sourceExample);
+        Map<String, FunctionalCase> sourceCaseMap = sourceCases.stream()
+                .collect(Collectors.toMap(FunctionalCase::getId, item -> item));
+        Map<String, FunctionalCase> activeCaseMap = sourceCases.stream()
+                .filter(item -> !Boolean.TRUE.equals(item.getDeleted()) && Boolean.TRUE.equals(item.getLatest()))
+                .collect(Collectors.toMap(FunctionalCase::getId, item -> item));
+
+        TestPlanFunctionalCaseExample relationExample = new TestPlanFunctionalCaseExample();
+        relationExample.createCriteria().andTestPlanIdEqualTo(testPlanId);
+        List<TestPlanFunctionalCase> relations = testPlanFunctionalCaseMapper.selectByExample(relationExample);
+        List<TestPlanFunctionalCase> projectRelations = relations.stream()
+                .filter(item -> sourceCaseMap.containsKey(item.getFunctionalCaseId()))
+                .toList();
+
+        List<String> removedIds = projectRelations.stream()
+                .filter(item -> !activeCaseMap.containsKey(item.getFunctionalCaseId()))
+                .map(TestPlanFunctionalCase::getId)
+                .toList();
+        if (CollectionUtils.isNotEmpty(removedIds)) {
+            TestPlanFunctionalCaseExample removeExample = new TestPlanFunctionalCaseExample();
+            removeExample.createCriteria().andIdIn(removedIds);
+            testPlanFunctionalCaseMapper.deleteByExample(removeExample);
+            extTestPlanCaseExecuteHistoryMapper.updateDeleted(removedIds, true);
+            result.setRemovedCount(removedIds.size());
+        }
+
+        int updatedCount = 0;
+        for (TestPlanFunctionalCase relation : projectRelations) {
+            FunctionalCase sourceCase = activeCaseMap.get(relation.getFunctionalCaseId());
+            if (sourceCase == null) {
+                continue;
+            }
+            String sourceResult = normalizeExecuteResult(sourceCase.getLastExecuteResult());
+            if (!StringUtils.equals(sourceResult, normalizeExecuteResult(relation.getLastExecResult()))
+                    || !Objects.equals(sourceCase.getLastExecuteTime(), relation.getLastExecTime())) {
+                updatedCount += extTestPlanFunctionalCaseMapper.updateSyncStatus(relation.getId(), sourceResult,
+                        sourceCase.getLastExecuteTime());
+            }
+        }
+        result.setUpdatedCount(updatedCount);
+        result.setPlanCount(1);
+        return result;
+    }
+
+    private static String normalizeExecuteResult(String executeResult) {
+        return StringUtils.defaultIfBlank(executeResult, ExecStatus.PENDING.name());
+    }
 
     @Override
     public List<TestPlanResourceExecResultDTO> selectDistinctExecResultByProjectId(String projectId) {

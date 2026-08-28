@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { constants, createDecipheriv, generateKeyPairSync, privateDecrypt, randomUUID } from "node:crypto";
 import type {
-  ArtifactResponse, LeaseAssignment, RunnerControl, RunnerEvent,
+  ArtifactResponse, LeaseAssignment, RunnerControl, RunnerEvent, RuntimeCredential, TestDataLease,
 } from "./types.js";
 import { RunnerError, sanitize } from "./security.js";
 
@@ -62,6 +62,42 @@ export class RunnerClient {
       body: form,
     }, false, false);
     return await response.json() as ArtifactResponse;
+  }
+
+  async resolveCredential(assignment: LeaseAssignment, referenceId: string): Promise<RuntimeCredential> {
+    const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 3072,
+      publicKeyEncoding: { type: "spki", format: "pem" }, privateKeyEncoding: { type: "pkcs8", format: "pem" } });
+    const response = await this.request(`/tasks/${assignment.task.id}/credentials/${referenceId}/resolve`, assignment.leaseToken, {
+      method: "POST", body: JSON.stringify({ leaseId: assignment.leaseId, purpose: "AUTOMATIC_LOGIN", runnerPublicKey: publicKey }),
+    });
+    const envelope = await response.json() as { algorithm: string; encryptedKey: string; iv: string; encryptedPayload: string; secretVersion?: string; expiresAt?: number };
+    if (envelope.algorithm !== "RSA-OAEP-256+A256GCM") throw new RunnerError("CREDENTIAL_PROTOCOL_UNSUPPORTED", "不支持的凭据加密协议");
+    const dataKey = privateDecrypt({ key: privateKey, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" }, Buffer.from(envelope.encryptedKey, "base64"));
+    const encrypted = Buffer.from(envelope.encryptedPayload, "base64");
+    if (encrypted.length < 17) throw new RunnerError("CREDENTIAL_PAYLOAD_INVALID", "运行时凭据密文无效");
+    const tag = encrypted.subarray(encrypted.length - 16); const ciphertext = encrypted.subarray(0, encrypted.length - 16);
+    const decipher = createDecipheriv("aes-256-gcm", dataKey, Buffer.from(envelope.iv, "base64")); decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]); dataKey.fill(0);
+    try { const parsed = JSON.parse(plaintext.toString("utf8")) as { username?: string; value?: string }; if (!parsed.value) throw new RunnerError("CREDENTIAL_PAYLOAD_INVALID", "运行时凭据内容无效"); return { username: parsed.username ?? "", value: parsed.value, secretVersion: envelope.secretVersion, expiresAt: envelope.expiresAt }; }
+    finally { plaintext.fill(0); }
+  }
+
+  async acquireTestData(assignment: LeaseAssignment, datasetId: string, dataKey: string): Promise<TestDataLease> {
+    const response = await this.request(`/tasks/${assignment.task.id}/test-data/leases`, assignment.leaseToken, {
+      method: "POST", body: JSON.stringify({ leaseId: assignment.leaseId, datasetId, dataKey, ttlMs: 60_000 }),
+    });
+    return await response.json() as TestDataLease;
+  }
+
+  async testDataContent(assignment: LeaseAssignment, lease: TestDataLease): Promise<Buffer> {
+    const response = await this.request(`/test-data/leases/${lease.id}/content?runnerLeaseId=${encodeURIComponent(assignment.leaseId)}`,
+      assignment.leaseToken, { headers: { "X-Test-Data-Lease-Token": lease.leaseToken } }, false, false);
+    return Buffer.from(await response.arrayBuffer());
+  }
+
+  async releaseTestData(assignment: LeaseAssignment, lease: TestDataLease): Promise<void> {
+    await this.request(`/test-data/leases/${lease.id}/release?runnerLeaseId=${encodeURIComponent(assignment.leaseId)}`,
+      assignment.leaseToken, { method: "POST", body: JSON.stringify({ leaseToken: lease.leaseToken }) });
   }
 
   async complete(assignment: LeaseAssignment, outcome: "COMPLETED" | "FAILED" | "CANCELED",

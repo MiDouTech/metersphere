@@ -12,6 +12,18 @@
         @adv-search="handleAdvSearch"
         @refresh="handleRefreshAll()"
       >
+        <template #left>
+          <MsButton
+            v-if="props.canEdit"
+            v-permission="['PROJECT_TEST_PLAN:READ+ASSOCIATION']"
+            type="button"
+            status="default"
+            :loading="caseSyncLoading"
+            @click="handleSyncPlanCases"
+          >
+            {{ t('caseManagement.featureCase.syncStatus') }}
+          </MsButton>
+        </template>
         <template #right>
           <MsButton
             v-if="props.canEdit"
@@ -313,6 +325,7 @@
     getPlanDetailFeatureCaseList,
     runFeatureCase,
     sortFeatureCase,
+    syncPlanFunctionalCases,
   } from '@/api/modules/test-plan/testPlan';
   import { defaultExecuteForm } from '@/config/testPlan';
   import { useI18n } from '@/hooks/useI18n';
@@ -359,6 +372,8 @@
   const { t } = useI18n();
   const route = useRoute();
   const router = useRouter();
+
+  const caseSyncLoading = ref(false);
   const appStore = useAppStore();
   const tableStore = useTableStore();
   const { openModal } = useModal();
@@ -1136,6 +1151,33 @@
     emit('refresh');
     await initModules();
     refresh();
+  }
+
+  function handleSyncPlanCases() {
+    openModal({
+      type: 'warning',
+      title: t('caseManagement.featureCase.syncStatus'),
+      content: t('caseManagement.featureCase.syncPlanConfirm'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      onBeforeOk: async () => {
+        try {
+          caseSyncLoading.value = true;
+          const result = await syncPlanFunctionalCases(props.planId);
+          Message.success(
+            t('caseManagement.featureCase.syncSuccess', {
+              plans: result.planCount,
+              updated: result.updatedCount,
+              removed: result.removedCount,
+            })
+          );
+          await handleRefreshAll();
+        } finally {
+          caseSyncLoading.value = false;
+        }
+      },
+      hideCancel: false,
+    });
   }
 
   function handleShowTypeChange(val: string | number | boolean) {

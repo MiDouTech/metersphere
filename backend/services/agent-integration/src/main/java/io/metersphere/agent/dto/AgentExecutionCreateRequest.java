@@ -40,6 +40,13 @@ public class AgentExecutionCreateRequest {
     private String browserType;
     private String loginMode;
     private String providerId;
+    @NotBlank
+    @Schema(description = "通过执行前检查取得的一次性 Preflight ID")
+    private String preflightId;
+    private String environmentProfileId;
+    private String credentialReferenceId;
+    private String modelProfileId;
+    private String promptTemplateVersionId;
     private String runnerId;
     @Schema(description = "执行方式：RUNNER/AGENT，默认 RUNNER")
     private String executionMode;

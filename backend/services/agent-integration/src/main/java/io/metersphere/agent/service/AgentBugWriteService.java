@@ -183,7 +183,17 @@ public class AgentBugWriteService {
     }
 
     public AgentBugDTO create(AgentBugCreateRequest request) {
-        String userId = requireUserId();
+        return createInternal(request, requireUserId());
+    }
+
+    public AgentBugDTO createDraft(AgentBugCreateRequest request, String userId) {
+        if (StringUtils.isBlank(userId)) throw new MSException("BUG_DRAFT_ACTOR_REQUIRED");
+        List<String> tags=new ArrayList<>(request.getTags()==null?List.of():request.getTags());
+        if(!tags.contains("AI_DRAFT"))tags.add("AI_DRAFT");request.setTags(tags);
+        return createInternal(request,userId);
+    }
+
+    private AgentBugDTO createInternal(AgentBugCreateRequest request, String userId) {
         String projectId = resolveAndAssertProject(request.getProjectId());
         request.setProjectId(projectId);
         Project project = requireProject(projectId);

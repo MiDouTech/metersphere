@@ -13,6 +13,7 @@ import io.metersphere.agent.dto.AgentHumanRequestDTO;
 import io.metersphere.agent.dto.AgentHumanResponseRequest;
 import io.metersphere.agent.service.AgentExecutionService;
 import io.metersphere.agent.service.AgentHumanRequestService;
+import io.metersphere.agent.service.AgentExecutionObservabilityService;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.dto.request.ai.AiAgentGatewayCapabilityDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import io.metersphere.system.utils.SessionUtils;
 
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "AI Execution")
 @RestController
@@ -39,6 +41,8 @@ public class AgentExecutionController {
     private AgentExecutionService agentExecutionService;
     @Resource
     private AgentHumanRequestService humanRequestService;
+    @Resource
+    private AgentExecutionObservabilityService observabilityService;
 
     @GetMapping("/agents")
     @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
@@ -73,6 +77,12 @@ public class AgentExecutionController {
     @Operation(summary = "获取 AI 自动化执行任务")
     public AgentExecutionTaskDTO get(@PathVariable String id) {
         return agentExecutionService.get(id);
+    }
+
+    @GetMapping("/task/{id}/observability")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    public Map<String,Object> observability(@PathVariable String id) {
+        return observabilityService.detail(id);
     }
 
     @GetMapping("/task/{id}/events")

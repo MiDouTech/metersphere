@@ -44,4 +44,18 @@ class AgentTokenScopeParserTests {
         Assertions.assertFalse(AgentTokenScopeParser.hasScope("BUG_WRITE_EXT", AgentTokenScope.BUG_WRITE));
         Assertions.assertTrue(AgentTokenScopeParser.hasScope(AgentTokenScope.AGENT_ALL, AgentTokenScope.BUG_COMMENT));
     }
+
+    @Test
+    void legacyExecutionScopesShouldMapToGranularTaskScopes() {
+        Assertions.assertTrue(AgentTokenScopeParser.hasScope(
+                AgentTokenScope.AI_EXECUTION_READ, AgentTokenScope.TASK_READ));
+        Assertions.assertTrue(AgentTokenScopeParser.hasScope(
+                AgentTokenScope.AI_EXECUTION_RUN, AgentTokenScope.TASK_CLAIM));
+        Assertions.assertTrue(AgentTokenScopeParser.hasScope(
+                AgentTokenScope.AI_EXECUTION_RUN, AgentTokenScope.TASK_EVENT_WRITE));
+        Assertions.assertTrue(AgentTokenScopeParser.hasScope(
+                AgentTokenScope.AI_EXECUTION_RUN, AgentTokenScope.TASK_RESULT_WRITE));
+        Assertions.assertFalse(AgentTokenScopeParser.hasScope(
+                AgentTokenScope.AI_EXECUTION_READ, AgentTokenScope.TASK_RESULT_WRITE));
+    }
 }

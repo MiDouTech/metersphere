@@ -18,31 +18,8 @@
           <a-form-item label="允许的资源类型">
             <a-checkbox-group v-model="form.allowedResourceTypes">
               <a-checkbox value="MODEL_API">平台模型 API</a-checkbox>
-              <a-checkbox value="USER_AGENT">个人 Agent</a-checkbox>
             </a-checkbox-group>
           </a-form-item>
-          <a-form-item label="个人 Agent">
-            <a-switch v-model="form.allowPersonalAgent" />
-          </a-form-item>
-          <a-form-item label="允许本地 Agent 工具">
-            <a-switch v-model="form.allowLocalAgentTools" :disabled="!form.allowPersonalAgent" />
-          </a-form-item>
-          <a-form-item label="Agent Provider 白名单">
-            <a-checkbox-group v-model="form.allowedAgentProviders" :disabled="!form.allowPersonalAgent">
-              <a-checkbox value="CODEX">Codex</a-checkbox>
-              <a-checkbox value="CURSOR">Cursor</a-checkbox>
-              <a-checkbox value="WORKBUDDY">WorkBuddy</a-checkbox>
-            </a-checkbox-group>
-          </a-form-item>
-          <a-form-item label="Agent 并发上限"
-            ><a-input-number v-model="form.maxAgentConcurrentTasks" :min="1" :max="20"
-          /></a-form-item>
-          <a-form-item label="Agent 单次最长分钟"
-            ><a-input-number v-model="form.maxAgentExecutionMinutes" :min="1" :max="240"
-          /></a-form-item>
-          <a-form-item label="用户每日 Agent 次数"
-            ><a-input-number v-model="form.dailyAgentExecutionLimit" :min="1" :max="10000"
-          /></a-form-item>
           <a-form-item label="项目 AI 总并发"
             ><a-input-number v-model="form.maxConcurrentTasks" :min="1" :max="100"
           /></a-form-item>
@@ -118,11 +95,10 @@
     saving.value = true;
     try {
       form.projectId = appStore.currentProjectId;
-      if (!form.allowPersonalAgent) {
-        form.allowLocalAgentTools = false;
-        form.allowedResourceTypes = form.allowedResourceTypes.filter((item) => item !== 'USER_AGENT');
-        form.allowedAgentProviders = [];
-      }
+      form.allowPersonalAgent = false;
+      form.allowLocalAgentTools = false;
+      form.allowedResourceTypes = ['MODEL_API'];
+      form.allowedAgentProviders = [];
       Object.assign(form, await saveAiProjectGovernance({ ...form }));
       Message.success('项目 AI 治理策略已保存');
     } finally {

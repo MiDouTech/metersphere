@@ -295,8 +295,21 @@ public class PermissionConstants {
     public static final String AI_EXECUTION_READ = "AI_EXECUTION:READ";
     public static final String AI_EXECUTION_RUN = "AI_EXECUTION:RUN";
     public static final String AI_EXECUTION_CANCEL = "AI_EXECUTION:CANCEL";
+    public static final String AI_EXECUTION_CONFIRM = "AI_EXECUTION:CONFIRM";
     public static final String AI_EXECUTION_LOGIN = "AI_EXECUTION:LOGIN";
     public static final String AI_EXECUTION_ADMIN = "AI_EXECUTION:ADMIN";
+    public static final String AI_MODEL_READ = "AI_MODEL:READ";
+    public static final String AI_MODEL_MANAGE = "AI_MODEL:MANAGE";
+    public static final String AI_MODEL_VERIFY = "AI_MODEL:VERIFY";
+    public static final String AI_TRIGGER_READ = "AI_TRIGGER:READ";
+    public static final String AI_TRIGGER_MANAGE = "AI_TRIGGER:MANAGE";
+    public static final String AI_RUNNER_READ = "AI_RUNNER:READ";
+    public static final String AI_RUNNER_MANAGE = "AI_RUNNER:MANAGE";
+    public static final String AI_EVIDENCE_READ = "AI_EVIDENCE:READ";
+    public static final String AI_CREDENTIAL_READ_METADATA = "AI_CREDENTIAL:READ_METADATA";
+    public static final String AI_CREDENTIAL_MANAGE = "AI_CREDENTIAL:MANAGE";
+    public static final String AI_CREDENTIAL_VERIFY = "AI_CREDENTIAL:VERIFY";
+    public static final String PLATFORM_AUTOMATION_MANAGE = "PLATFORM_AUTOMATION_MANAGE";
     /*------ end: AI_EXECUTION ------*/
     /*------ start: API_MANAGEMENT ------*/
     public static final String PROJECT_API_DEFINITION_READ = "PROJECT_API_DEFINITION:READ";

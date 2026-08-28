@@ -1,6 +1,8 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.constants.AgentExecutionStatus;
+import io.metersphere.agent.constants.AgentExecutorChannel;
+import io.metersphere.agent.dto.AgentExecutionAttemptDTO;
 import io.metersphere.agent.dto.AgentExecutionCaseDTO;
 import io.metersphere.agent.dto.AgentExecutionArtifactDTO;
 import io.metersphere.agent.dto.AgentExecutionStepDTO;
@@ -18,7 +20,9 @@ import io.metersphere.agent.dto.AgentRunnerRegisterResponse;
 import io.metersphere.agent.dto.AgentRunnerTaskStateRequest;
 import io.metersphere.agent.dto.AgentExecutionEventDTO;
 import io.metersphere.agent.dto.AgentExecutionHealingDTO;
+import io.metersphere.agent.dto.AgentCheckpointCreateRequest;
 import io.metersphere.agent.mapper.AgentExecutionMapper;
+import io.metersphere.agent.security.AgentSensitiveDataSanitizer;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.SessionUtils;
@@ -29,6 +33,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
@@ -46,7 +51,6 @@ import java.util.stream.Collectors;
 public class AgentRunnerService {
     private static final String CONTRACT_VERSION = "v1";
     private static final long RUNNER_HEARTBEAT_STALE_MS = 90_000L;
-    private static final long LEASE_TTL_MS = 60_000L;
     private static final Set<String> RUNNER_EVENT_TYPES = Set.of(
             "TASK_ACCEPTED", "BROWSER_READY", "LOGIN_REQUIRED", "CASE_STARTED", "STEP_STARTED",
             "ACTION_COMPLETED", "ASSERTION_FAILED", "HEALING_STARTED", "HEALING_COMPLETED",
@@ -60,9 +64,19 @@ public class AgentRunnerService {
     @Resource
     private AgentExecLogService execLogService;
     @Resource
+    private AgentWebExecutionContractValidator contractValidator;
+    @Resource
     private AgentExecutionWritebackService writebackService;
     @Resource
     private AgentHumanRequestService humanRequestService;
+    @Resource
+    private AgentExecutionCheckpointService checkpointService;
+    @Resource
+    private AgentTestDataLeaseService testDataLeaseService;
+    @Value("${agent.execution.lease-ttl-ms:60000}")
+    private long leaseTtlMs = 60_000L;
+    @Value("${agent.execution.event-batch-size:100}")
+    private int eventBatchSize = 100;
 
     public AgentRunnerRegisterResponse register(AgentRunnerRegisterRequest request) {
         if (!CONTRACT_VERSION.equals(request.getContractVersion())) {
@@ -140,18 +154,25 @@ public class AgentRunnerService {
         if (task == null) {
             return null;
         }
+        assertFrozenContract(task);
         String leaseToken = "msrl_" + randomToken();
         AgentRunnerLeaseDTO lease = new AgentRunnerLeaseDTO();
         lease.setId(IDGenerator.nextStr());
         lease.setTaskId(task.getId());
+        String executionId = IDGenerator.nextStr();
+        String traceId = IDGenerator.nextStr();
+        lease.setExecutionId(executionId);
+        lease.setExecutorChannel(AgentExecutorChannel.MODEL_API_RUNNER);
         lease.setRunnerId(runner.getId());
         lease.setExecutorType("RUNNER");
         lease.setExecutorId(runner.getId());
+        lease.setLeaseOwnerType("RUNNER");
+        lease.setLeaseOwnerId(runner.getId());
         lease.setAttempt((task.getAttemptCount() == null ? 0 : task.getAttemptCount()) + 1);
         lease.setStatus("ACTIVE");
         lease.setLeaseTokenHash(hash(leaseToken));
         lease.setAcceptedTime(now);
-        lease.setExpireTime(now + LEASE_TTL_MS);
+        lease.setExpireTime(now + leaseTtlMs);
         lease.setLastHeartbeatTime(now);
         Long currentSequence = executionMapper.selectMaxEventSequence(task.getId());
         lease.setLastEventSequence(currentSequence == null ? 0L : currentSequence);
@@ -159,12 +180,27 @@ public class AgentRunnerService {
         lease.setUpdateTime(now);
         lease.setVersion(0);
 
-        int assigned = executionMapper.assignRunnerLease(task.getId(), AgentExecutionStatus.QUEUED,
+        int assigned = executionMapper.assignExecutionLease(task.getId(), AgentExecutionStatus.QUEUED,
                 task.getVersion() == null ? 0 : task.getVersion(), runner.getId(), lease.getId(),
-                AgentExecutionStatus.PREPARING_BROWSER, now);
+                executionId, AgentExecutionStatus.PREPARING_BROWSER, now);
         if (assigned != 1) {
             throw new MSException("RUNNER_LEASE_CONFLICT: task already assigned");
         }
+        AgentExecutionAttemptDTO attempt = new AgentExecutionAttemptDTO();
+        attempt.setId(executionId);
+        attempt.setTaskId(task.getId());
+        attempt.setAttemptNo(lease.getAttempt());
+        attempt.setExecutorChannel(AgentExecutorChannel.MODEL_API_RUNNER);
+        attempt.setExecutorType("RUNNER");
+        attempt.setExecutorId(runner.getId());
+        attempt.setLeaseId(lease.getId());
+        attempt.setStatus("CLAIMED");
+        attempt.setTraceId(traceId);
+        attempt.setStartTime(now);
+        attempt.setCreateTime(now);
+        attempt.setUpdateTime(now);
+        attempt.setVersion(0);
+        executionMapper.insertExecutionAttempt(attempt);
         executionMapper.insertRunnerLease(lease);
         execLogService.audit("AI_RUNNER_LEASE_ASSIGNED", task.getId(), "runnerId=" + runner.getId());
 
@@ -177,6 +213,7 @@ public class AgentRunnerService {
         response.getTask().setStatus(AgentExecutionStatus.PREPARING_BROWSER);
         response.getTask().setRunnerId(runner.getId());
         response.getTask().setRunnerLeaseId(lease.getId());
+        response.getTask().setCurrentExecutionId(executionId);
         response.getTask().setVersion((task.getVersion() == null ? 0 : task.getVersion()) + 1);
         return response;
     }
@@ -186,7 +223,7 @@ public class AgentRunnerService {
         requireLeaseTaskActive(lease);
         long now = System.currentTimeMillis();
         int updated = executionMapper.renewRunnerLease(leaseId, lease.getRunnerId(),
-                lease.getVersion() == null ? 0 : lease.getVersion(), now + LEASE_TTL_MS, now);
+                lease.getVersion() == null ? 0 : lease.getVersion(), now + leaseTtlMs, now);
         if (updated != 1) {
             throw new MSException("RUNNER_LEASE_CONFLICT");
         }
@@ -210,9 +247,13 @@ public class AgentRunnerService {
     }
 
     public void reportEvents(String authorization, AgentRunnerEventsRequest request) {
+        if (request == null || StringUtils.isBlank(request.getLeaseId())
+                || request.getEvents() == null || request.getEvents().isEmpty()) {
+            throw new MSException("RUNNER_EVENT_REQUEST_INVALID");
+        }
         AgentRunnerLeaseDTO lease = authenticateLease(authorization, request.getLeaseId());
-        requireLeaseTaskActive(lease);
-        if (request.getEvents().size() > 100) {
+        AgentExecutionTaskDTO activeTask = requireLeaseTaskActive(lease);
+        if (request.getEvents().size() > eventBatchSize) {
             throw new MSException("RUNNER_EVENT_BATCH_TOO_LARGE");
         }
         long lastAccepted = lease.getLastEventSequence() == null ? 0L : lease.getLastEventSequence();
@@ -250,6 +291,8 @@ public class AgentRunnerService {
             event.setContractVersion(CONTRACT_VERSION);
             event.setEventId(source.getEventId());
             event.setTaskId(lease.getTaskId());
+            event.setExecutionId(lease.getExecutionId());
+            event.setLeaseId(lease.getId());
             event.setCaseId(StringUtils.trimToNull(source.getCaseId()));
             event.setStepId(StringUtils.trimToNull(source.getStepId()));
             event.setAttempt(source.getAttempt() == null ? 0 : Math.max(0, Math.min(source.getAttempt(), 10)));
@@ -259,10 +302,18 @@ public class AgentRunnerService {
                     ? now : source.getEventTime());
             event.setLevel(normalizeEventLevel(source.getLevel()));
             event.setEventType(eventType);
+            event.setActorType("EXTERNAL_MCP_AGENT".equals(lease.getExecutorChannel())
+                    ? "EXTERNAL_MCP_AGENT" : "MODEL_API_RUNNER");
+            event.setActorId(lease.getLeaseOwnerId());
+            event.setToolName(StringUtils.defaultIfBlank(source.getToolName(), "execution.events.batch"));
+            event.setRequestId(StringUtils.defaultIfBlank(source.getRequestId(), source.getEventId()));
+            event.setTraceId(StringUtils.defaultIfBlank(source.getTraceId(), activeTask.getTraceId()));
             event.setMessage(StringUtils.abbreviate(sanitize(source.getMessage()), 2048));
             event.setArtifactIds(validateArtifacts(lease.getTaskId(), source.getArtifactIds()));
             event.setArtifactIdsJson(event.getArtifactIds().isEmpty() ? null : JSON.toJSONString(event.getArtifactIds()));
             event.setSanitizedMetadata(StringUtils.abbreviate(sanitize(source.getSanitizedMetadata()), 65_535));
+            event.setPayload(StringUtils.abbreviate(sanitize(
+                    StringUtils.defaultIfBlank(source.getPayload(), event.getSanitizedMetadata())), 65_535));
             event.setCreateUser("runner:" + lease.getRunnerId());
             executionMapper.insertEvent(event);
             applyRuntimeEvent(event, stepExecutionCaseIds);
@@ -299,6 +350,16 @@ public class AgentRunnerService {
             humanRequestService.create(task.getId(), task.getProjectId(), "LOGIN", "需要人工登录",
                     sanitize(request.getReason()), "MEDIUM", "executor:" + lease.getRunnerId(),
                     task.getExecutedBy(), task.getTimeoutAt());
+        } else if (AgentExecutionStatus.WAITING_HUMAN.equals(toStatus)) {
+            humanRequestService.createForTaskRecipients(task.getId(), "LOGIN", "自动登录被 MFA 或验证码阻塞",
+                    sanitize(request.getReason()), "MEDIUM", "executor:" + lease.getRunnerId(), true,
+                    task.getTimeoutAt(), task.getTraceId());
+            AgentCheckpointCreateRequest checkpoint = new AgentCheckpointCreateRequest();
+            checkpoint.setExecutionId(lease.getExecutionId());
+            checkpoint.setReason(StringUtils.defaultIfBlank(sanitize(request.getReason()), "LOGIN_BLOCKED"));
+            checkpoint.setStateSnapshot(JSON.toJSONString(Map.of("phase", "LOGIN", "taskId", task.getId(),
+                    "executionId", lease.getExecutionId(), "capturedAt", System.currentTimeMillis())));
+            checkpointService.create(task.getId(), checkpoint);
         }
         execLogService.audit("AI_RUNNER_TASK_STATE", task.getId(),
                 task.getStatus() + "->" + toStatus + ";" + sanitize(request.getReason()));
@@ -319,6 +380,7 @@ public class AgentRunnerService {
             } else if (!AgentExecutionStatus.WRITING_BACK.equals(task.getStatus())) {
                 throw new MSException("RUNNER_TASK_NOT_READY_FOR_COMPLETION");
             }
+            testDataLeaseService.releaseForExecution(lease.getExecutionId());
             writebackService.writeback(task.getId());
             leaseStatus = "COMPLETED";
         } else if ("FAILED".equals(outcome)) {
@@ -336,16 +398,27 @@ public class AgentRunnerService {
         if (closed != 1) {
             throw new MSException("RUNNER_LEASE_CONFLICT");
         }
+        String attemptStatus = "COMPLETED".equals(outcome) ? "SUCCEEDED" : outcome;
+        executionMapper.finishExecutionAttempt(lease.getExecutionId(), attemptStatus,
+                "FAILED".equals(outcome) ? "EXECUTION_FAILED" : null,
+                "FAILED".equals(outcome) ? sanitize(request.getReason()) : null,
+                System.currentTimeMillis());
+        if (!"COMPLETED".equals(outcome)) {
+            testDataLeaseService.releaseForExecution(lease.getExecutionId());
+        }
         execLogService.audit("AI_RUNNER_LEASE_CLOSED", task.getId(),
                 "outcome=" + outcome + ";" + sanitize(request.getReason()));
     }
 
-    @Scheduled(fixedDelay = 30_000L)
+    @Scheduled(fixedDelayString = "${agent.execution.runner-heartbeat-ms:30000}")
     public void expireLeases() {
         long now = System.currentTimeMillis();
         for (AgentRunnerLeaseDTO lease : executionMapper.selectExpiredActiveLeases(now, 100)) {
             int recovered = executionMapper.recoverExpiredTaskLease(lease.getTaskId(), lease.getId(), now);
             executionMapper.closeRunnerLease(lease.getId(), lease.getRunnerId(), normalizedVersion(lease), "EXPIRED", now);
+            executionMapper.finishExecutionAttempt(lease.getExecutionId(), "EXPIRED", "LEASE_EXPIRED",
+                    "Execution lease expired", now);
+            testDataLeaseService.releaseForExecution(lease.getExecutionId());
             AgentExecutionTaskDTO recoveredTask = executionMapper.selectTaskById(lease.getTaskId());
             String outcome = recoveredTask == null ? "MISSING" : recoveredTask.getStatus();
             execLogService.audit("AI_RUNNER_LEASE_EXPIRED", lease.getTaskId(),
@@ -569,12 +642,19 @@ public class AgentRunnerService {
     }
 
     private String sanitize(String value) {
-        if (value == null) {
-            return null;
+        return AgentSensitiveDataSanitizer.sanitize(value);
+    }
+
+    private void assertFrozenContract(AgentExecutionTaskDTO task) {
+        if (StringUtils.isAnyBlank(task.getExecutionContract(), task.getExecutionContractHash(), task.getContextSnapshotHash())) {
+            throw new MSException("EXECUTION_CONTRACT_MISSING");
         }
-        return value
-                .replaceAll("(?i)(authorization|cookie|set-cookie|password|passwd|token|secret)\\s*[:=]\\s*[^,;\\s}]+", "$1=***")
-                .replaceAll("(?i)bearer\\s+[a-z0-9._~-]+", "Bearer ***");
+        if (!MessageDigest.isEqual(hash(task.getExecutionContract()).getBytes(StandardCharsets.US_ASCII),
+                task.getExecutionContractHash().getBytes(StandardCharsets.US_ASCII))) {
+            throw new MSException("EXECUTION_CONTRACT_HASH_MISMATCH");
+        }
+        contractValidator.validateContract(JSON.parseObject(task.getExecutionContract(),
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>() { }));
     }
 
     private String hash(String value) {

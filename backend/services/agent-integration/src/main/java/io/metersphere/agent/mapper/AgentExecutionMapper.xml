@@ -10,6 +10,8 @@
         <result column="name" property="name"/>
         <result column="objective" property="objective"/>
         <result column="source" property="source"/>
+        <result column="task_origin" property="taskOrigin"/>
+        <result column="executor_channel" property="executorChannel"/>
         <result column="selection_mode" property="selectionMode"/>
         <result column="prompt" property="prompt"/>
         <result column="resolved_filter" property="resolvedFilter"/>
@@ -28,7 +30,26 @@
         <result column="required_capabilities" property="requiredCapabilities"/>
         <result column="runner_id" property="runnerId"/>
         <result column="runner_lease_id" property="runnerLeaseId"/>
+        <result column="current_execution_id" property="currentExecutionId"/>
         <result column="provider_id" property="providerId"/>
+        <result column="plan_schema_version" property="planSchemaVersion"/>
+        <result column="model_snapshot" property="modelSnapshot"/>
+        <result column="prompt_template_snapshot" property="promptTemplateSnapshot"/>
+        <result column="execution_parameter_snapshot" property="executionParameterSnapshot"/>
+        <result column="trace_id" property="traceId"/>
+        <result column="environment_profile_id" property="environmentProfileId"/>
+        <result column="environment_profile_version" property="environmentProfileVersion"/>
+        <result column="credential_reference_id" property="credentialReferenceId"/>
+        <result column="model_profile_id" property="modelProfileId"/>
+        <result column="prompt_template_version_id" property="promptTemplateVersionId"/>
+        <result column="preflight_id" property="preflightId"/>
+        <result column="execution_contract" property="executionContract"/>
+        <result column="execution_contract_hash" property="executionContractHash"/>
+        <result column="blocked_reason" property="blockedReason"/>
+        <result column="blocked_detail" property="blockedDetail"/>
+        <result column="original_scope_count" property="originalScopeCount"/>
+        <result column="expanded_scope_count" property="expandedScopeCount"/>
+        <result column="scope_expansion_rate" property="scopeExpansionRate"/>
         <result column="environment_id" property="environmentId"/>
         <result column="target_url" property="targetUrl"/>
         <result column="browser_type" property="browserType"/>
@@ -87,6 +108,8 @@
         <result column="contract_version" property="contractVersion"/>
         <result column="runner_event_id" property="eventId"/>
         <result column="task_id" property="taskId"/>
+        <result column="execution_id" property="executionId"/>
+        <result column="lease_id" property="leaseId"/>
         <result column="case_id" property="caseId"/>
         <result column="step_id" property="stepId"/>
         <result column="attempt" property="attempt"/>
@@ -94,9 +117,15 @@
         <result column="event_time" property="eventTime"/>
         <result column="level" property="level"/>
         <result column="event_type" property="eventType"/>
+        <result column="actor_type" property="actorType"/>
+        <result column="actor_id" property="actorId"/>
+        <result column="tool_name" property="toolName"/>
+        <result column="request_id" property="requestId"/>
+        <result column="trace_id" property="traceId"/>
         <result column="message" property="message"/>
         <result column="artifact_ids" property="artifactIdsJson"/>
         <result column="sanitized_metadata" property="sanitizedMetadata"/>
+        <result column="payload" property="payload"/>
         <result column="create_user" property="createUser"/>
     </resultMap>
 
@@ -171,9 +200,13 @@
     <resultMap id="runnerLeaseMap" type="io.metersphere.agent.dto.AgentRunnerLeaseDTO">
         <id column="id" property="id"/>
         <result column="task_id" property="taskId"/>
+        <result column="execution_id" property="executionId"/>
+        <result column="executor_channel" property="executorChannel"/>
         <result column="runner_id" property="runnerId"/>
         <result column="executor_type" property="executorType"/>
         <result column="executor_id" property="executorId"/>
+        <result column="lease_owner_type" property="leaseOwnerType"/>
+        <result column="lease_owner_id" property="leaseOwnerId"/>
         <result column="attempt" property="attempt"/>
         <result column="status" property="status"/>
         <result column="lease_token_hash" property="leaseTokenHash"/>
@@ -181,6 +214,8 @@
         <result column="expire_time" property="expireTime"/>
         <result column="last_heartbeat_time" property="lastHeartbeatTime"/>
         <result column="last_event_sequence" property="lastEventSequence"/>
+        <result column="released_reason" property="releasedReason"/>
+        <result column="closed_at" property="closedAt"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="version" property="version"/>
@@ -189,6 +224,8 @@
     <resultMap id="artifactMap" type="io.metersphere.agent.dto.AgentExecutionArtifactDTO">
         <id column="id" property="id"/>
         <result column="task_id" property="taskId"/>
+        <result column="execution_id" property="executionId"/>
+        <result column="lease_id" property="leaseId"/>
         <result column="execution_case_id" property="executionCaseId"/>
         <result column="case_id" property="caseId"/>
         <result column="step_id" property="stepId"/>
@@ -201,6 +238,15 @@
         <result column="sha256" property="sha256"/>
         <result column="redacted" property="redacted"/>
         <result column="status" property="status"/>
+        <result column="upload_status" property="uploadStatus"/>
+        <result column="expected_size" property="expectedSize"/>
+        <result column="expected_sha256" property="expectedSha256"/>
+        <result column="expected_content_type" property="expectedContentType"/>
+        <result column="upload_token_hash" property="uploadTokenHash"/>
+        <result column="idempotency_key" property="idempotencyKey"/>
+        <result column="prepared_at" property="preparedAt"/>
+        <result column="committed_at" property="committedAt"/>
+        <result column="trace_id" property="traceId"/>
         <result column="retention_until" property="retentionUntil"/>
         <result column="create_time" property="createTime"/>
         <result column="create_user" property="createUser"/>
@@ -283,6 +329,12 @@
         LIMIT 1
     </select>
 
+    <select id="selectArtifactByPrepareKey" resultMap="artifactMap">
+        SELECT * FROM ai_execution_artifact
+        WHERE task_id = #{taskId} AND idempotency_key = #{idempotencyKey}
+        LIMIT 1
+    </select>
+
     <select id="selectArtifactsByTaskId" resultMap="artifactMap">
         SELECT * FROM ai_execution_artifact
         WHERE task_id = #{taskId} AND status = 'AVAILABLE'
@@ -348,7 +400,7 @@
         SELECT * FROM ai_execution_task
         WHERE organization_id = #{organizationId}
           AND status = 'QUEUED'
-          AND execution_mode = 'RUNNER'
+          AND executor_channel = 'MODEL_API_RUNNER'
           AND attempt_count &lt; max_attempts
           AND (timeout_at IS NULL OR timeout_at &gt; UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000)
           AND (runner_id IS NULL OR runner_id = '' OR runner_id = #{runnerId})
@@ -377,8 +429,8 @@
         SELECT * FROM ai_execution_task
         WHERE project_id = #{projectId}
           AND status = 'QUEUED'
-          AND execution_mode = 'AGENT'
-          AND dispatch_mode = 'PULL'
+          AND task_origin = 'PERSONAL_MCP'
+          AND executor_channel = 'EXTERNAL_MCP_AGENT'
           AND attempt_count &lt; max_attempts
           AND (timeout_at IS NULL OR timeout_at &gt; UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000)
           <if test="agentType != null and agentType != ''">
@@ -398,6 +450,8 @@
         </if>
         <if test="status != null and status != ''">AND status = #{status}</if>
         <if test="verdict != null and verdict != ''">AND verdict = #{verdict}</if>
+        <if test="taskOrigin != null and taskOrigin != ''">AND task_origin = #{taskOrigin}</if>
+        <if test="executorChannel != null and executorChannel != ''">AND executor_channel = #{executorChannel}</if>
         <if test="executionMode != null and executionMode != ''">AND execution_mode = #{executionMode}</if>
     </sql>
 
@@ -439,20 +493,30 @@
 
     <insert id="insertTask" parameterType="io.metersphere.agent.dto.AgentExecutionTaskDTO">
         INSERT INTO ai_execution_task (
-            id, organization_id, project_id, test_plan_id, name, objective, source, selection_mode, prompt, resolved_filter,
+            id, organization_id, project_id, test_plan_id, name, objective, source, task_origin, executor_channel,
+            selection_mode, prompt, resolved_filter,
             case_snapshot_hash, policy_snapshot, context_snapshot, context_snapshot_hash, approval_policy,
             status, verdict, verdict_reason, execution_mode, dispatch_mode, agent_type, agent_gateway_id, required_capabilities,
-            runner_id, runner_lease_id, provider_id,
+            runner_id, runner_lease_id, current_execution_id, provider_id, plan_schema_version, model_snapshot,
+            prompt_template_snapshot, execution_parameter_snapshot, trace_id, environment_profile_id,
+            environment_profile_version, credential_reference_id, model_profile_id, prompt_template_version_id,
+            preflight_id, execution_contract, execution_contract_hash, blocked_reason, blocked_detail,
+            original_scope_count, expanded_scope_count, scope_expansion_rate,
             environment_id, target_url, browser_type, login_mode, idempotency_key, confirm_required,
             confirmation_reason, timeout_at, max_attempts, attempt_count, finished_at,
             total_count, success_count, failed_count, blocked_count, skipped_count,
             unexecuted_count, writeback_status, artifact_status, executed_by, create_time, update_time,
             create_user, update_user, version
         ) VALUES (
-            #{id}, #{organizationId}, #{projectId}, #{testPlanId}, #{name}, #{objective}, #{source}, #{selectionMode}, #{prompt}, #{resolvedFilter},
+            #{id}, #{organizationId}, #{projectId}, #{testPlanId}, #{name}, #{objective}, #{source}, #{taskOrigin}, #{executorChannel},
+            #{selectionMode}, #{prompt}, #{resolvedFilter},
             #{caseSnapshotHash}, #{policySnapshot}, #{contextSnapshot}, #{contextSnapshotHash}, #{approvalPolicy},
             #{status}, #{verdict}, #{verdictReason}, #{executionMode}, #{dispatchMode}, #{agentType}, #{agentGatewayId}, #{requiredCapabilities},
-            #{runnerId}, #{runnerLeaseId}, #{providerId},
+            #{runnerId}, #{runnerLeaseId}, #{currentExecutionId}, #{providerId}, #{planSchemaVersion}, #{modelSnapshot},
+            #{promptTemplateSnapshot}, #{executionParameterSnapshot}, #{traceId}, #{environmentProfileId},
+            #{environmentProfileVersion}, #{credentialReferenceId}, #{modelProfileId}, #{promptTemplateVersionId},
+            #{preflightId}, #{executionContract}, #{executionContractHash}, #{blockedReason}, #{blockedDetail},
+            COALESCE(#{originalScopeCount},0), COALESCE(#{expandedScopeCount},0), COALESCE(#{scopeExpansionRate},0),
             #{environmentId}, #{targetUrl}, #{browserType}, #{loginMode}, #{idempotencyKey}, #{confirmRequired},
             #{confirmationReason}, #{timeoutAt}, COALESCE(#{maxAttempts}, 3), COALESCE(#{attemptCount}, 0), #{finishedAt},
             #{totalCount}, #{successCount}, #{failedCount}, #{blockedCount}, #{skippedCount},
@@ -513,26 +577,108 @@
 
     <insert id="insertRunnerLease" parameterType="io.metersphere.agent.dto.AgentRunnerLeaseDTO">
         INSERT INTO ai_runner_lease (
-            id, task_id, runner_id, executor_type, executor_id, attempt, status, lease_token_hash, accepted_time, expire_time,
-            last_heartbeat_time, last_event_sequence, create_time, update_time, version
+            id, task_id, execution_id, executor_channel, runner_id, executor_type, executor_id,
+            lease_owner_type, lease_owner_id, attempt, status, lease_token_hash, accepted_time, expire_time,
+            last_heartbeat_time, last_event_sequence, released_reason, closed_at, create_time, update_time, version
         ) VALUES (
-            #{id}, #{taskId}, #{runnerId}, COALESCE(#{executorType}, 'RUNNER'), #{executorId}, COALESCE(#{attempt}, 1),
+            #{id}, #{taskId}, #{executionId}, #{executorChannel}, #{runnerId}, COALESCE(#{executorType}, 'RUNNER'), #{executorId},
+            #{leaseOwnerType}, #{leaseOwnerId}, COALESCE(#{attempt}, 1),
             #{status}, #{leaseTokenHash}, #{acceptedTime}, #{expireTime},
-            #{lastHeartbeatTime}, #{lastEventSequence}, #{createTime}, #{updateTime}, COALESCE(#{version}, 0)
+            #{lastHeartbeatTime}, #{lastEventSequence}, #{releasedReason}, #{closedAt},
+            #{createTime}, #{updateTime}, COALESCE(#{version}, 0)
         )
     </insert>
 
-    <insert id="insertArtifact" parameterType="io.metersphere.agent.dto.AgentExecutionArtifactDTO">
-        INSERT INTO ai_execution_artifact (
-            id, task_id, execution_case_id, case_id, step_id, purpose, file_id, file_name,
-            storage_folder, content_type, size_bytes, sha256, redacted, status, retention_until,
-            create_time, create_user
+    <insert id="insertExecutionAttempt" parameterType="io.metersphere.agent.dto.AgentExecutionAttemptDTO">
+        INSERT INTO ai_execution_attempt (
+            id, task_id, attempt_no, executor_channel, executor_type, executor_id, lease_id,
+            status, trace_id, error_code, error_message, start_time, finish_time,
+            create_time, update_time, version
         ) VALUES (
-            #{id}, #{taskId}, #{executionCaseId}, #{caseId}, #{stepId}, #{purpose}, #{fileId}, #{fileName},
-            #{storageFolder}, #{contentType}, #{sizeBytes}, #{sha256}, #{redacted}, #{status}, #{retentionUntil},
-            #{createTime}, #{createUser}
+            #{id}, #{taskId}, #{attemptNo}, #{executorChannel}, #{executorType}, #{executorId}, #{leaseId},
+            #{status}, #{traceId}, #{errorCode}, #{errorMessage}, #{startTime}, #{finishTime},
+            #{createTime}, #{updateTime}, COALESCE(#{version}, 0)
         )
     </insert>
+
+    <select id="selectStepResultByRequest" resultType="io.metersphere.agent.dto.AgentExecutionStepResultDTO">
+        SELECT id, task_id AS taskId, execution_id AS executionId, lease_id AS leaseId,
+               step_id AS stepId, attempt, status, input_snapshot AS inputSnapshot,
+               output_summary AS outputSummary, assertion_result AS assertionResult,
+               error_code AS errorCode, error_message AS errorMessage, artifact_ids AS artifactIds,
+               request_id AS requestId, trace_id AS traceId, started_at AS startedAt,
+               finished_at AS finishedAt, create_time AS createTime, create_user AS createUser
+        FROM ai_execution_step_result
+        WHERE execution_id = #{executionId} AND step_id = #{stepId} AND request_id = #{requestId}
+        LIMIT 1
+    </select>
+    <select id="countAvailableArtifactsByExecutionCase" resultType="int">
+        SELECT COUNT(1) FROM ai_execution_artifact
+        WHERE task_id=#{taskId} AND execution_case_id=#{executionCaseId} AND status='AVAILABLE'
+          AND redaction_status IN ('PASSED','NOT_REQUIRED')
+    </select>
+    <select id="countOutstandingDataCleanup" resultType="int">
+        SELECT COUNT(1) FROM ai_test_data_cleanup c
+        JOIN ai_test_data_lease l ON l.id=c.lease_id
+        WHERE l.task_id=#{taskId} AND c.status != 'SUCCESS'
+    </select>
+
+    <insert id="insertStepResult" parameterType="io.metersphere.agent.dto.AgentExecutionStepResultDTO">
+        INSERT INTO ai_execution_step_result (
+            id, task_id, execution_id, lease_id, step_id, attempt, status, input_snapshot,
+            output_summary, assertion_result, error_code, error_message, artifact_ids,
+            request_id, trace_id, started_at, finished_at, create_time, create_user
+        ) VALUES (
+            #{id}, #{taskId}, #{executionId}, #{leaseId}, #{stepId}, #{attempt}, #{status}, #{inputSnapshot},
+            #{outputSummary}, #{assertionResult}, #{errorCode}, #{errorMessage}, #{artifactIds},
+            #{requestId}, #{traceId}, #{startedAt}, #{finishedAt}, #{createTime}, #{createUser}
+        )
+    </insert>
+
+    <update id="bindExecutionLease">
+        UPDATE ai_execution_attempt
+        SET lease_id = #{leaseId}, update_time = #{updateTime}, version = version + 1
+        WHERE id = #{executionId} AND status = 'CLAIMED' AND lease_id IS NULL
+    </update>
+
+    <update id="finishExecutionAttempt">
+        UPDATE ai_execution_attempt
+        SET status = #{status}, error_code = #{errorCode}, error_message = #{errorMessage},
+            finish_time = #{finishTime}, update_time = #{finishTime}, version = version + 1
+        WHERE id = #{executionId} AND status IN ('CLAIMED', 'RUNNING')
+    </update>
+
+    <insert id="insertArtifact" parameterType="io.metersphere.agent.dto.AgentExecutionArtifactDTO">
+        INSERT INTO ai_execution_artifact (
+            id, task_id, execution_id, lease_id, execution_case_id, case_id, step_id, purpose, file_id, file_name,
+            storage_folder, content_type, size_bytes, sha256, redacted, status, retention_until,
+            upload_status, expected_size, expected_sha256, expected_content_type, upload_token_hash,
+            idempotency_key, prepared_at, committed_at, trace_id, create_time, create_user
+        ) VALUES (
+            #{id}, #{taskId}, #{executionId}, #{leaseId}, #{executionCaseId}, #{caseId}, #{stepId}, #{purpose}, #{fileId}, #{fileName},
+            #{storageFolder}, #{contentType}, #{sizeBytes}, #{sha256}, #{redacted}, #{status}, #{retentionUntil},
+            COALESCE(#{uploadStatus}, 'AVAILABLE'), #{expectedSize}, #{expectedSha256}, #{expectedContentType},
+            #{uploadTokenHash}, #{idempotencyKey}, #{preparedAt}, #{committedAt}, #{traceId}, #{createTime}, #{createUser}
+        )
+    </insert>
+
+    <update id="storePreparedArtifact">
+        UPDATE ai_execution_artifact
+        SET file_id = #{fileId}, file_name = #{fileName}, storage_folder = #{storageFolder},
+            content_type = #{contentType}, size_bytes = #{sizeBytes}, sha256 = #{sha256},
+            upload_status = 'UPLOADED'
+        WHERE id = #{id} AND lease_id = #{leaseId} AND status = 'PREPARED'
+          AND upload_status = 'PREPARED'
+    </update>
+
+    <update id="commitPreparedArtifact">
+        UPDATE ai_execution_artifact
+        SET status = 'AVAILABLE', upload_status = 'AVAILABLE', committed_at = #{committedAt},
+            retention_until = #{retentionUntil},
+            trace_id = COALESCE(#{traceId}, trace_id)
+        WHERE id = #{id} AND lease_id = #{leaseId} AND status = 'PREPARED'
+          AND upload_status = 'UPLOADED'
+    </update>
 
     <update id="markArtifactDeleted">
         UPDATE ai_execution_artifact
@@ -571,9 +717,19 @@
           AND attempt_count &lt; max_attempts
     </update>
 
+    <update id="assignExecutionLease">
+        UPDATE ai_execution_task
+        SET runner_id = #{runnerId}, runner_lease_id = #{leaseId}, current_execution_id = #{executionId},
+            status = #{toStatus}, attempt_count = attempt_count + 1,
+            update_time = #{updateTime}, version = version + 1
+        WHERE id = #{taskId} AND status = #{fromStatus} AND version = #{version}
+          AND runner_lease_id IS NULL AND attempt_count &lt; max_attempts
+    </update>
+
     <update id="updateTaskContext">
         UPDATE ai_execution_task
         SET context_snapshot = #{contextSnapshot}, context_snapshot_hash = #{contextSnapshotHash},
+            execution_contract = #{executionContract}, execution_contract_hash = #{executionContractHash},
             update_time = #{updateTime}, version = version + 1
         WHERE id = #{id} AND status IN ('CREATED', 'WAITING_CONFIRMATION')
     </update>
@@ -587,7 +743,7 @@
 
     <update id="closeRunnerLease">
         UPDATE ai_runner_lease
-        SET status = #{status}, update_time = #{updateTime}, version = version + 1
+        SET status = #{status}, closed_at = #{updateTime}, update_time = #{updateTime}, version = version + 1
         WHERE id = #{id} AND runner_id = #{runnerId} AND status = 'ACTIVE'
     </update>
 
@@ -689,12 +845,14 @@
 
     <insert id="insertEvent" parameterType="io.metersphere.agent.dto.AgentExecutionEventDTO">
         INSERT INTO ai_execution_event (
-            id, contract_version, runner_event_id, task_id, case_id, step_id, attempt, sequence, event_time, level, event_type, message,
-            artifact_ids, sanitized_metadata, create_user
+            id, contract_version, runner_event_id, task_id, execution_id, lease_id, case_id, step_id,
+            attempt, sequence, event_time, level, event_type, actor_type, actor_id, tool_name,
+            request_id, trace_id, message, artifact_ids, sanitized_metadata, payload, create_user
         ) VALUES (
-            #{id}, COALESCE(#{contractVersion}, 'v1'), #{eventId}, #{taskId}, #{caseId}, #{stepId}, COALESCE(#{attempt}, 0),
-            #{sequence}, #{eventTime}, #{level}, #{eventType}, #{message},
-            #{artifactIdsJson}, #{sanitizedMetadata}, #{createUser}
+            #{id}, COALESCE(#{contractVersion}, 'v1'), #{eventId}, #{taskId}, #{executionId}, #{leaseId},
+            #{caseId}, #{stepId}, COALESCE(#{attempt}, 0), #{sequence}, #{eventTime}, #{level}, #{eventType},
+            #{actorType}, #{actorId}, #{toolName}, #{requestId}, #{traceId}, #{message},
+            #{artifactIdsJson}, #{sanitizedMetadata}, #{payload}, #{createUser}
         )
     </insert>
 
@@ -705,6 +863,14 @@
             update_user = #{updateUser},
             update_time = #{updateTime}
         WHERE id = #{id}
+    </update>
+
+    <update id="blockTask">
+        UPDATE ai_execution_task
+        SET status='WAITING_HUMAN', blocked_reason=#{blockedReason}, blocked_detail=#{blockedDetail},
+            verdict=#{verdict}, verdict_reason=#{blockedDetail}, version=version+1,
+            update_user=#{updateUser}, update_time=#{updateTime}
+        WHERE id=#{id} AND status NOT IN ('SUCCESS','PARTIAL_SUCCESS','FAILED','CANCELED','EXPIRED')
     </update>
 
     <update id="transitionTaskStatus">

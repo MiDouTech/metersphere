@@ -4,7 +4,9 @@ import io.metersphere.agent.dto.AgentExecutionCaseDTO;
 import io.metersphere.agent.dto.AgentExecutionArtifactDTO;
 import io.metersphere.agent.dto.AgentExecutionEventDTO;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
+import io.metersphere.agent.dto.AgentExecutionAttemptDTO;
 import io.metersphere.agent.dto.AgentExecutionStepDTO;
+import io.metersphere.agent.dto.AgentExecutionStepResultDTO;
 import io.metersphere.agent.dto.AgentExecutionHealingDTO;
 import io.metersphere.agent.dto.AgentExecutionOperationsDTO;
 import io.metersphere.agent.dto.AgentRunnerDTO;
@@ -46,6 +48,9 @@ public interface AgentExecutionMapper {
                                                        @Param("purpose") String purpose,
                                                        @Param("stepId") String stepId);
 
+    AgentExecutionArtifactDTO selectArtifactByPrepareKey(@Param("taskId") String taskId,
+                                                         @Param("idempotencyKey") String idempotencyKey);
+
     List<AgentExecutionArtifactDTO> selectArtifactsByTaskId(@Param("taskId") String taskId);
 
     List<AgentExecutionArtifactDTO> selectExpiredArtifacts(@Param("now") long now,
@@ -74,6 +79,8 @@ public interface AgentExecutionMapper {
                     @Param("likeKeyword") String likeKeyword,
                     @Param("status") String status,
                     @Param("verdict") String verdict,
+                    @Param("taskOrigin") String taskOrigin,
+                    @Param("executorChannel") String executorChannel,
                     @Param("executionMode") String executionMode);
 
     List<AgentExecutionTaskDTO> searchTasks(@Param("projectId") String projectId,
@@ -81,6 +88,8 @@ public interface AgentExecutionMapper {
                                             @Param("likeKeyword") String likeKeyword,
                                             @Param("status") String status,
                                             @Param("verdict") String verdict,
+                                            @Param("taskOrigin") String taskOrigin,
+                                            @Param("executorChannel") String executorChannel,
                                             @Param("executionMode") String executionMode,
                                             @Param("offset") int offset,
                                             @Param("limit") int limit);
@@ -106,7 +115,40 @@ public interface AgentExecutionMapper {
 
     void insertRunnerLease(AgentRunnerLeaseDTO lease);
 
+    void insertExecutionAttempt(AgentExecutionAttemptDTO attempt);
+
+    AgentExecutionStepResultDTO selectStepResultByRequest(@Param("executionId") String executionId,
+                                                          @Param("stepId") String stepId,
+                                                          @Param("requestId") String requestId);
+
+    void insertStepResult(AgentExecutionStepResultDTO result);
+
+    int bindExecutionLease(@Param("executionId") String executionId,
+                           @Param("leaseId") String leaseId,
+                           @Param("updateTime") long updateTime);
+
+    int finishExecutionAttempt(@Param("executionId") String executionId,
+                               @Param("status") String status,
+                               @Param("errorCode") String errorCode,
+                               @Param("errorMessage") String errorMessage,
+                               @Param("finishTime") long finishTime);
+
     void insertArtifact(AgentExecutionArtifactDTO artifact);
+
+    int storePreparedArtifact(@Param("id") String id,
+                              @Param("leaseId") String leaseId,
+                              @Param("fileId") String fileId,
+                              @Param("fileName") String fileName,
+                              @Param("storageFolder") String storageFolder,
+                              @Param("contentType") String contentType,
+                              @Param("sizeBytes") long sizeBytes,
+                              @Param("sha256") String sha256);
+
+    int commitPreparedArtifact(@Param("id") String id,
+                               @Param("leaseId") String leaseId,
+                               @Param("committedAt") long committedAt,
+                               @Param("retentionUntil") long retentionUntil,
+                               @Param("traceId") String traceId);
 
     int markArtifactDeleted(@Param("id") String id, @Param("status") String status);
 
@@ -136,9 +178,20 @@ public interface AgentExecutionMapper {
                           @Param("toStatus") String toStatus,
                           @Param("updateTime") long updateTime);
 
+    int assignExecutionLease(@Param("taskId") String taskId,
+                             @Param("fromStatus") String fromStatus,
+                             @Param("version") int version,
+                             @Param("runnerId") String runnerId,
+                             @Param("leaseId") String leaseId,
+                             @Param("executionId") String executionId,
+                             @Param("toStatus") String toStatus,
+                             @Param("updateTime") long updateTime);
+
     int updateTaskContext(@Param("id") String id,
                           @Param("contextSnapshot") String contextSnapshot,
                           @Param("contextSnapshotHash") String contextSnapshotHash,
+                          @Param("executionContract") String executionContract,
+                          @Param("executionContractHash") String executionContractHash,
                           @Param("updateTime") long updateTime);
 
     int updateLeaseEventSequence(@Param("id") String id,
@@ -207,6 +260,8 @@ public interface AgentExecutionMapper {
                               @Param("updateUser") String updateUser, @Param("updateTime") long updateTime);
 
     int countAvailableArtifacts(@Param("taskId") String taskId);
+    int countAvailableArtifactsByExecutionCase(@Param("taskId") String taskId, @Param("executionCaseId") String executionCaseId);
+    int countOutstandingDataCleanup(@Param("taskId") String taskId);
     int countTerminalSteps(@Param("taskId") String taskId);
     int countTerminalStepsWithArtifacts(@Param("taskId") String taskId);
     int sumHealingCount(@Param("taskId") String taskId);
@@ -218,6 +273,10 @@ public interface AgentExecutionMapper {
                          @Param("status") String status,
                          @Param("updateUser") String updateUser,
                          @Param("updateTime") long updateTime);
+
+    int blockTask(@Param("id") String id, @Param("blockedReason") String blockedReason,
+                  @Param("blockedDetail") String blockedDetail, @Param("verdict") String verdict,
+                  @Param("updateUser") String updateUser, @Param("updateTime") long updateTime);
 
     int transitionTaskStatus(@Param("id") String id,
                              @Param("fromStatus") String fromStatus,

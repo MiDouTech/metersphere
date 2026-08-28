@@ -1,6 +1,9 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.constants.AgentExecutionStatus;
+import io.metersphere.agent.constants.AgentExecutorChannel;
+import io.metersphere.agent.constants.AgentTaskOrigin;
+import io.metersphere.agent.dto.AgentExecutionAttemptDTO;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
 import io.metersphere.agent.dto.AgentExecutionTaskSearchResponse;
 import io.metersphere.agent.dto.AgentHumanCreateRequest;
@@ -24,6 +27,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -36,7 +40,6 @@ import java.util.Set;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentTaskClaimService {
-    private static final long LEASE_TTL_MS = 60_000L;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @Resource
@@ -51,6 +54,10 @@ public class AgentTaskClaimService {
     private AgentExecLogService execLogService;
     @Resource
     private AgentHumanRequestService humanRequestService;
+    @Resource
+    private AgentExecutionChannelPolicy channelPolicy;
+    @Value("${agent.execution.lease-ttl-ms:60000}")
+    private long leaseTtlMs = 60_000L;
 
     public AgentRunnerLeaseAssignmentDTO claim(AgentTaskClaimRequest request) {
         AgentToken token = requireToken();
@@ -70,32 +77,54 @@ public class AgentTaskClaimService {
         if (task == null) {
             return null;
         }
+        channelPolicy.assertClaimable(task, "MCP_AGENT");
         long now = System.currentTimeMillis();
         String leaseToken = "msrl_" + randomToken();
         String executorId = "agent-token:" + token.getId();
         AgentRunnerLeaseDTO lease = new AgentRunnerLeaseDTO();
         lease.setId(IDGenerator.nextStr());
         lease.setTaskId(task.getId());
+        String executionId = IDGenerator.nextStr();
+        String traceId = IDGenerator.nextStr();
+        lease.setExecutionId(executionId);
+        lease.setExecutorChannel(AgentExecutorChannel.EXTERNAL_MCP_AGENT);
         lease.setRunnerId(executorId);
         lease.setExecutorType("AGENT");
         lease.setExecutorId(token.getId());
+        lease.setLeaseOwnerType("MCP_TOKEN");
+        lease.setLeaseOwnerId(token.getId());
         lease.setAttempt((task.getAttemptCount() == null ? 0 : task.getAttemptCount()) + 1);
         lease.setStatus("ACTIVE");
         lease.setLeaseTokenHash(DigestUtils.sha256Hex(leaseToken));
         lease.setAcceptedTime(now);
-        lease.setExpireTime(now + LEASE_TTL_MS);
+        lease.setExpireTime(now + leaseTtlMs);
         lease.setLastHeartbeatTime(now);
         Long sequence = executionMapper.selectMaxEventSequence(task.getId());
         lease.setLastEventSequence(sequence == null ? 0L : sequence);
         lease.setCreateTime(now);
         lease.setUpdateTime(now);
         lease.setVersion(0);
-        int assigned = executionMapper.assignRunnerLease(task.getId(), AgentExecutionStatus.QUEUED,
+        int assigned = executionMapper.assignExecutionLease(task.getId(), AgentExecutionStatus.QUEUED,
                 task.getVersion() == null ? 0 : task.getVersion(), executorId, lease.getId(),
-                AgentExecutionStatus.PREPARING_BROWSER, now);
+                executionId, AgentExecutionStatus.PREPARING_BROWSER, now);
         if (assigned != 1) {
             throw new MSException("AGENT_TASK_LEASE_CONFLICT");
         }
+        AgentExecutionAttemptDTO attempt = new AgentExecutionAttemptDTO();
+        attempt.setId(executionId);
+        attempt.setTaskId(task.getId());
+        attempt.setAttemptNo(lease.getAttempt());
+        attempt.setExecutorChannel(AgentExecutorChannel.EXTERNAL_MCP_AGENT);
+        attempt.setExecutorType("MCP_AGENT");
+        attempt.setExecutorId(token.getId());
+        attempt.setLeaseId(lease.getId());
+        attempt.setStatus("CLAIMED");
+        attempt.setTraceId(traceId);
+        attempt.setStartTime(now);
+        attempt.setCreateTime(now);
+        attempt.setUpdateTime(now);
+        attempt.setVersion(0);
+        executionMapper.insertExecutionAttempt(attempt);
         executionMapper.insertRunnerLease(lease);
         execLogService.audit("AGENT_TASK_CLAIMED", task.getId(),
                 "tokenId=" + token.getId() + ";attempt=" + lease.getAttempt());
@@ -109,6 +138,7 @@ public class AgentTaskClaimService {
         response.getTask().setStatus(AgentExecutionStatus.PREPARING_BROWSER);
         response.getTask().setRunnerId(executorId);
         response.getTask().setRunnerLeaseId(lease.getId());
+        response.getTask().setCurrentExecutionId(executionId);
         return response;
     }
 
@@ -117,13 +147,23 @@ public class AgentTaskClaimService {
         String agentType = StringUtils.upperCase(StringUtils.trimToNull(request.getAgentType()));
         Set<String> offered = normalizeCapabilities(request.getCapabilities());
         List<AgentExecutionTaskDTO> tasks = executionMapper.selectQueuedTasksForAgent(projectId, agentType, 100)
-                .stream().filter(candidate -> supports(candidate, offered)).toList();
+                .stream().filter(candidate -> {try{channelPolicy.assertClaimable(candidate,"MCP_AGENT");return true;}catch(MSException ignored){return false;}})
+                .filter(candidate -> supports(candidate, offered)).toList();
         AgentExecutionTaskSearchResponse response = new AgentExecutionTaskSearchResponse();
         response.setCurrent(1);
         response.setPageSize(100);
         response.setTotal(tasks.size());
         response.setItems(tasks);
         return response;
+    }
+
+    public AgentExecutionTaskDTO getPersonalTask(String taskId) {
+        AgentExecutionTaskDTO task = executionService.get(taskId);
+        if (!AgentTaskOrigin.PERSONAL_MCP.equals(task.getTaskOrigin())
+                || !AgentExecutorChannel.EXTERNAL_MCP_AGENT.equals(task.getExecutorChannel())) {
+            throw new MSException("AGENT_TASK_NOT_FOUND");
+        }
+        return task;
     }
 
     public void heartbeat(String leaseId, String leaseToken) {
@@ -192,6 +232,8 @@ public class AgentTaskClaimService {
         if (closed != 1) {
             throw new MSException("AGENT_TASK_LEASE_CONFLICT");
         }
+        executionMapper.finishExecutionAttempt(lease.getExecutionId(), "RELEASED", "EXECUTOR_RELEASED",
+                StringUtils.abbreviate(StringUtils.defaultIfBlank(reason, "Agent cannot execute task"), 1000), now);
         execLogService.audit("AGENT_TASK_RELEASED", taskId, StringUtils.abbreviate(reason, 1000));
     }
 

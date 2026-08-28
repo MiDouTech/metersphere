@@ -2,6 +2,9 @@ package io.metersphere.agent.service;
 
 import io.metersphere.agent.dto.AgentExecutionArtifactDTO;
 import io.metersphere.agent.dto.AgentExecutionArtifactUploadResponse;
+import io.metersphere.agent.dto.AgentArtifactPrepareRequest;
+import io.metersphere.agent.dto.AgentArtifactPrepareResponse;
+import io.metersphere.agent.dto.AgentArtifactCommitRequest;
 import io.metersphere.agent.dto.AgentExecutionCaseDTO;
 import io.metersphere.agent.dto.AgentExecutionStepDTO;
 import io.metersphere.agent.dto.AgentExecutionTaskDTO;
@@ -25,12 +28,15 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.nio.file.Path;
 import java.nio.ByteBuffer;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -40,8 +46,7 @@ import java.util.Set;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentExecutionArtifactService {
-    private static final long MAX_SCREENSHOT_BYTES = 5L * 1024L * 1024L;
-    private static final long DEFAULT_RETENTION_MS = 30L * 24L * 60L * 60L * 1000L;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final Set<String> PURPOSES = Set.of(
             "BEFORE_STEP", "AFTER_STEP", "FAILURE", "HEALING_BEFORE", "HEALING_AFTER");
 
@@ -57,6 +62,133 @@ public class AgentExecutionArtifactService {
     private TestAssetVersionService testAssetVersionService;
     @Resource
     private FunctionalCaseMapper functionalCaseMapper;
+    @Resource
+    private AgentEvidenceRedactionService redactionService;
+    @Value("${agent.execution.artifact-max-bytes:5242880}")
+    private long artifactMaxBytes = 5L * 1024L * 1024L;
+    @Value("${agent.execution.artifact-retention-ms:2592000000}")
+    private long artifactRetentionMs = 30L * 24L * 60L * 60L * 1000L;
+    @Value("${agent.execution.artifact-prepare-ttl-ms:900000}")
+    private long artifactPrepareTtlMs = 15L * 60L * 1000L;
+
+    public AgentArtifactPrepareResponse prepare(AgentArtifactPrepareRequest request) {
+        requirePrepareRequest(request);
+        AgentRunnerLeaseDTO lease = runnerService.requireActiveLease(bearer(request.getLeaseToken()), request.getLeaseId());
+        AgentExecutionTaskDTO task = requireLeaseTask(request.getTaskId(), request.getExecutionId(), lease);
+        String purpose = StringUtils.upperCase(StringUtils.trimToEmpty(request.getPurpose()));
+        if (!PURPOSES.contains(purpose)) {
+            throw new MSException("UNSUPPORTED_CONTRACT_VALUE: artifact.purpose");
+        }
+        if (!Boolean.TRUE.equals(request.getRedacted())) {
+            throw new MSException("ARTIFACT_REDACTION_REQUIRED");
+        }
+        if (request.getSizeBytes() == null || request.getSizeBytes() <= 0
+                || request.getSizeBytes() > artifactMaxBytes) {
+            throw new MSException("ARTIFACT_SIZE_INVALID");
+        }
+        String expectedSha256 = StringUtils.lowerCase(StringUtils.trim(request.getSha256()));
+        if (!expectedSha256.matches("[0-9a-f]{64}")) {
+            throw new MSException("ARTIFACT_HASH_INVALID");
+        }
+        AgentExecutionArtifactDTO existing = executionMapper.selectArtifactByPrepareKey(task.getId(), request.getRequestId());
+        if (existing != null) {
+            return preparedResponse(existing, null);
+        }
+        long now = System.currentTimeMillis();
+        String uploadToken = "msau_" + randomToken();
+        AgentExecutionArtifactDTO artifact = new AgentExecutionArtifactDTO();
+        artifact.setId(IDGenerator.nextStr());
+        artifact.setTaskId(task.getId());
+        artifact.setExecutionId(lease.getExecutionId());
+        artifact.setLeaseId(lease.getId());
+        artifact.setExecutionCaseId(validateScope(task.getId(), request.getCaseId(), request.getStepId()));
+        artifact.setCaseId(StringUtils.trimToNull(request.getCaseId()));
+        artifact.setStepId(StringUtils.trimToNull(request.getStepId()));
+        artifact.setPurpose(purpose);
+        artifact.setFileName(StringUtils.abbreviate(Path.of(request.getFileName()).getFileName().toString(), 255));
+        artifact.setRedacted(true);
+        artifact.setStatus("PREPARED");
+        artifact.setUploadStatus("PREPARED");
+        artifact.setExpectedSize(request.getSizeBytes());
+        artifact.setExpectedSha256(expectedSha256);
+        artifact.setExpectedContentType(StringUtils.abbreviate(request.getContentType(), 128));
+        artifact.setUploadTokenHash(sha256(uploadToken.getBytes(StandardCharsets.UTF_8)));
+        artifact.setIdempotencyKey(request.getRequestId());
+        artifact.setPreparedAt(now);
+        artifact.setRetentionUntil(now + artifactPrepareTtlMs);
+        artifact.setTraceId(StringUtils.defaultIfBlank(request.getTraceId(), task.getTraceId()));
+        artifact.setCreateTime(now);
+        artifact.setCreateUser("executor:" + lease.getLeaseOwnerId());
+        executionMapper.insertArtifact(artifact);
+        return preparedResponse(artifact, uploadToken);
+    }
+
+    public AgentExecutionArtifactUploadResponse uploadPrepared(String authorization, String leaseId,
+                                                               String artifactId, String uploadToken,
+                                                               MultipartFile file) {
+        AgentRunnerLeaseDTO lease = runnerService.requireActiveLease(authorization, leaseId);
+        AgentExecutionArtifactDTO prepared = executionMapper.selectArtifactById(artifactId);
+        requirePrepared(prepared, lease, uploadToken, "PREPARED");
+        if (file == null || file.isEmpty() || file.getSize() != prepared.getExpectedSize()
+                || file.getSize() > artifactMaxBytes) {
+            throw new MSException("ARTIFACT_SIZE_INVALID");
+        }
+        byte[] bytes = readBytes(file);
+        ArtifactType artifactType = detectArtifact(bytes, file);
+        redactionService.scanBeforePersist(bytes,artifactType.contentType(),Boolean.TRUE.equals(prepared.getRedacted()));
+        String actualSha256 = sha256(bytes);
+        if (!MessageDigest.isEqual(actualSha256.getBytes(StandardCharsets.UTF_8),
+                prepared.getExpectedSha256().getBytes(StandardCharsets.UTF_8))) {
+            throw new MSException("ARTIFACT_HASH_MISMATCH");
+        }
+        if (!StringUtils.equalsIgnoreCase(artifactType.contentType(), prepared.getExpectedContentType())) {
+            throw new MSException("ARTIFACT_CONTENT_TYPE_MISMATCH");
+        }
+        String safeName = "evidence-" + artifactId + artifactType.extension();
+        MultipartFile namedFile = new NamedMultipartFile(file, safeName, artifactType.contentType(), bytes);
+        String fileId = commonFileService.uploadTempImgFile(namedFile);
+        String folder = "ai/execution/artifacts/" + lease.getTaskId() + "/" + lease.getExecutionId();
+        commonFileService.saveFileFromTempFile(folder, Map.of(fileId, safeName));
+        if (executionMapper.storePreparedArtifact(artifactId, leaseId, fileId, safeName, folder,
+                artifactType.contentType(), bytes.length, actualSha256) != 1) {
+            throw new MSException("ARTIFACT_PREPARE_CONFLICT");
+        }
+        return response(executionMapper.selectArtifactById(artifactId));
+    }
+
+    public AgentExecutionArtifactDTO commit(AgentArtifactCommitRequest request) {
+        requireCommitRequest(request);
+        AgentRunnerLeaseDTO lease = runnerService.requireActiveLease(bearer(request.getLeaseToken()), request.getLeaseId());
+        AgentExecutionTaskDTO task = requireLeaseTask(request.getTaskId(), request.getExecutionId(), lease);
+        AgentExecutionArtifactDTO artifact = executionMapper.selectArtifactById(request.getArtifactId());
+        requirePrepared(artifact, lease, request.getUploadToken(), "UPLOADED");
+        long now = System.currentTimeMillis();
+        if (executionMapper.commitPreparedArtifact(artifact.getId(), lease.getId(), now,
+                now + artifactRetentionMs,
+                StringUtils.defaultIfBlank(request.getTraceId(), task.getTraceId())) != 1) {
+            throw new MSException("ARTIFACT_COMMIT_CONFLICT");
+        }
+        artifact = executionMapper.selectArtifactById(artifact.getId());
+        publishAssetRelations(task, artifact);
+        return artifact;
+    }
+
+    private void requirePrepareRequest(AgentArtifactPrepareRequest request) {
+        if (request == null
+                || StringUtils.isAnyBlank(request.getTaskId(), request.getExecutionId(), request.getLeaseId(),
+                request.getLeaseToken(), request.getPurpose(), request.getFileName(), request.getContentType(),
+                request.getSha256(), request.getRequestId())) {
+            throw new MSException("ARTIFACT_PREPARE_REQUEST_INVALID");
+        }
+    }
+
+    private void requireCommitRequest(AgentArtifactCommitRequest request) {
+        if (request == null
+                || StringUtils.isAnyBlank(request.getTaskId(), request.getExecutionId(), request.getLeaseId(),
+                request.getLeaseToken(), request.getArtifactId(), request.getUploadToken(), request.getRequestId())) {
+            throw new MSException("ARTIFACT_COMMIT_REQUEST_INVALID");
+        }
+    }
 
     public AgentExecutionArtifactUploadResponse upload(String authorization, String leaseId, MultipartFile file,
                                                        String caseId, String stepId, String purpose,
@@ -73,11 +205,12 @@ public class AgentExecutionArtifactService {
         if (!Boolean.TRUE.equals(redacted)) {
             throw new MSException("ARTIFACT_REDACTION_REQUIRED");
         }
-        if (file == null || file.isEmpty() || file.getSize() > MAX_SCREENSHOT_BYTES) {
+        if (file == null || file.isEmpty() || file.getSize() > artifactMaxBytes) {
             throw new MSException("ARTIFACT_SIZE_INVALID");
         }
         byte[] bytes = readBytes(file);
         ArtifactType artifactType = detectArtifact(bytes, file);
+        redactionService.scanBeforePersist(bytes,artifactType.contentType(),Boolean.TRUE.equals(redacted));
         String actualSha256 = sha256(bytes);
         if (StringUtils.isNotBlank(expectedSha256)
                 && !MessageDigest.isEqual(actualSha256.getBytes(), StringUtils.lowerCase(expectedSha256).getBytes())) {
@@ -102,6 +235,8 @@ public class AgentExecutionArtifactService {
         AgentExecutionArtifactDTO artifact = new AgentExecutionArtifactDTO();
         artifact.setId(artifactId);
         artifact.setTaskId(task.getId());
+        artifact.setExecutionId(lease.getExecutionId());
+        artifact.setLeaseId(lease.getId());
         artifact.setExecutionCaseId(executionCaseId);
         artifact.setCaseId(StringUtils.trimToNull(caseId));
         artifact.setStepId(StringUtils.trimToNull(stepId));
@@ -114,7 +249,10 @@ public class AgentExecutionArtifactService {
         artifact.setSha256(actualSha256);
         artifact.setRedacted(true);
         artifact.setStatus("AVAILABLE");
-        artifact.setRetentionUntil(now + DEFAULT_RETENTION_MS);
+        artifact.setUploadStatus("AVAILABLE");
+        artifact.setCommittedAt(now);
+        artifact.setTraceId(task.getTraceId());
+        artifact.setRetentionUntil(now + artifactRetentionMs);
         artifact.setCreateTime(now);
         artifact.setCreateUser("runner:" + lease.getRunnerId());
         executionMapper.insertArtifact(artifact);
@@ -253,6 +391,53 @@ public class AgentExecutionArtifactService {
             }
         }
         return executionCase.getId();
+    }
+
+    private AgentExecutionTaskDTO requireLeaseTask(String taskId, String executionId, AgentRunnerLeaseDTO lease) {
+        AgentExecutionTaskDTO task = executionMapper.selectTaskById(lease.getTaskId());
+        if (task == null || !StringUtils.equals(taskId, task.getId())
+                || !StringUtils.equals(executionId, lease.getExecutionId())
+                || !StringUtils.equals(lease.getId(), task.getRunnerLeaseId())) {
+            throw new MSException("TASK_NOT_FOUND_OR_NOT_ACCESSIBLE");
+        }
+        return task;
+    }
+
+    private void requirePrepared(AgentExecutionArtifactDTO artifact, AgentRunnerLeaseDTO lease,
+                                 String uploadToken, String uploadStatus) {
+        String tokenHash = sha256(StringUtils.defaultString(uploadToken).getBytes(StandardCharsets.UTF_8));
+        if (artifact == null || !StringUtils.equals(lease.getTaskId(), artifact.getTaskId())
+                || !StringUtils.equals(lease.getExecutionId(), artifact.getExecutionId())
+                || !StringUtils.equals(lease.getId(), artifact.getLeaseId())
+                || !StringUtils.equals(uploadStatus, artifact.getUploadStatus())
+                || !MessageDigest.isEqual(tokenHash.getBytes(StandardCharsets.UTF_8),
+                StringUtils.defaultString(artifact.getUploadTokenHash()).getBytes(StandardCharsets.UTF_8))) {
+            throw new MSException("ARTIFACT_NOT_FOUND_OR_NOT_ACCESSIBLE");
+        }
+    }
+
+    private AgentArtifactPrepareResponse preparedResponse(AgentExecutionArtifactDTO artifact, String uploadToken) {
+        AgentArtifactPrepareResponse response = new AgentArtifactPrepareResponse();
+        response.setArtifactId(artifact.getId());
+        response.setUploadPath("/agent/v1/tasks/leases/" + artifact.getLeaseId()
+                + "/artifacts/" + artifact.getId() + ":upload");
+        response.setUploadToken(uploadToken);
+        response.setExpiresAt(artifact.getRetentionUntil());
+        response.setStatus(artifact.getUploadStatus());
+        return response;
+    }
+
+    private String bearer(String leaseToken) {
+        if (StringUtils.isBlank(leaseToken)) {
+            throw new MSException("AGENT_TASK_LEASE_TOKEN_REQUIRED");
+        }
+        return "Bearer " + leaseToken.trim();
+    }
+
+    private String randomToken() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private byte[] readBytes(MultipartFile file) {

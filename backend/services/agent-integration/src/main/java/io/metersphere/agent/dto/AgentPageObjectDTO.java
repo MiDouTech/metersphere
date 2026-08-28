@@ -1,0 +1,2 @@
+package io.metersphere.agent.dto;import lombok.Data;import java.util.List;
+@Data public class AgentPageObjectDTO {private String id;private String organizationId;private String projectId;private String name;private String routePattern;private List<String> allowedOrigins;private String status;private Integer version;private List<AgentPageElementDTO> elements;private Long createTime;private Long updateTime;}

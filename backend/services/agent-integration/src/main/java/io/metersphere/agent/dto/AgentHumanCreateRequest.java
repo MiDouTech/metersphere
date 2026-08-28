@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class AgentHumanCreateRequest {
     @NotBlank
@@ -18,4 +20,8 @@ public class AgentHumanCreateRequest {
     private String content;
     private String riskLevel;
     private Long expiresAt;
+    @Size(min = 3, max = 3)
+    private List<String> recipientUserIds;
+    private Boolean checkpointRequired;
+    private String actionHash;
 }

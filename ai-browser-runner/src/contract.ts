@@ -2,7 +2,7 @@ import type { WebAction, WebAssertion, WebLocator } from "./types.js";
 import { RunnerError } from "./security.js";
 
 const ACTIONS = new Set(["NAVIGATE", "CLICK", "FILL", "SELECT", "CHECK", "UPLOAD", "KEYBOARD", "WAIT", "SCROLL"]);
-const LOCATORS = new Set(["TEST_ID", "ROLE_NAME", "LABEL", "PLACEHOLDER", "TEXT", "SEMANTIC", "CSS", "XPATH"]);
+const LOCATORS = new Set(["TEST_ID", "ROLE", "LABEL", "PLACEHOLDER", "TEXT", "CSS"]);
 const ASSERTIONS = new Set(["TEXT", "VISIBLE", "ENABLED", "CHECKED", "ATTRIBUTE", "COUNT", "URL", "TITLE"]);
 
 export function parseAction(value: string | undefined): WebAction {
@@ -11,9 +11,15 @@ export function parseAction(value: string | undefined): WebAction {
     throw new RunnerError("UNSUPPORTED_CONTRACT_VALUE", "动作契约版本或类型不受支持");
   }
   validateTimeout(action.timeoutMs);
+  if (!action.id || !action.idempotencyKey) {
+    throw new RunnerError("INVALID_ACTION", "动作缺少 id/idempotencyKey");
+  }
   if (!["NAVIGATE", "WAIT", "SCROLL"].includes(action.type)) validateLocator(action.target);
   if (action.type === "FILL" && !action.valueRef && action.value === undefined) {
     throw new RunnerError("INVALID_ACTION", "FILL 缺少 value/valueRef");
+  }
+  if (action.type === "UPLOAD" && !action.fileRef) {
+    throw new RunnerError("INVALID_ACTION", "UPLOAD 缺少 fileRef");
   }
   if (action.riskLevel === "HIGH" && action.retryable) {
     throw new RunnerError("SECURITY_HIGH_RISK_RETRY", "高风险动作禁止自动重试");
@@ -60,11 +66,11 @@ export function validateLocator(locator: WebLocator | undefined): asserts locato
   const valid = (() => {
     switch (locator.strategy) {
       case "TEST_ID": return Boolean(locator.testId);
-      case "ROLE_NAME": return Boolean(locator.role && locator.name);
+      case "ROLE": return Boolean(locator.role && locator.name);
       case "LABEL": return Boolean(locator.label);
       case "PLACEHOLDER": return Boolean(locator.placeholder);
-      case "TEXT": case "SEMANTIC": return Boolean(locator.text);
-      case "CSS": case "XPATH": return Boolean(locator.selector);
+      case "TEXT": return Boolean(locator.text);
+      case "CSS": return Boolean(locator.selector) && !/(javascript:|expression\s*\(|url\s*\()/i.test(locator.selector!);
     }
   })();
   if (!valid) throw new RunnerError("INVALID_LOCATOR", `定位策略 ${locator.strategy} 缺少参数`);

@@ -17,9 +17,9 @@
         <a-select v-model="query.status" class="w-[180px]" allow-clear placeholder="运行状态" @change="search">
           <a-option v-for="status in statuses" :key="status" :value="status">{{ status }}</a-option>
         </a-select>
-        <a-select v-model="query.executionMode" class="w-[140px]" allow-clear placeholder="执行模式" @change="search">
-          <a-option value="RUNNER">RUNNER</a-option>
-          <a-option value="AGENT">AGENT</a-option>
+        <a-select v-model="query.executorChannel" class="w-[190px]" allow-clear placeholder="执行通道" @change="search">
+          <a-option value="MODEL_API_RUNNER">平台模型执行器</a-option>
+          <a-option value="EXTERNAL_MCP_AGENT">个人 MCP Agent</a-option>
         </a-select>
         <a-button :loading="loading" @click="load">刷新</a-button>
       </div>
@@ -44,10 +44,10 @@
             >
           </a-table-column>
           <a-table-column title="业务结论" data-index="verdict" :width="160" />
-          <a-table-column title="执行器" :width="150">
-            <template #cell="{ record }"
-              >{{ record.executionMode }}<span v-if="record.agentType"> / {{ record.agentType }}</span></template
-            >
+          <a-table-column title="来源 / 执行通道" :width="230">
+            <template #cell="{ record }">
+              {{ taskOriginLabel(record.taskOrigin) }} / {{ executorChannelLabel(record.executorChannel) }}
+            </template>
           </a-table-column>
           <a-table-column title="调度" data-index="dispatchMode" :width="90" />
           <a-table-column title="进度" :width="140">
@@ -79,9 +79,14 @@
             data-index="taskId"
             :width="220"
           />
+          <a-table-column title="执行批次 ID" data-index="executionId" :width="220" />
+          <a-table-column title="执行通道" :width="170">
+            <template #cell="{ record }">{{ executorChannelLabel(record.executorChannel) }}</template>
+          </a-table-column>
           <a-table-column title="执行器"
             ><template #cell="{ record }"
-              >{{ record.executorType || 'RUNNER' }} / {{ record.executorId || record.runnerId || '-' }}</template
+              >{{ record.leaseOwnerType || record.executorType || 'RUNNER' }} /
+              {{ record.leaseOwnerId || record.executorId || record.runnerId || '-' }}</template
             ></a-table-column
           >
           <a-table-column title="尝试" data-index="attempt" :width="80" /><a-table-column
@@ -98,153 +103,33 @@
         </template>
       </a-table>
     </MsCard>
-    <MsCard v-else simple>
-      <div class="mb-4 flex items-center justify-between">
-        <div>
-          <div class="text-base font-medium">调度规则</div>
-          <div class="mt-1 text-sm text-[var(--color-text-3)]"
-            >支持 Cron、签名 Webhook 和人工立即触发；Webhook 密钥仅在创建或轮换时展示一次。</div
-          >
-        </div>
-        <div class="flex gap-2">
-          <a-button :loading="triggerLoading" @click="loadTriggers">刷新</a-button>
-          <a-button v-permission="['AI_EXECUTION:RUN']" type="primary" @click="openTrigger()">新建规则</a-button>
-        </div>
-      </div>
-      <a-table :data="triggers" :loading="triggerLoading" :pagination="false" row-key="id">
-        <template #columns>
-          <a-table-column title="名称" data-index="name" />
-          <a-table-column title="类型" data-index="triggerType" :width="100" />
-          <a-table-column title="配置">
-            <template #cell="{ record }">
-              <span v-if="record.triggerType === 'CRON'">{{ record.cronExpression }} · {{ record.timezone }}</span>
-              <span v-else-if="record.triggerType === 'EVENT'">{{ record.eventType }}</span>
-              <span v-else>仅手动执行</span>
-            </template>
-          </a-table-column>
-          <a-table-column title="启用" :width="80">
-            <template #cell="{ record }"
-              ><a-switch
-                v-permission="['AI_EXECUTION:RUN']"
-                :model-value="record.enabled"
-                @change="toggleTrigger(record)"
-            /></template>
-          </a-table-column>
-          <a-table-column title="下次执行" :width="180">
-            <template #cell="{ record }">{{ formatTime(record.nextFireAt) }}</template>
-          </a-table-column>
-          <a-table-column title="最近结果" :width="130">
-            <template #cell="{ record }"
-              ><a-tag v-if="record.lastFireStatus" :color="record.lastFireStatus === 'CREATED' ? 'green' : 'red'">{{
-                record.lastFireStatus
-              }}</a-tag
-              ><span v-else>-</span></template
-            >
-          </a-table-column>
-          <a-table-column title="操作" :width="300">
-            <template #cell="{ record }">
-              <a-space>
-                <a-link v-permission="['AI_EXECUTION:RUN']" @click="openTrigger(record)">编辑</a-link>
-                <a-link v-permission="['AI_EXECUTION:RUN']" @click="fireTrigger(record)">立即执行</a-link>
-                <a-link @click="openHistory(record)">历史</a-link>
-                <a-link
-                  v-if="record.triggerType === 'EVENT'"
-                  v-permission="['AI_EXECUTION:RUN']"
-                  @click="rotateSecret(record)"
-                  >轮换密钥</a-link
-                >
-              </a-space>
-            </template>
-          </a-table-column>
-        </template>
-      </a-table>
-    </MsCard>
+    <TriggerList
+      v-else
+      :items="triggers"
+      :loading="triggerLoading"
+      :error="triggerError"
+      :format-time="formatTime"
+      @refresh="loadTriggers"
+      @create="openTrigger()"
+      @edit="openTrigger"
+      @fire="fireTrigger"
+      @history="openHistory"
+      @rotate="rotateSecret"
+      @toggle="toggleTrigger"
+    />
 
-    <a-modal
+    <TriggerForm
       v-model:visible="triggerVisible"
-      :title="triggerForm.id ? '编辑调度规则' : '新建调度规则'"
-      :ok-loading="triggerSaving"
-      width="720px"
-      unmount-on-close
-      @before-ok="saveTrigger"
-    >
-      <a-form :model="triggerForm" layout="vertical">
-        <div class="grid grid-cols-2 gap-x-4">
-          <a-form-item label="规则名称" required><a-input v-model="triggerForm.name" /></a-form-item>
-          <a-form-item label="触发类型" required>
-            <a-select v-model="triggerForm.triggerType" :disabled="!!triggerForm.id">
-              <a-option value="CRON">Cron 定时</a-option><a-option value="EVENT">Webhook 事件</a-option
-              ><a-option value="MANUAL">仅手动</a-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item v-if="triggerForm.triggerType === 'CRON'" label="Quartz Cron" required
-            ><a-input v-model="triggerForm.cronExpression" placeholder="0 0 2 * * ?"
-          /></a-form-item>
-          <a-form-item v-if="triggerForm.triggerType === 'CRON'" label="时区" required
-            ><a-input v-model="triggerForm.timezone"
-          /></a-form-item>
-          <a-form-item v-if="triggerForm.triggerType === 'EVENT'" label="事件类型" required
-            ><a-input v-model="triggerForm.eventType" placeholder="CI_BUILD_COMPLETED"
-          /></a-form-item>
-          <a-form-item v-if="triggerForm.triggerType === 'EVENT'" label="事件过滤 JSON"
-            ><a-input v-model="triggerForm.eventFilter" placeholder='{"branch":"main"}'
-          /></a-form-item>
-          <a-form-item label="并发策略"
-            ><a-select v-model="triggerForm.concurrencyPolicy"
-              ><a-option value="FORBID">禁止重叠</a-option><a-option value="ALLOW">允许并发</a-option></a-select
-            ></a-form-item
-          >
-          <a-form-item label="错过执行"
-            ><a-select v-model="triggerForm.missedPolicy"
-              ><a-option value="FIRE_ONCE">补执行一次</a-option><a-option value="SKIP">跳过</a-option></a-select
-            ></a-form-item
-          >
-          <a-form-item label="任务名称" required><a-input v-model="triggerForm.taskName" /></a-form-item>
-          <a-form-item label="执行模式"
-            ><a-select v-model="triggerForm.executionMode"
-              ><a-option value="RUNNER">RUNNER</a-option><a-option value="AGENT">AGENT</a-option></a-select
-            ></a-form-item
-          >
-          <a-form-item
-            v-if="triggerForm.executionMode === 'AGENT'"
-            label="Agent 类型"
-            :extra="
-              configuredAgents.length
-                ? '仅展示当前项目已配置且当前用户可使用的 Agent'
-                : '当前项目没有可用的 Agent，请先在能力与授权中完成配置'
-            "
-          >
-            <a-select v-model="triggerForm.agentType" :disabled="!configuredAgents.length">
-              <a-option v-for="agent in configuredAgents" :key="agent.name" :value="agent.name.toUpperCase()">
-                {{ agent.name }}
-              </a-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="目标地址"
-            ><a-input v-model="triggerForm.targetUrl" placeholder="https://test.example.com"
-          /></a-form-item>
-        </div>
-        <a-form-item
-          label="用例 ID"
-          required
-          extra="规则最终只保存当前项目用例 ID；选中资产后会在保存规则前先导入当前项目。"
-        >
-          <div class="w-full">
-            <a-textarea v-model="triggerForm.caseIds" :auto-size="{ minRows: 3, maxRows: 6 }" />
-            <div class="mt-2 flex items-center gap-2"
-              ><a-button size="small" @click="assetSelectorVisible = true">从用例资产导入</a-button
-              ><span v-if="pendingAssetIds.length" class="text-xs text-[var(--color-text-3)]"
-                >待导入 {{ pendingAssetIds.length }} 条</span
-              ></div
-            >
-          </div>
-        </a-form-item>
-        <a-form-item label="任务目标"
-          ><a-textarea v-model="triggerForm.objective" :auto-size="{ minRows: 2, maxRows: 4 }"
-        /></a-form-item>
-        <a-form-item label="启用"><a-switch v-model="triggerForm.enabled" /></a-form-item>
-      </a-form>
-    </a-modal>
+      :saving="triggerSaving"
+      :model="triggerForm"
+      :environment-profiles="environmentProfiles"
+      :credential-references="credentialReferences"
+      :model-profiles="modelProfiles"
+      :prompt-templates="promptTemplates"
+      @environment-change="onEnvironmentChange"
+      @select-assets="assetSelectorVisible = true"
+      @save="saveTrigger"
+    />
 
     <a-modal v-model:visible="assetSelectorVisible" title="从用例资产选择" :width="980" @ok="confirmAssetSelection">
       <CaseAssetSelector
@@ -261,18 +146,13 @@
       <div class="break-all rounded bg-[var(--color-fill-2)] p-3 font-mono text-sm">{{ oneTimeSecret }}</div>
     </a-modal>
 
-    <a-drawer v-model:visible="historyVisible" :width="720" title="触发历史">
-      <a-table :data="histories" :loading="historyLoading" :pagination="false" row-key="id">
-        <template #columns>
-          <a-table-column title="触发时间" :width="180"
-            ><template #cell="{ record }">{{ formatTime(record.fireTime) }}</template></a-table-column
-          >
-          <a-table-column title="状态" data-index="status" :width="110" />
-          <a-table-column title="任务 ID" data-index="taskId" :width="220" />
-          <a-table-column title="说明" data-index="message" />
-        </template>
-      </a-table>
-    </a-drawer>
+    <TriggerHistory
+      v-model:visible="historyVisible"
+      :items="histories"
+      :loading="historyLoading"
+      :error="historyError"
+      :format-time="formatTime"
+    />
   </AgentPage>
 </template>
 
@@ -284,11 +164,17 @@
 
   import CaseAssetSelector from '@/components/business/case-asset-selector/index.vue';
   import AgentPage from './components/AgentPage.vue';
+  import TriggerForm from './trigger/TriggerForm.vue';
+  import TriggerHistory from './trigger/TriggerHistory.vue';
+  import TriggerList from './trigger/TriggerList.vue';
 
   import type {
-    AiExecutionAgentOption,
-    AiExecutionMode,
+    AiCredentialReference,
+    AiEnvironmentProfile,
     AiExecutionTask,
+    AiExecutorChannel,
+    AiModelProfile,
+    AiPromptTemplateVersion,
     AiRunnerLease,
     AiTaskTrigger,
     AiTaskTriggerHistory,
@@ -296,10 +182,14 @@
   import {
     createAiTaskTrigger,
     fireAiTaskTrigger,
-    getAiExecutionAgents,
     getAiExecutionLeases,
+    listAiCredentialReferences,
+    listAiEnvironmentProfiles,
+    listAiModelProfiles,
+    listAiPromptTemplateVersions,
     listAiTaskTriggerHistory,
     listAiTaskTriggers,
+    preflightAiExecution,
     rotateAiTaskTriggerSecret,
     searchAiExecutionTasks,
     updateAiTaskTrigger,
@@ -338,11 +228,12 @@
   const query = reactive({
     keyword: '',
     status: undefined as string | undefined,
-    executionMode: undefined as AiExecutionMode | undefined,
+    executorChannel: undefined as AiExecutorChannel | undefined,
     current: 1,
     pageSize: 20,
   });
   const triggerLoading = ref(false);
+  const triggerError = ref('');
   const triggerSaving = ref(false);
   const triggerVisible = ref(false);
   const assetSelectorVisible = ref(false);
@@ -352,11 +243,14 @@
   const secretVisible = ref(false);
   const oneTimeSecret = ref('');
   const triggers = ref<AiTaskTrigger[]>([]);
-  const executionAgents = ref<AiExecutionAgentOption[]>([]);
-  const configuredAgents = computed(() => executionAgents.value.filter((item) => item.configured));
   const histories = ref<AiTaskTriggerHistory[]>([]);
+  const environmentProfiles = ref<AiEnvironmentProfile[]>([]);
+  const credentialReferences = ref<AiCredentialReference[]>([]);
+  const modelProfiles = ref<AiModelProfile[]>([]);
+  const promptTemplates = ref<AiPromptTemplateVersion[]>([]);
   const historyVisible = ref(false);
   const historyLoading = ref(false);
+  const historyError = ref('');
   const triggerForm = reactive({
     id: '',
     name: '',
@@ -370,9 +264,13 @@
     enabled: true,
     taskName: '',
     objective: '',
-    executionMode: 'RUNNER' as AiExecutionMode,
-    agentType: 'CODEX',
-    targetUrl: '',
+    environmentProfileId: '',
+    credentialReferenceId: '',
+    modelProfileId: '',
+    promptTemplateId: '',
+    runnerType: 'BROWSER',
+    requiredCapabilities: ['BROWSER'] as string[],
+    responsibleUserIds: '',
     caseIds: '',
   });
   const pagination = computed(() => ({
@@ -394,6 +292,17 @@
       return 'orange';
     }
     return 'blue';
+  }
+  function taskOriginLabel(origin?: AiExecutionTask['taskOrigin']) {
+    if (origin === 'PLATFORM_SCHEDULED') return '平台定时';
+    if (origin === 'PLATFORM_MANUAL') return '平台手动';
+    if (origin === 'PERSONAL_MCP') return '个人 MCP';
+    return '-';
+  }
+  function executorChannelLabel(channel?: AiExecutionTask['executorChannel']) {
+    if (channel === 'MODEL_API_RUNNER') return '模型执行器';
+    if (channel === 'EXTERNAL_MCP_AGENT') return '外部 MCP Agent';
+    return '-';
   }
 
   async function load() {
@@ -425,7 +334,7 @@
     load();
   }
   function openTask(id: string) {
-    router.push({ path: '/case-management/automation-execution', query: { executionTaskId: id } });
+    router.push({ path: '/agent/execution/detail', query: { executionTaskId: id } });
   }
   function parseCaseIds(value: string) {
     return [
@@ -440,19 +349,36 @@
   async function loadTriggers() {
     if (!appStore.currentProjectId) return;
     triggerLoading.value = true;
+    triggerError.value = '';
     try {
-      const [triggerResult, agentResult] = await Promise.all([
-        listAiTaskTriggers(appStore.currentProjectId),
-        getAiExecutionAgents(appStore.currentProjectId),
-      ]);
+      const triggerResult = await listAiTaskTriggers(appStore.currentProjectId);
       triggers.value = triggerResult || [];
-      executionAgents.value = agentResult || [];
-      if (!configuredAgents.value.some((item) => item.name.toUpperCase() === triggerForm.agentType)) {
-        triggerForm.agentType = configuredAgents.value[0]?.name.toUpperCase() || '';
-      }
+    } catch (error: any) {
+      triggerError.value = error?.message || '调度规则加载失败，请稍后重试';
     } finally {
       triggerLoading.value = false;
     }
+  }
+  async function loadExecutionProfiles() {
+    if (!appStore.currentProjectId) return;
+    const [environments, models, credentials, prompts] = await Promise.all([
+      listAiEnvironmentProfiles(appStore.currentProjectId),
+      listAiModelProfiles(appStore.currentProjectId),
+      listAiCredentialReferences(appStore.currentProjectId),
+      listAiPromptTemplateVersions(appStore.currentProjectId),
+    ]);
+    environmentProfiles.value = environments.filter((item) => item.enabled);
+    modelProfiles.value = models.filter((item) => item.enabled && item.lastVerifyStatus === 'SUCCESS');
+    credentialReferences.value = credentials.filter((item) => item.enabled && item.status === 'ACTIVE');
+    promptTemplates.value = prompts.filter((item) => item.status === 'PUBLISHED');
+  }
+  function onEnvironmentChange() {
+    const profile = environmentProfiles.value.find((item) => item.id === triggerForm.environmentProfileId);
+    triggerForm.runnerType = profile?.runnerType || 'BROWSER';
+    triggerForm.requiredCapabilities = profile?.requiredCapabilities?.length
+      ? [...profile.requiredCapabilities]
+      : ['BROWSER'];
+    if (profile?.defaultCredentialReferenceId) triggerForm.credentialReferenceId = profile.defaultCredentialReferenceId;
   }
   async function loadLeases() {
     leaseLoading.value = true;
@@ -476,9 +402,13 @@
       enabled: true,
       taskName: '',
       objective: '',
-      executionMode: 'RUNNER',
-      agentType: 'CODEX',
-      targetUrl: '',
+      environmentProfileId: '',
+      credentialReferenceId: '',
+      modelProfileId: '',
+      promptTemplateId: '',
+      runnerType: 'BROWSER',
+      requiredCapabilities: ['BROWSER'],
+      responsibleUserIds: '',
       caseIds: '',
     });
     draftAssetIds.value = [];
@@ -560,9 +490,13 @@
         enabled: record.enabled,
         taskName: template.name || '',
         objective: template.objective || '',
-        executionMode: template.executionMode || 'RUNNER',
-        agentType: template.agentType || 'CODEX',
-        targetUrl: template.targetUrl || '',
+        environmentProfileId: record.environmentProfileId || '',
+        credentialReferenceId: record.credentialReferenceId || '',
+        modelProfileId: record.modelProfileId || '',
+        promptTemplateId: record.promptTemplateId || '',
+        runnerType: record.runnerType || 'BROWSER',
+        requiredCapabilities: record.requiredCapabilities ? JSON.parse(record.requiredCapabilities) : [],
+        responsibleUserIds: record.responsibleUserIds ? JSON.parse(record.responsibleUserIds).join('\n') : '',
         caseIds: (template.caseIds || []).join('\n'),
       });
     }
@@ -581,7 +515,16 @@
       }
     }
     const caseIds = parseCaseIds(triggerForm.caseIds);
-    if (!triggerForm.name.trim() || !triggerForm.taskName.trim() || caseIds.length === 0) {
+    const responsibleUserIds = parseCaseIds(triggerForm.responsibleUserIds);
+    if (
+      !triggerForm.name.trim() ||
+      !triggerForm.taskName.trim() ||
+      caseIds.length === 0 ||
+      !triggerForm.environmentProfileId ||
+      !triggerForm.modelProfileId ||
+      !triggerForm.promptTemplateId ||
+      responsibleUserIds.length !== 3
+    ) {
       Message.warning('请填写规则名称、任务名称和至少一个用例 ID');
       done(false);
       return;
@@ -593,14 +536,6 @@
     }
     if (triggerForm.triggerType === 'EVENT' && !triggerForm.eventType.trim()) {
       Message.warning('事件类型不能为空');
-      done(false);
-      return;
-    }
-    if (
-      triggerForm.executionMode === 'AGENT' &&
-      !configuredAgents.value.some((item) => item.name.toUpperCase() === triggerForm.agentType)
-    ) {
-      Message.warning('请选择当前项目可用的 Agent');
       done(false);
       return;
     }
@@ -617,17 +552,50 @@
         concurrencyPolicy: triggerForm.concurrencyPolicy,
         missedPolicy: triggerForm.missedPolicy,
         enabled: triggerForm.enabled,
+        environmentProfileId: triggerForm.environmentProfileId,
+        credentialReferenceId: triggerForm.credentialReferenceId || undefined,
+        modelProfileId: triggerForm.modelProfileId,
+        promptTemplateId: triggerForm.promptTemplateId,
+        runnerType: triggerForm.runnerType,
+        requiredCapabilities: triggerForm.requiredCapabilities,
+        responsibleUserIds,
+        policy: { riskActionPolicy: 'SKIP_AND_REVIEW', scopeExpansionLimit: 0.15 },
+        evidencePolicy: { screenshot: 'ON_FAILURE', redactSensitive: true },
+        notificationPolicy: { channels: ['IN_APP'], firstResponseWins: true },
         taskTemplate: {
           projectId: appStore.currentProjectId,
           name: triggerForm.taskName.trim(),
           objective: triggerForm.objective.trim() || undefined,
           caseIds,
-          targetUrl: triggerForm.targetUrl.trim() || undefined,
-          executionMode: triggerForm.executionMode,
-          agentType: triggerForm.executionMode === 'AGENT' ? (triggerForm.agentType as any) : undefined,
+          environmentProfileId: triggerForm.environmentProfileId,
+          credentialReferenceId: triggerForm.credentialReferenceId || undefined,
+          modelProfileId: triggerForm.modelProfileId,
+          preflightId: '',
           confirmed: true,
         },
       };
+      const preview = await preflightAiExecution({
+        projectId: appStore.currentProjectId,
+        caseIds,
+        environmentProfileId: triggerForm.environmentProfileId,
+        credentialReferenceId: triggerForm.credentialReferenceId || undefined,
+        modelProfileId: triggerForm.modelProfileId,
+        promptTemplateId: triggerForm.promptTemplateId,
+        runnerType: triggerForm.runnerType,
+        requiredCapabilities: triggerForm.requiredCapabilities,
+        policy: data.policy,
+        taskOrigin: 'PLATFORM_SCHEDULED',
+        responsibleUserIds,
+      });
+      if (preview.status !== 'PASSED') {
+        Message.error(
+          `Preflight 未通过：${preview.blockedReason || preview.blockedDetail || '配置不可执行'}；traceId=${
+            preview.traceId
+          }`
+        );
+        done(false);
+        return;
+      }
       const result = triggerForm.id ? await updateAiTaskTrigger(triggerForm.id, data) : await createAiTaskTrigger(data);
       if (result.webhookSecret) {
         oneTimeSecret.value = result.webhookSecret;
@@ -661,6 +629,13 @@
       concurrencyPolicy: record.concurrencyPolicy,
       missedPolicy: record.missedPolicy,
       enabled: !record.enabled,
+      environmentProfileId: record.environmentProfileId,
+      credentialReferenceId: record.credentialReferenceId,
+      modelProfileId: record.modelProfileId,
+      promptTemplateId: record.promptTemplateId,
+      runnerType: record.runnerType,
+      requiredCapabilities: record.requiredCapabilities ? JSON.parse(record.requiredCapabilities) : [],
+      responsibleUserIds: record.responsibleUserIds ? JSON.parse(record.responsibleUserIds) : [],
       taskTemplate: template,
     });
     await loadTriggers();
@@ -679,8 +654,11 @@
   async function openHistory(record: AiTaskTrigger) {
     historyVisible.value = true;
     historyLoading.value = true;
+    historyError.value = '';
     try {
       histories.value = (await listAiTaskTriggerHistory(record.id)) || [];
+    } catch (error: any) {
+      historyError.value = error?.message || '触发历史加载失败，请稍后重试';
     } finally {
       historyLoading.value = false;
     }
@@ -695,10 +673,12 @@
       query.current = 1;
       load();
       loadTriggers();
+      loadExecutionProfiles();
     }
   );
   onMounted(() => {
     load();
     loadTriggers();
+    loadExecutionProfiles();
   });
 </script>

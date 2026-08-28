@@ -3,8 +3,8 @@ export type ActionType =
   | "UPLOAD" | "KEYBOARD" | "WAIT" | "SCROLL";
 
 export type LocatorStrategy =
-  | "TEST_ID" | "ROLE_NAME" | "LABEL" | "PLACEHOLDER"
-  | "TEXT" | "SEMANTIC" | "CSS" | "XPATH";
+  | "TEST_ID" | "ROLE" | "LABEL" | "PLACEHOLDER"
+  | "TEXT" | "CSS";
 
 export interface WebLocator {
   strategy: LocatorStrategy;
@@ -19,13 +19,16 @@ export interface WebLocator {
 
 export interface WebAction {
   contractVersion: "v1";
+  id: string;
   type: ActionType;
   target?: WebLocator;
   value?: string;
   valueRef?: string;
+  fileRef?: string;
+  idempotencyKey: string;
   timeoutMs: number;
   retryable: boolean;
-  riskLevel: "LOW" | "HIGH";
+  riskLevel: "LOW" | "MEDIUM" | "HIGH";
 }
 
 export type AssertionType =
@@ -71,8 +74,13 @@ export interface ExecutionTask {
   targetUrl?: string;
   loginMode?: string;
   policySnapshot?: string;
+  credentialReferenceId?: string;
+  executionParameterSnapshot?: string;
   cases: ExecutionCase[];
 }
+
+export interface RuntimeCredential { username: string; value: string; secretVersion?: string; expiresAt?: number; }
+export interface TestDataLease { id: string; datasetId: string; dataKey: string; leaseToken: string; expiresAt: number; }
 
 export interface LeaseAssignment {
   leaseId: string;

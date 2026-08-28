@@ -3,6 +3,8 @@ package io.metersphere.agent.service;
 import io.metersphere.agent.constants.AgentConstants;
 import io.metersphere.agent.constants.AgentExecutionMode;
 import io.metersphere.agent.constants.AgentExecutionStatus;
+import io.metersphere.agent.constants.AgentExecutorChannel;
+import io.metersphere.agent.constants.AgentTaskOrigin;
 import io.metersphere.agent.dto.AgentCaseDTO;
 import io.metersphere.agent.dto.AgentCaseSearchRequest;
 import io.metersphere.agent.dto.AgentCaseSearchResponse;
@@ -17,6 +19,8 @@ import io.metersphere.agent.dto.AgentExecutionTaskDTO;
 import io.metersphere.agent.dto.AgentExecutionTaskSearchRequest;
 import io.metersphere.agent.dto.AgentExecutionTaskSearchResponse;
 import io.metersphere.agent.dto.AgentExecutionStepDTO;
+import io.metersphere.agent.dto.AgentExecutionPreflightDTO;
+import io.metersphere.agent.dto.AgentEnvironmentProfileDTO;
 import io.metersphere.agent.dto.AgentTestPlanDTO;
 import io.metersphere.agent.dto.AgentTestPlanSearchRequest;
 import io.metersphere.agent.dto.AgentTestPlanSearchResponse;
@@ -39,7 +43,6 @@ import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.dto.request.ai.AiAgentGatewayCapabilityDTO;
-import io.metersphere.system.service.ai.AiGovernanceService;
 import io.metersphere.system.service.ai.provider.AiAgentGatewayService;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
@@ -115,7 +118,19 @@ public class AgentExecutionService {
     @Resource
     private AgentExecutionPlanningService executionPlanningService;
     @Resource
-    private AiGovernanceService aiGovernanceService;
+    private AgentExecutionPreflightService preflightService;
+    @Resource
+    private AgentWebExecutionContractValidator executionContractValidator;
+    @Resource
+    private AgentExecutionChannelPolicy executionChannelPolicy;
+    @Resource
+    private AgentExecutionCheckpointService checkpointService;
+    @Resource
+    private AgentLoginProfileService loginProfileService;
+    @Resource
+    private AgentEnvironmentProfileService environmentProfileService;
+    @Resource
+    private AgentModelProfileService modelProfileService;
     @Resource
     private AiAgentGatewayService agentGatewayService;
     @Resource
@@ -261,32 +276,61 @@ public class AgentExecutionService {
     }
 
     public AgentExecutionTaskDTO create(AgentExecutionCreateRequest request) {
+        return createInternal(request, false);
+    }
+
+    /** Only authenticated MCP/Agent adapters may create PERSONAL_MCP tasks. */
+    public AgentExecutionTaskDTO createPersonalMcp(AgentExecutionCreateRequest request) {
+        if (request != null) {
+            request.setSource("MCP");
+            request.setExecutionMode(AgentExecutionMode.AGENT);
+            request.setDispatchMode("PULL");
+        }
+        return createInternal(request, true);
+    }
+
+    private AgentExecutionTaskDTO createInternal(AgentExecutionCreateRequest request, boolean personalMcp) {
         if (request == null || StringUtils.isBlank(request.getProjectId())) {
             throw new MSException("缺少 projectId");
         }
         String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         String userId = requireUserId();
-        normalizeEnvironmentAssetRef(request);
-        String executionMode = AgentExecutionMode.normalizeMode(request.getExecutionMode());
-        String dispatchMode = AgentExecutionMode.AGENT.equals(executionMode)
-                ? StringUtils.defaultIfBlank(StringUtils.upperCase(request.getDispatchMode()), "PUSH") : "PULL";
-        if (!List.of(AgentExecutionMode.RUNNER, AgentExecutionMode.AGENT).contains(executionMode)) {
-            throw new MSException("executionMode 仅支持 RUNNER/AGENT");
+        String expectedOrigin = personalMcp ? AgentTaskOrigin.PERSONAL_MCP
+                : (StringUtils.startsWith(request.getSource(), "TRIGGER:")
+                ? AgentTaskOrigin.PLATFORM_SCHEDULED : AgentTaskOrigin.PLATFORM_MANUAL);
+        if (StringUtils.isBlank(request.getPreflightId())) {
+            throw new MSException("PREFLIGHT_REQUIRED");
         }
-        String agentType = AgentExecutionMode.normalizeAgentType(request.getAgentType());
+        AgentExecutionPreflightDTO preflight = preflightService.validateForCreate(
+                request.getPreflightId(), projectId, userId, expectedOrigin, request);
+        request.setCaseIds(preflight.getResolvedCaseIds());
+        request.setProjectWide(false);
+        AgentEnvironmentProfileDTO environmentProfile = environmentProfileService.resolveForTask(
+                request.getEnvironmentProfileId(), projectId);
+        if (StringUtils.isNotBlank(request.getTargetUrl())) {
+            environmentProfileService.assertTargetAllowed(environmentProfile, request.getTargetUrl());
+            if (!StringUtils.equals(StringUtils.removeEnd(request.getTargetUrl(), "/"),
+                    StringUtils.removeEnd(environmentProfile.getBaseUrl(), "/"))) {
+                throw new MSException("ENV_TARGET_MISMATCH");
+            }
+        }
+        request.setEnvironmentId(environmentProfile.getEnvironmentId());
+        request.setTargetUrl(environmentProfile.getBaseUrl());
+        if (AgentTaskOrigin.PLATFORM_SCHEDULED.equals(expectedOrigin)
+                && "MANUAL".equalsIgnoreCase(request.getLoginMode())) {
+            throw new MSException("SCHEDULED_MANUAL_LOGIN_FORBIDDEN");
+        }
+        normalizeEnvironmentAssetRef(request);
+        String executionMode = personalMcp ? AgentExecutionMode.AGENT : AgentExecutionMode.RUNNER;
+        String dispatchMode = "PULL";
+        String agentType = personalMcp
+                ? StringUtils.defaultIfBlank(AgentExecutionMode.normalizeAgentType(request.getAgentType()), "MCP_AGENT")
+                : null;
         String agentGatewayId = null;
-        if (AgentExecutionMode.AGENT.equals(executionMode)) {
+        if (personalMcp) {
             if (StringUtils.isBlank(agentType) || !agentType.matches("[A-Z][A-Z0-9_-]{1,31}")) {
                 throw new MSException("agentType 格式无效");
             }
-            if ("PUSH".equals(dispatchMode) && !AgentExecutionMode.SUPPORTED_AGENTS.contains(agentType)) {
-                throw new MSException("Agent 类型仅支持 WORKBUDDY/CURSOR/CODEX");
-            }
-            if ("PUSH".equals(dispatchMode)) {
-                agentGatewayId = agentGatewayService.requireExecutionAgentGateway(agentType, projectId, userId);
-            }
-        } else {
-            agentType = null;
         }
         if (StringUtils.isNotBlank(request.getIdempotencyKey())) {
             AgentExecutionTaskDTO existing = agentExecutionMapper.selectTaskByIdempotency(projectId, userId, request.getIdempotencyKey());
@@ -309,14 +353,6 @@ public class AgentExecutionService {
         if (cases.size() > 100) {
             throw new MSException("单个 AI Web UI 执行任务最多允许 100 条用例");
         }
-        if (AgentExecutionMode.RUNNER.equals(executionMode) && StringUtils.isBlank(request.getProviderId())) {
-            throw new MSException("Runner 执行必须选择 providerId，用于将人工步骤编译为受控动作契约");
-        }
-        if (AgentExecutionMode.RUNNER.equals(executionMode)) {
-            aiGovernanceService.assertModelAllowed(projectId, request.getProviderId());
-            aiGovernanceService.assertCanStartGeneration(projectId);
-        }
-
         List<String> highRiskSignals = detectHighRiskSignals(cases.stream().map(AgentExecutionCaseDTO::getCaseName).toList());
         List<String> confirmReasons = new ArrayList<>();
         if (cases.size() > DEFAULT_CONFIRM_THRESHOLD) {
@@ -341,6 +377,12 @@ public class AgentExecutionService {
                 StringUtils.isNotBlank(testPlanId) ? "测试计划执行 - " + testPlanId : "测试资产执行 - " + cases.size() + " 个用例"));
         task.setObjective(StringUtils.defaultIfBlank(request.getObjective(), "按冻结的用例与环境上下文执行测试并回传可审计证据"));
         task.setSource(StringUtils.defaultIfBlank(request.getSource(), "API"));
+        String taskOrigin = expectedOrigin;
+        String executorChannel = personalMcp ? AgentExecutorChannel.EXTERNAL_MCP_AGENT
+                : AgentExecutorChannel.MODEL_API_RUNNER;
+        executionChannelPolicy.assertCreatePair(taskOrigin, executorChannel);
+        task.setTaskOrigin(taskOrigin);
+        task.setExecutorChannel(executorChannel);
         task.setSelectionMode(StringUtils.defaultIfBlank(request.getSelectionMode(),
                 CollectionUtils.isNotEmpty(request.getCaseIds()) ? "MANUAL" : "NATURAL_LANGUAGE"));
         task.setPrompt(StringUtils.abbreviate(StringUtils.trimToNull(request.getPrompt()), 4000));
@@ -361,8 +403,37 @@ public class AgentExecutionService {
                 : request.getRequiredCapabilities().stream().filter(StringUtils::isNotBlank)
                 .map(StringUtils::trim).distinct().sorted().toList();
         task.setRequiredCapabilities(JSON.toJSONString(requiredCapabilities));
+        if (AgentExecutionMode.RUNNER.equals(executionMode)) {
+            modelProfileService.assertUsable(request.getModelProfileId(), projectId, List.of("STRUCTURED_OUTPUT"));
+        }
         task.setRunnerId(request.getRunnerId());
-        task.setProviderId(request.getProviderId());
+        task.setProviderId(null);
+        task.setPlanSchemaVersion(personalMcp ? null : "v1");
+        if (!personalMcp) {
+            task.setModelSnapshot(preflightService.frozenSnapshotSection(request.getPreflightId(), "model"));
+            task.setPromptTemplateSnapshot(preflightService.frozenSnapshotSection(request.getPreflightId(), "promptTemplate"));
+        }
+        Map<String,Object> executionParameters = new LinkedHashMap<>();
+        executionParameters.put("environmentId", StringUtils.defaultString(request.getEnvironmentId()));
+        executionParameters.put("targetUrl", StringUtils.defaultString(targetUrl));
+        executionParameters.put("browserType", StringUtils.defaultString(request.getBrowserType()));
+        executionParameters.put("loginMode", StringUtils.defaultIfBlank(request.getLoginMode(),
+                StringUtils.isBlank(environmentProfile.getLoginProfileId()) ? "NONE" : "AUTO"));
+        if (StringUtils.isNotBlank(environmentProfile.getLoginProfileId())) {
+            executionParameters.put("loginProfile", JSON.parseObject(loginProfileService.freeze(
+                    environmentProfile.getLoginProfileId(), projectId)));
+        }
+        task.setExecutionParameterSnapshot(JSON.toJSONString(executionParameters));
+        task.setTraceId(IDGenerator.nextStr());
+        task.setEnvironmentProfileId(environmentProfile.getId());
+        task.setEnvironmentProfileVersion(environmentProfile.getVersion());
+        task.setCredentialReferenceId(request.getCredentialReferenceId());
+        task.setModelProfileId(request.getModelProfileId());
+        task.setPromptTemplateVersionId(request.getPromptTemplateVersionId());
+        task.setPreflightId(request.getPreflightId());
+        task.setOriginalScopeCount(preflight.getOriginalScopeCount());
+        task.setExpandedScopeCount(preflight.getExpandedScopeCount());
+        task.setScopeExpansionRate(preflight.getScopeExpansionRate());
         task.setEnvironmentId(request.getEnvironmentId());
         task.setTargetUrl(targetUrl);
         task.setBrowserType(request.getBrowserType());
@@ -387,11 +458,14 @@ public class AgentExecutionService {
         task.setCreateUser(userId);
         task.setUpdateUser(userId);
         task.setVersion(0);
+        preflightService.consume(request.getPreflightId(), projectId, userId, taskOrigin, task.getId());
         agentExecutionMapper.insertTask(task);
 
         int pos = 0;
         List<AgentExecutionStepDTO> allStepSnapshots = new ArrayList<>();
+        List<AgentExecutionStepDTO> reviewRequiredSteps = new ArrayList<>();
         List<String> stableCaseAssetIds = new ArrayList<>();
+        String planningFailure = null;
         for (AgentExecutionCaseDTO item : cases) {
             FunctionalCase functionalCase = functionalCaseMapper.selectByPrimaryKey(item.getCaseId());
             if (functionalCase == null || !StringUtils.equals(projectId, functionalCase.getProjectId())) {
@@ -414,19 +488,28 @@ public class AgentExecutionService {
             item.setCreateTime(now);
             item.setUpdateTime(now);
             List<AgentExecutionStepDTO> stepSnapshots = executionSnapshotService.prepareSnapshot(item, now);
-            TestAssetVersionDTO assetVersion = testAssetVersionService.publish(projectId, "CASE", stableCaseId,
-                    item.getCaseVersion(), item.getCaseSnapshot(), userId);
+            TestAssetVersionDTO assetVersion = preflightService.assertFrozenCaseVersion(request.getPreflightId(),
+                    item.getCaseId(), stableCaseId, item.getCaseSnapshot());
             item.setAssetVersionId(assetVersion.getId());
             if (stepSnapshots.stream().anyMatch(step -> AgentExecutionStatus.CASE_NEEDS_REVIEW.equals(step.getStatus()))) {
-                throw new MSException("用例存在不可执行步骤，请先补充步骤描述和预期结果：" + item.getCaseName());
+                stepSnapshots.stream().filter(step -> AgentExecutionStatus.CASE_NEEDS_REVIEW.equals(step.getStatus()))
+                        .forEach(step -> step.setStatus(AgentExecutionStatus.STEP_SKIPPED_REVIEW_REQUIRED));
             }
             if (AgentExecutionMode.RUNNER.equals(executionMode)) {
-                executionPlanningService.plan(projectId, task.getOrganizationId(), task.getProviderId(), task.getId(),
-                        task.getTargetUrl(), stepSnapshots, userId);
+                if(planningFailure==null){
+                    try{executionPlanningService.plan(projectId, task.getOrganizationId(), task.getModelProfileId(), task.getId(),
+                            task.getTargetUrl(), stepSnapshots, userId);}catch(MSException ex){planningFailure=safePlanningCode(ex);}
+                }
+                if(planningFailure!=null)stepSnapshots.forEach(step->{step.setStatus(AgentExecutionStatus.CASE_NEEDS_REVIEW);step.setRetryable(false);});
             }
             if (stepSnapshots.stream().anyMatch(step -> "HIGH".equalsIgnoreCase(step.getRiskLevel()))) {
-                throw new MSException("第一阶段禁止执行高风险 Web 动作，请拆分或调整用例后重试：" + item.getCaseName());
+                stepSnapshots.stream().filter(step -> "HIGH".equalsIgnoreCase(step.getRiskLevel())).forEach(step -> {
+                    step.setStatus(AgentExecutionStatus.STEP_SKIPPED_REVIEW_REQUIRED);
+                    step.setRetryable(false);
+                });
             }
+            stepSnapshots.stream().filter(step -> AgentExecutionStatus.STEP_SKIPPED_REVIEW_REQUIRED.equals(step.getStatus()))
+                    .forEach(reviewRequiredSteps::add);
             agentExecutionMapper.insertCase(item);
             stepSnapshots.forEach(agentExecutionMapper::insertStep);
             testAssetVersionService.relate(projectId, "EXECUTES", "TASK", task.getId(), null,
@@ -435,8 +518,10 @@ public class AgentExecutionService {
                             "position", item.getPos())), userId);
             allStepSnapshots.addAll(stepSnapshots);
         }
-        List<io.metersphere.agent.dto.TestAssetContextDTO> selectedAssets =
-                testAssetCatalogService.resolveContext(projectId, request.getAssetRefs());
+        Map<String,io.metersphere.agent.dto.TestAssetContextDTO> frozenAssets=new LinkedHashMap<>();
+        preflightService.frozenExecutableAssetContexts(request.getPreflightId()).forEach(asset->frozenAssets.put(asset.getAssetType()+":"+asset.getAssetId(),asset));
+        testAssetCatalogService.resolveContext(projectId, request.getAssetRefs()).forEach(asset->frozenAssets.put(asset.getAssetType()+":"+asset.getAssetId(),asset));
+        List<io.metersphere.agent.dto.TestAssetContextDTO> selectedAssets = new ArrayList<>(frozenAssets.values());
         for (io.metersphere.agent.dto.TestAssetContextDTO asset : selectedAssets) {
             testAssetVersionService.relate(projectId, "USES", "TASK", task.getId(), null,
                     asset.getAssetType(), asset.getAssetId(), asset.getVersionId(),
@@ -445,13 +530,35 @@ public class AgentExecutionService {
         AgentExecutionContextService.ContextSnapshot contextSnapshot = executionContextService.build(
                 task, cases, allStepSnapshots,
                 testAssetCatalogService.documentContextForCases(projectId, stableCaseAssetIds), selectedAssets);
+        String executionContract = planningFailure==null?buildExecutionContract(task, cases, allStepSnapshots, preflight, contextSnapshot.sha256()):null;
+        String executionContractHash = executionContract==null?null:hashText(executionContract);
         int contextUpdated = agentExecutionMapper.updateTaskContext(task.getId(), contextSnapshot.content(),
-                contextSnapshot.sha256(), System.currentTimeMillis());
+                contextSnapshot.sha256(), executionContract, executionContractHash, System.currentTimeMillis());
         if (contextUpdated != 1) {
             throw new MSException("执行上下文冻结失败，任务未进入调度队列");
         }
         task.setContextSnapshot(contextSnapshot.content());
         task.setContextSnapshotHash(contextSnapshot.sha256());
+        task.setExecutionContract(executionContract);
+        task.setExecutionContractHash(executionContractHash);
+        if(planningFailure!=null){
+            task.setStatus(AgentExecutionStatus.WAITING_HUMAN);task.setBlockedReason(io.metersphere.agent.constants.AgentBlockedReason.BLOCKED_MODEL.name());
+            task.setBlockedDetail(planningFailure);agentExecutionMapper.blockTask(task.getId(),task.getBlockedReason(),planningFailure,"AGENT_PLAN_FAILED",userId,System.currentTimeMillis());
+            String content="平台模型规划失败，任务已阻塞且不会降级到个人 Agent。原因："+planningFailure+"，traceId="+task.getTraceId();
+            if(AgentTaskOrigin.PLATFORM_SCHEDULED.equals(taskOrigin))humanRequestService.createForTaskRecipients(task.getId(),"MODEL_BLOCKED","平台模型规划失败",content,"HIGH","system:model-planning",false,task.getTimeoutAt(),null);
+            else humanRequestService.create(task.getId(),projectId,"MODEL_BLOCKED","平台模型规划失败",content,"HIGH","system:model-planning",userId,task.getTimeoutAt());
+            appendEvent(task.getId(),null,"ERROR","TASK_BLOCKED_MODEL",content,Map.of("reason",planningFailure));
+        }
+        if (!reviewRequiredSteps.isEmpty()) {
+            String reviewContent = "已按 SKIP_AND_REVIEW 跳过 " + reviewRequiredSteps.size() + " 个高风险或不可安全编译步骤；其他低风险步骤可继续执行。";
+            if (AgentTaskOrigin.PLATFORM_SCHEDULED.equals(taskOrigin)) {
+                humanRequestService.createForTaskRecipients(task.getId(), "REVIEW", "高风险步骤复核", reviewContent,
+                        "HIGH", "system:contract-validator", false, task.getTimeoutAt(), task.getExecutionContractHash());
+            } else {
+                humanRequestService.create(task.getId(), projectId, "REVIEW", "高风险步骤复核", reviewContent,
+                        "HIGH", "system:contract-validator", userId, task.getTimeoutAt());
+            }
+        }
         if (confirmRequired) {
             humanRequestService.create(task.getId(), projectId, "APPROVAL", "确认执行范围与风险",
                     task.getConfirmationReason(), highRiskSignals.isEmpty() ? "MEDIUM" : "HIGH",
@@ -470,9 +577,8 @@ public class AgentExecutionService {
                 "confirmRequired", confirmRequired,
                 "source", task.getSource()
         )));
-        if (!confirmRequired) {
+        if (!confirmRequired && planningFailure==null) {
             advanceAfterPrepare(task.getId());
-            publishAgentDispatch(task, userId);
         }
         return get(task.getId());
     }
@@ -509,14 +615,18 @@ public class AgentExecutionService {
         String keyword = StringUtils.trimToEmpty(actual.getKeyword());
         String status = StringUtils.upperCase(StringUtils.trimToNull(actual.getStatus()));
         String verdict = StringUtils.upperCase(StringUtils.trimToNull(actual.getVerdict()));
+        String taskOrigin = StringUtils.upperCase(StringUtils.trimToNull(actual.getTaskOrigin()));
+        String executorChannel = StringUtils.upperCase(StringUtils.trimToNull(actual.getExecutorChannel()));
         String mode = StringUtils.upperCase(StringUtils.trimToNull(actual.getExecutionMode()));
         AgentExecutionTaskSearchResponse response = new AgentExecutionTaskSearchResponse();
         response.setCurrent(current);
         response.setPageSize(pageSize);
         response.setTotal(agentExecutionMapper.countTasks(projectId, keyword,
-                AgentProjectService.escapeLike(keyword.toLowerCase(Locale.ROOT)), status, verdict, mode));
+                AgentProjectService.escapeLike(keyword.toLowerCase(Locale.ROOT)), status, verdict,
+                taskOrigin, executorChannel, mode));
         response.setItems(agentExecutionMapper.searchTasks(projectId, keyword,
-                AgentProjectService.escapeLike(keyword.toLowerCase(Locale.ROOT)), status, verdict, mode,
+                AgentProjectService.escapeLike(keyword.toLowerCase(Locale.ROOT)), status, verdict,
+                taskOrigin, executorChannel, mode,
                 (current - 1) * pageSize, pageSize));
         return response;
     }
@@ -582,9 +692,14 @@ public class AgentExecutionService {
         if (List.of("APPROVED", "ANSWERED").contains(response.getStatus())
                 && List.of(AgentExecutionStatus.WAITING_HUMAN, AgentExecutionStatus.WAITING_LOGIN)
                 .contains(task.getStatus())) {
-            int updated = agentExecutionMapper.transitionTaskStatus(taskId, task.getStatus(), normalizedVersion(task),
-                    AgentExecutionStatus.RUNNING, userId, System.currentTimeMillis());
-            assertTransitionUpdated(updated, taskId);
+            String checkpointId = response.getCheckpointId();
+            if (StringUtils.isNotBlank(checkpointId)) {
+                checkpointService.resumeAfterHuman(taskId, checkpointId);
+            } else {
+                int updated = agentExecutionMapper.transitionTaskStatus(taskId, task.getStatus(), normalizedVersion(task),
+                        AgentExecutionStatus.QUEUED, userId, System.currentTimeMillis());
+                assertTransitionUpdated(updated, taskId);
+            }
             appendEvent(taskId, null, "INFO", "HUMAN_REQUEST_RESOLVED",
                     StringUtils.defaultIfBlank(request.getResponse(), response.getStatus()),
                     Map.of("requestId", requestId, "action", response.getStatus()), userId);
@@ -1011,6 +1126,52 @@ public class AgentExecutionService {
             throw new MSException("无法生成执行范围摘要：" + ex.getMessage());
         }
     }
+
+    private String buildExecutionContract(AgentExecutionTaskDTO task, List<AgentExecutionCaseDTO> cases,
+                                          List<AgentExecutionStepDTO> steps, AgentExecutionPreflightDTO preflight,
+                                          String snapshotHash) {
+        Map<String,Object> contract = new LinkedHashMap<>();
+        contract.put("contractVersion", "v1");
+        contract.put("taskId", task.getId());
+        contract.put("snapshotHash", snapshotHash);
+        contract.put("scope", Map.of("caseIds", preflight.getOriginalCaseIds(), "addedCaseIds", preflight.getAddedCaseIds()));
+        contract.put("environmentProfileVersion", task.getEnvironmentProfileVersion());
+        String credentialRole="NONE";
+        if(StringUtils.isNotBlank(task.getCredentialReferenceId())){
+            Map<String,Object> credential=JSON.parseObject(preflightService.frozenSnapshotSection(task.getPreflightId(),"credential"),Map.class);
+            credentialRole=StringUtils.defaultIfBlank((String)credential.get("businessRole"),"DEFAULT");
+        }
+        contract.put("credentialRole", credentialRole);
+        contract.put("runnerRequirements", StringUtils.isBlank(task.getRequiredCapabilities())?List.of():JSON.parseArray(task.getRequiredCapabilities(),String.class));
+        Map<String,List<AgentExecutionStepDTO>> byCase=steps.stream().collect(Collectors.groupingBy(AgentExecutionStepDTO::getExecutionCaseId,LinkedHashMap::new,Collectors.toList()));
+        List<Map<String,Object>> contractCases=new ArrayList<>();
+        for(AgentExecutionCaseDTO item:cases){
+            Map<String,Object> contractCase=new LinkedHashMap<>();contractCase.put("caseId",item.getCaseId());
+            contractCase.put("assetVersionId",item.getAssetVersionId());contractCase.put("name",StringUtils.defaultIfBlank(item.getCaseName(),item.getCaseId()));
+            List<Map<String,Object>> contractSteps=new ArrayList<>();
+            for(AgentExecutionStepDTO step:byCase.getOrDefault(item.getId(),List.of())){
+                if(StringUtils.isAnyBlank(step.getActionJson(),step.getAssertionJson())){
+                    if(AgentExecutorChannel.MODEL_API_RUNNER.equals(task.getExecutorChannel()))throw new MSException("EXECUTION_CONTRACT_STEP_NOT_PLANNED");
+                    continue;
+                }
+                Map<String,Object> value=new LinkedHashMap<>();value.put("stepId",step.getId());
+                value.put("action",JSON.parseObject(step.getActionJson()));value.put("assertions",JSON.parseArray(step.getAssertionJson()));
+                value.put("onFailure",AgentExecutionStatus.STEP_SKIPPED_REVIEW_REQUIRED.equals(step.getStatus())?"NEEDS_REVIEW":"STOP_CASE");
+                value.put("evidencePolicy","ON_FAILURE");contractSteps.add(value);
+            }
+            contractCase.put("steps",contractSteps);contractCase.put("cleanupActions",List.of());contractCases.add(contractCase);
+        }
+        contract.put("cases",contractCases);contract.put("generatedAt",System.currentTimeMillis());
+        if(AgentExecutorChannel.MODEL_API_RUNNER.equals(task.getExecutorChannel()))executionContractValidator.validateContract(contract);
+        return JSON.toJSONString(contract);
+    }
+
+    private String hashText(String value) {
+        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(StringUtils.defaultString(value).getBytes(StandardCharsets.UTF_8))); }
+        catch (Exception ex) { throw new MSException("EXECUTION_CONTRACT_HASH_FAILED"); }
+    }
+
+    private String safePlanningCode(Throwable error){String code=StringUtils.defaultString(error.getMessage());return code.matches("[A-Z0-9_]+")?code:"AGENT_PLAN_FAILED";}
 
     private String validateTargetUrl(String targetUrl) {
         if (StringUtils.isBlank(targetUrl)) {

@@ -4,6 +4,13 @@ export default {
   'caseManagement.featureCase.unclassifiedSystem': 'Unclassified',
   'caseManagement.featureCase.creatingCase': 'Create Case',
   'caseManagement.featureCase.importCase': 'Import Case',
+  'caseManagement.featureCase.syncStatus': 'Sync Status to Test Plans',
+  'caseManagement.featureCase.syncProjectConfirm':
+    'Sync execution status for associated cases to all unarchived test plans and unlink deleted cases. New cases will not be added. Continue?',
+  'caseManagement.featureCase.syncPlanConfirm':
+    'Sync execution status for associated cases to this test plan and unlink deleted cases. New cases will not be added. Continue?',
+  'caseManagement.featureCase.syncSuccess':
+    'Sync completed: {plans} test plan(s), {updated} updated, {removed} removed',
   'caseManagement.featureCase.importExcel': 'Import Excel',
   'caseManagement.featureCase.importXmind': 'Import Xmind',
   'caseManagement.featureCase.uploadXmind': 'Upload Xmind',

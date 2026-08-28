@@ -13,6 +13,18 @@
         <result column="concurrency_policy" property="concurrencyPolicy"/>
         <result column="missed_policy" property="missedPolicy"/>
         <result column="task_template" property="taskTemplate"/>
+        <result column="trigger_version" property="triggerVersion"/>
+        <result column="model_profile_id" property="modelProfileId"/>
+        <result column="prompt_template_id" property="promptTemplateId"/>
+        <result column="environment_profile_id" property="environmentProfileId"/>
+        <result column="credential_reference_id" property="credentialReferenceId"/>
+        <result column="runner_type" property="runnerType"/>
+        <result column="required_capabilities" property="requiredCapabilities"/>
+        <result column="policy_json" property="policyJson"/>
+        <result column="evidence_policy_json" property="evidencePolicyJson"/>
+        <result column="notification_policy_json" property="notificationPolicyJson"/>
+        <result column="responsible_user_ids" property="responsibleUserIds"/>
+        <result column="enabled" property="enabled"/>
         <result column="next_fire_at" property="nextFireAt"/>
         <result column="last_fire_at" property="lastFireAt"/>
         <result column="last_fire_status" property="lastFireStatus"/>
@@ -25,20 +37,31 @@
     <resultMap id="historyMap" type="io.metersphere.agent.dto.AgentTaskTriggerHistoryDTO">
         <id column="id" property="id"/>
         <result column="trigger_id" property="triggerId"/>
+        <result column="trigger_version" property="triggerVersion"/>
         <result column="task_id" property="taskId"/>
         <result column="event_id" property="eventId"/>
         <result column="scheduled_at" property="scheduledAt"/>
+        <result column="attempt_no" property="attemptNo"/>
+        <result column="idempotency_key" property="idempotencyKey"/>
+        <result column="trace_id" property="traceId"/>
         <result column="fire_time" property="fireTime"/>
+        <result column="status" property="status"/>
+        <result column="blocked_reason" property="blockedReason"/>
+        <result column="message" property="message"/>
         <result column="created_at" property="createdAt"/>
     </resultMap>
     <insert id="insert">
         INSERT INTO ai_task_trigger
         (id, org_id, project_id, name, trigger_type, cron_expression, timezone, event_type, event_filter,
-         webhook_secret_cipher, concurrency_policy, missed_policy, task_template, enabled, next_fire_at,
+         webhook_secret_cipher, concurrency_policy, missed_policy, task_template, trigger_version, model_profile_id,
+         prompt_template_id, environment_profile_id, credential_reference_id, runner_type, required_capabilities,
+         policy_json, evidence_policy_json, notification_policy_json, responsible_user_ids, enabled, next_fire_at,
          created_by, created_at, updated_by, updated_at, version)
         VALUES
         (#{id}, #{organizationId}, #{projectId}, #{name}, #{triggerType}, #{cronExpression}, #{timezone}, #{eventType},
-         #{eventFilter}, #{webhookSecretCipher}, #{concurrencyPolicy}, #{missedPolicy}, #{taskTemplate}, #{enabled},
+         #{eventFilter}, #{webhookSecretCipher}, #{concurrencyPolicy}, #{missedPolicy}, #{taskTemplate}, #{triggerVersion},
+         #{modelProfileId}, #{promptTemplateId}, #{environmentProfileId}, #{credentialReferenceId}, #{runnerType},
+         #{requiredCapabilities}, #{policyJson}, #{evidencePolicyJson}, #{notificationPolicyJson}, #{responsibleUserIds}, #{enabled},
          #{nextFireAt}, #{createdBy}, #{createdAt}, #{updatedBy}, #{updatedAt}, 0)
     </insert>
     <select id="selectById" resultMap="triggerMap">
@@ -57,6 +80,11 @@
             timezone=#{timezone}, event_type=#{eventType}, event_filter=#{eventFilter},
             webhook_secret_cipher=COALESCE(#{webhookSecretCipher}, webhook_secret_cipher),
             concurrency_policy=#{concurrencyPolicy}, missed_policy=#{missedPolicy}, task_template=#{taskTemplate},
+            trigger_version=trigger_version+1, model_profile_id=#{modelProfileId}, prompt_template_id=#{promptTemplateId},
+            environment_profile_id=#{environmentProfileId}, credential_reference_id=#{credentialReferenceId},
+            runner_type=#{runnerType}, required_capabilities=#{requiredCapabilities}, policy_json=#{policyJson},
+            evidence_policy_json=#{evidencePolicyJson}, notification_policy_json=#{notificationPolicyJson},
+            responsible_user_ids=#{responsibleUserIds},
             enabled=#{enabled}, next_fire_at=#{nextFireAt}, updated_by=#{updatedBy}, updated_at=#{updatedAt}, version=version+1
         WHERE id=#{id} AND version=#{version}
     </update>
@@ -75,8 +103,10 @@
     </select>
     <insert id="insertHistory">
         INSERT INTO ai_task_trigger_history
-        (id, trigger_id, task_id, event_id, scheduled_at, fire_time, status, message, created_at)
-        VALUES (#{id}, #{triggerId}, #{taskId}, #{eventId}, #{scheduledAt}, #{fireTime}, #{status}, #{message}, #{createdAt})
+        (id, trigger_id, trigger_version, task_id, event_id, scheduled_at, attempt_no, idempotency_key, trace_id,
+         fire_time, status, blocked_reason, message, created_at)
+        VALUES (#{id}, #{triggerId}, #{triggerVersion}, #{taskId}, #{eventId}, #{scheduledAt}, #{attemptNo},
+         #{idempotencyKey}, #{traceId}, #{fireTime}, #{status}, #{blockedReason}, #{message}, #{createdAt})
     </insert>
     <select id="selectHistory" resultMap="historyMap">
         SELECT * FROM ai_task_trigger_history WHERE trigger_id=#{triggerId} ORDER BY fire_time DESC LIMIT #{limit}

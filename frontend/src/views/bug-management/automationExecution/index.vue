@@ -83,9 +83,9 @@
         <a-select v-model:model-value="taskSearch.verdict" class="w-[170px]" allow-clear placeholder="业务结论">
           <a-option v-for="verdict in taskVerdicts" :key="verdict" :value="verdict">{{ verdict }}</a-option>
         </a-select>
-        <a-select v-model:model-value="taskSearch.executionMode" class="w-[130px]" allow-clear placeholder="执行方式">
-          <a-option value="RUNNER">RUNNER</a-option>
-          <a-option value="AGENT">AGENT</a-option>
+        <a-select v-model:model-value="taskSearch.executorChannel" class="w-[190px]" allow-clear placeholder="执行通道">
+          <a-option value="MODEL_API_RUNNER">平台模型执行器</a-option>
+          <a-option value="EXTERNAL_MCP_AGENT">个人 MCP Agent</a-option>
         </a-select>
         <a-button type="primary" :loading="taskListLoading" @click="reloadTaskList">查询</a-button>
       </div>
@@ -105,10 +105,10 @@
               <a-tag :color="verdictColor(record.verdict)">{{ record.verdict || '待判定' }}</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="执行器" :width="150">
-            <template #cell="{ record }"
-              >{{ record.executionMode }} / {{ record.agentType || record.runnerId || '-' }}</template
-            >
+          <a-table-column title="执行来源 / 通道" :width="230">
+            <template #cell="{ record }">
+              {{ taskOriginLabel(record.taskOrigin) }} / {{ executorChannelLabel(record.executorChannel) }}
+            </template>
           </a-table-column>
           <a-table-column title="进度" :width="130">
             <template #cell="{ record }"
@@ -140,52 +140,37 @@
       <section class="automation-panel">
         <div class="panel-title">{{ t('bugManagement.automationExecution.conversation') }}</div>
         <a-form :model="draftForm" layout="vertical" class="mb-[12px]">
-          <a-form-item :label="t('bugManagement.automationExecution.executionMode')">
-            <a-radio-group v-model:model-value="draftForm.executionMode" type="button">
-              <a-radio value="RUNNER">{{ t('bugManagement.automationExecution.executionModeRunner') }}</a-radio>
-              <a-radio value="AGENT">{{ t('bugManagement.automationExecution.executionModeAgent') }}</a-radio>
-            </a-radio-group>
-          </a-form-item>
-          <a-form-item
-            v-if="draftForm.executionMode === 'AGENT'"
-            :label="t('bugManagement.automationExecution.executionAgent')"
+          <a-alert class="mb-[12px]" type="info" show-icon>
+            平台创建的任务固定由模型执行器运行；个人 Agent 任务仅能通过 MCP 创建。
+          </a-alert>
+          <a-form-item label="MAP Gateway 模型配置" required
+            ><a-select v-model="draftForm.modelProfileId"
+              ><a-option v-for="item in platformModelProfiles" :key="item.id" :value="item.id"
+                >{{ item.name }} · {{ item.logicalModelPublicId }}</a-option
+              ></a-select
+            ></a-form-item
           >
-            <a-select
-              v-model:model-value="draftForm.agentType"
-              :options="agentSelectOptions"
-              :placeholder="t('bugManagement.automationExecution.executionAgentPlaceholder')"
-            />
-          </a-form-item>
-          <a-form-item
-            v-if="draftForm.executionMode === 'RUNNER'"
-            :label="t('bugManagement.automationExecution.model')"
+          <a-form-item label="已发布 Prompt 模板" required
+            ><a-select v-model="draftForm.promptTemplateId"
+              ><a-option v-for="item in platformPromptTemplates" :key="item.id" :value="item.promptTemplateId"
+                >{{ item.name }} · v{{ item.versionNo }}</a-option
+              ></a-select
+            ></a-form-item
           >
-            <a-select
-              v-model:model-value="chatModelId"
-              :options="modelOptions"
-              allow-search
-              :placeholder="t('bugManagement.automationExecution.modelPlaceholder')"
-            />
-          </a-form-item>
-          <a-form-item :label="t('bugManagement.automationExecution.targetUrl')">
-            <a-input v-model:model-value="draftForm.targetUrl" :placeholder="'https://...'" :max-length="500" />
-          </a-form-item>
-          <a-form-item :label="t('bugManagement.automationExecution.environment')">
-            <a-select
-              v-model:model-value="draftForm.environmentId"
-              allow-search
-              allow-clear
-              :filter-option="false"
-              placeholder="选择当前项目的测试环境"
-              @change="handleEnvironmentChange"
-              @search="loadEnvironmentOptions"
-              @popup-visible-change="(visible: boolean) => visible && loadEnvironmentOptions()"
-            >
-              <a-option v-for="item in environmentOptions" :key="item.id" :value="item.id">
-                {{ item.name }}{{ item.status ? `（${item.status}）` : '' }}
-              </a-option>
-            </a-select>
-          </a-form-item>
+          <a-form-item label="环境执行配置" required
+            ><a-select v-model="draftForm.environmentProfileId" @change="selectExecutionEnvironment"
+              ><a-option v-for="item in platformEnvironmentProfiles" :key="item.id" :value="item.id"
+                >{{ item.name }} · {{ item.baseUrl }}</a-option
+              ></a-select
+            ></a-form-item
+          >
+          <a-form-item label="凭据引用"
+            ><a-select v-model="draftForm.credentialReferenceId" allow-clear
+              ><a-option v-for="item in platformCredentialReferences" :key="item.id" :value="item.id"
+                >{{ item.name }} · {{ item.businessRole }}</a-option
+              ></a-select
+            ></a-form-item
+          >
           <a-form-item label="任务资产">
             <div class="w-full">
               <div class="mb-[8px] flex flex-wrap gap-[8px]">
@@ -232,10 +217,9 @@
             :loading="createLoading"
             :disabled="
               !canCreateFromResolve ||
-              (draftForm.executionMode === 'RUNNER' && !chatModelId) ||
-              !draftForm.targetUrl ||
-              !draftForm.environmentId ||
-              (draftForm.executionMode === 'AGENT' && !selectedAgentConfigured)
+              !draftForm.modelProfileId ||
+              !draftForm.promptTemplateId ||
+              !draftForm.environmentProfileId
             "
             @click="createFromResolve"
           >
@@ -268,6 +252,83 @@
               {{ resolveResult.caseSnapshotHash || '-' }}
             </a-descriptions-item>
           </a-descriptions>
+
+          <a-alert v-if="observabilityError" class="mt-[12px]" type="error" :content="observabilityError">
+            <template #action><a-button size="mini" @click="loadObservability">重试</a-button></template>
+          </a-alert>
+          <a-collapse v-if="task" class="mt-[12px]" :bordered="false">
+            <a-collapse-item key="governance" header="冻结上下文、模型调用与运行治理">
+              <a-spin :loading="observabilityLoading" class="w-full">
+                <a-descriptions :column="2" size="small" bordered>
+                  <a-descriptions-item label="Preflight 状态">{{
+                    observability?.preflight?.status || '-'
+                  }}</a-descriptions-item>
+                  <a-descriptions-item label="Preflight 快照 Hash">{{
+                    observability?.preflight?.assetSnapshotHash || '-'
+                  }}</a-descriptions-item>
+                  <a-descriptions-item label="模型调用次数">{{
+                    observability?.modelInvocations?.length || 0
+                  }}</a-descriptions-item>
+                  <a-descriptions-item label="Runner Lease 次数">{{
+                    observability?.runnerLeases?.length || 0
+                  }}</a-descriptions-item>
+                  <a-descriptions-item label="数据租约数">{{
+                    observability?.dataLeases?.length || 0
+                  }}</a-descriptions-item>
+                  <a-descriptions-item label="清理任务数">{{
+                    observability?.cleanupJobs?.length || 0
+                  }}</a-descriptions-item>
+                </a-descriptions>
+                <div class="panel-subtitle mt-[12px]">模型 Invocation</div>
+                <a-table :data="observability?.modelInvocations || []" :pagination="false" size="small" row-key="id">
+                  <template #columns>
+                    <a-table-column title="Request ID" data-index="gatewayRequestId" :width="210" ellipsis tooltip />
+                    <a-table-column title="状态" data-index="status" :width="100" />
+                    <a-table-column title="TTFT(ms)" data-index="ttftMs" :width="105" />
+                    <a-table-column title="总耗时(ms)" data-index="durationMs" :width="115" />
+                    <a-table-column title="输入/输出 Token" :width="145"
+                      ><template #cell="{ record }"
+                        >{{ record.inputTokens || 0 }}/{{ record.outputTokens || 0 }}</template
+                      ></a-table-column
+                    >
+                    <a-table-column title="重试" data-index="retryCount" :width="80" />
+                    <a-table-column title="费用" :width="110"
+                      ><template #cell="{ record }"
+                        >{{ record.costAmount ?? 0 }} {{ record.currency || '' }}</template
+                      ></a-table-column
+                    >
+                    <a-table-column title="错误" data-index="errorCode" ellipsis tooltip />
+                  </template>
+                </a-table>
+                <div class="panel-subtitle mt-[12px]">数据租约与清理</div>
+                <a-table :data="observability?.dataLeases || []" :pagination="false" size="small" row-key="id">
+                  <template #columns>
+                    <a-table-column title="数据集" data-index="datasetId" />
+                    <a-table-column title="数据键" data-index="dataKey" />
+                    <a-table-column title="命名空间" data-index="namespace" />
+                    <a-table-column title="状态" data-index="status" :width="100" />
+                    <a-table-column title="过期时间" :width="170"
+                      ><template #cell="{ record }">{{ formatTime(record.expiresAt) }}</template></a-table-column
+                    >
+                  </template>
+                </a-table>
+                <a-table
+                  class="mt-[8px]"
+                  :data="observability?.cleanupJobs || []"
+                  :pagination="false"
+                  size="small"
+                  row-key="id"
+                >
+                  <template #columns>
+                    <a-table-column title="清理类型" data-index="cleanupType" />
+                    <a-table-column title="状态" data-index="status" :width="100" />
+                    <a-table-column title="尝试次数" data-index="attemptCount" :width="100" />
+                    <a-table-column title="错误" data-index="errorMessage" ellipsis tooltip />
+                  </template>
+                </a-table>
+              </a-spin>
+            </a-collapse-item>
+          </a-collapse>
           <div
             v-if="(resolveResult.matchedReasons || []).length"
             class="mt-[8px] text-[12px] text-[var(--color-text-3)]"
@@ -351,11 +412,31 @@
             <a-descriptions-item :label="t('bugManagement.automationExecution.model')">
               {{ task.providerId || chatModelId || '-' }}
             </a-descriptions-item>
-            <a-descriptions-item :label="t('bugManagement.automationExecution.executionMode')">
-              {{ task.executionMode || 'RUNNER' }}
+            <a-descriptions-item label="任务来源">
+              {{ taskOriginLabel(task.taskOrigin) }}
             </a-descriptions-item>
-            <a-descriptions-item :label="t('bugManagement.automationExecution.executionAgent')">
-              {{ task.agentType || '-' }}
+            <a-descriptions-item label="执行通道">
+              {{ executorChannelLabel(task.executorChannel) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="本次执行 ID">
+              {{ task.currentExecutionId || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="Trace ID">{{ task.traceId || '-' }}</a-descriptions-item>
+            <a-descriptions-item label="Preflight ID">{{ task.preflightId || '-' }}</a-descriptions-item>
+            <a-descriptions-item label="环境 Profile / 版本">
+              {{ task.environmentProfileId || '-' }} / {{ task.environmentProfileVersion ?? '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="模型 / Prompt 版本">
+              {{ task.modelProfileId || '-' }} / {{ task.promptTemplateVersionId || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="Runner / Lease">
+              {{ task.runnerId || '-' }} / {{ task.runnerLeaseId || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="执行合同 Hash">{{ task.executionContractHash || '-' }}</a-descriptions-item>
+            <a-descriptions-item label="范围 / 扩围">
+              {{ task.originalScopeCount || 0 }} + {{ task.expandedScopeCount || 0 }}（{{
+                ((task.scopeExpansionRate || 0) * 100).toFixed(2)
+              }}%）
             </a-descriptions-item>
             <a-descriptions-item :label="t('bugManagement.automationExecution.startTime')">
               {{ formatTime(task.createTime) }}
@@ -471,13 +552,48 @@
 
           <div class="mt-[12px] flex items-center justify-between gap-[8px]">
             <div class="panel-subtitle">{{ t('bugManagement.automationExecution.eventLog') }}</div>
-            <div class="flex items-center gap-[8px]">
+            <div class="flex flex-wrap items-center justify-end gap-[8px]">
               <a-select v-model:model-value="eventLevel" size="mini" class="w-[120px]" @change="resetEvents">
                 <a-option value="ALL">ALL</a-option>
                 <a-option value="INFO">INFO</a-option>
                 <a-option value="WARN">WARN</a-option>
                 <a-option value="ERROR">ERROR</a-option>
               </a-select>
+              <a-select
+                v-model:model-value="eventTypeFilter"
+                size="mini"
+                allow-clear
+                class="w-[160px]"
+                placeholder="事件类型"
+              >
+                <a-option v-for="type in eventTypeOptions" :key="type" :value="type">{{ type }}</a-option>
+              </a-select>
+              <a-select
+                v-model:model-value="eventActorFilter"
+                size="mini"
+                allow-clear
+                class="w-[180px]"
+                placeholder="执行者"
+              >
+                <a-option v-for="actor in eventActorOptions" :key="actor.value" :value="actor.value">
+                  {{ actor.label }}
+                </a-option>
+              </a-select>
+              <a-input
+                v-model:model-value="eventStepFilter"
+                size="mini"
+                allow-clear
+                class="w-[140px]"
+                placeholder="步骤 ID"
+              />
+              <a-range-picker
+                v-model:model-value="eventTimeRange"
+                size="mini"
+                show-time
+                value-format="timestamp"
+                class="w-[300px]"
+              />
+              <a-checkbox v-model:model-value="eventFailedOnly">仅失败</a-checkbox>
               <a-button size="mini" @click="downloadEvents">
                 {{ t('bugManagement.automationExecution.downloadLog') }}
               </a-button>
@@ -488,6 +604,7 @@
               <a-tag size="small" :color="eventLevelColor(event.level)">{{ event.level }}</a-tag>
               <span class="event-time">{{ formatTime(event.eventTime) }}</span>
               <span class="event-type">{{ event.eventType }}</span>
+              <span class="event-type">{{ event.actorType || '-' }} / {{ event.actorId || '-' }}</span>
               <span class="event-message">{{ event.message }}</span>
             </div>
             <a-empty v-if="filteredEvents.length === 0" :description="t('bugManagement.automationExecution.noEvent')" />
@@ -545,25 +662,33 @@
   import dayjs from 'dayjs';
 
   import {
-    type AiExecutionAgentOption,
-    type AiExecutionAgentType,
+    type AiCredentialReference,
+    type AiEnvironmentProfile,
     type AiExecutionArtifact,
     type AiExecutionEvent,
-    type AiExecutionMode,
+    type AiExecutionObservability,
     type AiExecutionResolveResult,
     type AiExecutionTask,
+    type AiExecutorChannel,
     type AiHumanRequest,
+    type AiModelProfile,
+    type AiPromptTemplateVersion,
     cancelAiExecutionTask,
     confirmAiExecutionTask,
     createAiExecutionTask,
-    getAiExecutionAgents,
     getAiExecutionArtifacts,
     getAiExecutionEvents,
+    getAiExecutionObservability,
     getAiExecutionTask,
     getAiHumanRequests,
+    listAiCredentialReferences,
+    listAiEnvironmentProfiles,
+    listAiModelProfiles,
+    listAiPromptTemplateVersions,
     loginReadyAiExecutionTask,
     pageTestAssetCatalog,
     pauseAiExecutionTask,
+    preflightAiExecution,
     resolveAiExecutionScope,
     respondAiHumanRequest,
     retryAiExecutionTask,
@@ -586,6 +711,9 @@
   const resolveLoading = ref(false);
   const createLoading = ref(false);
   const task = ref<AiExecutionTask>();
+  const observability = ref<AiExecutionObservability>();
+  const observabilityLoading = ref(false);
+  const observabilityError = ref('');
   const taskListLoading = ref(false);
   const taskList = ref<AiExecutionTask[]>([]);
   const taskListTotal = ref(0);
@@ -593,7 +721,7 @@
     keyword: '',
     status: undefined as string | undefined,
     verdict: undefined as string | undefined,
-    executionMode: undefined as AiExecutionMode | undefined,
+    executorChannel: undefined as AiExecutorChannel | undefined,
     current: 1,
     pageSize: 20,
   });
@@ -626,16 +754,45 @@
   const humanAnswerVisible = ref(false);
   const humanAnswerRequestId = ref('');
   const humanAnswer = ref('');
-  const agentOptions = ref<AiExecutionAgentOption[]>([]);
   const eventCursor = ref(0);
   const eventLevel = ref('ALL');
+  const eventTypeFilter = ref('');
+  const eventActorFilter = ref('');
+  const eventStepFilter = ref('');
+  const eventTimeRange = ref<Array<number | string>>([]);
+  const eventFailedOnly = ref(false);
   const prompt = ref('');
   const draftForm = reactive({
-    executionMode: 'RUNNER' as AiExecutionMode,
-    agentType: undefined as AiExecutionAgentType | undefined,
-    targetUrl: '',
     environmentId: '',
+    environmentProfileId: '',
+    credentialReferenceId: '',
+    modelProfileId: '',
+    promptTemplateId: '',
   });
+  const platformEnvironmentProfiles = ref<AiEnvironmentProfile[]>([]);
+  const platformCredentialReferences = ref<AiCredentialReference[]>([]);
+  const platformModelProfiles = ref<AiModelProfile[]>([]);
+  const platformPromptTemplates = ref<AiPromptTemplateVersion[]>([]);
+  async function loadExecutionProfiles() {
+    if (!appStore.currentProjectId) return;
+    const [e, c, m, p] = await Promise.all([
+      listAiEnvironmentProfiles(appStore.currentProjectId),
+      listAiCredentialReferences(appStore.currentProjectId),
+      listAiModelProfiles(appStore.currentProjectId),
+      listAiPromptTemplateVersions(appStore.currentProjectId),
+    ]);
+    platformEnvironmentProfiles.value = e.filter((x) => x.enabled);
+    platformCredentialReferences.value = c.filter((x) => x.enabled && x.status === 'ACTIVE');
+    platformModelProfiles.value = m.filter((x) => x.enabled && x.lastVerifyStatus === 'SUCCESS');
+    platformPromptTemplates.value = p.filter((x) => x.status === 'PUBLISHED');
+    if (!draftForm.modelProfileId) draftForm.modelProfileId = platformModelProfiles.value[0]?.id || '';
+    if (!draftForm.promptTemplateId)
+      draftForm.promptTemplateId = platformPromptTemplates.value[0]?.promptTemplateId || '';
+  }
+  function selectExecutionEnvironment() {
+    const e = platformEnvironmentProfiles.value.find((x) => x.id === draftForm.environmentProfileId);
+    if (e?.defaultCredentialReferenceId) draftForm.credentialReferenceId = e.defaultCredentialReferenceId;
+  }
   type SelectedAssetRef = {
     assetType: TestAssetCatalogType;
     assetId: string;
@@ -764,23 +921,32 @@
       value: item.id,
     }))
   );
-  const agentSelectOptions = computed(() =>
-    agentOptions.value.map((item) => ({
-      label: item.configured
-        ? item.name
-        : `${item.name} (${t('bugManagement.automationExecution.agentNotConfigured')})`,
-      value: item.name.toUpperCase() as AiExecutionAgentType,
-      disabled: !item.configured,
-    }))
-  );
-  const selectedAgentConfigured = computed(
-    () =>
-      draftForm.executionMode !== 'AGENT' ||
-      agentOptions.value.some((item) => item.configured && item.name.toUpperCase() === draftForm.agentType)
-  );
-  const filteredEvents = computed(() =>
-    events.value.filter((item) => eventLevel.value === 'ALL' || item.level === eventLevel.value)
-  );
+  const eventTypeOptions = computed(() => [...new Set(events.value.map((item) => item.eventType))].sort());
+  const eventActorOptions = computed(() => {
+    const actors = new Map<string, string>();
+    events.value.forEach((item) => {
+      const value = `${item.actorType || ''}:${item.actorId || ''}`;
+      if (value !== ':') actors.set(value, `${item.actorType || '-'} / ${item.actorId || '-'}`);
+    });
+    return [...actors.entries()].map(([value, label]) => ({ value, label }));
+  });
+  const filteredEvents = computed(() => {
+    const stepKeyword = eventStepFilter.value.trim().toLowerCase();
+    const [startTime, endTime] = eventTimeRange.value.map(Number);
+    return events.value.filter((item) => {
+      const actor = `${item.actorType || ''}:${item.actorId || ''}`;
+      const failed = item.level === 'ERROR' || item.eventType.includes('FAILED');
+      return (
+        (eventLevel.value === 'ALL' || item.level === eventLevel.value) &&
+        (!eventTypeFilter.value || item.eventType === eventTypeFilter.value) &&
+        (!eventActorFilter.value || actor === eventActorFilter.value) &&
+        (!stepKeyword || (item.stepId || '').toLowerCase().includes(stepKeyword)) &&
+        (!startTime || Number(item.eventTime || 0) >= startTime) &&
+        (!endTime || Number(item.eventTime || 0) <= endTime) &&
+        (!eventFailedOnly.value || failed)
+      );
+    });
+  });
   const canCancel = computed(
     () => !!task.value && !['SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'CANCELED', 'EXPIRED'].includes(task.value.status)
   );
@@ -830,6 +996,19 @@
     return 'gray';
   }
 
+  function taskOriginLabel(origin?: AiExecutionTask['taskOrigin']) {
+    if (origin === 'PLATFORM_SCHEDULED') return '平台定时';
+    if (origin === 'PLATFORM_MANUAL') return '平台手动';
+    if (origin === 'PERSONAL_MCP') return '个人 MCP';
+    return '-';
+  }
+
+  function executorChannelLabel(channel?: AiExecutionTask['executorChannel']) {
+    if (channel === 'MODEL_API_RUNNER') return '模型执行器';
+    if (channel === 'EXTERNAL_MCP_AGENT') return '外部 MCP Agent';
+    return '-';
+  }
+
   async function reloadTaskList() {
     if (!appStore.currentProjectId || executionTaskId.value) return;
     taskListLoading.value = true;
@@ -839,7 +1018,7 @@
         keyword: taskSearch.keyword.trim() || undefined,
         status: taskSearch.status,
         verdict: taskSearch.verdict,
-        executionMode: taskSearch.executionMode,
+        executorChannel: taskSearch.executorChannel,
         current: taskSearch.current,
         pageSize: taskSearch.pageSize,
       });
@@ -855,6 +1034,10 @@
   }
 
   async function backToTaskList() {
+    if (route.path === '/agent/execution/detail') {
+      await router.push('/agent/queue');
+      return;
+    }
     const query = { ...route.query };
     delete query.executionTaskId;
     delete query.creating;
@@ -920,6 +1103,23 @@
       Message.error(t('bugManagement.automationExecution.loadFailed'));
     } finally {
       loading.value = false;
+    }
+  }
+
+  async function loadObservability() {
+    if (!executionTaskId.value) {
+      observability.value = undefined;
+      observabilityError.value = '';
+      return;
+    }
+    observabilityLoading.value = true;
+    observabilityError.value = '';
+    try {
+      observability.value = await getAiExecutionObservability(executionTaskId.value);
+    } catch (error: any) {
+      observabilityError.value = error?.message || '加载执行治理信息失败，请稍后重试';
+    } finally {
+      observabilityLoading.value = false;
     }
   }
 
@@ -998,30 +1198,11 @@
     await loadEvents(true);
     await loadArtifacts();
     await loadHumanRequests();
+    await loadObservability();
   }
 
   function resetEvents() {
     // filter only; keep loaded events
-  }
-
-  async function loadExecutionAgents(projectId?: string) {
-    if (!projectId) {
-      agentOptions.value = [];
-      draftForm.agentType = undefined;
-      return;
-    }
-    try {
-      agentOptions.value = await getAiExecutionAgents(projectId);
-      if (
-        draftForm.agentType &&
-        !agentOptions.value.some((item) => item.configured && item.name.toUpperCase() === draftForm.agentType)
-      ) {
-        draftForm.agentType = undefined;
-      }
-    } catch {
-      agentOptions.value = [];
-      draftForm.agentType = undefined;
-    }
   }
 
   async function sendPrompt() {
@@ -1074,14 +1255,26 @@
     }
     createLoading.value = true;
     try {
-      if (draftForm.executionMode === 'AGENT' && !selectedAgentConfigured.value) {
-        Message.warning(t('bugManagement.automationExecution.executionAgentRequired'));
-        return;
-      }
       const hasPlan = !!resolveResult.value.testPlanId;
       const projectWide = !hasPlan && !!resolveResult.value.confirmationRequired;
       const caseIds =
         hasPlan || projectWide ? [] : (resolveResult.value.cases || []).map((item) => item.caseId).filter(Boolean);
+      const preflight = await preflightAiExecution({
+        projectId: appStore.currentProjectId,
+        testPlanId: resolveResult.value.testPlanId,
+        caseIds,
+        environmentProfileId: draftForm.environmentProfileId,
+        credentialReferenceId: draftForm.credentialReferenceId || undefined,
+        modelProfileId: draftForm.modelProfileId,
+        promptTemplateId: draftForm.promptTemplateId,
+        runnerType: 'BROWSER',
+        requiredCapabilities: ['BROWSER'],
+        taskOrigin: 'PLATFORM_MANUAL',
+      });
+      if (preflight.status !== 'PASSED') {
+        Message.error(`${preflight.blockedReason}: ${preflight.blockedDetail || ''} · ${preflight.traceId}`);
+        return;
+      }
       const taskCreated = await createAiExecutionTask({
         projectId: appStore.currentProjectId,
         testPlanId: resolveResult.value.testPlanId,
@@ -1095,14 +1288,14 @@
         policySnapshot: JSON.stringify({ screenshotMode: 'AFTER_STEP', fullPage: true }),
         confirmed: resolveResult.value.confirmationRequired ? resolveConfirmed.value : undefined,
         projectWide: projectWide || undefined,
-        providerId: draftForm.executionMode === 'RUNNER' ? chatModelId.value || undefined : undefined,
-        executionMode: draftForm.executionMode,
-        agentType: draftForm.executionMode === 'AGENT' ? draftForm.agentType : undefined,
+        preflightId: preflight.id,
+        environmentProfileId: draftForm.environmentProfileId,
+        credentialReferenceId: draftForm.credentialReferenceId || undefined,
+        modelProfileId: draftForm.modelProfileId,
+        promptTemplateVersionId: preflight.promptTemplateVersionId,
         assetRefs: selectedAssetRefs.value.length
           ? selectedAssetRefs.value.map(({ assetType, assetId, versionId }) => ({ assetType, assetId, versionId }))
           : undefined,
-        environmentId: draftForm.environmentId || undefined,
-        targetUrl: draftForm.targetUrl || undefined,
         browserType: 'chromium',
         loginMode: 'MANUAL',
         idempotencyKey: `workbench-${appStore.currentProjectId}-${Date.now()}`,
@@ -1220,11 +1413,15 @@
 
   watch(
     () => appStore.currentProjectId,
-    (projectId) => {
-      loadExecutionAgents(projectId);
+    () => {
       selectedAssetRefs.value = [];
       draftForm.environmentId = '';
+      draftForm.environmentProfileId = '';
+      draftForm.credentialReferenceId = '';
+      draftForm.modelProfileId = '';
+      draftForm.promptTemplateId = '';
       loadEnvironmentOptions();
+      loadExecutionProfiles();
     },
     { immediate: true }
   );
@@ -1238,7 +1435,7 @@
   );
 
   watch(
-    () => [taskSearch.status, taskSearch.verdict, taskSearch.executionMode],
+    () => [taskSearch.status, taskSearch.verdict, taskSearch.executorChannel],
     () => {
       taskSearch.current = 1;
       reloadTaskList();
@@ -1258,6 +1455,7 @@
 
   onMounted(() => {
     aiStore.getAISourceNameList();
+    loadExecutionProfiles();
   });
 
   onBeforeUnmount(() => {

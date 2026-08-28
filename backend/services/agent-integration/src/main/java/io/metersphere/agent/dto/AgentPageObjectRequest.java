@@ -1,0 +1,2 @@
+package io.metersphere.agent.dto;import jakarta.validation.Valid;import jakarta.validation.constraints.NotBlank;import lombok.Data;import java.util.List;
+@Data public class AgentPageObjectRequest {@NotBlank private String projectId;@NotBlank private String name;private String routePattern;private List<String> allowedOrigins;private String status;private Integer version;@Valid private List<AgentPageElementRequest> elements;}

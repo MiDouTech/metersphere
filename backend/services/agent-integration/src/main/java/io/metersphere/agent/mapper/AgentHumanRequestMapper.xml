@@ -19,6 +19,10 @@
         <result column="expires_at" property="expiresAt"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
+        <result column="resolution_version" property="resolutionVersion"/>
+        <result column="resolved_reason" property="resolvedReason"/>
+        <result column="checkpoint_id" property="checkpointId"/>
+        <result column="trace_id" property="traceId"/>
     </resultMap>
     <insert id="insert" parameterType="io.metersphere.agent.dto.AgentHumanRequestDTO">
         INSERT INTO ai_execution_human_request

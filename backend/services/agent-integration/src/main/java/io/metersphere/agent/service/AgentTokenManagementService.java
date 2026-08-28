@@ -1,6 +1,7 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.constants.AgentConstants;
+import io.metersphere.agent.constants.AgentTokenScope;
 import io.metersphere.agent.dto.AgentTokenCreateRequest;
 import io.metersphere.agent.dto.AgentTokenCreateResponse;
 import io.metersphere.agent.dto.AgentTokenListItemDTO;
@@ -97,6 +98,7 @@ public class AgentTokenManagementService {
     }
 
     public AgentTokenCreateResponse createPersonal(AgentTokenCreateRequest request) {
+        rejectPlatformAutomationScope(request.getScopes());
         request.setUserId(SessionUtils.getUserId());
         validatePersonalProjectAccess(normalizeProjectIds(request.getProjectIds(), request.getProjectId()));
         return create(request);
@@ -161,11 +163,18 @@ public class AgentTokenManagementService {
     }
 
     public void updatePersonal(AgentTokenUpdateRequest request) {
+        rejectPlatformAutomationScope(request.getScopes());
         AgentToken existing = requirePersonalToken(request.getId());
         if (request.getProjectIds() != null || request.getProjectId() != null) {
             validatePersonalProjectAccess(normalizeProjectIds(request.getProjectIds(), request.getProjectId()));
         }
         update(request);
+    }
+
+    private void rejectPlatformAutomationScope(String scopes) {
+        if (AgentTokenScopeParser.parse(scopes).contains(AgentTokenScope.PLATFORM_AUTOMATION_MANAGE)) {
+            throw new MSException("Personal Agent Token 不允许申请平台自动化管理权限");
+        }
     }
 
     public void enablePersonal(String id) {

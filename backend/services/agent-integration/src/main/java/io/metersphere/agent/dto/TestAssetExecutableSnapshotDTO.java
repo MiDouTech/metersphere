@@ -5,6 +5,7 @@ import lombok.Data;
 /** Raw source fields used to build a secret-free, immutable asset snapshot. */
 @Data
 public class TestAssetExecutableSnapshotDTO {
+    private String rawContentJson;
     private String fileId;
     private String fileName;
     private String fileType;

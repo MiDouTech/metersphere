@@ -3,6 +3,9 @@ package io.metersphere.agent.tool;
 import io.metersphere.agent.constants.AgentTokenScope;
 import io.metersphere.agent.service.AgentTaskTriggerService;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.Bean;
+
+import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -22,11 +25,20 @@ class BuiltinAgentMcpTriggerToolTests {
         AgentMcpToolHandler fire = config.executionTriggerFireTool(service);
 
         assertEquals("metersphere.execution.trigger.create", create.name());
-        assertEquals(AgentTokenScope.AI_EXECUTION_RUN, create.requiredScope());
+        assertEquals(AgentTokenScope.PLATFORM_AUTOMATION_MANAGE, create.requiredScope());
         assertFalse((Boolean) create.annotations().get("readOnlyHint"));
-        assertEquals(AgentTokenScope.AI_EXECUTION_RUN, update.requiredScope());
-        assertEquals(AgentTokenScope.AI_EXECUTION_READ, list.requiredScope());
+        assertEquals(AgentTokenScope.PLATFORM_AUTOMATION_MANAGE, update.requiredScope());
+        assertEquals(AgentTokenScope.PLATFORM_AUTOMATION_MANAGE, list.requiredScope());
         assertTrue((Boolean) list.annotations().get("readOnlyHint"));
-        assertEquals(AgentTokenScope.AI_EXECUTION_RUN, fire.requiredScope());
+        assertEquals(AgentTokenScope.PLATFORM_AUTOMATION_MANAGE, fire.requiredScope());
+    }
+
+    @Test
+    void personalMcpRegistryDoesNotRegisterTriggerTools() throws Exception {
+        for (String methodName : new String[]{"executionTriggerCreateTool", "executionTriggerUpdateTool",
+                "executionTriggerListTool", "executionTriggerFireTool"}) {
+            Method method = BuiltinAgentMcpToolConfig.class.getDeclaredMethod(methodName, AgentTaskTriggerService.class);
+            assertFalse(method.isAnnotationPresent(Bean.class));
+        }
     }
 }

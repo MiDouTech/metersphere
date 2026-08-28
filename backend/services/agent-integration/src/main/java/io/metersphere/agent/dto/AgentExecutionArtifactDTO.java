@@ -7,6 +7,8 @@ import lombok.Data;
 public class AgentExecutionArtifactDTO {
     private String id;
     private String taskId;
+    private String executionId;
+    private String leaseId;
     private String executionCaseId;
     private String caseId;
     private String stepId;
@@ -21,6 +23,16 @@ public class AgentExecutionArtifactDTO {
     private String sha256;
     private Boolean redacted;
     private String status;
+    private String uploadStatus;
+    private Long expectedSize;
+    private String expectedSha256;
+    private String expectedContentType;
+    @JsonIgnore
+    private String uploadTokenHash;
+    private String idempotencyKey;
+    private Long preparedAt;
+    private Long committedAt;
+    private String traceId;
     private Long retentionUntil;
     private Long createTime;
     private String createUser;
