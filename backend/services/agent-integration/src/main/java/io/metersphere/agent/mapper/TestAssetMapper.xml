@@ -189,7 +189,7 @@
             </when>
             <when test="assetType == 'PAGE_OBJECT'">
                 SELECT JSON_OBJECT('id',p.id,'name',p.name,'routePattern',p.route_pattern,'allowedOrigins',p.allowed_origins,'status',p.status,'version',p.version,
-                       'elements',(SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id',e.id,'name',e.name,'strategy',e.strategy,'selectorValue',e.selector_value,'fallbackLocators',e.fallback_locators,'sensitive',e.sensitive,'riskLevel',e.risk_level,'version',e.version)),JSON_ARRAY()) FROM ai_page_element e WHERE e.page_object_id=p.id)) AS rawContentJson
+                       'elements',(SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id',e.id,'name',e.name,'strategy',e.strategy,'selectorValue',e.selector_value,'fallbackLocators',e.fallback_locators,'sensitive',e.`sensitive`,'riskLevel',e.risk_level,'version',e.version)),JSON_ARRAY()) FROM ai_page_element e WHERE e.page_object_id=p.id)) AS rawContentJson
                 FROM ai_page_object p WHERE p.project_id=#{projectId} AND p.id=#{assetId} LIMIT 1
             </when>
             <when test="assetType == 'BUSINESS_FLOW'">

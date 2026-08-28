@@ -324,7 +324,7 @@ CREATE TABLE ai_page_element
     strategy          VARCHAR(32)  NOT NULL,
     selector_value    VARCHAR(2048) NOT NULL,
     fallback_locators TEXT         NULL,
-    sensitive         BIT(1)       NOT NULL DEFAULT b'0',
+    `sensitive`       BIT(1)       NOT NULL DEFAULT b'0',
     risk_level        VARCHAR(16)   NOT NULL DEFAULT 'LOW',
     version           INT          NOT NULL DEFAULT 0,
     create_user       VARCHAR(64)  NULL,
