@@ -25,7 +25,7 @@ import java.util.*;
 public class AgentExecutionPreflightService {
     @Value("${metersphere.ai.execution.preflight-ttl-ms:600000}") private long ttlMs;
     @Resource private JdbcTemplate jdbcTemplate;
-    @Resource private AgentProjectService projectService;
+    @Resource(name = "agentProjectService") private AgentProjectService projectService;
     @Resource private AgentExecutionMapper executionMapper;
     @Resource private AgentTestPlanQueryService testPlanService;
     @Resource private AgentEnvironmentProfileService environmentService;
