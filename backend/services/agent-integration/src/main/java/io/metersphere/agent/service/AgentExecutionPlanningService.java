@@ -24,7 +24,7 @@ public class AgentExecutionPlanningService {
     @Resource private AgentModelProfileService profiles;
     @Resource private AgentModelInvocationService invocations;
     @Resource private MapGatewayClient gateway;
-    @Resource private AgentWebExecutionContractValidator validator;
+    @Resource(name = "agentWebExecutionContractValidator") private AgentWebExecutionContractValidator validator;
     @Resource private JdbcTemplate jdbcTemplate;
     @Resource private AgentBudgetGuard budgetGuard;
     @Resource private AgentExecutionPreflightService preflightService;
