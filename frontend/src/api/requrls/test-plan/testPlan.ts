@@ -62,6 +62,8 @@ export const DisassociateCaseUrl = '/test-plan/functional/case/disassociate';
 export const AssociateFunctionalCaseUrl = '/test-plan/functional/case/associate';
 // 计划详情-功能用例-批量取消关联用例
 export const BatchDisassociateCaseUrl = '/test-plan/functional/case/batch/disassociate';
+export const SyncProjectFunctionalCasesUrl = '/test-plan/functional/case/sync/project';
+export const SyncPlanFunctionalCasesUrl = '/test-plan/functional/case/sync/plan';
 // 计划详情-功能用例-执行
 export const RunFeatureCaseUrl = '/test-plan/functional/case/run';
 // 计划详情-功能用例列表-批量移动

@@ -23,13 +23,13 @@ public class AgentRunnerAdminController {
     private AgentRunnerService runnerService;
 
     @GetMapping
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    @RequiresPermissions(PermissionConstants.AI_RUNNER_READ)
     public List<AgentRunnerDTO> list() {
         return runnerService.list();
     }
 
     @PostMapping("/register")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_ADMIN)
+    @RequiresPermissions(PermissionConstants.AI_RUNNER_MANAGE)
     public AgentRunnerRegisterResponse register(@RequestBody @Valid AgentRunnerRegisterRequest request) {
         return runnerService.register(request);
     }

@@ -105,6 +105,25 @@ public class TestPlanFunctionalCaseController {
         testPlanFunctionalCaseService.associateCases(request, SessionUtils.getUser());
     }
 
+    @PostMapping("/sync/project/{projectId}")
+    @Operation(summary = "测试用例-同步当前项目用例到未归档测试计划")
+    @RequiresPermissions(value = {PermissionConstants.FUNCTIONAL_CASE_READ,
+            PermissionConstants.TEST_PLAN_READ_ASSOCIATION})
+    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    public TestPlanFunctionalCaseSyncResponse syncProjectCases(@PathVariable String projectId) {
+        return testPlanFunctionalCaseService.syncProjectCases(projectId, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/sync/plan/{testPlanId}")
+    @Operation(summary = "测试计划-同步当前项目用例到当前测试计划")
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_READ_ASSOCIATION)
+    @CheckOwner(resourceId = "#testPlanId", resourceType = "test_plan")
+    public TestPlanFunctionalCaseSyncResponse syncPlanCases(@PathVariable String testPlanId) {
+        testPlanManagementService.checkModuleIsOpen(testPlanId, TestPlanResourceConfig.CHECK_TYPE_TEST_PLAN,
+                Collections.singletonList(TestPlanResourceConfig.CONFIG_TEST_PLAN_FUNCTIONAL_CASE));
+        return testPlanFunctionalCaseService.syncPlanCases(testPlanId, SessionUtils.getUserId());
+    }
+
     @PostMapping("/disassociate")
     @Operation(summary = "测试计划-计划详情-列表-取消关联用例")
     @RequiresPermissions(PermissionConstants.TEST_PLAN_READ_ASSOCIATION)

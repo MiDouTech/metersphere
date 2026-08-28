@@ -5,8 +5,8 @@ import { assertAllowedUrl, resolveUploadPath } from "../src/security.js";
 import type { RunnerConfig } from "../src/types.js";
 
 test("accepts a v1 low-risk click action", () => {
-  const action = parseAction(JSON.stringify({ contractVersion: "v1", type: "CLICK",
-    target: { strategy: "ROLE_NAME", role: "button", name: "保存" },
+  const action = parseAction(JSON.stringify({ contractVersion: "v1", id: "action-1", idempotencyKey: "click-save-1", type: "CLICK",
+    target: { strategy: "ROLE", role: "button", name: "保存" },
     timeoutMs: 10_000, retryable: true, riskLevel: "LOW" }));
   assert.equal(action.type, "CLICK");
 });
@@ -17,8 +17,8 @@ test("rejects executable javascript and unknown actions", () => {
 });
 
 test("blocks high-risk actions in phase one", () => {
-  assert.throws(() => parseAction(JSON.stringify({ contractVersion: "v1", type: "CLICK",
-    target: { strategy: "ROLE_NAME", role: "button", name: "删除" },
+  assert.throws(() => parseAction(JSON.stringify({ contractVersion: "v1", id: "action-2", idempotencyKey: "click-delete-1", type: "CLICK",
+    target: { strategy: "ROLE", role: "button", name: "删除" },
     timeoutMs: 10_000, retryable: false, riskLevel: "HIGH" })), /高风险动作/);
 });
 

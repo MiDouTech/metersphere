@@ -8,4 +8,5 @@ public class AgentHumanResponseRequest {
     @NotBlank
     private String action;
     private String response;
+    private Integer expectedVersion;
 }

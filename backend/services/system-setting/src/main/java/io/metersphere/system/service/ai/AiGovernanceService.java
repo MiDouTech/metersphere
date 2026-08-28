@@ -20,8 +20,7 @@ import java.util.function.Supplier;
 
 @Service
 public class AiGovernanceService {
-    private static final List<String> RESOURCE_TYPES = List.of("MODEL_API", "USER_AGENT");
-    private static final List<String> AGENT_PROVIDERS = List.of("CODEX", "CURSOR", "WORKBUDDY");
+    private static final List<String> RESOURCE_TYPES = List.of("MODEL_API");
     private static final int DEFAULT_MAX_CONCURRENT = 3;
     private static final long DEFAULT_TOKEN_QUOTA = 1_000_000L;
     private static final long DEFAULT_PROJECT_FILE_QUOTA = 1_073_741_824L;
@@ -49,16 +48,9 @@ public class AiGovernanceService {
         dto.setAllowedModelIds(allowedModels);
         dto.setAllowedResourceTypes(normalizeAllowlist(dto.getAllowedResourceTypes(), List.of("MODEL_API")).stream()
                 .filter(RESOURCE_TYPES::contains).toList());
-        dto.setAllowedAgentProviders(normalizeAllowlist(dto.getAllowedAgentProviders(), List.of()).stream()
-                .filter(AGENT_PROVIDERS::contains).toList());
-        if (!dto.isAllowPersonalAgent()) {
-            dto.setAllowedResourceTypes(dto.getAllowedResourceTypes().stream()
-                    .filter(item -> !"USER_AGENT".equals(item)).toList());
-            dto.setAllowedAgentProviders(List.of());
-            dto.setAllowLocalAgentTools(false);
-        } else if (!dto.getAllowedResourceTypes().contains("USER_AGENT")) {
-            throw new MSException("允许个人 Agent 时，资源类型必须包含 USER_AGENT");
-        }
+        dto.setAllowedAgentProviders(List.of());
+        dto.setAllowPersonalAgent(false);
+        dto.setAllowLocalAgentTools(false);
         if (StringUtils.isNotBlank(dto.getFallbackModelId())
                 && CollectionUtils.isNotEmpty(allowedModels)
                 && !allowedModels.contains(dto.getFallbackModelId())) {
@@ -112,16 +104,7 @@ public class AiGovernanceService {
     }
 
     public void assertAgentAllowed(String projectId, String provider) {
-        AiProjectGovernanceDTO governance = get(projectId);
-        if (!governance.isAllowPersonalAgent()
-                || !governance.getAllowedResourceTypes().contains("USER_AGENT")) {
-            throw new MSException("AI_RESOURCE_NOT_ALLOWED：项目未允许个人 Agent");
-        }
-        if (CollectionUtils.isNotEmpty(governance.getAllowedAgentProviders())
-                && governance.getAllowedAgentProviders().stream()
-                .noneMatch(item -> StringUtils.equalsIgnoreCase(item, provider))) {
-            throw new MSException("AI_RESOURCE_NOT_ALLOWED：Agent Provider 不在项目白名单中");
-        }
+        throw new MSException("AGENT_BRIDGE_DEPRECATED：个人 Agent 不再作为平台 AI 资源，请通过 Remote MCP 执行个人任务");
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -328,8 +311,11 @@ public class AiGovernanceService {
                 (String) row.get("allowed_resource_types"), "[\"MODEL_API\"]"), String.class));
         dto.setAllowedAgentProviders(JSON.parseArray(StringUtils.defaultString(
                 (String) row.get("allowed_agent_providers"), "[]"), String.class));
-        dto.setAllowPersonalAgent(booleanValue(row.get("allow_personal_agent")));
-        dto.setAllowLocalAgentTools(booleanValue(row.get("allow_local_agent_tools")));
+        dto.setAllowedResourceTypes(dto.getAllowedResourceTypes().stream()
+                .filter(RESOURCE_TYPES::contains).toList());
+        dto.setAllowedAgentProviders(List.of());
+        dto.setAllowPersonalAgent(false);
+        dto.setAllowLocalAgentTools(false);
         dto.setMaxAgentConcurrentTasks(((Number) row.get("max_agent_concurrent_tasks")).intValue());
         dto.setMaxAgentExecutionMinutes(((Number) row.get("max_agent_execution_minutes")).intValue());
         dto.setDailyAgentExecutionLimit(((Number) row.get("daily_agent_execution_limit")).intValue());

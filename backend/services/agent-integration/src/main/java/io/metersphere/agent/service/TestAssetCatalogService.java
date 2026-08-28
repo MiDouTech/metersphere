@@ -24,8 +24,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.Collection;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
@@ -48,6 +51,7 @@ public class TestAssetCatalogService {
     private static final Map<String, List<String>> ASSET_PERMISSIONS = Map.ofEntries(
             Map.entry("DOCUMENT", List.of(PermissionConstants.FUNCTIONAL_CASE_AI_READ)),
             Map.entry("CASE", List.of(PermissionConstants.FUNCTIONAL_CASE_READ)),
+            Map.entry("PLAN", List.of(PermissionConstants.TEST_PLAN_READ)),
             Map.entry("TASK", List.of(PermissionConstants.AI_EXECUTION_READ)),
             Map.entry("STEP", List.of(PermissionConstants.AI_EXECUTION_READ)),
             Map.entry("DATASET", List.of(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ)),
@@ -56,9 +60,12 @@ public class TestAssetCatalogService {
             Map.entry("API_DEFINITION", List.of(PermissionConstants.PROJECT_API_DEFINITION_READ)),
             Map.entry("EVIDENCE", List.of(PermissionConstants.AI_EXECUTION_READ)),
             Map.entry("BUG", List.of(PermissionConstants.PROJECT_BUG_READ))
+            ,Map.entry("BUSINESS_FLOW", List.of(PermissionConstants.AI_EXECUTION_READ))
+            ,Map.entry("PAGE_OBJECT", List.of(PermissionConstants.AI_EXECUTION_READ))
     );
     private static final Set<String> CATALOG_TYPES = Set.of(
-            "DATASET", "ENVIRONMENT", "COMMON_STEP", "API_DEFINITION", "EVIDENCE", "BUG");
+            "CASE", "DOCUMENT", "PLAN", "DATASET", "ENVIRONMENT", "PAGE_OBJECT", "BUSINESS_FLOW",
+            "COMMON_STEP", "API_DEFINITION", "EVIDENCE", "BUG");
 
     @Transactional(rollbackFor = Exception.class)
     public Pager<List<TestAssetCatalogItemDTO>> catalog(String projectId, String assetType, String keyword,
@@ -165,6 +172,35 @@ public class TestAssetCatalogService {
                 (long) (page - 1) * size, size);
         return new Pager<>(list, total, size, page);
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Pager<List<TestAssetCatalogItemDTO>> searchByTypes(String projectId, List<String> assetTypes,
+                                                               String keyword, String status,
+                                                               Integer current, Integer pageSize) {
+        if (assetTypes == null || assetTypes.isEmpty()) throw new MSException("ASSET_TYPES_REQUIRED");
+        List<String> types = assetTypes.stream().map(this::requireCatalogType).distinct().toList();
+        types.forEach(this::assertPermission);
+        String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
+        int page = normalizePage(current);int size = normalizePageSize(pageSize);int fetch = page * size;
+        String query = StringUtils.trimToNull(keyword);
+        String normalizedStatus = StringUtils.defaultIfBlank(StringUtils.upperCase(StringUtils.trimToNull(status)), "PUBLISHED");
+        long total = 0;List<TestAssetCatalogItemDTO> merged = new ArrayList<>();
+        for (String type : types) {
+            total += mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus);
+            merged.addAll(mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus, 0, fetch));
+        }
+        merged.sort(Comparator.comparing(TestAssetCatalogItemDTO::getUpdateTime,
+                Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(TestAssetCatalogItemDTO::getId));
+        int from = Math.min((page - 1) * size, merged.size());int to = Math.min(from + size, merged.size());
+        List<TestAssetCatalogItemDTO> result = new ArrayList<>(merged.subList(from, to));
+        String userId = StringUtils.defaultIfBlank(SessionUtils.getUserId(), "system:test-asset-search");
+        result.forEach(item -> applyVersion(item, userId));
+        return new Pager<>(result, total, size, page);
+    }
+
+    public TestAssetVersionDTO version(String projectId,String versionId){String resolved=agentProjectService.resolveProjectId(projectId);TestAssetVersionDTO version=mapper.selectVersionById(versionId);if(version==null||!resolved.equals(version.getProjectId()))throw new MSException("ASSET_VERSION_NOT_FOUND");assertPermission(version.getAssetType());return version;}
+
+    public TestAssetVersionDTO latestPublishedVersion(String projectId,String assetType,String assetId){String resolved=agentProjectService.resolveProjectId(projectId);String type=normalizeType(assetType);assertPermission(type);return versionService.latestPublished(resolved,type,StringUtils.trim(assetId));}
 
     public Pager<List<TestAssetRelationDTO>> relations(String projectId, String assetType, String assetId,
                                                         String relationType, String keyword,
@@ -328,6 +364,8 @@ public class TestAssetCatalogService {
                 snapshot.put("handleUser", source.getHandleUser());
                 snapshot.put("tags", parseAndSanitize(source.getTagsJson(), "bug:" + item.getId()));
             }
+            case "CASE", "DOCUMENT", "PLAN", "PAGE_OBJECT", "BUSINESS_FLOW" ->
+                    snapshot.put("content", parseAndSanitize(source.getRawContentJson(), item.getAssetType().toLowerCase(Locale.ROOT)+":"+item.getId()));
             default -> throw new MSException("不支持的测试资产类型：" + item.getAssetType());
         }
     }

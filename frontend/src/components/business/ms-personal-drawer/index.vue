@@ -31,7 +31,6 @@
             <localExec v-else-if="activeMenu === 'local'" />
             <tripartite v-else-if="activeMenu === 'tripartite'" />
             <AgentIntegration v-else-if="activeMenu === 'agentIntegration'" compact />
-            <userAgent v-else-if="activeMenu === 'userAgent'" />
             <modelConfig v-else-if="activeMenu === 'modelConfig'" model-key="personal" />
           </div>
         </div>
@@ -41,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue';
+  import { computed, ref } from 'vue';
   import { useVModel } from '@vueuse/core';
 
   import MsMenuPanel from '@/components/pure/ms-menu-panel/index.vue';
@@ -51,10 +50,8 @@
   import modelConfig from './components/modelConfig.vue';
   import setPsw from './components/setPsw.vue';
   import tripartite from './components/tripartite.vue';
-  import userAgent from './components/userAgent.vue';
   import AgentIntegration from '@/views/setting/system/agentIntegration/index.vue';
 
-  import { getUserAgentFeatures } from '@/api/modules/setting/userAgent';
   import { useI18n } from '@/hooks/useI18n';
   import { useAppStore } from '@/store';
   import { hasAnyPermission } from '@/utils/permission';
@@ -77,7 +74,6 @@
     innerVisible.value = false;
   }
 
-  const userAgentEnabled = ref(false);
   const baseMenuList = [
     {
       name: 'personal',
@@ -120,11 +116,6 @@
       level: 2,
     },
     {
-      name: 'userAgent',
-      title: t('ms.personal.userAgent.menu'),
-      level: 2,
-    },
-    {
       name: 'modelConfig',
       title: t('system.config.modelConfig.modelConfigSet'),
       level: 2,
@@ -132,21 +123,9 @@
   ];
   const menuList = computed(() =>
     baseMenuList.filter(
-      (item) =>
-        (item.name !== 'agentIntegration' || hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM'])) &&
-        (item.name !== 'userAgent' ||
-          (userAgentEnabled.value && hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM'])))
+      (item) => item.name !== 'agentIntegration' || hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM'])
     )
   );
-
-  onMounted(async () => {
-    if (!hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM'])) return;
-    try {
-      userAgentEnabled.value = (await getUserAgentFeatures()).enabled;
-    } catch {
-      userAgentEnabled.value = false;
-    }
-  });
 </script>
 
 <style lang="less" scoped>

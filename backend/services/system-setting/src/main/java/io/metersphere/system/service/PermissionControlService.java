@@ -533,6 +533,13 @@ public class PermissionControlService {
         } else {
             permissionControlMapper.deleteRoleRelations(request.getRoleId(), sourceId, request.getUserIds());
         }
+        if (StringUtils.equals(role.getId(), io.metersphere.sdk.constants.InternalUserRole.ADMIN.getValue())) {
+            RoleMemberUpdateRequest memberRequest = new RoleMemberUpdateRequest();
+            memberRequest.setRoleId(MEMBER_ROLE_ID);
+            memberRequest.setSourceId(UserRoleScope.SYSTEM);
+            memberRequest.setUserIds(request.getUserIds());
+            addRoleMembers(memberRequest);
+        }
         permissionSessionRefreshService.refreshUsersAfterCommit(request.getUserIds());
     }
 
@@ -542,7 +549,7 @@ public class PermissionControlService {
         if (StringUtils.equals(role.getType(), UserRoleType.SYSTEM.name())) {
             globalUserRoleService.checkSystemUserGroup(role);
         }
-        if (mutable) {
+        if (mutable && !StringUtils.equals(role.getId(), io.metersphere.sdk.constants.InternalUserRole.ADMIN.getValue())) {
             globalUserRoleService.checkAdminUserRole(role);
         }
         assertTargetScopeMemberPermission(role, resolveMemberSourceId(role, sourceId), mutable);

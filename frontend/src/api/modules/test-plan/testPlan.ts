@@ -84,6 +84,8 @@ import {
   SortApiCaseUrl,
   SortApiScenarioUrl,
   SortFeatureCaseUrl,
+  SyncPlanFunctionalCasesUrl,
+  SyncProjectFunctionalCasesUrl,
   TaskResultUrl,
   TestPlanAndGroupCopyUrl,
   TestPlanApiAssociatedPageUrl,
@@ -144,6 +146,14 @@ import type {
 } from '@/models/testPlan/testPlan';
 
 import type { RequestOptions } from '#/axios';
+
+export interface FunctionalCaseSyncResult {
+  planCount: number;
+  skippedPlanCount: number;
+  addedCount: number;
+  updatedCount: number;
+  removedCount: number;
+}
 
 // 获取模块树
 export function getTestPlanModule(params: TableQueryParams) {
@@ -287,6 +297,14 @@ export function disassociateCase(data: DisassociateCaseParams) {
 // 计划详情-功能用例列表-关联用例
 export function associateFunctionalCase(data: TableQueryParams) {
   return MSR.post({ url: AssociateFunctionalCaseUrl, data });
+}
+
+export function syncProjectFunctionalCases(projectId: string) {
+  return MSR.post<FunctionalCaseSyncResult>({ url: `${SyncProjectFunctionalCasesUrl}/${projectId}` });
+}
+
+export function syncPlanFunctionalCases(testPlanId: string) {
+  return MSR.post<FunctionalCaseSyncResult>({ url: `${SyncPlanFunctionalCasesUrl}/${testPlanId}` });
 }
 // 计划详情-功能用例列表-拖拽排序
 export const sortFeatureCase = (data: SortApiCaseParams) => {

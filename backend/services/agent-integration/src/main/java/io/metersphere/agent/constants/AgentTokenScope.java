@@ -23,6 +23,15 @@ public class AgentTokenScope {
     public static final String AI_EXECUTION_CANCEL = "AI_EXECUTION_CANCEL";
     public static final String AI_EXECUTION_LOGIN = "AI_EXECUTION_LOGIN";
     public static final String AI_EXECUTION_ADMIN = "AI_EXECUTION_ADMIN";
+    public static final String TASK_READ = "TASK_READ";
+    public static final String TASK_CLAIM = "TASK_CLAIM";
+    public static final String TASK_EVENT_WRITE = "TASK_EVENT_WRITE";
+    public static final String TASK_RESULT_WRITE = "TASK_RESULT_WRITE";
+    public static final String ARTIFACT_WRITE = "ARTIFACT_WRITE";
+    public static final String AI_ASSET_READ = "AI_ASSET_READ";
+    public static final String AI_CREDENTIAL_READ_METADATA = "AI_CREDENTIAL_READ_METADATA";
+    public static final String PLAN_EXECUTE = "PLAN_EXECUTE";
+    public static final String PLATFORM_AUTOMATION_MANAGE = "PLATFORM_AUTOMATION_MANAGE";
     public static final String REVIEW_WRITE = "REVIEW_WRITE";
     public static final String BUG_READ = "BUG_READ";
     public static final String BUG_WRITE = "BUG_WRITE";
@@ -53,6 +62,15 @@ public class AgentTokenScope {
         scopes.add(AI_EXECUTION_CANCEL);
         scopes.add(AI_EXECUTION_LOGIN);
         scopes.add(AI_EXECUTION_ADMIN);
+        scopes.add(TASK_READ);
+        scopes.add(TASK_CLAIM);
+        scopes.add(TASK_EVENT_WRITE);
+        scopes.add(TASK_RESULT_WRITE);
+        scopes.add(ARTIFACT_WRITE);
+        scopes.add(AI_ASSET_READ);
+        scopes.add(AI_CREDENTIAL_READ_METADATA);
+        scopes.add(PLAN_EXECUTE);
+        scopes.add(PLATFORM_AUTOMATION_MANAGE);
         scopes.add(REVIEW_WRITE);
         scopes.add(BUG_READ);
         scopes.add(BUG_WRITE);
@@ -90,6 +108,15 @@ public class AgentTokenScope {
                 || AI_EXECUTION_CANCEL.equals(scope)
                 || AI_EXECUTION_LOGIN.equals(scope)
                 || AI_EXECUTION_ADMIN.equals(scope)
+                || TASK_READ.equals(scope)
+                || TASK_CLAIM.equals(scope)
+                || TASK_EVENT_WRITE.equals(scope)
+                || TASK_RESULT_WRITE.equals(scope)
+                || ARTIFACT_WRITE.equals(scope)
+                || AI_ASSET_READ.equals(scope)
+                || AI_CREDENTIAL_READ_METADATA.equals(scope)
+                || PLAN_EXECUTE.equals(scope)
+                || PLATFORM_AUTOMATION_MANAGE.equals(scope)
                 || REVIEW_WRITE.equals(scope);
     }
 

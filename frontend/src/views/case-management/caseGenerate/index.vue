@@ -421,10 +421,6 @@
         label: t('caseManagement.caseGenerate.personalModels'),
         test: (item: AiSelectableResource) => item.resourceType === 'MODEL_API' && item.personal,
       },
-      {
-        label: t('caseManagement.caseGenerate.myAgents'),
-        test: (item: AiSelectableResource) => item.resourceType === 'USER_AGENT',
-      },
     ];
     return groups
       .map((group) => ({

@@ -3,6 +3,7 @@ package io.metersphere.agent.service;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,20 @@ class AgentMcpStreamableServiceTests {
     void setUp() {
         // isNotification / handleNotification 不依赖注入字段
         service = new AgentMcpStreamableService();
+        ReflectionTestUtils.setField(service, "safeErrorMapper", new AgentSafeErrorMapper());
+    }
+
+    @Test
+    void directTriggerToolCallIsAlwaysForbiddenForPersonalMcp() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("jsonrpc", "2.0");
+        request.put("id", 7);
+        request.put("method", "tools/call");
+        request.put("params", Map.of("name", "metersphere.execution.trigger.fire", "arguments", Map.of()));
+        Map<String, Object> response = service.handle(request);
+        Map<?, ?> error = (Map<?, ?>) response.get("error");
+        Map<?, ?> data = (Map<?, ?>) error.get("data");
+        Assertions.assertEquals("MCP_TOOL_FORBIDDEN", data.get("code"));
     }
 
     @Test

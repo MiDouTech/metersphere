@@ -22,12 +22,17 @@ import java.util.Optional;
 
 @Service
 public class AgentMcpStreamableService {
+    private static final String TRIGGER_TOOL_PREFIX = "metersphere.execution.trigger.";
     @Resource
     private AgentTokenRateLimiter agentTokenRateLimiter;
     @Resource
     private AgentIdempotencyService agentIdempotencyService;
     @Resource
     private AgentMcpToolRegistry agentMcpToolRegistry;
+    @Resource
+    private AgentSafeErrorMapper safeErrorMapper;
+    @Resource
+    private AgentExecLogService execLogService;
 
     public Map<String, Object> handle(Map<String, Object> request) {
         return handle(request, null);
@@ -60,7 +65,7 @@ public class AgentMcpStreamableService {
         String method = StringUtils.defaultString((String) request.get("method"));
         try {
             return switch (method) {
-                case "initialize" -> response(id, initializeResult());
+                case "initialize" -> response(id, initializeResult(asMap(request.get("params"))));
                 case "notifications/initialized" -> {
                     // 带 id 的非标准客户端：返回空 result；无 id 应由 isNotification 短路
                     yield response(id, Map.of());
@@ -71,15 +76,19 @@ public class AgentMcpStreamableService {
                 default -> error(id, -32601, "Unsupported MCP method: " + method, null);
             };
         } catch (MSException ex) {
-            return error(id, -32001, ex.getMessage(), ex.getErrorCode());
+            var safe = safeErrorMapper.toApiError(ex, null);
+            return safeError(id, -32001, safe.getMessage(), safe.getCode(), safe.getTraceId());
         } catch (Exception ex) {
-            return error(id, -32603, ex.getMessage(), null);
+            var safe = safeErrorMapper.toApiError(ex, null);
+            return safeError(id, -32603, safe.getMessage(), safe.getCode(), safe.getTraceId());
         }
     }
 
-    private Map<String, Object> initializeResult() {
+    private Map<String, Object> initializeResult(Map<String, Object> params) {
+        String requested = String.valueOf(params.getOrDefault("protocolVersion", "2025-03-26"));
+        if (!List.of("2025-03-26", "2024-11-05").contains(requested)) requested = "2025-03-26";
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("protocolVersion", "2025-03-26");
+        result.put("protocolVersion", requested);
         result.put("capabilities", Map.of("tools", Map.of("listChanged", false)));
         result.put("serverInfo", Map.of("name", "metersphere-agent", "version", "1.0.0"));
         return result;
@@ -87,9 +96,12 @@ public class AgentMcpStreamableService {
 
     private List<Map<String, Object>> tools() {
         List<Map<String, Object>> tools = new ArrayList<>();
+        AgentToken token = AgentTokenContext.get();
         for (AgentMcpToolHandler handler : agentMcpToolRegistry.all()) {
+            if (handler.name().startsWith(TRIGGER_TOOL_PREFIX)) continue;
+            if (token == null || !AgentScopeAssert.hasScope(token.getScopes(), handler.requiredScope())) continue;
             tools.add(tool(handler.name(), handler.description(), handler.requiredScope(),
-                    handler.inputSchema(), handler.annotations()));
+                    handler.inputSchema(), handler.outputSchema(), handler.annotations()));
         }
         return tools;
     }
@@ -97,11 +109,18 @@ public class AgentMcpStreamableService {
     private Map<String, Object> callTool(Map<String, Object> params, String idempotencyKey) {
         String name = StringUtils.defaultString((String) params.get("name"));
         Map<String, Object> arguments = asMap(params.get("arguments"));
+        if (name.startsWith(TRIGGER_TOOL_PREFIX)) {
+            if(execLogService!=null)execLogService.audit("MCP_TRIGGER_TOOL_FORBIDDEN",name,"Direct personal MCP trigger call rejected");
+            throw new MSException("MCP_TOOL_FORBIDDEN");
+        }
         AgentToken token = AgentTokenContext.get();
         if (token != null && !agentTokenRateLimiter.tryAcquireTool(token.getId(), name)) {
             throw new MSException("Agent MCP tool requests are too frequent. Please retry later.");
         }
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
+        if (agentMcpToolRegistry.isWriteTool(name) && StringUtils.isBlank(effectiveIdempotencyKey)) {
+            throw new MSException("IDEMPOTENCY_KEY_REQUIRED");
+        }
         if (StringUtils.isNotBlank(effectiveIdempotencyKey) && agentMcpToolRegistry.isWriteTool(name)) {
             Optional<Map<String, Object>> cached = agentIdempotencyService.findCachedResponse(name, effectiveIdempotencyKey, arguments);
             if (cached.isPresent()) {
@@ -115,6 +134,9 @@ public class AgentMcpStreamableService {
     }
 
     private Map<String, Object> callToolInternal(String name, Map<String, Object> arguments) {
+        if (name.startsWith(TRIGGER_TOOL_PREFIX)) {
+            throw new MSException("MCP_TOOL_FORBIDDEN");
+        }
         AgentMcpToolHandler handler = agentMcpToolRegistry.find(name)
                 .orElseThrow(() -> new MSException("Unsupported MCP tool: " + name));
         AgentScopeAssert.assertScope(handler.requiredScope());
@@ -122,11 +144,14 @@ public class AgentMcpStreamableService {
     }
 
     private Map<String, Object> toolResponse(Object result) {
-        return Map.of("content", List.of(Map.of("type", "text", "text", JSON.toJSONString(result))));
+        Object safeResult = result == null ? Map.of() : result;
+        return Map.of("content", List.of(Map.of("type", "text", "text", JSON.toJSONString(safeResult))),
+                "structuredContent", Map.of("result", safeResult));
     }
 
     private Map<String, Object> tool(String name, String description, String scope,
-                                     Map<String, Object> inputSchema, Map<String, Object> annotations) {
+                                     Map<String, Object> inputSchema, Map<String, Object> outputSchema,
+                                     Map<String, Object> annotations) {
         Map<String, Object> mergedAnnotations = new LinkedHashMap<>();
         if (annotations != null) {
             mergedAnnotations.putAll(annotations);
@@ -137,6 +162,7 @@ public class AgentMcpStreamableService {
         tool.put("name", name);
         tool.put("description", description);
         tool.put("inputSchema", inputSchema);
+        tool.put("outputSchema", outputSchema);
         tool.put("annotations", mergedAnnotations);
         return tool;
     }
@@ -174,6 +200,14 @@ public class AgentMcpStreamableService {
             error.put("data", data);
         }
         response.put("error", error);
+        return response;
+    }
+
+    private Map<String, Object> safeError(Object id, int rpcCode, String message, String code, String traceId) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("jsonrpc", "2.0"); response.put("id", id);
+        response.put("error", Map.of("code", rpcCode, "message", message,
+                "data", Map.of("code", code, "traceId", traceId)));
         return response;
     }
 }

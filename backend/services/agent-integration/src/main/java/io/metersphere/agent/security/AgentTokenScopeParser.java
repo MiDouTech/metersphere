@@ -89,6 +89,26 @@ public final class AgentTokenScopeParser {
                 && owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN)) {
             return true;
         }
+        // Compatibility window: old execution scopes grant their equivalent granular scopes.
+        if (AgentTokenScope.TASK_READ.equals(required)
+                && (owned.contains(AgentTokenScope.AI_EXECUTION_READ)
+                || owned.contains(AgentTokenScope.AI_EXECUTION_RUN)
+                || owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN))) {
+            return true;
+        }
+        if (Set.of(AgentTokenScope.TASK_CLAIM, AgentTokenScope.TASK_EVENT_WRITE,
+                        AgentTokenScope.TASK_RESULT_WRITE, AgentTokenScope.ARTIFACT_WRITE)
+                .contains(required)
+                && (owned.contains(AgentTokenScope.AI_EXECUTION_RUN)
+                || owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN))) {
+            return true;
+        }
+        if (AgentTokenScope.PLAN_EXECUTE.equals(required)
+                && (owned.contains(AgentTokenScope.PLAN_WRITE)
+                || owned.contains(AgentTokenScope.AI_EXECUTION_RUN)
+                || owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN))) {
+            return true;
+        }
         return false;
     }
 

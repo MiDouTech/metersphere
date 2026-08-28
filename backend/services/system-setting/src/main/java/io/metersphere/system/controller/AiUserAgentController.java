@@ -62,12 +62,14 @@ public class AiUserAgentController {
     @PostMapping("/ai/user-agent/connections")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_CONNECT)
     public AiUserAgentConnectionDTO createConnection(@Valid @RequestBody AiUserAgentConnectionCreateRequest request) {
+        featureService.assertProvisioningAllowed();
         return service.createConnection(request, SessionUtils.getUserId());
     }
 
     @PostMapping("/ai/user-agent/connections/{id}/authorize")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_CONNECT)
     public void authorizeConnection(@PathVariable String id) {
+        featureService.assertProvisioningAllowed();
         AiUserAgentConnectionDTO connection = service.prepareAuthorization(id, SessionUtils.getUserId());
         sessionRegistry.authorize(connection.getDeviceId(), connection.getId(), connection.getProvider());
     }
@@ -81,6 +83,7 @@ public class AiUserAgentController {
     @PostMapping("/ai/agent-bridge/pairing")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERSONAL_AI_AGENT_CONNECT)
     public Map<String, Object> pairing(@Valid @RequestBody AiAgentPairingCreateRequest request) {
+        featureService.assertProvisioningAllowed();
         return service.createPairing(request, SessionUtils.getUserId());
     }
 
@@ -110,6 +113,7 @@ public class AiUserAgentController {
 
     @PostMapping("/ai/agent-bridge/pairing/consume")
     public Map<String, Object> consumePairing(@Valid @RequestBody AiAgentPairingConsumeRequest request) {
+        featureService.assertProvisioningAllowed();
         return service.consumePairing(request);
     }
 

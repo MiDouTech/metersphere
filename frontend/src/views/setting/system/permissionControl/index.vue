@@ -896,9 +896,8 @@
   const memberTotal = ref(0);
   const memberQuery = reactive({ current: 1, pageSize: 10, keyword: '' });
   const memberSourceId = ref('system');
-  const memberReadonly = computed(() =>
-    Boolean(currentMemberRole.value && (isProtectedAdmin(currentMemberRole.value) || !canUpdateRole.value))
-  );
+  // 系统管理员的权限定义仍受保护，但其成员关系允许有更新权限的管理员维护。
+  const memberReadonly = computed(() => !canUpdateRole.value);
   const memberPagination = computed(() => ({
     current: memberQuery.current,
     pageSize: memberQuery.pageSize,
@@ -1799,9 +1798,9 @@
 <style scoped lang="less">
   .permission-control-page {
     overflow: auto;
+    max-width: 100%;
     height: 100%;
     min-height: 0;
-    max-width: 100%;
   }
   .role-layout {
     display: grid;
@@ -1814,15 +1813,15 @@
   }
   .flow-layout {
     display: grid;
+    align-items: start;
+    min-width: 0;
+    min-height: 0;
     grid-template-columns: 300px minmax(520px, 1fr) 360px;
     gap: 16px;
-    min-height: 0;
-    min-width: 0;
-    align-items: start;
   }
   .flow-card {
-    min-height: 560px;
     min-width: 0;
+    min-height: 560px;
   }
   .card-title {
     display: flex;
@@ -1858,11 +1857,11 @@
   }
   .flow-list-item-actions {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 6px 8px;
-    width: 100%;
     margin-top: 10px;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px 8px;
   }
   .flow-list-scroll {
     overflow-y: auto;

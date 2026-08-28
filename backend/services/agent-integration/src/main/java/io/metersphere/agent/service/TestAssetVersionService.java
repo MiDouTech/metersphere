@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DuplicateKeyException;
+import io.metersphere.sdk.exception.MSException;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
@@ -71,4 +72,12 @@ public class TestAssetVersionService {
         mapper.insertRelation(IDGenerator.nextStr(), projectId, relationType, sourceType, sourceId,
                 sourceVersionId, targetType, targetId, targetVersionId, metadata, userId, System.currentTimeMillis());
     }
+
+    public TestAssetVersionDTO getPublished(String id,String projectId,String assetType,String assetId){
+        TestAssetVersionDTO version=mapper.selectVersionById(id);
+        if(version==null||!projectId.equals(version.getProjectId())||!assetType.equals(version.getAssetType())
+                ||!assetId.equals(version.getAssetId())||!"PUBLISHED".equals(version.getStatus()))throw new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND");
+        return version;
+    }
+    public TestAssetVersionDTO latestPublished(String projectId,String assetType,String assetId){TestAssetVersionDTO v=mapper.selectLatest(projectId,assetType,assetId);if(v==null||!"PUBLISHED".equals(v.getStatus()))throw new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND");return v;}
 }
