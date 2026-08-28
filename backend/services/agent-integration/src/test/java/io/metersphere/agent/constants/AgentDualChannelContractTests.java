@@ -44,6 +44,7 @@ class AgentDualChannelContractTests {
             assertFalse(sql.contains("CREATE TABLE ai_credential_reference"));
             assertTrue(sql.contains("ALTER TABLE ai_credential_reference"));
             assertTrue(sql.contains("CHANGE COLUMN enable enabled"));
+            assertTrue(sql.contains("`sensitive`       BIT(1)"));
         }
     }
 }
