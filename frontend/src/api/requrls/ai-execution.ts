@@ -77,5 +77,8 @@ export const TestAssetDocumentsUrl = '/test-assets/documents';
 export const TestAssetCatalogUrl = '/test-assets/catalog';
 export const TestAssetCatalogDetailUrl = (assetType: string, assetId: string) =>
   `${TestAssetCatalogUrl}/${assetType}/${assetId}`;
+export const TestAssetCatalogPublishUrl = (assetType: string, assetId: string) =>
+  `${TestAssetCatalogUrl}/${assetType}/${assetId}/publish`;
 export const TestAssetVersionsUrl = '/test-assets/versions';
+export const TestAssetVersionDeprecateUrl = (versionId: string) => `${TestAssetVersionsUrl}/${versionId}/deprecate`;
 export const TestAssetRelationsUrl = '/test-assets/relations';

@@ -24,19 +24,30 @@ public interface TestAssetMapper {
                                      @Param("assetType") String assetType,
                                      @Param("assetId") String assetId);
 
+    TestAssetVersionDTO selectLatestPublished(@Param("projectId") String projectId,
+                                              @Param("assetType") String assetType,
+                                              @Param("assetId") String assetId);
+
     TestAssetVersionDTO selectVersionById(@Param("id") String id);
+
+    int deprecateVersion(@Param("id") String id,
+                         @Param("projectId") String projectId,
+                         @Param("assetType") String assetType,
+                         @Param("assetId") String assetId);
 
     List<TestAssetCatalogItemDTO> selectCatalog(@Param("projectId") String projectId,
                                                 @Param("assetType") String assetType,
                                                 @Param("keyword") String keyword,
                                                 @Param("status") String status,
+                                                @Param("updatedAfter") Long updatedAfter,
                                                 @Param("offset") long offset,
                                                 @Param("pageSize") int pageSize);
 
     long countCatalog(@Param("projectId") String projectId,
                       @Param("assetType") String assetType,
                       @Param("keyword") String keyword,
-                      @Param("status") String status);
+                      @Param("status") String status,
+                      @Param("updatedAfter") Long updatedAfter);
 
     TestAssetCatalogItemDTO selectCatalogItem(@Param("projectId") String projectId,
                                               @Param("assetType") String assetType,

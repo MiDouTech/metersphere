@@ -67,9 +67,13 @@ public class TestAssetCatalogService {
             "CASE", "DOCUMENT", "PLAN", "DATASET", "ENVIRONMENT", "PAGE_OBJECT", "BUSINESS_FLOW",
             "COMMON_STEP", "API_DEFINITION", "EVIDENCE", "BUG");
 
-    @Transactional(rollbackFor = Exception.class)
     public Pager<List<TestAssetCatalogItemDTO>> catalog(String projectId, String assetType, String keyword,
                                                          String status, Integer current, Integer pageSize) {
+        return catalog(projectId, assetType, keyword, status, null, current, pageSize);
+    }
+
+    public Pager<List<TestAssetCatalogItemDTO>> catalog(String projectId, String assetType, String keyword,
+                                                         String status, Long updatedAfter, Integer current, Integer pageSize) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         String type = requireCatalogType(assetType);
         assertPermission(type);
@@ -77,16 +81,14 @@ public class TestAssetCatalogService {
         int size = normalizePageSize(pageSize);
         String query = StringUtils.trimToNull(keyword);
         String normalizedStatus = StringUtils.upperCase(StringUtils.trimToNull(status));
-        long total = mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus);
+        long total = mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter);
         List<TestAssetCatalogItemDTO> list = total == 0 ? List.of()
-                : mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus,
+                : mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter,
                 (long) (page - 1) * size, size);
-        String userId = StringUtils.defaultIfBlank(SessionUtils.getUserId(), "system:test-asset-reconcile");
-        list.forEach(item -> applyVersion(item, userId));
+        list.forEach(this::attachLatestPublishedVersion);
         return new Pager<>(list, total, size, page);
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public TestAssetCatalogItemDTO detail(String projectId, String assetType, String assetId) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         String type = requireCatalogType(assetType);
@@ -95,11 +97,26 @@ public class TestAssetCatalogService {
         if (item == null) {
             throw new MSException("测试资产不存在或不属于当前项目：" + type + "/" + assetId);
         }
-        applyVersion(item, StringUtils.defaultIfBlank(SessionUtils.getUserId(), "system:test-asset-detail"));
+        attachLatestPublishedVersion(item);
         return item;
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public TestAssetCatalogItemDTO publishAsset(String projectId,String assetType,String assetId){
+        String resolvedProjectId=agentProjectService.resolveProjectId(projectId);String type=requireCatalogType(assetType);assertPermission(type);
+        TestAssetCatalogItemDTO item=mapper.selectCatalogItem(resolvedProjectId,type,StringUtils.trim(assetId));
+        if(item==null)throw new MSException("ASSET_NOT_FOUND");
+        TestAssetVersionDTO version=publish(item,StringUtils.defaultIfBlank(SessionUtils.getUserId(),AgentExecutionActorContext.get()));
+        if(StringUtils.isBlank(version.getPublishedBy()))throw new MSException("ASSET_PUBLICATION_ACTOR_REQUIRED");
+        attachLatestPublishedVersion(item);return item;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public TestAssetVersionDTO deprecateVersion(String projectId,String versionId,String assetType,String assetId){
+        String resolvedProjectId=agentProjectService.resolveProjectId(projectId);String type=requireCatalogType(assetType);assertPermission(type);
+        return versionService.deprecate(StringUtils.trim(versionId),resolvedProjectId,type,StringUtils.trim(assetId));
+    }
+
     public List<TestAssetContextDTO> resolveContext(String projectId, List<TestAssetRefDTO> refs) {
         if (refs == null || refs.isEmpty()) {
             return List.of();
@@ -108,7 +125,6 @@ public class TestAssetCatalogService {
             throw new MSException("单个任务最多引用 50 个扩展测试资产");
         }
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
-        String userId = StringUtils.defaultIfBlank(SessionUtils.getUserId(), "system:task-context");
         Set<String> seen = new java.util.HashSet<>();
         return refs.stream().map(ref -> {
             String type = requireCatalogType(ref.getAssetType());
@@ -123,14 +139,9 @@ public class TestAssetCatalogService {
             }
             TestAssetVersionDTO version;
             if (StringUtils.isNotBlank(ref.getVersionId())) {
-                version = mapper.selectVersionById(ref.getVersionId());
-                if (version == null || !StringUtils.equals(resolvedProjectId, version.getProjectId())
-                        || !StringUtils.equals(type, version.getAssetType())
-                        || !StringUtils.equals(assetId, version.getAssetId())) {
-                    throw new MSException("指定资产版本不存在或与资产不匹配：" + ref.getVersionId());
-                }
+                version = versionService.getPublished(ref.getVersionId(), resolvedProjectId, type, assetId);
             } else {
-                version = publish(item, userId);
+                version = versionService.latestPublished(resolvedProjectId, type, assetId);
             }
             TestAssetContextDTO context = new TestAssetContextDTO();
             context.setAssetType(type);
@@ -173,9 +184,14 @@ public class TestAssetCatalogService {
         return new Pager<>(list, total, size, page);
     }
 
-    @Transactional(rollbackFor = Exception.class)
     public Pager<List<TestAssetCatalogItemDTO>> searchByTypes(String projectId, List<String> assetTypes,
                                                                String keyword, String status,
+                                                               Integer current, Integer pageSize) {
+        return searchByTypes(projectId, assetTypes, keyword, status, null, current, pageSize);
+    }
+
+    public Pager<List<TestAssetCatalogItemDTO>> searchByTypes(String projectId, List<String> assetTypes,
+                                                               String keyword, String status, Long updatedAfter,
                                                                Integer current, Integer pageSize) {
         if (assetTypes == null || assetTypes.isEmpty()) throw new MSException("ASSET_TYPES_REQUIRED");
         List<String> types = assetTypes.stream().map(this::requireCatalogType).distinct().toList();
@@ -186,15 +202,14 @@ public class TestAssetCatalogService {
         String normalizedStatus = StringUtils.defaultIfBlank(StringUtils.upperCase(StringUtils.trimToNull(status)), "PUBLISHED");
         long total = 0;List<TestAssetCatalogItemDTO> merged = new ArrayList<>();
         for (String type : types) {
-            total += mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus);
-            merged.addAll(mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus, 0, fetch));
+            total += mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter);
+            merged.addAll(mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter, 0, fetch));
         }
         merged.sort(Comparator.comparing(TestAssetCatalogItemDTO::getUpdateTime,
                 Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(TestAssetCatalogItemDTO::getId));
         int from = Math.min((page - 1) * size, merged.size());int to = Math.min(from + size, merged.size());
         List<TestAssetCatalogItemDTO> result = new ArrayList<>(merged.subList(from, to));
-        String userId = StringUtils.defaultIfBlank(SessionUtils.getUserId(), "system:test-asset-search");
-        result.forEach(item -> applyVersion(item, userId));
+        result.forEach(this::attachLatestPublishedVersion);
         return new Pager<>(result, total, size, page);
     }
 
@@ -278,8 +293,14 @@ public class TestAssetCatalogService {
         return allowed;
     }
 
-    private void applyVersion(TestAssetCatalogItemDTO item, String userId) {
-        TestAssetVersionDTO version = publish(item, userId);
+    private void attachLatestPublishedVersion(TestAssetCatalogItemDTO item) {
+        TestAssetVersionDTO version = mapper.selectLatestPublished(item.getProjectId(), item.getAssetType(), item.getId());
+        if (version == null) {
+            item.setAssetVersionId(null);
+            item.setAssetVersionNo(null);
+            item.setContentHash(null);
+            return;
+        }
         item.setAssetVersionId(version.getId());
         item.setAssetVersionNo(version.getVersionNo());
         item.setContentHash(version.getContentHash());

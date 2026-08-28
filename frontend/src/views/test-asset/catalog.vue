@@ -1,6 +1,7 @@
 <template>
   <TestAssetPage>
     <MsCard simple>
+      <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
       <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div class="text-base font-medium">{{ config.title }}</div>
@@ -40,7 +41,8 @@
           <a-table-column title="摘要" data-index="summary" :width="300" ellipsis tooltip />
           <a-table-column title="资产版本" :width="110"
             ><template #cell="{ record }"
-              ><a-link @click="openVersions(record)">v{{ record.assetVersionNo || 1 }}</a-link></template
+              ><a-link v-if="record.assetVersionId" @click="openVersions(record)">v{{ record.assetVersionNo }}</a-link
+              ><a-tag v-else color="orange">未发布</a-tag></template
             ></a-table-column
           >
           <a-table-column title="负责人" data-index="owner" :width="130" />
@@ -54,7 +56,13 @@
                 <a-link @click="openRelations(record)">追溯</a-link>
                 <a-link v-if="assetType === 'EVIDENCE'" @click="previewEvidence(record)">预览</a-link>
                 <a-link v-if="assetType === 'EVIDENCE'" @click="downloadEvidence(record)">下载</a-link>
-                <a-link v-permission="['AI_EXECUTION:RUN']" @click="useInTask(record)">用于任务</a-link>
+                <a-link v-permission="['AI_EXECUTION:RUN']" @click="publishAsset(record)">发布执行版本</a-link>
+                <a-link
+                  v-permission="['AI_EXECUTION:RUN']"
+                  :disabled="!record.assetVersionId"
+                  @click="useInTask(record)"
+                  >用于任务</a-link
+                >
               </a-space>
             </template>
           </a-table-column>
@@ -105,6 +113,7 @@
     downloadAiExecutionArtifact,
     getTestAssetCatalogDetail,
     pageTestAssetCatalog,
+    publishTestAssetCatalog,
   } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
   import { downloadByteFile } from '@/utils';
@@ -157,6 +166,7 @@
   const assetType = computed(() => config.value.type);
   const loading = ref(false);
   const records = ref<TestAssetCatalogItem[]>([]);
+  const error = ref('');
   const total = ref(0);
   const detailVisible = ref(false);
   const detail = ref<TestAssetCatalogItem>();
@@ -176,6 +186,7 @@
   async function load() {
     if (!appStore.currentProjectId) return;
     loading.value = true;
+    error.value = '';
     try {
       const result = await pageTestAssetCatalog({
         projectId: appStore.currentProjectId,
@@ -187,6 +198,8 @@
       });
       records.value = result.list || [];
       total.value = result.total || 0;
+    } catch (reason: any) {
+      error.value = reason?.message || `${config.value.title}加载失败，请稍后重试`;
     } finally {
       loading.value = false;
     }
@@ -219,6 +232,7 @@
     router.push(config.value.source);
   }
   function useInTask(record: TestAssetCatalogItem) {
+    if (!record.assetVersionId) return;
     router.push({
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
       query: {
@@ -229,6 +243,11 @@
         assetVersionId: record.assetVersionId,
       },
     });
+  }
+  async function publishAsset(record: TestAssetCatalogItem) {
+    if (!appStore.currentProjectId) return;
+    await publishTestAssetCatalog(appStore.currentProjectId, record.assetType, record.id);
+    await load();
   }
   async function downloadEvidence(record: TestAssetCatalogItem) {
     if (!record.relatedId) return;

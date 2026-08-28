@@ -10,6 +10,17 @@ const SENSITIVE_ERROR_PATTERNS = [
 
 export interface AppErrorDetails {
   code?: string | number;
+  status?: number;
+  category?:
+    | 'validation'
+    | 'permission'
+    | 'conflict'
+    | 'not-found'
+    | 'rate-limit'
+    | 'network'
+    | 'timeout'
+    | 'server'
+    | 'unknown';
   messageKey?: string;
   message: string;
   requestId?: string;
@@ -20,6 +31,10 @@ export interface AppErrorDetails {
 
 export class AppError extends Error implements AppErrorDetails {
   code?: string | number;
+
+  status?: number;
+
+  category?: AppErrorDetails['category'];
 
   messageKey?: string;
 
@@ -35,6 +50,8 @@ export class AppError extends Error implements AppErrorDetails {
     super(details.message);
     this.name = 'AppError';
     this.code = details.code;
+    this.status = details.status;
+    this.category = details.category;
     this.messageKey = details.messageKey;
     this.requestId = details.requestId;
     this.retryable = details.retryable;
@@ -62,13 +79,31 @@ function isStringMap(value: unknown): value is Record<string, string> {
   return entries.length > 0 && entries.every(([key, item]) => key !== 'requestId' && typeof item === 'string');
 }
 
+export function classifyStatus(status?: number): AppErrorDetails['category'] {
+  if (!status) return 'unknown';
+  if (status === 400 || status === 422) return 'validation';
+  if (status === 401 || status === 403) return 'permission';
+  if (status === 404 || status === 410) return 'not-found';
+  if (status === 409 || status === 423) return 'conflict';
+  if (status === 429) return 'rate-limit';
+  if (status >= 500) return 'server';
+  return 'unknown';
+}
+
 export function normalizeAppError(response: AxiosResponse | undefined, fallback: string): AppError {
   const body = response?.data || {};
   const legacyFieldErrors = isStringMap(body?.messageDetail) ? body.messageDetail : undefined;
   const requestId =
-    response?.headers?.['x-request-id'] || body?.requestId || body?.messageDetail?.requestId || body?.data?.requestId;
+    response?.headers?.['x-request-id'] ||
+    body?.traceId ||
+    body?.requestId ||
+    body?.messageDetail?.requestId ||
+    body?.data?.requestId;
+  const status = response?.status;
   return new AppError({
     code: body?.code,
+    status,
+    category: classifyStatus(status),
     messageKey: body?.messageKey,
     message: sanitizeServerMessage(body?.message, fallback),
     requestId,

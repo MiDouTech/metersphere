@@ -457,12 +457,6 @@ public class UserLoginService {
             dto.setUserRolePermissions(userRolePermissions);
             list.add(dto);
         }
-        Map<String, List<UserRoleUiPermission>> roleUiPermissionMap = permissionUiService.getUiPermissionsByRoles(userRoles);
-        list.forEach(dto -> {
-            if (dto.getUserRole() != null) {
-                dto.setUserRoleUiPermissions(roleUiPermissionMap.getOrDefault(dto.getUserRole().getId(), List.of()));
-            }
-        });
         permissionDTO.setList(list);
         return permissionDTO;
     }

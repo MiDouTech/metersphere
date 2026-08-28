@@ -15,6 +15,8 @@ import io.metersphere.agent.tool.functional.FunctionalHistoryListToolHandler;
 import io.metersphere.agent.tool.functional.FunctionalTemplateGetToolHandler;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import io.metersphere.agent.service.TestAssetCatalogService;
 
 import java.util.List;
 import java.util.Map;
@@ -58,9 +60,22 @@ class AgentMcpToolContractTests {
         for (AgentMcpToolHandler handler : handlers) {
             Assertions.assertTrue(expectedReadOnly.containsKey(handler.name()), "unexpected tool: " + handler.name());
             Assertions.assertNotNull(handler.inputSchema());
+            Assertions.assertNotNull(handler.outputSchema());
+            Assertions.assertFalse(((Map<?,?>)((Map<?,?>)handler.outputSchema().get("properties")).get("result")).isEmpty());
             Assertions.assertEquals(expectedReadOnly.get(handler.name()), handler.annotations().get("readOnlyHint"));
             Assertions.assertNotNull(handler.annotations().get("destructiveHint"));
             Assertions.assertNotNull(handler.annotations().get("idempotentHint"));
         }
+    }
+
+    @Test
+    void assetCatalogContractIncludesIncrementalCursorAndStrictPageResult(){
+        AgentMcpToolHandler handler=new BuiltinAgentMcpToolConfig().assetCatalogSearchTool(Mockito.mock(TestAssetCatalogService.class));
+        Map<?,?> properties=(Map<?,?>)handler.inputSchema().get("properties");
+        Assertions.assertTrue(properties.containsKey("updatedAfter"));
+        Map<?,?> outputProperties=(Map<?,?>)handler.outputSchema().get("properties");
+        Map<?,?> result=(Map<?,?>)outputProperties.get("result");
+        Assertions.assertEquals(false,result.get("additionalProperties"));
+        Assertions.assertEquals(List.of("items","nextCursor","hasMore","traceId"),result.get("required"));
     }
 }

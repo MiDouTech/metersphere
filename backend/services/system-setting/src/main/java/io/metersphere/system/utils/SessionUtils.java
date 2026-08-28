@@ -8,6 +8,8 @@ import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.domain.UserRole;
 import io.metersphere.system.domain.UserRolePermission;
 import io.metersphere.system.dto.sdk.SessionUser;
+import io.metersphere.project.domain.Project;
+import io.metersphere.project.mapper.ProjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -145,12 +147,7 @@ public class SessionUtils {
             }
         }));
 
-        long count = user.getUserRoles()
-                .stream()
-                .filter(g -> StringUtils.equalsIgnoreCase(g.getId(), InternalUserRole.ADMIN.getValue()))
-                .count();
-
-        if (count > 0) {
+        if (isAdminForScope(user, role, organizationId, projectId)) {
             return true;
         }
 
@@ -167,6 +164,66 @@ public class SessionUtils {
 
         Set<String> systemPermissions = getSystemPermissions(userRolePermissions, role, user);
         return systemPermissions.contains(permission);
+    }
+
+    public static boolean isAdminForScope(String organizationId, String projectId) {
+        SessionUser user = SessionUtils.getUser();
+        if (user == null) {
+            return false;
+        }
+        Map<String, UserRole> rolesByRelationId = new HashMap<>();
+        user.getUserRoleRelations().forEach(relation -> user.getUserRoles().stream()
+                .filter(role -> StringUtils.equalsIgnoreCase(role.getId(), relation.getRoleId()))
+                .findFirst()
+                .ifPresent(role -> rolesByRelationId.put(relation.getId(), role)));
+        return isAdminForScope(user, rolesByRelationId, organizationId, projectId);
+    }
+
+    private static boolean isAdminForScope(SessionUser user,
+                                           Map<String, UserRole> rolesByRelationId,
+                                           String organizationId,
+                                           String projectId) {
+        if (hasActiveRoleAssignment(user, rolesByRelationId, InternalUserRole.ADMIN.getValue(),
+                UserRoleType.SYSTEM.name(), UserRoleScope.SYSTEM)) {
+            return true;
+        }
+        if (StringUtils.isNotBlank(projectId) && hasActiveRoleAssignment(user, rolesByRelationId,
+                InternalUserRole.PROJECT_ADMIN.getValue(), UserRoleType.PROJECT.name(), projectId)) {
+            return true;
+        }
+        return StringUtils.isNotBlank(organizationId)
+                && hasActiveRoleAssignment(user, rolesByRelationId, InternalUserRole.ORG_ADMIN.getValue(),
+                UserRoleType.ORGANIZATION.name(), organizationId)
+                && projectBelongsToOrganization(projectId, organizationId);
+    }
+
+    private static boolean hasActiveRoleAssignment(SessionUser user,
+                                                   Map<String, UserRole> rolesByRelationId,
+                                                   String roleId,
+                                                   String roleType,
+                                                   String sourceId) {
+        return user.getUserRoleRelations().stream()
+                .filter(relation -> StringUtils.equalsIgnoreCase(relation.getRoleId(), roleId))
+                .filter(relation -> StringUtils.equalsIgnoreCase(relation.getSourceId(), sourceId))
+                .map(relation -> rolesByRelationId.get(relation.getId()))
+                .filter(Objects::nonNull)
+                .anyMatch(role -> StringUtils.equalsIgnoreCase(role.getId(), roleId)
+                        && StringUtils.equalsIgnoreCase(role.getType(), roleType)
+                        && BooleanUtils.isNotFalse(role.getEnabled()));
+    }
+
+    private static boolean projectBelongsToOrganization(String projectId, String organizationId) {
+        if (StringUtils.isBlank(projectId)) {
+            return true;
+        }
+        ProjectMapper projectMapper = CommonBeanFactory.getBean(ProjectMapper.class);
+        if (projectMapper == null) {
+            return false;
+        }
+        Project project = projectMapper.selectByPrimaryKey(projectId);
+        return project != null
+                && BooleanUtils.isNotTrue(project.getDeleted())
+                && StringUtils.equals(project.getOrganizationId(), organizationId);
     }
 
     public static Set<String> getSystemPermissions(Map<String, List<UserRolePermission>> userRolePermissions, Map<String, UserRole> role, SessionUser user) {

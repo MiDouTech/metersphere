@@ -4,6 +4,7 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import io.metersphere.plugin.platform.dto.SelectOption;
 import io.metersphere.sdk.constants.PermissionConstants;
+import io.metersphere.sdk.constants.InternalUserRole;
 import io.metersphere.sdk.constants.TemplateScene;
 import io.metersphere.sdk.constants.UserRoleScope;
 import io.metersphere.sdk.constants.UserRoleType;
@@ -19,7 +20,6 @@ import io.metersphere.system.domain.UserRole;
 import io.metersphere.system.domain.UserRoleRelation;
 import io.metersphere.system.domain.WorkflowDefinition;
 import io.metersphere.system.domain.WorkflowRole;
-import io.metersphere.system.domain.UserRoleUiPermission;
 import io.metersphere.system.dto.permission.PermissionDefinitionItem;
 import io.metersphere.system.dto.permission.PermissionResourceDTO;
 import io.metersphere.system.dto.permission.control.PermissionControlFlowMatrixDTO;
@@ -77,8 +77,10 @@ import java.util.stream.Collectors;
 @Transactional(rollbackFor = Exception.class)
 public class PermissionControlService {
 
-    private static final String MEMBER_ROLE_ID = "permission_member";
-    private static final String MEMBER_PERMISSION_INIT_VERSION = "V3.7.2_50_CACHE_V1";
+    private static final Set<String> REQUIRED_ROLE_IDS = Set.of(
+            InternalUserRole.ADMIN.getValue(), InternalUserRole.MEMBER.getValue(),
+            InternalUserRole.ORG_ADMIN.getValue(), InternalUserRole.ORG_MEMBER.getValue(),
+            InternalUserRole.PROJECT_ADMIN.getValue(), InternalUserRole.PROJECT_MEMBER.getValue());
 
     @Resource
     private GlobalUserRoleService globalUserRoleService;
@@ -90,8 +92,6 @@ public class PermissionControlService {
     private PermissionControlMapper permissionControlMapper;
     @Resource
     private ExtUserRoleRelationMapper extUserRoleRelationMapper;
-    @Resource
-    private PermissionMigrationAuditService permissionMigrationAuditService;
     @Resource
     private PermissionSessionRefreshService permissionSessionRefreshService;
     @Resource
@@ -111,8 +111,7 @@ public class PermissionControlService {
 
     public List<UserRole> listRoles() {
         return globalUserRoleService.list().stream()
-                .filter(role -> StringUtils.equals(role.getId(), "admin")
-                        || StringUtils.equals(role.getId(), "permission_member")
+                .filter(role -> REQUIRED_ROLE_IDS.contains(role.getId())
                         || (!BooleanUtils.isTrue(role.getInternal())
                         && !StringUtils.startsWith(role.getDescription(), "[已迁移旧用户组]")))
                 .toList();
@@ -128,10 +127,6 @@ public class PermissionControlService {
 
     public List<PermissionDefinitionItem> getPermissionDefinition(String roleType) {
         return globalUserRoleService.getPermissionDefinitionForControl(roleType);
-    }
-
-    public List<UserRoleUiPermission> getRoleUiPermission(String roleId) {
-        return permissionUiService.getRoleUiPermissions(roleId);
     }
 
     public UserRole addRole(UserRoleUpdateRequest request) {
@@ -156,17 +151,8 @@ public class PermissionControlService {
         saveRequest.setEnabled(request.getEnabled());
         if (StringUtils.isBlank(request.getId())) {
             saveRequest.setPermissions(List.of());
-            saveRequest.setUiPermissions(List.of());
         } else {
             saveRequest.setPermissions(flattenPermissionUpdates(getRolePermission(request.getId())));
-            saveRequest.setUiPermissions(getRoleUiPermission(request.getId()).stream().map(item -> {
-                io.metersphere.system.dto.permission.RoleUiPermissionDTO value =
-                        new io.metersphere.system.dto.permission.RoleUiPermissionDTO();
-                value.setResourceCode(item.getResourceCode());
-                value.setVisible(item.getVisible());
-                value.setOperable(item.getOperable());
-                return value;
-            }).toList());
         }
         return saveRole(saveRequest);
     }
@@ -194,6 +180,9 @@ public class PermissionControlService {
     }
 
     public UserRole enableRole(String roleId, Boolean enabled) {
+        if (REQUIRED_ROLE_IDS.contains(roleId) && BooleanUtils.isFalse(enabled)) {
+            throw new MSException("系统必备角色不可停用");
+        }
         List<String> affectedUsers = permissionControlMapper.selectRoleMemberUserIds(roleId, null);
         UserRole result = globalUserRoleService.enable(roleId, enabled);
         permissionSessionRefreshService.refreshUsersAfterCommit(affectedUsers);
@@ -201,6 +190,9 @@ public class PermissionControlService {
     }
 
     public void deleteRole(String roleId) {
+        if (REQUIRED_ROLE_IDS.contains(roleId)) {
+            throw new MSException("系统必备角色不可删除");
+        }
         List<String> affectedUsers = permissionControlMapper.selectRoleMemberUserIds(roleId, null);
         globalUserRoleService.delete(roleId, SessionUtils.getUserId());
         permissionSessionRefreshService.refreshUsersAfterCommit(affectedUsers);
@@ -236,9 +228,6 @@ public class PermissionControlService {
         }
         Set<String> allowedPermissionIds = collectPermissionIds(
                 globalUserRoleService.getPermissionDefinitionForControl(effectiveType));
-        request.setUiPermissions(normalizeLinkedButtonUiPermissions(request.getUiPermissions(), effectiveType));
-        validateUiPermissionScope(request.getUiPermissions(), effectiveType);
-
         UserRole role = new UserRole();
         role.setId(request.getId());
         role.setName(request.getName());
@@ -257,120 +246,11 @@ public class PermissionControlService {
         }
         PermissionSettingUpdateRequest permissionRequest = new PermissionSettingUpdateRequest();
         permissionRequest.setUserRoleId(saved.getId());
-        List<PermissionSettingUpdateRequest.PermissionUpdateRequest> normalizedPermissions =
-                normalizeUiOperableDependencies(request.getPermissions(), request.getUiPermissions(), effectiveType, allowedPermissionIds);
-        permissionRequest.setPermissions(normalizePermissionDependencies(normalizedPermissions, allowedPermissionIds));
-        permissionRequest.setUiPermissions(request.getUiPermissions());
+        permissionRequest.setPermissions(normalizePermissionDependencies(request.getPermissions(), allowedPermissionIds));
         globalUserRoleService.updatePermissionSetting(permissionRequest);
         permissionSessionRefreshService.refreshUsersAfterCommit(
                 permissionControlMapper.selectRoleMemberUserIds(saved.getId(), null));
         return globalUserRoleService.get(saved.getId());
-    }
-
-    private List<PermissionSettingUpdateRequest.PermissionUpdateRequest> normalizeUiOperableDependencies(
-            List<PermissionSettingUpdateRequest.PermissionUpdateRequest> permissions,
-            List<io.metersphere.system.dto.permission.RoleUiPermissionDTO> uiPermissions,
-            String roleType,
-            Set<String> allowedPermissionIds) {
-        Map<String, PermissionSettingUpdateRequest.PermissionUpdateRequest> normalized = permissions.stream()
-                .collect(Collectors.toMap(PermissionSettingUpdateRequest.PermissionUpdateRequest::getId,
-                        item -> new PermissionSettingUpdateRequest.PermissionUpdateRequest(item.getId(), BooleanUtils.isTrue(item.getEnable())),
-                        (a, b) -> b, java.util.LinkedHashMap::new));
-        Map<String, String> resourcePermissionIds = getResourceTree(roleType).stream()
-                .flatMap(root -> flattenResources(root).stream())
-                .filter(resource -> StringUtils.isNotBlank(resource.getPermissionId()))
-                .collect(Collectors.toMap(PermissionResourceDTO::getCode, PermissionResourceDTO::getPermissionId, (a, b) -> a));
-        uiPermissions.stream()
-                .filter(item -> BooleanUtils.isTrue(item.getOperable()))
-                .map(item -> resourcePermissionIds.get(item.getResourceCode()))
-                .filter(permissionId -> StringUtils.isNotBlank(permissionId) && allowedPermissionIds.contains(permissionId))
-                .forEach(permissionId -> normalized
-                        .computeIfAbsent(permissionId, id -> new PermissionSettingUpdateRequest.PermissionUpdateRequest(id, true))
-                        .setEnable(true));
-        return new ArrayList<>(normalized.values());
-    }
-
-    private List<io.metersphere.system.dto.permission.RoleUiPermissionDTO> normalizeLinkedButtonUiPermissions(
-            List<io.metersphere.system.dto.permission.RoleUiPermissionDTO> uiPermissions, String roleType) {
-        Map<String, io.metersphere.system.dto.permission.RoleUiPermissionDTO> normalized = uiPermissions.stream()
-                .collect(Collectors.toMap(io.metersphere.system.dto.permission.RoleUiPermissionDTO::getResourceCode,
-                        item -> item, (a, b) -> b, java.util.LinkedHashMap::new));
-        Map<String, List<PermissionResourceDTO>> linkedButtons = getResourceTree(roleType).stream()
-                .flatMap(root -> flattenResources(root).stream())
-                .filter(resource -> StringUtils.equals(resource.getType(), "BUTTON")
-                        && StringUtils.isNotBlank(resource.getPermissionId()))
-                .collect(Collectors.groupingBy(PermissionResourceDTO::getPermissionId));
-        for (List<PermissionResourceDTO> group : linkedButtons.values()) {
-            List<io.metersphere.system.dto.permission.RoleUiPermissionDTO> configured = group.stream()
-                    .map(resource -> normalized.get(resource.getCode()))
-                    .filter(Objects::nonNull)
-                    .toList();
-            if (CollectionUtils.isEmpty(configured)) {
-                continue;
-            }
-            boolean visible = BooleanUtils.isTrue(configured.getFirst().getVisible())
-                    || BooleanUtils.isTrue(configured.getFirst().getOperable());
-            boolean operable = BooleanUtils.isTrue(configured.getFirst().getOperable());
-            boolean inconsistent = configured.stream().anyMatch(item ->
-                    (BooleanUtils.isTrue(item.getVisible()) || BooleanUtils.isTrue(item.getOperable())) != visible
-                            || BooleanUtils.isTrue(item.getOperable()) != operable);
-            if (inconsistent) {
-                throw new MSException("关联同一接口权限的兼容按钮必须使用一致的可见和可操作设置："
-                        + group.getFirst().getPermissionId());
-            }
-            for (PermissionResourceDTO resource : group) {
-                io.metersphere.system.dto.permission.RoleUiPermissionDTO item = normalized.computeIfAbsent(
-                        resource.getCode(), code -> {
-                            io.metersphere.system.dto.permission.RoleUiPermissionDTO value =
-                                    new io.metersphere.system.dto.permission.RoleUiPermissionDTO();
-                            value.setResourceCode(code);
-                            return value;
-                        });
-                item.setVisible(visible);
-                item.setOperable(operable);
-            }
-        }
-        return new ArrayList<>(normalized.values());
-    }
-
-    public void synchronizeMemberRolePermissions() {
-        UserRole memberRole = globalUserRoleService.get(MEMBER_ROLE_ID);
-        if (memberRole == null || permissionControlMapper.countMemberInitialization(
-                MEMBER_ROLE_ID, MEMBER_PERMISSION_INIT_VERSION) > 0) {
-            return;
-        }
-        try {
-            synchronizeMemberRolePermissions(memberRole);
-        } catch (Exception e) {
-            permissionMigrationAuditService.recordFailure(MEMBER_PERMISSION_INIT_VERSION, MEMBER_ROLE_ID, null,
-                    "CACHE_PERMISSION_INITIALIZATION", e);
-            throw new IllegalStateException("初始化成员角色权限失败", e);
-        }
-    }
-
-    private void synchronizeMemberRolePermissions(UserRole memberRole) {
-        List<PermissionSettingUpdateRequest.PermissionUpdateRequest> permissions = collectPermissionIds(
-                globalUserRoleService.getPermissionDefinitionForControl(UserRoleType.SYSTEM.name())).stream()
-                .map(permissionId -> new PermissionSettingUpdateRequest.PermissionUpdateRequest(permissionId, true))
-                .toList();
-        if (CollectionUtils.isEmpty(permissions)) {
-            throw new MSException("统一权限定义为空，不能初始化成员角色权限");
-        }
-        PermissionSettingUpdateRequest request = new PermissionSettingUpdateRequest();
-        request.setUserRoleId(memberRole.getId());
-        request.setPermissions(permissions);
-        request.setUiPermissions(permissionUiService.getAllResourceTree().stream()
-                .flatMap(root -> flattenResources(root).stream())
-                .map(resource -> {
-                    io.metersphere.system.dto.permission.RoleUiPermissionDTO value = new io.metersphere.system.dto.permission.RoleUiPermissionDTO();
-                    value.setResourceCode(resource.getCode());
-                    value.setVisible(true);
-                    value.setOperable(StringUtils.equalsAny(resource.getType(), "BUTTON", "API"));
-                    return value;
-                }).toList());
-        globalUserRoleService.updatePermissionSetting(request);
-        permissionControlMapper.insertMemberInitialization(MEMBER_ROLE_ID, MEMBER_PERMISSION_INIT_VERSION,
-                System.currentTimeMillis());
     }
 
     private List<PermissionSettingUpdateRequest.PermissionUpdateRequest> normalizePermissionDependencies(
@@ -416,32 +296,6 @@ public class PermissionControlService {
                         .forEach(result::add);
             }
             result.addAll(collectPermissionIds(item.getChildren()));
-        }
-        return result;
-    }
-
-    private void validateUiPermissionScope(List<io.metersphere.system.dto.permission.RoleUiPermissionDTO> permissions,
-                                           String roleType) {
-        Set<String> allowedResourceCodes = getResourceTree(roleType).stream()
-                .flatMap(root -> flattenResources(root).stream())
-                .map(PermissionResourceDTO::getCode)
-                .filter(StringUtils::isNotBlank)
-                .collect(Collectors.toSet());
-        List<String> invalidResourceCodes = permissions.stream()
-                .map(io.metersphere.system.dto.permission.RoleUiPermissionDTO::getResourceCode)
-                .filter(code -> StringUtils.isBlank(code) || !allowedResourceCodes.contains(code))
-                .distinct()
-                .toList();
-        if (CollectionUtils.isNotEmpty(invalidResourceCodes)) {
-            throw new MSException("存在不属于当前角色范围的页面或按钮权限：" + String.join(", ", invalidResourceCodes));
-        }
-    }
-
-    private List<PermissionResourceDTO> flattenResources(PermissionResourceDTO node) {
-        List<PermissionResourceDTO> result = new ArrayList<>();
-        result.add(node);
-        if (CollectionUtils.isNotEmpty(node.getChildren())) {
-            node.getChildren().forEach(child -> result.addAll(flattenResources(child)));
         }
         return result;
     }
@@ -533,10 +387,11 @@ public class PermissionControlService {
         } else {
             permissionControlMapper.deleteRoleRelations(request.getRoleId(), sourceId, request.getUserIds());
         }
-        if (StringUtils.equals(role.getId(), io.metersphere.sdk.constants.InternalUserRole.ADMIN.getValue())) {
+        String fallbackRoleId = fallbackMemberRoleId(role.getId());
+        if (fallbackRoleId != null) {
             RoleMemberUpdateRequest memberRequest = new RoleMemberUpdateRequest();
-            memberRequest.setRoleId(MEMBER_ROLE_ID);
-            memberRequest.setSourceId(UserRoleScope.SYSTEM);
+            memberRequest.setRoleId(fallbackRoleId);
+            memberRequest.setSourceId(sourceId);
             memberRequest.setUserIds(request.getUserIds());
             addRoleMembers(memberRequest);
         }
@@ -549,11 +404,21 @@ public class PermissionControlService {
         if (StringUtils.equals(role.getType(), UserRoleType.SYSTEM.name())) {
             globalUserRoleService.checkSystemUserGroup(role);
         }
-        if (mutable && !StringUtils.equals(role.getId(), io.metersphere.sdk.constants.InternalUserRole.ADMIN.getValue())) {
-            globalUserRoleService.checkAdminUserRole(role);
-        }
         assertTargetScopeMemberPermission(role, resolveMemberSourceId(role, sourceId), mutable);
         return role;
+    }
+
+    private String fallbackMemberRoleId(String roleId) {
+        if (StringUtils.equals(roleId, InternalUserRole.ADMIN.getValue())) {
+            return InternalUserRole.MEMBER.getValue();
+        }
+        if (StringUtils.equals(roleId, InternalUserRole.ORG_ADMIN.getValue())) {
+            return InternalUserRole.ORG_MEMBER.getValue();
+        }
+        if (StringUtils.equals(roleId, InternalUserRole.PROJECT_ADMIN.getValue())) {
+            return InternalUserRole.PROJECT_MEMBER.getValue();
+        }
+        return null;
     }
 
     private String resolveMemberSourceId(UserRole role, String requestedSourceId) {
@@ -660,20 +525,7 @@ public class PermissionControlService {
         UserRole role = globalUserRoleService.getWithCheck(request.getUserRoleId());
         Set<String> allowedPermissionIds = collectPermissionIds(
                 globalUserRoleService.getPermissionDefinitionForControl(role.getType()));
-        List<io.metersphere.system.dto.permission.RoleUiPermissionDTO> uiPermissions =
-                request.getUiPermissions() == null ? permissionUiService.getRoleUiPermissions(role.getId()).stream().map(item -> {
-                    io.metersphere.system.dto.permission.RoleUiPermissionDTO dto = new io.metersphere.system.dto.permission.RoleUiPermissionDTO();
-                    dto.setResourceCode(item.getResourceCode());
-                    dto.setVisible(item.getVisible());
-                    dto.setOperable(item.getOperable());
-                    return dto;
-                }).toList() : request.getUiPermissions();
-        uiPermissions = normalizeLinkedButtonUiPermissions(uiPermissions, role.getType());
-        validateUiPermissionScope(uiPermissions, role.getType());
-        request.setPermissions(normalizePermissionDependencies(
-                normalizeUiOperableDependencies(request.getPermissions(), uiPermissions, role.getType(), allowedPermissionIds),
-                allowedPermissionIds));
-        request.setUiPermissions(request.getUiPermissions() == null ? null : uiPermissions);
+        request.setPermissions(normalizePermissionDependencies(request.getPermissions(), allowedPermissionIds));
         globalUserRoleService.updatePermissionSetting(request);
         permissionSessionRefreshService.refreshUsersAfterCommit(
                 permissionControlMapper.selectRoleMemberUserIds(role.getId(), null));

@@ -2,7 +2,6 @@ package io.metersphere.system.dto.permission.control;
 
 import io.metersphere.sdk.constants.UserRoleType;
 import io.metersphere.sdk.valid.EnumValue;
-import io.metersphere.system.dto.permission.RoleUiPermissionDTO;
 import io.metersphere.system.dto.sdk.request.PermissionSettingUpdateRequest;
 import io.metersphere.validation.groups.Created;
 import io.metersphere.validation.groups.Updated;
@@ -36,7 +35,4 @@ public class RoleSaveRequest {
     @Valid
     private List<PermissionSettingUpdateRequest.PermissionUpdateRequest> permissions;
 
-    @NotNull
-    @Valid
-    private List<RoleUiPermissionDTO> uiPermissions;
 }

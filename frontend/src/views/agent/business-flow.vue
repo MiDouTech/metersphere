@@ -1,5 +1,6 @@
 <template>
   <AgentPage>
+    <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
     <MsCard simple>
       <div class="mb-4 flex justify-between"
         ><div
@@ -62,6 +63,7 @@
   const app = useAppStore();
   const items = ref<AiBusinessFlow[]>([]);
   const loading = ref(false);
+  const error = ref('');
   const saving = ref(false);
   const visible = ref(false);
   const actions = ['NAVIGATE', 'CLICK', 'FILL', 'SELECT', 'WAIT', 'ASSERT', 'UPLOAD', 'KEYBOARD'];
@@ -79,8 +81,11 @@
   const form = reactive(empty());
   async function load() {
     loading.value = true;
+    error.value = '';
     try {
       items.value = await listAiBusinessFlows(app.currentProjectId);
+    } catch (reason: any) {
+      error.value = reason?.message || '业务流加载失败，请稍后重试';
     } finally {
       loading.value = false;
     }
@@ -123,8 +128,8 @@
       Message.success('保存成功');
       await load();
       done(true);
-    } catch (error) {
-      Message.error(error instanceof SyntaxError ? 'JSON 格式错误' : '保存失败');
+    } catch (reason) {
+      Message.error(reason instanceof SyntaxError ? 'JSON 格式错误' : '保存失败');
       done(false);
     } finally {
       saving.value = false;

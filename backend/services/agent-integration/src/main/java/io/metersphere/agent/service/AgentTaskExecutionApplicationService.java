@@ -148,7 +148,7 @@ public class AgentTaskExecutionApplicationService {
     public io.metersphere.agent.dto.AgentExecutionCheckpointDTO createCheckpoint(String taskId,String leaseId,String leaseToken,
                                                                                    io.metersphere.agent.dto.AgentCheckpointCreateRequest request){
         personalTaskService.control(taskId,leaseId,leaseToken);
-        return checkpointService.create(taskId,request);
+        return checkpointService.create(taskId,leaseId,request);
     }
 
     public AgentExecutionTaskDTO cancel(String taskId, AgentExecutionActionRequest request) {
