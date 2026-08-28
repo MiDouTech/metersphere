@@ -22,7 +22,7 @@ public class AgentLoginProfileService {
     @Resource private JdbcTemplate jdbc;
     @Resource private AgentProjectService projects;
     @Resource private AgentEnvironmentProfileService environments;
-    @Resource private AgentWebExecutionContractValidator validator;
+    @Resource(name = "agentWebExecutionContractValidator") private AgentWebExecutionContractValidator validator;
 
     public List<AgentLoginProfileDTO> list(String projectId){String p=projects.resolveProjectId(projectId);return jdbc.query("SELECT * FROM ai_login_profile WHERE project_id=? ORDER BY update_time DESC",this::map,p);}
     public AgentLoginProfileDTO get(String id){List<AgentLoginProfileDTO> rows=jdbc.query("SELECT * FROM ai_login_profile WHERE id=?",this::map,id);if(rows.isEmpty())throw new MSException("LOGIN_PROFILE_NOT_FOUND");projects.resolveProjectId(rows.getFirst().getProjectId());return rows.getFirst();}
