@@ -57,7 +57,7 @@ BEGIN
     DECLARE v_unexpected_tables INT DEFAULT 0;
 
     SELECT COUNT(*) INTO v_failed_rows
-    FROM flyway_schema_history
+    FROM metersphere_version
     WHERE version = '3.7.2.80' AND success = 0;
 
     IF v_failed_rows <> 1 THEN
@@ -130,7 +130,7 @@ BEGIN
     CALL ms_v80_drop_index_if_exists('ai_execution_artifact', 'idx_ai_artifact_retention');
     CALL ms_v80_drop_column_if_exists('ai_execution_artifact', 'redaction_status');
 
-    DELETE FROM flyway_schema_history
+    DELETE FROM metersphere_version
     WHERE version = '3.7.2.80' AND success = 0;
 END//
 
@@ -143,6 +143,6 @@ DROP PROCEDURE ms_v80_drop_index_if_exists//
 DELIMITER ;
 
 SELECT installed_rank, version, description, success
-FROM flyway_schema_history
+FROM metersphere_version
 ORDER BY installed_rank DESC
 LIMIT 5;
