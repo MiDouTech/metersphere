@@ -47,7 +47,7 @@ import java.security.SecureRandom;
 public class AgentCredentialReferenceService {
     private static final Set<String> TYPES = Set.of("USERNAME_PASSWORD", "TOKEN", "API_KEY", "OAUTH_CLIENT");
     @Resource private JdbcTemplate jdbcTemplate;
-    @Resource private AgentProjectService projectService;
+    @Resource(name = "agentProjectService") private AgentProjectService projectService;
     @Resource private ProjectMapper projectMapper;
     @Resource private AgentSecretProviderRegistry providers;
     @Resource private AgentExecLogService auditLog;
