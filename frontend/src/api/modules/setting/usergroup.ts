@@ -4,8 +4,6 @@ import * as ugUrl from '@/api/requrls/setting/usergroup';
 import { CommonList, TableQueryParams } from '@/models/common';
 import {
   OrgUserGroupParams,
-  PermissionResourceItem,
-  RoleUiPermission,
   SaveGlobalUSettingData,
   SystemUserGroupParams,
   UserGroupAuthSetting,
@@ -67,14 +65,6 @@ export function getGlobalUSetting(id: string) {
 // 组织-获取用户组对应的权限配置
 export function getOrgUSetting(id: string) {
   return MSR.get<UserGroupAuthSetting[]>({ url: `${ugUrl.getOrgUSettingUrl}${id}` });
-}
-
-export function getPermissionResourceTree(scopeType: string) {
-  return MSR.get<PermissionResourceItem[]>({ url: ugUrl.getPermissionResourceTreeUrl, params: { scopeType } });
-}
-
-export function getRoleUiPermission(roleId: string) {
-  return MSR.get<RoleUiPermission[]>({ url: `${ugUrl.getRoleUiPermissionUrl}${roleId}` });
 }
 
 // 系统-编辑用户组对应的权限配置

@@ -1,7 +1,6 @@
 package io.metersphere.system.security;
 
 
-import io.metersphere.sdk.constants.InternalUserRole;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.mapper.ExtCheckOwnerMapper;
@@ -50,11 +49,7 @@ public class CheckOwnerAspect {
         //获取参数对象数组
         Object[] args = joinPoint.getArgs();
         CheckOwner checkOwner = method.getAnnotation(CheckOwner.class);
-        long count = SessionUtils.getUser().getUserRoles()
-                .stream()
-                .filter(g -> StringUtils.equalsIgnoreCase(g.getId(), InternalUserRole.ADMIN.getValue()))
-                .count();
-        if (count > 0) {
+        if (SessionUtils.isAdminForScope(SessionUtils.getCurrentOrganizationId(), SessionUtils.getCurrentProjectId())) {
             return;
         }
         // 操作内容

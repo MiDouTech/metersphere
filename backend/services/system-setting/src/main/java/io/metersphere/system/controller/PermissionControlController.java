@@ -7,7 +7,6 @@ import io.metersphere.system.domain.StatusFlowRolePermission;
 import io.metersphere.system.domain.UserRole;
 import io.metersphere.system.domain.WorkflowDefinition;
 import io.metersphere.system.domain.WorkflowRole;
-import io.metersphere.system.domain.UserRoleUiPermission;
 import io.metersphere.system.dto.permission.PermissionDefinitionItem;
 import io.metersphere.system.dto.permission.PermissionResourceDTO;
 import io.metersphere.system.dto.permission.control.PermissionControlFlowMatrixDTO;
@@ -99,13 +98,6 @@ public class PermissionControlController {
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.saveLog(#request)", msClass = GlobalUserRoleLogService.class)
     public UserRole saveRole(@Validated @RequestBody RoleSaveRequest request) {
         return permissionControlService.saveRole(request);
-    }
-
-    @GetMapping("/role/ui-permission/{roleId}")
-    @Operation(summary = "权限控制-角色设置-UI 资源权限")
-    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
-    public List<UserRoleUiPermission> getRoleUiPermission(@PathVariable String roleId) {
-        return permissionControlService.getRoleUiPermission(roleId);
     }
 
     @PostMapping("/role/add")

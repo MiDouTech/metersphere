@@ -1,5 +1,6 @@
 <template>
   <AgentPage>
+    <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
     <div class="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-5">
       <MsCard v-for="item in metrics" :key="item.label" simple>
         <div class="text-sm text-[var(--color-text-3)]">{{ item.label }}</div>
@@ -113,6 +114,7 @@
   import { getAiExecutionOperations, getAiRunners, registerAiRunner } from '@/api/modules/ai-execution';
 
   const loading = ref(false);
+  const error = ref('');
   const runners = ref<AiRunner[]>([]);
   const operations = ref<AiExecutionOperations>();
   const registerVisible = ref(false);
@@ -140,10 +142,13 @@
 
   async function load() {
     loading.value = true;
+    error.value = '';
     try {
       const [runnerResult, operationResult] = await Promise.all([getAiRunners(), getAiExecutionOperations()]);
       runners.value = runnerResult || [];
       operations.value = operationResult;
+    } catch (reason: any) {
+      error.value = reason?.message || 'Agent 列表加载失败，请稍后重试';
     } finally {
       loading.value = false;
     }

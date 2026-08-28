@@ -64,30 +64,23 @@ class TestAssetCatalogServiceTests {
     }
 
     @Test
-    void catalogShouldCheckSourcePermissionAndPublishImmutableVersion() {
-        when(subject.getSession()).thenReturn(session);
+    void catalogShouldCheckSourcePermissionAndAttachPublishedVersionWithoutMutation() {
         when(subject.isPermitted(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ)).thenReturn(true);
         when(agentProjectService.resolveProjectId("project-number")).thenReturn("project-1");
-        when(mapper.countCatalog("project-1", "DATASET", "orders", "ACTIVE")).thenReturn(1L);
+        when(mapper.countCatalog("project-1", "DATASET", "orders", "ACTIVE", null)).thenReturn(1L);
         TestAssetCatalogItemDTO item = new TestAssetCatalogItemDTO();
         item.setId("dataset-1");
         item.setProjectId("project-1");
         item.setAssetType("DATASET");
         item.setName("orders.csv");
         item.setSourceVersion("3");
-        TestAssetExecutableSnapshotDTO executable = new TestAssetExecutableSnapshotDTO();
-        executable.setFileId("file-1");
-        executable.setFileName("orders.csv");
-        executable.setFileType("csv");
-        when(mapper.selectExecutableSnapshot("project-1", "DATASET", "dataset-1")).thenReturn(executable);
-        when(mapper.selectCatalog("project-1", "DATASET", "orders", "ACTIVE", 0L, 20))
+        when(mapper.selectCatalog("project-1", "DATASET", "orders", "ACTIVE", null, 0L, 20))
                 .thenReturn(List.of(item));
         TestAssetVersionDTO version = new TestAssetVersionDTO();
         version.setId("version-3");
         version.setVersionNo(3);
         version.setContentHash("sha256");
-        when(versionService.publish(eq("project-1"), eq("DATASET"), eq("dataset-1"), eq("3"),
-                anyString(), eq("system:test-asset-reconcile"))).thenReturn(version);
+        when(mapper.selectLatestPublished("project-1","DATASET","dataset-1")).thenReturn(version);
 
         Pager<List<TestAssetCatalogItemDTO>> result = service.catalog(
                 "project-number", "dataset", " orders ", "active", 1, 20);
@@ -98,26 +91,10 @@ class TestAssetCatalogServiceTests {
     }
 
     @Test
-    void catalogShouldPublishExecutableSnapshotsForEverySupportedAssetTypeAndRedactSecrets() {
-        when(subject.getSession()).thenReturn(session);
+    void catalogReadShouldNeverPublishAnySupportedAssetType() {
         when(subject.isPermitted(anyString())).thenReturn(true);
         when(agentProjectService.resolveProjectId("project-1")).thenReturn("project-1");
-        TestAssetVersionDTO version = new TestAssetVersionDTO();
-        version.setId("version-1");
-        version.setVersionNo(1);
-        version.setContentHash("hash-1");
-        when(versionService.publish(anyString(), anyString(), anyString(), any(), anyString(), anyString()))
-                .thenReturn(version);
-
-        Map<String, TestAssetExecutableSnapshotDTO> sources = Map.of(
-                "DATASET", datasetSource(),
-                "ENVIRONMENT", environmentSource(),
-                "COMMON_STEP", commonStepSource(),
-                "API_DEFINITION", apiSource(),
-                "EVIDENCE", evidenceSource(),
-                "BUG", bugSource());
-        for (Map.Entry<String, TestAssetExecutableSnapshotDTO> entry : sources.entrySet()) {
-            String type = entry.getKey();
+        for (String type : List.of("DATASET","ENVIRONMENT","COMMON_STEP","API_DEFINITION","EVIDENCE","BUG")) {
             String id = type.toLowerCase() + "-1";
             TestAssetCatalogItemDTO item = new TestAssetCatalogItemDTO();
             item.setId(id);
@@ -125,25 +102,27 @@ class TestAssetCatalogServiceTests {
             item.setAssetType(type);
             item.setName(type + " asset");
             item.setSourceVersion("1");
-            when(mapper.countCatalog("project-1", type, null, null)).thenReturn(1L);
-            when(mapper.selectCatalog("project-1", type, null, null, 0L, 20)).thenReturn(List.of(item));
-            when(mapper.selectExecutableSnapshot("project-1", type, id)).thenReturn(entry.getValue());
+            when(mapper.countCatalog("project-1", type, null, null, null)).thenReturn(1L);
+            when(mapper.selectCatalog("project-1", type, null, null, null, 0L, 20)).thenReturn(List.of(item));
 
             service.catalog("project-1", type, null, null, 1, 20);
         }
+        org.mockito.Mockito.verifyNoInteractions(versionService);
+    }
 
-        ArgumentCaptor<String> snapshotCaptor = ArgumentCaptor.forClass(String.class);
-        verify(versionService, org.mockito.Mockito.times(6)).publish(
-                eq("project-1"), anyString(), anyString(), eq("1"), snapshotCaptor.capture(),
-                eq("system:test-asset-reconcile"));
-        List<String> snapshots = snapshotCaptor.getAllValues();
-        Assertions.assertTrue(snapshots.stream().anyMatch(value -> value.contains("FIXED_FILE_REFERENCE")));
-        Assertions.assertTrue(snapshots.stream().anyMatch(value -> value.contains("AUTHORIZED_DOWNLOAD")));
-        Assertions.assertTrue(snapshots.stream().anyMatch(value -> value.contains("/orders")));
-        Assertions.assertTrue(snapshots.stream().anyMatch(value -> value.contains("resultSchema")));
-        Assertions.assertTrue(snapshots.stream().anyMatch(value -> value.contains("bug description")));
-        Assertions.assertTrue(snapshots.stream().noneMatch(value -> value.contains("raw-secret")));
-        Assertions.assertTrue(snapshots.stream().anyMatch(value -> value.contains("valueRef")));
+    @Test
+    void explicitPublicationCreatesSanitizedImmutableVersion(){
+        when(subject.isPermitted(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ)).thenReturn(true);
+        when(agentProjectService.resolveProjectId("project-1")).thenReturn("project-1");
+        TestAssetCatalogItemDTO item=new TestAssetCatalogItemDTO();item.setId("dataset-1");item.setProjectId("project-1");item.setAssetType("DATASET");item.setName("orders.csv");item.setSourceVersion("3");
+        when(mapper.selectCatalogItem("project-1","DATASET","dataset-1")).thenReturn(item);
+        when(mapper.selectExecutableSnapshot("project-1","DATASET","dataset-1")).thenReturn(datasetSource());
+        TestAssetVersionDTO version=new TestAssetVersionDTO();version.setId("v3");version.setVersionNo(3);version.setContentHash("hash");version.setPublishedBy("u1");
+        when(versionService.publish(eq("project-1"),eq("DATASET"),eq("dataset-1"),eq("3"),anyString(),any())).thenReturn(version);
+        when(mapper.selectLatestPublished("project-1","DATASET","dataset-1")).thenReturn(version);
+        TestAssetCatalogItemDTO result=service.publishAsset("project-1","DATASET","dataset-1");
+        Assertions.assertEquals("v3",result.getAssetVersionId());
+        verify(versionService).publish(eq("project-1"),eq("DATASET"),eq("dataset-1"),eq("3"),anyString(),any());
     }
 
     private TestAssetExecutableSnapshotDTO datasetSource() {
@@ -214,7 +193,6 @@ class TestAssetCatalogServiceTests {
 
     @Test
     void resolveContextShouldPinRequestedVersionAndRejectCrossAssetVersion() {
-        when(subject.getSession()).thenReturn(session);
         when(subject.isPermitted(PermissionConstants.PROJECT_API_DEFINITION_READ)).thenReturn(true);
         when(agentProjectService.resolveProjectId("project-1")).thenReturn("project-1");
         TestAssetCatalogItemDTO item = new TestAssetCatalogItemDTO();
@@ -228,7 +206,8 @@ class TestAssetCatalogServiceTests {
         version.setProjectId("project-1");
         version.setAssetType("API_DEFINITION");
         version.setAssetId("api-2");
-        when(mapper.selectVersionById("version-other")).thenReturn(version);
+        when(versionService.getPublished("version-other","project-1","API_DEFINITION","api-1"))
+                .thenThrow(new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND"));
         TestAssetRefDTO ref = new TestAssetRefDTO();
         ref.setAssetType("API_DEFINITION");
         ref.setAssetId("api-1");
@@ -240,7 +219,6 @@ class TestAssetCatalogServiceTests {
 
     @Test
     void resolveContextShouldRejectCrossProjectPinnedVersion() {
-        when(subject.getSession()).thenReturn(session);
         when(subject.isPermitted(PermissionConstants.PROJECT_ENVIRONMENT_READ)).thenReturn(true);
         when(agentProjectService.resolveProjectId("project-1")).thenReturn("project-1");
         TestAssetCatalogItemDTO item = new TestAssetCatalogItemDTO();
@@ -253,7 +231,8 @@ class TestAssetCatalogServiceTests {
         foreignVersion.setProjectId("project-2");
         foreignVersion.setAssetType("ENVIRONMENT");
         foreignVersion.setAssetId("env-1");
-        when(mapper.selectVersionById("foreign-version")).thenReturn(foreignVersion);
+        when(versionService.getPublished("foreign-version","project-1","ENVIRONMENT","env-1"))
+                .thenThrow(new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND"));
         TestAssetRefDTO ref = new TestAssetRefDTO();
         ref.setAssetType("ENVIRONMENT");
         ref.setAssetId("env-1");
@@ -277,7 +256,6 @@ class TestAssetCatalogServiceTests {
 
     @Test
     void resolveContextShouldReturnPinnedSnapshotWithoutRepublishing() {
-        when(subject.getSession()).thenReturn(session);
         when(subject.isPermitted(PermissionConstants.PROJECT_ENVIRONMENT_READ)).thenReturn(true);
         when(agentProjectService.resolveProjectId("project-1")).thenReturn("project-1");
         TestAssetCatalogItemDTO item = new TestAssetCatalogItemDTO();
@@ -294,7 +272,7 @@ class TestAssetCatalogServiceTests {
         version.setVersionNo(1);
         version.setContentHash("hash-1");
         version.setContentSnapshot("{\"name\":\"staging\"}");
-        when(mapper.selectVersionById("version-1")).thenReturn(version);
+        when(versionService.getPublished("version-1","project-1","ENVIRONMENT","env-1")).thenReturn(version);
         TestAssetRefDTO ref = new TestAssetRefDTO();
         ref.setAssetType("ENVIRONMENT");
         ref.setAssetId("env-1");

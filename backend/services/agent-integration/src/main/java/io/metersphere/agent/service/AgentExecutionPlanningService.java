@@ -69,7 +69,7 @@ public class AgentExecutionPlanningService {
                     plan=parseAndValidate(response);
                     invocations.finish(invocationId,response);
                 } catch (RuntimeException invalid) {
-                    invocations.fail(invocationId,"MAP_GATEWAY_SCHEMA_INVALID");
+                    invocations.recordFailure(invocationId,"MAP_GATEWAY_SCHEMA_INVALID",response);
                     plan=repairOnce(request,response,profile,taskId,traceId,promptVersion);
                 }
                 if("HIGH".equalsIgnoreCase(step.getRiskLevel())){plan.getAction().setRiskLevel("HIGH");plan.getAction().setRetryable(false);}
@@ -93,14 +93,15 @@ public class AgentExecutionPlanningService {
                 Map.of("role","system","content","Repair the supplied invalid result once. Return only an object conforming exactly to the supplied JSON Schema. Do not add scripts, secrets, markdown, or extra properties."),
                 Map.of("role","user","content",JSON.toJSONString(Map.of("originalInput",original.getMessages(),"invalidOutput",invalid.getStructuredOutput())))));
         String invocationId=invocations.start(taskId,traceId,profile.getId(),profile.getLogicalModelPublicId(),promptVersion,sha(JSON.toJSONString(repair)));
+        GatewayPlanningResponse repaired=null;
         try {
-            GatewayPlanningResponse repaired=gateway.invokeStructured(repair,profiles.serviceKeyRef(profile.getId()));
+            repaired=gateway.invokeStructured(repair,profiles.serviceKeyRef(profile.getId()));
             AgentWebStepPlanDTO plan=parseAndValidate(repaired);
             invocations.finish(invocationId,repaired);
             budgetGuard.recordAfterInvoke(profile,taskId);
             return plan;
         } catch (RuntimeException ex) {
-            invocations.fail(invocationId,"AGENT_PLAN_FAILED");
+            invocations.recordFailure(invocationId,"AGENT_PLAN_FAILED",repaired);
             throw new MSException("AGENT_PLAN_FAILED");
         }
     }

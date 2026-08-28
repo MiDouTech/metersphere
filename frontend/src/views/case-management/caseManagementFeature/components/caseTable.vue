@@ -2294,6 +2294,7 @@
         promptTemplateId: aiExecutionForm.promptTemplateId,
         runnerType: 'BROWSER',
         requiredCapabilities: ['BROWSER'],
+        browserType: aiExecutionForm.browserType,
         taskOrigin: 'PLATFORM_MANUAL',
       });
       if (preflight.status !== 'PASSED') {

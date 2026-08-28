@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.List;
 
@@ -37,9 +38,10 @@ public class TestAssetController {
                                                         @RequestParam String assetType,
                                                         @RequestParam(required = false) String keyword,
                                                         @RequestParam(required = false) String status,
+                                                        @RequestParam(required = false) Long updatedAfter,
                                                         @RequestParam(required = false) Integer current,
                                                         @RequestParam(required = false) Integer pageSize) {
-        return service.catalog(projectId, assetType, keyword, status, current, pageSize);
+        return service.catalog(projectId, assetType, keyword, status, updatedAfter, current, pageSize);
     }
 
     @GetMapping("/catalog/{assetType}/{assetId}")
@@ -55,6 +57,19 @@ public class TestAssetController {
                                                   @PathVariable String assetType,
                                                   @PathVariable String assetId) {
         return service.detail(projectId, assetType, assetId);
+    }
+
+    @PostMapping("/catalog/{assetType}/{assetId}/publish")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    public TestAssetCatalogItemDTO publish(@RequestParam String projectId,@PathVariable String assetType,@PathVariable String assetId){
+        return service.publishAsset(projectId,assetType,assetId);
+    }
+
+    @PostMapping("/versions/{versionId}/deprecate")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    public TestAssetVersionDTO deprecate(@RequestParam String projectId,@RequestParam String assetType,
+                                         @RequestParam String assetId,@PathVariable String versionId){
+        return service.deprecateVersion(projectId,versionId,assetType,assetId);
     }
 
     @GetMapping("/documents")

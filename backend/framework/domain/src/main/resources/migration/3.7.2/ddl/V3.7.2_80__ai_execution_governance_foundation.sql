@@ -46,12 +46,10 @@ ALTER TABLE ai_execution_human_request
     ADD COLUMN resolved_reason VARCHAR(1000) NULL AFTER response,
     ADD COLUMN checkpoint_id VARCHAR(64) NULL AFTER resolved_reason,
     ADD COLUMN trace_id VARCHAR(64) NULL AFTER checkpoint_id,
-    ADD INDEX idx_ai_human_request_task_status (task_id, status),
     ADD INDEX idx_ai_human_request_checkpoint (checkpoint_id);
 
 ALTER TABLE ai_execution_artifact
     ADD COLUMN redaction_status VARCHAR(32) NOT NULL DEFAULT 'PENDING' AFTER upload_status,
-    ADD COLUMN retention_until BIGINT NULL AFTER redaction_status,
     ADD INDEX idx_ai_artifact_retention (retention_until, status);
 
 CREATE TABLE ai_environment_execution_profile
@@ -81,35 +79,54 @@ CREATE TABLE ai_environment_execution_profile
     KEY idx_ai_environment_profile_environment (project_id, environment_id, enabled)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
 
-CREATE TABLE ai_credential_reference
-(
-    id                  VARCHAR(64)   NOT NULL,
-    organization_id     VARCHAR(64)   NOT NULL,
-    project_id          VARCHAR(64)   NOT NULL,
-    environment_id      VARCHAR(64)   NOT NULL,
-    name                VARCHAR(255)  NOT NULL,
-    credential_type     VARCHAR(32)   NOT NULL,
-    business_role       VARCHAR(64)   NOT NULL,
-    provider_type       VARCHAR(32)   NOT NULL,
-    secret_ref          VARCHAR(1024) NOT NULL,
-    secret_version      VARCHAR(128)  NULL,
-    username_hint       VARCHAR(255)  NULL,
-    status              VARCHAR(32)   NOT NULL DEFAULT 'UNVERIFIED',
-    expires_at          BIGINT        NULL,
-    last_verified_at    BIGINT        NULL,
-    last_verify_status  VARCHAR(32)   NULL,
-    last_verify_message VARCHAR(1000) NULL,
-    enabled             BIT(1)        NOT NULL DEFAULT b'1',
-    version             INT           NOT NULL DEFAULT 0,
-    create_user         VARCHAR(64)   NULL,
-    update_user         VARCHAR(64)   NULL,
-    create_time         BIGINT        NOT NULL,
-    update_time         BIGINT        NOT NULL,
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_ai_credential_reference_name (project_id, environment_id, name),
-    KEY idx_ai_credential_reference_status (project_id, environment_id, enabled, status),
-    KEY idx_ai_credential_reference_expiry (expires_at, enabled)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
+-- V3.7.2_24 already created ai_credential_reference for the original Web UI
+-- execution path. Preserve those opaque references and extend the table instead
+-- of replacing it. Legacy rows remain readable but are deliberately unavailable
+-- to the new execution path until an owner re-creates and verifies them.
+ALTER TABLE ai_credential_reference
+    MODIFY COLUMN id VARCHAR(64) NOT NULL,
+    MODIFY COLUMN organization_id VARCHAR(64) NULL,
+    MODIFY COLUMN project_id VARCHAR(64) NOT NULL,
+    MODIFY COLUMN environment_id VARCHAR(64) NULL,
+    MODIFY COLUMN domain VARCHAR(255) NULL,
+    MODIFY COLUMN secret_ref VARCHAR(1024) NOT NULL,
+    CHANGE COLUMN enable enabled BIT(1) NOT NULL DEFAULT b'1',
+    MODIFY COLUMN create_user VARCHAR(64) NULL,
+    MODIFY COLUMN update_user VARCHAR(64) NULL,
+    ADD COLUMN name VARCHAR(255) NULL AFTER environment_id,
+    ADD COLUMN credential_type VARCHAR(32) NULL AFTER name,
+    ADD COLUMN business_role VARCHAR(64) NULL AFTER credential_type,
+    ADD COLUMN provider_type VARCHAR(32) NULL AFTER business_role,
+    ADD COLUMN secret_version VARCHAR(128) NULL AFTER secret_ref,
+    ADD COLUMN username_hint VARCHAR(255) NULL AFTER secret_version,
+    ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT 'UNVERIFIED' AFTER username_hint,
+    ADD COLUMN expires_at BIGINT NULL AFTER status,
+    ADD COLUMN last_verified_at BIGINT NULL AFTER expires_at,
+    ADD COLUMN last_verify_status VARCHAR(32) NULL AFTER last_verified_at,
+    ADD COLUMN last_verify_message VARCHAR(1000) NULL AFTER last_verify_status,
+    ADD COLUMN version INT NOT NULL DEFAULT 0 AFTER enabled;
+
+UPDATE ai_credential_reference
+SET name = CONCAT('legacy-', id),
+    credential_type = 'LEGACY',
+    business_role = 'LEGACY',
+    provider_type = 'LEGACY',
+    status = 'UNAVAILABLE',
+    enabled = b'0',
+    create_time = COALESCE(create_time, 0),
+    update_time = COALESCE(update_time, create_time, 0)
+WHERE name IS NULL;
+
+ALTER TABLE ai_credential_reference
+    MODIFY COLUMN name VARCHAR(255) NOT NULL,
+    MODIFY COLUMN credential_type VARCHAR(32) NOT NULL,
+    MODIFY COLUMN business_role VARCHAR(64) NOT NULL,
+    MODIFY COLUMN provider_type VARCHAR(32) NOT NULL,
+    MODIFY COLUMN create_time BIGINT NOT NULL,
+    MODIFY COLUMN update_time BIGINT NOT NULL,
+    ADD UNIQUE KEY uk_ai_credential_reference_name (project_id, environment_id, name),
+    ADD KEY idx_ai_credential_reference_status (project_id, environment_id, enabled, status),
+    ADD KEY idx_ai_credential_reference_expiry (expires_at, enabled);
 
 CREATE TABLE ai_login_profile
 (
@@ -307,7 +324,7 @@ CREATE TABLE ai_page_element
     strategy          VARCHAR(32)  NOT NULL,
     selector_value    VARCHAR(2048) NOT NULL,
     fallback_locators TEXT         NULL,
-    sensitive         BIT(1)       NOT NULL DEFAULT b'0',
+    `sensitive`       BIT(1)       NOT NULL DEFAULT b'0',
     risk_level        VARCHAR(16)   NOT NULL DEFAULT 'LOW',
     version           INT          NOT NULL DEFAULT 0,
     create_user       VARCHAR(64)  NULL,

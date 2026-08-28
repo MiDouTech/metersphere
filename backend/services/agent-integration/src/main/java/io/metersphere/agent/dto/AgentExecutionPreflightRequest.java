@@ -21,6 +21,8 @@ public class AgentExecutionPreflightRequest {
     private String promptTemplateId;
     @NotBlank private String runnerType;
     @Size(max = 32) private List<String> requiredCapabilities;
+    private String browserType;
+    @Size(max = 50) private List<TestAssetRefDTO> assetRefs;
     private Map<String, Object> policy;
     @NotBlank private String taskOrigin;
     @Size(max = 3) private List<String> responsibleUserIds;

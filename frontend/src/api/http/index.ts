@@ -169,7 +169,11 @@ const transform: AxiosTransform = {
         } else if (errorMessageMode === 'message') {
           showHttpErrorMessage(errMessage);
         }
-        const networkError = new AppError({ message: errMessage, retryable: true });
+        const networkError = new AppError({
+          message: errMessage,
+          retryable: true,
+          category: code === 'ECONNABORTED' ? 'timeout' : 'network',
+        });
         return Promise.reject(
           response?.config?.requestOptions?.isReturnNativeResponse ? response?.data || error : networkError
         );

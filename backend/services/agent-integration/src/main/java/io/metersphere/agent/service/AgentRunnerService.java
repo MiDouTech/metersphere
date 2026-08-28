@@ -359,7 +359,8 @@ public class AgentRunnerService {
             checkpoint.setReason(StringUtils.defaultIfBlank(sanitize(request.getReason()), "LOGIN_BLOCKED"));
             checkpoint.setStateSnapshot(JSON.toJSONString(Map.of("phase", "LOGIN", "taskId", task.getId(),
                     "executionId", lease.getExecutionId(), "capturedAt", System.currentTimeMillis())));
-            checkpointService.create(task.getId(), checkpoint);
+            checkpoint.setRequestId("runner:"+lease.getExecutionId()+":login-blocked");
+            checkpointService.create(task.getId(), lease.getId(), checkpoint);
         }
         execLogService.audit("AI_RUNNER_TASK_STATE", task.getId(),
                 task.getStatus() + "->" + toStatus + ";" + sanitize(request.getReason()));

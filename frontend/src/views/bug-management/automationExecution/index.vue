@@ -873,6 +873,7 @@
     const result = await pageTestAssetCatalog({
       projectId: appStore.currentProjectId,
       assetType: 'ENVIRONMENT',
+      status: 'PUBLISHED',
       keyword: keyword.trim() || undefined,
       current: 1,
       pageSize: 100,
@@ -895,6 +896,7 @@
       const result = await pageTestAssetCatalog({
         projectId: appStore.currentProjectId,
         assetType: assetPicker.assetType,
+        status: 'PUBLISHED',
         keyword: assetPicker.keyword.trim() || undefined,
         current: assetPicker.current,
         pageSize: assetPicker.pageSize,
@@ -1269,6 +1271,10 @@
         promptTemplateId: draftForm.promptTemplateId,
         runnerType: 'BROWSER',
         requiredCapabilities: ['BROWSER'],
+        browserType: 'chromium',
+        assetRefs: selectedAssetRefs.value.length
+          ? selectedAssetRefs.value.map(({ assetType, assetId, versionId }) => ({ assetType, assetId, versionId }))
+          : undefined,
         taskOrigin: 'PLATFORM_MANUAL',
       });
       if (preflight.status !== 'PASSED') {

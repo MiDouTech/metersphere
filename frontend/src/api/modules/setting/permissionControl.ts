@@ -14,7 +14,6 @@ import {
   RoleDeleteImpact,
   RolePermissionItem,
   RoleSavePayload,
-  RoleUiPermissionValue,
   StatusFlowRolePermission,
   WorkflowDefinition,
   WorkflowRole,
@@ -50,10 +49,6 @@ export function savePermissionControlRole(data: RoleSavePayload) {
 
 export function getPermissionControlRoleDeleteImpact(roleId: string) {
   return MSR.get<RoleDeleteImpact>({ url: `${urls.roleDeleteImpactUrl}${roleId}` });
-}
-
-export function getPermissionControlRoleUiPermissions(roleId: string) {
-  return MSR.get<RoleUiPermissionValue[]>({ url: `${urls.roleUiPermissionUrl}${roleId}` });
 }
 
 export function enablePermissionControlRole(data: { roleId: string; enabled: boolean }) {

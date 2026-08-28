@@ -1,13 +1,11 @@
 package io.metersphere.system.security;
 
 
-import io.metersphere.sdk.constants.InternalUserRole;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.mapper.ExtCheckOwnerMapper;
 import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
-import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
@@ -48,11 +46,7 @@ public class CheckProjectOwnerAspect {
         //获取参数对象数组
         Object[] args = joinPoint.getArgs();
         CheckProjectOwner checkOwner = method.getAnnotation(CheckProjectOwner.class);
-        long count = SessionUtils.getUser().getUserRoles()
-                .stream()
-                .filter(g -> StringUtils.equalsIgnoreCase(g.getId(), InternalUserRole.ADMIN.getValue()))
-                .count();
-        if (count > 0) {
+        if (SessionUtils.isAdminForScope(SessionUtils.getCurrentOrganizationId(), SessionUtils.getCurrentProjectId())) {
             return;
         }
         // 操作内容

@@ -859,7 +859,8 @@
     scopeType: 'SYSTEM' as const,
     scopeId: 'system',
   };
-  const isProtectedAdmin = (role: PermissionControlRole) => role.id === 'admin';
+  const requiredRoleIds = new Set(['admin', 'member', 'org_admin', 'org_member', 'project_admin', 'project_member']);
+  const isProtectedAdmin = (role: PermissionControlRole) => requiredRoleIds.has(role.id);
   const appStore = useAppStore();
   const router = useRouter();
   const canAddRole = computed(() => hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+ADD'], ['SYSTEM']));
@@ -896,7 +897,7 @@
   const memberTotal = ref(0);
   const memberQuery = reactive({ current: 1, pageSize: 10, keyword: '' });
   const memberSourceId = ref('system');
-  // 系统管理员的权限定义仍受保护，但其成员关系允许有更新权限的管理员维护。
+  // 六个必备角色的定义受保护，但成员关系允许有更新权限的管理员维护。
   const memberReadonly = computed(() => !canUpdateRole.value);
   const memberPagination = computed(() => ({
     current: memberQuery.current,

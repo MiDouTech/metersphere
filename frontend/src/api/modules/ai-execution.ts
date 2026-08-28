@@ -68,9 +68,11 @@ import {
   AiRunnerRegisterUrl,
   AiRunnersUrl,
   TestAssetCatalogDetailUrl,
+  TestAssetCatalogPublishUrl,
   TestAssetCatalogUrl,
   TestAssetDocumentsUrl,
   TestAssetRelationsUrl,
+  TestAssetVersionDeprecateUrl,
   TestAssetVersionsUrl,
 } from '@/api/requrls/ai-execution';
 
@@ -228,6 +230,19 @@ export interface AiModelProfileRequest {
   version?: number;
 }
 
+export type TestAssetCatalogType =
+  | 'CASE'
+  | 'DOCUMENT'
+  | 'PLAN'
+  | 'DATASET'
+  | 'ENVIRONMENT'
+  | 'PAGE_OBJECT'
+  | 'BUSINESS_FLOW'
+  | 'COMMON_STEP'
+  | 'API_DEFINITION'
+  | 'EVIDENCE'
+  | 'BUG';
+
 export interface AiExecutionPreflightRequest {
   projectId: string;
   testPlanId?: string;
@@ -240,6 +255,8 @@ export interface AiExecutionPreflightRequest {
   promptTemplateId?: string;
   runnerType: string;
   requiredCapabilities?: string[];
+  browserType?: string;
+  assetRefs?: Array<{ assetType: TestAssetCatalogType; assetId: string; versionId?: string }>;
   policy?: Record<string, unknown>;
   taskOrigin: AiTaskOrigin;
   responsibleUserIds?: string[];
@@ -662,19 +679,6 @@ export interface TestAssetDocument {
   assetVersionId?: string;
   assetVersionNo?: number;
 }
-
-export type TestAssetCatalogType =
-  | 'CASE'
-  | 'DOCUMENT'
-  | 'PLAN'
-  | 'DATASET'
-  | 'ENVIRONMENT'
-  | 'PAGE_OBJECT'
-  | 'BUSINESS_FLOW'
-  | 'COMMON_STEP'
-  | 'API_DEFINITION'
-  | 'EVIDENCE'
-  | 'BUG';
 
 export interface TestAssetCatalogItem {
   id: string;
@@ -1172,6 +1176,7 @@ export function pageTestAssetCatalog(params: {
   assetType: TestAssetCatalogType;
   keyword?: string;
   status?: string;
+  updatedAfter?: number;
   current?: number;
   pageSize?: number;
 }) {
@@ -1183,6 +1188,10 @@ export function getTestAssetCatalogDetail(projectId: string, assetType: TestAsse
     url: TestAssetCatalogDetailUrl(assetType, assetId),
     params: { projectId },
   });
+}
+
+export function publishTestAssetCatalog(projectId: string, assetType: TestAssetCatalogType, assetId: string) {
+  return MSR.post<TestAssetCatalogItem>({ url: TestAssetCatalogPublishUrl(assetType, assetId), params: { projectId } });
 }
 
 export function downloadAiExecutionArtifact(taskId: string, artifactId: string) {
@@ -1201,6 +1210,13 @@ export function pageTestAssetVersions(params: {
   pageSize?: number;
 }) {
   return MSR.get<TestAssetPage<TestAssetVersion>>({ url: TestAssetVersionsUrl, params });
+}
+
+export function deprecateTestAssetVersion(projectId: string, version: TestAssetVersion) {
+  return MSR.post<TestAssetVersion>({
+    url: TestAssetVersionDeprecateUrl(version.id),
+    params: { projectId, assetType: version.assetType, assetId: version.assetId },
+  });
 }
 
 export function pageTestAssetRelations(params: {

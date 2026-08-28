@@ -10,6 +10,26 @@ export function hasPermission(permission: string, typeList: string[]) {
   if (userStore.isAdmin) {
     return true;
   }
+  const appStore = useAppStore();
+  const hasScopedAdmin = (roleId: string, roleType: SystemScopeType, sourceId: string) => {
+    if (!sourceId) return false;
+    const role = userStore.userRolePermissions?.find(
+      (item) => item.userRole.id === roleId && item.userRole.type === roleType && item.userRole.enabled !== false
+    );
+    return Boolean(
+      role &&
+        userStore.userRoleRelations?.some((relation) => relation.roleId === roleId && relation.sourceId === sourceId)
+    );
+  };
+  if (typeList.includes('PROJECT') && hasScopedAdmin('project_admin', 'PROJECT', appStore.currentProjectId)) {
+    return true;
+  }
+  if (
+    typeList.some((type) => type === 'ORGANIZATION' || type === 'PROJECT') &&
+    hasScopedAdmin('org_admin', 'ORGANIZATION', appStore.currentOrgId)
+  ) {
+    return true;
+  }
   const { projectPermissions, orgPermissions, systemPermissions } = userStore.currentRole;
 
   if (projectPermissions.length === 0 && orgPermissions.length === 0 && systemPermissions.length === 0) {
