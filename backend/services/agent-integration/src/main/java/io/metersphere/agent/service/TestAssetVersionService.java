@@ -1,6 +1,7 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.dto.TestAssetVersionDTO;
+import io.metersphere.agent.dto.TestAssetRefDTO;
 import io.metersphere.agent.mapper.TestAssetMapper;
 import io.metersphere.system.uid.IDGenerator;
 import jakarta.annotation.Resource;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DuplicateKeyException;
 import io.metersphere.sdk.exception.MSException;
+
+import java.util.List;
 
 @Service
 @Transactional(rollbackFor = Exception.class)
@@ -79,5 +82,25 @@ public class TestAssetVersionService {
                 ||!assetId.equals(version.getAssetId())||!"PUBLISHED".equals(version.getStatus()))throw new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND");
         return version;
     }
-    public TestAssetVersionDTO latestPublished(String projectId,String assetType,String assetId){TestAssetVersionDTO v=mapper.selectLatest(projectId,assetType,assetId);if(v==null||!"PUBLISHED".equals(v.getStatus()))throw new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND");return v;}
+    public TestAssetVersionDTO latestPublished(String projectId,String assetType,String assetId){TestAssetVersionDTO v=mapper.selectLatestPublished(projectId,assetType,assetId);if(v==null)throw new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND");return v;}
+
+    public List<TestAssetVersionDTO> freezeVersions(String projectId,List<TestAssetRefDTO> refs){
+        if(refs==null||refs.isEmpty())return List.of();
+        return refs.stream().map(ref->StringUtils.isNotBlank(ref.getVersionId())
+                ?getPublished(ref.getVersionId(),projectId,ref.getAssetType(),ref.getAssetId())
+                :latestPublished(projectId,ref.getAssetType(),ref.getAssetId())).toList();
+    }
+
+    public TestAssetVersionDTO deprecate(String id,String projectId,String assetType,String assetId){
+        TestAssetVersionDTO version=getPublished(id,projectId,assetType,assetId);
+        if(mapper.deprecateVersion(id,projectId,assetType,assetId)!=1)throw new MSException("ASSET_VERSION_DEPRECATE_CONFLICT");
+        version.setStatus("DEPRECATED");
+        return version;
+    }
+    public TestAssetVersionDTO getFrozen(String id,String projectId,String assetType,String assetId){
+        TestAssetVersionDTO version=mapper.selectVersionById(id);
+        if(version==null||!projectId.equals(version.getProjectId())||!assetType.equals(version.getAssetType())
+                ||!assetId.equals(version.getAssetId())||!List.of("PUBLISHED","DEPRECATED").contains(version.getStatus()))throw new MSException("FROZEN_ASSET_VERSION_NOT_FOUND");
+        return version;
+    }
 }

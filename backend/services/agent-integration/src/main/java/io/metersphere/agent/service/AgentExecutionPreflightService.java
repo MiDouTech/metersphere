@@ -35,7 +35,9 @@ public class AgentExecutionPreflightService {
     @Resource private AgentPromptTemplateService promptTemplateService;
     @Resource private AgentLoginProfileService loginProfileService;
     @Resource private TestAssetVersionService testAssetVersionService;
+    @Resource private TestAssetCatalogService testAssetCatalogService;
     @Resource private AgentCaseExecutabilityService caseExecutabilityService;
+    @Resource private List<AgentTestDataCleanupHandler> cleanupHandlers;
 
     @Transactional(rollbackFor = Exception.class)
     public AgentExecutionPreflightDTO preflight(AgentExecutionPreflightRequest request) {
@@ -102,6 +104,18 @@ public class AgentExecutionPreflightService {
             }
         } else pass(checks,"MODEL","Personal MCP performs planning outside the platform",Map.of(),now);
         try {
+            checkQuota(request, model);
+            pass(checks,"QUOTA","Model and execution budgets are valid",Map.of(),now);
+        } catch (MSException ex) {
+            if(blockedReason==null){blockedReason=AgentBlockedReason.BLOCKED_MODEL.name();blockedDetail=safe(ex);} block(checks,"QUOTA",safe(ex),now);
+        }
+        try {
+            checkRiskPolicy(request, environment);
+            pass(checks,"RISK_POLICY","Risk, production and scope-expansion policies are valid",Map.of("maxScopeExpansionRate",0.15d),now);
+        } catch (MSException ex) {
+            if(blockedReason==null){blockedReason=AgentBlockedReason.BLOCKED_POLICY.name();blockedDetail=safe(ex);} block(checks,"RISK_POLICY",safe(ex),now);
+        }
+        try {
             assertRunner(projectId,request,environment);
             pass(checks,"RUNNER","A matching Runner is online",Map.of(),now);
         } catch (MSException ex) {
@@ -133,19 +147,46 @@ public class AgentExecutionPreflightService {
             }catch(MSException ex){blockedReason=AgentBlockedReason.BLOCKED_SCOPE.name();blockedDetail=safe(ex);block(checks,"CASE_EXECUTABILITY",blockedDetail,now);}
         }
         List<Map<String,Object>> caseAssets=List.of();
+        List<Map<String,Object>> documentAssets=List.of();
+        List<TestAssetContextDTO> additionalAssets=List.of();
         if(blockedReason==null){
             try{
                 caseAssets=freezeCaseAssets(projectId,resolved,request.getTestPlanId(),actorId);
-                pass(checks,"PUBLISHED_ASSETS","Case content and steps are frozen as published immutable versions",Map.of("count",caseAssets.size()),now);
+                documentAssets=freezeRelatedDocuments(projectId,caseAssets);
+                pass(checks,"PUBLISHED_ASSETS","Case, document and executable assets are frozen from published immutable versions",Map.of("caseCount",caseAssets.size(),"documentCount",documentAssets.size()),now);
             }catch(MSException ex){
                 blockedReason=AgentBlockedReason.BLOCKED_SCOPE.name();blockedDetail=safe(ex);block(checks,"PUBLISHED_ASSETS",blockedDetail,now);
             }
+        }
+        if(blockedReason==null){
+            try{
+                List<TestAssetRefDTO> refs=new ArrayList<>(request.getAssetRefs()==null?List.of():request.getAssetRefs());
+                String environmentAssetId=environment==null?null:environment.getEnvironmentId();
+                if(environmentAssetId!=null&&refs.stream().noneMatch(ref->"ENVIRONMENT".equals(StringUtils.upperCase(ref.getAssetType()))&&environmentAssetId.equals(ref.getAssetId()))){TestAssetRefDTO environmentRef=new TestAssetRefDTO();environmentRef.setAssetType("ENVIRONMENT");environmentRef.setAssetId(environmentAssetId);refs.add(environmentRef);}
+                request.setAssetRefs(refs);
+                additionalAssets=testAssetCatalogService.resolveContext(projectId,refs);
+                pass(checks,"ADDITIONAL_ASSETS","Explicit asset references are published, authorized and frozen",Map.of("count",additionalAssets.size()),now);
+            }catch(MSException ex){blockedReason=AgentBlockedReason.BLOCKED_SCOPE.name();blockedDetail=safe(ex);block(checks,"ADDITIONAL_ASSETS",blockedDetail,now);}
+        }
+        try {
+            checkTestData(projectId,executableAssets);
+            pass(checks,"TEST_DATA","Referenced datasets are published and bound to the frozen execution scope",Map.of(),now);
+        } catch (MSException ex) {
+            if(blockedReason==null){blockedReason=AgentBlockedReason.BLOCKED_DATA.name();blockedDetail=safe(ex);} block(checks,"TEST_DATA",safe(ex),now);
+        }
+        try {
+            checkCleanupPolicy(request, executableAssets);
+            pass(checks,"CLEANUP_POLICY","An idempotent cleanup handler is available for leased test data",Map.of(),now);
+        } catch (MSException ex) {
+            if(blockedReason==null){blockedReason=AgentBlockedReason.BLOCKED_POLICY.name();blockedDetail=safe(ex);} block(checks,"CLEANUP_POLICY",safe(ex),now);
         }
         String scopeHash=sha(JSON.toJSONString(resolved));
         Map<String,Object> snapshot=new LinkedHashMap<>();
         snapshot.put("schemaVersion","v1");snapshot.put("projectId",projectId);snapshot.put("taskOrigin",origin);
         snapshot.put("originalCaseIds",original);snapshot.put("addedCaseIds",added);snapshot.put("expansionReasons",safeReasons(request.getExpansionReasons(),added));
         snapshot.put("caseAssets",caseAssets);
+        snapshot.put("documentAssets",documentAssets);
+        snapshot.put("additionalAssets",additionalAssets);
         snapshot.put("caseExecutability",executability);
         snapshot.put("executableAssets",executableAssets);
         if(environment!=null)snapshot.put("environment",JSON.parseObject(environmentService.freezeSnapshot(environment),Map.class));
@@ -193,11 +234,29 @@ public class AgentExecutionPreflightService {
                 || !StringUtils.equals(request.getCredentialReferenceId(), create.getCredentialReferenceId())
                 || !StringUtils.equals(request.getModelProfileId(), create.getModelProfileId())
                 || !StringUtils.equals(request.getTestPlanId(), create.getTestPlanId())
+                || !StringUtils.equals(StringUtils.upperCase(StringUtils.trimToNull(request.getBrowserType())),StringUtils.upperCase(StringUtils.trimToNull(create.getBrowserType())))
                 || !StringUtils.equals(dto.getPromptTemplateVersionId(), create.getPromptTemplateVersionId())
                 || !unique(request.getCaseIds()).equals(unique(create.getCaseIds()))) {
             throw new MSException("PREFLIGHT_REQUEST_MISMATCH");
         }
+        // The preflight request is the authoritative contract.  Never retain mutable
+        // policy or capability values supplied again by the create caller.
+        create.setRequiredCapabilities(unique(request.getRequiredCapabilities()));
+        create.setPolicySnapshot(JSON.toJSONString(request.getPolicy()==null?Map.of():request.getPolicy()));
+        Object approval=(request.getPolicy()==null?null:request.getPolicy().get("approvalPolicy"));
+        create.setApprovalPolicy(approval==null?null:JSON.toJSONString(approval));
+        create.setCaseIds(dto.getResolvedCaseIds());
+        create.setBrowserType(StringUtils.upperCase(StringUtils.trimToNull(request.getBrowserType())));
+        create.setAssetRefs(frozenAssetRefs(id));
         return dto;
+    }
+
+    private List<TestAssetRefDTO> frozenAssetRefs(String preflightId){
+        Map<String,Object> row=jdbcTemplate.queryForMap("SELECT snapshot_json FROM ai_execution_preflight WHERE id=?",preflightId);
+        Map<String,Object> snapshot=JSON.parseObject((String)row.get("snapshot_json"),Map.class);
+        @SuppressWarnings("unchecked") List<Map<String,Object>> assets=(List<Map<String,Object>>)snapshot.get("additionalAssets");
+        if(assets==null)return List.of();
+        return assets.stream().map(asset->{TestAssetRefDTO ref=new TestAssetRefDTO();ref.setAssetType(String.valueOf(asset.get("assetType")));ref.setAssetId(String.valueOf(asset.get("assetId")));ref.setVersionId(String.valueOf(asset.get("versionId")));return ref;}).toList();
     }
 
     public TestAssetVersionDTO assertFrozenCaseVersion(String preflightId,String caseRowId,String stableAssetId,String contentSnapshot){
@@ -207,7 +266,7 @@ public class AgentExecutionPreflightService {
         if(assets==null)throw new MSException("PREFLIGHT_CASE_ASSET_SNAPSHOT_MISSING");
         Map<String,Object> frozen=assets.stream().filter(v->caseRowId.equals(String.valueOf(v.get("caseRowId")))).findFirst().orElseThrow(()->new MSException("PREFLIGHT_CASE_ASSET_NOT_FROZEN"));
         if(!stableAssetId.equals(String.valueOf(frozen.get("assetId")))||!sha(contentSnapshot).equals(String.valueOf(frozen.get("contentHash"))))throw new MSException("PREFLIGHT_CASE_ASSET_CHANGED");
-        return testAssetVersionService.getPublished(String.valueOf(frozen.get("versionId")),snapshot.get("projectId").toString(),"CASE",stableAssetId);
+        return testAssetVersionService.getFrozen(String.valueOf(frozen.get("versionId")),snapshot.get("projectId").toString(),"CASE",stableAssetId);
     }
 
     public String frozenSnapshotSection(String preflightId, String section) {
@@ -223,7 +282,7 @@ public class AgentExecutionPreflightService {
         List<TestAssetContextDTO> result=new ArrayList<>();
         for(Map ref:refs){
             String type=String.valueOf(ref.get("assetType"));String assetId=String.valueOf(ref.get("assetId"));
-            TestAssetVersionDTO version=testAssetVersionService.getPublished(String.valueOf(ref.get("versionId")),get(preflightId).getProjectId(),type,assetId);
+            TestAssetVersionDTO version=testAssetVersionService.getFrozen(String.valueOf(ref.get("versionId")),get(preflightId).getProjectId(),type,assetId);
             TestAssetContextDTO context=new TestAssetContextDTO();context.setAssetType(type);context.setAssetId(assetId);context.setVersionId(version.getId());
             context.setVersionNo(version.getVersionNo());context.setContentHash(version.getContentHash());context.setContentSnapshot(version.getContentSnapshot());
             result.add(context);
@@ -254,13 +313,13 @@ public class AgentExecutionPreflightService {
     private void validateScope(String projectId,AgentExecutionPreflightRequest r,List<String> original,List<String> added){
         if(original.isEmpty())throw new MSException("EXECUTION_SCOPE_EMPTY");
         Set<String> overlap=new HashSet<>(original);overlap.retainAll(added);if(!overlap.isEmpty())throw new MSException("SCOPE_EXPANSION_DUPLICATE");
-        int max=(int)Math.ceil(original.size()*0.15d);if(added.size()>max)throw new MSException("SCOPE_EXPANSION_LIMIT_EXCEEDED");
+        if(!added.isEmpty()&&((double)added.size()/original.size())>0.15d)throw new MSException("SCOPE_EXPANSION_LIMIT_EXCEEDED");
         if(original.isEmpty()&&!added.isEmpty())throw new MSException("SCOPE_EXPANSION_WITHOUT_BASE");
         List<String> all=new ArrayList<>(original);all.addAll(added);if(all.size()>100)throw new MSException("EXECUTION_SCOPE_TOO_LARGE");
         String placeholders=String.join(",",Collections.nCopies(all.size(),"?"));List<Object> args=new ArrayList<>();args.add(projectId);args.addAll(all);
         Integer count=jdbcTemplate.queryForObject("SELECT COUNT(1) FROM functional_case WHERE project_id=? AND deleted=0 AND id IN ("+placeholders+")",Integer.class,args.toArray());
         if(count==null||count!=all.size())throw new MSException("SCOPE_CASE_PROJECT_MISMATCH");
-        if(!added.isEmpty()&&(r.getExpansionReasons()==null||!r.getExpansionReasons().keySet().containsAll(added)))throw new MSException("SCOPE_EXPANSION_REASON_REQUIRED");
+        if(!added.isEmpty()&&(r.getExpansionReasons()==null||added.stream().anyMatch(id->StringUtils.isBlank(r.getExpansionReasons().get(id)))))throw new MSException("SCOPE_EXPANSION_REASON_REQUIRED");
         if(!added.isEmpty()){
             String addedPlaceholders=String.join(",",Collections.nCopies(added.size(),"?"));List<Object> lowRiskArgs=new ArrayList<>();lowRiskArgs.add(projectId);lowRiskArgs.addAll(added);
             Integer lowRisk=jdbcTemplate.queryForObject("SELECT COUNT(1) FROM functional_case WHERE project_id=? AND deleted=0 AND review_status='PASS' AND id IN ("+addedPlaceholders+") AND UPPER(COALESCE(CAST(tags AS CHAR),'')) NOT LIKE '%HIGH_RISK%' AND UPPER(COALESCE(CAST(tags AS CHAR),'')) NOT LIKE '%PRODUCTION%'",Integer.class,lowRiskArgs.toArray());
@@ -272,11 +331,28 @@ public class AgentExecutionPreflightService {
         for(String caseId:caseIds){
             Map<String,Object> identity=jdbcTemplate.queryForMap("SELECT id,ref_id,update_time FROM functional_case WHERE id=? AND project_id=? AND deleted=0",caseId,projectId);
             String stableId=StringUtils.defaultIfBlank((String)identity.get("ref_id"),(String)identity.get("id"));
-            String content=JSON.toJSONString(caseSearchService.getById(caseId,true,testPlanId));
-            TestAssetVersionDTO version=testAssetVersionService.publish(projectId,"CASE",stableId,String.valueOf(identity.get("update_time")),content,actorId);
+            TestAssetVersionDTO version=testAssetVersionService.latestPublished(projectId,"CASE",stableId);
             result.add(Map.of("caseRowId",caseId,"assetId",stableId,"versionId",version.getId(),"versionNo",version.getVersionNo(),"contentHash",version.getContentHash()));
         }
         return result;
+    }
+
+    public TestAssetVersionDTO assertFrozenExecutableAsset(String preflightId,String assetType,String assetId){
+        Map<String,Object> row=jdbcTemplate.queryForMap("SELECT project_id,snapshot_json,status,expires_at FROM ai_execution_preflight WHERE id=?",preflightId);
+        if(!"PASSED".equals(row.get("status")))throw new MSException("PREFLIGHT_NOT_PASSED");
+        Map<String,Object> snapshot=JSON.parseObject((String)row.get("snapshot_json"),Map.class);
+        @SuppressWarnings("unchecked") List<Map<String,Object>> assets=(List<Map<String,Object>>)snapshot.get("executableAssets");
+        Map<String,Object> frozen=(assets==null?List.<Map<String,Object>>of():assets).stream()
+                .filter(v->assetType.equals(v.get("assetType"))&&assetId.equals(String.valueOf(v.get("assetId"))))
+                .findFirst().orElseThrow(()->new MSException("TEST_DATASET_NOT_IN_FROZEN_SCOPE"));
+        return testAssetVersionService.getFrozen(String.valueOf(frozen.get("versionId")),String.valueOf(row.get("project_id")),assetType,assetId);
+    }
+    private List<Map<String,Object>> freezeRelatedDocuments(String projectId,List<Map<String,Object>> caseAssets){
+        List<String> stableCaseIds=caseAssets.stream().map(v->String.valueOf(v.get("assetId"))).toList();
+        return testAssetCatalogService.documentContextForCases(projectId,stableCaseIds).stream().map(document->{
+            TestAssetVersionDTO version=testAssetVersionService.getPublished(document.getVersionId(),projectId,"DOCUMENT",document.getDocumentId());
+            return Map.<String,Object>of("assetType","DOCUMENT","assetId",document.getDocumentId(),"versionId",version.getId(),"versionNo",version.getVersionNo(),"contentHash",version.getContentHash());
+        }).distinct().toList();
     }
     private List<Map<String,Object>> freezeExecutableAssets(String projectId,List<AgentCaseExecutabilityDTO> configs){
         Set<String> refs=new LinkedHashSet<>();
@@ -301,6 +377,38 @@ public class AgentExecutionPreflightService {
     private void validateRecipients(String origin,List<String> users,String projectId){
         if(!AgentTaskOrigin.PLATFORM_SCHEDULED.equals(origin))return;List<String> ids=unique(users);if(ids.size()!=3)throw new MSException("RESPONSIBLE_USERS_MUST_BE_EXACTLY_THREE");String ph=String.join(",",Collections.nCopies(3,"?"));List<Object>a=new ArrayList<>(ids);a.add(projectId);Integer count=jdbcTemplate.queryForObject("SELECT COUNT(DISTINCT u.id) FROM user u JOIN user_role_relation urr ON urr.user_id=u.id WHERE u.enable=1 AND u.deleted=0 AND u.id IN ("+ph+") AND urr.source_id=?",Integer.class,a.toArray());if(count==null||count!=3)throw new MSException("RESPONSIBLE_USER_INVALID_OR_UNAUTHORIZED");
     }
+    private void checkQuota(AgentExecutionPreflightRequest request,AgentModelProfileDTO model){
+        Map<String,Object> policy=request.getPolicy()==null?Map.of():request.getPolicy();
+        long maxCalls=positiveLong(policy.get("maxModelInvocations"),100);
+        if(maxCalls<1||maxCalls>100)throw new MSException("MODEL_INVOCATION_LIMIT_INVALID");
+        long maxMinutes=positiveLong(policy.get("maxExecutionMinutes"),120);
+        if(maxMinutes<1||maxMinutes>1440)throw new MSException("EXECUTION_TIME_BUDGET_INVALID");
+        if(!AgentTaskOrigin.PERSONAL_MCP.equals(StringUtils.upperCase(request.getTaskOrigin()))&&model!=null&&model.getMaxCostAmount()!=null&&model.getMaxCostAmount().signum()<=0)
+            throw new MSException("MODEL_COST_BUDGET_INVALID");
+    }
+    private void checkRiskPolicy(AgentExecutionPreflightRequest request,AgentEnvironmentProfileDTO environment){
+        if(environment!=null&&"PRODUCTION".equals(environment.getEnvironmentType()))throw new MSException("PRODUCTION_EXECUTION_FORBIDDEN");
+        Map<String,Object> policy=request.getPolicy()==null?Map.of():request.getPolicy();
+        double configured=decimal(policy.get("scopeExpansionLimit"),0.15d);
+        if(configured<0||configured>0.15d)throw new MSException("SCOPE_EXPANSION_POLICY_INVALID");
+        String action=StringUtils.upperCase(String.valueOf(policy.getOrDefault("riskActionPolicy","SKIP_AND_REVIEW")));
+        if(!Set.of("SKIP_AND_REVIEW","BLOCK").contains(action))throw new MSException("RISK_ACTION_POLICY_INVALID");
+    }
+    private void checkTestData(String projectId,List<Map<String,Object>> executableAssets){
+        for(Map<String,Object> asset:executableAssets){
+            if("DATASET".equals(asset.get("assetType")))testAssetVersionService.getPublished(String.valueOf(asset.get("versionId")),
+                    projectId,"DATASET",String.valueOf(asset.get("assetId")));
+        }
+    }
+    private void checkCleanupPolicy(AgentExecutionPreflightRequest request,List<Map<String,Object>> executableAssets){
+        boolean datasets=executableAssets.stream().anyMatch(v->"DATASET".equals(v.get("assetType")));
+        if(!datasets)return;
+        Object configured=request.getPolicy()==null?null:request.getPolicy().get("cleanupRequired");
+        if(Boolean.FALSE.equals(configured))throw new MSException("TEST_DATA_CLEANUP_REQUIRED");
+        if(cleanupHandlers==null||cleanupHandlers.stream().noneMatch(v->v.supports("DATASET")))throw new MSException("TEST_DATA_CLEANUP_HANDLER_NOT_CONFIGURED");
+    }
+    private long positiveLong(Object value,long fallback){if(value==null)return fallback;try{return Long.parseLong(String.valueOf(value));}catch(NumberFormatException ex){throw new MSException("POLICY_NUMBER_INVALID");}}
+    private double decimal(Object value,double fallback){if(value==null)return fallback;try{return Double.parseDouble(String.valueOf(value));}catch(NumberFormatException ex){throw new MSException("POLICY_NUMBER_INVALID");}}
     private void pass(List<AgentPreflightCheckDTO> c,String code,String msg,Map<String,Object>d,long now){c.add(new AgentPreflightCheckDTO(code,"PASSED",msg,d,now));}
     private void block(List<AgentPreflightCheckDTO> c,String code,String msg,long now){c.add(new AgentPreflightCheckDTO(code,"BLOCKED",msg,Map.of(),now));}
     private String safe(Throwable e){String m=StringUtils.defaultIfBlank(e.getMessage(),"PREFLIGHT_CHECK_FAILED");return m.matches("[A-Z0-9_]+")?m:"PREFLIGHT_CHECK_FAILED";}

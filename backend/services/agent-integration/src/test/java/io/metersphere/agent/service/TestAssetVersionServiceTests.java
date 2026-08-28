@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -61,5 +62,25 @@ class TestAssetVersionServiceTests {
 
         assertEquals(3, result.getVersionNo());
         verify(mapper, org.mockito.Mockito.times(2)).insertVersion(any());
+    }
+
+    @Test
+    void deprecateUsesProjectScopedCompareAndSet() {
+        TestAssetVersionDTO version=new TestAssetVersionDTO();version.setId("v1");version.setProjectId("project");
+        version.setAssetType("DATASET");version.setAssetId("asset");version.setStatus("PUBLISHED");
+        when(mapper.selectVersionById("v1")).thenReturn(version);
+        when(mapper.deprecateVersion("v1","project","DATASET","asset")).thenReturn(1);
+
+        assertEquals("DEPRECATED",service.deprecate("v1","project","DATASET","asset").getStatus());
+    }
+
+    @Test
+    void frozenTaskCanStillReadDeprecatedImmutableVersion() {
+        TestAssetVersionDTO version=new TestAssetVersionDTO();version.setId("v1");version.setProjectId("project");
+        version.setAssetType("DATASET");version.setAssetId("asset");version.setStatus("DEPRECATED");
+        when(mapper.selectVersionById("v1")).thenReturn(version);
+
+        assertEquals("v1",service.getFrozen("v1","project","DATASET","asset").getId());
+        assertThrows(RuntimeException.class,()->service.getPublished("v1","project","DATASET","asset"));
     }
 }

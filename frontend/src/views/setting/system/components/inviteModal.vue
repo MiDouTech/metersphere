@@ -73,7 +73,7 @@
   const inviteFormRef = ref<FormInstance | null>(null);
   const defaultInviteForm = {
     emails: [] as string[],
-    userGroup: ['permission_member'] as string[],
+    userGroup: ['member'] as string[],
   };
   const emailForm = ref(cloneDeep(defaultInviteForm));
 
@@ -94,7 +94,7 @@
   function defaultMemberRole() {
     if (props.range === 'project') return ['project_member'];
     if (props.range === 'organization') return ['org_member'];
-    return ['permission_member'];
+    return ['member'];
   }
 
   function validateInputEmailTag(value: string) {

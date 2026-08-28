@@ -306,8 +306,11 @@
   const getCustomFieldColumns = async () => {
     const res = await getCustomFieldHeader(projectId.value);
     customFields.value = res;
-    searchCustomFields.value = getFilterCustomFields(
-      res.filter((item: BugEditCustomField) => item.fieldId !== 'title')
+    // title/status 已由缺陷列表提供内置筛选项。模板接口也会返回这些系统字段，
+    // 如果再当作自定义字段注入，会导致“状态”在高级筛选中重复出现。
+    const customFilterFields = res.filter((item: BugEditCustomField) => !['title', 'status'].includes(item.fieldId));
+    searchCustomFields.value = getFilterCustomFields(customFilterFields).filter(
+      (item, index, fields) => fields.findIndex((candidate) => candidate.dataIndex === item.dataIndex) === index
     );
 
     //  实例化自定义字段的filters

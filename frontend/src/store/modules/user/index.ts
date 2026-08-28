@@ -77,8 +77,13 @@ const useUserStore = defineStore('user', {
       return { ...state };
     },
     isAdmin(state: UserState): boolean {
-      if (!state.userRolePermissions) return false;
-      return state.userRolePermissions.findIndex((ur) => ur.userRole.id === 'admin') > -1;
+      const adminRole = state.userRolePermissions?.find(
+        (item) => item.userRole.id === 'admin' && item.userRole.type === 'SYSTEM' && item.userRole.enabled !== false
+      );
+      return Boolean(
+        adminRole &&
+          state.userRoleRelations?.some((relation) => relation.roleId === 'admin' && relation.sourceId === 'system')
+      );
     },
     currentRole(state: UserState): {
       projectPermissions: string[];

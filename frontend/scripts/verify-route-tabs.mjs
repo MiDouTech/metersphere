@@ -99,8 +99,9 @@ includesAll(roleService, [
   'ORGANIZATION_USER_ROLE_READ', 'PROJECT_GROUP_READ', '目标项目不存在或已停用',
 ], 'role service scope validation');
 includesAll(userService, [
-  'userCreateDTO.setUserRoleIdList(List.of(PERMISSION_MEMBER_ROLE_ID))',
-  'request.setUserRoleIds(List.of(PERMISSION_MEMBER_ROLE_ID))',
+  'private static final String SYSTEM_MEMBER_ROLE_ID = "member"',
+  'userCreateDTO.setUserRoleIdList(List.of(SYSTEM_MEMBER_ROLE_ID))',
+  'request.setUserRoleIds(List.of(SYSTEM_MEMBER_ROLE_ID))',
 ], 'default member assignment');
 check(!/updateUser\([\s\S]*?updateUserSystemGlobalRole/.test(userService), 'system user edit must not retain a second role-membership write path');
 

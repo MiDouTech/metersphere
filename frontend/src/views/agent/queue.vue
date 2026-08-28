@@ -1,5 +1,6 @@
 <template>
   <AgentPage>
+    <a-alert v-if="pageError" type="error" class="mb-4">{{ pageError }}</a-alert>
     <a-tabs v-model:active-key="queueTab" type="rounded" class="mb-4">
       <a-tab-pane key="tasks" title="任务队列" />
       <a-tab-pane key="leases" title="执行租约" />
@@ -204,6 +205,7 @@
   const appStore = useAppStore();
   const router = useRouter();
   const loading = ref(false);
+  const pageError = ref('');
   const queueTab = ref('tasks');
   const tasks = ref<AiExecutionTask[]>([]);
   const leases = ref<AiRunnerLease[]>([]);
@@ -308,6 +310,7 @@
   async function load() {
     if (!appStore.currentProjectId) return;
     loading.value = true;
+    pageError.value = '';
     try {
       const result = await searchAiExecutionTasks({
         projectId: appStore.currentProjectId,
@@ -316,6 +319,8 @@
       });
       tasks.value = result.items || [];
       total.value = result.total || 0;
+    } catch (reason: any) {
+      pageError.value = reason?.message || '任务队列加载失败，请稍后重试';
     } finally {
       loading.value = false;
     }
@@ -382,8 +387,11 @@
   }
   async function loadLeases() {
     leaseLoading.value = true;
+    pageError.value = '';
     try {
       leases.value = await getAiExecutionLeases(leaseStatus.value);
+    } catch (reason: any) {
+      pageError.value = reason?.message || '执行租约加载失败，请稍后重试';
     } finally {
       leaseLoading.value = false;
     }

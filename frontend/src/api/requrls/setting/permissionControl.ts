@@ -3,7 +3,6 @@ export const roleEnableUrl = `/permission-control/role/enable`;
 export const roleDeleteUrl = `/permission-control/role/delete`;
 export const resourceTreeUrl = `/permission-control/resource/tree`;
 export const rolePermissionUrl = `/permission-control/role/permission/`;
-export const roleUiPermissionUrl = `/permission-control/role/ui-permission/`;
 export const rolePermissionDefinitionUrl = `/permission-control/role/permission-definition`;
 export const roleSaveUrl = `/permission-control/role/save`;
 export const roleDeleteImpactUrl = `/permission-control/role/delete-impact/`;

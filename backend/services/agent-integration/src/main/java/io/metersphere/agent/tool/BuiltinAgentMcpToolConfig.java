@@ -87,8 +87,8 @@ public class BuiltinAgentMcpToolConfig {
     @Bean
     public AgentMcpToolHandler assetCatalogSearchTool(TestAssetCatalogService service) {
         return tool("metersphere.asset.catalog.search","Search published test-asset catalog metadata.",AgentTokenScope.AI_ASSET_READ,true,
-                objectSchema(Map.of("projectId",stringSchema(),"assetTypes",Map.of("type","array","minItems",1,"maxItems",11,"uniqueItems",true,"items",Map.of("type","string","enum",List.of("CASE","DOCUMENT","PLAN","DATASET","ENVIRONMENT","PAGE_OBJECT","BUSINESS_FLOW","COMMON_STEP","API_DEFINITION","EVIDENCE","BUG"))),"keyword",stringSchema(),"status",Map.of("type","string","enum",List.of("PUBLISHED")),"cursor",stringSchema(),"limit",Map.of("type","integer","minimum",1,"maximum",100)),List.of("projectId","assetTypes")),
-                args->pageResponse(service.searchByTypes(requiredString(args,"projectId"),stringList(args,"assetTypes"),(String)args.get("keyword"),(String)args.get("status"),cursorPage(args),optionalInt(args,"limit",20))));
+                objectSchema(Map.of("projectId",stringSchema(),"assetTypes",Map.of("type","array","minItems",1,"maxItems",11,"uniqueItems",true,"items",Map.of("type","string","enum",List.of("CASE","DOCUMENT","PLAN","DATASET","ENVIRONMENT","PAGE_OBJECT","BUSINESS_FLOW","COMMON_STEP","API_DEFINITION","EVIDENCE","BUG"))),"keyword",stringSchema(),"status",Map.of("type","string","enum",List.of("PUBLISHED")),"updatedAfter",Map.of("type","integer","minimum",0),"cursor",stringSchema(),"limit",Map.of("type","integer","minimum",1,"maximum",100)),List.of("projectId","assetTypes")),
+                args->pageResponse(service.searchByTypes(requiredString(args,"projectId"),stringList(args,"assetTypes"),(String)args.get("keyword"),(String)args.get("status"),optionalLong(args,"updatedAfter"),cursorPage(args),optionalInt(args,"limit",20))));
     }
     @Bean public AgentMcpToolHandler assetGetTool(TestAssetCatalogService service){return tool("metersphere.asset.get","Get test-asset metadata or one immutable version.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"assetType",stringSchema(),"assetId",stringSchema(),"versionId",stringSchema()),List.of("projectId","assetType","assetId")),args->{String projectId=requiredString(args,"projectId"),assetType=requiredString(args,"assetType"),assetId=requiredString(args,"assetId"),versionId=(String)args.get("versionId");if(StringUtils.isBlank(versionId))return service.detail(projectId,assetType,assetId);var version=service.version(projectId,versionId);if(!assetType.equalsIgnoreCase(version.getAssetType())||!assetId.equals(version.getAssetId()))throw new MSException("ASSET_VERSION_MISMATCH");return version;});}
     @Bean public AgentMcpToolHandler assetVersionGetTool(TestAssetCatalogService service){return tool("metersphere.asset.version.get","Get one immutable asset version.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"versionId",stringSchema()),List.of("projectId","versionId")),args->service.version(requiredString(args,"projectId"),requiredString(args,"versionId")));}
@@ -591,6 +591,11 @@ public class BuiltinAgentMcpToolConfig {
             }
 
             @Override
+            public Map<String,Object> outputSchema(){
+                return outputEnvelope(resultSchemaFor(name));
+            }
+
+            @Override
             public Map<String, Object> annotations() {
                 return annotations;
             }
@@ -622,6 +627,18 @@ public class BuiltinAgentMcpToolConfig {
 
     private static Map<String, Object> stringSchema() {
         return Map.of("type", "string");
+    }
+
+    private static Map<String,Object> outputEnvelope(Map<String,Object> resultSchema){return objectSchema(Map.of("result",resultSchema),List.of("result"));}
+    private static Map<String,Object> resultSchemaFor(String name){
+        if("metersphere.asset.catalog.search".equals(name))return objectSchema(Map.of(
+                "items",Map.of("type","array","items",Map.of("type","object")),
+                "nextCursor",Map.of("type",List.of("string","null")),"hasMore",Map.of("type","boolean"),"traceId",stringSchema()),List.of("items","nextCursor","hasMore","traceId"));
+        if("metersphere.execution.result.get".equals(name))return objectSchema(Map.of("taskId",stringSchema(),"status",stringSchema(),"verdict",stringSchema(),"verdictReason",stringSchema(),"traceId",stringSchema()),List.of("taskId","status","verdict","verdictReason","traceId"));
+        if("metersphere.writeback.status.get".equals(name))return objectSchema(Map.of("taskId",stringSchema(),"writebackStatus",stringSchema(),"artifactStatus",stringSchema(),"traceId",stringSchema()),List.of("taskId","writebackStatus","artifactStatus","traceId"));
+        if(name.endsWith(".list"))return Map.of("type","array","items",Map.of("type","object"));
+        if(name.endsWith(".delete")||name.endsWith(".associate_cases")||name.endsWith(".relate")||name.endsWith(".unrelate"))return objectSchema(Map.of("ok",Map.of("type","boolean")),List.of("ok"));
+        return Map.of("type","object");
     }
 
     private static int cursorPage(Map<String,Object> args){String cursor=(String)args.get("cursor");if(StringUtils.isBlank(cursor))return 1;try{int page=Integer.parseInt(cursor);if(page<1)throw new NumberFormatException();return page;}catch(NumberFormatException ex){throw new MSException("INVALID_CURSOR");}}
@@ -695,6 +712,7 @@ public class BuiltinAgentMcpToolConfig {
         }
         return Integer.parseInt(String.valueOf(value));
     }
+    private static Long optionalLong(Map<String,Object> arguments,String key){Object value=arguments.get(key);if(value==null)return null;if(value instanceof Number number)return number.longValue();try{return Long.parseLong(String.valueOf(value));}catch(NumberFormatException ex){throw new MSException("INVALID_"+key.toUpperCase());}}
 
     private static boolean optionalBool(Map<String, Object> arguments, String key, boolean defaultValue) {
         Object value = arguments.get(key);

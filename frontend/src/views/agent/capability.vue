@@ -1,5 +1,6 @@
 <template>
   <AgentPage>
+    <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
     <div class="grid gap-4 lg:grid-cols-2">
       <MsCard simple>
         <div class="mb-4 flex items-center justify-between">
@@ -99,6 +100,7 @@
 
   const appStore = useAppStore();
   const loading = ref(false);
+  const error = ref('');
   const agents = ref<AiExecutionAgentOption[]>([]);
   const tokens = ref<AgentTokenListItem[]>([]);
   const alerts = ref<AiExecutionAlert[]>([]);
@@ -109,8 +111,8 @@
     alertError.value = '';
     try {
       alerts.value = (await listAiExecutionAlerts(appStore.currentProjectId)) || [];
-    } catch (error: any) {
-      alertError.value = error?.message || '运维告警加载失败，请稍后重试';
+    } catch (reason: any) {
+      alertError.value = reason?.message || '运维告警加载失败，请稍后重试';
     } finally {
       alertLoading.value = false;
     }
@@ -119,12 +121,13 @@
     try {
       await acknowledgeAiExecutionAlert(appStore.currentProjectId, id);
       await loadAlerts();
-    } catch (error: any) {
-      alertError.value = error?.message || '告警确认失败，请稍后重试';
+    } catch (reason: any) {
+      alertError.value = reason?.message || '告警确认失败，请稍后重试';
     }
   }
   async function load() {
     loading.value = true;
+    error.value = '';
     try {
       const [agentResult, tokenResult] = await Promise.all([
         getAiExecutionAgents(appStore.currentProjectId),
@@ -132,6 +135,8 @@
       ]);
       agents.value = agentResult || [];
       tokens.value = tokenResult.list || [];
+    } catch (reason: any) {
+      error.value = reason?.message || '执行能力加载失败，请稍后重试';
     } finally {
       loading.value = false;
     }

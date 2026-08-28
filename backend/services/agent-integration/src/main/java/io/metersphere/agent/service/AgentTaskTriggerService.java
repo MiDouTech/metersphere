@@ -490,6 +490,8 @@ public class AgentTaskTriggerService {
         request.setPromptTemplateId(trigger.getPromptTemplateId());
         request.setRunnerType(trigger.getRunnerType());
         request.setRequiredCapabilities(JSON.parseArray(trigger.getRequiredCapabilities(), String.class));
+        request.setBrowserType(task.getBrowserType());
+        request.setAssetRefs(task.getAssetRefs());
         request.setPolicy(JSON.parseObject(trigger.getPolicyJson(), Map.class));
         request.setTaskOrigin(io.metersphere.agent.constants.AgentTaskOrigin.PLATFORM_SCHEDULED);
         request.setResponsibleUserIds(JSON.parseArray(trigger.getResponsibleUserIds(), String.class));

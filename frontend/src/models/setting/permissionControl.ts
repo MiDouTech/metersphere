@@ -93,12 +93,6 @@ export interface PermissionResourceNode {
   children?: PermissionResourceNode[];
 }
 
-export interface RoleUiPermissionValue {
-  resourceCode: string;
-  visible: boolean;
-  operable: boolean;
-}
-
 export interface RolePermissionItem {
   id: string;
   name: string;
@@ -114,7 +108,6 @@ export interface RoleSavePayload {
   type: 'SYSTEM' | 'ORGANIZATION' | 'PROJECT';
   enabled: boolean;
   permissions: Array<{ id: string; enable: boolean }>;
-  uiPermissions: RoleUiPermissionValue[];
 }
 
 export interface RoleDeleteImpact {

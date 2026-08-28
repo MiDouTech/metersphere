@@ -47,4 +47,16 @@ class AgentDualChannelContractTests {
             assertTrue(sql.contains("`sensitive`       BIT(1)"));
         }
     }
+
+    @Test
+    void integrityMigrationReplacesLegacyScheduleKeyAndAddsEphemeralDatasetStorage() throws IOException {
+        String resource="/migration/3.7.2/ddl/V3.7.2_88__ai_execution_integrity_completion.sql";
+        try(InputStream stream=AgentDualChannelContractTests.class.getResourceAsStream(resource)){
+            assertNotNull(stream,"integrity migration must be packaged in the domain dependency");
+            String sql=new String(stream.readAllBytes(),StandardCharsets.UTF_8);
+            assertTrue(sql.contains("DROP INDEX uk_ai_trigger_schedule"));
+            assertTrue(sql.contains("ADD COLUMN content_snapshot LONGBLOB"));
+            assertTrue(sql.contains("ADD COLUMN cleaned_at BIGINT"));
+        }
+    }
 }

@@ -64,7 +64,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class SimpleUserService {
-    private static final String PERMISSION_MEMBER_ROLE_ID = "permission_member";
+    private static final String SYSTEM_MEMBER_ROLE_ID = "member";
     @Resource
     private BaseUserMapper baseUserMapper;
     @Resource
@@ -118,7 +118,7 @@ public class SimpleUserService {
     public UserBatchCreateResponse addUser(UserBatchCreateRequest userCreateDTO, String source, String operator) {
 
         // 新用户的系统角色由权限控制统一维护，用户管理页只负责创建账号。
-        userCreateDTO.setUserRoleIdList(List.of(PERMISSION_MEMBER_ROLE_ID));
+        userCreateDTO.setUserRoleIdList(List.of(SYSTEM_MEMBER_ROLE_ID));
         globalUserRoleService.checkRoleIsGlobalAndHaveMember(userCreateDTO.getUserRoleIdList(), true);
 
         UserBatchCreateResponse response = new UserBatchCreateResponse();
@@ -444,7 +444,7 @@ public class SimpleUserService {
             logProjectId = OperationLogConstants.SYSTEM;
             logOrgId = OperationLogConstants.SYSTEM;
             // 系统邀请只创建成员；角色变更统一从权限控制入口完成。
-            request.setUserRoleIds(List.of(PERMISSION_MEMBER_ROLE_ID));
+            request.setUserRoleIds(List.of(SYSTEM_MEMBER_ROLE_ID));
             globalUserRoleService.checkRoleIsGlobalAndHaveMember(request.getUserRoleIds(), true);
             request.setOrganizationId(EmailInviteSource.SYSTEM.name());
             request.setProjectId(EmailInviteSource.SYSTEM.name());

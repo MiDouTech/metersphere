@@ -659,7 +659,7 @@
         phone: '',
       },
     ],
-    userGroup: [{ id: 'permission_member' }],
+    userGroup: [{ id: 'member' }],
   };
   const userForm = ref<UserForm>(cloneDeep(defaultUserForm));
 
@@ -678,7 +678,7 @@
     clearServerFieldErrors();
     userForm.value.list = [];
     userFormRef.value?.resetFields();
-    userForm.value.userGroup = [{ id: 'permission_member' }];
+    userForm.value.userGroup = [{ id: 'member' }];
   }
 
   /**
@@ -833,7 +833,7 @@
   async function createUser(isContinue?: boolean) {
     const params = {
       userInfoList: userForm.value.list,
-      userRoleIdList: ['permission_member'],
+      userRoleIdList: ['member'],
     };
     const res = await batchCreateUser(params, { errorMessageMode: 'none' });
     if (res.errorEmails !== null) {

@@ -122,43 +122,9 @@ export interface SavePermissions {
   id: string;
   enable: boolean;
 }
-export interface RoleUiPermission {
-  resourceCode: string;
-  visible: boolean;
-  operable: boolean;
-}
 export interface SaveGlobalUSettingData {
   userRoleId: string;
   permissions: SavePermissions[];
-  uiPermissions?: RoleUiPermission[];
-}
-
-export interface PermissionResourceItem {
-  id: string;
-  code: string;
-  name: string;
-  type: 'MENU' | 'PAGE' | 'TAB' | 'BUTTON' | 'API';
-  scopeType: AuthScopeEnum;
-  parentCode?: string;
-  routeName?: string;
-  permissionId?: string;
-  visibleDefault: boolean;
-  operableDefault: boolean;
-  sort: number;
-  enabled: boolean;
-  description?: string;
-  children?: PermissionResourceItem[];
-}
-
-export interface UiPermissionTableItem {
-  code: string;
-  name: string;
-  type: string;
-  parentCode?: string;
-  permissionId?: string;
-  level: number;
-  visible: boolean;
-  operable: boolean;
 }
 
 export interface UserTableItem {

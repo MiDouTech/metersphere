@@ -1,5 +1,6 @@
 <template>
   <AgentPage>
+    <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
     <div v-if="summaries.length" class="mb-4 grid gap-4 lg:grid-cols-3">
       <MsCard v-for="item in summaries" :key="`${item.executorType}-${item.executorId}`" simple>
         <div class="flex items-center justify-between">
@@ -139,6 +140,7 @@
 
   const appStore = useAppStore();
   const loading = ref(false);
+  const error = ref('');
   const evaluations = ref<AiExecutionEvaluation[]>([]);
   const summaries = ref<AiEvaluationSummary[]>([]);
   const current = ref(1);
@@ -182,6 +184,7 @@
   async function load() {
     if (!appStore.currentProjectId) return;
     loading.value = true;
+    error.value = '';
     try {
       const [page, summary] = await Promise.all([
         getAiExecutionEvaluations(appStore.currentProjectId, current.value, pageSize.value, { ...filters }),
@@ -190,6 +193,8 @@
       evaluations.value = page.list || [];
       total.value = page.total || 0;
       summaries.value = summary || [];
+    } catch (reason: any) {
+      error.value = reason?.message || '执行评价加载失败，请稍后重试';
     } finally {
       loading.value = false;
     }

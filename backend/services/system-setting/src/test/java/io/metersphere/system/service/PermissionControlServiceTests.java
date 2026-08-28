@@ -8,8 +8,6 @@ import io.metersphere.system.domain.WorkflowRole;
 import io.metersphere.system.domain.StatusFlowRolePermission;
 import io.metersphere.system.dto.permission.Permission;
 import io.metersphere.system.dto.permission.PermissionDefinitionItem;
-import io.metersphere.system.dto.permission.PermissionResourceDTO;
-import io.metersphere.system.dto.permission.RoleUiPermissionDTO;
 import io.metersphere.system.dto.permission.control.RoleDeleteImpactDTO;
 import io.metersphere.system.dto.permission.control.RoleMemberUpdateRequest;
 import io.metersphere.system.dto.permission.control.RoleSaveRequest;
@@ -60,8 +58,6 @@ class PermissionControlServiceTests {
     @Mock
     private PermissionControlMapper permissionControlMapper;
     @Mock
-    private PermissionMigrationAuditService permissionMigrationAuditService;
-    @Mock
     private GlobalUserRoleRelationService globalUserRoleRelationService;
     @Mock
     private ExtUserRoleRelationMapper extUserRoleRelationMapper;
@@ -82,7 +78,6 @@ class PermissionControlServiceTests {
         ReflectionTestUtils.setField(service, "globalUserRoleService", globalUserRoleService);
         ReflectionTestUtils.setField(service, "permissionUiService", permissionUiService);
         ReflectionTestUtils.setField(service, "permissionControlMapper", permissionControlMapper);
-        ReflectionTestUtils.setField(service, "permissionMigrationAuditService", permissionMigrationAuditService);
         ReflectionTestUtils.setField(service, "globalUserRoleRelationService", globalUserRoleRelationService);
         ReflectionTestUtils.setField(service, "extUserRoleRelationMapper", extUserRoleRelationMapper);
         ReflectionTestUtils.setField(service, "permissionSessionRefreshService", permissionSessionRefreshService);
@@ -97,7 +92,6 @@ class PermissionControlServiceTests {
         request.setName("开发成员");
         request.setType("SYSTEM");
         request.setEnabled(true);
-        request.setUiPermissions(List.of());
         request.setPermissions(List.of(
                 new PermissionSettingUpdateRequest.PermissionUpdateRequest("SYSTEM_USER:READ", false),
                 new PermissionSettingUpdateRequest.PermissionUpdateRequest("SYSTEM_USER:READ+UPDATE", true)));
@@ -112,7 +106,6 @@ class PermissionControlServiceTests {
         PermissionDefinitionItem definition = new PermissionDefinitionItem();
         definition.setPermissions(List.of(read, update));
         when(globalUserRoleService.getPermissionDefinitionForControl("SYSTEM")).thenReturn(List.of(definition));
-        when(permissionUiService.getAllResourceTree()).thenReturn(List.of());
         when(globalUserRoleService.add(any())).thenReturn(saved);
         when(globalUserRoleService.get("role-1")).thenReturn(saved);
 
@@ -134,59 +127,14 @@ class PermissionControlServiceTests {
         request.setName("成员");
         request.setType("PROJECT");
         request.setEnabled(true);
-        request.setUiPermissions(List.of());
         request.setPermissions(List.of(
                 new PermissionSettingUpdateRequest.PermissionUpdateRequest("SYSTEM_USER:READ", true)));
         when(globalUserRoleService.getPermissionDefinitionForControl("PROJECT")).thenReturn(List.of());
-        when(permissionUiService.getResourceTree("PROJECT")).thenReturn(List.of());
 
         try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class)) {
             session.when(() -> SessionUtils.hasPermission(null, null, PermissionConstants.SYSTEM_PERMISSION_CONTROL_ADD)).thenReturn(true);
             assertThrows(RuntimeException.class, () -> service.saveRole(request));
         }
-    }
-
-    @Test
-    void saveRoleEnablesAssociatedApiPermissionForOperableUiResource() {
-        RoleSaveRequest request = new RoleSaveRequest();
-        request.setName("操作员");
-        request.setType("SYSTEM");
-        request.setEnabled(true);
-        request.setPermissions(List.of(
-                new PermissionSettingUpdateRequest.PermissionUpdateRequest("SYSTEM_USER:READ", false)));
-        RoleUiPermissionDTO uiPermission = new RoleUiPermissionDTO();
-        uiPermission.setResourceCode("SYSTEM_USER_PAGE");
-        uiPermission.setVisible(true);
-        uiPermission.setOperable(true);
-        request.setUiPermissions(List.of(uiPermission));
-
-        Permission read = new Permission();
-        read.setId("SYSTEM_USER:READ");
-        PermissionDefinitionItem definition = new PermissionDefinitionItem();
-        definition.setPermissions(List.of(read));
-        PermissionResourceDTO resource = new PermissionResourceDTO();
-        resource.setCode("SYSTEM_USER_PAGE");
-        resource.setPermissionId("SYSTEM_USER:READ");
-        UserRole saved = new UserRole();
-        saved.setId("role-ui");
-        saved.setType("SYSTEM");
-        saved.setEnabled(true);
-
-        when(globalUserRoleService.getPermissionDefinitionForControl("SYSTEM")).thenReturn(List.of(definition));
-        when(permissionUiService.getAllResourceTree()).thenReturn(List.of(resource));
-        when(globalUserRoleService.add(any())).thenReturn(saved);
-        when(globalUserRoleService.get("role-ui")).thenReturn(saved);
-
-        try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class)) {
-            session.when(() -> SessionUtils.hasPermission(null, null, PermissionConstants.SYSTEM_PERMISSION_CONTROL_ADD)).thenReturn(true);
-            session.when(SessionUtils::getUserId).thenReturn("admin");
-            service.saveRole(request);
-        }
-
-        ArgumentCaptor<PermissionSettingUpdateRequest> captor = ArgumentCaptor.forClass(PermissionSettingUpdateRequest.class);
-        verify(globalUserRoleService).updatePermissionSetting(captor.capture());
-        assertTrue(captor.getValue().getPermissions().stream()
-                .anyMatch(item -> item.getId().equals("SYSTEM_USER:READ") && Boolean.TRUE.equals(item.getEnable())));
     }
 
     @Test
@@ -202,24 +150,6 @@ class PermissionControlServiceTests {
 
         assertEquals(12L, impact.getMemberCount());
         assertEquals(3L, impact.getUsersWithoutOtherBusinessRoleCount());
-    }
-
-    @Test
-    void memberInitializationRecordsFailureWhenPermissionDefinitionIsEmpty() {
-        UserRole member = new UserRole();
-        member.setId("permission_member");
-        when(globalUserRoleService.get("permission_member")).thenReturn(member);
-        when(permissionControlMapper.countMemberInitialization("permission_member", "V3.7.2_50_CACHE_V1")).thenReturn(0L);
-        when(globalUserRoleService.getPermissionDefinitionForControl("SYSTEM")).thenReturn(List.of());
-
-        assertThrows(IllegalStateException.class, service::synchronizeMemberRolePermissions);
-
-        verify(permissionMigrationAuditService).recordFailure(
-                org.mockito.ArgumentMatchers.eq("V3.7.2_50_CACHE_V1"),
-                org.mockito.ArgumentMatchers.eq("permission_member"),
-                org.mockito.ArgumentMatchers.isNull(),
-                org.mockito.ArgumentMatchers.eq("CACHE_PERMISSION_INITIALIZATION"),
-                any(Exception.class));
     }
 
     @Test
@@ -272,7 +202,7 @@ class PermissionControlServiceTests {
         admin.setId("admin");
         admin.setType("SYSTEM");
         UserRole member = new UserRole();
-        member.setId("permission_member");
+        member.setId("member");
         member.setType("SYSTEM");
         UserRoleRelation adminRelation = new UserRoleRelation();
         adminRelation.setId("admin-relation");
@@ -282,10 +212,10 @@ class PermissionControlServiceTests {
         request.setRoleId("admin");
         request.setUserIds(List.of("user-1"));
         when(globalUserRoleService.getWithCheck("admin")).thenReturn(admin);
-        when(globalUserRoleService.getWithCheck("permission_member")).thenReturn(member);
+        when(globalUserRoleService.getWithCheck("member")).thenReturn(member);
         when(permissionControlMapper.selectExistingRoleRelations("admin", "system", List.of("user-1")))
                 .thenReturn(List.of(adminRelation));
-        when(permissionControlMapper.selectExistingRoleRelations("permission_member", "system", List.of("user-1")))
+        when(permissionControlMapper.selectExistingRoleRelations("member", "system", List.of("user-1")))
                 .thenReturn(List.of());
 
         try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class);

@@ -50,6 +50,3 @@ export const getOrgUserGroupOptionUrl = `/user/role/organization/get-member/opti
 /** 项目 */
 /** 系统-获取用户组 */
 export const getProjectUserGroupU = `/user/role/organization/list/`;
-
-export const getPermissionResourceTreeUrl = `/permission/resource/tree`;
-export const getRoleUiPermissionUrl = `/permission/role-ui/`;

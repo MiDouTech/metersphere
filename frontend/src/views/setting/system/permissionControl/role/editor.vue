@@ -41,6 +41,9 @@
       </a-card>
 
       <a-card class="mt-4" title="页面、页签与按钮权限" :bordered="false">
+        <a-alert class="mb-3" type="info">
+          页面可见性与按钮可操作性由关联的业务权限统一决定；无独立权限的页签继承父页面权限。
+        </a-alert>
         <a-table :data="flatResources" :pagination="false" size="small" row-key="code" :scroll="{ y: 420 }">
           <template #columns>
             <a-table-column title="权限资源" :width="280">
@@ -54,23 +57,17 @@
             <a-table-column title="关联接口权限" :width="300">
               <template #cell="{ record }">{{ resourcePermissionText(record) }}</template>
             </a-table-column>
-            <a-table-column title="可见" :width="80">
+            <a-table-column title="可见（自动）" :width="110">
               <template #cell="{ record }">
-                <a-checkbox
-                  v-if="resourceMap[record.code]"
-                  v-model="resourceMap[record.code].visible"
-                  :disabled="readonly"
-                  @change="syncResource(record.code)"
-                />
+                <a-checkbox v-if="resourceMap[record.code]" v-model="resourceMap[record.code].visible" disabled />
               </template>
             </a-table-column>
-            <a-table-column title="可操作" :width="90">
+            <a-table-column title="可操作（自动）" :width="130">
               <template #cell="{ record }">
                 <a-checkbox
                   v-if="resourceMap[record.code] && ['BUTTON', 'API'].includes(record.type)"
                   v-model="resourceMap[record.code].operable"
-                  :disabled="readonly"
-                  @change="syncResource(record.code, true)"
+                  disabled
                 />
                 <span v-else>-</span>
               </template>
@@ -108,7 +105,6 @@
     getPermissionControlResourceTree,
     getPermissionControlRole,
     getPermissionControlRolePermissions,
-    getPermissionControlRoleUiPermissions,
     savePermissionControlRole,
   } from '@/api/modules/setting/permissionControl';
   import {
@@ -144,7 +140,10 @@
   const isEdit = computed(() => Boolean(roleId.value));
   const canAdd = computed(() => hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+ADD'], ['SYSTEM']));
   const canUpdate = computed(() => hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'], ['SYSTEM']));
-  const readonly = computed(() => (isEdit.value ? roleId.value === 'admin' || !canUpdate.value : !canAdd.value));
+  const isRequiredRole = computed(() =>
+    ['admin', 'member', 'org_admin', 'org_member', 'project_admin', 'project_member'].includes(roleId.value)
+  );
+  const readonly = computed(() => (isEdit.value ? isRequiredRole.value || !canUpdate.value : !canAdd.value));
   const pageTitle = computed(() => {
     if (readonly.value) return '查看角色';
     return isEdit.value ? '编辑角色' : '新增角色';
@@ -176,27 +175,52 @@
     Object.keys(permissionMap).forEach((key) => delete permissionMap[key]);
   }
 
+  function findResource(code?: string) {
+    return code ? flatResources.value.find((item) => item.code === code) : undefined;
+  }
+  function resolveResourcePermissionId(resource: FlatResource) {
+    let current: FlatResource | undefined = resource;
+    const visited = new Set<string>();
+    while (current && !visited.has(current.code)) {
+      visited.add(current.code);
+      if (current.permissionId) return current.permissionId;
+      current = findResource(current.parentCode);
+    }
+    return undefined;
+  }
+  function refreshResourcePermissions() {
+    flatResources.value.forEach((resource) => {
+      const permissionId = resolveResourcePermissionId(resource);
+      const granted = Boolean(permissionId && permissionMap[permissionId]);
+      resourceMap[resource.code] = {
+        visible: granted,
+        operable: granted && ['BUTTON', 'API'].includes(resource.type),
+      };
+    });
+    flatResources.value
+      .filter((resource) => resourceMap[resource.code]?.visible)
+      .forEach((resource) => {
+        let current = findResource(resource.parentCode);
+        while (current) {
+          resourceMap[current.code].visible = true;
+          current = findResource(current.parentCode);
+        }
+      });
+  }
+
   async function loadPermissions(reset = true) {
     if (!form.type) return;
-    const [resourceTree, dataPermissions, uiPermissions] = await Promise.all([
+    const [resourceTree, dataPermissions] = await Promise.all([
       getPermissionControlResourceTree(form.type),
       form.id ? getPermissionControlRolePermissions(form.id) : getPermissionControlPermissionDefinition(form.type),
-      form.id ? getPermissionControlRoleUiPermissions(form.id) : Promise.resolve([]),
     ]);
     resources.value = resourceTree || [];
     permissions.value = dataPermissions || [];
     clearMaps();
-    const uiMap = new Map(uiPermissions.map((item) => [item.resourceCode, item]));
-    flatResources.value.forEach((resource) => {
-      const current = uiMap.get(resource.code);
-      resourceMap[resource.code] = {
-        visible: Boolean(current?.visible),
-        operable: Boolean(current?.operable),
-      };
-    });
     flatPermissions.value.forEach((item) => {
       permissionMap[item.id] = Boolean(item.enable);
     });
+    refreshResourcePermissions();
     if (reset) {
       loadedType.value = form.type;
       snapshot.value = serialize();
@@ -226,26 +250,6 @@
     }
   }
 
-  function findResource(code?: string) {
-    return code ? flatResources.value.find((item) => item.code === code) : undefined;
-  }
-  function isDescendant(item: FlatResource, ancestor: string) {
-    let current: FlatResource | undefined = item;
-    const visited = new Set<string>();
-    while (current?.parentCode && !visited.has(current.code)) {
-      if (current.parentCode === ancestor) return true;
-      visited.add(current.code);
-      current = findResource(current.parentCode);
-    }
-    return false;
-  }
-  function showAncestors(code: string) {
-    let current = findResource(code);
-    while (current?.parentCode) {
-      if (resourceMap[current.parentCode]) resourceMap[current.parentCode].visible = true;
-      current = findResource(current.parentCode);
-    }
-  }
   function syncPermission(id: string) {
     const subject = id.split(':')[0];
     if (isWritePermission(id) && permissionMap[id]) {
@@ -257,33 +261,13 @@
           permissionMap[item.id] = false;
         });
     }
-  }
-  function syncResource(code: string, operableChanged = false) {
-    const value = resourceMap[code];
-    if (!value) return;
-    if (operableChanged && value.operable) {
-      value.visible = true;
-      const permissionId = findResource(code)?.permissionId;
-      if (permissionId && permissionId in permissionMap) {
-        permissionMap[permissionId] = true;
-        syncPermission(permissionId);
-      }
-    }
-    if (value.visible) showAncestors(code);
-    if (!value.visible) {
-      value.operable = false;
-      flatResources.value
-        .filter((item) => isDescendant(item, code))
-        .forEach((item) => {
-          resourceMap[item.code].visible = false;
-          resourceMap[item.code].operable = false;
-        });
-    }
+    refreshResourcePermissions();
   }
   function resourcePermissionText(resource: FlatResource) {
-    return resource.permissionId
-      ? getPermissionText(resource.permissionId, getResourceNameText(resource.name), resource.code)
-      : '-';
+    const permissionId = resolveResourcePermissionId(resource);
+    if (!permissionId) return '仅作为资源容器，无独立授权';
+    const label = getPermissionText(permissionId, getResourceNameText(resource.name), resource.code);
+    return resource.permissionId ? label : `${label}（继承父级）`;
   }
 
   async function changeType() {
@@ -331,7 +315,6 @@
         type: form.type,
         enabled: form.enabled !== false,
         permissions: flatPermissions.value.map((item) => ({ id: item.id, enable: Boolean(permissionMap[item.id]) })),
-        uiPermissions: flatResources.value.map((item) => ({ resourceCode: item.code, ...resourceMap[item.code] })),
       });
       Object.assign(form, saved);
       snapshot.value = serialize();

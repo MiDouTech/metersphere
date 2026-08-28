@@ -1,6 +1,7 @@
 <template>
   <TestAssetPage>
     <MsCard simple>
+      <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
       <div class="mb-4">
         <div class="text-base font-medium">资产版本</div>
         <div class="mt-1 text-sm text-[var(--color-text-3)]"
@@ -69,8 +70,18 @@
           <a-table-column title="发布时间" :width="180"
             ><template #cell="{ record }">{{ formatTime(record.publishedAt) }}</template></a-table-column
           >
-          <a-table-column title="操作" :width="90" fixed="right"
-            ><template #cell="{ record }"><a-link @click="trace(record)">追溯</a-link></template></a-table-column
+          <a-table-column title="操作" :width="160" fixed="right"
+            ><template #cell="{ record }"
+              ><a-space
+                ><a-link @click="trace(record)">追溯</a-link
+                ><a-popconfirm
+                  v-if="record.status === 'PUBLISHED'"
+                  content="停用后新任务不能再选择该版本，已冻结任务不受影响。"
+                  @ok="deprecate(record)"
+                  ><a-link v-permission="['AI_EXECUTION:RUN']" status="danger">停用</a-link></a-popconfirm
+                ></a-space
+              ></template
+            ></a-table-column
           >
         </template>
       </a-table>
@@ -86,13 +97,14 @@
   import TestAssetPage from './components/TestAssetPage.vue';
 
   import type { TestAssetVersion } from '@/api/modules/ai-execution';
-  import { pageTestAssetVersions } from '@/api/modules/ai-execution';
+  import { deprecateTestAssetVersion, pageTestAssetVersions } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
 
   const appStore = useAppStore();
   const route = useRoute();
   const router = useRouter();
   const loading = ref(false);
+  const error = ref('');
   const versions = ref<TestAssetVersion[]>([]);
   const total = ref(0);
   const query = reactive({
@@ -114,6 +126,7 @@
   async function load() {
     if (!appStore.currentProjectId) return;
     loading.value = true;
+    error.value = '';
     try {
       const result = await pageTestAssetVersions({
         projectId: appStore.currentProjectId,
@@ -123,6 +136,8 @@
       });
       versions.value = result.list || [];
       total.value = result.total || 0;
+    } catch (reason: any) {
+      error.value = reason?.message || '资产版本加载失败，请稍后重试';
     } finally {
       loading.value = false;
     }
@@ -142,6 +157,15 @@
   }
   function trace(record: TestAssetVersion) {
     router.push({ path: '/test-assets/relations', query: { assetType: record.assetType, assetId: record.assetId } });
+  }
+  async function deprecate(record: TestAssetVersion) {
+    if (!appStore.currentProjectId) return;
+    try {
+      await deprecateTestAssetVersion(appStore.currentProjectId, record);
+      await load();
+    } catch (reason: any) {
+      error.value = reason?.message || '资产版本停用失败，请稍后重试';
+    }
   }
   watch(
     () => appStore.currentProjectId,
