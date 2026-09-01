@@ -107,6 +107,8 @@ export default {
   'common.exportSuccessful': 'Export successful',
   'common.exportFailed': 'Export failed',
   'common.downloadFile': 'Download file',
+  'common.legacyDocPreviewUnsupported':
+    'Legacy Word (.doc) preview is unavailable. Please download the file to view it.',
   'common.import': 'Import',
   'common.collapseAll': 'Collapse all',
   'common.expandAll': 'Expand all',
