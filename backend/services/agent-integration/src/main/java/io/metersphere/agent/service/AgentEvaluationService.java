@@ -33,8 +33,6 @@ public class AgentEvaluationService {
     @Resource
     private AgentProjectService agentProjectService;
     @Resource
-    private AgentExecutionService executionService;
-    @Resource
     private AgentExecLogService execLogService;
 
     public AgentExecutionEvaluationDTO calculate(String taskId) {
@@ -68,7 +66,7 @@ public class AgentEvaluationService {
     }
 
     public AgentExecutionEvaluationDTO get(String taskId) {
-        AgentExecutionTaskDTO task = executionService.get(taskId);
+        AgentExecutionTaskDTO task = requireTask(taskId);
         AgentExecutionEvaluationDTO evaluation = mapper.selectByTaskId(taskId);
         if (evaluation == null && AgentExecutionStatus.TERMINAL.contains(task.getStatus())) {
             evaluation = calculate(taskId);
@@ -109,7 +107,7 @@ public class AgentEvaluationService {
     }
 
     public AgentExecutionEvaluationDTO manualEvaluate(String taskId, AgentEvaluationRequest request) {
-        executionService.get(taskId);
+        requireTask(taskId);
         AgentExecutionEvaluationDTO evaluation = mapper.selectByTaskId(taskId);
         if (evaluation == null) {
             evaluation = calculate(taskId);
@@ -135,8 +133,20 @@ public class AgentEvaluationService {
     }
 
     public List<AgentEvaluationHistoryDTO> history(String taskId, Integer limit) {
-        executionService.get(taskId);
+        requireTask(taskId);
         return mapper.selectHistory(taskId, Math.min(Math.max(limit == null ? 50 : limit, 1), 200));
+    }
+
+    private AgentExecutionTaskDTO requireTask(String taskId) {
+        AgentExecutionTaskDTO task = executionMapper.selectTaskById(taskId);
+        if (task == null) {
+            throw new MSException("AI 执行任务不存在：" + taskId);
+        }
+        String resolvedProjectId = agentProjectService.resolveProjectId(task.getProjectId());
+        if (!StringUtils.equals(resolvedProjectId, task.getProjectId())) {
+            throw new MSException("AI 执行任务项目上下文校验失败：" + taskId);
+        }
+        return task;
     }
 
     private String normalizeFilter(String value, Set<String> allowed, String field) {
