@@ -107,6 +107,7 @@ export default {
   'common.exportSuccessful': '导出成功',
   'common.exportFailed': '导出失败',
   'common.downloadFile': '下载文件',
+  'common.legacyDocPreviewUnsupported': '旧版 Word（.doc）暂不支持在线预览，请下载后查看',
   'common.import': '导入',
   'common.collapseAll': '收起全部',
   'common.expandAll': '展开全部',

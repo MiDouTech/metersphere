@@ -27,7 +27,7 @@
 
   import { MsFileItem } from '@/components/pure/ms-upload/types';
 
-  import { downloadFileRequest, previewDocumentFile } from '@/api/modules/bug-management';
+  import { downloadFileRequest } from '@/api/modules/bug-management';
   import { useI18n } from '@/hooks/useI18n';
 
   const MAX_BROWSER_PREVIEW_SIZE = 50 * 1024 * 1024;
@@ -100,6 +100,11 @@
 
   async function open(item: MsFileItem) {
     clearPreview();
+    const extension = getExtension(item);
+    if (extension === 'doc') {
+      Message.warning(t('common.legacyDocPreviewUnsupported'));
+      return;
+    }
     visible.value = true;
     loading.value = true;
     title.value = getFileName(item);
@@ -111,9 +116,8 @@
       fileName: getFileName(item),
     };
     try {
-      const extension = getExtension(item);
-      const bytes = extension === 'doc' ? await previewDocumentFile(request) : await downloadFileRequest(request);
-      const blob = new Blob([bytes], { type: extension === 'doc' ? 'application/pdf' : mimeType(item) });
+      const bytes = await downloadFileRequest(request);
+      const blob = new Blob([bytes], { type: mimeType(item) });
       if (blob.size > MAX_BROWSER_PREVIEW_SIZE) throw new Error('ATTACHMENT_PREVIEW_TOO_LARGE');
       if (['txt', 'log', 'csv', 'md', 'markdown', 'json', 'xml', 'yml', 'yaml'].includes(extension)) {
         previewType.value = 'text';

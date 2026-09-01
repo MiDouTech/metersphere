@@ -36,7 +36,6 @@ export const transferFileUrl = '/bug/attachment/transfer';
 export const getTransferTreeUrl = '/bug/attachment/transfer/options';
 // 预览文件
 export const previewFileUrl = '/bug/attachment/preview';
-export const previewDocumentFileUrl = '/bug/attachment/preview/document';
 // 下载文件
 export const downloadFileUrl = '/bug/attachment/download';
 // 检查文件是否更新

@@ -7,7 +7,6 @@ import io.metersphere.bug.dto.request.BugUploadFileRequest;
 import io.metersphere.bug.dto.response.BugFileDTO;
 import io.metersphere.bug.service.BugAttachmentLogService;
 import io.metersphere.bug.service.BugAttachmentService;
-import io.metersphere.bug.service.BugDocumentPreviewService;
 import io.metersphere.project.dto.filemanagement.request.FileMetadataTableRequest;
 import io.metersphere.project.dto.filemanagement.response.FileInformationResponse;
 import io.metersphere.project.service.FileAssociationService;
@@ -44,8 +43,6 @@ public class BugAttachmentController {
     private FileMetadataService fileMetadataService;
     @Resource
     private BugAttachmentService bugAttachmentService;
-    @Resource
-    private BugDocumentPreviewService bugDocumentPreviewService;
     @Resource
     private FileAssociationService fileAssociationService;
     @Resource
@@ -98,14 +95,6 @@ public class BugAttachmentController {
             // 本地
             return bugAttachmentService.downloadOrPreview(request);
         }
-    }
-
-    @PostMapping("/preview/document")
-    @Operation(summary = "缺陷管理-附件-DOC 文档转 PDF 预览")
-    @RequiresPermissions(PermissionConstants.PROJECT_BUG_READ)
-    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
-    public ResponseEntity<byte[]> previewDocument(@Validated @RequestBody BugFileSourceRequest request) {
-        return bugDocumentPreviewService.preview(request);
     }
 
     @PostMapping("/download")
