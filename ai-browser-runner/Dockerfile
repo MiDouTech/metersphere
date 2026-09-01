@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS build
+FROM docker.io/gzmidoo/node:22-bookworm-slim AS build
 WORKDIR /runner
 COPY package*.json tsconfig.json ./
 RUN npm ci

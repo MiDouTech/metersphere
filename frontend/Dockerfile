@@ -1,4 +1,4 @@
-FROM nginx:1.24.0
+FROM docker.io/gzmidoo/nginx:1.24.0
 
 COPY dist/ /app/
 RUN mkdir /cnf && chown 777 /cnf
