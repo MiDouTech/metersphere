@@ -34,6 +34,7 @@ ENV JAVA_OPTIONS="-Dfile.encoding=utf-8 -Djava.awt.headless=true --add-opens jav
 RUN apk add --no-cache libstdc++ libgcc \
     && node --version \
     && echo -n "${MS_VERSION}" > /tmp/MS_VERSION \
+    && sed -i 's/\r$//' /deployments/run-with-wecom-bridge.sh \
     && chmod 755 /deployments/run-with-wecom-bridge.sh
 
 CMD ["/deployments/run-with-wecom-bridge.sh"]
