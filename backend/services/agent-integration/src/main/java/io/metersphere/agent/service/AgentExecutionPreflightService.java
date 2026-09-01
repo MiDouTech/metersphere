@@ -27,8 +27,8 @@ public class AgentExecutionPreflightService {
     @Resource private JdbcTemplate jdbcTemplate;
     @Resource(name = "agentProjectService") private AgentProjectService projectService;
     @Resource private AgentExecutionMapper executionMapper;
-    @Resource private AgentTestPlanQueryService testPlanService;
-    @Resource private AgentEnvironmentProfileService environmentService;
+    @Resource(name = "agentTestPlanQueryService") private AgentTestPlanQueryService testPlanService;
+    @Resource(name = "agentEnvironmentProfileService") private AgentEnvironmentProfileService environmentService;
     @Resource private AgentCredentialReferenceService credentialService;
     @Resource private AgentModelProfileService modelProfileService;
     @Resource private AgentFunctionalCaseSearchService caseSearchService;
