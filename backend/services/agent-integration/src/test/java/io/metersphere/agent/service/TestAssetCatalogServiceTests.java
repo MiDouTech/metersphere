@@ -67,14 +67,14 @@ class TestAssetCatalogServiceTests {
     void catalogShouldCheckSourcePermissionAndAttachPublishedVersionWithoutMutation() {
         when(subject.isPermitted(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ)).thenReturn(true);
         when(agentProjectService.resolveProjectId("project-number")).thenReturn("project-1");
-        when(mapper.countCatalog("project-1", "DATASET", "orders", "ACTIVE", null)).thenReturn(1L);
+        when(mapper.countCatalog("project-1", "DATASET", "orders", "ACTIVE", null, List.of(), null, false)).thenReturn(1L);
         TestAssetCatalogItemDTO item = new TestAssetCatalogItemDTO();
         item.setId("dataset-1");
         item.setProjectId("project-1");
         item.setAssetType("DATASET");
         item.setName("orders.csv");
         item.setSourceVersion("3");
-        when(mapper.selectCatalog("project-1", "DATASET", "orders", "ACTIVE", null, 0L, 20))
+        when(mapper.selectCatalog("project-1", "DATASET", "orders", "ACTIVE", null, List.of(), null, false, 0L, 20))
                 .thenReturn(List.of(item));
         TestAssetVersionDTO version = new TestAssetVersionDTO();
         version.setId("version-3");
@@ -102,8 +102,8 @@ class TestAssetCatalogServiceTests {
             item.setAssetType(type);
             item.setName(type + " asset");
             item.setSourceVersion("1");
-            when(mapper.countCatalog("project-1", type, null, null, null)).thenReturn(1L);
-            when(mapper.selectCatalog("project-1", type, null, null, null, 0L, 20)).thenReturn(List.of(item));
+            when(mapper.countCatalog("project-1", type, null, null, null, List.of(), null, false)).thenReturn(1L);
+            when(mapper.selectCatalog("project-1", type, null, null, null, List.of(), null, false, 0L, 20)).thenReturn(List.of(item));
 
             service.catalog("project-1", type, null, null, 1, 20);
         }
@@ -288,10 +288,10 @@ class TestAssetCatalogServiceTests {
     @Test
     void documentsShouldResolveAccessibleProjectAndCapPageSize() {
         when(agentProjectService.resolveProjectId("project-number")).thenReturn("project-1");
-        when(mapper.countDocuments("project-1", "PARSED", "login")).thenReturn(1L);
+        when(mapper.countDocuments("project-1", "PARSED", "login", List.of(), null, false)).thenReturn(1L);
         TestAssetDocumentDTO document = new TestAssetDocumentDTO();
         document.setId("document-1");
-        when(mapper.selectDocuments("project-1", "PARSED", "login", 100L, 100))
+        when(mapper.selectDocuments("project-1", "PARSED", "login", List.of(), null, false, 100L, 100))
                 .thenReturn(List.of(document));
 
         Pager<List<TestAssetDocumentDTO>> result = service.documents(
@@ -307,14 +307,14 @@ class TestAssetCatalogServiceTests {
     void versionsShouldNormalizeAssetTypeAndEmptyFilters() {
         when(subject.isPermitted(PermissionConstants.FUNCTIONAL_CASE_READ)).thenReturn(true);
         when(agentProjectService.resolveProjectId("project-1")).thenReturn("project-1");
-        when(mapper.countVersions("project-1", List.of("CASE"), "CASE", null, null)).thenReturn(0L);
+        when(mapper.countVersions("project-1", List.of("CASE"), "CASE", null, null, List.of(), null, false)).thenReturn(0L);
 
         Pager<List<TestAssetVersionDTO>> result = service.versions(
                 "project-1", " case ", " ", " ", null, null);
 
         Assertions.assertTrue(result.getList().isEmpty());
         Assertions.assertEquals(20, result.getPageSize());
-        verify(mapper).countVersions("project-1", List.of("CASE"), "CASE", null, null);
+        verify(mapper).countVersions("project-1", List.of("CASE"), "CASE", null, null, List.of(), null, false);
     }
 
     @Test
@@ -322,25 +322,25 @@ class TestAssetCatalogServiceTests {
         when(subject.isPermitted(anyString())).thenAnswer(invocation ->
                 PermissionConstants.PROJECT_ENVIRONMENT_READ.equals(invocation.getArgument(0)));
         when(agentProjectService.resolveProjectId("project-1")).thenReturn("project-1");
-        when(mapper.countVersions("project-1", List.of("ENVIRONMENT"), null, null, null)).thenReturn(0L);
+        when(mapper.countVersions("project-1", List.of("ENVIRONMENT"), null, null, null, List.of(), null, false)).thenReturn(0L);
 
         Pager<List<TestAssetVersionDTO>> result = service.versions(
                 "project-1", null, null, null, 1, 20);
 
         Assertions.assertTrue(result.getList().isEmpty());
-        verify(mapper).countVersions("project-1", List.of("ENVIRONMENT"), null, null, null);
+        verify(mapper).countVersions("project-1", List.of("ENVIRONMENT"), null, null, null, List.of(), null, false);
     }
 
     @Test
     void relationsShouldApplyProjectIsolationBeforeQuery() {
         when(subject.isPermitted(PermissionConstants.FUNCTIONAL_CASE_AI_READ)).thenReturn(true);
         when(agentProjectService.resolveProjectId("project-alias")).thenReturn("project-2");
-        when(mapper.countRelations("project-2", List.of("DOCUMENT"), "DOCUMENT", "doc-1", "DERIVED_FROM", null))
+        when(mapper.countRelations("project-2", List.of("DOCUMENT"), "DOCUMENT", "doc-1", "DERIVED_FROM", null, List.of(), null, false))
                 .thenReturn(1L);
         TestAssetRelationDTO relation = new TestAssetRelationDTO();
         relation.setId("relation-1");
         when(mapper.selectRelations("project-2", List.of("DOCUMENT"), "DOCUMENT", "doc-1",
-                "DERIVED_FROM", null, 0L, 20))
+                "DERIVED_FROM", null, List.of(), null, false, 0L, 20))
                 .thenReturn(List.of(relation));
 
         Pager<List<TestAssetRelationDTO>> result = service.relations(

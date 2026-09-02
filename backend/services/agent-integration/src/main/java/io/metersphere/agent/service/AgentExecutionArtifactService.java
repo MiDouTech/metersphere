@@ -61,6 +61,8 @@ public class AgentExecutionArtifactService {
     @Resource
     private TestAssetVersionService testAssetVersionService;
     @Resource
+    private TestAssetGovernanceService testAssetGovernanceService;
+    @Resource
     private FunctionalCaseMapper functionalCaseMapper;
     @Resource
     private AgentEvidenceRedactionService redactionService;
@@ -277,6 +279,8 @@ public class AgentExecutionArtifactService {
         snapshot.put("retentionUntil", artifact.getRetentionUntil());
         var version = testAssetVersionService.publish(task.getProjectId(), "EVIDENCE", artifact.getId(),
                 artifact.getSha256(), JSON.toJSONString(snapshot), artifact.getCreateUser());
+        testAssetGovernanceService.recordTrustedSource(task.getProjectId(), "EVIDENCE", artifact.getId(), "AUTOMATION",
+                "AI_EXECUTION_TASK", task.getId(), "AGENT", artifact.getCreateUser());
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("executionCaseId", artifact.getExecutionCaseId());
         metadata.put("stepId", artifact.getStepId());

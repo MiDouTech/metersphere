@@ -30,13 +30,39 @@
           <a-option value="UPLOADED">待解析</a-option><a-option value="PARSING">解析中</a-option>
           <a-option value="PARSED">解析成功</a-option><a-option value="FAILED">解析失败</a-option>
         </a-select>
+        <a-select
+          v-model="query.creationSources"
+          multiple
+          allow-clear
+          class="w-[200px]"
+          placeholder="建立方式"
+          @change="search"
+        >
+          <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{ item.label }}</a-option>
+        </a-select>
+        <a-tree-select
+          v-model="query.categoryId"
+          allow-clear
+          allow-search
+          class="w-[200px]"
+          :data="categories"
+          :field-names="{ key: 'id', title: 'name', children: 'children' }"
+          placeholder="资产分类"
+          @change="search"
+        />
+        <a-checkbox v-model="query.includeDescendants" @change="search">含子分类</a-checkbox>
         <a-button :loading="loading" @click="load">刷新</a-button>
+        <a-button v-if="canAssignCategory" :disabled="!selectedDocumentIds.length" @click="batchCategoryVisible = true"
+          >批量归类</a-button
+        >
       </div>
       <a-table
+        v-model:selected-keys="selectedDocumentIds"
         :data="documents"
         :loading="loading"
         row-key="id"
         :pagination="pagination"
+        :row-selection="canAssignCategory ? { type: 'checkbox', showCheckedAll: true } : undefined"
         @page-change="changePage"
         @page-size-change="changePageSize"
       >
@@ -52,6 +78,41 @@
             <template #cell="{ record }"
               ><a-tag :color="statusColor(record.parseStatus)">{{ statusText(record.parseStatus) }}</a-tag></template
             >
+          </a-table-column>
+          <a-table-column title="建立方式" :width="120"
+            ><template #cell="{ record }">
+              <a-tooltip v-if="record.creationSource === 'UNKNOWN'" content="历史来源信息不足，待治理">
+                <a-tag :color="sourceMeta(record.creationSource).color">{{
+                  sourceMeta(record.creationSource).label
+                }}</a-tag>
+              </a-tooltip>
+              <a-tag v-else :color="sourceMeta(record.creationSource).color">{{
+                sourceMeta(record.creationSource).label
+              }}</a-tag>
+            </template></a-table-column
+          >
+          <a-table-column title="资产分类" :width="210">
+            <template #cell="{ record }">
+              <a-tree-select
+                v-if="canAssignCategory"
+                v-model="record.categoryId"
+                class="asset-category-select w-full"
+                allow-clear
+                allow-search
+                :data="categories"
+                :field-names="{ key: 'id', title: 'name', children: 'children' }"
+                @change="(value) => changeDocumentCategory(record, value as string | undefined)"
+              >
+                <template #label
+                  ><a-tooltip :content="record.categoryPath || '未分类'">{{
+                    record.categoryPath || '未分类'
+                  }}</a-tooltip></template
+                >
+              </a-tree-select>
+              <a-tooltip v-else :content="record.categoryPath || '未分类'">{{
+                record.categoryPath || '未分类'
+              }}</a-tooltip>
+            </template>
           </a-table-column>
           <a-table-column title="资产版本" :width="120">
             <template #cell="{ record }"
@@ -102,6 +163,10 @@
           <a-descriptions-item label="文档名称">{{ detail.originalName }}</a-descriptions-item>
           <a-descriptions-item label="文档 ID">{{ detail.id }}</a-descriptions-item>
           <a-descriptions-item label="解析状态">{{ statusText(detail.parseStatus) }}</a-descriptions-item>
+          <a-descriptions-item label="建立方式">{{
+            sourceMeta(detailMetadata?.creationSource).label
+          }}</a-descriptions-item>
+          <a-descriptions-item label="所属分类">{{ detailMetadata?.categoryPath || '未分类' }}</a-descriptions-item>
           <a-descriptions-item label="解析器">{{ detail.parserType || '-' }}</a-descriptions-item>
           <a-descriptions-item label="文件大小">{{ formatSize(detail.fileSize) }}</a-descriptions-item>
           <a-descriptions-item label="SHA-256"
@@ -115,6 +180,25 @@
         </a-descriptions>
       </a-spin>
     </a-drawer>
+    <a-modal
+      v-model:visible="batchCategoryVisible"
+      title="批量归类业务文档"
+      :ok-loading="batchCategoryLoading"
+      @ok="applyBatchCategory"
+    >
+      <a-form :model="{ batchCategoryId }" layout="vertical">
+        <a-form-item label="目标分类"
+          ><a-tree-select
+            v-model="batchCategoryId"
+            allow-clear
+            allow-search
+            :data="categories"
+            :field-names="{ key: 'id', title: 'name', children: 'children' }"
+            placeholder="不选择则移动到未分类"
+        /></a-form-item>
+      </a-form>
+      <a-alert>逐项校验资产权限；部分失败会单独提示。</a-alert>
+    </a-modal>
   </TestAssetPage>
 </template>
 
@@ -126,8 +210,19 @@
 
   import TestAssetPage from './components/TestAssetPage.vue';
 
-  import type { TestAssetDocument } from '@/api/modules/ai-execution';
-  import { pageTestAssetDocuments } from '@/api/modules/ai-execution';
+  import type {
+    TestAssetCategory,
+    TestAssetCreationSource,
+    TestAssetDocument,
+    TestAssetMetadata,
+  } from '@/api/modules/ai-execution';
+  import {
+    assignTestAssetCategory,
+    batchAssignTestAssetCategory,
+    getTestAssetMetadata,
+    listTestAssetCategories,
+    pageTestAssetDocuments,
+  } from '@/api/modules/ai-execution';
   import {
     deleteAiSourceDocument,
     downloadAiSourceDocument,
@@ -137,20 +232,46 @@
   } from '@/api/modules/case-management/caseGenerate';
   import useAppStore from '@/store/modules/app';
   import { downloadByteFile } from '@/utils';
+  import { hasAnyPermission } from '@/utils/permission';
 
   import type { AiSourceDocument } from '@/models/caseManagement/caseGenerate';
 
   const appStore = useAppStore();
   const router = useRouter();
+  const canAssignCategory = hasAnyPermission(['TEST_ASSET_CATEGORY:ASSIGN']);
   const fileInput = ref<HTMLInputElement>();
   const loading = ref(false);
   const uploading = ref(false);
   const detailVisible = ref(false);
   const detailLoading = ref(false);
   const detail = ref<AiSourceDocument>();
+  const detailMetadata = ref<TestAssetMetadata>();
+  const categories = ref<TestAssetCategory[]>([]);
   const documents = ref<TestAssetDocument[]>([]);
+  const selectedDocumentIds = ref<string[]>([]);
+  const batchCategoryVisible = ref(false);
+  const batchCategoryLoading = ref(false);
+  const batchCategoryId = ref<string>();
   const total = ref(0);
-  const query = reactive({ keyword: '', parseStatus: undefined as string | undefined, current: 1, pageSize: 20 });
+  const query = reactive({
+    keyword: '',
+    parseStatus: undefined as string | undefined,
+    creationSources: [] as TestAssetCreationSource[],
+    categoryId: undefined as string | undefined,
+    includeDescendants: true,
+    current: 1,
+    pageSize: 20,
+  });
+  const sourceOptions: Array<{ value: TestAssetCreationSource; label: string; color: string }> = [
+    { value: 'MANUAL', label: '人工建立', color: 'blue' },
+    { value: 'AI', label: 'AI 建立', color: 'purple' },
+    { value: 'IMPORT', label: '导入建立', color: 'cyan' },
+    { value: 'SYNC', label: '同步建立', color: 'orange' },
+    { value: 'AUTOMATION', label: '自动化建立', color: 'green' },
+    { value: 'UNKNOWN', label: '来源不明', color: 'gray' },
+  ];
+  const sourceMeta = (value?: TestAssetCreationSource) =>
+    sourceOptions.find((item) => item.value === value) || sourceOptions.at(-1)!;
   const pagination = computed(() => ({
     current: query.current,
     pageSize: query.pageSize,
@@ -187,6 +308,38 @@
       loading.value = false;
     }
   }
+  async function changeDocumentCategory(document: TestAssetDocument, categoryId?: string) {
+    const previous = document.categoryId;
+    try {
+      const metadata = await assignTestAssetCategory(appStore.currentProjectId, 'DOCUMENT', document.id, categoryId);
+      document.categoryId = metadata.categoryId;
+      document.categoryName = metadata.categoryName;
+      document.categoryPath = metadata.categoryPath;
+    } catch {
+      document.categoryId = previous;
+    }
+  }
+  async function applyBatchCategory() {
+    batchCategoryLoading.value = true;
+    try {
+      const results = await batchAssignTestAssetCategory({
+        categoryId: batchCategoryId.value,
+        items: selectedDocumentIds.value.map((assetId) => ({
+          projectId: appStore.currentProjectId,
+          assetType: 'DOCUMENT',
+          assetId,
+        })),
+      });
+      const failed = results.filter((item) => !item.success).length;
+      if (failed) Message.warning(`归类成功 ${results.length - failed} 项，失败 ${failed} 项`);
+      else Message.success(`已归类 ${results.length} 项`);
+      batchCategoryVisible.value = false;
+      selectedDocumentIds.value = [];
+      await load();
+    } finally {
+      batchCategoryLoading.value = false;
+    }
+  }
   function search() {
     query.current = 1;
     load();
@@ -217,7 +370,10 @@
     detailVisible.value = true;
     detailLoading.value = true;
     try {
-      detail.value = await getAiSourceDocument(document.id, appStore.currentProjectId);
+      [detail.value, detailMetadata.value] = await Promise.all([
+        getAiSourceDocument(document.id, appStore.currentProjectId),
+        getTestAssetMetadata(appStore.currentProjectId, 'DOCUMENT', document.id),
+      ]);
     } finally {
       detailLoading.value = false;
     }
@@ -267,5 +423,23 @@
       load();
     }
   );
-  onMounted(load);
+  onMounted(async () => {
+    categories.value = await listTestAssetCategories();
+    await load();
+  });
 </script>
+
+<style scoped lang="less">
+  :deep(.asset-category-select .arco-select-view-single) {
+    min-height: 30px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    &:hover,
+    &.arco-select-view-focus {
+      border-color: rgb(var(--primary-5));
+      color: rgb(var(--primary-6));
+      background: rgb(var(--primary-1));
+    }
+  }
+</style>

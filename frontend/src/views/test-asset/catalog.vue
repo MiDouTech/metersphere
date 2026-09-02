@@ -17,15 +17,44 @@
             @clear="search"
           />
           <a-input v-model="query.status" class="w-[150px]" allow-clear placeholder="状态" @press-enter="search" />
+          <a-select
+            v-model="query.creationSources"
+            multiple
+            allow-clear
+            class="w-[210px]"
+            placeholder="建立方式"
+            @change="search"
+          >
+            <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{ item.label }}</a-option>
+          </a-select>
+          <a-tree-select
+            v-model="query.categoryId"
+            allow-clear
+            allow-search
+            class="w-[200px]"
+            :data="categories"
+            :field-names="{ key: 'id', title: 'name', children: 'children' }"
+            placeholder="资产分类"
+            @change="search"
+          />
+          <a-checkbox v-model="query.includeDescendants" @change="search">含子分类</a-checkbox>
           <a-button :loading="loading" @click="load">刷新</a-button>
+          <a-button v-permission="['TEST_ASSET_CATEGORY:MANAGE']" @click="categoryDrawerVisible = true"
+            >分类管理</a-button
+          >
+          <a-button v-if="canAssignCategory" :disabled="!selectedAssetIds.length" @click="batchCategoryVisible = true"
+            >批量归类</a-button
+          >
           <a-button @click="openSource">打开原业务模块</a-button>
         </div>
       </div>
       <a-table
+        v-model:selected-keys="selectedAssetIds"
         :data="records"
         :loading="loading"
         row-key="id"
         :pagination="pagination"
+        :row-selection="canAssignCategory ? { type: 'checkbox', showCheckedAll: true } : undefined"
         @page-change="changePage"
         @page-size-change="changePageSize"
       >
@@ -33,6 +62,44 @@
         <template #columns>
           <a-table-column title="名称" data-index="name" :width="240" ellipsis tooltip />
           <a-table-column title="类型" data-index="category" :width="140" />
+          <a-table-column title="建立方式" :width="120">
+            <template #cell="{ record }">
+              <a-tooltip v-if="record.creationSource === 'UNKNOWN'" content="历史来源信息不足，待治理">
+                <a-tag :color="sourceMeta(record.creationSource).color">{{
+                  sourceMeta(record.creationSource).label
+                }}</a-tag>
+              </a-tooltip>
+              <a-tag v-else :color="sourceMeta(record.creationSource).color">{{
+                sourceMeta(record.creationSource).label
+              }}</a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="资产分类" :width="220">
+            <template #cell="{ record }">
+              <a-tree-select
+                v-if="canAssignCategory"
+                v-model="record.categoryId"
+                class="asset-category-select w-full"
+                allow-clear
+                allow-search
+                :data="categories"
+                :field-names="{ key: 'id', title: 'name', children: 'children' }"
+                @click.stop
+                @change="(value) => changeCategory(record, value as string | undefined)"
+              >
+                <template #label
+                  ><a-tooltip :content="record.categoryPath || '未分类'">{{
+                    record.categoryPath || '未分类'
+                  }}</a-tooltip></template
+                >
+              </a-tree-select>
+              <a-tooltip v-else :content="record.categoryPath || '未分类'">
+                <span :class="{ 'text-[var(--color-text-3)]': !record.categoryId }">{{
+                  record.categoryPath || '未分类'
+                }}</span>
+              </a-tooltip>
+            </template>
+          </a-table-column>
           <a-table-column title="状态" :width="120"
             ><template #cell="{ record }"
               ><a-tag>{{ record.status || '-' }}</a-tag></template
@@ -56,6 +123,11 @@
                 <a-link @click="openRelations(record)">追溯</a-link>
                 <a-link v-if="assetType === 'EVIDENCE'" @click="previewEvidence(record)">预览</a-link>
                 <a-link v-if="assetType === 'EVIDENCE'" @click="downloadEvidence(record)">下载</a-link>
+                <a-link
+                  v-if="canGovernSource && record.creationSource === 'UNKNOWN'"
+                  @click="openSourceGovernance(record)"
+                  >治理来源</a-link
+                >
                 <a-link v-permission="['AI_EXECUTION:RUN']" @click="publishAsset(record)">发布执行版本</a-link>
                 <a-link
                   v-permission="['AI_EXECUTION:RUN']"
@@ -75,6 +147,35 @@
         <a-descriptions-item label="资产 ID">{{ detail.id }}</a-descriptions-item>
         <a-descriptions-item label="类型">{{ detail.assetType }} / {{ detail.category || '-' }}</a-descriptions-item>
         <a-descriptions-item label="状态">{{ detail.status || '-' }}</a-descriptions-item>
+        <a-descriptions-item label="建立方式">
+          <a-tag :color="sourceMeta(detail.creationSource).color">{{ sourceMeta(detail.creationSource).label }}</a-tag>
+        </a-descriptions-item>
+        <a-descriptions-item label="所属分类">{{ detail.categoryPath || '未分类' }}</a-descriptions-item>
+        <a-descriptions-item v-if="detail.sourceReferenceId" label="来源引用">
+          {{ detail.sourceReferenceType || '来源记录' }} / {{ detail.sourceReferenceId }}
+        </a-descriptions-item>
+        <template v-if="detailMetadata?.creationSource === 'AI'">
+          <a-descriptions-item label="AI 生成批次">{{
+            detailMetadata.aiGenerationId || detailMetadata.sourceReferenceId || '-'
+          }}</a-descriptions-item>
+          <a-descriptions-item label="Provider / 模型">{{
+            [detailMetadata.aiProvider, detailMetadata.aiModelName || detailMetadata.aiModelId]
+              .filter(Boolean)
+              .join(' / ') || '-'
+          }}</a-descriptions-item>
+          <a-descriptions-item label="提示模板版本">{{
+            detailMetadata.promptTemplateVersion || '-'
+          }}</a-descriptions-item>
+          <a-descriptions-item label="来源文档">{{ detailMetadata.sourceDocumentId || '-' }}</a-descriptions-item>
+          <a-descriptions-item label="发起人 / 生成时间"
+            >{{ detailMetadata.generationInitiator || '-' }} /
+            {{ formatTime(detailMetadata.generationTime) }}</a-descriptions-item
+          >
+          <a-descriptions-item label="评审"
+            >{{ detailMetadata.reviewStatus || '-' }} / {{ detailMetadata.reviewedBy || '-' }}</a-descriptions-item
+          >
+          <a-descriptions-item label="正式发布时间">{{ formatTime(detailMetadata.publishedAt) }}</a-descriptions-item>
+        </template>
         <a-descriptions-item label="版本">v{{ detail.assetVersionNo || 1 }}</a-descriptions-item>
         <a-descriptions-item label="内容哈希"
           ><span class="break-all font-mono text-xs">{{ detail.contentHash || '-' }}</span></a-descriptions-item
@@ -97,32 +198,94 @@
       >
       <a-empty v-else description="该证据无法安全预览，请下载后查看" />
     </a-modal>
+    <TestAssetCategoryDrawer v-model:visible="categoryDrawerVisible" @changed="handleCategoryChanged" />
+    <a-modal
+      v-model:visible="batchCategoryVisible"
+      title="批量归类"
+      :ok-loading="batchCategoryLoading"
+      @ok="applyBatchCategory"
+    >
+      <a-form :model="{ batchCategoryId }" layout="vertical">
+        <a-form-item label="目标分类">
+          <a-tree-select
+            v-model="batchCategoryId"
+            allow-clear
+            allow-search
+            :data="categories"
+            :field-names="{ key: 'id', title: 'name', children: 'children' }"
+            placeholder="不选择则移动到未分类"
+          />
+        </a-form-item>
+      </a-form>
+      <a-alert>将对已选 {{ selectedAssetIds.length }} 项逐项校验权限；部分失败会单独提示。</a-alert>
+    </a-modal>
+    <a-modal
+      v-model:visible="sourceGovernanceVisible"
+      title="治理历史来源"
+      :ok-loading="sourceGovernanceLoading"
+      @ok="applySourceGovernance"
+    >
+      <a-form :model="sourceGovernanceForm" layout="vertical">
+        <a-form-item label="确认建立方式" required>
+          <a-select v-model="sourceGovernanceForm.creationSource">
+            <a-option
+              v-for="item in sourceOptions.filter((item) => item.value !== 'UNKNOWN')"
+              :key="item.value"
+              :value="item.value"
+              >{{ item.label }}</a-option
+            >
+          </a-select>
+        </a-form-item>
+        <a-form-item label="来源依据" required
+          ><a-textarea v-model="sourceGovernanceForm.evidence" :max-length="500" show-word-limit
+        /></a-form-item>
+        <a-form-item label="来源引用类型"><a-input v-model="sourceGovernanceForm.sourceReferenceType" /></a-form-item>
+        <a-form-item label="来源引用 ID"><a-input v-model="sourceGovernanceForm.sourceReferenceId" /></a-form-item>
+      </a-form>
+      <a-alert type="warning">仅“来源不明”可治理为确定来源，确认后不可再次修改。</a-alert>
+    </a-modal>
   </TestAssetPage>
 </template>
 
 <script setup lang="ts">
   import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
+  import { Message } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
+  import TestAssetCategoryDrawer from './components/TestAssetCategoryDrawer.vue';
   import TestAssetPage from './components/TestAssetPage.vue';
 
-  import type { TestAssetCatalogItem, TestAssetCatalogType } from '@/api/modules/ai-execution';
+  import type {
+    TestAssetCatalogItem,
+    TestAssetCatalogType,
+    TestAssetCategory,
+    TestAssetCreationSource,
+    TestAssetMetadata,
+  } from '@/api/modules/ai-execution';
   import {
+    assignTestAssetCategory,
+    batchAssignTestAssetCategory,
     downloadAiExecutionArtifact,
     getTestAssetCatalogDetail,
+    getTestAssetMetadata,
+    governTestAssetSource,
+    listTestAssetCategories,
     pageTestAssetCatalog,
     publishTestAssetCatalog,
   } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
   import { downloadByteFile } from '@/utils';
+  import { hasAnyPermission } from '@/utils/permission';
 
   import { CaseManagementRouteEnum } from '@/enums/routeEnum';
 
   const route = useRoute();
   const router = useRouter();
   const appStore = useAppStore();
+  const canAssignCategory = hasAnyPermission(['TEST_ASSET_CATEGORY:ASSIGN']);
+  const canGovernSource = hasAnyPermission(['TEST_ASSET_SOURCE:GOVERN']);
   const configs: Record<string, { type: TestAssetCatalogType; title: string; description: string; source: string }> = {
     'datasets': {
       type: 'DATASET',
@@ -170,10 +333,44 @@
   const total = ref(0);
   const detailVisible = ref(false);
   const detail = ref<TestAssetCatalogItem>();
+  const detailMetadata = ref<TestAssetMetadata>();
   const previewVisible = ref(false);
   const previewUrl = ref('');
   const previewText = ref('');
-  const query = reactive({ keyword: '', status: '', current: 1, pageSize: 20 });
+  const categories = ref<TestAssetCategory[]>([]);
+  const categoryDrawerVisible = ref(false);
+  const selectedAssetIds = ref<string[]>([]);
+  const batchCategoryVisible = ref(false);
+  const batchCategoryLoading = ref(false);
+  const batchCategoryId = ref<string>();
+  const sourceGovernanceVisible = ref(false);
+  const sourceGovernanceLoading = ref(false);
+  const governingAsset = ref<TestAssetCatalogItem>();
+  const sourceGovernanceForm = reactive({
+    creationSource: 'MANUAL' as Exclude<TestAssetCreationSource, 'UNKNOWN'>,
+    evidence: '',
+    sourceReferenceType: '',
+    sourceReferenceId: '',
+  });
+  const query = reactive({
+    keyword: '',
+    status: '',
+    creationSources: [] as TestAssetCreationSource[],
+    categoryId: undefined as string | undefined,
+    includeDescendants: true,
+    current: 1,
+    pageSize: 20,
+  });
+  const sourceOptions: Array<{ value: TestAssetCreationSource; label: string; color: string }> = [
+    { value: 'MANUAL', label: '人工建立', color: 'blue' },
+    { value: 'AI', label: 'AI 建立', color: 'purple' },
+    { value: 'IMPORT', label: '导入建立', color: 'cyan' },
+    { value: 'SYNC', label: '同步建立', color: 'orange' },
+    { value: 'AUTOMATION', label: '自动化建立', color: 'green' },
+    { value: 'UNKNOWN', label: '来源不明', color: 'gray' },
+  ];
+  const sourceMeta = (source?: TestAssetCreationSource) =>
+    sourceOptions.find((item) => item.value === source) || sourceOptions.at(-1)!;
   const pagination = computed(() => ({
     current: query.current,
     pageSize: query.pageSize,
@@ -193,6 +390,9 @@
         assetType: assetType.value,
         keyword: query.keyword.trim() || undefined,
         status: query.status.trim() || undefined,
+        creationSources: query.creationSources.length ? query.creationSources : undefined,
+        categoryId: query.categoryId,
+        includeDescendants: query.includeDescendants,
         current: query.current,
         pageSize: query.pageSize,
       });
@@ -202,6 +402,83 @@
       error.value = reason?.message || `${config.value.title}加载失败，请稍后重试`;
     } finally {
       loading.value = false;
+    }
+  }
+  async function loadCategories() {
+    categories.value = await listTestAssetCategories();
+  }
+  async function handleCategoryChanged() {
+    await loadCategories();
+    await load();
+  }
+  async function changeCategory(record: TestAssetCatalogItem, categoryId?: string) {
+    const previous = record.categoryId;
+    try {
+      const metadata = await assignTestAssetCategory(
+        appStore.currentProjectId,
+        record.assetType,
+        record.id,
+        categoryId
+      );
+      record.categoryId = metadata.categoryId;
+      record.categoryName = metadata.categoryName;
+      record.categoryPath = metadata.categoryPath;
+    } catch (reason) {
+      record.categoryId = previous;
+    }
+  }
+  async function applyBatchCategory() {
+    batchCategoryLoading.value = true;
+    try {
+      const selected = records.value.filter((record) => selectedAssetIds.value.includes(record.id));
+      const results = await batchAssignTestAssetCategory({
+        categoryId: batchCategoryId.value,
+        items: selected.map((record) => ({
+          projectId: appStore.currentProjectId,
+          assetType: record.assetType,
+          assetId: record.id,
+        })),
+      });
+      const failed = results.filter((item) => !item.success);
+      if (failed.length) Message.warning(`归类成功 ${results.length - failed.length} 项，失败 ${failed.length} 项`);
+      else Message.success(`已归类 ${results.length} 项`);
+      batchCategoryVisible.value = false;
+      selectedAssetIds.value = [];
+      await load();
+    } finally {
+      batchCategoryLoading.value = false;
+    }
+  }
+  function openSourceGovernance(record: TestAssetCatalogItem) {
+    governingAsset.value = record;
+    sourceGovernanceForm.creationSource = 'MANUAL';
+    sourceGovernanceForm.evidence = '';
+    sourceGovernanceForm.sourceReferenceType = '';
+    sourceGovernanceForm.sourceReferenceId = '';
+    sourceGovernanceVisible.value = true;
+  }
+  async function applySourceGovernance() {
+    const record = governingAsset.value;
+    if (!record || !sourceGovernanceForm.evidence.trim()) {
+      Message.warning('请填写可审计的来源依据');
+      return;
+    }
+    sourceGovernanceLoading.value = true;
+    try {
+      await governTestAssetSource({
+        projectId: appStore.currentProjectId,
+        assetType: record.assetType,
+        assetId: record.id,
+        creationSource: sourceGovernanceForm.creationSource,
+        evidence: sourceGovernanceForm.evidence.trim(),
+        sourceReferenceType: sourceGovernanceForm.sourceReferenceType.trim() || undefined,
+        sourceReferenceId: sourceGovernanceForm.sourceReferenceId.trim() || undefined,
+      });
+      Message.success('来源治理已记录');
+      sourceGovernanceVisible.value = false;
+      await load();
+    } finally {
+      sourceGovernanceLoading.value = false;
     }
   }
   function search() {
@@ -220,7 +497,12 @@
   async function openDetail(record: TestAssetCatalogItem) {
     if (!appStore.currentProjectId) return;
     detailVisible.value = true;
-    detail.value = await getTestAssetCatalogDetail(appStore.currentProjectId, record.assetType, record.id);
+    const [asset, metadata] = await Promise.all([
+      getTestAssetCatalogDetail(appStore.currentProjectId, record.assetType, record.id),
+      getTestAssetMetadata(appStore.currentProjectId, record.assetType, record.id),
+    ]);
+    detail.value = asset;
+    detailMetadata.value = metadata;
   }
   function openVersions(record: TestAssetCatalogItem) {
     router.push({ path: '/test-assets/versions', query: { assetType: record.assetType, assetId: record.id } });
@@ -278,6 +560,22 @@
       load();
     }
   );
-  onMounted(load);
+  onMounted(async () => {
+    await loadCategories();
+    await load();
+  });
   onBeforeUnmount(clearPreview);
 </script>
+
+<style scoped lang="less">
+  :deep(.asset-category-select .arco-select-view-single) {
+    border-color: transparent;
+    background: transparent;
+    &:hover,
+    &.arco-select-view-focus {
+      border-color: rgb(var(--primary-5));
+      color: rgb(var(--primary-6));
+      background: rgb(var(--primary-1));
+    }
+  }
+</style>

@@ -34,6 +34,15 @@ public class FunctionalCasePageRequest extends BasePageRequest implements Serial
 
     private Boolean unclassifiedSystem;
 
+    @Schema(description = "测试资产建立方式")
+    private List<String> creationSources;
+
+    @Schema(description = "测试资产业务分类 ID")
+    private String assetCategoryId;
+
+    @Schema(description = "分类筛选是否包含子分类")
+    private Boolean includeAssetCategoryDescendants;
+
     @Schema(description = "版本id")
     private String versionId;
 

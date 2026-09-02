@@ -1133,7 +1133,11 @@ public class WecomBotService {
             if (!Boolean.FALSE.equals(schedule.enabled())) {
                 String definition = schedule.cycleType() + "|" + weekdays(schedule) + "|" + schedule.executionTime() + "|" + schedule.timezone();
                 if (!enabledDefinitions.add(definition)) throw new MSException("Duplicate enabled notification schedule");
-                List<Object> args = new ArrayList<>(List.of(schedule.cycleType(), weekdays(schedule), schedule.executionTime(), schedule.timezone()));
+                List<Object> args = new ArrayList<>();
+                args.add(schedule.cycleType());
+                args.add(weekdays(schedule));
+                args.add(schedule.executionTime());
+                args.add(schedule.timezone());
                 String sql = "SELECT COUNT(*) FROM wecom_notification_schedule WHERE enabled=1 AND cycle_type=? AND COALESCE(weekdays,'')=COALESCE(?,'') AND execution_time=? AND timezone=?";
                 if (StringUtils.isNotBlank(ruleId)) { sql += " AND rule_id=?"; args.add(ruleId); }
                 if (StringUtils.isNotBlank(excludedId)) { sql += " AND id<>?"; args.add(excludedId); }

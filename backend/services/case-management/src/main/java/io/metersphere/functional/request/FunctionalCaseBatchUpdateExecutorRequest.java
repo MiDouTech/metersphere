@@ -15,7 +15,6 @@ public class FunctionalCaseBatchUpdateExecutorRequest extends BaseFunctionalCase
     @NotBlank(message = "{functional_case.project_id.not_blank}")
     private String projectId;
 
-    @Schema(description = "执行人id", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotBlank(message = "{test_plan.user_id.not_blank}")
+    @Schema(description = "执行人id；空字符串表示清空执行人")
     private String userId;
 }

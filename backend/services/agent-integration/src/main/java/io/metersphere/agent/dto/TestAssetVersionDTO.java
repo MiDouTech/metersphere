@@ -18,4 +18,8 @@ public class TestAssetVersionDTO {
     private Long createdAt;
     private String publishedBy;
     private Long publishedAt;
+    private String creationSource;
+    private String categoryId;
+    private String categoryName;
+    private String categoryPath;
 }

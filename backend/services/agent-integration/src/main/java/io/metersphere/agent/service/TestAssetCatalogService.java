@@ -74,6 +74,13 @@ public class TestAssetCatalogService {
 
     public Pager<List<TestAssetCatalogItemDTO>> catalog(String projectId, String assetType, String keyword,
                                                          String status, Long updatedAfter, Integer current, Integer pageSize) {
+        return catalog(projectId, assetType, keyword, status, updatedAfter, null, null, false, current, pageSize);
+    }
+
+    public Pager<List<TestAssetCatalogItemDTO>> catalog(String projectId, String assetType, String keyword,
+                                                         String status, Long updatedAfter, List<String> creationSources,
+                                                         String categoryId, boolean includeDescendants,
+                                                         Integer current, Integer pageSize) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         String type = requireCatalogType(assetType);
         assertPermission(type);
@@ -81,10 +88,15 @@ public class TestAssetCatalogService {
         int size = normalizePageSize(pageSize);
         String query = StringUtils.trimToNull(keyword);
         String normalizedStatus = StringUtils.upperCase(StringUtils.trimToNull(status));
-        long total = mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter);
+        List<String> sources = creationSources == null ? List.of() : creationSources.stream()
+                .map(value -> StringUtils.upperCase(StringUtils.trim(value))).filter(TestAssetGovernanceService.SOURCES::contains)
+                .distinct().toList();
+        String category = StringUtils.trimToNull(categoryId);
+        long total = mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter,
+                sources, category, includeDescendants);
         List<TestAssetCatalogItemDTO> list = total == 0 ? List.of()
                 : mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter,
-                (long) (page - 1) * size, size);
+                sources, category, includeDescendants, (long) (page - 1) * size, size);
         list.forEach(this::attachLatestPublishedVersion);
         return new Pager<>(list, total, size, page);
     }
@@ -157,18 +169,32 @@ public class TestAssetCatalogService {
 
     public Pager<List<TestAssetDocumentDTO>> documents(String projectId, String parseStatus, String keyword,
                                                         Integer current, Integer pageSize) {
+        return documents(projectId, parseStatus, keyword, null, null, false, current, pageSize);
+    }
+
+    public Pager<List<TestAssetDocumentDTO>> documents(String projectId, String parseStatus, String keyword,
+                                                        List<String> creationSources, String categoryId, boolean includeDescendants,
+                                                        Integer current, Integer pageSize) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         int page = normalizePage(current);
         int size = normalizePageSize(pageSize);
         String status = StringUtils.equalsIgnoreCase(parseStatus, "ALL") ? null : StringUtils.trimToNull(parseStatus);
         String query = StringUtils.trimToNull(keyword);
-        long total = mapper.countDocuments(resolvedProjectId, status, query);
+        List<String> sources = normalizeSources(creationSources); String category = StringUtils.trimToNull(categoryId);
+        long total = mapper.countDocuments(resolvedProjectId, status, query, sources, category, includeDescendants);
         List<TestAssetDocumentDTO> list = total == 0 ? List.of()
-                : mapper.selectDocuments(resolvedProjectId, status, query, (long) (page - 1) * size, size);
+                : mapper.selectDocuments(resolvedProjectId, status, query, sources, category, includeDescendants,
+                (long) (page - 1) * size, size);
         return new Pager<>(list, total, size, page);
     }
 
     public Pager<List<TestAssetVersionDTO>> versions(String projectId, String assetType, String assetId, String keyword,
+                                                      Integer current, Integer pageSize) {
+        return versions(projectId, assetType, assetId, keyword, null, null, false, current, pageSize);
+    }
+
+    public Pager<List<TestAssetVersionDTO>> versions(String projectId, String assetType, String assetId, String keyword,
+                                                      List<String> creationSources, String categoryId, boolean includeDescendants,
                                                       Integer current, Integer pageSize) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         int page = normalizePage(current);
@@ -177,9 +203,10 @@ public class TestAssetCatalogService {
         List<String> allowedTypes = resolveAllowedTypes(type);
         String id = StringUtils.trimToNull(assetId);
         String query = StringUtils.trimToNull(keyword);
-        long total = mapper.countVersions(resolvedProjectId, allowedTypes, type, id, query);
+        List<String> sources = normalizeSources(creationSources); String category = StringUtils.trimToNull(categoryId);
+        long total = mapper.countVersions(resolvedProjectId, allowedTypes, type, id, query, sources, category, includeDescendants);
         List<TestAssetVersionDTO> list = total == 0 ? List.of()
-                : mapper.selectVersions(resolvedProjectId, allowedTypes, type, id, query,
+                : mapper.selectVersions(resolvedProjectId, allowedTypes, type, id, query, sources, category, includeDescendants,
                 (long) (page - 1) * size, size);
         return new Pager<>(list, total, size, page);
     }
@@ -202,8 +229,9 @@ public class TestAssetCatalogService {
         String normalizedStatus = StringUtils.defaultIfBlank(StringUtils.upperCase(StringUtils.trimToNull(status)), "PUBLISHED");
         long total = 0;List<TestAssetCatalogItemDTO> merged = new ArrayList<>();
         for (String type : types) {
-            total += mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter);
-            merged.addAll(mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter, 0, fetch));
+            total += mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter, List.of(), null, false);
+            merged.addAll(mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter,
+                    List.of(), null, false, 0, fetch));
         }
         merged.sort(Comparator.comparing(TestAssetCatalogItemDTO::getUpdateTime,
                 Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(TestAssetCatalogItemDTO::getId));
@@ -220,6 +248,13 @@ public class TestAssetCatalogService {
     public Pager<List<TestAssetRelationDTO>> relations(String projectId, String assetType, String assetId,
                                                         String relationType, String keyword,
                                                         Integer current, Integer pageSize) {
+        return relations(projectId, assetType, assetId, relationType, keyword, null, null, false, current, pageSize);
+    }
+
+    public Pager<List<TestAssetRelationDTO>> relations(String projectId, String assetType, String assetId,
+                                                        String relationType, String keyword,
+                                                        List<String> creationSources, String categoryId, boolean includeDescendants,
+                                                        Integer current, Integer pageSize) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         int page = normalizePage(current);
         int size = normalizePageSize(pageSize);
@@ -228,9 +263,12 @@ public class TestAssetCatalogService {
         String id = StringUtils.trimToNull(assetId);
         String relation = StringUtils.upperCase(StringUtils.trimToNull(relationType));
         String query = StringUtils.trimToNull(keyword);
-        long total = mapper.countRelations(resolvedProjectId, allowedTypes, type, id, relation, query);
+        List<String> sources = normalizeSources(creationSources); String category = StringUtils.trimToNull(categoryId);
+        long total = mapper.countRelations(resolvedProjectId, allowedTypes, type, id, relation, query,
+                sources, category, includeDescendants);
         List<TestAssetRelationDTO> list = total == 0 ? List.of()
                 : mapper.selectRelations(resolvedProjectId, allowedTypes, type, id, relation, query,
+                sources, category, includeDescendants,
                 (long) (page - 1) * size, size);
         return new Pager<>(list, total, size, page);
     }
@@ -244,6 +282,11 @@ public class TestAssetCatalogService {
 
     private int normalizePage(Integer current) {
         return current == null || current < 1 ? 1 : current;
+    }
+
+    private List<String> normalizeSources(List<String> values) {
+        return values == null ? List.of() : values.stream().map(value -> StringUtils.upperCase(StringUtils.trim(value)))
+                .filter(TestAssetGovernanceService.SOURCES::contains).distinct().toList();
     }
 
     private int normalizePageSize(Integer pageSize) {

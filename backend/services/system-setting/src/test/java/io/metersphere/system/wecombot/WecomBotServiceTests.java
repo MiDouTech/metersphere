@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -122,6 +123,15 @@ class WecomBotServiceTests {
                 service.formatTimestamp(1787529600000L, "Asia/Shanghai"));
         assertEquals("2026-08-24 00:00",
                 service.formatTimestamp(1787529600000L, "UTC"));
+    }
+
+    @Test
+    void dailyScheduleValidationAcceptsNullWeekdays() {
+        WecomBotModels.ScheduleRequest daily = new WecomBotModels.ScheduleRequest(
+                null, "DAILY", null, "09:30", "Asia/Shanghai", true);
+
+        ReflectionTestUtils.invokeMethod(service, "validateSchedules",
+                "BUG_EXPECTED_RESOLUTION_DUE", List.of(daily), null, null);
     }
 
     private WecomBotModels.RuleRequest rule(String notificationType, String triggerType, String cron,

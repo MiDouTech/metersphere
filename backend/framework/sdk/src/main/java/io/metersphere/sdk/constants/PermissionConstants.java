@@ -298,6 +298,9 @@ public class PermissionConstants {
     public static final String AI_EXECUTION_CONFIRM = "AI_EXECUTION:CONFIRM";
     public static final String AI_EXECUTION_LOGIN = "AI_EXECUTION:LOGIN";
     public static final String AI_EXECUTION_ADMIN = "AI_EXECUTION:ADMIN";
+    public static final String TEST_ASSET_CATEGORY_MANAGE = "TEST_ASSET_CATEGORY:MANAGE";
+    public static final String TEST_ASSET_CATEGORY_ASSIGN = "TEST_ASSET_CATEGORY:ASSIGN";
+    public static final String TEST_ASSET_SOURCE_GOVERN = "TEST_ASSET_SOURCE:GOVERN";
     public static final String AI_MODEL_READ = "AI_MODEL:READ";
     public static final String AI_MODEL_MANAGE = "AI_MODEL:MANAGE";
     public static final String AI_MODEL_VERIFY = "AI_MODEL:VERIFY";

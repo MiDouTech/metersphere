@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 @Service
 public class BugStatusService {
@@ -63,6 +64,35 @@ public class BugStatusService {
             }
             return platformStatusOption;
         }
+    }
+
+    /**
+     * List filters group status records that carry the same business meaning while keeping every underlying id.
+     * The joined value is expanded again before the database query; workflow transitions still use exact ids.
+     */
+    public List<SelectOption> getGroupedHeaderStatusOption(String projectId) {
+        Map<String, List<SelectOption>> groups = new LinkedHashMap<>();
+        getHeaderStatusOption(projectId).forEach(option -> groups
+                .computeIfAbsent(normalizeStatusMeaning(option.getText()), ignored -> new ArrayList<>())
+                .add(option));
+        return groups.values().stream().map(group -> new SelectOption(
+                group.getFirst().getText(),
+                group.stream().map(SelectOption::getValue).distinct().collect(java.util.stream.Collectors.joining("|"))))
+                .toList();
+    }
+
+    static String normalizeStatusMeaning(String value) {
+        String normalized = StringUtils.defaultString(value).trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[\\s_-]+", "");
+        return switch (normalized) {
+            case "新建", "创建", "已创建", "新增", "new", "created", "create", "open" -> "created";
+            case "处理中", "处理", "进行中", "inprogress", "processing" -> "processing";
+            case "已解决", "解决", "resolved", "fixed" -> "resolved";
+            case "已关闭", "关闭", "closed", "close" -> "closed";
+            case "已拒绝", "拒绝", "rejected", "reject" -> "rejected";
+            case "重新打开", "重开", "reopened", "reopen" -> "reopened";
+            default -> normalized;
+        };
     }
 
     /**

@@ -40,6 +40,9 @@ public interface TestAssetMapper {
                                                 @Param("keyword") String keyword,
                                                 @Param("status") String status,
                                                 @Param("updatedAfter") Long updatedAfter,
+                                                @Param("creationSources") List<String> creationSources,
+                                                @Param("categoryId") String categoryId,
+                                                @Param("includeDescendants") boolean includeDescendants,
                                                 @Param("offset") long offset,
                                                 @Param("pageSize") int pageSize);
 
@@ -47,7 +50,10 @@ public interface TestAssetMapper {
                       @Param("assetType") String assetType,
                       @Param("keyword") String keyword,
                       @Param("status") String status,
-                      @Param("updatedAfter") Long updatedAfter);
+                      @Param("updatedAfter") Long updatedAfter,
+                      @Param("creationSources") List<String> creationSources,
+                      @Param("categoryId") String categoryId,
+                      @Param("includeDescendants") boolean includeDescendants);
 
     TestAssetCatalogItemDTO selectCatalogItem(@Param("projectId") String projectId,
                                               @Param("assetType") String assetType,
@@ -60,18 +66,27 @@ public interface TestAssetMapper {
     List<TestAssetDocumentDTO> selectDocuments(@Param("projectId") String projectId,
                                                @Param("parseStatus") String parseStatus,
                                                @Param("keyword") String keyword,
+                                               @Param("creationSources") List<String> creationSources,
+                                               @Param("categoryId") String categoryId,
+                                               @Param("includeDescendants") boolean includeDescendants,
                                                @Param("offset") long offset,
                                                @Param("pageSize") int pageSize);
 
     long countDocuments(@Param("projectId") String projectId,
                         @Param("parseStatus") String parseStatus,
-                        @Param("keyword") String keyword);
+                        @Param("keyword") String keyword,
+                        @Param("creationSources") List<String> creationSources,
+                        @Param("categoryId") String categoryId,
+                        @Param("includeDescendants") boolean includeDescendants);
 
     List<TestAssetVersionDTO> selectVersions(@Param("projectId") String projectId,
                                              @Param("allowedTypes") List<String> allowedTypes,
                                              @Param("assetType") String assetType,
                                              @Param("assetId") String assetId,
                                              @Param("keyword") String keyword,
+                                             @Param("creationSources") List<String> creationSources,
+                                             @Param("categoryId") String categoryId,
+                                             @Param("includeDescendants") boolean includeDescendants,
                                              @Param("offset") long offset,
                                              @Param("pageSize") int pageSize);
 
@@ -79,7 +94,10 @@ public interface TestAssetMapper {
                        @Param("allowedTypes") List<String> allowedTypes,
                        @Param("assetType") String assetType,
                        @Param("assetId") String assetId,
-                       @Param("keyword") String keyword);
+                       @Param("keyword") String keyword,
+                       @Param("creationSources") List<String> creationSources,
+                       @Param("categoryId") String categoryId,
+                       @Param("includeDescendants") boolean includeDescendants);
 
     List<TestAssetRelationDTO> selectRelations(@Param("projectId") String projectId,
                                                @Param("allowedTypes") List<String> allowedTypes,
@@ -87,6 +105,9 @@ public interface TestAssetMapper {
                                                @Param("assetId") String assetId,
                                                @Param("relationType") String relationType,
                                                @Param("keyword") String keyword,
+                                               @Param("creationSources") List<String> creationSources,
+                                               @Param("categoryId") String categoryId,
+                                               @Param("includeDescendants") boolean includeDescendants,
                                                @Param("offset") long offset,
                                                @Param("pageSize") int pageSize);
 
@@ -95,7 +116,10 @@ public interface TestAssetMapper {
                         @Param("assetType") String assetType,
                         @Param("assetId") String assetId,
                         @Param("relationType") String relationType,
-                        @Param("keyword") String keyword);
+                        @Param("keyword") String keyword,
+                        @Param("creationSources") List<String> creationSources,
+                        @Param("categoryId") String categoryId,
+                        @Param("includeDescendants") boolean includeDescendants);
 
     List<TestAssetContextDocumentDTO> selectDocumentContextForCases(@Param("projectId") String projectId,
                                                                     @Param("caseAssetIds") List<String> caseAssetIds);

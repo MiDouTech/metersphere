@@ -204,11 +204,15 @@ public class DefaultHubCaseImportService {
                 return new ImportOutcome(exists.getFirst().getId(), "SKIPPED", true);
             }
             overwriteCase(exists.getFirst(), hubCaseId, hubProjectId, request, operator);
+            functionalCaseService.publishImportedAssetCase(hubProjectId,
+                    StringUtils.defaultIfBlank(hubCase.getRefId(), hubCase.getId()), exists.getFirst().getId(), operator);
             saveLineage(hubCaseId, exists.getFirst().getId(), request.getTargetProjectId(), jobId,
                     request.getConflictStrategy(), operator);
             return new ImportOutcome(exists.getFirst().getId(), "OVERWRITTEN", false);
         }
         String targetCaseId = createImportedCase(hubCase, hubCaseId, hubProjectId, request, targetModuleId, operator);
+        functionalCaseService.publishImportedAssetCase(hubProjectId,
+                StringUtils.defaultIfBlank(hubCase.getRefId(), hubCase.getId()), targetCaseId, operator);
         saveLineage(hubCaseId, targetCaseId, request.getTargetProjectId(), jobId, request.getConflictStrategy(), operator);
         return new ImportOutcome(targetCaseId, "CREATED", false);
     }

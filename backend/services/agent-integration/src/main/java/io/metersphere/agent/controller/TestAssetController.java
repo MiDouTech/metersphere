@@ -1,10 +1,8 @@
 package io.metersphere.agent.controller;
 
-import io.metersphere.agent.dto.TestAssetDocumentDTO;
-import io.metersphere.agent.dto.TestAssetRelationDTO;
-import io.metersphere.agent.dto.TestAssetVersionDTO;
-import io.metersphere.agent.dto.TestAssetCatalogItemDTO;
+import io.metersphere.agent.dto.*;
 import io.metersphere.agent.service.TestAssetCatalogService;
+import io.metersphere.agent.service.TestAssetGovernanceService;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.utils.Pager;
 import jakarta.annotation.Resource;
@@ -16,6 +14,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -24,6 +26,63 @@ import java.util.List;
 public class TestAssetController {
     @Resource
     private TestAssetCatalogService service;
+    @Resource
+    private TestAssetGovernanceService governanceService;
+
+    @GetMapping("/categories/tree")
+    public List<TestAssetCategoryDTO> categoryTree(@RequestParam(required = false) String keyword) {
+        return governanceService.tree(keyword);
+    }
+
+    @PostMapping("/categories")
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_CATEGORY_MANAGE)
+    public TestAssetCategoryDTO createCategory(@Valid @RequestBody TestAssetCategorySaveRequest request) {
+        return governanceService.create(request);
+    }
+
+    @PutMapping("/categories/{id}")
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_CATEGORY_MANAGE)
+    public TestAssetCategoryDTO updateCategory(@PathVariable String id,
+                                                @Valid @RequestBody TestAssetCategorySaveRequest request) {
+        return governanceService.update(id, request);
+    }
+
+    @PutMapping("/categories/reorder")
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_CATEGORY_MANAGE)
+    public void reorderCategories(@Valid @RequestBody TestAssetCategoryReorderRequest request) {
+        governanceService.reorder(request);
+    }
+
+    @DeleteMapping("/categories/{id}")
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_CATEGORY_MANAGE)
+    public void deleteCategory(@PathVariable String id, @RequestBody TestAssetCategoryDeleteRequest request) {
+        governanceService.delete(id, request);
+    }
+
+    @GetMapping("/{assetType}/{assetId}/metadata")
+    public TestAssetMetadataDTO metadata(@PathVariable String assetType, @PathVariable String assetId,
+                                         @RequestParam String projectId) {
+        return governanceService.metadata(projectId, assetType, assetId);
+    }
+
+    @PutMapping("/{assetType}/{assetId}/category")
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_CATEGORY_ASSIGN)
+    public TestAssetMetadataDTO assignCategory(@PathVariable String assetType, @PathVariable String assetId,
+                                                @Valid @RequestBody TestAssetCategoryAssignRequest request) {
+        return governanceService.assign(assetType, assetId, request);
+    }
+
+    @PostMapping("/category-assignments/batch")
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_CATEGORY_ASSIGN)
+    public List<TestAssetBatchAssignResult> batchAssign(@Valid @RequestBody TestAssetBatchAssignRequest request) {
+        return governanceService.batchAssign(request);
+    }
+
+    @PostMapping("/source-governance")
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_SOURCE_GOVERN)
+    public TestAssetMetadataDTO governSource(@Valid @RequestBody TestAssetSourceGovernanceRequest request) {
+        return governanceService.governSource(request);
+    }
 
     @GetMapping("/catalog")
     @RequiresPermissions(value = {
@@ -39,9 +98,13 @@ public class TestAssetController {
                                                         @RequestParam(required = false) String keyword,
                                                         @RequestParam(required = false) String status,
                                                         @RequestParam(required = false) Long updatedAfter,
+                                                        @RequestParam(required = false) List<String> creationSources,
+                                                        @RequestParam(required = false) String categoryId,
+                                                        @RequestParam(defaultValue = "false") boolean includeDescendants,
                                                         @RequestParam(required = false) Integer current,
                                                         @RequestParam(required = false) Integer pageSize) {
-        return service.catalog(projectId, assetType, keyword, status, updatedAfter, current, pageSize);
+        return service.catalog(projectId, assetType, keyword, status, updatedAfter, creationSources,
+                categoryId, includeDescendants, current, pageSize);
     }
 
     @GetMapping("/catalog/{assetType}/{assetId}")
@@ -77,9 +140,12 @@ public class TestAssetController {
     public Pager<List<TestAssetDocumentDTO>> documents(@RequestParam String projectId,
                                                         @RequestParam(required = false) String parseStatus,
                                                         @RequestParam(required = false) String keyword,
+                                                        @RequestParam(required = false) List<String> creationSources,
+                                                        @RequestParam(required = false) String categoryId,
+                                                        @RequestParam(defaultValue = "false") boolean includeDescendants,
                                                         @RequestParam(required = false) Integer current,
                                                         @RequestParam(required = false) Integer pageSize) {
-        return service.documents(projectId, parseStatus, keyword, current, pageSize);
+        return service.documents(projectId, parseStatus, keyword, creationSources, categoryId, includeDescendants, current, pageSize);
     }
 
     @GetMapping("/versions")
@@ -97,9 +163,12 @@ public class TestAssetController {
                                                       @RequestParam(required = false) String assetType,
                                                       @RequestParam(required = false) String assetId,
                                                       @RequestParam(required = false) String keyword,
+                                                      @RequestParam(required = false) List<String> creationSources,
+                                                      @RequestParam(required = false) String categoryId,
+                                                      @RequestParam(defaultValue = "false") boolean includeDescendants,
                                                       @RequestParam(required = false) Integer current,
                                                       @RequestParam(required = false) Integer pageSize) {
-        return service.versions(projectId, assetType, assetId, keyword, current, pageSize);
+        return service.versions(projectId, assetType, assetId, keyword, creationSources, categoryId, includeDescendants, current, pageSize);
     }
 
     @GetMapping("/relations")
@@ -118,8 +187,12 @@ public class TestAssetController {
                                                         @RequestParam(required = false) String assetId,
                                                         @RequestParam(required = false) String relationType,
                                                         @RequestParam(required = false) String keyword,
+                                                        @RequestParam(required = false) List<String> creationSources,
+                                                        @RequestParam(required = false) String categoryId,
+                                                        @RequestParam(defaultValue = "false") boolean includeDescendants,
                                                         @RequestParam(required = false) Integer current,
                                                         @RequestParam(required = false) Integer pageSize) {
-        return service.relations(projectId, assetType, assetId, relationType, keyword, current, pageSize);
+        return service.relations(projectId, assetType, assetId, relationType, keyword, creationSources,
+                categoryId, includeDescendants, current, pageSize);
     }
 }

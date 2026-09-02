@@ -172,7 +172,8 @@
               <a-select
                 v-model:model-value="record.caseLevel"
                 :placeholder="t('common.pleaseSelect')"
-                class="param-input w-full"
+                class="inline-edit-select w-full"
+                :disabled="!hasCaseUpdatePermission"
                 @click.stop
                 @change="() => handleStatusChange(record)"
               >
@@ -204,14 +205,45 @@
               <span>{{ statusIconMap[record.reviewStatus]?.statusText || '' }} </span>
             </template>
             <template #lastExecuteResult="{ record }">
-              <ExecuteStatusTag v-if="record.lastExecuteResult" :execute-result="record.lastExecuteResult" />
-              <span v-else>-</span>
+              <a-select
+                v-model:model-value="record.lastExecuteResult"
+                class="inline-edit-select w-full"
+                allow-clear
+                :disabled="!hasCaseUpdatePermission"
+                :loading="inlineSaving[`${record.id}:result`]"
+                @click.stop
+                @focus="rememberInlineValue(record, 'lastExecuteResult')"
+                @change="(value) => updateExecuteResult(record, value as string | undefined)"
+              >
+                <template #label>
+                  <ExecuteStatusTag v-if="record.lastExecuteResult" :execute-result="record.lastExecuteResult" />
+                  <span v-else>-</span>
+                </template>
+                <a-option v-for="item in executeResultOptions" :key="item.value" :value="item.value">
+                  <ExecuteStatusTag :execute-result="item.value as LastExecuteResults" />
+                </a-option>
+              </a-select>
             </template>
             <template #lastExecuteTime="{ record }">
               <span>{{ formatTime(record.lastExecuteTime) }}</span>
             </template>
             <template #executeUserName="{ record }">
-              <span>{{ record.executeUserName || '-' }}</span>
+              <a-select
+                v-model:model-value="record.executeUser"
+                class="inline-edit-select w-full"
+                allow-clear
+                allow-search
+                :disabled="!hasCaseUpdatePermission"
+                :loading="executorOptionsLoading || inlineSaving[`${record.id}:executor`]"
+                @click.stop
+                @focus="rememberInlineValue(record, 'executeUser')"
+                @change="(value) => updateExecutor(record, value as string | undefined)"
+              >
+                <template #label>{{ record.executeUserName || '-' }}</template>
+                <a-option v-for="item in executorOptions" :key="item.value" :value="item.value">
+                  {{ item.label }}
+                </a-option>
+              </a-select>
             </template>
             <template #lastExecuteUserName="{ record }">
               <span>{{ record.lastExecuteUserName || '-' }}</span>
@@ -686,7 +718,7 @@
     updateCaseRequest,
   } from '@/api/modules/case-management/featureCase';
   import { getCaseRelatedInfo } from '@/api/modules/project-management/menuManagement';
-  import { syncProjectFunctionalCases } from '@/api/modules/test-plan/testPlan';
+  import { GetTestPlanUsers, syncProjectFunctionalCases } from '@/api/modules/test-plan/testPlan';
   import { NAV_NAVIGATION } from '@/config/workbench';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
@@ -709,6 +741,7 @@
   import { hasAllPermission, hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
   import { AiCaseTransformResult } from '@/models/ai';
+  import type { ReviewUserItem } from '@/models/caseManagement/caseReview';
   import type {
     CaseManagementTable,
     CaseModuleQueryParams,
@@ -722,6 +755,7 @@
   import { ModuleTreeNode } from '@/models/common';
   import { FilterType, ViewTypeEnum } from '@/enums/advancedFilterEnum';
   import { CacheTabTypeEnum } from '@/enums/cacheTabEnum';
+  import { LastExecuteResults } from '@/enums/caseEnum';
   import { MinderKeyEnum } from '@/enums/minderEnum';
   import { CaseManagementRouteEnum, RouteEnum } from '@/enums/routeEnum';
   import { ColumnEditTypeEnum, SelectAllEnum, TableKeyEnum } from '@/enums/tableEnum';
@@ -831,6 +865,80 @@
   const hasOperationPermission = computed(() =>
     hasAnyPermission(['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE:READ+UPDATE', 'FUNCTIONAL_CASE:READ+DELETE'])
   );
+  const hasCaseUpdatePermission = computed(() => hasAnyPermission(['FUNCTIONAL_CASE:READ+UPDATE']));
+  const inlineSaving = reactive<Record<string, boolean>>({});
+  const inlineOriginalValues = new Map<string, unknown>();
+  const executorOptions = ref<Array<{ label: string; value: string }>>([]);
+  const executorOptionsLoading = ref(false);
+
+  function rememberInlineValue(record: CaseManagementTable, field: 'lastExecuteResult' | 'executeUser') {
+    inlineOriginalValues.set(`${record.id}:${field}`, record[field]);
+  }
+
+  async function loadExecutorOptions() {
+    try {
+      executorOptionsLoading.value = true;
+      const users = await GetTestPlanUsers(currentProjectId.value, '');
+      executorOptions.value = users.map((user: ReviewUserItem) => ({ label: user.name, value: user.id }));
+    } finally {
+      executorOptionsLoading.value = false;
+    }
+  }
+
+  async function updateExecuteResult(record: CaseManagementTable, value?: string) {
+    const key = `${record.id}:lastExecuteResult`;
+    const savingKey = `${record.id}:result`;
+    const original = inlineOriginalValues.get(key) as string | undefined;
+    if (original === value || inlineSaving[savingKey]) return;
+    try {
+      inlineSaving[savingKey] = true;
+      const detailResult = await getCaseDetail(record.id);
+      await updateCaseRequest({
+        request: {
+          ...detailResult,
+          lastExecuteResult: value || '',
+          // eslint-disable-next-line no-use-before-define
+          customFields: getCustomMaps(detailResult),
+        },
+        fileList: [],
+      });
+      Message.success(t('common.updateSuccess'));
+      // eslint-disable-next-line no-use-before-define
+      await initData();
+    } catch (error) {
+      record.lastExecuteResult = original || '';
+    } finally {
+      inlineSaving[savingKey] = false;
+      inlineOriginalValues.delete(key);
+    }
+  }
+
+  async function updateExecutor(record: CaseManagementTable, value?: string) {
+    const key = `${record.id}:executeUser`;
+    const savingKey = `${record.id}:executor`;
+    const original = inlineOriginalValues.get(key) as string | undefined;
+    if (original === value || inlineSaving[savingKey]) return;
+    try {
+      inlineSaving[savingKey] = true;
+      await batchUpdateExecutor({
+        selectIds: [record.id],
+        projectId: currentProjectId.value,
+        moduleIds: [],
+        selectAll: false,
+        excludeIds: [],
+        condition: {},
+        userId: value || '',
+      });
+      Message.success(t('common.updateSuccess'));
+      // eslint-disable-next-line no-use-before-define
+      await initData();
+    } catch (error) {
+      record.executeUser = original;
+    } finally {
+      inlineSaving[savingKey] = false;
+      inlineOriginalValues.delete(key);
+    }
+  }
 
   const executeResultOptions = computed(() => {
     return Object.keys(executionResultMap).map((key) => {
@@ -2696,6 +2804,7 @@
       propsRes.value.filter = { ...NAV_NAVIGATION[route.query.home as WorkNavValueEnum] };
     }
     await initFilter();
+    await loadExecutorOptions();
     restoreCaseTableFilterState();
     await restoreAdvancedFilterDrawerState();
     await initData();
@@ -2786,6 +2895,28 @@
       }
       .arco-select-view-value {
         color: var(--color-text-brand);
+      }
+    }
+  }
+  :deep(.inline-edit-select .arco-select-view-single) {
+    padding: 0 10px;
+    min-height: 30px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--color-text-1);
+    background: transparent;
+    cursor: pointer;
+    .arco-select-view-suffix {
+      color: rgb(var(--primary-6));
+      visibility: hidden;
+    }
+    &:hover,
+    &.arco-select-view-focus {
+      border-color: rgb(var(--primary-5));
+      color: rgb(var(--primary-6));
+      background: rgb(var(--primary-1));
+      .arco-select-view-suffix {
+        visibility: visible;
       }
     }
   }

@@ -18,4 +18,10 @@ public class TestAssetCatalogItemDTO {
     private String assetVersionId;
     private Integer assetVersionNo;
     private String contentHash;
+    private String creationSource;
+    private String categoryId;
+    private String categoryName;
+    private String categoryPath;
+    private String sourceReferenceType;
+    private String sourceReferenceId;
 }

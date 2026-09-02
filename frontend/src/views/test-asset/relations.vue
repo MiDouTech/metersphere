@@ -35,6 +35,27 @@
           placeholder="任一端资产 ID"
           @press-enter="search"
         />
+        <a-select
+          v-model="query.creationSources"
+          multiple
+          allow-clear
+          class="w-[190px]"
+          placeholder="任一端建立方式"
+          @change="search"
+        >
+          <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{ item.label }}</a-option>
+        </a-select>
+        <a-tree-select
+          v-model="query.categoryId"
+          allow-clear
+          allow-search
+          class="w-[190px]"
+          :data="categories"
+          :field-names="{ key: 'id', title: 'name', children: 'children' }"
+          placeholder="任一端分类"
+          @change="search"
+        />
+        <a-checkbox v-model="query.includeDescendants" @change="search">含子分类</a-checkbox>
         <a-button :loading="loading" @click="load">刷新</a-button>
       </div>
       <a-table
@@ -53,6 +74,8 @@
                 :id="record.sourceAssetId"
                 :type="record.sourceAssetType"
                 :name="record.sourceAssetName"
+                :source="record.sourceCreationSource"
+                :category="record.sourceCategoryPath"
                 :version="record.sourceVersionNo" /></template
           ></a-table-column>
           <a-table-column title="关系" :width="150"
@@ -66,6 +89,8 @@
                 :id="record.targetAssetId"
                 :type="record.targetAssetType"
                 :name="record.targetAssetName"
+                :source="record.targetCreationSource"
+                :category="record.targetCategoryPath"
                 :version="record.targetVersionNo" /></template
           ></a-table-column>
           <a-table-column title="创建人" data-index="createdBy" :width="140" /><a-table-column
@@ -86,12 +111,24 @@
 
   import TestAssetPage from './components/TestAssetPage.vue';
 
-  import type { TestAssetRelation } from '@/api/modules/ai-execution';
-  import { pageTestAssetRelations } from '@/api/modules/ai-execution';
+  import type { TestAssetCategory, TestAssetCreationSource, TestAssetRelation } from '@/api/modules/ai-execution';
+  import { listTestAssetCategories, pageTestAssetRelations } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
 
+  const relationSourceOptions: Array<{ value: string; label: string }> = [
+    { value: 'MANUAL', label: '人工建立' },
+    { value: 'AI', label: 'AI 建立' },
+    { value: 'IMPORT', label: '导入建立' },
+    { value: 'SYNC', label: '同步建立' },
+    { value: 'AUTOMATION', label: '自动化建立' },
+    { value: 'UNKNOWN', label: '来源不明' },
+  ];
+  function relationSourceLabel(value?: string) {
+    return relationSourceOptions.find((item) => item.value === value)?.label || '来源不明';
+  }
+
   const AssetEndpoint = defineComponent({
-    props: { type: String, name: String, id: String, version: Number },
+    props: { type: String, name: String, id: String, version: Number, source: String, category: String },
     setup(props) {
       return () =>
         h('div', [
@@ -100,6 +137,11 @@
             props.version ? h('span', { class: 'text-xs text-[var(--color-text-3)]' }, `v${props.version}`) : null,
           ]),
           h('div', { class: 'mt-1 text-xs text-[var(--color-text-3)]' }, `${props.type || '-'} · ${props.id || '-'}`),
+          h(
+            'div',
+            { class: 'mt-1 text-xs text-[var(--color-text-3)]' },
+            `${relationSourceLabel(props.source)} · ${props.category || '未分类'}`
+          ),
         ]);
     },
   });
@@ -107,15 +149,27 @@
   const route = useRoute();
   const loading = ref(false);
   const relations = ref<TestAssetRelation[]>([]);
+  const categories = ref<TestAssetCategory[]>([]);
   const total = ref(0);
   const query = reactive({
     keyword: '',
     relationType: undefined as string | undefined,
     assetType: String(route.query.assetType || '') || (undefined as string | undefined),
     assetId: String(route.query.assetId || ''),
+    creationSources: [] as TestAssetCreationSource[],
+    categoryId: undefined as string | undefined,
+    includeDescendants: true,
     current: 1,
     pageSize: 20,
   });
+  const sourceOptions: Array<{ value: TestAssetCreationSource; label: string }> = [
+    { value: 'MANUAL', label: '人工建立' },
+    { value: 'AI', label: 'AI 建立' },
+    { value: 'IMPORT', label: '导入建立' },
+    { value: 'SYNC', label: '同步建立' },
+    { value: 'AUTOMATION', label: '自动化建立' },
+    { value: 'UNKNOWN', label: '来源不明' },
+  ];
   const pagination = computed(() => ({
     current: query.current,
     pageSize: query.pageSize,
@@ -160,5 +214,8 @@
       load();
     }
   );
-  onMounted(load);
+  onMounted(async () => {
+    categories.value = await listTestAssetCategories();
+    await load();
+  });
 </script>
