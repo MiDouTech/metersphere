@@ -51,7 +51,7 @@ public class AgentCredentialReferenceService {
     @Resource private ProjectMapper projectMapper;
     @Resource private AgentSecretProviderRegistry providers;
     @Resource private AgentExecLogService auditLog;
-    @Resource private AgentRunnerService runnerService;
+    @Resource private AgentRunnerLeaseAuthorizationService runnerLeaseAuthorizationService;
 
     public List<AgentCredentialReferenceDTO> list(String projectId, String environmentId) {
         String resolved = projectService.resolveProjectId(projectId);
@@ -183,7 +183,7 @@ public class AgentCredentialReferenceService {
 
     public AgentCredentialResolveResponse resolveForRunner(String authorization, String taskId, String referenceId,
                                                             AgentCredentialResolveRequest request) {
-        AgentRunnerLeaseDTO lease = runnerService.requireActiveLease(authorization, request.getLeaseId());
+        AgentRunnerLeaseDTO lease = runnerLeaseAuthorizationService.requireActiveLease(authorization, request.getLeaseId());
         if (!taskId.equals(lease.getTaskId()) || !AgentExecutorChannel.MODEL_API_RUNNER.equals(lease.getExecutorChannel())) {
             throw new MSException("RUNNER_LEASE_TASK_MISMATCH");
         }

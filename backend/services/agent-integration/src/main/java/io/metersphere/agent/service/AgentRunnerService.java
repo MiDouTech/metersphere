@@ -72,6 +72,8 @@ public class AgentRunnerService {
     @Resource
     private AgentExecutionCheckpointService checkpointService;
     @Resource
+    private AgentRunnerLeaseAuthorizationService runnerLeaseAuthorizationService;
+    @Resource
     private AgentTestDataLeaseService testDataLeaseService;
     @Value("${agent.execution.lease-ttl-ms:60000}")
     private long leaseTtlMs = 60_000L;
@@ -428,9 +430,7 @@ public class AgentRunnerService {
     }
 
     public AgentRunnerLeaseDTO requireActiveLease(String authorization, String leaseId) {
-        AgentRunnerLeaseDTO lease = authenticateLease(authorization, leaseId);
-        requireLeaseTaskActive(lease);
-        return lease;
+        return runnerLeaseAuthorizationService.requireActiveLease(authorization, leaseId);
     }
 
     private AgentRunnerDTO authenticate(String authorization, String runnerId) {
@@ -445,18 +445,7 @@ public class AgentRunnerService {
     }
 
     private AgentRunnerLeaseDTO authenticateLease(String authorization, String leaseId) {
-        String token = bearerToken(authorization, "msrl_");
-        AgentRunnerLeaseDTO lease = executionMapper.selectLeaseById(leaseId);
-        if (lease == null || StringUtils.isBlank(lease.getLeaseTokenHash()) || !MessageDigest.isEqual(
-                hash(token).getBytes(StandardCharsets.UTF_8),
-                lease.getLeaseTokenHash().getBytes(StandardCharsets.UTF_8))) {
-            throw new MSException("RUNNER_LEASE_UNAUTHORIZED");
-        }
-        if (!"ACTIVE".equals(lease.getStatus()) || lease.getExpireTime() == null
-                || lease.getExpireTime() < System.currentTimeMillis()) {
-            throw new MSException("RUNNER_LEASE_EXPIRED");
-        }
-        return lease;
+        return runnerLeaseAuthorizationService.authenticateLease(authorization, leaseId);
     }
 
     private AgentExecutionTaskDTO hydrate(AgentExecutionTaskDTO task) {
@@ -610,14 +599,7 @@ public class AgentRunnerService {
     }
 
     private AgentExecutionTaskDTO requireLeaseTaskActive(AgentRunnerLeaseDTO lease) {
-        AgentExecutionTaskDTO task = executionMapper.selectTaskById(lease.getTaskId());
-        if (task == null || !StringUtils.equals(lease.getId(), task.getRunnerLeaseId())) {
-            throw new MSException("RUNNER_LEASE_TASK_MISMATCH");
-        }
-        if (AgentExecutionStatus.TERMINAL.contains(task.getStatus())) {
-            throw new MSException("RUNNER_LEASE_EXPIRED");
-        }
-        return task;
+        return runnerLeaseAuthorizationService.requireLeaseTaskActive(lease);
     }
 
     private String bearerToken(String authorization, String prefix) {
