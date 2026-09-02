@@ -49,4 +49,16 @@ public class FunctionalCasePageDTO extends FunctionalCase {
     @Schema(description = "已引用项目摘要")
     private List<Map<String, Object>> referencedProjects;
 
+    @Schema(description = "测试资产建立方式")
+    private String creationSource;
+
+    @Schema(description = "测试资产业务分类 ID")
+    private String assetCategoryId;
+
+    @Schema(description = "测试资产业务分类名称")
+    private String assetCategoryName;
+
+    @Schema(description = "测试资产业务分类完整路径")
+    private String assetCategoryPath;
+
 }

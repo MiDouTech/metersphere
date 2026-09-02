@@ -43,11 +43,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class FunctionalCaseModuleService extends ModuleTreeService {
+    private static final Pattern NATURAL_PART_PATTERN = Pattern.compile("\\d+|\\D+");
     @Resource
     private FunctionalCaseModuleMapper functionalCaseModuleMapper;
     @Resource
@@ -302,7 +305,7 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         List<BaseTreeNode> searchRoots = baseNode != null
                 ? (CollectionUtils.isEmpty(baseNode.getChildren()) ? List.of() : baseNode.getChildren())
                 : moduleTree;
-        modulePath.forEach(path -> {
+        modulePath.stream().sorted(FunctionalCaseModuleService::compareNaturalPath).forEach(path -> {
             if (StringUtils.isBlank(path)) {
                 return;
             }
@@ -337,6 +340,42 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
             }
         });
         return pathMap;
+    }
+
+    static int compareNaturalPath(String left, String right) {
+        if (Objects.equals(left, right)) {
+            return 0;
+        }
+        if (left == null) {
+            return 1;
+        }
+        if (right == null) {
+            return -1;
+        }
+        Matcher leftParts = NATURAL_PART_PATTERN.matcher(left.trim());
+        Matcher rightParts = NATURAL_PART_PATTERN.matcher(right.trim());
+        while (leftParts.find() && rightParts.find()) {
+            String leftPart = leftParts.group();
+            String rightPart = rightParts.group();
+            int result;
+            if (Character.isDigit(leftPart.charAt(0)) && Character.isDigit(rightPart.charAt(0))) {
+                String normalizedLeft = leftPart.replaceFirst("^0+(?!$)", "");
+                String normalizedRight = rightPart.replaceFirst("^0+(?!$)", "");
+                result = Integer.compare(normalizedLeft.length(), normalizedRight.length());
+                if (result == 0) {
+                    result = normalizedLeft.compareTo(normalizedRight);
+                }
+                if (result == 0) {
+                    result = Integer.compare(leftPart.length(), rightPart.length());
+                }
+            } else {
+                result = leftPart.compareToIgnoreCase(rightPart);
+            }
+            if (result != 0) {
+                return result;
+            }
+        }
+        return Integer.compare(left.length(), right.length());
     }
 
     public Map<String, String> createCaseModule(List<String> modulePath, String projectId, List<BaseTreeNode> moduleTree, String userId, Map<String, String> pathMap) {

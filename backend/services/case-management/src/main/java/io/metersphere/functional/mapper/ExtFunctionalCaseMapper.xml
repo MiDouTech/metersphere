@@ -242,11 +242,20 @@
         functional_case.project_id,
         functional_case.system_id,
         functional_case.system_module_id,
-        functional_case.ai_create
+        functional_case.ai_create,
+        COALESCE(test_asset_metadata.creation_source, 'UNKNOWN') AS creationSource,
+        test_asset_metadata.category_id AS assetCategoryId,
+        test_asset_category.name AS assetCategoryName,
+        test_asset_category.path AS assetCategoryPath
         FROM
             functional_case
         LEFT JOIN project_version ON  functional_case.version_id = project_version.id
         LEFT JOIN functional_case_module ON functional_case_module.id = functional_case.module_id
+        LEFT JOIN test_asset_metadata ON test_asset_metadata.project_id = functional_case.project_id
+            AND test_asset_metadata.asset_type = 'CASE'
+            AND test_asset_metadata.asset_id = COALESCE(NULLIF(functional_case.ref_id, ''), functional_case.id)
+        LEFT JOIN test_asset_category ON test_asset_category.id = test_asset_metadata.category_id
+            AND test_asset_category.deleted = b'0'
         where functional_case.deleted = #{deleted}
         <include refid="queryWorkspaceAndDimensionCondition"/>
         <include refid="queryWhereCondition"/>
@@ -367,6 +376,26 @@
             or functional_case.num like concat('%', #{request.keyword},'%')
             or functional_case.tags like concat('%', #{request.keyword},'%')
             )
+        </if>
+        <if test="request.creationSources != null and request.creationSources.size() > 0">
+            AND COALESCE((SELECT tam.creation_source FROM test_asset_metadata tam
+                WHERE tam.project_id = functional_case.project_id AND tam.asset_type = 'CASE'
+                  AND tam.asset_id = COALESCE(NULLIF(functional_case.ref_id, ''), functional_case.id)
+                LIMIT 1), 'UNKNOWN') IN
+            <foreach collection="request.creationSources" item="source" separator="," open="(" close=")">
+                #{source}
+            </foreach>
+        </if>
+        <if test="request.assetCategoryId != null and request.assetCategoryId != ''">
+            AND EXISTS (SELECT 1 FROM test_asset_metadata tam
+                INNER JOIN test_asset_category tac ON tac.id = tam.category_id AND tac.deleted = b'0'
+                WHERE tam.project_id = functional_case.project_id AND tam.asset_type = 'CASE'
+                  AND tam.asset_id = COALESCE(NULLIF(functional_case.ref_id, ''), functional_case.id)
+                  AND (tac.id = #{request.assetCategoryId}
+                    <if test="request.includeAssetCategoryDescendants == true">
+                      OR tac.path LIKE CONCAT((SELECT path FROM test_asset_category WHERE id = #{request.assetCategoryId}), ' / %')
+                    </if>
+                  ))
         </if>
         <include refid="filters">
             <property name="filter" value="request.filter"/>
@@ -786,13 +815,23 @@
         and deleted = false
     </update>
 
+    <update id="clearExecutionByCaseIds">
+        update functional_case
+        set last_execute_result = null,
+            last_execute_user = null,
+            last_execute_time = null
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and deleted = false
+    </update>
+
     <update id="syncPlanExecByCaseIds">
         update test_plan_functional_case
-        set last_exec_result = #{lastExecResult},
-            last_exec_time = #{lastExecTime}
-            <if test="executeUser != null and executeUser != ''">
-                , execute_user = #{executeUser}
-            </if>
+        set last_exec_result = nullif(#{lastExecResult}, ''),
+            last_exec_time = #{lastExecTime},
+            execute_user = #{executeUser}
         where functional_case_id in
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}

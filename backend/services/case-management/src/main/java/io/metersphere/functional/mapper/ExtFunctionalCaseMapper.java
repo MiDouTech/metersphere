@@ -62,6 +62,8 @@ public interface ExtFunctionalCaseMapper {
 
     void batchUpdateExecutor(@Param("ids") List<String> ids, @Param("userId") String userId);
 
+    void clearExecutionByCaseIds(@Param("ids") List<String> ids);
+
     /**
      * 用例库执行结果变更 → 同步到所有关联的测试计划用例行
      */

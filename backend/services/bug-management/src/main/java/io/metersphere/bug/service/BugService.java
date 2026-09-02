@@ -10,6 +10,7 @@ import io.metersphere.bug.dto.response.*;
 import io.metersphere.bug.enums.BugAttachmentSourceType;
 import io.metersphere.bug.enums.BugPlatform;
 import io.metersphere.bug.enums.BugTemplateCustomField;
+import io.metersphere.bug.event.TestAssetBugCreatedEvent;
 import io.metersphere.bug.mapper.*;
 import io.metersphere.bug.utils.ExportUtils;
 import io.metersphere.plugin.platform.dto.PlatformAttachment;
@@ -35,6 +36,7 @@ import io.metersphere.project.service.ProjectApplicationService;
 import io.metersphere.project.service.ProjectTemplateService;
 import io.metersphere.sdk.constants.*;
 import io.metersphere.sdk.exception.MSException;
+import io.metersphere.sdk.dto.CombineCondition;
 import io.metersphere.sdk.file.FileCenter;
 import io.metersphere.sdk.file.FileRequest;
 import io.metersphere.sdk.util.*;
@@ -197,6 +199,7 @@ public class BugService {
      * @return 缺陷列表
      */
     public List<BugDTO> list(BugPageRequest request) {
+        expandGroupedStatusFilters(request);
         List<BugDTO> bugs = extBugMapper.list(request, null);
         if (CollectionUtils.isEmpty(bugs)) {
             return new ArrayList<>();
@@ -204,6 +207,38 @@ public class BugService {
         // 处理自定义字段
         List<BugDTO> bugList = handleCustomField(bugs, request.getProjectId());
         return buildExtraInfo(bugList);
+    }
+
+    private void expandGroupedStatusFilters(BugPageRequest request) {
+        if (request.getFilter() != null && request.getFilter().containsKey("status")) {
+            request.getFilter().put("status", expandGroupedStatusValues(request.getFilter().get("status")));
+        }
+        if (request.getCombineSearch() == null || request.getCombineSearch().getConditions() == null) {
+            return;
+        }
+        request.getCombineSearch().getConditions().stream()
+                .filter(condition -> StringUtils.equals(condition.getName(), "status"))
+                .forEach(condition -> {
+                    List<String> expanded = expandGroupedStatusValues(condition.getValue() instanceof Collection<?> values
+                            ? values.stream().map(String::valueOf).toList()
+                            : List.of(String.valueOf(condition.getValue())));
+                    condition.setValue(expanded);
+                    if (StringUtils.equalsAny(condition.getOperator(), "EQUALS", "CONTAINS")) {
+                        condition.setOperator(CombineCondition.CombineConditionOperator.IN.name());
+                    } else if (StringUtils.equalsAny(condition.getOperator(), "NOT_EQUALS", "NOT_CONTAINS")) {
+                        condition.setOperator(CombineCondition.CombineConditionOperator.NOT_IN.name());
+                    }
+                });
+    }
+
+    private List<String> expandGroupedStatusValues(List<String> values) {
+        return ListUtils.emptyIfNull(values).stream()
+                .filter(Objects::nonNull)
+                .flatMap(value -> java.util.Arrays.stream(value.split("\\|")))
+                .map(StringUtils::trimToNull)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     }
 
     /**
@@ -217,11 +252,24 @@ public class BugService {
      * @return 缺陷
      */
     public Bug addOrUpdate(BugEditRequest request, List<MultipartFile> files, String currentUser, String currentOrgId, boolean isUpdate) {
-        return addOrUpdate(request, files, currentUser, currentOrgId, isUpdate, false);
+        return addOrUpdate(request, files, currentUser, currentOrgId, isUpdate, false, isUpdate ? null : "MANUAL", null);
+    }
+
+    public Bug addOrUpdateFromTrustedSource(BugEditRequest request, List<MultipartFile> files, String currentUser,
+                                             String currentOrgId, String creationSource, String sourceReferenceId) {
+        if (!StringUtils.equalsAny(creationSource, "AI", "AUTOMATION", "IMPORT", "SYNC")) {
+            throw new MSException("INVALID_TRUSTED_BUG_SOURCE");
+        }
+        return addOrUpdate(request, files, currentUser, currentOrgId, false, false, creationSource, sourceReferenceId);
     }
 
     private Bug addOrUpdate(BugEditRequest request, List<MultipartFile> files, String currentUser, String currentOrgId,
                             boolean isUpdate, boolean workflowTransition) {
+        return addOrUpdate(request, files, currentUser, currentOrgId, isUpdate, workflowTransition, null, null);
+    }
+
+    private Bug addOrUpdate(BugEditRequest request, List<MultipartFile> files, String currentUser, String currentOrgId,
+                            boolean isUpdate, boolean workflowTransition, String creationSource, String sourceReferenceId) {
         if (isUpdate) {
             Bug existing = checkBugExist(request.getId());
             assertBugProject(existing, request.getProjectId(), PermissionConstants.PROJECT_BUG_UPDATE);
@@ -272,6 +320,10 @@ public class BugService {
         handleAndSaveCaseRelation(request, isUpdate, bug, currentUser);
 
         applicationEventPublisher.publishEvent(new BugExpectedResolutionChangedEvent(bug.getId(), System.currentTimeMillis()));
+        if (!isUpdate && StringUtils.isNotBlank(creationSource)) {
+            applicationEventPublisher.publishEvent(new TestAssetBugCreatedEvent(
+                    bug, creationSource, currentUser, sourceReferenceId));
+        }
 
         return bug;
     }
@@ -707,7 +759,7 @@ public class BugService {
         return new BugColumnsOptionDTO(
                 bugCommonService.getLocalHandlerOption(projectId),
                 bugCommonService.getHeaderHandlerOption(projectId),
-                bugStatusService.getHeaderStatusOption(projectId)
+                bugStatusService.getGroupedHeaderStatusOption(projectId)
         );
     }
 

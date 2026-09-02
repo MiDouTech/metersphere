@@ -67,11 +67,18 @@ import {
   AiPromptTemplatesUrl,
   AiRunnerRegisterUrl,
   AiRunnersUrl,
+  TestAssetBatchCategoryAssignUrl,
   TestAssetCatalogDetailUrl,
   TestAssetCatalogPublishUrl,
   TestAssetCatalogUrl,
+  TestAssetCategoriesUrl,
+  TestAssetCategoryAssignUrl,
+  TestAssetCategoryReorderUrl,
+  TestAssetCategoryTreeUrl,
   TestAssetDocumentsUrl,
+  TestAssetMetadataUrl,
   TestAssetRelationsUrl,
+  TestAssetSourceGovernanceUrl,
   TestAssetVersionDeprecateUrl,
   TestAssetVersionsUrl,
 } from '@/api/requrls/ai-execution';
@@ -661,6 +668,8 @@ export interface TestAssetPage<T> {
   pageSize: number;
 }
 
+export type TestAssetCreationSource = 'MANUAL' | 'AI' | 'IMPORT' | 'SYNC' | 'AUTOMATION' | 'UNKNOWN';
+
 export interface TestAssetDocument {
   id: string;
   projectId: string;
@@ -678,6 +687,10 @@ export interface TestAssetDocument {
   updateTime?: number;
   assetVersionId?: string;
   assetVersionNo?: number;
+  creationSource?: TestAssetCreationSource;
+  categoryId?: string;
+  categoryName?: string;
+  categoryPath?: string;
 }
 
 export interface TestAssetCatalogItem {
@@ -695,6 +708,49 @@ export interface TestAssetCatalogItem {
   assetVersionId?: string;
   assetVersionNo?: number;
   contentHash?: string;
+  creationSource?: TestAssetCreationSource;
+  categoryId?: string;
+  categoryName?: string;
+  categoryPath?: string;
+  sourceReferenceType?: string;
+  sourceReferenceId?: string;
+}
+
+export interface TestAssetCategory {
+  id: string;
+  parentId?: string;
+  name: string;
+  path: string;
+  level: number;
+  sort?: number;
+  assetCount?: number;
+  children?: TestAssetCategory[];
+}
+
+export interface TestAssetMetadata {
+  assetType: string;
+  assetId: string;
+  creationSource: TestAssetCreationSource;
+  categoryId?: string;
+  categoryName?: string;
+  categoryPath?: string;
+  sourceReferenceType?: string;
+  sourceReferenceId?: string;
+  createdByActorType?: string;
+  createdByActorId?: string;
+  createTime?: number;
+  aiGenerationId?: string;
+  aiProvider?: string;
+  aiModelId?: string;
+  aiModelName?: string;
+  promptTemplateVersion?: string;
+  sourceDocumentId?: string;
+  generationTime?: number;
+  generationInitiator?: string;
+  reviewStatus?: string;
+  reviewedBy?: string;
+  reviewedAt?: number;
+  publishedAt?: number;
 }
 
 export interface TestAssetVersion {
@@ -711,6 +767,10 @@ export interface TestAssetVersion {
   createdAt?: number;
   publishedBy?: string;
   publishedAt?: number;
+  creationSource?: TestAssetCreationSource;
+  categoryId?: string;
+  categoryName?: string;
+  categoryPath?: string;
 }
 
 export interface TestAssetRelation {
@@ -730,6 +790,10 @@ export interface TestAssetRelation {
   metadata?: string;
   createdBy?: string;
   createdAt?: number;
+  sourceCreationSource?: TestAssetCreationSource;
+  sourceCategoryPath?: string;
+  targetCreationSource?: TestAssetCreationSource;
+  targetCategoryPath?: string;
 }
 
 export interface AiExecutionEvent {
@@ -1165,6 +1229,9 @@ export function pageTestAssetDocuments(params: {
   projectId: string;
   parseStatus?: string;
   keyword?: string;
+  creationSources?: TestAssetCreationSource[];
+  categoryId?: string;
+  includeDescendants?: boolean;
   current?: number;
   pageSize?: number;
 }) {
@@ -1177,10 +1244,66 @@ export function pageTestAssetCatalog(params: {
   keyword?: string;
   status?: string;
   updatedAfter?: number;
+  creationSources?: TestAssetCreationSource[];
+  categoryId?: string;
+  includeDescendants?: boolean;
   current?: number;
   pageSize?: number;
 }) {
   return MSR.get<TestAssetPage<TestAssetCatalogItem>>({ url: TestAssetCatalogUrl, params });
+}
+
+export function listTestAssetCategories(keyword?: string) {
+  return MSR.get<TestAssetCategory[]>({ url: TestAssetCategoryTreeUrl, params: { keyword } });
+}
+
+export function createTestAssetCategory(data: { name: string; parentId?: string }) {
+  return MSR.post<TestAssetCategory>({ url: TestAssetCategoriesUrl, data });
+}
+
+export function updateTestAssetCategory(id: string, data: { name: string; parentId?: string }) {
+  return MSR.put<TestAssetCategory>({ url: `${TestAssetCategoriesUrl}/${id}`, data });
+}
+
+export function reorderTestAssetCategories(ids: string[]) {
+  return MSR.put({ url: TestAssetCategoryReorderUrl, data: { ids } });
+}
+
+export function deleteTestAssetCategory(id: string, data: { strategy?: string; targetCategoryId?: string }) {
+  return MSR.delete({ url: `${TestAssetCategoriesUrl}/${id}`, data });
+}
+
+export function getTestAssetMetadata(projectId: string, assetType: string, assetId: string) {
+  return MSR.get<TestAssetMetadata>({ url: TestAssetMetadataUrl(assetType, assetId), params: { projectId } });
+}
+
+export function assignTestAssetCategory(projectId: string, assetType: string, assetId: string, categoryId?: string) {
+  return MSR.put<TestAssetMetadata>({
+    url: TestAssetCategoryAssignUrl(assetType, assetId),
+    data: { projectId, categoryId },
+  });
+}
+
+export function batchAssignTestAssetCategory(data: {
+  items: Array<{ projectId: string; assetType: string; assetId: string }>;
+  categoryId?: string;
+}) {
+  return MSR.post<Array<{ assetId: string; success: boolean; message: string }>>({
+    url: TestAssetBatchCategoryAssignUrl,
+    data,
+  });
+}
+
+export function governTestAssetSource(data: {
+  projectId: string;
+  assetType: string;
+  assetId: string;
+  creationSource: TestAssetCreationSource;
+  evidence: string;
+  sourceReferenceType?: string;
+  sourceReferenceId?: string;
+}) {
+  return MSR.post<TestAssetMetadata>({ url: TestAssetSourceGovernanceUrl, data });
 }
 
 export function getTestAssetCatalogDetail(projectId: string, assetType: TestAssetCatalogType, assetId: string) {
@@ -1206,6 +1329,9 @@ export function pageTestAssetVersions(params: {
   assetType?: string;
   assetId?: string;
   keyword?: string;
+  creationSources?: TestAssetCreationSource[];
+  categoryId?: string;
+  includeDescendants?: boolean;
   current?: number;
   pageSize?: number;
 }) {
@@ -1225,6 +1351,9 @@ export function pageTestAssetRelations(params: {
   assetId?: string;
   relationType?: string;
   keyword?: string;
+  creationSources?: TestAssetCreationSource[];
+  categoryId?: string;
+  includeDescendants?: boolean;
   current?: number;
   pageSize?: number;
 }) {

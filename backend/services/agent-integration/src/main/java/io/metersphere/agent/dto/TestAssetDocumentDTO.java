@@ -20,4 +20,8 @@ public class TestAssetDocumentDTO {
     private Long updateTime;
     private String assetVersionId;
     private Integer assetVersionNo;
+    private String creationSource;
+    private String categoryId;
+    private String categoryName;
+    private String categoryPath;
 }

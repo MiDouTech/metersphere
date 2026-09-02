@@ -215,7 +215,8 @@ public class AgentBugWriteService {
             editRequest.setTestPlanCaseId(request.getTestPlanCaseId());
         }
 
-        Bug bug = bugService.addOrUpdate(editRequest, new ArrayList<>(), userId, project.getOrganizationId(), false);
+        Bug bug = bugService.addOrUpdateFromTrustedSource(editRequest, new ArrayList<>(), userId,
+                project.getOrganizationId(), "AI", request.getRequestId());
         attachTempFiles(bug.getId(), projectId, request.getAttachmentIds());
         relateAdditionalCases(projectId, bug.getId(), request.getAddCaseIds(), request.getCaseType());
         publishBugRelations(bug, request, userId);

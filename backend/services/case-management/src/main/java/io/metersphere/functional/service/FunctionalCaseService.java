@@ -10,6 +10,7 @@ import io.metersphere.functional.domain.*;
 import io.metersphere.functional.dto.*;
 import io.metersphere.functional.excel.domain.FunctionalCaseExcelData;
 import io.metersphere.functional.event.TestAssetFunctionalCaseChangedEvent;
+import io.metersphere.functional.event.TestAssetCaseCopiedEvent;
 import io.metersphere.functional.mapper.*;
 import io.metersphere.functional.request.*;
 import io.metersphere.functional.result.CaseManagementResultCode;
@@ -229,7 +230,7 @@ public class FunctionalCaseService {
 
         triggerHubCaseSync(request.getProjectId(), functionalCase.getId(), userId);
         if (!Boolean.TRUE.equals(functionalCase.getAiCreate())) {
-            publishTestAssetCaseChange(functionalCase, userId);
+            publishTestAssetCaseChange(functionalCase, userId, "MANUAL");
         }
         return functionalCase;
     }
@@ -686,12 +687,12 @@ public class FunctionalCaseService {
         handleReviewStatus(request, functionalCaseBlob, checked.getName(), userId);
 
         triggerHubCaseSync(request.getProjectId(), request.getId(), userId);
-        publishTestAssetCaseChange(functionalCaseMapper.selectByPrimaryKey(request.getId()), userId);
+        publishTestAssetCaseChange(functionalCaseMapper.selectByPrimaryKey(request.getId()), userId, null);
         return functionalCase;
 
     }
 
-    private void publishTestAssetCaseChange(FunctionalCase functionalCase, String userId) {
+    private void publishTestAssetCaseChange(FunctionalCase functionalCase, String userId, String creationSource) {
         if (functionalCase == null || StringUtils.isBlank(functionalCase.getProjectId())) {
             return;
         }
@@ -714,7 +715,17 @@ public class FunctionalCaseService {
         snapshot.put("expectedResult", blobText(blob == null ? null : blob.getExpectedResult()));
         snapshot.put("description", blobText(blob == null ? null : blob.getDescription()));
         applicationEventPublisher.publishEvent(new TestAssetFunctionalCaseChangedEvent(
-                functionalCase, JSON.toJSONString(snapshot), userId));
+                functionalCase, JSON.toJSONString(snapshot), userId, creationSource));
+    }
+
+    public void publishImportedAssetCase(String sourceProjectId, String sourceAssetId,
+                                         String targetCaseId, String userId) {
+        FunctionalCase target = functionalCaseMapper.selectByPrimaryKey(targetCaseId);
+        if (target == null) return;
+        publishTestAssetCaseChange(target, userId, "IMPORT");
+        applicationEventPublisher.publishEvent(new TestAssetCaseCopiedEvent(
+                sourceProjectId, sourceAssetId, target.getProjectId(),
+                StringUtils.defaultIfBlank(target.getRefId(), target.getId()), userId));
     }
 
     private String blobText(byte[] value) {
@@ -741,14 +752,19 @@ public class FunctionalCaseService {
         long now = System.currentTimeMillis();
         functionalCase.setUpdateUser(userId);
         functionalCase.setUpdateTime(now);
-        boolean execResultChanged = StringUtils.isNotBlank(request.getLastExecuteResult())
+        boolean execResultChanged = request.getLastExecuteResult() != null
                 && !StringUtils.equals(request.getLastExecuteResult(), oldCase.getLastExecuteResult());
         if (execResultChanged) {
-            functionalCase.setLastExecuteUser(userId);
-            functionalCase.setLastExecuteTime(now);
+            if (StringUtils.isNotBlank(request.getLastExecuteResult())) {
+                functionalCase.setLastExecuteUser(userId);
+                functionalCase.setLastExecuteTime(now);
+            }
         }
         //更新用例
         functionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
+        if (execResultChanged && StringUtils.isBlank(request.getLastExecuteResult())) {
+            extFunctionalCaseMapper.clearExecutionByCaseIds(List.of(request.getId()));
+        }
         //更新附属表信息
         FunctionalCaseBlob functionalCaseBlob = new FunctionalCaseBlob();
         functionalCaseBlob.setId(request.getId());
@@ -784,7 +800,9 @@ public class FunctionalCaseService {
         }
         // 用例库执行结果 → 同步到所有关联的测试计划用例（评审不改）
         if (execResultChanged) {
-            syncAssociatedPlanCaseExec(List.of(request.getId()), request.getLastExecuteResult(), userId, now);
+            syncAssociatedPlanCaseExec(List.of(request.getId()), request.getLastExecuteResult(),
+                    StringUtils.isBlank(request.getLastExecuteResult()) ? null : userId,
+                    StringUtils.isBlank(request.getLastExecuteResult()) ? null : now);
         }
     }
 
@@ -795,8 +813,8 @@ public class FunctionalCaseService {
         syncAssociatedPlanCaseExec(caseIds, lastExecResult, executeUser, System.currentTimeMillis());
     }
 
-    private void syncAssociatedPlanCaseExec(List<String> caseIds, String lastExecResult, String executeUser, long now) {
-        if (CollectionUtils.isEmpty(caseIds) || StringUtils.isBlank(lastExecResult)) {
+    private void syncAssociatedPlanCaseExec(List<String> caseIds, String lastExecResult, String executeUser, Long now) {
+        if (CollectionUtils.isEmpty(caseIds)) {
             return;
         }
         extFunctionalCaseMapper.syncPlanExecByCaseIds(caseIds, lastExecResult, executeUser, now);
@@ -1261,8 +1279,9 @@ public class FunctionalCaseService {
     public void batchUpdateExecutor(FunctionalCaseBatchUpdateExecutorRequest request) {
         List<String> ids = doSelectIds(request, request.getProjectId());
         if (CollectionUtils.isNotEmpty(ids)) {
-            extFunctionalCaseMapper.batchUpdateExecutor(ids, request.getUserId());
-            extFunctionalCaseMapper.syncPlanExecutorByCaseIds(ids, request.getUserId());
+            String executorId = StringUtils.trimToNull(request.getUserId());
+            extFunctionalCaseMapper.batchUpdateExecutor(ids, executorId);
+            extFunctionalCaseMapper.syncPlanExecutorByCaseIds(ids, executorId);
         }
     }
 
@@ -1412,6 +1431,8 @@ public class FunctionalCaseService {
         commonNoticeSendService.sendNotice(NoticeConstants.TaskType.FUNCTIONAL_CASE_TASK, NoticeConstants.Event.CREATE, resources, user, request.getProjectId());
         // 导入用例同步至默认项目对应文件夹
         caseIds.forEach(id -> triggerHubCaseSync(request.getProjectId(), id, user.getId()));
+        caseIds.stream().map(functionalCaseMapper::selectByPrimaryKey).filter(Objects::nonNull)
+                .forEach(functionalCase -> publishTestAssetCaseChange(functionalCase, user.getId(), "IMPORT"));
     }
 
     /** 导入目标文件夹：all/root/回收站视为未选中 */

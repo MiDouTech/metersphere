@@ -20,4 +20,8 @@ public class TestAssetRelationDTO {
     private String metadata;
     private String createdBy;
     private Long createdAt;
+    private String sourceCreationSource;
+    private String sourceCategoryPath;
+    private String targetCreationSource;
+    private String targetCategoryPath;
 }

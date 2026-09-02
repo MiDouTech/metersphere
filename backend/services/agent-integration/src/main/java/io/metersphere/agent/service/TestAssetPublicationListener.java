@@ -7,7 +7,9 @@ import io.metersphere.functional.dto.CaseGenerationSourceRefDTO;
 import io.metersphere.functional.event.TestAssetCasePublishedEvent;
 import io.metersphere.functional.event.TestAssetDocumentPublishedEvent;
 import io.metersphere.functional.event.TestAssetFunctionalCaseChangedEvent;
+import io.metersphere.functional.event.TestAssetCaseCopiedEvent;
 import io.metersphere.functional.mapper.AiSourceDocumentMapper;
+import io.metersphere.bug.event.TestAssetBugCreatedEvent;
 import io.metersphere.sdk.util.JSON;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,8 @@ public class TestAssetPublicationListener {
     private TestAssetMapper testAssetMapper;
     @Resource
     private AiSourceDocumentMapper documentMapper;
+    @Resource
+    private TestAssetGovernanceService governanceService;
 
     @EventListener
     public void onDocumentPublished(TestAssetDocumentPublishedEvent event) {
@@ -39,6 +43,8 @@ public class TestAssetPublicationListener {
         }
         versionService.publish(document.getProjectId(), "DOCUMENT", document.getId(), document.getSha256(),
                 StringUtils.defaultIfBlank(event.contentSnapshot(), JSON.toJSONString(document)), document.getCreateUser());
+        governanceService.recordTrustedSource(document.getProjectId(), "DOCUMENT", document.getId(), "IMPORT",
+                "SOURCE_DOCUMENT", document.getId(), "USER", document.getCreateUser());
     }
 
     @EventListener
@@ -50,6 +56,10 @@ public class TestAssetPublicationListener {
                 event.functionalCase().getRefId(), event.functionalCase().getId());
         versionService.publish(event.functionalCase().getProjectId(), "CASE", stableCaseId,
                 event.functionalCase().getVersionId(), event.contentSnapshot(), event.userId());
+        if (StringUtils.isNotBlank(event.creationSource())) {
+            governanceService.recordTrustedSource(event.functionalCase().getProjectId(), "CASE", stableCaseId,
+                    event.creationSource(), "FUNCTIONAL_CASE", event.functionalCase().getId(), "USER", event.userId());
+        }
     }
 
     @EventListener
@@ -61,6 +71,8 @@ public class TestAssetPublicationListener {
         String stableCaseId = StringUtils.defaultIfBlank(event.functionalCase().getRefId(), event.functionalCase().getId());
         TestAssetVersionDTO caseVersion = versionService.publish(projectId, "CASE", stableCaseId,
                 event.functionalCase().getVersionId(), event.contentSnapshot(), event.userId());
+        governanceService.recordTrustedSource(projectId, "CASE", stableCaseId, "AI",
+                "AI_GENERATION", event.draft().getGenerationId(), "USER", event.userId());
 
         Map<String, List<CaseGenerationSourceRefDTO>> references = sourceReferences(event.draft().getSourceReferences());
         if (StringUtils.isNotBlank(event.draft().getSourceDocumentId())) {
@@ -68,6 +80,20 @@ public class TestAssetPublicationListener {
         }
         references.forEach((documentId, documentReferences) -> relateDocument(
                 projectId, documentId, documentReferences, stableCaseId, caseVersion, event));
+    }
+
+    @EventListener
+    public void onBugCreated(TestAssetBugCreatedEvent event) {
+        if (event.bug() == null || StringUtils.isAnyBlank(event.bug().getProjectId(), event.bug().getId())) return;
+        governanceService.recordTrustedSource(event.bug().getProjectId(), "BUG", event.bug().getId(),
+                event.creationSource(), "BUG_CREATE", event.sourceReferenceId(),
+                "AI".equals(event.creationSource()) ? "AGENT" : "USER", event.actorId());
+    }
+
+    @EventListener
+    public void onCaseCopied(TestAssetCaseCopiedEvent event) {
+        governanceService.copyCategoryByPath(event.sourceProjectId(), "CASE", event.sourceAssetId(),
+                event.targetProjectId(), "CASE", event.targetAssetId(), event.userId());
     }
 
     private void relateDocument(String projectId, String documentId, List<CaseGenerationSourceRefDTO> references,

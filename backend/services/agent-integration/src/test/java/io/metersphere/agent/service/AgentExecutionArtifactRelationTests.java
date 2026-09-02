@@ -49,11 +49,13 @@ class AgentExecutionArtifactRelationTests {
     void artifactShouldPublishTaskStepAndCaseRelations() {
         AgentExecutionMapper executionMapper = mock(AgentExecutionMapper.class);
         TestAssetVersionService versionService = mock(TestAssetVersionService.class);
+        TestAssetGovernanceService governanceService = mock(TestAssetGovernanceService.class);
         FunctionalCaseMapper functionalCaseMapper = mock(FunctionalCaseMapper.class);
         AgentExecutionArtifactService service = new AgentExecutionArtifactService();
         ReflectionTestUtils.setField(service, "executionMapper", executionMapper);
         ReflectionTestUtils.setField(service, "testAssetVersionService", versionService);
         ReflectionTestUtils.setField(service, "functionalCaseMapper", functionalCaseMapper);
+        ReflectionTestUtils.setField(service, "testAssetGovernanceService", governanceService);
 
         TestAssetVersionDTO evidenceVersion = version("evidence-version");
         TestAssetVersionDTO stepVersion = version("step-version");
@@ -104,6 +106,8 @@ class AgentExecutionArtifactRelationTests {
                 eq("EVIDENCE"), eq("artifact-1"), eq("evidence-version"), anyString(), eq("runner:1"));
         verify(versionService).relate(eq("project-1"), eq("PRODUCES"), eq("CASE"), eq("case-stable-1"), eq("case-version"),
                 eq("EVIDENCE"), eq("artifact-1"), eq("evidence-version"), anyString(), eq("runner:1"));
+        verify(governanceService).recordTrustedSource("project-1", "EVIDENCE", "artifact-1", "AUTOMATION",
+                "AI_EXECUTION_TASK", "task-1", "AGENT", "runner:1");
     }
 
     private TestAssetVersionDTO version(String id) {

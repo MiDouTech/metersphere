@@ -139,6 +139,27 @@
               @search="searchCases"
               @clear="searchCases"
             />
+            <a-select
+              v-model="caseQuery.creationSources"
+              multiple
+              allow-clear
+              class="w-[200px]"
+              placeholder="建立方式"
+              @change="searchCases"
+            >
+              <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{ item.label }}</a-option>
+            </a-select>
+            <a-tree-select
+              v-model="caseQuery.assetCategoryId"
+              allow-clear
+              allow-search
+              class="w-[200px]"
+              :data="assetCategories"
+              :field-names="{ key: 'id', title: 'name', children: 'children' }"
+              placeholder="资产分类"
+              @change="searchCases"
+            />
+            <a-checkbox v-model="caseQuery.includeAssetCategoryDescendants" @change="searchCases">含子分类</a-checkbox>
             <div class="asset-toolbar-actions ml-auto flex gap-2">
               <a-select
                 v-model="environmentProfileId"
@@ -185,6 +206,9 @@
                 >导入测试用例</a-button
               >
               <a-button :loading="caseLoading" :disabled="!selectedCatalogId" @click="loadCases">刷新</a-button>
+              <a-button v-permission="['TEST_ASSET_CATEGORY:MANAGE']" @click="categoryDrawerVisible = true"
+                >分类管理</a-button
+              >
             </div>
           </div>
           <a-table
@@ -219,6 +243,42 @@
                   ></template
                 ></a-table-column
               >
+              <a-table-column title="建立方式" :width="120">
+                <template #cell="{ record }">
+                  <a-tooltip v-if="record.creationSource === 'UNKNOWN'" content="历史来源信息不足，待治理">
+                    <a-tag :color="sourceMeta(record.creationSource).color">{{
+                      sourceMeta(record.creationSource).label
+                    }}</a-tag>
+                  </a-tooltip>
+                  <a-tag v-else :color="sourceMeta(record.creationSource).color">{{
+                    sourceMeta(record.creationSource).label
+                  }}</a-tag>
+                </template>
+              </a-table-column>
+              <a-table-column title="资产分类" :width="220">
+                <template #cell="{ record }">
+                  <a-tree-select
+                    v-if="canAssignAssetCategory"
+                    v-model="record.assetCategoryId"
+                    class="asset-category-select w-full"
+                    allow-clear
+                    allow-search
+                    :data="assetCategories"
+                    :field-names="{ key: 'id', title: 'name', children: 'children' }"
+                    @click.stop
+                    @change="(value) => changeCaseCategory(record, value as string | undefined)"
+                  >
+                    <template #label
+                      ><a-tooltip :content="record.assetCategoryPath || '未分类'">{{
+                        record.assetCategoryPath || '未分类'
+                      }}</a-tooltip></template
+                    >
+                  </a-tree-select>
+                  <a-tooltip v-else :content="record.assetCategoryPath || '未分类'">
+                    <span>{{ record.assetCategoryPath || '未分类' }}</span>
+                  </a-tooltip>
+                </template>
+              </a-table-column>
               <a-table-column title="已引用项目" :width="190">
                 <template #cell="{ record }">
                   <a-tooltip
@@ -292,6 +352,15 @@
       </a-form>
     </a-modal>
     <CaseAssetFileImport v-model:visible="importVisible" :catalog-id="selectedCatalogId" @success="loadCases" />
+    <TestAssetCategoryDrawer
+      v-model:visible="categoryDrawerVisible"
+      @changed="
+        async () => {
+          assetCategories = await listTestAssetCategories();
+          await loadCases();
+        }
+      "
+    />
     <a-modal v-model:visible="referencedVisible" title="已引用项目" :footer="false">
       <a-table
         :data="referencedProjects"
@@ -316,12 +385,17 @@
 
   import MsCard from '@/components/pure/ms-card/index.vue';
   import CaseAssetFileImport from './components/CaseAssetFileImport.vue';
+  import TestAssetCategoryDrawer from './components/TestAssetCategoryDrawer.vue';
 
   import {
     type AiCaseExecutability,
     type AiEnvironmentProfile,
+    assignTestAssetCategory,
     checkAiCaseExecutability,
     listAiEnvironmentProfiles,
+    listTestAssetCategories,
+    type TestAssetCategory,
+    type TestAssetCreationSource,
   } from '@/api/modules/ai-execution';
   import {
     backfillCaseAssetCatalogs,
@@ -351,6 +425,8 @@
   const canUpdate = hasAnyPermission(['CASE_ASSET:READ+UPDATE']);
   const canDelete = hasAnyPermission(['CASE_ASSET:READ+DELETE']);
   const canImport = hasAnyPermission(['CASE_ASSET:READ+IMPORT']);
+  const canAssignAssetCategory = hasAnyPermission(['TEST_ASSET_CATEGORY:ASSIGN']);
+  const categoryDrawerVisible = ref(false);
   const catalogLoading = ref(false);
   const backfillLoading = ref(false);
   const historySyncJob = ref<CaseAssetHistorySyncJob>();
@@ -366,7 +442,25 @@
   const readinessByCase = reactive<Record<string, AiCaseExecutability>>({});
   const caseTotal = ref(0);
   const catalogQuery = reactive({ current: 1, pageSize: 12, keyword: '' });
-  const caseQuery = reactive({ current: 1, pageSize: 20, keyword: '' });
+  const caseQuery = reactive({
+    current: 1,
+    pageSize: 20,
+    keyword: '',
+    creationSources: [] as TestAssetCreationSource[],
+    assetCategoryId: undefined as string | undefined,
+    includeAssetCategoryDescendants: true,
+  });
+  const assetCategories = ref<TestAssetCategory[]>([]);
+  const sourceOptions: Array<{ value: TestAssetCreationSource; label: string; color: string }> = [
+    { value: 'MANUAL', label: '人工建立', color: 'blue' },
+    { value: 'AI', label: 'AI 建立', color: 'purple' },
+    { value: 'IMPORT', label: '导入建立', color: 'cyan' },
+    { value: 'SYNC', label: '同步建立', color: 'orange' },
+    { value: 'AUTOMATION', label: '自动化建立', color: 'green' },
+    { value: 'UNKNOWN', label: '来源不明', color: 'gray' },
+  ];
+  const sourceMeta = (source?: TestAssetCreationSource) =>
+    sourceOptions.find((item) => item.value === source) || sourceOptions.at(-1)!;
   const selectedCatalog = computed(() => catalogs.value.find((item) => item.id === selectedCatalogId.value));
   const casePagination = computed(() => ({
     current: caseQuery.current,
@@ -458,6 +552,17 @@
       caseTotal.value = result.total || 0;
     } finally {
       caseLoading.value = false;
+    }
+  }
+  async function changeCaseCategory(record: CaseManagementTable, categoryId?: string) {
+    const previous = record.assetCategoryId;
+    try {
+      const metadata = await assignTestAssetCategory(record.projectId, 'CASE', record.refId || record.id, categoryId);
+      record.assetCategoryId = metadata.categoryId;
+      record.assetCategoryName = metadata.categoryName;
+      record.assetCategoryPath = metadata.categoryPath;
+    } catch {
+      record.assetCategoryId = previous;
     }
   }
   async function loadCatalogs() {
@@ -650,6 +755,7 @@
     loadReferencedProjects();
   }
   onMounted(async () => {
+    assetCategories.value = await listTestAssetCategories();
     await loadEnvironmentProfiles();
     await loadCatalogs();
     await restoreLatestHistorySync();

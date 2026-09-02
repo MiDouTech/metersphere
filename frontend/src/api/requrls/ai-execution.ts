@@ -82,3 +82,12 @@ export const TestAssetCatalogPublishUrl = (assetType: string, assetId: string) =
 export const TestAssetVersionsUrl = '/test-assets/versions';
 export const TestAssetVersionDeprecateUrl = (versionId: string) => `${TestAssetVersionsUrl}/${versionId}/deprecate`;
 export const TestAssetRelationsUrl = '/test-assets/relations';
+export const TestAssetCategoryTreeUrl = '/test-assets/categories/tree';
+export const TestAssetCategoriesUrl = '/test-assets/categories';
+export const TestAssetCategoryReorderUrl = '/test-assets/categories/reorder';
+export const TestAssetMetadataUrl = (assetType: string, assetId: string) =>
+  `/test-assets/${assetType}/${assetId}/metadata`;
+export const TestAssetCategoryAssignUrl = (assetType: string, assetId: string) =>
+  `/test-assets/${assetType}/${assetId}/category`;
+export const TestAssetBatchCategoryAssignUrl = '/test-assets/category-assignments/batch';
+export const TestAssetSourceGovernanceUrl = '/test-assets/source-governance';

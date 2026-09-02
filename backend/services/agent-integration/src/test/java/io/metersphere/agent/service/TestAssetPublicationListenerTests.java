@@ -6,6 +6,7 @@ import io.metersphere.functional.domain.AiSourceDocument;
 import io.metersphere.functional.domain.FunctionalCase;
 import io.metersphere.functional.domain.FunctionalCaseAiDraft;
 import io.metersphere.functional.event.TestAssetCasePublishedEvent;
+import io.metersphere.functional.event.TestAssetCaseCopiedEvent;
 import io.metersphere.functional.event.TestAssetDocumentPublishedEvent;
 import io.metersphere.functional.event.TestAssetFunctionalCaseChangedEvent;
 import io.metersphere.functional.mapper.AiSourceDocumentMapper;
@@ -29,6 +30,8 @@ class TestAssetPublicationListenerTests {
     private TestAssetMapper testAssetMapper;
     @Mock
     private AiSourceDocumentMapper documentMapper;
+    @Mock
+    private TestAssetGovernanceService governanceService;
     @InjectMocks
     private TestAssetPublicationListener listener;
 
@@ -39,6 +42,8 @@ class TestAssetPublicationListenerTests {
         listener.onDocumentPublished(new TestAssetDocumentPublishedEvent(document, "snapshot"));
 
         verify(versionService).publish("project-1", "DOCUMENT", "document-1", "sha-1", "snapshot", "user-1");
+        verify(governanceService).recordTrustedSource("project-1", "DOCUMENT", "document-1", "IMPORT",
+                "SOURCE_DOCUMENT", "document-1", "USER", "user-1");
     }
 
     @Test
@@ -50,10 +55,12 @@ class TestAssetPublicationListenerTests {
         functionalCase.setVersionId("business-version-2");
 
         listener.onFunctionalCaseChanged(new TestAssetFunctionalCaseChangedEvent(
-                functionalCase, "normal-case-snapshot", "editor-1"));
+                functionalCase, "normal-case-snapshot", "editor-1", "MANUAL"));
 
         verify(versionService).publish("project-1", "CASE", "case-stable-2", "business-version-2",
                 "normal-case-snapshot", "editor-1");
+        verify(governanceService).recordTrustedSource("project-1", "CASE", "case-stable-2", "MANUAL",
+                "FUNCTIONAL_CASE", "case-row-2", "USER", "editor-1");
     }
 
     @Test
@@ -105,6 +112,15 @@ class TestAssetPublicationListenerTests {
 
         verify(versionService, never()).relate(anyString(), anyString(), anyString(), anyString(), anyString(),
                 anyString(), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void copiedCaseShouldMatchCategoryByPathInsteadOfReusingCategoryId() {
+        listener.onCaseCopied(new TestAssetCaseCopiedEvent(
+                "source-project", "source-case", "target-project", "target-case", "user-1"));
+
+        verify(governanceService).copyCategoryByPath(
+                "source-project", "CASE", "source-case", "target-project", "CASE", "target-case", "user-1");
     }
 
     private AiSourceDocument document(String projectId, String id) {
