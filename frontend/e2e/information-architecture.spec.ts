@@ -133,14 +133,60 @@ test('权限控制只暴露角色入口，角色表头完整且管理员不可�
 });
 
 test('Agent 仅保留一套导航，Agent 集成权限与后端 Token 权限一致', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await openAuthenticated(page, '/#/agent/access');
-  await expect(page.getByText('Agent 集成', { exact: true })).toHaveCount(1);
+  await expect(
+    page.locator('.center-side .arco-menu-item').filter({ hasText: 'Agent 集成', visible: true })
+  ).toHaveCount(1);
   await expect(page.getByText('接入配置', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('我的 Agent Token', { exact: true })).toBeVisible();
+  await expect(page.getByText('我的 Agent Token', { exact: true }).first()).toBeVisible();
   await expect(
     page
       .getByRole('button', { name: '创建 Token', exact: true })
       .first()
       .or(page.getByText('当前账号没有个人 Agent 接入读取权限', { exact: true }))
   ).toBeVisible();
+});
+
+test('页面内容超出可视区域时提供横向和纵向滚动', async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await openAuthenticated(page, '/#/agent/access');
+
+  const pageContent = page.locator('.page-content').first();
+  const layoutScrollContainer = page.locator('.layout-scroll-container').first();
+  await expect(pageContent).toBeVisible();
+  await expect(layoutScrollContainer).toBeVisible();
+  await pageContent.evaluate((element) => {
+    const overflowProbe = document.createElement('div');
+    overflowProbe.dataset.testid = 'layout-overflow-probe';
+    overflowProbe.style.width = '1600px';
+    overflowProbe.style.height = '1200px';
+    element.appendChild(overflowProbe);
+  });
+
+  await expect
+    .poll(() =>
+      pageContent.evaluate((element) => ({
+        canScrollHorizontally: element.scrollWidth > element.clientWidth,
+        overflowX: getComputedStyle(element).overflowX,
+      }))
+    )
+    .toEqual({
+      canScrollHorizontally: true,
+      overflowX: 'auto',
+    });
+
+  await expect
+    .poll(() =>
+      layoutScrollContainer.evaluate((element) => ({
+        canScrollVertically: element.scrollHeight > element.clientHeight,
+        overflowY: getComputedStyle(element).overflowY,
+      }))
+    )
+    .toEqual({ canScrollVertically: true, overflowY: 'auto' });
+
+  await pageContent.evaluate((element) => element.scrollTo({ left: 300 }));
+  await layoutScrollContainer.evaluate((element) => element.scrollTo({ top: 300 }));
+  await expect.poll(() => pageContent.evaluate((element) => element.scrollLeft > 0)).toBeTruthy();
+  await expect.poll(() => layoutScrollContainer.evaluate((element) => element.scrollTop > 0)).toBeTruthy();
 });

@@ -23,9 +23,11 @@
           <a-select
             v-model:model-value="appStore.currentProjectId"
             class="project-switch-select min-w-[200px] max-w-[420px] focus-within:!bg-[var(--color-text-n8)] hover:!bg-[var(--color-text-n8)]"
+            :style="{ width: projectSelectWidth }"
             :bordered="false"
             :fallback-option="false"
             :popup-max-height="360"
+            :trigger-props="{ contentClass: 'project-switch-dropdown', autoFitPopupMinWidth: true }"
             allow-search
             @change="selectProject"
           >
@@ -51,7 +53,7 @@
               :title="project.name"
               :class="project.id === appStore.currentProjectId ? 'arco-select-option-selected' : ''"
             >
-              {{ project.name }}
+              <span class="project-switch-option-name">{{ project.name }}</span>
             </a-option>
           </a-select>
         </a-tooltip>
@@ -296,6 +298,11 @@
     const current = appStore.projectList.find((project) => project.id === appStore.currentProjectId);
     return current?.name || '';
   });
+  const projectSelectWidth = computed(() => {
+    const text = currentProjectName.value || '';
+    const visualLength = [...text].reduce((total, char) => total + (char.charCodeAt(0) > 255 ? 2 : 1), 0);
+    return `${Math.min(420, Math.max(200, visualLength * 7 + 48))}px`;
+  });
   const currentOrgName = computed(() => {
     const orgId = appStore.currentOrgId || userStore.lastOrganizationId;
     if (!orgId) {
@@ -454,11 +461,24 @@
   }
   .project-switch-select {
     :deep(.arco-select-view-value) {
-      overflow: hidden;
-      max-width: 380px;
-      text-overflow: ellipsis;
+      overflow: visible;
+      max-width: none;
+      text-overflow: clip;
       white-space: nowrap;
     }
+  }
+  :global(.project-switch-dropdown .arco-select-option) {
+    height: auto;
+    min-height: 36px;
+  }
+  :global(.project-switch-dropdown .arco-select-option-content) {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  :global(.project-switch-dropdown .project-switch-option-name) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .current-org-name {
     max-width: 200px;

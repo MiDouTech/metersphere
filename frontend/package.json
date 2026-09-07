@@ -16,6 +16,7 @@
     "type:check": "vue-tsc --noEmit --skipLibCheck",
     "test:api-contracts": "node ./scripts/verify-api-contracts.mjs",
     "test:route-tabs": "node ./scripts/verify-route-tabs.mjs",
+    "test:layout-overflow": "node ./scripts/verify-layout-overflow.mjs",
     "test:permission-resources": "node ./scripts/verify-permission-resource-coverage.mjs",
     "test:e2e:information-architecture": "playwright test e2e/information-architecture.spec.ts",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",

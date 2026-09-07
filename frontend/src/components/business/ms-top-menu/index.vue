@@ -77,11 +77,12 @@
    */
   listenerRouteChange((newRoute) => {
     const { name } = newRoute;
+    const matchedRouteNames = new Set(newRoute.matched.map((item) => item.name).filter(Boolean));
     for (let i = 0; i < copyRouters.length; i++) {
       const firstRoute = copyRouters[i];
       // 权限校验通过
       if (permission.accessRouter(firstRoute)) {
-        if (name && firstRoute?.name && (name as string).includes(firstRoute.name as string)) {
+        if (firstRoute?.name && matchedRouteNames.has(firstRoute.name)) {
           // 先判断二级菜单是否顶部菜单
           let currentParent = firstRoute?.children?.some((item) => item.meta?.isTopMenu)
             ? (firstRoute as RouteRecordRaw)
@@ -89,9 +90,7 @@
 
           if (!currentParent) {
             // 二级菜单非顶部菜单，则判断三级菜单是否有顶部菜单
-            currentParent = firstRoute?.children?.find(
-              (item) => name && item?.name && (name as string).includes(item.name as string)
-            );
+            currentParent = firstRoute?.children?.find((item) => item?.name && matchedRouteNames.has(item.name));
           }
 
           let filterMenuTopRouter =

@@ -60,7 +60,11 @@
               </a-space>
             </template>
           </a-table-column>
-          <a-table-column title="项目名称" data-index="name" :width="220" ellipsis tooltip />
+          <a-table-column title="项目名称" :width="320">
+            <template #cell="{ record }">
+              <span class="project-name-cell">{{ record.name }}</span>
+            </template>
+          </a-table-column>
           <a-table-column title="成员" data-index="memberCount" :width="90">
             <template #cell="{ record }">
               <a-tooltip :content="memberPreviewText(record)"
@@ -195,3 +199,12 @@
 
   onMounted(load);
 </script>
+
+<style scoped lang="less">
+  .project-name-cell {
+    display: block;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+</style>

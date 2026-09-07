@@ -419,23 +419,90 @@ public class CaseAssetService {
         return syncHistoricalCases(sourceProject, catalog, organizationId, operator);
     }
 
+    /**
+     * Creates the project catalog in its own committed transaction before case-level synchronization starts.
+     * Successful cases can then stay committed when a different historical case contains incompatible data.
+     */
+    public Map<String, Object> prepareHistoricalProject(String projectId, String organizationId, String operator) {
+        Project sourceProject = projectMapper.selectByPrimaryKey(projectId);
+        if (sourceProject == null || Boolean.TRUE.equals(sourceProject.getDeleted())
+                || !StringUtils.equals(sourceProject.getOrganizationId(), organizationId)
+                || defaultHubProjectService.isDefaultProject(projectId)) {
+            return Map.of("skipped", true, "caseIds", List.of());
+        }
+        Map<String, Object> catalog = upsertCatalog(organizationId, sourceProject.getName(), "PROJECT", projectId, operator);
+        List<String> caseIds = listHistoricalSources(projectId).stream()
+                .map(source -> String.valueOf(source.get("id"))).toList();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("skipped", false);
+        result.put("hubModuleId", String.valueOf(catalog.get("hubModuleId")));
+        result.put("caseIds", caseIds);
+        return result;
+    }
+
+    public String syncHistoricalCase(String projectId, String organizationId, String operator,
+                                     String hubModuleId, String sourceCaseId) {
+        Project sourceProject = projectMapper.selectByPrimaryKey(projectId);
+        if (sourceProject == null || Boolean.TRUE.equals(sourceProject.getDeleted())
+                || !StringUtils.equals(sourceProject.getOrganizationId(), organizationId)) {
+            throw new MSException("历史项目不存在、已删除或不属于当前组织");
+        }
+        List<Map<String, Object>> sources = listHistoricalSources(projectId, sourceCaseId);
+        if (sources.isEmpty()) {
+            return "SKIPPED";
+        }
+        return syncHistoricalCaseSource(sourceProject, hubModuleId, organizationId, operator, sources.getFirst());
+    }
+
     private Map<String, Integer> syncHistoricalCases(Project sourceProject, Map<String, Object> catalog,
                                                      String organizationId, String operator) {
         String hubProjectId = requireHubProjectId();
         if (StringUtils.equals(sourceProject.getId(), hubProjectId)) return Map.of("created", 0, "updated", 0, "skipped", 0);
-        List<Map<String, Object>> sources = jdbcTemplate.queryForList("SELECT fc.id,COALESCE(NULLIF(fc.ref_id,''),fc.id) sourceRefId,"
+        List<Map<String, Object>> sources = listHistoricalSources(sourceProject.getId());
+        TemplateDTO template = projectTemplateService.getDefaultTemplateDTO(hubProjectId, TemplateScene.FUNCTIONAL.name());
+        int created = 0;
+        int updated = 0;
+        for (Map<String, Object> source : sources) {
+            String outcome = syncHistoricalCaseSource(sourceProject, String.valueOf(catalog.get("hubModuleId")), organizationId,
+                    operator, source, template);
+            if (StringUtils.equals(outcome, "UPDATED")) updated++; else created++;
+        }
+        Integer total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM functional_case WHERE project_id=? AND deleted=b'0' AND latest=b'1'",
+                Integer.class, sourceProject.getId());
+        return Map.of("created", created, "updated", updated,
+                "skipped", Math.max(0, (total == null ? 0 : total) - created - updated));
+    }
+
+    private List<Map<String, Object>> listHistoricalSources(String projectId) {
+        return listHistoricalSources(projectId, null);
+    }
+
+    private List<Map<String, Object>> listHistoricalSources(String projectId, String sourceCaseId) {
+        List<Object> args = new ArrayList<>();
+        args.add(projectId);
+        String caseFilter = StringUtils.isBlank(sourceCaseId) ? "" : " AND fc.id=? ";
+        if (StringUtils.isNotBlank(sourceCaseId)) args.add(sourceCaseId);
+        return jdbcTemplate.queryForList("SELECT fc.id,COALESCE(NULLIF(fc.ref_id,''),fc.id) sourceRefId,"
                 + "fc.name,fc.case_edit_type caseEditType,"
                 + "fc.tags,fc.update_time updateTime,rel.asset_case_id assetCaseId,rel.source_update_time sourceSyncedTime "
                 + "FROM functional_case fc LEFT JOIN case_asset_source_relation rel "
                 + "ON rel.source_project_id=fc.project_id "
                 + "AND rel.source_case_id=COALESCE(NULLIF(fc.ref_id,''),fc.id) "
-                + "WHERE fc.project_id=? AND fc.deleted=b'0' AND fc.latest=b'1' "
+                + "WHERE fc.project_id=? AND fc.deleted=b'0' AND fc.latest=b'1' " + caseFilter
                 + "AND (rel.id IS NULL OR COALESCE(fc.update_time,0)>COALESCE(rel.source_update_time,0)) "
-                + "ORDER BY fc.create_time,fc.id", sourceProject.getId());
-        TemplateDTO template = projectTemplateService.getDefaultTemplateDTO(hubProjectId, TemplateScene.FUNCTIONAL.name());
-        int created = 0;
-        int updated = 0;
-        for (Map<String, Object> source : sources) {
+                + "ORDER BY fc.create_time,fc.id", args.toArray());
+    }
+
+    private String syncHistoricalCaseSource(Project sourceProject, String hubModuleId, String organizationId,
+                                            String operator, Map<String, Object> source) {
+        TemplateDTO template = projectTemplateService.getDefaultTemplateDTO(
+                requireHubProjectId(), TemplateScene.FUNCTIONAL.name());
+        return syncHistoricalCaseSource(sourceProject, hubModuleId, organizationId, operator, source, template);
+    }
+
+    private String syncHistoricalCaseSource(Project sourceProject, String hubModuleId, String organizationId,
+                                            String operator, Map<String, Object> source, TemplateDTO template) {
+            String hubProjectId = requireHubProjectId();
             String sourceCaseId = String.valueOf(source.get("id"));
             String sourceRefId = String.valueOf(source.get("sourceRefId"));
             List<Map<String, Object>> blobs = jdbcTemplate.queryForList("SELECT prerequisite,steps,text_description textDescription,"
@@ -445,10 +512,10 @@ public class CaseAssetService {
             FunctionalCaseAddRequest add = new FunctionalCaseAddRequest();
             add.setProjectId(hubProjectId);
             add.setWorkspaceId(organizationId);
-            add.setModuleId(String.valueOf(catalog.get("hubModuleId")));
+            add.setModuleId(hubModuleId);
             add.setTemplateId(template.getId());
             add.setName(String.valueOf(source.get("name")));
-            add.setCaseEditType(StringUtils.defaultIfBlank((String) source.get("caseEditType"), "STEP"));
+            add.setCaseEditType(normalizeCaseEditType((String) source.get("caseEditType")));
             add.setPrerequisite(blobText(blob.get("prerequisite")));
             add.setSteps(blobText(blob.get("steps")));
             add.setTextDescription(blobText(blob.get("textDescription")));
@@ -490,12 +557,7 @@ public class CaseAssetService {
             jdbcTemplate.update("INSERT IGNORE INTO case_asset_lineage (id,source_case_id,target_case_id,target_project_id,"
                             + "import_batch_id,conflict_strategy,create_user,create_time,update_time) VALUES (?,?,?,?,NULL,'HISTORY_BACKFILL',?,?,?)",
                     IDGenerator.nextStr(), asset.getId(), sourceCaseId, sourceProject.getId(), operator, now, now);
-            if (current == null || Boolean.TRUE.equals(current.getDeleted())) created++; else updated++;
-        }
-        Integer total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM functional_case WHERE project_id=? AND deleted=b'0' AND latest=b'1'",
-                Integer.class, sourceProject.getId());
-        return Map.of("created", created, "updated", updated,
-                "skipped", Math.max(0, (total == null ? 0 : total) - created - updated));
+            return current == null || Boolean.TRUE.equals(current.getDeleted()) ? "CREATED" : "UPDATED";
     }
 
     @Transactional(readOnly = true)
@@ -506,9 +568,11 @@ public class CaseAssetService {
                         "FROM case_asset_history_sync_job WHERE id=? AND organization_id=?", jobId, requireOrganization());
         if (rows.isEmpty()) throw new MSException("历史用例同步任务不存在");
         Map<String, Object> result = new LinkedHashMap<>(rows.getFirst());
-        result.put("items", jdbcTemplate.queryForList("SELECT project_id projectId,status,case_created_count caseCreated," +
-                "case_updated_count caseUpdated,case_skipped_count caseSkipped,failure_reason failureReason " +
-                "FROM case_asset_history_sync_item WHERE job_id=? ORDER BY create_time,project_id", jobId));
+        result.put("items", jdbcTemplate.queryForList("SELECT i.project_id projectId,p.name projectName,i.status," +
+                "i.case_created_count caseCreated,i.case_updated_count caseUpdated," +
+                "i.case_skipped_count caseSkipped,i.failure_reason failureReason " +
+                "FROM case_asset_history_sync_item i LEFT JOIN project p ON p.id=i.project_id " +
+                "WHERE i.job_id=? ORDER BY i.create_time,i.project_id", jobId));
         return result;
     }
 
@@ -553,6 +617,10 @@ public class CaseAssetService {
         if (value == null) return StringUtils.EMPTY;
         if (value instanceof byte[] bytes) return new String(bytes, StandardCharsets.UTF_8);
         return String.valueOf(value);
+    }
+
+    static String normalizeCaseEditType(String value) {
+        return StringUtils.equalsIgnoreCase(StringUtils.trim(value), "TEXT") ? "TEXT" : "STEP";
     }
 
     private Map<String, Object> upsertCatalog(String orgId, String rawName, String source, String projectId, String operator) {

@@ -222,6 +222,7 @@ export interface CaseAssetHistorySyncJob {
   caseSkipped: number;
   items: Array<{
     projectId: string;
+    projectName?: string;
     status: string;
     caseCreated: number;
     caseUpdated: number;

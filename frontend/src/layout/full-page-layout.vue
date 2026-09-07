@@ -17,7 +17,7 @@
   .layout {
     @apply h-full w-full;
     .page-content {
-      @apply overflow-y-auto;
+      @apply overflow-auto;
 
       height: 100vh;
       background-color: var(--color-bg-3);

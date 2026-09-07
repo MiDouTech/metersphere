@@ -59,13 +59,14 @@
     background-color: var(--color-bg-3);
     transition: padding 0.2s cubic-bezier(0.34, 0.69, 0.1, 1);
     .arco-layout-content {
-      overflow: hidden;
+      overflow: visible;
       padding: 0 16px 16px 0;
+      min-width: 0;
     }
     .page-content {
       min-height: 500px;
       background: var(--color-text-n9);
-      @apply h-full w-full overflow-y-auto p-4;
+      @apply h-full w-full overflow-auto p-4;
       .ms-scroll-bar();
     }
   }

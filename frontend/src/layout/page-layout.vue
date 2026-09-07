@@ -76,7 +76,7 @@
 <style lang="less" scoped>
   .page-content {
     min-height: 500px;
-    @apply overflow-y-auto;
+    @apply overflow-auto;
     .ms-scroll-bar();
   }
 </style>
