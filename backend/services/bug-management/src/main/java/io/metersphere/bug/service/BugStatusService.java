@@ -75,10 +75,18 @@ public class BugStatusService {
         getHeaderStatusOption(projectId).forEach(option -> groups
                 .computeIfAbsent(normalizeStatusMeaning(option.getText()), ignored -> new ArrayList<>())
                 .add(option));
-        return groups.values().stream().map(group -> new SelectOption(
-                group.getFirst().getText(),
-                group.stream().map(SelectOption::getValue).distinct().collect(java.util.stream.Collectors.joining("|"))))
+        return groups.entrySet().stream().map(entry -> new SelectOption(
+                preferredStatusLabel(entry.getKey(), entry.getValue()),
+                entry.getValue().stream().map(SelectOption::getValue).distinct()
+                        .collect(java.util.stream.Collectors.joining("|"))))
                 .toList();
+    }
+
+    private static String preferredStatusLabel(String meaning, List<SelectOption> group) {
+        if (StringUtils.equals(meaning, "not-a-bug")) {
+            return "非问题";
+        }
+        return group.getFirst().getText();
     }
 
     static String normalizeStatusMeaning(String value) {
@@ -91,6 +99,7 @@ public class BugStatusService {
             case "已关闭", "关闭", "closed", "close" -> "closed";
             case "已拒绝", "拒绝", "rejected", "reject" -> "rejected";
             case "重新打开", "重开", "reopened", "reopen" -> "reopened";
+            case "非问题", "非缺陷", "不是缺陷", "notabug", "notdefect" -> "not-a-bug";
             default -> normalized;
         };
     }

@@ -51,9 +51,11 @@
 
     background-color: var(--color-text-n9);
     .body {
+      overflow: auto;
       margin-top: 56px;
       padding: 17px 14px 15px 18px;
-      height: 100%;
+      height: calc(100vh - 56px);
+      .ms-scroll-bar();
       .content-wrapper {
         display: flex;
         justify-content: center;

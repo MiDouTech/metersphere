@@ -37,17 +37,31 @@ includesAll(caseAssets, ['pageCaseAssetCatalogs', 'catalogQuery', 'caseQuery', '
 excludesAll(caseAssets, ['pageAccessibleProjects', '系统级用例资产暂未开放'], 'case asset page');
 
 const agentRoutes = readFrontend('src/router/routes/modules/agent.ts');
+const agentPage = readFrontend('src/views/agent/components/AgentPage.vue');
 const agentAccess = readFrontend('src/views/agent/access.vue');
 const agentIntegration = readFrontend('src/views/setting/system/agentIntegration/index.vue');
 includesAll(agentRoutes, [
   "icon: 'icon-icon_robot'", "path: 'access'", "locale: 'Agent 集成'",
   "roles: ['SYSTEM_PERSONAL_AI_AGENT:READ']", "resourceCode: 'AGENT_INTEGRATION_PAGE'",
+  "name: 'AgentEnvironmentProfile'", "name: 'AgentCredentialReference'", "name: 'AgentModelProfile'",
+  "name: 'AgentPromptTemplate'", "name: 'AgentLoginProfile'", "name: 'AgentPageObject'",
+  "name: 'AgentBusinessFlow'", "name: 'AgentExecutionDetail'",
 ], 'Agent routes');
+check(!agentPage.includes('AgentTabs'), 'Agent page shell must not render a second same-name tab row');
 check(!agentAccess.includes('AgentTabs'), 'Agent pages must not render a second same-name tab row');
 includesAll(agentIntegration, [
   'if (!canReadTokens) return', 'AGENT_TOKEN_CREATE_BUTTON', 'AGENT_TOKEN_DOWNLOAD_BUTTON',
   'AGENT_TOKEN_UPDATE_BUTTON', 'AGENT_TOKEN_DELETE_BUTTON',
 ], 'Agent integration permission gates');
+
+const topMenu = readFrontend('src/components/business/ms-top-menu/index.vue');
+includesAll(topMenu, [
+  'newRoute.matched.map', 'matchedRouteNames.has(firstRoute.name)', 'matchedRouteNames.has(item.name)',
+], 'top menu route hierarchy matching');
+excludesAll(topMenu, [
+  '(name as string).includes(firstRoute.name as string)',
+  '(name as string).includes(item.name as string)',
+], 'top menu route name substring matching');
 
 const testAssetPage = readFrontend('src/views/test-asset/components/TestAssetPage.vue');
 check(!testAssetPage.includes('TestAssetTabs'), 'test asset pages must not render a second same-name tab row');

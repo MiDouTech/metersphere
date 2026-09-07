@@ -50,22 +50,32 @@
         </a-space>
       </div>
       <a-alert v-if="historySyncJob" class="mt-3" :type="historySyncJob.failed ? 'warning' : 'info'">
-        历史同步 {{ historySyncJob.status }}：项目成功 {{ historySyncJob.success || 0 }}/{{
-          historySyncJob.total || 0
-        }}， 用例新增 {{ historySyncJob.caseCreated || 0 }}、更新 {{ historySyncJob.caseUpdated || 0 }}、跳过
-        {{ historySyncJob.caseSkipped || 0 }}
-        <a-button
-          v-if="canAdd && ['FAILED', 'PARTIAL_SUCCESS'].includes(historySyncJob.status)"
-          v-operable-permission="{
-            code: 'CASE_ASSET_ADD_BUTTON',
-            permissions: ['CASE_ASSET:READ+ADD'],
-            typeList: ['ORGANIZATION'],
-          }"
-          class="ml-2"
-          size="mini"
-          @click="retryHistorySync"
-          >重试失败项</a-button
-        >
+        <div>
+          历史同步 {{ historySyncJob.status }}：项目成功 {{ historySyncJob.success || 0 }}/{{
+            historySyncJob.total || 0
+          }}， 用例新增 {{ historySyncJob.caseCreated || 0 }}、更新 {{ historySyncJob.caseUpdated || 0 }}、跳过
+          {{ historySyncJob.caseSkipped || 0 }}
+          <a-button
+            v-if="canAdd && ['FAILED', 'PARTIAL_SUCCESS'].includes(historySyncJob.status)"
+            v-operable-permission="{
+              code: 'CASE_ASSET_ADD_BUTTON',
+              permissions: ['CASE_ASSET:READ+ADD'],
+              typeList: ['ORGANIZATION'],
+            }"
+            class="ml-2"
+            size="mini"
+            @click="retryHistorySync"
+            >重试失败项</a-button
+          >
+        </div>
+        <details v-if="failedHistoryItems.length" class="history-sync-failures">
+          <summary>查看 {{ failedHistoryItems.length }} 个失败项目及原因</summary>
+          <div v-for="item in failedHistoryItems" :key="item.projectId" class="history-sync-failure-item">
+            <strong>{{ item.projectName || item.projectId }}</strong>
+            <span v-if="item.projectName" class="ml-1 text-[var(--color-text-3)]">({{ item.projectId }})</span>
+            <div>{{ item.failureReason || '同步失败，请根据项目 ID 查看服务日志' }}</div>
+          </div>
+        </details>
       </a-alert>
 
       <div class="asset-layout">
@@ -430,6 +440,9 @@
   const catalogLoading = ref(false);
   const backfillLoading = ref(false);
   const historySyncJob = ref<CaseAssetHistorySyncJob>();
+  const failedHistoryItems = computed(() =>
+    (historySyncJob.value?.items || []).filter((item) => item.status === 'FAILED')
+  );
   const caseLoading = ref(false);
   const catalogs = ref<CaseAssetCatalog[]>([]);
   const catalogTotal = ref(0);
@@ -796,10 +809,9 @@
     background: rgb(var(--primary-1));
   }
   .catalog-name {
-    overflow: hidden;
     font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    white-space: normal;
     color: #722ed1;
   }
   .catalog-id {
@@ -809,5 +821,17 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--color-text-3);
+  }
+  .history-sync-failures {
+    margin-top: 8px;
+  }
+  .history-sync-failures summary {
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .history-sync-failure-item {
+    margin-top: 8px;
+    padding-left: 12px;
+    overflow-wrap: anywhere;
   }
 </style>

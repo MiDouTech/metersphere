@@ -2,7 +2,9 @@ package io.metersphere.functional.asset.service;
 
 import jakarta.annotation.Resource;
 import io.metersphere.sdk.util.LogUtils;
+import io.metersphere.sdk.exception.MSException;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.TransientDataAccessException;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -10,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +21,7 @@ public class CaseAssetHistorySyncWorker {
     @Resource private JdbcTemplate jdbcTemplate;
     @Lazy
     @Resource private CaseAssetService caseAssetService;
+    @Resource private CaseAssetHistoryCaseSyncService caseSyncService;
 
     @EventListener(ApplicationReadyEvent.class)
     public void recoverInterruptedJobs() {
@@ -46,19 +50,72 @@ public class CaseAssetHistorySyncWorker {
             String itemId = String.valueOf(item.get("id"));
             String projectId = String.valueOf(item.get("projectId"));
             try {
-                Map<String, Integer> counts = caseAssetService.syncHistoricalProject(projectId, organizationId, operator);
-                jdbcTemplate.update("UPDATE case_asset_history_sync_item SET status='SUCCESS',case_created_count=?," +
-                                "case_updated_count=?,case_skipped_count=?,failure_reason=NULL,update_time=? WHERE id=?",
-                        counts.getOrDefault("created", 0), counts.getOrDefault("updated", 0),
-                        counts.getOrDefault("skipped", 0), System.currentTimeMillis(), itemId);
+                Map<String, Object> context = caseAssetService.prepareHistoricalProject(projectId, organizationId, operator);
+                if (Boolean.TRUE.equals(context.get("skipped"))) {
+                    jdbcTemplate.update("UPDATE case_asset_history_sync_item SET status='SKIPPED',case_created_count=0," +
+                                    "case_updated_count=0,case_skipped_count=0,failure_reason=NULL,update_time=? WHERE id=?",
+                            System.currentTimeMillis(), itemId);
+                } else {
+                    @SuppressWarnings("unchecked")
+                    List<String> caseIds = (List<String>) context.getOrDefault("caseIds", List.of());
+                    String hubModuleId = String.valueOf(context.get("hubModuleId"));
+                    int created = 0;
+                    int updated = 0;
+                    int skipped = 0;
+                    List<String> failures = new ArrayList<>();
+                    for (String caseId : caseIds) {
+                        try {
+                            String outcome = syncCaseWithRetry(projectId, organizationId, operator, hubModuleId, caseId);
+                            if (StringUtils.equals(outcome, "CREATED")) created++;
+                            else if (StringUtils.equals(outcome, "UPDATED")) updated++;
+                            else skipped++;
+                        } catch (Exception caseError) {
+                            String reference = itemId + ":" + caseId;
+                            LogUtils.error("Historical case asset sync failed, reference=" + reference
+                                    + ", project=" + projectId + ", case=" + caseId, caseError);
+                            failures.add("用例 " + caseId + "：" + safeFailureMessage(caseError, reference));
+                        }
+                    }
+                    String status = failures.isEmpty() ? "SUCCESS" : "FAILED";
+                    String failureReason = failures.isEmpty() ? null
+                            : StringUtils.left(String.join("；", failures), 2000);
+                    jdbcTemplate.update("UPDATE case_asset_history_sync_item SET status=?," +
+                                    "case_created_count=case_created_count+?,case_updated_count=case_updated_count+?," +
+                                    "case_skipped_count=case_skipped_count+?,failure_reason=?,update_time=? WHERE id=?",
+                            status, created, updated, skipped, failureReason, System.currentTimeMillis(), itemId);
+                }
             } catch (Exception e) {
+                LogUtils.error("Historical case asset project preparation failed, item=" + itemId
+                        + ", project=" + projectId, e);
                 jdbcTemplate.update("UPDATE case_asset_history_sync_item SET status='FAILED',failure_reason=?,update_time=? WHERE id=?",
-                        StringUtils.left(StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), 2000),
+                        safeFailureMessage(e, itemId),
                         System.currentTimeMillis(), itemId);
             }
             refresh(jobId, false);
         }
         refresh(jobId, true);
+    }
+
+    private String syncCaseWithRetry(String projectId, String organizationId, String operator,
+                                     String hubModuleId, String caseId) {
+        int attempt = 0;
+        while (true) {
+            try {
+                return caseSyncService.sync(projectId, organizationId, operator, hubModuleId, caseId);
+            } catch (TransientDataAccessException transientFailure) {
+                attempt++;
+                if (attempt >= 3) throw transientFailure;
+                LogUtils.warn("Retry transient historical case sync, project=" + projectId
+                        + ", case=" + caseId + ", attempt=" + (attempt + 1));
+            }
+        }
+    }
+
+    private String safeFailureMessage(Exception error, String reference) {
+        if (error instanceof MSException && StringUtils.isNotBlank(error.getMessage())) {
+            return StringUtils.left(error.getMessage(), 1500);
+        }
+        return "同步失败，请根据错误编号 " + reference + " 查看服务日志";
     }
 
     private void refresh(String jobId, boolean finish) {
