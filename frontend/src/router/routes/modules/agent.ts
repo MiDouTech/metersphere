@@ -14,6 +14,7 @@ const Agent: AppRouteRecordRaw = {
     icon: 'icon-icon_robot',
     order: 7,
     hideChildrenInMenu: true,
+    adminOnly: true,
     roles: ['AI_EXECUTION:READ', 'SYSTEM_PERSONAL_AI_AGENT:READ'],
   },
   children: [

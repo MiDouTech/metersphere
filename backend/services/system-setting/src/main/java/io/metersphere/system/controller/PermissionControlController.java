@@ -162,6 +162,13 @@ public class PermissionControlController {
         return permissionControlService.getRoleMemberScopeOptions(roleId, keyword);
     }
 
+    @GetMapping("/role/member/position-organization/options")
+    @Operation(summary = "权限控制-角色设置-岗位分配可选组织")
+    @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_READ)
+    public List<OptionDTO> getPositionOrganizationOptions(@RequestParam(required = false) String keyword) {
+        return permissionControlService.getPositionOrganizationOptions(keyword);
+    }
+
     @PostMapping("/role/member/add")
     @Operation(summary = "权限控制-角色设置-添加成员")
     @RequiresPermissions(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)

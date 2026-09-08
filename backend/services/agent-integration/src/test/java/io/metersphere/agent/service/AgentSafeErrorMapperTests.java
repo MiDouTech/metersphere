@@ -24,4 +24,14 @@ class AgentSafeErrorMapperTests {
         assertFalse(result.toString().contains("jdbc:mysql"));
         assertFalse(result.toString().contains("hidden"));
     }
+
+    @Test
+    void returnsActionableMessagesForConfigurationErrors() {
+        var credential = mapper.toApiError(new MSException("CREDENTIAL_SECRET_REF_INVALID"), "trace-3");
+        var model = mapper.toApiError(new MSException("MODEL_SERVICE_KEY_REF_INVALID"), "trace-4");
+
+        assertEquals("CREDENTIAL_SECRET_REF_INVALID", credential.getCode());
+        assertEquals("Secret 引用格式无效，请使用 env://变量名 或 vault://mount/path#field", credential.getMessage());
+        assertEquals("Gateway Service Key 引用必须使用 env:// 或 vault:// 格式", model.getMessage());
+    }
 }

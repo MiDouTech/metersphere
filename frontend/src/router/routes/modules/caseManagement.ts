@@ -38,6 +38,7 @@ const CaseManagement: AppRouteRecordRaw = {
       component: () => import('@/views/case-management/caseGenerate/index.vue'),
       meta: {
         locale: 'menu.caseManagement.caseGenerate',
+        adminOnly: true,
         roles: ['FUNCTIONAL_CASE_AI:READ'],
         resourceCode: 'FUNCTIONAL_CASE_AI_GENERATE_TAB',
         isTopMenu: true,
@@ -51,6 +52,7 @@ const CaseManagement: AppRouteRecordRaw = {
       component: () => import('@/views/bug-management/automationExecution/index.vue'),
       meta: {
         locale: 'menu.bugManagement.automationExecution',
+        adminOnly: true,
         roles: ['AI_EXECUTION:READ'],
         resourceCode: 'FUNCTIONAL_CASE_AUTOMATION_EXECUTION_TAB',
         isTopMenu: true,

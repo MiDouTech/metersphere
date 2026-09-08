@@ -755,8 +755,15 @@
     >
       <a-form :model="positionRuleForm" layout="vertical">
         <a-form-item field="organizationId" label="组织" required>
-          <a-select v-model="positionRuleForm.organizationId" allow-search placeholder="请选择组织">
-            <a-option v-for="item in memberScopeOptions" :key="item.id" :value="item.id">{{ item.name }}</a-option>
+          <a-select
+            v-model="positionRuleForm.organizationId"
+            allow-search
+            :loading="positionOrganizationLoading"
+            placeholder="请选择组织"
+          >
+            <a-option v-for="item in positionOrganizationOptions" :key="item.id" :value="item.id">
+              {{ item.name }}
+            </a-option>
           </a-select>
         </a-form-item>
         <a-form-item field="departmentId" label="部门 ID">
@@ -810,6 +817,7 @@
     getPermissionControlFlowRolePermissions,
     getPermissionControlFlowRoles,
     getPermissionControlFlows,
+    getPermissionControlPositionOrganizationOptions,
     getPermissionControlRoleAssignmentRules,
     getPermissionControlRoleDeleteImpact,
     getPermissionControlRoleMemberOptions,
@@ -886,6 +894,8 @@
   const selectedMemberIds = ref<string[]>([]);
   const positionRuleVisible = ref(false);
   const positionRuleLoading = ref(false);
+  const positionOrganizationLoading = ref(false);
+  const positionOrganizationOptions = ref<PermissionControlRoleMemberScopeOption[]>([]);
   const positionRules = ref<RoleAssignmentRule[]>([]);
   const positionRuleForm = reactive({
     organizationId: '',
@@ -1124,11 +1134,19 @@
 
   async function openPositionRules() {
     if (!currentMemberRole.value?.id) return;
-    positionRuleForm.organizationId = currentMemberRole.value.type === 'ORGANIZATION' ? memberSourceId.value : '';
+    positionOrganizationLoading.value = true;
+    try {
+      positionOrganizationOptions.value = await getPermissionControlPositionOrganizationOptions();
+    } finally {
+      positionOrganizationLoading.value = false;
+    }
+    positionRuleForm.organizationId =
+      currentMemberRole.value.type === 'ORGANIZATION'
+        ? memberSourceId.value
+        : positionOrganizationOptions.value[0]?.id || '';
     positionRuleForm.departmentId = '';
     positionRuleForm.positionId = '';
     positionRuleForm.syncMode = 'MANUAL';
-    if (!memberScopeOptions.value.length) await loadRoleMemberScopeOptions();
     positionRules.value = await getPermissionControlRoleAssignmentRules(currentMemberRole.value.id);
     positionRuleVisible.value = true;
   }

@@ -7,13 +7,14 @@
     :ok-loading="drawerLoading"
     :width="1200"
     :mask-closable="true"
-    unmount-on-close
+    :unmount-on-close="!props.preserveDraft"
     :show-continue="true"
     no-content-padding
     :save-continue-text="t('case.saveContinueText')"
     @continue="handleDrawerConfirm(true)"
     @confirm="handleDrawerConfirm"
     @cancel="handleDrawerCancel"
+    @footer-cancel="handleDrawerExplicitCancel"
   >
     <template #tbutton>
       <div class="font-normal">
@@ -32,6 +33,7 @@
     </template>
     <div class="h-[calc(100vh-122px)] w-full p-[16px]">
       <BugDetail
+        :key="`${bugTemplateId || 'empty-template'}:${formGeneration}`"
         ref="bugDetailRef"
         v-model:template-id="bugTemplateId"
         is-drawer
@@ -84,6 +86,8 @@
       name: string; // 用例明细名称
     };
     isMinderBatch?: boolean;
+    preserveDraft?: boolean;
+    draftKey?: string;
   }>();
 
   const emit = defineEmits<{
@@ -100,6 +104,9 @@
   const isEdit = computed(() => props.bugId);
 
   const bugTemplateId = ref<string>('');
+  const formGeneration = ref(0);
+  const draftInitialized = ref(false);
+  const activeDraftKey = ref('');
 
   const templateOption = ref<TemplateOption[]>([]);
 
@@ -108,26 +115,38 @@
       drawerLoading.value = true;
       const res = await getTemplateOption(appStore.currentProjectId);
       templateOption.value = res.map((item) => {
-        if (item.enableDefault && !isEdit.value) {
-          // 选中默认模板
-          bugTemplateId.value = item.id;
-        }
         return {
           label: item.name,
           value: item.id,
         };
       });
+      if (!isEdit.value) {
+        const selectedTemplate = res.find((item) => item.enableDefault) || res[0];
+        bugTemplateId.value = selectedTemplate?.id || '';
+      }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      bugDetailRef.value?.applyServerError(error);
     } finally {
       drawerLoading.value = false;
     }
   };
-  function handleDrawerCancel() {
+  function clearDraft() {
     bugDetailRef.value?.resetForm();
-    showBugDrawer.value = false;
     bugTemplateId.value = '';
+    formGeneration.value += 1;
+    draftInitialized.value = false;
+    activeDraftKey.value = '';
+  }
+
+  function handleDrawerExplicitCancel() {
+    clearDraft();
+  }
+
+  function handleDrawerCancel() {
+    if (!props.preserveDraft) {
+      clearDraft();
+    }
+    showBugDrawer.value = false;
   }
 
   const batchAddApiMap: Record<string, (params: { request: BugEditFormObject; fileList: File[] }) => Promise<any>> = {
@@ -135,6 +154,18 @@
     [CaseLinkEnum.API]: batchAddBugToApiCase,
     [CaseLinkEnum.SCENARIO]: batchAddBugToScenarioCase,
   };
+
+  async function initDefaultFields() {
+    const nextDraftKey = props.draftKey || '';
+    if (props.preserveDraft && draftInitialized.value && activeDraftKey.value === nextDraftKey) {
+      return;
+    }
+    await getTemplateOptions();
+    if (props.preserveDraft) {
+      draftInitialized.value = true;
+      activeDraftKey.value = nextDraftKey;
+    }
+  }
 
   async function saveParams(isContinue: boolean, params: { request: BugEditFormObject; fileList: File[] }) {
     try {
@@ -153,9 +184,11 @@
       Message.success(props.bugId ? t('common.updateSuccess') : t('common.createSuccess'));
 
       if (isContinue) {
-        bugDetailRef.value?.resetForm();
+        clearDraft();
+        await initDefaultFields();
       } else {
-        handleDrawerCancel();
+        clearDraft();
+        showBugDrawer.value = false;
       }
       emit('success');
     } catch (error) {
@@ -170,9 +203,16 @@
     bugDetailRef.value?.saveHandler(isContinue);
   };
 
-  const initDefaultFields = async () => {
-    await getTemplateOptions();
-  };
+  watch(
+    () => props.draftKey,
+    async (nextKey, previousKey) => {
+      if (nextKey === previousKey) return;
+      clearDraft();
+      if (showBugDrawer.value) {
+        await initDefaultFields();
+      }
+    }
+  );
 
   watch(
     () => showBugDrawer.value,

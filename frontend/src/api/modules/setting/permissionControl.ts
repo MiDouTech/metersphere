@@ -73,6 +73,13 @@ export function getPermissionControlRoleMemberScopeOptions(roleId: string, keywo
   });
 }
 
+export function getPermissionControlPositionOrganizationOptions(keyword?: string) {
+  return MSR.get<PermissionControlRoleMemberScopeOption[]>({
+    url: urls.roleMemberPositionOrganizationOptionsUrl,
+    params: { keyword },
+  });
+}
+
 export function addPermissionControlRoleMembers(data: { roleId: string; sourceId?: string; userIds: string[] }) {
   return MSR.post<void>({ url: urls.roleMemberAddUrl, data });
 }

@@ -100,7 +100,7 @@ public class AgentCredentialReferenceService {
     public AgentCredentialReferenceDTO create(AgentCredentialReferenceRequest request) {
         String projectId = projectService.resolveProjectId(request.getProjectId());
         Project project = projectMapper.selectByPrimaryKey(projectId);
-        if (project == null) throw new MSException("项目不存在");
+        if (project == null) throw new MSException("PROJECT_NOT_FOUND");
         validate(request);
         String id = IDGenerator.nextStr(); long now = System.currentTimeMillis(); String user = SessionUtils.getUserId();
         try {
@@ -113,7 +113,7 @@ public class AgentCredentialReferenceService {
                     request.getCredentialType().toUpperCase(Locale.ROOT), request.getBusinessRole().trim(),
                     request.getProviderType().toUpperCase(Locale.ROOT), request.getSecretRef().trim(), request.getUsernameHint(),
                     request.getExpiresAt(), request.getEnabled(), user, user, now, now);
-        } catch (DuplicateKeyException ex) { throw new MSException("同一环境下凭据引用名称不能重复"); }
+        } catch (DuplicateKeyException ex) { throw new MSException("CREDENTIAL_NAME_CONFLICT"); }
         auditLog.audit("AI_CREDENTIAL_REFERENCE_CREATED", id, "credential metadata created");
         return getMetadata(id);
     }
@@ -132,7 +132,7 @@ public class AgentCredentialReferenceService {
                 request.getBusinessRole().trim(), request.getProviderType().toUpperCase(Locale.ROOT), request.getSecretRef().trim(),
                 request.getUsernameHint(), request.getExpiresAt(), request.getEnabled(), SessionUtils.getUserId(),
                 System.currentTimeMillis(), id, existing.getProjectId(), version);
-        if (changed != 1) throw new MSException("凭据引用已被修改，请刷新后重试");
+        if (changed != 1) throw new MSException("CREDENTIAL_VERSION_CONFLICT");
         auditLog.audit("AI_CREDENTIAL_REFERENCE_UPDATED", id, "credential reference rotated");
         return getMetadata(id);
     }
@@ -243,12 +243,12 @@ public class AgentCredentialReferenceService {
     private record EncryptedSecret(String encryptedKey, String iv, String payload) { }
 
     private void validate(AgentCredentialReferenceRequest request) {
-        if (!TYPES.contains(request.getCredentialType().toUpperCase(Locale.ROOT))) throw new MSException("不支持的凭据类型");
-        if (request.getExpiresAt() != null && request.getExpiresAt() <= System.currentTimeMillis()) throw new MSException("凭据过期时间必须晚于当前时间");
+        if (!TYPES.contains(request.getCredentialType().toUpperCase(Locale.ROOT))) throw new MSException("CREDENTIAL_TYPE_INVALID");
+        if (request.getExpiresAt() != null && request.getExpiresAt() <= System.currentTimeMillis()) throw new MSException("CREDENTIAL_EXPIRY_INVALID");
         providers.require(request.getProviderType()).validateReference(request.getSecretRef());
         Integer environmentCount = jdbcTemplate.queryForObject("SELECT COUNT(1) FROM ai_environment_execution_profile WHERE project_id=? AND environment_id=?",
                 Integer.class, projectService.resolveProjectId(request.getProjectId()), request.getEnvironmentId());
-        if (environmentCount == null || environmentCount == 0) throw new MSException("凭据引用对应的环境执行配置不存在");
+        if (environmentCount == null || environmentCount == 0) throw new MSException("CREDENTIAL_ENVIRONMENT_NOT_FOUND");
     }
 
     private AgentCredentialReferenceDTO map(java.sql.ResultSet rs) throws java.sql.SQLException {

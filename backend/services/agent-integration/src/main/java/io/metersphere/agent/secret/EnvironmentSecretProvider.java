@@ -15,16 +15,16 @@ public class EnvironmentSecretProvider implements AgentSecretProvider {
     @Override
     public void validateReference(String secretRef) {
         if (!secretRef.matches("^env://[A-Z][A-Z0-9_]{1,127}$")) {
-            throw new MSException("ENV 密钥引用格式必须为 env://VARIABLE_NAME");
+            throw new MSException("CREDENTIAL_SECRET_REF_INVALID");
         }
     }
 
     @Override
     public SecretMetadata verify(String secretRef) {
         validateReference(secretRef);
-        if (!enabled) throw new MSException("当前部署未启用 ENV Secret Provider");
+        if (!enabled) throw new MSException("ENV_SECRET_PROVIDER_DISABLED");
         String variable = secretRef.substring("env://".length());
-        if (StringUtils.isBlank(System.getenv(variable))) throw new MSException("密钥引用不可用");
+        if (StringUtils.isBlank(System.getenv(variable))) throw new MSException("CREDENTIAL_SECRET_REF_UNAVAILABLE");
         return new SecretMetadata("environment", null);
     }
 

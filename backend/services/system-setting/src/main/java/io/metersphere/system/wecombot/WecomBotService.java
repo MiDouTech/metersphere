@@ -1211,7 +1211,7 @@ public class WecomBotService {
 
     private List<String> executeBugRule(Map<String, Object> rule, String triggerPrefix, String triggerMode,
                                         String triggerUserId, String scheduleId, long now) {
-        StringBuilder sql = new StringBuilder("SELECT b.id,b.num,b.title,b.status,b.handle_user,b.create_user AS bug_create_user,b.expected_resolve_time,b.project_id,COALESCE(si.name,b.status) bug_status_name,p.name project_name FROM bug b JOIN project p ON p.id=b.project_id AND p.enable=1 AND p.deleted=0 LEFT JOIN status_item si ON si.id=b.status AND si.enabled=1 WHERE b.deleted=0 AND b.expected_resolve_time IS NOT NULL AND b.expected_resolve_time>?");
+        StringBuilder sql = new StringBuilder("SELECT b.id,b.num,b.title,b.status,b.handle_user,b.create_user AS bug_create_user,b.expected_resolve_time,b.project_id,COALESCE(si.name,b.status) bug_status_name,p.name project_name FROM bug b JOIN project p ON p.id=b.project_id AND p.enable=1 AND p.deleted=0 LEFT JOIN status_item si ON si.id=b.status AND si.enabled=1 WHERE b.deleted=0 AND (b.expected_resolve_time IS NULL OR b.expected_resolve_time>?)");
         List<Object> args = new ArrayList<>();
         args.add(now);
         if ("PROJECT".equals(str(rule, "scope_type"))) {
@@ -1226,8 +1226,8 @@ public class WecomBotService {
         if (terminalStatuses.isEmpty()) terminalStatuses.addAll(strings(trigger.get("terminalStatuses")));
         List<String> result = new ArrayList<>();
         for (Map<String, Object> bug : jdbc.queryForList(sql.toString(), args.toArray())) {
-            long deadline = ((Number) bug.get("expected_resolve_time")).longValue();
-            if (leadMillis > 0 && deadline - now > leadMillis) continue;
+            Long deadline = bug.get("expected_resolve_time") instanceof Number value ? value.longValue() : null;
+            if (!isBugNotificationWindowOpen(deadline, now, leadMillis)) continue;
             if (terminalStatuses.contains(str(bug, "status"))) continue;
             Map<String, Object> variables = new HashMap<>();
             variables.put("bugNum", bug.get("num"));
@@ -1235,8 +1235,8 @@ public class WecomBotService {
             variables.put("bugStatus", bug.get("bug_status_name"));
             variables.put("bugHandlerNames", userNames(userIds(bug.get("handle_user"))));
             variables.put("bugCreatorName", userNames(userIds(bug.get("bug_create_user"))));
-            variables.put("expectedResolveTime", formatTimestamp(deadline, str(rule, "timezone")));
-            variables.put("remainingTime", formatRemaining(deadline - now));
+            variables.put("expectedResolveTime", deadline == null ? "-" : formatTimestamp(deadline, str(rule, "timezone")));
+            variables.put("remainingTime", deadline == null ? "-" : formatRemaining(deadline - now));
             variables.put("projectName", bug.get("project_name"));
             variables.put("resourceUrl", baseUrl() + "/bug-management/detail/edit?id=" + bug.get("id"));
             variables.put("ruleName", rule.get("name"));
@@ -1246,6 +1246,12 @@ public class WecomBotService {
                     str(bug, "id"), render(str(rule, "template"), variables), triggerMode, triggerUserId, scheduleId));
         }
         return result;
+    }
+
+    boolean isBugNotificationWindowOpen(Long deadline, long now, long leadMillis) {
+        if (deadline == null) return true;
+        if (deadline <= now) return false;
+        return leadMillis <= 0 || deadline - now <= leadMillis;
     }
 
     private Map<String, Object> withBugBusinessRecipients(Map<String, Object> rule, Map<String, Object> bug) {

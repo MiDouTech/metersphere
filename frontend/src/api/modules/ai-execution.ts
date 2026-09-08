@@ -955,34 +955,35 @@ export function listAiCredentialReferences(projectId: string, environmentId?: st
   return MSR.get<AiCredentialReference[]>({ url: AiCredentialReferencesUrl, params: { projectId, environmentId } });
 }
 export function createAiCredentialReference(data: AiCredentialReferenceRequest) {
-  return MSR.post<AiCredentialReference>({ url: AiCredentialReferencesUrl, data });
+  return MSR.post<AiCredentialReference>({ url: AiCredentialReferencesUrl, data }, { errorMessageMode: 'none' });
 }
 export function updateAiCredentialReference(id: string, data: AiCredentialReferenceRequest) {
-  return MSR.put<AiCredentialReference>({ url: AiCredentialReferenceUrl(id), data });
+  return MSR.put<AiCredentialReference>({ url: AiCredentialReferenceUrl(id), data }, { errorMessageMode: 'none' });
 }
 export function verifyAiCredentialReference(id: string) {
-  return MSR.post<{ valid: boolean; status: string; message: string; traceId: string }>({
-    url: AiCredentialReferenceVerifyUrl(id),
-  });
+  return MSR.post<{ valid: boolean; status: string; message: string; traceId: string }>(
+    { url: AiCredentialReferenceVerifyUrl(id) },
+    { errorMessageMode: 'none' }
+  );
 }
 export function enableAiCredentialReference(id: string) {
-  return MSR.post<AiCredentialReference>({ url: AiCredentialReferenceEnableUrl(id) });
+  return MSR.post<AiCredentialReference>({ url: AiCredentialReferenceEnableUrl(id) }, { errorMessageMode: 'none' });
 }
 export function disableAiCredentialReference(id: string) {
-  return MSR.post<AiCredentialReference>({ url: AiCredentialReferenceDisableUrl(id) });
+  return MSR.post<AiCredentialReference>({ url: AiCredentialReferenceDisableUrl(id) }, { errorMessageMode: 'none' });
 }
 
 export function listAiModelProfiles(projectId: string) {
   return MSR.get<AiModelProfile[]>({ url: AiModelProfilesUrl, params: { projectId } });
 }
 export function createAiModelProfile(data: AiModelProfileRequest) {
-  return MSR.post<AiModelProfile>({ url: AiModelProfilesUrl, data });
+  return MSR.post<AiModelProfile>({ url: AiModelProfilesUrl, data }, { errorMessageMode: 'none' });
 }
 export function updateAiModelProfile(id: string, data: AiModelProfileRequest) {
-  return MSR.put<AiModelProfile>({ url: AiModelProfileUrl(id), data });
+  return MSR.put<AiModelProfile>({ url: AiModelProfileUrl(id), data }, { errorMessageMode: 'none' });
 }
 export function verifyAiModelProfile(id: string) {
-  return MSR.post<Record<string, unknown>>({ url: AiModelProfileVerifyUrl(id) });
+  return MSR.post<Record<string, unknown>>({ url: AiModelProfileVerifyUrl(id) }, { errorMessageMode: 'none' });
 }
 export function getAiModelProfileHealth(id: string) {
   return MSR.get<Record<string, unknown>>({ url: AiModelProfileHealthUrl(id) });
@@ -991,10 +992,10 @@ export function getAiModelProfileCapabilities(id: string) {
   return MSR.get<Record<string, unknown>>({ url: AiModelProfileCapabilitiesUrl(id) });
 }
 export function enableAiModelProfile(id: string) {
-  return MSR.post<AiModelProfile>({ url: AiModelProfileEnableUrl(id) });
+  return MSR.post<AiModelProfile>({ url: AiModelProfileEnableUrl(id) }, { errorMessageMode: 'none' });
 }
 export function disableAiModelProfile(id: string) {
-  return MSR.post<AiModelProfile>({ url: AiModelProfileDisableUrl(id) });
+  return MSR.post<AiModelProfile>({ url: AiModelProfileDisableUrl(id) }, { errorMessageMode: 'none' });
 }
 export function preflightAiExecution(data: AiExecutionPreflightRequest) {
   return MSR.post<AiExecutionPreflight>({ url: AiExecutionPreflightUrl, data });
@@ -1006,16 +1007,22 @@ export function listAiPromptTemplateVersions(projectId: string, promptTemplateId
   return MSR.get<AiPromptTemplateVersion[]>({ url: AiPromptTemplatesUrl, params: { projectId, promptTemplateId } });
 }
 export function createAiPromptTemplateVersion(data: AiPromptTemplateVersionRequest) {
-  return MSR.post<AiPromptTemplateVersion>({ url: AiPromptTemplatesUrl, data });
+  return MSR.post<AiPromptTemplateVersion>({ url: AiPromptTemplatesUrl, data }, { errorMessageMode: 'none' });
 }
 export function publishAiPromptTemplateVersion(id: string, projectId: string) {
-  return MSR.post<AiPromptTemplateVersion>({ url: AiPromptTemplatePublishUrl(id), params: { projectId } });
+  return MSR.post<AiPromptTemplateVersion>(
+    { url: AiPromptTemplatePublishUrl(id), params: { projectId } },
+    { joinParamsToUrl: true, errorMessageMode: 'none' }
+  );
 }
 export function previewAiPromptTemplateVersion(id: string, projectId: string, data: Record<string, unknown>) {
   return MSR.post<Record<string, unknown>>({ url: AiPromptTemplatePreviewUrl(id), params: { projectId }, data });
 }
 export function rollbackAiPromptTemplateVersion(id: string, projectId: string) {
-  return MSR.post<AiPromptTemplateVersion>({ url: AiPromptTemplateRollbackUrl(id), params: { projectId } });
+  return MSR.post<AiPromptTemplateVersion>(
+    { url: AiPromptTemplateRollbackUrl(id), params: { projectId } },
+    { joinParamsToUrl: true, errorMessageMode: 'none' }
+  );
 }
 export function getAiModelInvocation(id: string, projectId: string) {
   return MSR.get<Record<string, unknown>>({ url: AiModelInvocationUrl(id), params: { projectId } });
@@ -1027,16 +1034,16 @@ export function listAiLoginProfiles(projectId: string) {
   return MSR.get<AiLoginProfile[]>({ url: AiLoginProfilesUrl, params: { projectId } });
 }
 export function createAiLoginProfile(data: AiLoginProfileRequest) {
-  return MSR.post<AiLoginProfile>({ url: AiLoginProfilesUrl, data });
+  return MSR.post<AiLoginProfile>({ url: AiLoginProfilesUrl, data }, { errorMessageMode: 'none' });
 }
 export function updateAiLoginProfile(id: string, data: AiLoginProfileRequest) {
-  return MSR.put<AiLoginProfile>({ url: AiLoginProfileUrl(id), data });
+  return MSR.put<AiLoginProfile>({ url: AiLoginProfileUrl(id), data }, { errorMessageMode: 'none' });
 }
 export function enableAiLoginProfile(id: string) {
-  return MSR.post<AiLoginProfile>({ url: AiLoginProfileEnableUrl(id) });
+  return MSR.post<AiLoginProfile>({ url: AiLoginProfileEnableUrl(id) }, { errorMessageMode: 'none' });
 }
 export function disableAiLoginProfile(id: string) {
-  return MSR.post<AiLoginProfile>({ url: AiLoginProfileDisableUrl(id) });
+  return MSR.post<AiLoginProfile>({ url: AiLoginProfileDisableUrl(id) }, { errorMessageMode: 'none' });
 }
 export function listAiPageObjects(projectId: string) {
   return MSR.get<AiPageObject[]>({ url: AiPageObjectsUrl, params: { projectId } });
@@ -1051,10 +1058,10 @@ export function listAiBusinessFlows(projectId: string) {
   return MSR.get<AiBusinessFlow[]>({ url: AiBusinessFlowsUrl, params: { projectId } });
 }
 export function createAiBusinessFlow(data: AiBusinessFlowRequest) {
-  return MSR.post<AiBusinessFlow>({ url: AiBusinessFlowsUrl, data });
+  return MSR.post<AiBusinessFlow>({ url: AiBusinessFlowsUrl, data }, { errorMessageMode: 'none' });
 }
 export function updateAiBusinessFlow(id: string, data: AiBusinessFlowRequest) {
-  return MSR.put<AiBusinessFlow>({ url: AiBusinessFlowUrl(id), data });
+  return MSR.put<AiBusinessFlow>({ url: AiBusinessFlowUrl(id), data }, { errorMessageMode: 'none' });
 }
 
 export function createAiExecutionTask(data: AiExecutionCreateParams) {
@@ -1164,7 +1171,7 @@ export function listAiExecutionAlerts(projectId: string, status?: string) {
   return MSR.get<AiExecutionAlert[]>({ url: AiExecutionAlertsUrl, params: { projectId, status } });
 }
 export function acknowledgeAiExecutionAlert(projectId: string, id: string) {
-  return MSR.post<void>({ url: acknowledgeAiExecutionAlertUrl(id), params: { projectId } });
+  return MSR.post<void>({ url: acknowledgeAiExecutionAlertUrl(id), params: { projectId } }, { joinParamsToUrl: true });
 }
 
 export function getAiExecutionLeases(status?: string, limit = 50) {
@@ -1314,7 +1321,10 @@ export function getTestAssetCatalogDetail(projectId: string, assetType: TestAsse
 }
 
 export function publishTestAssetCatalog(projectId: string, assetType: TestAssetCatalogType, assetId: string) {
-  return MSR.post<TestAssetCatalogItem>({ url: TestAssetCatalogPublishUrl(assetType, assetId), params: { projectId } });
+  return MSR.post<TestAssetCatalogItem>(
+    { url: TestAssetCatalogPublishUrl(assetType, assetId), params: { projectId } },
+    { joinParamsToUrl: true }
+  );
 }
 
 export function downloadAiExecutionArtifact(taskId: string, artifactId: string) {

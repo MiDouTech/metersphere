@@ -24,6 +24,8 @@ import io.metersphere.system.utils.SessionUtils;
 import io.metersphere.system.utils.Pager;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.mapper.ExtUserRoleRelationMapper;
+import io.metersphere.system.domain.Organization;
+import io.metersphere.system.mapper.OrganizationMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,6 +70,8 @@ class PermissionControlServiceTests {
     @Mock
     private ProjectMapper projectMapper;
     @Mock
+    private OrganizationMapper organizationMapper;
+    @Mock
     private JdbcTemplate jdbcTemplate;
 
     private PermissionControlService service;
@@ -83,7 +87,22 @@ class PermissionControlServiceTests {
         ReflectionTestUtils.setField(service, "permissionSessionRefreshService", permissionSessionRefreshService);
         ReflectionTestUtils.setField(service, "simpleUserService", simpleUserService);
         ReflectionTestUtils.setField(service, "projectMapper", projectMapper);
+        ReflectionTestUtils.setField(service, "organizationMapper", organizationMapper);
         ReflectionTestUtils.setField(service, "jdbcTemplate", jdbcTemplate);
+    }
+
+    @Test
+    void positionAssignmentUsesRealEnabledOrganizationOptions() {
+        Organization organization = new Organization();
+        organization.setId("org-1");
+        organization.setName("Alpha Organization");
+        when(organizationMapper.selectByExample(any())).thenReturn(List.of(organization));
+
+        var options = service.getPositionOrganizationOptions("alpha");
+
+        assertEquals(1, options.size());
+        assertEquals("org-1", options.getFirst().getId());
+        assertEquals("Alpha Organization", options.getFirst().getName());
     }
 
     @Test

@@ -159,7 +159,21 @@
                   value-format="timestamp"
                 />
               </a-form-item>
-              <MsFormCreate ref="formCreateRef" v-model:formItem="formItem" v-model:api="fApi" :form-rule="formRules" />
+              <a-form-item v-if="isEdit && form.status" :label="t('bugManagement.status')">
+                <BugStatusTransitionSelect
+                  :bug-id="bugId || ''"
+                  :status="form.status"
+                  :status-name="form.statusName"
+                  @success="handleStatusTransitionSuccess"
+                />
+              </a-form-item>
+              <MsFormCreate
+                v-if="formRules.length"
+                ref="formCreateRef"
+                v-model:formItem="formItem"
+                v-model:api="fApi"
+                :form-rule="formRules"
+              />
             </div>
 
             <a-form-item v-if="!isPlatformDefaultTemplate" field="tag" :label="t('bugManagement.tag')">
@@ -216,8 +230,10 @@
   import SaveAsFilePopover from '@/components/business/ms-add-attachment/saveAsFilePopover.vue';
   import MsBugAttachmentPreview from '@/components/business/ms-bug-attachment-preview/index.vue';
   import RelateFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
+  import BugStatusTransitionSelect from './components/BugStatusTransitionSelect.vue';
 
   import {
+    type BugTransitionRuntime,
     checkFileIsUpdateRequest,
     downloadFileRequest,
     editorUploadFile,
@@ -412,24 +428,26 @@
   const getFormRules = (arr: BugEditCustomField[]) => {
     formRules.value = [];
     if (Array.isArray(arr) && arr.length) {
-      formRules.value = arr.map((item: any) => {
-        const initOptions = item.options || JSON.parse(item.platformOptionJson || '[]');
-        const initValue = getInitValue(item, initOptions);
-        return {
-          type: item.type,
-          name: item.fieldId,
-          label: item.fieldName,
-          value: initValue,
-          options: initOptions,
-          required: item.required as boolean,
-          platformPlaceHolder: item.platformPlaceHolder,
-          tooltip: resolveBugFieldTooltip(item),
-          props: {
-            modelValue: initValue,
+      formRules.value = arr
+        .filter((item) => !(isEdit.value && item.fieldId === 'status'))
+        .map((item: any) => {
+          const initOptions = item.options || JSON.parse(item.platformOptionJson || '[]');
+          const initValue = getInitValue(item, initOptions);
+          return {
+            type: item.type,
+            name: item.fieldId,
+            label: item.fieldName,
+            value: initValue,
             options: initOptions,
-          },
-        };
-      });
+            required: item.required as boolean,
+            platformPlaceHolder: item.platformPlaceHolder,
+            tooltip: resolveBugFieldTooltip(item),
+            props: {
+              modelValue: initValue,
+              options: initOptions,
+            },
+          };
+        });
     }
   };
 
@@ -591,6 +609,17 @@
       delete form.value.description;
       delete form.value.tags;
     }
+    if (isEdit.value && form.value.status) {
+      const existingStatusIndex = customFields.findIndex((field) => field.id === 'status');
+      if (existingStatusIndex >= 0) customFields.splice(existingStatusIndex, 1);
+      customFields.unshift({
+        id: 'status',
+        name: t('bugManagement.status'),
+        type: 'SELECT',
+        value: form.value.status,
+        text: form.value.statusName,
+      });
+    }
     // 过滤出复制的附件
     const copyFileList = fileList.value.filter((item) => item.isCopyFlag);
     let copyFiles: { refId: string; fileId: string; local: boolean }[] = [];
@@ -648,7 +677,14 @@
   const saveHandler = async (isContinue = false) => {
     formRef.value.validate((error: any) => {
       if (!error) {
-        fApi.value.validate(async (valid: any) => {
+        const validateCustomFields = fApi.value?.validate?.bind(fApi.value);
+        if (!validateCustomFields) {
+          if (!formRules.value.length) {
+            emit('saveParams', isContinue, makeParams());
+          }
+          return;
+        }
+        validateCustomFields(async (valid: any) => {
           if (valid === true) {
             emit('saveParams', isContinue, makeParams());
           }
@@ -778,6 +814,12 @@
     return tmpObj;
   }
 
+  function handleStatusTransitionSuccess(runtime: BugTransitionRuntime) {
+    form.value.status = runtime.currentStatus.id;
+    form.value.statusName = runtime.currentStatus.name;
+    form.value.updateTime = runtime.updateTime;
+  }
+
   // 获取详情
   const getDetailInfo = async () => {
     try {
@@ -820,6 +862,9 @@
         templateId: res.templateId,
         tags: res.tags || [],
         projectId: res.projectId,
+        status: res.status,
+        statusName: res.statusName,
+        updateTime: res.updateTime,
         platformSystemFields,
       };
     } catch (error) {
@@ -879,7 +924,8 @@
           templateChange(val);
         }
       }
-    }
+    },
+    { immediate: true }
   );
 
   const { registerCatchSaveShortcut, removeCatchSaveShortcut } = useShortcutSave(() => {

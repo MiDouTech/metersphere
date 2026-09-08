@@ -63,30 +63,39 @@
     >
       <a-form :model="form" layout="vertical">
         <div class="grid grid-cols-2 gap-x-4">
-          <a-form-item label="名称" required><a-input v-model="form.name" /></a-form-item>
-          <a-form-item label="App Caller" required><a-input v-model="form.gatewayAppCaller" /></a-form-item>
-          <a-form-item label="逻辑模型公开 ID" required><a-input v-model="form.logicalModelPublicId" /></a-form-item>
-          <a-form-item label="Prompt 策略 ID" required><a-input v-model="form.promptPolicyId" /></a-form-item>
-          <a-form-item label="Gateway Prompt 策略"><a-input v-model="form.gatewayPromptPolicyId" /></a-form-item>
-          <a-form-item label="币种" required><a-input v-model="form.currency" /></a-form-item>
-          <a-form-item label="请求超时(ms)" required
+          <a-form-item field="name" label="名称" required><a-input v-model="form.name" /></a-form-item>
+          <a-form-item field="gatewayAppCaller" label="App Caller" required
+            ><a-input v-model="form.gatewayAppCaller"
+          /></a-form-item>
+          <a-form-item field="logicalModelPublicId" label="逻辑模型公开 ID" required
+            ><a-input v-model="form.logicalModelPublicId"
+          /></a-form-item>
+          <a-form-item field="promptPolicyId" label="Prompt 策略 ID" required
+            ><a-input v-model="form.promptPolicyId"
+          /></a-form-item>
+          <a-form-item field="gatewayPromptPolicyId" label="Gateway Prompt 策略"
+            ><a-input v-model="form.gatewayPromptPolicyId"
+          /></a-form-item>
+          <a-form-item field="currency" label="币种" required><a-input v-model="form.currency" /></a-form-item>
+          <a-form-item field="requestTimeoutMs" label="请求超时(ms)" required
             ><a-input-number v-model="form.requestTimeoutMs" :min="1000" :max="300000" class="w-full"
           /></a-form-item>
-          <a-form-item label="最大输出 Token" required
+          <a-form-item field="maxOutputTokens" label="最大输出 Token" required
             ><a-input-number v-model="form.maxOutputTokens" :min="1" :max="65536" class="w-full"
           /></a-form-item>
-          <a-form-item label="单次最大成本"
+          <a-form-item field="maxCostAmount" label="单次最大成本"
             ><a-input-number v-model="form.maxCostAmount" :min="0" class="w-full"
           /></a-form-item>
-          <a-form-item label="启用"><a-switch v-model="form.enabled" /></a-form-item>
+          <a-form-item field="enabled" label="启用"><a-switch v-model="form.enabled" /></a-form-item>
         </div>
         <a-form-item
           label="Gateway Service Key 引用"
+          field="gatewayServiceKeyRef"
           required
-          extra="仅接受受控 Secret Provider 引用，例如 vault://mount/path#field"
-          ><a-input-password v-model="form.gatewayServiceKeyRef" autocomplete="new-password"
+          extra="仅接受受控 Secret Provider 引用，例如 env://MAP_GATEWAY_SERVICE_KEY 或 vault://mount/path#field"
+          ><a-input v-model="form.gatewayServiceKeyRef" placeholder="env://MAP_GATEWAY_SERVICE_KEY"
         /></a-form-item>
-        <a-form-item label="必需能力" required
+        <a-form-item field="requiredCapabilities" label="必需能力" required
           ><a-select v-model="form.requiredCapabilities" multiple allow-create
             ><a-option value="STRUCTURED_OUTPUT">STRUCTURED_OUTPUT</a-option
             ><a-option value="TOOL_CALLING">TOOL_CALLING</a-option><a-option value="VISION">VISION</a-option></a-select
@@ -136,7 +145,11 @@
     enabled: true,
     version: 0,
   });
-  const message = (e: unknown) => (e as { message?: string })?.message || '请求失败，请稍后重试';
+  const message = (e: unknown) => {
+    const appError = e as { message?: string; requestId?: string };
+    const value = appError?.message || '请求失败，请稍后重试';
+    return appError?.requestId ? `${value} (${appError.requestId})` : value;
+  };
   async function load() {
     loading.value = true;
     error.value = '';
@@ -193,11 +206,21 @@
       done(false);
       return;
     }
+    const gatewayServiceKeyRef = form.gatewayServiceKeyRef.trim();
+    const validServiceKeyRef =
+      /^env:\/\/[A-Z][A-Z0-9_]{1,127}$/.test(gatewayServiceKeyRef) ||
+      (/^vault:\/\/[A-Za-z0-9_-]+\/[A-Za-z0-9_./-]+#[A-Za-z0-9_-]+$/.test(gatewayServiceKeyRef) &&
+        !gatewayServiceKeyRef.includes('..'));
+    if (!validServiceKeyRef) {
+      Message.warning('Service Key 引用必须为 env://VARIABLE_NAME 或 vault://mount/path#field');
+      done(false);
+      return;
+    }
     const data: AiModelProfileRequest = {
       projectId: app.currentProjectId,
       name: form.name.trim(),
       gatewayAppCaller: form.gatewayAppCaller.trim(),
-      gatewayServiceKeyRef: form.gatewayServiceKeyRef.trim(),
+      gatewayServiceKeyRef,
       logicalModelPublicId: form.logicalModelPublicId.trim(),
       promptPolicyId: form.promptPolicyId.trim(),
       gatewayPromptPolicyId: form.gatewayPromptPolicyId.trim() || undefined,

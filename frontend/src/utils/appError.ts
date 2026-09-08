@@ -92,24 +92,33 @@ export function classifyStatus(status?: number): AppErrorDetails['category'] {
 
 export function normalizeAppError(response: AxiosResponse | undefined, fallback: string): AppError {
   const body = response?.data || {};
-  const legacyFieldErrors = isStringMap(body?.messageDetail) ? body.messageDetail : undefined;
+  const nestedData = body?.data;
+  const payload =
+    nestedData &&
+    typeof nestedData === 'object' &&
+    !Array.isArray(nestedData) &&
+    (nestedData.code || nestedData.message || nestedData.traceId || nestedData.fieldErrors)
+      ? nestedData
+      : body;
+  const legacyFieldErrors = isStringMap(payload?.messageDetail) ? payload.messageDetail : undefined;
   const requestId =
     response?.headers?.['x-request-id'] ||
+    payload?.traceId ||
+    payload?.requestId ||
+    payload?.messageDetail?.requestId ||
     body?.traceId ||
-    body?.requestId ||
-    body?.messageDetail?.requestId ||
-    body?.data?.requestId;
+    body?.requestId;
   const status = response?.status;
   return new AppError({
-    code: body?.code,
+    code: payload?.code ?? body?.code,
     status,
     category: classifyStatus(status),
-    messageKey: body?.messageKey,
-    message: sanitizeServerMessage(body?.message, fallback),
+    messageKey: payload?.messageKey ?? body?.messageKey,
+    message: sanitizeServerMessage(payload?.message ?? body?.message, fallback),
     requestId,
-    retryable: body?.retryable ?? Boolean(response?.status && response.status >= 500),
-    fieldErrors: body?.fieldErrors || legacyFieldErrors,
-    context: body?.context,
+    retryable: payload?.retryable ?? body?.retryable ?? Boolean(response?.status && response.status >= 500),
+    fieldErrors: payload?.fieldErrors || legacyFieldErrors,
+    context: payload?.context ?? body?.context,
   });
 }
 

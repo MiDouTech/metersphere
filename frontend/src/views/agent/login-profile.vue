@@ -45,24 +45,30 @@
       @before-ok="save"
       ><a-form :model="form" layout="vertical"
         ><div class="grid grid-cols-2 gap-x-4"
-          ><a-form-item label="名称" required><a-input v-model="form.name" /></a-form-item
-          ><a-form-item label="环境执行配置" required
+          ><a-form-item field="name" label="名称" required><a-input v-model="form.name" /></a-form-item
+          ><a-form-item field="environmentProfileId" label="环境执行配置" required
             ><a-select v-model="form.environmentProfileId"
-              ><a-option v-for="e in environments" :key="e.id" :value="e.id">{{ e.name }}</a-option></a-select
+              ><a-option v-for="e in environments" :key="e.id" :value="e.id"
+                >{{ e.name }}（{{ e.enabled ? '已启用' : '已停用' }}）</a-option
+              ></a-select
             ></a-form-item
-          ><a-form-item label="登录地址" required><a-input v-model="form.loginUrl" /></a-form-item
-          ><a-form-item label="MFA 策略" required
+          ><a-form-item field="loginUrl" label="登录地址" required><a-input v-model="form.loginUrl" /></a-form-item
+          ><a-form-item field="mfaPolicy" label="MFA 策略" required
             ><a-select v-model="form.mfaPolicy"
               ><a-option value="BLOCK">BLOCK</a-option><a-option value="CHECKPOINT">CHECKPOINT</a-option></a-select
             ></a-form-item
-          ><a-form-item label="超时(ms)" required
+          ><a-form-item field="timeoutMs" label="超时(ms)" required
             ><a-input-number v-model="form.timeoutMs" :min="1000" :max="60000" class="w-full" /></a-form-item
-          ><a-form-item label="启用"><a-switch v-model="form.enabled" /></a-form-item></div
-        ><a-form-item label="用户名定位器 JSON" required><a-textarea v-model="form.usernameLocator" /></a-form-item
-        ><a-form-item label="密码定位器 JSON" required><a-textarea v-model="form.passwordLocator" /></a-form-item
-        ><a-form-item label="提交定位器 JSON" required><a-textarea v-model="form.submitLocator" /></a-form-item
-        ><a-form-item label="成功断言 JSON" required><a-textarea v-model="form.successAssertion" /></a-form-item
-        ><a-form-item label="会话断言 JSON"
+          ><a-form-item field="enabled" label="启用"><a-switch v-model="form.enabled" /></a-form-item></div
+        ><a-form-item field="usernameLocator" label="用户名定位器 JSON" required
+          ><a-textarea v-model="form.usernameLocator" /></a-form-item
+        ><a-form-item field="passwordLocator" label="密码定位器 JSON" required
+          ><a-textarea v-model="form.passwordLocator" /></a-form-item
+        ><a-form-item field="submitLocator" label="提交定位器 JSON" required
+          ><a-textarea v-model="form.submitLocator" /></a-form-item
+        ><a-form-item field="successAssertion" label="成功断言 JSON" required
+          ><a-textarea v-model="form.successAssertion" /></a-form-item
+        ><a-form-item field="sessionValidation" label="会话断言 JSON"
           ><a-textarea v-model="form.sessionValidation" /></a-form-item></a-form></a-modal></AgentPage
 ></template>
 
@@ -108,7 +114,11 @@
     version: 0,
   };
   const form = reactive({ ...defaults });
-  const msg = (e: unknown) => (e as { message?: string })?.message || '请求失败';
+  const msg = (e: unknown) => {
+    const appError = e as { message?: string; requestId?: string };
+    const message = appError?.message || '请求失败';
+    return appError?.requestId ? `${message} (${appError.requestId})` : message;
+  };
   async function load() {
     loading.value = true;
     error.value = '';

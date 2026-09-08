@@ -43,16 +43,16 @@
       ></MsCard
     ><a-modal v-model:visible="visible" title="新建 Prompt 版本" :ok-loading="saving" width="760px" @before-ok="save"
       ><a-form :model="form" layout="vertical"
-        ><a-form-item label="模板 ID" extra="留空创建新模板；填写已有模板 ID 创建下一版本"
+        ><a-form-item field="promptTemplateId" label="模板 ID" extra="留空创建新模板；填写已有模板 ID 创建下一版本"
           ><a-input v-model="form.promptTemplateId" /></a-form-item
-        ><a-form-item label="名称" required><a-input v-model="form.name" /></a-form-item
-        ><a-form-item label="系统模板" required
+        ><a-form-item field="name" label="名称" required><a-input v-model="form.name" /></a-form-item
+        ><a-form-item field="systemTemplate" label="系统模板" required
           ><a-textarea v-model="form.systemTemplate" :auto-size="{ minRows: 4, maxRows: 8 }" /></a-form-item
-        ><a-form-item label="业务模板" required
+        ><a-form-item field="businessTemplate" label="业务模板" required
           ><a-textarea v-model="form.businessTemplate" :auto-size="{ minRows: 4, maxRows: 8 }" /></a-form-item
-        ><a-form-item label="变量 JSON Schema" required
+        ><a-form-item field="variableSchema" label="变量 JSON Schema" required
           ><a-textarea v-model="form.variableSchema" :auto-size="{ minRows: 3, maxRows: 8 }" /></a-form-item
-        ><a-form-item label="输出 Schema 版本" required
+        ><a-form-item field="outputSchemaVersion" label="输出 Schema 版本" required
           ><a-input v-model="form.outputSchemaVersion" /></a-form-item></a-form></a-modal></AgentPage
 ></template>
 
@@ -84,7 +84,11 @@
     variableSchema: '{"type":"object","additionalProperties":false,"properties":{}}',
     outputSchemaVersion: 'v1',
   });
-  const msg = (e: unknown) => (e as { message?: string })?.message || '请求失败';
+  const msg = (e: unknown) => {
+    const appError = e as { message?: string; requestId?: string };
+    const message = appError?.message || '请求失败';
+    return appError?.requestId ? `${message} (${appError.requestId})` : message;
+  };
   async function load() {
     loading.value = true;
     error.value = '';

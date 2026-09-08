@@ -19,6 +19,7 @@ import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.domain.User;
+import io.metersphere.system.event.TestReportGeneratedEvent;
 import io.metersphere.system.mapper.UserMapper;
 import io.metersphere.system.service.PermissionCheckService;
 import io.metersphere.system.uid.IDGenerator;
@@ -26,6 +27,7 @@ import io.metersphere.system.utils.SessionUtils;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +60,8 @@ public class FunctionalTestReportService {
     private UserMapper userMapper;
     @Resource
     private PermissionCheckService permissionCheckService;
+    @Resource
+    private ApplicationEventPublisher applicationEventPublisher;
 
     public List<FunctionalTestReportDTO> list(FunctionalTestReportPageRequest request) {
         List<FunctionalTestReport> reports = extFunctionalTestReportMapper.list(request);
@@ -122,6 +126,9 @@ public class FunctionalTestReportService {
         report.setCreateUser(userId);
         report.setUpdateUser(userId);
         functionalTestReportMapper.insert(report);
+        applicationEventPublisher.publishEvent(new TestReportGeneratedEvent(
+                "TEST_REPORT_GENERATED:" + report.getId(), report.getId(), report.getPlanId(), report.getProjectId(),
+                report.getName(), userId, "MANUAL", now, TestReportGeneratedEvent.TYPE_FUNCTIONAL));
         return toDTO(report);
     }
 

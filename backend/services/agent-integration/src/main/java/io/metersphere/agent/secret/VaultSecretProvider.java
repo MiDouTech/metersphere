@@ -26,9 +26,9 @@ public class VaultSecretProvider implements AgentSecretProvider {
     @Override
     public void validateReference(String secretRef) {
         if (StringUtils.isBlank(secretRef) || !secretRef.matches("^vault://[A-Za-z0-9_-]+/[A-Za-z0-9_./-]+#[A-Za-z0-9_-]+$")) {
-            throw new MSException("Vault 引用格式必须为 vault://mount/path#field");
+            throw new MSException("CREDENTIAL_SECRET_REF_INVALID");
         }
-        if (secretRef.contains("..")) throw new MSException("Vault 引用不允许路径穿越");
+        if (secretRef.contains("..")) throw new MSException("CREDENTIAL_SECRET_REF_INVALID");
     }
 
     @Override
@@ -46,10 +46,10 @@ public class VaultSecretProvider implements AgentSecretProvider {
     @SuppressWarnings("unchecked")
     private VaultValue fetch(String secretRef) {
         validateReference(secretRef);
-        if (!enabled) throw new MSException("当前部署未启用 Vault Secret Provider");
+        if (!enabled) throw new MSException("VAULT_SECRET_PROVIDER_DISABLED");
         URI base = validateAddress();
         String token = System.getenv(tokenEnvironmentVariable);
-        if (StringUtils.isBlank(token)) throw new MSException("Vault 服务身份不可用");
+        if (StringUtils.isBlank(token)) throw new MSException("VAULT_AUTHENTICATION_UNAVAILABLE");
         String raw = secretRef.substring("vault://".length());
         int slash = raw.indexOf('/'); int hash = raw.lastIndexOf('#');
         String mount = raw.substring(0, slash); String path = raw.substring(slash + 1, hash); String field = raw.substring(hash + 1);
@@ -59,20 +59,20 @@ public class VaultSecretProvider implements AgentSecretProvider {
         if (StringUtils.isNotBlank(namespace)) builder.header("X-Vault-Namespace", namespace);
         try {
             HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) throw new MSException("Vault 密钥引用不可用");
+            if (response.statusCode() != 200) throw new MSException("CREDENTIAL_SECRET_REF_UNAVAILABLE");
             Map<String, Object> root = JSON.parseMap(response.body());
             Map<String, Object> outer = (Map<String, Object>) root.get("data");
             Map<String, Object> values = outer == null ? null : (Map<String, Object>) outer.get("data");
             Map<String, Object> metadata = outer == null ? null : (Map<String, Object>) outer.get("metadata");
             Object secret = values == null ? null : values.get(field);
-            if (secret == null) throw new MSException("Vault 密钥引用不可用");
+            if (secret == null) throw new MSException("CREDENTIAL_SECRET_REF_UNAVAILABLE");
             return new VaultValue(String.valueOf(secret), metadata == null ? null : String.valueOf(metadata.get("version")));
         } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt(); throw new MSException("Vault 请求被中断");
+            Thread.currentThread().interrupt(); throw new MSException("VAULT_REQUEST_INTERRUPTED");
         } catch (MSException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new MSException("Vault 密钥引用不可用");
+            throw new MSException("CREDENTIAL_SECRET_REF_UNAVAILABLE");
         }
     }
 
@@ -82,7 +82,7 @@ public class VaultSecretProvider implements AgentSecretProvider {
             if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) throw new IllegalArgumentException();
             return uri;
         } catch (Exception ex) {
-            throw new MSException("Vault 地址必须配置为 HTTPS 地址");
+            throw new MSException("VAULT_ADDRESS_INVALID");
         }
     }
 
