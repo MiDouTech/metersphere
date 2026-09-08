@@ -450,6 +450,8 @@
   <AddDefectDrawer
     v-model:visible="showDefectDrawer"
     :extra-params="{ caseId: detailForm.id }"
+    :draft-key="detailForm.id"
+    preserve-draft
     @success="emit('updateSuccess')"
   />
 </template>

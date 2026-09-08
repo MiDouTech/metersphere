@@ -18,6 +18,7 @@
     "test:route-tabs": "node ./scripts/verify-route-tabs.mjs",
     "test:layout-overflow": "node ./scripts/verify-layout-overflow.mjs",
     "test:permission-resources": "node ./scripts/verify-permission-resource-coverage.mjs",
+    "test:admin-draft-contracts": "node ./scripts/verify-admin-draft-contracts.mjs",
     "test:e2e:information-architecture": "playwright test e2e/information-architecture.spec.ts",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "lint:styles": "stylelint 'src/**/*.{vue,html,css,scss,less}' --fix",

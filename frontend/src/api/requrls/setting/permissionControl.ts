@@ -9,6 +9,7 @@ export const roleDeleteImpactUrl = `/permission-control/role/delete-impact/`;
 export const roleMemberListUrl = `/permission-control/role/member/list`;
 export const roleMemberOptionsUrl = `/permission-control/role/member/options/`;
 export const roleMemberScopeOptionsUrl = `/permission-control/role/member/scope/options/`;
+export const roleMemberPositionOrganizationOptionsUrl = `/permission-control/role/member/position-organization/options`;
 export const roleMemberAddUrl = `/permission-control/role/member/add`;
 export const roleMemberRemoveUrl = `/permission-control/role/member/remove`;
 export const roleMemberAssignByPositionUrl = `/permission-control/role/member/assign-by-position`;

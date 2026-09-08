@@ -6,7 +6,7 @@
         ><div
           ><div class="text-base font-medium">业务流</div
           ><div class="text-sm text-[var(--color-text-3)]">版本化保存节点、边与退出条件；发布后供执行使用。</div></div
-        ><a-button type="primary" @click="open()">新建</a-button></div
+        ><a-button v-permission="['AI_EXECUTION:RUN']" type="primary" @click="open()">新建</a-button></div
       >
       <a-table :data="items" :loading="loading" row-key="id" :pagination="false"
         ><template #columns
@@ -17,25 +17,29 @@
             title="版本"
             data-index="version"
           /><a-table-column title="操作"
-            ><template #cell="{ record }"><a-link @click="open(record)">编辑</a-link></template></a-table-column
+            ><template #cell="{ record }"
+              ><a-link v-permission="['AI_EXECUTION:RUN']" @click="open(record)">编辑</a-link></template
+            ></a-table-column
           ></template
         ></a-table
       >
     </MsCard>
     <a-modal v-model:visible="visible" title="业务流" :ok-loading="saving" width="820px" @before-ok="save"
       ><a-form :model="form" layout="vertical"
-        ><a-form-item label="名称" required><a-input v-model="form.name" /></a-form-item
-        ><a-form-item label="节点 JSON" required
+        ><a-form-item field="name" label="名称" required><a-input v-model="form.name" /></a-form-item
+        ><a-form-item field="nodesJson" label="节点 JSON" required
           ><a-textarea v-model="form.nodesJson" :auto-size="{ minRows: 5, maxRows: 12 }" /></a-form-item
-        ><a-form-item label="边 JSON" required
+        ><a-form-item field="edgesJson" label="边 JSON" required
           ><a-textarea v-model="form.edgesJson" :auto-size="{ minRows: 4, maxRows: 10 }" /></a-form-item
-        ><a-form-item label="入口节点 ID" required><a-input v-model="form.entryNodeId" /></a-form-item
-        ><a-form-item label="退出条件 JSON" required><a-textarea v-model="form.exitJson" /></a-form-item
-        ><a-form-item label="允许动作"
+        ><a-form-item field="entryNodeId" label="入口节点 ID" required
+          ><a-input v-model="form.entryNodeId" /></a-form-item
+        ><a-form-item field="exitJson" label="退出条件 JSON" required
+          ><a-textarea v-model="form.exitJson" /></a-form-item
+        ><a-form-item field="allowedActions" label="允许动作"
           ><a-select v-model="form.allowedActions" multiple
             ><a-option v-for="value in actions" :key="value" :value="value">{{ value }}</a-option></a-select
           ></a-form-item
-        ><a-form-item label="状态"
+        ><a-form-item field="status" label="状态"
           ><a-select v-model="form.status"
             ><a-option value="DRAFT">DRAFT</a-option><a-option value="PUBLISHED">PUBLISHED</a-option
             ><a-option value="DISABLED">DISABLED</a-option></a-select
@@ -79,6 +83,10 @@
     version: 0,
   });
   const form = reactive(empty());
+  const errorMessage = (reason: unknown) =>
+    (reason as { message?: string; requestId?: string })?.requestId
+      ? `${(reason as { message?: string }).message || '保存失败'} (${(reason as { requestId?: string }).requestId})`
+      : (reason as { message?: string })?.message || '保存失败';
   async function load() {
     loading.value = true;
     error.value = '';
@@ -129,7 +137,7 @@
       await load();
       done(true);
     } catch (reason) {
-      Message.error(reason instanceof SyntaxError ? 'JSON 格式错误' : '保存失败');
+      Message.error(reason instanceof SyntaxError ? 'JSON 格式错误' : errorMessage(reason));
       done(false);
     } finally {
       saving.value = false;

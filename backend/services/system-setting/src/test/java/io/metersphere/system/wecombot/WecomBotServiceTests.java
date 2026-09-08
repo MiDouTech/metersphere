@@ -134,6 +134,17 @@ class WecomBotServiceTests {
                 "BUG_EXPECTED_RESOLUTION_DUE", List.of(daily), null, null);
     }
 
+    @Test
+    void bugWithoutExpectedResolutionTimeRemainsEligibleAndConfiguredDeadlineIsEnforced() {
+        long now = 1_000_000L;
+
+        assertEquals(true, service.isBugNotificationWindowOpen(null, now, 60_000L));
+        assertEquals(true, service.isBugNotificationWindowOpen(now + 30_000L, now, 60_000L));
+        assertEquals(false, service.isBugNotificationWindowOpen(now + 120_000L, now, 60_000L));
+        assertEquals(false, service.isBugNotificationWindowOpen(now, now, 60_000L));
+        assertEquals(false, service.isBugNotificationWindowOpen(now - 1L, now, 60_000L));
+    }
+
     private WecomBotModels.RuleRequest rule(String notificationType, String triggerType, String cron,
                                              Map<String, Object> recipients, String deliveryMode,
                                              Map<String, Object> triggerConfig) {

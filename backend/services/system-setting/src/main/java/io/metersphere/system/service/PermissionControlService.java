@@ -344,6 +344,19 @@ public class PermissionControlService {
                 .toList();
     }
 
+    public List<OptionDTO> getPositionOrganizationOptions(String keyword) {
+        String normalizedKeyword = StringUtils.trimToEmpty(keyword).toLowerCase();
+        OrganizationExample example = new OrganizationExample();
+        example.createCriteria().andDeletedEqualTo(false).andEnableEqualTo(true);
+        return organizationMapper.selectByExample(example).stream()
+                .filter(item -> StringUtils.isBlank(normalizedKeyword)
+                        || StringUtils.containsIgnoreCase(item.getName(), normalizedKeyword)
+                        || StringUtils.containsIgnoreCase(item.getId(), normalizedKeyword))
+                .limit(100)
+                .map(item -> new OptionDTO(item.getId(), item.getName()))
+                .toList();
+    }
+
     public void addRoleMembers(RoleMemberUpdateRequest request) {
         UserRole role = validateRoleForMemberManagement(request.getRoleId(), request.getSourceId(), true);
         String sourceId = resolveMemberSourceId(role, request.getSourceId());

@@ -88,7 +88,7 @@
         <div class="flex items-center justify-between">
           <slot name="footerLeft"></slot>
           <div class="ml-auto flex gap-[12px]">
-            <a-button :disabled="props.okLoading" @click="handleCancel">
+            <a-button :disabled="props.okLoading" @click="handleFooterCancel">
               {{ t(props.cancelText || 'ms.drawer.cancel') }}
             </a-button>
             <a-button
@@ -172,7 +172,7 @@
     unmountOnClose: false,
     okPermission: () => [], // 确认按钮权限
   });
-  const emit = defineEmits(['update:visible', 'confirm', 'cancel', 'continue', 'close']);
+  const emit = defineEmits(['update:visible', 'confirm', 'cancel', 'footerCancel', 'continue', 'close']);
 
   const { t } = useI18n();
 
@@ -199,6 +199,11 @@
     visible.value = false;
     emit('update:visible', false);
     emit('cancel');
+  };
+
+  const handleFooterCancel = () => {
+    emit('footerCancel');
+    handleCancel();
   };
 
   const handleClose = () => {

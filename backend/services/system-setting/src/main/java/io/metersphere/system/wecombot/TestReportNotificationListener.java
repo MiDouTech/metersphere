@@ -40,9 +40,9 @@ public class TestReportNotificationListener {
             variables.put("reportName", event.reportName());
             variables.put("testPlanName", planName(event.testPlanId()));
             variables.put("projectName", projectName(event.projectId()));
-            variables.put("reportUrl", baseUrl() + "/test-plan/testPlanReportDetail?id=" + event.reportId() + "&type=TEST_PLAN");
+            variables.put("reportUrl", reportUrl(event));
             variables.put("reportGeneratorName", userName(event.generatorUserId()));
-            variables.put("reportSummary", reportSummary(event.reportId()));
+            variables.put("reportSummary", reportSummary(event));
             variables.put("generatedAt", botService.formatTimestamp(event.generatedAt(), String.valueOf(rule.get("timezone"))));
             variables.put("ruleName", rule.get("name"));
             variables.put("now", botService.formatTimestamp(event.generatedAt(), String.valueOf(rule.get("timezone"))));
@@ -67,9 +67,33 @@ public class TestReportNotificationListener {
         return values.isEmpty() ? id : values.getFirst();
     }
 
-    private String reportSummary(String reportId) {
-        List<String> values = jdbc.queryForList("SELECT summary FROM test_plan_report_summary WHERE test_plan_report_id=? AND summary IS NOT NULL AND summary<>'' LIMIT 1", String.class, reportId);
+    private String reportSummary(TestReportGeneratedEvent event) {
+        if (TestReportGeneratedEvent.TYPE_FUNCTIONAL.equals(event.reportType())) {
+            List<Map<String, Object>> reports = jdbc.queryForList(
+                    "SELECT name,content FROM functional_test_report WHERE id=?", event.reportId());
+            if (reports.isEmpty()) return "-";
+            Map<String, Object> report = reports.getFirst();
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> content = JSON.parseObject(String.valueOf(report.get("content")), Map.class);
+                Object conclusion = content == null ? null : content.get("conclusion");
+                if (conclusion instanceof Map<?, ?> values && values.get("result") != null) {
+                    return String.valueOf(values.get("result"));
+                }
+            } catch (RuntimeException ignored) {
+                // The report name is a safe fallback for legacy or malformed report content.
+            }
+            return String.valueOf(report.get("name"));
+        }
+        List<String> values = jdbc.queryForList("SELECT summary FROM test_plan_report_summary WHERE test_plan_report_id=? AND summary IS NOT NULL AND summary<>'' LIMIT 1", String.class, event.reportId());
         return values.isEmpty() ? "-" : values.getFirst();
+    }
+
+    private String reportUrl(TestReportGeneratedEvent event) {
+        if (TestReportGeneratedEvent.TYPE_FUNCTIONAL.equals(event.reportType())) {
+            return baseUrl() + "/test-plan/functionalTestReportDetail?id=" + event.reportId() + "&mode=view";
+        }
+        return baseUrl() + "/test-plan/testPlanReportDetail?id=" + event.reportId() + "&type=TEST_PLAN";
     }
 
     private String baseUrl() {

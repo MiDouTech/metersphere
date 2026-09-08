@@ -68,40 +68,51 @@
       @before-ok="save"
       ><a-form :model="form" layout="vertical">
         <div class="grid grid-cols-2 gap-x-4"
-          ><a-form-item label="名称" required><a-input v-model="form.name" /></a-form-item
-          ><a-form-item label="环境 ID" required><a-input v-model="form.environmentId" /></a-form-item>
-          <a-form-item label="凭据类型" required
+          ><a-form-item field="name" label="名称" required><a-input v-model="form.name" /></a-form-item
+          ><a-form-item field="environmentId" label="环境" required
+            ><a-select v-model="form.environmentId" allow-search placeholder="请选择环境执行配置"
+              ><a-option v-for="item in environments" :key="item.id" :value="item.environmentId"
+                >{{ item.name }}（{{ item.environmentId }}）</a-option
+              ></a-select
+            ></a-form-item
+          >
+          <a-form-item field="credentialType" label="凭据类型" required
             ><a-select v-model="form.credentialType"
               ><a-option value="USERNAME_PASSWORD">账号密码</a-option><a-option value="TOKEN">Token</a-option
               ><a-option value="API_KEY">API Key</a-option
               ><a-option value="OAUTH_CLIENT">OAuth Client</a-option></a-select
             ></a-form-item
           >
-          <a-form-item label="Provider" required
+          <a-form-item field="providerType" label="Provider" required
             ><a-select v-model="form.providerType"
               ><a-option value="VAULT">Vault</a-option
               ><a-option value="ENV">ENV（仅受控非生产环境）</a-option></a-select
             ></a-form-item
           ></div
         >
-        <a-form-item label="业务角色" required
+        <a-form-item field="businessRole" label="业务角色" required
           ><a-input v-model="form.businessRole" placeholder="TEST_ADMIN"
         /></a-form-item>
         <a-form-item
           label="Secret 引用"
+          field="secretRef"
           required
           extra="保存后不会回显；Vault：vault://mount/path#field；ENV：env://TEST_ADMIN_SECRET"
-          ><a-input-password v-model="form.secretRef" autocomplete="new-password"
+          ><a-input
+            v-model="form.secretRef"
+            :placeholder="
+              form.providerType === 'ENV' ? 'env://TEST_ADMIN_SECRET' : 'vault://secret/test-admin#password'
+            "
         /></a-form-item>
-        <a-form-item label="用户名提示"><a-input v-model="form.usernameHint" /></a-form-item
-        ><a-form-item label="过期时间"
+        <a-form-item field="usernameHint" label="用户名提示"><a-input v-model="form.usernameHint" /></a-form-item
+        ><a-form-item field="expiresAt" label="过期时间"
           ><a-date-picker
             v-model="form.expiresAt"
             show-time
             value-format="timestamp"
             class="w-full"
             allow-clear /></a-form-item
-        ><a-form-item label="启用"><a-switch v-model="form.enabled" /></a-form-item> </a-form></a-modal
+        ><a-form-item field="enabled" label="启用"><a-switch v-model="form.enabled" /></a-form-item> </a-form></a-modal
   ></AgentPage>
 </template>
 
@@ -111,12 +122,17 @@
 
   import AgentPage from './components/AgentPage.vue';
 
-  import type { AiCredentialReference, AiCredentialReferenceRequest } from '@/api/modules/ai-execution';
+  import type {
+    AiCredentialReference,
+    AiCredentialReferenceRequest,
+    AiEnvironmentProfile,
+  } from '@/api/modules/ai-execution';
   import {
     createAiCredentialReference,
     disableAiCredentialReference,
     enableAiCredentialReference,
     listAiCredentialReferences,
+    listAiEnvironmentProfiles,
     updateAiCredentialReference,
     verifyAiCredentialReference,
   } from '@/api/modules/ai-execution';
@@ -124,6 +140,7 @@
 
   const app = useAppStore();
   const items = ref<AiCredentialReference[]>([]);
+  const environments = ref<AiEnvironmentProfile[]>([]);
   const loading = ref(false);
   const saving = ref(false);
   const visible = ref(false);
@@ -141,12 +158,19 @@
     enabled: true,
     version: 0,
   });
-  const msg = (e: unknown) => (e as { message?: string })?.message || '请求失败，请稍后重试';
+  const msg = (e: unknown) => {
+    const appError = e as { message?: string; requestId?: string };
+    const message = appError?.message || '请求失败，请稍后重试';
+    return appError?.requestId ? `${message} (${appError.requestId})` : message;
+  };
   async function load() {
     loading.value = true;
     error.value = '';
     try {
-      items.value = await listAiCredentialReferences(app.currentProjectId);
+      [items.value, environments.value] = await Promise.all([
+        listAiCredentialReferences(app.currentProjectId),
+        listAiEnvironmentProfiles(app.currentProjectId),
+      ]);
     } catch (e) {
       error.value = msg(e);
     } finally {
@@ -197,6 +221,20 @@
       done(false);
       return;
     }
+    const secretRef = form.secretRef.trim();
+    const validSecretRef =
+      form.providerType === 'ENV'
+        ? /^env:\/\/[A-Z][A-Z0-9_]{1,127}$/.test(secretRef)
+        : /^vault:\/\/[A-Za-z0-9_-]+\/[A-Za-z0-9_./-]+#[A-Za-z0-9_-]+$/.test(secretRef) && !secretRef.includes('..');
+    if (!validSecretRef) {
+      Message.warning(
+        form.providerType === 'ENV'
+          ? 'ENV 引用格式必须为 env://VARIABLE_NAME'
+          : 'Vault 引用格式必须为 vault://mount/path#field'
+      );
+      done(false);
+      return;
+    }
     const data: AiCredentialReferenceRequest = {
       projectId: app.currentProjectId,
       environmentId: form.environmentId.trim(),
@@ -204,7 +242,7 @@
       credentialType: form.credentialType,
       businessRole: form.businessRole.trim(),
       providerType: form.providerType,
-      secretRef: form.secretRef.trim(),
+      secretRef,
       usernameHint: form.usernameHint.trim() || undefined,
       expiresAt: form.expiresAt,
       enabled: form.enabled,

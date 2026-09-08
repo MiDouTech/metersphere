@@ -34,6 +34,7 @@ const TestAsset: AppRouteRecordRaw = {
     icon: 'icon-icon_functional_testing1',
     order: 2,
     hideChildrenInMenu: true,
+    adminOnly: true,
     roles: readRoles,
   },
   children: [

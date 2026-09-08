@@ -3,6 +3,7 @@ import 'vue-router';
 declare module 'vue-router' {
   interface RouteMeta {
     roles?: string[]; // 角色数组
+    adminOnly?: boolean; // 是否仅系统管理员可访问
     resourceCode?: string; // UI 权限资源编码
     requiresAuth?: boolean; // 是否需要权限，默认需要
     icon?: string; // 菜单icon
