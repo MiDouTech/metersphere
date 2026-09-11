@@ -15,6 +15,7 @@
     "preview": "npm run build && vite preview --host",
     "type:check": "vue-tsc --noEmit --skipLibCheck",
     "test:api-contracts": "node ./scripts/verify-api-contracts.mjs",
+    "test:image-clipboard": "node --test ./scripts/test-image-clipboard.mjs",
     "test:route-tabs": "node ./scripts/verify-route-tabs.mjs",
     "test:layout-overflow": "node ./scripts/verify-layout-overflow.mjs",
     "test:permission-resources": "node ./scripts/verify-permission-resource-coverage.mjs",
