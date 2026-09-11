@@ -32,7 +32,7 @@ import java.util.*;
 @Service
 public class AgentMcpMaintenanceService {
     @Resource private Validator validator;
-    @Resource private AgentProjectService projectService;
+    @Resource(name = "agentProjectService") private AgentProjectService projectService;
     @Resource private PermissionCheckService permissionCheckService;
     @Resource private AgentBatchSubmitService batchService;
     @Resource private FunctionalCaseMapper functionalCaseMapper;
@@ -45,7 +45,7 @@ public class AgentMcpMaintenanceService {
     @Resource private AgentTaskClaimService taskClaims;
     @Resource private AgentExecutionCheckpointService checkpointService;
     @Resource private AgentExecutionMapper executionMapper;
-    @Resource private AgentBugWriteService bugService;
+    @Resource(name = "agentBugWriteService") private AgentBugWriteService bugService;
     @Resource private AgentExecLogService execLogService;
     @Resource private JdbcTemplate jdbcTemplate;
     @Resource private io.metersphere.plan.service.TestPlanManagementService planManagementService;
