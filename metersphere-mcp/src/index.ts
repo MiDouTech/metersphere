@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { nativeBatchSubmitTool, executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
+  bugTransitionTool, testPlanUpdateTool, testPlanDisassociateTool, testPlanGetTool } from "./tools/maintenance.js";
 import { loadConfig, MeterSphereClient, MsApiError } from "./client.js";
 import { getFunctionalCaseTool } from "./tools/getFunctionalCase.js";
 import { listModulesTool } from "./tools/listModules.js";
@@ -45,6 +47,8 @@ type ToolDef = {
 };
 
 const tools: ToolDef[] = [
+  nativeBatchSubmitTool, executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
+  bugTransitionTool, testPlanUpdateTool, testPlanDisassociateTool, testPlanGetTool,
   searchFunctionalCasesTool,
   getFunctionalCaseTool,
   submitFunctionalResultTool,

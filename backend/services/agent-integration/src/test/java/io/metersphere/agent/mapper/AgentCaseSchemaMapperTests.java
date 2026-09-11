@@ -5,6 +5,7 @@ import io.metersphere.agent.dto.AgentCaseStepDTO;
 import io.metersphere.functional.constants.FunctionalCaseTypeConstants;
 import io.metersphere.functional.dto.FunctionalCaseCustomFieldDTO;
 import io.metersphere.functional.dto.FunctionalCaseDetailDTO;
+import io.metersphere.functional.dto.FunctionalCasePageDTO;
 import io.metersphere.functional.dto.FunctionalCaseStepDTO;
 import io.metersphere.plan.dto.response.TestPlanCasePageResponse;
 import io.metersphere.sdk.util.JSON;
@@ -17,6 +18,61 @@ import java.util.List;
 class AgentCaseSchemaMapperTests {
 
     private final AgentCaseSchemaMapper mapper = new AgentCaseSchemaMapper();
+
+    @Test
+    void repositoryListAndDetailShouldExposeLastExecutorInsteadOfAssignedExecutor() {
+        FunctionalCasePageDTO source = new FunctionalCasePageDTO();
+        source.setExecuteUser("assigned-user");
+        source.setLastExecuteUser("actual-user");
+        source.setLastExecuteUserName("实际执行人");
+        var dto = mapper.fromFunctionalCasePage(source, "模块");
+        Assertions.assertEquals("actual-user", dto.getLastExecuteUser());
+        Assertions.assertEquals("实际执行人", dto.getLastExecuteUserName());
+
+        FunctionalCaseDetailDTO detail = new FunctionalCaseDetailDTO();
+        detail.setExecuteUser("assigned-user");
+        detail.setLastExecuteUser("latest-user");
+        detail.setLastExecuteUserName("最近执行人");
+        mapper.enrichDetail(dto, detail, new ArrayList<>());
+        Assertions.assertEquals("latest-user", dto.getLastExecuteUser());
+        Assertions.assertEquals("最近执行人", dto.getLastExecuteUserName());
+        Assertions.assertTrue(JSON.toJSONString(dto).contains("\"lastExecuteUserName\":\"最近执行人\""));
+    }
+
+    @Test
+    void planExecutorMustNotBeOverwrittenByRepositoryStepEnrichment() {
+        TestPlanCasePageResponse source = new TestPlanCasePageResponse();
+        source.setTestPlanId("plan-1");
+        source.setLastExecuteUser("plan-user");
+        source.setLastExecuteUserName("计划执行人");
+        var dto = mapper.fromTestPlanCase(source, "模块");
+        FunctionalCaseDetailDTO detail = new FunctionalCaseDetailDTO();
+        detail.setLastExecuteUser("repository-user");
+        detail.setLastExecuteUserName("库执行人");
+        mapper.enrichDetail(dto, detail, new ArrayList<>());
+        Assertions.assertEquals("plan-user", dto.getLastExecuteUser());
+        Assertions.assertEquals("计划执行人", dto.getLastExecuteUserName());
+
+        source.setLastExecuteUser(null);
+        source.setLastExecuteUserName(null);
+        var unexecuted = mapper.fromTestPlanCase(source, "模块");
+        mapper.enrichDetail(unexecuted, detail, new ArrayList<>());
+        Assertions.assertNull(unexecuted.getLastExecuteUser());
+        Assertions.assertNull(unexecuted.getLastExecuteUserName());
+    }
+
+    @Test
+    void missingExecutorAndMissingUserNameShouldRemainEmpty() {
+        FunctionalCasePageDTO source = new FunctionalCasePageDTO();
+        source.setExecuteUser("assigned-user");
+        var dto = mapper.fromFunctionalCasePage(source, "模块");
+        Assertions.assertNull(dto.getLastExecuteUser());
+        Assertions.assertNull(dto.getLastExecuteUserName());
+        source.setLastExecuteUser("deleted-user");
+        dto = mapper.fromFunctionalCasePage(source, "模块");
+        Assertions.assertEquals("deleted-user", dto.getLastExecuteUser());
+        Assertions.assertNull(dto.getLastExecuteUserName());
+    }
 
     @Test
     void fromTestPlanCaseShouldExposeTestPlanCaseId() {

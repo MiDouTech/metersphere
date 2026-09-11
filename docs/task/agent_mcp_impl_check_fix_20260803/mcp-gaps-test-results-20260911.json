@@ -1,0 +1,79 @@
+﻿[
+    {
+        "Name":  "io.metersphere.agent.mapper.AgentCaseSchemaMapperTests",
+        "Tests":  8,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.mapper.AgentPersonalHistorySqlTests",
+        "Tests":  1,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.service.AgentCheckpointResumeTests",
+        "Tests":  4,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.service.AgentFunctionalCaseSearchServiceTests",
+        "Tests":  9,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.service.AgentFunctionalCaseSubmitServiceTests",
+        "Tests":  4,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.service.AgentMcpBatchTests",
+        "Tests":  3,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.service.AgentMcpMaintenanceServiceTests",
+        "Tests":  13,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.service.AgentMcpStreamableServiceTests",
+        "Tests":  4,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.tool.AgentMcpMaintenanceToolTests",
+        "Tests":  3,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.tool.AgentMcpToolContractTests",
+        "Tests":  2,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    },
+    {
+        "Name":  "io.metersphere.agent.tool.AgentMcpToolRegistryTests",
+        "Tests":  1,
+        "Failures":  0,
+        "Errors":  0,
+        "Skipped":  0
+    }
+]

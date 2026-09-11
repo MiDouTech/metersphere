@@ -41,6 +41,12 @@ public class AgentCaseDTO {
     @Schema(description = "最近执行结果")
     private String lastExecuteResult;
 
+    @Schema(description = "最后执行人用户 ID；指定测试计划时为计划关联用例的最后执行人，未执行时为空")
+    private String lastExecuteUser;
+
+    @Schema(description = "最后执行人姓名；用户不存在或未执行时可为空")
+    private String lastExecuteUserName;
+
     @Schema(description = "步骤列表")
     private List<AgentCaseStepDTO> steps = new ArrayList<>();
 }

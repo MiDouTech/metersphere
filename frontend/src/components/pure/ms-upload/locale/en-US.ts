@@ -7,6 +7,12 @@ export default {
   'ms.upload.waiting_save': 'Waiting save',
   'ms.upload.reUpload': 'Reupload',
   'ms.upload.preview': 'Preview',
+  'ms.upload.copyImage': 'Copy image',
+  'ms.upload.copyImageSuccess': 'Image copied. Paste it into an app that accepts images.',
+  'ms.upload.copyImageUnsupported': 'Image copying requires HTTPS and a browser that supports image clipboard access.',
+  'ms.upload.copyImageDenied': 'Allow clipboard access and keep this page in the foreground, then try again.',
+  'ms.upload.copyImageFailed':
+    'Could not copy the image. It may be unavailable or too large. Preview it and try again.',
   'ms.upload.uploadAt': 'Uploaded at',
   'ms.upload.associatedAt': 'Associated at',
   'ms.upload.fail': 'Error',

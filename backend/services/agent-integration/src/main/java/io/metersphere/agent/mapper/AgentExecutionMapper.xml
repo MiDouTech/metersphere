@@ -441,6 +441,28 @@
         FOR UPDATE SKIP LOCKED
     </select>
 
+    <sql id="personalHistoryWhere">
+        WHERE project_id = #{projectId}
+          AND task_origin = 'PERSONAL_MCP'
+          AND executor_channel = 'EXTERNAL_MCP_AGENT'
+        <if test="request.keyword != null and request.keyword != ''">
+            AND (LOWER(name) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '!'
+                 OR LOWER(objective) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '!'
+                 OR id = #{request.keyword})
+        </if>
+        <if test="request.status != null">AND status = #{request.status}</if>
+        <if test="request.createdAfter != null">AND create_time &gt;= #{request.createdAfter}</if>
+        <if test="request.createdBefore != null">AND create_time &lt;= #{request.createdBefore}</if>
+    </sql>
+
+    <select id="countPersonalHistory" resultType="long">
+        SELECT COUNT(*) FROM ai_execution_task <include refid="personalHistoryWhere"/>
+    </select>
+    <select id="searchPersonalHistory" resultMap="taskMap">
+        SELECT * FROM ai_execution_task <include refid="personalHistoryWhere"/>
+        ORDER BY create_time DESC, id DESC LIMIT #{offset}, #{request.pageSize}
+    </select>
+
     <sql id="taskSearchWhere">
         WHERE project_id = #{projectId}
         <if test="keyword != null and keyword != ''">

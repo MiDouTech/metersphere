@@ -17,6 +17,12 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 public interface AgentExecutionMapper {
+    long countPersonalHistory(@Param("projectId") String projectId,
+            @Param("request") io.metersphere.agent.dto.AgentExecutionHistoryRequest request, @Param("likeKeyword") String likeKeyword);
+
+    List<AgentExecutionTaskDTO> searchPersonalHistory(@Param("projectId") String projectId,
+            @Param("request") io.metersphere.agent.dto.AgentExecutionHistoryRequest request,
+            @Param("likeKeyword") String likeKeyword, @Param("offset") int offset);
     AgentExecutionTaskDTO selectTaskById(@Param("id") String id);
 
     AgentExecutionTaskDTO selectTaskByIdempotency(@Param("projectId") String projectId,

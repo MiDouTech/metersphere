@@ -10,6 +10,7 @@ public class AgentTestPlanDTO {
     private String projectId;
     private String status;
     private Long num;
+    private Long updateTime;
     @Schema(description = "已关联用例数（创建时传入则返回关联数）")
     private Integer associatedCaseCount;
 }

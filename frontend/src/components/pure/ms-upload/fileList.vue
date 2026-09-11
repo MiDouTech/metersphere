@@ -69,6 +69,10 @@
                 </a-tooltip>
                 <slot name="title" :item="item"></slot>
                 <div v-if="props.buttonInTitle" class="ml-auto flex items-center font-normal">
+                  <CopyImageButton
+                    v-if="isImageFile(item) && canPreviewFile(item) && !item.delete"
+                    :source="() => getCopySource(item)"
+                  />
                   <slot name="titleAction" :item="item">
                     <MsButton
                       v-if="canPreviewFile(item)"
@@ -151,6 +155,10 @@
           </a-list-item-meta>
           <template v-if="!props.buttonInTitle" #actions>
             <div class="flex items-center">
+              <CopyImageButton
+                v-if="isImageFile(item) && canPreviewFile(item) && !item.delete"
+                :source="() => getCopySource(item)"
+              />
               <MsButton
                 v-if="canPreviewFile(item)"
                 type="button"
@@ -197,6 +205,10 @@
           @click="handlePreview(item)"
         />
         <icon-close-circle-fill class="image-item-close-icon" @click="deleteFile(item)" />
+        <CopyImageButton
+          v-if="isImageFile(item) && canPreviewFile(item) && !item.delete"
+          :source="() => getCopySource(item)"
+        />
       </div>
     </div>
     <a-image-preview-group
@@ -204,7 +216,11 @@
       v-model:current="previewCurrent"
       infinite
       :src-list="previewList"
-    />
+    >
+      <template #actions="{ url }">
+        <CopyImageButton v-if="url" :source="() => url" />
+      </template>
+    </a-image-preview-group>
   </div>
 </template>
 
@@ -215,6 +231,7 @@
   import MsButton from '@/components/pure/ms-button/index.vue';
   import MsIcon from '@/components/pure/ms-icon-font/index.vue';
   import MsList from '@/components/pure/ms-list/index.vue';
+  import CopyImageButton from './copyImageButton.vue';
 
   import { useI18n } from '@/hooks/useI18n';
   import useAsyncTaskStore from '@/store/modules/app/asyncTask';
@@ -285,6 +302,17 @@
 
   function getThumbSrc(item: MsFileItem) {
     return thumbSrcMap.value[item.uid] || item.url || '';
+  }
+
+  async function getCopySource(item: MsFileItem) {
+    const loaded = getThumbSrc(item);
+    if (loaded) return loaded;
+    if (props.getThumbnail) {
+      const source = await props.getThumbnail(item);
+      if (source) thumbSrcMap.value[item.uid] = source;
+      return source;
+    }
+    return '';
   }
 
   async function loadThumbnails(list: MsFileItem[]) {
