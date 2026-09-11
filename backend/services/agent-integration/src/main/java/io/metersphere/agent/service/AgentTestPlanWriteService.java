@@ -95,6 +95,7 @@ public class AgentTestPlanWriteService {
         dto.setProjectId(plan.getProjectId());
         dto.setStatus(plan.getStatus());
         dto.setNum(plan.getNum());
+        dto.setUpdateTime(plan.getUpdateTime());
         dto.setAssociatedCaseCount(associated);
         return dto;
     }

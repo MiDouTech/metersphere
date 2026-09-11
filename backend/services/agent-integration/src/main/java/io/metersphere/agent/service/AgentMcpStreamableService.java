@@ -118,6 +118,8 @@ public class AgentMcpStreamableService {
             throw new MSException("Agent MCP tool requests are too frequent. Please retry later.");
         }
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
+        // Recheck scope even when a previous result is cached for this token.
+        agentMcpToolRegistry.find(name).ifPresent(handler -> AgentScopeAssert.assertScope(handler.requiredScope()));
         if (agentMcpToolRegistry.isWriteTool(name) && StringUtils.isBlank(effectiveIdempotencyKey)) {
             throw new MSException("IDEMPOTENCY_KEY_REQUIRED");
         }

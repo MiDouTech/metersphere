@@ -15,7 +15,46 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 
 ## MCP Tools
 
+### 维护与执行历史（需要部署含这些工具的后端）
+
+下列工具通过 `/api/mcp` 转发到原生工具，复用业务权限和幂等校验。
+写工具必须传非空 `requestId`；同一次请求重试使用相同 ID 和完全相同的参数。
+
+| Tool | 主要参数 | Scope |
+| --- | --- | --- |
+| `metersphere.functional.submit.batch` | projectId、results、requestId；可选 failFast、testPlanId、executionTaskId | FUNCTIONAL_SUBMIT |
+| `metersphere.execution.search` | projectId；可选 keyword、status、createdAfter、createdBefore、current、pageSize | AI_EXECUTION_READ |
+| `metersphere.execution.preflight` | projectId、environmentProfileId、runnerType、requestId；取得恢复所需 preflightId | TASK_CLAIM |
+| `metersphere.execution.checkpoint.resume` | taskId、checkpointId、resumeToken、preflightId、requestId | AI_EXECUTION_RUN |
+| `metersphere.bug.transitions` | projectId、bugId | BUG_READ |
+| `metersphere.bug.transition` | projectId、bugId、transition、requestId | BUG_WRITE |
+| `metersphere.test_plan.get` | testPlanId；响应包含 updateTime | PLAN_READ |
+| `metersphere.test_plan.update` | projectId、testPlanId、expectedUpdateTime、patch、requestId | PLAN_WRITE |
+| `metersphere.test_plan.disassociate_cases` | projectId、testPlanId、associationIds、requestId | PLAN_WRITE |
+
+- 批量回写最多 100 条。身份、项目/计划/用例归属在写入前校验；业务失败逐条返回
+  `errors[{caseId,code,message,traceId}]`。响应包含 total/success/failed/skipped，
+  failFast=true 时未尝试的后续项计入 skipped。成功项独立提交并持久化幂等记录。
+  修正失败项后应以新 requestId 只提交需重试的项；幂等保留期沿用平台配置。
+- 历史查询只返回 PERSONAL_MCP / EXTERNAL_MCP_AGENT，包含终态，按创建时间、ID 倒序。
+  时间条件为包含边界的 Unix 毫秒；页码从 1 开始，每页 1–100 条。平台托管任务不在此接口中。
+- 断点恢复必须使用原断点恢复令牌及新的 PASSED 预检记录；不是 login-ready，不能跳过快照和状态校验。
+- 缺陷 transition 对象必须有 transitionId、targetStatusId、expectedUpdateTime；可选 comment、override、overrideReason。
+  流转仍受平台工作流角色和并发版本约束。
+- 计划 patch 支持 name、description、tags、plannedStartTime、plannedEndTime、automaticStatusUpdate、repeatCase、passThreshold。
+  未传字段保留；不接受 null，清空描述用空字符串、清空标签用空数组。
+  已归档或存在执行中的计划不能维护。associationIds 是 `testPlanCaseId`，不是用例库 caseId。
+  删除计划、移动分组/模块和修改计划状态不属于本组工具的编辑范围。
+
 ### 读 / 执行回写
+
+用例查询结果包含只读字段 `lastExecuteUser`（最后执行人用户 ID）和
+`lastExecuteUserName`（姓名）。适用于 `search_functional_cases`、
+`get_functional_case`、`metersphere.test_plan.cases`，以及原生远程 MCP 的
+`metersphere.functional.search/get`。不指定测试计划时读取用例库的最后执行人；
+指定计划并匹配到关联用例时读取计划记录。`includeSteps: false` 仍返回这些字段。
+未执行时值可为空；用户姓名不可解析时保留 ID，姓名可为空。
+这些字段不是分配执行人 `executeUser`，也不是回写备注中的 `executedBy`。
 
 | Tool | 说明 |
 |------|------|

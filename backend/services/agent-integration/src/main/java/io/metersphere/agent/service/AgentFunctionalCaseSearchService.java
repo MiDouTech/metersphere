@@ -178,6 +178,8 @@ public class AgentFunctionalCaseSearchService {
                     agentCase.setTestPlanCaseId(item.getId());
                     agentCase.setTestPlanId(testPlanId);
                     agentCase.setLastExecuteResult(item.getLastExecResult());
+                    agentCase.setLastExecuteUser(item.getLastExecuteUser());
+                    agentCase.setLastExecuteUserName(item.getLastExecuteUserName());
                 });
     }
 

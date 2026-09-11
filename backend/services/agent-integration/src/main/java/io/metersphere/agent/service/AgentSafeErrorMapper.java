@@ -28,6 +28,13 @@ public class AgentSafeErrorMapper {
             case "TASK_ORIGIN_CHANNEL_MISMATCH" -> "任务来源与执行通道不匹配";
             case "PERMISSION_DENIED" -> "没有执行此操作的权限";
             case "VALIDATION_ERROR" -> "请求参数校验失败";
+            case "RESOURCE_NOT_FOUND", "RESOURCE_PROJECT_MISMATCH" -> "资源不存在或不属于指定项目";
+            case "VERSION_CONFLICT" -> "数据已被更新，请重新查询后重试";
+            case "TEST_PLAN_ARCHIVED" -> "测试计划已归档，不能修改或回写";
+            case "TEST_PLAN_EXECUTING" -> "测试计划正在执行，请结束执行后再修改";
+            case "CHECKPOINT_RESUME_TOKEN_INVALID" -> "断点恢复凭据无效或已使用";
+            case "CHECKPOINT_HASH_MISMATCH" -> "断点数据校验失败，不能恢复";
+            case "PREFLIGHT_REQUIRED_FOR_RESUME" -> "请完成新的执行预检后再恢复";
             case "ENVIRONMENT_PROFILE_DISABLED" -> "所选环境执行配置已停用";
             case "MODEL_SERVICE_KEY_REF_INVALID" -> "Gateway Service Key 引用必须使用 env:// 或 vault:// 格式";
             case "CREDENTIAL_SECRET_REF_INVALID" -> "Secret 引用格式无效，请使用 env://变量名 或 vault://mount/path#field";

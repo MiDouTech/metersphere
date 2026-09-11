@@ -11,6 +11,7 @@ import io.metersphere.agent.resolver.AgentQueryResolver;
 import io.metersphere.agent.resolver.ModuleTreeMatcher;
 import io.metersphere.agent.resolver.ResolvedSearchCondition;
 import io.metersphere.functional.dto.FunctionalCasePageDTO;
+import io.metersphere.functional.dto.FunctionalCaseDetailDTO;
 import io.metersphere.functional.service.FunctionalCaseService;
 import io.metersphere.plan.dto.response.TestPlanCasePageResponse;
 import io.metersphere.plan.service.TestPlanFunctionalCaseService;
@@ -58,6 +59,54 @@ class AgentFunctionalCaseSearchServiceTests {
     @AfterEach
     void tearDown() {
         SessionUtils.clearCurrentProjectId();
+    }
+
+    @Test
+    void getWithoutStepsShouldExposeRepositoryLastExecutor() {
+        org.springframework.test.util.ReflectionTestUtils.setField(searchService,
+                "agentCaseSchemaMapper", new AgentCaseSchemaMapper());
+        SessionUtils.setCurrentProjectId("proj-001");
+        FunctionalCaseDetailDTO detail = new FunctionalCaseDetailDTO();
+        detail.setId("fc-001");
+        detail.setLastExecuteUser("repository-user");
+        detail.setLastExecuteUserName("库执行人");
+        when(functionalCaseService.getFunctionalCaseDetail(eq("fc-001"), any(), eq(false))).thenReturn(detail);
+        when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
+
+        AgentCaseDTO result = searchService.getById("fc-001", false, null);
+        Assertions.assertEquals("repository-user", result.getLastExecuteUser());
+        Assertions.assertEquals("库执行人", result.getLastExecuteUserName());
+        Assertions.assertTrue(result.getSteps().isEmpty());
+    }
+
+    @Test
+    void getInPlanShouldUsePlanExecutorIncludingUnexecutedPlan() {
+        org.springframework.test.util.ReflectionTestUtils.setField(searchService,
+                "agentCaseSchemaMapper", new AgentCaseSchemaMapper());
+        SessionUtils.setCurrentProjectId("proj-001");
+        FunctionalCaseDetailDTO detail = new FunctionalCaseDetailDTO();
+        detail.setId("fc-001");
+        detail.setName("用例");
+        detail.setLastExecuteUser("repository-user");
+        detail.setLastExecuteUserName("库执行人");
+        TestPlanCasePageResponse planCase = new TestPlanCasePageResponse();
+        planCase.setId("plan-case-001");
+        planCase.setCaseId("fc-001");
+        planCase.setLastExecuteUser("plan-user");
+        planCase.setLastExecuteUserName("计划执行人");
+        when(functionalCaseService.getFunctionalCaseDetail(eq("fc-001"), any(), eq(false))).thenReturn(detail);
+        when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
+        when(testPlanFunctionalCaseService.getFunctionalCasePage(any(), eq(false), eq("proj-001")))
+                .thenReturn(List.of(planCase));
+
+        AgentCaseDTO result = searchService.getById("fc-001", false, "plan-001");
+        Assertions.assertEquals("plan-user", result.getLastExecuteUser());
+        Assertions.assertEquals("计划执行人", result.getLastExecuteUserName());
+        planCase.setLastExecuteUser(null);
+        planCase.setLastExecuteUserName(null);
+        result = searchService.getById("fc-001", true, "plan-001");
+        Assertions.assertNull(result.getLastExecuteUser());
+        Assertions.assertNull(result.getLastExecuteUserName());
     }
 
     @Test

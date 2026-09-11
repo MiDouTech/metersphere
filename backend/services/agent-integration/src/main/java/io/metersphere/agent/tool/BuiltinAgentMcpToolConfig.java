@@ -85,6 +85,74 @@ import java.util.UUID;
 public class BuiltinAgentMcpToolConfig {
 
     @Bean
+    public AgentMcpToolHandler functionalBatchSubmitTool(io.metersphere.agent.service.AgentMcpMaintenanceService service) {
+        Map<String,Object> item = new LinkedHashMap<>(dtoSchema(AgentCaseSubmitRequest.class));
+        item.put("required", List.of("caseId", "lastExecResult"));
+        return tool("metersphere.functional.submit.batch", "Batch writeback, at most 100 results. Authorization is checked before writing; business failures are per-item. Reuse requestId only for the identical batch.",
+                AgentTokenScope.FUNCTIONAL_SUBMIT, false,
+                objectSchema(Map.of("projectId", stringSchema(), "testPlanId", stringSchema(), "executedBy", stringSchema(),
+                        "executionTaskId", stringSchema(), "failFast", Map.of("type", "boolean"), "requestId", stringSchema(),
+                        "results", Map.of("type", "array", "minItems", 1, "maxItems", 100, "items", item)), List.of("projectId", "results", "requestId")),
+                args -> service.batch(convert(args, io.metersphere.agent.dto.AgentBatchSubmitRequest.class), requiredString(args,"requestId")));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionHistoryTool(io.metersphere.agent.service.AgentMcpMaintenanceService service) {
+        return tool("metersphere.execution.search", "Search personal MCP execution history, including terminal tasks. createdAfter/createdBefore are inclusive epoch milliseconds; current/pageSize provide stable newest-first pagination.",
+                AgentTokenScope.AI_EXECUTION_READ, true, dtoSchema(io.metersphere.agent.dto.AgentExecutionHistoryRequest.class),
+                args -> service.history(convert(args, io.metersphere.agent.dto.AgentExecutionHistoryRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler executionCheckpointResumeTool(io.metersphere.agent.service.AgentMcpMaintenanceService service) {
+        return tool("metersphere.execution.checkpoint.resume", "Resume a personal task checkpoint with its one-time resumeToken and a fresh passed preflightId.",
+                AgentTokenScope.AI_EXECUTION_RUN, false,
+                objectSchema(Map.of("taskId", stringSchema(), "checkpointId", stringSchema(), "resumeToken", Map.of("type", "string", "minLength", 40, "maxLength", 128),
+                        "preflightId", stringSchema(), "requestId", stringSchema()), List.of("taskId", "checkpointId", "resumeToken", "preflightId", "requestId")),
+                args -> service.resume(requiredString(args,"taskId"), requiredString(args,"checkpointId"), convert(args,io.metersphere.agent.dto.AgentCheckpointResumeRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler bugTransitionsTool(io.metersphere.agent.service.AgentMcpMaintenanceService service) {
+        return tool("metersphere.bug.transitions", "Get the bug's allowed workflow transitions and current concurrency version.", AgentTokenScope.BUG_READ, true,
+                objectSchema(Map.of("projectId", stringSchema(), "bugId", stringSchema()), List.of("projectId", "bugId")),
+                args -> service.transitions(requiredString(args,"projectId"), requiredString(args,"bugId")));
+    }
+
+    @Bean
+    public AgentMcpToolHandler bugTransitionTool(io.metersphere.agent.service.AgentMcpMaintenanceService service) {
+        return tool("metersphere.bug.transition", "Execute an allowed workflow transition using transitionId, targetStatusId and expectedUpdateTime.", AgentTokenScope.BUG_WRITE, false,
+                objectSchema(Map.of("projectId", stringSchema(), "bugId", stringSchema(), "requestId", stringSchema(),
+                        "transition", dtoSchema(io.metersphere.bug.dto.request.BugTransitionRequest.class)), List.of("projectId", "bugId", "transition", "requestId")),
+                args -> service.transition(requiredString(args,"projectId"), requiredString(args,"bugId"),
+                        convert(asObject(args,"transition"), io.metersphere.bug.dto.request.BugTransitionRequest.class)));
+    }
+
+    @Bean
+    public AgentMcpToolHandler testPlanUpdateTool(io.metersphere.agent.service.AgentMcpMaintenanceService service) {
+        var patch = objectSchema(Map.of("name", Map.of("type","string","minLength",1,"maxLength",255), "description", stringSchema(),
+                "tags", Map.of("type","array","items",stringSchema()), "plannedStartTime", Map.of("type","integer","minimum",0),
+                "plannedEndTime", Map.of("type","integer","minimum",0), "automaticStatusUpdate",Map.of("type","boolean"),
+                "repeatCase",Map.of("type","boolean"), "passThreshold",Map.of("type","number","minimum",0,"maximum",100)), List.of());
+        return tool("metersphere.test_plan.update", "Patch plan name, description, tags, schedule or execution configuration. Omitted fields are preserved. Requires updateTime from test_plan.get; archived or executing plans are rejected.", AgentTokenScope.PLAN_WRITE, false,
+                objectSchema(Map.of("projectId",stringSchema(),"testPlanId",stringSchema(),"expectedUpdateTime",Map.of("type","integer"),"patch",patch,"requestId",stringSchema()),List.of("projectId","testPlanId","expectedUpdateTime","patch","requestId")),
+                args -> service.updatePlan(requiredString(args,"projectId"),requiredString(args,"testPlanId"),optionalLong(args,"expectedUpdateTime"),asObject(args,"patch")));
+    }
+
+    @Bean
+    public AgentMcpToolHandler testPlanDisassociateTool(io.metersphere.agent.service.AgentMcpMaintenanceService service) {
+        return tool("metersphere.test_plan.disassociate_cases", "Remove functional-case associations using testPlanCaseId values, not repository caseIds. At most 100; executing or archived plans are rejected.", AgentTokenScope.PLAN_WRITE, false,
+                objectSchema(Map.of("projectId",stringSchema(),"testPlanId",stringSchema(),"associationIds",Map.of("type","array","minItems",1,"maxItems",100,"uniqueItems",true,"items",stringSchema()),"requestId",stringSchema()),List.of("projectId","testPlanId","associationIds","requestId")),
+                args -> service.disassociate(requiredString(args,"projectId"),requiredString(args,"testPlanId"),stringList(args,"associationIds")));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String,Object> asObject(Map<String,Object> args, String key) {
+        if (!(args.get(key) instanceof Map<?,?>)) throw new MSException("VALIDATION_ERROR");
+        return (Map<String,Object>)args.get(key);
+    }
+
+    @Bean
     public AgentMcpToolHandler assetCatalogSearchTool(TestAssetCatalogService service) {
         return tool("metersphere.asset.catalog.search","Search published test-asset catalog metadata.",AgentTokenScope.AI_ASSET_READ,true,
                 objectSchema(Map.of("projectId",stringSchema(),"assetTypes",Map.of("type","array","minItems",1,"maxItems",11,"uniqueItems",true,"items",Map.of("type","string","enum",List.of("CASE","DOCUMENT","PLAN","DATASET","ENVIRONMENT","PAGE_OBJECT","BUSINESS_FLOW","COMMON_STEP","API_DEFINITION","EVIDENCE","BUG"))),"keyword",stringSchema(),"status",Map.of("type","string","enum",List.of("PUBLISHED")),"updatedAfter",Map.of("type","integer","minimum",0),"cursor",stringSchema(),"limit",Map.of("type","integer","minimum",1,"maximum",100)),List.of("projectId","assetTypes")),
@@ -268,10 +336,10 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     @Bean
-    public AgentMcpToolHandler testPlanGetTool(AgentTestPlanWriteService service) {
+    public AgentMcpToolHandler testPlanGetTool(io.metersphere.agent.service.AgentMcpMaintenanceService service) {
         return tool("metersphere.test_plan.get", "Get test plan detail", AgentTokenScope.PLAN_READ, true,
                 objectSchema(Map.of("testPlanId", stringSchema()), List.of("testPlanId")),
-                args -> service.get(requiredString(args, "testPlanId")));
+                args -> service.getPlan(requiredString(args, "testPlanId")));
     }
 
     @Bean

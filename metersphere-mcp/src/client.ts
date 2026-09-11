@@ -51,6 +51,33 @@ export function loadConfig(): MsConfig {
 export class MeterSphereClient {
   constructor(private readonly config: MsConfig) {}
 
+  async callNativeTool(name: string, args: Record<string, unknown>): Promise<{
+    content: Array<{ type: "text"; text: string }>;
+    isError?: boolean;
+  }> {
+    try {
+      const response = await this.request<{
+        result?: { content: Array<{ type: "text"; text: string }>; isError?: boolean };
+        error?: { code: number; message: string; data?: unknown };
+      }>("POST", "/api/mcp", {
+        jsonrpc: "2.0", id: crypto.randomUUID(), method: "tools/call", params: { name, arguments: args },
+      });
+      if (response.error) {
+        return { isError: true, content: [{ type: "text", text: JSON.stringify(response.error) }] };
+      }
+      if (!response.result || !Array.isArray(response.result.content)) {
+        throw new Error("MeterSphere MCP response is invalid");
+      }
+      return response.result;
+    } catch (error) {
+      return { isError: true, content: [{ type: "text", text: JSON.stringify({
+        code: error instanceof MsApiError ? "MCP_HTTP_ERROR" : "MCP_TRANSPORT_ERROR",
+        message: "无法完成 MCP 请求，请检查连接、身份和服务状态后重试",
+        ...(error instanceof MsApiError ? { status: error.status } : {}),
+      }) }] };
+    }
+  }
+
   private headers(contentType = "application/json"): Record<string, string> {
     return {
       Authorization: `Bearer ${this.config.agentToken}`,

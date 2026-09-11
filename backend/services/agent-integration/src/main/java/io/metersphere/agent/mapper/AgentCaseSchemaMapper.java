@@ -36,6 +36,8 @@ public class AgentCaseSchemaMapper {
         target.setTags(source.getTags());
         target.setPriority(extractPriority(source.getCustomFields(), null));
         target.setLastExecuteResult(source.getLastExecuteResult());
+        target.setLastExecuteUser(source.getLastExecuteUser());
+        target.setLastExecuteUserName(source.getLastExecuteUserName());
         return target;
     }
 
@@ -50,10 +52,17 @@ public class AgentCaseSchemaMapper {
         target.setTestPlanId(source.getTestPlanId());
         target.setTestPlanCaseId(source.getId());
         target.setLastExecuteResult(source.getLastExecResult());
+        target.setLastExecuteUser(source.getLastExecuteUser());
+        target.setLastExecuteUserName(source.getLastExecuteUserName());
         return target;
     }
 
     public void enrichDetail(AgentCaseDTO target, FunctionalCaseDetailDTO detail, List<String> warnings) {
+        // Steps come from the repository; plan execution metadata must remain plan-specific.
+        if (StringUtils.isBlank(target.getTestPlanId()) && StringUtils.isBlank(target.getTestPlanCaseId())) {
+            target.setLastExecuteUser(detail.getLastExecuteUser());
+            target.setLastExecuteUserName(detail.getLastExecuteUserName());
+        }
         target.setCaseEditType(detail.getCaseEditType());
         target.setPrerequisite(detail.getPrerequisite());
         target.setPriority(StringUtils.defaultIfBlank(detail.getFunctionalPriority(), target.getPriority()));
