@@ -214,6 +214,8 @@ jobs:
       - name: Build and store backend image in CNB registry
         uses: docker/build-push-action@v6
         with:
+          provenance: false
+          sbom: false
           context: ${{ needs.prepare.outputs.backend_context }}
           file: ${{ needs.prepare.outputs.backend_dockerfile }}
           push: true
