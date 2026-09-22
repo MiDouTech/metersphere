@@ -3,6 +3,11 @@ name: Build And Store Artifacts In CNB
 on:
   workflow_dispatch:
     inputs:
+      publish_test:
+        description: 是否发布到测试环境；选择否时 CNB 更新提交会添加 [skip ci]
+        required: true
+        default: true
+        type: boolean
       version:
         description: "制品版本号，留空则使用日期+短SHA"
         required: false
@@ -10,7 +15,6 @@ on:
   push:
     branches:
       - v3.x
-      - main
 
 permissions:
   contents: read
@@ -384,6 +388,6 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: update build metadata ${VERSION} [skip ci]"
+          git commit -m "chore: update build metadata ${VERSION}${{ github.event_name == 'workflow_dispatch' && inputs.publish_test == false && ' [skip ci]' || '' }}"
           git -c "http.https://cnb.cool/.extraheader=AUTHORIZATION: basic ${basic}" \
             push origin "HEAD:${default_branch}"
