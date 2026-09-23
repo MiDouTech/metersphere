@@ -293,6 +293,9 @@ public class PermissionConstants {
 
     /*------ start: AI_EXECUTION ------*/
     public static final String AI_EXECUTION_READ = "AI_EXECUTION:READ";
+    public static final String QUALITY_READ = "QUALITY:READ";
+    public static final String QUALITY_POLICY_MANAGE = "QUALITY_POLICY:MANAGE";
+    public static final String QUALITY_POLICY_PUBLISH = "QUALITY_POLICY:PUBLISH";
     public static final String AI_EXECUTION_RUN = "AI_EXECUTION:RUN";
     public static final String AI_EXECUTION_CANCEL = "AI_EXECUTION:CANCEL";
     public static final String AI_EXECUTION_CONFIRM = "AI_EXECUTION:CONFIRM";

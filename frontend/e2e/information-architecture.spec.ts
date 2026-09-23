@@ -132,12 +132,13 @@ test('权限控制只暴露角色入口，角色表头完整且管理员不可�
   await expect(page.getByText('用户组', { exact: true })).toHaveCount(0);
 });
 
-test('Agent 仅保留一套导航，Agent 集成权限与后端 Token 权限一致', async ({ page }) => {
+test('个人接入仅保留一套导航，旧 Agent 地址转到同一 Token 维护页', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await openAuthenticated(page, '/#/agent/access');
-  await expect(
-    page.locator('.center-side .arco-menu-item').filter({ hasText: 'Agent 集成', visible: true })
-  ).toHaveCount(1);
+  await expect(page).toHaveURL(/\/setting\/personal-access\/access/);
+  await expect(page.locator('.center-side .arco-menu-item').filter({ hasText: '个人接入', visible: true })).toHaveCount(
+    1
+  );
   await expect(page.getByText('接入配置', { exact: true })).toHaveCount(0);
   await expect(page.getByText('我的 Agent Token', { exact: true }).first()).toBeVisible();
   await expect(

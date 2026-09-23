@@ -119,28 +119,28 @@ export const pathMap: PathMapItem[] = [
   },
   {
     key: 'AGENT',
-    locale: 'Agent',
+    locale: '执行配置（兼容入口）',
     route: RouteEnum.AGENT,
     permission: ['AI_EXECUTION:READ'],
     level: MENU_LEVEL[2],
     children: [
       {
         key: 'AGENT_LIST',
-        locale: 'Agent 列表',
+        locale: '执行器管理',
         route: RouteEnum.AGENT_LIST,
         permission: ['AI_EXECUTION:READ'],
         level: MENU_LEVEL[2],
       },
       {
         key: 'AGENT_CAPABILITY',
-        locale: '能力与授权',
+        locale: '运行告警',
         route: RouteEnum.AGENT_CAPABILITY,
         permission: ['AI_EXECUTION:READ'],
         level: MENU_LEVEL[2],
       },
       {
         key: 'AGENT_QUEUE',
-        locale: '调度队列',
+        locale: '租约与调度',
         route: RouteEnum.AGENT_QUEUE,
         permission: ['AI_EXECUTION:READ'],
         level: MENU_LEVEL[2],
@@ -154,7 +154,7 @@ export const pathMap: PathMapItem[] = [
       },
       {
         key: 'AGENT_ACCESS',
-        locale: 'Agent 集成',
+        locale: '个人接入',
         route: RouteEnum.AGENT_ACCESS,
         permission: ['AI_EXECUTION:READ'],
         level: MENU_LEVEL[2],

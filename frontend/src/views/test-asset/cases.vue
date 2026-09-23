@@ -9,10 +9,16 @@
           >
         </div>
         <a-space class="asset-toolbar-actions">
-          <a-button v-permission="['AI_EXECUTION:READ']" @click="router.push({ name: 'AgentPageObject' })"
+          <a-button
+            v-if="userStore.isAdmin"
+            v-permission="['AI_EXECUTION:READ']"
+            @click="router.push({ name: 'AgentPageObject' })"
             >页面对象</a-button
           >
-          <a-button v-permission="['AI_EXECUTION:READ']" @click="router.push({ name: 'AgentBusinessFlow' })"
+          <a-button
+            v-if="userStore.isAdmin"
+            v-permission="['AI_EXECUTION:READ']"
+            @click="router.push({ name: 'AgentBusinessFlow' })"
             >业务流</a-button
           >
           <a-button
@@ -423,11 +429,14 @@
     retryCaseAssetHistorySyncJob,
     updateCaseAssetCatalog,
   } from '@/api/modules/case-management/featureCase';
+  import { useUserStore } from '@/store';
   import useAppStore from '@/store/modules/app';
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { CaseManagementTable } from '@/models/caseManagement/featureCase';
   import { TestAssetRouteEnum } from '@/enums/routeEnum';
+
+  const userStore = useUserStore();
 
   const router = useRouter();
   const appStore = useAppStore();

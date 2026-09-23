@@ -142,6 +142,10 @@
       </a-table>
     </MsCard>
     <a-drawer v-model:visible="detailVisible" :title="`${config.title}详情`" :width="560" unmount-on-close>
+      <a-space v-if="detail" class="mb-4">
+        <a-link @click="openVersions(detail)">版本与历史快照</a-link>
+        <a-link @click="openRelations(detail)">引用关系与关联缺陷</a-link>
+      </a-space>
       <a-descriptions v-if="detail" :column="1" bordered>
         <a-descriptions-item label="名称">{{ detail.name }}</a-descriptions-item>
         <a-descriptions-item label="资产 ID">{{ detail.id }}</a-descriptions-item>
@@ -315,7 +319,7 @@
       type: 'EVIDENCE',
       title: '执行证据',
       description: 'Agent/Runner 回传的截图、HAR 和附件证据。',
-      source: '/case-management/automationExecution',
+      source: '/execution/tasks',
     },
     'bugs': {
       type: 'BUG',

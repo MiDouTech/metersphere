@@ -1,3 +1,5 @@
+import { executionLocation } from '@/utils/execution-navigation';
+
 import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
 import { DEFAULT_LAYOUT } from '../base';
@@ -48,16 +50,10 @@ const CaseManagement: AppRouteRecordRaw = {
     // 创建用例&编辑用例
     {
       path: 'automation-execution',
-      name: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
-      component: () => import('@/views/bug-management/automationExecution/index.vue'),
-      meta: {
-        locale: 'menu.bugManagement.automationExecution',
-        adminOnly: true,
-        roles: ['AI_EXECUTION:READ'],
-        resourceCode: 'FUNCTIONAL_CASE_AUTOMATION_EXECUTION_TAB',
-        isTopMenu: true,
-        keepModuleAlive: true,
-      },
+      name: 'caseManagementAutomationExecution',
+      component: null,
+      redirect: (to) => executionLocation(to.query),
+      meta: { hideInMenu: true },
     },
     // 创建用例&编辑用例
     {

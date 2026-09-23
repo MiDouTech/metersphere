@@ -1,0 +1,14 @@
+[
+  {
+    "id": "EXECUTION_QUALITY",
+    "name": "执行质量",
+    "type": "PROJECT",
+    "children": [
+      {"id": "QUALITY", "name": "质量策略读取", "permissions": [{"id": "QUALITY:READ", "name": "查看质量策略"}]},
+      {"id": "QUALITY_POLICY", "name": "质量策略管理", "permissions": [
+        {"id": "QUALITY_POLICY:MANAGE", "name": "编辑和校验策略草稿"},
+        {"id": "QUALITY_POLICY:PUBLISH", "name": "发布策略版本"}
+      ]}
+    ]
+  }
+]

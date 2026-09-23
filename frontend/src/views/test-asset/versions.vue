@@ -9,6 +9,12 @@
         >
       </div>
       <div class="mb-4 flex flex-wrap items-center gap-3">
+        <a-link
+          v-if="query.assetType && catalogPaths[query.assetType]"
+          @click="router.push(catalogPaths[query.assetType])"
+        >
+          查看此类资产目录
+        </a-link>
         <a-input-search
           v-model="query.keyword"
           class="w-[260px]"
@@ -141,6 +147,16 @@
   const versions = ref<TestAssetVersion[]>([]);
   const categories = ref<TestAssetCategory[]>([]);
   const total = ref(0);
+  const catalogPaths: Record<string, string> = {
+    DOCUMENT: '/test-assets/documents',
+    CASE: '/test-assets/cases/project',
+    DATASET: '/test-assets/datasets',
+    ENVIRONMENT: '/test-assets/environments',
+    COMMON_STEP: '/test-assets/common-steps',
+    API_DEFINITION: '/test-assets/apis',
+    EVIDENCE: '/test-assets/evidence',
+    BUG: '/test-assets/bugs',
+  };
   const query = reactive({
     keyword: '',
     assetType: String(route.query.assetType || '') || (undefined as string | undefined),

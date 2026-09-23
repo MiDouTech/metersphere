@@ -101,7 +101,7 @@
             );
           }
           appStore.setTopMenus(filterMenuTopRouter);
-          setCurrentTopMenu(name as string);
+          setCurrentTopMenu((newRoute.meta.activeMenu || name) as string);
           return;
         }
       }
