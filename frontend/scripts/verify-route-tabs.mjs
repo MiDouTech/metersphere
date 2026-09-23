@@ -36,12 +36,14 @@ includesAll(testAssetRoutes, [
 includesAll(caseAssets, ['pageCaseAssetCatalogs', 'catalogQuery', 'caseQuery', '用例项目仅是资产分类目录', 'CaseAssetFileImport'], 'case asset page');
 excludesAll(caseAssets, ['pageAccessibleProjects', '系统级用例资产暂未开放'], 'case asset page');
 
-const agentRoutes = readFrontend('src/router/routes/modules/agent.ts');
+const agentRoutes = readFrontend('src/router/routes/execution-settings.ts') + readFrontend('src/router/routes/modules/execution.ts');
+const legacyAgentRoutes = readFrontend('src/router/routes/modules/agent.ts');
+includesAll(legacyAgentRoutes, ['executionLocation(to.query)', 'safeExecutionQuery(to.query)', "hideInMenu: true"], 'legacy Agent redirects');
 const agentPage = readFrontend('src/views/agent/components/AgentPage.vue');
 const agentAccess = readFrontend('src/views/agent/access.vue');
 const agentIntegration = readFrontend('src/views/setting/system/agentIntegration/index.vue');
 includesAll(agentRoutes, [
-  "icon: 'icon-icon_robot'", "path: 'access'", "locale: 'Agent 集成'",
+  "icon: 'icon-icon_robot'", "path: 'access'", "locale: '个人接入'",
   "roles: ['SYSTEM_PERSONAL_AI_AGENT:READ']", "resourceCode: 'AGENT_INTEGRATION_PAGE'",
   "name: 'AgentEnvironmentProfile'", "name: 'AgentCredentialReference'", "name: 'AgentModelProfile'",
   "name: 'AgentPromptTemplate'", "name: 'AgentLoginProfile'", "name: 'AgentPageObject'",
@@ -63,6 +65,7 @@ excludesAll(topMenu, [
   '(name as string).includes(item.name as string)',
 ], 'top menu route name substring matching');
 
+check((testAssetRoutes.match(/isTopMenu: true/g) || []).length === 3, 'asset primary navigation must contain exactly three object types');
 const testAssetPage = readFrontend('src/views/test-asset/components/TestAssetPage.vue');
 check(!testAssetPage.includes('TestAssetTabs'), 'test asset pages must not render a second same-name tab row');
 

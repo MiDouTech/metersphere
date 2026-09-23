@@ -2,24 +2,30 @@
   <div class="automation-execution-page">
     <div class="automation-execution-header">
       <div>
-        <div class="text-[18px] font-medium text-[var(--color-text-1)]">
-          {{ t('menu.bugManagement.automationExecution') }}
-        </div>
+        <div class="text-[18px] font-medium text-[var(--color-text-1)]"> 执行任务 </div>
         <div class="mt-[4px] text-[12px] text-[var(--color-text-3)]">
           {{ t('bugManagement.automationExecution.subtitle') }}
         </div>
       </div>
       <div class="flex flex-wrap gap-[8px]">
         <a-button
-          v-if="!executionTaskId && !isCreating"
+          v-if="!executionTaskId && !isCreating && canUsePlatform"
           v-permission="['AI_EXECUTION:RUN']"
           type="primary"
           @click="startCreating"
         >
           创建执行任务
         </a-button>
+        <a-button
+          v-if="executionTaskId"
+          @click="
+            router.push({ path: '/test-assets/relations', query: { assetType: 'TASK', assetId: executionTaskId } })
+          "
+          >关联资产与缺陷</a-button
+        >
         <a-button v-if="executionTaskId" @click="backToTaskList">返回任务列表</a-button>
         <a-button v-if="isCreating" @click="backToTaskList">返回任务列表</a-button>
+        <a-button v-if="canAccessPersonal" @click="router.push({ name: 'agentAccess' })">个人接入</a-button>
         <a-button @click="refreshAll">{{ t('common.refresh') }}</a-button>
         <a-button
           v-if="task?.confirmRequired || task?.status === 'WAITING_CONFIRMATION'"
@@ -67,7 +73,12 @@
       </div>
     </div>
 
-    <section v-if="!executionTaskId && !isCreating" class="task-center-panel">
+    <a-alert v-if="!executionTaskId && !canUsePlatform" type="info" class="mb-4">
+      平台模型执行未启用或当前账号无平台创建权限。外部 Agent 请通过已授权的 MCP
+      接入创建任务；网页无模型创建及审批尚未开放。
+    </a-alert>
+    <a-alert v-if="taskListError" type="error" class="mb-4">{{ taskListError }}</a-alert>
+    <section v-if="!executionTaskId && (!isCreating || !canUsePlatform)" class="task-center-panel">
       <div class="mb-[12px] flex flex-wrap items-center gap-[8px]">
         <a-input-search
           v-model:model-value="taskSearch.keyword"
@@ -83,7 +94,14 @@
         <a-select v-model:model-value="taskSearch.verdict" class="w-[170px]" allow-clear placeholder="业务结论">
           <a-option v-for="verdict in taskVerdicts" :key="verdict" :value="verdict">{{ verdict }}</a-option>
         </a-select>
-        <a-select v-model:model-value="taskSearch.executorChannel" class="w-[190px]" allow-clear placeholder="执行通道">
+        <a-checkbox v-model="showAdvancedFilters">高级筛选与技术列</a-checkbox>
+        <a-select
+          v-if="showAdvancedFilters"
+          v-model:model-value="taskSearch.executorChannel"
+          class="w-[190px]"
+          allow-clear
+          placeholder="执行通道"
+        >
           <a-option value="MODEL_API_RUNNER">平台模型执行器</a-option>
           <a-option value="EXTERNAL_MCP_AGENT">个人 MCP Agent</a-option>
         </a-select>
@@ -105,7 +123,7 @@
               <a-tag :color="verdictColor(record.verdict)">{{ record.verdict || '待判定' }}</a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="执行来源 / 通道" :width="230">
+          <a-table-column v-if="showAdvancedFilters" title="执行来源 / 通道" :width="230">
             <template #cell="{ record }">
               {{ taskOriginLabel(record.taskOrigin) }} / {{ executorChannelLabel(record.executorChannel) }}
             </template>
@@ -115,11 +133,11 @@
               >{{ (record.successCount || 0) + (record.failedCount || 0) }}/{{ record.totalCount || 0 }}</template
             >
           </a-table-column>
-          <a-table-column title="尝试" :width="90">
+          <a-table-column v-if="showAdvancedFilters" title="尝试" :width="90">
             <template #cell="{ record }">{{ record.attemptCount || 0 }}/{{ record.maxAttempts || 3 }}</template>
           </a-table-column>
-          <a-table-column title="创建时间" :width="180">
-            <template #cell="{ record }">{{ formatTime(record.createTime) }}</template>
+          <a-table-column title="更新时间" :width="180">
+            <template #cell="{ record }">{{ formatTime(record.updateTime || record.createTime) }}</template>
           </a-table-column>
         </template>
       </a-table>
@@ -257,7 +275,7 @@
             <template #action><a-button size="mini" @click="loadObservability">重试</a-button></template>
           </a-alert>
           <a-collapse v-if="task" class="mt-[12px]" :bordered="false">
-            <a-collapse-item key="governance" header="冻结上下文、模型调用与运行治理">
+            <a-collapse-item v-if="userStore.isAdmin" key="governance" header="冻结上下文、模型调用与运行治理">
               <a-spin :loading="observabilityLoading" class="w-full">
                 <a-descriptions :column="2" size="small" bordered>
                   <a-descriptions-item label="Preflight 状态">{{
@@ -697,14 +715,22 @@
     type TestAssetCatalogType,
   } from '@/api/modules/ai-execution';
   import { useI18n } from '@/hooks/useI18n';
-  import { useAppStore } from '@/store';
+  import { useAppStore, useUserStore } from '@/store';
   import useAIStore from '@/store/modules/setting/ai';
+  import { safeExecutionQuery } from '@/utils/execution-navigation';
+  import { hasAnyPermission, hasPageVisible } from '@/utils/permission';
 
   const route = useRoute();
   const router = useRouter();
   const { t } = useI18n();
   const appStore = useAppStore();
   const aiStore = useAIStore();
+  const userStore = useUserStore();
+  const canAccessPersonal = computed(
+    () => hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM']) && hasPageVisible('AGENT_INTEGRATION_PAGE')
+  );
+  const taskListError = ref('');
+  const showAdvancedFilters = ref(Boolean(route.query.executorChannel));
 
   const loading = ref(false);
   const actionLoading = ref(false);
@@ -718,10 +744,10 @@
   const taskList = ref<AiExecutionTask[]>([]);
   const taskListTotal = ref(0);
   const taskSearch = reactive({
-    keyword: '',
-    status: undefined as string | undefined,
-    verdict: undefined as string | undefined,
-    executorChannel: undefined as AiExecutorChannel | undefined,
+    keyword: String(route.query.keyword || ''),
+    status: String(route.query.status || '') || undefined,
+    verdict: String(route.query.verdict || '') || undefined,
+    executorChannel: (String(route.query.executorChannel || '') || undefined) as AiExecutorChannel | undefined,
     current: 1,
     pageSize: 20,
   });
@@ -772,9 +798,10 @@
   const platformEnvironmentProfiles = ref<AiEnvironmentProfile[]>([]);
   const platformCredentialReferences = ref<AiCredentialReference[]>([]);
   const platformModelProfiles = ref<AiModelProfile[]>([]);
+  const canUsePlatform = computed(() => userStore.isAdmin && platformModelProfiles.value.length > 0);
   const platformPromptTemplates = ref<AiPromptTemplateVersion[]>([]);
   async function loadExecutionProfiles() {
-    if (!appStore.currentProjectId) return;
+    if (!userStore.isAdmin || !appStore.currentProjectId) return;
     const [e, c, m, p] = await Promise.all([
       listAiEnvironmentProfiles(appStore.currentProjectId),
       listAiCredentialReferences(appStore.currentProjectId),
@@ -821,7 +848,9 @@
   const lastResolvedPrompt = ref('');
   let pollTimer: number | undefined;
 
-  const executionTaskId = computed(() => (route.query.executionTaskId as string | undefined) || undefined);
+  const executionTaskId = computed(
+    () => (route.params.id as string | undefined) || (route.query.executionTaskId as string | undefined) || undefined
+  );
   const isCreating = computed(() => route.query.creating === '1');
   const selectedAssetRef = computed(() => {
     const assetType = String(route.query.assetType || '');
@@ -1014,6 +1043,7 @@
   async function reloadTaskList() {
     if (!appStore.currentProjectId || executionTaskId.value) return;
     taskListLoading.value = true;
+    taskListError.value = '';
     try {
       const response = await searchAiExecutionTasks({
         projectId: appStore.currentProjectId,
@@ -1026,21 +1056,31 @@
       });
       taskList.value = response.items || [];
       taskListTotal.value = response.total || 0;
+    } catch {
+      taskList.value = [];
+      taskListTotal.value = 0;
+      taskListError.value = '任务加载失败，请检查项目权限或稍后重试';
     } finally {
       taskListLoading.value = false;
     }
   }
 
   async function openTask(record: TableData) {
-    await router.push({ query: { ...route.query, executionTaskId: String(record.id) } });
+    await router.push({
+      name: 'AgentExecutionDetail',
+      params: { id: String(record.id) },
+      query: {
+        ...safeExecutionQuery(route.query),
+        keyword: taskSearch.keyword,
+        status: taskSearch.status,
+        verdict: taskSearch.verdict,
+        executorChannel: taskSearch.executorChannel,
+      },
+    });
   }
 
   async function backToTaskList() {
-    if (route.path === '/agent/execution/detail') {
-      await router.push('/agent/queue');
-      return;
-    }
-    const query = { ...route.query };
+    const query = safeExecutionQuery(route.query);
     delete query.executionTaskId;
     delete query.creating;
     delete query.caseIds;
@@ -1048,11 +1088,11 @@
     delete query.assetId;
     delete query.assetName;
     delete query.assetVersionId;
-    await router.push({ query });
+    await router.push({ path: '/execution/tasks', query });
   }
 
   async function startCreating() {
-    await router.push({ query: { creating: '1' } });
+    await router.push({ path: '/execution/tasks', query: { ...safeExecutionQuery(route.query), creating: '1' } });
   }
 
   function hydrateExplicitCasesFromRoute() {
@@ -1096,6 +1136,7 @@
       return;
     }
     loading.value = true;
+    task.value = undefined;
     try {
       task.value = await getAiExecutionTask(executionTaskId.value);
       if (task.value.providerId) {
@@ -1109,6 +1150,7 @@
   }
 
   async function loadObservability() {
+    if (!userStore.isAdmin) return;
     if (!executionTaskId.value) {
       observability.value = undefined;
       observabilityError.value = '';
@@ -1119,7 +1161,7 @@
     try {
       observability.value = await getAiExecutionObservability(executionTaskId.value);
     } catch (error: any) {
-      observabilityError.value = error?.message || '加载执行治理信息失败，请稍后重试';
+      observabilityError.value = '加载执行治理信息失败，请稍后重试';
     } finally {
       observabilityLoading.value = false;
     }
@@ -1308,7 +1350,9 @@
       });
       Message.success(t('bugManagement.automationExecution.taskCreated'));
       await router.replace({
-        query: { executionTaskId: taskCreated.id },
+        name: 'AgentExecutionDetail',
+        params: { id: taskCreated.id },
+        query: { pId: appStore.currentProjectId },
       });
     } finally {
       createLoading.value = false;
@@ -1426,8 +1470,11 @@
       draftForm.credentialReferenceId = '';
       draftForm.modelProfileId = '';
       draftForm.promptTemplateId = '';
-      loadEnvironmentOptions();
-      loadExecutionProfiles();
+      if (userStore.isAdmin) {
+        loadEnvironmentOptions();
+        loadExecutionProfiles();
+      }
+      reloadTaskList();
     },
     { immediate: true }
   );
@@ -1460,8 +1507,10 @@
   );
 
   onMounted(() => {
-    aiStore.getAISourceNameList();
-    loadExecutionProfiles();
+    if (userStore.isAdmin) {
+      aiStore.getAISourceNameList();
+      loadExecutionProfiles();
+    }
   });
 
   onBeforeUnmount(() => {

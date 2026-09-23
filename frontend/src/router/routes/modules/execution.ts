@@ -1,30 +1,52 @@
+import { safeExecutionQuery } from '@/utils/execution-navigation';
+
+import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+
 import { DEFAULT_LAYOUT } from '../base';
 import type { AppRouteRecordRaw } from '../types';
 
 const Execution: AppRouteRecordRaw = {
   path: '/execution',
   name: 'ExecutionQuality',
-  redirect: '/execution/quality-policy',
+  redirect: '/execution/tasks',
   component: DEFAULT_LAYOUT,
   meta: {
-    locale: 'menu.executionQuality',
+    locale: 'menu.executionCenter',
     icon: 'icon-icon_robot',
     order: 6,
-    roles: ['QUALITY:READ'],
     resourceCode: 'EXECUTION_QUALITY_MENU',
+    hideChildrenInMenu: true,
+    roles: ['AI_EXECUTION:READ'],
   },
   children: [
     {
-      path: 'quality-policy',
-      name: 'ExecutionQualityPolicy',
-      component: () => import('@/views/execution/quality-policy.vue'),
+      path: 'tasks',
+      name: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
+      component: () => import('@/views/execution/tasks.vue'),
       meta: {
-        locale: 'menu.executionQuality.policy',
-        roles: ['QUALITY:READ'],
-        resourceCode: 'EXECUTION_QUALITY_POLICY_PAGE',
+        locale: 'menu.executionCenter.tasks',
+        roles: ['AI_EXECUTION:READ'],
+        resourceCode: 'FUNCTIONAL_CASE_AUTOMATION_EXECUTION_TAB',
         isTopMenu: true,
-        keepModuleAlive: true,
       },
+    },
+    {
+      path: 'tasks/:id',
+      name: 'AgentExecutionDetail',
+      component: () => import('@/views/execution/tasks.vue'),
+      meta: {
+        locale: 'menu.executionCenter.detail',
+        roles: ['AI_EXECUTION:READ'],
+        resourceCode: 'AGENT_EXECUTION_DETAIL_PAGE',
+        hideInMenu: true,
+        activeMenu: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
+      },
+    },
+    {
+      path: 'quality-policy',
+      component: null,
+      redirect: (to) => ({ path: '/setting/execution-settings/quality-policy', query: safeExecutionQuery(to.query) }),
+      meta: { hideInMenu: true },
     },
   ],
 };

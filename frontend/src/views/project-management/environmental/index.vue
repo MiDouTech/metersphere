@@ -1,5 +1,10 @@
 <template>
   <div class="page">
+    <div class="px-4 py-2"
+      ><a-link v-permission="['PROJECT_ENVIRONMENT:READ']" @click="$router.push('/test-assets/environments')"
+        >环境资产、版本与引用</a-link
+      ></div
+    >
     <MsSplitBox>
       <template #first>
         <div class="mr-[6px] p-[16px]">

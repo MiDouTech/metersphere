@@ -2,70 +2,10 @@
   <AgentPage>
     <a-alert v-if="pageError" type="error" class="mb-4">{{ pageError }}</a-alert>
     <a-tabs v-model:active-key="queueTab" type="rounded" class="mb-4">
-      <a-tab-pane key="tasks" title="任务队列" />
       <a-tab-pane key="leases" title="执行租约" />
       <a-tab-pane key="triggers" title="调度规则" />
     </a-tabs>
-    <MsCard v-if="queueTab === 'tasks'" simple>
-      <div class="mb-4 flex flex-wrap items-center gap-3">
-        <a-input-search
-          v-model="query.keyword"
-          class="w-[260px]"
-          allow-clear
-          placeholder="搜索任务名称或 ID"
-          @search="search"
-        />
-        <a-select v-model="query.status" class="w-[180px]" allow-clear placeholder="运行状态" @change="search">
-          <a-option v-for="status in statuses" :key="status" :value="status">{{ status }}</a-option>
-        </a-select>
-        <a-select v-model="query.executorChannel" class="w-[190px]" allow-clear placeholder="执行通道" @change="search">
-          <a-option value="MODEL_API_RUNNER">平台模型执行器</a-option>
-          <a-option value="EXTERNAL_MCP_AGENT">个人 MCP Agent</a-option>
-        </a-select>
-        <a-button :loading="loading" @click="load">刷新</a-button>
-      </div>
-      <a-table
-        :data="tasks"
-        :loading="loading"
-        row-key="id"
-        :pagination="pagination"
-        @page-change="changePage"
-        @page-size-change="changePageSize"
-      >
-        <template #columns>
-          <a-table-column title="任务" :width="300">
-            <template #cell="{ record }">
-              <a-link @click="openTask(record.id)">{{ record.name || record.id }}</a-link>
-              <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ record.id }}</div>
-            </template>
-          </a-table-column>
-          <a-table-column title="运行状态" :width="170">
-            <template #cell="{ record }"
-              ><a-tag :color="statusColor(record.status)">{{ record.status }}</a-tag></template
-            >
-          </a-table-column>
-          <a-table-column title="业务结论" data-index="verdict" :width="160" />
-          <a-table-column title="来源 / 执行通道" :width="230">
-            <template #cell="{ record }">
-              {{ taskOriginLabel(record.taskOrigin) }} / {{ executorChannelLabel(record.executorChannel) }}
-            </template>
-          </a-table-column>
-          <a-table-column title="调度" data-index="dispatchMode" :width="90" />
-          <a-table-column title="进度" :width="140">
-            <template #cell="{ record }"
-              >{{ record.totalCount - record.unexecutedCount }} / {{ record.totalCount }}</template
-            >
-          </a-table-column>
-          <a-table-column title="尝试" :width="90">
-            <template #cell="{ record }">{{ record.attemptCount || 0 }} / {{ record.maxAttempts || 0 }}</template>
-          </a-table-column>
-          <a-table-column title="更新时间" :width="180">
-            <template #cell="{ record }">{{ formatTime(record.updateTime) }}</template>
-          </a-table-column>
-        </template>
-      </a-table>
-    </MsCard>
-    <MsCard v-else-if="queueTab === 'leases'" simple>
+    <MsCard v-if="queueTab === 'leases'" simple>
       <div class="mb-4 flex items-center gap-3"
         ><a-select v-model="leaseStatus" class="w-[160px]" allow-clear placeholder="租约状态" @change="loadLeases"
           ><a-option value="ACTIVE">ACTIVE</a-option><a-option value="COMPLETED">COMPLETED</a-option
@@ -158,8 +98,8 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, reactive, ref, watch } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { onMounted, reactive, ref, watch } from 'vue';
+  import { useRoute } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
@@ -172,7 +112,6 @@
   import type {
     AiCredentialReference,
     AiEnvironmentProfile,
-    AiExecutionTask,
     AiExecutorChannel,
     AiModelProfile,
     AiPromptTemplateVersion,
@@ -192,7 +131,6 @@
     listAiTaskTriggers,
     preflightAiExecution,
     rotateAiTaskTriggerSecret,
-    searchAiExecutionTasks,
     updateAiTaskTrigger,
   } from '@/api/modules/ai-execution';
   import {
@@ -203,37 +141,12 @@
   import { useAppStore } from '@/store';
 
   const appStore = useAppStore();
-  const router = useRouter();
-  const loading = ref(false);
   const pageError = ref('');
-  const queueTab = ref('tasks');
-  const tasks = ref<AiExecutionTask[]>([]);
+  const route = useRoute();
+  const queueTab = ref(route.query.tab === 'triggers' ? 'triggers' : 'leases');
   const leases = ref<AiRunnerLease[]>([]);
   const leaseStatus = ref<string>();
   const leaseLoading = ref(false);
-  const total = ref(0);
-  const statuses = [
-    'WAITING_CONFIRMATION',
-    'QUEUED',
-    'PREPARING_BROWSER',
-    'WAITING_LOGIN',
-    'WAITING_HUMAN',
-    'RUNNING',
-    'PAUSED',
-    'WRITING_BACK',
-    'SUCCESS',
-    'PARTIAL_SUCCESS',
-    'FAILED',
-    'CANCELED',
-    'EXPIRED',
-  ];
-  const query = reactive({
-    keyword: '',
-    status: undefined as string | undefined,
-    executorChannel: undefined as AiExecutorChannel | undefined,
-    current: 1,
-    pageSize: 20,
-  });
   const triggerLoading = ref(false);
   const triggerError = ref('');
   const triggerSaving = ref(false);
@@ -275,72 +188,13 @@
     responsibleUserIds: '',
     caseIds: '',
   });
-  const pagination = computed(() => ({
-    current: query.current,
-    pageSize: query.pageSize,
-    total: total.value,
-    showTotal: true,
-    showPageSize: true,
-  }));
   const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
-  function statusColor(status: string) {
-    if (['SUCCESS', 'PARTIAL_SUCCESS'].includes(status)) {
-      return 'green';
-    }
-    if (['FAILED', 'CANCELED', 'EXPIRED'].includes(status)) {
-      return 'red';
-    }
-    if (['WAITING_LOGIN', 'WAITING_HUMAN', 'PAUSED'].includes(status)) {
-      return 'orange';
-    }
-    return 'blue';
-  }
-  function taskOriginLabel(origin?: AiExecutionTask['taskOrigin']) {
-    if (origin === 'PLATFORM_SCHEDULED') return '平台定时';
-    if (origin === 'PLATFORM_MANUAL') return '平台手动';
-    if (origin === 'PERSONAL_MCP') return '个人 MCP';
-    return '-';
-  }
-  function executorChannelLabel(channel?: AiExecutionTask['executorChannel']) {
+  function executorChannelLabel(channel?: AiExecutorChannel) {
     if (channel === 'MODEL_API_RUNNER') return '模型执行器';
     if (channel === 'EXTERNAL_MCP_AGENT') return '外部 MCP Agent';
     return '-';
   }
 
-  async function load() {
-    if (!appStore.currentProjectId) return;
-    loading.value = true;
-    pageError.value = '';
-    try {
-      const result = await searchAiExecutionTasks({
-        projectId: appStore.currentProjectId,
-        ...query,
-        keyword: query.keyword.trim() || undefined,
-      });
-      tasks.value = result.items || [];
-      total.value = result.total || 0;
-    } catch (reason: any) {
-      pageError.value = reason?.message || '任务队列加载失败，请稍后重试';
-    } finally {
-      loading.value = false;
-    }
-  }
-  function search() {
-    query.current = 1;
-    load();
-  }
-  function changePage(current: number) {
-    query.current = current;
-    load();
-  }
-  function changePageSize(pageSize: number) {
-    query.pageSize = pageSize;
-    query.current = 1;
-    load();
-  }
-  function openTask(id: string) {
-    router.push({ path: '/agent/execution/detail', query: { executionTaskId: id } });
-  }
   function parseCaseIds(value: string) {
     return [
       ...new Set(
@@ -671,6 +525,12 @@
       historyLoading.value = false;
     }
   }
+  watch(
+    () => route.query.tab,
+    (value) => {
+      queueTab.value = value === 'triggers' ? 'triggers' : 'leases';
+    }
+  );
   watch(queueTab, (value) => {
     if (value === 'triggers') loadTriggers();
     else if (value === 'leases') loadLeases();
@@ -678,14 +538,13 @@
   watch(
     () => appStore.currentProjectId,
     () => {
-      query.current = 1;
-      load();
+      loadLeases();
       loadTriggers();
       loadExecutionProfiles();
     }
   );
   onMounted(() => {
-    load();
+    loadLeases();
     loadTriggers();
     loadExecutionProfiles();
   });

@@ -1,6 +1,7 @@
 import { SettingRouteEnum } from '@/enums/routeEnum';
 
 import { DEFAULT_LAYOUT } from '../base';
+import executionSettings from '../execution-settings';
 import type { AppRouteRecordRaw } from '../types';
 
 const Setting: AppRouteRecordRaw = {
@@ -13,6 +14,11 @@ const Setting: AppRouteRecordRaw = {
     icon: 'icon-a-icon_system_settings',
     order: 8,
     roles: [
+      'SYSTEM_PERSONAL_AI_AGENT:READ',
+      'AI_EXECUTION:READ',
+      'QUALITY:READ',
+      'AI_MODEL:READ',
+      'AI_CREDENTIAL:READ_METADATA',
       'SYSTEM_USER:READ',
       'SYSTEM_USER_ROLE:READ',
       'SYSTEM_PERMISSION_CONTROL:READ',
@@ -39,6 +45,7 @@ const Setting: AppRouteRecordRaw = {
     ],
   },
   children: [
+    ...executionSettings,
     {
       path: 'system',
       name: SettingRouteEnum.SETTING_SYSTEM,

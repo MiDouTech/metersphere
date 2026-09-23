@@ -1,4 +1,4 @@
-import { hasAnyPermission } from '@/utils/permission';
+import { hasAnyPermission, hasPageVisible, hasRouteVisible } from '@/utils/permission';
 
 import { TestAssetRouteEnum } from '@/enums/routeEnum';
 
@@ -18,8 +18,25 @@ const readRoles = [
 ];
 
 function resolveDefaultTestAssetPath() {
-  if (hasAnyPermission(['FUNCTIONAL_CASE_AI:READ'])) return '/test-assets/documents';
-  if (readRoles.some((permission) => hasAnyPermission([permission]))) return '/test-assets/versions';
+  if (
+    hasAnyPermission(['FUNCTIONAL_CASE_AI:READ']) &&
+    hasPageVisible('TEST_ASSET_DOCUMENTS_PAGE') &&
+    hasRouteVisible('testAssetDocuments')
+  )
+    return '/test-assets/documents';
+  if (
+    hasAnyPermission(['CASE_ASSET:READ']) &&
+    hasPageVisible('TEST_ASSET_CASES_PAGE') &&
+    hasPageVisible('TEST_ASSET_CASE_PROJECT_TAB') &&
+    hasRouteVisible('testAssetCasesProject')
+  )
+    return '/test-assets/cases/project';
+  if (
+    hasAnyPermission(['PROJECT_FILE_MANAGEMENT:READ']) &&
+    hasPageVisible('TEST_ASSET_DATASETS_PAGE') &&
+    hasRouteVisible('testAssetDatasets')
+  )
+    return '/test-assets/datasets';
   return '/no-resource';
 }
 
@@ -34,7 +51,6 @@ const TestAsset: AppRouteRecordRaw = {
     icon: 'icon-icon_functional_testing1',
     order: 2,
     hideChildrenInMenu: true,
-    adminOnly: true,
     roles: readRoles,
   },
   children: [
@@ -83,7 +99,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.environments',
         roles: ['PROJECT_ENVIRONMENT:READ'],
         resourceCode: 'TEST_ASSET_ENVIRONMENTS_PAGE',
-        isTopMenu: true,
+        hideInMenu: true,
         keepModuleAlive: true,
       },
     },
@@ -95,7 +111,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.versions',
         roles: readRoles,
         resourceCode: 'TEST_ASSET_VERSIONS_PAGE',
-        isTopMenu: true,
+        hideInMenu: true,
         keepModuleAlive: true,
       },
     },
@@ -107,7 +123,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.relations',
         roles: readRoles,
         resourceCode: 'TEST_ASSET_RELATIONS_PAGE',
-        isTopMenu: true,
+        hideInMenu: true,
         keepModuleAlive: true,
       },
     },
@@ -119,7 +135,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.commonSteps',
         roles: ['PROJECT_API_SCENARIO:READ'],
         resourceCode: 'TEST_ASSET_COMMON_STEPS_PAGE',
-        isTopMenu: true,
+        hideInMenu: true,
         keepModuleAlive: true,
       },
     },
@@ -131,7 +147,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.apis',
         roles: ['PROJECT_API_DEFINITION:READ'],
         resourceCode: 'TEST_ASSET_APIS_PAGE',
-        isTopMenu: true,
+        hideInMenu: true,
         keepModuleAlive: true,
       },
     },
@@ -143,7 +159,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.evidence',
         roles: ['AI_EXECUTION:READ'],
         resourceCode: 'TEST_ASSET_EVIDENCE_PAGE',
-        isTopMenu: true,
+        hideInMenu: true,
         keepModuleAlive: true,
       },
     },
@@ -155,7 +171,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.bugs',
         roles: ['PROJECT_BUG:READ'],
         resourceCode: 'TEST_ASSET_BUGS_PAGE',
-        isTopMenu: true,
+        hideInMenu: true,
         keepModuleAlive: true,
       },
     },

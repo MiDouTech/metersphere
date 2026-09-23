@@ -1,5 +1,8 @@
 <template>
   <AgentPage>
+    <a-alert v-if="route.query.startTime || route.query.endTime || route.query.executorId" type="info" class="mb-4"
+      >历史评价接口暂不支持按日期或指定执行者筛选；当前按下方运行状态、业务结论和执行器类型展示。</a-alert
+    >
     <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
     <div v-if="summaries.length" class="mb-4 grid gap-4 lg:grid-cols-3">
       <MsCard v-for="item in summaries" :key="`${item.executorType}-${item.executorId}`" simple>
@@ -125,6 +128,7 @@
 
 <script setup lang="ts">
   import { computed, onMounted, reactive, ref, watch } from 'vue';
+  import { useRoute } from 'vue-router';
   import dayjs from 'dayjs';
 
   import AgentPage from './components/AgentPage.vue';
@@ -139,6 +143,7 @@
   import { useAppStore } from '@/store';
 
   const appStore = useAppStore();
+  const route = useRoute();
   const loading = ref(false);
   const error = ref('');
   const evaluations = ref<AiExecutionEvaluation[]>([]);
@@ -152,9 +157,9 @@
   const historyLoading = ref(false);
   const history = ref<AiEvaluationHistory[]>([]);
   const filters = reactive({
-    operationalStatus: undefined as string | undefined,
-    businessVerdict: undefined as string | undefined,
-    executorType: undefined as string | undefined,
+    operationalStatus: String(route.query.operationalStatus || '') || undefined,
+    businessVerdict: String(route.query.businessVerdict || '') || undefined,
+    executorType: String(route.query.executorType || '') || undefined,
   });
   const operationalStatuses = ['SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'CANCELED', 'EXPIRED'];
   const businessVerdicts = [

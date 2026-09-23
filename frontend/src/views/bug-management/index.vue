@@ -29,6 +29,7 @@
           </div>
         </template>
         <template #right>
+          <a-link @click="$router.push('/test-assets/bugs')">缺陷资产与历史引用</a-link>
           <MsModuleRefresh :on-refresh="refreshModule" />
         </template>
       </MsAdvanceFilter>

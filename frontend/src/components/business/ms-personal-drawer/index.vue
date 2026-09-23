@@ -30,7 +30,9 @@
             <apiKey v-else-if="activeMenu === 'apiKey'" />
             <localExec v-else-if="activeMenu === 'local'" />
             <tripartite v-else-if="activeMenu === 'tripartite'" />
-            <AgentIntegration v-else-if="activeMenu === 'agentIntegration'" compact />
+            <a-button v-else-if="activeMenu === 'agentIntegration'" type="primary" @click="openPersonalAccess"
+              >前往个人接入</a-button
+            >
             <modelConfig v-else-if="activeMenu === 'modelConfig'" model-key="personal" />
           </div>
         </div>
@@ -41,6 +43,7 @@
 
 <script setup lang="ts">
   import { computed, ref } from 'vue';
+  import { useRouter } from 'vue-router';
   import { useVModel } from '@vueuse/core';
 
   import MsMenuPanel from '@/components/pure/ms-menu-panel/index.vue';
@@ -50,7 +53,6 @@
   import modelConfig from './components/modelConfig.vue';
   import setPsw from './components/setPsw.vue';
   import tripartite from './components/tripartite.vue';
-  import AgentIntegration from '@/views/setting/system/agentIntegration/index.vue';
 
   import { useI18n } from '@/hooks/useI18n';
   import { useAppStore } from '@/store';
@@ -65,6 +67,7 @@
 
   const { t } = useI18n();
   const appStore = useAppStore();
+  const router = useRouter();
 
   const innerVisible = useVModel(props, 'visible', emit);
   const activeMenu = ref('baseInfo');
@@ -72,6 +75,11 @@
 
   function closePersonalCenter() {
     innerVisible.value = false;
+  }
+
+  function openPersonalAccess() {
+    closePersonalCenter();
+    router.push({ name: 'agentAccess' });
   }
 
   const baseMenuList = [

@@ -2,7 +2,7 @@
   <AgentPage>
     <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
     <div class="grid gap-4 lg:grid-cols-2">
-      <MsCard simple>
+      <MsCard v-if="section === 'capabilities'" simple>
         <div class="mb-4 flex items-center justify-between">
           <div>
             <div class="text-base font-medium">执行能力</div>
@@ -24,27 +24,18 @@
           </template>
         </a-list>
       </MsCard>
-      <MsCard simple>
-        <div class="mb-4">
-          <div class="text-base font-medium">我的授权</div>
-          <div class="mt-1 text-sm text-[var(--color-text-3)]">Token 只显示范围和使用状态，密钥不会再次返回。</div>
-        </div>
-        <a-table :data="tokens" :loading="loading" :pagination="false" row-key="id">
-          <template #columns>
-            <a-table-column title="名称" data-index="name" />
-            <a-table-column title="客户端" data-index="clientType" :width="110" />
-            <a-table-column title="权限范围" data-index="scopes" />
-            <a-table-column title="状态" :width="90">
-              <template #cell="{ record }"
-                ><a-tag :color="record.enable ? 'green' : 'gray'">{{
-                  record.enable ? '启用' : '停用'
-                }}</a-tag></template
-              >
-            </a-table-column>
-          </template>
-        </a-table>
-      </MsCard>
-      <MsCard simple class="lg:col-span-2">
+      <a-space class="lg:col-span-2">
+        <a-link v-permission="['SYSTEM_PERSONAL_AI_AGENT:READ']" @click="router.push({ name: 'agentAccess' })"
+          >个人接入</a-link
+        >
+        <a-link @click="router.push('/setting/runtime/capability')">运行告警</a-link>
+        <a-link
+          v-permission="['FUNCTIONAL_CASE_AI:CONFIG']"
+          @click="router.push('/setting/execution-settings/governance')"
+          >项目执行策略</a-link
+        >
+      </a-space>
+      <MsCard v-if="section === 'alerts'" simple class="lg:col-span-2">
         <div class="mb-4 flex items-center justify-between"
           ><div
             ><div class="text-base font-medium">AI 执行运维告警</div
@@ -81,28 +72,34 @@
           <template #empty><a-empty description="当前项目暂无运维告警" /></template>
         </a-table>
       </MsCard>
-      <AiGovernancePanel v-permission="['FUNCTIONAL_CASE_AI:CONFIG']" class="lg:col-span-2" />
+      <AiGovernancePanel
+        v-if="section === 'policy'"
+        v-permission="['FUNCTIONAL_CASE_AI:CONFIG']"
+        class="lg:col-span-2"
+      />
     </div>
   </AgentPage>
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+  import { ref, watch } from 'vue';
+  import { useRouter } from 'vue-router';
 
   import AgentPage from './components/AgentPage.vue';
   import AiGovernancePanel from './components/AiGovernancePanel.vue';
 
   import type { AiExecutionAgentOption, AiExecutionAlert } from '@/api/modules/ai-execution';
   import { acknowledgeAiExecutionAlert, getAiExecutionAgents, listAiExecutionAlerts } from '@/api/modules/ai-execution';
-  import type { AgentTokenListItem } from '@/api/modules/setting/agentIntegration';
-  import { getAgentTokenPage } from '@/api/modules/setting/agentIntegration';
   import { useAppStore } from '@/store';
 
+  const props = withDefaults(defineProps<{ section?: 'capabilities' | 'alerts' | 'policy' }>(), {
+    section: 'capabilities',
+  });
+  const router = useRouter();
   const appStore = useAppStore();
   const loading = ref(false);
   const error = ref('');
   const agents = ref<AiExecutionAgentOption[]>([]);
-  const tokens = ref<AgentTokenListItem[]>([]);
   const alerts = ref<AiExecutionAlert[]>([]);
   const alertLoading = ref(false);
   const alertError = ref('');
@@ -112,7 +109,7 @@
     try {
       alerts.value = (await listAiExecutionAlerts(appStore.currentProjectId)) || [];
     } catch (reason: any) {
-      alertError.value = reason?.message || '运维告警加载失败，请稍后重试';
+      alertError.value = '运维告警加载失败，请稍后重试';
     } finally {
       alertLoading.value = false;
     }
@@ -122,27 +119,29 @@
       await acknowledgeAiExecutionAlert(appStore.currentProjectId, id);
       await loadAlerts();
     } catch (reason: any) {
-      alertError.value = reason?.message || '告警确认失败，请稍后重试';
+      alertError.value = '告警确认失败，请稍后重试';
     }
   }
   async function load() {
     loading.value = true;
     error.value = '';
     try {
-      const [agentResult, tokenResult] = await Promise.all([
-        getAiExecutionAgents(appStore.currentProjectId),
-        getAgentTokenPage({ current: 1, pageSize: 100 }),
-      ]);
-      agents.value = agentResult || [];
-      tokens.value = tokenResult.list || [];
+      agents.value = (await getAiExecutionAgents(appStore.currentProjectId)) || [];
     } catch (reason: any) {
-      error.value = reason?.message || '执行能力加载失败，请稍后重试';
+      error.value = '执行能力加载失败，请稍后重试';
     } finally {
       loading.value = false;
     }
   }
-  onMounted(() => {
-    load();
-    loadAlerts();
-  });
+  watch(
+    () => [props.section, appStore.currentProjectId],
+    () => {
+      agents.value = [];
+      alerts.value = [];
+      if (!appStore.currentProjectId) return;
+      if (props.section === 'capabilities') load();
+      if (props.section === 'alerts') loadAlerts();
+    },
+    { immediate: true }
+  );
 </script>
