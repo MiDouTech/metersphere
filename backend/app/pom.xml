@@ -12,6 +12,10 @@
     <name>app</name>
     <dependencies>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.metersphere</groupId>
             <artifactId>metersphere-sdk</artifactId>
             <version>${revision}</version>

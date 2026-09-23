@@ -1,0 +1,100 @@
+# Isolated local acceptance environment; no shared dev/production volumes.
+services:
+  mysql:
+    image: mysql:8.0.35
+    environment:
+      MYSQL_ROOT_PASSWORD: ${QUALITY_DB_PASSWORD:?Set an isolated test database password}
+      MYSQL_DATABASE: metersphere_quality
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_general_ci", "--lower_case_table_names=1", "--max_connections=250"]
+    volumes: [quality_mysql:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_ROOT_PASSWORD mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    mem_limit: 1g
+  redis:
+    image: redis:7.2-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 256m
+  minio:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: quality-test
+      MINIO_ROOT_PASSWORD: ${QUALITY_STORAGE_PASSWORD:?Set an isolated object storage password}
+    volumes: [quality_minio:/data]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+  kafka:
+    image: apache/kafka:3.8.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+    mem_limit: 1g
+  app:
+    image: msp-quality:verify
+    ports: ["127.0.0.1:18081:8081", "127.0.0.1:17071:7071"]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/metersphere_quality?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${QUALITY_DB_PASSWORD:?Set an isolated test database password}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 20
+      SPRING_DATASOURCE_QUARTZ_HIKARI_MAXIMUM_POOL_SIZE: 10
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_REDIS_REDISSON_FILE: file:/verify/redisson.yml
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: quality-test
+      MINIO_SECRET_KEY: ${QUALITY_STORAGE_PASSWORD:?Set an isolated object storage password}
+      MINIO_BUCKET: quality-evidence
+      MS_LOG_PATH: /tmp/msp-quality/logs
+      LOGGING_FILE_PATH: /tmp/msp-quality/logs
+      JMETER_HOME: /tmp/msp-quality/jmeter
+      MANAGEMENT_ENDPOINT_HEALTH_ENABLED: "true"
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health
+      SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "true"
+      JAVA_MAX_MEM_RATIO: 65
+    volumes:
+      - ./quality-verify/redisson.yml:/verify/redisson.yml:ro
+      - quality_app:/opt/metersphere
+    depends_on:
+      mysql: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7071/actuator/health/readiness').then(async r=>process.exit(r.ok && (await r.json()).status==='UP'?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+    mem_limit: 3g
+volumes:
+  quality_mysql:
+  quality_minio:
+  quality_app:

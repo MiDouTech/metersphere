@@ -24,6 +24,12 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "AUTHENTICATION_REQUIRED" -> "请登录后重试";
+            case "QUALITY_POLICY_FORBIDDEN" -> "执行令牌不能管理质量策略，请使用具有策略权限的登录账号";
+            case "QUALITY_POLICY_PROJECT_FORBIDDEN" -> "无权访问该项目的质量策略，请确认当前项目";
+            case "QUALITY_POLICY_PROJECT_DISABLED" -> "项目已停用，质量策略仅可查看，不能修改或发布";
+            case "QUALITY_POLICY_NOT_FOUND" -> "质量策略不存在或不属于当前项目";
+            case "QUALITY_POLICY_VERSION_CONFLICT" -> "策略或当前发布版本已变化，请刷新后比较并重试";
             case "MCP_TOOL_FORBIDDEN" -> "当前身份无权调用该 MCP 工具";
             case "TASK_ORIGIN_CHANNEL_MISMATCH" -> "任务来源与执行通道不匹配";
             case "PERMISSION_DENIED" -> "没有执行此操作的权限";

@@ -39,6 +39,13 @@ public class AgentExecutionExceptionHandler {
         return ResponseEntity.status(status).body(mapper.toApiError(new MSException(code), traceId));
     }
 
+    @ExceptionHandler(io.metersphere.agent.quality.QualityPolicyValidationException.class)
+    public ResponseEntity<AgentApiErrorDTO> policyValidation(io.metersphere.agent.quality.QualityPolicyValidationException error,
+                                                            HttpServletRequest request) {
+        return ResponseEntity.badRequest().body(new AgentApiErrorDTO("QUALITY_POLICY_INVALID", "门禁策略校验失败，请检查标记字段",
+                java.util.Map.of("errors", error.getErrors()), traceId(request)));
+    }
+
     @ExceptionHandler(AuthorizationException.class)
     public ResponseEntity<AgentApiErrorDTO> forbidden(AuthorizationException error, HttpServletRequest request) {
         String traceId = traceId(request);
@@ -48,7 +55,8 @@ public class AgentExecutionExceptionHandler {
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class,
-            MissingServletRequestParameterException.class, IllegalArgumentException.class})
+            MissingServletRequestParameterException.class, IllegalArgumentException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class})
     public ResponseEntity<AgentApiErrorDTO> validation(Exception error, HttpServletRequest request) {
         String traceId = traceId(request);
         LOGGER.warn("AI execution validation failed, traceId={}, type={}", traceId, error.getClass().getSimpleName());

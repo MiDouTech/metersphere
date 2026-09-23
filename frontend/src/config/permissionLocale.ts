@@ -44,6 +44,8 @@ const actionMap: Record<string, string> = {
   MINDER: '脑图编辑',
   SAVE: '保存',
   ADMIN: '管理',
+  MANAGE: '管理',
+  PUBLISH: '发布',
   ASSOCIATION: '关联',
   CANCEL: '取消',
   LOGIN: '登录',
