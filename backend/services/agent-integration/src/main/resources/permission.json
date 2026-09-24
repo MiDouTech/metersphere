@@ -1,14 +1,58 @@
 [
   {
+    "id": "SYSTEM_EXECUTION_QUALITY",
+    "name": "平台质量门禁",
+    "type": "SYSTEM",
+    "children": [
+      {
+        "id": "SYSTEM_QUALITY",
+        "name": "平台策略管理",
+        "permissions": [
+          {
+            "id": "SYSTEM_QUALITY:READ",
+            "name": "查看平台策略"
+          },
+          {
+            "id": "SYSTEM_QUALITY:MANAGE",
+            "name": "编辑和校验全局草稿"
+          },
+          {
+            "id": "SYSTEM_QUALITY:PUBLISH",
+            "name": "发布全平台策略"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "EXECUTION_QUALITY",
     "name": "执行质量",
     "type": "PROJECT",
     "children": [
-      {"id": "QUALITY", "name": "质量策略读取", "permissions": [{"id": "QUALITY:READ", "name": "查看质量策略"}]},
-      {"id": "QUALITY_POLICY", "name": "质量策略管理", "permissions": [
-        {"id": "QUALITY_POLICY:MANAGE", "name": "编辑和校验策略草稿"},
-        {"id": "QUALITY_POLICY:PUBLISH", "name": "发布策略版本"}
-      ]}
+      {
+        "id": "QUALITY",
+        "name": "质量策略读取",
+        "permissions": [
+          {
+            "id": "QUALITY:READ",
+            "name": "查看质量策略"
+          }
+        ]
+      },
+      {
+        "id": "QUALITY_POLICY",
+        "name": "质量策略管理",
+        "permissions": [
+          {
+            "id": "QUALITY_POLICY:MANAGE",
+            "name": "编辑和校验策略草稿"
+          },
+          {
+            "id": "QUALITY_POLICY:PUBLISH",
+            "name": "发布策略版本"
+          }
+        ]
+      }
     ]
   }
 ]

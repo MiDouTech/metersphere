@@ -47,9 +47,9 @@
       "idempotencyKey": { "type": "string", "minLength": 8, "maxLength": 256 }, "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 60000 },
       "retryable": { "type": "boolean" }, "riskLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] }
     } },
-    "assertion": { "type": "object", "additionalProperties": false, "required": ["contractVersion", "type", "timeoutMs"], "properties": {
+    "assertion": { "type": "object", "additionalProperties": false, "required": ["contractVersion", "type", "operator", "expected", "timeoutMs"], "properties": {
       "contractVersion": { "const": "v1" }, "type": { "type": "string", "enum": ["TEXT", "VISIBLE", "ENABLED", "CHECKED", "ATTRIBUTE", "COUNT", "URL", "TITLE"] },
-      "target": { "$ref": "#/$defs/locator" }, "operator": { "type": "string", "maxLength": 64 }, "expected": { "type": "string", "maxLength": 10000 },
+      "target": { "$ref": "#/$defs/locator" }, "operator": { "type": "string", "enum": ["EQUALS", "IN_RANGE"] }, "expected": { "type": "string", "maxLength": 10000 },
       "attribute": { "type": "string", "maxLength": 256 }, "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 60000 }
     } }
   }

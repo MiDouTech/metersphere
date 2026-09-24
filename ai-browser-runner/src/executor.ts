@@ -204,10 +204,13 @@ async function executeCase(page: Page, executionCase: ExecutionCase, config: Run
     try {
       const action = parseAction(step.actionJson);
       const assertions = parseAssertions(step.assertionJson);
+      if (!assignment.qualityPolicy) throw new RunnerError("QUALITY_POLICY_BINDING_NOT_FOUND", "执行缺少全局门禁版本");
+      const artifactIds = await captureEvidence(page, client, assignment, executionCase, step, "BEFORE_STEP", policy);
       await executeWithHealing(page, action, config, client, assignment, events, executionCase, step, policy);
-      for (const assertion of assertions) await executeAssertion(page, assertion, config);
-      const artifactIds = policy.screenshotMode === "AFTER_STEP"
-        ? await captureEvidence(page, client, assignment, executionCase, step, "AFTER_STEP", policy) : [];
+      const actuals: unknown[] = [];
+      for (const assertion of assertions) actuals.push(await executeAssertion(page, assertion, config));
+      artifactIds.push(...await captureEvidence(page, client, assignment, executionCase, step, "AFTER_STEP", policy));
+      await client.stepResult(assignment, step.id, actuals, artifactIds);
       events.add({ ...info("STEP_COMPLETED", "步骤执行与断言成功"), caseId: executionCase.caseId,
         stepId: step.id, attempt: step.attempt ?? 0, artifactIds });
     } catch (cause) {
@@ -292,7 +295,7 @@ async function executeAction(page: Page, action: WebAction, config: RunnerConfig
   if (page.url() !== "about:blank") assertAllowedUrl(page.url(), config.allowedOrigins);
 }
 
-async function executeAssertion(page: Page, assertion: WebAssertion, config: RunnerConfig): Promise<void> {
+export async function executeAssertion(page: Page, assertion: WebAssertion, config: RunnerConfig): Promise<string | number | boolean> {
   const deadline = Date.now() + assertion.timeoutMs;
   let actual = "";
   do {
@@ -304,17 +307,17 @@ async function executeAssertion(page: Page, assertion: WebAssertion, config: Run
           ? locatorFor(page, assertion.target!) : await uniqueLocator(page, assertion.target);
         switch (assertion.type) {
           case "TEXT": actual = (await locator.textContent()) ?? ""; break;
-          case "VISIBLE": if (await locator.isVisible()) return; actual = "false"; break;
-          case "ENABLED": if (await locator.isEnabled()) return; actual = "false"; break;
-          case "CHECKED": if (await locator.isChecked()) return; actual = "false"; break;
+          case "VISIBLE": actual = String(await locator.isVisible()); break;
+          case "ENABLED": actual = String(await locator.isEnabled()); break;
+          case "CHECKED": actual = String(await locator.isChecked()); break;
           case "ATTRIBUTE": actual = (await locator.getAttribute(assertion.attribute!)) ?? ""; break;
           case "COUNT": actual = String(await locator.count()); break;
         }
       }
       const expected = assertion.expected?.startsWith("dataset:")
-        ? resolveValue(undefined, assertion.expected, config.values) : assertion.expected ?? "";
-      if (["TEXT", "ATTRIBUTE", "COUNT", "URL", "TITLE"].includes(assertion.type)
-          && compare(actual, expected, assertion.operator)) return;
+        ? resolveValue(undefined, assertion.expected, config.values) : assertion.expected ?? (["VISIBLE", "ENABLED", "CHECKED"].includes(assertion.type) ? "true" : "");
+      if (["TEXT", "ATTRIBUTE", "COUNT", "URL", "TITLE", "VISIBLE", "ENABLED", "CHECKED"].includes(assertion.type)
+          && compare(actual, expected, assertion.operator)) return assertion.operator === "IN_RANGE" ? Number(actual) : actual;
     } catch (cause) {
       actual = asRunnerError(cause).message;
     }
@@ -326,6 +329,13 @@ async function executeAssertion(page: Page, assertion: WebAssertion, config: Run
 function compare(actual: string, expected: string, operator: WebAssertion["operator"] = "CONTAINS"): boolean {
   switch (operator) {
     case "EQUALS": return actual === expected;
+    case "IN_RANGE": {
+      let range: unknown;
+      try { range = JSON.parse(expected); } catch { return false; }
+      return actual.trim() !== "" && Number.isFinite(Number(actual)) && Array.isArray(range) && range.length === 2
+        && range.every(value => typeof value === "number" && Number.isFinite(value))
+        && Number(actual) >= range[0] && Number(actual) <= range[1];
+    }
     case "NOT_EQUALS": return actual !== expected;
     case "CONTAINS": return actual.includes(expected);
     case "MATCHES": throw new RunnerError("UNSUPPORTED_CONTRACT_VALUE", "Runner 不执行模型提供的正则表达式");
@@ -375,10 +385,15 @@ async function captureEvidence(page: Page, client: RunnerClient, assignment: Lea
                                policy: EvidencePolicy): Promise<string[]> {
   const masks: Locator[] = [page.locator("input[type=password], input[autocomplete='current-password'], input[autocomplete='new-password']")];
   for (const selector of policy.sensitiveSelectors) masks.push(page.locator(selector));
-  const bytes = await page.screenshot({ type: "png", fullPage: policy.fullPage, mask: masks, maskColor: "#000000" });
+  const globalRules = assignment.qualityPolicy ? JSON.parse(assignment.qualityPolicy.rulesJson).rules : [];
+  const evidence = globalRules.find((rule: { ruleId: string }) => rule.ruleId === "Q-EVIDENCE-01")?.parameters;
+  const mime = evidence?.allowedMimeTypes?.includes("image/png") ? "image/png" : "image/jpeg";
+  const format = mime === "image/png" ? "png" : "jpeg";
+  const bytes = await page.screenshot({ type: format, fullPage: policy.fullPage, mask: masks, maskColor: "#000000" });
+  if (evidence && bytes.length > evidence.maxArtifactBytes) throw new RunnerError("QUALITY_EVIDENCE_INVALID", "截图超过全局门禁大小限制");
   const sha256 = createHash("sha256").update(bytes).digest("hex");
-  const artifact = await client.artifact(assignment, bytes, `evidence-${step.id}-${purpose}.png`, purpose,
-    sha256, executionCase.caseId, step.id);
+  const artifact = await client.artifact(assignment, bytes, `evidence-${step.id}-${purpose}.${format}`, purpose,
+    sha256, executionCase.caseId, step.id, mime);
   return [artifact.artifactId];
 }
 

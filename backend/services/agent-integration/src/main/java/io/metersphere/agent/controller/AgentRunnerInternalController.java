@@ -80,6 +80,14 @@ public class AgentRunnerInternalController {
         taskExecutionService.appendEvents(authorization, request);
     }
 
+    @PostMapping("/lease/{id}/step-result")
+    public io.metersphere.agent.dto.AgentExecutionStepResultDTO stepResult(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @PathVariable String id,
+            @RequestBody io.metersphere.agent.dto.AgentExecutionStepSubmitRequest request) {
+        return taskExecutionService.submitRunnerStepResult(authorization, id, request);
+    }
+
     @PostMapping("/lease/{id}/artifact")
     public AgentExecutionArtifactUploadResponse uploadArtifact(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,

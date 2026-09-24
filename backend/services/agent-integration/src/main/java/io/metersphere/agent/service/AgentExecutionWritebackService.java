@@ -104,6 +104,9 @@ public class AgentExecutionWritebackService {
     private String determineVerdict(int failed, int blocked, int skipped, int unexecuted,
                                     int writebackFailed, int artifactCount, boolean cleanupIncomplete,
                                     List<AgentExecutionStepDTO> steps) {
+        if (writebackFailed > 0 || artifactCount == 0 || cleanupIncomplete) {
+            return AgentExecutionVerdict.INCONCLUSIVE;
+        }
         if (unexecuted > 0) {
             return AgentExecutionVerdict.AGENT_FAILED;
         }

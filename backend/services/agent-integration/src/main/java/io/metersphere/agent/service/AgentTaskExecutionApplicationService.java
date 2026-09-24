@@ -87,6 +87,17 @@ public class AgentTaskExecutionApplicationService {
         return stepResultService.submit(request);
     }
 
+    public AgentExecutionStepResultDTO submitRunnerStepResult(String authorization, String leaseId,
+                                                              AgentExecutionStepSubmitRequest request) {
+        var lease = runnerService.requireActiveLease(authorization, leaseId);
+        request.setTaskId(lease.getTaskId());
+        request.setExecutionId(lease.getExecutionId());
+        request.setLeaseId(leaseId);
+        request.setLeaseToken(authorization.substring("Bearer ".length()));
+        request.setAttempt(lease.getAttempt());
+        return stepResultService.submit(request);
+    }
+
     public AgentArtifactPrepareResponse prepareArtifact(AgentArtifactPrepareRequest request) {
         if (request != null) {
             personalTaskService.assertLeaseOwner(request.getLeaseId());

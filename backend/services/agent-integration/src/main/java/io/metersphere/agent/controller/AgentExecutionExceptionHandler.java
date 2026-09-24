@@ -35,6 +35,7 @@ public class AgentExecutionExceptionHandler {
         String traceId = traceId(request);
         String code=safeCode(error);
         HttpStatus status=status(code);
+        auditQualityRejection(request, code, traceId);
         LOGGER.warn("AI execution request rejected, traceId={}, code={}, httpStatus={}", traceId, code,status.value());
         return ResponseEntity.status(status).body(mapper.toApiError(new MSException(code), traceId));
     }
@@ -42,13 +43,16 @@ public class AgentExecutionExceptionHandler {
     @ExceptionHandler(io.metersphere.agent.quality.QualityPolicyValidationException.class)
     public ResponseEntity<AgentApiErrorDTO> policyValidation(io.metersphere.agent.quality.QualityPolicyValidationException error,
                                                             HttpServletRequest request) {
+        String traceId = traceId(request);
+        auditQualityRejection(request, "QUALITY_POLICY_INVALID", traceId);
         return ResponseEntity.badRequest().body(new AgentApiErrorDTO("QUALITY_POLICY_INVALID", "门禁策略校验失败，请检查标记字段",
-                java.util.Map.of("errors", error.getErrors()), traceId(request)));
+                java.util.Map.of("errors", error.getErrors()), traceId));
     }
 
     @ExceptionHandler(AuthorizationException.class)
     public ResponseEntity<AgentApiErrorDTO> forbidden(AuthorizationException error, HttpServletRequest request) {
         String traceId = traceId(request);
+        auditQualityRejection(request, "PERMISSION_DENIED", traceId);
         LOGGER.warn("AI execution permission denied, traceId={}", traceId);
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(mapper.toApiError(new MSException("PERMISSION_DENIED"), traceId));
@@ -59,6 +63,7 @@ public class AgentExecutionExceptionHandler {
             org.springframework.http.converter.HttpMessageNotReadableException.class})
     public ResponseEntity<AgentApiErrorDTO> validation(Exception error, HttpServletRequest request) {
         String traceId = traceId(request);
+        auditQualityRejection(request, "VALIDATION_ERROR", traceId);
         LOGGER.warn("AI execution validation failed, traceId={}, type={}", traceId, error.getClass().getSimpleName());
         return ResponseEntity.badRequest().body(mapper.toApiError(new MSException("VALIDATION_ERROR"), traceId));
     }
@@ -68,6 +73,16 @@ public class AgentExecutionExceptionHandler {
         String traceId = traceId(request);
         LOGGER.error("AI execution internal error, traceId={}", traceId, error);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapper.toApiError(error, traceId));
+    }
+
+    private void auditQualityRejection(HttpServletRequest request, String code, String traceId) {
+        if (request.getRequestURI().contains("/quality/")) {
+            String actor;
+            try { actor = io.metersphere.system.utils.SessionUtils.getUserId(); }
+            catch (Exception ignored) { actor = "unauthenticated"; }
+            LOGGER.warn("QUALITY_POLICY_REJECTED actor={} method={} path={} code={} traceId={}",
+                    actor, request.getMethod(), request.getRequestURI(), code, traceId);
+        }
     }
 
     private String traceId(HttpServletRequest request) {

@@ -1,5 +1,3 @@
-import { hasAnyPermission, hasPageVisible } from '@/utils/permission';
-
 import { AgentRouteEnum } from '@/enums/routeEnum';
 
 import type { AppRouteRecordRaw } from './types';
@@ -30,19 +28,10 @@ const executionSettings: AppRouteRecordRaw[] = [
     path: 'execution-settings',
     name: 'SettingExecutionSettings',
     component: null,
-    redirect: () =>
-      hasAnyPermission(['QUALITY:READ']) && hasPageVisible('EXECUTION_QUALITY_POLICY_PAGE')
-        ? '/setting/execution-settings/quality-policy'
-        : '/setting/execution-settings/environment-profile',
+    redirect: '/setting/execution-settings/environment-profile',
     meta: {
       locale: '项目执行设置',
-      roles: [
-        'AI_EXECUTION:READ',
-        'QUALITY:READ',
-        'FUNCTIONAL_CASE_AI:CONFIG',
-        'AI_MODEL:READ',
-        'AI_CREDENTIAL:READ_METADATA',
-      ],
+      roles: ['AI_EXECUTION:READ', 'FUNCTIONAL_CASE_AI:CONFIG', 'AI_MODEL:READ', 'AI_CREDENTIAL:READ_METADATA'],
       hideChildrenInMenu: true,
     },
     children: [
@@ -88,13 +77,9 @@ const executionSettings: AppRouteRecordRaw[] = [
       {
         path: 'quality-policy',
         name: 'ExecutionQualityPolicy',
-        component: () => import('@/views/execution/quality-policy.vue'),
-        meta: {
-          locale: 'menu.executionQuality.policy',
-          roles: ['QUALITY:READ'],
-          resourceCode: 'EXECUTION_QUALITY_POLICY_PAGE',
-          isTopMenu: true,
-        },
+        component: null,
+        redirect: '/setting/system/quality-policy',
+        meta: { hideInMenu: true },
       },
       {
         path: 'governance',
@@ -118,13 +103,7 @@ const executionSettings: AppRouteRecordRaw[] = [
     redirect: '/setting/runtime/list',
     meta: {
       locale: '系统运行维护',
-      roles: [
-        'AI_EXECUTION:READ',
-        'QUALITY:READ',
-        'FUNCTIONAL_CASE_AI:CONFIG',
-        'AI_MODEL:READ',
-        'AI_CREDENTIAL:READ_METADATA',
-      ],
+      roles: ['AI_EXECUTION:READ', 'FUNCTIONAL_CASE_AI:CONFIG', 'AI_MODEL:READ', 'AI_CREDENTIAL:READ_METADATA'],
       hideChildrenInMenu: true,
       adminOnly: true,
     },
@@ -178,13 +157,7 @@ const executionSettings: AppRouteRecordRaw[] = [
     redirect: '/setting/extensions/model-profile',
     meta: {
       locale: '扩展能力',
-      roles: [
-        'AI_EXECUTION:READ',
-        'QUALITY:READ',
-        'FUNCTIONAL_CASE_AI:CONFIG',
-        'AI_MODEL:READ',
-        'AI_CREDENTIAL:READ_METADATA',
-      ],
+      roles: ['AI_EXECUTION:READ', 'FUNCTIONAL_CASE_AI:CONFIG', 'AI_MODEL:READ', 'AI_CREDENTIAL:READ_METADATA'],
       hideChildrenInMenu: true,
       adminOnly: true,
     },

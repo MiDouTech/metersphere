@@ -158,3 +158,8 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 - [缺陷 MCP 使用文档（AI 自配置）](../docs/task/metersphere_agent/mcp-bug-api-usage.md)
 - [Cursor 接入指南](../docs/task/metersphere_agent/cursor-onboarding.md)
 - [扩展方案](../docs/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)
+
+
+### 全局质量门禁升级兼容性
+
+启用平台统一门禁后，旧 `submit_functional_result` / `submit_functional_results_batch` 直写接口不再接受执行结果，返回 `QUALITY_LEGACY_SUBMIT_FORBIDDEN`。不能用旧工具提交“通过”来绕过门禁。执行器须转入平台任务认领、尝试绑定、证据上传、步骤结果及最终回写流程；仅上报事件或附件不构成验收通过。系统管理员通过 `/setting/system/quality-policy` 发布全平台统一规则；该管理能力不向 Agent Token 开放。

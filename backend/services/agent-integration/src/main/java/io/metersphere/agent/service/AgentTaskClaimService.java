@@ -40,6 +40,7 @@ import java.util.Set;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentTaskClaimService {
+    @jakarta.annotation.Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @Resource
@@ -124,12 +125,14 @@ public class AgentTaskClaimService {
         attempt.setCreateTime(now);
         attempt.setUpdateTime(now);
         attempt.setVersion(0);
+        var qualityPolicy = qualityGate.bind(executionId, task.getId());
         executionMapper.insertExecutionAttempt(attempt);
         executionMapper.insertRunnerLease(lease);
         execLogService.audit("AGENT_TASK_CLAIMED", task.getId(),
                 "tokenId=" + token.getId() + ";attempt=" + lease.getAttempt());
 
         AgentRunnerLeaseAssignmentDTO response = new AgentRunnerLeaseAssignmentDTO();
+        response.setQualityPolicy(qualityPolicy);
         response.setLeaseId(lease.getId());
         response.setLeaseToken(leaseToken);
         response.setExpireTime(lease.getExpireTime());

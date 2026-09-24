@@ -21,6 +21,7 @@ import java.util.Set;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentExecutionStepResultService {
+    @jakarta.annotation.Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
     private static final Set<String> STATUSES = Set.of("SUCCESS", "FAILED", "BLOCKED", "SKIPPED");
 
     private final AgentExecutionMapper mapper;
@@ -65,6 +66,11 @@ public class AgentExecutionStepResultService {
                 throw new MSException("ARTIFACT_NOT_FOUND_OR_NOT_ACCESSIBLE");
             }
         }
+        if (request.getAttempt() != null && !request.getAttempt().equals(lease.getAttempt())) {
+            throw new MSException("QUALITY_ATTEMPT_INVALID");
+        }
+        if ("SUCCESS".equals(status)) qualityGate.verifySuccess(task, request.getExecutionId(), step,
+                request.getAssertionResult(), artifactIds);
         long now = System.currentTimeMillis();
         AgentExecutionStepResultDTO result = new AgentExecutionStepResultDTO();
         result.setId(IDGenerator.nextStr());

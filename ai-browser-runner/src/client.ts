@@ -47,11 +47,18 @@ export class RunnerClient {
     });
   }
 
+  async stepResult(assignment: LeaseAssignment, stepId: string, actuals: unknown[], artifactIds: string[]): Promise<void> {
+    await this.request(`/lease/${assignment.leaseId}/step-result`, assignment.leaseToken, {
+      method: "POST", body: JSON.stringify({ stepId, status: "SUCCESS", requestId: randomUUID(),
+        assertionResult: JSON.stringify(actuals.map(actual => ({ actual }))), artifactIds }),
+    });
+  }
+
   async artifact(assignment: LeaseAssignment, bytes: Buffer, fileName: string, purpose: string,
-                 sha256: string, caseId?: string, stepId?: string): Promise<ArtifactResponse> {
+                 sha256: string, caseId?: string, stepId?: string, contentType = "image/png"): Promise<ArtifactResponse> {
     const form = new FormData();
     const copy = Uint8Array.from(bytes);
-    form.append("file", new Blob([copy.buffer], { type: "image/png" }), fileName);
+    form.append("file", new Blob([copy.buffer], { type: contentType }), fileName);
     form.append("purpose", purpose);
     form.append("sha256", sha256);
     form.append("redacted", "true");

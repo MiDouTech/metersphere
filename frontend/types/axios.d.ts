@@ -6,6 +6,7 @@ export interface RequestOptions {
   handleError?: boolean;
   joinParamsToUrl?: boolean; // post请求时，是否使用URLSearchParams
   noErrorTip?: boolean;
+  handleForbiddenLocally?: boolean; // caller renders 403; 401 handling is unchanged
   errorMessageMode?: ErrorMessageMode; // 错误信息提示模式,none不提示
   joinTime?: boolean; // 是否加入时间戳
   ignoreCancelToken?: boolean; // 是否不记录取消请求的token，不记录则请求不会被取消；默认为记录，在路由切换时会清除上个页面未完成的请求

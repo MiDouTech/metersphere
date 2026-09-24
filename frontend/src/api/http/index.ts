@@ -181,7 +181,9 @@ const transform: AxiosTransform = {
     } catch (e) {
       return Promise.reject(new AppError({ message: t('api.apiRequestFailed'), retryable: true }));
     }
-    checkStatus(response?.status, msg, response?.data?.code, errorMessageMode, appError.context);
+    if (!(response?.status === 403 && config?.requestOptions?.handleForbiddenLocally === true)) {
+      checkStatus(response?.status, msg, response?.data?.code, errorMessageMode, appError.context);
+    }
     return Promise.reject(response?.config?.requestOptions?.isReturnNativeResponse ? response?.data : appError);
   },
 };

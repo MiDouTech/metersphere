@@ -24,14 +24,17 @@ test.beforeAll(async ({ browser, baseURL }) => {
       'ORGANIZATION': '100001',
     }));
     await Promise.all(
-      ['reader', 'editor', 'publisher'].map(async (role) => {
+      ['reader', 'editor', 'publisher', 'pure-admin'].map(async (role) => {
         const email = `quality-${role}-api@quality.invalid`;
         const found = await page.request.get(`/api/system/user/get/${email}`, { headers });
         const existing = await found.json();
         if (existing.data?.id) return;
         const response = await page.request.post('/api/system/user/add', {
           headers,
-          data: { userInfoList: [{ name: `Quality ${role}`, email }], userRoleIdList: ['member'] },
+          data: {
+            userInfoList: [{ name: `Quality ${role}`, email }],
+            userRoleIdList: role === 'pure-admin' ? ['admin'] : ['member'],
+          },
         });
         const result = await response.json();
         expect(result.data?.successList?.length).toBe(1);
@@ -48,10 +51,23 @@ test.beforeAll(async ({ browser, baseURL }) => {
         'MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysql -uroot metersphere_quality',
       ],
       {
-        input: readFileSync('../deploy/quality-verify/rbac-fixture.sql', 'utf8'),
+        input: readFileSync('../deploy/quality-verify/global-rbac-fixture.sql', 'utf8'),
         encoding: 'utf8',
       }
     );
+    const rulesJson = JSON.stringify({
+      schemaVersion: 'quality-policy.v1',
+      name: 'Global fixture',
+      rules: [
+        {
+          ruleId: 'Q-EVIDENCE-01',
+          parameters: { requiredRoles: ['AFTER_ACTION'], allowedMimeTypes: ['image/png'], maxArtifactBytes: 1024 },
+        },
+        { ruleId: 'Q-ASSERT-01', parameters: { allowedOperators: ['EQUALS'], expectedSource: 'FROZEN_CONTRACT' } },
+      ],
+    });
+    const seed = await page.request.post('/api/system/quality/policies', { headers, data: { rulesJson } });
+    expect(seed.status()).toBe(200);
   } finally {
     await context.close();
   }
@@ -97,7 +113,7 @@ test('slow validation cannot change the save target, publication exposes audit f
   });
   await page.getByRole('button', { name: '保存草稿', exact: true }).click();
   await requested;
-  await expect(page.locator('.arco-modal-close-btn')).toHaveCount(0);
+  await expect(page.locator('.arco-modal-close-btn:visible')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: '保存草稿', exact: true })).toBeVisible();
   release();
@@ -125,8 +141,8 @@ test('slow validation cannot change the save target, publication exposes audit f
       'PROJECT': '100001100001',
       'ORGANIZATION': '100001',
     }));
-    const base = '/api/quality/policies';
-    const listing = await page.request.get(`${base}?projectId=100001100001`, { headers });
+    const base = '/api/system/quality/policies';
+    const listing = await page.request.get(`${base}`, { headers });
     expect(listing.status()).toBe(200);
     const body = await listing.json();
     const data = body.data || body;
@@ -134,12 +150,12 @@ test('slow validation cannot change the save target, publication exposes audit f
     expect(draft).toBeTruthy();
     const validation = await page.request.post(`${base}/validate`, {
       headers,
-      data: { projectId: '100001100001', rulesJson: draft.rulesJson },
+      data: { rulesJson: draft.rulesJson },
     });
     expect(validation.status()).toBe(role === 'editor' ? 200 : 403);
     const create = await page.request.post(base, {
       headers,
-      data: { projectId: '100001100001', rulesJson: draft.rulesJson },
+      data: { rulesJson: draft.rulesJson },
     });
     expect(create.status()).toBe(role === 'editor' ? 200 : 403);
     if (role === 'editor') {
@@ -151,7 +167,6 @@ test('slow validation cannot change the save target, publication exposes audit f
     const publish = await page.request.post(`${base}/${draft.id}/publish`, {
       headers,
       data: {
-        projectId: '100001100001',
         expectedVersion: draft.rowVersion,
         expectedCurrentPolicyId: data.currentPolicyId,
         changeReason: 'Isolated role regression',
@@ -159,11 +174,11 @@ test('slow validation cannot change the save target, publication exposes audit f
     });
     expect(publish.status()).toBe(role === 'publisher' ? 200 : 403);
     const foreign = await page.request.get(`${base}/${draft.id}?projectId=other-project`, { headers });
-    expect(foreign.status()).toBe(403);
+    expect(foreign.status()).toBe(400);
   });
 });
 
-test('disabled isolated project remains readable and rejects writes', async ({ page }) => {
+test('disabled selected project does not restrict global policy management', async ({ page }) => {
   const headers = await page.evaluate(() => ({
     'X-AUTH-TOKEN': localStorage.getItem('sessionId') || '',
     'CSRF-TOKEN': localStorage.getItem('csrfToken') || '',
@@ -187,17 +202,15 @@ test('disabled isolated project remains readable and rejects writes', async ({ p
   expect(original).toMatch(/^[01]$/);
   try {
     sql('UPDATE project SET enable=0 WHERE id="100001100001";');
-    const read = await page.request.get('/api/quality/policies?projectId=100001100001', { headers });
+    const read = await page.request.get('/api/system/quality/policies', { headers });
     expect(read.status()).toBe(200);
     const body = await read.json();
     const data = body.data || body;
-    const write = await page.request.post('/api/quality/policies', {
+    const write = await page.request.post('/api/system/quality/policies', {
       headers,
-      data: { projectId: '100001100001', rulesJson: data.items[0].rulesJson },
+      data: { rulesJson: data.items[0].rulesJson },
     });
-    expect(write.status()).toBe(400);
-    const error = await write.json();
-    expect((error.data || error).code).toBe('QUALITY_POLICY_PROJECT_DISABLED');
+    expect(write.status()).toBe(200);
   } finally {
     sql(`UPDATE project SET enable=${original} WHERE id="100001100001";`);
   }
@@ -214,4 +227,79 @@ test('invalid nested parameter keeps JSON and identifies its exact path', async 
   await page.getByRole('button', { name: '可视化表单', exact: true }).click();
   await expect(page.getByText(/\/rules\/0\/parameters\/maxArtifactBytes/)).toBeVisible();
   await expect(json).toHaveValue(raw);
+});
+
+test('role:pure-admin:no project binding is required for global access', async ({ page }) => {
+  await expect(page).toHaveURL(/setting\/system\/quality-policy/);
+  await expect(page.getByRole('button', { name: '新建草稿', exact: true })).toBeEnabled();
+  const headers = await page.evaluate(() => ({
+    'X-AUTH-TOKEN': localStorage.getItem('sessionId') || '',
+    'CSRF-TOKEN': localStorage.getItem('csrfToken') || '',
+  }));
+  expect((await page.request.get('/api/system/quality/policies', { headers })).status()).toBe(200);
+});
+
+test('legacy import creates an idempotent draft without switching the global effective policy', async ({ page }) => {
+  const headers = await page.evaluate(() => ({
+    'X-AUTH-TOKEN': localStorage.getItem('sessionId') || '',
+    'CSRF-TOKEN': localStorage.getItem('csrfToken') || '',
+  }));
+  const beforeResponse = await page.request.get('/api/system/quality/policies', { headers });
+  const beforeBody = await beforeResponse.json();
+  const before = beforeBody.data || beforeBody;
+  await page.getByRole('button', { name: '查看旧项目策略归档' }).click();
+  await expect(page.getByRole('button', { name: '导入为全局草稿' }).first()).toBeVisible();
+  const archivedResponse = await page.request.get('/api/system/quality/legacy-policies', { headers });
+  const archivedBody = await archivedResponse.json();
+  const archived = archivedBody.data || archivedBody;
+  expect(archived.total).toBeGreaterThan(0);
+  const path = `/api/system/quality/legacy-policies/${archived.items[0].id}/import`;
+  const importedResponse = await page.request.post(path, { headers });
+  expect(importedResponse.status()).toBe(200);
+  const importedBody = await importedResponse.json();
+  const imported = importedBody.data || importedBody;
+  expect(imported.status).toBe('DRAFT');
+  const repeatedResponse = await page.request.post(path, { headers });
+  const repeatedBody = await repeatedResponse.json();
+  expect((repeatedBody.data || repeatedBody).id).toBe(imported.id);
+  const afterResponse = await page.request.get('/api/system/quality/policies', { headers });
+  const afterBody = await afterResponse.json();
+  expect((afterBody.data || afterBody).currentPolicyId).toBe(before.currentPolicyId);
+});
+
+test('role:editor:revocation during editing returns local 403 and preserves the draft', async ({ page }) => {
+  await page.getByRole('button', { name: '新建草稿', exact: true }).click();
+  const name = `revoked-draft-${Date.now()}`;
+  const input = page.locator('form').getByRole('textbox');
+  await input.fill(name);
+  const sql = (statement: string) =>
+    execFileSync(
+      'docker',
+      [
+        'exec',
+        '-i',
+        'msp-quality-verify-mysql-1',
+        'sh',
+        '-c',
+        'MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysql -uroot -N metersphere_quality',
+      ],
+      { input: statement, encoding: 'utf8' }
+    );
+  try {
+    sql(
+      "DELETE FROM user_role_permission WHERE role_id='quality-global-editor' AND permission_id='SYSTEM_QUALITY:MANAGE';"
+    );
+    const rejected = page.waitForResponse((response) => response.url().endsWith('/quality/policies/validate'));
+    await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+    expect((await rejected).status()).toBe(403);
+    await expect(input).toHaveValue(name);
+    await expect(page.getByRole('button', { name: '保存草稿', exact: true })).toBeEnabled();
+    await expect(page).toHaveURL(/setting\/system\/quality-policy/);
+  } finally {
+    sql(
+      "INSERT IGNORE INTO user_role_permission(id,role_id,permission_id) VALUES ('qg-editor-manage','quality-global-editor','SYSTEM_QUALITY:MANAGE');"
+    );
+  }
+  await page.getByRole('button', { name: '保存草稿', exact: true }).click();
+  await expect(page.getByRole('button', { name: '保存草稿', exact: true })).toBeHidden();
 });

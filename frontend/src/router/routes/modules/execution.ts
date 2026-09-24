@@ -1,5 +1,3 @@
-import { safeExecutionQuery } from '@/utils/execution-navigation';
-
 import { CaseManagementRouteEnum } from '@/enums/routeEnum';
 
 import { DEFAULT_LAYOUT } from '../base';
@@ -45,7 +43,7 @@ const Execution: AppRouteRecordRaw = {
     {
       path: 'quality-policy',
       component: null,
-      redirect: (to) => ({ path: '/setting/execution-settings/quality-policy', query: safeExecutionQuery(to.query) }),
+      redirect: '/setting/system/quality-policy',
       meta: { hideInMenu: true },
     },
   ],

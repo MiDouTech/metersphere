@@ -468,6 +468,7 @@ export interface AiExecutionTask {
   promptTemplateVersionId?: string;
   runnerId?: string;
   runnerLeaseId?: string;
+  qualityPolicy?: { policyId: string; versionNo: number; contentHash: string; rulesJson: string };
   executionContract?: string;
   executionContractHash?: string;
   originalScopeCount?: number;

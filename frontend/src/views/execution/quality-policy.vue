@@ -1,13 +1,16 @@
 <template>
   <div class="quality-policy-page">
+    <a-alert class="mb-4"
+      >全平台统一标准：所有项目使用同一当前版本，不能按项目覆盖。新版本用于后续执行，历史执行保留其绑定版本。</a-alert
+    >
     <a-space direction="vertical" fill>
       <a-typography-title :heading="4">门禁策略</a-typography-title>
-      <a-alert>管理项目策略草稿与发布版本。执行门禁接入尚未完成，发布策略不会使现有任务自动受控。</a-alert>
+      <a-alert>发布影响全平台后续执行。旧项目策略仅供历史核对，导入只生成草稿，不会自动生效。</a-alert>
       <a-alert v-if="error" type="error">{{ error }}</a-alert>
       <a-space>
         <a-button :loading="loading" @click="load">刷新</a-button>
         <a-button
-          v-permission="['QUALITY_POLICY:MANAGE']"
+          v-permission="['SYSTEM_QUALITY:MANAGE']"
           type="primary"
           :disabled="!schema || loading"
           @click="create"
@@ -19,10 +22,44 @@
       <a-space v-if="currentPolicy">
         <strong>当前发布版本：{{ currentPolicy.versionNo }}</strong>
         <a-button :disabled="busy" @click="inspect(currentPolicy)">查看当前版本</a-button>
-        <a-button v-permission="['QUALITY_POLICY:MANAGE']" :disabled="busy" @click="copy(currentPolicy)"
+        <a-button v-permission="['SYSTEM_QUALITY:MANAGE']" :disabled="busy" @click="copy(currentPolicy)"
           >复制当前版本</a-button
         >
       </a-space>
+      <a-button :loading="archiveLoading" @click="loadArchive">查看旧项目策略归档</a-button>
+      <a-alert v-if="archiveError" type="error">{{ archiveError }}</a-alert>
+      <a-table
+        v-if="archiveVisible"
+        :data="archiveItems"
+        :loading="archiveLoading"
+        row-key="id"
+        :pagination="{ current: archivePage, pageSize: 20, total: archiveTotal }"
+        @page-change="loadArchive"
+      >
+        <template #columns>
+          <a-table-column title="来源项目" data-index="projectId" />
+          <a-table-column title="原版本" data-index="versionNo" />
+          <a-table-column title="原状态" data-index="status" />
+          <a-table-column title="内容 Hash" data-index="contentHash" ellipsis tooltip />
+          <a-table-column title="操作"
+            ><template #cell="{ record }">
+              <a-button
+                @click="
+                  archiveJson = record.rulesJson;
+                  archiveDetailVisible = true;
+                "
+                >查看规则</a-button
+              >
+              <a-button v-permission="['SYSTEM_QUALITY:MANAGE']" :disabled="busy" @click="importArchive(record.id)"
+                >导入为全局草稿</a-button
+              >
+            </template></a-table-column
+          >
+        </template>
+      </a-table>
+      <a-modal v-model:visible="archiveDetailVisible" title="旧项目策略（只读归档）" :footer="false">
+        <pre class="whitespace-pre-wrap break-all">{{ archiveJson }}</pre>
+      </a-modal>
       <a-table
         :data="items"
         :loading="loading"
@@ -44,17 +81,17 @@
                 <a-button type="text" @click="inspect(record)">查看</a-button>
                 <a-button
                   v-if="record.status === 'DRAFT'"
-                  v-permission="['QUALITY_POLICY:MANAGE']"
+                  v-permission="['SYSTEM_QUALITY:MANAGE']"
                   type="text"
                   @click="edit(record)"
                   >编辑</a-button
                 >
-                <a-button v-permission="['QUALITY_POLICY:MANAGE']" type="text" @click="copy(record)"
+                <a-button v-permission="['SYSTEM_QUALITY:MANAGE']" type="text" @click="copy(record)"
                   >复制为新草稿</a-button
                 >
                 <a-button
                   v-if="record.status === 'DRAFT'"
-                  v-permission="['QUALITY_POLICY:PUBLISH']"
+                  v-permission="['SYSTEM_QUALITY:PUBLISH']"
                   type="text"
                   @click="preparePublish(record)"
                   >发布</a-button
@@ -154,7 +191,7 @@
         </div>
         <a-textarea v-model="publishReason" :max-length="1000" placeholder="填写发布或回退原因" aria-label="发布原因" />
         <a-space>
-          <a-button v-permission="['QUALITY_POLICY:PUBLISH']" type="primary" :loading="busy" @click="publish"
+          <a-button v-permission="['SYSTEM_QUALITY:PUBLISH']" type="primary" :loading="busy" @click="publish"
             >确认发布</a-button
           >
           <a-button :disabled="busy" @click="publishVisible = false">取消</a-button>
@@ -165,10 +202,11 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, reactive, ref, watch } from 'vue';
+  import { computed, onMounted, reactive, ref, watch } from 'vue';
   import { Message } from '@arco-design/web-vue';
 
   import type {
+    LegacyQualityPolicy,
     PolicyPublication,
     PolicySchema,
     PolicyValidation,
@@ -178,15 +216,38 @@
   import {
     getQualityPolicy,
     getQualityPolicySchema,
+    importLegacyQualityPolicy,
+    listLegacyQualityPolicies,
     listQualityPolicies,
     publishQualityPolicy,
     saveQualityPolicy,
     validateQualityPolicy,
   } from '@/api/modules/execution-quality';
-  import useAppStore from '@/store/modules/app';
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
 
-  const app = useAppStore();
+  const archiveItems = ref<LegacyQualityPolicy[]>([]);
+  const archivePage = ref(1);
+  const archiveTotal = ref(0);
+  const archiveVisible = ref(false);
+  const archiveLoading = ref(false);
+  const archiveError = ref('');
+  const archiveJson = ref('');
+  const archiveDetailVisible = ref(false);
+  async function loadArchive(value: number | MouseEvent = 1) {
+    archivePage.value = typeof value === 'number' ? value : 1;
+    archiveVisible.value = true;
+    archiveLoading.value = true;
+    archiveError.value = '';
+    try {
+      const result = await listLegacyQualityPolicies(archivePage.value);
+      archiveItems.value = result.items;
+      archiveTotal.value = result.total;
+    } catch (e) {
+      archiveError.value = formatAppErrorMessage(ensureAppError(e, '读取归档失败'));
+    } finally {
+      archiveLoading.value = false;
+    }
+  }
   const items = ref<QualityPolicy[]>([]);
   const page = ref(1);
   const total = ref(0);
@@ -246,17 +307,9 @@
     editorVisible.value = false;
     publishVisible.value = false;
     error.value = '';
-    if (!app.currentProjectId) {
-      error.value = '请先选择项目';
-      loading.value = false;
-      return;
-    }
     loading.value = true;
     try {
-      const [listing, document] = await Promise.all([
-        listQualityPolicies(app.currentProjectId, page.value),
-        getQualityPolicySchema(app.currentProjectId),
-      ]);
+      const [listing, document] = await Promise.all([listQualityPolicies(page.value), getQualityPolicySchema()]);
       if (requestEpoch !== epoch) return;
       items.value = listing.items;
       total.value = listing.total;
@@ -267,6 +320,20 @@
       if (requestEpoch === epoch) error.value = message(e);
     } finally {
       if (requestEpoch === epoch) loading.value = false;
+    }
+  }
+  async function importArchive(id: string) {
+    if (busy.value) return;
+    busy.value = true;
+    archiveError.value = '';
+    try {
+      await importLegacyQualityPolicy(id);
+      await load();
+      Message.success('已生成全局草稿，请核对规则后单独发布');
+    } catch (e) {
+      archiveError.value = formatAppErrorMessage(ensureAppError(e, '导入失败'));
+    } finally {
+      busy.value = false;
     }
   }
   function resetEditor() {
@@ -325,7 +392,7 @@
     readonly.value = true;
     raw.value = pretty(policy.rulesJson);
     editorVisible.value = true;
-    getQualityPolicy(policy.id, policy.projectId)
+    getQualityPolicy(policy.id)
       .then((detail) => {
         if (session !== editorEpoch || !editorVisible.value) return;
         publication.value = detail.publication;
@@ -354,11 +421,10 @@
     resetEditor();
   }
   async function check(): Promise<PolicyValidation | undefined> {
-    const projectId = app.currentProjectId;
     const requestEpoch = epoch;
     const session = editorEpoch;
     resetEditor();
-    const result = await validateQualityPolicy(projectId, documentText());
+    const result = await validateQualityPolicy(documentText());
     if (requestEpoch !== epoch || session !== editorEpoch || !editorVisible.value) return undefined;
     issues.value = result.errors;
     return result;
@@ -404,13 +470,12 @@
     if (busy.value) return;
     busy.value = true;
     const requestEpoch = epoch;
-    const projectId = app.currentProjectId;
     const session = editorEpoch;
     const target = editing.value ? { ...editing.value } : undefined;
     try {
       const result = await check();
       if (!result?.valid || !result.normalizedJson || requestEpoch !== epoch) return;
-      await saveQualityPolicy(projectId, result.normalizedJson, target);
+      await saveQualityPolicy(result.normalizedJson, target);
       if (requestEpoch !== epoch || session !== editorEpoch) return;
       editorVisible.value = false;
       Message.success('草稿已保存');
@@ -473,14 +538,7 @@
     },
     { flush: 'sync' }
   );
-  watch(
-    () => app.currentProjectId,
-    () => {
-      page.value = 1;
-      load();
-    },
-    { immediate: true }
-  );
+  onMounted(load);
   watch(
     () => [raw.value, JSON.stringify(form)],
     () => {

@@ -110,6 +110,10 @@ public class AgentExecutionPlanningService {
         AgentWebStepPlanDTO plan=JSON.parseObject(JSON.toJSONString(response.getStructuredOutput()),AgentWebStepPlanDTO.class);
         if(plan==null||plan.getAction()==null||plan.getAssertions()==null||plan.getAssertions().isEmpty())throw new MSException("MAP_GATEWAY_SCHEMA_INVALID");
         validator.validateAction(plan.getAction());validator.validateAssertions(plan.getAssertions());
+        for (var assertion : plan.getAssertions()) {
+            if (assertion.getExpected() == null || !java.util.Set.of("EQUALS", "IN_RANGE").contains(StringUtils.defaultString(assertion.getOperator())))
+                throw new MSException("QUALITY_ASSERTION_INVALID");
+        }
         return plan;
     }
 

@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentRunnerService {
+    @jakarta.annotation.Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
     private static final String CONTRACT_VERSION = "v1";
     private static final long RUNNER_HEARTBEAT_STALE_MS = 90_000L;
     private static final Set<String> RUNNER_EVENT_TYPES = Set.of(
@@ -202,11 +203,13 @@ public class AgentRunnerService {
         attempt.setCreateTime(now);
         attempt.setUpdateTime(now);
         attempt.setVersion(0);
+        var qualityPolicy = qualityGate.bind(executionId, task.getId());
         executionMapper.insertExecutionAttempt(attempt);
         executionMapper.insertRunnerLease(lease);
         execLogService.audit("AI_RUNNER_LEASE_ASSIGNED", task.getId(), "runnerId=" + runner.getId());
 
         AgentRunnerLeaseAssignmentDTO response = new AgentRunnerLeaseAssignmentDTO();
+        response.setQualityPolicy(qualityPolicy);
         response.setLeaseId(lease.getId());
         response.setLeaseToken(leaseToken);
         response.setExpireTime(lease.getExpireTime());
@@ -401,10 +404,13 @@ public class AgentRunnerService {
         if (closed != 1) {
             throw new MSException("RUNNER_LEASE_CONFLICT");
         }
-        String attemptStatus = "COMPLETED".equals(outcome) ? "SUCCEEDED" : outcome;
+        AgentExecutionTaskDTO completedTask = executionMapper.selectTaskById(task.getId());
+        boolean verifiedSuccess = completedTask != null && "SUCCESS".equals(completedTask.getWritebackStatus())
+                && "PASSED".equals(completedTask.getVerdict());
+        String attemptStatus = "COMPLETED".equals(outcome) ? (verifiedSuccess ? "SUCCEEDED" : "NEEDS_REVIEW") : outcome;
         executionMapper.finishExecutionAttempt(lease.getExecutionId(), attemptStatus,
-                "FAILED".equals(outcome) ? "EXECUTION_FAILED" : null,
-                "FAILED".equals(outcome) ? sanitize(request.getReason()) : null,
+                "NEEDS_REVIEW".equals(attemptStatus) ? "QUALITY_GATE_NOT_PASSED" : "FAILED".equals(outcome) ? "EXECUTION_FAILED" : null,
+                "NEEDS_REVIEW".equals(attemptStatus) ? "Platform checks or writeback did not pass" : "FAILED".equals(outcome) ? sanitize(request.getReason()) : null,
                 System.currentTimeMillis());
         if (!"COMPLETED".equals(outcome)) {
             testDataLeaseService.releaseForExecution(lease.getExecutionId());
