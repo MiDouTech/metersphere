@@ -26,6 +26,14 @@ public class AgentSafeErrorMapper {
         return switch (code) {
             case "AUTHENTICATION_REQUIRED" -> "请登录后重试";
             case "QUALITY_POLICY_FORBIDDEN" -> "执行令牌不能管理质量策略，请使用具有策略权限的登录账号";
+            case "QUALITY_LEGACY_SUBMIT_FORBIDDEN" -> "旧结果直写接口已停用，请通过执行任务提交步骤和证据";
+            case "QUALITY_POLICY_NOT_CONFIGURED" -> "尚未发布平台统一门禁策略，无法开始执行";
+            case "QUALITY_POLICY_BINDING_NOT_FOUND" -> "执行未绑定平台策略，请重新发起执行";
+            case "QUALITY_POLICY_HASH_INVALID", "QUALITY_CONTRACT_INVALID" -> "执行策略或合同校验失败，请联系管理员";
+            case "QUALITY_EVIDENCE_REQUIRED", "QUALITY_EVIDENCE_INVALID" -> "执行证据不符合平台门禁要求，请补充本步骤的有效证据";
+            case "QUALITY_ASSERTION_INVALID", "QUALITY_ASSERTION_FAILED", "QUALITY_RULE_UNSUPPORTED" -> "断言未通过平台门禁，请核对冻结预期和实际结果";
+            case "QUALITY_ATTEMPT_INVALID" -> "提交的执行轮次与当前租约不一致";
+            case "QUALITY_POLICY_LEGACY_WRITE_FORBIDDEN" -> "项目策略已停止维护，请进入系统设置中的平台质量门禁";
             case "QUALITY_POLICY_PROJECT_FORBIDDEN" -> "无权访问该项目的质量策略，请确认当前项目";
             case "QUALITY_POLICY_PROJECT_DISABLED" -> "项目已停用，质量策略仅可查看，不能修改或发布";
             case "QUALITY_POLICY_NOT_FOUND" -> "质量策略不存在或不属于当前项目";

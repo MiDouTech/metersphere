@@ -35,24 +35,24 @@ public class QualityPolicyController {
     @PostMapping("/policies/validate")
     @RequiresPermissions(PermissionConstants.QUALITY_POLICY_MANAGE)
     public QualityPolicyValidator.Validation validate(@RequestBody @Valid QualityPolicyService.DraftRequest request) {
-        return service.validate(request);
+        throw new io.metersphere.sdk.exception.MSException("QUALITY_POLICY_LEGACY_WRITE_FORBIDDEN");
     }
 
     @PostMapping("/policies")
     @RequiresPermissions(PermissionConstants.QUALITY_POLICY_MANAGE)
     public QualityPolicyService.Policy create(@RequestBody @Valid QualityPolicyService.DraftRequest request) {
-        return service.create(request);
+        throw new io.metersphere.sdk.exception.MSException("QUALITY_POLICY_LEGACY_WRITE_FORBIDDEN");
     }
 
     @PutMapping("/policies/{id}/draft")
     @RequiresPermissions(PermissionConstants.QUALITY_POLICY_MANAGE)
     public QualityPolicyService.Policy update(@PathVariable String id, @RequestBody @Valid QualityPolicyService.DraftRequest request) {
-        return service.update(id, request);
+        throw new io.metersphere.sdk.exception.MSException("QUALITY_POLICY_LEGACY_WRITE_FORBIDDEN");
     }
 
     @PostMapping("/policies/{id}/publish")
     @RequiresPermissions(PermissionConstants.QUALITY_POLICY_PUBLISH)
     public QualityPolicyService.Policy publish(@PathVariable String id, @RequestBody @Valid QualityPolicyService.PublishRequest request) {
-        return service.publish(id, request);
+        throw new io.metersphere.sdk.exception.MSException("QUALITY_POLICY_LEGACY_WRITE_FORBIDDEN");
     }
 }

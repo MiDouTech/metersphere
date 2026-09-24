@@ -70,6 +70,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentExecutionService {
+    @Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
     private static final int DEFAULT_CONFIRM_THRESHOLD = 20;
     private static final int EVENT_LIMIT_MAX = 500;
     private static final int ESTIMATE_MINUTES_PER_CASE = 2;
@@ -1152,7 +1153,9 @@ public class AgentExecutionService {
             for(AgentExecutionStepDTO step:byCase.getOrDefault(item.getId(),List.of())){
                 if(StringUtils.isAnyBlank(step.getActionJson(),step.getAssertionJson())){
                     if(AgentExecutorChannel.MODEL_API_RUNNER.equals(task.getExecutorChannel()))throw new MSException("EXECUTION_CONTRACT_STEP_NOT_PLANNED");
-                    continue;
+                    if(StringUtils.isBlank(step.getExpected())) throw new MSException("EXECUTION_CONTRACT_STEP_NOT_PLANNED");
+                    step.setActionJson(JSON.toJSONString(Map.of("instruction",StringUtils.defaultString(step.getInstruction()))));
+                    step.setAssertionJson(JSON.toJSONString(List.of(Map.of("operator","EQUALS","expected",step.getExpected()))));
                 }
                 Map<String,Object> value=new LinkedHashMap<>();value.put("stepId",step.getId());
                 value.put("action",JSON.parseObject(step.getActionJson()));value.put("assertions",JSON.parseArray(step.getAssertionJson()));
@@ -1224,6 +1227,7 @@ public class AgentExecutionService {
     }
 
     private AgentExecutionTaskDTO hydrate(AgentExecutionTaskDTO task) {
+        if (task.getCurrentExecutionId() != null) task.setQualityPolicy(qualityGate.findBinding(task.getCurrentExecutionId(), task.getId()));
         List<AgentExecutionCaseDTO> cases = agentExecutionMapper.selectCasesByTaskId(task.getId());
         Map<String, List<AgentExecutionStepDTO>> stepsByExecutionCase = agentExecutionMapper.selectStepsByTaskId(task.getId())
                 .stream()

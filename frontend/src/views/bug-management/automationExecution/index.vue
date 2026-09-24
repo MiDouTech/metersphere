@@ -73,6 +73,13 @@
       </div>
     </div>
 
+    <a-alert v-if="task?.qualityPolicy" class="mb-4">
+      本次执行绑定平台门禁 v{{ task.qualityPolicy.versionNo }} · {{ task.qualityPolicy.contentHash }}。
+      执行完成不等于门禁通过，正式结果须通过服务端检查。
+    </a-alert>
+    <a-alert v-else-if="task?.currentExecutionId" type="warning" class="mb-4">
+      历史执行未绑定平台统一策略，不能作为已通过统一门禁的证明。
+    </a-alert>
     <a-alert v-if="!executionTaskId && !canUsePlatform" type="info" class="mb-4">
       平台模型执行未启用或当前账号无平台创建权限。外部 Agent 请通过已授权的 MCP
       接入创建任务；网页无模型创建及审批尚未开放。

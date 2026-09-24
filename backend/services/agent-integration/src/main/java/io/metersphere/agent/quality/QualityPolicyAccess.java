@@ -20,6 +20,25 @@ public class QualityPolicyAccess {
         this.jdbc = jdbc;
     }
 
+    public String requireSystem(String permission) {
+        String actor = SessionUtils.getUserId();
+        if (StringUtils.isBlank(actor)) throw new MSException("AUTHENTICATION_REQUIRED");
+        if (AgentTokenContext.get() != null) throw new MSException("QUALITY_POLICY_FORBIDDEN");
+        if (!java.util.Set.of(PermissionConstants.SYSTEM_QUALITY_READ,
+                PermissionConstants.SYSTEM_QUALITY_MANAGE, PermissionConstants.SYSTEM_QUALITY_PUBLISH).contains(permission)) {
+            throw new MSException("PERMISSION_DENIED");
+        }
+        Integer grants = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM user_role_relation rel
+                JOIN user_role role ON role.id=rel.role_id
+                WHERE rel.user_id=? AND rel.source_id='system' AND role.type='SYSTEM' AND role.enabled=1
+                  AND (role.id='admin' OR EXISTS (SELECT 1 FROM user_role_permission perm
+                       WHERE perm.role_id=role.id AND perm.permission_id=?))
+                """, Integer.class, actor, permission);
+        if (grants == null || grants == 0) throw new MSException("PERMISSION_DENIED");
+        return actor;
+    }
+
     public String require(String projectId, String permission) {
         String actor = SessionUtils.getUserId();
         if (StringUtils.isBlank(actor)) throw new MSException("AUTHENTICATION_REQUIRED");

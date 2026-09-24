@@ -288,6 +288,21 @@ const useUserStore = defineStore('user', {
       const appStore = useAppStore();
       const isLogin = await this.isLogin(forceSet);
       const routeName = router.currentRoute.value.name as string;
+      const systemPolicyRoute =
+        ['SystemQualityPolicy', 'ExecutionQualityPolicy'].includes(routeName) ||
+        router.currentRoute.value.path === '/execution/quality-policy';
+      // System policy access is checked by its own route guard, never by current-project membership.
+      if (isLogin && systemPolicyRoute) return;
+      if (
+        isLogin &&
+        isLoginPage() &&
+        (!appStore.currentProjectId || appStore.currentProjectId === 'no_such_project') &&
+        (this.isAdmin || this.currentRole.systemPermissions.includes('SYSTEM_QUALITY:READ'))
+      ) {
+        await router.push({ name: 'SystemQualityPolicy' });
+        return;
+      }
+
       if (isLogin && appStore.currentProjectId && appStore.currentProjectId !== 'no_such_project') {
         // 当前为登陆状态，且已经选择了项目，初始化当前项目配置
         try {

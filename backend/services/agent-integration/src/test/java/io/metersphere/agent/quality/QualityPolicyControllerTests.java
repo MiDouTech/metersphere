@@ -29,18 +29,11 @@ class QualityPolicyControllerTests {
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.traceId").isNotEmpty());
         verifyNoInteractions(service);
     }
-    @Test void conflictingPublishReturnsSafe409() throws Exception {
-        when(service.publish(eq("p1"), any())).thenThrow(new MSException("QUALITY_POLICY_VERSION_CONFLICT"));
-        mvc.perform(post("/quality/policies/p1/publish").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"projectId\":\"project\",\"expectedVersion\":0,\"changeReason\":\"change\"}"))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("QUALITY_POLICY_VERSION_CONFLICT"))
-                .andExpect(jsonPath("$.traceId").isNotEmpty());
-    }
-    @Test void invalidPolicyPreservesSafeFieldPointers() throws Exception {
-        when(service.create(any())).thenThrow(new QualityPolicyValidationException(List.of(new QualityPolicyValidator.Issue("/rules", "规则不合法"))));
+    @Test void legacyWritesNeverBecomeGlobalWrites() throws Exception {
         mvc.perform(post("/api/quality/policies").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"projectId\":\"project\",\"rulesJson\":\"{}\"}"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.details.errors[0].path").value("/rules"));
+                .content("{\"projectId\":\"project\",\"rulesJson\":\"{}\"}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("QUALITY_POLICY_LEGACY_WRITE_FORBIDDEN"));
+        verifyNoInteractions(service);
     }
     @Test void paginationAndDetailRoutesForwardProjectScope() throws Exception {
         mvc.perform(get("/quality/policies").param("projectId", "p").param("page", "6").param("pageSize", "20"))

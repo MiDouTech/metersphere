@@ -10,6 +10,10 @@ export function hasPermission(permission: string, typeList: string[]) {
   if (userStore.isAdmin) {
     return true;
   }
+  // Platform policy grants must never inherit project/organization administrator bypasses.
+  if (permission.startsWith('SYSTEM_QUALITY:')) {
+    return userStore.currentRole.systemPermissions.includes(permission);
+  }
   const appStore = useAppStore();
   const hasScopedAdmin = (roleId: string, roleType: SystemScopeType, sourceId: string) => {
     if (!sourceId) return false;

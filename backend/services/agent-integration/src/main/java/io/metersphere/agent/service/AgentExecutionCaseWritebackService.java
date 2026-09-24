@@ -30,6 +30,7 @@ import java.util.List;
 
 @Service
 public class AgentExecutionCaseWritebackService {
+    @Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
     @Resource
     private AgentExecutionMapper executionMapper;
     @Resource
@@ -46,7 +47,8 @@ public class AgentExecutionCaseWritebackService {
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void writeback(AgentExecutionTaskDTO task, AgentExecutionCaseDTO executionCase,
                           List<AgentExecutionStepDTO> steps) {
-        String idempotencyKey = "ai-webui:" + task.getId() + ":" + executionCase.getCaseId()
+        qualityGate.requireCase(task, executionCase, steps);
+        String idempotencyKey = "ai-webui:" + task.getId() + ":" + task.getCurrentExecutionId() + ":" + executionCase.getCaseId()
                 + ":attempt-" + (executionCase.getRetryCount() == null ? 0 : executionCase.getRetryCount()) + ":v1";
         String result = toPlatformResult(executionCase.getStatus());
         if (executionMapper.countWritebackIdempotency(task.getId(), executionCase.getCaseId(), idempotencyKey) > 0) {

@@ -16,7 +16,7 @@ const Setting: AppRouteRecordRaw = {
     roles: [
       'SYSTEM_PERSONAL_AI_AGENT:READ',
       'AI_EXECUTION:READ',
-      'QUALITY:READ',
+      'SYSTEM_QUALITY:READ',
       'AI_MODEL:READ',
       'AI_CREDENTIAL:READ_METADATA',
       'SYSTEM_USER:READ',
@@ -53,6 +53,7 @@ const Setting: AppRouteRecordRaw = {
       meta: {
         locale: 'menu.settings.system',
         roles: [
+          'SYSTEM_QUALITY:READ',
           'SYSTEM_USER:READ',
           'SYSTEM_USER_ROLE:READ',
           'SYSTEM_PERMISSION_CONTROL:READ',
@@ -72,6 +73,17 @@ const Setting: AppRouteRecordRaw = {
         hideChildrenInMenu: true,
       },
       children: [
+        {
+          path: 'quality-policy',
+          name: 'SystemQualityPolicy',
+          component: () => import('@/views/execution/quality-policy.vue'),
+          meta: {
+            locale: '平台质量门禁',
+            roles: ['SYSTEM_QUALITY:READ'],
+            resourceCode: 'SYSTEM_QUALITY_POLICY_PAGE',
+            isTopMenu: true,
+          },
+        },
         {
           path: 'user',
           name: SettingRouteEnum.SETTING_SYSTEM_USER_SINGLE,

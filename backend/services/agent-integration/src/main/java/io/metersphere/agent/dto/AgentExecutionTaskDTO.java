@@ -47,6 +47,7 @@ public class AgentExecutionTaskDTO {
     private String modelProfileId;
     private String promptTemplateVersionId;
     private String preflightId;
+    private io.metersphere.agent.quality.GlobalQualityGate.Binding qualityPolicy;
     private String executionContract;
     private String executionContractHash;
     private String blockedReason;

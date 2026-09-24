@@ -39,7 +39,7 @@ export interface WebAssertion {
   contractVersion: "v1";
   type: AssertionType;
   target?: WebLocator;
-  operator?: "EQUALS" | "CONTAINS" | "MATCHES" | "NOT_EQUALS";
+  operator?: "EQUALS" | "CONTAINS" | "MATCHES" | "NOT_EQUALS" | "IN_RANGE";
   expected?: string;
   attribute?: string;
   timeoutMs: number;
@@ -83,6 +83,7 @@ export interface RuntimeCredential { username: string; value: string; secretVers
 export interface TestDataLease { id: string; datasetId: string; dataKey: string; leaseToken: string; expiresAt: number; }
 
 export interface LeaseAssignment {
+  qualityPolicy?: { policyId: string; versionNo: number; contentHash: string; rulesJson: string };
   leaseId: string;
   leaseToken: string;
   expireTime: number;

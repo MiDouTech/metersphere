@@ -32,7 +32,7 @@ class AgentExecutionPlanningServiceTests {
         when(jdbc.queryForObject(contains("preflight_id"),eq(String.class),any())).thenReturn("pf1");when(preflight.frozenExecutableAssetContexts("pf1")).thenReturn(List.of());
         when(invocations.start(anyString(),anyString(),anyString(),anyString(),anyString(),anyString())).thenReturn("i1","i2");
         GatewayPlanningResponse invalid=new GatewayPlanningResponse();invalid.setGatewayRequestId("g1");invalid.setStructuredOutput(Map.of("bad",true));invalid.getUsage().setInputTokens(10L);invalid.getCost().setAmount(new java.math.BigDecimal("0.01"));
-        GatewayPlanningResponse repaired=new GatewayPlanningResponse();repaired.setGatewayRequestId("g2");repaired.setStructuredOutput(Map.of("action",Map.of("type","NAVIGATE"),"assertions",List.of(Map.of("type","VISIBLE"))));
+        GatewayPlanningResponse repaired=new GatewayPlanningResponse();repaired.setGatewayRequestId("g2");repaired.setStructuredOutput(Map.of("action",Map.of("type","NAVIGATE"),"assertions",List.of(Map.of("type","VISIBLE","operator","EQUALS","expected","true"))));
         when(gateway.invokeStructured(any(),eq("vault://gateway"))).thenReturn(invalid,repaired);
         AgentExecutionStepDTO step=new AgentExecutionStepDTO();step.setId("s1");step.setInstruction("open");step.setExpected("visible");step.setRiskLevel("LOW");
         service.plan("p1","o1","m1","t1","https://example.test",List.of(step),"u1");
