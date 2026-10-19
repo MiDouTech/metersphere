@@ -49,6 +49,8 @@ class TestAssetCatalogServiceTests {
     private Subject subject;
     @Mock
     private Session session;
+    @org.mockito.Spy
+    private AgentCaseContentReader caseContentReader=new AgentCaseContentReader();
     @InjectMocks
     private TestAssetCatalogService service;
 

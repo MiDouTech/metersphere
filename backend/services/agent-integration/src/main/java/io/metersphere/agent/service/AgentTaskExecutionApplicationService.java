@@ -80,6 +80,12 @@ public class AgentTaskExecutionApplicationService {
         runnerService.updateTaskState(runnerAuthorization, leaseId, request);
     }
 
+    @Transactional(readOnly=true)
+    public AgentExecutionStepResultDTO readStepResult(String taskId,String executionId,String stepId,String requestId){
+        personalTaskService.getPersonalTask(taskId);
+        return stepResultService.read(taskId,executionId,stepId,requestId);
+    }
+
     public AgentExecutionStepResultDTO submitStepResult(AgentExecutionStepSubmitRequest request) {
         if (request != null) {
             personalTaskService.assertLeaseOwner(request.getLeaseId());

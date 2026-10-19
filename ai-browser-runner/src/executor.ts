@@ -1,3 +1,4 @@
+import { typedActual, compareTyped } from "./typed-assertions.js";
 import { createHash } from "node:crypto";
 import { access } from "node:fs/promises";
 import { chromium, type Browser, type Locator, type Page } from "playwright";
@@ -208,9 +209,23 @@ async function executeCase(page: Page, executionCase: ExecutionCase, config: Run
       const artifactIds = await captureEvidence(page, client, assignment, executionCase, step, "BEFORE_STEP", policy);
       await executeWithHealing(page, action, config, client, assignment, events, executionCase, step, policy);
       const actuals: unknown[] = [];
-      for (const assertion of assertions) actuals.push(await executeAssertion(page, assertion, config));
+      let assertionFailed = false;
+      for (const assertion of assertions) {
+        try { actuals.push(await executeAssertion(page, assertion, config)); }
+        catch (error) {
+          if (!(error instanceof AssertionMismatch)) throw error;
+          actuals.push(error.actual); assertionFailed = true;
+        }
+      }
       artifactIds.push(...await captureEvidence(page, client, assignment, executionCase, step, "AFTER_STEP", policy));
-      await client.stepResult(assignment, step.id, actuals, artifactIds);
+      await client.stepResult(assignment, step.id, actuals, artifactIds, assertionFailed ? "FAILED" : "SUCCESS",
+        assertionFailed ? "ASSERTION_MISMATCH" : undefined, assertions[0]?.contractVersion === "v2" ? assertions.map(a => a.assertionId!) : undefined);
+      if (assertionFailed) {
+        failed = true;
+        events.add({ ...errorEvent("ASSERTION_FAILED", "业务断言未满足，实际值与证据已提交"), caseId: executionCase.caseId,
+          stepId: step.id, attempt: step.attempt ?? 0, artifactIds });
+        break;
+      }
       events.add({ ...info("STEP_COMPLETED", "步骤执行与断言成功"), caseId: executionCase.caseId,
         stepId: step.id, attempt: step.attempt ?? 0, artifactIds });
     } catch (cause) {
@@ -218,6 +233,7 @@ async function executeCase(page: Page, executionCase: ExecutionCase, config: Run
       const error = asRunnerError(cause);
       const artifactIds = await captureEvidence(page, client, assignment, executionCase, step, "FAILURE", policy)
         .catch(() => []);
+      await client.stepResult(assignment, step.id, [], artifactIds, "BLOCKED", error.category);
       events.add({ ...errorEvent("ASSERTION_FAILED", `${error.category}: ${sanitize(error.message)}`),
         caseId: executionCase.caseId, stepId: step.id, attempt: step.attempt ?? 0, artifactIds,
         sanitizedMetadata: JSON.stringify({ failureCategory: error.category }) });
@@ -295,8 +311,15 @@ async function executeAction(page: Page, action: WebAction, config: RunnerConfig
   if (page.url() !== "about:blank") assertAllowedUrl(page.url(), config.allowedOrigins);
 }
 
+class AssertionMismatch extends RunnerError {
+  constructor(public readonly actual: string | number | boolean, type: string) {
+    super("ASSERTION_MISMATCH", `断言 ${type} 未满足`);
+  }
+}
+
 export async function executeAssertion(page: Page, assertion: WebAssertion, config: RunnerConfig): Promise<string | number | boolean> {
   const deadline = Date.now() + assertion.timeoutMs;
+  let observationError: RunnerError | undefined;
   let actual = "";
   do {
     try {
@@ -314,16 +337,22 @@ export async function executeAssertion(page: Page, assertion: WebAssertion, conf
           case "COUNT": actual = String(await locator.count()); break;
         }
       }
+      observationError = undefined;
       const expected = assertion.expected?.startsWith("dataset:")
         ? resolveValue(undefined, assertion.expected, config.values) : assertion.expected ?? (["VISIBLE", "ENABLED", "CHECKED"].includes(assertion.type) ? "true" : "");
-      if (["TEXT", "ATTRIBUTE", "COUNT", "URL", "TITLE", "VISIBLE", "ENABLED", "CHECKED"].includes(assertion.type)
+      if (assertion.contractVersion === "v2") {
+        const observation = typedActual(actual, assertion);
+        if (compareTyped(observation, assertion)) return observation;
+      } else if (["TEXT", "ATTRIBUTE", "COUNT", "URL", "TITLE", "VISIBLE", "ENABLED", "CHECKED"].includes(assertion.type)
           && compare(actual, expected, assertion.operator)) return assertion.operator === "IN_RANGE" ? Number(actual) : actual;
     } catch (cause) {
-      actual = asRunnerError(cause).message;
+      observationError = asRunnerError(cause);
     }
     await page.waitForTimeout(200);
   } while (Date.now() < deadline);
-  throw new RunnerError("ASSERTION_MISMATCH", `断言 ${assertion.type} 失败，actual=${sanitize(actual)}`);
+  if (observationError) throw observationError;
+  if (assertion.contractVersion === "v2") throw new AssertionMismatch(typedActual(actual, assertion), assertion.type);
+  throw new AssertionMismatch(assertion.operator === "IN_RANGE" && Number.isFinite(Number(actual)) ? Number(actual) : actual, assertion.type);
 }
 
 function compare(actual: string, expected: string, operator: WebAssertion["operator"] = "CONTAINS"): boolean {

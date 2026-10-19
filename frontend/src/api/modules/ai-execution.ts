@@ -126,6 +126,23 @@ export interface AiCaseExecutability {
   businessFlowId?: string;
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   missingItems: string[];
+  stableAssetId?: string;
+  caseVersionId?: string;
+  contentHash?: string;
+  contentSchemaVersion?: string;
+  issues?: Array<{
+    code: string;
+    stage: string;
+    caseId: string;
+    caseVersionId?: string;
+    stepId?: string;
+    stepIndex?: number;
+    fieldPath?: string;
+    message: string;
+    suggestion: string;
+    retryable: boolean;
+    traceId: string;
+  }>;
   lastCheckedAt?: number;
   checkerVersion: string;
   version: number;
@@ -144,6 +161,9 @@ export interface AiCaseExecutabilityConfigRequest {
 }
 
 export interface AiExecutionObservability {
+  qualityEvaluations?: Array<Record<string, any>>;
+  resultSync?: Array<Record<string, any>>;
+  assertionContracts?: Array<Record<string, any>>;
   traceId?: string;
   preflight: Record<string, any>;
   modelInvocations: Array<Record<string, any>>;
@@ -273,6 +293,8 @@ export interface AiExecutionPreflight {
   projectId: string;
   taskOrigin: AiTaskOrigin;
   status: 'PASSED' | 'BLOCKED';
+  checks?: Array<{ code: string; status: string; message: string; details?: { cases?: AiCaseExecutability[] } }>;
+
   resolvedCaseIds: string[];
   originalScopeCount: number;
   expandedScopeCount: number;
@@ -1369,4 +1391,8 @@ export function pageTestAssetRelations(params: {
   pageSize?: number;
 }) {
   return MSR.get<TestAssetPage<TestAssetRelation>>({ url: TestAssetRelationsUrl, params });
+}
+
+export function retryAiExecutionSync(taskId: string) {
+  return MSR.post({ url: `/ai/execution/task/${encodeURIComponent(taskId)}/retry-sync` });
 }

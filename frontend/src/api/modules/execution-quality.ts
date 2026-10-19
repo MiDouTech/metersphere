@@ -113,3 +113,26 @@ export function listLegacyQualityPolicies(page = 1) {
 export function importLegacyQualityPolicy(id: string) {
   return MSR.post<QualityPolicy>({ url: `/system/quality/legacy-policies/${id}/import` }, options);
 }
+
+export interface QualityImpactPreview {
+  scope: string;
+  candidateHash: string;
+  changedRules: string[];
+  inFlightAttempts: number;
+  appliesTo: string;
+}
+export interface QualityTrialResult {
+  trialId: string;
+  candidateHash: string;
+  sampleCount: number;
+  wouldPass: number;
+  wouldReject: number;
+  unavailable: number;
+  notice: string;
+}
+export function previewQualityPolicy(id: string) {
+  return MSR.get<QualityImpactPreview>({ url: `${base}/${encodeURIComponent(id)}/impact-preview` }, options);
+}
+export function trialQualityPolicy(id: string) {
+  return MSR.post<QualityTrialResult>({ url: `${base}/${encodeURIComponent(id)}/trial` }, options);
+}

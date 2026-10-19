@@ -19,4 +19,10 @@ public class AgentCaseExecutabilityDTO {
     private Long lastCheckedAt;
     private String checkerVersion;
     private Integer version;
+    private String stableAssetId;
+    private String caseVersionId;
+    private String contentHash;
+    private String contentSchemaVersion;
+    private List<AgentCaseContentIssue> issues;
+
 }

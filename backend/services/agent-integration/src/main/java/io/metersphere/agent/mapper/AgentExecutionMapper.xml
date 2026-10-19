@@ -401,6 +401,7 @@
         WHERE organization_id = #{organizationId}
           AND status = 'QUEUED'
           AND executor_channel = 'MODEL_API_RUNNER'
+          AND (#{supportsV2} = TRUE OR COALESCE(JSON_UNQUOTE(JSON_EXTRACT(CASE WHEN JSON_VALID(execution_contract) THEN execution_contract ELSE '{}' END,'$.contractVersion')),'v1') != 'v2')
           AND attempt_count &lt; max_attempts
           AND (timeout_at IS NULL OR timeout_at &gt; UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000)
           AND (runner_id IS NULL OR runner_id = '' OR runner_id = #{runnerId})
@@ -628,11 +629,11 @@
                step_id AS stepId, attempt, status, input_snapshot AS inputSnapshot,
                output_summary AS outputSummary, assertion_result AS assertionResult,
                error_code AS errorCode, error_message AS errorMessage, artifact_ids AS artifactIds,
-               request_id AS requestId, trace_id AS traceId, started_at AS startedAt,
+               request_id AS requestId, payload_hash AS payloadHash, facts_version AS factsVersion, trace_id AS traceId, started_at AS startedAt,
                finished_at AS finishedAt, create_time AS createTime, create_user AS createUser
         FROM ai_execution_step_result
         WHERE execution_id = #{executionId} AND step_id = #{stepId} AND request_id = #{requestId}
-        LIMIT 1
+        LIMIT 1 FOR UPDATE
     </select>
     <select id="countAvailableArtifactsByExecutionCase" resultType="int">
         SELECT COUNT(1) FROM ai_execution_artifact
@@ -649,11 +650,11 @@
         INSERT INTO ai_execution_step_result (
             id, task_id, execution_id, lease_id, step_id, attempt, status, input_snapshot,
             output_summary, assertion_result, error_code, error_message, artifact_ids,
-            request_id, trace_id, started_at, finished_at, create_time, create_user
+            request_id, payload_hash, facts_version, trace_id, started_at, finished_at, create_time, create_user
         ) VALUES (
             #{id}, #{taskId}, #{executionId}, #{leaseId}, #{stepId}, #{attempt}, #{status}, #{inputSnapshot},
             #{outputSummary}, #{assertionResult}, #{errorCode}, #{errorMessage}, #{artifactIds},
-            #{requestId}, #{traceId}, #{startedAt}, #{finishedAt}, #{createTime}, #{createUser}
+            #{requestId}, #{payloadHash}, #{factsVersion}, #{traceId}, #{startedAt}, #{finishedAt}, #{createTime}, #{createUser}
         )
     </insert>
 
@@ -667,7 +668,7 @@
         UPDATE ai_execution_attempt
         SET status = #{status}, error_code = #{errorCode}, error_message = #{errorMessage},
             finish_time = #{finishTime}, update_time = #{finishTime}, version = version + 1
-        WHERE id = #{executionId} AND status IN ('CLAIMED', 'RUNNING')
+        WHERE id = #{executionId} AND status IN ('CLAIMED', 'RUNNING', 'FINALIZING')
     </update>
 
     <insert id="insertArtifact" parameterType="io.metersphere.agent.dto.AgentExecutionArtifactDTO">
@@ -862,7 +863,7 @@
             blocked_count = #{blockedCount}, skipped_count = #{skippedCount}, unexecuted_count = #{unexecutedCount},
             writeback_status = #{writebackStatus}, artifact_status = #{artifactStatus},
             finished_at = #{updateTime}, update_user = #{updateUser}, update_time = #{updateTime}, version = version + 1
-        WHERE id = #{taskId} AND status = 'WRITING_BACK'
+        WHERE id = #{taskId} AND current_execution_id=#{executionId} AND status IN ('WRITING_BACK','PARTIAL_SUCCESS','FAILED')
     </update>
 
     <insert id="insertEvent" parameterType="io.metersphere.agent.dto.AgentExecutionEventDTO">

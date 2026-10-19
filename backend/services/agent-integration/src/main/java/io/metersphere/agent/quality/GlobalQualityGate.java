@@ -14,6 +14,7 @@ import java.util.*;
 /** Server-owned policy binding and result verification; no project-specific policy fallback. */
 @Service
 public class GlobalQualityGate {
+    @jakarta.annotation.Resource private io.metersphere.agent.security.AgentFactCipher factCipher;
     private final JdbcTemplate jdbc;
     private final AgentExecutionMapper mapper;
     private final QualityPolicyValidator validator;
@@ -76,6 +77,16 @@ public class GlobalQualityGate {
     static void evaluate(JsonNode policy, JsonNode frozen, JsonNode observed, List<AgentExecutionArtifactDTO> artifacts) {
         if(frozen==null || !frozen.isArray() || frozen.isEmpty() || !observed.isArray() || observed.size()!=frozen.size())
             throw new MSException("QUALITY_ASSERTION_INVALID");
+        boolean v2="v2".equals(frozen.get(0).path("contractVersion").asText());
+        Map<String,JsonNode> byId=new HashMap<>();Set<String> frozenIds=new HashSet<>();
+        if(v2){
+            for(JsonNode observation:observed){
+                if(!observation.isObject() || observation.size()!=2 || !observation.has("actual") || !observation.path("assertionId").isTextual())throw new MSException("QUALITY_ASSERTION_INVALID");
+                if(byId.put(observation.path("assertionId").asText(),observation)!=null)throw new MSException("QUALITY_ASSERTION_INVALID");
+            }
+            for(JsonNode rule:frozen){String id=rule.path("assertionId").asText();if(id.isBlank() || !frozenIds.add(id) || !byId.containsKey(id) || !"v2".equals(rule.path("contractVersion").asText()))throw new MSException("QUALITY_ASSERTION_INVALID");}
+        }
+        boolean assertionFailed=false;
         for(JsonNode rule:policy.path("rules")) {
             JsonNode parameters=rule.path("parameters");
             if("Q-EVIDENCE-01".equals(rule.path("ruleId").asText())) {
@@ -88,22 +99,29 @@ public class GlobalQualityGate {
                 }
             } else if("Q-ASSERT-01".equals(rule.path("ruleId").asText())) {
                 for(int i=0;i<frozen.size();i++) {
-                    JsonNode expected=frozen.get(i); JsonNode actual=observed.get(i).get("actual");
+                    JsonNode expected=frozen.get(i); JsonNode actual=(v2?byId.get(expected.path("assertionId").asText()):observed.get(i)).get("actual");
                     String operator=expected.path("operator").asText();
                     if(actual==null || actual.isNull() || !contains(parameters.path("allowedOperators"),operator))
                         throw new MSException("QUALITY_ASSERTION_INVALID");
                     JsonNode value=expected.get("expected"); boolean pass=false;
-                    if(value!=null && "EQUALS".equals(operator)) pass=value.equals(actual);
+                    if(v2)pass=TypedAssertionComparator.compare(expected,actual);
+                    else if(value!=null && "EQUALS".equals(operator)) pass=value.equals(actual);
                     else if(value!=null && "IN_RANGE".equals(operator)) {
                         JsonNode range=value.isTextual()?read(value.asText()):value;
                         if(range.isArray() && range.size()==2 && range.get(0).isNumber() && range.get(1).isNumber() && actual.isNumber())
                             pass=actual.decimalValue().compareTo(range.get(0).decimalValue())>=0
                                     && actual.decimalValue().compareTo(range.get(1).decimalValue())<=0;
                     }
-                    if(!pass) throw new MSException("QUALITY_ASSERTION_FAILED");
+                    if(!pass) assertionFailed=true;
                 }
             } else throw new MSException("QUALITY_RULE_UNSUPPORTED");
         }
+        if(assertionFailed)throw new MSException("QUALITY_ASSERTION_FAILED");
+    }
+    public void verifyFailure(AgentExecutionTaskDTO task,String executionId,AgentExecutionStepDTO step,String assertions,List<String> artifacts){
+        try {verifySuccess(task,executionId,step,assertions,artifacts);}
+        catch(MSException error){if("QUALITY_ASSERTION_FAILED".equals(error.getMessage()))return;throw error;}
+        throw new MSException("QUALITY_FAILURE_FACTS_MISMATCH");
     }
     private static boolean contains(JsonNode values,String value) {
         for(JsonNode item:values) if(item.asText().equals(value)) return true;
@@ -114,21 +132,29 @@ public class GlobalQualityGate {
         catch(Exception ignored) { /* converted to safe contract error */ }
         throw new MSException("QUALITY_ASSERTION_INVALID");
     }
+    private String storedAssertions(String value){return io.metersphere.agent.security.AgentFactCipher.protectedValue(value)?factCipher.reveal(value):value;}
     public void requireCase(AgentExecutionTaskDTO task, AgentExecutionCaseDTO executionCase, List<AgentExecutionStepDTO> steps) {
         binding(task.getCurrentExecutionId(),task.getId());
-        if(!"SUCCESS".equals(executionCase.getStatus())) return;
+        if(!List.of("SUCCESS","FAILED").contains(executionCase.getStatus())) return;
         if(steps.isEmpty()) throw new MSException("QUALITY_ASSERTION_INVALID");
+        boolean failedFact=false;
         for(var step:steps) {
             var results=jdbc.queryForList("SELECT status,assertion_result,artifact_ids FROM ai_execution_step_result WHERE execution_id=? AND step_id=? ORDER BY create_time DESC,id DESC LIMIT 1",
                     task.getCurrentExecutionId(),step.getId());
-            if(results.isEmpty() || !"SUCCESS".equals(step.getStatus())) throw new MSException("QUALITY_ASSERTION_INVALID");
+            if(results.isEmpty()) {
+                if("FAILED".equals(executionCase.getStatus()) && failedFact && List.of("PENDING","SKIPPED").contains(step.getStatus()))continue;
+                throw new MSException("QUALITY_ASSERTION_INVALID");
+            }
             var result=results.getFirst();
-            if(!"SUCCESS".equals(result.get("status"))) throw new MSException("QUALITY_ASSERTION_INVALID");
+            if(!Objects.equals(result.get("status"),step.getStatus()) || !List.of("SUCCESS","FAILED").contains(step.getStatus()))throw new MSException("QUALITY_ASSERTION_INVALID");
+            if("SUCCESS".equals(executionCase.getStatus()) && !"SUCCESS".equals(step.getStatus()))throw new MSException("QUALITY_ASSERTION_INVALID");
             var artifactIds=new ArrayList<String>();
             JsonNode stored=read((String)result.get("artifact_ids"));
             if(!stored.isArray()) throw new MSException("QUALITY_EVIDENCE_INVALID");
             stored.forEach(id->artifactIds.add(id.asText()));
-            verifySuccess(task,task.getCurrentExecutionId(),step,(String)result.get("assertion_result"),artifactIds);
+            if("FAILED".equals(step.getStatus())){verifyFailure(task,task.getCurrentExecutionId(),step,storedAssertions((String)result.get("assertion_result")),artifactIds);failedFact=true;}
+            else verifySuccess(task,task.getCurrentExecutionId(),step,storedAssertions((String)result.get("assertion_result")),artifactIds);
         }
+        if("FAILED".equals(executionCase.getStatus()) && !failedFact)throw new MSException("QUALITY_FAILURE_FACTS_MISMATCH");
     }
 }

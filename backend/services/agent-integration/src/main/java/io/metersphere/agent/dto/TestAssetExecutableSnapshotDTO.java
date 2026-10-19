@@ -6,6 +6,10 @@ import lombok.Data;
 @Data
 public class TestAssetExecutableSnapshotDTO {
     private String rawContentJson;
+    private byte[] casePrerequisiteRaw;
+    private byte[] caseStepsRaw;
+    private byte[] caseDescriptionRaw;
+    private byte[] caseExpectedRaw;
     private String fileId;
     private String fileName;
     private String fileType;

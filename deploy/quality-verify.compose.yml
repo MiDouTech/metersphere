@@ -78,6 +78,7 @@ services:
       MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health
       SPRING_FLYWAY_VALIDATE_ON_MIGRATE: "true"
+      AGENT_EXECUTION_FACTS_KEY: ${QUALITY_FACTS_KEY:-}
       JAVA_MAX_MEM_RATIO: 65
     volumes:
       - ./quality-verify/redisson.yml:/verify/redisson.yml:ro

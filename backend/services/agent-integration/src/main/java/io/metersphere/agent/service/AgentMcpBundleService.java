@@ -21,7 +21,8 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class AgentMcpBundleService {
     private static final String PACKAGE_NAME = "metersphere-agent-skill";
-    private static final String VERSION = "1.0.0";
+    private static final String VERSION = "1.1.0";
+    @jakarta.annotation.Resource private io.metersphere.agent.tool.AgentMcpToolRegistry registry;
     private static final String FILE_NAME = PACKAGE_NAME + "-" + VERSION + ".zip";
     private static final String TEST_BASE_URL = "https://msp.ebcone.net";
     private static final String PROD_BASE_URL = "https://msp.ebcone.cn";
@@ -48,7 +49,7 @@ public class AgentMcpBundleService {
             headers.setContentLength(bytes.length);
             return ResponseEntity.ok().headers(headers).body(bytes);
         } catch (Exception e) {
-            throw new MSException("Failed to build Agent skill package: " + e.getMessage());
+            throw new MSException("AGENT_SKILL_PACKAGE_BUILD_FAILED");
         }
     }
 
@@ -134,6 +135,8 @@ public class AgentMcpBundleService {
                         "test", TEST_BASE_URL,
                         "production", PROD_BASE_URL
                 ),
+                "capabilityContractVersion", "1.1.0",
+                "capabilityDigest", DigestUtils.sha256Hex(toolsMd()),
                 "tokenEmbedded", false
         ));
     }
@@ -157,32 +160,13 @@ public class AgentMcpBundleService {
     }
 
     private String toolsMd() {
-        return """
-                # Tools
-
-                - metersphere.functional.search
-                - metersphere.functional.get
-                - metersphere.functional.modules
-                - metersphere.functional.submit
-                - metersphere.functional.module.create
-                - metersphere.functional.case.create
-                - metersphere.functional.case.batch_create
-                - metersphere.bug.search
-                - metersphere.bug.get
-                - metersphere.bug.create
-                - metersphere.bug.update
-                - metersphere.project.create
-                - metersphere.project.members.add
-                - metersphere.project.search
-                - metersphere.project.list
-                - metersphere.project.get
-                - metersphere.test_plan.create
-                - metersphere.test_plan.associate_cases
-                - metersphere.test_plan.get
-                - metersphere.case_review.create
-                - metersphere.case_review.associate_cases
-                - metersphere.case_review.get
-                """;
+        StringBuilder out = new StringBuilder("# Server capabilities\n\nGenerated from the deployed registry. Call tools/list with your token for the authorized subset.\n\n");
+        registry.all().stream().filter(handler -> io.metersphere.agent.tool.AgentMcpToolExposure.discoverable(handler.name()))
+                .sorted(java.util.Comparator.comparing(io.metersphere.agent.tool.AgentMcpToolHandler::name))
+                .forEach(handler -> out.append("## ").append(handler.name()).append("\n\nScope: ").append(handler.requiredScope())
+                        .append("\n\n").append(handler.description()).append("\n\nInput schema:\n```json\n")
+                        .append(JSON.toJSONString(handler.inputSchema())).append("\n```\n\n"));
+        return out.toString();
     }
 
     private String permissionsMd() {
@@ -209,7 +193,10 @@ public class AgentMcpBundleService {
                 - Search cases before creating duplicates.
                 - When the user provides a project name or the numeric ID shown in the MeterSphere project list, call `metersphere.project.search` first (alias `search_projects` is accepted). Use `metersphere.project.list` to enumerate accessible projects. Pass `page`/`pageSize` for pagination; response contains `items`, `total`, `hasMore`. The numeric UI ID maps to `project.num`; if multiple projects share the same number, return all matches and ask the user to choose.
                 - For case search, execution result submission, module creation, case creation, and batch case creation, always pass `projectId`. `projectId` may be the internal project id, the numeric UI project ID, or the exact project name; the server resolves it to the internal project id and enforces user/token project access.
-                - When submitting execution results, include exact case ID, result, step snapshots, and attachments where available.
+                - Execution must use a server-created task and a current lease: search/preflight, claim, heartbeat, submit step facts, commit evidence, then complete. The server evaluates assertions and writes results. Never invent PASS/FAIL or call legacy functional.submit APIs.
+                - A lost claim response does not authorize blindly claiming another task. Query task/attempt state first; an expired lease requires recovery or a new server-issued lease.
+                - Reuse the same requestId and identical payload for retries. IDEMPOTENCY_CONFLICT requires checking the existing operation; do not generate another key to bypass it.
+                - Review create/associate require requestId; read the review after a response loss. Review decisions and Excel import are not promised unless the live tools/list exposes them.
                 - For bug creation, include reproduction steps, expected result, actual result, severity, and related case ID when known.
                 """;
     }

@@ -469,8 +469,15 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     @Bean
+    public AgentMcpToolHandler executionStepResultReadTool(AgentTaskExecutionApplicationService service){
+        return tool("metersphere.execution.step.result.get","Read a persisted step result by requestId after a lost response or expired lease. Requires authorized access to the personal task; never replays a mutation.",
+                AgentTokenScope.TASK_READ,true,objectSchema(Map.of("taskId",stringSchema(),"executionId",stringSchema(),"stepId",stringSchema(),"requestId",stringSchema()),List.of("taskId","executionId","stepId","requestId")),
+                args->service.readStepResult(requiredString(args,"taskId"),requiredString(args,"executionId"),requiredString(args,"stepId"),requiredString(args,"requestId")));
+    }
+
+    @Bean
     public AgentMcpToolHandler executionStepSubmitTool(AgentTaskExecutionApplicationService service) {
-        return tool("metersphere.execution.step.submit", "Submit an idempotent result for one execution step.",
+        return tool("metersphere.execution.step.submit", "Submit immutable step facts using the frozen contract: v1 uses ordered actual values; v2 requires unique assertionId and typed actual values (DECIMAL/INTEGER as strings). Never submit expected/operator overrides. Reuse requestId and payload for retries; changed payloads conflict.",
                 AgentTokenScope.TASK_RESULT_WRITE, false,
                 dtoSchema(AgentExecutionStepSubmitRequest.class),
                 args -> service.submitStepResult(convert(args, AgentExecutionStepSubmitRequest.class)));

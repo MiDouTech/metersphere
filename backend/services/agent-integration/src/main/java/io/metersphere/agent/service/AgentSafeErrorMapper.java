@@ -24,6 +24,27 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "QUALITY_CLAIM_ACTOR_REVOKED" -> "任务发起人的项目权限已失效，请重新授权后再执行";
+            case "QUALITY_CLAIM_PROJECT_UNAVAILABLE", "QUALITY_CLAIM_CASE_UNAVAILABLE", "QUALITY_CLAIM_ENVIRONMENT_UNAVAILABLE", "QUALITY_CLAIM_CREDENTIAL_UNAVAILABLE" -> "执行所需的项目、用例、环境或凭据已失效，请重新预检后发起任务";
+            case "AGENT_RESOURCE_NOT_ACCESSIBLE" -> "资源不存在或当前账号和令牌无权访问，请检查项目授权";
+            case "IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED" -> "历史请求结果需要核对，请先查询资源，不要直接重新执行";
+            case "REQUEST_IN_PROGRESS" -> "请求正在处理，请稍后使用相同请求标识查询或重试";
+            case "AGENT_RESULT_LIMIT_EXCEEDED", "AGENT_SERIALIZATION_ERROR" -> "请求结果暂时无法保存，请提供 traceId 联系管理员";
+            case "AGENT_VALIDATION_ERROR" -> "参数不符合要求，请检查必填项、数量与字段格式";
+            case "AGENT_REVIEW_STATE_CONFLICT" -> "评审状态已变化，请刷新后重试";
+            case "QUALITY_FACTS_KEY_NOT_CONFIGURED" -> "敏感执行事实需要管理员配置加密密钥后再提交";
+            case "QUALITY_FACTS_ENCRYPTION_FAILED", "QUALITY_FACTS_DECRYPTION_FAILED" -> "受保护的执行事实暂时不可用，请提供 traceId 联系管理员";
+            case "QUALITY_FINAL_FACTS_INCOMPLETE", "QUALITY_FAILURE_FACTS_MISMATCH" -> "执行事实不完整或与申报结果不一致，不能同步正式结果";
+            case "QUALITY_FINAL_FACTS_HASH_INVALID" -> "最终事实校验失败，请联系管理员";
+            case "EXECUTION_FACTS_FINALIZED_CONFLICT" -> "执行事实已冻结，不能继续提交或修改本次结果";
+            case "STEP_RESULT_REQUEST_CONFLICT" -> "同一请求标识对应的提交内容已变化，请使用新的请求标识";
+            case "STEP_RESULT_LEGACY_REQUEST_CONFLICT" -> "历史结果没有可验证摘要，请查询原结果，不要重放提交";
+            case "STEP_FACTS_LIMIT_EXCEEDED" -> "步骤事实超过允许容量，请减少非必要信息后重新提交";
+            case "CASE_CONTENT_MISSING" -> "用例缺少有效操作或预期，请核对并重新发布";
+            case "CASE_CONTENT_FORMAT_INVALID", "CASE_CONTENT_DECODE_FAILED", "CASE_CONTENT_HASH_INVALID" -> "发布版本内容无法读取，请提供 traceId 联系管理员";
+            case "CASE_CONTENT_LIMIT_EXCEEDED" -> "用例内容超过安全读取限制，请联系管理员";
+            case "CASE_VERSION_NOT_PUBLISHED" -> "请先发布用例版本，再执行检查";
+            case "PREFLIGHT_CHECKER_VERSION_EXPIRED" -> "预检版本已失效，请重新执行预检";
             case "AUTHENTICATION_REQUIRED" -> "请登录后重试";
             case "QUALITY_POLICY_FORBIDDEN" -> "执行令牌不能管理质量策略，请使用具有策略权限的登录账号";
             case "QUALITY_LEGACY_SUBMIT_FORBIDDEN" -> "旧结果直写接口已停用，请通过执行任务提交步骤和证据";

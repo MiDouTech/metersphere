@@ -42,6 +42,8 @@ import java.util.List;
 
 @Service
 public class AgentCaseWriteService {
+    @Resource private AgentBusinessAccess access;
+    @Resource private AgentSafeErrorMapper safeErrors;
     @Resource
     private FunctionalCaseService functionalCaseService;
     @Resource
@@ -62,10 +64,12 @@ public class AgentCaseWriteService {
     public AgentModuleDTO createModule(AgentModuleCreateRequest request) {
         String userId = requireUserId();
         String projectId = agentProjectService.resolveProjectId(request.getProjectId());
+        userId = access.project(projectId, "FUNCTIONAL_CASE:READ+ADD", true, io.metersphere.agent.constants.AgentTokenScope.CASE_WRITE);
         String moduleId;
         if (StringUtils.isNotBlank(request.getModulePath())) {
             moduleId = resolveOrCreateModulePath(projectId, request.getModulePath(), userId);
         } else {
+            if (!ModuleConstants.ROOT_NODE_PARENT_ID.equals(request.getParentId())) access.module(projectId, request.getParentId(), false);
             FunctionalCaseModuleCreateRequest createRequest = new FunctionalCaseModuleCreateRequest();
             createRequest.setProjectId(projectId);
             createRequest.setName(request.getName());
@@ -99,12 +103,14 @@ public class AgentCaseWriteService {
     public AgentCaseBatchCreateResponse batchCreate(AgentCaseBatchCreateRequest request) {
         String userId = requireUserId();
         String projectId = agentProjectService.resolveProjectId(request.getProjectId());
+        userId = access.project(projectId, "FUNCTIONAL_CASE:READ+ADD", true, io.metersphere.agent.constants.AgentTokenScope.CASE_WRITE);
         request.setProjectId(projectId);
         Project project = projectMapper.selectByPrimaryKey(projectId);
         if (project == null) {
             throw new MSException("项目不存在: " + request.getProjectId());
         }
         String organizationId = project.getOrganizationId();
+        access.module(projectId, request.getModuleId(), false);
         String moduleId = resolveModuleId(projectId, request.getModuleId(), request.getModulePath(), userId);
         String scene = TemplateScene.FUNCTIONAL.name();
         TemplateDTO templateDTO;
@@ -134,7 +140,7 @@ public class AgentCaseWriteService {
             } catch (Exception ex) {
                 AgentCaseBatchCreateResponse.FailedCase failed = new AgentCaseBatchCreateResponse.FailedCase();
                 failed.setName(item.getName());
-                failed.setError(ex.getMessage());
+                failed.setError(safeErrors.toApiError(ex, null).getMessage());
                 response.getErrors().add(failed);
                 if (failFast) {
                     break;

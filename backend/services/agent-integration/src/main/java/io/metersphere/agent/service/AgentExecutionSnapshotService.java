@@ -2,6 +2,7 @@ package io.metersphere.agent.service;
 
 import io.metersphere.agent.constants.AgentExecutionStatus;
 import io.metersphere.agent.dto.AgentCaseDTO;
+import io.metersphere.agent.dto.TestAssetVersionDTO;
 import io.metersphere.agent.dto.AgentCaseStepDTO;
 import io.metersphere.agent.dto.AgentExecutionCaseDTO;
 import io.metersphere.agent.dto.AgentExecutionStepDTO;
@@ -25,10 +26,22 @@ public class AgentExecutionSnapshotService {
     @Resource
     private AgentFunctionalCaseSearchService functionalCaseSearchService;
 
+    @Resource private AgentCaseContentReader contentReader;
+
+    public List<AgentExecutionStepDTO> prepareSnapshot(AgentExecutionCaseDTO executionCase, TestAssetVersionDTO version, long now) {
+        AgentCaseDTO source=contentReader.published(version);
+        executionCase.setCaseSnapshot(version.getContentSnapshot());
+        return steps(executionCase,source,now);
+    }
+
     public List<AgentExecutionStepDTO> prepareSnapshot(AgentExecutionCaseDTO executionCase, long now) {
         AgentCaseDTO source = functionalCaseSearchService.getById(
                 executionCase.getCaseId(), true, executionCase.getTestPlanId());
         executionCase.setCaseSnapshot(JSON.toJSONString(source));
+        return steps(executionCase,source,now);
+    }
+
+    private List<AgentExecutionStepDTO> steps(AgentExecutionCaseDTO executionCase,AgentCaseDTO source,long now) {
         if (CollectionUtils.isEmpty(source.getSteps())) {
             return List.of();
         }

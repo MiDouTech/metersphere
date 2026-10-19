@@ -282,6 +282,53 @@
             <template #action><a-button size="mini" @click="loadObservability">重试</a-button></template>
           </a-alert>
           <a-collapse v-if="task" class="mt-[12px]" :bordered="false">
+            <a-collapse-item key="assertion-contracts" header="冻结断言标准">
+              <a-table :data="observability?.assertionContracts || []" :pagination="false" size="small">
+                <template #columns>
+                  <a-table-column title="步骤" data-index="stepId" ellipsis tooltip />
+                  <a-table-column title="断言标识" data-index="assertionId" ellipsis tooltip />
+                  <a-table-column title="值类型" data-index="valueType" />
+                  <a-table-column title="比较方式" data-index="operator" />
+                  <a-table-column title="冻结预期" data-index="expected" ellipsis tooltip />
+                  <a-table-column title="单位" data-index="unit" />
+                  <a-table-column title="小数位" data-index="scale" />
+                </template>
+              </a-table>
+            </a-collapse-item>
+            <a-collapse-item key="result-sync" header="业务结果、门禁结论与同步状态">
+              <a-button
+                v-permission="['AI_EXECUTION:RUN']"
+                :loading="syncRetryLoading"
+                size="small"
+                @click="retryResultSync"
+                >重试失败的正式同步</a-button
+              >
+              <a-table :data="observability?.resultSync || []" :pagination="false" size="small">
+                <template #columns>
+                  <a-table-column title="执行轮次" data-index="executionId" ellipsis tooltip />
+                  <a-table-column title="用例" data-index="executionCaseId" ellipsis tooltip />
+                  <a-table-column title="业务结果" data-index="businessStatus" />
+                  <a-table-column title="门禁结论" data-index="qualityStatus" />
+                  <a-table-column title="正式同步" data-index="status" />
+                  <a-table-column title="原因" data-index="errorCode" ellipsis tooltip />
+                  <a-table-column title="重试次数" data-index="attemptCount" />
+                </template>
+              </a-table>
+            </a-collapse-item>
+            <a-collapse-item key="quality-evaluations" header="门禁拒绝记录（最近 100 条）">
+              <a-spin :loading="observabilityLoading" class="w-full">
+                <a-table :data="observability?.qualityEvaluations || []" :pagination="false" row-key="id" size="small">
+                  <template #columns>
+                    <a-table-column title="阶段" data-index="stage" />
+                    <a-table-column title="结论" data-index="outcome" />
+                    <a-table-column title="规则/原因" data-index="ruleCode" />
+                    <a-table-column title="执行轮次" data-index="executionId" ellipsis tooltip />
+                    <a-table-column title="步骤" data-index="stepId" ellipsis tooltip />
+                    <a-table-column title="Trace ID" data-index="traceId" ellipsis tooltip />
+                  </template>
+                </a-table>
+              </a-spin>
+            </a-collapse-item>
             <a-collapse-item v-if="userStore.isAdmin" key="governance" header="冻结上下文、模型调用与运行治理">
               <a-spin :loading="observabilityLoading" class="w-full">
                 <a-descriptions :column="2" size="small" bordered>
@@ -716,6 +763,7 @@
     preflightAiExecution,
     resolveAiExecutionScope,
     respondAiHumanRequest,
+    retryAiExecutionSync,
     retryAiExecutionTask,
     searchAiExecutionTasks,
     type TestAssetCatalogItem,
@@ -745,6 +793,8 @@
   const createLoading = ref(false);
   const task = ref<AiExecutionTask>();
   const observability = ref<AiExecutionObservability>();
+  const syncRetryLoading = ref(false);
+
   const observabilityLoading = ref(false);
   const observabilityError = ref('');
   const taskListLoading = ref(false);
@@ -1157,7 +1207,6 @@
   }
 
   async function loadObservability() {
-    if (!userStore.isAdmin) return;
     if (!executionTaskId.value) {
       observability.value = undefined;
       observabilityError.value = '';
@@ -1174,6 +1223,17 @@
     }
   }
 
+  async function retryResultSync() {
+    if (!executionTaskId.value) return;
+    syncRetryLoading.value = true;
+    try {
+      await retryAiExecutionSync(executionTaskId.value);
+      Message.success('已安排重试，可稍后刷新同步状态');
+      await loadObservability();
+    } finally {
+      syncRetryLoading.value = false;
+    }
+  }
   async function loadEvents(reset = false) {
     if (!executionTaskId.value) {
       events.value = [];
@@ -1327,7 +1387,18 @@
         taskOrigin: 'PLATFORM_MANUAL',
       });
       if (preflight.status !== 'PASSED') {
-        Message.error(`${preflight.blockedReason}: ${preflight.blockedDetail || ''} · ${preflight.traceId}`);
+        const issues = preflight.checks
+          ?.flatMap((check) => check.details?.cases ?? [])
+          .flatMap((item) => item.issues ?? []);
+        const explanation = issues
+          ?.map(
+            (issue) =>
+              `${issue.caseId}${issue.stepIndex ? ` 第 ${issue.stepIndex} 步` : ''}：${issue.message}；${
+                issue.suggestion
+              }`
+          )
+          .join('；');
+        Message.error(`${explanation || preflight.blockedDetail || '预检未通过'} · ${preflight.traceId}`);
         return;
       }
       const taskCreated = await createAiExecutionTask({

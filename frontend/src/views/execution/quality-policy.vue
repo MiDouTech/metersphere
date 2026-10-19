@@ -79,6 +79,9 @@
             <template #cell="{ record }">
               <a-space>
                 <a-button type="text" @click="inspect(record)">查看</a-button>
+                <a-button type="text" :disabled="busy || analysisLoading" @click="preparePublish(record)"
+                  >影响预览 / 试算</a-button
+                >
                 <a-button
                   v-if="record.status === 'DRAFT'"
                   v-permission="['SYSTEM_QUALITY:MANAGE']"
@@ -179,8 +182,25 @@
       :esc-to-close="!busy"
     >
       <a-space direction="vertical" fill>
-        <a-alert type="warning">请比较当前版本与待发布内容。当前阶段未提供执行材料试算；本次仅发布策略配置。</a-alert>
+        <a-alert type="warning">请比较当前版本与待发布内容。只读试算不会修改正式结果，也不能替代真实执行验收。</a-alert>
         <a-alert v-if="publishError" type="error">{{ publishError }}</a-alert>
+        <a-spin :loading="analysisLoading">
+          <a-alert v-if="impactPreview"
+            >{{ impactPreview.appliesTo }}；变更规则：{{ impactPreview.changedRules.join('、') || '无' }}；在途执行
+            {{ impactPreview.inFlightAttempts }} 次。</a-alert
+          >
+          <a-button
+            v-permission="['SYSTEM_QUALITY:MANAGE']"
+            :disabled="analysisLoading || !impactPreview"
+            @click="runTrial"
+            >只读试算最近 100 条事实</a-button
+          >
+          <a-alert v-if="trialResult"
+            >{{ trialResult.notice }}。样本 {{ trialResult.sampleCount }}，满足成功要求
+            {{ trialResult.wouldPass }}，拒绝 {{ trialResult.wouldReject }}，不可复核
+            {{ trialResult.unavailable }}。记录：{{ trialResult.trialId }}</a-alert
+          >
+        </a-spin>
         <div class="policy-comparison">
           <div
             ><strong>当前版本</strong><pre>{{ currentJson }}</pre>
@@ -191,7 +211,13 @@
         </div>
         <a-textarea v-model="publishReason" :max-length="1000" placeholder="填写发布或回退原因" aria-label="发布原因" />
         <a-space>
-          <a-button v-permission="['SYSTEM_QUALITY:PUBLISH']" type="primary" :loading="busy" @click="publish"
+          <a-button
+            v-if="pending?.status === 'DRAFT'"
+            v-permission="['SYSTEM_QUALITY:PUBLISH']"
+            type="primary"
+            :disabled="analysisLoading || !impactPreview"
+            :loading="busy"
+            @click="publish"
             >确认发布</a-button
           >
           <a-button :disabled="busy" @click="publishVisible = false">取消</a-button>
@@ -210,8 +236,10 @@
     PolicyPublication,
     PolicySchema,
     PolicyValidation,
+    QualityImpactPreview,
     QualityPolicy,
     QualityPolicyDocument,
+    QualityTrialResult,
   } from '@/api/modules/execution-quality';
   import {
     getQualityPolicy,
@@ -219,8 +247,10 @@
     importLegacyQualityPolicy,
     listLegacyQualityPolicies,
     listQualityPolicies,
+    previewQualityPolicy,
     publishQualityPolicy,
     saveQualityPolicy,
+    trialQualityPolicy,
     validateQualityPolicy,
   } from '@/api/modules/execution-quality';
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
@@ -261,6 +291,10 @@
   const error = ref('');
   const editorError = ref('');
   const publishError = ref('');
+  const impactPreview = ref<QualityImpactPreview>();
+  const trialResult = ref<QualityTrialResult>();
+  const analysisLoading = ref(false);
+
   const editorVisible = ref(false);
   const publishVisible = ref(false);
   const readonly = ref(false);
@@ -494,16 +528,37 @@
     link.click();
     URL.revokeObjectURL(url);
   }
-  function preparePublish(policy: QualityPolicy) {
+  async function runTrial() {
+    if (!pending.value) return;
+    analysisLoading.value = true;
+    try {
+      trialResult.value = await trialQualityPolicy(pending.value.id);
+    } catch (e) {
+      publishError.value = message(e);
+    } finally {
+      analysisLoading.value = false;
+    }
+  }
+  async function preparePublish(policy: QualityPolicy) {
     if (busy.value) return;
     pending.value = policy;
     publishBase.value = currentId.value;
     publishReason.value = '';
     publishError.value = '';
+    impactPreview.value = undefined;
+    trialResult.value = undefined;
     publishVisible.value = true;
+    analysisLoading.value = true;
+    try {
+      impactPreview.value = await previewQualityPolicy(policy.id);
+    } catch (e) {
+      publishError.value = message(e);
+    } finally {
+      analysisLoading.value = false;
+    }
   }
   async function publish() {
-    if (busy.value || !pending.value) return;
+    if (busy.value || !pending.value || !impactPreview.value || analysisLoading.value) return;
     if (!publishReason.value.trim()) {
       publishError.value = '请填写发布原因';
       return;

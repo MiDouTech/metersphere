@@ -18,6 +18,8 @@ public class AgentExecutionStepResultDTO {
     private String errorMessage;
     private String artifactIds;
     private String requestId;
+    private String payloadHash;
+    private String factsVersion;
     private String traceId;
     private Long startedAt;
     private Long finishedAt;

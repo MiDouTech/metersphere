@@ -15,6 +15,9 @@ public class FunctionalCommentsListToolHandler implements AgentMcpToolHandler {
     @Resource
     private FunctionalCaseCommentService functionalCaseCommentService;
 
+    @Resource
+    private io.metersphere.agent.service.AgentBusinessAccess access;
+
     @Override
     public String name() {
         return "metersphere.functional.comments.list";
@@ -45,6 +48,7 @@ public class FunctionalCommentsListToolHandler implements AgentMcpToolHandler {
 
     @Override
     public Object execute(Map<String, Object> arguments) {
+        access.caseProject((String) arguments.get("caseId"), null, "FUNCTIONAL_CASE:READ", false, AgentTokenScope.FUNCTIONAL_READ);
         return functionalCaseCommentService.getCommentList((String) arguments.get("caseId"));
     }
 }

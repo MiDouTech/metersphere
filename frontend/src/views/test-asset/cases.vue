@@ -310,7 +310,20 @@
               </a-table-column>
               <a-table-column title="AI 可执行性" :width="180">
                 <template #cell="{ record }">
-                  <a-tooltip :content="readinessByCase[record.id]?.missingItems?.join('、') || '请选择环境并执行检查'">
+                  <a-tooltip
+                    :content="
+                      readinessByCase[record.id]?.issues
+                        ?.map(
+                          (issue) =>
+                            `${issue.stepIndex ? `第 ${issue.stepIndex} 步：` : ''}${issue.message}；${
+                              issue.suggestion
+                            } (${issue.code})`
+                        )
+                        .join('、') ||
+                      readinessByCase[record.id]?.missingItems?.join('、') ||
+                      '请选择环境并执行检查'
+                    "
+                  >
                     <a-tag :color="readinessColor(readinessByCase[record.id]?.automationReadiness)">
                       {{ readinessByCase[record.id]?.automationReadiness || '未检查' }}
                     </a-tag>
@@ -461,6 +474,7 @@
   const environmentProfileId = ref('');
   const environmentLoading = ref(false);
   const readinessLoading = ref(false);
+  let readinessGeneration = 0;
   const readinessByCase = reactive<Record<string, AiCaseExecutability>>({});
   const caseTotal = ref(0);
   const catalogQuery = reactive({ current: 1, pageSize: 12, keyword: '' });
@@ -538,6 +552,8 @@
 
   async function checkReadiness() {
     if (!appStore.currentProjectId || !environmentProfileId.value || !cases.value.length) return;
+    Object.keys(readinessByCase).forEach((id) => delete readinessByCase[id]);
+    const generation = ++readinessGeneration;
     readinessLoading.value = true;
     try {
       const result = await checkAiCaseExecutability({
@@ -545,6 +561,7 @@
         environmentProfileId: environmentProfileId.value,
         caseIds: cases.value.map((item) => item.id),
       });
+      if (generation !== readinessGeneration) return;
       result.forEach((item) => {
         readinessByCase[item.caseId] = item;
         const source = cases.value.find((record) => record.id === item.caseId || (record as any).refId === item.caseId);
@@ -555,6 +572,10 @@
     }
   }
 
+  watch([() => appStore.currentProjectId, environmentProfileId], () => {
+    readinessGeneration += 1;
+    Object.keys(readinessByCase).forEach((id) => delete readinessByCase[id]);
+  });
   watch(() => appStore.currentProjectId, loadEnvironmentProfiles);
 
   async function loadCases() {

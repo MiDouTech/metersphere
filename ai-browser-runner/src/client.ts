@@ -1,4 +1,6 @@
-import { constants, createDecipheriv, generateKeyPairSync, privateDecrypt, randomUUID } from "node:crypto";
+import { mkdir, readFile, open, link, unlink } from "node:fs/promises";
+import { resolve, join } from "node:path";
+import { constants, createHash, createCipheriv, randomBytes, createDecipheriv, generateKeyPairSync, privateDecrypt, randomUUID } from "node:crypto";
 import type {
   ArtifactResponse, LeaseAssignment, RunnerControl, RunnerEvent, RuntimeCredential, TestDataLease,
 } from "./types.js";
@@ -47,11 +49,39 @@ export class RunnerClient {
     });
   }
 
-  async stepResult(assignment: LeaseAssignment, stepId: string, actuals: unknown[], artifactIds: string[]): Promise<void> {
-    await this.request(`/lease/${assignment.leaseId}/step-result`, assignment.leaseToken, {
-      method: "POST", body: JSON.stringify({ stepId, status: "SUCCESS", requestId: randomUUID(),
-        assertionResult: JSON.stringify(actuals.map(actual => ({ actual }))), artifactIds }),
-    });
+  async stepResult(assignment: LeaseAssignment, stepId: string, actuals: unknown[], artifactIds: string[], status: "SUCCESS" | "FAILED" | "BLOCKED" = "SUCCESS", errorCode?: string, assertionIds?: string[]): Promise<void> {
+    const facts = { stepId, status, errorCode, assertionResult: JSON.stringify(actuals.map((actual, index) => assertionIds ? ({ assertionId: assertionIds[index], actual }) : ({ actual }))),
+      artifactIds: [...new Set(artifactIds)].sort() };
+    const digest = createHash("sha256").update(JSON.stringify({ leaseId: assignment.leaseId, facts })).digest("hex");
+    const directory = resolve(process.env.MS_RUNNER_STATE_DIR ?? ".runner-state");
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    const file = join(directory, `${digest}.json`);
+    let body: string;
+    try {
+      body = revealPending(await readFile(file, "utf8"));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      body = JSON.stringify({ ...facts, requestId: randomUUID() });
+      const temporary = join(directory, `${digest}.${randomUUID()}.tmp`);
+      const protectedBody = protectPending(body);
+      const handle = await open(temporary, "wx", 0o600);
+      try { await handle.writeFile(protectedBody, "utf8"); await handle.sync(); }
+      finally { await handle.close(); }
+      try { await link(temporary, file); }
+      catch (collision) {
+        if ((collision as NodeJS.ErrnoException).code !== "EEXIST") throw collision;
+        body = revealPending(await readFile(file, "utf8"));
+      } finally { await unlink(temporary); }
+    }
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await this.request(`/lease/${assignment.leaseId}/step-result`, assignment.leaseToken, { method: "POST", body });
+        return;
+      } catch (error) {
+        if (!(error instanceof RunnerError) || error.category !== "RUNNER_CONTROL_PLANE_UNAVAILABLE" || attempt >= 2) throw error;
+        await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
+      }
+    }
   }
 
   async artifact(assignment: LeaseAssignment, bytes: Buffer, fileName: string, purpose: string,
@@ -154,4 +184,23 @@ export class EventBuffer {
       this.pending.splice(0, batch.length);
     }
   }
+}
+
+function stateKey(): Buffer {
+  const key = Buffer.from(process.env.MS_RUNNER_STATE_KEY ?? "", "base64");
+  if (key.length !== 32) throw new RunnerError("RUNNER_STATE_KEY_REQUIRED", "敏感待发送事实需要配置本地加密密钥");
+  return key;
+}
+function protectPending(body: string): string {
+  if (sanitize(body) === body && !/"(?:password|passwd|token|secret|authorization|cookie)"\s*:/i.test(body)) return body;
+  const iv = randomBytes(12); const cipher = createCipheriv("aes-256-gcm", stateKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(body, "utf8"), cipher.final()]);
+  return JSON.stringify({ format: "pending-encrypted-v1", iv: iv.toString("base64"), tag: cipher.getAuthTag().toString("base64"), value: encrypted.toString("base64") });
+}
+function revealPending(stored: string): string {
+  const envelope = JSON.parse(stored) as { format?: string; iv: string; tag: string; value: string };
+  if (envelope.format !== "pending-encrypted-v1") return stored;
+  const decipher = createDecipheriv("aes-256-gcm", stateKey(), Buffer.from(envelope.iv, "base64"));
+  decipher.setAuthTag(Buffer.from(envelope.tag, "base64"));
+  return Buffer.concat([decipher.update(Buffer.from(envelope.value, "base64")), decipher.final()]).toString("utf8");
 }

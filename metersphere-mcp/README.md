@@ -163,3 +163,12 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 ### 全局质量门禁升级兼容性
 
 启用平台统一门禁后，旧 `submit_functional_result` / `submit_functional_results_batch` 直写接口不再接受执行结果，返回 `QUALITY_LEGACY_SUBMIT_FORBIDDEN`。不能用旧工具提交“通过”来绕过门禁。执行器须转入平台任务认领、尝试绑定、证据上传、步骤结果及最终回写流程；仅上报事件或附件不构成验收通过。系统管理员通过 `/setting/system/quality-policy` 发布全平台统一规则；该管理能力不向 Agent Token 开放。
+
+
+## 0.4.0 兼容变化
+
+- 评审创建、关联必须提供稳定的 `requestId`；超时重试使用原键和原参数。
+- 新增 `get_case_review` 及受控任务领取、租约续期、步骤事实、证据与终态工具。
+- 不再注册 `submit_functional_result`、`submit_functional_results_batch`、`metersphere.functional.submit.batch`。旧直写由服务端拒绝；执行结果由质量门禁评估后回写。
+- 领取响应丢失时先查询任务状态，不盲目重复领取。租约和上传凭证不得写入业务笔记或共享日志。
+- 技能包契约版本为 1.1.0；该版本不承诺尚未开放的评审结论提交和 Excel 导入能力。实际能力以服务器 `tools/list` 为准。

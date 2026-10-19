@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 @Service
 @Transactional(readOnly = true)
 public class TestAssetCatalogService {
+    @jakarta.annotation.Resource private AgentCaseContentReader caseContentReader;
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final int MAX_PAGE_SIZE = 100;
     private static final int MAX_ASSET_SNAPSHOT_CHARS = 2_000_000;
@@ -428,7 +429,15 @@ public class TestAssetCatalogService {
                 snapshot.put("handleUser", source.getHandleUser());
                 snapshot.put("tags", parseAndSanitize(source.getTagsJson(), "bug:" + item.getId()));
             }
-            case "CASE", "DOCUMENT", "PLAN", "PAGE_OBJECT", "BUSINESS_FLOW" ->
+            case "CASE" -> {
+                Map<String,Object> content=JSON.parseObject(source.getRawContentJson(),Map.class);
+                content.put("prerequisite",caseContentReader.decodeRaw(source.getCasePrerequisiteRaw()));
+                content.put("steps",caseContentReader.decodeRaw(source.getCaseStepsRaw()));
+                content.put("textDescription",caseContentReader.decodeRaw(source.getCaseDescriptionRaw()));
+                content.put("expectedResult",caseContentReader.decodeRaw(source.getCaseExpectedRaw()));
+                snapshot.put("content",content);
+            }
+            case "DOCUMENT", "PLAN", "PAGE_OBJECT", "BUSINESS_FLOW" ->
                     snapshot.put("content", parseAndSanitize(source.getRawContentJson(), item.getAssetType().toLowerCase(Locale.ROOT)+":"+item.getId()));
             default -> throw new MSException("不支持的测试资产类型：" + item.getAssetType());
         }

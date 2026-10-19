@@ -47,14 +47,17 @@ test("native adapter does not expose a raw HTTP failure body", async t => {
 test("real stdio process discovers maintenance tools without a backend call", async () => {
   const client = new Client({ name: "maintenance-contract-test", version: "1" });
   const transport = new StdioClientTransport({ command: process.execPath,
-    args: [fileURLToPath(new URL("../dist/index.js", import.meta.url))],
+    args: [process.env.MS_TEST_BINARY || fileURLToPath(new URL("../dist/index.js", import.meta.url))],
     env: { ...process.env, MS_BASE_URL: "http://127.0.0.1:1", MS_AGENT_TOKEN: "test-token", MS_PROJECT_ID: "project" },
     stderr: "pipe" });
   try {
     await client.connect(transport);
     const { tools } = await client.listTools();
     const names = new Set(tools.map(tool => tool.name));
-    for (const name of ["metersphere.functional.submit.batch", "metersphere.execution.search", "metersphere.execution.preflight", "metersphere.execution.checkpoint.resume",
+    for (const legacy of ["metersphere.functional.submit.batch","submit_functional_result","submit_functional_results_batch"]) assert.equal(names.has(legacy),false);
+    assert.ok(names.has("get_case_review"));
+    for (const name of ["metersphere.task.claim","metersphere.execution.step.submit","metersphere.execution.complete","metersphere.artifact.prepare"]) assert.ok(names.has(name),name);
+    for (const name of ["metersphere.execution.search", "metersphere.execution.preflight", "metersphere.execution.checkpoint.resume",
       "metersphere.test_plan.update", "metersphere.test_plan.disassociate_cases", "metersphere.test_plan.get", "metersphere.bug.transitions", "metersphere.bug.transition"]) assert.ok(names.has(name), name);
   } finally { await client.close(); }
 });

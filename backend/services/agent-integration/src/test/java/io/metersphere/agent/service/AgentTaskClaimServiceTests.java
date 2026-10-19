@@ -12,6 +12,7 @@ import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
 class AgentTaskClaimServiceTests {
+    @org.mockito.Mock private AgentExecutionClaimSafetyService claimSafety;
     @AfterEach void clear(){AgentTokenContext.clear();}
     @Test void leaseMutationRequiresSamePersonalAgentToken(){
         AgentTaskClaimService service=new AgentTaskClaimService();AgentExecutionMapper mapper=Mockito.mock(AgentExecutionMapper.class);ReflectionTestUtils.setField(service,"executionMapper",mapper);

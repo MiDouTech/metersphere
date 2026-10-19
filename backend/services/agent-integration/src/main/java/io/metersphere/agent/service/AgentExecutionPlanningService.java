@@ -20,7 +20,8 @@ import java.util.Map;
 
 @Service
 public class AgentExecutionPlanningService {
-    private static final Map<String,Object> STEP_PLAN_SCHEMA = loadSchema();
+    private static final Map<String,Object> STEP_PLAN_SCHEMA = loadSchema("v1");
+    private static final Map<String,Object> STEP_PLAN_SCHEMA_V2 = loadSchema("v2");
     @Resource private AgentModelProfileService profiles;
     @Resource private AgentModelInvocationService invocations;
     @Resource private MapGatewayClient gateway;
@@ -32,6 +33,8 @@ public class AgentExecutionPlanningService {
     public void plan(String projectId,String organizationId,String modelProfileId,String taskId,
                      String targetUrl,List<AgentExecutionStepDTO> steps,String userId){
         AgentModelProfileDTO profile=profiles.assertUsable(modelProfileId,projectId,List.of("STRUCTURED_OUTPUT"));
+        String capabilities=jdbcTemplate.queryForObject("SELECT required_capabilities FROM ai_execution_task WHERE id=?",String.class,taskId);
+        boolean v2=capabilities!=null && JSON.parseArray(capabilities,String.class).stream().anyMatch("ASSERTION_V2"::equalsIgnoreCase);
         String promptVersion=jdbcTemplate.queryForObject("SELECT prompt_template_version_id FROM ai_execution_task WHERE id=?",String.class,taskId);
         for(AgentExecutionStepDTO step:steps){
             if(StringUtils.isNotBlank(step.getActionJson()))continue;
@@ -59,7 +62,7 @@ public class AgentExecutionPlanningService {
                             "step",promptVariables,"publishedExecutableAssets",executableAssets.stream().map(asset->Map.of(
                                     "assetType",asset.getAssetType(),"assetId",asset.getAssetId(),"versionId",asset.getVersionId(),
                                     "contentHash",asset.getContentHash(),"content",asset.getContentSnapshot())).toList())))));
-            request.setOutputSchema(STEP_PLAN_SCHEMA);
+            request.setOutputSchema(v2?STEP_PLAN_SCHEMA_V2:STEP_PLAN_SCHEMA);
             request.setMetadata(Map.of("tenantId",organizationId,"projectId",projectId,"taskId",taskId,"businessType","SCHEDULED_TEST_PLANNING"));
             String requestHash=sha(JSON.toJSONString(request));String invocationId=invocations.start(taskId,traceId,profile.getId(),profile.getLogicalModelPublicId(),promptVersion,requestHash);
             try{
@@ -67,12 +70,15 @@ public class AgentExecutionPlanningService {
                 AgentWebStepPlanDTO plan;
                 try {
                     plan=parseAndValidate(response);
+                    requireProtocol(plan,v2);
                     invocations.finish(invocationId,response);
                 } catch (RuntimeException invalid) {
                     invocations.recordFailure(invocationId,"MAP_GATEWAY_SCHEMA_INVALID",response);
                     plan=repairOnce(request,response,profile,taskId,traceId,promptVersion);
+                    requireProtocol(plan,v2);
                 }
                 if("HIGH".equalsIgnoreCase(step.getRiskLevel())){plan.getAction().setRiskLevel("HIGH");plan.getAction().setRetryable(false);}
+                if(v2){for(int i=0;i<plan.getAssertions().size();i++)plan.getAssertions().get(i).setAssertionId(sha(taskId+":"+step.getId()+":"+i));}
                 step.setActionJson(JSON.toJSONString(plan.getAction()));step.setAssertionJson(JSON.toJSONString(plan.getAssertions()));
                 step.setRetryable(plan.getAction().getRetryable());step.setRiskLevel(plan.getAction().getRiskLevel());budgetGuard.recordAfterInvoke(profile,taskId);
             }catch(RuntimeException ex){String code=safeCode(ex);if(!"AGENT_PLAN_FAILED".equals(code))invocations.fail(invocationId,code);throw new MSException(code);}
@@ -88,7 +94,7 @@ public class AgentExecutionPlanningService {
         repair.setPromptPolicyId(original.getPromptPolicyId());repair.setPromptVersionId(original.getPromptVersionId());
         repair.setTemperature(0D);repair.setMaxOutputTokens(original.getMaxOutputTokens());repair.setTimeoutMs(original.getTimeoutMs());
         repair.setIdempotencyKey(original.getIdempotencyKey()+":repair:1");repair.setTraceId(traceId);
-        repair.setOutputSchema(STEP_PLAN_SCHEMA);repair.setMetadata(original.getMetadata());
+        repair.setOutputSchema(original.getOutputSchema());repair.setMetadata(original.getMetadata());
         repair.setMessages(List.of(
                 Map.of("role","system","content","Repair the supplied invalid result once. Return only an object conforming exactly to the supplied JSON Schema. Do not add scripts, secrets, markdown, or extra properties."),
                 Map.of("role","user","content",JSON.toJSONString(Map.of("originalInput",original.getMessages(),"invalidOutput",invalid.getStructuredOutput())))));
@@ -106,6 +112,9 @@ public class AgentExecutionPlanningService {
         }
     }
 
+    private void requireProtocol(AgentWebStepPlanDTO plan,boolean v2){
+        if(plan.getAssertions().stream().anyMatch(a->!(v2?"v2":"v1").equals(a.getContractVersion())))throw new MSException("QUALITY_CONTRACT_INVALID");
+    }
     private AgentWebStepPlanDTO parseAndValidate(GatewayPlanningResponse response) {
         AgentWebStepPlanDTO plan=JSON.parseObject(JSON.toJSONString(response.getStructuredOutput()),AgentWebStepPlanDTO.class);
         if(plan==null||plan.getAction()==null||plan.getAssertions()==null||plan.getAssertions().isEmpty())throw new MSException("MAP_GATEWAY_SCHEMA_INVALID");
@@ -118,9 +127,9 @@ public class AgentExecutionPlanningService {
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String,Object> loadSchema(){
+    private static Map<String,Object> loadSchema(String version){
         try {
-            byte[] bytes=new ClassPathResource("ai-contract/execution-contract-v1.schema.json").getInputStream().readAllBytes();
+            byte[] bytes=new ClassPathResource("ai-contract/execution-contract-"+version+".schema.json").getInputStream().readAllBytes();
             Map<String,Object> contract=JSON.parseObject(new String(bytes,StandardCharsets.UTF_8),Map.class);
             Map<String,Object> schema=new LinkedHashMap<>();
             schema.put("$schema","https://json-schema.org/draft/2020-12/schema");schema.put("type","object");schema.put("additionalProperties",false);

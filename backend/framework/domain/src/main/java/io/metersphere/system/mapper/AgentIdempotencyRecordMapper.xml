@@ -12,10 +12,10 @@
     </resultMap>
 
     <insert id="insert" parameterType="io.metersphere.system.domain.AgentIdempotencyRecord">
-        insert into agent_idempotency_record (id, token_id, tool_name, request_id, request_hash, response_json, create_time)
+        insert into agent_idempotency_record (id, token_id, tool_name, request_id, request_hash, response_json, create_time, status, hash_version, completed_time)
         values (#{id,jdbcType=VARCHAR}, #{tokenId,jdbcType=VARCHAR}, #{toolName,jdbcType=VARCHAR},
                 #{requestId,jdbcType=VARCHAR}, #{requestHash,jdbcType=VARCHAR}, #{responseJson,jdbcType=LONGVARCHAR},
-                #{createTime,jdbcType=BIGINT})
+                #{createTime,jdbcType=BIGINT}, 'SUCCEEDED', 'legacy-v0', #{createTime,jdbcType=BIGINT})
     </insert>
 
     <select id="selectByTokenToolRequest" resultMap="BaseResultMap">
@@ -29,6 +29,6 @@
 
     <delete id="deleteExpired">
         delete from agent_idempotency_record
-        where create_time &lt; #{expiresBefore}
+        where create_time &lt; #{expiresBefore} AND status='SUCCEEDED' AND hash_version='legacy-v0'
     </delete>
 </mapper>

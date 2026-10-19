@@ -24,8 +24,10 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class AgentCaseReviewWriteService {
+    @Resource private AgentBusinessAccess access;
+    @Resource private AgentOperationExecutor operations;
+    @Resource private jakarta.validation.Validator validator;
     private static final String PASS_RULE_SINGLE = "SINGLE";
 
     @Resource
@@ -36,8 +38,18 @@ public class AgentCaseReviewWriteService {
     private AgentExecLogService agentExecLogService;
 
     public AgentCaseReviewDTO create(AgentCaseReviewCreateRequest request) {
-        String userId = requireUserId();
+        if(!validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+        return operations.execute("case_review.create",request.getRequestId(),request,AgentCaseReviewDTO.class,
+            ()->access.project(request.getProjectId(),io.metersphere.sdk.constants.PermissionConstants.CASE_REVIEW_READ_ADD,true,io.metersphere.agent.constants.AgentTokenScope.REVIEW_WRITE),()->createOnce(request));
+    }
+
+    private AgentCaseReviewDTO createOnce(AgentCaseReviewCreateRequest request) {
+        if(!validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+        String userId = access.project(request.getProjectId(),io.metersphere.sdk.constants.PermissionConstants.CASE_REVIEW_READ_ADD,true,io.metersphere.agent.constants.AgentTokenScope.REVIEW_WRITE);
         List<String> reviewers = resolveReviewers(request.getReviewers(), userId);
+        access.reviewers(request.getProjectId(),reviewers);
+        access.cases(request.getProjectId(),request.getCaseIds());
+        access.module(request.getProjectId(),request.getModuleId(),true);
 
         CaseReviewRequest reviewRequest = new CaseReviewRequest();
         reviewRequest.setProjectId(request.getProjectId());
@@ -66,8 +78,23 @@ public class AgentCaseReviewWriteService {
     }
 
     public void associate(AgentCaseReviewAssociateRequest request) {
-        String userId = requireUserId();
+        if(!validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+        operations.execute("case_review.associate_cases",request.getRequestId(),request,java.util.Map.class,()->{
+            var review=caseReviewMapper.selectByPrimaryKey(request.getReviewId());
+            if(review==null || !java.util.Objects.equals(review.getProjectId(),request.getProjectId()))throw AgentBusinessAccess.denied();
+            access.project(review.getProjectId(),io.metersphere.sdk.constants.PermissionConstants.CASE_REVIEW_RELEVANCE,true,io.metersphere.agent.constants.AgentTokenScope.REVIEW_WRITE);
+        },()->{associateOnce(request);return java.util.Map.of("ok",true);});
+    }
+
+    private void associateOnce(AgentCaseReviewAssociateRequest request) {
+        if(!validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+        var review=caseReviewMapper.selectByPrimaryKey(request.getReviewId());
+        if(review==null || !java.util.Objects.equals(review.getProjectId(),request.getProjectId()))throw AgentBusinessAccess.denied();
+        String userId=access.project(review.getProjectId(),io.metersphere.sdk.constants.PermissionConstants.CASE_REVIEW_RELEVANCE,true,io.metersphere.agent.constants.AgentTokenScope.REVIEW_WRITE);
+        if("ARCHIVED".equals(review.getStatus()))throw new MSException("AGENT_REVIEW_STATE_CONFLICT");
         List<String> reviewers = resolveReviewers(request.getReviewers(), userId);
+        access.reviewers(review.getProjectId(),reviewers);
+        access.cases(review.getProjectId(),request.getCaseIds());
 
         CaseReviewAssociateRequest associateRequest = new CaseReviewAssociateRequest();
         associateRequest.setReviewId(request.getReviewId());
@@ -88,8 +115,9 @@ public class AgentCaseReviewWriteService {
     public AgentCaseReviewDTO get(String id) {
         CaseReview review = caseReviewMapper.selectByPrimaryKey(id);
         if (review == null) {
-            throw new MSException("评审不存在: " + id);
+            throw AgentBusinessAccess.denied();
         }
+        access.project(review.getProjectId(),io.metersphere.sdk.constants.PermissionConstants.CASE_REVIEW_READ,false,io.metersphere.agent.constants.AgentTokenScope.REVIEW_WRITE,io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ);
         return toDto(review);
     }
 

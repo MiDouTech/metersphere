@@ -41,6 +41,7 @@ import java.util.Set;
 @Transactional(rollbackFor = Exception.class)
 public class AgentTaskClaimService {
     @jakarta.annotation.Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
+    @Resource private AgentExecutionClaimSafetyService claimSafety;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @Resource
@@ -79,6 +80,7 @@ public class AgentTaskClaimService {
             return null;
         }
         channelPolicy.assertClaimable(task, "MCP_AGENT");
+        claimSafety.requireClaimable(task);
         long now = System.currentTimeMillis();
         String leaseToken = "msrl_" + randomToken();
         String executorId = "agent-token:" + token.getId();

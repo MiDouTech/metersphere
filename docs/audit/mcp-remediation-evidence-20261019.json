@@ -1,0 +1,99 @@
+{
+  "status": "PARTIAL",
+  "date": "2026-10-19",
+  "branch": "v3.2",
+  "baseCommit": "5d2bcbc1c70f6ef1024a8ce6e4e9b7f9c9f66652",
+  "workingTreeDirty": true,
+  "backendRegression": {
+    "agentTests": 223,
+    "dependencyTests": 7,
+    "failures": 0,
+    "skipped": 0
+  },
+  "additionalMySqlTests": {
+    "tests": 7,
+    "failures": 0,
+    "skipped": 0,
+    "note": "Includes six repeated tests and one additional attachment consumption test; not additive to the regression count."
+  },
+  "nodeTests": {
+    "tests": 10,
+    "failures": 0,
+    "installedTarballVerified": true
+  },
+  "browserApiIntegration": {
+    "tests": 1,
+    "failures": 0,
+    "scope": "Real browser login, Token creation, native MCP review creation, HTTP replay, payload conflict and Token disabling. Not a complete review UI or decision workflow."
+  },
+  "checks": {
+    "frontendTypecheck": "PASS",
+    "changedE2ELint": "PASS",
+    "backendPackage": "PASS",
+    "imageBuild": "PASS",
+    "containerHealth": "PASS",
+    "migration101": "PASS",
+    "jarHashMatch": "PASS",
+    "gitDiffCheck": "PASS"
+  },
+  "imageId": "sha256:e57acad958cf319cc758b36866e68794dd60f5ae95b28e7c9bb82344df578bb2",
+  "agentJarSha256": "017306fd305404a62d75d07522fd374db9ee8c1cb25e8023e444f730bbde1b2b",
+  "nodeTarballSha256": "c4e15ed76e82c00ed789529413fa35e106c877ee3ba517e90f3eaa7ec9242869",
+  "migrationSha256": "1edbd8a36250aaa30e21fb7338d571425a80fa25ad827c89a1be065bd459623e",
+  "logs": [
+    {
+      "path": ".codex-tmp/mcp-agent-regression-final.log",
+      "sha256": "625bfeeee4c5d998f2b9fce36d846da6319a883331dae05289f132d1044a96ce"
+    },
+    {
+      "path": ".codex-tmp/mcp-operation-mysql-lifecycle.log",
+      "sha256": "22026832c073bbd74cadcfc2600910a09088d0084b91f40e2f12ccf4af002e42"
+    },
+    {
+      "path": ".codex-tmp/mcp-node-tests-final.log",
+      "sha256": "c76228e6326140f2152530f0e586b628ed52968f10a450e2bfbd30afb54ef42a"
+    },
+    {
+      "path": ".codex-tmp/mcp-consumer-tests-final.log",
+      "sha256": "9b9837bb37a2ad1ac49a7de4c0471c1e05de91903e8e5e20d7f618e905eef8ed"
+    },
+    {
+      "path": ".codex-tmp/mcp-app-package.log",
+      "sha256": "48fc30b917a9e19f42c9b086eb3379b27fc35c8901101a775ffc2dd533b96805"
+    },
+    {
+      "path": ".codex-tmp/mcp-image-build.log",
+      "sha256": "cac7730fb16bbb12a27c394c9b81f36f4888348ac76a3df0274e6777a740751b"
+    },
+    {
+      "path": ".codex-tmp/mcp-container-start.log",
+      "sha256": "67b40889a20c696f674abfa50181f58179b21792df5de70ffc3d0b51bfe9643b"
+    },
+    {
+      "path": ".codex-tmp/mcp-environment-health.log",
+      "sha256": "56fdd985a693dd19133454e62d2586c9cb453248b27b513a529c8d7857c96e0e"
+    },
+    {
+      "path": ".codex-tmp/mcp-review-e2e-final.log",
+      "sha256": "4abbd7325b374261cc3e3672708a33c2567e35b89380b7591b0b01c1a3686140"
+    },
+    {
+      "path": ".codex-tmp/mcp-frontend-typecheck.log",
+      "sha256": "b2a7a16aa118ac0c45f045f8348c5860038c8df5983a45f97136728537cbc5ca"
+    },
+    {
+      "path": ".codex-tmp/mcp-e2e-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "unverified": [
+    "Full frontend production build and global lint for this round",
+    "Review decision UI and transactional batch business behavior",
+    "Complete case operations and delete preview",
+    "Excel import jobs and worker recovery",
+    "Full authorization contract migration and all-operation idempotency",
+    "Complete managed execution with real model and runner",
+    "Artifact external side-effect compensation and after-commit notifications"
+  ],
+  "archiveNote": "This JSON is a durable index in the repository. Full logs remain local and have not been uploaded to a long-term archive."
+}

@@ -31,23 +31,18 @@ class AgentMcpMaintenanceToolTests {
     @AfterEach void after(){AgentTokenContext.clear();}
     @Test void listIncludesAllNewToolsAndRespectsReadScope(){
         var response=transport.handle(Map.of("id",1,"method","tools/list"));
-        assertEquals(8,((List<?>)((Map<?,?>)response.get("result")).get("tools")).size());
+        assertEquals(7,((List<?>)((Map<?,?>)response.get("result")).get("tools")).size());
         AgentTokenContext.get().setScopes(AgentTokenScope.BUG_READ);
         response=transport.handle(Map.of("id",2,"method","tools/list"));
         var tools=(List<?>)((Map<?,?>)response.get("result")).get("tools");assertEquals(1,tools.size());
         assertEquals("metersphere.bug.transitions",((Map<?,?>)tools.getFirst()).get("name"));
     }
-    @Test void batchCallReturnsStructuredResultAndReplaySkipsBusinessService(){
+    @Test void legacyBatchWriteIsRejectedBeforeAnyBusinessOrCacheAccess(){
         var args=Map.<String,Object>of("projectId","project","requestId","request","results",List.of(Map.of("caseId","case","lastExecResult","SUCCESS")));
-        AgentBatchSubmitResponse result=new AgentBatchSubmitResponse();result.setSuccess(1);result.setTotal(1);
-        when(maintenance.batch(any(),eq("request"))).thenReturn(result);
-        Map<String,Object> request=call("metersphere.functional.submit.batch",args);
-        var first=transport.handle(request);assertNotNull(first.get("result"));
-        @SuppressWarnings("unchecked") Map<String,Object> cached=(Map<String,Object>)first.get("result");
-        when(idempotency.findCachedResponse(anyString(),eq("request"),anyMap())).thenReturn(Optional.of(cached));
-        assertEquals(first,transport.handle(request));verify(maintenance,times(1)).batch(any(),eq("request"));
-        AgentTokenContext.get().setScopes(AgentTokenScope.BUG_READ);
-        assertNotNull(transport.handle(request).get("error"));verify(maintenance,times(1)).batch(any(),eq("request"));
+        var response=transport.handle(call("metersphere.functional.submit.batch",args));
+        var error=(Map<?,?>)response.get("error");
+        assertEquals("QUALITY_LEGACY_SUBMIT_FORBIDDEN",((Map<?,?>)error.get("data")).get("code"));
+        verifyNoInteractions(maintenance,idempotency);
     }
     @Test void missingIdempotencyKeyRejectsWriteBeforeService(){
         assertNotNull(transport.handle(call("metersphere.test_plan.disassociate_cases",Map.of("projectId","project","testPlanId","plan","associationIds",List.of("r")))).get("error"));

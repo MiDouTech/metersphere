@@ -39,6 +39,8 @@ import java.util.Map;
 public class AgentExecutionController {
     @Resource
     private AgentExecutionService agentExecutionService;
+    @Resource private io.metersphere.agent.service.AgentExecutionFinalizationService finalization;
+    @Resource private io.metersphere.agent.service.AgentExecutionStepResultService stepResults;
     @Resource
     private AgentHumanRequestService humanRequestService;
     @Resource
@@ -77,6 +79,20 @@ public class AgentExecutionController {
     @Operation(summary = "获取 AI 自动化执行任务")
     public AgentExecutionTaskDTO get(@PathVariable String id) {
         return agentExecutionService.get(id);
+    }
+
+    @GetMapping("/task/{id}/step-result")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    public io.metersphere.agent.dto.AgentExecutionStepResultDTO stepResult(@PathVariable String id,@RequestParam String executionId,@RequestParam String stepId,@RequestParam String requestId){
+        agentExecutionService.get(id);
+        return stepResults.read(id,executionId,stepId,requestId);
+    }
+
+    @PostMapping("/task/{id}/retry-sync")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    public void retrySync(@PathVariable String id){
+        var task=agentExecutionService.get(id);
+        finalization.retrySync(id,task.getCurrentExecutionId());
     }
 
     @GetMapping("/task/{id}/observability")

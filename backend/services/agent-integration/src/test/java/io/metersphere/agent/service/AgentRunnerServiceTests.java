@@ -19,6 +19,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class AgentRunnerServiceTests {
+    @org.mockito.Mock private AgentExecutionClaimSafetyService claimSafety;
 
     @Test
     void registersDeclaredContainerIsolationMode() {

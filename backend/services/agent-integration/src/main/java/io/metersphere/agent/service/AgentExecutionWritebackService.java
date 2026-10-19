@@ -19,6 +19,15 @@ import java.util.stream.Collectors;
 
 @Service
 public class AgentExecutionWritebackService {
+    private static final org.slf4j.Logger LOG=org.slf4j.LoggerFactory.getLogger(AgentExecutionWritebackService.class);
+    @Resource private AgentExecutionFinalizationService finalization;
+
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay=30000)
+    public void recoverPendingSync(){
+        for(String taskId:finalization.recoverableTasks()){
+            try{writeback(taskId);}catch(Exception error){LOG.warn("Quality sync recovery failed task={}",taskId,error);}
+        }
+    }
     @Resource
     private AgentExecutionMapper executionMapper;
     @Resource
@@ -32,9 +41,10 @@ public class AgentExecutionWritebackService {
 
     public void writeback(String taskId) {
         AgentExecutionTaskDTO task = executionMapper.selectTaskById(taskId);
-        List<AgentExecutionCaseDTO> cases = executionMapper.selectCasesByTaskId(taskId);
-        Map<String, List<AgentExecutionStepDTO>> steps = executionMapper.selectStepsByTaskId(taskId).stream()
-                .collect(Collectors.groupingBy(AgentExecutionStepDTO::getExecutionCaseId));
+        var frozen=finalization.prepare(taskId);
+        List<AgentExecutionCaseDTO> cases=frozen.stream().map(AgentExecutionFinalizationService.FrozenCase::executionCase).toList();
+        Map<String,List<AgentExecutionStepDTO>> steps=frozen.stream().collect(Collectors.toMap(item->item.executionCase().getId(),AgentExecutionFinalizationService.FrozenCase::steps));
+        boolean qualityRejected=frozen.stream().anyMatch(item->!"PASS".equals(item.qualityStatus()));
         int writebackSuccess = 0;
         int writebackFailed = 0;
         for (AgentExecutionCaseDTO executionCase : cases) {
@@ -44,6 +54,8 @@ public class AgentExecutionWritebackService {
                 }
                 caseWritebackService.writeback(task, executionCase,
                         steps.getOrDefault(executionCase.getId(), List.of()));
+                writebackSuccess++;
+                try {
                 int caseArtifactCount=executionMapper.countAvailableArtifactsByExecutionCase(taskId,executionCase.getId());
                 AgentFailureClassifier.Classification classification=failureClassifier.classify(
                         steps.getOrDefault(executionCase.getId(),List.of()),caseArtifactCount,false,false);
@@ -51,23 +63,23 @@ public class AgentExecutionWritebackService {
                     String bugId=bugDraftService.createIfAbsent(task,executionCase,caseArtifactCount);
                     appendEvent(task,executionCase.getCaseId(),"INFO","BUG_DRAFT_CREATED","已创建待人工复核的缺陷草稿",Map.of("bugId",bugId,"evidenceCount",caseArtifactCount));
                 }
-                writebackSuccess++;
-                appendEvent(task, executionCase.getCaseId(), "INFO", "CASE_WRITEBACK_SUCCESS",
-                        "执行结果已幂等回写", Map.of("result", StringUtils.defaultString(executionCase.getResult())));
+                    appendEvent(task, executionCase.getCaseId(), "INFO", "CASE_WRITEBACK_SUCCESS",
+                            "执行结果已幂等回写", Map.of("result", StringUtils.defaultString(executionCase.getResult())));
+                } catch(Exception diagnosticFailure){LOG.warn("Post-sync diagnostics failed task={} case={}",taskId,executionCase.getCaseId(),diagnosticFailure);}
             } catch (Exception ex) {
                 writebackFailed++;
-                caseWritebackService.markFailed(taskId, executionCase.getCaseId(), ex.getMessage());
+                caseWritebackService.markFailed(taskId,task.getCurrentExecutionId(), executionCase.getCaseId(), ex.getMessage());
                 appendEvent(task, executionCase.getCaseId(), "ERROR", "CASE_WRITEBACK_FAILED",
                         "执行结果回写失败", Map.of("category", "WRITEBACK_FAILED"));
             }
         }
         finalizeTask(task, cases, steps.values().stream().flatMap(List::stream).toList(),
-                writebackSuccess, writebackFailed);
+                writebackSuccess, writebackFailed,qualityRejected);
     }
 
     private void finalizeTask(AgentExecutionTaskDTO task, List<AgentExecutionCaseDTO> cases,
                               List<AgentExecutionStepDTO> steps,
-                              int writebackSuccess, int writebackFailed) {
+                              int writebackSuccess, int writebackFailed,boolean qualityRejected) {
         int success = (int) cases.stream().filter(item -> AgentExecutionStatus.SUCCESS.equals(item.getStatus())).count();
         int failed = (int) cases.stream().filter(item -> List.of(AgentExecutionStatus.FAILED,
                 AgentExecutionStatus.CASE_ERROR, AgentExecutionStatus.CASE_NEEDS_REVIEW).contains(item.getStatus())).count();
@@ -82,17 +94,20 @@ public class AgentExecutionWritebackService {
         String status = technicalIssue
                 ? (completed > 0 ? AgentExecutionStatus.PARTIAL_SUCCESS : AgentExecutionStatus.FAILED)
                 : AgentExecutionStatus.SUCCESS;
-        String verdict = determineVerdict(failed, blocked, skipped, unexecuted, writebackFailed,
+        String verdict = qualityRejected ? AgentExecutionVerdict.INCONCLUSIVE : determineVerdict(failed, blocked, skipped, unexecuted, writebackFailed,
                 artifactCount, cleanupOutstanding > 0, steps);
         String verdictReason = "success=" + success + ",failed=" + failed + ",blocked=" + blocked
                 + ",skipped=" + skipped + ",unexecuted=" + unexecuted + ",writebackFailed=" + writebackFailed
                 + ",artifacts=" + artifactCount + ",cleanupOutstanding=" + cleanupOutstanding;
         String writebackStatus = writebackFailed == 0 ? "SUCCESS" : writebackSuccess > 0 ? "PARTIAL_SUCCESS" : "FAILED";
         String artifactStatus = artifactCount > 0 ? "AVAILABLE" : "MISSING";
-        int updated = executionMapper.finalizeExecutionTask(task.getId(), status, verdict, verdictReason,
+        int updated = executionMapper.finalizeExecutionTask(task.getId(), task.getCurrentExecutionId(),status, verdict, verdictReason,
                 success, failed, blocked, skipped,
                 unexecuted, writebackStatus, artifactStatus, "system:ai-webui-writeback", System.currentTimeMillis());
         if (updated != 1) {
+            var current=executionMapper.selectTaskById(task.getId());
+            if(current!=null && java.util.Objects.equals(current.getCurrentExecutionId(),task.getCurrentExecutionId())
+                    && java.util.Objects.equals(current.getWritebackStatus(),writebackStatus))return;
             throw new IllegalStateException("WRITEBACK_TASK_STATE_CONFLICT");
         }
         appendEvent(task, null, "SUCCESS".equals(status) ? "INFO" : "WARN", "TASK_WRITEBACK_COMPLETED",
@@ -104,7 +119,7 @@ public class AgentExecutionWritebackService {
     private String determineVerdict(int failed, int blocked, int skipped, int unexecuted,
                                     int writebackFailed, int artifactCount, boolean cleanupIncomplete,
                                     List<AgentExecutionStepDTO> steps) {
-        if (writebackFailed > 0 || artifactCount == 0 || cleanupIncomplete) {
+        if (artifactCount == 0 || cleanupIncomplete) {
             return AgentExecutionVerdict.INCONCLUSIVE;
         }
         if (unexecuted > 0) {
@@ -114,7 +129,7 @@ public class AgentExecutionWritebackService {
             return AgentExecutionVerdict.BLOCKED;
         }
         if (failed > 0) {
-            return failureClassifier.classify(steps,artifactCount,cleanupIncomplete,writebackFailed>0).verdict();
+            return failureClassifier.classify(steps,artifactCount,cleanupIncomplete,false).verdict();
         }
         if (skipped > 0) {
             return AgentExecutionVerdict.INCONCLUSIVE;

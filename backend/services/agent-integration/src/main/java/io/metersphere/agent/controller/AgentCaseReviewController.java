@@ -9,7 +9,6 @@ import io.metersphere.agent.service.AgentCaseReviewWriteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,14 +25,16 @@ public class AgentCaseReviewController {
 
     @PostMapping("/create")
     @Operation(summary = "创建用例评审")
-    public AgentCaseReviewDTO create(@RequestBody @Valid AgentCaseReviewCreateRequest request) {
+    public AgentCaseReviewDTO create(@RequestBody AgentCaseReviewCreateRequest request, jakarta.servlet.http.HttpServletRequest http) {
+        request.setRequestId(requestKey(request.getRequestId(),http.getHeader("Idempotency-Key")));
         AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE);
         return agentCaseReviewWriteService.create(request);
     }
 
     @PostMapping("/associate-cases")
     @Operation(summary = "关联功能用例到评审")
-    public void associate(@RequestBody @Valid AgentCaseReviewAssociateRequest request) {
+    public void associate(@RequestBody AgentCaseReviewAssociateRequest request, jakarta.servlet.http.HttpServletRequest http) {
+        request.setRequestId(requestKey(request.getRequestId(),http.getHeader("Idempotency-Key")));
         AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE);
         agentCaseReviewWriteService.associate(request);
     }
@@ -41,7 +42,11 @@ public class AgentCaseReviewController {
     @GetMapping("/{id}")
     @Operation(summary = "获取评审")
     public AgentCaseReviewDTO get(@PathVariable String id) {
-        AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE);
+        AgentScopeAssert.assertAnyScope(AgentTokenScope.REVIEW_WRITE, AgentTokenScope.FUNCTIONAL_READ);
         return agentCaseReviewWriteService.get(id);
+    }
+    private String requestKey(String argument,String header) {
+        if(org.apache.commons.lang3.StringUtils.isNotBlank(header) && org.apache.commons.lang3.StringUtils.isNotBlank(argument) && !header.equals(argument))throw new io.metersphere.sdk.exception.MSException("IDEMPOTENCY_CONFLICT");
+        return org.apache.commons.lang3.StringUtils.defaultIfBlank(header,argument);
     }
 }

@@ -56,4 +56,32 @@ class AgentMcpStreamableServiceTests {
         request.put("method", "notifications/initialized");
         Assertions.assertDoesNotThrow(() -> service.handleNotification(request));
     }
+
+    @Test
+    void leaseResponseIsNeverStoredOrReplayedByGenericCache() {
+        var token = new io.metersphere.system.domain.AgentToken();
+        token.setId("test-token"); token.setScopes("AGENT_ALL");
+        io.metersphere.agent.security.AgentTokenContext.set(token);
+        try {
+            var limiter = org.mockito.Mockito.mock(io.metersphere.agent.security.AgentTokenRateLimiter.class);
+            org.mockito.Mockito.when(limiter.tryAcquireTool(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+            var cache = org.mockito.Mockito.mock(AgentIdempotencyService.class);
+            var calls = new java.util.concurrent.atomic.AtomicInteger();
+            var handler = new io.metersphere.agent.tool.AgentMcpToolHandler() {
+                public String name() { return "metersphere.task.claim"; }
+                public String requiredScope() { return "TASK_CLAIM"; }
+                public Map<String,Object> inputSchema() { return Map.of(); }
+                public Map<String,Object> annotations() { return Map.of("readOnlyHint",false); }
+                public Object execute(Map<String,Object> args) { return Map.of("leaseToken","fixture-"+calls.incrementAndGet()); }
+            };
+            ReflectionTestUtils.setField(service,"agentTokenRateLimiter",limiter);
+            ReflectionTestUtils.setField(service,"agentIdempotencyService",cache);
+            ReflectionTestUtils.setField(service,"agentMcpToolRegistry",new io.metersphere.agent.tool.AgentMcpToolRegistry(java.util.List.of(handler)));
+            var request=Map.<String,Object>of("id",1,"method","tools/call","params",Map.of("name",handler.name(),"arguments",Map.of("requestId","claim-key")));
+            Assertions.assertTrue(service.handle(request).containsKey("result"));
+            Assertions.assertTrue(service.handle(request).containsKey("result"));
+            Assertions.assertEquals(2,calls.get());
+            org.mockito.Mockito.verifyNoInteractions(cache);
+        } finally { io.metersphere.agent.security.AgentTokenContext.clear(); }
+    }
 }

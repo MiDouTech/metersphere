@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping({"/system/quality", "/api/system/quality"})
 public class GlobalQualityPolicyController {
     private final GlobalQualityPolicyService service;
+    @jakarta.annotation.Resource private io.metersphere.agent.quality.GlobalQualityAnalysisService analysis;
     public GlobalQualityPolicyController(GlobalQualityPolicyService service) { this.service = service; }
 
     @ModelAttribute
@@ -41,6 +42,14 @@ public class GlobalQualityPolicyController {
                                             @RequestParam(defaultValue = "20") int pageSize) {
         return service.list(page, pageSize);
     }
+
+    @GetMapping("/policies/{id}/impact-preview")
+    @RequiresPermissions(PermissionConstants.SYSTEM_QUALITY_READ)
+    public java.util.Map<String,Object> preview(@PathVariable String id){return analysis.preview(id);}
+
+    @PostMapping("/policies/{id}/trial")
+    @RequiresPermissions(PermissionConstants.SYSTEM_QUALITY_MANAGE)
+    public java.util.Map<String,Object> trial(@PathVariable String id){return analysis.trial(id);}
 
     @GetMapping("/policies/{id}")
     @RequiresPermissions(PermissionConstants.SYSTEM_QUALITY_READ)

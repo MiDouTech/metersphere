@@ -221,7 +221,8 @@
         <choose>
             <when test="assetType == 'CASE'">
                 SELECT JSON_OBJECT('id',f.id,'refId',f.ref_id,'name',f.name,'editType',f.case_edit_type,'tags',CAST(f.tags AS CHAR),
-                       'steps',CAST(b.steps AS CHAR),'textDescription',CAST(b.text_description AS CHAR),'expectedResult',CAST(b.expected_result AS CHAR)) AS rawContentJson
+                       'contentSchemaVersion','case-source.v1') AS rawContentJson,
+                       b.prerequisite AS casePrerequisiteRaw,b.steps AS caseStepsRaw,b.text_description AS caseDescriptionRaw,b.expected_result AS caseExpectedRaw
                 FROM functional_case f LEFT JOIN functional_case_blob b ON b.id=f.id
                 WHERE f.project_id=#{projectId} AND f.latest=1 AND f.deleted=0 AND COALESCE(NULLIF(f.ref_id,''),f.id)=#{assetId} LIMIT 1
             </when>

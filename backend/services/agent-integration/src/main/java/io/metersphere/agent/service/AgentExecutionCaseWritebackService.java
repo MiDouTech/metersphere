@@ -7,8 +7,6 @@ import io.metersphere.agent.dto.AgentExecutionTaskDTO;
 import io.metersphere.agent.mapper.AgentCaseSchemaMapper;
 import io.metersphere.agent.mapper.AgentExecutionMapper;
 import io.metersphere.functional.domain.FunctionalCase;
-import io.metersphere.functional.domain.FunctionalCaseBlob;
-import io.metersphere.functional.mapper.FunctionalCaseBlobMapper;
 import io.metersphere.functional.mapper.FunctionalCaseMapper;
 import io.metersphere.functional.service.FunctionalCaseService;
 import io.metersphere.plan.dto.request.TestPlanCaseRunRequest;
@@ -25,12 +23,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Service
 public class AgentExecutionCaseWritebackService {
     @Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
+    @Resource private AgentExecutionFinalizationService finalization;
     @Resource
     private AgentExecutionMapper executionMapper;
     @Resource
@@ -40,24 +38,24 @@ public class AgentExecutionCaseWritebackService {
     @Resource
     private FunctionalCaseMapper functionalCaseMapper;
     @Resource
-    private FunctionalCaseBlobMapper functionalCaseBlobMapper;
-    @Resource
     private FunctionalCaseService functionalCaseService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void writeback(AgentExecutionTaskDTO task, AgentExecutionCaseDTO executionCase,
                           List<AgentExecutionStepDTO> steps) {
-        qualityGate.requireCase(task, executionCase, steps);
+        finalization.beginSync(task,executionCase);
         String idempotencyKey = "ai-webui:" + task.getId() + ":" + task.getCurrentExecutionId() + ":" + executionCase.getCaseId()
                 + ":attempt-" + (executionCase.getRetryCount() == null ? 0 : executionCase.getRetryCount()) + ":v1";
         String result = toPlatformResult(executionCase.getStatus());
         if (executionMapper.countWritebackIdempotency(task.getId(), executionCase.getCaseId(), idempotencyKey) > 0) {
             executionMapper.updateCaseWritebackStatus(task.getId(), executionCase.getCaseId(),
                     "SUCCESS", null, System.currentTimeMillis());
+            finalization.synced(task,executionCase);
             return;
         }
+        qualityGate.requireCase(task, executionCase, steps);
         FunctionalCase functionalCase = functionalCaseMapper.selectByPrimaryKey(executionCase.getCaseId());
-        if (functionalCase == null || !StringUtils.equals(task.getProjectId(), functionalCase.getProjectId())) {
+        if (functionalCase == null || Boolean.TRUE.equals(functionalCase.getDeleted()) || !StringUtils.equals(task.getProjectId(), functionalCase.getProjectId())) {
             throw new MSException("WRITEBACK_CASE_MISMATCH");
         }
         List<AgentCaseStepDTO> resultSteps = steps.stream().map(this::toResultStep).toList();
@@ -71,7 +69,7 @@ public class AgentExecutionCaseWritebackService {
             request.setLastExecResult(result);
             request.setStepsExecResult(caseSchemaMapper.toStepsExecResultJson(resultSteps));
             request.setContent("[AI WebUI] task=" + task.getId());
-            testPlanFunctionalCaseService.run(request,
+            testPlanFunctionalCaseService.runFrozenResult(request,
                     new LogInsertModule(operator, "/internal/ai-runner/v1/writeback", HttpMethodConstants.POST.name()));
         } else {
             long now = System.currentTimeMillis();
@@ -81,20 +79,18 @@ public class AgentExecutionCaseWritebackService {
             update.setLastExecuteUser(operator);
             update.setLastExecuteTime(now);
             functionalCaseMapper.updateByPrimaryKeySelective(update);
-            FunctionalCaseBlob blob = new FunctionalCaseBlob();
-            blob.setId(executionCase.getCaseId());
-            blob.setSteps(caseSchemaMapper.toStepsExecResultJson(resultSteps).getBytes(StandardCharsets.UTF_8));
-            functionalCaseBlobMapper.updateByPrimaryKeySelective(blob);
             functionalCaseService.syncAssociatedPlanCaseExec(List.of(executionCase.getCaseId()), result, operator);
         }
         executionMapper.insertWritebackIdempotency(IDGenerator.nextStr(), task.getId(), executionCase.getCaseId(),
                 idempotencyKey, task.getProjectId(), result, operator, System.currentTimeMillis());
         executionMapper.updateCaseWritebackStatus(task.getId(), executionCase.getCaseId(),
                 "SUCCESS", null, System.currentTimeMillis());
+        finalization.synced(task,executionCase);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public void markFailed(String taskId, String caseId, String message) {
+    public void markFailed(String taskId, String executionId,String caseId, String message) {
+        finalization.failed(taskId,executionId,caseId);
         executionMapper.updateCaseWritebackStatus(taskId, caseId, "FAILED",
                 StringUtils.abbreviate(sanitize(message), 1000), System.currentTimeMillis());
     }

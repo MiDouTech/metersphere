@@ -74,7 +74,7 @@ public interface AgentExecutionMapper {
                                 @Param("now") long now);
 
     AgentExecutionTaskDTO selectQueuedTaskForRunner(@Param("organizationId") String organizationId,
-                                                    @Param("runnerId") String runnerId);
+                                                    @Param("runnerId") String runnerId, @Param("supportsV2") boolean supportsV2);
 
     List<AgentExecutionTaskDTO> selectQueuedTasksForAgent(@Param("projectId") String projectId,
                                                           @Param("agentType") String agentType,
@@ -256,7 +256,7 @@ public interface AgentExecutionMapper {
                                   @Param("errorMessage") String errorMessage,
                                   @Param("updateTime") long updateTime);
 
-    int finalizeExecutionTask(@Param("taskId") String taskId, @Param("status") String status,
+    int finalizeExecutionTask(@Param("taskId") String taskId, @Param("executionId") String executionId, @Param("status") String status,
                               @Param("verdict") String verdict, @Param("verdictReason") String verdictReason,
                               @Param("successCount") int successCount, @Param("failedCount") int failedCount,
                               @Param("blockedCount") int blockedCount, @Param("skippedCount") int skippedCount,

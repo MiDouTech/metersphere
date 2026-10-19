@@ -90,7 +90,7 @@ public class AgentFunctionalCaseController {
     @Operation(summary = "批量回写执行结果")
     public AgentBatchSubmitResponse batchSubmit(@RequestBody @Valid AgentBatchSubmitRequest request) {
         AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
-        return agentBatchSubmitService.batchSubmit(request);
+        throw new io.metersphere.sdk.exception.MSException("QUALITY_LEGACY_SUBMIT_FORBIDDEN");
     }
 
     @GetMapping("/exec-log/page")
