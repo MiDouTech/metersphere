@@ -15,13 +15,23 @@ export interface MsResultHolder<T = unknown> {
 }
 
 export class MsApiError extends Error {
-  status: number;
-  body: string;
-
+  readonly status: number;
+  readonly code: string;
+  readonly traceId?: string;
   constructor(status: number, body: string) {
-    super(`MeterSphere API error ${status}: ${body}`);
-    this.status = status;
-    this.body = body;
+    let value: Record<string, unknown> = {};
+    try { const parsed = JSON.parse(body); if (parsed && typeof parsed === "object") value = parsed; } catch { /* opaque server failure */ }
+    // Older deployments wrap Agent error DTOs in ResultHolder even for HTTP 4xx/5xx.
+    if (value.data && typeof value.data === "object" && !Array.isArray(value.data)) {
+      const nested = value.data as Record<string, unknown>;
+      if (typeof nested.code === "string") value = nested;
+    }
+    const code = typeof value.code === "string" && /^[A-Z][A-Z0-9_]{2,80}$/.test(value.code) ? value.code : "MCP_HTTP_ERROR";
+    const message = status === 401 ? "身份已失效，请重新配置令牌" : status === 403 ? "没有此操作权限，请检查用户角色和令牌范围"
+      : status === 409 ? "请求与当前数据冲突，请先查询结果或刷新版本" : "请求失败，请检查参数、权限或服务状态；响应不明确时先查询结果";
+    super(message);
+    this.status = status; this.code = code;
+    this.traceId = typeof value.traceId === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(value.traceId) ? value.traceId : undefined;
     this.name = "MsApiError";
   }
 }
@@ -63,7 +73,11 @@ export class MeterSphereClient {
         jsonrpc: "2.0", id: crypto.randomUUID(), method: "tools/call", params: { name, arguments: args },
       });
       if (response.error) {
-        return { isError: true, content: [{ type: "text", text: JSON.stringify(response.error) }] };
+        const safe = new MsApiError(400, JSON.stringify(response.error.data ?? {}));
+        return { isError: true, content: [{ type: "text", text: JSON.stringify({
+          code: response.error.code, message: safe.message,
+          data: { code: safe.code, ...(safe.traceId ? { traceId: safe.traceId } : {}) },
+        }) }] };
       }
       if (!response.result || !Array.isArray(response.result.content)) {
         throw new Error("MeterSphere MCP response is invalid");
@@ -93,6 +107,7 @@ export class MeterSphereClient {
     const response = await fetch(url, {
       method,
       headers: this.headers(),
+      signal: AbortSignal.timeout(30_000),
       body: body === undefined ? undefined : JSON.stringify(body),
     });
 
@@ -107,7 +122,9 @@ export class MeterSphereClient {
 
     const parsed = JSON.parse(text) as MsResultHolder<T> | T;
     if (parsed && typeof parsed === "object" && "data" in parsed && "code" in parsed) {
-      return (parsed as MsResultHolder<T>).data as T;
+      const holder = parsed as MsResultHolder<T>;
+      if (holder.code !== 100200) throw new MsApiError(400, text);
+      return holder.data as T;
     }
     return parsed as T;
   }
@@ -431,6 +448,7 @@ export class MeterSphereClient {
   }
 
   createCaseReview(payload: {
+    requestId: string;
     projectId?: string;
     name: string;
     moduleId?: string;
@@ -447,6 +465,7 @@ export class MeterSphereClient {
   }
 
   associateCaseReviewCases(payload: {
+    requestId: string;
     projectId?: string;
     reviewId: string;
     caseIds: string[];

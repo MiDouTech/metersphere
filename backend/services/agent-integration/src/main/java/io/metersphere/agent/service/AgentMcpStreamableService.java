@@ -98,7 +98,7 @@ public class AgentMcpStreamableService {
         List<Map<String, Object>> tools = new ArrayList<>();
         AgentToken token = AgentTokenContext.get();
         for (AgentMcpToolHandler handler : agentMcpToolRegistry.all()) {
-            if (handler.name().startsWith(TRIGGER_TOOL_PREFIX)) continue;
+            if (!io.metersphere.agent.tool.AgentMcpToolExposure.discoverable(handler.name())) continue;
             if (token == null || !AgentScopeAssert.hasScope(token.getScopes(), handler.requiredScope())) continue;
             tools.add(tool(handler.name(), handler.description(), handler.requiredScope(),
                     handler.inputSchema(), handler.outputSchema(), handler.annotations()));
@@ -109,6 +109,7 @@ public class AgentMcpStreamableService {
     private Map<String, Object> callTool(Map<String, Object> params, String idempotencyKey) {
         String name = StringUtils.defaultString((String) params.get("name"));
         Map<String, Object> arguments = asMap(params.get("arguments"));
+        if (io.metersphere.agent.tool.AgentMcpToolExposure.legacyResultWrite(name)) throw new MSException("QUALITY_LEGACY_SUBMIT_FORBIDDEN");
         if (name.startsWith(TRIGGER_TOOL_PREFIX)) {
             if(execLogService!=null)execLogService.audit("MCP_TRIGGER_TOOL_FORBIDDEN",name,"Direct personal MCP trigger call rejected");
             throw new MSException("MCP_TOOL_FORBIDDEN");
@@ -117,7 +118,21 @@ public class AgentMcpStreamableService {
         if (token != null && !agentTokenRateLimiter.tryAcquireTool(token.getId(), name)) {
             throw new MSException("Agent MCP tool requests are too frequent. Please retry later.");
         }
+        String argumentKey=(String)arguments.get("requestId");
+        if(StringUtils.isNotBlank(idempotencyKey) && StringUtils.isNotBlank(argumentKey) && !idempotencyKey.equals(argumentKey))throw new MSException("IDEMPOTENCY_CONFLICT");
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
+        if(StringUtils.isNotBlank(effectiveIdempotencyKey)) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
+        if(java.util.Set.of("metersphere.case_review.create","metersphere.case_review.associate_cases","metersphere.functional.comment.create","metersphere.functional.case.update").contains(name))return callToolInternal(name,arguments);
+        // Runtime protocols validate current lease/state on every request. Never persist lease
+        // credentials or replay an expired capability through the generic response cache.
+        if (java.util.Set.of("metersphere.task.claim", "metersphere.task.lease.heartbeat",
+                "metersphere.task.release", "metersphere.execution.events.batch",
+                "metersphere.execution.step.submit", "metersphere.execution.complete",
+                "metersphere.execution.fail", "metersphere.execution.checkpoint.create",
+                "metersphere.human_request.create", "metersphere.artifact.prepare",
+                "metersphere.artifact.commit").contains(name)) {
+            return callToolInternal(name, arguments);
+        }
         // Recheck scope even when a previous result is cached for this token.
         agentMcpToolRegistry.find(name).ifPresent(handler -> AgentScopeAssert.assertScope(handler.requiredScope()));
         if (agentMcpToolRegistry.isWriteTool(name) && StringUtils.isBlank(effectiveIdempotencyKey)) {

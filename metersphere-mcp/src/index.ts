@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { managedExecutionTools } from "./tools/managedExecution.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { nativeBatchSubmitTool, executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
@@ -20,6 +21,7 @@ import {
 } from "./tools/caseWrite.js";
 import {
   associateCaseReviewCasesTool,
+  getCaseReviewTool,
   associateTestPlanCasesTool,
   createCaseReviewTool,
   createTestPlanTool,
@@ -47,12 +49,11 @@ type ToolDef = {
 };
 
 const tools: ToolDef[] = [
-  nativeBatchSubmitTool, executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
+  ...managedExecutionTools,
+  executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
   bugTransitionTool, testPlanUpdateTool, testPlanDisassociateTool, testPlanGetTool,
   searchFunctionalCasesTool,
   getFunctionalCaseTool,
-  submitFunctionalResultTool,
-  submitFunctionalResultsBatchTool,
   uploadExecutionAttachmentTool,
   listModulesTool,
   searchProjectsTool,
@@ -73,6 +74,7 @@ const tools: ToolDef[] = [
   resumeExecutionTaskTool,
   createCaseReviewTool,
   associateCaseReviewCasesTool,
+  getCaseReviewTool,
   searchBugsTool,
   getBugTool,
   createBugTool,
@@ -87,7 +89,7 @@ async function main() {
 
   const server = new McpServer({
     name: "metersphere-mcp",
-    version: "0.3.0",
+    version: "0.4.0",
   });
 
   for (const tool of tools) {
@@ -105,7 +107,8 @@ async function main() {
                   {
                     error: error.message,
                     status: error.status,
-                    body: error.body,
+                    code: error.code,
+                    traceId: error.traceId,
                   },
                   null,
                   2
@@ -114,7 +117,7 @@ async function main() {
             ],
           };
         }
-        const message = error instanceof Error ? error.message : String(error);
+        const message = "请求失败，请检查连接或参数后重试；不要直接重复执行已提交的业务操作";
         return {
           isError: true,
           content: [{ type: "text", text: JSON.stringify({ error: message }, null, 2) }],

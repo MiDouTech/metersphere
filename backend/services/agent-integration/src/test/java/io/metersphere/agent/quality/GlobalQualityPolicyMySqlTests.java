@@ -28,6 +28,7 @@ class GlobalQualityPolicyMySqlTests {
         }
         @Bean JdbcTemplate jdbc(DataSource ds) { return new JdbcTemplate(ds); }
         @Bean PlatformTransactionManager tx(DataSource ds) { return new DataSourceTransactionManager(ds); }
+        @Bean io.metersphere.agent.security.AgentFactCipher factCipher(){return new io.metersphere.agent.security.AgentFactCipher();}
         @Bean QualityPolicyValidator validator() { return new QualityPolicyValidator(); }
         @Bean GlobalQualityGate gate(JdbcTemplate jdbc, QualityPolicyValidator validator) {
             return new GlobalQualityGate(jdbc, mock(io.metersphere.agent.mapper.AgentExecutionMapper.class), validator);

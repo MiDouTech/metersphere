@@ -122,7 +122,7 @@ public class AgentWebExecutionContractValidator {
 
     @SuppressWarnings("unchecked")
     public void validateContract(Map<String,Object> contract) {
-        validateSchemaVersion((String)contract.get("contractVersion"), "contractVersion");
+        if(!Set.of("v1","v2").contains(StringUtils.defaultString((String)contract.get("contractVersion"))))throw new MSException("QUALITY_CONTRACT_INVALID");
         if (StringUtils.isAnyBlank((String)contract.get("taskId"), (String)contract.get("snapshotHash"), (String)contract.get("credentialRole"))) {
             throw new MSException("EXECUTION_CONTRACT_REQUIRED_FIELD_MISSING");
         }
@@ -142,6 +142,7 @@ public class AgentWebExecutionContractValidator {
                 AgentWebActionDTO action=io.metersphere.sdk.util.JSON.parseObject(io.metersphere.sdk.util.JSON.toJSONString(step.get("action")),AgentWebActionDTO.class);
                 List<AgentWebAssertionDTO> assertions=io.metersphere.sdk.util.JSON.parseArray(io.metersphere.sdk.util.JSON.toJSONString(step.get("assertions")),AgentWebAssertionDTO.class);
                 validateAction(action);validateAssertions(assertions);validateRisk(action);
+                if(assertions.stream().anyMatch(a->!java.util.Objects.equals(a.getContractVersion(),contract.get("contractVersion"))))throw new MSException("QUALITY_CONTRACT_INVALID");
                 if(!Set.of("STOP_CASE","CONTINUE_CASE","STOP_TASK","NEEDS_REVIEW").contains(step.get("onFailure")))throw new MSException("EXECUTION_CONTRACT_ON_FAILURE_INVALID");
                 if(!Set.of("ON_FAILURE","ALWAYS","NONE").contains(step.get("evidencePolicy")))throw new MSException("EXECUTION_CONTRACT_EVIDENCE_POLICY_INVALID");
             }
@@ -152,9 +153,27 @@ public class AgentWebExecutionContractValidator {
         if (assertions == null || assertions.isEmpty()) {
             throw new MSException("INVALID_ASSERTION: at least one assertion is required");
         }
+        Set<String> ids=new java.util.HashSet<>();
         for (AgentWebAssertionDTO assertion : assertions) {
-            if (assertion == null || !"v1".equals(assertion.getContractVersion())) {
+            if (assertion == null || !Set.of("v1","v2").contains(StringUtils.defaultString(assertion.getContractVersion()))) {
                 throw new MSException("UNSUPPORTED_CONTRACT_VALUE: assertion.contractVersion");
+            }
+            if("v2".equals(assertion.getContractVersion())){
+                if(StringUtils.isBlank(assertion.getAssertionId()) || assertion.getAssertionId().length()>128 || !ids.add(assertion.getAssertionId())
+                        || !Set.of("STRING","BOOLEAN","INTEGER","DECIMAL","DATE").contains(StringUtils.defaultString(assertion.getValueType())))throw new MSException("QUALITY_ASSERTION_INVALID");
+                if("DECIMAL".equals(assertion.getValueType()) && (assertion.getScale()==null || assertion.getPrecision()==null || assertion.getScale()<0 || assertion.getScale()>18 || assertion.getPrecision()<1 || assertion.getPrecision()>38 || assertion.getScale()>assertion.getPrecision()))throw new MSException("QUALITY_ASSERTION_INVALID");
+            }
+            if("v2".equals(assertion.getContractVersion())){
+                try {
+                    var json=new com.fasterxml.jackson.databind.ObjectMapper();var rule=json.valueToTree(assertion);
+                    com.fasterxml.jackson.databind.JsonNode sample;
+                    if("IN_RANGE".equals(assertion.getOperator())){
+                        if(assertion.getTolerance()!=null)throw new MSException("QUALITY_ASSERTION_INVALID");
+                        var range=json.readTree(assertion.getExpected());if(!range.isArray() || range.size()!=2)throw new MSException("QUALITY_ASSERTION_INVALID");sample=range.get(0);
+                    }else if("BOOLEAN".equals(assertion.getValueType()))sample=json.valueToTree(Boolean.parseBoolean(assertion.getExpected()));
+                    else sample=json.valueToTree(assertion.getExpected());
+                    io.metersphere.agent.quality.TypedAssertionComparator.compare(rule,sample);
+                }catch(MSException error){throw error;}catch(Exception error){throw new MSException("QUALITY_ASSERTION_INVALID");}
             }
             String type = normalize(assertion.getType());
             if (!ASSERTION_TYPES.contains(type)) {

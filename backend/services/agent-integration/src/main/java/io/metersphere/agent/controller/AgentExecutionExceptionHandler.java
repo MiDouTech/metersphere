@@ -86,7 +86,7 @@ public class AgentExecutionExceptionHandler {
     }
 
     private String traceId(HttpServletRequest request) {
-        return StringUtils.defaultIfBlank(request.getHeader("X-Trace-Id"), UUID.randomUUID().toString());
+        return StringUtils.defaultIfBlank((String)request.getAttribute("agentTraceId"),StringUtils.defaultIfBlank(request.getHeader("X-Trace-Id"), UUID.randomUUID().toString()));
     }
 
     private String safeCode(MSException error) {

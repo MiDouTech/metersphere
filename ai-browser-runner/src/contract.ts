@@ -42,9 +42,15 @@ export function parseAssertions(value: string | undefined): WebAssertion[] {
   if (assertions.length === 0 || assertions.length > 20) {
     throw new RunnerError("INVALID_ASSERTION", "断言数量必须为 1..20");
   }
+  const ids = new Set<string>();
   for (const assertion of assertions) {
-    if (assertion.contractVersion !== "v1" || !ASSERTIONS.has(assertion.type)) {
+    if (!["v1", "v2"].includes(assertion.contractVersion) || !ASSERTIONS.has(assertion.type)) {
       throw new RunnerError("UNSUPPORTED_CONTRACT_VALUE", "断言契约版本或类型不受支持");
+    }
+    if (assertion.contractVersion !== assertions[0].contractVersion) throw new RunnerError("QUALITY_CONTRACT_INVALID", "步骤不能混用断言协议");
+    if (assertion.contractVersion === "v2") {
+      if (!assertion.assertionId || ids.has(assertion.assertionId) || !["STRING", "BOOLEAN", "INTEGER", "DECIMAL", "DATE"].includes(assertion.valueType ?? "")) throw new RunnerError("QUALITY_ASSERTION_INVALID", "断言标识或类型无效");
+      ids.add(assertion.assertionId);
     }
     validateTimeout(assertion.timeoutMs);
     if (!["URL", "TITLE"].includes(assertion.type)) validateLocator(assertion.target);

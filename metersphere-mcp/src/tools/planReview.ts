@@ -42,10 +42,11 @@ export const associateTestPlanCasesTool = {
 };
 
 export const createCaseReviewInputSchema = {
+  requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/).describe("Stable logical request ID; reuse unchanged after response loss"),
   projectId: z.string().optional(),
   name: z.string(),
   moduleId: z.string().optional(),
-  reviewPassRule: z.string().optional().describe("SINGLE or MULTIPLE"),
+  reviewPassRule: z.enum(["SINGLE", "MULTIPLE"]).optional(),
   reviewers: z.array(z.string()).optional(),
   description: z.string().optional(),
   caseIds: z.array(z.string()).optional(),
@@ -63,6 +64,7 @@ export const createCaseReviewTool = {
 };
 
 export const associateCaseReviewCasesInputSchema = {
+  requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/).describe("Stable logical request ID; reuse unchanged after response loss"),
   projectId: z.string().optional(),
   reviewId: z.string(),
   caseIds: z.array(z.string()).min(1),
@@ -79,4 +81,13 @@ export const associateCaseReviewCasesTool = {
     );
     return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, result }, null, 2) }] };
   },
+};
+
+export const getCaseReviewTool = {
+  name: "get_case_review",
+  description: "Read an authorized review and its current status.",
+  inputSchema: { reviewId: z.string().min(1) },
+  handler: async (client: MeterSphereClient, args: Record<string, unknown>) => ({
+    content: [{ type: "text" as const, text: JSON.stringify(await client.getCaseReview(String(args.reviewId))) }],
+  }),
 };

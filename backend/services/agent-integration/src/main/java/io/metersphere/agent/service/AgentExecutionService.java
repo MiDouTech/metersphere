@@ -488,9 +488,9 @@ public class AgentExecutionService {
             item.setVersion(0);
             item.setCreateTime(now);
             item.setUpdateTime(now);
-            List<AgentExecutionStepDTO> stepSnapshots = executionSnapshotService.prepareSnapshot(item, now);
-            TestAssetVersionDTO assetVersion = preflightService.assertFrozenCaseVersion(request.getPreflightId(),
-                    item.getCaseId(), stableCaseId, item.getCaseSnapshot());
+            TestAssetVersionDTO assetVersion = preflightService.frozenCaseVersion(request.getPreflightId(),
+                    item.getCaseId(), stableCaseId);
+            List<AgentExecutionStepDTO> stepSnapshots = executionSnapshotService.prepareSnapshot(item, assetVersion, now);
             item.setAssetVersionId(assetVersion.getId());
             if (stepSnapshots.stream().anyMatch(step -> AgentExecutionStatus.CASE_NEEDS_REVIEW.equals(step.getStatus()))) {
                 stepSnapshots.stream().filter(step -> AgentExecutionStatus.CASE_NEEDS_REVIEW.equals(step.getStatus()))
@@ -1132,7 +1132,7 @@ public class AgentExecutionService {
                                           List<AgentExecutionStepDTO> steps, AgentExecutionPreflightDTO preflight,
                                           String snapshotHash) {
         Map<String,Object> contract = new LinkedHashMap<>();
-        contract.put("contractVersion", "v1");
+        contract.put("contractVersion", task.getRequiredCapabilities()!=null && JSON.parseArray(task.getRequiredCapabilities(),String.class).stream().anyMatch("ASSERTION_V2"::equalsIgnoreCase)?"v2":"v1");
         contract.put("taskId", task.getId());
         contract.put("snapshotHash", snapshotHash);
         contract.put("scope", Map.of("caseIds", preflight.getOriginalCaseIds(), "addedCaseIds", preflight.getAddedCaseIds()));

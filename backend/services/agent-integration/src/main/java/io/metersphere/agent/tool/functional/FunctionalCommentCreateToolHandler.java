@@ -20,6 +20,14 @@ public class FunctionalCommentCreateToolHandler implements AgentMcpToolHandler {
     @Resource
     private FunctionalCaseCommentService functionalCaseCommentService;
 
+    @Resource
+    private io.metersphere.agent.service.AgentBusinessAccess access;
+
+    @Resource
+    private io.metersphere.agent.service.AgentOperationExecutor operations;
+    @Resource
+    private io.metersphere.agent.service.AgentTempAttachmentService attachments;
+
     @Override
     public String name() {
         return "metersphere.functional.comment.create";
@@ -27,7 +35,7 @@ public class FunctionalCommentCreateToolHandler implements AgentMcpToolHandler {
 
     @Override
     public String description() {
-        return "Create a comment or reply for a functional test case.";
+        return "Create a comment or reply. uploadFileIds must contain temporary attachment IDs returned by the Agent upload endpoint, not storage file IDs.";
     }
 
     @Override
@@ -53,7 +61,7 @@ public class FunctionalCommentCreateToolHandler implements AgentMcpToolHandler {
                         "uploadFileIds", AgentMcpToolSchemas.stringArray(10),
                         "requestId", AgentMcpToolSchemas.string(1, 128)
                 ),
-                List.of("caseId", "projectId", "content")
+                List.of("caseId", "projectId", "content", "requestId")
         );
     }
 
@@ -64,10 +72,40 @@ public class FunctionalCommentCreateToolHandler implements AgentMcpToolHandler {
 
     @Override
     public Object execute(Map<String, Object> arguments) {
+        return operations.execute("functional.comment.create", (String) arguments.get("requestId"), arguments,
+                io.metersphere.functional.domain.FunctionalCaseComment.class,
+                () -> access.caseProject((String) arguments.get("caseId"), (String) arguments.get("projectId"),
+                        "FUNCTIONAL_CASE:READ+COMMENT", true, AgentTokenScope.CASE_COMMENT),
+                () -> createOnce(arguments));
+    }
+
+    private io.metersphere.functional.domain.FunctionalCaseComment createOnce(Map<String, Object> arguments) {
         FunctionalCaseCommentRequest request = JSON.parseObject(JSON.toJSONString(arguments), FunctionalCaseCommentRequest.class);
         if (StringUtils.isBlank(request.getEvent())) {
             request.setEvent(NoticeConstants.Event.COMMENT);
         }
-        return functionalCaseCommentService.saveComment(request, SessionUtils.getUserId());
+        access.caseProject(request.getCaseId(), request.getProjectId(), "FUNCTIONAL_CASE:READ+COMMENT", true, AgentTokenScope.CASE_COMMENT);
+        if (StringUtils.isBlank(request.getContent()) || request.getContent().length()>20000
+                || !List.of(NoticeConstants.Event.COMMENT, NoticeConstants.Event.AT, NoticeConstants.Event.REPLY).contains(request.getEvent())) {
+            throw new io.metersphere.sdk.exception.MSException("AGENT_VALIDATION_ERROR");
+        }
+        if (NoticeConstants.Event.REPLY.equals(request.getEvent())) {
+            access.commentParent(request.getCaseId(), request.getParentId(), request.getReplyUser());
+        } else if (StringUtils.isNotBlank(request.getParentId()) || StringUtils.isNotBlank(request.getReplyUser())) {
+            throw new io.metersphere.sdk.exception.MSException("AGENT_VALIDATION_ERROR");
+        }
+        if (StringUtils.isNotBlank(request.getNotifier())) {
+            String[] recipients=request.getNotifier().split(";",-1);
+            if (recipients.length>100) throw new io.metersphere.sdk.exception.MSException("AGENT_VALIDATION_ERROR");
+            for (String recipient:recipients) {
+                if (StringUtils.isBlank(recipient) || !access.userHasPermission(recipient, request.getProjectId(), "FUNCTIONAL_CASE:READ")) {
+                    throw io.metersphere.agent.service.AgentBusinessAccess.denied();
+                }
+            }
+        }
+        var files = attachments.requireUsable(request.getUploadFileIds(), request.getProjectId(), io.metersphere.agent.constants.AgentAttachmentPurpose.CASE_COMMENT);
+        attachments.markLinked(files);
+        request.setUploadFileIds(attachments.toFileIds(files));
+        return functionalCaseCommentService.saveComment(request, io.metersphere.agent.security.AgentTokenContext.get().getUserId());
     }
 }

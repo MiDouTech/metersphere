@@ -618,6 +618,15 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
      * @param logInsertModule
      */
     public void run(TestPlanCaseRunRequest request, LogInsertModule logInsertModule) {
+        runResult(request,logInsertModule,false);
+    }
+
+    /** Managed execution records frozen steps in history without replacing a newer authoring draft. */
+    public void runFrozenResult(TestPlanCaseRunRequest request,LogInsertModule logInsertModule){
+        runResult(request,logInsertModule,true);
+    }
+
+    private void runResult(TestPlanCaseRunRequest request,LogInsertModule logInsertModule,boolean preserveDraft){
         long now = System.currentTimeMillis();
         String operator = logInsertModule.getOperator();
         // 同一用例在所有测试计划中的关联行与用例库执行状态互相同步
@@ -630,7 +639,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         testPlanFunctionalCaseMapper.updateByExampleSelective(planCaseUpdate, planCaseExample);
 
         //更新用例表执行状态 以及补充用例步骤ID为null的步骤信息
-        updateFunctionalCaseStatus(Collections.singletonList(request.getCaseId()), request.getLastExecResult(), request.getStepsExecResult(), operator, now);
+        updateFunctionalCaseStatus(Collections.singletonList(request.getCaseId()), request.getLastExecResult(), preserveDraft?null:request.getStepsExecResult(), operator, now);
 
         //执行记录
         TestPlanCaseExecuteHistory executeHistory = buildHistory(request, operator);

@@ -5,6 +5,14 @@ import lombok.Data;
 @Data
 public class AgentWebAssertionDTO {
     private String contractVersion = "v1";
+    private String assertionId;
+    private String valueType;
+    private Integer precision;
+    private Integer scale;
+    private String unit;
+    private String tolerance;
+    private Boolean lowerInclusive;
+    private Boolean upperInclusive;
     private String type;
     private AgentWebLocatorDTO target;
     private String operator;

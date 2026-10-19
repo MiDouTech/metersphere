@@ -34,6 +34,9 @@ public class AgentTempAttachmentService {
     private static final List<String> BLOCKED_EXTENSIONS = List.of("html", "htm", "svg", "js", "mjs", "exe", "bat", "cmd", "sh");
 
     @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Resource
     private CommonFileService commonFileService;
     @Resource
     private AgentTempAttachmentMapper agentTempAttachmentMapper;
@@ -115,12 +118,18 @@ public class AgentTempAttachmentService {
         }
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         assertProjectAllowed(resolvedProjectId);
+        if (attachmentIds.stream().anyMatch(StringUtils::isBlank) || attachmentIds.stream().distinct().count()!=attachmentIds.size()) {
+            throw new MSException("AGENT_VALIDATION_ERROR");
+        }
+        AgentToken token = AgentTokenContext.get();
+        if (token==null) throw AgentBusinessAccess.denied();
         long now = System.currentTimeMillis();
         List<AgentTempAttachment> result = new ArrayList<>();
         for (String attachmentId : attachmentIds) {
             AgentTempAttachment attachment = agentTempAttachmentMapper.selectByPrimaryKey(attachmentId);
-            if (attachment == null) {
-                throw new MSException(AgentErrorCode.RESOURCE_NOT_FOUND, "临时附件不存在: " + attachmentId);
+            if (attachment == null || !token.getId().equals(attachment.getTokenId())
+                    || !token.getUserId().equals(attachment.getUserId())) {
+                throw AgentBusinessAccess.denied();
             }
             if (!StringUtils.equals(attachment.getProjectId(), resolvedProjectId)) {
                 throw new MSException(AgentErrorCode.RESOURCE_PROJECT_MISMATCH, "临时附件不属于指定项目");
@@ -146,10 +155,11 @@ public class AgentTempAttachmentService {
             return;
         }
         for (AgentTempAttachment attachment : attachments) {
-            AgentTempAttachment update = new AgentTempAttachment();
-            update.setId(attachment.getId());
-            update.setLinked(true);
-            agentTempAttachmentMapper.updateByPrimaryKeySelective(update);
+            AgentToken token = AgentTokenContext.get();
+            if (token == null || jdbc.update("UPDATE agent_temp_attachment SET linked=1 WHERE id=? AND token_id=? AND user_id=? AND project_id=? AND purpose=? AND linked=0 AND expires_at>?",
+                    attachment.getId(), token.getId(), token.getUserId(), attachment.getProjectId(), attachment.getPurpose(), System.currentTimeMillis())!=1) {
+                throw AgentBusinessAccess.denied();
+            }
         }
     }
 

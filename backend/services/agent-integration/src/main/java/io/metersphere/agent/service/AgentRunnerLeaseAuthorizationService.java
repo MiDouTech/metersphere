@@ -23,17 +23,23 @@ public class AgentRunnerLeaseAuthorizationService {
         return lease;
     }
 
-    public AgentRunnerLeaseDTO authenticateLease(String authorization, String leaseId) {
+    public AgentRunnerLeaseDTO authenticateLeaseForCompletion(String authorization,String leaseId){
+        AgentRunnerLeaseDTO lease=authenticateIdentity(authorization,leaseId);
+        if("COMPLETED".equals(lease.getStatus()))return lease;
+        return authenticateLease(authorization,leaseId);
+    }
+    public AgentRunnerLeaseDTO authenticateLease(String authorization,String leaseId){
+        AgentRunnerLeaseDTO lease=authenticateIdentity(authorization,leaseId);
+        if(!"ACTIVE".equals(lease.getStatus()) || lease.getExpireTime()==null || lease.getExpireTime()<System.currentTimeMillis())throw new MSException("RUNNER_LEASE_EXPIRED");
+        return lease;
+    }
+    private AgentRunnerLeaseDTO authenticateIdentity(String authorization, String leaseId) {
         String token = bearerToken(authorization);
         AgentRunnerLeaseDTO lease = executionMapper.selectLeaseById(leaseId);
         if (lease == null || StringUtils.isBlank(lease.getLeaseTokenHash()) || !MessageDigest.isEqual(
                 hash(token).getBytes(StandardCharsets.UTF_8),
                 lease.getLeaseTokenHash().getBytes(StandardCharsets.UTF_8))) {
             throw new MSException("RUNNER_LEASE_UNAUTHORIZED");
-        }
-        if (!"ACTIVE".equals(lease.getStatus()) || lease.getExpireTime() == null
-                || lease.getExpireTime() < System.currentTimeMillis()) {
-            throw new MSException("RUNNER_LEASE_EXPIRED");
         }
         return lease;
     }

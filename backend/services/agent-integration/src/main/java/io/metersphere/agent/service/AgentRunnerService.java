@@ -50,6 +50,8 @@ import java.util.stream.Collectors;
 @Transactional(rollbackFor = Exception.class)
 public class AgentRunnerService {
     @jakarta.annotation.Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
+    @Resource private AgentExecutionClaimSafetyService claimSafety;
+    @Resource private AgentExecutionFinalizationService finalization;
     private static final String CONTRACT_VERSION = "v1";
     private static final long RUNNER_HEARTBEAT_STALE_MS = 90_000L;
     private static final Set<String> RUNNER_EVENT_TYPES = Set.of(
@@ -143,6 +145,12 @@ public class AgentRunnerService {
         }
     }
 
+    private boolean supportsAssertionV2(AgentRunnerDTO runner){
+        String capabilities=StringUtils.defaultString(runner.getBrowserCapabilities());
+        try {return JSON.parseArray(capabilities,String.class).stream().anyMatch("ASSERTION_V2"::equalsIgnoreCase);}
+        catch(Exception error){return java.util.Arrays.stream(capabilities.split(",")).map(String::trim).anyMatch("ASSERTION_V2"::equalsIgnoreCase);}
+    }
+
     public AgentRunnerLeaseAssignmentDTO poll(String authorization, AgentRunnerPollRequest request) {
         AgentRunnerDTO runner = authenticate(authorization, request.getRunnerId());
         long now = System.currentTimeMillis();
@@ -153,11 +161,12 @@ public class AgentRunnerService {
         if (runner.getMaxConcurrency() != null && activeLeases >= runner.getMaxConcurrency()) {
             return null;
         }
-        AgentExecutionTaskDTO task = executionMapper.selectQueuedTaskForRunner(runner.getOrganizationId(), runner.getId());
+        AgentExecutionTaskDTO task = executionMapper.selectQueuedTaskForRunner(runner.getOrganizationId(), runner.getId(), supportsAssertionV2(runner));
         if (task == null) {
             return null;
         }
         assertFrozenContract(task);
+        claimSafety.requireClaimable(task);
         String leaseToken = "msrl_" + randomToken();
         AgentRunnerLeaseDTO lease = new AgentRunnerLeaseDTO();
         lease.setId(IDGenerator.nextStr());
@@ -257,6 +266,7 @@ public class AgentRunnerService {
             throw new MSException("RUNNER_EVENT_REQUEST_INVALID");
         }
         AgentRunnerLeaseDTO lease = authenticateLease(authorization, request.getLeaseId());
+        finalization.requireMutable(lease.getTaskId(),lease.getExecutionId());
         AgentExecutionTaskDTO activeTask = requireLeaseTaskActive(lease);
         if (request.getEvents().size() > eventBatchSize) {
             throw new MSException("RUNNER_EVENT_BATCH_TOO_LARGE");
@@ -371,8 +381,13 @@ public class AgentRunnerService {
                 task.getStatus() + "->" + toStatus + ";" + sanitize(request.getReason()));
     }
 
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public void completeLease(String authorization, String leaseId, AgentRunnerLeaseCompleteRequest request) {
-        AgentRunnerLeaseDTO lease = authenticateLease(authorization, leaseId);
+        AgentRunnerLeaseDTO lease = runnerLeaseAuthorizationService.authenticateLeaseForCompletion(authorization, leaseId);
+        if("COMPLETED".equals(lease.getStatus())){
+            if(!"COMPLETED".equalsIgnoreCase(request.getOutcome()))throw new MSException("RUNNER_LEASE_CONFLICT");
+            return;
+        }
         AgentExecutionTaskDTO task = executionMapper.selectTaskById(lease.getTaskId());
         if (task == null || !leaseId.equals(task.getRunnerLeaseId())) {
             throw new MSException("RUNNER_LEASE_TASK_MISMATCH");
@@ -383,11 +398,12 @@ public class AgentRunnerService {
             if (AgentExecutionStatus.RUNNING.equals(task.getStatus())) {
                 transitionRunnerTask(task, AgentExecutionStatus.WRITING_BACK, lease.getRunnerId());
                 task.setStatus(AgentExecutionStatus.WRITING_BACK);
-            } else if (!AgentExecutionStatus.WRITING_BACK.equals(task.getStatus())) {
+            } else if (!AgentExecutionStatus.WRITING_BACK.equals(task.getStatus())
+                    && !(AgentExecutionStatus.TERMINAL.contains(task.getStatus()) && finalization.hasFrozen(task.getId(),lease.getExecutionId()))) {
                 throw new MSException("RUNNER_TASK_NOT_READY_FOR_COMPLETION");
             }
             testDataLeaseService.releaseForExecution(lease.getExecutionId());
-            writebackService.writeback(task.getId());
+            if(AgentExecutionStatus.WRITING_BACK.equals(task.getStatus()))writebackService.writeback(task.getId());
             leaseStatus = "COMPLETED";
         } else if ("FAILED".equals(outcome)) {
             if (!AgentExecutionStatus.TERMINAL.contains(task.getStatus())) {
@@ -405,8 +421,7 @@ public class AgentRunnerService {
             throw new MSException("RUNNER_LEASE_CONFLICT");
         }
         AgentExecutionTaskDTO completedTask = executionMapper.selectTaskById(task.getId());
-        boolean verifiedSuccess = completedTask != null && "SUCCESS".equals(completedTask.getWritebackStatus())
-                && "PASSED".equals(completedTask.getVerdict());
+        boolean verifiedSuccess = completedTask != null && "PASSED".equals(completedTask.getVerdict());
         String attemptStatus = "COMPLETED".equals(outcome) ? (verifiedSuccess ? "SUCCEEDED" : "NEEDS_REVIEW") : outcome;
         executionMapper.finishExecutionAttempt(lease.getExecutionId(), attemptStatus,
                 "NEEDS_REVIEW".equals(attemptStatus) ? "QUALITY_GATE_NOT_PASSED" : "FAILED".equals(outcome) ? "EXECUTION_FAILED" : null,
@@ -423,6 +438,10 @@ public class AgentRunnerService {
     public void expireLeases() {
         long now = System.currentTimeMillis();
         for (AgentRunnerLeaseDTO lease : executionMapper.selectExpiredActiveLeases(now, 100)) {
+            if (finalization.reconcileExpiredFinalization(lease)) {
+                testDataLeaseService.releaseForExecution(lease.getExecutionId());
+                continue;
+            }
             int recovered = executionMapper.recoverExpiredTaskLease(lease.getTaskId(), lease.getId(), now);
             executionMapper.closeRunnerLease(lease.getId(), lease.getRunnerId(), normalizedVersion(lease), "EXPIRED", now);
             executionMapper.finishExecutionAttempt(lease.getExecutionId(), "EXPIRED", "LEASE_EXPIRED",

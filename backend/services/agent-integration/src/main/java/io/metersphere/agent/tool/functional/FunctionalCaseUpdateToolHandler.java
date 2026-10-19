@@ -41,7 +41,7 @@ public class FunctionalCaseUpdateToolHandler implements AgentMcpToolHandler {
                         "requestId", AgentMcpToolSchemas.string(1, 128),
                         "reason", AgentMcpToolSchemas.string(1, 2000)
                 ),
-                List.of("projectId", "caseId")
+                List.of("projectId", "caseId", "expectedUpdateTime", "patch", "requestId")
         );
     }
 

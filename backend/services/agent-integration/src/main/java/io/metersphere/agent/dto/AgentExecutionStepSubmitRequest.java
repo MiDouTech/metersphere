@@ -16,6 +16,7 @@ public class AgentExecutionStepSubmitRequest {
     @NotBlank private String status;
     private String inputSnapshot;
     private String outputSummary;
+    @io.swagger.v3.oas.annotations.media.Schema(description="Frozen v1: ordered [{actual}]; v2: [{assertionId,actual}], DECIMAL/INTEGER as strings. Maximum UTF-8 payload 65535 bytes.")
     private String assertionResult;
     private String errorCode;
     private String errorMessage;

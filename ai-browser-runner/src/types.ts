@@ -36,7 +36,15 @@ export type AssertionType =
   | "ATTRIBUTE" | "COUNT" | "URL" | "TITLE";
 
 export interface WebAssertion {
-  contractVersion: "v1";
+  contractVersion: "v1" | "v2";
+  assertionId?: string;
+  valueType?: "STRING" | "BOOLEAN" | "INTEGER" | "DECIMAL" | "DATE";
+  precision?: number;
+  scale?: number;
+  unit?: string;
+  tolerance?: string;
+  lowerInclusive?: boolean;
+  upperInclusive?: boolean;
   type: AssertionType;
   target?: WebLocator;
   operator?: "EQUALS" | "CONTAINS" | "MATCHES" | "NOT_EQUALS" | "IN_RANGE";

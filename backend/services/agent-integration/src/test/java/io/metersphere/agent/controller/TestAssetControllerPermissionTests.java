@@ -12,7 +12,7 @@ class TestAssetControllerPermissionTests {
     @Test
     void businessDocumentEndpointShouldRequireAiDocumentReadPermission() throws Exception {
         Method method = TestAssetController.class.getDeclaredMethod("documents",
-                String.class, String.class, String.class, Integer.class, Integer.class);
+                String.class, String.class, String.class, java.util.List.class, String.class, boolean.class, Integer.class, Integer.class);
         RequiresPermissions permission = method.getAnnotation(RequiresPermissions.class);
 
         Assertions.assertNotNull(permission);

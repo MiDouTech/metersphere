@@ -2,3 +2,5 @@ dist/
 .npm-cache/
 .browsers/
 node_modules/
+
+.runner-state/

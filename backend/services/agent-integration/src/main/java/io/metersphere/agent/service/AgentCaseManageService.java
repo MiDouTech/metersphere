@@ -44,8 +44,11 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class AgentCaseManageService {
+    @Resource private AgentBusinessAccess access;
+    @Resource private AgentOperationExecutor operations;
+    @Resource private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Resource private AgentCaseContentReader contentReader;
     @Resource
     private FunctionalCaseService functionalCaseService;
     @Resource
@@ -63,7 +66,7 @@ public class AgentCaseManageService {
 
     public Object getTemplate(String projectId, String templateId) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
-        assertProjectAllowed(resolvedProjectId);
+        access.project(resolvedProjectId, "FUNCTIONAL_CASE:READ", false, io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ);
         TemplateDTO templateDTO;
         if (StringUtils.isNotBlank(templateId)) {
             templateDTO = projectTemplateService.getTemplateDTOById(templateId, resolvedProjectId, TemplateScene.FUNCTIONAL.name());
@@ -77,6 +80,7 @@ public class AgentCaseManageService {
     }
 
     public Object listHistory(String projectId, String caseId, Integer current, Integer pageSize) {
+        access.caseProject(caseId, projectId, "FUNCTIONAL_CASE:READ", false, io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ);
         FunctionalCase functionalCase = requireCaseInProject(projectId, caseId);
         OperationHistoryRequest request = new OperationHistoryRequest();
         request.setProjectId(functionalCase.getProjectId());
@@ -94,11 +98,24 @@ public class AgentCaseManageService {
 
     @SuppressWarnings("unchecked")
     public Object update(Map<String, Object> arguments) {
+        return operations.execute("functional.case.update", (String) arguments.get("requestId"), arguments, Map.class,
+                () -> access.caseProject(requiredString(arguments,"caseId"), requiredString(arguments,"projectId"),
+                        "FUNCTIONAL_CASE:READ+UPDATE", true, io.metersphere.agent.constants.AgentTokenScope.CASE_UPDATE),
+                () -> updateOnce(arguments));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map updateOnce(Map<String, Object> arguments) {
         String projectId = requiredString(arguments, "projectId");
         String caseId = requiredString(arguments, "caseId");
+        access.caseProject(caseId, projectId, "FUNCTIONAL_CASE:READ+UPDATE", true, io.metersphere.agent.constants.AgentTokenScope.CASE_UPDATE);
+        // Lock the stored case before comparing the client version, so concurrent Agent patches
+        // cannot both pass the same check and overwrite one another.
+        jdbc.queryForList("SELECT id FROM functional_case WHERE id=? FOR UPDATE", String.class, caseId);
         FunctionalCase existing = requireCaseInProject(projectId, caseId);
         Long expectedUpdateTime = toLong(arguments.get("expectedUpdateTime"));
-        if (expectedUpdateTime != null && existing.getUpdateTime() != null
+        if (expectedUpdateTime == null) throw new MSException("AGENT_VALIDATION_ERROR");
+        if (existing.getUpdateTime() != null
                 && !expectedUpdateTime.equals(existing.getUpdateTime())) {
             throw new MSException(AgentErrorCode.VERSION_CONFLICT,
                     "用例已被他人更新，当前 updateTime=" + existing.getUpdateTime());
@@ -108,6 +125,7 @@ public class AgentCaseManageService {
                 ? (Map<String, Object>) map
                 : Map.of();
 
+        if (patch.isEmpty() || !java.util.Set.of("name","moduleId","prerequisite","description","tags","steps","customFields","priority").containsAll(patch.keySet())) throw new MSException("AGENT_VALIDATION_ERROR");
         FunctionalCaseBlob blob = functionalCaseBlobMapper.selectByPrimaryKey(existing.getId());
         FunctionalCaseEditRequest edit = new FunctionalCaseEditRequest();
         edit.setId(existing.getId());
@@ -132,6 +150,7 @@ public class AgentCaseManageService {
             edit.setName(String.valueOf(patch.get("name")));
         }
         if (patch.containsKey("moduleId") && patch.get("moduleId") != null) {
+            access.module(projectId, String.valueOf(patch.get("moduleId")), false);
             edit.setModuleId(String.valueOf(patch.get("moduleId")));
         }
         if (patch.containsKey("prerequisite")) {
@@ -281,6 +300,6 @@ public class AgentCaseManageService {
         if (bytes == null || bytes.length == 0) {
             return "";
         }
-        return new String(bytes, StandardCharsets.UTF_8);
+        return contentReader.decodeRaw(bytes);
     }
 }

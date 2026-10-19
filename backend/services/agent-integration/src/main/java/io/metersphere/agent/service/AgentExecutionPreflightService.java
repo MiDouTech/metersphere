@@ -38,10 +38,15 @@ public class AgentExecutionPreflightService {
     @Resource private TestAssetCatalogService testAssetCatalogService;
     @Resource private AgentCaseExecutabilityService caseExecutabilityService;
     @Resource private List<AgentTestDataCleanupHandler> cleanupHandlers;
+    @Value("${agent.execution.contract-v2-enabled:false}") private boolean contractV2Enabled;
 
     @Transactional(rollbackFor = Exception.class)
     public AgentExecutionPreflightDTO preflight(AgentExecutionPreflightRequest request) {
         String projectId=projectService.resolveProjectId(request.getProjectId());
+        if(contractV2Enabled && !AgentTaskOrigin.PERSONAL_MCP.equals(request.getTaskOrigin())){
+            List<String> capabilities=new ArrayList<>(request.getRequiredCapabilities()==null || request.getRequiredCapabilities().isEmpty()?List.of("browser.playwright","evidence.screenshot","result.writeback"):request.getRequiredCapabilities());
+            if(!capabilities.contains("ASSERTION_V2"))capabilities.add("ASSERTION_V2");request.setRequiredCapabilities(capabilities);
+        }
         String actorId=StringUtils.defaultIfBlank(SessionUtils.getUserId(), AgentExecutionActorContext.get());
         if (StringUtils.isBlank(actorId)) throw new MSException("AUTHENTICATION_REQUIRED");
         String origin=StringUtils.upperCase(request.getTaskOrigin());
@@ -144,14 +149,14 @@ public class AgentExecutionPreflightService {
                 }
                 executableAssets=freezeExecutableAssets(projectId,executability);
                 pass(checks,"CASE_EXECUTABILITY","All cases are READY for the selected environment and credential role",Map.of("count",executability.size()),now);
-            }catch(MSException ex){blockedReason=AgentBlockedReason.BLOCKED_SCOPE.name();blockedDetail=safe(ex);block(checks,"CASE_EXECUTABILITY",blockedDetail,now);}
+            }catch(MSException ex){blockedReason=AgentBlockedReason.BLOCKED_SCOPE.name();blockedDetail=safe(ex);checks.add(new AgentPreflightCheckDTO("CASE_EXECUTABILITY","BLOCKED",blockedDetail,Map.of("cases",executability),now));}
         }
         List<Map<String,Object>> caseAssets=List.of();
         List<Map<String,Object>> documentAssets=List.of();
         List<TestAssetContextDTO> additionalAssets=List.of();
         if(blockedReason==null){
             try{
-                caseAssets=freezeCaseAssets(projectId,resolved,request.getTestPlanId(),actorId);
+                caseAssets=freezeCaseAssets(projectId,resolved,executability);
                 documentAssets=freezeRelatedDocuments(projectId,caseAssets);
                 pass(checks,"PUBLISHED_ASSETS","Case, document and executable assets are frozen from published immutable versions",Map.of("caseCount",caseAssets.size(),"documentCount",documentAssets.size()),now);
             }catch(MSException ex){
@@ -259,14 +264,23 @@ public class AgentExecutionPreflightService {
         return assets.stream().map(asset->{TestAssetRefDTO ref=new TestAssetRefDTO();ref.setAssetType(String.valueOf(asset.get("assetType")));ref.setAssetId(String.valueOf(asset.get("assetId")));ref.setVersionId(String.valueOf(asset.get("versionId")));return ref;}).toList();
     }
 
-    public TestAssetVersionDTO assertFrozenCaseVersion(String preflightId,String caseRowId,String stableAssetId,String contentSnapshot){
-        Map<String,Object> row=jdbcTemplate.queryForMap("SELECT snapshot_json FROM ai_execution_preflight WHERE id=?",preflightId);
+    public TestAssetVersionDTO frozenCaseVersion(String preflightId,String caseRowId,String stableAssetId){
+        Map<String,Object> row=jdbcTemplate.queryForMap("SELECT project_id,snapshot_json FROM ai_execution_preflight WHERE id=?",preflightId);
         Map<String,Object> snapshot=JSON.parseObject((String)row.get("snapshot_json"),Map.class);
         @SuppressWarnings("unchecked") List<Map<String,Object>> assets=(List<Map<String,Object>>)snapshot.get("caseAssets");
         if(assets==null)throw new MSException("PREFLIGHT_CASE_ASSET_SNAPSHOT_MISSING");
         Map<String,Object> frozen=assets.stream().filter(v->caseRowId.equals(String.valueOf(v.get("caseRowId")))).findFirst().orElseThrow(()->new MSException("PREFLIGHT_CASE_ASSET_NOT_FROZEN"));
-        if(!stableAssetId.equals(String.valueOf(frozen.get("assetId")))||!sha(contentSnapshot).equals(String.valueOf(frozen.get("contentHash"))))throw new MSException("PREFLIGHT_CASE_ASSET_CHANGED");
-        return testAssetVersionService.getFrozen(String.valueOf(frozen.get("versionId")),snapshot.get("projectId").toString(),"CASE",stableAssetId);
+        if(!AgentCaseContentReader.CHECKER_VERSION.equals(frozen.get("checkerVersion")))throw new MSException("PREFLIGHT_CHECKER_VERSION_EXPIRED");
+        if(!stableAssetId.equals(frozen.get("assetId")) || !row.get("project_id").equals(frozen.get("projectId")))throw new MSException("PREFLIGHT_CASE_ASSET_CHANGED");
+        TestAssetVersionDTO version=testAssetVersionService.getFrozen(String.valueOf(frozen.get("versionId")),String.valueOf(row.get("project_id")),"CASE",stableAssetId);
+        if(!Objects.equals(version.getContentHash(),frozen.get("contentHash")) || !sha(version.getContentSnapshot()).equals(version.getContentHash()))throw new MSException("PREFLIGHT_CASE_ASSET_CHANGED");
+        return version;
+    }
+
+    public TestAssetVersionDTO assertFrozenCaseVersion(String preflightId,String caseRowId,String stableAssetId,String contentSnapshot){
+        TestAssetVersionDTO version=frozenCaseVersion(preflightId,caseRowId,stableAssetId);
+        if(!sha(contentSnapshot).equals(version.getContentHash()))throw new MSException("PREFLIGHT_CASE_ASSET_CHANGED");
+        return version;
     }
 
     public String frozenSnapshotSection(String preflightId, String section) {
@@ -326,13 +340,15 @@ public class AgentExecutionPreflightService {
             if(lowRisk==null||lowRisk!=added.size())throw new MSException("SCOPE_EXPANSION_CASE_NOT_LOW_RISK_OR_REVIEWED");
         }
     }
-    private List<Map<String,Object>> freezeCaseAssets(String projectId,List<String> caseIds,String testPlanId,String actorId){
+    private List<Map<String,Object>> freezeCaseAssets(String projectId,List<String> caseIds,List<AgentCaseExecutabilityDTO> checked){
         List<Map<String,Object>> result=new ArrayList<>();
         for(String caseId:caseIds){
-            Map<String,Object> identity=jdbcTemplate.queryForMap("SELECT id,ref_id,update_time FROM functional_case WHERE id=? AND project_id=? AND deleted=0",caseId,projectId);
-            String stableId=StringUtils.defaultIfBlank((String)identity.get("ref_id"),(String)identity.get("id"));
-            TestAssetVersionDTO version=testAssetVersionService.latestPublished(projectId,"CASE",stableId);
-            result.add(Map.of("caseRowId",caseId,"assetId",stableId,"versionId",version.getId(),"versionNo",version.getVersionNo(),"contentHash",version.getContentHash()));
+            AgentCaseExecutabilityDTO item=checked.stream().filter(c->caseId.equals(c.getCaseId()) && projectId.equals(c.getProjectId()))
+                    .findFirst().orElseThrow(()->new MSException("PREFLIGHT_CASE_ASSET_NOT_FROZEN"));
+            if(!"READY".equals(item.getAutomationReadiness()) || item.getCaseVersionId()==null)throw new MSException("CASE_EXECUTABILITY_NOT_READY");
+            result.add(Map.of("projectId",projectId,"caseRowId",caseId,"assetId",item.getStableAssetId(),
+                    "versionId",item.getCaseVersionId(),"contentHash",item.getContentHash(),
+                    "contentSchemaVersion",item.getContentSchemaVersion(),"checkerVersion",item.getCheckerVersion()));
         }
         return result;
     }
@@ -370,7 +386,7 @@ public class AgentExecutionPreflightService {
         if(AgentTaskOrigin.PERSONAL_MCP.equals(StringUtils.upperCase(r.getTaskOrigin())))return;
         String org=jdbcTemplate.queryForObject("SELECT organization_id FROM project WHERE id=?",String.class,projectId);
         List<Map<String,Object>> runners=jdbcTemplate.queryForList("SELECT browser_capabilities,browser_types,last_heartbeat_time FROM ai_runner WHERE organization_id=? AND status='ONLINE' AND runner_type=? AND active_count<max_concurrency AND last_heartbeat_time>=? AND (network_zone IS NULL OR network_zone=? OR ? IS NULL)",org,StringUtils.upperCase(r.getRunnerType()),System.currentTimeMillis()-90_000L,env==null?null:env.getNetworkZone(),env==null?null:env.getNetworkZone());
-        List<String> required=unique(r.getRequiredCapabilities());
+        List<String> required=unique(r.getRequiredCapabilities()).stream().map(StringUtils::upperCase).toList();
         boolean matched=runners.stream().anyMatch(row->{Set<String> available=new HashSet<>();available.addAll(jsonStrings(row.get("browser_capabilities")));available.addAll(jsonStrings(row.get("browser_types")));return available.containsAll(required);});
         if(!matched)throw new MSException("RUNNER_NOT_AVAILABLE_OR_CAPABILITY_MISMATCH");
     }

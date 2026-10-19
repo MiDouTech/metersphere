@@ -27,3 +27,16 @@ Runner 为成功步骤上传 BEFORE_STEP/AFTER_STEP 截图，并调用 `POST /in
 新模型计划必须提供明确的 `operator` 和 `expected`；当前支持 EQUALS、IN_RANGE。EQUALS 不做类型转换，浏览器字符串值（含布尔状态字符串）与冻结字符串比较；IN_RANGE 的 expected 使用 `[下界,上界]` JSON 字符串，actual 上报有限数值。CONTAINS 等旧断言不能作为全局门禁通过依据。数据集引用不能替代冻结的明确预期。
 
 截图按策略允许的 PNG/JPEG 编码并检查大小；项目截图选项不能关闭门禁证据。任何失败均不得报告正式通过。旧的直接用例结果提交接口返回 QUALITY_LEGACY_SUBMIT_FORBIDDEN，外部执行器须使用任务认领、证据上传、步骤结果提交与最终回写链路。
+
+
+## 2026-10-19 quality protocol update
+
+The control-plane envelope remains v1. This runner reads both v1 positional assertions and v2 assertions identified by `assertionId`. Register `ASSERTION_V2` in `browserCapabilities` only after upgrading this runner. Enable `agent.execution.contract-v2-enabled=true` on the server only after compatible consumers are available. Old tasks keep their frozen protocol; do not rewrite existing contracts.
+
+V2 DECIMAL and INTEGER observations travel as decimal strings; decimal comparison uses BigInt on the runner and BigDecimal on the server. DECIMAL contracts specify `precision` (1..38), `scale` (0..18), optional unit/tolerance and inclusive/exclusive range bounds. V2 boolean observations are JSON booleans, dates are valid `YYYY-MM-DD`, strings compare exactly. Actions retain the v1 action schema.
+
+`MS_RUNNER_STATE_DIR` stores durable pending result requests (container default `/runner/state`); mount it on persistent storage. Retries reuse the same requestId and payload. Each lease is still authenticated; a journal does not authorize replay after lease expiry. Keep state only for the required recovery window, then remove records for closed leases through deployment maintenance.
+
+For sensitive observations configure `MS_RUNNER_STATE_KEY` as a Base64-encoded, securely generated 32-byte key. Sensitive pending facts are encrypted with AES-256-GCM; missing keys reject persistence. The server uses its separate `agent.execution.facts-key` / `AGENT_EXECUTION_FACTS_KEY` with the same key format. Back up keys securely for the full fact-retention period; do not replace keys without retaining the ability to decrypt old facts. Keys must never be committed to the repository.
+
+A failed business assertion submits its actual values and evidence as FAILED. Infrastructure/collection failures submit BLOCKED with a reason, rather than fabricated observations. Formal result synchronization is independently visible and retryable; it does not rerun browser actions.

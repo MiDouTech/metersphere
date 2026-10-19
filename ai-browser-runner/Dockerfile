@@ -11,5 +11,8 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /runner/dist ./dist
+RUN mkdir -p /runner/state && chown pwuser:pwuser /runner/state
+ENV MS_RUNNER_STATE_DIR=/runner/state
+VOLUME ["/runner/state"]
 USER pwuser
 CMD ["node", "dist/src/index.js"]
