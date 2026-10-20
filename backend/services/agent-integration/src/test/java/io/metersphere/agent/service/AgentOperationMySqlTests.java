@@ -103,4 +103,33 @@ class AgentOperationMySqlTests {
         assertThrows(MSException.class,()->service.markLinked(List.of(attachment)));
         assertEquals(0,jdbc.queryForObject("SELECT linked FROM agent_temp_attachment WHERE id='attachment'",Integer.class));
     }
+
+    @Test void temporaryDownloadsRequireOwnershipPurposeScopeAndLiveReference() {
+        long future = System.currentTimeMillis() + 60000;
+        jdbc.update("INSERT INTO agent_temp_attachment(id,token_id,user_id,project_id,file_id,purpose,linked,expires_at) VALUES ('attachment','t','u','p','storage','CASE_COMMENT',0,?)", future);
+        var service = new AgentTempAttachmentService();
+        var projects = org.mockito.Mockito.mock(AgentProjectService.class);
+        org.mockito.Mockito.when(projects.resolveProjectId("p")).thenReturn("p");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "jdbc", jdbc);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "agentProjectService", projects);
+        token.setScopes("FUNCTIONAL_READ");
+        assertDoesNotThrow(() -> service.requireDownload("p", "storage"));
+        assertDoesNotThrow(() -> service.requireMetadata("attachment"));
+        assertThrows(MSException.class, () -> service.requireDownload("p", "unknown"));
+        token.setId("other");
+        assertThrows(MSException.class, () -> service.requireDownload("p", "storage"));
+        assertThrows(MSException.class, () -> service.requireMetadata("attachment"));
+        token.setId("t");
+        token.setScopes("BUG_READ");
+        assertThrows(MSException.class, () -> service.requireDownload("p", "storage"));
+        token.setScopes("FUNCTIONAL_READ");
+        jdbc.update("UPDATE agent_temp_attachment SET linked=1");
+        assertThrows(MSException.class, () -> service.requireDownload("p", "storage"));
+        jdbc.update("UPDATE agent_temp_attachment SET linked=0,expires_at=1");
+        assertThrows(MSException.class, () -> service.requireDownload("p", "storage"));
+        jdbc.update("UPDATE agent_temp_attachment SET expires_at=?,purpose='EXECUTION'", future);
+        assertDoesNotThrow(() -> service.requireDownload("p", "storage"));
+        token.setProjectIds("[\"foreign\"]");
+        assertThrows(MSException.class, () -> service.requireDownload("p", "storage"));
+    }
 }

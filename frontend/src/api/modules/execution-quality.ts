@@ -1,5 +1,9 @@
 import MSR from '@/api/http/index';
 
+export function getEvidenceReviewStatus() {
+  return MSR.get<{ configured: boolean; message: string }>({ url: '/system/quality/evidence-review/status' });
+}
+
 export interface QualityPolicyDocument {
   schemaVersion: 'quality-policy.v1';
   name: string;

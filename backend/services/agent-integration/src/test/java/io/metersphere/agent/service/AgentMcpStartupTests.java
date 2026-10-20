@@ -10,6 +10,27 @@ import static org.mockito.Mockito.mock;
 
 class AgentMcpStartupTests {
     @Test
+    void bootMustNotRegisterTheShiroAgentFilterOnAllServletRequests() throws Exception {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            var filter = new io.metersphere.agent.security.AgentTokenFilter(null, null, null);
+            context.registerBean("agentTokenFilter", io.metersphere.agent.security.AgentTokenFilter.class, () -> filter);
+            context.register(io.metersphere.agent.config.AgentShiroFilterChainExtender.class);
+            context.refresh();
+            var servlet = mock(jakarta.servlet.ServletContext.class);
+            for (var initializer : new org.springframework.boot.web.servlet.ServletContextInitializerBeans(context.getBeanFactory())) {
+                initializer.onStartup(servlet);
+            }
+            org.mockito.Mockito.verify(servlet, org.mockito.Mockito.never()).addFilter(
+                    org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(jakarta.servlet.Filter.class));
+            var filters = new java.util.HashMap<String, jakarta.servlet.Filter>();
+            var chains = new java.util.HashMap<String, String>();
+            context.getBean(io.metersphere.agent.config.AgentShiroFilterChainExtender.class).extend(filters, chains);
+            assertSame(filter, filters.get("agentToken"));
+            org.junit.jupiter.api.Assertions.assertEquals("agentToken, authc", chains.get("/api/agent/v1/**"));
+        }
+    }
+
+    @Test
     void mapperResourcesMustResolveSharedFragmentsBeforeFirstQuery() throws Exception {
         var factory = new org.mybatis.spring.SqlSessionFactoryBean();
         factory.setDataSource(mock(javax.sql.DataSource.class));

@@ -75,13 +75,14 @@ const Setting: AppRouteRecordRaw = {
       children: [
         {
           path: 'quality-policy',
-          name: 'SystemQualityPolicy',
-          component: () => import('@/views/execution/quality-policy.vue'),
+          name: 'LegacySystemQualityPolicy',
+          component: null,
+          redirect: '/execution/quality-policy',
           meta: {
             locale: '平台质量门禁',
             roles: ['SYSTEM_QUALITY:READ'],
             resourceCode: 'SYSTEM_QUALITY_POLICY_PAGE',
-            isTopMenu: true,
+            hideInMenu: true,
           },
         },
         {

@@ -41,7 +41,7 @@ export const caseLibraryTools = [
       return client.callNativeTool("metersphere.functional.execution.evidence.upload", payload);
     },
   },
-  tool("metersphere.functional.execution.submit", "Validate every step and matching evidence; atomically publish attachments and case result. No lease. SUCCESS requires actual exactly equal to expected; ERROR requires a difference. Same requestId retries safely.", {
+  tool("metersphere.functional.execution.submit", "Validate steps and independently review evidence. Only gateStatus=ACCEPTED with publishStatus=PUBLISHED means the case was updated. NEEDS_REVIEW/NOT_PUBLISHED is not success; inspect issues and report. No lease. Current assertions use exact EQUALS. Same requestId retries safely.", {
     ...resource, contentHash: z.string().length(64), policyHash: z.string().length(64), requestId,
     steps: z.array(z.object({ stepNum: z.number().int().min(1).max(100), actual: z.string().min(1).max(20000), result: z.enum(["SUCCESS", "ERROR"]), evidenceIds: z.array(id).min(1).max(10) }).strict()).min(1).max(100),
   }),

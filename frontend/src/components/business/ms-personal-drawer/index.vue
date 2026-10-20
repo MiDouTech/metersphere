@@ -30,9 +30,7 @@
             <apiKey v-else-if="activeMenu === 'apiKey'" />
             <localExec v-else-if="activeMenu === 'local'" />
             <tripartite v-else-if="activeMenu === 'tripartite'" />
-            <a-button v-else-if="activeMenu === 'agentIntegration'" type="primary" @click="openPersonalAccess"
-              >前往个人接入</a-button
-            >
+            <AgentIntegration v-else-if="activeMenu === 'agentIntegration'" compact />
             <modelConfig v-else-if="activeMenu === 'modelConfig'" model-key="personal" />
           </div>
         </div>
@@ -42,8 +40,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { computed, defineAsyncComponent, ref } from 'vue';
   import { useVModel } from '@vueuse/core';
 
   import MsMenuPanel from '@/components/pure/ms-menu-panel/index.vue';
@@ -58,8 +55,11 @@
   import { useAppStore } from '@/store';
   import { hasAnyPermission } from '@/utils/permission';
 
+  const AgentIntegration = defineAsyncComponent(() => import('@/views/setting/system/agentIntegration/index.vue'));
+
   const props = defineProps<{
     visible: boolean;
+    initialMenu?: string;
   }>();
   const emit = defineEmits<{
     (e: 'update:visible', val: boolean): void;
@@ -67,19 +67,17 @@
 
   const { t } = useI18n();
   const appStore = useAppStore();
-  const router = useRouter();
 
   const innerVisible = useVModel(props, 'visible', emit);
-  const activeMenu = ref('baseInfo');
+  const activeMenu = ref(
+    props.initialMenu === 'agentIntegration' && hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM'])
+      ? 'agentIntegration'
+      : 'baseInfo'
+  );
   const panelLeft = computed(() => (appStore.menuCollapse ? 56 : 196));
 
   function closePersonalCenter() {
     innerVisible.value = false;
-  }
-
-  function openPersonalAccess() {
-    closePersonalCenter();
-    router.push({ name: 'agentAccess' });
   }
 
   const baseMenuList = [

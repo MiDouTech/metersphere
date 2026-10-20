@@ -291,6 +291,12 @@
         <div class="mt-3 flex justify-end">
           <a-button type="primary" @click="copyMcpConfig">{{ t('system.agentIntegration.copyMcpConfig') }}</a-button>
         </div>
+        <div class="mt-3">
+          <a-button :loading="connectionChecking" @click="verifyMcpConnection">验证 MCP 接入</a-button>
+          <a-alert v-if="connectionResult" :type="connectionVerified ? 'success' : 'warning'" class="mt-2">
+            {{ connectionResult }}
+          </a-alert>
+        </div>
       </a-modal>
     </template>
 
@@ -331,6 +337,37 @@
   import { downloadByteFile } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
 
+  const createdToken = ref<AgentTokenCreateResult>();
+  const connectionChecking = ref(false);
+  const connectionVerified = ref(false);
+  const connectionResult = ref('');
+  async function verifyMcpConnection() {
+    if (!createdToken.value?.token) return;
+    connectionChecking.value = true;
+    connectionVerified.value = false;
+    connectionResult.value = '';
+    try {
+      const response = await fetch('/api/mcp', {
+        method: 'POST',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${createdToken.value.token}` },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 'personal-connection-check', method: 'tools/list', params: {} }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const body = await response.json();
+      const rpc = body.data || body;
+      if (!response.ok || rpc.error || !Array.isArray(rpc.result?.tools)) throw new Error('MCP_CHECK_FAILED');
+      connectionVerified.value = true;
+      connectionResult.value = `MCP 鉴权与工具发现通过（${
+        rpc.result.tools.length
+      } 个工具，${new Date().toLocaleTimeString()}）。此检查不代表执行端在线或业务测试通过。`;
+    } catch {
+      connectionResult.value = 'MCP 接入验证失败，请检查 Token 状态、接入地址和网络后重试。';
+    } finally {
+      connectionChecking.value = false;
+    }
+  }
+
   withDefaults(
     defineProps<{
       compact?: boolean;
@@ -353,19 +390,11 @@
   const canReadTokens = hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM']);
   const tokenVisible = ref(false);
   const manifest = ref<AgentMcpManifest>();
-  const mcpPlainText = `MCP 技能包
-下载技能包交给 AI（如 Cursor），使其学会调用本平台 Agent/MCP 接口。平台侧只需：下载技能包 + 创建 Token。
-技能包暂不可用，请联系管理员重新打包部署
-AI 技能包用于指导 AI 连接远程 MCP，不包含 Token。创建 Token 后复制 MCP 配置到对应客户端。
-内置平台地址
-测试环境：https://msp.ebcone.net
-正式环境：https://msp.ebcone.cn
-常用 Scope（创建 Token 时选择）
-全部 Agent 权限：包含查询、执行、用例、计划、评审、缺陷和项目相关能力，仍受本人 RBAC 限制。
-项目查看：允许检索和查看可访问项目；迁移期 FUNCTIONAL_READ 仍临时覆盖本权限。
-测试用例管理：用例读取、结果提交、测试计划和评审相关操作。
-缺陷管理：缺陷检索、详情查看、创建和更新。`;
-  const createdToken = ref<AgentTokenCreateResult>();
+  const mcpPlainText = `MCP 地址：${window.location.origin}/api/mcp
+创建本人 Token，选择项目及“个人 Agent 测试闭环”权限组合，再复制接入配置到 AI 客户端。
+个人 Agent 可直接读取用例、执行并提交步骤证据，无需创建任务或维护租约。
+只有门禁审核接受并发布后，正式附件与执行结果才会更新；“待核验”不代表测试通过。
+技能包包含调用说明，不包含你的 Token。秘密只展示一次，请妥善保存。`;
   const createdClientType = ref('CHATGPT');
   const createFormRef = ref<FormInstance>();
   const editFormRef = ref<FormInstance>();
@@ -620,6 +649,8 @@ AI 技能包用于指导 AI 连接远程 MCP，不包含 Token。创建 Token �
     createLoading.value = true;
     try {
       createdClientType.value = createForm.clientType;
+      connectionResult.value = '';
+      connectionVerified.value = false;
       createdToken.value = await createAgentToken({
         name: createForm.name,
         projectIds: createForm.projectIds?.length ? createForm.projectIds : [],

@@ -18,6 +18,19 @@ export default function usePermission() {
      * @returns 是否
      */
     accessRouter(route: RouteLocationNormalized | RouteRecordRaw) {
+      if (route.name === 'ExecutionQuality') {
+        // The parent aggregates its real child grants; legacy project menu grants
+        // must not block a system-only quality policy administrator.
+        return (
+          (hasAnyPermission(['SYSTEM_QUALITY:READ'], ['SYSTEM']) &&
+            hasPageVisible('SYSTEM_QUALITY_POLICY_PAGE', ['SYSTEM']) &&
+            hasRouteVisible('SystemQualityPolicy', ['SYSTEM'])) ||
+          (hasAnyPermission(['AI_EXECUTION:READ']) &&
+            hasPageVisible('FUNCTIONAL_CASE_AUTOMATION_EXECUTION_TAB') &&
+            hasRouteVisible('executionTasks')) ||
+          hasAnyPermission(['AI_CREDENTIAL:READ_METADATA'])
+        );
+      }
       if (route.meta?.adminOnly && !userStore.isAdmin) {
         return false;
       }

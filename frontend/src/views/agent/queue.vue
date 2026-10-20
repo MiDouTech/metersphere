@@ -1,7 +1,7 @@
 <template>
   <AgentPage>
     <a-alert v-if="pageError" type="error" class="mb-4">{{ pageError }}</a-alert>
-    <a-tabs v-model:active-key="queueTab" type="rounded" class="mb-4">
+    <a-tabs v-if="!scheduleOnly" v-model:active-key="queueTab" type="rounded" class="mb-4">
       <a-tab-pane key="leases" title="执行租约" />
       <a-tab-pane key="triggers" title="调度规则" />
     </a-tabs>
@@ -141,9 +141,10 @@
   import { useAppStore } from '@/store';
 
   const appStore = useAppStore();
+  const props = defineProps<{ scheduleOnly?: boolean }>();
   const pageError = ref('');
   const route = useRoute();
-  const queueTab = ref(route.query.tab === 'triggers' ? 'triggers' : 'leases');
+  const queueTab = ref(props.scheduleOnly || route.query.tab === 'triggers' ? 'triggers' : 'leases');
   const leases = ref<AiRunnerLease[]>([]);
   const leaseStatus = ref<string>();
   const leaseLoading = ref(false);
@@ -528,7 +529,7 @@
   watch(
     () => route.query.tab,
     (value) => {
-      queueTab.value = value === 'triggers' ? 'triggers' : 'leases';
+      queueTab.value = props.scheduleOnly || value === 'triggers' ? 'triggers' : 'leases';
     }
   );
   watch(queueTab, (value) => {
@@ -538,13 +539,13 @@
   watch(
     () => appStore.currentProjectId,
     () => {
-      loadLeases();
+      if (!props.scheduleOnly) loadLeases();
       loadTriggers();
       loadExecutionProfiles();
     }
   );
   onMounted(() => {
-    loadLeases();
+    if (!props.scheduleOnly) loadLeases();
     loadTriggers();
     loadExecutionProfiles();
   });

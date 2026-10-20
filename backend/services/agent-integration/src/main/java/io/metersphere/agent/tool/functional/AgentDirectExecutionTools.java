@@ -31,7 +31,7 @@ public class AgentDirectExecutionTools {
                 case "contract" -> "Read case steps and global gate for direct execution without task/lease. Returns contentHash and policyHash. Text expectations use exact EQUALS comparison.";
                 case "get" -> "Read an authorized direct execution report with step outcomes, evidence mapping and frozen global policy. Sensitive facts are redacted.";
                 case "evidence.upload" -> "Stage a PNG/JPEG evidence file as base64 (max 5 MiB), bound to case contentHash and 1-based stepNum. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT. Not visible until gate passes.";
-                default -> "Validate all steps and their evidence against the global gate, atomically publish case attachments and execution result. No task/lease required. actual is the observed text; result SUCCESS requires exact equality with expected; otherwise ERROR. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.";
+                default -> "Validate all steps and independently review evidence content. Only gateStatus=ACCEPTED and publishStatus=PUBLISHED mean attachments and result were published. NEEDS_REVIEW/NOT_PUBLISHED preserves a report without updating the case; never report it as test success. No task/lease required. Current assertion comparison uses exact EQUALS. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.";
             };}
             public String requiredScope(){return read?AgentTokenScope.FUNCTIONAL_READ:AgentTokenScope.FUNCTIONAL_SUBMIT;}
             public Map<String,Object> inputSchema(){

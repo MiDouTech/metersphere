@@ -25,7 +25,7 @@
         >
         <a-button v-if="executionTaskId" @click="backToTaskList">返回任务列表</a-button>
         <a-button v-if="isCreating" @click="backToTaskList">返回任务列表</a-button>
-        <a-button v-if="canAccessPersonal" @click="router.push({ name: 'agentAccess' })">个人接入</a-button>
+        <a-button v-if="canAccessPersonal" @click="router.push({ name: 'agentAccess' })">Agent配置</a-button>
         <a-button @click="refreshAll">{{ t('common.refresh') }}</a-button>
         <a-button
           v-if="task?.confirmRequired || task?.status === 'WAITING_CONFIRMATION'"
@@ -84,7 +84,12 @@
       平台模型执行未启用或当前账号无平台创建权限。外部 Agent 请通过已授权的 MCP
       接入创建任务；网页无模型创建及审批尚未开放。
     </a-alert>
-    <a-alert v-if="taskListError" type="error" class="mb-4">{{ taskListError }}</a-alert>
+    <a-alert v-if="taskListError" type="error" class="mb-4">
+      {{ taskListError }}
+      <a-button v-if="userStore.isAdmin" type="text" @click="router.push({ name: 'ExecutionDiagnostics' })"
+        >查看运行诊断</a-button
+      >
+    </a-alert>
     <section v-if="!executionTaskId && (!isCreating || !canUsePlatform)" class="task-center-panel">
       <div class="mb-[12px] flex flex-wrap items-center gap-[8px]">
         <a-input-search
@@ -1097,7 +1102,9 @@
     return '-';
   }
 
+  let taskListRequest = 0;
   async function reloadTaskList() {
+    const request = ++taskListRequest;
     if (!appStore.currentProjectId || executionTaskId.value) return;
     taskListLoading.value = true;
     taskListError.value = '';
@@ -1111,14 +1118,20 @@
         current: taskSearch.current,
         pageSize: taskSearch.pageSize,
       });
+      if (request !== taskListRequest) return;
       taskList.value = response.items || [];
       taskListTotal.value = response.total || 0;
-    } catch {
+    } catch (error) {
+      if (request !== taskListRequest) return;
       taskList.value = [];
       taskListTotal.value = 0;
-      taskListError.value = '任务加载失败，请检查项目权限或稍后重试';
+      const failure = error as { status?: number; requestId?: string };
+      taskListError.value = failure.status === 403 ? '当前账号没有查看这些任务的权限' : '任务加载失败，请稍后重试';
+      if (failure.requestId && /^[a-zA-Z0-9_-]{1,128}$/.test(failure.requestId)) {
+        taskListError.value += `（traceId：${failure.requestId}）`;
+      }
     } finally {
-      taskListLoading.value = false;
+      if (request === taskListRequest) taskListLoading.value = false;
     }
   }
 

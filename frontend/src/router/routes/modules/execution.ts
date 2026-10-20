@@ -1,3 +1,5 @@
+import { hasAnyPermission } from '@/utils/permission';
+
 import { CaseManagementRouteEnum } from '@/enums/routeEnum';
 
 import { DEFAULT_LAYOUT } from '../base';
@@ -6,17 +8,36 @@ import type { AppRouteRecordRaw } from '../types';
 const Execution: AppRouteRecordRaw = {
   path: '/execution',
   name: 'ExecutionQuality',
-  redirect: '/execution/tasks',
+  redirect: () => {
+    if (hasAnyPermission(['AI_EXECUTION:READ'])) return '/execution/tasks';
+    if (hasAnyPermission(['SYSTEM_QUALITY:READ'], ['SYSTEM'])) return '/execution/quality-policy';
+    return '/execution/platforms';
+  },
   component: DEFAULT_LAYOUT,
   meta: {
     locale: 'menu.executionCenter',
     icon: 'icon-icon_robot',
     order: 6,
-    resourceCode: 'EXECUTION_QUALITY_MENU',
     hideChildrenInMenu: true,
-    roles: ['AI_EXECUTION:READ'],
+    roles: ['AI_EXECUTION:READ', 'AI_CREDENTIAL:READ_METADATA', 'SYSTEM_QUALITY:READ'],
   },
   children: [
+    {
+      path: 'diagnostics/:section?',
+      name: 'ExecutionDiagnostics',
+      component: () => import('@/views/execution/diagnostics.vue'),
+      meta: { hideInMenu: true, adminOnly: true, roles: ['AI_EXECUTION:READ'] },
+    },
+    {
+      path: 'platforms',
+      name: 'ExecutionPlatforms',
+      component: () => import('@/views/execution/platforms.vue'),
+      meta: {
+        locale: '测试平台配置',
+        roles: ['AI_EXECUTION:READ', 'AI_CREDENTIAL:READ_METADATA'],
+        isTopMenu: true,
+      },
+    },
     {
       path: 'tasks',
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,
@@ -42,9 +63,14 @@ const Execution: AppRouteRecordRaw = {
     },
     {
       path: 'quality-policy',
-      component: null,
-      redirect: '/setting/system/quality-policy',
-      meta: { hideInMenu: true },
+      name: 'SystemQualityPolicy',
+      component: () => import('@/views/execution/quality-policy.vue'),
+      meta: {
+        locale: '平台质量门禁',
+        roles: ['SYSTEM_QUALITY:READ'],
+        resourceCode: 'SYSTEM_QUALITY_POLICY_PAGE',
+        isTopMenu: true,
+      },
     },
   ],
 };

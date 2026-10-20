@@ -11,7 +11,7 @@ import java.util.List;
 @Data
 public class AgentEnvironmentProfileRequest {
     @NotBlank private String projectId;
-    @NotBlank private String environmentId;
+    @Size(max = 64) private String environmentId;
     @NotBlank @Size(max = 255) private String name;
     @NotBlank @Size(max = 2048) private String baseUrl;
     @NotEmpty private List<@NotBlank String> allowedOrigins;

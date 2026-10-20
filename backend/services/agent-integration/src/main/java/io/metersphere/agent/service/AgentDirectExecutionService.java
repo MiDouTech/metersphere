@@ -30,6 +30,7 @@ public class AgentDirectExecutionService {
     @Resource private AgentOperationExecutor operations;
     @Resource private GlobalQualityGate gate;
     @Resource private AgentFactCipher cipher;
+    @Resource private io.metersphere.agent.quality.EvidenceContentReviewer evidenceReviewer;
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final int MAX_FILE = 5 * 1024 * 1024;
 
@@ -78,15 +79,34 @@ public class AgentDirectExecutionService {
 
     public Map<String,Object> report(Map<String,Object> args) {
         authorize(args,false);
-        var rows=jdbc.queryForList("SELECT id,result,content_hash,policy_hash,facts,create_time FROM agent_case_submission WHERE id=? AND case_id=? AND project_id=?",
+        var rows=jdbc.queryForList("SELECT id,result,gate_status,review_code,reviewer_version,content_hash,policy_hash,facts,create_time FROM agent_case_submission WHERE id=? AND case_id=? AND project_id=?",
                 string(args,"submissionId"),string(args,"caseId"),string(args,"projectId"));
         if(rows.size()!=1) throw AgentBusinessAccess.denied();
         var result=new LinkedHashMap<>(rows.getFirst());
         result.put("facts",parse(io.metersphere.agent.security.AgentSensitiveDataSanitizer.sanitize(cipher.reveal((String)result.get("facts")))));
+        // Keep legacy fields readable while exposing the same status vocabulary as submit.
+        String gateStatus = (String) result.get("gate_status");
+        result.put("submissionId", result.get("id"));
+        result.put("caseId", args.get("caseId"));
+        result.put("gateStatus", gateStatus);
+        result.put("publishStatus", "NEEDS_REVIEW".equals(gateStatus) ? "NOT_PUBLISHED" : "PUBLISHED");
+        result.put("policyHash", result.get("policy_hash"));
+        result.put("contentHash", result.get("content_hash"));
+        result.put("reviewerVersion", result.get("reviewer_version"));
+        result.put("issues", "NEEDS_REVIEW".equals(gateStatus)
+                ? List.of(Map.of("ruleId", "Q-EVIDENCE-CONTENT", "code", Objects.toString(result.get("review_code"), "EVIDENCE_REVIEW_UNAVAILABLE"),
+                    "message", "证据内容尚未通过独立核验；正式附件和执行结果未更新"))
+                : List.of());
         return result;
     }
 
     public Map<String,Object> submit(Map<String,Object> args) {
+        authorize(args,true);
+        var replay=operations.completed("functional.execution.submit",string(args,"requestId"),args,Map.class,()->authorize(args,true));
+        if(replay.isPresent()) return replay.get();
+        // External content inspection happens before the short publishing transaction.
+        // The transaction below rechecks source/policy and every evidence reference.
+        var contentReview=reviewContent(args);
         return operations.execute("functional.execution.submit",string(args,"requestId"),args,Map.class,
                 () -> authorize(args,true), () -> {
                     // Same case row as normal editing; no stale source may be published.
@@ -123,16 +143,63 @@ public class AgentDirectExecutionService {
                     }
                     String id=UUID.randomUUID().toString(), result=failed?"ERROR":"SUCCESS";
                     var facts=Map.of("case",source,"steps",steps,"policy",parse(policy.rulesJson()),"evidence",evidence);
-                    jdbc.update("INSERT INTO agent_case_submission(id,token_id,user_id,project_id,case_id,content_hash,policy_hash,facts,result,create_time) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                            id,token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),args.get("contentHash"),policy.contentHash(),cipher.protect(JSON.toJSONString(facts)),result,now);
+                    String gateStatus=contentReview.supported()?"ACCEPTED":"NEEDS_REVIEW";
+                    jdbc.update("INSERT INTO agent_case_submission(id,token_id,user_id,project_id,case_id,content_hash,policy_hash,facts,result,create_time,gate_status,review_code,reviewer_version) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                            id,token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),args.get("contentHash"),policy.contentHash(),cipher.protect(JSON.toJSONString(facts)),contentReview.supported()?result:"UNKNOWN",now,gateStatus,contentReview.code(),contentReview.reviewerVersion());
+                    for (String evidenceId:evidenceIds) {
+                        jdbc.update("INSERT INTO agent_case_submission_evidence(submission_id,evidence_id,retain_until) VALUES (?,?,?)",
+                                id,evidenceId,now+30L*86400000);
+                    }
+                    if (!contentReview.supported()) {
+                        return Map.of("submissionId",id,"caseId",args.get("caseId"),"result","UNKNOWN",
+                                "gateStatus",gateStatus,"publishStatus","NOT_PUBLISHED","attachmentIds",List.of(),
+                                "issues",List.of(Map.of("ruleId","Q-EVIDENCE-CONTENT","code",contentReview.code(),
+                                        "message","证据内容尚未通过独立核验；正式附件和执行结果未更新，请查看提交记录后补交或联系管理员配置核验服务")),
+                                "policyHash",policy.contentHash());
+                    }
                     for(var file:evidence) {
                         jdbc.update("UPDATE agent_case_evidence SET submission_id=? WHERE id=?",id,file.get("id"));
                         jdbc.update("INSERT INTO functional_case_attachment(id,case_id,file_id,file_name,size,local,create_user,create_time,file_source) VALUES (?,?,?,?,?,1,?,?, 'ATTACHMENT')",
                                 UUID.randomUUID().toString(),args.get("caseId"),file.get("id"),file.get("file_name"),file.get("size_bytes"),token.getUserId(),now);
                     }
                     jdbc.update("UPDATE functional_case SET last_execute_result=?,last_execute_user=?,last_execute_time=? WHERE id=?",result,token.getUserId(),now,args.get("caseId"));
-                    return Map.of("submissionId",id,"caseId",args.get("caseId"),"result",result,"gateStatus","PASSED","attachmentIds",evidenceIds,"policyHash",policy.contentHash());
+                    return Map.of("submissionId",id,"caseId",args.get("caseId"),"result",result,"gateStatus","ACCEPTED","publishStatus","PUBLISHED","attachmentIds",evidenceIds,"policyHash",policy.contentHash());
                 });
+    }
+
+    private io.metersphere.agent.quality.EvidenceContentReviewer.Review reviewContent(Map<String,Object> args) {
+        var source=source(args); requireHash(source,args);
+        var submitted=MAPPER.valueToTree(args.get("steps"));
+        if (!submitted.isArray() || submitted.size()!=source.getSteps().size()) fail("QUALITY_FINAL_FACTS_INCOMPLETE");
+        List<Map<String,Object>> reviewSteps=new ArrayList<>();
+        Set<Integer> positions=new HashSet<>();
+        Set<String> evidenceIds=new HashSet<>();
+        long totalBytes=0;
+        var token=AgentTokenContext.get();
+        for (JsonNode step:submitted) {
+            int position=step.path("stepNum").asInt();
+            if(position<1 || position>source.getSteps().size() || !positions.add(position)) fail("QUALITY_FINAL_FACTS_INCOMPLETE");
+            if(!step.path("actual").isTextual() || step.path("actual").asText().isBlank() || step.path("actual").asText().length()>20000) fail("QUALITY_ASSERTION_INVALID");
+            if(!step.path("evidenceIds").isArray() || step.path("evidenceIds").isEmpty() || step.path("evidenceIds").size()>10) fail("QUALITY_EVIDENCE_REQUIRED");
+            List<Map<String,Object>> files=new ArrayList<>();
+            List<String> hashes=new ArrayList<>();
+            for (JsonNode ref:step.path("evidenceIds")) {
+                if(!ref.isTextual() || !evidenceIds.add(ref.asText()) || evidenceIds.size()>100) fail("QUALITY_EVIDENCE_INVALID");
+                var rows=jdbc.queryForList("SELECT sha256,content_type,purpose,payload FROM agent_case_evidence WHERE id=? AND token_id=? AND user_id=? AND project_id=? AND case_id=? AND content_hash=? AND step_num=? AND submission_id IS NULL AND expires_at>?",
+                        ref.asText(),token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),args.get("contentHash"),position,System.currentTimeMillis());
+                if(rows.size()!=1) fail("QUALITY_EVIDENCE_INVALID");
+                var row=rows.getFirst();
+                totalBytes+=((byte[])row.get("payload")).length;
+                if(totalBytes>50L*1024*1024) fail("STEP_FACTS_LIMIT_EXCEEDED");
+                hashes.add((String)row.get("sha256"));
+                files.add(Map.of("sha256",row.get("sha256"),"contentType",row.get("content_type"),"purpose",row.get("purpose"),
+                        "base64",Base64.getEncoder().encodeToString((byte[])row.get("payload"))));
+            }
+            reviewSteps.add(Map.of("stepNum",position,"description",source.getSteps().get(position-1).getDesc(),
+                    "expected",source.getSteps().get(position-1).getExpected(),"actual",step.path("actual").asText(),
+                    "evidenceHashes",hashes,"evidence",files));
+        }
+        return evidenceReviewer.review(Map.of("protocolVersion","1","contentHash",args.get("contentHash"),"steps",reviewSteps));
     }
 
     private AgentCaseDTO source(Map<String,Object> args) {
@@ -163,7 +230,7 @@ public class AgentDirectExecutionService {
                     String format=reader.getFormatName();
                     if(!("image/png".equals(type)?"png":"JPEG").equalsIgnoreCase(format)
                             || (long)reader.getWidth(0)*reader.getHeight(0)>20_000_000L) throw new IllegalArgumentException();
-                    if(reader.read(0)==null) throw new IllegalArgumentException();
+                    if(reader.getWidth(0)<64 || reader.getHeight(0)<64 || reader.read(0)==null) throw new IllegalArgumentException();
                 } finally {reader.dispose();}
             }
             return bytes;
@@ -171,7 +238,8 @@ public class AgentDirectExecutionService {
     }
     @Scheduled(fixedDelay=3600000)
     public void expirePendingEvidence() {
-        jdbc.update("DELETE FROM agent_case_evidence WHERE submission_id IS NULL AND expires_at<? LIMIT 1000",System.currentTimeMillis());
+        long now=System.currentTimeMillis();
+        jdbc.update("DELETE FROM agent_case_evidence WHERE submission_id IS NULL AND expires_at<? AND NOT EXISTS (SELECT 1 FROM agent_case_submission_evidence r WHERE r.evidence_id=agent_case_evidence.id AND r.retain_until>?) LIMIT 1000",now,now);
     }
     private static String string(Map<String,Object> args,String key) {
         if(!(args.get(key) instanceof String value) || value.isBlank()) throw new MSException("AGENT_VALIDATION_ERROR");

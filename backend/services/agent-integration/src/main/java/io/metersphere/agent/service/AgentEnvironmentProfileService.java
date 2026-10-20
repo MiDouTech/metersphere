@@ -67,6 +67,8 @@ public class AgentEnvironmentProfileService {
         String projectId = projectService.resolveProjectId(request.getProjectId());
         Project project = projectMapper.selectByPrimaryKey(projectId);
         if (project == null) throw new MSException("项目不存在");
+        // Personal platform configuration does not require a published environment asset.
+        if (StringUtils.isBlank(request.getEnvironmentId())) request.setEnvironmentId(IDGenerator.nextStr());
         validate(request);
         if (StringUtils.isNotBlank(request.getLoginProfileId()) || StringUtils.isNotBlank(request.getDefaultCredentialReferenceId())) {
             throw new MSException("ENVIRONMENT_BINDINGS_REQUIRE_PROFILE_UPDATE_AFTER_CREATE");
@@ -95,6 +97,7 @@ public class AgentEnvironmentProfileService {
     @Transactional(rollbackFor = Exception.class)
     public AgentEnvironmentProfileDTO update(String id, AgentEnvironmentProfileRequest request) {
         AgentEnvironmentProfileDTO existing = get(id);
+        if (StringUtils.isBlank(request.getEnvironmentId())) request.setEnvironmentId(existing.getEnvironmentId());
         if (!StringUtils.equals(existing.getProjectId(), projectService.resolveProjectId(request.getProjectId()))) {
             throw new MSException("环境执行配置不允许跨项目迁移");
         }

@@ -23,6 +23,19 @@ public class AgentOperationExecutor {
         this.jdbc=jdbc;this.transaction=new TransactionTemplate(manager);this.transaction.setTimeout(15);
         this.transaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
+    /** Read only committed replay results before expensive external validation. */
+    public <T> Optional<T> completed(String operation,String requestId,Object arguments,Class<T> type,Runnable authorize) {
+        if(requestId==null || !requestId.matches("[A-Za-z0-9_.:-]{1,128}"))throw new MSException("IDEMPOTENCY_KEY_REQUIRED");
+        var token=AgentTokenContext.get();if(token==null)throw AgentBusinessAccess.denied();
+        authorize.run();
+        var rows=jdbc.queryForList("SELECT request_hash,response_json,status,hash_version FROM agent_idempotency_record WHERE token_id=? AND tool_name=? AND request_id=?",token.getId(),operation,requestId);
+        if(rows.isEmpty())return Optional.empty();
+        var row=rows.getFirst();
+        if(!hash(arguments).equals(row.get("request_hash")))throw new MSException("IDEMPOTENCY_CONFLICT");
+        if(!"SUCCEEDED".equals(row.get("status")) || !"canonical-v1".equals(row.get("hash_version")))throw new MSException("REQUEST_IN_PROGRESS");
+        authorize.run();
+        return Optional.of(read((String)row.get("response_json"),type));
+    }
     public <T> T execute(String operation,String requestId,Object arguments,Class<T> resultType,Runnable authorize,Supplier<T> action) {
         if(requestId==null || !requestId.matches("[A-Za-z0-9_.:-]{1,128}"))throw new MSException("IDEMPOTENCY_KEY_REQUIRED");
         var token=AgentTokenContext.get();if(token==null)throw AgentBusinessAccess.denied();

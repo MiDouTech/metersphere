@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test.skip(process.env.MCP_CASE_LIBRARY_E2E !== 'true', 'Requires isolated acceptance backend');
 test.use({ trace: 'off', video: 'off' });
 
-test('personal token executes without a lease and publishes evidence only after the global gate', async ({
+test('personal token preserves a pending report without publishing when independent review is unavailable', async ({
   page,
   baseURL,
 }) => {
@@ -78,7 +78,22 @@ test('personal token executes without a lease and publishes evidence only after 
     const resource = { projectId, caseId, contentHash: contract.contentHash };
     await page.goto('/#/case-management/featureCase');
     await expect(page.locator('.arco-table').first()).toBeVisible();
-    const png = await page.screenshot({ clip: { x: 0, y: 0, width: 2, height: 2 } });
+    const tiny = await page.screenshot({ clip: { x: 0, y: 0, width: 2, height: 2 } });
+    const invalidImage = await call('execution.evidence.upload', {
+      ...resource,
+      requestId: `${key}-tiny`,
+      stepNum: 1,
+      purpose: 'AFTER_STEP',
+      fileName: 'tiny.png',
+      contentType: 'image/png',
+      base64: tiny.toString('base64'),
+    });
+    expect(invalidImage.error?.data?.code).toBe('QUALITY_EVIDENCE_INVALID');
+    // Capture a small empty corner of the actual page: it meets the transport limits
+    // but deliberately cannot substantiate the business step. This is a negative fixture.
+    const png = await page.screenshot({ clip: { x: 1200, y: 650, width: 64, height: 64 } });
+    const evidenceRule = contract.policy.rules.find((rule: { ruleId: string }) => rule.ruleId === 'Q-EVIDENCE-01');
+    expect(png.length).toBeLessThanOrEqual(evidenceRule.parameters.maxArtifactBytes);
     const uploaded = await call('execution.evidence.upload', {
       ...resource,
       requestId: `${key}-image`,
@@ -112,32 +127,29 @@ test('personal token executes without a lease and publishes evidence only after 
     expect((await call('attachments.list', { projectId, caseId })).result.structuredContent.result).toHaveLength(0);
     const accepted = await call('execution.submit', submission);
     expect(accepted.error).toBeUndefined();
-    expect(accepted.result.structuredContent.result.result).toBe('SUCCESS');
+    expect(accepted.result.structuredContent.result.gateStatus).toBe('NEEDS_REVIEW');
+    expect(accepted.result.structuredContent.result.publishStatus).toBe('NOT_PUBLISHED');
+    expect(accepted.result.structuredContent.result.result).toBe('UNKNOWN');
     const report = await call('execution.get', {
       projectId,
       caseId,
       submissionId: accepted.result.structuredContent.result.submissionId,
     });
     expect(report.result.structuredContent.result.facts.steps[0].evidenceIds).toContain(evidenceId);
+    expect(report.result.structuredContent.result.gateStatus).toBe('NEEDS_REVIEW');
+    expect(report.result.structuredContent.result.publishStatus).toBe('NOT_PUBLISHED');
     const replay = await call('execution.submit', submission);
     expect(replay.result.structuredContent.result.submissionId).toBe(
       accepted.result.structuredContent.result.submissionId
     );
-    expect((await call('get', { caseId })).result.structuredContent.result.lastExecuteResult).toBe('SUCCESS');
+    expect((await call('get', { caseId })).result.structuredContent.result.lastExecuteResult).toBe(initialResult);
     const attachments = (await call('attachments.list', { projectId, caseId })).result.structuredContent.result;
-    expect(attachments).toHaveLength(1);
-    expect(attachments[0].fileId).toBe(evidenceId);
-    const downloaded = await page.request.post('/api/attachment/download', {
-      headers,
-      data: { projectId, caseId, fileId: evidenceId, local: true },
-    });
-    expect(downloaded.ok()).toBe(true);
-    expect(Buffer.compare(await downloaded.body(), png)).toBe(0);
+    expect(attachments).toHaveLength(0);
     await page.reload();
     const row = page.getByRole('row').filter({ hasText: key });
-    await expect(row.getByText('成功', { exact: true })).toBeVisible();
+    await expect(row.getByText('成功', { exact: true })).toHaveCount(0);
     await row.getByText('详情', { exact: true }).click();
-    await expect(page.getByText(`${key}.png`, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(`${key}.png`, { exact: true })).toHaveCount(0);
     const disabled = await page.request.post(`/api/personal/agent-tokens/${tokenId}/disable`, { headers });
     expect((await disabled.json()).code).toBe(100200);
     expect((await call('execution.submit', submission)).httpStatus).toBeGreaterThanOrEqual(400);

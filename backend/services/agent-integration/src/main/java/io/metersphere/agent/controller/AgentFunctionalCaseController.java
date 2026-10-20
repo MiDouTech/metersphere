@@ -49,6 +49,8 @@ public class AgentFunctionalCaseController {
     private AgentExecLogService agentExecLogService;
     @Resource
     private AgentAttachmentService agentAttachmentService;
+    @Resource
+    private io.metersphere.agent.service.AgentTempAttachmentService tempAttachments;
 
     @GetMapping("/health")
     @Operation(summary = "健康检查")
@@ -113,7 +115,13 @@ public class AgentFunctionalCaseController {
                                                           @RequestParam String projectId,
                                                           @RequestParam(required = false) Integer stepNum) {
         AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_SUBMIT);
-        return agentAttachmentService.upload(file, projectId, stepNum);
+        var attachment = tempAttachments.upload(file, projectId, "EXECUTION", stepNum);
+        AgentAttachmentUploadResponse response = new AgentAttachmentUploadResponse();
+        response.setAttachmentId(attachment.getAttachmentId());
+        response.setFileId(attachment.getFileId());
+        response.setFileName(attachment.getFileName());
+        response.setDownloadPath(attachment.getDownloadPath());
+        return response;
     }
 
     @GetMapping("/attachment/{id}")
@@ -121,6 +129,7 @@ public class AgentFunctionalCaseController {
     public AgentAttachmentDTO getAttachment(@PathVariable String id,
                                             @RequestParam(required = false) String projectId) {
         AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        tempAttachments.requireMetadata(id);
         return agentAttachmentService.get(id);
     }
 
@@ -128,6 +137,7 @@ public class AgentFunctionalCaseController {
     @Operation(summary = "下载附件")
     public ResponseEntity<byte[]> downloadAttachment(@PathVariable String projectId, @PathVariable String fileId) {
         AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        tempAttachments.requireDownload(projectId, fileId);
         return agentAttachmentService.download(projectId, fileId);
     }
 }
