@@ -12,6 +12,16 @@ import java.util.UUID;
 public class AgentSafeErrorMapper {
     public AgentApiErrorDTO toApiError(Throwable error, String suppliedTraceId) {
         String traceId = StringUtils.defaultIfBlank(suppliedTraceId, UUID.randomUUID().toString());
+        if (error instanceof MSException) {
+            String commentCode = switch (StringUtils.defaultString(error.getMessage())) {
+                case "评论已被更新，请刷新后重试" -> "VERSION_CONFLICT";
+                case "只能编辑当前用例中本人创建的评论" -> "AGENT_PERMISSION_DENIED";
+                case "用例已删除，不能编辑评论" -> "RESOURCE_NOT_FOUND";
+                case "请刷新评论后重试，评论内容不能为空或超过限制" -> "AGENT_VALIDATION_ERROR";
+                default -> null;
+            };
+            if (commentCode != null) return new AgentApiErrorDTO(commentCode, error.getMessage(), Map.of(), traceId);
+        }
         if (error instanceof MSException && isStableCode(error.getMessage())) {
             return new AgentApiErrorDTO(error.getMessage(), safeMessage(error.getMessage()), Map.of(), traceId);
         }
@@ -24,6 +34,8 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "PROJECT_IDENTITY_REQUIRED" -> "请选择项目或提供项目 ID、编号或名称";
+            case "PROJECT_IDENTITY_AMBIGUOUS" -> "项目标识存在歧义，请搜索授权项目后使用内部项目 ID";
             case "QUALITY_CLAIM_ACTOR_REVOKED" -> "任务发起人的项目权限已失效，请重新授权后再执行";
             case "QUALITY_CLAIM_PROJECT_UNAVAILABLE", "QUALITY_CLAIM_CASE_UNAVAILABLE", "QUALITY_CLAIM_ENVIRONMENT_UNAVAILABLE", "QUALITY_CLAIM_CREDENTIAL_UNAVAILABLE" -> "执行所需的项目、用例、环境或凭据已失效，请重新预检后发起任务";
             case "AGENT_RESOURCE_NOT_ACCESSIBLE" -> "资源不存在或当前账号和令牌无权访问，请检查项目授权";

@@ -1,5 +1,10 @@
 package io.metersphere.agent.service;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
+import io.metersphere.agent.constants.AgentTokenScope;
+import io.metersphere.sdk.constants.PermissionConstants;
+import io.metersphere.sdk.exception.MSException;
 import io.metersphere.agent.constants.AgentConstants;
 import io.metersphere.agent.constants.AgentWarningCode;
 import io.metersphere.agent.dto.AgentCaseDTO;
@@ -50,27 +55,28 @@ public class AgentFunctionalCaseSearchService {
     @Resource
     private AgentProjectService agentProjectService;
 
+    @Resource
+    private AgentBusinessAccess access;
+
     public AgentCaseSearchResponse search(AgentCaseSearchRequest request) {
         validateSearchRequest(request);
-        String projectId = agentProjectService.resolveProjectId(request.getProjectId());
+        String projectId = request.getIdentityType() == null ? agentProjectService.resolveProjectId(request.getProjectId())
+                : agentProjectService.resolveProjectId(request.getProjectId(), request.getIdentityType());
+        access.project(projectId, PermissionConstants.FUNCTIONAL_CASE_READ, false, AgentTokenScope.FUNCTIONAL_READ);
+        if (StringUtils.isNotBlank(request.getTestPlanId())) access.plan(projectId, request.getTestPlanId());
         ResolvedSearchCondition condition = agentQueryResolver.resolve(request, projectId);
         Map<String, String> modulePathMap = buildModulePathMap(projectId);
 
-        List<AgentCaseDTO> cases;
-        long total;
-        if (StringUtils.isNotBlank(request.getTestPlanId())) {
-            cases = searchInTestPlan(request, projectId, condition, modulePathMap);
-            total = cases.size();
-        } else {
-            cases = searchInRepository(request, projectId, condition, modulePathMap);
-            total = cases.size();
-            if (StringUtils.isBlank(request.getTestPlanId())) {
-                // no testPlanCaseId without test plan
-            }
-        }
-
+        SearchPage page = StringUtils.isNotBlank(request.getTestPlanId())
+                ? searchInTestPlan(request, projectId, condition, modulePathMap)
+                : searchInRepository(request, projectId, condition, modulePathMap);
+        List<AgentCaseDTO> cases = page.cases();
         boolean includeSteps = request.getIncludeSteps() == null || request.getIncludeSteps();
-        AgentCaseSearchResponse response = buildResponse(condition, cases, total);
+        AgentCaseSearchResponse response = buildResponse(condition, cases, page.total());
+        response.setProjectId(projectId);
+        response.setCurrent(request.getCurrent());
+        response.setPageSize(request.getPageSize());
+        response.setHasMore((long) request.getCurrent() * request.getPageSize() < page.total());
         if (includeSteps) {
             agentFunctionalCaseExportService.enrichWithSteps(cases, response.getWarnings());
         }
@@ -86,7 +92,8 @@ public class AgentFunctionalCaseSearchService {
     }
 
     public AgentCaseDTO getById(String caseId, boolean includeSteps, String testPlanId) {
-        String projectId = requireProjectId();
+        String projectId = access.caseProject(caseId, null, PermissionConstants.FUNCTIONAL_CASE_READ, false, AgentTokenScope.FUNCTIONAL_READ);
+        if (StringUtils.isNotBlank(testPlanId)) access.plan(projectId, testPlanId);
         String userId = StringUtils.defaultIfBlank(SessionUtils.getUserId(), AgentExecutionActorContext.get());
         FunctionalCaseDetailDTO detail = functionalCaseService.getFunctionalCaseDetail(caseId, userId, false);
         AgentCaseDTO agentCase = new AgentCaseDTO();
@@ -108,15 +115,18 @@ public class AgentFunctionalCaseSearchService {
 
     public List<AgentModuleDTO> listModules(String projectId) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
+        access.project(resolvedProjectId, PermissionConstants.FUNCTIONAL_CASE_READ, false, AgentTokenScope.FUNCTIONAL_READ);
         return moduleTreeMatcher.flatten(resolvedProjectId).stream()
                 .map(agentCaseSchemaMapper::toModuleDto)
                 .collect(Collectors.toList());
     }
 
-    private List<AgentCaseDTO> searchInRepository(AgentCaseSearchRequest request, String projectId,
+    private SearchPage searchInRepository(AgentCaseSearchRequest request, String projectId,
                                                     ResolvedSearchCondition condition, Map<String, String> modulePathMap) {
         FunctionalCasePageRequest pageRequest = new FunctionalCasePageRequest();
         pageRequest.setProjectId(projectId);
+        pageRequest.setVersionId(request.getVersionId());
+        pageRequest.setRefId(request.getRefId());
         pageRequest.setCurrent(request.getCurrent());
         pageRequest.setPageSize(request.getPageSize());
         if (CollectionUtils.isNotEmpty(condition.getModuleIds())) {
@@ -126,22 +136,27 @@ public class AgentFunctionalCaseSearchService {
             pageRequest.initKeyword(condition.getKeyword());
         }
         Map<String, List<String>> filter = buildRepositoryFilter(condition);
+        addFilters(filter, request, condition);
         if (!filter.isEmpty()) {
             pageRequest.setFilter(filter);
         }
-        List<FunctionalCasePageDTO> page = functionalCaseService.getFunctionalCasePage(pageRequest, false, false);
-        return page.stream()
-                .map(item -> agentCaseSchemaMapper.fromFunctionalCasePage(item, modulePathMap.get(item.getModuleId())))
-                .filter(item -> agentCaseSchemaMapper.matchesPriority(item.getPriority(), condition.getPriorities()))
-                .filter(item -> agentCaseSchemaMapper.matchesTags(item.getTags(), condition.getTags()))
-                .collect(Collectors.toList());
+        try (Page<?> pagination = PageHelper.startPage(request.getCurrent(), request.getPageSize(), "functional_case.pos desc, functional_case.id asc")) {
+            List<FunctionalCasePageDTO> rows = functionalCaseService.getFunctionalCasePage(pageRequest, false, true);
+            return new SearchPage(rows.stream()
+                    .map(item -> agentCaseSchemaMapper.fromFunctionalCasePage(item, modulePathMap.get(item.getModuleId())))
+                    .collect(Collectors.toList()), Math.max(0, pagination.getTotal()));
+        } finally {
+            PageHelper.clearPage();
+        }
     }
 
-    private List<AgentCaseDTO> searchInTestPlan(AgentCaseSearchRequest request, String projectId,
+    private SearchPage searchInTestPlan(AgentCaseSearchRequest request, String projectId,
                                                  ResolvedSearchCondition condition, Map<String, String> modulePathMap) {
         TestPlanCaseRequest pageRequest = new TestPlanCaseRequest();
         pageRequest.setTestPlanId(request.getTestPlanId());
         pageRequest.setProjectId(projectId);
+        pageRequest.setVersionId(request.getVersionId());
+        pageRequest.setRefId(request.getRefId());
         pageRequest.setCurrent(request.getCurrent());
         pageRequest.setPageSize(request.getPageSize());
         if (CollectionUtils.isNotEmpty(condition.getModuleIds())) {
@@ -151,17 +166,22 @@ public class AgentFunctionalCaseSearchService {
             pageRequest.initKeyword(condition.getKeyword());
         }
         Map<String, List<String>> filter = buildTestPlanFilter(condition);
+        addFilters(filter, request, condition);
         if (!filter.isEmpty()) {
             pageRequest.setFilter(filter);
         }
-        List<TestPlanCasePageResponse> page = testPlanFunctionalCaseService.getFunctionalCasePage(pageRequest, false, projectId);
-        return page.stream()
-                .map(item -> agentCaseSchemaMapper.fromTestPlanCase(item, modulePathMap.get(item.getModuleId())))
-                .filter(item -> agentCaseSchemaMapper.matchesPriority(item.getPriority(), condition.getPriorities()))
-                .filter(item -> agentCaseSchemaMapper.matchesTags(item.getTags(), condition.getTags()))
-                .peek(item -> item.setTestPlanId(request.getTestPlanId()))
-                .collect(Collectors.toList());
+        try (Page<?> pagination = PageHelper.startPage(request.getCurrent(), request.getPageSize(), "test_plan_functional_case.pos desc, test_plan_functional_case.id asc")) {
+            List<TestPlanCasePageResponse> rows = testPlanFunctionalCaseService.getFunctionalCasePage(pageRequest, false, projectId);
+            return new SearchPage(rows.stream()
+                    .map(item -> agentCaseSchemaMapper.fromTestPlanCase(item, modulePathMap.get(item.getModuleId())))
+                    .peek(item -> item.setTestPlanId(request.getTestPlanId()))
+                    .collect(Collectors.toList()), Math.max(0, pagination.getTotal()));
+        } finally {
+            PageHelper.clearPage();
+        }
     }
+
+    private record SearchPage(List<AgentCaseDTO> cases, long total) {}
 
     private void fillTestPlanCaseId(AgentCaseDTO agentCase, String testPlanId, String projectId) {
         TestPlanCaseRequest pageRequest = new TestPlanCaseRequest();
@@ -225,31 +245,35 @@ public class AgentFunctionalCaseSearchService {
         return buildModulePathMap(projectId).getOrDefault(moduleId, "");
     }
 
-    private void validateSearchRequest(AgentCaseSearchRequest request) {
-        boolean hasQuery = StringUtils.isNotBlank(request.getQuery());
-        boolean hasFilters = request.getFilters() != null && (
-                CollectionUtils.isNotEmpty(request.getFilters().getModuleIds())
-                        || CollectionUtils.isNotEmpty(request.getFilters().getPriority())
-                        || CollectionUtils.isNotEmpty(request.getFilters().getLastExecuteResult())
-                        || CollectionUtils.isNotEmpty(request.getFilters().getTags())
-                        || StringUtils.isNotBlank(request.getFilters().getKeyword())
-                        || Boolean.TRUE.equals(request.getFilters().getExcludeRiskActions())
-        );
-        boolean hasPlan = StringUtils.isNotBlank(request.getTestPlanId());
-        if (!hasQuery && !hasFilters && !hasPlan) {
-            throw new IllegalArgumentException("query 与 filters 至少一项非空");
+    private void addFilters(Map<String, List<String>> filter, AgentCaseSearchRequest request, ResolvedSearchCondition condition) {
+        if (CollectionUtils.isNotEmpty(condition.getPriorities())) {
+            filter.remove(AgentConstants.FILTER_CASE_LEVEL);
+            filter.put("agentPriority", condition.getPriorities());
         }
-        if (request.getPageSize() > AgentConstants.MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("pageSize 最大 " + AgentConstants.MAX_PAGE_SIZE);
+        if (CollectionUtils.isNotEmpty(condition.getTags())) {
+            filter.put(request.getFilters() != null && "ALL".equals(request.getFilters().getTagMatch()) ? "agentTagsAll" : "agentTagsAny", condition.getTags());
         }
-        request.setPageSize(AgentConstants.normalizePageSize(request.getPageSize()));
+        if (request.getFilters() != null && CollectionUtils.isNotEmpty(request.getFilters().getReviewStatus())) {
+            filter.put("reviewStatus", request.getFilters().getReviewStatus());
+        }
     }
 
-    private String requireProjectId() {
-        String projectId = SessionUtils.getCurrentProjectId();
-        if (StringUtils.isBlank(projectId)) {
-            throw new IllegalArgumentException("缺少项目上下文，请设置 X-MS-PROJECT 或 PROJECT");
+    private void validateSearchRequest(AgentCaseSearchRequest request) {
+        if (request == null || request.getCurrent() < 1 || request.getPageSize() < 1 || request.getPageSize() > AgentConstants.MAX_PAGE_SIZE) {
+            throw new MSException("AGENT_VALIDATION_ERROR");
         }
-        return projectId;
+        if (StringUtils.isNotBlank(request.getVersionId()) && StringUtils.isNotBlank(request.getRefId())) throw new MSException("AGENT_VALIDATION_ERROR");
+        if (request.getFilters() != null) {
+            var filters = request.getFilters();
+            if (!Set.of("ANY", "ALL").contains(StringUtils.defaultString(filters.getTagMatch(), "ANY"))
+                    || Boolean.TRUE.equals(filters.getExcludeRiskActions())) throw new MSException("AGENT_VALIDATION_ERROR");
+            if (filters.getLimit() != null) {
+                if (filters.getLimit() < 1 || filters.getLimit() > AgentConstants.MAX_PAGE_SIZE) throw new MSException("AGENT_VALIDATION_ERROR");
+                request.setPageSize(Math.min(request.getPageSize(), filters.getLimit()));
+            }
+            for (var values : java.util.Arrays.asList(filters.getTags(), filters.getPriority(), filters.getLastExecuteResult(), filters.getModuleIds(), filters.getReviewStatus())) {
+                if (values != null && (values.size() > 100 || values.stream().anyMatch(v -> StringUtils.isBlank(v) || v.length() > 255))) throw new MSException("AGENT_VALIDATION_ERROR");
+            }
+        }
     }
 }

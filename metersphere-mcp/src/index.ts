@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { caseLibraryTools } from "./tools/caseLibrary.js";
 import { managedExecutionTools } from "./tools/managedExecution.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -10,7 +11,6 @@ import { listModulesTool } from "./tools/listModules.js";
 import { searchFunctionalCasesTool } from "./tools/searchFunctionalCases.js";
 import { submitFunctionalResultTool } from "./tools/submitFunctionalResult.js";
 import { submitFunctionalResultsBatchTool } from "./tools/submitFunctionalResultsBatch.js";
-import { uploadExecutionAttachmentTool } from "./tools/uploadExecutionAttachment.js";
 import { createProjectTool } from "./tools/createProject.js";
 import { addProjectMembersTool } from "./tools/addProjectMembers.js";
 import { searchProjectsTool } from "./tools/searchProjects.js";
@@ -50,11 +50,11 @@ type ToolDef = {
 
 const tools: ToolDef[] = [
   ...managedExecutionTools,
+  ...caseLibraryTools,
   executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
   bugTransitionTool, testPlanUpdateTool, testPlanDisassociateTool, testPlanGetTool,
   searchFunctionalCasesTool,
   getFunctionalCaseTool,
-  uploadExecutionAttachmentTool,
   listModulesTool,
   searchProjectsTool,
   createProjectTool,
@@ -89,7 +89,7 @@ async function main() {
 
   const server = new McpServer({
     name: "metersphere-mcp",
-    version: "0.4.0",
+    version: "0.5.1",
   });
 
   for (const tool of tools) {

@@ -31,6 +31,11 @@ public class AgentCaseSchemaMapper {
         target.setCaseId(source.getId());
         target.setNum(source.getNum());
         target.setName(source.getName());
+        target.setProjectId(source.getProjectId());
+        target.setModuleId(source.getModuleId());
+        target.setVersionId(source.getVersionId());
+        target.setReviewStatus(source.getReviewStatus());
+        target.setUpdateTime(source.getUpdateTime());
         target.setModulePath(modulePath);
         target.setCaseEditType(source.getCaseEditType());
         target.setTags(source.getTags());
@@ -46,6 +51,11 @@ public class AgentCaseSchemaMapper {
         target.setCaseId(source.getCaseId());
         target.setNum(source.getNum());
         target.setName(source.getName());
+        target.setProjectId(source.getProjectId());
+        target.setModuleId(source.getModuleId());
+        target.setVersionId(source.getVersionId());
+        target.setReviewStatus(source.getReviewStatus());
+        target.setUpdateTime(source.getUpdateTime());
         target.setModulePath(modulePath);
         target.setTags(source.getTags());
         target.setPriority(extractPriority(source.getCustomFields(), null));
@@ -63,6 +73,13 @@ public class AgentCaseSchemaMapper {
             target.setLastExecuteUser(detail.getLastExecuteUser());
             target.setLastExecuteUserName(detail.getLastExecuteUserName());
         }
+        target.setProjectId(detail.getProjectId());
+        target.setModuleId(detail.getModuleId());
+        target.setVersionId(detail.getVersionId());
+        target.setReviewStatus(detail.getReviewStatus());
+        target.setUpdateTime(detail.getUpdateTime());
+        target.setDescription(detail.getDescription());
+        target.setCustomFields(detail.getCustomFields());
         target.setCaseEditType(detail.getCaseEditType());
         target.setPrerequisite(detail.getPrerequisite());
         target.setPriority(StringUtils.defaultIfBlank(detail.getFunctionalPriority(), target.getPriority()));
@@ -136,7 +153,8 @@ public class AgentCaseSchemaMapper {
     public String extractPriority(List<FunctionalCaseCustomFieldDTO> customFields, String fallback) {
         if (CollectionUtils.isNotEmpty(customFields)) {
             for (FunctionalCaseCustomFieldDTO field : customFields) {
-                if (StringUtils.equals(field.getFieldName(), AgentConstants.PRIORITY_FIELD)
+                if (StringUtils.equals(field.getInternalFieldKey(), AgentConstants.PRIORITY_FIELD)
+                        || StringUtils.equals(field.getFieldName(), AgentConstants.PRIORITY_FIELD)
                         || StringUtils.equalsIgnoreCase(field.getFieldName(), AgentConstants.PRIORITY_FIELD)) {
                     return normalizeCustomFieldValue(field.getDefaultValue());
                 }

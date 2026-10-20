@@ -68,4 +68,20 @@ class AgentTokenServiceTests {
         token.setEnable(true);
         return token;
     }
+
+    @Test
+    void disabledRevokedAndInactiveRecordsAreRejectedEvenIfMapperReturnsThem() {
+        AgentToken token = buildToken(AgentTokenScope.FUNCTIONAL_READ, null);
+        when(agentTokenMapper.selectByTokenHash(eq(DigestUtils.sha256Hex(RAW_TOKEN)))).thenReturn(token);
+        token.setEnable(false);
+        Assertions.assertNull(agentTokenService.validateBearerToken("Bearer " + RAW_TOKEN));
+        token.setEnable(true);
+        token.setRevokedAt(1L);
+        Assertions.assertNull(agentTokenService.validateBearerToken("Bearer " + RAW_TOKEN));
+        token.setRevokedAt(null);
+        token.setStatus("REVOKED");
+        Assertions.assertNull(agentTokenService.validateBearerToken("Bearer " + RAW_TOKEN));
+        token.setStatus("ACTIVE");
+        Assertions.assertNotNull(agentTokenService.validateBearerToken("Bearer " + RAW_TOKEN));
+    }
 }

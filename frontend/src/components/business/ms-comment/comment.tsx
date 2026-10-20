@@ -94,6 +94,7 @@ export default defineComponent({
       };
       if (currentItem.commentType === 'EDIT') {
         params.id = item.id;
+        if (item.caseId) params.expectedUpdateTime = item.updateTime;
       }
       emit('updateOrAdd', params, (result: boolean) => {
         if (result) {

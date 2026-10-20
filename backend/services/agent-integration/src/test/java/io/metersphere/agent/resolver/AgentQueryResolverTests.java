@@ -84,6 +84,9 @@ class AgentQueryResolverTests {
         request.setQuery("订单");
         AgentSearchFilters filters = new AgentSearchFilters();
         filters.setModuleIds(List.of("mod-explicit"));
+        var node = new ModuleTreeMatcher.AgentModuleNode();
+        node.setId("mod-explicit");
+        when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of(node));
         request.setFilters(filters);
 
         ResolvedSearchCondition condition = resolver.resolve(request, "proj-001");

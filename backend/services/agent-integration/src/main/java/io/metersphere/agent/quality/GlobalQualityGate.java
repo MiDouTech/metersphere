@@ -23,6 +23,41 @@ public class GlobalQualityGate {
     }
     public record Binding(String policyId, int versionNo, String contentHash, String rulesJson) {}
 
+    /** Current global policy for direct case submissions; caller owns the transaction. */
+    public Binding currentForSubmission() {
+        var current=jdbc.queryForList("SELECT current_policy_id FROM execution_quality_policy_global_state WHERE scope='GLOBAL' FOR UPDATE",String.class);
+        if(current.isEmpty() || current.getFirst()==null) throw new MSException("QUALITY_POLICY_NOT_CONFIGURED");
+        var rows=jdbc.query("SELECT id,version_no,content_hash,rules_json FROM execution_quality_policy_global WHERE id=? AND status='PUBLISHED'",
+                (rs,n)->new Binding(rs.getString(1),rs.getInt(2),rs.getString(3),rs.getString(4)),current.getFirst());
+        if(rows.size()!=1) throw new MSException("QUALITY_POLICY_NOT_CONFIGURED");
+        checkHash(rows.getFirst());
+        return rows.getFirst();
+    }
+
+    public boolean verifyDirectStep(Binding policy, String expected, String actual, List<AgentExecutionArtifactDTO> artifacts) {
+        JsonNode rules=read(policy.rulesJson());
+        for(JsonNode rule:rules.path("rules")) {
+            if(!"Q-EVIDENCE-01".equals(rule.path("ruleId").asText())) continue;
+            JsonNode limits=rule.path("parameters");
+            for(var artifact:artifacts) {
+                if(artifact.getSizeBytes()==null || artifact.getSizeBytes()<1
+                        || artifact.getSizeBytes()>limits.path("maxArtifactBytes").asLong()
+                        || !contains(limits.path("allowedMimeTypes"),artifact.getContentType()))
+                    throw new MSException("QUALITY_EVIDENCE_INVALID");
+            }
+        }
+        var json = new ObjectMapper();
+        var frozen=json.createArrayNode();
+        frozen.addObject().put("operator","EQUALS").put("expected",expected);
+        var observed=json.createArrayNode();
+        observed.addObject().put("actual",actual);
+        try { evaluate(rules,frozen,observed,artifacts); return true; }
+        catch(MSException error) {
+            if("QUALITY_ASSERTION_FAILED".equals(error.getMessage())) return false;
+            throw error;
+        }
+    }
+
     @Transactional(rollbackFor=Exception.class)
     public Binding bind(String executionId, String taskId) {
         // Same singleton lock as publication: an attempt sees one complete published version.

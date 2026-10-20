@@ -387,6 +387,21 @@ AI 技能包用于指导 AI 连接远程 MCP，不包含 Token。创建 Token �
 
   const scopeOptions = [
     {
+      value: 'PROJECT_READ;FUNCTIONAL_READ;FUNCTIONAL_SUBMIT;CASE_ATTACHMENT',
+      label: '个人 Agent 测试闭环',
+      desc: '读取用例、上传步骤证据，经平台统一门禁审核后更新附件与执行结果，无需任务或租约。',
+    },
+    {
+      value: 'FUNCTIONAL_READ;CASE_COMMENT_EDIT_V2',
+      label: '编辑本人用例评论（需明确授权）',
+      desc: '允许修改本人评论正文，要求当前版本；保留回复及附件，不修改执行结果。',
+    },
+    {
+      value: 'FUNCTIONAL_READ;CASE_MODULE_WRITE_V2',
+      label: '用例目录管理（需明确授权）',
+      desc: '允许目录改名和移动；旧全能力 Token 不自动包含此权限，仍受项目权限约束。',
+    },
+    {
       value: 'AGENT_ALL',
       label: t('system.agentIntegration.scopeAgentAll'),
       desc: t('system.agentIntegration.scopeAgentAllDesc'),

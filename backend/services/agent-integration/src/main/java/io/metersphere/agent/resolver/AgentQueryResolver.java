@@ -28,6 +28,17 @@ public class AgentQueryResolver {
 
         if (CollectionUtils.isNotEmpty(filters.getModuleIds())) {
             condition.getModuleIds().addAll(filters.getModuleIds());
+            var nodes = moduleTreeMatcher.flatten(projectId);
+            Set<String> known = nodes.stream().map(ModuleTreeMatcher.AgentModuleNode::getId).collect(java.util.stream.Collectors.toSet());
+            known.add("root");
+            if (!known.containsAll(filters.getModuleIds())) throw new io.metersphere.sdk.exception.MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
+            if (!Boolean.FALSE.equals(filters.getIncludeDescendants())) {
+                boolean changed;
+                do {
+                    changed = false;
+                    for (var node : nodes) if (condition.getModuleIds().contains(node.getParentId())) changed |= condition.getModuleIds().add(node.getId());
+                } while (changed);
+            }
             condition.getMatchedBy().add("moduleIds");
         } else if (StringUtils.isNotBlank(request.getQuery())) {
             Set<String> aliasModuleIds = agentModuleAliasService.resolveModuleIds(projectId, request.getQuery());

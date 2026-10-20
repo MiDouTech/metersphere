@@ -48,8 +48,11 @@ import java.util.regex.Pattern;
 
 
 @Service
-@Transactional(rollbackFor = Exception.class)
+@Transactional(rollbackFor = Exception.class, isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
 public class FunctionalCaseModuleService extends ModuleTreeService {
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate moduleJdbc;
+
     private static final Pattern NATURAL_PART_PATTERN = Pattern.compile("\\d+|\\D+");
     @Resource
     private FunctionalCaseModuleMapper functionalCaseModuleMapper;
@@ -93,6 +96,8 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
     }
 
     public String add(FunctionalCaseModuleCreateRequest request, String userId) {
+        lockProjectTree(request.getProjectId());
+        checkParent(request.getProjectId(), null, request.getParentId());
         FunctionalCaseModule functionalCaseModule = new FunctionalCaseModule();
         functionalCaseModule.setId(IDGenerator.nextStr());
         functionalCaseModule.setName(request.getName());
@@ -118,9 +123,11 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         if (updateModule == null) {
             throw new MSException(Translator.get("case_module.not.exist"));
         }
+        lockProjectTree(updateModule.getProjectId());
+        updateModule = currentModule(request.getId());
         updateModule.setName(request.getName());
         this.checkDataValidity(updateModule);
-        updateModule.setUpdateTime(System.currentTimeMillis());
+        updateModule.setUpdateTime(Math.max(System.currentTimeMillis(), updateModule.getUpdateTime()+1));
         updateModule.setUpdateUser(userId);
         updateModule.setCreateUser(null);
         updateModule.setCreateTime(null);
@@ -129,15 +136,21 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
     }
 
     public void moveNode(NodeMoveRequest request, String userId) {
+        FunctionalCaseModule source = functionalCaseModuleMapper.selectByPrimaryKey(request.getDragNodeId());
+        if (source == null) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
+        lockProjectTree(source.getProjectId());
         NodeSortDTO nodeSortDTO = super.getNodeSortDTO(request,
                 extFunctionalCaseModuleMapper::selectBaseModuleById,
                 extFunctionalCaseModuleMapper::selectModuleByParentIdAndPosOperator);
 
+        checkParent(source.getProjectId(), source.getId(), nodeSortDTO.getParent().getId());
+        FunctionalCaseModule target = functionalCaseModuleMapper.selectByPrimaryKey(request.getDropNodeId());
+        if (target == null || !source.getProjectId().equals(target.getProjectId())) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
         FunctionalCaseModuleExample example = new FunctionalCaseModuleExample();
         example.createCriteria().andParentIdEqualTo(nodeSortDTO.getParent().getId()).andIdEqualTo(request.getDragNodeId());
         //节点换到了别的节点下,要先更新parent节点再计算sort
         if (functionalCaseModuleMapper.countByExample(example) == 0) {
-            FunctionalCaseModule moveModule = functionalCaseModuleMapper.selectByPrimaryKey(request.getDragNodeId());
+            FunctionalCaseModule moveModule = currentModule(request.getDragNodeId());
             moveModule.setParentId(nodeSortDTO.getParent().getId());
             this.checkDataValidity(moveModule);
 
@@ -149,11 +162,54 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
             functionalCaseModuleMapper.updateByPrimaryKeySelective(functionalCaseModule);
         }
         super.sort(nodeSortDTO);
+        moduleJdbc.update("UPDATE functional_case_module SET update_time=GREATEST(COALESCE(update_time,0)+1,?),update_user=? WHERE id=?",
+                System.currentTimeMillis(),userId,request.getDragNodeId());
+    }
+
+    /** Shared by UI and Agent tree writers; serializes ancestor validation and mutation. */
+    public void lockProjectTree(String projectId) {
+        var rows = moduleJdbc.queryForList("SELECT id FROM project WHERE id=? AND deleted=0 FOR UPDATE", String.class, projectId);
+        if (rows.size()!=1) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
+    }
+
+    private FunctionalCaseModule currentModule(String id) {
+        var rows = moduleJdbc.query("SELECT * FROM functional_case_module WHERE id=? FOR UPDATE",
+                org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(FunctionalCaseModule.class), id);
+        if (rows.size()!=1) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
+        return rows.getFirst();
+    }
+
+    private void checkParent(String projectId, String movingId, String parentId) {
+        Set<String> visited = new HashSet<>();
+        String current = parentId;
+        while (StringUtils.isNotBlank(current) && !ModuleConstants.ROOT_NODE_PARENT_ID.equals(current)) {
+            if (current.equals(movingId) || !visited.add(current)) throw new MSException("AGENT_VALIDATION_ERROR");
+            FunctionalCaseModule parent = currentModule(current);
+            if (parent == null || !projectId.equals(parent.getProjectId())) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
+            current = parent.getParentId();
+        }
+    }
+
+    public FunctionalCaseModule moveToParent(String moduleId, String parentId, String userId) {
+        FunctionalCaseModule module = functionalCaseModuleMapper.selectByPrimaryKey(moduleId);
+        if (module == null) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
+        lockProjectTree(module.getProjectId());
+        module = currentModule(moduleId);
+        checkParent(module.getProjectId(), moduleId, parentId);
+        module.setParentId(parentId);
+        checkDataValidity(module);
+        module.setPos(countPos(parentId));
+        module.setUpdateTime(Math.max(System.currentTimeMillis(), module.getUpdateTime()+1));
+        module.setUpdateUser(userId);
+        functionalCaseModuleMapper.updateByPrimaryKeySelective(module);
+        functionalCaseModuleLogService.updateModuleLog(module, userId);
+        return module;
     }
 
     public void deleteModule(String moduleId, String userId) {
         FunctionalCaseModule deleteModule = functionalCaseModuleMapper.selectByPrimaryKey(moduleId);
         if (deleteModule != null) {
+            lockProjectTree(deleteModule.getProjectId());
             List<FunctionalCase> functionalCases = this.deleteModuleByIds(Collections.singletonList(moduleId), new ArrayList<>(), userId);
             //用例日志
             functionalCaseModuleLogService.batchDelLog(functionalCases, deleteModule.getProjectId(), userId, "/functional/case/module/delete/" + moduleId);

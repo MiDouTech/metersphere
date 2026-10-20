@@ -1,18 +1,27 @@
 # MeterSphere Agent 集成：个人 Token 与多 Agent MCP 接入改造方案
 
-> 日期：2026-07-30  
-> 适用版本：MeterSphere 3.7.x  
-> 范围：系统设置 → 系统 → Agent 集成、个人 Token、MCP 服务、技能包  
+> 初稿日期：2026-07-30；修订日期：2026-10-20
+> 适用版本：MeterSphere 3.7.x
+> 范围：系统设置 → 系统 → Agent 集成、个人 Token、MCP 服务、技能包
 > 文档性质：产品与技术联合改造方案，不包含本次代码实施
+
+## 0. 修订基准与约束
+
+本次修订以[质量门禁修复与完善方案](质量门禁修复与完善方案-20261019.md)为最高业务约束，承接[MCP 与 AI 技能包整改方案](../mcp-and-ai-skill-remediation-plan-20261019.md)及[用例库能力方案](../metersphere-mcp-case-library-improvement-plan-2026-10-20.md)。§19 为本次实施契约；历史现状表和初稿估算不作为当前实现或验收证明。
+
+- 全局质量门禁统一生效，不按项目采用不同放行标准。纯系统管理员能访问系统级治理和门禁；业务资源仍按项目、实际归属和当前权限校验。
+- 正式结果只通过冻结合同、有效 attempt/租约、事实与证据、服务端判定和持久化正式回写产生。保留 QUALITY_LEGACY_SUBMIT_FORBIDDEN；管理员、人工确认、Token scope 和客户端审批不能替代事实或绕过门禁。
+- 执行中删除沿用用例库方案的预检及用户决定：取消、等待或具备停止权限时停止后删除；不能用 Token 创建时的风险确认替代具体业务确认。
+- 本次仅修订方案，不改变现有实现的部分完成状态，不包含代码修改、部署或运行验收。
 
 ## 1. 结论
 
-当前 Agent 集成模块需要从“管理员创建并分配 Agent Token + 下载 Cursor/Claude 本地桥接包”，重构为：
+本方案在已有个人 Token、远程 MCP 与技能包基础上补齐安全和业务链路。已有入口不代表通过验收；当前基线及修订契约见 §19。目标为：
 
 1. **个人自助凭据**：登录用户只能为自己创建、查看、禁用、轮换和删除 Token，不能选择或冒充其他用户。
 2. **管理面与调用面分轨**：Web 会话管理 Token；Agent 使用个人 Token 调用 MCP，个人 Token 不能反向管理 Token。
 3. **原生远程 MCP**：MeterSphere 直接提供标准 Streamable HTTP MCP 服务，Codex、ChatGPT、Cursor、WorkBuddy 等支持远程 MCP 的客户端可直接接入。
-4. **仅保留 AI 技能包**：舍弃原有 Node.js MCP 集成包和本地 `stdio` 适配器；技能包必须能指导 AI 根据用户提供的地址和 Token 正确配置并连接远程 MCP。
+4. **远程优先、兼容迁移**：本轮保留 Node.js MCP 与本地 `stdio` 适配器及验收；技能包必须能指导 AI 根据用户提供的地址和 Token 正确配置并连接远程 MCP。
 5. **技能包与密钥分离**：用户可下载技能包交给 AI，技能包包含操作知识、连接步骤、Tool 说明和各客户端配置模板，但永不包含真实 Token。
 6. **普通用户自主选权**：用户可自行选择 Token scopes，包括 `AGENT_ALL`；最终权限仍为用户实时 RBAC ∩ Token scopes ∩ Token 项目范围 ∩ MCP Tool 安全策略，Token 永远不能提升用户权限。
 
@@ -51,9 +60,11 @@ Codex / ChatGPT / Cursor / WorkBuddy
 | 热路径轻量 | 最近使用时间与调用次数异步、原子更新 |
 | 可立即吊销 | 禁用、删除、用户停用或权限撤回后立即失效 |
 
-## 3. 当前实现与目标差距
+## 3. 历史差距记录（不作为当前实施基线）
 
-### 3.1 当前实现概况
+以下为初稿历史记录，已部分过时。当前已有个人 Token 控制器、BCrypt 验证及远程 MCP；实施必须以 §19.2 的增量核对为准，不重复建设。
+
+### 3.1 初稿实现概况
 
 当前仓库已经具备：
 
@@ -78,7 +89,7 @@ Codex / ChatGPT / Cursor / WorkBuddy
 | `SHA-256(rawToken)` 直接查找 | 数据库泄露后可离线直接比对候选 Token | 公共 ID 索引 + 慢哈希验证秘密段 |
 | 仅支持 Bearer | 某些客户端或脚本使用专用 API Key 头 | 同时支持 Bearer 和 `X-API-Key` |
 | MCP 包只有本地 `stdio` | ChatGPT、云端 Codex 等无法运行用户本地 Node 进程 | 新增公网/内网可达的 Streamable HTTP MCP |
-| 技能包定位为本地 MCP 程序包 | “知识技能”和“协议实现”混在一起 | 舍弃原集成程序包，只交付可指导 AI 连接远程 MCP 的 Skill zip |
+| 技能包定位为本地 MCP 程序包 | “知识技能”和“协议实现”混在一起 | 技能包独立交付，Node 兼容链路按迁移条件保留 |
 | 无调用次数/最近使用/最后 IP | 用户无法判断凭据是否被滥用 | 增加使用统计和安全审计 |
 | 工具未完整标注读写属性 | 客户端难以实施审批策略 | MCP Tool 增加 `readOnlyHint`、`destructiveHint` 等 annotations |
 
@@ -194,7 +205,7 @@ MCP 配置生成规则：
 
 - 配置中直接使用当前部署的 MCP 服务地址。
 - Token 只在本次创建成功弹窗中注入配置并展示一次。
-- 配置格式根据所选客户端生成；选择“其他”时生成标准 Streamable HTTP MCP JSON。
+- 配置格式根据所选客户端生成；选择“其他”时生成注明用途的通用示意配置，不承诺可直接导入所有客户端。
 - 创建页面虽不提供 Codex 选项，但用户仍可切换查看并复制 Codex 支持的 TOML 配置模板。
 - Token 和 MCP 配置分别提供复制按钮，并显示复制成功反馈。
 - 关闭弹窗前明确提示完整 Token 和含 Token 的配置均不可再次查看。
@@ -206,11 +217,11 @@ MCP 配置生成规则：
 |---|---|
 | 全部 Agent 权限 | `AGENT_ALL` |
 | 功能测试只读 | `FUNCTIONAL_READ` |
-| 测试结果提交 | `FUNCTIONAL_SUBMIT` |
+| 受管执行与事实提交 | 按注册中心的任务/执行 scopes 生成；不开放旧结果直写 |
 | 项目管理 | `PROJECT_READ` / `PROJECT_WRITE` |
-| 测试用例管理 | `CASE_READ` / `CASE_WRITE` |
+| 测试用例管理 | 现有只读、创建、更新、评论及附件 scopes，按工具逐项映射 |
 | 测试计划管理 | `PLAN_READ` / `PLAN_WRITE` |
-| 用例评审管理 | `REVIEW_READ` / `REVIEW_WRITE` |
+| 用例评审管理 | 现有只读权限 / `REVIEW_WRITE`；不得发放未定义枚举 |
 | 缺陷管理 | `BUG_READ` / `BUG_WRITE` |
 
 前端选项、已选标签、Token 列表和确认弹窗均显示中文名称，不直接把 `AGENT_ALL`、`BUG_WRITE` 等内部枚举作为主文案。内部枚举仅用于接口传输、开发诊断和审计详情。
@@ -269,7 +280,7 @@ msat_k7Q2p9_4Hq...高熵随机秘密...
 | `name` | 用户命名 |
 | `user_id` | 固定为创建用户 |
 | `public_id` | Token 公共定位 ID，唯一索引 |
-| `secret_hash` | Argon2id 或 BCrypt 慢哈希 |
+| `secret_hash` | 复用现有 BCrypt，参数及性能预算经验证固定 |
 | `display_prefix` | 列表脱敏展示 |
 | `client_type` | CHATGPT / CURSOR / WORKBUDDY / OTHER；历史 `CODEX` 值继续兼容读取，但创建页面不再新增 |
 | `project_ids` | 项目白名单 JSON |
@@ -308,10 +319,10 @@ X-API-Key: msat_...
 
 优先级：
 
-1. 已存在有效 Web/JWT 身份时使用 Web/JWT；
-2. 否则识别 `X-API-Key`；
-3. 否则只在 Bearer 值以 `msat_` 开头时识别为个人 Token；
-4. 避免吞掉普通 JWT Bearer。
+1. 按端点隔离认证机制，MCP 不因 Web/JWT 身份存在而放宽 Token 权限；
+2. Bearer 与 X-API-Key 同传拒绝歧义输入；管理 API 拒绝个人 Token，包括同时携带会话的请求；
+3. MCP 仅使用有效个人 Token 或受支持的 OAuth 凭据；无效 Token 不回退到 Web 会话；
+4. Token 与会话同用户仍执行 Token 限制，不同用户拒绝；严格识别前缀，避免吞掉普通 JWT Bearer。
 
 ### 6.5 权限公式
 
@@ -329,7 +340,7 @@ X-API-Key: msat_...
 
 - 创建 Token 时只能选择本人当前可访问项目。
 - 调用时再次实时校验用户项目权限，创建后的权限撤回立即生效。
-- Token 项目白名单为空不再默认“全部系统项目”，而定义为“本人全部可访问项目”；UI 必须显式提示。
+- 项目范围使用 SELECTED / ALL_ACCESSIBLE；历史空白名单迁移为 ALL_ACCESSIBLE，新建不再用空数组隐式表达全量范围。
 - 写操作不能只检查 `AgentScopeAssert`，还必须执行原业务权限校验。
 - 请求体中的 `executedBy/userId/createUser` 不可信，服务端统一以 Token 用户覆盖。
 - 用户禁用、删除、锁定或离职后，其全部个人 Token 立即失效。
@@ -352,13 +363,13 @@ WHERE id = :tokenId;
 
 ### 7.1 单一远程传输架构
 
-仅提供标准 Streamable HTTP：
+原生服务提供 Streamable HTTP，Node/stdio 作为现有兼容客户端保留：
 
 | 传输 | 地址/形态 | 面向客户端 |
 |---|---|---|
 | Streamable HTTP | `POST/GET/DELETE /api/mcp` | ChatGPT、Codex、Cursor、WorkBuddy 及其他远程 MCP 客户端 |
 
-不再构建、下载或维护本地 Node.js `stdio` MCP 程序。客户端若不支持 Streamable HTTP，则不属于首期支持范围，页面需明确提示升级客户端或使用支持远程 MCP 的版本。
+远程 MCP 为推荐方式；本轮继续维护 Node/stdio 兼容能力与制品测试。退役条件见 §19，不因本方案删除现有工程或降低用例库能力覆盖。
 
 ### 7.2 MCP 协议端点
 
@@ -366,8 +377,8 @@ WHERE id = :tokenId;
 
 ```text
 /api/mcp                         标准 MCP Streamable HTTP
-/api/agent/skill-package/manifest AI 技能包清单
-/api/agent/skill-package/download 下载 AI 技能包
+/api/personal/agent-package/manifest AI 技能包清单
+/api/personal/agent-package/skill/download 下载 AI 技能包
 ```
 
 避免当前 `/api/agent/mcp` 同时承担“下载控制器”和“协议服务”造成语义冲突。
@@ -423,8 +434,8 @@ interface MeterSphereMcpTool<I, O> {
 #### 执行写入
 
 - `upload_execution_attachment`
-- `submit_functional_result`
-- `submit_functional_results_batch`
+- 受管任务的事实提交、服务端门禁评估与正式回写（不新增直接结果提交工具）
+- 批量受管执行仍逐项遵守冻结合同、证据、尝试及回写规则
 
 #### 内容管理
 
@@ -535,14 +546,14 @@ interface MeterSphereMcpTool<I, O> {
 
 - 每个 MCP 请求都验证 Token；
 - 项目 ID作为 Tool 参数，不依赖服务端 HTTP Session；
-- 可返回 MCP session id 以满足客户端协议，但业务上下文不放入全局 `SessionUtils` 长期保存；
+- 无状态模式不签发虚构 MCP session id，业务上下文不放入全局 `SessionUtils` 长期保存；
 - 请求结束必须清理线程上下文。
 
 当前通过 `SessionUtils.setCurrentProjectId()` 注入项目的实现可作为过渡，但新 Tool 服务应显式传递 `AgentPrincipal` 和 `projectId`，降低串请求污染风险。
 
 ## 8. 技能包设计
 
-### 8.1 唯一交付物：MeterSphere AI 技能包
+### 8.1 知识交付物：MeterSphere AI 技能包
 
 文件名：
 
@@ -580,11 +591,11 @@ metersphere-agent/
 - 约束先查项目/模板再执行写操作；
 - 提供端到端工作流；
 - 提供错误码和恢复方式。
-- 明确告诉 AI 如何向用户索取 `MS_BASE_URL`、`MS_AGENT_TOKEN` 和可选默认项目；
+- 明确告诉 AI 如何指导用户在客户端秘密存储或本地环境变量中设置 `MS_BASE_URL`、`MS_AGENT_TOKEN` 和可选默认项目；
 - 指导 AI识别 Codex、ChatGPT、Cursor、WorkBuddy 的配置位置并生成远程 MCP 配置；
 - 提供只执行 `initialize`、`tools/list` 和只读 Tool 的连接验证脚本或步骤。
 
-原有 `metersphere-mcp/**` Node.js 工程、服务端内置的 `metersphere-mcp-*.zip`、对应下载接口和打包脚本在远程 MCP 与新技能包验收通过后删除。若需保留历史下载地址，应返回明确的升级说明，不再返回旧程序包。
+本轮不删除 `metersphere-mcp/**`、现有下载和打包链路。退役须完成用户迁移、完整能力等价验证、公告窗口与回退设计，并形成明确切换决定；仅通过远程只读连接测试不足以退役。
 
 ### 8.2 技能包安全规则
 
@@ -612,7 +623,7 @@ ${MS_PROJECT_ID}
 
 1. 用户提供项目名称或名称片段时，先调用 `search_projects`；唯一命中后使用返回的 `projectId`，多条命中时先请用户确认目标项目。
 2. 批量创建前先调用模板/字段查询 Tool。
-3. 结果回写必须使用 Token 身份，忽略模型自行填写的执行人。
+3. 事实提交采用 Token 身份，正式结果由服务端门禁判定后回写；忽略模型自行填写的执行人，不允许直接提交 PASS。
 4. 删除、覆盖、批量更新必须要求用户确认。
 5. 错误不得无限重试；429 遵循 `Retry-After`。
 6. 不在对话、日志或生成文件中复述完整 Token。
@@ -651,7 +662,7 @@ ChatGPT 必须连接可从 ChatGPT 所在网络访问的 HTTPS MCP URL：
 https://metersphere.example.com/api/mcp
 ```
 
-首版可以支持静态 Bearer Token；正式面向更广泛用户或企业工作区时，建议增加 OAuth 2.1 Authorization Code + PKCE 与动态客户端注册/管理员预注册，避免用户在第三方界面长期粘贴个人 Token。
+ChatGPT 受保护接入按 OAuth 路径规划，静态 Bearer 不作为默认支持承诺。实现 Authorization Code + PKCE、资源/授权服务元数据、注册策略、授权同意、令牌刷新与撤销，并按实际工作区和客户端版本验证；未验证前标记待支持。不能将 Responses API 的认证头能力等同于 ChatGPT 配置能力。
 
 如果 MeterSphere 仅在企业内网，不应直接暴露公网；应通过企业批准的反向代理、私有连接或受控 MCP gateway 暴露，并保留 WAF、IP 策略和审计。
 
@@ -689,7 +700,7 @@ https://metersphere.example.com/api/mcp
 }
 ```
 
-具体字段名由前端接入卡片按已验证客户端版本生成。若客户端不支持远程 Streamable HTTP，技能包应明确告知“不兼容当前接入方式”，不能引导用户安装已废弃的本地集成包。
+具体字段名由前端接入卡片按已验证客户端版本生成。若客户端不支持远程 Streamable HTTP，应提示使用已验证的 Node/stdio 兼容方式或升级客户端；不承诺未实测版本兼容。
 
 ## 10. API 设计
 
@@ -712,8 +723,8 @@ https://metersphere.example.com/api/mcp
 
 ```json
 {
-  "name": "公司电脑 Codex",
-  "clientType": "CODEX",
+  "name": "公司电脑测试助手",
+  "clientType": "OTHER",
   "projectIds": ["project-1"],
   "scopes": ["FUNCTIONAL_READ", "BUG_READ"],
   "expireTime": 1790000000000
@@ -779,7 +790,7 @@ Agent 与 API
 - 创建成功时根据已选客户端即时生成完整、可查看、可一键复制的 MCP 配置；用户自行粘贴到 Agent 中。
 - 页面删除“解压后按 INSTALL.md 配置本机 mcp.json……”提示。
 - Token 列表展示使用统计和安全状态。
-- “连接测试”调用只读 Tool（如 `list_projects`），返回当前身份、可访问项目和可用 Tools，不执行写操作。
+- 真实“连接测试”由持有凭据的客户端调用只读工具；列表仅做元数据和配置检查，两者分别展示结果，不执行写操作。
 
 ## 12. 后端改造
 
@@ -855,7 +866,7 @@ Token + IP
 Idempotency-Key: <client-generated-id>
 ```
 
-服务端按 `userId + toolName + idempotencyKey` 去重，避免 Agent 超时重试造成重复项目、用例、计划或缺陷。
+服务端沿用 Token ID + 固定 operationId + requestId 去重，并保存规范化参数摘要；同键异参冲突，成功重放仍重新授权。副作用与幂等结果同事务。头与参数的键同时存在必须一致；不得改成用户维度造成多个 Agent 相互命中。租约和临时凭证不使用普通结果缓存。
 
 ## 14. 实施阶段
 
@@ -867,7 +878,7 @@ Idempotency-Key: <client-generated-id>
 | M4 | AI 技能包重构、Codex/ChatGPT/Cursor/WorkBuddy 远程接入向导 | 3～5 人日 |
 | M5 | 管理员治理、限流/幂等、安全测试与多客户端验收 | 5～8 人日 |
 
-合计约 24～36 人日。建议后端两人、前端一人、测试一人并行。
+以上为初稿估算，不作为当前排期承诺。先完成 §19 的基线、OAuth 和迁移范围核对，再按实际增量重新估算；阶段退出标准见 §19。
 
 优先顺序：
 
@@ -931,7 +942,7 @@ Idempotency-Key: <client-generated-id>
 ### 16.1 已确认
 
 1. 普通用户可自主选择 Token 权限，包括 `AGENT_ALL`。
-2. 舍弃原有 MCP 集成程序包，不再交付或维护本地 `stdio` adapter，仅保留 AI 技能包。
+2. 远程优先；本轮保留 Node/stdio，旧退役决定由 §19 的迁移与验收条件替代。
 3. 页面拆分为“个人 Agent 与 API”和“管理员 Agent 集成治理”。
 4. “管理员 Agent 集成治理”菜单、路由和接口仅系统管理员可见/可访问。
 5. 创建 Token 页面删除 Codex 客户端选项，但 Codex MCP 接入能力继续保留。
@@ -941,7 +952,7 @@ Idempotency-Key: <client-generated-id>
 
 ### 16.2 剩余待确认
 
-1. ChatGPT 首版使用个人 Bearer Token，还是直接实现 OAuth 2.1；本方案建议内部试用先 Bearer，正式企业推广前完成 OAuth。
+1. ChatGPT 按 OAuth 路径实施；实际工作区和版本适配结果决定放行，不默认承诺静态 Bearer。
 2. Token 默认项目范围：本方案推荐当前项目，用户可显式扩展到本人其他项目。
 3. Token 默认能力可以是只读，但用户可切换并选择 `AGENT_ALL`。
 4. 旧 Token 迁移期限：建议 30～60 天。
@@ -973,7 +984,7 @@ MeterSphere 中已有的权限。
 
 ```text
 技能包用于教 AI 正确使用 MeterSphere MCP，不包含你的 Token。
-下载后可直接交给 AI。AI 应按照包内说明向你获取 MeterSphere 地址和个人 Token，
+下载后可直接交给 AI。AI 应按照包内说明指导你在本地秘密存储中配置 MeterSphere 地址和个人 Token，不要求把完整 Token 发到聊天中，
 生成对应客户端的远程 MCP 配置并执行安全的连接验证。
 ```
 
@@ -985,3 +996,95 @@ MeterSphere 中已有的权限。
 - 当前代码：`frontend/src/views/setting/system/agentIntegration/**`
 - 当前代码：`metersphere-mcp/**`
 - OpenAI 官方 Remote MCP API 定义支持通过 `server_url` 连接远程 MCP，并可携带认证信息或自定义 headers；客户端具体开放能力仍应按部署时版本和工作区策略实测。
+
+
+## 19. 修订后的实施契约与验收要求
+
+### 19.1 需求追踪
+
+以下为目标契约，实施时补充准确文件、迁移编号和测试证据，不凭表格认定接口已实现。
+
+| 需求 | 前端入口及交互 | 后端接口或工具 | 数据/配置 | 验收 |
+|---|---|---|---|---|
+| 本人凭据 | 个人 Agent 与 API、列表及一次性弹窗 | /api/personal/agent-tokens 创建、列表、修改、启停、删除 | 所有权、范围、revision、配额 | 普通用户、伪造身份、IDOR、并发配额 |
+| 轮换 | 所有者轮换、版本冲突及丢失响应提示 | POST /api/personal/agent-tokens/{id}/rotate | 凭据代次、哈希及审计 | 并发、旧秘密失效、无明文重放 |
+| 治理 | 系统治理菜单、策略、审计 | /api/admin/agent-tokens、agent-policy、agent-audit | 独立系统权限、持久化策略 | 普通用户拒绝、纯系统管理员可用 |
+| 接入检查 | 配置检查与真实连接分开显示 | /{id}/test 检查元数据；客户端实际调用 MCP | 安全存储、支持矩阵 | 不以元数据检查冒充连接成功 |
+| 多 Agent | 执行工作台、状态与冲突展示 | MCP 任务、事实及只读状态工具 | Token、generation、attempt、lease | 认领隔离、撤权、迟到回调 |
+| 用例库与执行 | 用例库、回收站、确认页、门禁面板 | 用例库能力清单及受管执行链路 | 版本、确认记录、证据、正式同步 | 全部必选能力及门禁约束逐项验收 |
+| 技能及客户端 | 下载、中文能力清单及配置 | /api/personal/agent-package/manifest、skill/download | 版本、校验和及能力摘要 | 真实下载制品、安装包与客户端验证 |
+
+页面统一处理 loading、empty、success、validation-error、permission-denied、network-error、server-error。前后端复用安全错误协议，未知错误返回可理解提示和 traceId，不向用户展示 SQL、异常类名或堆栈。
+
+### 19.2 增量基线
+
+以 2026-10-20 当前工作区为文档核对基线，包含未提交的用例库实现；部署版本须另核对。已有 PersonalAgentTokenController、AgentTokenManagementService、AgentTokenService 的 BCrypt 验证、AgentMcpStreamableController/Service、AgentBusinessAccess、AgentOperationExecutor 和 AgentMcpBundleService。
+
+本次重点补齐个人默认权限及管理认证隔离、轮换/迁移、全部入口实时授权、授权版本、同源契约与客户端验收，不要求为了类名而重写业务服务。CASE_MODULE_WRITE_V2 已有显式授权保护，通配 scope 不能覆盖。用例库查询/目录基础已有部分实现，删除恢复、导入导出及完整附件生命周期等仍按原方案登记缺口。
+
+### 19.3 授权版本与项目范围
+
+- 凭据格式版本 credentialVersion 与 authorizationContractVersion 分开。AGENT_ALL 只能覆盖用户已确认的能力版本，新增高风险能力重新授权，不能自动扩张。
+- scopes、工具名和 Schema 从真实注册中心生成。CASE_READ、REVIEW_READ 等未定义枚举不能直接发放；现有只读权限及新增 scope 的迁移须逐工具映射。保留原生 metersphere.* 名称，下划线名称仅作为有迁移说明的别名，不能新增漂移目录。
+- projectScopeMode 使用 SELECTED / ALL_ACCESSIBLE。SELECTED 必须非空；ALL_ACCESSIBLE 包含未来新获授权项目，创建/扩权时明确说明。历史空数组回填不扩大实时用户权限。
+- 默认个人权限通过 SYSTEM_PERSONAL_AI_AGENT_* 及历史角色迁移落实，不授予用户管理权限。关闭新建或调用后，用户仍可查看并吊销本人凭据。
+- 工具发现、调用、下载、异步任务及幂等重放均复核当前 Token、用户、scope、策略与资源权限。系统级授权不虚构项目成员要求。
+
+### 19.4 数据、密码验证和迁移
+
+在现有字段上补齐 credential_version、authorization_contract_version、credential_generation、project_scope_mode、revision、轮换和吊销审计，登记真实类型、默认值、唯一索引、回填、迁移编号及兼容读写，不重复添加已有字段。
+
+秘密由安全随机源生成，至少 256 bit 熵。高熵随机 Token 的 SHA-256 摘要不能等同于弱密码离线破解风险；复用现有 BCrypt 时必须定义参数、输入长度及性能预算。认证前 IP/全局限流和请求大小限制先于昂贵验证，认证后再按 Token/工具限流；可信代理列表决定是否采信转发 IP。
+
+旧格式按显式版本验证，v2 失败不回退 v1。迁移公告启用后默认 30 天，审计延期最多 60 天，截止配置自动生效；不能安全归类的旧凭据停用后重新签发。迁移不恢复秘密，回退不重新启用已截止版本或已吊销凭据。
+
+### 19.5 状态、轮换及运行中任务
+
+ENABLED 可调用；DISABLED 可按规则启用；REVOKED 永不可恢复。EXPIRED 按 expire_time 在请求时计算，不允许启用绕过到期。用户停用、删除或权限撤回影响后续调用。
+
+轮换保留内部 Token ID，递增 credential_generation/revision，更换 publicId 与秘密，提交后旧秘密立即失效；首版无重叠期。要求 Web 所有权和 expectedRevision，过期或吊销记录不能轮换复活。并发轮换只允许一项成功，吊销不能被后续轮换覆盖。
+
+轮换响应不缓存明文。响应丢失时查看轮换元数据后显式进行下一代轮换，不能重放旧请求恢复秘密。普通业务幂等记录保留在稳定 Token ID 下；旧代次租约和上传凭证失效，不能由新秘密直接继承。任务进入可解释的待恢复状态，按质量门禁允许的新尝试/重新认领恢复，原事实与审计保留。
+
+异步正式同步仍检查当前业务授权与 attempt，撤权后暂停受影响同步并展示原因；不能因任务曾获授权而继续写入，也不能删除冻结事实。恢复按门禁重新授权，不通过重放旧租约绕过校验。
+
+### 19.6 多 Agent、统计及幂等
+
+默认一 Agent 实例一 Token；client_type 与 User-Agent 仅为声明用途，不能作为可信身份。共享 Token 无法可靠区分实例，审计以用户、Token ID、代次、operationId、task/attempt 为依据。配额包含 Token、用户、项目、全局及并发维度，避免多 Token 绕过。
+
+内容修改使用共享 revision/updateTime，网页、导入和 MCP 均维护；任务认领遵守租约及隔离栅栏，旧回调不能覆盖新 attempt。跨 Token 业务去重若有必要单独定义，不能混入请求重试键。
+
+统计分别记录认证次数、调用次数、成功调用次数和对应时间，异步原子累计且队列有界。统计失败不阻塞业务；安全审计不能视为可丢失统计，应可靠持久化，明确保留期、脱敏及查询权限。
+
+普通业务幂等使用现有事务执行器；定义保留期及过期重试规则，文件/通知/调度采用可靠事件与补偿。租约、短期凭证及完成后的确认沿用质量门禁专用规则；不能缓存旧 claim 凭据并恢复写权限。
+
+### 19.7 协议、OAuth 和真实连接
+
+固定协议版本，覆盖版本协商、Content-Type/Accept、Origin、通知、JSON-RPC ID、非法 Schema、大小/超时与错误分层。首版无状态，不为兼容虚构 session；无 SSE 的 GET 返回 405，DELETE 按所选协议定义，不返回伪关闭成功。上下文在 finally 清理，不能误登出 Web 用户。
+
+管理 API 仅接受 Web/JWT 并检查所有权或系统权限；含个人 Token 的管理请求拒绝，Cookie 请求校验 CSRF。MCP 仅会话不放行，无效 Token 不回退会话；同用户混合凭据仍按 Token 限制，不同用户拒绝；双凭据头拒绝歧义。
+
+OAuth 工作包包括元数据发现、Code + PKCE、注册策略、redirect URI、resource/audience/scope、授权同意、刷新轮换、撤销和错误发现。OAuth 同样受当前用户权限与全局门禁约束，不允许反向管理个人 Token。ChatGPT 未完成实测前标记待支持。
+
+服务端只存哈希，不能凭 Token ID 重建真实连接。列表 test 仅检查状态与配置；真实认证由持有秘密的客户端执行 initialize/tools/list/只读工具。配置中的环境变量语法按客户端实测，不把通用示意 JSON 宣称为标准导入格式。关闭弹窗后仅复制占位配置。
+
+平台外部 MCP 地址使用受信配置，不从任意 Host/转发头生成。技能包禁止要求用户在聊天中发送完整秘密。记录每个客户端的版本、认证方式、读写、文件传输、受管执行和错误恢复证据，不能用只读发现替代端到端验收。
+
+### 19.8 阶段及验收
+
+先做 M0：盘点工作区与部署差异、工具/权限/数据映射、OAuth 可行性及迁移设计，再执行个人管理与认证隔离、生命周期、协议/事务一致性、客户端与技能包、发布验收。管理员策略及限流是开放自助签发的前置条件，不能推迟到全部客户端开放之后。
+
+必须增加以下验收：
+
+1. 同用户多 Token、不同用户、混合会话及双认证头，无串身份和授权回退。
+2. 并发创建/轮换/吊销、轮换响应丢失、过期及旧版本截止，不超配额、不复活凭据、不重放秘密。
+3. 旧 AGENT_ALL 不获得新增风险能力；纯系统管理员能访问全局门禁，具体业务仍校验资源权限。
+4. 撤权/吊销/轮换后旧 lease、文件凭证和幂等重放不能越权；事实保留、暂停及恢复状态真实。
+5. 多 Agent 并发修改、认领、同键异参和迟到回调，无重复副作用和旧尝试覆盖。
+6. 缺失事实、未提交证据、直接 complete、历史直写、管理员/人工审批均不能绕过门禁。完成状态与正式同步状态分别验证。
+7. 执行中删除的取消、等待、停止后删除及预检后目标变化，沿用用户确认与并发协调验收。
+8. 真实客户端、实际安装的 Node 包及下载技能包完成必选业务链路；日志、错误、压缩包及列表无秘密泄漏。
+
+执行相关单元测试、后端集成、前端类型检查、只读 lint、生产构建、后端打包、真实数据库迁移、Docker 构建/启动/健康和核心 E2E。实施记录按需求编号登记准确命令、环境、结果、制品摘要及证据；未执行项说明原因、风险及可复现命令，不虚构尚不存在的测试命令。
+
+回滚只允许支持已生成凭据/授权版本及冻结事实协议的兼容制品；否则暂停新签发、新准入或受影响回写并修复前进。严禁恢复项目差异化门禁、直接结果回写、已截止 v1 或吊销秘密。任何必选项缺乏证据，状态为部分完成或阻塞。

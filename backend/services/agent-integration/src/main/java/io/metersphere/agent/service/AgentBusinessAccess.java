@@ -54,6 +54,11 @@ public class AgentBusinessAccess {
         return projects.getFirst();
     }
 
+    public void plan(String projectId, String planId) {
+        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM test_plan WHERE id=? AND project_id=? AND deleted=0", Long.class, planId, projectId);
+        if (count == null || count != 1) throw denied();
+    }
+
     public void cases(String projectId,List<String> caseIds) {
         if(caseIds==null)return;
         if(caseIds.size()>100 || caseIds.stream().anyMatch(StringUtils::isBlank) || caseIds.stream().distinct().count()!=caseIds.size())throw new MSException("AGENT_VALIDATION_ERROR");

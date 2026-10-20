@@ -438,6 +438,30 @@
             <foreach collection="${filter}.entrySet()" index="key" item="values">
                 <if test="values != null and values.size() > 0">
                     <choose>
+                        <when test="key=='agentPriority'">
+                            AND EXISTS (SELECT 1 FROM functional_case_custom_field ap
+                                JOIN custom_field acf ON acf.id=ap.field_id
+                                WHERE ap.case_id=functional_case.id AND acf.name='functional_priority'
+                                AND TRIM(BOTH '&quot;' FROM ap.value) IN
+                                <foreach collection="values" item="value" open="(" separator="," close=")">#{value}</foreach>)
+                        </when>
+                        <when test="key=='agentTagsAny' or key=='agentTagsAll'">
+                            AND (
+                            <choose>
+                                <when test="key=='agentTagsAll'">
+                                    <foreach collection="values" item="value" separator=" AND ">
+                                        JSON_CONTAINS(CASE WHEN JSON_VALID(functional_case.tags) THEN functional_case.tags ELSE '[]' END, JSON_QUOTE(#{value}))
+                                    </foreach>
+                                </when>
+                                <otherwise>
+                                    <foreach collection="values" item="value" separator=" OR ">
+                                        JSON_CONTAINS(CASE WHEN JSON_VALID(functional_case.tags) THEN functional_case.tags ELSE '[]' END, JSON_QUOTE(#{value}))
+                                    </foreach>
+                                </otherwise>
+                            </choose>
+                            )
+                        </when>
+
                         <!-- 评审状态 -->
                         <when test="key=='reviewStatus'">
                             and functional_case.review_status in
