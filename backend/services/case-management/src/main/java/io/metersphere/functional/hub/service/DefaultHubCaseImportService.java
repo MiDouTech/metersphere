@@ -302,7 +302,8 @@ public class DefaultHubCaseImportService {
         List<FunctionalCaseAttachment> attachments = functionalCaseAttachmentMapper.selectByExample(sourceExample);
         FileRepository repository = FileCenter.getDefaultRepository();
         for (FunctionalCaseAttachment source : attachments) {
-            if (Boolean.TRUE.equals(source.getLocal())) {
+            if (Boolean.TRUE.equals(source.getLocal()) && !functionalCaseAttachmentService.copyExecutionEvidence(
+                    sourceProjectId,sourceCaseId,targetProjectId,targetCaseId,source.getFileId(),source.getFileName())) {
                 FileCopyRequest copy = new FileCopyRequest();
                 copy.setCopyFolder(DefaultRepositoryDir.getFunctionalCaseDir(sourceProjectId, sourceCaseId) + "/" + source.getFileId());
                 copy.setCopyfileName(source.getFileName());

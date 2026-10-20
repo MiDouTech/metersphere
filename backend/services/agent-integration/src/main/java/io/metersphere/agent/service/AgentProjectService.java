@@ -127,32 +127,31 @@ public class AgentProjectService {
     }
 
     public String resolveProjectId(String projectIdentity) {
+        return resolveProjectId(projectIdentity, null);
+    }
+
+    public String resolveProjectId(String projectIdentity, String identityType) {
+        if (identityType != null && !Set.of("ID", "NUMBER", "NAME").contains(identityType)) throw new MSException("AGENT_VALIDATION_ERROR");
         String identity = StringUtils.trimToEmpty(projectIdentity);
         if (StringUtils.isBlank(identity)) {
             String currentProjectId = SessionUtils.getCurrentProjectId();
             if (StringUtils.isBlank(currentProjectId)) {
-                throw new MSException("Missing project identity. Use projectId with internal project id, UI project number, or project name.");
+                throw new MSException("PROJECT_IDENTITY_REQUIRED");
             }
             identity = currentProjectId;
         }
 
-        String searchIdentity = identity;
-        AgentProjectSearchRequest request = new AgentProjectSearchRequest();
-        request.setKeyword(searchIdentity);
-        request.setPage(1);
-        request.setPageSize(MAX_PAGE_SIZE);
-        request.setIncludeArchived(true);
-        List<AgentProjectDTO> matched = search(request).getItems().stream()
-                .filter(project -> exactProjectMatch(project, searchIdentity))
-                .collect(Collectors.toList());
+        Set<String> candidateIds = accessibleProjectIds(requireUserId());
+        AgentToken token = AgentTokenContext.get();
+        List<String> tokenProjectIds = AgentTokenProjectAccess.parseProjectIds(token);
+        if (CollectionUtils.isNotEmpty(tokenProjectIds)) candidateIds.retainAll(tokenProjectIds);
+        List<Project> matched = candidateIds.isEmpty() ? List.of()
+                : extAgentProjectMapper.resolveExact(new ArrayList<>(candidateIds), identity, identityType);
         if (matched.isEmpty()) {
-            throw new MSException("Project not found or not accessible by current Agent Token: " + identity);
+            throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
         }
         if (matched.size() > 1) {
-            String candidates = matched.stream()
-                    .map(project -> project.getName() + "(" + project.getNum() + ", " + project.getId() + ")")
-                    .collect(Collectors.joining(", "));
-            throw new MSException("Project identity matched multiple projects. Use internal project id. Candidates: " + candidates);
+            throw new MSException("PROJECT_IDENTITY_AMBIGUOUS");
         }
         return matched.get(0).getId();
     }

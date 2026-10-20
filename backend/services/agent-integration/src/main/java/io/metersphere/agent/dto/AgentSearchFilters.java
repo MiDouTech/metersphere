@@ -7,6 +7,9 @@ import java.util.List;
 
 @Data
 public class AgentSearchFilters {
+    private Boolean includeDescendants = true;
+    private String tagMatch = "ANY";
+    private List<String> reviewStatus;
     @Schema(description = "名称或编号关键词")
     private String keyword;
 

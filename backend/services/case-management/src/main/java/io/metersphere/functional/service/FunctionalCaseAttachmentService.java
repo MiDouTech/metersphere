@@ -55,6 +55,8 @@ import java.util.stream.Collectors;
 @Transactional(rollbackFor = Exception.class)
 public class FunctionalCaseAttachmentService {
 
+    @Resource private FunctionalCaseEvidenceStore evidenceStore;
+
 
     @Resource
     private FunctionalCaseAttachmentMapper functionalCaseAttachmentMapper;
@@ -203,6 +205,8 @@ public class FunctionalCaseAttachmentService {
     private void deleteMinioFile(List<FunctionalCaseAttachment> files, String caseId, String projectId) {
         if (CollectionUtils.isNotEmpty(files)) {
             files.forEach(file -> {
+                // Immutable execution evidence is retained for audit; only its UI association is removed.
+                if (evidenceStore.retained(file.getFileId(), file.getCaseId())) return;
                 FileRequest fileRequest = new FileRequest();
                 fileRequest.setFileName(file.getFileName());
                 fileRequest.setFolder(DefaultRepositoryDir.getFunctionalCaseDir(projectId, caseId) + "/" + file.getFileId());
@@ -290,6 +294,8 @@ public class FunctionalCaseAttachmentService {
      * @param request request
      */
     public ResponseEntity<byte[]> downloadPreviewImgById(FunctionalCaseFileRequest request) {
+        byte[] evidence = evidenceStore.read(request.getProjectId(), request.getCaseId(), request.getFileId());
+        if (evidence != null) return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).body(evidence);
         FunctionalCaseAttachmentExample example = new FunctionalCaseAttachmentExample();
         example.createCriteria().andFileIdEqualTo(request.getFileId()).andCaseIdEqualTo(request.getCaseId());
         List<FunctionalCaseAttachment> caseAttachments = functionalCaseAttachmentMapper.selectByExample(example);
@@ -314,6 +320,8 @@ public class FunctionalCaseAttachmentService {
     }
 
     public byte[] getFileByte(FunctionalCaseFileRequest request) {
+        byte[] evidence = evidenceStore.read(request.getProjectId(), request.getCaseId(), request.getFileId());
+        if (evidence != null) return evidence;
         FunctionalCaseAttachmentExample example = new FunctionalCaseAttachmentExample();
         example.createCriteria().andFileIdEqualTo(request.getFileId()).andCaseIdEqualTo(request.getCaseId());
         List<FunctionalCaseAttachment> caseAttachments = functionalCaseAttachmentMapper.selectByExample(example);
@@ -331,6 +339,20 @@ public class FunctionalCaseAttachmentService {
             }
         }
         return bytes;
+    }
+
+    /** Ordinary case copies keep an independent object-store attachment, not an execution result. */
+    public boolean copyExecutionEvidence(String sourceProjectId, String sourceCaseId, String targetProjectId,
+                                         String targetCaseId, String fileId, String fileName) {
+        byte[] bytes=evidenceStore.read(sourceProjectId, sourceCaseId, fileId);
+        if(bytes==null) return false;
+        FileRequest target=new FileRequest();
+        target.setFileName(fileName);
+        target.setFolder(DefaultRepositoryDir.getFunctionalCaseDir(targetProjectId,targetCaseId)+"/"+fileId);
+        target.setStorage(StorageType.MINIO.name());
+        try { fileService.upload(bytes,target); }
+        catch(Exception error) { LogUtils.error(error); throw new MSException("复制执行证据附件失败，请稍后重试"); }
+        return true;
     }
 
     public FunctionalCaseAttachment getAttachment(FunctionalCaseFileRequest request) {
@@ -473,6 +495,9 @@ public class FunctionalCaseAttachmentService {
             //在正式目录获取
             FunctionalCaseAttachment attachment = caseAttachments.getFirst();
             fileName = attachment.getFileName();
+            byte[] evidence = evidenceStore.read(projectId, attachment.getCaseId(), fileId);
+            if (evidence != null) return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"").body(evidence);
             FileRequest fileRequest = new FileRequest();
             fileRequest.setFileName(attachment.getFileName());
             if (compressed) {

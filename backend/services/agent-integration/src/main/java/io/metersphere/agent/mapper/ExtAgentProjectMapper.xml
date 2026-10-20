@@ -68,4 +68,15 @@
             p.id ASC
         LIMIT #{offset}, #{limit}
     </select>
+    <select id="resolveExact" resultType="io.metersphere.project.domain.Project">
+        SELECT p.id, p.name, p.num FROM project p WHERE p.deleted=0
+        AND p.id IN <foreach collection="projectIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        AND (
+        <choose>
+            <when test="identityType=='ID'">BINARY p.id = BINARY #{identity}</when>
+            <when test="identityType=='NUMBER'">CAST(p.num AS CHAR) = #{identity}</when>
+            <when test="identityType=='NAME'">BINARY p.name = BINARY #{identity}</when>
+            <otherwise>BINARY p.id = BINARY #{identity} OR CAST(p.num AS CHAR) = #{identity} OR BINARY p.name = BINARY #{identity}</otherwise>
+        </choose>) ORDER BY p.id LIMIT 2
+    </select>
 </mapper>

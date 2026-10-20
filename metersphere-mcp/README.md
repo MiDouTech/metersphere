@@ -11,7 +11,7 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 | `MS_BASE_URL` | 是 | MeterSphere 地址，如 `https://msp.ebcone.cn` |
 | `MS_AGENT_TOKEN` | 是 | Agent Token，格式 `msat_xxx` |
 | `MS_PROJECT_ID` | 是 | 默认项目 ID（创建新项目后建议在调用中显式传 projectId） |
-| `MS_TEST_PLAN_ID` | 否 | 默认测试计划 ID，`search` 时自动带入 |
+| `MS_TEST_PLAN_ID` | 否 | 执行类操作的默认计划；用例库 search/get 不自动带入，查询计划上下文须显式传 testPlanId |
 
 ## MCP Tools
 
@@ -62,7 +62,7 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 | `get_functional_case` | 单条用例详情 |
 | `submit_functional_result` | 回写计划内执行结果 |
 | `submit_functional_results_batch` | 批量回写 |
-| `upload_execution_attachment` | 上传执行截图/附件 |
+| `metersphere.functional.execution.evidence.upload` | 暂存与用例及步骤绑定的截图，门禁通过后发布 |
 | `list_modules` | 模块列表 |
 | `get_exec_log` | 执行审计日志详情 |
 | `metersphere.test_plan.search` | 检索测试计划 |
@@ -140,7 +140,7 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 1. `create_project` → 得到 projectId  
 2. 对话生成用例 → `batch_create_functional_cases`  
 3. `create_test_plan` + caseIds；`create_case_review` + caseIds  
-4. `search_functional_cases` → 外部执行 → `upload_execution_attachment` → `submit_functional_result`  
+4. `search_functional_cases` → `metersphere.functional.execution.contract` → 外部执行 → `metersphere.functional.execution.evidence.upload` → `metersphere.functional.execution.submit`
 5. 失败则 `create_bug`（带 caseId）；后续可用 `search_bugs` / `get_bug` / `update_bug` 跟踪与改状态
 
 ## 常见问题
@@ -172,3 +172,27 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 - 不再注册 `submit_functional_result`、`submit_functional_results_batch`、`metersphere.functional.submit.batch`。旧直写由服务端拒绝；执行结果由质量门禁评估后回写。
 - 领取响应丢失时先查询任务状态，不盲目重复领取。租约和上传凭证不得写入业务笔记或共享日志。
 - 技能包契约版本为 1.1.0；该版本不承诺尚未开放的评审结论提交和 Excel 导入能力。实际能力以服务器 `tools/list` 为准。
+
+
+## 0.5.1 用例库能力
+
+- search_functional_cases 支持 projectId、identityType、标签 ANY/ALL、子目录范围、评审状态及版本筛选；默认读取用例库，分页响应保留 cases，并返回 current/pageSize/total/hasMore。
+- 补充原生名称适配：functional.template.get、history.list、comments.list、attachments.list、case.update、comment.create、versions.list、overview.get、module.get/update/move（均带 metersphere. 前缀）。
+- case.update 先读取 updateTime；customFields 使用字段 ID 到值的对象映射，不能提交执行结果字段。
+- module.update/move 需要明确授予 CASE_MODULE_WRITE_V2，旧 AGENT_ALL/FUNCTIONAL_ALL 不包含此权限。module.get 返回 expectedUpdateTime 的来源；parentId=NONE 表示项目根目录。
+- 技能包版本 1.2.1；实时分页不是完整快照导出。运行中删除确认、异步导入导出、普通附件上传下载、评论删除等仍需后续实现，以实时 tools/list 为准，不应猜测工具名调用。
+
+- functional.comment.update 编辑本人评论正文，要求 CASE_COMMENT_EDIT_V2、expectedUpdateTime 和 requestId；不重新通知，不修改回复关系和附件。网页编辑使用相同版本校验。
+# 个人 Agent 直接执行用例（0.6.0）
+
+平台个人 Token 选择“个人 Agent 测试闭环”，包括 `FUNCTIONAL_READ;FUNCTIONAL_SUBMIT;CASE_ATTACHMENT`。用户本人仍需该项目的用例读取和更新权限。原生远程 MCP 和 Node 客户端均支持以下流程，无需任务、租约或 Runner：
+
+1. `metersphere.functional.execution.contract({projectId, caseId})`：取得完整步骤、`contentHash`、`policyHash` 和全局门禁要求。`stepNum` 使用返回步骤数组从 1 开始的位置。
+2. 执行测试，逐步骤保存观察事实和门禁要求的执行前/后截图。
+3. `metersphere.functional.execution.evidence.upload`：传 `projectId, caseId, contentHash, stepNum, purpose, fileName, contentType, requestId`，以及 `base64`。Node 客户端可用本机 `filePath` 替代 base64。支持可解码的 PNG/JPEG，单文件不超过 5 MiB，并受当前全局策略更小的大小/MIME 限制。暂存附件 24 小时内提交，单 Token 暂存总量 50 MiB。
+4. `metersphere.functional.execution.submit`：传 `projectId, caseId, contentHash, policyHash, requestId, steps`。每个步骤为 `{stepNum, actual, result, evidenceIds}`，不可漏步骤或跨步骤复用证据。审核通过后，附件与用例执行结果在一个事务内发布；拒绝时正式结果不变。
+5. `metersphere.functional.execution.get({projectId, caseId, submissionId})` 查询步骤、附件对应关系及当次策略。用例详情也可查看、下载已发布附件。
+
+当前 Q-ASSERT-01 使用服务端用例文字预期进行精确 EQUALS 比较：观察值相等时提交 `SUCCESS`，不等时提交 `ERROR`；不得直接复制未实际观察到的预期。它不是截图语义识别。全局策略若不允许 EQUALS，此通道拒绝提交，不会绕过策略。用例内容或策略变化后重新读取基准并核查执行事实。
+
+相同操作重试沿用相同 requestId 和参数。已被采用的附件不能提交第二次；需重新执行时上传新的证据。已批准证据存于数据库并保留审计，删除用例附件关联不删除历史事实。数据库备份需包含新证据表。

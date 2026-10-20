@@ -15,6 +15,8 @@ public class FunctionalCaseCommentRequest {
     @NotBlank(message = "{functional_case_comment.id.not_blank}", groups = {Updated.class})
     private String id;
 
+    private Long expectedUpdateTime;
+
     @Schema(description = "功能用例ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{functional_case_comment.case_id.not_blank}", groups = {Created.class, Updated.class})
     private String caseId;

@@ -18,21 +18,25 @@ public class AgentShiroFilterChainExtender implements ShiroFilterChainExtender {
         filters.put("agentToken", agentTokenFilter);
         chain.put("/ai/execution/triggers/*/webhook", "anon");
         chain.put("/api/ai/execution/triggers/*/webhook", "anon");
-        // 兼容：网关剥离 /api 后落到 /agent/**，以及直连保留 /api/agent/**
+        // Gateway aliases share the same credential boundary.
         chain.put("/agent/v1/functional/health", "anon");
         chain.put("/api/agent/v1/functional/health", "anon");
         chain.put("/agent/v1/**", "agentToken, authc");
         chain.put("/api/agent/v1/**", "agentToken, authc");
-        chain.put("/agent/mcp/**", "authc");
-        chain.put("/api/agent/mcp/**", "authc");
-        chain.put("/personal/agent-tokens/**", "authc");
-        chain.put("/api/personal/agent-tokens/**", "authc");
-        chain.put("/personal/agent-projects/**", "authc");
-        chain.put("/api/personal/agent-projects/**", "authc");
-        chain.put("/personal/agent-package/**", "authc");
-        chain.put("/api/personal/agent-package/**", "authc");
-        chain.put("/admin/agent-tokens/**", "authc");
-        chain.put("/api/admin/agent-tokens/**", "authc");
+        chain.put("/agent/mcp/**", "agentToken, authc");
+        chain.put("/api/agent/mcp/**", "agentToken, authc");
+        chain.put("/personal/agent-tokens/**", "agentToken, authc");
+        chain.put("/api/personal/agent-tokens/**", "agentToken, authc");
+        chain.put("/personal/agent-projects/**", "agentToken, authc");
+        chain.put("/api/personal/agent-projects/**", "agentToken, authc");
+        chain.put("/personal/agent-package/**", "agentToken, authc");
+        chain.put("/api/personal/agent-package/**", "agentToken, authc");
+        chain.put("/admin/agent-tokens/**", "agentToken, authc");
+        chain.put("/api/admin/agent-tokens/**", "agentToken, authc");
+        chain.put("/admin/agent-policy/**", "agentToken, authc");
+        chain.put("/api/admin/agent-policy/**", "agentToken, authc");
+        chain.put("/admin/agent-audit/**", "agentToken, authc");
+        chain.put("/api/admin/agent-audit/**", "agentToken, authc");
         // Runner endpoints authenticate an msrt_/msrl_ token inside AgentRunnerService.
         chain.put("/internal/ai-runner/v1/**", "anon");
         chain.put("/api/internal/ai-runner/v1/**", "anon");

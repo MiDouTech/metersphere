@@ -41,6 +41,9 @@ import java.util.stream.Stream;
 public class FunctionalCaseCommentService {
 
     @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Resource
     private FunctionalCaseCommentMapper functionalCaseCommentMapper;
 
     @Resource
@@ -326,9 +329,28 @@ public class FunctionalCaseCommentService {
         return userIds;
     }
 
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public FunctionalCaseComment updateComment(FunctionalCaseCommentRequest functionalCaseCommentRequest, String userId) {
-        checkCase(functionalCaseCommentRequest.getCaseId());
+        FunctionalCase ownerCase = checkCase(functionalCaseCommentRequest.getCaseId());
+        if (Boolean.TRUE.equals(ownerCase.getDeleted())) throw new MSException("用例已删除，不能编辑评论");
+        if (functionalCaseCommentRequest.getExpectedUpdateTime() == null
+                || StringUtils.isBlank(functionalCaseCommentRequest.getContent())
+                || functionalCaseCommentRequest.getContent().length() > 20000) {
+            throw new MSException("请刷新评论后重试，评论内容不能为空或超过限制");
+        }
+        var rows = jdbc.queryForList("SELECT case_id,create_user,update_time FROM functional_case_comment WHERE id=? FOR UPDATE",
+                functionalCaseCommentRequest.getId());
+        if (rows.isEmpty() || !Objects.equals(rows.get(0).get("case_id"), ownerCase.getId())
+                || !Objects.equals(rows.get(0).get("create_user"), userId)) {
+            throw new MSException("只能编辑当前用例中本人创建的评论");
+        }
+        long version = ((Number) rows.get(0).get("update_time")).longValue();
+        if (version != functionalCaseCommentRequest.getExpectedUpdateTime()) {
+            throw new MSException("评论已被更新，请刷新后重试");
+        }
+        functionalCaseCommentRequest.setProjectId(ownerCase.getProjectId());
         FunctionalCaseComment functionalCaseComment = getFunctionalCaseCommentByUpdate(functionalCaseCommentRequest);
+        functionalCaseComment.setUpdateTime(Math.max(System.currentTimeMillis(), version + 1));
         if (StringUtils.equals(functionalCaseCommentRequest.getEvent(), NoticeConstants.Event.REPLY)) {
             return updateCommentWidthNotice(functionalCaseCommentRequest, functionalCaseComment, userId);
         } else {

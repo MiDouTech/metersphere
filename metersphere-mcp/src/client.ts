@@ -130,12 +130,20 @@ export class MeterSphereClient {
   }
 
   searchFunctionalCases(params: {
+    versionId?: string;
+    refId?: string;
+    identityType?: "ID" | "NUMBER" | "NAME";
+    projectId?: string;
     query?: string;
     testPlanId?: string;
     includeSteps?: boolean;
     current?: number;
     pageSize?: number;
     filters?: {
+      keyword?: string;
+      includeDescendants?: boolean;
+      tagMatch?: "ANY" | "ALL";
+      reviewStatus?: string[];
       priority?: string[];
       lastExecuteResult?: string[];
       tags?: string[];
@@ -144,7 +152,7 @@ export class MeterSphereClient {
   }) {
     const payload = {
       ...params,
-      testPlanId: params.testPlanId ?? this.config.testPlanId,
+      testPlanId: params.testPlanId,
     };
     return this.request("POST", "/api/agent/v1/functional/search", payload);
   }
@@ -152,8 +160,8 @@ export class MeterSphereClient {
   getFunctionalCase(caseId: string, includeSteps = true, testPlanId?: string) {
     const query = new URLSearchParams();
     query.set("includeSteps", String(includeSteps));
-    if (testPlanId ?? this.config.testPlanId) {
-      query.set("testPlanId", (testPlanId ?? this.config.testPlanId)!);
+    if (testPlanId) {
+      query.set("testPlanId", testPlanId);
     }
     return this.request("GET", `/api/agent/v1/functional/${encodeURIComponent(caseId)}?${query}`);
   }

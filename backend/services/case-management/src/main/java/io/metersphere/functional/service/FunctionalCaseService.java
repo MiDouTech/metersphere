@@ -293,10 +293,12 @@ public class FunctionalCaseService {
         }
     }
 
-    private static void copyFile(FunctionalCaseAddRequest request, String caseId, String saveAttachmentFileId, Map<String, List<FunctionalCaseAttachment>> oldFileMap, FunctionalCaseAttachmentDTO functionalCaseAttachmentDTO, FileRepository defaultRepository) {
+    private void copyFile(FunctionalCaseAddRequest request, String caseId, String saveAttachmentFileId, Map<String, List<FunctionalCaseAttachment>> oldFileMap, FunctionalCaseAttachmentDTO functionalCaseAttachmentDTO, FileRepository defaultRepository) {
         List<FunctionalCaseAttachment> oldFunctionalCaseAttachments = oldFileMap.get(saveAttachmentFileId);
         if (CollectionUtils.isNotEmpty(oldFunctionalCaseAttachments)) {
             FunctionalCaseAttachment functionalCaseAttachment = oldFunctionalCaseAttachments.getFirst();
+            if (functionalCaseAttachmentService.copyExecutionEvidence(request.getProjectId(), functionalCaseAttachment.getCaseId(),
+                    request.getProjectId(), caseId, saveAttachmentFileId, functionalCaseAttachmentDTO.getFileName())) return;
             // 复制文件
             FileCopyRequest fileCopyRequest = new FileCopyRequest();
             fileCopyRequest.setCopyFolder(DefaultRepositoryDir.getFunctionalCaseDir(request.getProjectId(), functionalCaseAttachment.getCaseId()) + "/" + saveAttachmentFileId);

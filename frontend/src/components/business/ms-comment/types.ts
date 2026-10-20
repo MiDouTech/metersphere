@@ -33,6 +33,7 @@ export interface WriteCommentProps {
   caseId?: string; // 用例id
 }
 export interface CommentParams extends WriteCommentProps {
+  expectedUpdateTime?: number;
   content: string;
   replyUser?: string; // 回复人
   notifier?: string; // 通知人

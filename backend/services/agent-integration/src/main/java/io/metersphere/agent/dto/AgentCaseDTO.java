@@ -8,6 +8,13 @@ import java.util.List;
 
 @Data
 public class AgentCaseDTO {
+    private String projectId;
+    private String moduleId;
+    private String versionId;
+    private String reviewStatus;
+    private Long updateTime;
+    private String description;
+    private List<io.metersphere.system.dto.sdk.TemplateCustomFieldDTO> customFields;
     @Schema(description = "功能用例 ID")
     private String caseId;
 

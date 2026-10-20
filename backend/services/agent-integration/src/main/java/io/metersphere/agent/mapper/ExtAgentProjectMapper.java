@@ -7,6 +7,9 @@ import java.util.List;
 
 public interface ExtAgentProjectMapper {
 
+    List<Project> resolveExact(@Param("projectIds") List<String> projectIds,
+                               @Param("identity") String identity, @Param("identityType") String identityType);
+
     long countSearch(@Param("projectIds") List<String> projectIds,
                      @Param("keyword") String keyword,
                      @Param("likeKeyword") String likeKeyword,

@@ -26,6 +26,8 @@ public class AgentTokenService {
     }
 
     public AgentToken validateRequest(HttpServletRequest request) {
+        if (StringUtils.isNotBlank(request.getHeader("Authorization"))
+                && StringUtils.isNotBlank(request.getHeader("X-API-Key"))) return null;
         AgentToken bearerToken = validateBearerToken(request.getHeader("Authorization"));
         if (bearerToken != null) {
             return bearerToken;
@@ -42,6 +44,11 @@ public class AgentTokenService {
             agentToken = agentTokenMapper.selectByTokenHash(DigestUtils.sha256Hex(token));
         }
         if (agentToken == null) {
+            return null;
+        }
+        if (!Boolean.TRUE.equals(agentToken.getEnable())
+                || agentToken.getRevokedAt() != null
+                || (StringUtils.isNotBlank(agentToken.getStatus()) && !"ACTIVE".equals(agentToken.getStatus()))) {
             return null;
         }
         if (agentToken.getExpireTime() != null && agentToken.getExpireTime() < System.currentTimeMillis()) {

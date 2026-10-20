@@ -36,6 +36,8 @@ import java.util.Map;
 @Transactional(rollbackFor = Exception.class)
 public class AgentFunctionalCaseAttachmentService {
     @Resource
+    private AgentBusinessAccess access;
+    @Resource
     private AgentTempAttachmentService agentTempAttachmentService;
     @Resource
     private FunctionalCaseAttachmentService functionalCaseAttachmentService;
@@ -49,7 +51,7 @@ public class AgentFunctionalCaseAttachmentService {
     private AgentExecLogService agentExecLogService;
 
     public List<AgentResourceAttachmentDTO> list(String projectId, String caseId) {
-        FunctionalCase functionalCase = requireCaseInProject(projectId, caseId);
+        FunctionalCase functionalCase = requireCaseInProject(projectId, caseId, false);
         FunctionalCaseDetailDTO detail = new FunctionalCaseDetailDTO();
         detail.setId(functionalCase.getId());
         functionalCaseAttachmentService.getAttachmentInfo(detail);
@@ -74,7 +76,7 @@ public class AgentFunctionalCaseAttachmentService {
     }
 
     public Map<String, Object> attach(String projectId, String caseId, List<String> attachmentIds) {
-        FunctionalCase functionalCase = requireCaseInProject(projectId, caseId);
+        FunctionalCase functionalCase = requireCaseInProject(projectId, caseId, true);
         List<AgentTempAttachment> temps = agentTempAttachmentService.requireUsable(
                 attachmentIds, functionalCase.getProjectId(), AgentAttachmentPurpose.CASE_DETAIL);
         List<String> fileIds = agentTempAttachmentService.toFileIds(temps);
@@ -98,7 +100,7 @@ public class AgentFunctionalCaseAttachmentService {
         if (!BooleanUtils.isTrue(confirm)) {
             throw new MSException(AgentErrorCode.CONFIRMATION_REQUIRED, "删除附件需要 confirm=true");
         }
-        FunctionalCase functionalCase = requireCaseInProject(projectId, caseId);
+        FunctionalCase functionalCase = requireCaseInProject(projectId, caseId, true);
         FunctionalCaseAttachment local = findLocalAttachment(functionalCase.getId(), attachmentId);
         FunctionalCaseDeleteFileRequest request = new FunctionalCaseDeleteFileRequest();
         request.setProjectId(functionalCase.getProjectId());
@@ -135,9 +137,10 @@ public class AgentFunctionalCaseAttachmentService {
         return null;
     }
 
-    private FunctionalCase requireCaseInProject(String projectId, String caseId) {
+    private FunctionalCase requireCaseInProject(String projectId, String caseId, boolean write) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
-        assertProjectAllowed(resolvedProjectId);
+        access.caseProject(caseId, resolvedProjectId, write ? "FUNCTIONAL_CASE:READ+UPDATE" : "FUNCTIONAL_CASE:READ", write,
+                write ? io.metersphere.agent.constants.AgentTokenScope.CASE_ATTACHMENT : io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ);
         FunctionalCase functionalCase = functionalCaseMapper.selectByPrimaryKey(caseId);
         if (functionalCase == null || Boolean.TRUE.equals(functionalCase.getDeleted())) {
             throw new MSException(AgentErrorCode.RESOURCE_NOT_FOUND, "用例不存在: " + caseId);

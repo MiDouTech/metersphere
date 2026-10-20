@@ -55,6 +55,8 @@ class AgentFunctionalCaseSearchServiceTests {
     private ModuleTreeMatcher moduleTreeMatcher;
     @Mock
     private AgentProjectService agentProjectService;
+    @Mock
+    private AgentBusinessAccess access;
 
     @AfterEach
     void tearDown() {
@@ -71,6 +73,7 @@ class AgentFunctionalCaseSearchServiceTests {
         detail.setLastExecuteUser("repository-user");
         detail.setLastExecuteUserName("库执行人");
         when(functionalCaseService.getFunctionalCaseDetail(eq("fc-001"), any(), eq(false))).thenReturn(detail);
+        when(access.caseProject(eq("fc-001"), org.mockito.ArgumentMatchers.isNull(), any(), eq(false), any())).thenReturn("proj-001");
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
 
         AgentCaseDTO result = searchService.getById("fc-001", false, null);
@@ -95,6 +98,7 @@ class AgentFunctionalCaseSearchServiceTests {
         planCase.setLastExecuteUser("plan-user");
         planCase.setLastExecuteUserName("计划执行人");
         when(functionalCaseService.getFunctionalCaseDetail(eq("fc-001"), any(), eq(false))).thenReturn(detail);
+        when(access.caseProject(eq("fc-001"), org.mockito.ArgumentMatchers.isNull(), any(), eq(false), any())).thenReturn("proj-001");
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
         when(testPlanFunctionalCaseService.getFunctionalCasePage(any(), eq(false), eq("proj-001")))
                 .thenReturn(List.of(planCase));
@@ -134,11 +138,9 @@ class AgentFunctionalCaseSearchServiceTests {
         moduleNode.setName("订单");
         moduleNode.setPath("订单");
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of(moduleNode));
-        when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(false)))
+        when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(true)))
                 .thenReturn(List.of(pageItem));
         when(agentCaseSchemaMapper.fromFunctionalCasePage(pageItem, "订单")).thenReturn(mapped);
-        when(agentCaseSchemaMapper.matchesPriority(any(), any())).thenReturn(true);
-        when(agentCaseSchemaMapper.matchesTags(any(), any())).thenReturn(true);
 
         AgentCaseSearchResponse response = searchService.search(request);
 
@@ -171,8 +173,6 @@ class AgentFunctionalCaseSearchServiceTests {
         when(testPlanFunctionalCaseService.getFunctionalCasePage(any(), eq(false), eq("proj-001")))
                 .thenReturn(List.of(planCase));
         when(agentCaseSchemaMapper.fromTestPlanCase(planCase, null)).thenReturn(mapped);
-        when(agentCaseSchemaMapper.matchesPriority(any(), any())).thenReturn(true);
-        when(agentCaseSchemaMapper.matchesTags(any(), any())).thenReturn(true);
 
         AgentCaseSearchResponse response = searchService.search(request);
 
@@ -196,7 +196,7 @@ class AgentFunctionalCaseSearchServiceTests {
         when(agentProjectService.resolveProjectId(null)).thenReturn("proj-001");
         when(agentQueryResolver.resolve(request, "proj-001")).thenReturn(condition);
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
-        when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(false))).thenReturn(List.of());
+        when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(true))).thenReturn(List.of());
 
         AgentCaseSearchResponse response = searchService.search(request);
 
@@ -217,7 +217,7 @@ class AgentFunctionalCaseSearchServiceTests {
         when(agentProjectService.resolveProjectId(null)).thenReturn("proj-001");
         when(agentQueryResolver.resolve(request, "proj-001")).thenReturn(condition);
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
-        when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(false))).thenReturn(List.of());
+        when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(true))).thenReturn(List.of());
 
         AgentCaseSearchResponse response = searchService.search(request);
 
@@ -262,11 +262,40 @@ class AgentFunctionalCaseSearchServiceTests {
         when(agentProjectService.resolveProjectId(null)).thenReturn("proj-001");
         when(agentQueryResolver.resolve(request, "proj-001")).thenReturn(condition);
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
-        when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(false))).thenReturn(List.of());
+        when(functionalCaseService.getFunctionalCasePage(any(), eq(false), eq(true))).thenReturn(List.of());
 
         searchService.search(request);
 
         verify(agentFunctionalCaseExportService, org.mockito.Mockito.never())
                 .enrichWithSteps(any(), any());
     }
+    @Test
+    void projectOnlySearchReturnsDatabaseTotalAndClearsPagination() {
+        var request = new AgentCaseSearchRequest(); request.setProjectId("proj-001"); request.setCurrent(2); request.setPageSize(2); request.setIncludeSteps(false);
+        when(agentProjectService.resolveProjectId("proj-001")).thenReturn("proj-001");
+        when(agentQueryResolver.resolve(request,"proj-001")).thenReturn(new ResolvedSearchCondition());
+        when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
+        when(functionalCaseService.getFunctionalCasePage(any(),eq(false),eq(true))).thenAnswer(invocation -> {
+            var pagination = com.github.pagehelper.PageHelper.getLocalPage();
+            Assertions.assertEquals(2,pagination.getPageNum());
+            Assertions.assertEquals(2,pagination.getPageSize());
+            pagination.setTotal(9);
+            return List.of();
+        });
+        var response=searchService.search(request);
+        Assertions.assertEquals(9,response.getTotal());Assertions.assertEquals(2,response.getCurrent());
+        Assertions.assertTrue(response.isHasMore());Assertions.assertNull(com.github.pagehelper.PageHelper.getLocalPage());
+    }
+
+    @Test
+    void deniedCaseNeverReadsDetailsAndInvalidPageNeverQueries() {
+        org.mockito.Mockito.doThrow(new io.metersphere.sdk.exception.MSException("AGENT_RESOURCE_NOT_ACCESSIBLE"))
+            .when(access).caseProject(eq("foreign"),org.mockito.ArgumentMatchers.isNull(),any(),eq(false),any());
+        Assertions.assertThrows(Exception.class,()->searchService.getById("foreign",true,null));
+        org.mockito.Mockito.verifyNoInteractions(functionalCaseService);
+        var request=new AgentCaseSearchRequest();request.setPageSize(0);
+        Assertions.assertThrows(Exception.class,()->searchService.search(request));
+        org.mockito.Mockito.verifyNoInteractions(agentProjectService);
+    }
+
 }

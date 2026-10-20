@@ -8,6 +8,10 @@ import java.util.List;
 
 @Data
 public class AgentCaseSearchResponse {
+    private String projectId;
+    private int current;
+    private int pageSize;
+    private boolean hasMore;
     @Schema(description = "命中策略")
     private List<String> matchedBy = new ArrayList<>();
 

@@ -5,6 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class AgentTokenScope {
+    public static final String CASE_MODULE_WRITE_V2 = "CASE_MODULE_WRITE_V2";
+    public static final String CASE_COMMENT_EDIT_V2 = "CASE_COMMENT_EDIT_V2";
     public static final String FUNCTIONAL_READ = "FUNCTIONAL_READ";
     public static final String FUNCTIONAL_SUBMIT = "FUNCTIONAL_SUBMIT";
     public static final String FUNCTIONAL_ALL = "FUNCTIONAL_ALL";
@@ -45,6 +47,8 @@ public class AgentTokenScope {
 
     static {
         Set<String> scopes = new LinkedHashSet<>();
+        scopes.add(CASE_MODULE_WRITE_V2);
+        scopes.add(CASE_COMMENT_EDIT_V2);
         scopes.add(FUNCTIONAL_READ);
         scopes.add(FUNCTIONAL_SUBMIT);
         scopes.add(FUNCTIONAL_ALL);

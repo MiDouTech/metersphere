@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class AgentMcpBundleService {
     private static final String PACKAGE_NAME = "metersphere-agent-skill";
-    private static final String VERSION = "1.1.0";
+    private static final String VERSION = "1.3.0";
     @jakarta.annotation.Resource private io.metersphere.agent.tool.AgentMcpToolRegistry registry;
     private static final String FILE_NAME = PACKAGE_NAME + "-" + VERSION + ".zip";
     private static final String TEST_BASE_URL = "https://msp.ebcone.net";
@@ -107,6 +107,13 @@ public class AgentMcpBundleService {
 
                 Only ask the user for a base URL when they are using a non-standard private deployment.
                 Transport: Streamable HTTP
+
+                Personal case execution (no task or lease): grant FUNCTIONAL_READ, FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.
+                Call metersphere.functional.execution.contract before executing. Follow its global policy and retain contentHash/policyHash.
+                Upload each step's PNG/JPEG with metersphere.functional.execution.evidence.upload (base64, at most 5 MiB).
+                Submit every step with metersphere.functional.execution.submit; only a successful gate publishes case attachments and result.
+                Current text assertions use exact EQUALS against the server case expectation; report observed actual text, never copy an expectation without observing it.
+                Use metersphere.functional.execution.get to inspect accepted step facts and evidence mapping. Reuse requestId only for identical retries.
                 """;
     }
 
@@ -135,7 +142,7 @@ public class AgentMcpBundleService {
                         "test", TEST_BASE_URL,
                         "production", PROD_BASE_URL
                 ),
-                "capabilityContractVersion", "1.1.0",
+                "capabilityContractVersion", "1.3.0",
                 "capabilityDigest", DigestUtils.sha256Hex(toolsMd()),
                 "tokenEmbedded", false
         ));
@@ -193,9 +200,14 @@ public class AgentMcpBundleService {
                 - Search cases before creating duplicates.
                 - When the user provides a project name or the numeric ID shown in the MeterSphere project list, call `metersphere.project.search` first (alias `search_projects` is accepted). Use `metersphere.project.list` to enumerate accessible projects. Pass `page`/`pageSize` for pagination; response contains `items`, `total`, `hasMore`. The numeric UI ID maps to `project.num`; if multiple projects share the same number, return all matches and ask the user to choose.
                 - For case search, execution result submission, module creation, case creation, and batch case creation, always pass `projectId`. `projectId` may be the internal project id, the numeric UI project ID, or the exact project name; the server resolves it to the internal project id and enforces user/token project access.
-                - Execution must use a server-created task and a current lease: search/preflight, claim, heartbeat, submit step facts, commit evidence, then complete. The server evaluates assertions and writes results. Never invent PASS/FAIL or call legacy functional.submit APIs.
-                - A lost claim response does not authorize blindly claiming another task. Query task/attempt state first; an expired lease requires recovery or a new server-issued lease.
+                - Personal case execution uses functional.execution.contract -> functional.execution.evidence.upload -> functional.execution.submit -> functional.execution.get. No task, claim, heartbeat or lease is required. Read the global evidence roles and exact-text comparison requirement before testing; send observed actual values and all step evidence. Legacy functional.submit remains forbidden.
+                - The advanced Runner task channel remains compatible with its existing lease protocol; its lease requirements do not apply to direct personal case execution.
                 - Reuse the same requestId and identical payload for retries. IDEMPOTENCY_CONFLICT requires checking the existing operation; do not generate another key to bypass it.
+                - Case-library search accepts projectId and optional identityType (ID/NUMBER/NAME). Omit testPlanId to search the repository; inspect current/pageSize/total/hasMore. Live paging is not a frozen export snapshot.
+                - Read case updateTime before case.update; keep customFields as a field-ID map. A conflict requires rereading, not overwriting another writer.
+                - Use functional.comments.list to read comment updateTime before functional.comment.update. Only edit your own text with explicit CASE_COMMENT_EDIT_V2 and requestId; preserve replies and attachments. Invalid credentials must not fall back to a browser session. Personal tokens cannot manage credentials.
+                - Use module.get to read updateTime before module.update/move. Moving to parentId=NONE means project root. CASE_MODULE_WRITE_V2 is an explicit grant; AGENT_ALL and FUNCTIONAL_ALL do not include it.
+                - Never infer that deletion/import/export is available from this guide. Only invoke capabilities exposed by live tools/list. Running-case deletion must wait for the user's documented decision when that capability becomes available.
                 - Review create/associate require requestId; read the review after a response loss. Review decisions and Excel import are not promised unless the live tools/list exposes them.
                 - For bug creation, include reproduction steps, expected result, actual result, severity, and related case ID when known.
                 """;

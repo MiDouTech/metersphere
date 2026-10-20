@@ -122,7 +122,7 @@ public class AgentMcpStreamableService {
         if(StringUtils.isNotBlank(idempotencyKey) && StringUtils.isNotBlank(argumentKey) && !idempotencyKey.equals(argumentKey))throw new MSException("IDEMPOTENCY_CONFLICT");
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
         if(StringUtils.isNotBlank(effectiveIdempotencyKey)) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
-        if(java.util.Set.of("metersphere.case_review.create","metersphere.case_review.associate_cases","metersphere.functional.comment.create","metersphere.functional.case.update").contains(name))return callToolInternal(name,arguments);
+        if(java.util.Set.of("metersphere.functional.execution.evidence.upload","metersphere.functional.execution.submit","metersphere.case_review.create","metersphere.case_review.associate_cases","metersphere.functional.comment.create","metersphere.functional.comment.update","metersphere.functional.case.update","metersphere.functional.module.update","metersphere.functional.module.move").contains(name))return callToolInternal(name,arguments);
         // Runtime protocols validate current lease/state on every request. Never persist lease
         // credentials or replay an expired capability through the generic response cache.
         if (java.util.Set.of("metersphere.task.claim", "metersphere.task.lease.heartbeat",

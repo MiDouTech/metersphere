@@ -3,6 +3,10 @@ import type { MeterSphereClient } from "../client.js";
 
 const filtersSchema = z
   .object({
+    keyword: z.string().optional(),
+    includeDescendants: z.boolean().optional(),
+    tagMatch: z.enum(["ANY", "ALL"]).optional(),
+    reviewStatus: z.array(z.string()).optional(),
     priority: z.array(z.string()).optional(),
     lastExecuteResult: z.array(z.string()).optional(),
     tags: z.array(z.string()).optional(),
@@ -11,8 +15,12 @@ const filtersSchema = z
   .optional();
 
 export const searchFunctionalCasesInputSchema = {
+  versionId: z.string().optional(),
+  refId: z.string().optional(),
+  identityType: z.enum(["ID", "NUMBER", "NAME"]).optional(),
+  projectId: z.string().optional().describe("Project internal ID, number or exact name"),
   query: z.string().optional().describe("Natural language query: module name, tag, case name or number"),
-  testPlanId: z.string().optional().describe("Test plan ID; uses MS_TEST_PLAN_ID env when omitted"),
+  testPlanId: z.string().optional().describe("Optional explicit plan context; omitted searches the project case library"),
   includeSteps: z.boolean().optional().describe("Include full steps, default true"),
   current: z.number().int().min(1).optional().describe("Page number, default 1"),
   pageSize: z.number().int().min(1).max(100).optional().describe("Page size, default 50, max 100"),

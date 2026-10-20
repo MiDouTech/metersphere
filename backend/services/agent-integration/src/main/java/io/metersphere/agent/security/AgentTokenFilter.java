@@ -40,7 +40,7 @@ public class AgentTokenFilter extends AnonymousFilter {
         String authorization = request.getHeader("Authorization");
         boolean bearer = StringUtils.isNotBlank(authorization)
                 && StringUtils.startsWithIgnoreCase(authorization, "Bearer ")
-                && StringUtils.contains(authorization, AgentConstants.TOKEN_PREFIX);
+                && StringUtils.startsWith(StringUtils.trim(authorization.substring(7)), AgentConstants.TOKEN_PREFIX);
         String apiKey = request.getHeader("X-API-Key");
         return bearer || (StringUtils.isNotBlank(apiKey) && StringUtils.startsWith(apiKey, AgentConstants.TOKEN_PREFIX));
     }
@@ -73,12 +73,28 @@ public class AgentTokenFilter extends AnonymousFilter {
     @Override
     protected boolean onPreHandle(ServletRequest request, ServletResponse response, Object mappedValue) {
         HttpServletRequest httpRequest = WebUtils.toHttp(request);
+        if (isManagementEndpoint(httpRequest)) {
+            if (isAgentTokenCall(httpRequest) || AgentTokenContext.get() != null) {
+                writeJsonError(WebUtils.toHttp(response), 403, "请使用网页登录身份管理 Agent 凭据");
+                return false;
+            }
+            return true;
+        }
+        if (StringUtils.isNotBlank(httpRequest.getHeader("Authorization"))
+                && StringUtils.isNotBlank(httpRequest.getHeader("X-API-Key"))) {
+            writeJsonError(WebUtils.toHttp(response), 401, "请仅提供一种认证凭据");
+            return false;
+        }
         // Cursor/WorkBuddy 在 POST initialize 后会 GET 探 SSE；无 SSE 时必须 405，不能落到 authc→401
         if (isMcpGetWithoutSse(httpRequest)) {
             writeMethodNotAllowed(WebUtils.toHttp(response), "POST");
             return false;
         }
         if (!isAgentTokenCall(httpRequest)) {
+            if (isMcpStreamableEndpoint(httpRequest)) {
+                writeJsonError(WebUtils.toHttp(response), 401, "请提供有效的 Agent 凭据");
+                return false;
+            }
             return true;
         }
         AgentToken token = agentTokenService.validateRequest(httpRequest);
@@ -122,17 +138,31 @@ public class AgentTokenFilter extends AnonymousFilter {
             return true;
         }
         ((HttpServletResponse) response).setHeader(SessionConstants.AUTHENTICATION_STATUS, SessionConstants.AUTHENTICATION_INVALID);
-        return true;
+        writeJsonError(WebUtils.toHttp(response), 401, "Agent 凭据无效或已失效，请重新配置");
+        return false;
+    }
+
+    static boolean isManagementEndpoint(HttpServletRequest request) {
+        String path = StringUtils.defaultString(StringUtils.defaultIfBlank(request.getServletPath(), request.getRequestURI()));
+        String context = request.getContextPath();
+        if (StringUtils.isNotBlank(context) && path.startsWith(context + "/")) path = path.substring(context.length());
+        if (path.startsWith("/api/")) path = path.substring(4);
+        return path.startsWith("/personal/agent-") || path.startsWith("/admin/agent-")
+                || path.equals("/agent/mcp") || path.startsWith("/agent/mcp/");
     }
 
     @Override
-    protected void postHandle(ServletRequest request, ServletResponse response) {
-        if (Boolean.TRUE.equals(request.getAttribute(ATTR_AGENT_LOGIN_ESTABLISHED))
-                && SecurityUtils.getSubject().isAuthenticated()) {
-            SecurityUtils.getSubject().logout();
+    public void afterCompletion(ServletRequest request, ServletResponse response, Exception exception) {
+        if (request.getAttribute(ATTR_AGENT_LOGIN_ESTABLISHED) == null) return;
+        try {
+            if (Boolean.TRUE.equals(request.getAttribute(ATTR_AGENT_LOGIN_ESTABLISHED))
+                    && SecurityUtils.getSubject().isAuthenticated()) {
+                SecurityUtils.getSubject().logout();
+            }
+        } finally {
+            AgentTokenContext.clear();
+            SessionUtils.clearCurrentProjectId();
         }
-        AgentTokenContext.clear();
-        SessionUtils.clearCurrentProjectId();
     }
 
     /**
@@ -169,6 +199,8 @@ public class AgentTokenFilter extends AnonymousFilter {
     private void writeJsonError(HttpServletResponse response, int status, String message) {
         try {
             response.setStatus(status);
+            if (status == 401) response.setHeader("WWW-Authenticate", "Bearer realm=\"metersphere-agent\"");
+            if (status == 429) response.setHeader("Retry-After", "60");
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setContentType("application/json;charset=UTF-8");
             String safe = StringUtils.defaultString(message).replace("\"", "'");
