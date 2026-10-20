@@ -46,6 +46,7 @@ public class AgentTempAttachmentService {
     private AgentProjectService agentProjectService;
 
     public AgentTempAttachmentUploadResponse upload(MultipartFile file, String projectId, String purpose, Integer stepNum) {
+        if (AgentTokenContext.get() == null) throw AgentBusinessAccess.denied();
         if (file == null || file.isEmpty()) {
             throw new MSException("上传文件不能为空");
         }
@@ -63,7 +64,9 @@ public class AgentTempAttachmentService {
         String originalName = sanitizeFileName(file.getOriginalFilename());
         assertExtensionAllowed(originalName);
 
-        String fileId = commonFileService.uploadTempImgFile(file);
+        // The storage layer uses MultipartFile.originalFilename, not the metadata
+        // written below. Pass the normalized name to both, including legacy uploads.
+        String fileId = commonFileService.uploadTempImgFile(new NamedMultipartFile(file, originalName));
         long now = System.currentTimeMillis();
         String userId = requireUserId();
         AgentToken token = AgentTokenContext.get();
@@ -167,6 +170,33 @@ public class AgentTempAttachmentService {
         return attachments.stream().map(AgentTempAttachment::getFileId).toList();
     }
 
+    public void requireMetadata(String attachmentId) {
+        var token = AgentTokenContext.get();
+        if (token == null) throw AgentBusinessAccess.denied();
+        var rows = jdbc.queryForList("SELECT project_id,file_id FROM agent_temp_attachment WHERE id=? AND token_id=? AND user_id=?",
+                attachmentId, token.getId(), token.getUserId());
+        if (rows.size() != 1) throw AgentBusinessAccess.denied();
+        requireDownload((String) rows.getFirst().get("project_id"), (String) rows.getFirst().get("file_id"));
+    }
+
+    public void requireDownload(String projectId,String fileId) {
+        var token=AgentTokenContext.get();
+        if(token==null) throw AgentBusinessAccess.denied();
+        String resolved=agentProjectService.resolveProjectId(projectId);
+        assertProjectAllowed(resolved);
+        var rows=jdbc.queryForList("SELECT purpose FROM agent_temp_attachment WHERE file_id=? AND project_id=? AND token_id=? AND user_id=? AND linked=0 AND expires_at>?",
+                fileId,resolved,token.getId(),token.getUserId(),System.currentTimeMillis());
+        if(rows.size()!=1) throw AgentBusinessAccess.denied();
+        String purpose=(String)rows.getFirst().get("purpose");
+        if(purpose.startsWith("CASE_"))
+            io.metersphere.agent.security.AgentScopeAssert.assertAnyScope(io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ,io.metersphere.agent.constants.AgentTokenScope.CASE_ATTACHMENT);
+        else if(purpose.startsWith("BUG_"))
+            io.metersphere.agent.security.AgentScopeAssert.assertAnyScope(io.metersphere.agent.constants.AgentTokenScope.BUG_READ,io.metersphere.agent.constants.AgentTokenScope.BUG_ATTACHMENT);
+        else if ("EXECUTION".equals(purpose))
+            io.metersphere.agent.security.AgentScopeAssert.assertAnyScope(io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ,io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_SUBMIT);
+        else throw AgentBusinessAccess.denied();
+    }
+
     @Scheduled(fixedDelay = 60 * 60 * 1000L)
     public void cleanupExpired() {
         List<AgentTempAttachment> expired = agentTempAttachmentMapper.selectExpiredUnlinked(System.currentTimeMillis(), 200);
@@ -216,5 +246,16 @@ public class AgentTempAttachmentService {
         if (BLOCKED_EXTENSIONS.contains(ext)) {
             throw new MSException(AgentErrorCode.ATTACHMENT_TYPE_NOT_ALLOWED, "不允许的文件类型: " + ext);
         }
+    }
+
+    private record NamedMultipartFile(MultipartFile source, String filename) implements MultipartFile {
+        @Override public String getName() { return source.getName(); }
+        @Override public String getOriginalFilename() { return filename; }
+        @Override public String getContentType() { return source.getContentType(); }
+        @Override public boolean isEmpty() { return source.isEmpty(); }
+        @Override public long getSize() { return source.getSize(); }
+        @Override public byte[] getBytes() throws java.io.IOException { return source.getBytes(); }
+        @Override public java.io.InputStream getInputStream() throws java.io.IOException { return source.getInputStream(); }
+        @Override public void transferTo(java.io.File destination) throws java.io.IOException { source.transferTo(destination); }
     }
 }

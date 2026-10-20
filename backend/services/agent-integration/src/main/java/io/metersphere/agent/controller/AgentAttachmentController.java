@@ -50,7 +50,8 @@ public class AgentAttachmentController {
     @GetMapping("/download/{projectId}/{fileId}")
     @Operation(summary = "下载临时附件")
     public ResponseEntity<byte[]> download(@PathVariable String projectId, @PathVariable String fileId) {
-        AgentScopeAssert.assertAnyScope(AgentTokenScope.FUNCTIONAL_READ, AgentTokenScope.BUG_READ, AgentTokenScope.CASE_ATTACHMENT, AgentTokenScope.BUG_ATTACHMENT);
+        AgentScopeAssert.assertAnyScope(AgentTokenScope.FUNCTIONAL_READ, AgentTokenScope.BUG_READ, AgentTokenScope.CASE_ATTACHMENT, AgentTokenScope.BUG_ATTACHMENT, AgentTokenScope.FUNCTIONAL_SUBMIT);
+        agentTempAttachmentService.requireDownload(projectId, fileId);
         return agentAttachmentService.download(projectId, fileId);
     }
 }

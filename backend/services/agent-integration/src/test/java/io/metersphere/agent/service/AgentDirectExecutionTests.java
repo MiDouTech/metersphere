@@ -34,7 +34,7 @@ class AgentDirectExecutionTests {
         {"ruleId":"Q-ASSERT-01","parameters":{"allowedOperators":["EQUALS"],"expectedSource":"FROZEN_CONTRACT"}}]}
         """;
     static String png() throws Exception {
-        var output=new ByteArrayOutputStream();ImageIO.write(new BufferedImage(2,2,BufferedImage.TYPE_INT_RGB),"png",output);
+        var output=new ByteArrayOutputStream();ImageIO.write(new BufferedImage(64,64,BufferedImage.TYPE_INT_RGB),"png",output);
         return Base64.getEncoder().encodeToString(output.toByteArray());
     }
     @Test void evidenceMustDecodeAsTheDeclaredBoundedImage() throws Exception {
@@ -43,6 +43,8 @@ class AgentDirectExecutionTests {
         assertThrows(MSException.class,()->AgentDirectExecutionService.decodeImage("PGh0bWw+","image/png"));
         assertThrows(MSException.class,()->AgentDirectExecutionService.decodeImage("!invalid","image/png"));
         assertThrows(MSException.class,()->AgentDirectExecutionService.decodeImage("A".repeat(6990509),"image/png"));
+        var tiny=new ByteArrayOutputStream();ImageIO.write(new BufferedImage(2,2,BufferedImage.TYPE_INT_RGB),"png",tiny);
+        assertThrows(MSException.class,()->AgentDirectExecutionService.decodeImage(Base64.getEncoder().encodeToString(tiny.toByteArray()),"image/png"));
     }
     @Test void directModeUsesBothGlobalRulesAndDoesNotAcceptMissingEvidenceAsBusinessFailure() {
         var gate=new GlobalQualityGate(null,null,new QualityPolicyValidator());

@@ -73,7 +73,7 @@
 ></template>
 
 <script setup lang="ts">
-  import { onMounted, reactive, ref } from 'vue';
+  import { onMounted, reactive, ref, watch } from 'vue';
   import { Message } from '@arco-design/web-vue';
 
   import AgentPage from './components/AgentPage.vue';
@@ -88,6 +88,7 @@
     updateAiLoginProfile,
   } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
 
   const app = useAppStore();
   const items = ref<AiLoginProfile[]>([]);
@@ -115,9 +116,7 @@
   };
   const form = reactive({ ...defaults });
   const msg = (e: unknown) => {
-    const appError = e as { message?: string; requestId?: string };
-    const message = appError?.message || '请求失败';
-    return appError?.requestId ? `${message} (${appError.requestId})` : message;
+    return formatAppErrorMessage(ensureAppError(e, '请求失败，请稍后重试'));
   };
   async function load() {
     loading.value = true;
@@ -201,5 +200,15 @@
       Message.error(msg(e));
     }
   }
-  onMounted(load);
+  watch(
+    () => app.currentProjectId,
+    () => {
+      visible.value = false;
+      items.value = [];
+      if (app.currentProjectId) load();
+    }
+  );
+  onMounted(() => {
+    if (app.currentProjectId) load();
+  });
 </script>

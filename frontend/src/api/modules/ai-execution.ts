@@ -1096,7 +1096,7 @@ export function getAiExecutionTask(id: string) {
 }
 
 export function searchAiExecutionTasks(data: AiExecutionTaskSearchRequest) {
-  return MSR.post<AiExecutionTaskSearchResponse>({ url: AiExecutionTaskSearchUrl, data });
+  return MSR.post<AiExecutionTaskSearchResponse>({ url: AiExecutionTaskSearchUrl, data }, { ignoreCancelToken: true });
 }
 
 export function getAiExecutionEvents(id: string, params?: { cursor?: number; limit?: number }) {

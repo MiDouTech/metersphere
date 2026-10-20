@@ -89,7 +89,7 @@ async function main() {
 
   const server = new McpServer({
     name: "metersphere-mcp",
-    version: "0.5.1",
+    version: "0.7.0",
   });
 
   for (const tool of tools) {

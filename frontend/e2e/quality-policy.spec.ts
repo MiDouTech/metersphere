@@ -230,7 +230,7 @@ test('invalid nested parameter keeps JSON and identifies its exact path', async 
 });
 
 test('role:pure-admin:no project binding is required for global access', async ({ page }) => {
-  await expect(page).toHaveURL(/setting\/system\/quality-policy/);
+  await expect(page).toHaveURL(/execution\/quality-policy/);
   await expect(page.getByRole('button', { name: '新建草稿', exact: true })).toBeEnabled();
   const headers = await page.evaluate(() => ({
     'X-AUTH-TOKEN': localStorage.getItem('sessionId') || '',
@@ -294,7 +294,7 @@ test('role:editor:revocation during editing returns local 403 and preserves the 
     expect((await rejected).status()).toBe(403);
     await expect(input).toHaveValue(name);
     await expect(page.getByRole('button', { name: '保存草稿', exact: true })).toBeEnabled();
-    await expect(page).toHaveURL(/setting\/system\/quality-policy/);
+    await expect(page).toHaveURL(/execution\/quality-policy/);
   } finally {
     sql(
       "INSERT IGNORE INTO user_role_permission(id,role_id,permission_id) VALUES ('qg-editor-manage','quality-global-editor','SYSTEM_QUALITY:MANAGE');"

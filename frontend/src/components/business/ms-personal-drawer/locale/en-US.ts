@@ -5,7 +5,7 @@ export default {
   'ms.personal.setPsw': 'Password settings',
   'ms.personal.setting': 'Personal settings',
   'ms.personal.apiKey': 'API KEY',
-  'ms.personal.agentIntegration': 'Agent Integration',
+  'ms.personal.agentIntegration': 'Agent Configuration',
   'ms.personal.tripartite': 'Tripartite account',
   'ms.personal.changeAvatar': 'Change avatar',
   'ms.personal.name': 'User name',

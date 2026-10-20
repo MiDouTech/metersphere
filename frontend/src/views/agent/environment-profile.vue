@@ -3,9 +3,9 @@
     <MsCard simple>
       <div class="mb-4 flex items-center justify-between">
         <div>
-          <div class="text-base font-medium">环境执行配置</div>
+          <div class="text-base font-medium">测试平台配置</div>
           <div class="mt-1 text-sm text-[var(--color-text-3)]"
-            >限定 AI 测试可访问的地址、网络区与 Runner 能力；生产环境暂不开放。</div
+            >管理测试地址、登录方式和凭据引用。地址连接检查不代表已经成功登录。</div
           >
         </div>
         <a-space>
@@ -15,7 +15,7 @@
       </div>
       <a-alert v-if="errorMessage" type="error" class="mb-4">{{ errorMessage }}</a-alert>
       <a-table :data="profiles" :loading="loading" :pagination="false" row-key="id">
-        <template #empty><a-empty description="当前项目尚未配置 AI 测试环境" /></template>
+        <template #empty><a-empty description="当前项目尚未配置测试平台" /></template>
         <template #columns>
           <a-table-column title="名称" data-index="name" />
           <a-table-column title="环境" data-index="environmentType" :width="110" />
@@ -45,13 +45,12 @@
 
     <a-modal
       v-model:visible="visible"
-      :title="form.id ? '编辑环境执行配置' : '新增环境执行配置'"
+      :title="form.id ? '编辑测试平台配置' : '新增测试平台配置'"
       :ok-loading="saving"
       @before-ok="save"
     >
       <a-form :model="form" layout="vertical">
         <a-form-item label="名称" required><a-input v-model="form.name" :max-length="255" /></a-form-item>
-        <a-form-item label="环境 ID" required><a-input v-model="form.environmentId" /></a-form-item>
         <a-form-item label="环境类型" required>
           <a-select v-model="form.environmentType"
             ><a-option value="TEST">测试</a-option><a-option value="STAGING">预发布</a-option></a-select
@@ -101,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, reactive, ref } from 'vue';
+  import { onMounted, reactive, ref, watch } from 'vue';
   import { Message } from '@arco-design/web-vue';
 
   import AgentPage from './components/AgentPage.vue';
@@ -123,6 +122,8 @@
     verifyAiEnvironmentProfile,
   } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
+  import { hasAnyPermission } from '@/utils/permission';
 
   const appStore = useAppStore();
   const profiles = ref<AiEnvironmentProfile[]>([]);
@@ -149,8 +150,7 @@
   });
 
   function safeMessage(error: unknown) {
-    const candidate = error as { message?: string };
-    return candidate?.message || '请求失败，请稍后重试';
+    return formatAppErrorMessage(ensureAppError(error, '请求失败，请稍后重试'));
   }
   async function load() {
     loading.value = true;
@@ -159,7 +159,9 @@
       [profiles.value, loginProfiles.value, credentials.value] = await Promise.all([
         listAiEnvironmentProfiles(appStore.currentProjectId),
         listAiLoginProfiles(appStore.currentProjectId),
-        listAiCredentialReferences(appStore.currentProjectId),
+        hasAnyPermission(['AI_CREDENTIAL:READ_METADATA'])
+          ? listAiCredentialReferences(appStore.currentProjectId)
+          : Promise.resolve([]),
       ]);
     } catch (error) {
       errorMessage.value = safeMessage(error);
@@ -209,8 +211,8 @@
       .split(/\r?\n/)
       .map((item) => item.trim())
       .filter(Boolean);
-    if (!form.name.trim() || !form.environmentId.trim() || !form.baseUrl.trim() || !origins.length) {
-      Message.warning('请完整填写名称、环境、基础地址和允许 Origin');
+    if (!form.name.trim() || !form.baseUrl.trim() || !origins.length) {
+      Message.warning('请完整填写名称、基础地址和允许 Origin');
       done(false);
       return;
     }
@@ -249,7 +251,7 @@
   async function verify(record: AiEnvironmentProfile) {
     try {
       const result = await verifyAiEnvironmentProfile(record.id);
-      if (result.valid) Message.success(`DNS、TLS、连通性和 Runner 校验通过 · ${result.traceId}`);
+      if (result.valid) Message.success(`地址连接检查通过（尚未验证登录） · ${result.traceId}`);
       else Message.error(`验证未通过：${result.checks.join('、')} · ${result.traceId}`);
     } catch (error) {
       Message.error(safeMessage(error));
@@ -265,5 +267,15 @@
       Message.error(safeMessage(error));
     }
   }
-  onMounted(load);
+  watch(
+    () => appStore.currentProjectId,
+    () => {
+      visible.value = false;
+      profiles.value = [];
+      if (appStore.currentProjectId) load();
+    }
+  );
+  onMounted(() => {
+    if (appStore.currentProjectId) load();
+  });
 </script>

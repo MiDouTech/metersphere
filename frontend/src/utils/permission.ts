@@ -293,7 +293,7 @@ export function topLevelMenuHasPermission(route: RouteLocationNormalized | Route
 // 有权限的第一个路由名，如果没有找到则返回IndexRoute
 export function getFirstRouteNameByPermission(routerList: RouteRecordNormalized[]) {
   const currentRoute = routerList
-    .filter((item) => hasRouteResourceVisible(item) && hasAnyPermission(item.meta.roles || [])) // 排除没有权限的路由
+    .filter((item) => !item.meta.hideInMenu && hasRouteResourceVisible(item) && hasAnyPermission(item.meta.roles || []))
     .sort((a, b) => {
       // 如果 a 和 b 都有 order，按照 order 的值进行升序排序
       if (a.meta.order !== undefined && b.meta.order !== undefined) {
@@ -343,7 +343,7 @@ export function getFirstRouterNameByCurrentRoute(parentName: string) {
   const currentRoute = findRouteByName(parentName);
   if (currentRoute) {
     const hasAuthChildrenRouter = currentRoute.children.find(
-      (item) => hasRouteResourceVisible(item) && hasAnyPermission(item.meta?.roles || [])
+      (item) => !item.meta?.hideInMenu && hasRouteResourceVisible(item) && hasAnyPermission(item.meta?.roles || [])
     );
     return hasAuthChildrenRouter ? hasAuthChildrenRouter.name : parentName;
   }

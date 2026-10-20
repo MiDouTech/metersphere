@@ -17,7 +17,7 @@
         ><template #empty><a-empty description="暂无凭据引用" /></template
         ><template #columns>
           <a-table-column title="名称" data-index="name" /><a-table-column
-            title="环境 ID"
+            title="平台关联 ID"
             data-index="environmentId"
           /><a-table-column title="业务角色" data-index="businessRole" />
           <a-table-column title="类型" data-index="credentialType" /><a-table-column
@@ -69,11 +69,11 @@
       ><a-form :model="form" layout="vertical">
         <div class="grid grid-cols-2 gap-x-4"
           ><a-form-item field="name" label="名称" required><a-input v-model="form.name" /></a-form-item
-          ><a-form-item field="environmentId" label="环境" required
-            ><a-select v-model="form.environmentId" allow-search placeholder="请选择环境执行配置"
-              ><a-option v-for="item in environments" :key="item.id" :value="item.environmentId"
-                >{{ item.name }}（{{ item.environmentId }}）</a-option
-              ></a-select
+          ><a-form-item field="environmentId" label="测试平台" required
+            ><a-select v-model="form.environmentId" allow-search placeholder="请选择测试平台"
+              ><a-option v-for="item in environments" :key="item.id" :value="item.environmentId">{{
+                item.name
+              }}</a-option></a-select
             ></a-form-item
           >
           <a-form-item field="credentialType" label="凭据类型" required
@@ -117,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, reactive, ref } from 'vue';
+  import { onMounted, reactive, ref, watch } from 'vue';
   import { Message } from '@arco-design/web-vue';
 
   import AgentPage from './components/AgentPage.vue';
@@ -137,6 +137,7 @@
     verifyAiCredentialReference,
   } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
 
   const app = useAppStore();
   const items = ref<AiCredentialReference[]>([]);
@@ -159,9 +160,7 @@
     version: 0,
   });
   const msg = (e: unknown) => {
-    const appError = e as { message?: string; requestId?: string };
-    const message = appError?.message || '请求失败，请稍后重试';
-    return appError?.requestId ? `${message} (${appError.requestId})` : message;
+    return formatAppErrorMessage(ensureAppError(e, '请求失败，请稍后重试'));
   };
   async function load() {
     loading.value = true;
@@ -283,5 +282,15 @@
       Message.error(msg(e));
     }
   }
-  onMounted(load);
+  watch(
+    () => app.currentProjectId,
+    () => {
+      visible.value = false;
+      items.value = [];
+      if (app.currentProjectId) load();
+    }
+  );
+  onMounted(() => {
+    if (app.currentProjectId) load();
+  });
 </script>

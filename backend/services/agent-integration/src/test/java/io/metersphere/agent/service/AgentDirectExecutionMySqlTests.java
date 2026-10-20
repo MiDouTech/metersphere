@@ -31,6 +31,11 @@ class AgentDirectExecutionMySqlTests {
                 for(String sql:new String(stream.readAllBytes(),StandardCharsets.UTF_8).split(";"))
                     if(!sql.isBlank())jdbc.execute(sql.replace("CREATE TABLE","CREATE TEMPORARY TABLE"));
             }
+            try(var stream=getClass().getResourceAsStream("/migration/3.7.2/ddl/V3.7.2_103__personal_evidence_review.sql")) {
+                assertNotNull(stream);
+                for(String sql:new String(stream.readAllBytes(),StandardCharsets.UTF_8).split(";"))
+                    if(!sql.isBlank())jdbc.execute(sql.replace("CREATE TABLE","CREATE TEMPORARY TABLE"));
+            }
             jdbc.execute("CREATE TEMPORARY TABLE agent_token(id VARCHAR(64) PRIMARY KEY)");
             jdbc.update("INSERT INTO agent_token VALUES ('t')");
             jdbc.execute("CREATE TEMPORARY TABLE functional_case(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64),deleted BOOLEAN,last_execute_result VARCHAR(32),last_execute_user VARCHAR(64),last_execute_time BIGINT)");
@@ -54,6 +59,9 @@ class AgentDirectExecutionMySqlTests {
             ReflectionTestUtils.setField(service,"operations",new AgentOperationExecutor(jdbc,new DataSourceTransactionManager(ds)));
             ReflectionTestUtils.setField(service,"gate",new GlobalQualityGate(jdbc,null,new QualityPolicyValidator()));
             ReflectionTestUtils.setField(service,"cipher",new AgentFactCipher());
+            var reviewer=mock(io.metersphere.agent.quality.EvidenceContentReviewer.class);
+            when(reviewer.review(anyMap())).thenReturn(new io.metersphere.agent.quality.EvidenceContentReviewer.Review(true,"EVIDENCE_CONTENT_SUPPORTED","test-protocol-only","digest"));
+            ReflectionTestUtils.setField(service,"evidenceReviewer",reviewer);
             var base=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c"));
             var contract=service.contract(base);base.put("contentHash",contract.get("contentHash"));
             var upload=new LinkedHashMap<>(base);upload.putAll(Map.of("stepNum",1,"purpose","BEFORE_STEP","fileName","screen.png","contentType","image/png","base64",AgentDirectExecutionTests.png(),"requestId","before"));
@@ -87,10 +95,28 @@ class AgentDirectExecutionMySqlTests {
             assertEquals("SUCCESS",service.report(Map.of("projectId","p","caseId","c","submissionId",result.get("submissionId"))).get("result"));
             submit.put("requestId","reuse-consumed");assertThrows(MSException.class,()->service.submit(submit));
             assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Integer.class));
+            // A configured reviewer failure never inherits the structural-only approval.
+            upload.put("requestId","pending-before");upload.put("purpose","BEFORE_STEP");
+            String pendingBefore=(String)service.upload(upload).get("evidenceId");
+            upload.put("requestId","pending-after");upload.put("purpose","AFTER_STEP");
+            String pendingAfter=(String)service.upload(upload).get("evidenceId");
+            submit.put("requestId","review-unavailable");
+            submit.put("steps",List.of(Map.of("stepNum",1,"actual","visible","result","SUCCESS","evidenceIds",List.of(pendingBefore,pendingAfter))));
+            ReflectionTestUtils.setField(service,"evidenceReviewer",new io.metersphere.agent.quality.EvidenceContentReviewer("",""));
+            var pending=service.submit(submit);
+            assertEquals("NEEDS_REVIEW",pending.get("gateStatus"));
+            assertEquals("NOT_PUBLISHED",pending.get("publishStatus"));
+            var pendingReport = service.report(Map.of("projectId","p","caseId","c","submissionId",pending.get("submissionId")));
+            assertEquals("NEEDS_REVIEW", pendingReport.get("gateStatus"));
+            assertEquals("NOT_PUBLISHED", pendingReport.get("publishStatus"));
+            assertFalse(((List<?>) pendingReport.get("issues")).isEmpty());
+            assertEquals(pending.get("submissionId"),service.submit(submit).get("submissionId"));
+            assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
+            assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_execute_result FROM functional_case",String.class));
             upload.put("requestId","expired-pending");service.upload(upload);
             jdbc.update("UPDATE agent_case_evidence SET expires_at=0");
             service.expirePendingEvidence();
-            assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_evidence",Integer.class));
+            assertEquals(4,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_evidence",Integer.class));
             assertNotNull(store.read("p","c",before));
         } finally {AgentTokenContext.clear();ds.destroy();}
     }

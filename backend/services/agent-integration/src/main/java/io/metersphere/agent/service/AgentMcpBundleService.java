@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class AgentMcpBundleService {
     private static final String PACKAGE_NAME = "metersphere-agent-skill";
-    private static final String VERSION = "1.3.0";
+    private static final String VERSION = "1.4.0";
     @jakarta.annotation.Resource private io.metersphere.agent.tool.AgentMcpToolRegistry registry;
     private static final String FILE_NAME = PACKAGE_NAME + "-" + VERSION + ".zip";
     private static final String TEST_BASE_URL = "https://msp.ebcone.net";
@@ -111,7 +111,7 @@ public class AgentMcpBundleService {
                 Personal case execution (no task or lease): grant FUNCTIONAL_READ, FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.
                 Call metersphere.functional.execution.contract before executing. Follow its global policy and retain contentHash/policyHash.
                 Upload each step's PNG/JPEG with metersphere.functional.execution.evidence.upload (base64, at most 5 MiB).
-                Submit every step with metersphere.functional.execution.submit; only a successful gate publishes case attachments and result.
+                Submit every step with metersphere.functional.execution.submit; only gateStatus=ACCEPTED with publishStatus=PUBLISHED publishes attachments and result. NEEDS_REVIEW means evidence content was not verified and no formal result was updated; inspect issues and query the submission report. Never treat a successful HTTP/MCP response as a passed business test.
                 Current text assertions use exact EQUALS against the server case expectation; report observed actual text, never copy an expectation without observing it.
                 Use metersphere.functional.execution.get to inspect accepted step facts and evidence mapping. Reuse requestId only for identical retries.
                 """;
@@ -142,7 +142,7 @@ public class AgentMcpBundleService {
                         "test", TEST_BASE_URL,
                         "production", PROD_BASE_URL
                 ),
-                "capabilityContractVersion", "1.3.0",
+                "capabilityContractVersion", "1.4.0",
                 "capabilityDigest", DigestUtils.sha256Hex(toolsMd()),
                 "tokenEmbedded", false
         ));

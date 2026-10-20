@@ -13,7 +13,15 @@ import org.springframework.web.bind.annotation.*;
 public class GlobalQualityPolicyController {
     private final GlobalQualityPolicyService service;
     @jakarta.annotation.Resource private io.metersphere.agent.quality.GlobalQualityAnalysisService analysis;
+    @jakarta.annotation.Resource private io.metersphere.agent.quality.EvidenceContentReviewer evidenceReviewer;
     public GlobalQualityPolicyController(GlobalQualityPolicyService service) { this.service = service; }
+
+    @GetMapping("/evidence-review/status")
+    @RequiresPermissions(PermissionConstants.SYSTEM_QUALITY_READ)
+    public java.util.Map<String,Object> evidenceReviewStatus() {
+        service.schema(); // Same system authorization, independent of project membership.
+        return evidenceReviewer.status();
+    }
 
     @ModelAttribute
     public void rejectProjectSelection(jakarta.servlet.http.HttpServletRequest request) {

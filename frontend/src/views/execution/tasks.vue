@@ -1,8 +1,17 @@
 <template>
   <div>
-    <AutomationExecution />
+    <a-tabs
+      v-if="!route.params.id"
+      :active-key="route.query.view === 'schedule' ? 'schedule' : 'tasks'"
+      @change="changeView"
+    >
+      <a-tab-pane key="tasks" title="执行记录" />
+      <a-tab-pane key="schedule" title="定时任务" />
+    </a-tabs>
+    <Schedule v-if="route.query.view === 'schedule' && !route.params.id" schedule-only />
+    <AutomationExecution v-else />
     <a-collapse
-      v-if="!route.params.id && route.query.creating !== '1' && canEvaluate"
+      v-if="!route.params.id && route.query.view !== 'schedule' && route.query.creating !== '1' && canEvaluate"
       v-model:active-key="expanded"
       class="m-4"
     >
@@ -14,8 +23,8 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, ref, watch } from 'vue';
-  import { useRoute } from 'vue-router';
+  import { computed, defineAsyncComponent, ref, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
 
   import Evaluation from '@/views/agent/evaluation.vue';
   import AutomationExecution from '@/views/bug-management/automationExecution/index.vue';
@@ -23,6 +32,11 @@
   import { hasAnyPermission, hasPageVisible, hasRouteVisible } from '@/utils/permission';
 
   const route = useRoute();
+  const router = useRouter();
+  const Schedule = defineAsyncComponent(() => import('@/views/agent/queue.vue'));
+  function changeView(view: string | number) {
+    router.replace({ query: { ...route.query, view: view === 'schedule' ? 'schedule' : undefined } });
+  }
   const expanded = ref<string[]>([]);
   const canEvaluate = computed(
     () =>

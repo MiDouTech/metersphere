@@ -183,7 +183,11 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 - 技能包版本 1.2.1；实时分页不是完整快照导出。运行中删除确认、异步导入导出、普通附件上传下载、评论删除等仍需后续实现，以实时 tools/list 为准，不应猜测工具名调用。
 
 - functional.comment.update 编辑本人评论正文，要求 CASE_COMMENT_EDIT_V2、expectedUpdateTime 和 requestId；不重新通知，不修改回复关系和附件。网页编辑使用相同版本校验。
-# 个人 Agent 直接执行用例（0.6.0）
+# 个人 Agent 直接执行用例（0.7.0）
+
+0.7.0 增加独立证据内容审核状态。只有 `gateStatus=ACCEPTED` 且 `publishStatus=PUBLISHED` 才代表附件和正式结果已发布；`NEEDS_REVIEW` / `NOT_PUBLISHED` 不代表业务通过。核验服务未配置、不可用或证据不足时，查询提交报告并处理 `issues`，不要把 HTTP/MCP 成功当成测试成功。相同 requestId 查询原结果；补交使用新的 requestId。
+
+图片最低 64×64 只用于过滤明显无效文件，不代表图片内容已经可信。内容核验器由平台管理员独立配置，个人 Agent 不得自行提交“已核验”结论代替服务端审核。当前断言仍采用精确 EQUALS；自然语言预期的完整类型化迁移尚未交付。
 
 平台个人 Token 选择“个人 Agent 测试闭环”，包括 `FUNCTIONAL_READ;FUNCTIONAL_SUBMIT;CASE_ATTACHMENT`。用户本人仍需该项目的用例读取和更新权限。原生远程 MCP 和 Node 客户端均支持以下流程，无需任务、租约或 Runner：
 
