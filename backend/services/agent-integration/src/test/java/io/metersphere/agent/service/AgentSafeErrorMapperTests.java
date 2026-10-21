@@ -10,6 +10,12 @@ class AgentSafeErrorMapperTests {
     private final AgentSafeErrorMapper mapper = new AgentSafeErrorMapper();
 
     @Test
+    void preservesTypedPermissionErrorAndDiscardsRawMessage() {
+        var result = mapper.toApiError(new MSException(io.metersphere.agent.constants.AgentErrorCode.SCOPE_DENIED, "SQL password=secret"), "typed-trace");
+        assertEquals("SCOPE_DENIED", result.getCode());assertFalse(result.getMessage().contains("secret"));
+    }
+
+    @Test
     void preservesStableBusinessCodeWithoutLeakingTechnicalDetails() {
         var result = mapper.toApiError(new MSException("MODEL_BUDGET_EXCEEDED"), "trace-1");
         assertEquals("MODEL_BUDGET_EXCEEDED", result.getCode());

@@ -10,6 +10,12 @@ import org.springframework.mock.web.MockHttpServletRequest;
 class AgentExecutionExceptionHandlerTests {
     private final AgentExecutionExceptionHandler handler=new AgentExecutionExceptionHandler(new AgentSafeErrorMapper());
 
+    @Test void typedScopeDenialReturns403WithoutRawDetails(){
+        var request=new MockHttpServletRequest();request.addHeader("X-Trace-Id","scope-trace");
+        var response=handler.business(new MSException(io.metersphere.agent.constants.AgentErrorCode.SCOPE_DENIED,"internal scope details"),request);
+        Assertions.assertEquals(HttpStatus.FORBIDDEN,response.getStatusCode());Assertions.assertEquals("SCOPE_DENIED",response.getBody().getCode());
+        Assertions.assertEquals("scope-trace",response.getBody().getTraceId());Assertions.assertFalse(response.getBody().getMessage().contains("internal"));
+    }
     @Test void mapsNotFoundConflictRateLimitAndGatewayFailures(){
         MockHttpServletRequest request=new MockHttpServletRequest();request.addHeader("X-Trace-Id","trace-1");
         Assertions.assertEquals(HttpStatus.NOT_FOUND,handler.business(new MSException("MODEL_INVOCATION_NOT_FOUND"),request).getStatusCode());

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { caseExportTools } from "./tools/caseExport.js";
+import { bugTransferTools } from "./tools/bugTransfer.js";
 import { caseLibraryTools } from "./tools/caseLibrary.js";
 import { managedExecutionTools } from "./tools/managedExecution.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -51,6 +53,8 @@ type ToolDef = {
 const tools: ToolDef[] = [
   ...managedExecutionTools,
   ...caseLibraryTools,
+  ...caseExportTools,
+  ...bugTransferTools,
   executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
   bugTransitionTool, testPlanUpdateTool, testPlanDisassociateTool, testPlanGetTool,
   searchFunctionalCasesTool,

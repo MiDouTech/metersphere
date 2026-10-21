@@ -34,7 +34,6 @@ import io.metersphere.project.mapper.ExtBaseProjectVersionMapper;
 import io.metersphere.project.mapper.ProjectMapper;
 import io.metersphere.project.service.ProjectTemplateService;
 import io.metersphere.sdk.constants.*;
-import io.metersphere.sdk.dto.ExportMsgDTO;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.file.FileRequest;
 import io.metersphere.sdk.util.*;
@@ -50,12 +49,10 @@ import io.metersphere.system.excel.domain.ExcelErrData;
 import io.metersphere.system.excel.utils.EasyExcelExporter;
 import io.metersphere.system.log.dto.LogDTO;
 import io.metersphere.system.log.service.OperationLogService;
-import io.metersphere.system.manager.ExportTaskManager;
 import io.metersphere.system.mapper.SystemParameterMapper;
 import io.metersphere.system.mapper.UserMapper;
 import io.metersphere.system.service.FileService;
 import io.metersphere.system.service.NoticeSendService;
-import io.metersphere.system.socket.ExportWebSocketHandler;
 import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.ServiceUtils;
 import jakarta.annotation.Resource;
@@ -111,7 +108,7 @@ public class FunctionalCaseFileService {
     @Resource
     private SystemParameterMapper systemParameterMapper;
     @Resource
-    private ExportTaskManager exportTaskManager;
+    private FunctionalCaseExportTaskService exportTaskService;
     @Resource
     private ExportTaskMapper exportTaskMapper;
     private static final String XLSX = "xlsx";
@@ -429,88 +426,84 @@ public class FunctionalCaseFileService {
         }
     }
 
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public String export(String userId, FunctionalCaseExportRequest request, String orgId) {
-        try {
-            exportCheck(request, userId);
-            ExportTask exportTask = exportTaskManager.exportAsyncTask(request.getProjectId(), request.getFileId(), userId, ExportConstants.ExportType.CASE.toString(), request, t -> exportFunctionalCaseZip(request, userId, orgId));
-            return exportTask.getId();
-        } catch (InterruptedException e) {
-            LogUtils.error("导出失败：" + e);
-            throw new MSException(e);
+        exportTaskService.authorize(request.getProjectId(), userId);
+        validateExportFields(request);
+        return exportTaskService.start(request, userId, XLSX,
+                taskId -> exportFunctionalCaseZip(request, userId, orgId, taskId));
+    }
+
+    public void validateExportFields(FunctionalCaseExportRequest request) {
+        FunctionalCaseExportColumns allowed = getExportColumns(request.getProjectId());
+        validateFields(request.getSystemFields(), allowed.getSystemColumns());
+        validateFields(request.getCustomFields(), allowed.getCustomColumns());
+        validateFields(request.getOtherFields(), allowed.getOtherColumns());
+        if (request.getSystemFields().isEmpty() && request.getCustomFields().isEmpty() && request.getOtherFields().isEmpty()) {
+            throw new MSException("请至少选择一个导出字段");
         }
     }
 
-    public void exportCheck(FunctionalCaseExportRequest request, String userId) {
-        List<ExportTask> exportTasks = getExportTasks(request.getProjectId(), userId);
-        if (CollectionUtils.isNotEmpty(exportTasks)) {
-            throw new MSException(Translator.get("export_case_task_existed"));
+    private void validateFields(List<FunctionalCaseHeader> selected, Map<String, String> names) {
+        if (selected == null || selected.size() > 200) throw new MSException("导出字段无效");
+        Set<String> seen = new HashSet<>();
+        for (FunctionalCaseHeader field : selected) {
+            if (field == null || !names.containsKey(field.getId()) || !seen.add(field.getId())) throw new MSException("导出字段无效");
+            field.setName(names.get(field.getId()));
         }
     }
 
+    public List<String> validatedExportIds(FunctionalCaseExportRequest request) {
+        List<String> selected = functionalCaseService.doSelectIds(request, request.getProjectId());
+        if (CollectionUtils.isEmpty(selected)) throw new FunctionalCaseExportTaskService.EmptyExportException();
+        List<String> ids = new ArrayList<>(new LinkedHashSet<>(selected));
+        if (ids.size() > 100000) throw new MSException("单次最多导出 100000 条用例");
+        SubListUtils.dealForSubList(ids, 1000, batch -> {
+            List<FunctionalCase> cases = functionalCaseService.getCaseDataByIds(batch);
+            if (cases.size() != batch.size() || cases.stream().anyMatch(item ->
+                    !request.getProjectId().equals(item.getProjectId()) || Boolean.TRUE.equals(item.getDeleted()))) {
+                throw new MSException("导出范围包含已删除或无权访问的用例");
+            }
+        });
+        return ids;
+    }
 
-    /**
-     * 导出excel
-     *
-     * @param request
-     */
-    public String exportFunctionalCaseZip(FunctionalCaseExportRequest request, String userId, String orgId) {
+    private FunctionalCaseExportTaskService.Result exportFunctionalCaseZip(FunctionalCaseExportRequest request, String userId, String orgId, String taskId) {
         File tmpDir = null;
-        String fileType = "";
         try {
             User user = userMapper.selectByPrimaryKey(userId);
             noticeSendService.setLanguage(user.getLanguage());
+            ExcelSnapshot snapshot = exportTaskService.readSnapshot(() -> snapshotExcel(request));
+            List<String> ids = snapshot.ids();
+            exportTaskService.saveSnapshot(taskId, ids, snapshot);
             tmpDir = new File(LocalRepositoryDir.getSystemTempDir() + File.separatorChar + EXPORT_CASE_TMP_DIR + "_" + IDGenerator.nextStr());
-            if (!tmpDir.exists() && !tmpDir.mkdirs()) {
-                throw new MSException(Translator.get("upload_fail"));
-            }
-            //获取导出的ids集合
-            List<File> batchExcels = new ArrayList<>();
-            List<String> ids = functionalCaseService.doSelectIds(request, request.getProjectId());
-            if (CollectionUtils.isEmpty(ids)) {
-                return null;
-            }
-            // 生成EXCEL
-            batchExcels = generateCaseExportExcel(batchExcels, ids, tmpDir.getPath(), request);
+            if (!tmpDir.exists() && !tmpDir.mkdirs()) throw new MSException("无法创建导出临时文件");
+            List<File> batchExcels = generateCaseExportExcel(snapshot, tmpDir.getPath(), request, taskId);
+            exportTaskService.checkActive(taskId);
+            String fileType;
             if (batchExcels.size() > 1) {
-                // EXCEL -> ZIP (EXCEL数目大于1)
                 File zipFile = CompressUtils.zipFilesToPath(tmpDir.getPath() + File.separatorChar + request.getFileId() + ".zip", batchExcels);
                 fileType = ZIP;
+                exportTaskService.registerFile(taskId, fileType);
                 uploadFileToMinio(fileType, zipFile, request.getFileId());
             } else {
-                // EXCEL (EXCEL数目等于1)
-                File singeFile = batchExcels.get(0);
                 fileType = XLSX;
-                uploadFileToMinio(fileType, singeFile, request.getFileId());
+                exportTaskService.registerFile(taskId, fileType);
+                uploadFileToMinio(fileType, batchExcels.getFirst(), request.getFileId());
             }
             LogDTO logDTO = functionalCaseLogService.exportExcelLog(request, "excel", userId, orgId);
             operationLogService.add(logDTO);
-            List<ExportTask> exportTasks = getExportTasks(request.getProjectId(), userId);
-            String taskId;
-            if (CollectionUtils.isNotEmpty(exportTasks)) {
-                taskId = exportTasks.getFirst().getId();
-                updateExportTask(ExportConstants.ExportState.SUCCESS.name(), taskId, fileType);
-            } else {
-                taskId = MsgType.CONNECT.name();
-            }
-            ExportMsgDTO exportMsgDTO = new ExportMsgDTO(request.getFileId(), taskId, ids.size(), true, MsgType.EXEC_RESULT.name());
-            ExportWebSocketHandler.sendMessageSingle(exportMsgDTO);
+            return new FunctionalCaseExportTaskService.Result(fileType, ids.size());
+        } catch (FunctionalCaseExportTaskService.EmptyExportException e) {
+            throw e;
         } catch (Exception e) {
-            List<ExportTask> exportTasks = getExportTasks(request.getProjectId(), userId);
-            if (CollectionUtils.isNotEmpty(exportTasks)) {
-                updateExportTask(ExportConstants.ExportState.ERROR.name(), exportTasks.getFirst().getId(), fileType);
-            }
-            ExportMsgDTO exportMsgDTO = new ExportMsgDTO(request.getFileId(), "", 0, false, MsgType.EXEC_RESULT.name());
-            ExportWebSocketHandler.sendMessageSingle(exportMsgDTO);
-            LogUtils.error(e);
-            throw new MSException(e);
+            throw new MSException("用例导出失败", e);
         } finally {
-            try {
-                MsFileUtils.deleteDir(tmpDir.getPath());
-            } catch (Exception e) {
-                throw new MSException(e);
+            if (tmpDir != null) {
+                try { MsFileUtils.deleteDir(tmpDir.getPath()); }
+                catch (Exception cleanup) { LogUtils.error("Export temporary file cleanup failed, taskId=" + taskId, cleanup); }
             }
         }
-        return null;
     }
 
     public List<ExportTask> getExportTasks(String projectId, String userId) {
@@ -530,6 +523,7 @@ public class FunctionalCaseFileService {
     }
 
     public void uploadFileToMinio(String fileType, File file, String fileId) throws Exception {
+        if (file.length() > 64L * 1024 * 1024) throw new MSException("导出文件超过 64 MiB，请缩小范围分批导出");
         FileRequest fileRequest = new FileRequest();
         fileRequest.setFileName(fileId.concat(".").concat(fileType));
         fileRequest.setFolder(DefaultRepositoryDir.getExportExcelTempDir());
@@ -539,57 +533,46 @@ public class FunctionalCaseFileService {
         }
     }
 
-    private List<File> generateCaseExportExcel(List<File> tmpExportExcelList, List<String> ids, String tmpZipPath, FunctionalCaseExportRequest request) {
-        //excel表头
-        List<List<String>> headList = getFunctionalCaseExportHeads(request);
-        //获取导出的ids集合
-        //获取当前项目下默认模板的自定义字段属性
+    private record ExcelBatch(List<List<Object>> rows, Map<Integer, Integer> merges) { }
+    private record ExcelSnapshot(List<String> ids, List<List<String>> heads, Map<String, List<String>> options,
+                                 Map<String, TemplateCustomFieldDTO> fields, List<ExcelBatch> batches) { }
+
+    private ExcelSnapshot snapshotExcel(FunctionalCaseExportRequest request) {
+        List<String> ids = validatedExportIds(request);
+        List<List<String>> heads = getFunctionalCaseExportHeads(request);
         List<TemplateCustomFieldDTO> customFields = getCustomFields(request.getProjectId());
-        //默认字段+自定义字段的 options集合
-        Map<String, List<String>> customFieldOptionsMap = getCustomFieldOptionsMap(customFields);
-        Map<String, TemplateCustomFieldDTO> customFieldMap = customFields.stream().collect(Collectors.toMap(TemplateCustomFieldDTO::getFieldName, templateCustomFieldDTO -> templateCustomFieldDTO));
-
-        //获取url
+        Map<String, List<String>> options = getCustomFieldOptionsMap(customFields);
+        Map<String, TemplateCustomFieldDTO> fields = customFields.stream().collect(Collectors.toMap(TemplateCustomFieldDTO::getFieldName, item -> item));
         SystemParameter parameter = systemParameterMapper.selectByPrimaryKey(ParamConstants.BASE.URL.getValue());
-
-        //获取用例模块map
-        Map<String, String> moduleMap = getModuleMap(request.getProjectId());
-        //2000条，分批导出
-        AtomicInteger count = new AtomicInteger(0);
-        SubListUtils.dealForSubList(ids, EXPORT_CASE_MAX_COUNT, (subIds) -> {
-            count.getAndIncrement();
-            // 生成writeHandler
-            Map<Integer, Integer> rowMergeInfo = new HashMap<>();
-            FunctionCaseMergeWriteHandler writeHandler = new FunctionCaseMergeWriteHandler(rowMergeInfo, headList);
-            //表头备注信息
-            FunctionCaseTemplateWriteHandler handler = new FunctionCaseTemplateWriteHandler(headList, customFieldOptionsMap, customFieldMap);
-
-            //获取导出数据
-            List<FunctionalCaseExcelData> excelData = parseCaseData2ExcelData(subIds, rowMergeInfo, request, customFields, moduleMap, parameter.getParamValue());
-            List<List<Object>> data = parseExcelData2List(headList, excelData);
-
-            File createFile = new File(tmpZipPath + File.separatorChar + request.getFileId() + count.get() + ".xlsx");
-            if (!createFile.exists()) {
-                try {
-                    createFile.createNewFile();
-                } catch (IOException e) {
-                    throw new MSException(e);
-                }
-            }
-
-            //生成临时EXCEL
-            EasyExcel.write(createFile)
-                    .head(Optional.ofNullable(headList).orElse(new ArrayList<>()))
-                    .registerWriteHandler(handler)
-                    .registerWriteHandler(writeHandler)
-                    .registerWriteHandler(FunctionCaseTemplateWriteHandler.getHorizontalWrapStrategy())
-                    .excelType(ExcelTypeEnum.XLSX).sheet(Translator.get("test_case_import_template_sheet")).doWrite(data);
-            tmpExportExcelList.add(createFile);
+        Map<String, String> modules = getModuleMap(request.getProjectId());
+        List<ExcelBatch> batches = new ArrayList<>();
+        int[] bytes = {0};
+        SubListUtils.dealForSubList(ids, EXPORT_CASE_MAX_COUNT, batch -> {
+            Map<Integer, Integer> merges = new HashMap<>();
+            List<FunctionalCaseExcelData> data = parseCaseData2ExcelData(batch, merges, request, customFields, modules,
+                    parameter == null ? "" : parameter.getParamValue());
+            List<List<Object>> rows = parseExcelData2List(heads, data);
+            bytes[0] += JSON.toJSONString(rows).getBytes(StandardCharsets.UTF_8).length;
+            if (bytes[0] > 8 * 1024 * 1024) throw new MSException("导出内容过大，请缩小范围分批导出");
+            batches.add(new ExcelBatch(rows, merges));
         });
-
-        return tmpExportExcelList;
+        return new ExcelSnapshot(ids, heads, options, fields, batches);
     }
 
+    private List<File> generateCaseExportExcel(ExcelSnapshot snapshot, String directory, FunctionalCaseExportRequest request, String taskId) {
+        List<File> files = new ArrayList<>();
+        for (ExcelBatch batch : snapshot.batches()) {
+            exportTaskService.checkActive(taskId);
+            File file = new File(directory, request.getFileId() + (files.size() + 1) + ".xlsx");
+            EasyExcel.write(file).head(snapshot.heads())
+                    .registerWriteHandler(new FunctionCaseTemplateWriteHandler(snapshot.heads(), snapshot.options(), snapshot.fields()))
+                    .registerWriteHandler(new FunctionCaseMergeWriteHandler(batch.merges(), snapshot.heads()))
+                    .registerWriteHandler(FunctionCaseTemplateWriteHandler.getHorizontalWrapStrategy())
+                    .excelType(ExcelTypeEnum.XLSX).sheet(Translator.get("test_case_import_template_sheet")).doWrite(batch.rows());
+            files.add(file);
+        }
+        return files;
+    }
 
     private List<FunctionalCaseExcelData> parseCaseData2ExcelData(List<String> ids, Map<Integer, Integer> rowMergeInfo, FunctionalCaseExportRequest request, List<TemplateCustomFieldDTO> customFields, Map<String, String> moduleMap, String url) {
         List<FunctionalCaseExcelData> list = new ArrayList<>();
@@ -618,7 +601,7 @@ public class FunctionalCaseFileService {
             //构建基本参数
             buildBaseField(data, functionalCase, functionalCaseBlob, moduleMap, textDescriptionList, expectedResultList, url, project);
             //构建自定义字段
-            buildExportCustomField(customFields, customFieldMap.get(id), data, request);
+            buildExportCustomField(customFields, customFieldMap.getOrDefault(id, List.of()), data, request);
             //构建其他字段
             buildExportOtherField(functionalCase, data, caseCommentMap, executeCommentMap, reviewCommentMap, request);
             validateExportTextField(data);
@@ -939,32 +922,28 @@ public class FunctionalCaseFileService {
         return functionalCaseExportColumns;
     }
 
-    public ResponseEntity<byte[]> downloadFile(String projectId, String fileId, String userId) {
-        List<ExportTask> exportTasks = getExportTasksByFileId(projectId, userId, fileId);
-        if (CollectionUtils.isEmpty(exportTasks)) {
-            return ResponseEntity.notFound().build();
-        }
-        ExportTask tasksFirst = exportTasks.getFirst();
+    public ResponseEntity<org.springframework.core.io.InputStreamResource> downloadFile(String projectId, String fileId, String userId) {
+        ExportTaskDTO task = exportTaskService.forDownload(projectId, fileId, userId);
         Project project = projectMapper.selectByPrimaryKey(projectId);
-        byte[] bytes;
         FileRequest fileRequest = new FileRequest();
-        fileRequest.setFileName(tasksFirst.getFileId().concat(".").concat(tasksFirst.getFileType()));
+        fileRequest.setFileName(task.getFileId() + "." + task.getFileType());
         fileRequest.setFolder(DefaultRepositoryDir.getExportExcelTempDir());
         fileRequest.setStorage(StorageType.MINIO.name());
         try {
-            bytes = fileService.download(fileRequest);
-        } catch (Exception e) {
-            throw new MSException("get file error");
-        }
-        String fileName = "Metersphere_case_" + project.getName() + "." + tasksFirst.getFileType();
-
-        try {
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("application/octet-stream"))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()))
-                    .body(bytes);
-        } catch (UnsupportedEncodingException e) {
-            throw new MSException("Utf-8 encoding is not supported");
+            String contentType = switch (task.getFileType()) {
+                case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                case "zip" -> "application/zip";
+                default -> "application/octet-stream";
+            };
+            String name = "Metersphere_case_" + project.getName() + "." + task.getFileType();
+            var stream = fileService.getFileAsStream(fileRequest);
+            return ResponseEntity.ok().contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, org.springframework.http.ContentDisposition.attachment()
+                            .filename(name, StandardCharsets.UTF_8).build().toString())
+                    .body(new org.springframework.core.io.InputStreamResource(stream));
+        } catch (Exception exception) {
+            LogUtils.error("Export download failed, taskId=" + task.getTaskId(), exception);
+            throw new MSException("导出文件暂时无法下载，请稍后重试");
         }
     }
 
@@ -977,7 +956,7 @@ public class FunctionalCaseFileService {
     }
 
     public void stopExport(String taskId, String userId) {
-        exportTaskManager.sendStopMessage(taskId, userId);
+        exportTaskService.stop(taskId, userId);
     }
 
     public ExportTaskDTO checkExportTask(String projectId, String userId) {

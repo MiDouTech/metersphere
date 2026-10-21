@@ -29,4 +29,8 @@ test("direct submit requires matching case/policy revisions and complete step fa
   assert.equal(schema.safeParse({...args,policyHash:undefined}).success,false);
   assert.equal(schema.safeParse({...args,steps:[{...args.steps[0],evidenceIds:[]}]}).success,false);
   assert.equal(schema.safeParse({...args,steps:[{...args.steps[0],result:"PASS"}]}).success,false);
+  assert.equal(schema.safeParse({...args,steps:[args.steps[0],args.steps[0],{...args.steps[0],stepNum:101}]}).success,true);
+  assert.equal(schema.safeParse({...args,steps:Array.from({length:101},()=>args.steps[0])}).success,true);
+  assert.equal(schema.safeParse({...args,steps:Array.from({length:1001},()=>args.steps[0])}).success,false);
+  assert.equal(schema.safeParse({...args,steps:[{...args.steps[0],stepNum:1001}]}).success,false);
 });

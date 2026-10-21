@@ -19,4 +19,13 @@ public class ExportTaskDTO implements Serializable {
 
     @Schema(description =  "任务id")
     private String taskId;
+    private String projectId;
+    private String state;
+    private String fileType;
+    private int count;
+    private long stateVersion;
+    private Long expiresAt;
+    private String errorCode;
+    private String message;
+    private String traceId;
 }

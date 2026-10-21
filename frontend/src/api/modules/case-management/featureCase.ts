@@ -89,7 +89,6 @@ import {
   RestoreCaseListUrl,
   SaveAiConfigUrl,
   SaveCaseMinderUrl,
-  StopCaseExportUrl,
   TransferFileUrl,
   UpdateCaseModuleTreeUrl,
   UpdateCaseUrl,
@@ -674,13 +673,27 @@ export function getDefaultHubJob(jobId: string) {
     errorMessage?: string;
   }>({ url: `/default-hub/sync/${jobId}` });
 }
+export interface CaseExportTask {
+  taskId: string;
+  projectId: string;
+  fileId: string;
+  state: 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
+  fileType: string;
+  count: number;
+  stateVersion: number;
+  expiresAt?: number;
+  errorCode?: string;
+  message?: string;
+  traceId: string;
+}
+
 // 导出excel
 export function exportExcelCase(data: TableQueryParams) {
-  return MSR.post({ url: ExportExcelCaseUrl, data });
+  return MSR.post<string>({ url: ExportExcelCaseUrl, data });
 }
 // 导出XMind
 export function exportXMindCase(data: TableQueryParams) {
-  return MSR.post({ url: ExportXMindCaseUrl, data });
+  return MSR.post<string>({ url: ExportXMindCaseUrl, data });
 }
 // 检查是否有导出任务
 export function checkCaseExportTask() {
@@ -695,7 +708,7 @@ export function getCaseDownloadFile(projectId: string, fileId: string) {
 }
 // 停止导出
 export function stopCaseExport(taskId: string) {
-  return MSR.get({ url: `${StopCaseExportUrl}/${taskId}` });
+  return MSR.post<CaseExportTask>({ url: `/functional/case/export/tasks/${taskId}/stop` });
 }
 // 获取导出字段配置
 export function getCaseExportConfig(projectId: string) {
@@ -748,4 +761,12 @@ export function caseAiChat(data: AiChatPrams) {
 // AI用例批量保存
 export function caseAiBatchSave(data: CaseAiBatchSaveParams) {
   return MSR.post({ url: CaseAiBatchSaveUrl, data });
+}
+
+export function getCaseExportTask(taskId: string) {
+  return MSR.get<CaseExportTask>({ url: `/functional/case/export/tasks/${encodeURIComponent(taskId)}` });
+}
+
+export function getRecentCaseExports(projectId: string) {
+  return MSR.get<CaseExportTask[]>({ url: '/functional/case/export/tasks', params: { projectId } });
 }

@@ -137,9 +137,16 @@ public class SessionUtils {
     }
 
     public static boolean hasPermission(String organizationId, String projectId, String permission) {
+        return hasPermission(SessionUtils.getUser(), organizationId, projectId, permission);
+    }
+
+    /** Allows background work to authorize a freshly loaded identity without a browser Session. */
+    public static boolean hasPermission(SessionUser user, String organizationId, String projectId, String permission) {
+        if (user == null) {
+            return false;
+        }
         Map<String, List<UserRolePermission>> userRolePermissions = new HashMap<>();
         Map<String, UserRole> role = new HashMap<>();
-        SessionUser user = Objects.requireNonNull(SessionUtils.getUser());
         user.getUserRoleRelations().forEach(ug -> user.getUserRolePermissions().forEach(gp -> {
             if (StringUtils.equalsIgnoreCase(gp.getUserRole().getId(), ug.getRoleId())) {
                 userRolePermissions.put(ug.getId(), gp.getUserRolePermissions());

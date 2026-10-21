@@ -490,6 +490,7 @@ export class MeterSphereClient {
   }
 
   createBug(payload: {
+    requestId: string;
     projectId?: string;
     title: string;
     description?: string;

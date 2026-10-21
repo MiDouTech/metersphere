@@ -12,6 +12,12 @@ import java.util.UUID;
 public class AgentSafeErrorMapper {
     public AgentApiErrorDTO toApiError(Throwable error, String suppliedTraceId) {
         String traceId = StringUtils.defaultIfBlank(suppliedTraceId, UUID.randomUUID().toString());
+        if (error instanceof MSException business && business.getErrorCode() instanceof io.metersphere.agent.constants.AgentErrorCode code) {
+            return new AgentApiErrorDTO(code.name(), safeMessage(code.name()), Map.of(), traceId);
+        }
+        if (error instanceof jakarta.validation.ValidationException || error instanceof IllegalArgumentException) {
+            return new AgentApiErrorDTO("AGENT_VALIDATION_ERROR", safeMessage("AGENT_VALIDATION_ERROR"), Map.of(), traceId);
+        }
         if (error instanceof MSException) {
             String commentCode = switch (StringUtils.defaultString(error.getMessage())) {
                 case "评论已被更新，请刷新后重试" -> "VERSION_CONFLICT";
@@ -34,6 +40,9 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "SCOPE_DENIED", "RBAC_DENIED", "PROJECT_NOT_ALLOWED" -> "当前令牌或账号没有执行此项目操作的权限";
+            case "PROJECT_NOT_FOUND" -> "项目不存在或当前账号无权访问";
+            case "IDEMPOTENCY_CONFLICT" -> "相同请求标识的参数已变化，请使用新的请求标识";
             case "PROJECT_IDENTITY_REQUIRED" -> "请选择项目或提供项目 ID、编号或名称";
             case "PROJECT_IDENTITY_AMBIGUOUS" -> "项目标识存在歧义，请搜索授权项目后使用内部项目 ID";
             case "QUALITY_CLAIM_ACTOR_REVOKED" -> "任务发起人的项目权限已失效，请重新授权后再执行";
@@ -71,6 +80,16 @@ public class AgentSafeErrorMapper {
             case "QUALITY_POLICY_PROJECT_DISABLED" -> "项目已停用，质量策略仅可查看，不能修改或发布";
             case "QUALITY_POLICY_NOT_FOUND" -> "质量策略不存在或不属于当前项目";
             case "QUALITY_POLICY_VERSION_CONFLICT" -> "策略或当前发布版本已变化，请刷新后比较并重试";
+            case "MCP_TOOL_NOT_FOUND" -> "MCP 工具不存在，请刷新工具清单";
+            case "BUG_REQUIRED_FIELD_MISSING" -> "请补齐缺陷必填字段和处理人";
+            case "BUG_FIELD_VALUE_INVALID" -> "缺陷字段值或处理人不在当前项目允许范围内";
+            case "BUG_INITIAL_STATUS_SERVER_OWNED" -> "新建缺陷状态由已发布工作流决定，请勿指定状态";
+            case "BUG_IMPORT_PREVIEW_CHANGED" -> "导入内容或模板已变化，请重新预检";
+            case "BUG_IMPORT_FILE_INVALID" -> "请提供符合模板的 XLSX 文件，不能包含公式或重复表头";
+            case "BUG_TRANSFER_LIMIT_EXCEEDED" -> "单次最多处理100条缺陷，文件不超过5MiB";
+            case "BUG_IMPORT_LOCAL_ONLY" -> "当前批量导入仅支持本地缺陷项目";
+            case "BUG_EXPORT_EMPTY" -> "没有可导出的缺陷";
+            case "BUG_WORKFLOW_NOT_PUBLISHED", "BUG_WORKFLOW_INITIAL_STATUS_INVALID" -> "请管理员发布具有唯一初始状态的缺陷工作流";
             case "MCP_TOOL_FORBIDDEN" -> "当前身份无权调用该 MCP 工具";
             case "TASK_ORIGIN_CHANNEL_MISMATCH" -> "任务来源与执行通道不匹配";
             case "PERMISSION_DENIED" -> "没有执行此操作的权限";

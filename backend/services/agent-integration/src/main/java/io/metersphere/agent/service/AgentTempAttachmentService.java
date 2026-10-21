@@ -35,6 +35,7 @@ public class AgentTempAttachmentService {
 
     @Resource
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Resource private AgentBusinessAccess businessAccess;
 
     @Resource
     private CommonFileService commonFileService;
@@ -188,7 +189,10 @@ public class AgentTempAttachmentService {
                 fileId,resolved,token.getId(),token.getUserId(),System.currentTimeMillis());
         if(rows.size()!=1) throw AgentBusinessAccess.denied();
         String purpose=(String)rows.getFirst().get("purpose");
-        if(purpose.startsWith("CASE_"))
+        if("BUG_EXPORT".equals(purpose)) {
+            businessAccess.project(resolved,io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_EXPORT,false,
+                    io.metersphere.agent.constants.AgentTokenScope.BUG_READ);
+        } else if(purpose.startsWith("CASE_"))
             io.metersphere.agent.security.AgentScopeAssert.assertAnyScope(io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ,io.metersphere.agent.constants.AgentTokenScope.CASE_ATTACHMENT);
         else if(purpose.startsWith("BUG_"))
             io.metersphere.agent.security.AgentScopeAssert.assertAnyScope(io.metersphere.agent.constants.AgentTokenScope.BUG_READ,io.metersphere.agent.constants.AgentTokenScope.BUG_ATTACHMENT);

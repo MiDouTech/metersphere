@@ -4,14 +4,9 @@
       >全平台统一标准：所有项目使用同一当前版本，不能按项目覆盖。新版本用于后续执行，历史执行保留其绑定版本。</a-alert
     >
     <a-space direction="vertical" fill>
-      <a-alert :type="reviewConfigured ? 'info' : 'warning'">
-        {{
-          reviewConfigured === undefined
-            ? '证据内容核验配置尚未读取。'
-            : reviewConfigured
-            ? '已配置独立证据核验服务；实际可用性由每次提交确认。'
-            : '尚未配置独立证据核验服务。个人 Agent 提交将保留为待核验，不发布正式附件或结果。'
-        }}
+      <a-alert type="info">
+        个人 Agent 仅校验步骤覆盖、版本及附件结构，不比较实际结果与预期文字，也不审核图片语义。
+        原用例步骤不可遗漏；额外和重复步骤允许并保留，任一记录失败则汇总失败。结果由提交方声明，无需外部核验服务。
       </a-alert>
       <a-typography-title :heading="4">门禁策略</a-typography-title>
       <a-alert>发布影响全平台后续执行。旧项目策略仅供历史核对，导入只生成草稿，不会自动生效。</a-alert>
@@ -251,7 +246,6 @@
     QualityTrialResult,
   } from '@/api/modules/execution-quality';
   import {
-    getEvidenceReviewStatus,
     getQualityPolicy,
     getQualityPolicySchema,
     importLegacyQualityPolicy,
@@ -266,7 +260,6 @@
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
 
   const archiveItems = ref<LegacyQualityPolicy[]>([]);
-  const reviewConfigured = ref<boolean>();
   const archivePage = ref(1);
   const archiveTotal = ref(0);
   const archiveVisible = ref(false);
@@ -361,12 +354,6 @@
       currentId.value = listing.currentPolicyId;
       currentPolicy.value = listing.currentPolicy;
       schema.value = document;
-      try {
-        const review = await getEvidenceReviewStatus();
-        if (requestEpoch === epoch) reviewConfigured.value = review.configured;
-      } catch {
-        if (requestEpoch === epoch) reviewConfigured.value = undefined;
-      }
     } catch (e) {
       if (requestEpoch === epoch) error.value = message(e);
     } finally {

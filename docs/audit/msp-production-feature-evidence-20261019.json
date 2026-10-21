@@ -1,0 +1,1646 @@
+{
+  "checkedAt": "2026-10-19 Asia/Shanghai",
+  "environment": "https://msp.ebcone.cn",
+  "endpoint": "https://msp.ebcone.cn/api/mcp",
+  "scope": "Current Agent Token accessible projects only; includeArchived=true; 45 projects; browser unavailable",
+  "method": {
+    "projects": "metersphere.project.list",
+    "environments": "metersphere.environment.profile.list",
+    "publishedAssets": "metersphere.asset.catalog.search",
+    "assetTypes": [
+      "DOCUMENT",
+      "PAGE_OBJECT",
+      "BUSINESS_FLOW",
+      "DATASET",
+      "COMMON_STEP",
+      "EVIDENCE",
+      "API_DEFINITION"
+    ],
+    "executions": "metersphere.execution.search",
+    "executionFilters": {
+      "current": 1,
+      "pageSize": 1
+    },
+    "notes": "Published assets only, no keyword or date filter. Empty asset results all hasMore=false. Initial HTTP 429 failures retried at lower rate for environments/assets/executions; failed plan/bug queries excluded from conclusions."
+  },
+  "projects": [
+    {
+      "id": "1698768949795274752",
+      "num": 100045,
+      "name": "IMP 标识中台",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 0,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "2726269f-7d17-44a1-b78c-5162abcf2d63"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 0
+        }
+      ]
+    },
+    {
+      "id": "1695148412623831040",
+      "num": 100044,
+      "name": "互动营销T3.48.0（组合有礼新增主商品解锁模式+出资方分摊）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "688ea082-a47c-416a-9a4f-ef8bd48b32f2"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 0
+        }
+      ]
+    },
+    {
+      "id": "1691654319289581568",
+      "num": 100043,
+      "name": "智能营销（广府槟榔定制扫码模板）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "c9605828-29f8-4c64-aff4-86478d8a2e6e"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 0
+        }
+      ]
+    },
+    {
+      "id": "1690342034981961728",
+      "num": 100042,
+      "name": "fc_codeapi异步码关系导入",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "d33d3e69-92c0-441b-bc2d-bc75648ae52e"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 0
+        }
+      ]
+    },
+    {
+      "id": "1689917451694948352",
+      "num": 100041,
+      "name": "品牌商后台基础T6.18.7（待解锁券管理升级）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "2c700dd1-4b34-49c5-9525-1da9e7b1d4db"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 3
+        }
+      ]
+    },
+    {
+      "id": "1688695980175835136",
+      "num": 100040,
+      "name": "互动营销T3.47.1（渠道返利是否宴席/团购商品订单结单后判定优化）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "91f7f6fa-a282-4dd7-a86c-db0d29138591"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 1
+        }
+      ]
+    },
+    {
+      "id": "1688661981214720000",
+      "num": 100039,
+      "name": "品牌商后台基础T6.18.8（手工发放多张券）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "a6eb3983-f4a1-412f-ad02-22786ff8871f"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 1
+        }
+      ]
+    },
+    {
+      "id": "1684335128081514496",
+      "num": 100038,
+      "name": "品牌商后台基础T6.18.7（红包券管理升级为待解锁券管理）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "e82d9724-490b-45ce-84a2-a20f449110f8"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 0
+        }
+      ]
+    },
+    {
+      "id": "1660499674496417792",
+      "num": 100037,
+      "name": "智能营销T3.1.20（自定义溯源页）拜耳",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "da897de2-6c6f-4184-bc85-f6d141212084"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 0
+        }
+      ]
+    },
+    {
+      "id": "1657807004879732736",
+      "num": 100036,
+      "name": "【领卡优化】领卡成功后展示奖项信息（无奖项则不展示）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": true,
+          "total": 1,
+          "hasMore": false
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "ca48186b-4624-4ebb-80c9-db2084f69594"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": true,
+          "total": 0
+        }
+      ]
+    },
+    {
+      "id": "1657803757884456960",
+      "num": 100035,
+      "name": "互动营销T3.47.2（内容营销支持配置每日发奖数量限制）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "d60ed7fc-61ae-49ce-8318-b6c45bf8d8e4"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1657797659030896640",
+      "num": 100034,
+      "name": "会员小程序T2.6.11（新增添加企微组件）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "d847c5f3-4c29-4fc7-8001-8128c937266d"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1657414273070186496",
+      "num": 100033,
+      "name": "品牌商后台基础 T6.18.5（资金账户管理方案）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "6d549375-3f0c-442e-9b41-907f86605cde"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1657388881223532544",
+      "num": 100032,
+      "name": "智能营销T3.1.19（活动出资方式）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "863228a0-6939-42af-8ba8-35b67049959b"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1657101943048421376",
+      "num": 100031,
+      "name": "优化小程序隐私协议授权逻辑",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "f9caca52-9559-4ce3-a4a2-92b1b1b1b1aa"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1653060962938437632",
+      "num": 100030,
+      "name": "会员小程序T2.6.10（千区千面方案）AI文档",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "f44ec62d-6c9d-4d29-bfa2-fd86a5eb73ad"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1651897628096643072",
+      "num": 100029,
+      "name": "品牌商后台基础（业务员新增销售区域关联字段）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "cbf2388f-9888-4e05-8c15-0352bae03d87"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1649791324595077120",
+      "num": 100028,
+      "name": "智能营销T3.1.17（拜耳活动区域管理与窜货白名单）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "3467379c-00ea-44b6-9046-c069794583b8"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1648201825918304256",
+      "num": 100027,
+      "name": "品牌商后台基础T6.18.6（验真匹配支持高德POI）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "d882d423-2258-448b-a38d-5b740bc2596c"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1638304108144394240",
+      "num": 100026,
+      "name": "互动营销T3.45.0（拜耳组合有礼）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "8d8860da-2571-4778-a300-6709b27a268a"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1636787744170721280",
+      "num": 100025,
+      "name": "互动营销T3.45.1（加企微有礼 · 扫码二重礼）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "e937c727-6299-4643-8963-e3a3e875044a"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1636719883687444480",
+      "num": 100024,
+      "name": "互动营销T3.46.0（新增参会有礼）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "f2bb8055-9f3c-4033-90e5-30e18d99395e"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1628125465149587456",
+      "num": 100023,
+      "name": "互动营销T[3.44.7]（会员小程序接入内容营销）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "513d24a4-c11a-46af-94f7-d3016337a683"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1625985042427822080",
+      "num": 100022,
+      "name": "智能营销T3.1.16（拜耳通码进场瓶身领奖方案）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "65c9dda7-ea58-46fe-8b05-057ba7bb367a"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1625917937858789376",
+      "num": 100021,
+      "name": "米多星球：运营-资金管理",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "4983b37d-56db-4aa0-bd28-474523ae27ae"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1620108101237751808",
+      "num": 100020,
+      "name": "互动营销T3.44.5 （渠道返利门店增加参与机会奖项-含宴席/团购）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "d1653b55-56fd-4c0e-9829-e50be424d573"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1617124061039706112",
+      "num": 100019,
+      "name": "防窜物流T3.3.5（门店扫动销码窜货判断支持销售区域类型）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "5be16d92-0ee5-4253-94fc-de368857ce72"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1611604100351401984",
+      "num": 100018,
+      "name": "米多星球T3.14.0 (企业主体)",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "b3b7a018-267a-4b31-9712-78e8aae63d0e"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1611596300690792448",
+      "num": 100017,
+      "name": "互动营销T3.44.6（团购有礼活动报名支持自动审核）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "aac86535-49b7-4a41-9c66-186f400abd00"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1610369056735617024",
+      "num": 100016,
+      "name": "米多星球：财务-红包资金管理",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "f52f577a-bdf9-45bf-ae1a-5fbd4adec702"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1603043131018829824",
+      "num": 100015,
+      "name": "智能营销T3.1.13（扫码活动支持双扫码模板（H5/小程序））",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "cc1e8c4d-4680-48e4-8cbb-ab627cbf5acd"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1600703061037277184",
+      "num": 100014,
+      "name": "DCRM-高级搜索索引同步",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "5594390c-b6d8-4322-b6cf-3b9473ef97f1"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1596934828530458624",
+      "num": 100013,
+      "name": "品牌商后台基础（新增刷脸实名认证模块）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "2a6da879-f7b3-4d2d-be2c-b08cb8671b22"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1596788662203441152",
+      "num": 100012,
+      "name": "品牌商后台基础T6.18.2_用户管理支持批量发红包",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "6d7011a9-77ea-4262-a1d6-445d69eaf141"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1592019788215992320",
+      "num": 100011,
+      "name": "测试项目-测试一体化",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 1
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "472d4128-283f-4e90-a547-15dce573de74"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1564196749554237440",
+      "num": 100003,
+      "name": "智能营销T3.1.14（扫码模板新增商品信息组件）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "3bc0e85e-6f23-48df-a643-48b4d5575d58"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1577226580818722816",
+      "num": 100010,
+      "name": "米多星球T3.2.0(资金管理)-支出金额核对",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "a8949f13-ad61-4e51-8fc2-3aa8661c01dd"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1564158988201762816",
+      "num": 100002,
+      "name": "默认项目",
+      "enabled": false,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "2c1eabb6-6a62-4de1-baad-014716c355cb"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1564204824092753920",
+      "num": 100004,
+      "name": "品牌商后台基础T6.17.9（红包充值：新增营销推广服务费及相关优化）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "d0fedf15-d557-4075-9eb9-c543202443e2"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1565178098041774080",
+      "num": 100005,
+      "name": "防窜物流T3.3.4（防窜物流6月常规优化）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "b4d2c8c7-2d16-4aca-9a3b-83bae71184e3"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1565363554729615360",
+      "num": 100006,
+      "name": "互动营销T3.44.2-应用拆分升级",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "103b7bdc-ff8a-408d-99cf-8fe11a162071"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1568541108974157824",
+      "num": 100007,
+      "name": "米多星球T3.13.6（资金管理-红包充值）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "0f69d1ab-a907-414e-a884-0426a7ae1ea1"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1568617336053727232",
+      "num": 100008,
+      "name": "品牌商后台基础T6.18.0（BDE营销系统接入第三方标识中台）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "e3b1e0d7-631d-469f-b3d3-7a4af2a79964"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "1569600402528174080",
+      "num": 100009,
+      "name": "互动营销T3.44.3（渠道返利累计有效次数按方案隔离）",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "af81ce1f-9689-4d9f-8a77-707f41fc415a"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    },
+    {
+      "id": "100001100001",
+      "num": 100001,
+      "name": "米多公司默认项目",
+      "enabled": true,
+      "checks": [
+        {
+          "kind": "plans",
+          "success": false,
+          "total": null
+        },
+        {
+          "kind": "environments",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "assets",
+          "success": true,
+          "total": 0,
+          "hasMore": false,
+          "traceId": "ebfde7ee-4294-47f3-9a48-c23c3ce8a716"
+        },
+        {
+          "kind": "executions",
+          "success": true,
+          "total": 0
+        },
+        {
+          "kind": "bugs",
+          "success": false,
+          "total": null
+        }
+      ]
+    }
+  ],
+  "environmentProfiles": [
+    {
+      "id": "1637795188879548416",
+      "name": "测试",
+      "enabled": false,
+      "runnerType": "BROWSER",
+      "environmentType": "TEST",
+      "loginProfileConfigured": false,
+      "defaultCredentialConfigured": false
+    }
+  ],
+  "credentialMetadataCount": 0,
+  "functionalSearchErrors": [
+    {
+      "projectNum": 100045,
+      "code": "AI_EXECUTION_INTERNAL_ERROR",
+      "traceId": "a4f46f1d-e895-4c27-9dd7-d986fc510cb0"
+    },
+    {
+      "projectNum": 100044,
+      "code": "AI_EXECUTION_INTERNAL_ERROR",
+      "traceId": "4cfe2742-0e63-4fb4-9eb4-422b126911e1"
+    }
+  ],
+  "unresolved": [
+    "Browser menu and system configuration inspection",
+    "Models/Runner/notification/SSO configuration",
+    "Unpublished documents and attachments",
+    "API test executions",
+    "Quality gate actual enforcement and independent approvals",
+    "Deployed revision compared with local source"
+  ],
+  "changes": "Read-only production audit. No production configuration or business data changed."
+}

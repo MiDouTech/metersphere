@@ -9,6 +9,7 @@ public enum AgentAttachmentPurpose {
     CASE_DETAIL,
     CASE_COMMENT,
     BUG_DETAIL,
+    BUG_EXPORT,
     BUG_COMMENT,
     EXECUTION;
 

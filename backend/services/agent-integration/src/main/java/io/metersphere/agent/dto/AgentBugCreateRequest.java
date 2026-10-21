@@ -48,5 +48,6 @@ public class AgentBugCreateRequest {
     private List<String> addCaseIds;
 
     @Schema(description = "幂等键")
+    @NotBlank
     private String requestId;
 }

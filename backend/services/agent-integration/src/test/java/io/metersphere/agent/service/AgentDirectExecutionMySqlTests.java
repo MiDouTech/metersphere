@@ -59,9 +59,6 @@ class AgentDirectExecutionMySqlTests {
             ReflectionTestUtils.setField(service,"operations",new AgentOperationExecutor(jdbc,new DataSourceTransactionManager(ds)));
             ReflectionTestUtils.setField(service,"gate",new GlobalQualityGate(jdbc,null,new QualityPolicyValidator()));
             ReflectionTestUtils.setField(service,"cipher",new AgentFactCipher());
-            var reviewer=mock(io.metersphere.agent.quality.EvidenceContentReviewer.class);
-            when(reviewer.review(anyMap())).thenReturn(new io.metersphere.agent.quality.EvidenceContentReviewer.Review(true,"EVIDENCE_CONTENT_SUPPORTED","test-protocol-only","digest"));
-            ReflectionTestUtils.setField(service,"evidenceReviewer",reviewer);
             var base=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c"));
             var contract=service.contract(base);base.put("contentHash",contract.get("contentHash"));
             var upload=new LinkedHashMap<>(base);upload.putAll(Map.of("stepNum",1,"purpose","BEFORE_STEP","fileName","screen.png","contentType","image/png","base64",AgentDirectExecutionTests.png(),"requestId","before"));
@@ -70,13 +67,13 @@ class AgentDirectExecutionMySqlTests {
             upload.put("purpose","AFTER_STEP");upload.put("requestId","after");
             String after=(String)service.upload(upload).get("evidenceId");
             var submit=new LinkedHashMap<>(base);submit.put("policyHash",contract.get("policyHash"));submit.put("requestId","result");
-            submit.put("steps",List.of(Map.of("stepNum",1,"actual","visible","result","SUCCESS","evidenceIds",List.of(after))));
+            submit.put("steps",List.of(Map.of("stepNum",1,"actual","observed with different wording","result","SUCCESS","evidenceIds",List.of(after))));
             assertEquals("QUALITY_EVIDENCE_REQUIRED",assertThrows(MSException.class,()->service.submit(submit)).getMessage());
             assertEquals("PENDING",jdbc.queryForObject("SELECT last_execute_result FROM functional_case",String.class));
             assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
             var store=new FunctionalCaseEvidenceStore();ReflectionTestUtils.setField(store,"jdbc",jdbc);
             assertNull(store.read("p","c",before));
-            submit.put("steps",List.of(Map.of("stepNum",1,"actual","visible","result","SUCCESS","evidenceIds",List.of(before,after))));
+            submit.put("steps",List.of(Map.of("stepNum",1,"actual","observed with different wording","result","SUCCESS","evidenceIds",List.of(before,after))));
             token.setId("other-token");assertThrows(MSException.class,()->service.submit(submit));token.setId("t");
             submit.put("contentHash","0".repeat(64));assertEquals("VERSION_CONFLICT",assertThrows(MSException.class,()->service.submit(submit)).getMessage());submit.put("contentHash",contract.get("contentHash"));
             jdbc.execute("ALTER TABLE functional_case_attachment ADD UNIQUE KEY forced_failure(file_name)");
@@ -95,28 +92,48 @@ class AgentDirectExecutionMySqlTests {
             assertEquals("SUCCESS",service.report(Map.of("projectId","p","caseId","c","submissionId",result.get("submissionId"))).get("result"));
             submit.put("requestId","reuse-consumed");assertThrows(MSException.class,()->service.submit(submit));
             assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Integer.class));
-            // A configured reviewer failure never inherits the structural-only approval.
-            upload.put("requestId","pending-before");upload.put("purpose","BEFORE_STEP");
-            String pendingBefore=(String)service.upload(upload).get("evidenceId");
-            upload.put("requestId","pending-after");upload.put("purpose","AFTER_STEP");
-            String pendingAfter=(String)service.upload(upload).get("evidenceId");
-            submit.put("requestId","review-unavailable");
-            submit.put("steps",List.of(Map.of("stepNum",1,"actual","visible","result","SUCCESS","evidenceIds",List.of(pendingBefore,pendingAfter))));
-            ReflectionTestUtils.setField(service,"evidenceReviewer",new io.metersphere.agent.quality.EvidenceContentReviewer("",""));
-            var pending=service.submit(submit);
-            assertEquals("NEEDS_REVIEW",pending.get("gateStatus"));
-            assertEquals("NOT_PUBLISHED",pending.get("publishStatus"));
-            var pendingReport = service.report(Map.of("projectId","p","caseId","c","submissionId",pending.get("submissionId")));
-            assertEquals("NEEDS_REVIEW", pendingReport.get("gateStatus"));
-            assertEquals("NOT_PUBLISHED", pendingReport.get("publishStatus"));
-            assertFalse(((List<?>) pendingReport.get("issues")).isEmpty());
-            assertEquals(pending.get("submissionId"),service.submit(submit).get("submissionId"));
-            assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
-            assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_execute_result FROM functional_case",String.class));
+            // Structure-only publication needs no content-review service; retain repeats/extras.
+            upload.put("requestId","second-before");upload.put("purpose","BEFORE_STEP");
+            String secondBefore=(String)service.upload(upload).get("evidenceId");
+            upload.put("requestId","second-after");upload.put("purpose","AFTER_STEP");
+            String secondAfter=(String)service.upload(upload).get("evidenceId");
+            upload.put("stepNum",2);upload.put("requestId","extra-before");upload.put("purpose","BEFORE_STEP");
+            String extraBefore=(String)service.upload(upload).get("evidenceId");
+            upload.put("requestId","extra-after");upload.put("purpose","AFTER_STEP");
+            String extraAfter=(String)service.upload(upload).get("evidenceId");
+            var original=Map.of("stepNum",1,"actual","visible","result","SUCCESS","evidenceIds",List.of(secondBefore,secondAfter));
+            var extra=Map.of("stepNum",2,"actual","additional observation","result","ERROR","evidenceIds",List.of(extraBefore,extraAfter));
+            submit.put("requestId","missing-original");submit.put("steps",List.of(extra));
+            assertEquals("QUALITY_FINAL_FACTS_INCOMPLETE",assertThrows(MSException.class,()->service.submit(submit)).getMessage());
+            submit.put("requestId","invalid-status");submit.put("steps",List.of(Map.of("stepNum",1,"actual","visible","result","PASS","evidenceIds",List.of(secondBefore,secondAfter))));
+            assertEquals("QUALITY_ASSERTION_INVALID",assertThrows(MSException.class,()->service.submit(submit)).getMessage());
+            submit.put("requestId","repeat-extra");
+            submit.put("steps",List.of(extra,original,original));
+            var second=service.submit(submit);
+            assertEquals("ACCEPTED",second.get("gateStatus"));
+            assertEquals("PUBLISHED",second.get("publishStatus"));
+            assertEquals("ERROR",second.get("result"));
+            assertEquals("STRUCTURE_ONLY_V1",second.get("validationMode"));
+            var secondReport=service.report(Map.of("projectId","p","caseId","c","submissionId",second.get("submissionId")));
+            assertEquals("AGENT_REPORTED",secondReport.get("resultSource"));
+            assertEquals(3,((com.fasterxml.jackson.databind.JsonNode)secondReport.get("facts")).path("steps").size());
+            assertEquals(second.get("submissionId"),service.submit(submit).get("submissionId"));
+            assertEquals(6,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
+            assertEquals("ERROR",jdbc.queryForObject("SELECT last_execute_result FROM functional_case",String.class));
+            upload.put("stepNum",1);upload.put("requestId","repeat-only-before");upload.put("purpose","BEFORE_STEP");
+            String repeatBefore=(String)service.upload(upload).get("evidenceId");
+            upload.put("requestId","repeat-only-after");upload.put("purpose","AFTER_STEP");
+            String repeatAfter=(String)service.upload(upload).get("evidenceId");
+            submit.put("requestId","repeat-only");
+            submit.put("steps",List.of(
+                    Map.of("stepNum",1,"actual","visible","result","ERROR","evidenceIds",List.of(repeatBefore,repeatAfter)),
+                    Map.of("stepNum",1,"actual","visible","result","SUCCESS","evidenceIds",List.of(repeatBefore,repeatAfter))));
+            assertEquals("ERROR",service.submit(submit).get("result"));
+            assertEquals(8,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
             upload.put("requestId","expired-pending");service.upload(upload);
             jdbc.update("UPDATE agent_case_evidence SET expires_at=0");
             service.expirePendingEvidence();
-            assertEquals(4,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_evidence",Integer.class));
+            assertEquals(8,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_evidence",Integer.class));
             assertNotNull(store.read("p","c",before));
         } finally {AgentTokenContext.clear();ds.destroy();}
     }

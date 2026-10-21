@@ -46,17 +46,22 @@ class AgentDirectExecutionTests {
         var tiny=new ByteArrayOutputStream();ImageIO.write(new BufferedImage(2,2,BufferedImage.TYPE_INT_RGB),"png",tiny);
         assertThrows(MSException.class,()->AgentDirectExecutionService.decodeImage(Base64.getEncoder().encodeToString(tiny.toByteArray()),"image/png"));
     }
-    @Test void directModeUsesBothGlobalRulesAndDoesNotAcceptMissingEvidenceAsBusinessFailure() {
+    @Test void directModeValidatesEvidenceWithoutDerivingBusinessVerdicts() {
         var gate=new GlobalQualityGate(null,null,new QualityPolicyValidator());
         var policy=new GlobalQualityGate.Binding("global",1,"hash",POLICY);
         var before=artifact("BEFORE_STEP");
         var after=artifact("AFTER_STEP");
-        assertTrue(gate.verifyDirectStep(policy,"visible","visible",List.of(before,after)));
-        assertFalse(gate.verifyDirectStep(policy,"visible","missing",List.of(before,after)));
+        assertDoesNotThrow(()->gate.verifyDirectEvidence(policy,List.of(before,after)));
         assertEquals("QUALITY_EVIDENCE_REQUIRED",assertThrows(MSException.class,
-                ()->gate.verifyDirectStep(policy,"visible","missing",List.of(after))).getMessage());
+                ()->gate.verifyDirectEvidence(policy,List.of(after))).getMessage());
         after.setContentType("image/jpeg");
-        assertThrows(MSException.class,()->gate.verifyDirectStep(policy,"visible","visible",List.of(before,after)));
+        assertThrows(MSException.class,()->gate.verifyDirectEvidence(policy,List.of(before,after)));
+    }
+    @Test void coverageAllowsRepeatedExtraAndUnorderedStepsButNotOmissions() throws Exception {
+        var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        assertDoesNotThrow(()->AgentDirectExecutionService.requireStepCoverage(json.readTree("[{\"stepNum\":2},{\"stepNum\":1},{\"stepNum\":1},{\"stepNum\":3}]"),2));
+        for(String invalid:List.of("[]","[{\"stepNum\":1},{\"stepNum\":1},{\"stepNum\":3}]","[{\"stepNum\":0},{\"stepNum\":2}]","[{\"stepNum\":1.5},{\"stepNum\":2}]","[{\"stepNum\":\"1\"},{\"stepNum\":2}]"))
+            assertThrows(MSException.class,()->AgentDirectExecutionService.requireStepCoverage(json.readTree(invalid),2));
     }
     private AgentExecutionArtifactDTO artifact(String purpose) {
         var artifact=new AgentExecutionArtifactDTO();artifact.setPurpose(purpose);artifact.setContentType("image/png");artifact.setSizeBytes(100L);return artifact;

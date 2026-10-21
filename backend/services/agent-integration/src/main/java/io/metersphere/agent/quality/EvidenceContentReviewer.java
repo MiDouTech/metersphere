@@ -37,7 +37,8 @@ public class EvidenceContentReviewer {
     public Map<String,Object> status() {
         return Map.of("configured",!endpoint.isBlank() && !token.isBlank(),
                 "verification","PER_SUBMISSION","unavailableBehavior","NEEDS_REVIEW",
-                "message","配置状态不代表核验服务可用；每次提交独立核验，未通过不会发布正式结果");
+                "directExecutionValidationMode","STRUCTURE_ONLY_V1","directExecutionReviewerRequired",false,
+                "message","此状态描述独立核验适配器配置；个人直接提交仅检查步骤覆盖、版本和附件结构，不依赖该服务，也不独立判断业务结果");
     }
 
     public EvidenceContentReviewer(

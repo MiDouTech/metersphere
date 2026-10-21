@@ -28,10 +28,10 @@ public class AgentDirectExecutionTools {
         return new AgentMcpToolHandler() {
             public String name(){return "metersphere.functional.execution."+action;}
             public String description(){return switch(action) {
-                case "contract" -> "Read case steps and global gate for direct execution without task/lease. Returns contentHash and policyHash. Text expectations use exact EQUALS comparison.";
+                case "contract" -> "Read case steps, contentHash and policyHash for structure-only direct execution. Agent declares SUCCESS/ERROR; actual text is not compared with expected. Cover every original position; extras and repeats are allowed and retained.";
                 case "get" -> "Read an authorized direct execution report with step outcomes, evidence mapping and frozen global policy. Sensitive facts are redacted.";
                 case "evidence.upload" -> "Stage a PNG/JPEG evidence file as base64 (max 5 MiB), bound to case contentHash and 1-based stepNum. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT. Not visible until gate passes.";
-                default -> "Validate all steps and independently review evidence content. Only gateStatus=ACCEPTED and publishStatus=PUBLISHED mean attachments and result were published. NEEDS_REVIEW/NOT_PUBLISHED preserves a report without updating the case; never report it as test success. No task/lease required. Current assertion comparison uses exact EQUALS. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.";
+                default -> "Validate original-step coverage and evidence structure, then publish Agent-reported results. Extra and repeated positions are retained; any ERROR makes the case ERROR. No expected-text comparison or content reviewer. ACCEPTED/PUBLISHED means structure accepted, not independently verified execution. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.";
             };}
             public String requiredScope(){return read?AgentTokenScope.FUNCTIONAL_READ:AgentTokenScope.FUNCTIONAL_SUBMIT;}
             public Map<String,Object> inputSchema(){
@@ -40,7 +40,7 @@ public class AgentDirectExecutionTools {
                 if("get".equals(action)) fields.put("submissionId",AgentMcpToolSchemas.string(1,64));
                 if(!read){fields.put("requestId",AgentMcpToolSchemas.string(1,128));fields.put("contentHash",AgentMcpToolSchemas.string(64,64));}
                 if("evidence.upload".equals(action)) {
-                    fields.put("stepNum",Map.of("type","integer","minimum",1,"maximum",100));
+                    fields.put("stepNum",Map.of("type","integer","minimum",1,"maximum",1000));
                     fields.put("purpose",Map.of("type","string","enum",List.of("BEFORE_STEP","AFTER_STEP")));
                     fields.put("fileName",AgentMcpToolSchemas.string(1,200));
                     fields.put("contentType",Map.of("type","string","enum",List.of("image/png","image/jpeg")));
@@ -48,8 +48,8 @@ public class AgentDirectExecutionTools {
                 }
                 if("submit".equals(action)) {
                     fields.put("policyHash",AgentMcpToolSchemas.string(64,64));
-                    fields.put("steps",Map.of("type","array","minItems",1,"maxItems",100,"items",AgentMcpToolSchemas.object(Map.of(
-                            "stepNum",Map.of("type","integer","minimum",1,"maximum",100),
+                    fields.put("steps",Map.of("type","array","minItems",1,"maxItems",1000,"items",AgentMcpToolSchemas.object(Map.of(
+                            "stepNum",Map.of("type","integer","minimum",1,"maximum",1000),
                             "actual",AgentMcpToolSchemas.string(1,20000),
                             "result",Map.of("type","string","enum",List.of("SUCCESS","ERROR")),
                             "evidenceIds",Map.of("type","array","minItems",1,"maxItems",10,"items",AgentMcpToolSchemas.string(1,64))),

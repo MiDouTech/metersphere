@@ -111,8 +111,8 @@ public class AgentMcpBundleService {
                 Personal case execution (no task or lease): grant FUNCTIONAL_READ, FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.
                 Call metersphere.functional.execution.contract before executing. Follow its global policy and retain contentHash/policyHash.
                 Upload each step's PNG/JPEG with metersphere.functional.execution.evidence.upload (base64, at most 5 MiB).
-                Submit every step with metersphere.functional.execution.submit; only gateStatus=ACCEPTED with publishStatus=PUBLISHED publishes attachments and result. NEEDS_REVIEW means evidence content was not verified and no formal result was updated; inspect issues and query the submission report. Never treat a successful HTTP/MCP response as a passed business test.
-                Current text assertions use exact EQUALS against the server case expectation; report observed actual text, never copy an expectation without observing it.
+                Submit with metersphere.functional.execution.submit. Cover every original position at least once; extra and repeated positions are allowed and retained. ACCEPTED/PUBLISHED means structure accepted and declared results saved, not independent execution verification. Historical NEEDS_REVIEW submissions remain unchanged.
+                Report actual observations and SUCCESS or ERROR. No comparison with expected text or content reviewer is used. Any ERROR, including extra or repeated records, makes the case ERROR. Permissions, content/policy versions and evidence rules still apply.
                 Use metersphere.functional.execution.get to inspect accepted step facts and evidence mapping. Reuse requestId only for identical retries.
                 """;
     }
