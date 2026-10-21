@@ -60,9 +60,11 @@ public class ExportWebSocketHandler {
      */
     @OnMessage
     public void onMessage(@PathParam("fileId") String fileId, String message) {
-        LogUtils.info("服务器收到：[" + fileId + "] : " + message);
-        ExportMsgDTO dto = JSON.parseObject(message, ExportMsgDTO.class);
-        ExportWebSocketHandler.sendMessageSingle(dto);
+        // Export results are server-originated. Never route a client payload to another file ID.
+        if ("ping".equals(message)) {
+            Session session = ONLINE_EXPORT_EXCEL_SESSIONS.get(fileId);
+            if (session != null) session.getAsyncRemote().sendText("pong");
+        }
     }
 
     /**
@@ -71,7 +73,7 @@ public class ExportWebSocketHandler {
     @OnClose
     public void onClose(@PathParam("fileId") String fileId, Session session) throws IOException {
         //当前的Session 移除
-        ExportWebSocketHandler.ONLINE_EXPORT_EXCEL_SESSIONS.remove(fileId);
+        ExportWebSocketHandler.ONLINE_EXPORT_EXCEL_SESSIONS.remove(fileId, session);
         LogUtils.info("[" + fileId + "] : 断开连接！" + ExportWebSocketHandler.ONLINE_EXPORT_EXCEL_SESSIONS.size());
         //并且通知其他人当前用户已经断开连接了
         session.close();

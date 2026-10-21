@@ -34,27 +34,23 @@ public class GlobalQualityGate {
         return rows.getFirst();
     }
 
-    public boolean verifyDirectStep(Binding policy, String expected, String actual, List<AgentExecutionArtifactDTO> artifacts) {
+    /** Direct submissions validate evidence structure; business verdicts are Agent-reported. */
+    public void verifyDirectEvidence(Binding policy, List<AgentExecutionArtifactDTO> artifacts) {
         JsonNode rules=read(policy.rulesJson());
         for(JsonNode rule:rules.path("rules")) {
             if(!"Q-EVIDENCE-01".equals(rule.path("ruleId").asText())) continue;
             JsonNode limits=rule.path("parameters");
+            for(JsonNode role:limits.path("requiredRoles")) {
+                String purpose="BEFORE_ACTION".equals(role.asText())?"BEFORE_STEP":"AFTER_STEP";
+                if(artifacts.stream().noneMatch(a->purpose.equals(a.getPurpose())))
+                    throw new MSException("QUALITY_EVIDENCE_REQUIRED");
+            }
             for(var artifact:artifacts) {
                 if(artifact.getSizeBytes()==null || artifact.getSizeBytes()<1
                         || artifact.getSizeBytes()>limits.path("maxArtifactBytes").asLong()
                         || !contains(limits.path("allowedMimeTypes"),artifact.getContentType()))
                     throw new MSException("QUALITY_EVIDENCE_INVALID");
             }
-        }
-        var json = new ObjectMapper();
-        var frozen=json.createArrayNode();
-        frozen.addObject().put("operator","EQUALS").put("expected",expected);
-        var observed=json.createArrayNode();
-        observed.addObject().put("actual",actual);
-        try { evaluate(rules,frozen,observed,artifacts); return true; }
-        catch(MSException error) {
-            if("QUALITY_ASSERTION_FAILED".equals(error.getMessage())) return false;
-            throw error;
         }
     }
 

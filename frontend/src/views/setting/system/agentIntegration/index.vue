@@ -393,7 +393,7 @@
   const mcpPlainText = `MCP 地址：${window.location.origin}/api/mcp
 创建本人 Token，选择项目及“个人 Agent 测试闭环”权限组合，再复制接入配置到 AI 客户端。
 个人 Agent 可直接读取用例、执行并提交步骤证据，无需创建任务或维护租约。
-只有门禁审核接受并发布后，正式附件与执行结果才会更新；“待核验”不代表测试通过。
+门禁仅检查步骤覆盖、版本和附件结构，不比较预期文字、不核验图片语义；执行结果由提交方声明。原步骤不可遗漏，额外和重复步骤允许并保留，任一失败记录使汇总失败。
 技能包包含调用说明，不包含你的 Token。秘密只展示一次，请妥善保存。`;
   const createdClientType = ref('CHATGPT');
   const createFormRef = ref<FormInstance>();
@@ -418,7 +418,7 @@
     {
       value: 'PROJECT_READ;FUNCTIONAL_READ;FUNCTIONAL_SUBMIT;CASE_ATTACHMENT',
       label: '个人 Agent 测试闭环',
-      desc: '读取用例、上传步骤证据，经平台统一门禁审核后更新附件与执行结果，无需任务或租约。',
+      desc: '读取用例、上传证据，经步骤覆盖及附件结构校验后保存声明结果，无需任务、租约或模型核验。',
     },
     {
       value: 'FUNCTIONAL_READ;CASE_COMMENT_EDIT_V2',

@@ -68,6 +68,8 @@ public class FunctionalCaseController {
     @Resource
     private FunctionalCaseXmindService functionalCaseXmindService;
     @Resource
+    private FunctionalCaseExportTaskService exportTaskService;
+    @Resource
     private io.metersphere.functional.hub.service.DefaultHubCaseImportService defaultHubCaseImportService;
     @Resource
     private ProjectService projectService;
@@ -328,9 +330,26 @@ public class FunctionalCaseController {
     @GetMapping("/stop/{taskId}")
     @Operation(summary = "用例管理-功能用例-导出-停止导出")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
-    @CheckOwner(resourceId = "#projectId", resourceType = "project")
     public void caseStopExport(@PathVariable String taskId) {
         functionalCaseFileService.stopExport(taskId, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/export/tasks/{taskId}/stop")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
+    public ExportTaskDTO stopExportTask(@PathVariable String taskId) {
+        return exportTaskService.stop(taskId, SessionUtils.getUserId());
+    }
+
+    @GetMapping("/export/tasks/{taskId}")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
+    public ExportTaskDTO exportTask(@PathVariable String taskId) {
+        return exportTaskService.get(taskId, SessionUtils.getUserId());
+    }
+
+    @GetMapping("/export/tasks")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
+    public List<ExportTaskDTO> exportTasks(@RequestParam String projectId) {
+        return exportTaskService.recent(projectId, SessionUtils.getUserId());
     }
 
     @GetMapping("/download/xmind/template/{projectId}")
@@ -353,7 +372,7 @@ public class FunctionalCaseController {
     @GetMapping(value = "/download/file/{projectId}/{fileId}")
     @Operation(summary = "用例管理-功能用例-下载文件")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
-    public ResponseEntity<byte[]> downloadImgById(@PathVariable String projectId, @PathVariable String fileId) {
+    public ResponseEntity<org.springframework.core.io.InputStreamResource> downloadImgById(@PathVariable String projectId, @PathVariable String fileId) {
         return functionalCaseFileService.downloadFile(projectId, fileId, SessionUtils.getUserId());
     }
 

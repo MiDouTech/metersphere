@@ -35,6 +35,7 @@ export const getBugTool = {
 };
 
 export const createBugInputSchema = {
+  requestId: z.string().min(1).max(128),
   projectId: z.string().optional(),
   title: z.string(),
   description: z.string().optional(),

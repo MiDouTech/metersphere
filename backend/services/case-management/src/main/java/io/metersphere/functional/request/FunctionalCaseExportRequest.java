@@ -33,6 +33,10 @@ public class FunctionalCaseExportRequest extends BaseFunctionalCaseBatchDTO impl
     @Schema(description = "文件id")
     private String fileId;
 
+    @jakarta.validation.constraints.Size(max = 64)
+    @Schema(description = "客户端幂等请求标识")
+    private String requestId;
+
     @Schema(description = "单元格拆分")
     private Boolean isMerge = false;
 

@@ -607,7 +607,6 @@
     batchDeleteCase,
     batchMoveToModules,
     batchUpdateExecutor,
-    checkCaseExportTask,
     deleteCaseRequest,
     dragSort,
     exportExcelCase,
@@ -616,9 +615,11 @@
     getCaseDetail,
     getCaseDownloadFile,
     getCaseExportConfig,
+    getCaseExportTask,
     getCaseList,
     getCustomFieldsTable,
     getPersonalProgress,
+    getRecentCaseExports,
     stopCaseExport,
     updateCaseRequest,
   } from '@/api/modules/case-management/featureCase';
@@ -627,7 +628,6 @@
   import { NAV_NAVIGATION } from '@/config/workbench';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
-  import useWebsocket from '@/hooks/useWebsocket';
   import { useAppStore, useTableStore } from '@/store';
   import useCacheStore from '@/store/modules/cache/cache';
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
@@ -1859,23 +1859,32 @@
     }
   }
 
-  const websocket = ref<WebSocket>();
   const reportId = ref('');
+  const exportProjectId = ref('');
+  let exportTimer: ReturnType<typeof setTimeout> | undefined;
+  let exportPollGeneration = 0;
+  let pendingExport: { signature: string; requestId: string } | undefined;
   const taskId = ref('');
 
   // 下载文件
-  async function downloadFile(id: string) {
+  async function downloadFile(id: string, projectId = exportProjectId.value) {
     try {
-      const response = await getCaseDownloadFile(currentProjectId.value, id);
-      const fileName = response?.headers.get('content-disposition').split('filename=')[1];
+      const response = await getCaseDownloadFile(projectId, id);
+      if (!(response.data instanceof Blob) || /json|html/i.test(response.data.type)) {
+        Message.error(t('common.exportFailed'));
+        return;
+      }
+      const disposition = String(response.headers.get('content-disposition') || '');
+      const encodedName = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+      const plainName = /filename="?([^";]+)/i.exec(disposition)?.[1];
+      const fileName = encodedName || plainName || 'export.xlsx';
       downloadByteFile(response.data, decodeURIComponent(fileName));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      Message.error(t('common.exportFailed'));
     }
   }
   // 提示：导出成功
-  function showExportSuccessfulMessage(id: string, count: number) {
+  function showExportSuccessfulMessage(id: string, count: number, projectId = exportProjectId.value) {
     Message.success({
       content: () =>
         h('div', { class: 'flex flex-col gap-[8px] items-start' }, [
@@ -1887,7 +1896,7 @@
               {
                 type: 'text',
                 onClick() {
-                  downloadFile(id);
+                  downloadFile(id, projectId);
                 },
               },
               { default: () => t('common.downloadFile') }
@@ -1902,14 +1911,19 @@
   const isShowExportingMessage = ref(false); // 正在导出提示显示中
   const exportingMessage = ref();
   // 取消导出
+  function stopExportPolling() {
+    exportPollGeneration += 1;
+    clearTimeout(exportTimer);
+  }
+
   async function cancelExport() {
     try {
-      await stopCaseExport(taskId.value);
-      exportingMessage.value.close();
-      websocket.value?.close();
+      const task = await stopCaseExport(taskId.value);
+      stopExportPolling();
+      exportingMessage.value?.close();
+      if (task.state === 'SUCCEEDED') showExportSuccessfulMessage(task.fileId, task.count, task.projectId);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      Message.error(t('common.exportFailed'));
     }
   }
   // 提示：正在导出
@@ -1938,32 +1952,33 @@
       },
     });
   }
-  // 开启websocket监听，接收结果
-  async function startWebsocketGetExportResult() {
-    const { createSocket, websocket: _websocket } = useWebsocket({
-      reportId: reportId.value,
-      socketUrl: '/ws/export',
-      onMessage: (event) => {
-        const data = JSON.parse(event.data);
-        if (data.msgType === 'EXEC_RESULT') {
-          exportingMessage.value.close();
-          reportId.value = data.fileId;
-          taskId.value = data.taskId;
-          if (data.isSuccessful) {
-            showExportSuccessfulMessage(reportId.value, data.count);
-          } else {
-            Message.error({
-              content: t('common.exportFailed'),
-              duration: 999999999, // 一直展示，除非手动关闭
-              closable: true,
-            });
+  // Task state is durable; notification connectivity never gates submission.
+  function startExportPolling(id: string) {
+    stopExportPolling();
+    const generation = exportPollGeneration;
+    let delay = 3000;
+    const poll = async () => {
+      if (generation !== exportPollGeneration) return;
+      try {
+        const task = await getCaseExportTask(id);
+        if (generation !== exportPollGeneration) return;
+        if (task.state !== 'RUNNING') {
+          exportingMessage.value?.close();
+          if (task.state === 'SUCCEEDED') {
+            showExportSuccessfulMessage(task.fileId, task.count, task.projectId);
+          } else if (task.state !== 'CANCELLED') {
+            Message.error({ content: task.message || t('common.exportFailed'), duration: 10000, closable: true });
           }
-          websocket.value?.close();
+          return;
         }
-      },
-    });
-    await createSocket();
-    websocket.value = _websocket.value;
+        delay = 3000;
+      } catch (error) {
+        // A failed read is not a failed export. Re-entering the menu also recovers server state.
+        delay = Math.min(delay * 2, 10000);
+      }
+      if (generation === exportPollGeneration) exportTimer = setTimeout(poll, delay);
+    };
+    poll();
   }
 
   function getConfirmFields(option: MsExportDrawerOption[], columnType: string) {
@@ -1975,8 +1990,7 @@
     try {
       exportLoading.value = true;
       const { selectedIds, selectAll, excludeIds } = batchParams.value;
-      reportId.value = getGenerateId();
-      await startWebsocketGetExportResult();
+      exportProjectId.value = currentProjectId.value;
       const params = {
         projectId: currentProjectId.value,
         selectIds: selectAll ? [] : selectedIds,
@@ -1986,26 +2000,36 @@
         selectAll,
         systemFields: getConfirmFields(option, 'system'),
         customFields: getConfirmFields(option, 'custom'),
-        fileId: reportId.value,
       };
+      const signature = JSON.stringify({
+        ...params,
+        format: exportType.value,
+        otherFields: getConfirmFields(option, 'other'),
+        isMerge: isMerge.value,
+      });
+      if (!pendingExport || pendingExport.signature !== signature) {
+        pendingExport = { signature, requestId: getGenerateId() };
+      }
+      const request = { ...params, requestId: pendingExport.requestId };
       let res;
       if (exportType.value === 'exportExcel') {
         res = await exportExcelCase({
-          ...params,
+          ...request,
           otherFields: getConfirmFields(option, 'other'),
           isMerge: isMerge.value,
         });
       } else {
-        res = await exportXMindCase(params);
+        res = await exportXMindCase(request);
       }
       taskId.value = res;
+      pendingExport = undefined;
       showExportingMessage();
+      startExportPolling(res);
       exportLoading.value = false;
       showExportVisible.value = false;
       resetSelector();
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      Message.error(t('common.exportFailed'));
     } finally {
       exportLoading.value = false;
     }
@@ -2013,21 +2037,22 @@
 
   async function batchExport() {
     try {
-      const res = await checkCaseExportTask();
-      if (!res.fileId || !res.fileId.length) {
-        showExportVisible.value = true;
-      } else {
-        reportId.value = res.fileId;
-        taskId.value = res.taskId;
-        Message.error(t('caseManagement.featureCase.alreadyExportTasks'));
-        if (!websocket.value) {
-          await startWebsocketGetExportResult();
-        }
+      const tasks = await getRecentCaseExports(currentProjectId.value);
+      const active = tasks.find((task) => task.state === 'RUNNING');
+      const latest = tasks[0];
+      exportProjectId.value = currentProjectId.value;
+      if (active) {
+        taskId.value = active.taskId;
+        reportId.value = active.fileId;
         showExportingMessage();
+        startExportPolling(active.taskId);
+      } else {
+        if (latest?.state === 'SUCCEEDED') showExportSuccessfulMessage(latest.fileId, latest.count, latest.projectId);
+        else if (latest?.state === 'FAILED') Message.warning(latest.message || t('common.exportFailed'));
+        showExportVisible.value = true;
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      Message.error(t('common.exportFailed'));
     }
   }
 
@@ -2583,6 +2608,8 @@
   const viewName = ref<string>('');
 
   onBeforeUnmount(() => {
+    stopExportPolling();
+    exportingMessage.value?.close();
     showDetailDrawer.value = false;
   });
 

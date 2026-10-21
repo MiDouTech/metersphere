@@ -44,7 +44,6 @@ import io.metersphere.system.dto.OperationHistoryDTO;
 import io.metersphere.system.dto.request.OperationHistoryRequest;
 import io.metersphere.system.dto.sdk.TemplateCustomFieldDTO;
 import io.metersphere.system.dto.sdk.TemplateDTO;
-import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.PageUtils;
 import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
@@ -142,7 +141,10 @@ public class AgentBugWriteService {
 
     public Object getTemplate(String projectId, String templateId) {
         String resolvedProjectId = resolveAndAssertProject(projectId);
+        access.project(resolvedProjectId,io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_READ,false,
+                io.metersphere.agent.constants.AgentTokenScope.BUG_READ,io.metersphere.agent.constants.AgentTokenScope.BUG_WRITE);
         TemplateDTO templateDTO = resolveTemplate(resolvedProjectId, templateId);
+        boolean local = "Local".equalsIgnoreCase(applications.getPlatformName(resolvedProjectId));
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("id", templateDTO.getId());
         view.put("name", templateDTO.getName());
@@ -154,7 +156,8 @@ public class AgentBugWriteService {
                 item.put("fieldId", field.getFieldId());
                 item.put("fieldName", field.getFieldName());
                 item.put("type", field.getType());
-                item.put("required", field.getRequired());
+                item.put("required", local && "status".equals(field.getFieldId()) ? false : field.getRequired());
+                if (local && "status".equals(field.getFieldId())) item.put("serverOwnedOnCreate", true);
                 item.put("defaultValue", field.getDefaultValue());
                 item.put("options", field.getOptions());
                 item.put("internalFieldKey", field.getInternalFieldKey());
@@ -163,6 +166,11 @@ public class AgentBugWriteService {
             }
         }
         view.put("customFields", fields);
+        var initial = new Bug(); initial.setPlatform("Local");
+        if(local) bugWorkflowRuntimeService.bindPublishedWorkflow(initial);
+        view.put("initialStatusId", initial.getStatus());
+        view.put("workflowId", initial.getWorkflowId());
+        view.put("workflowVersion", initial.getWorkflowVersion());
         return view;
     }
 
@@ -182,18 +190,79 @@ public class AgentBugWriteService {
         return result;
     }
 
+    @Resource private io.metersphere.project.service.ProjectApplicationService applications;
+    @Resource private AgentOperationExecutor operations;
+    @Resource private AgentBusinessAccess access;
+
     public AgentBugDTO create(AgentBugCreateRequest request) {
-        return createInternal(request, requireUserId());
+        return operations.execute("bug.create", request.getRequestId(), request, AgentBugDTO.class,
+                () -> authorizeCreate(request.getProjectId()), () -> createInternal(request, requireUserId(), "AI"));
+    }
+
+    public String authorizeCreate(String projectId) {
+        String resolved = resolveAndAssertProject(projectId);
+        access.project(resolved, io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_ADD, true,
+                io.metersphere.agent.constants.AgentTokenScope.BUG_WRITE);
+        return resolved;
+    }
+
+    public AgentBugDTO importRow(AgentBugCreateRequest request) {
+        return createInternal(request, requireUserId(), "IMPORT");
+    }
+
+    public void validateCreate(AgentBugCreateRequest request) {
+        if (StringUtils.isBlank(request.getTitle()) || request.getTitle().length() > 255
+                || StringUtils.length(request.getDescription()) > 100000) throw new MSException("AGENT_VALIDATION_ERROR");
+        String project = authorizeCreate(request.getProjectId());
+        buildFieldsForCreate(project, resolveTemplate(project, request.getTemplateId()), request.getCustomFields(), requireUserId());
+    }
+
+    private List<BugCustomFieldDTO> buildFieldsForCreate(String project, TemplateDTO template, Map<String,String> values, String user) {
+        if ("Local".equalsIgnoreCase(applications.getPlatformName(project))) return buildCreateFields(template, values, user);
+        var fields = buildCustomFields(template, values, user); validateFieldValues(template, fields); return fields;
+    }
+
+    private List<BugCustomFieldDTO> buildCreateFields(TemplateDTO template, Map<String,String> values, String user) {
+        Map<String,String> supplied = new HashMap<>(values == null ? Map.of() : values);
+        if (StringUtils.isNotBlank(supplied.get("status"))) throw new MSException("BUG_INITIAL_STATUS_SERVER_OWNED");
+        supplied.put("status", "");
+        var known = template.getCustomFields().stream().map(f -> f.getFieldId()).collect(java.util.stream.Collectors.toSet());
+        if (!known.containsAll(supplied.keySet())) throw new MSException("BUG_FIELD_VALUE_INVALID");
+        var fields = buildCustomFields(template, supplied, user);
+        validateFieldValues(template, fields);
+        return fields;
+    }
+
+    private void validateFieldValues(TemplateDTO template, List<BugCustomFieldDTO> fields) {
+        for (var field : fields) {
+            var definition = template.getCustomFields().stream().filter(f -> f.getFieldId().equals(field.getId())).findFirst().orElseThrow();
+            if ("status".equals(field.getId()) && StringUtils.isBlank(field.getValue())) continue;
+            String value = field.getValue();
+            if (Boolean.TRUE.equals(definition.getRequired()) && StringUtils.isBlank(value)) throw new MSException("BUG_REQUIRED_FIELD_MISSING");
+            if (StringUtils.isBlank(value)) continue;
+            if (definition.getOptions() == null || definition.getOptions().isEmpty()) {
+                if (java.util.Set.of("SELECT", "MULTIPLE_SELECT", "MEMBER", "MULTIPLE_MEMBER").contains(definition.getType())) throw new MSException("BUG_FIELD_VALUE_INVALID");
+                continue;
+            }
+            if (!java.util.Set.of("SELECT", "MULTIPLE_SELECT", "MEMBER", "MULTIPLE_MEMBER").contains(definition.getType())) continue;
+            List<String> selected;
+            try { selected = value.trim().startsWith("[") ? JSON.parseArray(value, String.class) : List.of(value.split(",")); }
+            catch (Exception invalid) { throw new MSException("BUG_FIELD_VALUE_INVALID"); }
+            if (java.util.Set.of("SELECT", "MEMBER").contains(definition.getType()) && selected.size() != 1) throw new MSException("BUG_FIELD_VALUE_INVALID");
+            var allowed = definition.getOptions().stream().map(f -> f.getValue()).collect(java.util.stream.Collectors.toSet());
+            if (selected == null || selected.isEmpty() || selected.stream().anyMatch(v -> !allowed.contains(v))) throw new MSException("BUG_FIELD_VALUE_INVALID");
+        }
     }
 
     public AgentBugDTO createDraft(AgentBugCreateRequest request, String userId) {
         if (StringUtils.isBlank(userId)) throw new MSException("BUG_DRAFT_ACTOR_REQUIRED");
         List<String> tags=new ArrayList<>(request.getTags()==null?List.of():request.getTags());
         if(!tags.contains("AI_DRAFT"))tags.add("AI_DRAFT");request.setTags(tags);
-        return createInternal(request,userId);
+        return createInternal(request,userId,"AI");
     }
 
-    private AgentBugDTO createInternal(AgentBugCreateRequest request, String userId) {
+    private AgentBugDTO createInternal(AgentBugCreateRequest request, String userId, String creationSource) {
+        if (StringUtils.isBlank(request.getTitle()) || request.getTitle().length() > 255 || StringUtils.length(request.getDescription()) > 100000) throw new MSException("AGENT_VALIDATION_ERROR");
         String projectId = resolveAndAssertProject(request.getProjectId());
         request.setProjectId(projectId);
         Project project = requireProject(projectId);
@@ -201,13 +270,12 @@ public class AgentBugWriteService {
         String templateId = templateDTO.getId();
 
         BugEditRequest editRequest = new BugEditRequest();
-        editRequest.setId(IDGenerator.nextStr());
         editRequest.setProjectId(projectId);
         editRequest.setTitle(request.getTitle());
         editRequest.setDescription(StringUtils.defaultString(request.getDescription()));
         editRequest.setTemplateId(templateId);
         editRequest.setTags(request.getTags());
-        editRequest.setCustomFields(buildCustomFields(templateDTO, request.getCustomFields(), userId));
+        editRequest.setCustomFields(buildFieldsForCreate(projectId, templateDTO, request.getCustomFields(), userId));
         if (StringUtils.isNotBlank(request.getCaseId())) {
             editRequest.setCaseId(request.getCaseId());
             editRequest.setCaseType(StringUtils.defaultIfBlank(request.getCaseType(), CaseType.FUNCTIONAL_CASE.getKey()));
@@ -216,7 +284,7 @@ public class AgentBugWriteService {
         }
 
         Bug bug = bugService.addOrUpdateFromTrustedSource(editRequest, new ArrayList<>(), userId,
-                project.getOrganizationId(), "AI", request.getRequestId());
+                project.getOrganizationId(), creationSource, request.getRequestId());
         attachTempFiles(bug.getId(), projectId, request.getAttachmentIds());
         relateAdditionalCases(projectId, bug.getId(), request.getAddCaseIds(), request.getCaseType());
         publishBugRelations(bug, request, userId);
@@ -457,7 +525,7 @@ public class AgentBugWriteService {
                 throw new MSException(AgentErrorCode.RESOURCE_NOT_FOUND, "项目未配置缺陷默认模板");
             }
         }
-        return templateDTO;
+        return bugService.getTemplate(templateDTO.getId(), projectId, null, null, false, "zh_CN");
     }
 
     private List<BugCustomFieldDTO> buildCustomFields(TemplateDTO templateDTO, Map<String, String> customFields, String userId) {
@@ -480,7 +548,7 @@ public class AgentBugWriteService {
                     dto.setValue(defaultValue);
                 }
             } else if (Boolean.TRUE.equals(field.getRequired())) {
-                throw new MSException("缺陷必填自定义字段缺失: " + field.getFieldName() + " (" + field.getFieldId() + ")");
+                throw new MSException("BUG_REQUIRED_FIELD_MISSING");
             } else {
                 continue;
             }

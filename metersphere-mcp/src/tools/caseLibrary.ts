@@ -13,12 +13,12 @@ const tool = (name: string, description: string, inputSchema: z.ZodRawShape) => 
 });
 
 export const caseLibraryTools = [
-  tool("metersphere.functional.execution.contract", "Read case steps, contentHash and global policyHash. Direct execution without task or lease; current gate uses exact text EQUALS.", resource),
+  tool("metersphere.functional.execution.contract", "Read case steps, contentHash and global policyHash. Structure-only direct execution: Agent reports SUCCESS/ERROR; no expected-text comparison. Original positions must all be covered; extra and repeated positions are retained.", resource),
   tool("metersphere.functional.execution.get", "Read step outcomes, evidence mapping and the frozen global policy of a submitted execution.", { ...resource, submissionId: id }),
   {
     name: "metersphere.functional.execution.evidence.upload",
     description: "Stage step evidence from a local PNG/JPEG filePath or base64 (max 5 MiB). Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT; published only after submit passes the gate.",
-    inputSchema: { ...resource, contentHash: z.string().length(64), stepNum: z.number().int().min(1).max(100), purpose: z.enum(["BEFORE_STEP", "AFTER_STEP"]), fileName: z.string().min(1).max(200), contentType: z.enum(["image/png", "image/jpeg"]), filePath: z.string().min(1).optional(), base64: z.string().min(1).max(6990508).optional(), requestId },
+    inputSchema: { ...resource, contentHash: z.string().length(64), stepNum: z.number().int().min(1).max(1000), purpose: z.enum(["BEFORE_STEP", "AFTER_STEP"]), fileName: z.string().min(1).max(200), contentType: z.enum(["image/png", "image/jpeg"]), filePath: z.string().min(1).optional(), base64: z.string().min(1).max(6990508).optional(), requestId },
     handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
       if (Boolean(args.filePath) === Boolean(args.base64)) throw new Error("Provide exactly one of filePath or base64");
       const { filePath, ...payload } = args;
@@ -41,9 +41,9 @@ export const caseLibraryTools = [
       return client.callNativeTool("metersphere.functional.execution.evidence.upload", payload);
     },
   },
-  tool("metersphere.functional.execution.submit", "Validate steps and independently review evidence. Only gateStatus=ACCEPTED with publishStatus=PUBLISHED means the case was updated. NEEDS_REVIEW/NOT_PUBLISHED is not success; inspect issues and report. No lease. Current assertions use exact EQUALS. Same requestId retries safely.", {
+  tool("metersphere.functional.execution.submit", "Validate original-step coverage and evidence structure; retain extra/repeated positions. Agent reports SUCCESS/ERROR without expected-text comparison or content review. Any ERROR makes the case ERROR. ACCEPTED/PUBLISHED means structure accepted, not execution verified. Same requestId retries safely.", {
     ...resource, contentHash: z.string().length(64), policyHash: z.string().length(64), requestId,
-    steps: z.array(z.object({ stepNum: z.number().int().min(1).max(100), actual: z.string().min(1).max(20000), result: z.enum(["SUCCESS", "ERROR"]), evidenceIds: z.array(id).min(1).max(10) }).strict()).min(1).max(100),
+    steps: z.array(z.object({ stepNum: z.number().int().min(1).max(1000), actual: z.string().min(1).max(20000), result: z.enum(["SUCCESS", "ERROR"]), evidenceIds: z.array(id).min(1).max(10) }).strict()).min(1).max(1000),
   }),
   tool("metersphere.functional.comment.update", "Edit your own comment text with version checking. Explicit CASE_COMMENT_EDIT_V2 required; preserves replies and attachments.", {
     ...resource, commentId: id, content: z.string().min(1).max(20000), expectedUpdateTime: version, requestId,

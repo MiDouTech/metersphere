@@ -22,6 +22,7 @@ import java.util.Optional;
 
 @Service
 public class AgentMcpStreamableService {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(AgentMcpStreamableService.class);
     private static final String TRIGGER_TOOL_PREFIX = "metersphere.execution.trigger.";
     @Resource
     private AgentTokenRateLimiter agentTokenRateLimiter;
@@ -77,9 +78,11 @@ public class AgentMcpStreamableService {
             };
         } catch (MSException ex) {
             var safe = safeErrorMapper.toApiError(ex, null);
+            LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32001, safe.getMessage(), safe.getCode(), safe.getTraceId());
         } catch (Exception ex) {
             var safe = safeErrorMapper.toApiError(ex, null);
+            LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32603, safe.getMessage(), safe.getCode(), safe.getTraceId());
         }
     }
@@ -122,7 +125,7 @@ public class AgentMcpStreamableService {
         if(StringUtils.isNotBlank(idempotencyKey) && StringUtils.isNotBlank(argumentKey) && !idempotencyKey.equals(argumentKey))throw new MSException("IDEMPOTENCY_CONFLICT");
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
         if(StringUtils.isNotBlank(effectiveIdempotencyKey)) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
-        if(java.util.Set.of("metersphere.functional.execution.evidence.upload","metersphere.functional.execution.submit","metersphere.case_review.create","metersphere.case_review.associate_cases","metersphere.functional.comment.create","metersphere.functional.comment.update","metersphere.functional.case.update","metersphere.functional.module.update","metersphere.functional.module.move").contains(name))return callToolInternal(name,arguments);
+        if(java.util.Set.of("metersphere.bug.create","metersphere.bug.import.commit","metersphere.bug.export","metersphere.functional.execution.evidence.upload","metersphere.functional.execution.submit","metersphere.case_review.create","metersphere.case_review.associate_cases","metersphere.functional.comment.create","metersphere.functional.comment.update","metersphere.functional.case.update","metersphere.functional.module.update","metersphere.functional.module.move").contains(name))return callToolInternal(name,arguments);
         // Runtime protocols validate current lease/state on every request. Never persist lease
         // credentials or replay an expired capability through the generic response cache.
         if (java.util.Set.of("metersphere.task.claim", "metersphere.task.lease.heartbeat",
@@ -155,7 +158,7 @@ public class AgentMcpStreamableService {
             throw new MSException("MCP_TOOL_FORBIDDEN");
         }
         AgentMcpToolHandler handler = agentMcpToolRegistry.find(name)
-                .orElseThrow(() -> new MSException("Unsupported MCP tool: " + name));
+                .orElseThrow(() -> new MSException("MCP_TOOL_NOT_FOUND"));
         AgentScopeAssert.assertScope(handler.requiredScope());
         return toolResponse(handler.execute(arguments));
     }

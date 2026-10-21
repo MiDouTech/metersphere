@@ -90,12 +90,14 @@ public class AgentExecutionExceptionHandler {
     }
 
     private String safeCode(MSException error) {
+        if (error.getErrorCode() instanceof io.metersphere.agent.constants.AgentErrorCode code) return code.name();
         String value = error.getMessage();
         return StringUtils.isNotBlank(value) && value.matches("^[A-Z][A-Z0-9_]{2,63}$") ? value : "BUSINESS_ERROR";
     }
 
     private HttpStatus status(String code){
         if("AUTHENTICATION_REQUIRED".equals(code)||code.endsWith("_TOKEN_REQUIRED"))return HttpStatus.UNAUTHORIZED;
+        if(java.util.Set.of("SCOPE_DENIED","RBAC_DENIED","PROJECT_NOT_ALLOWED").contains(code))return HttpStatus.FORBIDDEN;
         if(code.contains("FORBIDDEN")||code.contains("PERMISSION_DENIED")||code.endsWith("_NOT_ACCESSIBLE"))return HttpStatus.FORBIDDEN;
         if(code.contains("NOT_FOUND")||code.endsWith("_NOT_EXIST"))return HttpStatus.NOT_FOUND;
         if(code.contains("EXPIRED"))return HttpStatus.GONE;
