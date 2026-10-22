@@ -25,6 +25,40 @@ public class FunctionalCaseCommentController {
 
     @Resource
     private FunctionalCaseCommentService functionalCaseCommentService;
+    @Resource private io.metersphere.functional.service.FunctionalCaseCommentLifecycleService lifecycle;
+    @Resource private io.metersphere.functional.service.FunctionalCaseCommentOutbox outbox;
+
+    public record RetryNotice(@jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Min(0) Long expectedUpdateTime) { }
+    @GetMapping("/notices/{caseId}")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    public java.util.Map<String,Object> notices(@PathVariable String caseId,@RequestParam(defaultValue="1") int current,@RequestParam(defaultValue="10") int pageSize) {
+        return outbox.list(caseId,SessionUtils.getUserId(),current,pageSize);
+    }
+    @PostMapping("/notices/{caseId}/{id}/retry")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_COMMENT)
+    public void retryNotice(@PathVariable String caseId,@PathVariable String id,@Validated @RequestBody RetryNotice request) {
+        outbox.retry(caseId,id,SessionUtils.getUserId(),request.expectedUpdateTime());
+    }
+
+    public record DeleteCommentRequest(@jakarta.validation.constraints.NotBlank String caseId,
+                                       @jakarta.validation.constraints.NotBlank String commentId,
+                                       @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Min(0) Long expectedUpdateTime) { }
+
+    @PostMapping("/delete")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_COMMENT)
+    @CheckOwner(resourceId = "#request.caseId()", resourceType = "functional_case")
+    public io.metersphere.functional.service.FunctionalCaseCommentLifecycleService.DeletedComment deleteVersioned(@Validated @RequestBody DeleteCommentRequest request) {
+        return lifecycle.delete(request.caseId(), request.commentId(), SessionUtils.getUserId(), request.expectedUpdateTime());
+    }
+
+    @GetMapping("/page/{caseId}")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
+    @CheckOwner(resourceId = "#caseId", resourceType = "functional_case")
+    public io.metersphere.functional.service.FunctionalCaseCommentLifecycleService.CommentPage page(
+            @PathVariable String caseId, @RequestParam(defaultValue = "1") int current,
+            @RequestParam(defaultValue = "10") int pageSize, @RequestParam(required = false) String parentId) {
+        return lifecycle.page(caseId, SessionUtils.getUserId(), parentId, current, pageSize);
+    }
 
     @PostMapping("/save")
     @Operation(summary = "用例管理-功能用例-用例评论-创建评论")

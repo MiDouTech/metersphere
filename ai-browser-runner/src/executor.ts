@@ -426,10 +426,10 @@ async function captureEvidence(page: Page, client: RunnerClient, assignment: Lea
   return [artifact.artifactId];
 }
 
-async function safePoint(client: RunnerClient, assignment: LeaseAssignment): Promise<void> {
+export async function safePoint(client: RunnerClient, assignment: LeaseAssignment): Promise<void> {
   let control = await client.control(assignment);
   if (control.command === "CANCEL") throw new RunnerError("RUNNER_TASK_CANCELED", "任务已取消");
-  while (control.command === "PAUSE" || control.command === "WAIT_LOGIN") {
+  while (control.command === "PAUSE" || control.command === "WAIT_LOGIN" || control.command === "WAIT_HUMAN") {
     await delay(2_000);
     control = await client.control(assignment);
     if (control.command === "CANCEL") throw new RunnerError("RUNNER_TASK_CANCELED", "任务已取消");

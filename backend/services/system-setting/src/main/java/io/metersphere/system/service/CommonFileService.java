@@ -43,11 +43,16 @@ public class CommonFileService {
      * @return 文件ID
      */
     public String uploadTempImgFile(MultipartFile file) {
+        return uploadTempImgFile(file,IDGenerator.nextStr());
+    }
+
+    /** Internal preallocated identity for callers that persist crash-cleanup responsibility. */
+    public String uploadTempImgFile(MultipartFile file,String fileId) {
+        if(fileId==null||!fileId.matches("[A-Za-z0-9_-]{1,50}"))throw new MSException("文件标识无效");
         String fileName = StringUtils.trim(file.getOriginalFilename());
         if (StringUtils.isBlank(fileName)) {
             throw new MSException(Translator.get("file.name.cannot.be.empty"));
         }
-        String fileId = IDGenerator.nextStr();
         FileRequest fileRequest = new FileRequest();
         fileRequest.setFileName(fileName);
         fileRequest.setFolder(DefaultRepositoryDir.getSystemTempDir() + "/" + fileId);
@@ -222,6 +227,16 @@ public class CommonFileService {
         fileRequest.setFolder(systemTempDir + "/" + fileId);
         fileRequest.setFileName(fileName);
         defaultRepository.delete(fileRequest);
+    }
+
+    /** Remove an unconsumed upload and its preview. Safe to retry after a partial deletion. */
+    public void deleteExpiredTempUpload(String fileId, String fileName) throws Exception {
+        deleteTempFile(fileId, fileName);
+        FileRequest preview = new FileRequest();
+        preview.setFolder(DefaultRepositoryDir.getSystemTempCompressDir() + "/" + fileId);
+        preview.setFileName(fileName);
+        preview.setStorage(StorageType.MINIO.toString());
+        fileService.deleteFile(preview);
     }
 
     /**

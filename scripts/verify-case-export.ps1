@@ -1,6 +1,7 @@
 param(
     [ValidateSet('Frontend','Backend','McpPackage','Image','Start','Smoke')][string]$Stage = 'Frontend',
-    [string]$EnvironmentFile = '.codex-tmp/case-export.env'
+    [string]$EnvironmentFile = '.codex-tmp/case-export.env',
+    [string]$AlpineMirror = 'https://dl-cdn.alpinelinux.org/alpine'
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
@@ -17,11 +18,13 @@ switch ($Stage) {
             'src/api/modules/case-management/featureCase.ts',
             'src/views/case-management/caseManagementFeature/components/caseTable.vue')
         Run-Checked 'npm.cmd' @('--prefix','metersphere-mcp','test')
+        Run-Checked 'node' @('frontend/scripts/test-case-export-notifications.mjs')
     }
     'Backend' {
         # New export tests create/drop a uniquely named database on the dedicated loopback test MySQL.
         Run-Checked '.\mvnw.cmd' @('-pl','backend/app','-am','package',
-            '-Dtest=FunctionalCaseExport*Tests,ExportWebSocketHandlerTests,Agent*Tests','-Dquality.mysql=true','-Dsurefire.failIfNoSpecifiedTests=false')
+            '-Dtest=FunctionalCaseExport*Tests,CaseExportNotification*Tests,CaseExportTicketFilterTests,ExportWebSocketHandlerTests,Agent*Tests',
+            '-Dquality.mysql=true','-Dquality.redis=true','-Dsurefire.failIfNoSpecifiedTests=false')
     }
     'McpPackage' {
         New-Item -ItemType Directory -Force -Path '.codex-tmp' | Out-Null
@@ -47,7 +50,7 @@ switch ($Stage) {
         Copy-Item -LiteralPath 'wecom-bot-bridge/package.json','wecom-bot-bridge/package-lock.json' -Destination "$context/wecom-bot-bridge"
         Copy-Item -Path 'wecom-bot-bridge/src/*' -Destination "$context/wecom-bot-bridge/src" -Recurse -Force
         Copy-Item -LiteralPath 'deploy/run-with-wecom-bridge.sh' -Destination "$context/deploy"
-        Run-Checked 'docker' @('build','--build-arg','DEPENDENCY=app','--build-arg',"MS_VERSION=case-export-$($hash.Substring(0,16))",'-t','msp-quality:case-export',$context)
+        Run-Checked 'docker' @('build','--build-arg','DEPENDENCY=app','--build-arg',"ALPINE_MIRROR=$AlpineMirror",'--build-arg',"MS_VERSION=case-export-$($hash.Substring(0,16))",'-t','msp-quality:case-export',$context)
         Write-Output "Application SHA256: $hash"
     }
     'Start' {

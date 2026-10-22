@@ -183,6 +183,17 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 - 技能包版本 1.2.1；实时分页不是完整快照导出。运行中删除确认、异步导入导出、普通附件上传下载、评论删除等仍需后续实现，以实时 tools/list 为准，不应猜测工具名调用。
 
 - functional.comment.update 编辑本人评论正文，要求 CASE_COMMENT_EDIT_V2、expectedUpdateTime 和 requestId；不重新通知，不修改回复关系和附件。网页编辑使用相同版本校验。
+- functional.comments.list 返回 `{total,current,pageSize,list}`，根评论与回复独立分页（默认 10、最多 100）；传 `parentId` 获取指定根评论的回复页。根评论包含首 10 条回复及 `childTotal`。
+- functional.comment.delete 要求显式 `CASE_COMMENT_DELETE_V2`、`projectId/caseId/commentId/expectedUpdateTime/requestId`。`AGENT_ALL` 不包含此权限；作者还须具有当前评论权限，管理删除还须具有当前用例删除权限。删除保留墓碑和回复，清空正文；旧版无版本删除请求会明确拒绝。
+- 完整提取可用 `functional.snapshot.create({query})` 冻结用例库内容，再用 `snapshot.page` 续读，完成后 `snapshot.release`。有效期15分钟，最多10000条/50MiB，每Token同时5个；超限应缩小查询或使用文件导出。普通 search 仍实时查询；快照读取会重新授权，目标被删除后要求重建。
+- 普通用例附件支持 `functional.attachment.upload.prepare`（项目、用途、文件名、类型、大小、SHA-256、requestId）与 `upload.complete`（uploadId及原文件）。Node complete 接受 filePath 或 base64；原生 MCP 接受 base64，HTTP complete 接受 multipart。单文件5MiB、准备有效期15分钟、每Token有效准备额度50MiB。完成只产生临时attachmentId，仍需 attach/comment.create 关联；个人执行证据继续走独立 evidence.upload。
+### 持久化导入、删除确认与执行归档
+
+- `functional.import.precheck` 接收项目、文件和稳定的 `requestId`，返回任务与逐项预检结果；检查后调用 `import.commit`，通过 `import.get` 分页读取实际进度。`import.stop` 保留已成功条目，`import.retry` 仅处理未成功条目。需要显式 `CASE_IMPORT_V2`，上限为 50MiB、10000 条逻辑用例，任务重试期限 24 小时。Node 支持本地 `filePath`；原生工具使用 `base64`。预检不等于导入成功。
+- `functional.case.delete_preview` 返回网页确认地址，用户本人选择取消、等待、停止或删除后，调用 `case.delete` / `case.batch_delete` 继续同一 `previewId`。需要显式 `CASE_DELETE_V2`，最多100个目标版本，默认只处理 CURRENT；ALL 必须明确指定。不要代替用户确认。恢复使用 `case.restore` 和显式 `CASE_RESTORE_V2`，不会恢复已停止任务。
+- `functional.archive.prepare` 接受已结束 TASK 或已接收 SUBMISSION 的来源 ID；`archive.get` 查看独立归档状态，失败后 `archive.retry` 不重新执行测试。需要 `ARTIFACT_WRITE` 和当前项目来源读取权限。归档仍明确保留 `AGENT_REPORTED / STRUCTURE_ONLY_V1`，不代表独立业务核验。
+- 有真实可复用业务数据时调用 `functional.archive.data`，每条提供 `sourceObjectId`、`reuseConditions`、`cleanupStatus` 和 `values`，另需项目文件新增权限。没有实际数据时不创建空数据资产。相同内容重放不会重复生成文档或数据集；不同内容不能覆盖同一次运行的原始归档。
+
 # 个人 Agent 直接执行用例（0.7.0）
 
 个人直接提交采用 `STRUCTURE_ONLY_V1`：要求原用例步骤至少覆盖一次，允许额外和重复步骤并原样保留。按冻结 contentHash 和 stepNum 匹配，不比较 actual 与 expected 文字；提交方声明 SUCCESS 或 ERROR，任一记录 ERROR 则汇总 ERROR。

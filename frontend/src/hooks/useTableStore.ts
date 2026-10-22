@@ -4,6 +4,7 @@ import { MsTableColumn, MsTableColumnData } from '@/components/pure/ms-table/typ
 
 import useAppStore from '@/store/modules/app';
 import { MsTableSelectorItem, TableOpenDetailMode } from '@/store/modules/components/ms-table/types';
+import useUserStore from '@/store/modules/user';
 import { isArraysEqualWithOrder } from '@/utils/equal';
 
 import { SpecialColumnEnum, TableKeyEnum } from '@/enums/tableEnum';
@@ -256,6 +257,10 @@ export default function useTableStore() {
   }
 
   async function getPageSize(tableKey: TableKeyEnum) {
+    if (tableKey === TableKeyEnum.CASE_MANAGEMENT_TABLE) {
+      const size = await getItem<number>(`ms:list-page-size:${useUserStore().id}:functional-case`, true);
+      return size && [10, 20, 50, 100].includes(size) ? size : 10;
+    }
     const tableColumnsMap = await getItem<MsTableSelectorItem>(
       tableKey,
       tableKey.startsWith('SYSTEM') || tableKey.startsWith('ORGANIZATION')
@@ -266,6 +271,12 @@ export default function useTableStore() {
     return useAppStore().pageSize;
   }
   async function setPageSize(tableKey: TableKeyEnum, pageSize: number) {
+    if (tableKey === TableKeyEnum.CASE_MANAGEMENT_TABLE) {
+      if ([10, 20, 50, 100].includes(pageSize)) {
+        await setItem(`ms:list-page-size:${useUserStore().id}:functional-case`, pageSize, true);
+      }
+      return;
+    }
     try {
       const tableColumnsMap = await getItem<MsTableSelectorItem>(
         tableKey,

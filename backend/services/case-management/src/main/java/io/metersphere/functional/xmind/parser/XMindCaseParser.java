@@ -124,9 +124,14 @@ public class XMindCaseParser {
     /**
      * 递归处理案例数据
      */
+    private int logicalCaseCount;
+
     private void recursion(Attached parent, int level, List<Attached> attachedList) {
         for (Attached item : attachedList) {
             if (isAvailable(item.getTitle(), CASE)) {
+                if (++logicalCaseCount > 10000) {
+                    throw new io.metersphere.sdk.exception.MSException("导入超过10000条用例，请拆分文件");
+                }
                 item.setParent(parent);
                 // 格式化一个用例
                 this.formatTestCase(item.getTitle(), parent.getPath(), item.getChildren() != null ? item.getChildren().getAttached() : null);
@@ -476,6 +481,7 @@ public class XMindCaseParser {
      * 导入思维导图处理
      */
     public List<ExcelErrData<FunctionalCaseExcelData>> parse(MultipartFile multipartFile) {
+        logicalCaseCount = 0;
         try {
             // 获取思维导图内容
             List<JsonRootBean> roots = XMindParser.parseObject(multipartFile);

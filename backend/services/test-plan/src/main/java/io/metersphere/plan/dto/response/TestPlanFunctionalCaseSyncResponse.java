@@ -22,7 +22,11 @@ public class TestPlanFunctionalCaseSyncResponse {
     @Schema(description = "删除的计划用例数量")
     private int removedCount;
 
+    @Schema(description = "补齐的缺陷关联数量（不删除人工关联）")
+    private int defectAddedCount;
+
     public void add(TestPlanFunctionalCaseSyncResponse response) {
+        this.defectAddedCount += response.defectAddedCount;
         this.planCount += response.planCount;
         this.skippedPlanCount += response.skippedPlanCount;
         this.addedCount += response.addedCount;

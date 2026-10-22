@@ -1,5 +1,5 @@
 <template>
-  <MsCard v-if="currentProjectId" simple no-content-padding>
+  <MsCard v-if="currentProjectId" simple no-content-padding :min-width="0">
     <a-tabs v-model:active-key="activeTab" class="no-content" @change="handleTabChange">
       <a-tab-pane v-if="canShowExecuteTab" key="execute" :title="t('menu.caseManagement.executeCase')" />
       <a-tab-pane v-if="canShowXmindTab" key="xmind" :title="t('menu.caseManagement.xmindCase')" />

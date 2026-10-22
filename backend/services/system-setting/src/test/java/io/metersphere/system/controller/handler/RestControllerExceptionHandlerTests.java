@@ -28,6 +28,17 @@ import static org.mockito.Mockito.mockStatic;
 class RestControllerExceptionHandlerTests {
 
     @Test
+    void missingRouteReturnsNonRetryable404WithRequestId() {
+        var response = new MockHttpServletResponse();
+        var result = new RestControllerExceptionHandler().resourceNotFound(
+                new MockHttpServletRequest("GET", "/missing"), response);
+        assertEquals(404, response.getStatus());
+        assertEquals(MsHttpResultCode.NOT_FOUND.getCode(), result.getCode());
+        assertFalse(result.isRetryable());
+        assertNotNull(result.getRequestId());
+    }
+
+    @Test
     void shouldHideInternalExceptionDetailsAndReturnTraceableRequestId() {
         RestControllerExceptionHandler handler = new RestControllerExceptionHandler();
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/project/create");

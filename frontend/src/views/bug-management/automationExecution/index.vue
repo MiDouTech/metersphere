@@ -28,7 +28,7 @@
         <a-button v-if="canAccessPersonal" @click="router.push({ name: 'agentAccess' })">Agent配置</a-button>
         <a-button @click="refreshAll">{{ t('common.refresh') }}</a-button>
         <a-button
-          v-if="task?.confirmRequired || task?.status === 'WAITING_CONFIRMATION'"
+          v-if="canContinueTask && (task?.confirmRequired || task?.status === 'WAITING_CONFIRMATION')"
           v-permission="['AI_EXECUTION:RUN']"
           type="primary"
           :loading="actionLoading"
@@ -37,7 +37,7 @@
           {{ t('bugManagement.automationExecution.confirm') }}
         </a-button>
         <a-button
-          v-if="task?.status === 'WAITING_LOGIN' || task?.status === 'PAUSED'"
+          v-if="canContinueTask && (task?.status === 'WAITING_LOGIN' || task?.status === 'PAUSED')"
           v-permission="['AI_EXECUTION:RUN']"
           type="primary"
           :loading="actionLoading"
@@ -86,10 +86,21 @@
     </a-alert>
     <a-alert v-if="taskListError" type="error" class="mb-4">
       {{ taskListError }}
+      <span v-if="taskList.length">（当前显示上次成功加载的数据，可能已过期）</span>
+      <a-button type="text" :loading="taskListLoading" @click="reloadTaskList">重试</a-button>
       <a-button v-if="userStore.isAdmin" type="text" @click="router.push({ name: 'ExecutionDiagnostics' })"
         >查看运行诊断</a-button
       >
     </a-alert>
+    <a-alert v-if="executionTaskId && taskDetailError" type="error" class="mb-4">
+      {{ taskDetailError }}
+      <span v-if="task">（当前显示上次成功加载的数据，可能已过期）</span>
+      <a-button type="text" :loading="loading" @click="refreshAll">重试</a-button>
+    </a-alert>
+    <ExecutionArchive
+      v-if="task && ['SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'CANCELED', 'EXPIRED'].includes(task.status)"
+      :task-id="task.id"
+    />
     <section v-if="!executionTaskId && (!isCreating || !canUsePlatform)" class="task-center-panel">
       <div class="mb-[12px] flex flex-wrap items-center gap-[8px]">
         <a-input-search
@@ -582,6 +593,7 @@
                   v-if="request.requestType === 'INPUT'"
                   v-permission="['AI_EXECUTION:RUN']"
                   type="primary"
+                  :disabled="!canContinueTask"
                   @click="openHumanAnswer(request)"
                   >输入并恢复</a-button
                 >
@@ -589,6 +601,7 @@
                   v-else
                   v-permission="['AI_EXECUTION:RUN']"
                   type="primary"
+                  :disabled="!canContinueTask"
                   @click="respondHuman(request.id, 'APPROVE')"
                   >批准并恢复</a-button
                 >
@@ -738,6 +751,8 @@
   import { Message, type TableData } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
+  import ExecutionArchive from '@/views/execution/execution-archive.vue';
+
   import {
     type AiCredentialReference,
     type AiEnvironmentProfile,
@@ -775,8 +790,10 @@
     type TestAssetCatalogType,
   } from '@/api/modules/ai-execution';
   import { useI18n } from '@/hooks/useI18n';
+  import useListRefresh from '@/hooks/useListRefresh';
   import { useAppStore, useUserStore } from '@/store';
   import useAIStore from '@/store/modules/setting/ai';
+  import { formatPreflightBlockedMessage } from '@/utils/appError';
   import { safeExecutionQuery } from '@/utils/execution-navigation';
   import { hasAnyPermission, hasPageVisible } from '@/utils/permission';
 
@@ -790,6 +807,7 @@
     () => hasAnyPermission(['SYSTEM_PERSONAL_AI_AGENT:READ'], ['SYSTEM']) && hasPageVisible('AGENT_INTEGRATION_PAGE')
   );
   const taskListError = ref('');
+  const taskDetailError = ref('');
   const showAdvancedFilters = ref(Boolean(route.query.executorChannel));
 
   const loading = ref(false);
@@ -860,10 +878,12 @@
   const platformEnvironmentProfiles = ref<AiEnvironmentProfile[]>([]);
   const platformCredentialReferences = ref<AiCredentialReference[]>([]);
   const platformModelProfiles = ref<AiModelProfile[]>([]);
-  const canUsePlatform = computed(() => userStore.isAdmin && platformModelProfiles.value.length > 0);
+  const canUsePlatform = computed(
+    () => aiStore.llmUiEnabled && userStore.isAdmin && platformModelProfiles.value.length > 0
+  );
   const platformPromptTemplates = ref<AiPromptTemplateVersion[]>([]);
   async function loadExecutionProfiles() {
-    if (!userStore.isAdmin || !appStore.currentProjectId) return;
+    if (!aiStore.llmUiEnabled || !userStore.isAdmin || !appStore.currentProjectId) return;
     const [e, c, m, p] = await Promise.all([
       listAiEnvironmentProfiles(appStore.currentProjectId),
       listAiCredentialReferences(appStore.currentProjectId),
@@ -908,7 +928,6 @@
   const chatModelId = ref(localStorage.getItem('aiChatModel') || '');
   const messages = ref<Array<{ id: string; role: 'user' | 'assistant'; content: string }>>([]);
   const lastResolvedPrompt = ref('');
-  let pollTimer: number | undefined;
 
   const executionTaskId = computed(
     () => (route.params.id as string | undefined) || (route.query.executionTaskId as string | undefined) || undefined
@@ -1046,8 +1065,10 @@
   const canPause = computed(
     () => !!task.value && ['RUNNING', 'WAITING_LOGIN', 'PREPARING_BROWSER'].includes(task.value.status)
   );
+  const canContinueTask = computed(() => aiStore.llmUiEnabled || task.value?.executorChannel === 'EXTERNAL_MCP_AGENT');
   const canRetry = computed(
-    () => !!task.value && ((task.value.failedCount || 0) > 0 || (task.value.blockedCount || 0) > 0)
+    () =>
+      canContinueTask.value && !!task.value && ((task.value.failedCount || 0) > 0 || (task.value.blockedCount || 0) > 0)
   );
   const canCreateFromResolve = computed(() => {
     if (!resolveResult.value?.executable) {
@@ -1105,12 +1126,16 @@
   let taskListRequest = 0;
   async function reloadTaskList() {
     const request = ++taskListRequest;
-    if (!appStore.currentProjectId || executionTaskId.value) return;
+    const projectId = appStore.currentProjectId;
+    if (!appStore.currentProjectId || executionTaskId.value) {
+      taskListLoading.value = false;
+      return;
+    }
     taskListLoading.value = true;
     taskListError.value = '';
     try {
       const response = await searchAiExecutionTasks({
-        projectId: appStore.currentProjectId,
+        projectId,
         keyword: taskSearch.keyword.trim() || undefined,
         status: taskSearch.status,
         verdict: taskSearch.verdict,
@@ -1118,14 +1143,16 @@
         current: taskSearch.current,
         pageSize: taskSearch.pageSize,
       });
-      if (request !== taskListRequest) return;
+      if (request !== taskListRequest || projectId !== appStore.currentProjectId) return;
       taskList.value = response.items || [];
       taskListTotal.value = response.total || 0;
     } catch (error) {
       if (request !== taskListRequest) return;
-      taskList.value = [];
-      taskListTotal.value = 0;
       const failure = error as { status?: number; requestId?: string };
+      if (failure.status === 401 || failure.status === 403) {
+        taskList.value = [];
+        taskListTotal.value = 0;
+      }
       taskListError.value = failure.status === 403 ? '当前账号没有查看这些任务的权限' : '任务加载失败，请稍后重试';
       if (failure.requestId && /^[a-zA-Z0-9_-]{1,128}$/.test(failure.requestId)) {
         taskListError.value += `（traceId：${failure.requestId}）`;
@@ -1200,27 +1227,43 @@
     ];
   }
 
+  let taskDetailRequest = 0;
   async function loadTask() {
-    if (!executionTaskId.value) {
+    const request = ++taskDetailRequest;
+    const taskId = executionTaskId.value;
+    if (!taskId) {
       task.value = undefined;
+      loading.value = false;
       return;
     }
     loading.value = true;
-    task.value = undefined;
+    taskDetailError.value = '';
+    if (task.value?.id !== taskId) task.value = undefined;
     try {
-      task.value = await getAiExecutionTask(executionTaskId.value);
+      const response = await getAiExecutionTask(taskId);
+      if (request !== taskDetailRequest || taskId !== executionTaskId.value) return;
+      task.value = response;
       if (task.value.providerId) {
         chatModelId.value = task.value.providerId;
       }
-    } catch {
-      Message.error(t('bugManagement.automationExecution.loadFailed'));
+    } catch (error) {
+      if (request !== taskDetailRequest || taskId !== executionTaskId.value) return;
+      if ([401, 403, 404].includes((error as { status?: number }).status || 0)) {
+        task.value = undefined;
+        events.value = [];
+        artifacts.value = [];
+        humanRequests.value = [];
+        observability.value = undefined;
+      }
+      taskDetailError.value = t('bugManagement.automationExecution.loadFailed');
     } finally {
-      loading.value = false;
+      if (request === taskDetailRequest) loading.value = false;
     }
   }
 
   async function loadObservability() {
-    if (!executionTaskId.value) {
+    const taskId = executionTaskId.value;
+    if (!taskId) {
       observability.value = undefined;
       observabilityError.value = '';
       return;
@@ -1228,11 +1271,14 @@
     observabilityLoading.value = true;
     observabilityError.value = '';
     try {
-      observability.value = await getAiExecutionObservability(executionTaskId.value);
+      const response = await getAiExecutionObservability(taskId);
+      if (taskId !== executionTaskId.value) return;
+      observability.value = response;
     } catch (error: any) {
+      if (taskId !== executionTaskId.value) return;
       observabilityError.value = '加载执行治理信息失败，请稍后重试';
     } finally {
-      observabilityLoading.value = false;
+      if (taskId === executionTaskId.value) observabilityLoading.value = false;
     }
   }
 
@@ -1247,8 +1293,11 @@
       syncRetryLoading.value = false;
     }
   }
+  let taskEventsRequest = 0;
   async function loadEvents(reset = false) {
-    if (!executionTaskId.value) {
+    const request = ++taskEventsRequest;
+    const taskId = executionTaskId.value;
+    if (!taskId) {
       events.value = [];
       eventCursor.value = 0;
       return;
@@ -1257,23 +1306,28 @@
       events.value = [];
       eventCursor.value = 0;
     }
-    const response = await getAiExecutionEvents(executionTaskId.value, {
+    const response = await getAiExecutionEvents(taskId, {
       cursor: eventCursor.value,
       limit: 100,
     });
+    if (request !== taskEventsRequest || taskId !== executionTaskId.value) return;
     const nextEvents = response.events || [];
     if (nextEvents.length) {
-      events.value = [...events.value, ...nextEvents];
+      events.value = [...new Map([...events.value, ...nextEvents].map((event) => [event.id, event])).values()];
       eventCursor.value = response.cursor || nextEvents[nextEvents.length - 1].sequence;
     }
   }
 
   async function loadArtifacts() {
-    artifacts.value = executionTaskId.value ? await getAiExecutionArtifacts(executionTaskId.value) : [];
+    const taskId = executionTaskId.value;
+    const response = taskId ? await getAiExecutionArtifacts(taskId) : [];
+    if (taskId === executionTaskId.value) artifacts.value = response;
   }
 
   async function loadHumanRequests() {
-    humanRequests.value = executionTaskId.value ? await getAiHumanRequests(executionTaskId.value) : [];
+    const taskId = executionTaskId.value;
+    const response = taskId ? await getAiHumanRequests(taskId) : [];
+    if (taskId === executionTaskId.value) humanRequests.value = response;
   }
 
   async function respondHuman(requestId: string, action: 'APPROVE' | 'REJECT' | 'CANCEL', response?: string) {
@@ -1411,7 +1465,7 @@
               }`
           )
           .join('；');
-        Message.error(`${explanation || preflight.blockedDetail || '预检未通过'} · ${preflight.traceId}`);
+        Message.error(`${explanation || formatPreflightBlockedMessage(preflight)} · ${preflight.traceId}`);
         return;
       }
       const taskCreated = await createAiExecutionTask({
@@ -1523,27 +1577,26 @@
     URL.revokeObjectURL(url);
   }
 
-  function startPolling() {
-    window.clearInterval(pollTimer);
-    if (!executionTaskId.value) {
-      return;
-    }
-    pollTimer = window.setInterval(async () => {
-      try {
-        await loadTask();
-        await loadEvents(false);
-        await loadArtifacts();
-      } catch {
-        // ignore transient poll errors
-      }
-    }, 3000);
-  }
+  useListRefresh(reloadTaskList, () => !executionTaskId.value && !isCreating.value && !taskListLoading.value);
+  useListRefresh(
+    async () => {
+      await loadTask();
+      await Promise.all([loadEvents(false), loadArtifacts(), loadHumanRequests()]);
+    },
+    () => !!executionTaskId.value && !loading.value && !actionLoading.value,
+    3000
+  );
 
   watch(
-    executionTaskId,
+    () => [executionTaskId.value, appStore.currentProjectId],
     async () => {
+      taskDetailRequest += 1;
+      taskEventsRequest += 1;
+      events.value = [];
+      eventCursor.value = 0;
+      artifacts.value = [];
+      humanRequests.value = [];
       await refreshAll();
-      startPolling();
     },
     { immediate: true }
   );
@@ -1555,6 +1608,9 @@
   watch(
     () => appStore.currentProjectId,
     () => {
+      taskList.value = [];
+      taskListTotal.value = 0;
+      taskListError.value = '';
       selectedAssetRefs.value = [];
       draftForm.environmentId = '';
       draftForm.environmentProfileId = '';
@@ -1565,7 +1621,6 @@
         loadEnvironmentOptions();
         loadExecutionProfiles();
       }
-      reloadTaskList();
     },
     { immediate: true }
   );
@@ -1605,7 +1660,9 @@
   });
 
   onBeforeUnmount(() => {
-    window.clearInterval(pollTimer);
+    taskListRequest += 1;
+    taskDetailRequest += 1;
+    taskEventsRequest += 1;
   });
 </script>
 

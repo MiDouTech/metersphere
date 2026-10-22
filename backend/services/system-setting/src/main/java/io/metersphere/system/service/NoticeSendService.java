@@ -23,6 +23,35 @@ import java.util.Map;
 
 @Component
 public class NoticeSendService {
+    public record Delivery(MessageDetail configuration, NoticeModel model) { }
+
+    /** No sending here: caller persists the frozen deliveries in its business transaction. */
+    public List<Delivery> prepareDeliveries(String taskType, NoticeModel model) {
+        List<Delivery> deliveries = new java.util.ArrayList<>();
+        String projectId = (String) model.getParamMap().get("projectId");
+        for (MessageDetail configured : messageDetailService.searchMessageByTypeAndProjectId(taskType, projectId)) {
+            if (!StringUtils.equals(configured.getEvent(), model.getEvent())) continue;
+            MessageDetail detail = SerializationUtils.clone(configured);
+            NoticeModel copy = SerializationUtils.clone(model);
+            var recipients = getNoticeSender(detail).resolveRecipients(detail, copy);
+            for (var recipient : recipients) {
+                NoticeModel single = SerializationUtils.clone(copy);
+                single.setReceivers(List.of(recipient));
+                single.setFrozenRecipients(true);
+                deliveries.add(new Delivery(detail, single));
+            }
+        }
+        return deliveries;
+    }
+
+    /** Synchronous delivery for a durable worker; failures must reach that worker. */
+    public void deliver(Delivery delivery) {
+        var previous = LocaleContextHolder.getLocaleContext();
+        try {
+            setLanguage(delivery.model());
+            getNoticeSender(delivery.configuration()).send(delivery.configuration(), delivery.model());
+        } finally { LocaleContextHolder.setLocaleContext(previous); }
+    }
     @Resource
     private MailNoticeSender mailNoticeSender;
     @Resource

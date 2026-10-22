@@ -22,6 +22,7 @@ export interface CreateOrUpdateModule {
 }
 // 更新模块
 export interface UpdateModule {
+  expectedUpdateTime?: number;
   id: string;
   name: string;
 }
@@ -449,6 +450,7 @@ export type FeatureCaseMinderActionType = 'ADD' | 'UPDATE';
 export type FeatureCaseMinderEditType = 'STEP' | 'TEXT';
 // 脑图新增/修改的模块集合（只记录操作的节点，节点下的子节点不需要记录）
 export interface FeatureCaseMinderUpdateModuleItem {
+  expectedUpdateTime?: number;
   id: string;
   name: string;
   parentId: string;

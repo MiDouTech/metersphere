@@ -12,6 +12,8 @@ public interface AgentTempAttachmentMapper {
 
     AgentTempAttachment selectByPrimaryKey(@Param("id") String id);
 
+    AgentTempAttachment selectForLink(@Param("id") String id);
+
     List<AgentTempAttachment> selectExpiredUnlinked(@Param("expiresBefore") long expiresBefore, @Param("limit") int limit);
 
     int deleteByPrimaryKey(@Param("id") String id);

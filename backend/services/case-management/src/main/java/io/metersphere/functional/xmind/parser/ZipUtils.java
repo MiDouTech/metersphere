@@ -43,9 +43,15 @@ public class ZipUtils {
      */
     public static String extract(File file) throws IOException, ArchiveException {
         Expander expander = new Expander();
-        String destFileName = FileUtils.getTempDirectoryPath()+ File.separator + "XMind" + System.currentTimeMillis();
-        expander.expand(file, new File(destFileName));
-        return destFileName;
+        File destination = java.nio.file.Files.createTempDirectory("XMind-").toFile();
+        try {
+            expander.expand(file, destination);
+            return destination.getAbsolutePath();
+        } catch (IOException | ArchiveException | RuntimeException failure) {
+            try { FileUtils.deleteDirectory(destination); }
+            catch (IOException cleanupFailure) { failure.addSuppressed(cleanupFailure); }
+            throw failure;
+        }
     }
 
     /**

@@ -24,7 +24,8 @@ import java.util.Set;
 @Service
 public class PermissionSessionRefreshService {
 
-    private static final String SESSION_KEY_PREFIX = "spring:session:sessions:";
+    @org.springframework.beans.factory.annotation.Value("${spring.session.redis.namespace:spring:session}")
+    private String sessionNamespace = "spring:session";
     private static final String USER_ATTRIBUTE_KEY = "sessionAttr:" + SessionConstants.ATTR_USER;
 
     @Resource
@@ -69,7 +70,7 @@ public class PermissionSessionRefreshService {
                     }
                 }
                 sessionRepository.getSessionRedisOperations().opsForHash()
-                        .put(SESSION_KEY_PREFIX + sessionId, USER_ATTRIBUTE_KEY, refreshed);
+                        .put(sessionNamespace + ":sessions:" + sessionId, USER_ATTRIBUTE_KEY, refreshed);
             }
         } catch (Exception e) {
             LogUtils.error("刷新用户权限会话失败，已按失败关闭删除会话，userId=" + userId, e);

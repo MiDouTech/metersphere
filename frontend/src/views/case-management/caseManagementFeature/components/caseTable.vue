@@ -37,7 +37,7 @@
             @refresh="fetchData()"
           >
             <template #left>
-              <div class="flex">
+              <div class="flex min-w-0 max-w-full flex-wrap items-center gap-y-2">
                 <a-button
                   v-permission="['FUNCTIONAL_CASE:READ+ADD']"
                   class="mr-[12px]"
@@ -52,6 +52,7 @@
                   @init-modules="emit('initModules')"
                   @confirm-import="confirmImport"
                 />
+                <ExportHistoryDrawer :project-id="currentProjectId" />
                 <a-button
                   v-if="hasAllPermission(['FUNCTIONAL_CASE:READ', 'PROJECT_TEST_PLAN:READ+ASSOCIATION'])"
                   class="ml-[12px]"
@@ -596,18 +597,18 @@
   import BatchExecResultModal from './batchExecResultModal.vue';
   import CaseDetailDrawer from './caseDetailDrawer.vue';
   import FeatureCaseTree from './caseTree.vue';
+  import ExportHistoryDrawer from './ExportHistoryDrawer.vue';
   import ImportCase from './import/index.vue';
   import AddDemandModal from './tabContent/tabDemand/addDemandModal.vue';
   import ThirdDemandDrawer from './tabContent/tabDemand/thirdDemandDrawer.vue';
   import BatchUpdateExecutorModal from '@/views/test-plan/testPlan/components/batchUpdateExecutorModal.vue';
 
+  import MSR from '@/api/http';
   import {
     batchAssociationDemand,
     batchCopyToModules,
-    batchDeleteCase,
     batchMoveToModules,
     batchUpdateExecutor,
-    deleteCaseRequest,
     dragSort,
     exportExcelCase,
     exportXMindCase,
@@ -634,15 +635,8 @@
   import useMinderStore from '@/store/modules/components/minder-editor';
   import { ShowType } from '@/store/modules/components/minder-editor/types';
   import useAIStore from '@/store/modules/setting/ai';
-  import {
-    characterLimit,
-    downloadByteFile,
-    filterTreeNode,
-    findNodeByKey,
-    findNodePathByKey,
-    getGenerateId,
-    mapTree,
-  } from '@/utils';
+  import { downloadByteFile, filterTreeNode, findNodeByKey, findNodePathByKey, getGenerateId, mapTree } from '@/utils';
+  import watchCaseExportNotifications from '@/utils/caseExportNotifications';
   import { hasAllPermission, hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
   import { AiCaseTransformResult } from '@/models/ai';
@@ -668,7 +662,7 @@
   import { WorkNavValueEnum } from '@/enums/workbenchEnum';
 
   import { executionResultMap, getCaseLevels, getTableFields, statusIconMap } from './utils';
-  import { LabelValue } from '@arco-design/web-vue/es/tree-select/interface';
+  import type { LabelValue } from '@arco-design/web-vue/es/tree-select/interface';
 
   const MsAIDrawer = defineAsyncComponent(() => import('@/components/business/ms-ai-drawer/index.vue'));
 
@@ -1391,6 +1385,15 @@
 
   const tableProps = ref<Partial<MsTableProps<CaseManagementTable>>>({
     tableKey: TableKeyEnum.CASE_MANAGEMENT_TABLE,
+    msPagination: {
+      current: 1,
+      pageSize: 10,
+      total: 0,
+      showPageSize: true,
+      pageSizeOptions: [10, 20, 50, 100],
+      hideOnSinglePage: false,
+      autoAdjust: false,
+    },
     selectable: true,
     showSetting: true,
     heightUsed: 268,
@@ -1711,11 +1714,11 @@
           caseSyncLoading.value = true;
           const result = await syncProjectFunctionalCases(appStore.currentProjectId);
           Message.success(
-            t('caseManagement.featureCase.syncSuccess', {
+            `${t('caseManagement.featureCase.syncSuccess', {
               plans: result.planCount,
               updated: result.updatedCount,
               removed: result.removedCount,
-            })
+            })}；补齐缺陷关联 ${result.defectAddedCount || 0} 条`
           );
           await initData();
         } finally {
@@ -1801,33 +1804,12 @@
   }
 
   // 删除
-  function deleteCase(record: CaseManagementTable) {
-    openModal({
-      type: 'error',
-      title: t('caseManagement.featureCase.deleteCaseTitle', { name: characterLimit(record.name) }),
-      content: t('caseManagement.featureCase.beforeDeleteCase'),
-      okText: t('common.confirmDelete'),
-      cancelText: t('common.cancel'),
-      okButtonProps: {
-        status: 'danger',
-      },
-      onBeforeOk: async () => {
-        try {
-          const params = {
-            id: record.id,
-            deleteAll: false,
-            projectId: currentProjectId.value,
-          };
-          await deleteCaseRequest(params);
-          Message.success(t('common.deleteSuccess'));
-          emitTableParams();
-          loadList();
-        } catch (error) {
-          console.log(error);
-        }
-      },
-      hideCancel: false,
+  async function deleteCase(record: CaseManagementTable) {
+    const preview = await MSR.post<{ previewId: string }>({
+      url: '/ai/case-deletions/preview',
+      data: { projectId: currentProjectId.value, selectIds: [record.id], selectAll: false, deleteAll: false },
     });
+    router.push({ name: 'CaseDeletionConfirm', params: { id: preview.previewId } });
   }
 
   const moreActions: ActionsItem[] = [
@@ -1863,6 +1845,9 @@
   const exportProjectId = ref('');
   let exportTimer: ReturnType<typeof setTimeout> | undefined;
   let exportPollGeneration = 0;
+  let exportViewDisposed = false;
+  let exportContextGeneration = 0;
+  let disposeExportNotifications: (() => void) | undefined;
   let pendingExport: { signature: string; requestId: string } | undefined;
   const taskId = ref('');
 
@@ -1914,16 +1899,29 @@
   function stopExportPolling() {
     exportPollGeneration += 1;
     clearTimeout(exportTimer);
+    disposeExportNotifications?.();
+    disposeExportNotifications = undefined;
   }
 
+  watch(currentProjectId, () => {
+    exportContextGeneration += 1;
+    stopExportPolling();
+    exportingMessage.value?.close();
+    showExportVisible.value = false;
+    pendingExport = undefined;
+    exportLoading.value = false;
+  });
+
   async function cancelExport() {
+    const generation = exportPollGeneration;
     try {
       const task = await stopCaseExport(taskId.value);
+      if (exportViewDisposed || generation !== exportPollGeneration) return;
       stopExportPolling();
       exportingMessage.value?.close();
       if (task.state === 'SUCCEEDED') showExportSuccessfulMessage(task.fileId, task.count, task.projectId);
     } catch (error) {
-      Message.error(t('common.exportFailed'));
+      if (!exportViewDisposed && generation === exportPollGeneration) Message.error(t('common.exportFailed'));
     }
   }
   // 提示：正在导出
@@ -1957,12 +1955,16 @@
     stopExportPolling();
     const generation = exportPollGeneration;
     let delay = 3000;
+    let inFlight = false;
     const poll = async () => {
-      if (generation !== exportPollGeneration) return;
+      if (generation !== exportPollGeneration || inFlight) return;
+      inFlight = true;
+      clearTimeout(exportTimer);
       try {
         const task = await getCaseExportTask(id);
         if (generation !== exportPollGeneration) return;
         if (task.state !== 'RUNNING') {
+          stopExportPolling();
           exportingMessage.value?.close();
           if (task.state === 'SUCCEEDED') {
             showExportSuccessfulMessage(task.fileId, task.count, task.projectId);
@@ -1975,9 +1977,12 @@
       } catch (error) {
         // A failed read is not a failed export. Re-entering the menu also recovers server state.
         delay = Math.min(delay * 2, 10000);
+      } finally {
+        inFlight = false;
       }
       if (generation === exportPollGeneration) exportTimer = setTimeout(poll, delay);
     };
+    disposeExportNotifications = watchCaseExportNotifications(id, exportProjectId.value, poll);
     poll();
   }
 
@@ -1987,6 +1992,8 @@
       .map((item) => ({ id: item.key, name: item.text }));
   }
   const exportConfirm = async (option: MsExportDrawerOption[]) => {
+    const projectId = currentProjectId.value;
+    const contextGeneration = exportContextGeneration;
     try {
       exportLoading.value = true;
       const { selectedIds, selectAll, excludeIds } = batchParams.value;
@@ -2021,6 +2028,8 @@
       } else {
         res = await exportXMindCase(request);
       }
+      if (exportViewDisposed || exportContextGeneration !== contextGeneration || currentProjectId.value !== projectId)
+        return;
       taskId.value = res;
       pendingExport = undefined;
       showExportingMessage();
@@ -2029,15 +2038,25 @@
       showExportVisible.value = false;
       resetSelector();
     } catch (error) {
-      Message.error(t('common.exportFailed'));
+      if (
+        !exportViewDisposed &&
+        exportContextGeneration === contextGeneration &&
+        currentProjectId.value === projectId
+      ) {
+        Message.error(t('common.exportFailed'));
+      }
     } finally {
-      exportLoading.value = false;
+      if (!exportViewDisposed && exportContextGeneration === contextGeneration) exportLoading.value = false;
     }
   };
 
   async function batchExport() {
+    const projectId = currentProjectId.value;
+    const contextGeneration = exportContextGeneration;
     try {
-      const tasks = await getRecentCaseExports(currentProjectId.value);
+      const tasks = await getRecentCaseExports(projectId);
+      if (exportViewDisposed || exportContextGeneration !== contextGeneration || currentProjectId.value !== projectId)
+        return;
       const active = tasks.find((task) => task.state === 'RUNNING');
       const latest = tasks[0];
       exportProjectId.value = currentProjectId.value;
@@ -2052,7 +2071,13 @@
         showExportVisible.value = true;
       }
     } catch (error) {
-      Message.error(t('common.exportFailed'));
+      if (
+        !exportViewDisposed &&
+        exportContextGeneration === contextGeneration &&
+        currentProjectId.value === projectId
+      ) {
+        Message.error(t('common.exportFailed'));
+      }
     }
   }
 
@@ -2155,38 +2180,20 @@
 
   // 批量删除
   async function batchDelete() {
-    openModal({
-      type: 'error',
-      title: t('caseManagement.featureCase.batchDelete', {
-        number: batchParams.value.currentSelectCount,
-      }),
-      content: t('caseManagement.featureCase.beforeDeleteCase'),
-      okText: t('common.confirmDelete'),
-      cancelText: t('common.cancel'),
-      okButtonProps: {
-        status: 'danger',
+    const { selectedIds, selectAll, excludeIds } = batchParams.value;
+    const preview = await MSR.post<{ previewId: string }>({
+      url: '/ai/case-deletions/preview',
+      data: {
+        projectId: currentProjectId.value,
+        selectIds: selectAll ? [] : selectedIds,
+        excludeIds: excludeIds || [],
+        moduleIds: props.activeFolder === 'all' ? [] : [props.activeFolder, ...props.offspringIds],
+        condition: conditionParams.value,
+        selectAll,
+        deleteAll: false,
       },
-      onBeforeOk: async () => {
-        try {
-          const { selectedIds, selectAll, excludeIds } = batchParams.value;
-          await batchDeleteCase({
-            projectId: currentProjectId.value,
-            selectIds: selectAll ? [] : selectedIds,
-            excludeIds: excludeIds || [],
-            moduleIds: props.activeFolder === 'all' ? [] : [props.activeFolder, ...props.offspringIds],
-            condition: conditionParams.value,
-            selectAll,
-          });
-          resetSelector();
-          Message.success(t('common.deleteSuccess'));
-          emitTableParams();
-          loadList();
-        } catch (error) {
-          console.log(error);
-        }
-      },
-      hideCancel: false,
     });
+    router.push({ name: 'CaseDeletionConfirm', params: { id: preview.previewId } });
   }
 
   const showDemandModel = ref<boolean>(false);
@@ -2608,6 +2615,7 @@
   const viewName = ref<string>('');
 
   onBeforeUnmount(() => {
+    exportViewDisposed = true;
     stopExportPolling();
     exportingMessage.value?.close();
     showDetailDrawer.value = false;

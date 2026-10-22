@@ -262,6 +262,7 @@
 
   const renamePopVisible = ref(false);
   const renameCaseName = ref('');
+  const renameUpdateTime = ref<number>();
 
   function resetFocusNodeKey() {
     focusNodeKey.value = '';
@@ -287,6 +288,7 @@
         resetFocusNodeKey();
         break;
       case 'rename':
+        renameUpdateTime.value = node.updateTime;
         renameCaseName.value = node.name || '';
         renamePopVisible.value = true;
         document.querySelector(`#renameSpan${node.id}`)?.dispatchEvent(new Event('click'));
@@ -313,6 +315,7 @@
       loading.value = true;
       await moveCaseModuleTree({
         dragNodeId: dragNode.id as string,
+        expectedUpdateTime: dragNode.updateTime,
         dropNodeId: dropNode.id || '',
         dropPosition,
       });
@@ -366,6 +369,7 @@
       if (formValue && formValue.id) {
         const params: UpdateModule = {
           id: formValue.id,
+          expectedUpdateTime: renameUpdateTime.value,
           name: formValue?.field as string,
         };
         await updateCaseModuleTree(params);

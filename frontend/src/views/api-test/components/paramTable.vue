@@ -636,7 +636,7 @@
   import { TableKeyEnum } from '@/enums/tableEnum';
 
   import { filterKeyValParams } from './utils';
-  import { TableOperationColumn } from '@arco-design/web-vue/es/table/interface';
+  import type { TableOperationColumn } from '@arco-design/web-vue/es/table/interface';
   // 异步加载组件
   const MsAddAttachment = defineAsyncComponent(() => import('@/components/business/ms-add-attachment/index.vue'));
   const MsParamsInput = defineAsyncComponent(() => import('@/components/business/ms-params-input/index.vue'));

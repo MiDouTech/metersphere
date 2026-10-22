@@ -6,5 +6,13 @@ export default {
   'ms.comment.delete': '删除',
   'ms.comment.deleteConfirm': '确认删除该评论吗？',
   'ms.comment.deleteContent': '删除后，评论无法回复，请谨慎操作',
+  'ms.comment.deleteCaseContent': '删除正文后保留已删除标记和现有回复，不会删除其他人的回复。此操作不可撤销。',
+  'ms.comment.deleted': '该评论已删除，已有回复保留',
+  'ms.comment.unknownUser': '已移除的用户',
+  'ms.comment.retry': '重试',
+  'ms.comment.refresh': '刷新评论',
+  'ms.comment.loadFailed': '评论读取失败，请重试',
+  'ms.comment.previousData': '当前显示上次读取的数据',
+  'ms.comment.rootTotal': '共 {total} 条主评论，回复独立分页',
   'ms.comment.enterPlaceHolderTip': '请输入评论，⌘ + Enter 结束',
 };

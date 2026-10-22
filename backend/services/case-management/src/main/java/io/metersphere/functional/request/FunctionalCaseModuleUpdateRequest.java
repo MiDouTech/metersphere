@@ -21,6 +21,9 @@ public class FunctionalCaseModuleUpdateRequest implements Serializable {
     @NotBlank(message = "{file_module.id.not_blank}")
     private String id;
 
+    @jakarta.validation.constraints.NotNull
+    private Long expectedUpdateTime;
+
     @Schema(description = "模块名称", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotEmpty(message = "{file_module.name.not_blank}")
     private String name;

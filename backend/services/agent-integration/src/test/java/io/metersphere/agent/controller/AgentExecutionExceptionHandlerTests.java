@@ -8,6 +8,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 class AgentExecutionExceptionHandlerTests {
+    @Test void disabledFeatureKeepsStableCodeAndSafeMessage() {
+        var response = handler.business(new MSException(
+                io.metersphere.system.controller.handler.result.CommonResultCode.FEATURE_DISABLED, "internal"),
+                new MockHttpServletRequest());
+        Assertions.assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        Assertions.assertEquals("FEATURE_DISABLED", response.getBody().getCode());
+        Assertions.assertFalse(response.getBody().getMessage().contains("internal"));
+    }
     private final AgentExecutionExceptionHandler handler=new AgentExecutionExceptionHandler(new AgentSafeErrorMapper());
 
     @Test void typedScopeDenialReturns403WithoutRawDetails(){

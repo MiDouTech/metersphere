@@ -174,3 +174,7 @@ export function getModelConfigNameList() {
 export function deleteModelConfig(id: string) {
   return MSR.get({ url: `${DeleteModelConfigUrl}/${id}` });
 }
+
+export function getFeatureCapabilities() {
+  return MSR.get<{ llmUiEnabled: boolean }>({ url: '/feature/capabilities' }, { ignoreCancelToken: true });
+}

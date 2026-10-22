@@ -82,11 +82,17 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
     private FunctionalCaseService functionalCaseService;
     private SessionUser user;
     private int successCount = 0;
+    private int logicalCount = 0;
     private Map<String, String> pathMap = new HashMap<>();
     protected static final int TAGS_COUNT = 10;
     protected static final int TAG_LENGTH = 64;
 
     private AtomicLong lastPos;
+    private java.util.function.BiConsumer<String,FunctionalCaseExcelData> preparedItem;
+    /** Parse through the existing validation/merge rules without writing business data. */
+    public void collectPreparedItems(java.util.function.BiConsumer<String,FunctionalCaseExcelData> consumer) {
+        this.preparedItem=Objects.requireNonNull(consumer);
+    }
 
     public FunctionalCaseImportEventListener(FunctionalCaseImportRequest request, Class clazz, List<TemplateCustomFieldDTO> customFields, Set<ExcelMergeInfo> mergeInfoSet, SessionUser user, Long pos) {
         this.mergeInfoSet = mergeInfoSet;
@@ -122,6 +128,7 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
         }
 
         Integer rowIndex = analysisContext.readRowHolder().getRowIndex();
+        if (rowIndex > 100000) throw new MSException("导入表格行数超过限制，请拆分文件");
         //处理合并单元格
         handleMergeData(data, rowIndex);
 
@@ -174,6 +181,8 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
             functionalCaseExcelData = parseDataToModel(data);
         }
 
+        if (++logicalCount > 10000) throw new MSException("单次导入最多10000条用例，请拆分文件");
+        if (logicalCount % 100 == 0) io.metersphere.functional.service.FunctionalLegacyImportService.stage("PARSING", logicalCount);
         //校验数据
         buildUpdateOrErrorList(rowIndex, functionalCaseExcelData);
 
@@ -191,8 +200,10 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
     public void doAfterAllAnalysed(AnalysisContext analysisContext) {
         // 如果文件最后一行是没有内容的步骤，这里处理最后一条合并单元格的数据
         if (currentMergeData != null) {
+            if (++logicalCount > 10000) throw new MSException("单次导入最多10000条用例，请拆分文件");
             buildUpdateOrErrorList(firstMergeRowIndex, currentMergeData);
         }
+        io.metersphere.functional.service.FunctionalLegacyImportService.stage("WRITING", logicalCount);
         saveData();
         this.successCount += list.size() + updateList.size();
         list.clear();
@@ -205,6 +216,11 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
      * 执行保存数据
      */
     private void saveData() {
+        if(preparedItem!=null) {
+            list.forEach(item->preparedItem.accept("CREATE",item));
+            updateList.forEach(item->preparedItem.accept("UPDATE",item));
+            return;
+        }
         if (CollectionUtils.isNotEmpty(list)) {
             functionalCaseService.saveImportData(list, request, moduleTree, customFieldsMap, pathMap, user, lastPos);
         }
@@ -399,6 +415,8 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
                     //如果是覆盖，那么有id的需要更新
                     functionalCaseExcelData.setNum(checkResult);
                     updateList.add(functionalCaseExcelData);
+                } else if(preparedItem!=null) {
+                    preparedItem.accept("SKIPPED",functionalCaseExcelData);
                 }
             } else {
                 list.add(functionalCaseExcelData);

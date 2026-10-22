@@ -62,10 +62,11 @@ public class AgentBusinessAccess {
     public void cases(String projectId,List<String> caseIds) {
         if(caseIds==null)return;
         if(caseIds.size()>100 || caseIds.stream().anyMatch(StringUtils::isBlank) || caseIds.stream().distinct().count()!=caseIds.size())throw new MSException("AGENT_VALIDATION_ERROR");
-        for(String id:caseIds) {
-            Long count=jdbc.queryForObject("SELECT COUNT(*) FROM functional_case WHERE id=? AND project_id=? AND deleted=0",Long.class,id,projectId);
-            if(count==null || count!=1)throw denied();
-        }
+        if(caseIds.isEmpty())return;
+        String placeholders=String.join(",",java.util.Collections.nCopies(caseIds.size(),"?"));
+        var parameters=new java.util.ArrayList<Object>();parameters.add(projectId);parameters.addAll(caseIds);
+        Long count=jdbc.queryForObject("SELECT COUNT(*) FROM functional_case WHERE project_id=? AND deleted=0 AND id IN ("+placeholders+")",Long.class,parameters.toArray());
+        if(count==null || count!=caseIds.size())throw denied();
     }
 
     public void reviewers(String projectId,List<String> reviewers) {
@@ -82,8 +83,10 @@ public class AgentBusinessAccess {
 
     public void commentParent(String caseId, String parentId, String replyUser) {
         if (StringUtils.isBlank(parentId)) throw new MSException("AGENT_VALIDATION_ERROR");
-        var users = jdbc.queryForList("SELECT create_user FROM functional_case_comment WHERE id=? AND case_id=?", String.class, parentId, caseId);
-        if (users.size()!=1 || !java.util.Objects.equals(users.getFirst(), replyUser)) throw denied();
+        var rows = jdbc.queryForList("SELECT id FROM functional_case_comment WHERE id=? AND case_id=?", String.class, parentId, caseId);
+        if (rows.size()!=1 || StringUtils.isBlank(replyUser)) throw denied();
+        // The shared transactional comment service validates the reply recipient against the thread,
+        // current read permission and deletion state, including replies to an existing child.
     }
 
     public static MSException denied() { return new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE"); }

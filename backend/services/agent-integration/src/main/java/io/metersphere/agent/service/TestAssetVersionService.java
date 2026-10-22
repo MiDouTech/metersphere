@@ -76,12 +76,14 @@ public class TestAssetVersionService {
                 sourceVersionId, targetType, targetId, targetVersionId, metadata, userId, System.currentTimeMillis());
     }
 
+    @Transactional(readOnly = true, noRollbackFor = MSException.class)
     public TestAssetVersionDTO getPublished(String id,String projectId,String assetType,String assetId){
         TestAssetVersionDTO version=mapper.selectVersionById(id);
         if(version==null||!projectId.equals(version.getProjectId())||!assetType.equals(version.getAssetType())
                 ||!assetId.equals(version.getAssetId())||!"PUBLISHED".equals(version.getStatus()))throw new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND");
         return version;
     }
+    @Transactional(readOnly = true, noRollbackFor = MSException.class)
     public TestAssetVersionDTO latestPublished(String projectId,String assetType,String assetId){TestAssetVersionDTO v=mapper.selectLatestPublished(projectId,assetType,assetId);if(v==null)throw new MSException("PUBLISHED_ASSET_VERSION_NOT_FOUND");return v;}
 
     public List<TestAssetVersionDTO> freezeVersions(String projectId,List<TestAssetRefDTO> refs){

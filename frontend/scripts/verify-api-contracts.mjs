@@ -93,8 +93,18 @@ requireText(
 const credentialReferenceView = read('src/views/agent/credential-reference.vue');
 requireText(
   credentialReferenceView,
-  'listAiEnvironmentProfiles(app.currentProjectId)',
+  'listAiEnvironmentProfiles(projectId)',
   'Credential references must select from existing environment profiles.'
+);
+requireText(
+  credentialReferenceView,
+  'const projectId = app.currentProjectId',
+  'Capture the project before requesting environment options.'
+);
+requireText(
+  credentialReferenceView,
+  'projectId !== app.currentProjectId',
+  'Discard environment options returned after a project switch.'
 );
 requireText(
   credentialReferenceView,

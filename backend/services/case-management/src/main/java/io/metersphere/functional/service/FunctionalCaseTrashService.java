@@ -58,6 +58,12 @@ public class FunctionalCaseTrashService {
             throw new MSException(Translator.get("case_comment.case_is_null"));
         }
         List<String> ids = getIdsByRefId(functionalCase.getRefId());
+        recoverVersions(ids, userId);
+    }
+
+    /** Caller validates the explicit version set and destination before entering this shared recovery path. */
+    public void recoverVersions(List<String> ids, String userId) {
+        if (ids == null || ids.isEmpty()) return;
         //检查自定义字段是否还存在，不存在，删除关联关系（与恢复流程没关系可异步执行）
         delCustomFields(ids);
         extFunctionalCaseMapper.recoverCase(ids, userId, System.currentTimeMillis());

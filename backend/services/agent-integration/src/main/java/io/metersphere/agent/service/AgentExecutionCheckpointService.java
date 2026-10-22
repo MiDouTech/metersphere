@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 public class AgentExecutionCheckpointService {
     @Resource private JdbcTemplate jdbcTemplate;
     @Resource private AgentExecutionPreflightService preflightService;
+    @Resource private io.metersphere.system.security.LlmFeature llmFeature;
     @Resource(name = "agentProjectService") private AgentProjectService projectService;
 
     private static final Set<String> CHECKPOINTABLE_STATUSES = Set.of("RUNNING", "WAITING_LOGIN", "WAITING_HUMAN");
@@ -64,6 +65,7 @@ public class AgentExecutionCheckpointService {
         String actualHash=sha((String)cp.get("state_snapshot"));if(!actualHash.equals(cp.get("state_hash")))throw new MSException("CHECKPOINT_HASH_MISMATCH");
         Map<String,Object> task=jdbcTemplate.queryForMap("SELECT project_id,create_user,task_origin,status,current_execution_id,timeout_at FROM ai_execution_task WHERE id=? FOR UPDATE",taskId);
         projectService.resolveProjectId((String)task.get("project_id"));
+        if (!"PERSONAL_MCP".equals(task.get("task_origin"))) llmFeature.requireEnabled();
         if(!"WAITING_HUMAN".equals(task.get("status"))||!StringUtils.equals((String)cp.get("execution_id"),(String)task.get("current_execution_id")))throw new MSException("CHECKPOINT_RESUME_STATE_CONFLICT");
         if(task.get("timeout_at")!=null&&((Number)task.get("timeout_at")).longValue()<=System.currentTimeMillis())throw new MSException("CHECKPOINT_EXPIRED");
         String actor=StringUtils.defaultIfBlank(SessionUtils.getUserId(),AgentExecutionActorContext.get());
@@ -93,6 +95,7 @@ public class AgentExecutionCheckpointService {
         Map<String,Object> task=jdbcTemplate.queryForMap("SELECT t.project_id,t.task_origin,p.request_json FROM ai_execution_task t JOIN ai_execution_preflight p ON p.id=t.preflight_id WHERE t.id=?",taskId);
         projectService.resolveProjectId((String)task.get("project_id"));
         AgentExecutionPreflightRequest freshRequest=io.metersphere.sdk.util.JSON.parseObject((String)task.get("request_json"),AgentExecutionPreflightRequest.class);
+        if (!"PERSONAL_MCP".equals(task.get("task_origin"))) llmFeature.requireEnabled();
         freshRequest.setProjectId((String)task.get("project_id"));
         freshRequest.setTaskOrigin((String)task.get("task_origin"));
         AgentExecutionPreflightDTO fresh=preflightService.preflight(freshRequest);

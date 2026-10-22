@@ -15,6 +15,11 @@
   const route = useRoute();
   const router = useRouter();
   const sections = [
+    {
+      key: 'recovery',
+      label: '回写恢复状态',
+      component: defineAsyncComponent(() => import('@/views/agent/recovery-health.vue')),
+    },
     { key: 'runners', label: '执行器', component: defineAsyncComponent(() => import('@/views/agent/list.vue')) },
     {
       key: 'models',

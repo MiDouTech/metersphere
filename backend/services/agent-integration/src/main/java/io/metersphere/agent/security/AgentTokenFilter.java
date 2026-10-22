@@ -100,6 +100,7 @@ public class AgentTokenFilter extends AnonymousFilter {
         AgentToken token = agentTokenService.validateRequest(httpRequest);
         if (token != null && StringUtils.isNotBlank(token.getUserId())) {
             boolean searchApi = AgentTokenRateLimiter.isSearchApi(httpRequest.getRequestURI());
+            try {
             if (!agentTokenRateLimiter.tryAcquire(token.getId(), searchApi)) {
                 writeJsonError(WebUtils.toHttp(response), 429, searchRateLimitMessage(searchApi));
                 return false;
@@ -109,6 +110,11 @@ public class AgentTokenFilter extends AnonymousFilter {
                 writeJsonError(WebUtils.toHttp(response), 429, "Agent Token requests from this IP are too frequent. Please retry later.");
                 return false;
             }
+            } catch (org.springframework.dao.DataAccessException unavailable) {
+                writeJsonError(WebUtils.toHttp(response), 503, "调用保护服务暂不可用，请稍后重试");
+                return false;
+            }
+            String clientIp = clientIp(httpRequest);
             String projectId;
             try {
                 projectId = resolveProjectId(httpRequest, token);
@@ -203,8 +209,9 @@ public class AgentTokenFilter extends AnonymousFilter {
             if (status == 429) response.setHeader("Retry-After", "60");
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setContentType("application/json;charset=UTF-8");
-            String safe = StringUtils.defaultString(message).replace("\"", "'");
-            response.getWriter().write("{\"code\":" + status + ",\"message\":\"" + safe + "\"}");
+            response.getWriter().write(io.metersphere.sdk.util.JSON.toJSONString(java.util.Map.of(
+                    "code", status, "message", StringUtils.defaultString(message),
+                    "context", java.util.Map.of("credentialOwner", "AGENT"))));
             response.getWriter().flush();
         } catch (Exception ignored) {
             // ignore write failure

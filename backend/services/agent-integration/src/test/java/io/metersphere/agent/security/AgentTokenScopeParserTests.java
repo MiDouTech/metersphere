@@ -9,6 +9,18 @@ import java.util.Set;
 
 class AgentTokenScopeParserTests {
 
+    @Test void commentDeletionRequiresExplicitGrant() {
+        for (String scope : Set.of("AGENT_ALL", "FUNCTIONAL_ALL", "FUNCTIONAL_WRITE", "CASE_COMMENT_EDIT_V2"))
+            Assertions.assertFalse(AgentTokenScopeParser.hasScope(scope, AgentTokenScope.CASE_COMMENT_DELETE_V2));
+        Assertions.assertTrue(AgentTokenScopeParser.hasScope("CASE_COMMENT_DELETE_V2", AgentTokenScope.CASE_COMMENT_DELETE_V2));
+        Assertions.assertEquals("CASE_COMMENT_DELETE_V2", AgentTokenScopeParser.normalizeAndValidate("case_comment_delete_v2"));
+        for (String required : Set.of(AgentTokenScope.CASE_DELETE_V2, AgentTokenScope.CASE_RESTORE_V2)) {
+            Assertions.assertFalse(AgentTokenScopeParser.hasScope("AGENT_ALL", required));
+            Assertions.assertFalse(AgentTokenScopeParser.hasScope("FUNCTIONAL_ALL", required));
+            Assertions.assertTrue(AgentTokenScopeParser.hasScope(required, required));
+        }
+    }
+
     @Test
     void parseShouldSplitAndDeduplicate() {
         Set<String> scopes = AgentTokenScopeParser.parse("functional_read; BUG_WRITE,BUG_WRITE  PROJECT_READ");

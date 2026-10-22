@@ -58,7 +58,11 @@ public final class AgentTokenScopeParser {
         String required = requiredScope.trim().toUpperCase(Locale.ROOT);
         // Versioned grants require explicit consent; legacy wildcard scopes never acquire them.
         if (AgentTokenScope.CASE_MODULE_WRITE_V2.equals(required)
-                || AgentTokenScope.CASE_COMMENT_EDIT_V2.equals(required)) return owned.contains(required);
+                || AgentTokenScope.CASE_COMMENT_EDIT_V2.equals(required)
+                || AgentTokenScope.CASE_COMMENT_DELETE_V2.equals(required)
+                || AgentTokenScope.CASE_DELETE_V2.equals(required)
+                || AgentTokenScope.CASE_RESTORE_V2.equals(required)
+                || AgentTokenScope.CASE_IMPORT_V2.equals(required)) return owned.contains(required);
         if (owned.contains(AgentTokenScope.AGENT_ALL)) {
             return true;
         }

@@ -238,6 +238,7 @@
             ...e.data,
             id: e.id || e.data?.id || '',
             text: e.name || e.data?.text || '',
+            updateTime: e.updateTime ?? e.data?.updateTime,
             resource: props.modulesCount[e.id] !== undefined ? [moduleTag] : e.data?.resource,
             expandState: e.level === 0 ? 'expand' : 'collapse',
             count: props.modulesCount[e.id],
@@ -726,6 +727,7 @@
             ...e.data,
             id: e.id || e.data?.id || '',
             text: e.name || e.data?.text || '',
+            updateTime: e.updateTime ?? e.data?.updateTime,
             resource: [moduleTag],
             expandState: 'collapse',
             count: props.modulesCount[e.id],
@@ -1093,6 +1095,7 @@
           // 处理模块节点
           tempMinderParams.value.updateModuleList.push({
             id: node.data.id,
+            expectedUpdateTime: node.data.updateTime,
             name: node.data.text,
             parentId: parent?.data.id || 'NONE',
             type: node.data.isNew !== false ? 'ADD' : 'UPDATE',
@@ -1179,6 +1182,7 @@
       extraVisible.value = false;
       Message.success(t('common.saveSuccess'));
       resetMinderParams();
+      await initCaseTree();
       emit('save');
       callback(false);
     } catch (error) {

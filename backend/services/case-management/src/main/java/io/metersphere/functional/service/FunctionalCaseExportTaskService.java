@@ -59,6 +59,42 @@ public class FunctionalCaseExportTaskService {
     }
 
     public record Result(String fileType, int count) { }
+    public record RetryParameters(FunctionalCaseExportRequest request, String format) { }
+
+    public ExportTaskDTO existingRetry(String sourceId, String userId, String requestId) {
+        ExportTaskDTO original = get(sourceId, userId);
+        if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{1,64}")) throw new MSException("重试请求标识无效");
+        var rows = jdbc.queryForList("SELECT id,source_task_id FROM export_task WHERE project_id=? AND create_user=? AND type='CASE' AND request_key=?",
+                original.getProjectId(), userId, requestId);
+        if (rows.isEmpty()) return null;
+        if (!Objects.equals(sourceId, rows.getFirst().get("source_task_id")))
+            throw new MSException("相同请求标识已用于其他导出，请使用新的请求标识");
+        return get((String) rows.getFirst().get("id"), userId);
+    }
+
+    public RetryParameters prepareRetry(String sourceId, String userId, String requestId) {
+        ExportTaskDTO original = get(sourceId, userId);
+        if (!Set.of("FAILED", "CANCELLED", "EXPIRED").contains(original.getState()))
+            throw new MSException("只能重试失败、已停止或已过期的导出任务");
+        if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{1,64}"))
+            throw new MSException("重试请求标识无效");
+        String payload = jdbc.queryForObject("SELECT request_payload FROM export_task WHERE id=? AND create_user=? AND type='CASE'",
+                String.class, sourceId, userId);
+        if (StringUtils.isBlank(payload)) throw new MSException("旧任务没有完整导出参数，请重新选择用例导出");
+        FunctionalCaseExportRequest request;
+        try { request = JSON.parseObject(payload, FunctionalCaseExportRequest.class); }
+        catch (Exception invalid) { throw new MSException("原任务参数无法恢复，请重新选择用例导出"); }
+        if (request == null || !Objects.equals(original.getProjectId(), request.getProjectId()))
+            throw new MSException("原任务参数无法恢复，请重新选择用例导出");
+        String format = original.getFileType();
+        if ("zip".equals(format)) format = "xlsx";
+        if (!Set.of("xlsx", "xmind").contains(Objects.toString(format, "")))
+            throw new MSException("原任务格式无法恢复，请重新选择用例导出");
+        request.setRequestId(requestId);
+        request.setFileId(null);
+        request.setSourceTaskId(sourceId);
+        return new RetryParameters(request, format);
+    }
 
     public void authorize(String projectId, String userId) {
         if (StringUtils.isBlank(userId) || StringUtils.isBlank(projectId)) throw denied();
@@ -79,6 +115,11 @@ public class FunctionalCaseExportTaskService {
 
     public String start(FunctionalCaseExportRequest request, String userId, String format,
                         Function<String, Result> generate) {
+        return start(request, userId, format, taskId -> null, (taskId, ignored) -> generate.apply(taskId));
+    }
+
+    public <T> String start(FunctionalCaseExportRequest request, String userId, String format,
+                           Function<String, T> freeze, java.util.function.BiFunction<String, T, Result> generate) {
         authorize(request.getProjectId(), userId);
         String key = StringUtils.defaultIfBlank(request.getRequestId(), UUID.randomUUID().toString());
         if (!key.matches("[A-Za-z0-9_-]{1,64}")) throw new MSException("导出请求标识无效");
@@ -104,19 +145,31 @@ public class FunctionalCaseExportTaskService {
             if (own >= perUserInflight || total >= globalInflight) throw new MSException("导出任务较多，请等待现有任务结束后重试");
             jdbc.update("""
                     INSERT INTO export_task(id,type,file_id,file_type,project_id,state,create_user,create_time,
-                    update_user,update_time,request_key,request_hash,request_payload,worker_id,lease_until)
-                    VALUES (?,'CASE',?,?,?,'PREPARED',?,?,?,?,?,?,?,?,?)
+                    update_user,update_time,request_key,request_hash,request_payload,worker_id,lease_until,source_task_id)
+                    VALUES (?,'CASE',?,?,?,'PREPARED',?,?,?,?,?,?,?,?,?,?)
                     """, id, fileId, format, request.getProjectId(), userId, now, userId, now,
-                    key, hash, payload, workerId, now + timeoutMs);
+                    key, hash, payload, workerId, now + timeoutMs, request.getSourceTaskId());
             return id;
         });
         if (!id.equals(reservedId)) return reservedId;
         request.setFileId(fileId);
+        final T snapshot;
+        try {
+            authorize(request.getProjectId(), userId);
+            checkActive(id);
+            snapshot = freeze.apply(id);
+            checkActive(id);
+        } catch (Exception exception) {
+            fail(id, exception instanceof EmptyExportException ? "EXPORT_EMPTY" : "EXPORT_FAILED");
+            notifyLegacy(fileId, id, 0, false);
+            LogUtils.error("Case export snapshot failed, taskId=" + id, exception);
+            return id;
+        }
         FutureTask<Void> future = new FutureTask<>(() -> {
             try {
                 authorize(request.getProjectId(), userId);
                 if (!active(id)) return null;
-                Result result = generate.apply(id);
+                Result result = generate.apply(id, snapshot);
                 authorize(request.getProjectId(), userId);
                 assertSnapshotScope(id, request.getProjectId());
                 long finished = System.currentTimeMillis();
@@ -132,6 +185,13 @@ public class FunctionalCaseExportTaskService {
                 notifyLegacy(fileId, id, 0, false);
                 LogUtils.error("Case export failed, taskId=" + id, exception);
             } finally {
+                // A non-interruptible upload can finish after the lease sweeper has already cleaned this task.
+                // Re-register cleanup even when publishing lost the terminal-state race or generation threw.
+                try {
+                    jdbc.update("UPDATE export_task SET cleanup_done=0 WHERE id=? AND state IN ('STOP','ERROR')", id);
+                } catch (Exception cleanupRegistrationFailure) {
+                    LogUtils.error("Late export cleanup registration failed, taskId=" + id, cleanupRegistrationFailure);
+                }
                 running.remove(id);
             }
             return null;
@@ -188,8 +248,21 @@ public class FunctionalCaseExportTaskService {
 
     public List<ExportTaskDTO> recent(String projectId, String userId) {
         authorize(projectId, userId);
-        return jdbc.queryForList("SELECT * FROM export_task WHERE project_id=? AND create_user=? AND type='CASE' ORDER BY create_time DESC,id DESC LIMIT 20",
+        return jdbc.queryForList("SELECT * FROM export_task WHERE project_id=? AND create_user=? AND type='CASE' ORDER BY (state='PREPARED') DESC,create_time DESC,id DESC LIMIT 20",
                 projectId, userId).stream().map(this::toDTO).toList();
+    }
+
+    public io.metersphere.system.utils.Pager<List<ExportTaskDTO>> history(String projectId, String userId, int current, int pageSize) {
+        authorize(projectId, userId);
+        if (current < 1 || pageSize < 1 || pageSize > 100) throw new MSException("导出记录分页参数不合法");
+        Long total = jdbc.queryForObject("SELECT COUNT(*) FROM export_task WHERE project_id=? AND create_user=? AND type='CASE'",
+                Long.class, projectId, userId);
+        long count = total == null ? 0 : total;
+        int page = (int) Math.min(current, Math.max(1, (count + pageSize - 1) / pageSize));
+        List<ExportTaskDTO> rows = count == 0 ? List.of() : jdbc.queryForList(
+                "SELECT * FROM export_task WHERE project_id=? AND create_user=? AND type='CASE' ORDER BY create_time DESC,id DESC LIMIT ?,?",
+                projectId, userId, (long) (page - 1) * pageSize, pageSize).stream().map(this::toDTO).toList();
+        return new io.metersphere.system.utils.Pager<>(rows, count, pageSize, page);
     }
 
     public ExportTaskDTO stop(String id, String userId) {
@@ -215,9 +288,13 @@ public class FunctionalCaseExportTaskService {
     private ExportTaskDTO toDTO(Map<String, Object> row) {
         var dto = new ExportTaskDTO();
         dto.setTaskId((String) row.get("id"));
+        dto.setSourceTaskId((String) row.get("source_task_id"));
         dto.setTraceId(dto.getTaskId());
         dto.setFileId((String) row.get("file_id"));
         dto.setProjectId((String) row.get("project_id"));
+        dto.setName((String) row.get("name"));
+        if (row.get("create_time") instanceof Number created) dto.setCreateTime(created.longValue());
+        if (row.get("finished_at") instanceof Number finished) dto.setFinishedAt(finished.longValue());
         dto.setFileType((String) row.get("file_type"));
         dto.setCount(((Number) row.get("result_count")).intValue());
         dto.setStateVersion(((Number) row.get("state_version")).longValue());

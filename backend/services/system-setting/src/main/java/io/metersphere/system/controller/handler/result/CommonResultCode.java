@@ -9,6 +9,7 @@ import io.metersphere.sdk.exception.IResultCode;
  */
 public enum CommonResultCode implements IResultCode {
 
+    FEATURE_DISABLED(100020, "FEATURE_DISABLED"),
     PLUGIN_GET_INSTANCE(100001, "get_plugin_instance_error"),
     USER_ROLE_RELATION_EXIST(100002, "user_role_relation_exist_error"),
     /**

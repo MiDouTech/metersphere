@@ -28,6 +28,8 @@ public class BaseTreeNode {
     @Schema(description = "项目ID")
     private String projectId;
 
+    private Long updateTime;
+
     @Schema(description = "子节点")
     private List<BaseTreeNode> children = new ArrayList<>();
 

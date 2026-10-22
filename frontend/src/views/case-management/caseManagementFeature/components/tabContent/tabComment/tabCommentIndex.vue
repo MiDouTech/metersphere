@@ -10,15 +10,14 @@
   <div>
     <!-- 用例评论 -->
     <div v-show="activeComment === 'caseComment'">
-      <MsComment
+      <FunctionalCommentList
+        ref="commentPanelRef"
+        :case-id="caseId"
         :upload-image="handleUploadImage"
-        :comment-list="commentList"
         :preview-url="PreviewEditorImageUrl"
-        :permissions="['FUNCTIONAL_CASE:READ+COMMENT']"
-        @delete="handleDelete"
-        @update-or-add="handleUpdateOrAdd"
+        @total="commentTotal = $event"
+        @changed="featureCaseStore.getCaseCounts(props.caseId)"
       />
-      <MsEmpty v-if="commentList.length === 0" />
     </div>
 
     <!-- 评审评论 -->
@@ -34,24 +33,18 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
-  import { Message } from '@arco-design/web-vue';
 
-  import MsEmpty from '@/components/pure/ms-empty/index.vue';
-  import MsComment from '@/components/business/ms-comment/comment';
-  import { CommentItem, CommentParams } from '@/components/business/ms-comment/types';
+  import FunctionalCommentList from '@/components/business/ms-comment/functional-comment-list.vue';
+  import { CommentItem } from '@/components/business/ms-comment/types';
   import ReviewCommentList from './reviewCommentList.vue';
 
   import {
-    addOrUpdateCommentList,
-    deleteCommentList,
     editorUploadFile,
-    getCommentList,
     getReviewCommentList,
     getTestPlanExecuteCommentList,
   } from '@/api/modules/case-management/featureCase';
   import { PreviewEditorImageUrl } from '@/api/requrls/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
-  import useModal from '@/hooks/useModal';
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
 
   import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
@@ -59,7 +52,6 @@
   const featureCaseStore = useFeatureCaseStore();
   const router = useRouter();
   const route = useRoute();
-  const { openModal } = useModal();
   const { t } = useI18n();
 
   const props = defineProps<{
@@ -69,19 +61,15 @@
 
   const activeComment = ref('caseComment');
 
-  const commentList = ref<CommentItem[]>([]);
+  const commentTotal = ref(0);
+  const commentPanelRef = ref<InstanceType<typeof FunctionalCommentList>>();
   const reviewCommentList = ref<CommentItem[]>([]);
 
   // 初始化评论列表
   async function initCommentList() {
-    try {
-      const result = await getCommentList(props.caseId);
-      commentList.value = result;
-    } catch (error) {
-      console.log(error);
-    }
+    await commentPanelRef.value?.reload();
   }
-  // 初始化评审评论
+
   async function initReviewCommentList() {
     try {
       const result = await getReviewCommentList(props.caseId);
@@ -121,42 +109,6 @@
   }
 
   // 添加或者更新评论
-  async function handleUpdateOrAdd(item: CommentParams, cb: (result: boolean) => void) {
-    try {
-      await addOrUpdateCommentList(item);
-      getAllCommentList();
-      cb(true);
-    } catch (error) {
-      cb(false);
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
-  }
-
-  // 删除评论
-  async function handleDelete(caseCommentId: string) {
-    openModal({
-      type: 'error',
-      title: t('ms.comment.deleteConfirm'),
-      content: t('ms.comment.deleteContent'),
-      okText: t('common.confirmDelete'),
-      cancelText: t('common.cancel'),
-      okButtonProps: {
-        status: 'danger',
-      },
-      onBeforeOk: async () => {
-        try {
-          await deleteCommentList(caseCommentId);
-          Message.success(t('common.deleteSuccess'));
-          getAllCommentList();
-        } catch (error) {
-          console.error(error);
-        }
-      },
-      hideCancel: false,
-    });
-  }
-
   // 去用例评审页面
   function review(record: CommentItem) {
     router.push({

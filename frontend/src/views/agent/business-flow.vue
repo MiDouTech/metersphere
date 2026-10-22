@@ -62,6 +62,7 @@
     listAiBusinessFlows,
     updateAiBusinessFlow,
   } from '@/api/modules/ai-execution';
+  import useListRefresh from '@/hooks/useListRefresh';
   import { useAppStore } from '@/store';
 
   const app = useAppStore();
@@ -87,15 +88,25 @@
     (reason as { message?: string; requestId?: string })?.requestId
       ? `${(reason as { message?: string }).message || '保存失败'} (${(reason as { requestId?: string }).requestId})`
       : (reason as { message?: string })?.message || '保存失败';
+  let loadSequence = 0;
   async function load() {
+    const sequence = ++loadSequence;
+    const projectId = app.currentProjectId;
+    if (!projectId) {
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     error.value = '';
     try {
-      items.value = await listAiBusinessFlows(app.currentProjectId);
+      const response = await listAiBusinessFlows(projectId);
+      if (sequence !== loadSequence || projectId !== app.currentProjectId) return;
+      items.value = response;
     } catch (reason: any) {
+      if (sequence !== loadSequence) return;
       error.value = reason?.message || '业务流加载失败，请稍后重试';
     } finally {
-      loading.value = false;
+      if (sequence === loadSequence) loading.value = false;
     }
   }
   function open(value?: AiBusinessFlow) {
@@ -143,5 +154,17 @@
       saving.value = false;
     }
   }
+  watch(
+    () => app.currentProjectId,
+    () => {
+      visible.value = false;
+      items.value = [];
+      load();
+    }
+  );
   onMounted(load);
+  useListRefresh(load, () => !!app.currentProjectId && !loading.value && !visible.value);
+  onBeforeUnmount(() => {
+    loadSequence += 1;
+  });
 </script>

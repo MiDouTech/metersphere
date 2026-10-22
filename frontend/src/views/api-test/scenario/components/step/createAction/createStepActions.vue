@@ -60,7 +60,7 @@
 
   import useCreateActions from './useCreateActions';
   import { defaultStepItemCommon } from '@/views/api-test/scenario/components/config';
-  import { DropdownPosition } from '@arco-design/web-vue/es/dropdown/interface';
+  import type { DropdownPosition } from '@arco-design/web-vue/es/dropdown/interface';
 
   const props = defineProps<{
     position?: DropdownPosition;

@@ -53,7 +53,6 @@ import io.metersphere.system.mapper.SystemParameterMapper;
 import io.metersphere.system.mapper.UserMapper;
 import io.metersphere.system.service.FileService;
 import io.metersphere.system.service.NoticeSendService;
-import io.metersphere.system.uid.IDGenerator;
 import io.metersphere.system.utils.ServiceUtils;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletResponse;
@@ -95,7 +94,6 @@ public class FunctionalCaseFileService {
     private FunctionalCaseModuleService functionalCaseModuleService;
     @Resource
     private FunctionalCaseCustomFieldService functionalCaseCustomFieldService;
-    private static final String EXPORT_CASE_TMP_DIR = "tmp";
     private static final int EXPORT_CASE_MAX_COUNT = 2000;
     @Resource
     private ExtFunctionalCaseCommentMapper extFunctionalCaseCommentMapper;
@@ -109,6 +107,8 @@ public class FunctionalCaseFileService {
     private SystemParameterMapper systemParameterMapper;
     @Resource
     private FunctionalCaseExportTaskService exportTaskService;
+    @Resource
+    private FunctionalCaseExportTempFiles exportTempFiles;
     @Resource
     private ExportTaskMapper exportTaskMapper;
     private static final String XLSX = "xlsx";
@@ -283,18 +283,19 @@ public class FunctionalCaseFileService {
             //获取当前项目默认模板的自定义字段
             List<TemplateCustomFieldDTO> customFields = getCustomFields(request.getProjectId());
             Set<ExcelMergeInfo> mergeInfoSet = new TreeSet<>();
+            FunctionalLegacyImportService.stage("PREPROCESSING", 0);
             // 预处理，查询合并单元格信息
             EasyExcel.read(file.getInputStream(), null, new FunctionalCasePretreatmentListener(mergeInfoSet))
                     .extraRead(CellExtraTypeEnum.MERGE).sheet().doRead();
             FunctionalCaseCheckEventListener eventListener = new FunctionalCaseCheckEventListener(request, clazz, customFields, mergeInfoSet);
+            FunctionalLegacyImportService.stage("PARSING", 0);
             EasyExcelFactory.read(file.getInputStream(), eventListener).sheet().doRead();
             response.setErrorMessages(eventListener.getErrList());
             response.setSuccessCount(eventListener.getList().size());
             response.setFailCount(eventListener.getErrList().size());
         } catch (Exception e) {
             LogUtils.error("checkImportExcel error", e);
-            throw new MSException(Translator.get("check_import_excel_error") + ": "
-                    + StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), e);
+            throw new MSException(Translator.get("check_import_excel_error"), e);
         }
     }
 
@@ -331,8 +332,7 @@ public class FunctionalCaseFileService {
             return response;
         } catch (Exception e) {
             LogUtils.error("checkImportExcel error", e);
-            throw new MSException(Translator.get("check_import_excel_error") + ": "
-                    + StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), e);
+            throw new MSException(Translator.get("check_import_excel_error"), e);
         }
     }
 
@@ -361,10 +361,12 @@ public class FunctionalCaseFileService {
             //获取当前项目默认模板的自定义字段
             List<TemplateCustomFieldDTO> customFields = getCustomFields(request.getProjectId());
             Set<ExcelMergeInfo> mergeInfoSet = new TreeSet<>();
+            FunctionalLegacyImportService.stage("PREPROCESSING", 0);
             // 预处理，查询合并单元格信息
             EasyExcel.read(file.getInputStream(), null, new FunctionalCasePretreatmentListener(mergeInfoSet))
                     .extraRead(CellExtraTypeEnum.MERGE).sheet().doRead();
             FunctionalCaseImportEventListener eventListener = new FunctionalCaseImportEventListener(request, clazz, customFields, mergeInfoSet, user, lasePos);
+            FunctionalLegacyImportService.stage("PARSING", 0);
             EasyExcelFactory.read(file.getInputStream(), eventListener).sheet().doRead();
             response.setErrorMessages(eventListener.getErrList());
             response.setSuccessCount(eventListener.getSuccessCount());
@@ -372,8 +374,7 @@ public class FunctionalCaseFileService {
             return response;
         } catch (Exception e) {
             LogUtils.error("checkImportExcel error", e);
-            throw new MSException(Translator.get("check_import_excel_error") + ": "
-                    + StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), e);
+            throw new MSException(Translator.get("check_import_excel_error"), e);
         }
     }
 
@@ -410,8 +411,7 @@ public class FunctionalCaseFileService {
             return response;
         } catch (Exception e) {
             LogUtils.error("checkImportExcel error", e);
-            throw new MSException(Translator.get("check_import_excel_error") + ": "
-                    + StringUtils.defaultIfBlank(e.getMessage(), e.getClass().getSimpleName()), e);
+            throw new MSException(Translator.get("check_import_excel_error"), e);
         }
     }
 
@@ -431,7 +431,14 @@ public class FunctionalCaseFileService {
         exportTaskService.authorize(request.getProjectId(), userId);
         validateExportFields(request);
         return exportTaskService.start(request, userId, XLSX,
-                taskId -> exportFunctionalCaseZip(request, userId, orgId, taskId));
+                taskId -> {
+                    User user = userMapper.selectByPrimaryKey(userId);
+                    noticeSendService.setLanguage(user.getLanguage());
+                    ExcelSnapshot snapshot = exportTaskService.readSnapshot(() -> snapshotExcel(request));
+                    exportTaskService.saveSnapshot(taskId, snapshot.ids(), snapshot);
+                    return snapshot;
+                },
+                (taskId, snapshot) -> exportFunctionalCaseZip(request, userId, orgId, taskId, snapshot));
     }
 
     public void validateExportFields(FunctionalCaseExportRequest request) {
@@ -468,16 +475,13 @@ public class FunctionalCaseFileService {
         return ids;
     }
 
-    private FunctionalCaseExportTaskService.Result exportFunctionalCaseZip(FunctionalCaseExportRequest request, String userId, String orgId, String taskId) {
+    private FunctionalCaseExportTaskService.Result exportFunctionalCaseZip(FunctionalCaseExportRequest request, String userId, String orgId, String taskId, ExcelSnapshot snapshot) {
         File tmpDir = null;
         try {
             User user = userMapper.selectByPrimaryKey(userId);
             noticeSendService.setLanguage(user.getLanguage());
-            ExcelSnapshot snapshot = exportTaskService.readSnapshot(() -> snapshotExcel(request));
             List<String> ids = snapshot.ids();
-            exportTaskService.saveSnapshot(taskId, ids, snapshot);
-            tmpDir = new File(LocalRepositoryDir.getSystemTempDir() + File.separatorChar + EXPORT_CASE_TMP_DIR + "_" + IDGenerator.nextStr());
-            if (!tmpDir.exists() && !tmpDir.mkdirs()) throw new MSException("无法创建导出临时文件");
+            tmpDir = exportTempFiles.create(taskId);
             List<File> batchExcels = generateCaseExportExcel(snapshot, tmpDir.getPath(), request, taskId);
             exportTaskService.checkActive(taskId);
             String fileType;
@@ -499,10 +503,7 @@ public class FunctionalCaseFileService {
         } catch (Exception e) {
             throw new MSException("用例导出失败", e);
         } finally {
-            if (tmpDir != null) {
-                try { MsFileUtils.deleteDir(tmpDir.getPath()); }
-                catch (Exception cleanup) { LogUtils.error("Export temporary file cleanup failed, taskId=" + taskId, cleanup); }
-            }
+            exportTempFiles.cleanup(tmpDir);
         }
     }
 
@@ -534,7 +535,20 @@ public class FunctionalCaseFileService {
     }
 
     private record ExcelBatch(List<List<Object>> rows, Map<Integer, Integer> merges) { }
-    private record ExcelSnapshot(List<String> ids, List<List<String>> heads, Map<String, List<String>> options,
+    public record CaseRevision(String caseId, String versionId, Long updateTime) { }
+
+    public List<CaseRevision> exportRevisions(List<String> ids) {
+        Map<String, CaseRevision> revisions = new LinkedHashMap<>();
+        SubListUtils.dealForSubList(ids, 1000, batch -> functionalCaseService.getCaseDataByIds(batch).forEach(item ->
+                revisions.put(item.getId(), new CaseRevision(item.getId(), item.getVersionId(), item.getUpdateTime()))));
+        return ids.stream().map(id -> {
+            CaseRevision revision = revisions.get(id);
+            if (revision == null) throw new MSException("导出范围已变化，请重新导出");
+            return revision;
+        }).toList();
+    }
+
+    private record ExcelSnapshot(List<String> ids, List<CaseRevision> revisions, List<List<String>> heads, Map<String, List<String>> options,
                                  Map<String, TemplateCustomFieldDTO> fields, List<ExcelBatch> batches) { }
 
     private ExcelSnapshot snapshotExcel(FunctionalCaseExportRequest request) {
@@ -556,7 +570,7 @@ public class FunctionalCaseFileService {
             if (bytes[0] > 8 * 1024 * 1024) throw new MSException("导出内容过大，请缩小范围分批导出");
             batches.add(new ExcelBatch(rows, merges));
         });
-        return new ExcelSnapshot(ids, heads, options, fields, batches);
+        return new ExcelSnapshot(ids, exportRevisions(ids), heads, options, fields, batches);
     }
 
     private List<File> generateCaseExportExcel(ExcelSnapshot snapshot, String directory, FunctionalCaseExportRequest request, String taskId) {

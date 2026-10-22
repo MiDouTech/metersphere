@@ -34,6 +34,7 @@ public class MapGatewayClient {
         this.restClientBuilder = builder;
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     public GatewayPlanningResponse invokeStructured(GatewayPlanningRequest request, String serviceKeyRef) {
         validateConfiguration();
         SecretResolveContext context = new SecretResolveContext(

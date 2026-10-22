@@ -58,6 +58,7 @@
 
   import type { AiPageElement, AiPageObject, AiPageObjectRequest } from '@/api/modules/ai-execution';
   import { createAiPageObject, listAiPageObjects, updateAiPageObject } from '@/api/modules/ai-execution';
+  import useListRefresh from '@/hooks/useListRefresh';
   import useAppStore from '@/store/modules/app';
 
   const app = useAppStore();
@@ -78,15 +79,25 @@
     elementsJson: example,
   });
   const msg = (e: unknown) => (e as { message?: string })?.message || '请求失败';
+  let loadSequence = 0;
   async function load() {
+    const sequence = ++loadSequence;
+    const projectId = app.currentProjectId;
+    if (!projectId) {
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     error.value = '';
     try {
-      items.value = await listAiPageObjects(app.currentProjectId);
+      const response = await listAiPageObjects(projectId);
+      if (sequence !== loadSequence || projectId !== app.currentProjectId) return;
+      items.value = response;
     } catch (e) {
+      if (sequence !== loadSequence) return;
       error.value = msg(e);
     } finally {
-      loading.value = false;
+      if (sequence === loadSequence) loading.value = false;
     }
   }
   function open(r?: AiPageObject) {
@@ -148,5 +159,17 @@
       saving.value = false;
     }
   }
+  watch(
+    () => app.currentProjectId,
+    () => {
+      visible.value = false;
+      items.value = [];
+      load();
+    }
+  );
   onMounted(load);
+  useListRefresh(load, () => !!app.currentProjectId && !loading.value && !visible.value);
+  onBeforeUnmount(() => {
+    loadSequence += 1;
+  });
 </script>

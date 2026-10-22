@@ -11,6 +11,20 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class FunctionalCaseExportValidationTests {
+    @Test void snapshotRevisionsPreserveSelectedOrderAndRejectMissingRows() {
+        var cases = mock(FunctionalCaseService.class);
+        var files = new FunctionalCaseFileService();
+        ReflectionTestUtils.setField(files, "functionalCaseService", cases);
+        var first = new FunctionalCase(); first.setId("first"); first.setVersionId("v1"); first.setUpdateTime(11L);
+        var second = new FunctionalCase(); second.setId("second"); second.setVersionId("v2"); second.setUpdateTime(22L);
+        when(cases.getCaseDataByIds(List.of("second", "first"))).thenReturn(List.of(first, second));
+        var revisions = files.exportRevisions(List.of("second", "first"));
+        assertEquals(List.of("second", "first"), revisions.stream().map(FunctionalCaseFileService.CaseRevision::caseId).toList());
+        assertEquals("v2", revisions.getFirst().versionId());
+        assertEquals(22L, revisions.getFirst().updateTime());
+        when(cases.getCaseDataByIds(List.of("second", "first"))).thenReturn(List.of(first));
+        assertThrows(MSException.class, () -> files.exportRevisions(List.of("second", "first")));
+    }
     @Test void everySelectedCaseMustBelongToTheRequestedProject() {
         var cases = mock(FunctionalCaseService.class);
         var files = new FunctionalCaseFileService();

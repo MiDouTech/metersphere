@@ -131,6 +131,9 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     @Resource
     private TestPlanApiScenarioMapper testPlanApiScenarioMapper;
 
+    @Resource
+    private TestPlanDefectSyncService defectSyncService;
+
     private static final String CASE_MODULE_COUNT_ALL = "all";
     private static final String EXECUTOR = "executeUserName";
 
@@ -239,6 +242,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
             }
         }
         result.setUpdatedCount(updatedCount);
+        result.setDefectAddedCount(defectSyncService.sync(projectId, testPlanId, userId, CaseType.FUNCTIONAL_CASE.getKey()));
         result.setPlanCount(1);
         return result;
     }
@@ -607,7 +611,13 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         }
     }
 
+    private void lockForBugAssociation(String planId) {
+        if (StringUtils.isBlank(planId) || extTestPlanFunctionalCaseMapper.lockTestPlan(planId) == null)
+            throw new MSException(Translator.get("test_plan_not_exist"));
+    }
+
     public void associateBug(TestPlanCaseAssociateBugRequest request, String userId) {
+        lockForBugAssociation(request.getTestPlanId());
         super.associateBug(request, userId, CaseType.FUNCTIONAL_CASE.getKey());
     }
 
@@ -1206,6 +1216,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     }
 
     public void handleAssociateBug(List<String> ids, String userId, String bugId, String testPlanId) {
+        lockForBugAssociation(testPlanId);
         SubListUtils.dealForSubList(ids, 500, (subList) -> {
             Map<String, String> caseMap = getCaseMap(subList);
             List<BugRelationCase> list = new ArrayList<>();
@@ -1242,6 +1253,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     }
 
     public void handleAssociateBugByIds(List<String> ids, TestPlanCaseBatchAssociateBugRequest request, String userId) {
+        lockForBugAssociation(request.getTestPlanId());
         SubListUtils.dealForSubList(ids, 500, (subList) -> {
             BugRelationCaseExample example = new BugRelationCaseExample();
             example.createCriteria().andTestPlanCaseIdIn(subList).andTestPlanIdEqualTo(request.getTestPlanId()).andBugIdIn(request.getBugIds());

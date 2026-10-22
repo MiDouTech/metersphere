@@ -45,7 +45,7 @@ public class AgentLibraryModuleService {
                     if(current.getUpdateTime()==null || current.getUpdateTime()!=((Number)args.get("expectedUpdateTime")).longValue())throw new MSException("VERSION_CONFLICT");
                     String userId=AgentTokenContext.get().getUserId();
                     if(move)modules.moveToParent(moduleId,value,userId);
-                    else {var request=new FunctionalCaseModuleUpdateRequest();request.setId(moduleId);request.setName(value);modules.update(request,userId);}
+                    else {var request=new FunctionalCaseModuleUpdateRequest();request.setId(moduleId);request.setName(value);request.setExpectedUpdateTime(current.getUpdateTime());modules.update(request,userId);}
                     return read(projectId,moduleId,true);
                 });
     }

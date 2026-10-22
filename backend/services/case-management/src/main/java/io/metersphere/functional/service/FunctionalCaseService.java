@@ -856,17 +856,19 @@ public class FunctionalCaseService {
 
     public void handDeleteFunctionalCase(List<String> ids, Boolean deleteAll, String userId, String projectId) {
         Map<String, Object> param = new HashMap<>();
-        if (deleteAll) {
+        if (Boolean.TRUE.equals(deleteAll)) {
             //全部删除  进入回收站
             List<String> refId = extFunctionalCaseMapper.getRefIds(ids, false);
             FunctionalCaseExample functionalCaseExample = new FunctionalCaseExample();
-            functionalCaseExample.createCriteria().andRefIdIn(refId);
+            functionalCaseExample.createCriteria().andRefIdIn(refId).andProjectIdEqualTo(projectId).andDeletedEqualTo(false);
             List<FunctionalCase> functionalCases = functionalCaseMapper.selectByExample(functionalCaseExample);
             List<String> caseIds = functionalCases.stream().map(FunctionalCase::getId).toList();
+            requireDeletionIdle(caseIds,projectId);
             param.put(CaseEvent.Param.CASE_IDS, CollectionUtils.isNotEmpty(caseIds) ? caseIds : new ArrayList<>());
             caseIds.forEach(id -> triggerHubCaseDelete(id, userId));
-            extFunctionalCaseMapper.batchDelete(refId, userId);
+            doDelete(caseIds,userId);
         } else {
+            requireDeletionIdle(ids,projectId);
             param.put(CaseEvent.Param.CASE_IDS, CollectionUtils.isNotEmpty(ids) ? ids : new ArrayList<>());
             ids.forEach(id -> triggerHubCaseDelete(id, userId));
             doDelete(ids, userId);
@@ -878,20 +880,29 @@ public class FunctionalCaseService {
         provider.updateCaseReview(param);
     }
 
+    @Resource private org.springframework.jdbc.core.JdbcTemplate caseLifecycleJdbc;
+    private void requireDeletionIdle(List<String> ids,String projectId) {
+        if(ids==null||ids.isEmpty())throw new MSException("请选择要删除的用例");
+        for(String id:ids.stream().distinct().sorted().toList()) {
+            var rows=caseLifecycleJdbc.queryForList("SELECT id FROM functional_case WHERE id=? AND project_id=? AND deleted=0 FOR UPDATE",id,projectId);
+            if(rows.size()!=1)throw new MSException("用例已变化，请刷新列表后重试");
+        }
+        String markers=String.join(",",Collections.nCopies(ids.size(),"?"));
+        Long active=caseLifecycleJdbc.queryForObject("SELECT COUNT(*) FROM ai_execution_task t JOIN ai_execution_case c ON c.task_id=t.id WHERE c.case_id IN ("+markers+") AND t.status NOT IN ('SUCCESS','PARTIAL_SUCCESS','FAILED','CANCELED','EXPIRED')",Long.class,ids.toArray());
+        if(active!=null&&active>0)throw new MSException("存在未结束的执行任务，请从用例列表重新预检并选择等待或停止后删除");
+    }
+
 
     private void doDelete(List<String> ids, String userId) {
-        SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
-        FunctionalCaseMapper caseMapper = sqlSession.getMapper(FunctionalCaseMapper.class);
         ids.forEach(id -> {
             FunctionalCase functionalCase = new FunctionalCase();
             functionalCase.setDeleted(true);
             functionalCase.setId(id);
             functionalCase.setDeleteUser(userId);
             functionalCase.setDeleteTime(System.currentTimeMillis());
-            caseMapper.updateByPrimaryKeySelective(functionalCase);
+            functionalCase.setUpdateTime(System.currentTimeMillis());
+            functionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
         });
-        sqlSession.flushStatements();
-        SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
     }
 
 
@@ -1403,10 +1414,10 @@ public class FunctionalCaseService {
         Map<String, String> caseModulePathMap = functionalCaseModuleService.createCaseModule(
                 modulePath, request.getProjectId(), moduleTree, user.getId(), pathMap, resolveImportBaseModuleId(request));
 
-        SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
-        FunctionalCaseMapper caseMapper = sqlSession.getMapper(FunctionalCaseMapper.class);
-        FunctionalCaseBlobMapper caseBlobMapper = sqlSession.getMapper(FunctionalCaseBlobMapper.class);
-        FunctionalCaseCustomFieldMapper customFieldMapper = sqlSession.getMapper(FunctionalCaseCustomFieldMapper.class);
+        // Use the enclosing transaction, including asynchronous import item bookkeeping.
+        FunctionalCaseMapper caseMapper = functionalCaseMapper;
+        FunctionalCaseBlobMapper caseBlobMapper = functionalCaseBlobMapper;
+        FunctionalCaseCustomFieldMapper customFieldMapper = functionalCaseCustomFieldMapper;
         List<FunctionalCaseDTO> noticeList = new ArrayList<>();
         List<FunctionalCaseHistoryLogDTO> historyLogDTOS = new ArrayList<>();
         List<LogDTO> logDTOS = new ArrayList<>();
@@ -1419,8 +1430,8 @@ public class FunctionalCaseService {
             noticeModule(noticeList, list.get(i), request, user.getId(), customFieldsMap);
         }
         lastPos.set(pos);
-        sqlSession.flushStatements();
-        SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+
+
 
         //新增用例记录日志
         historyLogDTOS.forEach(historyLogDTO -> {
@@ -1517,9 +1528,9 @@ public class FunctionalCaseService {
         }
         functionalCase.setModuleId(resolvedModuleId);
         functionalCase.setProjectId(request.getProjectId());
-        functionalCase.setWorkspaceId(StringUtils.defaultIfBlank(request.getWorkspaceId(),
-                Optional.ofNullable(projectMapper.selectByPrimaryKey(request.getProjectId()))
-                        .map(Project::getOrganizationId).orElse(SessionUtils.getCurrentOrganizationId())));
+        Project importProject = projectMapper.selectByPrimaryKey(request.getProjectId());
+        if (importProject == null) throw new MSException("导入项目不存在");
+        functionalCase.setWorkspaceId(importProject.getOrganizationId());
         functionalCase.setTemplateId(defaultTemplateDTO.getId());
         functionalCase.setName(functionalCaseExcelData.getName().toString());
         functionalCase.setReviewStatus(FunctionalCaseReviewStatus.UN_REVIEWED.name());
@@ -1539,6 +1550,7 @@ public class FunctionalCaseService {
             functionalCase.setExecuteUser(functionalCaseExcelData.getExecuteUserId());
         }
         caseMapper.insertSelective(functionalCase);
+        functionalCaseExcelData.setImportedCaseId(caseId);
 
         //用例附属表
         FunctionalCaseBlob caseBlob = new FunctionalCaseBlob();
@@ -1686,10 +1698,10 @@ public class FunctionalCaseService {
         Map<String, List<FunctionalCaseBlob>> blobsCollect = blobs.stream().collect(Collectors.groupingBy(FunctionalCaseBlob::getId));
         Map<String, List<FunctionalCaseCustomField>> customFieldMap = functionalCaseCustomFieldService.getCustomFieldMapByCaseIds(ids);
 
-        SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
-        FunctionalCaseMapper caseMapper = sqlSession.getMapper(FunctionalCaseMapper.class);
-        FunctionalCaseBlobMapper caseBlobMapper = sqlSession.getMapper(FunctionalCaseBlobMapper.class);
-        FunctionalCaseCustomFieldMapper customFieldMapper = sqlSession.getMapper(FunctionalCaseCustomFieldMapper.class);
+        // Use the enclosing transaction, including asynchronous import item bookkeeping.
+        FunctionalCaseMapper caseMapper = functionalCaseMapper;
+        FunctionalCaseBlobMapper caseBlobMapper = functionalCaseBlobMapper;
+        FunctionalCaseCustomFieldMapper customFieldMapper = functionalCaseCustomFieldMapper;
         List<FunctionalCaseDTO> noticeList = new ArrayList<>();
         List<String> caseIds = new ArrayList<>();
         List<FunctionalCaseHistoryLogDTO> historyLogDTOS = new ArrayList<>();
@@ -1702,8 +1714,8 @@ public class FunctionalCaseService {
             //通知
             noticeModule(noticeList, updateList.get(i), request, user.getId(), customFieldsMap);
         }
-        sqlSession.flushStatements();
-        SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+
+
 
         //更新用例评审状态
         if (CollectionUtils.isNotEmpty(caseIds)) {

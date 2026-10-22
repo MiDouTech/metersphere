@@ -9,6 +9,11 @@ FROM registry.fit2cloud.com/metersphere/alpine-openjdk21-jre
 
 LABEL maintainer="miduoyanfa"
 
+ARG ALPINE_MIRROR=https://dl-cdn.alpinelinux.org/alpine
+RUN case "$ALPINE_MIRROR" in https://*) ;; *) exit 1 ;; esac \
+    && sed -i "s|https://dl-cdn.alpinelinux.org/alpine|${ALPINE_MIRROR}|g" /etc/apk/repositories \
+    && apk add --no-cache libstdc++ libgcc
+
 ARG MS_VERSION=dev
 ARG DEPENDENCY=backend/app/target/dependency
 
@@ -26,8 +31,7 @@ ENV AB_OFF=true
 ENV MS_VERSION=${MS_VERSION}
 ENV JAVA_OPTIONS="-Dfile.encoding=utf-8 -Djava.awt.headless=true --add-opens java.base/jdk.internal.loader=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED"
 
-RUN apk add --no-cache libstdc++ libgcc \
-    && node --version \
+RUN node --version \
     && echo -n "${MS_VERSION}" > /tmp/MS_VERSION \
     && sed -i 's/\r$//' /deployments/run-with-wecom-bridge.sh \
     && chmod 755 /deployments/run-with-wecom-bridge.sh

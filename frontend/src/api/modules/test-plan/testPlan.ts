@@ -148,6 +148,7 @@ import type {
 import type { RequestOptions } from '#/axios';
 
 export interface FunctionalCaseSyncResult {
+  defectAddedCount?: number;
   planCount: number;
   skippedPlanCount: number;
   addedCount: number;

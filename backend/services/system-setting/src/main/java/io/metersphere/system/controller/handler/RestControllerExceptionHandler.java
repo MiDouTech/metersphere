@@ -41,6 +41,13 @@ import java.util.regex.Pattern;
 @RestControllerAdvice
 public class RestControllerExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResultHolder resourceNotFound(HttpServletRequest request, HttpServletResponse response) {
+        response.setStatus(HttpStatus.NOT_FOUND.value());
+        return ResultHolder.structuredError(MsHttpResultCode.NOT_FOUND.getCode(), "http_result_not_found",
+                "请求的资源不存在", ensureRequestId(request, response), false, Map.of());
+    }
+
     private static final Logger LOGGER = LoggerFactory.getLogger(RestControllerExceptionHandler.class);
     private static final String REQUEST_ID_HEADER = "X-Request-ID";
     private static final String INTERNAL_ERROR_MESSAGE = "Internal server error";
@@ -231,8 +238,9 @@ public class RestControllerExceptionHandler {
     }
 
     private String ensureRequestId(HttpServletRequest request, HttpServletResponse response) {
-        String existing = request == null ? null : request.getHeader(REQUEST_ID_HEADER);
-        String requestId = StringUtils.defaultIfBlank(existing, UUID.randomUUID().toString());
+        String existing = request == null ? null : (String) request.getAttribute("requestId");
+        if (StringUtils.isBlank(existing) && request != null) existing = request.getHeader(REQUEST_ID_HEADER);
+        String requestId = existing != null && existing.matches("[A-Za-z0-9_.:-]{1,128}") ? existing : UUID.randomUUID().toString();
         if (response != null) {
             response.setHeader(REQUEST_ID_HEADER, requestId);
         }

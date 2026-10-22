@@ -1,5 +1,5 @@
 import { h } from 'vue';
-import { Message } from '@arco-design/web-vue';
+import { Message, Modal } from '@arco-design/web-vue';
 
 import { useI18n } from '@/hooks/useI18n';
 import useUser from '@/hooks/useUser';
@@ -26,6 +26,10 @@ export default function checkStatus(
       errMessage = `${msg}`;
       break;
     case 401: {
+      if (context?.credentialOwner === 'INTEGRATION' || context?.credentialOwner === 'AGENT') {
+        showHttpErrorMessage(msg || '集成凭证已失效，请在对应配置中更新凭证');
+        return;
+      }
       // 登录页只提示错误，不登出；业务页并发 401 只处理一次
       if (isLoginPage() || isWhiteListPage()) {
         errMessage = msg || t('api.errMsg401');
@@ -34,10 +38,16 @@ export default function checkStatus(
       if (!tryBeginSessionExpiredHandling()) {
         return;
       }
-      errMessage = msg || t('api.errMsg401');
-      // 静默登出：避免「认证失败」后再弹「登出成功」
-      logout(undefined, false, true);
-      break;
+      Modal.warning({
+        title: t('api.errorTip'),
+        content: t('message.loginExpired'),
+        hideCancel: true,
+        maskClosable: false,
+        closable: false,
+        escToClose: false,
+        onOk: () => logout(undefined, false, true),
+      });
+      return;
     }
     case 403:
       if (router.currentRoute.value.name !== NO_RESOURCE_ROUTE_NAME) {

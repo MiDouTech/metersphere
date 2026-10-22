@@ -6,5 +6,13 @@ export default {
   'ms.comment.delete': 'Delete',
   'ms.comment.deleteConfirm': 'Are you sure you want to delete this comment?',
   'ms.comment.deleteContent': 'After deletion, the comment cannot be replied to. Please proceed with caution.',
+  'ms.comment.deleteCaseContent': 'The text will be removed, with a deletion marker and existing replies retained. Other users’ replies will not be deleted. This cannot be undone.',
+  'ms.comment.deleted': 'This comment was deleted. Existing replies are retained.',
+  'ms.comment.unknownUser': 'Removed user',
+  'ms.comment.retry': 'Retry',
+  'ms.comment.refresh': 'Refresh comments',
+  'ms.comment.loadFailed': 'Unable to load comments. Please retry.',
+  'ms.comment.previousData': 'Showing previously loaded data',
+  'ms.comment.rootTotal': '{total} top-level comments; replies are paginated separately',
   'ms.comment.enterPlaceHolderTip': 'Please enter a comment and press  ⌘ + Enter to finish.',
 };

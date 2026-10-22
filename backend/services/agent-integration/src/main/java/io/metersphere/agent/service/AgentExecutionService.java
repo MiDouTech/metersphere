@@ -70,6 +70,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentExecutionService {
+    @Resource private org.springframework.jdbc.core.JdbcTemplate caseLifecycleJdbc;
     @Resource private io.metersphere.agent.quality.GlobalQualityGate qualityGate;
     private static final int DEFAULT_CONFIRM_THRESHOLD = 20;
     private static final int EVENT_LIMIT_MAX = 500;
@@ -124,6 +125,15 @@ public class AgentExecutionService {
     private AgentWebExecutionContractValidator executionContractValidator;
     @Resource
     private AgentExecutionChannelPolicy executionChannelPolicy;
+
+    @Resource
+    private io.metersphere.system.security.LlmFeature llmFeature;
+
+    private void requireExecutionEnabled(AgentExecutionTaskDTO task) {
+        if (!AgentExecutorChannel.EXTERNAL_MCP_AGENT.equals(task.getExecutorChannel())) {
+            llmFeature.requireEnabled();
+        }
+    }
     @Resource
     private AgentExecutionCheckpointService checkpointService;
     @Resource
@@ -291,6 +301,7 @@ public class AgentExecutionService {
     }
 
     private AgentExecutionTaskDTO createInternal(AgentExecutionCreateRequest request, boolean personalMcp) {
+        if (!personalMcp) llmFeature.requireEnabled();
         if (request == null || StringUtils.isBlank(request.getProjectId())) {
             throw new MSException("缺少 projectId");
         }
@@ -308,6 +319,7 @@ public class AgentExecutionService {
         request.setProjectWide(false);
         AgentEnvironmentProfileDTO environmentProfile = environmentProfileService.resolveForTask(
                 request.getEnvironmentProfileId(), projectId);
+        preflightService.assertEnvironmentUnchanged(request.getPreflightId(), environmentProfile);
         if (StringUtils.isNotBlank(request.getTargetUrl())) {
             environmentProfileService.assertTargetAllowed(environmentProfile, request.getTargetUrl());
             if (!StringUtils.equals(StringUtils.removeEnd(request.getTargetUrl(), "/"),
@@ -321,7 +333,7 @@ public class AgentExecutionService {
                 && "MANUAL".equalsIgnoreCase(request.getLoginMode())) {
             throw new MSException("SCHEDULED_MANUAL_LOGIN_FORBIDDEN");
         }
-        normalizeEnvironmentAssetRef(request);
+        normalizeEnvironmentAssetRef(request, environmentProfile.getEnvironmentAssetId());
         String executionMode = personalMcp ? AgentExecutionMode.AGENT : AgentExecutionMode.RUNNER;
         String dispatchMode = "PULL";
         String agentType = personalMcp
@@ -353,6 +365,11 @@ public class AgentExecutionService {
         }
         if (cases.size() > 100) {
             throw new MSException("单个 AI Web UI 执行任务最多允许 100 条用例");
+        }
+        // Serialize task creation with confirmed deletion of the same version rows.
+        for (String caseId : cases.stream().map(AgentExecutionCaseDTO::getCaseId).sorted().toList()) {
+            var available = caseLifecycleJdbc.queryForList("SELECT id FROM functional_case WHERE id=? AND project_id=? AND deleted=0 FOR UPDATE", caseId, projectId);
+            if (available.size() != 1) throw new MSException("所选用例已删除或不可访问，请重新选择执行范围");
         }
         List<String> highRiskSignals = detectHighRiskSignals(cases.stream().map(AgentExecutionCaseDTO::getCaseName).toList());
         List<String> confirmReasons = new ArrayList<>();
@@ -655,6 +672,7 @@ public class AgentExecutionService {
 
     public AgentExecutionTaskDTO confirm(String id, String reason) {
         AgentExecutionTaskDTO task = requireTask(id);
+        requireExecutionEnabled(task);
         assertNotTerminal(task);
         AgentExecutionStateMachine.requireTransition(task.getStatus(), AgentExecutionStatus.QUEUED);
         int updated = agentExecutionMapper.confirmTask(id, task.getStatus(), normalizedVersion(task),
@@ -671,6 +689,7 @@ public class AgentExecutionService {
 
     public AgentExecutionTaskDTO loginReady(String id, String reason) {
         AgentExecutionTaskDTO task = requireTask(id);
+        requireExecutionEnabled(task);
         assertNotTerminal(task);
         if (!List.of(AgentExecutionStatus.WAITING_LOGIN, AgentExecutionStatus.PAUSED, AgentExecutionStatus.PREPARING_BROWSER)
                 .contains(task.getStatus())) {
@@ -687,6 +706,10 @@ public class AgentExecutionService {
     public AgentExecutionTaskDTO respondHumanRequest(String taskId, String requestId,
                                                      io.metersphere.agent.dto.AgentHumanResponseRequest request) {
         AgentExecutionTaskDTO task = requireTask(taskId);
+        if (request != null && ("APPROVE".equalsIgnoreCase(request.getAction())
+                || "ANSWER".equalsIgnoreCase(request.getAction()))) {
+            requireExecutionEnabled(task);
+        }
         String userId = requireUserId();
         io.metersphere.agent.dto.AgentHumanRequestDTO response =
                 humanRequestService.respond(taskId, requestId, request, userId);
@@ -748,6 +771,7 @@ public class AgentExecutionService {
 
     public AgentExecutionTaskDTO retry(String id, String reason) {
         AgentExecutionTaskDTO task = requireTask(id);
+        requireExecutionEnabled(task);
         List<AgentExecutionCaseDTO> retryCases = agentExecutionMapper.selectCasesByTaskIdAndStatuses(id,
                 List.of(AgentExecutionStatus.FAILED, AgentExecutionStatus.CASE_BLOCKED));
         if (CollectionUtils.isEmpty(retryCases)) {
@@ -941,30 +965,8 @@ public class AgentExecutionService {
         }
     }
 
-    void normalizeEnvironmentAssetRef(AgentExecutionCreateRequest request) {
-        List<io.metersphere.agent.dto.TestAssetRefDTO> refs = request.getAssetRefs() == null
-                ? new ArrayList<>() : new ArrayList<>(request.getAssetRefs());
-        List<io.metersphere.agent.dto.TestAssetRefDTO> environments = refs.stream()
-                .filter(ref -> ref != null && "ENVIRONMENT".equalsIgnoreCase(StringUtils.trim(ref.getAssetType())))
-                .toList();
-        if (environments.size() > 1) {
-            throw new MSException("单个执行任务只能选择一个测试环境");
-        }
-        String environmentId = StringUtils.trimToNull(request.getEnvironmentId());
-        if (!environments.isEmpty()) {
-            String referencedEnvironmentId = StringUtils.trimToNull(environments.getFirst().getAssetId());
-            if (environmentId != null && !StringUtils.equals(environmentId, referencedEnvironmentId)) {
-                throw new MSException("environmentId 与 ENVIRONMENT 资产引用不一致");
-            }
-            request.setEnvironmentId(referencedEnvironmentId);
-        } else if (environmentId != null) {
-            io.metersphere.agent.dto.TestAssetRefDTO environmentRef = new io.metersphere.agent.dto.TestAssetRefDTO();
-            environmentRef.setAssetType("ENVIRONMENT");
-            environmentRef.setAssetId(environmentId);
-            refs.add(environmentRef);
-            request.setEnvironmentId(environmentId);
-        }
-        request.setAssetRefs(refs);
+    void normalizeEnvironmentAssetRef(AgentExecutionCreateRequest request, String boundAssetId) {
+        request.setAssetRefs(AgentEnvironmentAssetBinding.normalize(request.getAssetRefs(), boundAssetId));
     }
 
     private List<AgentExecutionCaseDTO> resolveCreateCases(String projectId, String testPlanId, List<String> caseIds,

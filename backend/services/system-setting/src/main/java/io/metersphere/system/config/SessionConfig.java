@@ -23,6 +23,8 @@ import java.util.Map;
 
 @Configuration
 public class SessionConfig {
+    @org.springframework.beans.factory.annotation.Value("${spring.session.redis.namespace:spring:session}")
+    private String namespace;
     @Resource
     private StringRedisTemplate stringRedisTemplate;
     @Resource
@@ -41,13 +43,13 @@ public class SessionConfig {
     @QuartzScheduled(cron = "0 2 0 * * ?")
     public void cleanSession() {
         Map<String, Long> userCount = new HashMap<>();
-        ScanOptions options = ScanOptions.scanOptions().match("spring:session:sessions:*").count(1000).build();
+        ScanOptions options = ScanOptions.scanOptions().match(namespace + ":sessions:*").count(1000).build();
         try (
                 Cursor<String> scan = stringRedisTemplate.scan(options)
         ) {
             while (scan.hasNext()) {
                 String key = scan.next();
-                if (StringUtils.contains(key, "spring:session:sessions:expires:")) {
+                if (StringUtils.contains(key, namespace + ":sessions:expires:")) {
                     continue;
                 }
                 String sessionId = key.substring(key.lastIndexOf(":") + 1);
@@ -61,14 +63,14 @@ public class SessionConfig {
                     Long count = userCount.getOrDefault(userId, 0L);
                     count++;
                     userCount.put(userId, count);
-                    LogUtils.info(key + " : " + userId + " 过期时间: " + expire);
+                    LogUtils.debug("Session cleanup inspected fingerprint=" + org.apache.commons.codec.digest.DigestUtils.sha256Hex(sessionId).substring(0,12) + ", ttl=" + expire);
                     if (expire != null && expire.intValue() == -1) {
                         redisIndexedSessionRepository.getSessionRedisOperations().expire(key, Duration.of(30, ChronoUnit.SECONDS));
                     }
                 }
             }
 
-            LogUtils.info(JSON.toJSONString(userCount));
+            LogUtils.info("Session cleanup finished; users=" + userCount.size());
         } catch (Exception e) {
             LogUtils.error(e);
         }

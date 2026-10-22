@@ -19,7 +19,7 @@
         <slot name="nameRight"></slot>
       </div>
     </slot>
-    <div class="flex flex-row gap-[8px]">
+    <div class="flex min-w-0 max-w-full flex-row flex-wrap gap-[8px]">
       <a-input-search
         v-if="!props.notShowInputSearch && !isAdvancedSearchMode"
         v-model:model-value="keyword"

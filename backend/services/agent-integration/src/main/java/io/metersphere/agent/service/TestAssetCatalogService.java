@@ -130,6 +130,9 @@ public class TestAssetCatalogService {
         return versionService.deprecate(StringUtils.trim(versionId),resolvedProjectId,type,StringUtils.trim(assetId));
     }
 
+    // A rejected read is a preflight BLOCKED result, not a failed business write.
+    // Keep the caller's snapshot while allowing it to persist that result.
+    @Transactional(readOnly = true, noRollbackFor = MSException.class)
     public List<TestAssetContextDTO> resolveContext(String projectId, List<TestAssetRefDTO> refs) {
         if (refs == null || refs.isEmpty()) {
             return List.of();

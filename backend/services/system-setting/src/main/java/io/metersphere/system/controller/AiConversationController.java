@@ -38,6 +38,7 @@ public class AiConversationController {
         return aiConversationService.chatList(conversationId, SessionUtils.getUserId());
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping(value = "/add")
     @Operation(summary = "添加对话")
     public AiConversation add(@Validated @RequestBody AIChatRequest request) {
@@ -50,6 +51,7 @@ public class AiConversationController {
         return aiConversationService.update(request, SessionUtils.getUserId());
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping(value = "/chat")
     @Operation(summary = "聊天")
     public String chat(@Validated @RequestBody AIChatRequest request) {

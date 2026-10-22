@@ -375,13 +375,6 @@ export const pathMap: PathMapItem[] = [
         ],
       },
       {
-        key: 'CASE_MANAGEMENT_CASE_GENERATE', // 功能测试-生成用例
-        locale: 'menu.caseManagement.caseGenerate',
-        route: RouteEnum.CASE_MANAGEMENT_CASE_GENERATE,
-        permission: [],
-        level: MENU_LEVEL[2],
-      },
-      {
         key: 'CASE_MANAGEMENT_AUTOMATION_EXECUTION',
         locale: 'menu.bugManagement.automationExecution',
         route: RouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION,

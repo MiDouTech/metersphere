@@ -52,12 +52,16 @@ class TestPlanFunctionalCaseSyncServiceTests {
     @Mock
     private MessageSource messageSource;
 
+    @Mock
+    private TestPlanDefectSyncService defectSyncService;
+
     private TestPlanFunctionalCaseService service;
 
     @BeforeEach
     void setUp() {
         new Translator().setMessageSource(messageSource);
         service = new TestPlanFunctionalCaseService();
+        ReflectionTestUtils.setField(service, "defectSyncService", defectSyncService);
         ReflectionTestUtils.setField(service, "testPlanMapper", testPlanMapper);
         ReflectionTestUtils.setField(service, "testPlanFunctionalCaseMapper", relationMapper);
         ReflectionTestUtils.setField(service, "extTestPlanFunctionalCaseMapper", extRelationMapper);
@@ -88,6 +92,7 @@ class TestPlanFunctionalCaseSyncServiceTests {
 
         TestPlanFunctionalCaseSyncResponse response = service.syncPlanCases("plan-1", "user-1");
 
+        verify(defectSyncService).sync("project-1", "plan-1", "user-1", "FUNCTIONAL");
         assertEquals(1, response.getPlanCount());
         assertEquals(0, response.getAddedCount());
         assertEquals(1, response.getUpdatedCount());
@@ -112,6 +117,7 @@ class TestPlanFunctionalCaseSyncServiceTests {
 
         TestPlanFunctionalCaseSyncResponse response = service.syncPlanCases("plan-1", "user-1");
 
+        verify(defectSyncService).sync("project-1", "plan-1", "user-1", "FUNCTIONAL");
         assertEquals(1, response.getPlanCount());
         assertEquals(0, response.getAddedCount());
         assertEquals(0, response.getUpdatedCount());

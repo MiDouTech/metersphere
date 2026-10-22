@@ -143,7 +143,7 @@ public class MiduoSsoClient {
         if (StringUtils.isNotBlank(state)) {
             builder.queryParam("state", state);
         }
-        return builder.build(true).toUriString();
+        return builder.build().encode().toUriString();
     }
 
     /**

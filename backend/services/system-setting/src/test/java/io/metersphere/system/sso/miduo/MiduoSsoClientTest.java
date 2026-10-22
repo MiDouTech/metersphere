@@ -58,6 +58,8 @@ class MiduoSsoClientTest {
         Assertions.assertTrue(url.contains("appCode=ms-app"));
         Assertions.assertTrue(url.contains("state=state-xyz"));
         Assertions.assertTrue(url.contains("redirectUri="));
+        Assertions.assertFalse(url.contains("#"));
+        Assertions.assertTrue(url.contains("%23"));
     }
 
     private static String hmac(String appCode, String timestamp, String nonce, String signedValue, String secret)

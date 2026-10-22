@@ -269,6 +269,7 @@ public class FunctionalCaseMinderControllerTest extends BaseTest {
         functionalCaseModuleEditRequests.add(functionalCaseModuleEditRequest);
         functionalCaseModuleEditRequest = new FunctionalCaseModuleEditRequest();
         functionalCaseModuleEditRequest.setId("TEST_MINDER_MODULE_ID_GYQ7");
+        functionalCaseModuleEditRequest.setExpectedUpdateTime(functionalCaseModuleMapper.selectByPrimaryKey("TEST_MINDER_MODULE_ID_GYQ7").getUpdateTime());
         functionalCaseModuleEditRequest.setType("UPDATE");
         functionalCaseModuleEditRequest.setMoveMode("BEFORE");
         functionalCaseModuleEditRequest.setTargetId("TEST_MINDER_MODULE_ID_GYQ8");

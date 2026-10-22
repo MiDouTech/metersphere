@@ -25,9 +25,9 @@ class AgentQualityFinalizationMySqlTests {
     private JdbcTemplate admin,jdbc;private DriverManagerDataSource ds;private DataSourceTransactionManager transactions;
     @BeforeEach void database() throws Exception {
         admin=new JdbcTemplate(new DriverManagerDataSource("jdbc:mysql://127.0.0.1:13326/?useSSL=false&allowPublicKeyRetrieval=true","root","quality-test-only"));
-        admin.execute("CREATE DATABASE "+schema+" CHARACTER SET utf8mb4");
+        admin.execute("CREATE DATABASE "+schema+" CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
         ds=new DriverManagerDataSource("jdbc:mysql://127.0.0.1:13326/"+schema+"?useSSL=false&allowPublicKeyRetrieval=true","root","quality-test-only");jdbc=new JdbcTemplate(ds);transactions=new DataSourceTransactionManager(ds);
-        jdbc.execute("CREATE TABLE ai_execution_task(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64),current_execution_id VARCHAR(64),status VARCHAR(32))");
+        jdbc.execute("CREATE TABLE ai_execution_task(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64),current_execution_id VARCHAR(64),status VARCHAR(32)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
         jdbc.execute("CREATE TABLE ai_execution_attempt(id VARCHAR(64) PRIMARY KEY,task_id VARCHAR(64),status VARCHAR(32),update_time BIGINT,version INT)");
         jdbc.execute("CREATE TABLE ai_execution_case(id VARCHAR(64),task_id VARCHAR(64),case_id VARCHAR(64))");
         jdbc.execute("CREATE TABLE ai_execution_step_result(id VARCHAR(64) PRIMARY KEY)");
@@ -54,6 +54,11 @@ class AgentQualityFinalizationMySqlTests {
         var tx=new TransactionTemplate(transactions);
         assertThrows(MSException.class,()->tx.execute(status->{restarted.requireMutable("t1","e1");return null;}));
         assertTrue(restarted.recoverableTasks().contains("t1"));
+        try(var connection=ds.getConnection()) {
+            ScriptUtils.executeSqlScript(connection,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_118__writeback_identifier_collations.sql"));
+        } catch(Exception error) { throw new AssertionError("Identifier migration failed",error); }
+        assertTrue(restarted.recoverableTasks().contains("t1"));
+        assertEquals("utf8mb4_general_ci",jdbc.queryForObject("SELECT COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ai_execution_case_sync' AND COLUMN_NAME='task_id'",String.class));
         var lease=new AgentRunnerLeaseDTO();lease.setTaskId("t1");lease.setExecutionId("e1");lease.setId("l1");lease.setRunnerId("r1");lease.setVersion(0);
         assertTrue(restarted.reconcileExpiredFinalization(lease));
         verify(mapper,never()).closeRunnerLease(anyString(),anyString(),anyInt(),anyString(),anyLong());

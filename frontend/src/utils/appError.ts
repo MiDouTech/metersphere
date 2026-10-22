@@ -1,5 +1,26 @@
 import type { AxiosResponse } from 'axios';
 
+export function formatPreflightBlockedMessage(preflight: { blockedDetail?: string; blockedReason?: string }) {
+  const messages: Record<string, string> = {
+    ENVIRONMENT_ASSET_BINDING_REQUIRED: '请在测试平台配置中绑定已发布环境资产，再运行受管任务；个人直连不受影响',
+    ENVIRONMENT_ASSET_BINDING_CONFLICT: '环境资产引用与平台配置不一致，请重新选择环境并预检',
+    PUBLISHED_ASSET_VERSION_NOT_FOUND: '执行所需的资产尚未发布或已失效，请核对发布版本',
+    ENVIRONMENT_PROFILE_DISABLED: '测试平台配置已停用，请启用或选择其他配置',
+    PRODUCTION_EXECUTION_FORBIDDEN: '不允许在生产环境执行此任务，请选择测试或预发布环境',
+    MODEL_PROFILE_REQUIRED: '请选择可用的模型配置后重新预检',
+    PROMPT_TEMPLATE_REQUIRED: '请选择已发布的提示词模板后重新预检',
+    BLOCKED_ENVIRONMENT: '环境配置未通过检查，请核对平台地址、状态及资产绑定',
+    BLOCKED_CREDENTIAL: '凭据或登录配置不可用，请检查角色、状态及环境范围',
+    BLOCKED_SCOPE: '用例范围或发布资产未通过检查，请核对执行范围和权限',
+    BLOCKED_MODEL: '模型或提示词配置未通过检查，请核对配置及使用额度',
+  };
+  return (
+    messages[preflight.blockedDetail || ''] ||
+    messages[preflight.blockedReason || ''] ||
+    '预检未通过，请检查执行配置；可使用 traceId 查询详细原因'
+  );
+}
+
 const SENSITIVE_ERROR_PATTERNS = [
   /java\.[\w.$]+(?:Exception|Error)/i,
   /org\.[\w.$]+(?:Exception|Error)/i,

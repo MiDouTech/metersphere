@@ -1,10 +1,10 @@
 <template>
-  <div :class="['ms-base-table', $slots.quickCreate ? 'ms-base-table--hasQuickCreate' : '']">
+  <div ref="tableWrapper" :class="['ms-base-table', $slots.quickCreate ? 'ms-base-table--hasQuickCreate' : '']">
     <div v-if="$slots.quickCreate" class="ms-base-table-quickCreate">
       <slot name="quickCreate"></slot>
     </div>
     <a-table
-      v-bind="{ ...$attrs, ...scrollObj }"
+      v-bind="{ ...$attrs, ...scrollObj, ...viewportScroll }"
       v-model:selected-keys="originalSelectedKeys"
       v-model:expanded-keys="expandedKeys"
       :row-class="getRowClass"
@@ -257,7 +257,8 @@
     <div
       v-if="showBatchAction || !!attrs.showPagination || alwaysShowSelectedCount"
       id="ms-table-footer-wrapper"
-      class="mt-[16px] flex w-full flex-row flex-nowrap items-center overflow-hidden"
+      ref="tableFooter"
+      class="mt-[16px] flex w-full flex-row flex-wrap items-center gap-y-2"
       :class="{ 'justify-between': showBatchAction }"
     >
       <span v-if="props.actionConfig && selectedCount > 0 && !showBatchAction" class="title text-[var(--color-text-2)]">
@@ -268,11 +269,12 @@
           {{ t('msTable.batch.clear') }}
         </a-button>
       </span>
-      <div class="flex flex-grow items-center">
+      <div class="flex min-w-0 max-w-full flex-grow basis-full items-center">
         <batch-action
           v-if="showBatchAction || alwaysShowSelectedCount"
           class="flex-1"
           :select-row-count="selectedCount"
+          :disabled="!!attrs.loading"
           :action-config="props.actionConfig"
           wrapper-id="ms-table-footer-wrapper"
           :size="props.paginationSize"
@@ -288,7 +290,7 @@
         v-if="!!attrs.showPagination"
         :size="props.paginationSize || 'small'"
         v-bind="(attrs.msPagination as MsPaginationI)"
-        :simple="!!showBatchAction"
+        :simple="!!showBatchAction && !(attrs.msPagination as MsPaginationI).showPageSize"
         :show-jumper="(attrs.msPagination as MsPaginationI).total / (attrs.msPagination as MsPaginationI).pageSize > 5"
         @change="pageChange"
         @page-size-change="pageSizeChange"
@@ -461,6 +463,47 @@
   });
 
   const scrollObj = ref<Record<string, any>>({});
+  const tableWrapper = ref<HTMLElement>();
+  const tableFooter = ref<HTMLElement>();
+  const availableBodyHeight = ref<number>();
+  let layoutObserver: ResizeObserver | undefined;
+  let layoutFrame = 0;
+  const measureLayout = () => {
+    cancelAnimationFrame(layoutFrame);
+    layoutFrame = requestAnimationFrame(() => {
+      const root = tableWrapper.value;
+      if (!root || !root.getClientRects().length) return;
+      const header = root.querySelector('.arco-table-header');
+      const footerHeight = tableFooter.value?.getBoundingClientRect().height || 0;
+      availableBodyHeight.value = Math.max(
+        80,
+        window.innerHeight -
+          root.getBoundingClientRect().top -
+          (header?.getBoundingClientRect().height || 48) -
+          footerHeight -
+          48
+      );
+    });
+  };
+  const viewportScroll = computed(() => {
+    const scroll = scrollObj.value.scroll || attrs.scroll;
+    if (!scroll || typeof scroll.y !== 'number' || availableBodyHeight.value === undefined) return {};
+    return { scroll: { ...scroll, y: Math.min(scroll.y, availableBodyHeight.value) } };
+  });
+  onMounted(() => {
+    layoutObserver = new ResizeObserver(measureLayout);
+    if (tableWrapper.value) layoutObserver.observe(tableWrapper.value);
+    if (tableFooter.value) layoutObserver.observe(tableFooter.value);
+    window.addEventListener('resize', measureLayout);
+    measureLayout();
+  });
+  onActivated(measureLayout);
+  onUnmounted(() => {
+    layoutObserver?.disconnect();
+    cancelAnimationFrame(layoutFrame);
+    window.removeEventListener('resize', measureLayout);
+  });
+
   const initColumn = async (arr?: MsTableColumn) => {
     try {
       let tmpArr: MsTableColumn = [];
@@ -667,7 +710,7 @@
   });
 
   const showBatchAction = computed(() => {
-    return selectedCount.value > 0 && !!attrs.selectable && props.actionConfig;
+    return !!attrs.selectable && !!props.actionConfig;
   });
 
   const handleBatchAction = (value: BatchActionParams) => {

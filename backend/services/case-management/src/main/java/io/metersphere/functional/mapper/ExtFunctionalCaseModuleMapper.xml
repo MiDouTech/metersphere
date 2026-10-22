@@ -5,6 +5,7 @@
         SELECT id,
                name,
                parent_id AS parentId,
+               update_time AS updateTime,
                CASE WHEN module_type = 'FOLDER' THEN 'folder' ELSE 'module' END AS type
         FROM functional_case_module
         WHERE project_id = #{projectId}

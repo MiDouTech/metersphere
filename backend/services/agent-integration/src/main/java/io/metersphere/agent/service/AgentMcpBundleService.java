@@ -114,6 +114,9 @@ public class AgentMcpBundleService {
                 Submit with metersphere.functional.execution.submit. Cover every original position at least once; extra and repeated positions are allowed and retained. ACCEPTED/PUBLISHED means structure accepted and declared results saved, not independent execution verification. Historical NEEDS_REVIEW submissions remain unchanged.
                 Report actual observations and SUCCESS or ERROR. No comparison with expected text or content reviewer is used. Any ERROR, including extra or repeated records, makes the case ERROR. Permissions, content/policy versions and evidence rules still apply.
                 Use metersphere.functional.execution.get to inspect accepted step facts and evidence mapping. Reuse requestId only for identical retries.
+                For imports, use functional.import.precheck, inspect its report, then import.commit and import.get. Stop preserves successful writes; retry does not duplicate them. Requires explicit CASE_IMPORT_V2.
+                For deletion, use functional.case.delete_preview and let the user decide at confirmationPath before continuing the same previewId. Never forge user confirmation. CASE_DELETE_V2 and CASE_RESTORE_V2 are explicit permissions, not implied by legacy wildcard scopes.
+                Archive ended runs with functional.archive.prepare/get/retry. Archival failure never changes the execution verdict. Only submit actual reusable business data through archive.data with sourceObjectId, reuseConditions and cleanupStatus. Requires ARTIFACT_WRITE and current project permissions; no data means no empty dataset.
                 """;
     }
 
@@ -205,7 +208,7 @@ public class AgentMcpBundleService {
                 - Reuse the same requestId and identical payload for retries. IDEMPOTENCY_CONFLICT requires checking the existing operation; do not generate another key to bypass it.
                 - Case-library search accepts projectId and optional identityType (ID/NUMBER/NAME). Omit testPlanId to search the repository; inspect current/pageSize/total/hasMore. Live paging is not a frozen export snapshot.
                 - Read case updateTime before case.update; keep customFields as a field-ID map. A conflict requires rereading, not overwriting another writer.
-                - Use functional.comments.list to read comment updateTime before functional.comment.update. Only edit your own text with explicit CASE_COMMENT_EDIT_V2 and requestId; preserve replies and attachments. Invalid credentials must not fall back to a browser session. Personal tokens cannot manage credentials.
+                - functional.comments.list returns {total,current,pageSize,list}: page roots with current/pageSize, or replies with parentId. Read updateTime before mutation. Edit only your own text with explicit CASE_COMMENT_EDIT_V2. Deletion requires explicit CASE_COMMENT_DELETE_V2, expectedUpdateTime and requestId, and leaves a tombstone preserving replies. Neither scope is implied by AGENT_ALL. Invalid credentials must not fall back to a browser session. Personal tokens cannot manage credentials.
                 - Use module.get to read updateTime before module.update/move. Moving to parentId=NONE means project root. CASE_MODULE_WRITE_V2 is an explicit grant; AGENT_ALL and FUNCTIONAL_ALL do not include it.
                 - Never infer that deletion/import/export is available from this guide. Only invoke capabilities exposed by live tools/list. Running-case deletion must wait for the user's documented decision when that capability becomes available.
                 - Review create/associate require requestId; read the review after a response loss. Review decisions and Excel import are not promised unless the live tools/list exposes them.

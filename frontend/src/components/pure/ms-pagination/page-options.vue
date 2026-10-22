@@ -18,7 +18,7 @@
 
   import { Size } from './types';
   import { getPrefixCls } from './utils';
-  import { SelectProps } from '@arco-design/web-vue/es/select/interface';
+  import type { SelectProps } from '@arco-design/web-vue/es/select/interface';
 
   defineOptions({ name: 'PageOptions' });
 

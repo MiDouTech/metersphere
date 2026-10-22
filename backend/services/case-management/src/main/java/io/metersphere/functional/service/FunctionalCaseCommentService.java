@@ -43,6 +43,11 @@ public class FunctionalCaseCommentService {
     @Resource
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
+    @Resource private FunctionalCaseCommentAccess commentAccess;
+    @Resource private FunctionalCaseCommentAudit commentAudit;
+    @Resource private FunctionalCaseCommentLifecycleService commentLifecycle;
+    @Resource private FunctionalCaseCommentOutbox commentOutbox;
+
     @Resource
     private FunctionalCaseCommentMapper functionalCaseCommentMapper;
 
@@ -73,14 +78,40 @@ public class FunctionalCaseCommentService {
      * @param userId                       当前操作用户
      * @return FunctionalCaseComment
      */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public FunctionalCaseComment saveComment(FunctionalCaseCommentRequest functionalCaseCommentRequest, String userId) {
-        FunctionalCase functionalCase = checkCase(functionalCaseCommentRequest.getCaseId());
+        FunctionalCase functionalCase = commentAccess.requireCase(functionalCaseCommentRequest.getCaseId(), userId, true);
+        validateContentAndRecipients(functionalCaseCommentRequest, functionalCase.getProjectId());
+        if (!List.of(NoticeConstants.Event.COMMENT, NoticeConstants.Event.AT, NoticeConstants.Event.REPLY).contains(Objects.toString(functionalCaseCommentRequest.getEvent(), "")))
+            throw FunctionalCaseCommentAccess.invalid("评论事件无效");
+        if (!NoticeConstants.Event.REPLY.equals(functionalCaseCommentRequest.getEvent())
+                && (StringUtils.isNotBlank(functionalCaseCommentRequest.getParentId()) || StringUtils.isNotBlank(functionalCaseCommentRequest.getReplyUser())))
+            throw FunctionalCaseCommentAccess.invalid("回复评论必须指定有效的回复事件");
         FunctionalCaseComment functionalCaseComment = getFunctionalCaseComment(functionalCaseCommentRequest, userId);
+        functionalCaseCommentRequest.setId(functionalCaseComment.getId());
         functionalCaseCommentRequest.setProjectId(functionalCase.getProjectId());
+        FunctionalCaseComment saved;
         if (StringUtils.equals(functionalCaseCommentRequest.getEvent(), NoticeConstants.Event.REPLY)) {
-            return saveCommentWidthReply(functionalCaseCommentRequest, functionalCaseComment, userId);
+            saved = saveCommentWidthReply(functionalCaseCommentRequest, functionalCaseComment, userId);
         } else {
-            return saveCommentOrAt(functionalCaseCommentRequest, functionalCaseComment, userId);
+            saved = saveCommentOrAt(functionalCaseCommentRequest, functionalCaseComment, userId);
+        }
+        commentAudit.record(saved.getId(), saved.getCaseId(), userId, "CREATE", saved.getUpdateTime(), "", saved.getContent());
+        return saved;
+    }
+
+    private void validateContentAndRecipients(FunctionalCaseCommentRequest request, String projectId) {
+        if (StringUtils.isBlank(request.getContent()) || request.getContent().length() > 20000)
+            throw FunctionalCaseCommentAccess.invalid("评论内容不能为空或超过 20000 字符");
+        if (StringUtils.isNotBlank(request.getNotifier())) {
+            String[] raw = request.getNotifier().split(";", -1);
+            if (raw.length > 100) throw FunctionalCaseCommentAccess.invalid("评论通知人数不能超过 100 人");
+            Set<String> recipients = new LinkedHashSet<>(Arrays.asList(raw));
+            for (String recipient : recipients) {
+                if (StringUtils.isBlank(recipient) || !commentAccess.hasPermission(recipient, projectId, io.metersphere.sdk.constants.PermissionConstants.FUNCTIONAL_CASE_READ))
+                    throw FunctionalCaseCommentAccess.denied();
+            }
+            request.setNotifier(String.join(";", recipients));
         }
     }
 
@@ -106,7 +137,7 @@ public class FunctionalCaseCommentService {
 
     private FunctionalCase checkCase(String caseId) {
         FunctionalCase functionalCase = functionalCaseMapper.selectByPrimaryKey(caseId);
-        if (functionalCase == null) {
+        if (functionalCase == null || Boolean.TRUE.equals(functionalCase.getDeleted())) {
             throw new MSException(Translator.get("case_comment.case_is_null"));
         }
         return functionalCase;
@@ -191,7 +222,8 @@ public class FunctionalCaseCommentService {
                 .excludeSelf(true)
                 .relatedUsers(relatedUsers)
                 .build();
-        noticeSendService.send(NoticeConstants.TaskType.FUNCTIONAL_CASE_TASK, noticeModel);
+        Long version = jdbc.queryForObject("SELECT update_time FROM functional_case_comment WHERE id=?", Long.class, functionalCaseCommentRequest.getId());
+        commentOutbox.enqueue(functionalCaseCommentRequest.getId(), Objects.requireNonNull(version), functionalCaseCommentRequest.getCaseId(), noticeModel);
     }
 
     private static void setLanguage(String language) {
@@ -214,11 +246,20 @@ public class FunctionalCaseCommentService {
         if (StringUtils.isBlank(parentId)) {
             throw new MSException(Translator.get("case_comment.parent_id_is_null"));
         }
-        FunctionalCaseComment parentComment = functionalCaseCommentMapper.selectByPrimaryKey(parentId);
-        if (parentComment==null) {
-            throw new MSException(Translator.get("case_comment.parent_case_is_null"));
-        }
-        functionalCaseComment.setParentId(parentId);
+        var rows = jdbc.queryForList("SELECT id,case_id,parent_id,create_user,deleted FROM functional_case_comment WHERE id=? FOR UPDATE", parentId);
+        if (rows.size() != 1 || !Objects.equals(rows.getFirst().get("case_id"), functionalCaseCommentRequest.getCaseId()))
+            throw FunctionalCaseCommentAccess.denied();
+        var parent = rows.getFirst();
+        if (StringUtils.isNotBlank((String) parent.get("parent_id")) && Boolean.TRUE.equals(parent.get("deleted")))
+            throw FunctionalCaseCommentAccess.conflict();
+        String root = StringUtils.defaultIfBlank((String) parent.get("parent_id"), parentId);
+        String replyUser = functionalCaseCommentRequest.getReplyUser();
+        Integer related = jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_comment WHERE case_id=? AND create_user=? AND deleted=0 AND (id=? OR parent_id=?)",
+                Integer.class, functionalCaseCommentRequest.getCaseId(), replyUser, root, root);
+        if (related == null || related == 0 || !commentAccess.hasPermission(replyUser, functionalCaseCommentRequest.getProjectId(), io.metersphere.sdk.constants.PermissionConstants.FUNCTIONAL_CASE_READ))
+            throw FunctionalCaseCommentAccess.denied();
+        functionalCaseComment.setParentId(root);
+        functionalCaseCommentRequest.setParentId(root);
     }
 
     private List<String> getRelatedUsers(Object relatedUsers) {
@@ -231,37 +272,11 @@ public class FunctionalCaseCommentService {
     }
 
     public void deleteComment(String commentId, String userId) {
-        FunctionalCaseComment functionalCaseComment = functionalCaseCommentMapper.selectByPrimaryKey(commentId);
-        if (functionalCaseComment == null) {
-            return;
-        }
-        //只有评论人自己可以删除当前评论
-        if (!StringUtils.equalsIgnoreCase(functionalCaseComment.getCreateUser(), userId)) {
-            throw new MSException(Translator.get("case_comment.user_self"));
-        }
-        //删除选中的评论下的所有回复
-        FunctionalCaseCommentExample functionalCaseCommentExample = new FunctionalCaseCommentExample();
-        functionalCaseCommentExample.createCriteria().andParentIdEqualTo(commentId);
-        List<FunctionalCaseComment> functionalCaseComments = functionalCaseCommentMapper.selectByExample(functionalCaseCommentExample);
-        List<String> commentIds = new ArrayList<>(functionalCaseComments.stream().map(FunctionalCaseComment::getId).toList());
-        commentIds.add(commentId);
-        functionalCaseCommentExample = new FunctionalCaseCommentExample();
-        functionalCaseCommentExample.createCriteria().andIdIn(commentIds);
-        functionalCaseCommentMapper.deleteByExample(functionalCaseCommentExample);
+        throw FunctionalCaseCommentAccess.invalid("请刷新页面，使用带评论版本的删除操作");
     }
 
     public List<FunctionalCaseCommentDTO> getCommentList(String caseId) {
-        checkCase(caseId);
-        //查询出当前用例下的所有数据
-        FunctionalCaseCommentExample functionalCaseCommentExample = new FunctionalCaseCommentExample();
-        functionalCaseCommentExample.createCriteria().andCaseIdEqualTo(caseId);
-        List<FunctionalCaseComment> functionalCaseComments = functionalCaseCommentMapper.selectByExampleWithBLOBs(functionalCaseCommentExample);
-        List<String> userIds = getUserIds(functionalCaseComments);
-        if (CollectionUtils.isEmpty(userIds)) {
-            return new ArrayList<>();
-        }
-        Map<String, CommentUserInfo> userMap = getUserMap(userIds);
-        return buildData(functionalCaseComments, userMap);
+        return commentLifecycle.legacyList(caseId, io.metersphere.system.utils.SessionUtils.getUserId());
     }
 
     /**
@@ -331,31 +346,35 @@ public class FunctionalCaseCommentService {
 
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public FunctionalCaseComment updateComment(FunctionalCaseCommentRequest functionalCaseCommentRequest, String userId) {
-        FunctionalCase ownerCase = checkCase(functionalCaseCommentRequest.getCaseId());
+        FunctionalCase ownerCase = commentAccess.requireCase(functionalCaseCommentRequest.getCaseId(), userId, true);
         if (Boolean.TRUE.equals(ownerCase.getDeleted())) throw new MSException("用例已删除，不能编辑评论");
         if (functionalCaseCommentRequest.getExpectedUpdateTime() == null
                 || StringUtils.isBlank(functionalCaseCommentRequest.getContent())
                 || functionalCaseCommentRequest.getContent().length() > 20000) {
-            throw new MSException("请刷新评论后重试，评论内容不能为空或超过限制");
+            throw FunctionalCaseCommentAccess.invalid("请刷新评论后重试，评论内容不能为空或超过限制");
         }
-        var rows = jdbc.queryForList("SELECT case_id,create_user,update_time FROM functional_case_comment WHERE id=? FOR UPDATE",
+        var rows = jdbc.queryForList("SELECT case_id,create_user,update_time,content,deleted,notifier FROM functional_case_comment WHERE id=? FOR UPDATE",
                 functionalCaseCommentRequest.getId());
         if (rows.isEmpty() || !Objects.equals(rows.get(0).get("case_id"), ownerCase.getId())
                 || !Objects.equals(rows.get(0).get("create_user"), userId)) {
-            throw new MSException("只能编辑当前用例中本人创建的评论");
+            throw FunctionalCaseCommentAccess.denied();
         }
         long version = ((Number) rows.get(0).get("update_time")).longValue();
-        if (version != functionalCaseCommentRequest.getExpectedUpdateTime()) {
-            throw new MSException("评论已被更新，请刷新后重试");
+        if (version != functionalCaseCommentRequest.getExpectedUpdateTime() || Boolean.TRUE.equals(rows.getFirst().get("deleted"))) {
+            throw FunctionalCaseCommentAccess.conflict();
         }
         functionalCaseCommentRequest.setProjectId(ownerCase.getProjectId());
+        boolean changedRecipients = !Objects.equals(StringUtils.defaultString(functionalCaseCommentRequest.getNotifier()),
+                Objects.toString(rows.getFirst().get("notifier"), ""));
+        if (changedRecipients) validateContentAndRecipients(functionalCaseCommentRequest, ownerCase.getProjectId());
+        functionalCaseCommentRequest.setEvent(changedRecipients && StringUtils.isNotBlank(functionalCaseCommentRequest.getNotifier())
+                ? NoticeConstants.Event.AT : NoticeConstants.Event.COMMENT);
         FunctionalCaseComment functionalCaseComment = getFunctionalCaseCommentByUpdate(functionalCaseCommentRequest);
         functionalCaseComment.setUpdateTime(Math.max(System.currentTimeMillis(), version + 1));
-        if (StringUtils.equals(functionalCaseCommentRequest.getEvent(), NoticeConstants.Event.REPLY)) {
-            return updateCommentWidthNotice(functionalCaseCommentRequest, functionalCaseComment, userId);
-        } else {
-            return updateCommentWidthOutNotice(functionalCaseCommentRequest, functionalCaseComment, userId);
-        }
+        commentAudit.record(functionalCaseComment.getId(), ownerCase.getId(), userId, "UPDATE", functionalCaseComment.getUpdateTime(),
+                Objects.toString(rows.getFirst().get("content"), ""), functionalCaseComment.getContent());
+        // Editing never changes the parent/reply relationship and does not resend unchanged mentions.
+        return updateCommentWidthOutNotice(functionalCaseCommentRequest, functionalCaseComment, userId);
     }
 
     private FunctionalCaseComment updateCommentWidthOutNotice(FunctionalCaseCommentRequest functionalCaseCommentRequest, FunctionalCaseComment functionalCaseComment, String userId) {

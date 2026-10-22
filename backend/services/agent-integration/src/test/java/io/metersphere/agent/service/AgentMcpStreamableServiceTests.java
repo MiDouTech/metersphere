@@ -84,4 +84,33 @@ class AgentMcpStreamableServiceTests {
             org.mockito.Mockito.verifyNoInteractions(cache);
         } finally { io.metersphere.agent.security.AgentTokenContext.clear(); }
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"metersphere.functional.attachment.upload.complete","metersphere.functional.import.commit","metersphere.functional.archive.prepare","metersphere.functional.snapshot.create","metersphere.functional.case.delete_preview"})
+    void durableResourceProtocolsReachCurrentAuthorizationWithoutGenericRequestKey(String name) {
+        var token=new io.metersphere.system.domain.AgentToken();token.setId("test-token");token.setScopes("CASE_ATTACHMENT");
+        io.metersphere.agent.security.AgentTokenContext.set(token);
+        try {
+            var limiter=org.mockito.Mockito.mock(io.metersphere.agent.security.AgentTokenRateLimiter.class);
+            org.mockito.Mockito.when(limiter.tryAcquireTool(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+            var cache=org.mockito.Mockito.mock(AgentIdempotencyService.class);
+            var calls=new java.util.concurrent.atomic.AtomicInteger();
+            var handler=new io.metersphere.agent.tool.AgentMcpToolHandler() {
+                public String name(){return name;}
+                public String requiredScope(){return "CASE_ATTACHMENT";}
+                public Map<String,Object> inputSchema(){return Map.of();}
+                public Map<String,Object> annotations(){return Map.of("readOnlyHint",false);}
+                public Object execute(Map<String,Object> args){return Map.of("checked",calls.incrementAndGet());}
+            };
+            ReflectionTestUtils.setField(service,"agentTokenRateLimiter",limiter);
+            ReflectionTestUtils.setField(service,"agentIdempotencyService",cache);
+            ReflectionTestUtils.setField(service,"agentMcpToolRegistry",new io.metersphere.agent.tool.AgentMcpToolRegistry(java.util.List.of(handler)));
+            var request=Map.<String,Object>of("id",1,"method","tools/call","params",Map.of("name",name,"arguments",Map.of("uploadId","resource")));
+            Assertions.assertTrue(service.handle(request).containsKey("result"));
+            Assertions.assertTrue(service.handle(request).containsKey("result"));
+            token.setScopes("FUNCTIONAL_READ");
+            Assertions.assertTrue(service.handle(request).containsKey("error"));
+            Assertions.assertEquals(2,calls.get());org.mockito.Mockito.verifyNoInteractions(cache);
+        } finally {io.metersphere.agent.security.AgentTokenContext.clear();}
+    }
 }

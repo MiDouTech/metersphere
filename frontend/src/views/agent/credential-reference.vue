@@ -13,13 +13,19 @@
         ></div
       >
       <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
-      <a-table :data="items" :loading="loading" :pagination="false" row-key="id"
+      <a-table
+        :data="platformEnvironmentId ? items.filter((item) => item.environmentId === platformEnvironmentId) : items"
+        :loading="loading"
+        :scroll="{ x: 1200 }"
+        v-bind="tablePaging"
+        row-key="id"
         ><template #empty><a-empty description="暂无凭据引用" /></template
         ><template #columns>
-          <a-table-column title="名称" data-index="name" /><a-table-column
-            title="平台关联 ID"
-            data-index="environmentId"
-          /><a-table-column title="业务角色" data-index="businessRole" />
+          <a-table-column title="名称" data-index="name" /><a-table-column title="测试平台"
+            ><template #cell="{ record }">{{
+              environments.find((item) => item.environmentId === record.environmentId)?.name || '待关联平台'
+            }}</template></a-table-column
+          ><a-table-column title="业务角色" data-index="businessRole" />
           <a-table-column title="类型" data-index="credentialType" /><a-table-column
             title="Provider"
             data-index="providerType"
@@ -70,7 +76,11 @@
         <div class="grid grid-cols-2 gap-x-4"
           ><a-form-item field="name" label="名称" required><a-input v-model="form.name" /></a-form-item
           ><a-form-item field="environmentId" label="测试平台" required
-            ><a-select v-model="form.environmentId" allow-search placeholder="请选择测试平台"
+            ><a-select
+              v-model="form.environmentId"
+              :disabled="!!platformEnvironmentId"
+              allow-search
+              placeholder="请选择测试平台"
               ><a-option v-for="item in environments" :key="item.id" :value="item.environmentId">{{
                 item.name
               }}</a-option></a-select
@@ -136,12 +146,25 @@
     updateAiCredentialReference,
     verifyAiCredentialReference,
   } from '@/api/modules/ai-execution';
+  import useClientTablePaging from '@/hooks/useClientTablePaging';
+  import useListRefresh from '@/hooks/useListRefresh';
   import useAppStore from '@/store/modules/app';
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
+
+  const props = defineProps<{ platformEnvironmentId?: string }>();
 
   const app = useAppStore();
   const items = ref<AiCredentialReference[]>([]);
   const environments = ref<AiEnvironmentProfile[]>([]);
+  const tablePaging = useClientTablePaging(
+    'credential-reference',
+    () =>
+      (props.platformEnvironmentId
+        ? items.value.filter((item) => item.environmentId === props.platformEnvironmentId)
+        : items.value
+      ).length,
+    () => props.platformEnvironmentId
+  );
   const loading = ref(false);
   const saving = ref(false);
   const visible = ref(false);
@@ -162,18 +185,25 @@
   const msg = (e: unknown) => {
     return formatAppErrorMessage(ensureAppError(e, '请求失败，请稍后重试'));
   };
+  let loadSequence = 0;
   async function load() {
+    const sequence = ++loadSequence;
+    const projectId = app.currentProjectId;
+    if (!projectId) {
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     error.value = '';
     try {
-      [items.value, environments.value] = await Promise.all([
-        listAiCredentialReferences(app.currentProjectId),
-        listAiEnvironmentProfiles(app.currentProjectId),
-      ]);
+      const response = await Promise.all([listAiCredentialReferences(projectId), listAiEnvironmentProfiles(projectId)]);
+      if (sequence !== loadSequence || projectId !== app.currentProjectId) return;
+      [items.value, environments.value] = response;
     } catch (e) {
+      if (sequence !== loadSequence) return;
       error.value = msg(e);
     } finally {
-      loading.value = false;
+      if (sequence === loadSequence) loading.value = false;
     }
   }
   function open(r?: AiCredentialReference) {
@@ -196,7 +226,7 @@
         : {
             id: '',
             name: '',
-            environmentId: '',
+            environmentId: props.platformEnvironmentId || '',
             credentialType: 'USERNAME_PASSWORD',
             businessRole: '',
             providerType: 'ENV',
@@ -287,10 +317,15 @@
     () => {
       visible.value = false;
       items.value = [];
-      if (app.currentProjectId) load();
+      environments.value = [];
+      load();
     }
   );
   onMounted(() => {
     if (app.currentProjectId) load();
+  });
+  useListRefresh(load, () => !!app.currentProjectId && !loading.value && !visible.value);
+  onBeforeUnmount(() => {
+    loadSequence += 1;
   });
 </script>
