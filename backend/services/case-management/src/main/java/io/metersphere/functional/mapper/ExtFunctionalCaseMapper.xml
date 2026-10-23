@@ -37,6 +37,13 @@
         <result column="tags" jdbcType="VARCHAR" property="tags" typeHandler="io.metersphere.handler.ListTypeHandler" />
     </resultMap>
 
+    <select id="getAgentContent" resultMap="io.metersphere.functional.mapper.FunctionalCaseBlobMapper.ResultMapWithBLOBs">
+        SELECT id, prerequisite, description
+        <if test="includeSteps">, steps, text_description, expected_result</if>
+        FROM functional_case_blob WHERE id IN
+        <foreach collection="caseIds" item="caseId" open="(" separator="," close=")">#{caseId}</foreach>
+    </select>
+
     <select id="getPos" resultType="java.lang.Long">
         SELECT
             pos
@@ -161,6 +168,22 @@
     </select>
 
     <select id="getTestPlanOverviewByCaseIds" resultType="io.metersphere.functional.dto.FunctionalCaseTestPlanOverviewDTO">
+        WITH related AS (
+            SELECT DISTINCT functional_case_id, test_plan_id
+            FROM test_plan_functional_case
+            WHERE functional_case_id IN
+            <foreach collection="caseIds" item="caseId" open="(" separator="," close=")">#{caseId}</foreach>
+        ), relevant_plans AS (
+            SELECT DISTINCT test_plan_id FROM related
+        ), plan_stats AS (
+            SELECT tpfc.test_plan_id, COUNT(*) AS total,
+                SUM(CASE WHEN tpfc.last_exec_result IS NOT NULL AND tpfc.last_exec_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END) AS executed,
+                SUM(CASE WHEN tpfc.last_exec_result = 'SUCCESS' THEN 1 ELSE 0 END) AS passed
+            FROM relevant_plans rp
+            JOIN test_plan_functional_case tpfc ON tpfc.test_plan_id = rp.test_plan_id
+            JOIN functional_case fc ON fc.id = tpfc.functional_case_id AND fc.deleted = false
+            GROUP BY tpfc.test_plan_id
+        )
         SELECT
             related.functional_case_id AS caseId,
             tp.id,
@@ -168,29 +191,17 @@
             tp.name,
             tp.status,
             CASE WHEN tp.status = 'ARCHIVED' THEN true ELSE false END AS archived,
-            COALESCE(COUNT(tpfc.id), 0) AS total,
-            COALESCE(SUM(CASE WHEN tpfc.last_exec_result IS NOT NULL AND tpfc.last_exec_result NOT IN ('', 'PENDING', 'UN_EXECUTED') THEN 1 ELSE 0 END), 0) AS executed,
-            COALESCE(SUM(CASE WHEN tpfc.last_exec_result = 'SUCCESS' THEN 1 ELSE 0 END), 0) AS passed,
+            COALESCE(stats.total, 0) AS total,
+            COALESCE(stats.executed, 0) AS executed,
+            COALESCE(stats.passed, 0) AS passed,
             CASE
-                WHEN COUNT(tpfc.id) = 0 THEN 0
-                ELSE ROUND(SUM(CASE WHEN tpfc.last_exec_result = 'SUCCESS' THEN 1 ELSE 0 END) * 100 / COUNT(tpfc.id))
+                WHEN COALESCE(stats.total, 0) = 0 THEN 0
+                ELSE ROUND(stats.passed * 100 / stats.total)
             END AS rate,
             tp.update_time AS updateTime
-        FROM (
-            SELECT DISTINCT functional_case_id, test_plan_id
-            FROM test_plan_functional_case
-            WHERE functional_case_id IN
-            <foreach collection="caseIds" item="caseId" open="(" separator="," close=")">
-                #{caseId}
-            </foreach>
-        ) related
+        FROM related
                  INNER JOIN test_plan tp ON tp.id = related.test_plan_id
-                 LEFT JOIN (
-            SELECT tpfc.test_plan_id, tpfc.id, tpfc.last_exec_result
-            FROM test_plan_functional_case tpfc
-                     INNER JOIN functional_case fc ON fc.id = tpfc.functional_case_id AND fc.deleted = false
-        ) tpfc ON tpfc.test_plan_id = tp.id
-        GROUP BY related.functional_case_id, tp.id, tp.num, tp.name, tp.status, tp.update_time
+                 LEFT JOIN plan_stats stats ON stats.test_plan_id = tp.id
         ORDER BY related.functional_case_id, tp.update_time DESC
     </select>
 
@@ -252,10 +263,21 @@
         LEFT JOIN project_version ON  functional_case.version_id = project_version.id
         LEFT JOIN functional_case_module ON functional_case_module.id = functional_case.module_id
         LEFT JOIN test_asset_metadata ON test_asset_metadata.project_id = functional_case.project_id
+            AND test_asset_metadata.organization_id = (SELECT organization_id FROM project WHERE id = functional_case.project_id)
             AND test_asset_metadata.asset_type = 'CASE'
             AND test_asset_metadata.asset_id = COALESCE(NULLIF(functional_case.ref_id, ''), functional_case.id)
         LEFT JOIN test_asset_category ON test_asset_category.id = test_asset_metadata.category_id
             AND test_asset_category.deleted = b'0'
+        <include refid="listWhere"/>
+    </select>
+
+    <!-- PageHelper discovers this exact mapped statement instead of counting display joins. -->
+    <select id="list_COUNT" resultType="long">
+        SELECT COUNT(*) FROM functional_case
+        <include refid="listWhere"/>
+    </select>
+
+    <sql id="listWhere">
         where functional_case.deleted = #{deleted}
         <include refid="queryWorkspaceAndDimensionCondition"/>
         <include refid="queryWhereCondition"/>
@@ -275,7 +297,7 @@
                 #{excludeId}
             </foreach>
         </if>
-    </select>
+    </sql>
 
     <sql id="queryWorkspaceAndDimensionCondition">
         <choose>
@@ -380,6 +402,7 @@
         <if test="request.creationSources != null and request.creationSources.size() > 0">
             AND COALESCE((SELECT tam.creation_source FROM test_asset_metadata tam
                 WHERE tam.project_id = functional_case.project_id AND tam.asset_type = 'CASE'
+                  AND tam.organization_id = (SELECT organization_id FROM project WHERE id = functional_case.project_id)
                   AND tam.asset_id = COALESCE(NULLIF(functional_case.ref_id, ''), functional_case.id)
                 LIMIT 1), 'UNKNOWN') IN
             <foreach collection="request.creationSources" item="source" separator="," open="(" close=")">
@@ -390,6 +413,7 @@
             AND EXISTS (SELECT 1 FROM test_asset_metadata tam
                 INNER JOIN test_asset_category tac ON tac.id = tam.category_id AND tac.deleted = b'0'
                 WHERE tam.project_id = functional_case.project_id AND tam.asset_type = 'CASE'
+                  AND tam.organization_id = (SELECT organization_id FROM project WHERE id = functional_case.project_id)
                   AND tam.asset_id = COALESCE(NULLIF(functional_case.ref_id, ''), functional_case.id)
                   AND (tac.id = #{request.assetCategoryId}
                     <if test="request.includeAssetCategoryDescendants == true">

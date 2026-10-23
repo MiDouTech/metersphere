@@ -12,6 +12,13 @@
             last_exec_time = #{lastExecTime}
         WHERE id = #{id}
     </update>
+    <update id="updateActiveSummaries">
+        UPDATE test_plan_functional_case r
+        JOIN test_plan p ON p.id=r.test_plan_id AND p.status&lt;&gt;'ARCHIVED'
+        SET r.last_exec_result=#{result}, r.last_exec_time=#{executedAt}
+        WHERE r.functional_case_id IN
+        <foreach collection="caseIds" item="caseId" open="(" close=")" separator=",">#{caseId}</foreach>
+    </update>
     <resultMap id="BaseResultMapDTO" type="io.metersphere.plan.dto.response.TestPlanCasePageResponse">
         <result column="tags" jdbcType="VARCHAR" property="tags" typeHandler="io.metersphere.handler.ListTypeHandler" />
     </resultMap>
@@ -24,13 +31,13 @@
     </update>
     <select id="selectIdByTestPlanIdOrderByPos" resultType="java.lang.String">
         SELECT id
-        FROM test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         WHERE test_plan_id = #{testPlanId}
         ORDER BY pos ASC
     </select>
     <select id="selectIdByTestPlanIds" resultType="java.lang.String">
         SELECT id
-        FROM test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         WHERE test_plan_id IN
         <foreach collection="testPlanIds" item="item" index="index" open="(" close=")" separator=",">
             #{item}
@@ -38,7 +45,7 @@
     </select>
     <select id="getMaxPosByTestPlanId" resultType="java.lang.Long">
         SELECT max(pos)
-        FROM test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         WHERE test_plan_id = #{0}
     </select>
     <select id="getIdByParam"
@@ -61,7 +68,7 @@
         </if>
         <if test="repeatCase == false">
             AND id NOT IN
-            (SELECT functional_case_id FROM test_plan_functional_case WHERE test_plan_id = #{testPlanId})
+            (SELECT functional_case_id FROM plan_functional_case_effective test_plan_functional_case WHERE test_plan_id = #{testPlanId})
         </if>
         <if test="orderString != null ">
             ORDER BY #{orderString}
@@ -71,8 +78,7 @@
     <select id="getIds" resultType="java.lang.String">
         SELECT
         test_plan_functional_case.id as id
-        FROM
-        test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         LEFT JOIN functional_case ON test_plan_functional_case.functional_case_id = functional_case.id
         WHERE
         test_plan_functional_case.test_plan_id = #{request.testPlanId}
@@ -82,14 +88,14 @@
 
     <select id="selectDragInfoById" resultType="io.metersphere.project.dto.DropNode">
         SELECT id, pos
-        FROM test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         WHERE id = #{0}
     </select>
     <select id="selectNodeByPosOperator"
             parameterType="io.metersphere.project.dto.NodeSortQueryParam"
             resultType="io.metersphere.project.dto.DropNode">
         SELECT id, pos
-        FROM test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         WHERE test_plan_collection_id = #{parentId}
         <if test="operator == 'moreThan'">
             AND pos &gt; #{pos}
@@ -133,7 +139,7 @@
         from
         functional_case
         inner join project on functional_case.project_id = project.id
-        inner join test_plan_functional_case on functional_case.id = test_plan_functional_case.functional_case_id
+        inner join plan_functional_case_effective test_plan_functional_case on functional_case.id = test_plan_functional_case.functional_case_id
         inner join project_version ON functional_case.version_id = project_version.id
         inner join test_plan_collection on test_plan_collection.id = test_plan_functional_case.test_plan_collection_id
         where functional_case.deleted = #{deleted}
@@ -559,9 +565,7 @@
             <when test="request.refId != null and request.refId != ''">
                 and ${versionTable}.ref_id = #{request.refId}
             </when>
-            <otherwise>
-                and ${versionTable}.latest = 1
-            </otherwise>
+            <!-- Membership pins the exact case ID; non-latest versions remain valid plan members. -->
         </choose>
     </sql>
 
@@ -610,7 +614,7 @@
     <select id="selectRootIdByTestPlanId" resultType="io.metersphere.functional.dto.ProjectOptionDTO">
         SELECT fc.module_id as id, fc.project_id as name, p.name as projectName
         FROM functional_case fc
-                 LEFT JOIN test_plan_functional_case tpfc ON tpfc.functional_case_id = fc.id
+                 LEFT JOIN plan_functional_case_effective tpfc ON tpfc.functional_case_id = fc.id
                  LEFT JOIN project p ON fc.project_id = p.id
         WHERE tpfc.test_plan_id = #{testPlanId}
           AND fc.deleted = false
@@ -624,7 +628,7 @@
         WHERE fcm.id IN
               (SELECT fc.module_id
                FROM functional_case fc
-                        LEFT JOIN test_plan_functional_case tpfc ON tpfc.functional_case_id = fc.id
+                        LEFT JOIN plan_functional_case_effective tpfc ON tpfc.functional_case_id = fc.id
                WHERE tpfc.test_plan_id = #{testPlanId}
                  AND fc.deleted = false)
         ORDER BY pos
@@ -634,7 +638,7 @@
         SELECT CASE WHEN functional_case.module_id = 'root' THEN concat(functional_case.project_id, '_',
         functional_case.module_id) ElSE functional_case.module_id END AS moduleId,
         count(functional_case.id) As dataCount, functional_case.project_id As projectId, project.name As projectName
-        FROM test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         LEFT JOIN functional_case ON test_plan_functional_case.functional_case_id = functional_case.id
         LEFT JOIN project ON functional_case.project_id = project.id
         WHERE test_plan_functional_case.test_plan_id = #{request.testPlanId}
@@ -646,7 +650,7 @@
     <select id="caseCount"
             resultType="java.lang.Long">
         SELECT count(functional_case.id)
-        FROM test_plan_functional_case LEFT JOIN functional_case ON test_plan_functional_case.functional_case_id =
+        FROM plan_functional_case_effective test_plan_functional_case LEFT JOIN functional_case ON test_plan_functional_case.functional_case_id =
         functional_case.id
         WHERE test_plan_functional_case.test_plan_id = #{request.testPlanId}
         AND functional_case.deleted = #{deleted}
@@ -655,7 +659,7 @@
 
     <select id="getPlanFunctionalCaseByIds" resultType="io.metersphere.plan.domain.TestPlanFunctionalCase">
         select tpfc.test_plan_id testPlanId, tpfc.functional_case_id functionalCaseId, tpfc.last_exec_result lastExecResult, tpfc.execute_user executeUser
-        from test_plan_functional_case tpfc join functional_case fc on fc.id = tpfc.functional_case_id
+        from plan_functional_case_effective tpfc join functional_case fc on fc.id = tpfc.functional_case_id
         <where>
             fc.deleted = false
             <if test="planIds != null and planIds.size() > 0">
@@ -669,7 +673,7 @@
 
     <select id="getPlanCaseNotDeletedByCollectionIds" resultType="io.metersphere.plan.domain.TestPlanFunctionalCase">
         SELECT t.*
-        from test_plan_functional_case t
+        from plan_functional_case_effective t
         INNER JOIN functional_case f ON t.functional_case_id = f.id
         WHERE t.test_plan_collection_id IN
         <foreach collection="collectionIds" item="collectionId" separator="," open="(" close=")">
@@ -680,7 +684,7 @@
 
     <select id="selectCaseExecResultCount" resultType="io.metersphere.plan.dto.TestPlanCaseRunResultCount">
         select test_plan_functional_case.last_exec_result as result, count(test_plan_functional_case.id) as resultCount
-        from test_plan_functional_case
+        from plan_functional_case_effective test_plan_functional_case
                  INNER JOIN functional_case ON test_plan_functional_case.functional_case_id = functional_case.id
         where test_plan_id = #{0}
           AND functional_case.deleted = false
@@ -689,7 +693,7 @@
     <select id="selectByTestPlanIdAndNotDeleted"
             resultType="io.metersphere.plan.domain.TestPlanFunctionalCase">
         SELECT t.*
-        from test_plan_functional_case t
+        from plan_functional_case_effective t
                  INNER JOIN functional_case f ON t.functional_case_id = f.id
         WHERE test_plan_id = #{0}
           AND f.deleted = false
@@ -718,7 +722,7 @@
 
     <select id="getMaxPosByCollectionId" resultType="java.lang.Long">
         SELECT max(pos)
-        FROM test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         WHERE test_plan_collection_id = #{0}
     </select>
 
@@ -728,7 +732,7 @@
         count( test_plan_functional_case.id ) AS dataCount
         FROM
         functional_case
-        INNER JOIN test_plan_functional_case ON functional_case.id = test_plan_functional_case.functional_case_id
+        INNER JOIN plan_functional_case_effective test_plan_functional_case ON functional_case.id = test_plan_functional_case.functional_case_id
         WHERE
         functional_case.deleted = FALSE
         AND test_plan_functional_case.test_plan_id = #{request.testPlanId}
@@ -750,7 +754,7 @@
                             ELSE 'PENDING'
                             END               AS execResult,
                         test_plan.group_id    AS testPlanGroupId
-        from test_plan_functional_case resource
+        from plan_functional_case_effective resource
                  INNER JOIN test_plan ON test_plan.id = resource.test_plan_id
                  INNER JOIN functional_case ON resource.functional_case_id = functional_case.id
         where test_plan.project_id = #{projectId}
@@ -759,7 +763,7 @@
     </select>
     <select id="selectTestPlanIdByFunctionCaseId" resultType="java.lang.String">
         SELECT DISTINCT test_plan_id
-        FROM test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         WHERE functional_case_id = #{0}
     </select>
     <select id="selectDistinctExecResultByTestPlanIds"
@@ -777,7 +781,7 @@
         ELSE 'PENDING'
         END AS execResult,
         test_plan.group_id AS testPlanGroupId
-        from test_plan_functional_case resource
+        from plan_functional_case_effective resource
         INNER JOIN functional_case funcCase ON resource.functional_case_id = funcCase.id
         INNER JOIN test_plan ON test_plan.id = resource.test_plan_id
         where resource.test_plan_id IN
@@ -790,8 +794,7 @@
     <select id="selectIdsByProjectIdsOrCollectionIds" resultType="java.lang.String">
         SELECT
         test_plan_functional_case.id
-        FROM
-        test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         LEFT JOIN functional_case ON test_plan_functional_case.functional_case_id = functional_case.id
         WHERE
         test_plan_functional_case.test_plan_id = #{request.testPlanId}
@@ -823,8 +826,7 @@
     <select id="selectIdsByModuleIds" resultType="java.lang.String">
         SELECT
         test_plan_functional_case.id
-        FROM
-        test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         LEFT JOIN functional_case ON test_plan_functional_case.functional_case_id = functional_case.id
         WHERE
         test_plan_functional_case.test_plan_id = #{request.testPlanId}
@@ -839,8 +841,7 @@
     <select id="selectIdsByRootIds" resultType="java.lang.String">
         SELECT
         test_plan_functional_case.id
-        FROM
-        test_plan_functional_case
+        FROM plan_functional_case_effective test_plan_functional_case
         LEFT JOIN functional_case ON test_plan_functional_case.functional_case_id = functional_case.id
         WHERE
             functional_case.deleted = false
@@ -864,7 +865,7 @@
         THEN 'PENDING'
         ELSE resource.last_exec_result
         END AS execResult
-        FROM test_plan_functional_case resource
+        FROM plan_functional_case_effective resource
         INNER JOIN test_plan ON test_plan.id = resource.test_plan_id
         INNER JOIN functional_case funcCase ON resource.functional_case_id = funcCase.id
         WHERE resource.test_plan_id IN
@@ -878,7 +879,7 @@
         select resource.test_plan_id     AS testPlanId,
                resource.last_exec_result AS execResult,
                test_plan.group_id        AS testPlanGroupId
-        from test_plan_functional_case resource
+        from plan_functional_case_effective resource
                  INNER JOIN test_plan ON test_plan.id = resource.test_plan_id
                  INNER JOIN functional_case ON resource.functional_case_id = functional_case.id
         where test_plan.project_id = #{projectId}

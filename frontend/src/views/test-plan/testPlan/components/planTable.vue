@@ -387,6 +387,7 @@
   } from '@/api/modules/test-plan/testPlan';
   import { NAV_NAVIGATION } from '@/config/workbench';
   import { useI18n } from '@/hooks/useI18n';
+  import useListRefresh from '@/hooks/useListRefresh';
   import useModal from '@/hooks/useModal';
   import { useAppStore, useTableStore } from '@/store';
   import useCacheStore from '@/store/modules/cache/cache';
@@ -1755,12 +1756,7 @@
     }
   });
 
-  onActivated(() => {
-    // keep-alive 返回时保留筛选、分页和滚动等现场；如果当前没有任何数据，必须兜底拉取，避免进入测试计划后列表空白。
-    if (!propsRes.value.data?.length) {
-      fetchData();
-    }
-  });
+  useListRefresh(refreshPreserveState, () => !!appStore.currentProjectId);
 
   defineExpose({
     fetchData,

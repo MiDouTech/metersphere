@@ -10,6 +10,16 @@ class AgentSafeErrorMapperTests {
     private final AgentSafeErrorMapper mapper = new AgentSafeErrorMapper();
 
     @Test
+    void mapsTypedConflictIndependentlyOfLocalizedMessage() {
+        var result = mapper.toApiError(new MSException(
+                io.metersphere.system.controller.handler.result.MsHttpResultCode.CONFLICT,
+                "technical conflict details must not escape"), "conflict-trace");
+        assertEquals("VERSION_CONFLICT", result.getCode());
+        assertEquals("conflict-trace", result.getTraceId());
+        assertFalse(result.getMessage().contains("technical"));
+    }
+
+    @Test
     void preservesTypedPermissionErrorAndDiscardsRawMessage() {
         var result = mapper.toApiError(new MSException(io.metersphere.agent.constants.AgentErrorCode.SCOPE_DENIED, "SQL password=secret"), "typed-trace");
         assertEquals("SCOPE_DENIED", result.getCode());assertFalse(result.getMessage().contains("secret"));

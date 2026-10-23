@@ -55,7 +55,11 @@ public class AgentBusinessAccess {
     }
 
     public void plan(String projectId, String planId) {
-        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM test_plan WHERE id=? AND project_id=? AND deleted=0", Long.class, planId, projectId);
+        AgentToken actor = AgentTokenContext.get();
+        if (actor == null || !userHasPermission(actor.getUserId(), projectId,
+                io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ)) throw denied();
+        // Plans are physically deleted; unlike functional_case, test_plan has no deleted column.
+        Long count = jdbc.queryForObject("SELECT COUNT(*) FROM test_plan WHERE id=? AND project_id=? AND type='TEST_PLAN'", Long.class, planId, projectId);
         if (count == null || count != 1) throw denied();
     }
 

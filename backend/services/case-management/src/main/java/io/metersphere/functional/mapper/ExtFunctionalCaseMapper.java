@@ -22,6 +22,9 @@ import java.util.Set;
  */
 public interface ExtFunctionalCaseMapper {
 
+    List<io.metersphere.functional.domain.FunctionalCaseBlob> getAgentContent(
+            @Param("caseIds") List<String> caseIds, @Param("includeSteps") boolean includeSteps);
+
     Long getPos(@Param("projectId") String projectId);
 
     Long getWorkspacePos(@Param("workspaceId") String workspaceId);

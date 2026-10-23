@@ -22,10 +22,18 @@ public class AgentFunctionalCaseExportService {
         if (CollectionUtils.isEmpty(cases)) {
             return;
         }
-        String userId = SessionUtils.getUserId();
-        for (AgentCaseDTO item : cases) {
-            FunctionalCaseDetailDTO detail = functionalCaseService.getFunctionalCaseDetail(item.getCaseId(), userId, false);
-            agentCaseSchemaMapper.enrichDetail(item, detail, warnings);
+        for (int start = 0; start < cases.size(); start += 200) {
+            List<AgentCaseDTO> chunk = cases.subList(start, Math.min(start + 200, cases.size()));
+            String projectId = chunk.getFirst().getProjectId();
+            if (projectId == null || chunk.stream().anyMatch(item -> !projectId.equals(item.getProjectId())))
+                throw new io.metersphere.sdk.exception.MSException("单批读取必须属于同一个已授权项目");
+            var details = functionalCaseService.getAgentCaseDetails(chunk.stream().map(AgentCaseDTO::getCaseId).toList(), projectId, true);
+            for (AgentCaseDTO item : chunk) {
+                FunctionalCaseDetailDTO detail = details.get(item.getCaseId());
+                if (detail == null || (item.getProjectId() != null && !item.getProjectId().equals(detail.getProjectId())))
+                    throw new io.metersphere.sdk.exception.MSException("用例已变更或无权访问，请重新检索");
+                agentCaseSchemaMapper.enrichDetail(item, detail, warnings);
+            }
         }
     }
 }

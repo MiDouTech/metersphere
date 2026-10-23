@@ -26,6 +26,9 @@ public interface ExtTestPlanFunctionalCaseMapper {
 
     String lockTestPlan(String testPlanId);
 
+    int updateActiveSummaries(@Param("caseIds") List<String> caseIds,
+                              @Param("result") String result, @Param("executedAt") long executedAt);
+
     int updateSyncStatus(@Param("id") String id,
                          @Param("lastExecResult") String lastExecResult,
                          @Param("lastExecTime") Long lastExecTime);

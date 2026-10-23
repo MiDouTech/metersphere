@@ -18,8 +18,10 @@ class AgentPlanDefectSyncMySqlTests {
         jdbc=new JdbcTemplate(new DriverManagerDataSource("jdbc:mysql://127.0.0.1:13326/"+schema+"?useSSL=false&allowPublicKeyRetrieval=true","root","quality-test-only"));
         jdbc.execute("CREATE TABLE functional_case(id VARCHAR(50) PRIMARY KEY,project_id VARCHAR(50),deleted BOOLEAN,latest BOOLEAN)");
         jdbc.execute("CREATE TABLE test_plan_functional_case(id VARCHAR(50) PRIMARY KEY,functional_case_id VARCHAR(50),test_plan_id VARCHAR(50))");
+        jdbc.execute("CREATE TABLE test_plan(id VARCHAR(50) PRIMARY KEY, project_id VARCHAR(50), status VARCHAR(20))");
+        jdbc.update("INSERT INTO test_plan VALUES ('plan1','p1','NOT_ARCHIVED'),('plan2','p1','NOT_ARCHIVED')");
         jdbc.execute("CREATE TABLE bug(id VARCHAR(50) PRIMARY KEY,project_id VARCHAR(50),deleted BOOLEAN)");
-        jdbc.execute("CREATE TABLE bug_relation_case(id VARCHAR(50) PRIMARY KEY,case_id VARCHAR(50),bug_id VARCHAR(50),case_type VARCHAR(64),test_plan_id VARCHAR(50),test_plan_case_id VARCHAR(50),create_user VARCHAR(50),create_time BIGINT,update_time BIGINT)");
+        jdbc.execute("CREATE TABLE bug_relation_case(id VARCHAR(50) PRIMARY KEY,case_id VARCHAR(50),bug_id VARCHAR(50),case_type VARCHAR(64),test_plan_id VARCHAR(50),test_plan_case_id VARCHAR(50),create_user VARCHAR(50),create_time BIGINT,update_time BIGINT,sync_origin VARCHAR(16) DEFAULT 'LEGACY')");
         jdbc.update("INSERT INTO functional_case VALUES ('c1','p1',0,1),('c2','p2',0,1),('deleted','p1',1,1)");
         jdbc.update("INSERT INTO test_plan_functional_case VALUES ('r1','c1','plan1'),('r2','c1','plan2'),('r3','c2','plan1'),('r4','deleted','plan1')");
         jdbc.update("INSERT INTO bug VALUES ('b1','p1',0),('b2','p1',0),('foreign','p2',0),('removed','p1',1)");

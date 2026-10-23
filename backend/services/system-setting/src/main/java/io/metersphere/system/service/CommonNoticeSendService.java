@@ -23,6 +23,11 @@ public class CommonNoticeSendService {
 
     @Async
     public void sendNotice(String taskType, String event, List<Map> resources, User operator, String currentProjectId) {
+        sendNoticeNow(taskType, event, resources, operator, currentProjectId);
+    }
+
+    /** Used by durable outbox consumers; completion must not mean merely queued in an executor. */
+    public void sendNoticeNow(String taskType, String event, List<Map> resources, User operator, String currentProjectId) {
         setLanguage(operator.getLanguage());
         // 有批量操作发送多次
         BaseSystemConfigDTO baseSystemConfigDTO = systemParameterService.getBaseInfo();
@@ -54,7 +59,9 @@ public class CommonNoticeSendService {
                     .excludeSelf(true)
                     .relatedUsers(relatedUsers)
                     .build();
-            noticeSendService.send(taskType, noticeModel);
+            for (NoticeSendService.Delivery delivery : noticeSendService.prepareDeliveries(taskType, noticeModel)) {
+                noticeSendService.deliver(delivery);
+            }
         }
     }
 

@@ -70,9 +70,10 @@ class AgentFunctionalCaseSearchServiceTests {
         SessionUtils.setCurrentProjectId("proj-001");
         FunctionalCaseDetailDTO detail = new FunctionalCaseDetailDTO();
         detail.setId("fc-001");
+        detail.setProjectId("proj-001");
         detail.setLastExecuteUser("repository-user");
         detail.setLastExecuteUserName("库执行人");
-        when(functionalCaseService.getFunctionalCaseDetail(eq("fc-001"), any(), eq(false))).thenReturn(detail);
+        when(functionalCaseService.getAgentCaseDetails(eq(List.of("fc-001")), eq("proj-001"), anyBoolean())).thenReturn(java.util.Map.of("fc-001", detail));
         when(access.caseProject(eq("fc-001"), org.mockito.ArgumentMatchers.isNull(), any(), eq(false), any())).thenReturn("proj-001");
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
 
@@ -89,6 +90,7 @@ class AgentFunctionalCaseSearchServiceTests {
         SessionUtils.setCurrentProjectId("proj-001");
         FunctionalCaseDetailDTO detail = new FunctionalCaseDetailDTO();
         detail.setId("fc-001");
+        detail.setProjectId("proj-001");
         detail.setName("用例");
         detail.setLastExecuteUser("repository-user");
         detail.setLastExecuteUserName("库执行人");
@@ -97,7 +99,7 @@ class AgentFunctionalCaseSearchServiceTests {
         planCase.setCaseId("fc-001");
         planCase.setLastExecuteUser("plan-user");
         planCase.setLastExecuteUserName("计划执行人");
-        when(functionalCaseService.getFunctionalCaseDetail(eq("fc-001"), any(), eq(false))).thenReturn(detail);
+        when(functionalCaseService.getAgentCaseDetails(eq(List.of("fc-001")), eq("proj-001"), anyBoolean())).thenReturn(java.util.Map.of("fc-001", detail));
         when(access.caseProject(eq("fc-001"), org.mockito.ArgumentMatchers.isNull(), any(), eq(false), any())).thenReturn("proj-001");
         when(moduleTreeMatcher.flatten("proj-001")).thenReturn(List.of());
         when(testPlanFunctionalCaseService.getFunctionalCasePage(any(), eq(false), eq("proj-001")))

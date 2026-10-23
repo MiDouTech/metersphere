@@ -22,11 +22,13 @@ public class RequestTraceFilter extends OncePerRequestFilter {
         request.setAttribute("agentTraceId",id);request.setAttribute("requestId",id);
         response.setHeader("X-Request-ID",id);MDC.put("traceId",id);
         long start=System.nanoTime();
+        var previousDb = io.metersphere.system.interceptor.DatabaseQueryTelemetry.startRequest();
         try {chain.doFilter(request,response);}
         finally {
             long ms=(System.nanoTime()-start)/1_000_000;
+            var db = io.metersphere.system.interceptor.DatabaseQueryTelemetry.finishRequest(previousDb);
             Object route=request.getAttribute("org.springframework.web.servlet.HandlerMapping.bestMatchingPattern");
-            if(ms>=3000 || response.getStatus()>=500)LOG.warn("HTTP_REQUEST method={} route={} status={} durationMs={}",request.getMethod(),route==null?"UNMATCHED":route,response.getStatus(),ms);
+            if(ms>=3000 || response.getStatus()>=500)LOG.warn("HTTP_REQUEST method={} route={} status={} durationMs={} dbOperations={} dbOperationMs={}",request.getMethod(),route==null?"UNMATCHED":route,response.getStatus(),ms,db==null?0:db.operations,db==null?0:db.elapsedNanos/1_000_000);
             if(previous==null)MDC.remove("traceId");else MDC.put("traceId",previous);
         }
     }

@@ -304,6 +304,27 @@ export function syncProjectFunctionalCases(projectId: string) {
   return MSR.post<FunctionalCaseSyncResult>({ url: `${SyncProjectFunctionalCasesUrl}/${projectId}` });
 }
 
+export interface PlanCaseSyncJob {
+  id: string;
+  state: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'PARTIAL_FAILED' | 'CANCELLED';
+  counts: { state: string; total: number; updatedCount: number; defectAddedCount: number }[];
+  failures: { planId: string; code: string; traceId: string }[];
+}
+
+const syncJobsUrl = '/test-plan/functional/case/sync-jobs';
+export function createPlanCaseSyncJob(projectId: string, requestId: string) {
+  return MSR.post<PlanCaseSyncJob>({ url: syncJobsUrl, data: { projectId, requestId } });
+}
+export function getPlanCaseSyncJob(id: string) {
+  return MSR.get<PlanCaseSyncJob>({ url: `${syncJobsUrl}/${id}` }, { errorMessageMode: 'none' });
+}
+export function cancelPlanCaseSyncJob(id: string) {
+  return MSR.post<PlanCaseSyncJob>({ url: `${syncJobsUrl}/${id}/cancel` });
+}
+export function retryPlanCaseSyncJob(id: string) {
+  return MSR.post<PlanCaseSyncJob>({ url: `${syncJobsUrl}/${id}/retry` });
+}
+
 export function syncPlanFunctionalCases(testPlanId: string) {
   return MSR.post<FunctionalCaseSyncResult>({ url: `${SyncPlanFunctionalCasesUrl}/${testPlanId}` });
 }

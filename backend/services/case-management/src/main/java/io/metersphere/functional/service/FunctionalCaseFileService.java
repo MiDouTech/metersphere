@@ -119,6 +119,10 @@ public class FunctionalCaseFileService {
     private NoticeSendService noticeSendService;
     @Resource
     private UserMapper userMapper;
+    @Resource
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+    @org.springframework.beans.factory.annotation.Value("${ms.import.write-timeout-seconds:120}")
+    private int importWriteTimeoutSeconds = 120;
 
     /**
      * 下载excel导入模板
@@ -344,6 +348,7 @@ public class FunctionalCaseFileService {
      * @param user
      * @param file
      */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public FunctionalCaseImportResponse importExcel(FunctionalCaseImportRequest request, SessionUser user, MultipartFile file) {
         if (file == null) {
             throw new MSException(Translator.get("file_cannot_be_null"));
@@ -366,8 +371,13 @@ public class FunctionalCaseFileService {
             EasyExcel.read(file.getInputStream(), null, new FunctionalCasePretreatmentListener(mergeInfoSet))
                     .extraRead(CellExtraTypeEnum.MERGE).sheet().doRead();
             FunctionalCaseImportEventListener eventListener = new FunctionalCaseImportEventListener(request, clazz, customFields, mergeInfoSet, user, lasePos);
+            eventListener.deferWrites();
             FunctionalLegacyImportService.stage("PARSING", 0);
             EasyExcelFactory.read(file.getInputStream(), eventListener).sheet().doRead();
+            FunctionalLegacyImportService.stage("WRITING", eventListener.getSuccessCount());
+            var writeTransaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+            writeTransaction.setTimeout(importWriteTimeoutSeconds);
+            writeTransaction.executeWithoutResult(status -> eventListener.writePrepared());
             response.setErrorMessages(eventListener.getErrList());
             response.setSuccessCount(eventListener.getSuccessCount());
             response.setFailCount(eventListener.getErrList().size());

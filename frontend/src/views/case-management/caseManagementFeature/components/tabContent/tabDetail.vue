@@ -1183,13 +1183,20 @@
   }
 
   // 获取详情
+  let loadedBodySnapshot = '';
+  let detailsSequence = 0;
   async function getDetails() {
+    const sequence = ++detailsSequence;
+    const { id } = detailForm.value;
+    const projectId = currentProjectId.value;
     const { steps, attachments } = detailForm.value;
     setStepData(steps);
+    loadedBodySnapshot = serializeCaseBody();
     const fileIds = (attachments || []).map((item: any) => item.id);
     if (fileIds.length) {
       await getCheckFileIds(fileIds);
     }
+    if (sequence !== detailsSequence || id !== detailForm.value.id || projectId !== currentProjectId.value) return;
 
     attachmentsList.value = attachments || [];
     // 处理文件列表
@@ -1450,6 +1457,7 @@
   });
 
   onBeforeUnmount(() => {
+    detailsSequence += 1;
     document.removeEventListener('paste', onDocumentPaste, true);
   });
 
@@ -1459,6 +1467,10 @@
     stepData,
     fileList,
     hasValidAttachment,
+    hasPendingChanges: () =>
+      (!!loadedBodySnapshot && loadedBodySnapshot !== serializeCaseBody()) ||
+      !!inlineCommentContent.value.trim() ||
+      fileList.value.some((item) => item.status === 'init' || item.status === 'uploading'),
   });
 </script>
 

@@ -1124,7 +1124,7 @@
 
   async function refresh(getCount = true) {
     if (showType.value === 'list') {
-      loadCaseList(getCount);
+      await loadCaseList(getCount);
     } else {
       if (getCount) {
         await getModuleCount();

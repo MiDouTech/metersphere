@@ -575,6 +575,7 @@
   }
 
   function loadedCase(detail: DetailCase) {
+    if (detail.projectId !== currentProjectId.value || detail.id !== props.detailId) return;
     getCaseTree();
     detailInfo.value = { ...detail };
     titleName.value = detail.name;

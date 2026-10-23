@@ -49,6 +49,7 @@
   import CaseTree from './components/caseTree.vue';
 
   import { useI18n } from '@/hooks/useI18n';
+  import useListRefresh from '@/hooks/useListRefresh';
   import useAppStore from '@/store/modules/app';
   import useTestPlanFeatureCaseStore from '@/store/modules/testPlan/testPlanFeatureCase';
 
@@ -67,7 +68,7 @@
   const appStore = useAppStore();
   const testPlanFeatureCaseStore = useTestPlanFeatureCaseStore();
 
-  const planId = ref(route.query.id as string);
+  const planId = computed(() => route.query.id as string);
   const modulesCount = computed(() => testPlanFeatureCaseStore.modulesCount);
 
   const caseTableRef = ref<InstanceType<typeof CaseTable>>();
@@ -122,6 +123,14 @@
     caseTreeRef.value?.initModules();
     caseTableRef.value?.refresh();
   }
+
+  useListRefresh(
+    async () => {
+      await caseTreeRef.value?.initModules();
+      await caseTableRef.value?.refresh();
+    },
+    () => !!planId.value && !!appStore.currentProjectId && !associateDrawerVisible.value
+  );
 </script>
 
 <style lang="less" scoped>

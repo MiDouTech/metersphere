@@ -4,7 +4,7 @@
     <springProperty scope="context" name="loggingFilePath" source="logging.file.path" defaultValue="./local-runtime/logs/metersphere"/>
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d %5p %40.40c:%4L [traceId=%X{traceId}] - %m%n</pattern>
+            <pattern>%d [%thread] %5p %40.40c:%4L [traceId=%X{traceId}] - %m%n</pattern>
         </encoder>
     </appender>
 

@@ -4,11 +4,11 @@ export default {
   'caseManagement.featureCase.unclassifiedSystem': '\u5f85\u4eba\u5de5\u5206\u7c7b',
   'caseManagement.featureCase.creatingCase': '创建用例',
   'caseManagement.featureCase.importCase': '导入用例',
-  'caseManagement.featureCase.syncStatus': '同步状态至测试计划',
+  'caseManagement.featureCase.syncStatus': '同步全部用例数据至测试计划',
   'caseManagement.featureCase.syncProjectConfirm':
-    '将当前项目中已关联用例的执行状态同步到所有未归档测试计划，并解除已删除用例的关联；新增用例不会自动加入测试计划。是否继续？',
+    '校准当前项目已关联的未归档测试计划：共享用例内容、附件、执行状态及证据、缺陷关联和状态。保留计划独立文档、分派及历史；未关联用例不会自动加入，已删除用例关联保留用于恢复。是否继续？',
   'caseManagement.featureCase.syncPlanConfirm':
-    '将当前项目中已关联用例的执行状态同步到当前测试计划，并解除已删除用例的关联；新增用例不会自动加入测试计划。是否继续？',
+    '校准当前计划已关联用例的共享内容、附件、执行状态及证据、缺陷关联和状态；保留计划独立数据、历史和可恢复关联，不自动加入新用例。是否继续？',
   'caseManagement.featureCase.syncSuccess': '同步完成：{plans} 个测试计划，更新 {updated} 条，删除 {removed} 条',
   'caseManagement.featureCase.importExcel': 'Excel 导入',
   'caseManagement.featureCase.importXmind': 'Xmind 导入',

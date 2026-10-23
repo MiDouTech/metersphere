@@ -176,6 +176,7 @@
   } from '@/api/modules/test-plan/testPlan';
   import { defaultDetailCount, testPlanDefaultDetail } from '@/config/testPlan';
   import { useI18n } from '@/hooks/useI18n';
+  import useListRefresh from '@/hooks/useListRefresh';
   import useModal from '@/hooks/useModal';
   import useAppStore from '@/store/modules/app';
   import useCacheStore from '@/store/modules/cache/cache';
@@ -471,8 +472,10 @@
 
   const testPlanTree = ref<ModuleTreeNode[]>([]);
   async function initPlanTree() {
+    const projectId = appStore.currentProjectId;
     try {
-      testPlanTree.value = await getTestPlanModule({ projectId: appStore.currentProjectId });
+      const tree = await getTestPlanModule({ projectId });
+      if (projectId === appStore.currentProjectId) testPlanTree.value = tree;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -588,10 +591,17 @@
     },
     { immediate: true }
   );
-  let activatedOnce = false;
-  onActivated(() => {
-    if (activatedOnce && !loading.value) initDetail();
-    activatedOnce = true;
+  useListRefresh(initDetail, () => {
+    const status = planTabRef.value?.getAutoSaveStatus?.();
+    return (
+      route.name === TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL &&
+      !!planId.value &&
+      !!appStore.currentProjectId &&
+      !loading.value &&
+      !showPlanDrawer.value &&
+      !minderStore.minderUnsaved &&
+      !['dirty', 'error', 'saving'].includes(status || '')
+    );
   });
   onBeforeUnmount(() => {
     detailSequence += 1;
