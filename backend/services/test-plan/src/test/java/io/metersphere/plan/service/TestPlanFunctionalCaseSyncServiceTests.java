@@ -71,7 +71,7 @@ class TestPlanFunctionalCaseSyncServiceTests {
     }
 
     @Test
-    void syncPlanUpdatesAndRemovesAssociatedCasesWithoutAddingNewCases() {
+    void syncPlanPreservesPinnedVersionsAndRecoverableMembershipWithoutAddingNewCases() {
         TestPlan plan = plan(TestPlanConstants.TEST_PLAN_STATUS_NOT_ARCHIVED);
         when(testPlanMapper.selectByPrimaryKey("plan-1")).thenReturn(plan);
         when(extRelationMapper.lockTestPlan("plan-1")).thenReturn("plan-1");
@@ -96,9 +96,9 @@ class TestPlanFunctionalCaseSyncServiceTests {
         assertEquals(1, response.getPlanCount());
         assertEquals(0, response.getAddedCount());
         assertEquals(1, response.getUpdatedCount());
-        assertEquals(2, response.getRemovedCount());
-        verify(relationMapper).deleteByExample(any());
-        verify(historyMapper).updateDeleted(anyList(), org.mockito.ArgumentMatchers.eq(true));
+        assertEquals(0, response.getRemovedCount());
+        verify(relationMapper, never()).deleteByExample(any());
+        verify(historyMapper, never()).updateDeleted(anyList(), org.mockito.ArgumentMatchers.eq(true));
         verify(relationMapper, never()).batchInsert(anyList());
     }
 

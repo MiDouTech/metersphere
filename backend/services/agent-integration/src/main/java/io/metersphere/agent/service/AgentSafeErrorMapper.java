@@ -12,6 +12,10 @@ import java.util.UUID;
 public class AgentSafeErrorMapper {
     public AgentApiErrorDTO toApiError(Throwable error, String suppliedTraceId) {
         String traceId = StringUtils.defaultIfBlank(suppliedTraceId, UUID.randomUUID().toString());
+        if (error instanceof MSException business
+                && business.getErrorCode() == io.metersphere.system.controller.handler.result.MsHttpResultCode.CONFLICT) {
+            return new AgentApiErrorDTO("VERSION_CONFLICT", safeMessage("VERSION_CONFLICT"), Map.of(), traceId);
+        }
         if (error instanceof MSException business && business.getErrorCode() instanceof io.metersphere.agent.constants.AgentErrorCode code) {
             return new AgentApiErrorDTO(code.name(), safeMessage(code.name()), Map.of(), traceId);
         }
@@ -20,7 +24,7 @@ public class AgentSafeErrorMapper {
         }
         if (error instanceof MSException) {
             String commentCode = switch (StringUtils.defaultString(error.getMessage())) {
-                case "评论已被更新，请刷新后重试" -> "VERSION_CONFLICT";
+                case "评论已被更新，请刷新后重试", "评论已变更，请刷新后重试" -> "VERSION_CONFLICT";
                 case "只能编辑当前用例中本人创建的评论" -> "AGENT_PERMISSION_DENIED";
                 case "用例已删除，不能编辑评论" -> "RESOURCE_NOT_FOUND";
                 case "请刷新评论后重试，评论内容不能为空或超过限制" -> "AGENT_VALIDATION_ERROR";

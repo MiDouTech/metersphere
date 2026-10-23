@@ -21,7 +21,8 @@
     </template>
 
     <template #operation="{ record }">
-      <MsButton v-permission="['FUNCTIONAL_CASE:READ+UPDATE']" @click="cancelLink(record.id)">{{
+      <span v-if="record.relationOrigin === 'SOURCE_SYNC'" class="text-[var(--color-text-3)]">来自源用例</span>
+      <MsButton v-else v-permission="['FUNCTIONAL_CASE:READ+UPDATE']" @click="cancelLink(record.id)">{{
         t('caseManagement.featureCase.cancelLink')
       }}</MsButton>
     </template>

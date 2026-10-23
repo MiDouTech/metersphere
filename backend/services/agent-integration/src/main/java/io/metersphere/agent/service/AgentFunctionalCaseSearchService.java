@@ -38,7 +38,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(rollbackFor = Exception.class)
+@Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
 public class AgentFunctionalCaseSearchService {
     @Resource
     private AgentQueryResolver agentQueryResolver;
@@ -71,6 +71,10 @@ public class AgentFunctionalCaseSearchService {
                 ? searchInTestPlan(request, projectId, condition, modulePathMap)
                 : searchInRepository(request, projectId, condition, modulePathMap);
         List<AgentCaseDTO> cases = page.cases();
+        cases.forEach(item -> {
+            if (StringUtils.isBlank(item.getProjectId())) item.setProjectId(projectId);
+            else if (!projectId.equals(item.getProjectId())) throw new MSException("用例已变更或无权访问，请重新检索");
+        });
         boolean includeSteps = request.getIncludeSteps() == null || request.getIncludeSteps();
         AgentCaseSearchResponse response = buildResponse(condition, cases, page.total());
         response.setProjectId(projectId);
@@ -94,8 +98,8 @@ public class AgentFunctionalCaseSearchService {
     public AgentCaseDTO getById(String caseId, boolean includeSteps, String testPlanId) {
         String projectId = access.caseProject(caseId, null, PermissionConstants.FUNCTIONAL_CASE_READ, false, AgentTokenScope.FUNCTIONAL_READ);
         if (StringUtils.isNotBlank(testPlanId)) access.plan(projectId, testPlanId);
-        String userId = StringUtils.defaultIfBlank(SessionUtils.getUserId(), AgentExecutionActorContext.get());
-        FunctionalCaseDetailDTO detail = functionalCaseService.getFunctionalCaseDetail(caseId, userId, false);
+        FunctionalCaseDetailDTO detail = functionalCaseService.getAgentCaseDetails(List.of(caseId), projectId, includeSteps).get(caseId);
+        if (detail == null || !projectId.equals(detail.getProjectId())) throw new MSException("用例已变更或无权访问，请重新检索");
         AgentCaseDTO agentCase = new AgentCaseDTO();
         agentCase.setCaseId(detail.getId());
         agentCase.setNum(detail.getNum());

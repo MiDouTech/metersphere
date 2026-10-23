@@ -3,7 +3,7 @@
 <mapper namespace="io.metersphere.plan.mapper.ExtTestPlanBugMapper">
     <select id="list" parameterType="io.metersphere.plan.dto.request.TestPlanBugPageRequest" resultType="io.metersphere.plan.dto.response.TestPlanBugPageResponse">
         select b.id as id, b.num as num, b.title as title, bc.description content, b.handle_user handleUser, b.status as status, b.create_user createUser, b.create_time createTime
-        from bug_relation_case brc join bug b on brc.bug_id = b.id
+        from plan_case_effective_bug_relation brc join bug b on brc.bug_id = b.id
         left join bug_content bc on b.id = bc.bug_id
         where brc.test_plan_id = #{request.planId} and b.deleted = false
         <if test="request.keyword != null and request.keyword != ''">
@@ -25,7 +25,7 @@
 
     <select id="countBugByIds" resultType="io.metersphere.plan.dto.response.TestPlanBugPageResponse">
         select b.id as id, b.num as num, b.title as title, bc.description content, b.handle_user handleUser, b.status as status, b.create_user createUser, b.create_time createTime,brc.test_plan_id testPlanId
-        from bug_relation_case brc join bug b on brc.bug_id = b.id
+        from plan_case_effective_bug_relation brc join bug b on brc.bug_id = b.id
         left join bug_content bc on b.id = bc.bug_id
         <where>
             b.deleted = false
@@ -41,7 +41,7 @@
 
     <select id="selectBugCountByPlanId" resultType="io.metersphere.plan.dto.response.TestPlanBugPageResponse">
         select b.id as id, b.num as num, b.title as title, bc.description content, b.handle_user handleUser, b.status as status, b.create_user createUser, b.create_time createTime,brc.test_plan_id testPlanId
-        from bug_relation_case brc join bug b on brc.bug_id = b.id
+        from plan_case_effective_bug_relation brc join bug b on brc.bug_id = b.id
         left join bug_content bc on b.id = bc.bug_id
         <where>
             b.deleted = false
@@ -52,7 +52,7 @@
 
     <select id="selectPlanRelationBug" resultType="io.metersphere.plan.dto.response.TestPlanBugPageResponse">
         select b.id as id, b.num as num, b.title as title, bc.description content, b.handle_user handleUser, b.status as status, brc.create_user createUser, brc.create_time createTime,brc.test_plan_id testPlanId
-        from bug_relation_case brc join bug b on brc.bug_id = b.id
+        from plan_case_effective_bug_relation brc join bug b on brc.bug_id = b.id
         left join bug_content bc on b.id = bc.bug_id
         <where>
             b.deleted = false
@@ -64,7 +64,7 @@
 
     <select id="getBugRelatedCase" resultType="io.metersphere.plan.dto.TestPlanBugCaseDTO">
         select brc.case_id as id, fc.num as num, 'FUNCTIONAL' as type, brc.bug_id as bugId, fc.name as name, fc.project_id as projectId
-            from bug_relation_case brc
+            from plan_case_effective_bug_relation brc
             join functional_case fc on brc.case_id = fc.id
         where brc.test_plan_id = #{planId}
         and brc.bug_id in
@@ -73,7 +73,7 @@
         </foreach>
         union all
         select brc.case_id as id, atc.num as num, 'API' as type, brc.bug_id as bugId, atc.name as name, atc.project_id as projectId
-            from bug_relation_case brc
+            from plan_case_effective_bug_relation brc
             join api_test_case atc on brc.case_id = atc.id
         where brc.test_plan_id = #{planId}
         and brc.bug_id in
@@ -82,7 +82,7 @@
         </foreach>
         union all
         select brc.case_id as id, asi.num as num, 'SCENARIO' as type, brc.bug_id as bugId, asi.name as name, asi.project_id as projectId
-            from bug_relation_case brc
+            from plan_case_effective_bug_relation brc
             join api_scenario asi on brc.case_id = asi.id
         where brc.test_plan_id = #{planId}
         and brc.bug_id in
@@ -93,7 +93,7 @@
 
     <select id="getBugRelatedCaseByCaseIds" resultType="io.metersphere.plan.dto.TestPlanBugCaseDTO">
         select brc.case_id as id, brc.bug_id as bugId
-        from bug_relation_case brc
+        from plan_case_effective_bug_relation brc
         where brc.test_plan_id = #{planId}
         and brc.bug_id in
         <foreach collection="ids" item="id" separator="," open="(" close=")">
@@ -108,7 +108,7 @@
 
     <select id="getCaseRelatedBug" resultType="io.metersphere.plan.dto.TestPlanCaseBugDTO">
         select brc.id as id, b.num as num, b.title as title, b.status as status, brc.test_plan_case_id as planCaseRefId
-        from bug_relation_case brc
+        from plan_case_effective_bug_relation brc
            join bug b on brc.bug_id = b.id
         where b.deleted = false and brc.test_plan_case_id in
         <foreach collection="ids" item="id" separator="," open="(" close=")">

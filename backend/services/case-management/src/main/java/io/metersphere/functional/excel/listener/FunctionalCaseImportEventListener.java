@@ -89,6 +89,22 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
 
     private AtomicLong lastPos;
     private java.util.function.BiConsumer<String,FunctionalCaseExcelData> preparedItem;
+    private boolean deferWrites;
+    private final List<List<FunctionalCaseExcelData>> preparedCreates = new ArrayList<>();
+    private final List<List<FunctionalCaseExcelData>> preparedUpdates = new ArrayList<>();
+
+    /** Parse/validate without holding the business write transaction. */
+    public void deferWrites() { this.deferWrites = true; }
+
+    /** Caller supplies the atomic business transaction; preserve original batch ordering. */
+    public void writePrepared() {
+        for (int i = 0; i < preparedCreates.size(); i++) {
+            writeBatch(preparedCreates.get(i), preparedUpdates.get(i));
+        }
+        preparedCreates.clear();
+        preparedUpdates.clear();
+        customFieldsMap.clear();
+    }
     /** Parse through the existing validation/merge rules without writing business data. */
     public void collectPreparedItems(java.util.function.BiConsumer<String,FunctionalCaseExcelData> consumer) {
         this.preparedItem=Objects.requireNonNull(consumer);
@@ -208,7 +224,7 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
         this.successCount += list.size() + updateList.size();
         list.clear();
         updateList.clear();
-        customFieldsMap.clear();
+        if (!deferWrites) customFieldsMap.clear();
     }
 
 
@@ -221,12 +237,20 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
             updateList.forEach(item->preparedItem.accept("UPDATE",item));
             return;
         }
-        if (CollectionUtils.isNotEmpty(list)) {
-            functionalCaseService.saveImportData(list, request, moduleTree, customFieldsMap, pathMap, user, lastPos);
+        if (deferWrites) {
+            preparedCreates.add(new ArrayList<>(list));
+            preparedUpdates.add(new ArrayList<>(updateList));
+            return;
         }
+        writeBatch(list, updateList);
+    }
 
-        if (CollectionUtils.isNotEmpty(updateList)) {
-            functionalCaseService.updateImportData(updateList, request, moduleTree, customFieldsMap, pathMap, user);
+    private void writeBatch(List<FunctionalCaseExcelData> creates, List<FunctionalCaseExcelData> updates) {
+        if (CollectionUtils.isNotEmpty(creates)) {
+            functionalCaseService.saveImportData(creates, request, moduleTree, customFieldsMap, pathMap, user, lastPos);
+        }
+        if (CollectionUtils.isNotEmpty(updates)) {
+            functionalCaseService.updateImportData(updates, request, moduleTree, customFieldsMap, pathMap, user);
         }
     }
 

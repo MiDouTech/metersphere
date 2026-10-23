@@ -195,6 +195,15 @@ public class FunctionalCaseService {
     private io.metersphere.system.edit.service.ResourceEditService resourceEditService;
     @Resource
     private ApplicationEventPublisher applicationEventPublisher;
+    @Lazy
+    @Resource
+    private FunctionalImportEffectOutbox importEffectOutbox;
+
+    public void publishImportedCaseAsset(String caseId, String userId) {
+        FunctionalCase functionalCase = functionalCaseMapper.selectByPrimaryKey(caseId);
+        if (functionalCase != null && !Boolean.TRUE.equals(functionalCase.getDeleted()))
+            publishTestAssetCaseChange(functionalCase, userId, "IMPORT");
+    }
 
     public FunctionalCase addFunctionalCase(FunctionalCaseAddRequest request, List<MultipartFile> files, String userId, String organizationId) {
         String caseId = IDGenerator.nextStr();
@@ -425,6 +434,83 @@ public class FunctionalCaseService {
      * @param functionalCaseId functionalCaseId
      * @return FunctionalCaseDetailDTO
      */
+    /** Internal, bounded projection for already-authorized Agent targets; no attachment or follow queries. */
+    @Transactional(readOnly = true, timeoutString = "${ms.db.interactive-transaction-seconds:25}")
+    public Map<String, FunctionalCaseDetailDTO> getAgentCaseDetails(List<String> caseIds, String projectId, boolean includeSteps) {
+        if (CollectionUtils.isEmpty(caseIds)) return Map.of();
+        List<String> ids = caseIds.stream().filter(StringUtils::isNotBlank).distinct().toList();
+        if (ids.isEmpty()) return Map.of();
+        if (ids.size() > 200) throw new MSException("单批最多读取200条用例，请分页读取");
+        if (StringUtils.isBlank(projectId)) throw new MSException("读取用例必须指定已授权项目");
+        FunctionalCaseExample example = new FunctionalCaseExample();
+        example.createCriteria().andIdIn(ids).andProjectIdEqualTo(projectId).andDeletedEqualTo(false);
+        List<FunctionalCase> cases = functionalCaseMapper.selectByExample(example);
+        if (cases.size() != ids.size()) throw new MSException(CaseManagementResultCode.FUNCTIONAL_CASE_NOT_FOUND);
+        Map<String, FunctionalCaseBlob> blobs = extFunctionalCaseMapper.getAgentContent(ids, includeSteps).stream()
+                .collect(Collectors.toMap(FunctionalCaseBlob::getId, item -> item));
+        FunctionalCaseCustomFieldExample fields = new FunctionalCaseCustomFieldExample();
+        fields.createCriteria().andCaseIdIn(ids);
+        Map<String, List<FunctionalCaseCustomField>> values = functionalCaseCustomFieldMapper.selectByExample(fields).stream()
+                .collect(Collectors.groupingBy(FunctionalCaseCustomField::getCaseId));
+        Set<String> userIds = cases.stream().map(FunctionalCase::getLastExecuteUser).filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        Map<String, User> users = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            UserExample userExample = new UserExample();
+            userExample.createCriteria().andIdIn(new ArrayList<>(userIds));
+            userMapper.selectByExample(userExample).forEach(user -> users.put(user.getId(), user));
+        }
+        Map<String, TemplateDTO> templates = new HashMap<>();
+        Map<String, List<CustomFieldOption>> members = new HashMap<>();
+        Map<String, FunctionalCaseDetailDTO> result = new LinkedHashMap<>();
+        long bytes = 0;
+        for (FunctionalCase item : cases) {
+            FunctionalCaseDetailDTO detail = new FunctionalCaseDetailDTO();
+            BeanUtils.copyBean(detail, item);
+            FunctionalCaseBlob blob = blobs.get(item.getId());
+            if (blob == null) throw new MSException("用例正文不存在，请联系管理员核对数据");
+            byte[][] content = {blob.getSteps(), blob.getTextDescription(), blob.getExpectedResult(), blob.getDescription(), blob.getPrerequisite()};
+            for (byte[] value : content) bytes += value == null ? 0 : value.length;
+            if (bytes > 32L * 1024 * 1024) throw new MSException("用例正文过大，请减少单次读取数量");
+            detail.setDescription(agentText(blob.getDescription()));
+            detail.setPrerequisite(agentText(blob.getPrerequisite()));
+            if (includeSteps) {
+                String steps = agentText(blob.getSteps());
+                List<FunctionalCaseStepDTO> parsed = StringUtils.isBlank(steps) ? new ArrayList<>() : JSON.parseArray(steps, FunctionalCaseStepDTO.class);
+                parsed.forEach(step -> { if (StringUtils.isBlank(step.getId())) step.setId(UUID.randomUUID().toString()); });
+                detail.setSteps(JSON.toJSONString(parsed));
+                detail.setTextDescription(agentText(blob.getTextDescription()));
+                detail.setExpectedResult(agentText(blob.getExpectedResult()));
+            }
+            User executor = users.get(item.getLastExecuteUser());
+            detail.setLastExecuteUserName(executor == null ? null : executor.getName());
+            String key = item.getProjectId() + ":" + item.getTemplateId();
+            TemplateDTO template = templates.computeIfAbsent(key, ignored -> projectTemplateService.getTemplateDTOById(
+                    item.getTemplateId(), item.getProjectId(), TemplateScene.FUNCTIONAL.name()));
+            if (CollectionUtils.isNotEmpty(template.getCustomFields())) {
+                // Field values/options are mutable; never share a case's values with the next case.
+                List<TemplateCustomFieldDTO> custom = JSON.parseArray(JSON.toJSONString(template.getCustomFields()), TemplateCustomFieldDTO.class);
+                Map<String, String> caseValues = new HashMap<>();
+                values.getOrDefault(item.getId(), List.of()).forEach(value -> caseValues.put(value.getFieldId(), value.getValue()));
+                for (TemplateCustomFieldDTO field : custom) {
+                    if (StringUtils.equalsAnyIgnoreCase(field.getType(), CustomFieldType.MEMBER.name(), CustomFieldType.MULTIPLE_MEMBER.name()))
+                        field.setOptions(members.computeIfAbsent(item.getProjectId(), projectTemplateService::getMemberOptions));
+                    if (caseValues.containsKey(field.getFieldId())) {
+                        field.setDefaultValue(caseValues.get(field.getFieldId()));
+                        if (Translator.get("custom_field.functional_priority").equals(field.getFieldName())) detail.setFunctionalPriority(caseValues.get(field.getFieldId()));
+                    }
+                }
+                detail.setCustomFields(custom);
+            }
+            result.put(item.getId(), detail);
+        }
+        return result;
+    }
+
+    private static String agentText(byte[] bytes) {
+        return new String(bytes == null ? new byte[0] : bytes, StandardCharsets.UTF_8);
+    }
+
     public FunctionalCaseDetailDTO getFunctionalCaseDetail(String functionalCaseId, String userId, boolean checkDetailCount) {
         return getFunctionalCaseDetail(functionalCaseId, userId, checkDetailCount, false);
     }
@@ -1441,11 +1527,7 @@ public class FunctionalCaseService {
 
         List<Map> resources = new ArrayList<>();
         resources.addAll(JSON.parseArray(JSON.toJSONString(noticeList), Map.class));
-        commonNoticeSendService.sendNotice(NoticeConstants.TaskType.FUNCTIONAL_CASE_TASK, NoticeConstants.Event.CREATE, resources, user, request.getProjectId());
-        // 导入用例同步至默认项目对应文件夹
-        caseIds.forEach(id -> triggerHubCaseSync(request.getProjectId(), id, user.getId()));
-        caseIds.stream().map(functionalCaseMapper::selectByPrimaryKey).filter(Objects::nonNull)
-                .forEach(functionalCase -> publishTestAssetCaseChange(functionalCase, user.getId(), "IMPORT"));
+        importEffectOutbox.enqueue(request.getProjectId(), user.getId(), caseIds, resources, NoticeConstants.Event.CREATE);
     }
 
     /** 导入目标文件夹：all/root/回收站视为未选中 */
@@ -1730,9 +1812,7 @@ public class FunctionalCaseService {
 
         List<Map> resources = new ArrayList<>();
         resources.addAll(JSON.parseArray(JSON.toJSONString(noticeList), Map.class));
-        commonNoticeSendService.sendNotice(NoticeConstants.TaskType.FUNCTIONAL_CASE_TASK, NoticeConstants.Event.UPDATE, resources, user, request.getProjectId());
-        // 覆盖导入后同步枢纽
-        collect.keySet().forEach(id -> triggerHubCaseSync(request.getProjectId(), id, user.getId()));
+        importEffectOutbox.enqueue(request.getProjectId(), user.getId(), new ArrayList<>(collect.keySet()), resources, NoticeConstants.Event.UPDATE);
     }
 
     private void batchHandImportUpdateLog(FunctionalCaseHistoryLogDTO newData, Map<String, List<FunctionalCase>> collect, Map<String, List<FunctionalCaseBlob>> blobsCollect, Map<String, List<FunctionalCaseCustomField>> customFieldMap, List<LogDTO> logDTOS, SessionUser user) {

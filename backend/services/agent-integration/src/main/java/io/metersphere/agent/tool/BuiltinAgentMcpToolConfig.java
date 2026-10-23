@@ -744,7 +744,8 @@ public class BuiltinAgentMcpToolConfig {
         if(type instanceof ParameterizedType parameterized){
             Class<?> raw=(Class<?>)parameterized.getRawType();
             if(java.util.Collection.class.isAssignableFrom(raw))return Map.of("type","array","items",fieldSchema(parameterized.getActualTypeArguments()[0]));
-            if(Map.class.isAssignableFrom(raw))return Map.of("type","object","additionalProperties",true);
+            if(Map.class.isAssignableFrom(raw))return Map.of("type","object","additionalProperties",
+                    parameterized.getActualTypeArguments()[1] == Object.class ? true : fieldSchema(parameterized.getActualTypeArguments()[1]));
         }
         if(type instanceof Class<?> clazz){
             if(clazz==String.class||clazz==Character.class||clazz==char.class)return stringSchema();
@@ -758,7 +759,11 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     private static <T> T convert(Map<String, Object> arguments, Class<T> clazz) {
-        return JSON.parseObject(JSON.toJSONString(arguments), clazz);
+        try {
+            return JSON.parseObject(JSON.toJSONString(arguments), clazz);
+        } catch (Exception invalid) {
+            throw new MSException("AGENT_VALIDATION_ERROR");
+        }
     }
 
     private static String requiredString(Map<String, Object> arguments, String key) {

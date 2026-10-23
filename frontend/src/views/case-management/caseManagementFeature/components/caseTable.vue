@@ -61,6 +61,27 @@
                 >
                   {{ t('caseManagement.featureCase.syncStatus') }}
                 </a-button>
+                <a-space v-if="caseSyncJob" class="ml-2" wrap>
+                  <span>同步进度：{{ syncProgress }} · {{ syncStateLabel }}</span>
+                  <a-button v-if="caseSyncLoading" size="mini" @click="cancelSyncJob">停止后续计划同步</a-button>
+                  <a-button
+                    v-if="['PARTIAL_FAILED', 'CANCELLED'].includes(caseSyncJob.state)"
+                    size="mini"
+                    @click="retrySyncJob"
+                  >
+                    重试未完成项
+                  </a-button>
+                  <a-tooltip
+                    v-if="caseSyncJob.failures.length"
+                    :content="
+                      caseSyncJob.failures
+                        .map((item) => `计划 ${item.planId}：同步失败，参考号 ${item.traceId}`)
+                        .join('；')
+                    "
+                  >
+                    <span class="text-[rgb(var(--danger-6))]">{{ caseSyncJob.failures.length }} 项失败</span>
+                  </a-tooltip>
+                </a-space>
                 <MsAiButton
                   v-if="aiStore.aiSourceNameList.length > 0"
                   class="ml-[12px]"
@@ -625,11 +646,18 @@
     updateCaseRequest,
   } from '@/api/modules/case-management/featureCase';
   import { getCaseRelatedInfo } from '@/api/modules/project-management/menuManagement';
-  import { GetTestPlanUsers, syncProjectFunctionalCases } from '@/api/modules/test-plan/testPlan';
+  import type { PlanCaseSyncJob } from '@/api/modules/test-plan/testPlan';
+  import {
+    cancelPlanCaseSyncJob,
+    createPlanCaseSyncJob,
+    getPlanCaseSyncJob,
+    GetTestPlanUsers,
+    retryPlanCaseSyncJob,
+  } from '@/api/modules/test-plan/testPlan';
   import { NAV_NAVIGATION } from '@/config/workbench';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
-  import { useAppStore, useTableStore } from '@/store';
+  import { useAppStore, useTableStore, useUserStore } from '@/store';
   import useCacheStore from '@/store/modules/cache/cache';
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
   import useMinderStore from '@/store/modules/components/minder-editor';
@@ -1702,6 +1730,83 @@
   }
 
   const caseSyncLoading = ref(false);
+  const caseSyncJob = ref<PlanCaseSyncJob>();
+  let syncGeneration = 0;
+  let syncTimer: ReturnType<typeof setTimeout> | undefined;
+  const syncStorageKey = () => `plan-case-sync:${useUserStore().id}:${appStore.currentProjectId}`;
+  const syncProgress = computed(() => {
+    const counts = caseSyncJob.value?.counts || [];
+    const total = counts.reduce((n, item) => n + Number(item.total), 0);
+    const finished = counts.filter((item) => item.state !== 'PENDING').reduce((n, item) => n + Number(item.total), 0);
+    return `${finished}/${total}`;
+  });
+  const syncStateLabel = computed(
+    () =>
+      ({ QUEUED: '排队中', RUNNING: '同步中', SUCCEEDED: '已完成', PARTIAL_FAILED: '部分失败', CANCELLED: '已停止' }[
+        caseSyncJob.value?.state || 'QUEUED'
+      ])
+  );
+
+  function stopSyncMonitoring() {
+    syncGeneration += 1;
+    clearTimeout(syncTimer);
+    caseSyncLoading.value = false;
+  }
+
+  async function monitorSyncJob(id: string) {
+    stopSyncMonitoring();
+    const generation = syncGeneration;
+    const projectId = appStore.currentProjectId;
+    const poll = async () => {
+      if (generation !== syncGeneration || projectId !== appStore.currentProjectId) return;
+      if (document.visibilityState !== 'visible' || !navigator.onLine) {
+        syncTimer = setTimeout(poll, 3000);
+        return;
+      }
+      try {
+        const wasRunning = caseSyncJob.value && ['QUEUED', 'RUNNING'].includes(caseSyncJob.value.state);
+        const job = await getPlanCaseSyncJob(id);
+        if (generation !== syncGeneration || projectId !== appStore.currentProjectId) return;
+        caseSyncJob.value = job;
+        caseSyncLoading.value = ['QUEUED', 'RUNNING'].includes(job.state);
+        if (caseSyncLoading.value) syncTimer = setTimeout(poll, 2000);
+        else {
+          if (wasRunning && job.state === 'SUCCEEDED') Message.success('已校准全部目标计划，页面共享数据自动保持最新');
+          await initData();
+        }
+      } catch {
+        if (generation !== syncGeneration) return;
+        caseSyncLoading.value = false;
+        Message.warning('暂时无法读取同步进度，稍后重新进入页面可继续查看');
+      }
+    };
+    await poll();
+  }
+
+  function resumeSyncJob() {
+    const id = localStorage.getItem(syncStorageKey());
+    if (id) monitorSyncJob(id);
+  }
+
+  async function cancelSyncJob() {
+    if (!caseSyncJob.value) return;
+    const { id } = caseSyncJob.value;
+    const generation = syncGeneration;
+    const job = await cancelPlanCaseSyncJob(id);
+    if (generation !== syncGeneration) return;
+    stopSyncMonitoring();
+    caseSyncJob.value = job;
+  }
+
+  async function retrySyncJob() {
+    if (!caseSyncJob.value) return;
+    const { id } = caseSyncJob.value;
+    const generation = syncGeneration;
+    await retryPlanCaseSyncJob(id);
+    if (generation !== syncGeneration) return;
+    await monitorSyncJob(id);
+  }
+
   function handleSyncProjectCases() {
     openModal({
       type: 'warning',
@@ -1712,17 +1817,15 @@
       onBeforeOk: async () => {
         try {
           caseSyncLoading.value = true;
-          const result = await syncProjectFunctionalCases(appStore.currentProjectId);
-          Message.success(
-            `${t('caseManagement.featureCase.syncSuccess', {
-              plans: result.planCount,
-              updated: result.updatedCount,
-              removed: result.removedCount,
-            })}；补齐缺陷关联 ${result.defectAddedCount || 0} 条`
-          );
-          await initData();
+          const key = syncStorageKey();
+          const projectId = appStore.currentProjectId;
+          const job = await createPlanCaseSyncJob(projectId, crypto.randomUUID());
+          localStorage.setItem(key, job.id);
+          if (projectId !== appStore.currentProjectId) return;
+          caseSyncJob.value = job;
+          await monitorSyncJob(job.id);
         } finally {
-          caseSyncLoading.value = false;
+          caseSyncLoading.value = !!caseSyncJob.value && ['QUEUED', 'RUNNING'].includes(caseSyncJob.value.state);
         }
       },
       hideCancel: false,
@@ -1904,12 +2007,21 @@
   }
 
   watch(currentProjectId, () => {
+    stopSyncMonitoring();
+    caseSyncJob.value = undefined;
+    // A cached detail belongs to its original project, even when the route component is reused.
+    showDetailDrawer.value = false;
+    activeDetailId.value = '';
+    activeCaseIndex.value = 0;
+    caseViewTab.value = 'list';
+    resetSelector();
     exportContextGeneration += 1;
     stopExportPolling();
     exportingMessage.value?.close();
     showExportVisible.value = false;
     pendingExport = undefined;
     exportLoading.value = false;
+    resumeSyncJob();
   });
 
   async function cancelExport() {
@@ -2615,6 +2727,7 @@
   const viewName = ref<string>('');
 
   onBeforeUnmount(() => {
+    stopSyncMonitoring();
     exportViewDisposed = true;
     stopExportPolling();
     exportingMessage.value?.close();
@@ -2622,6 +2735,7 @@
   });
 
   onMounted(() => {
+    resumeSyncJob();
     // 切换菜单默认还是列表；已经在脑图的时候，刷新浏览器，保持脑图状态
     showType.value = minderStore.getShowType(MinderKeyEnum.FEATURE_CASE_MINDER);
     if (route.query.showType) {
@@ -2636,10 +2750,13 @@
   });
 
   onActivated(() => {
+    resumeSyncJob();
     if (route.query.id && activeDetailId.value !== route.query.id) {
       showCaseDetail(route.query.id as string, -1);
     }
   });
+
+  onDeactivated(stopSyncMonitoring);
 
   defineExpose({
     isAdvancedSearchMode,

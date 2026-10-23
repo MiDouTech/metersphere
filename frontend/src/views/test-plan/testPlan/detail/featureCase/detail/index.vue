@@ -119,7 +119,36 @@
               </template>
             </MsDescription>
             <div v-else-if="activeTab === 'detail'" class="align-content-start flex h-full flex-col">
-              <CaseTabDetail ref="caseTabDetailRef" is-test-plan :form="caseDetail" :is-disabled-test-plan="!canEdit" />
+              <a-collapse v-if="caseDetail.executionFacts?.steps?.length" class="mx-4 mb-2 shrink-0">
+                <a-collapse-item key="current-execution" header="用例当前执行记录（含额外和重复步骤）">
+                  <a-table
+                    :data="caseDetail.executionFacts.steps"
+                    :pagination="{ pageSize: 10 }"
+                    :scroll="{ y: 220 }"
+                    size="small"
+                  >
+                    <template #columns>
+                      <a-table-column title="步骤序号" data-index="stepNum" :width="85" />
+                      <a-table-column title="实际结果" data-index="actual" />
+                      <a-table-column title="执行结果" :width="100">
+                        <template #cell="{ record }">
+                          <ExecuteResult :execute-result="record.result" />
+                        </template>
+                      </a-table-column>
+                      <a-table-column title="证据附件" :width="100">
+                        <template #cell="{ record }">{{ record.evidenceIds?.length || 0 }} 个</template>
+                      </a-table-column>
+                    </template>
+                  </a-table>
+                </a-collapse-item>
+              </a-collapse>
+              <CaseTabDetail
+                :key="`${appStore.currentProjectId}:${route.query.id}:${activeId}`"
+                ref="caseTabDetailRef"
+                is-test-plan
+                :form="caseDetail"
+                :is-disabled-test-plan="!canEdit"
+              />
               <!-- 开始执行 -->
               <div
                 v-if="canEdit && hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE'])"
@@ -290,6 +319,7 @@
   import { testPlanDefaultDetail } from '@/config/testPlan';
   import useFeatureCaseAutoNext from '@/hooks/useFeatureCaseAutoNext';
   import { useI18n } from '@/hooks/useI18n';
+  import useListRefresh from '@/hooks/useListRefresh';
   import useOpenNewPage from '@/hooks/useOpenNewPage';
   import useAppStore from '@/store/modules/app';
   import { type AppError, ensureAppError } from '@/utils/appError';
@@ -299,7 +329,7 @@
   import type { ExecuteHistoryItem, PlanDetailFeatureCaseItem, TestPlanDetail } from '@/models/testPlan/testPlan';
   import { AssociatedBugApiTypeEnum } from '@/enums/associateBugEnum';
   import { CaseLinkEnum, LastExecuteResults } from '@/enums/caseEnum';
-  import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+  import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
   import {
     executionResultMap,
@@ -315,9 +345,15 @@
   const planDetail = ref<TestPlanDetail>({
     ...testPlanDefaultDetail,
   });
+  const contextKey = () => `${appStore.currentOrgId}:${appStore.currentProjectId}:${route.query.id}`;
+  let caseListSequence = 0;
   async function getPlanDetail() {
+    const context = contextKey();
+    const id = route.query.id as string;
+    if (!id) return;
     try {
-      planDetail.value = await getTestPlanDetail(route.query.id as string);
+      const detail = await getTestPlanDetail(id);
+      if (context === contextKey()) planDetail.value = detail;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -351,6 +387,8 @@
   const caseListError = ref<AppError>();
   // 加载用例列表
   async function loadCaseList() {
+    const context = contextKey();
+    const sequence = ++caseListSequence;
     try {
       caseListLoading.value = true;
       caseListError.value = undefined;
@@ -368,12 +406,14 @@
         },
         { errorMessageMode: 'none' }
       );
+      if (context !== contextKey() || sequence !== caseListSequence) return;
       caseList.value = res.list;
       pageNation.value.total = res.total;
     } catch (error) {
-      caseListError.value = ensureAppError(error, t('common.loadFailedMessage'));
+      if (context === contextKey() && sequence === caseListSequence)
+        caseListError.value = ensureAppError(error, t('common.loadFailedMessage'));
     } finally {
-      caseListLoading.value = false;
+      if (sequence === caseListSequence) caseListLoading.value = false;
     }
   }
 
@@ -429,11 +469,26 @@
   });
 
   // 获取用例详情
+  let detailSequence = 0;
   async function loadCaseDetail() {
+    const sequence = ++detailSequence;
+    const id = activeId.value;
+    const projectId = appStore.currentProjectId;
+    const planId = route.query.id;
+    caseDetail.value = {};
+    descriptions.value = [];
+    if (!id) return;
     try {
       caseDetailLoading.value = true;
       caseDetailError.value = undefined;
-      const res = await getCaseDetail(activeId.value, { errorMessageMode: 'none' });
+      const res = await getCaseDetail(id, { errorMessageMode: 'none' });
+      if (
+        sequence !== detailSequence ||
+        id !== activeId.value ||
+        projectId !== appStore.currentProjectId ||
+        planId !== route.query.id
+      )
+        return;
       caseDetail.value = res;
       descriptions.value = [
         {
@@ -474,10 +529,11 @@
         },
       ];
     } catch (error) {
+      if (sequence !== detailSequence) return;
       caseDetailError.value = ensureAppError(error, t('common.loadFailedMessage'));
       loadCaseList();
     } finally {
-      caseDetailLoading.value = false;
+      if (sequence === detailSequence) caseDetailLoading.value = false;
     }
   }
 
@@ -706,6 +762,43 @@
     () => {
       loadCaseDetail();
     }
+  );
+
+  watch(
+    () => [appStore.currentProjectId, route.query.id, route.query.caseId, route.query.testPlanCaseId],
+    () => {
+      detailSequence += 1;
+      caseListSequence += 1;
+      caseDetail.value = {};
+      caseList.value = [];
+      planDetail.value = { ...testPlanDefaultDetail };
+      descriptions.value = [];
+      if (route.name !== TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL_FEATURE_CASE_DETAIL) return;
+      activeCaseId.value = route.query.caseId as string;
+      activeId.value = route.query.testPlanCaseId as string;
+      canEdit.value = route.query.canEdit === 'true';
+      otherListQueryParams.value = {};
+      pageNation.value.current = 1;
+      getPlanDetail();
+      loadCaseList();
+      loadCaseDetail();
+    }
+  );
+
+  useListRefresh(
+    async () => {
+      await getPlanDetail();
+      await loadCaseList();
+      if (!caseTabDetailRef.value?.hasPendingChanges()) await loadCaseDetail();
+    },
+    () =>
+      route.name === TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL_FEATURE_CASE_DETAIL &&
+      !!activeId.value &&
+      !caseDetailLoading.value &&
+      !editCaseVisible.value &&
+      !showDrawer.value &&
+      !showLinkDrawer.value &&
+      !caseTabDetailRef.value?.hasPendingChanges()
   );
 
   watch(

@@ -9,6 +9,11 @@ import java.util.List;
 
 @Data
 public class AgentProjectCreateRequest {
+    @Schema(description = "幂等请求标识；相同业务请求重试时保持不变", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank
+    @jakarta.validation.constraints.Size(max = 128)
+    private String requestId;
+
     @Schema(description = "组织ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank
     private String organizationId;

@@ -134,6 +134,9 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     @Resource
     private TestPlanDefectSyncService defectSyncService;
 
+    @Resource
+    private PlanCaseEffectiveViewService effectiveViewService;
+
     private static final String CASE_MODULE_COUNT_ALL = "all";
     private static final String EXECUTOR = "executeUserName";
 
@@ -200,33 +203,28 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
             throw new MSException(Translator.get("resource_not_exist"));
         }
 
-        FunctionalCaseExample sourceExample = new FunctionalCaseExample();
-        sourceExample.createCriteria().andProjectIdEqualTo(projectId);
-        List<FunctionalCase> sourceCases = functionalCaseMapper.selectByExample(sourceExample);
-        Map<String, FunctionalCase> sourceCaseMap = sourceCases.stream()
-                .collect(Collectors.toMap(FunctionalCase::getId, item -> item));
-        Map<String, FunctionalCase> activeCaseMap = sourceCases.stream()
-                .filter(item -> !Boolean.TRUE.equals(item.getDeleted()) && Boolean.TRUE.equals(item.getLatest()))
-                .collect(Collectors.toMap(FunctionalCase::getId, item -> item));
-
         TestPlanFunctionalCaseExample relationExample = new TestPlanFunctionalCaseExample();
         relationExample.createCriteria().andTestPlanIdEqualTo(testPlanId);
         List<TestPlanFunctionalCase> relations = testPlanFunctionalCaseMapper.selectByExample(relationExample);
+        List<FunctionalCase> sourceCases = new ArrayList<>();
+        List<String> sourceIds = relations.stream().map(TestPlanFunctionalCase::getFunctionalCaseId).distinct().toList();
+        SubListUtils.dealForSubList(sourceIds, 200, ids -> {
+            FunctionalCaseExample sourceExample = new FunctionalCaseExample();
+            sourceExample.createCriteria().andProjectIdEqualTo(projectId).andIdIn(ids);
+            sourceCases.addAll(functionalCaseMapper.selectByExample(sourceExample));
+        });
+        Map<String, FunctionalCase> sourceCaseMap = sourceCases.stream()
+                .collect(Collectors.toMap(FunctionalCase::getId, item -> item));
+        Map<String, FunctionalCase> activeCaseMap = sourceCases.stream()
+                .filter(item -> !Boolean.TRUE.equals(item.getDeleted()))
+                .collect(Collectors.toMap(FunctionalCase::getId, item -> item));
+
         List<TestPlanFunctionalCase> projectRelations = relations.stream()
                 .filter(item -> sourceCaseMap.containsKey(item.getFunctionalCaseId()))
                 .toList();
 
-        List<String> removedIds = projectRelations.stream()
-                .filter(item -> !activeCaseMap.containsKey(item.getFunctionalCaseId()))
-                .map(TestPlanFunctionalCase::getId)
-                .toList();
-        if (CollectionUtils.isNotEmpty(removedIds)) {
-            TestPlanFunctionalCaseExample removeExample = new TestPlanFunctionalCaseExample();
-            removeExample.createCriteria().andIdIn(removedIds);
-            testPlanFunctionalCaseMapper.deleteByExample(removeExample);
-            extTestPlanCaseExecuteHistoryMapper.updateDeleted(removedIds, true);
-            result.setRemovedCount(removedIds.size());
-        }
+        // Deleted sources disappear from the effective view, not from recoverable membership/history.
+        // A pinned non-latest version is still a valid plan target.
 
         int updatedCount = 0;
         for (TestPlanFunctionalCase relation : projectRelations) {
@@ -640,13 +638,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         long now = System.currentTimeMillis();
         String operator = logInsertModule.getOperator();
         // 同一用例在所有测试计划中的关联行与用例库执行状态互相同步
-        TestPlanFunctionalCase planCaseUpdate = new TestPlanFunctionalCase();
-        planCaseUpdate.setLastExecResult(request.getLastExecResult());
-        planCaseUpdate.setLastExecTime(now);
-        planCaseUpdate.setExecuteUser(operator);
-        TestPlanFunctionalCaseExample planCaseExample = new TestPlanFunctionalCaseExample();
-        planCaseExample.createCriteria().andFunctionalCaseIdEqualTo(request.getCaseId());
-        testPlanFunctionalCaseMapper.updateByExampleSelective(planCaseUpdate, planCaseExample);
+        extTestPlanFunctionalCaseMapper.updateActiveSummaries(List.of(request.getCaseId()), request.getLastExecResult(), now);
 
         //更新用例表执行状态 以及补充用例步骤ID为null的步骤信息
         updateFunctionalCaseStatus(Collections.singletonList(request.getCaseId()), request.getLastExecResult(), preserveDraft?null:request.getStepsExecResult(), operator, now);
@@ -724,6 +716,12 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         return baseAssociateBugProvider.hasTestPlanAssociateBugPage(request);
     }
 
+    @Override
+    public void disassociateBug(String id) {
+        effectiveViewService.requireManualBugRelation(id);
+        super.disassociateBug(id);
+    }
+
 
     /**
      * 批量执行功能用例
@@ -752,13 +750,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
         // 用例库与所有关联计划行互相同步执行状态
         if (CollectionUtils.isNotEmpty(caseIds)) {
-            TestPlanFunctionalCase planCaseUpdate = new TestPlanFunctionalCase();
-            planCaseUpdate.setLastExecResult(request.getLastExecResult());
-            planCaseUpdate.setLastExecTime(now);
-            planCaseUpdate.setExecuteUser(logInsertModule.getOperator());
-            TestPlanFunctionalCaseExample syncExample = new TestPlanFunctionalCaseExample();
-            syncExample.createCriteria().andFunctionalCaseIdIn(caseIds);
-            testPlanFunctionalCaseMapper.updateByExampleSelective(planCaseUpdate, syncExample);
+            extTestPlanFunctionalCaseMapper.updateActiveSummaries(caseIds, request.getLastExecResult(), now);
         }
 
         List<TestPlanCaseExecuteHistory> historyList = getExecHistory(ids, request, logInsertModule, idsMap, projectMap);
@@ -854,10 +846,11 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         }
         String caseId = planFunctionalCase.getFunctionalCaseId();
         FunctionalCaseDetailDTO functionalCaseDetail = functionalCaseService.getFunctionalCaseDetail(caseId, userId, false);
+        boolean followsSource = effectiveViewService.followsSource(planFunctionalCase.getTestPlanId());
         String caseDetailSteps = functionalCaseDetail.getSteps();
         List<TestPlanCaseExecuteHistory> testPlanCaseExecuteHistories = extTestPlanCaseExecuteHistoryMapper.selectSteps(id, caseId);
         List<FunctionalCaseStepDTO> functionalCaseStepDTOS = new ArrayList<>();
-        if (CollectionUtils.isNotEmpty(testPlanCaseExecuteHistories)) {
+        if (!followsSource && CollectionUtils.isNotEmpty(testPlanCaseExecuteHistories)) {
             TestPlanCaseExecuteHistory testPlanCaseExecuteHistory = testPlanCaseExecuteHistories.getFirst();
             if (StringUtils.isNotBlank(caseDetailSteps)) {
                 List<FunctionalCaseStepDTO> newCaseSteps = JSON.parseArray(caseDetailSteps, FunctionalCaseStepDTO.class);
@@ -874,6 +867,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         TestPlanCaseDetailResponse response = new TestPlanCaseDetailResponse();
         BeanUtils.copyBean(response, functionalCaseDetail);
         response.setLastExecuteResult(planFunctionalCase.getLastExecResult());
+        if (followsSource) effectiveViewService.enrich(response, functionalCaseDetail);
 
         TestPlanCaseExecuteHistoryExample testPlanCaseExecuteHistoryExample = new TestPlanCaseExecuteHistoryExample();
         testPlanCaseExecuteHistoryExample.createCriteria().andCaseIdEqualTo(caseId).andTestPlanCaseIdEqualTo(id).andDeletedEqualTo(false);

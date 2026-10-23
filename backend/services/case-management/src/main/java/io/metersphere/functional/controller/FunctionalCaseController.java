@@ -178,7 +178,7 @@ public class FunctionalCaseController {
             throw new io.metersphere.sdk.exception.MSException("无权查看该项目的测试用例");
         }
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
-                StringUtils.isNotBlank(request.getSortString()) ? request.getSortString() : "functional_case.update_time desc");
+                StringUtils.isNotBlank(request.getSortString()) ? request.getSortString() : "functional_case.update_time desc, functional_case.id asc");
         return PageUtils.setPageInfo(page, functionalCaseService.getFunctionalCasePage(request, false, true));
     }
 

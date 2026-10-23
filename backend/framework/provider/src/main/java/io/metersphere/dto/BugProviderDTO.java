@@ -12,6 +12,8 @@ import java.util.List;
  */
 @Data
 public class BugProviderDTO implements Serializable {
+    @Schema(description = "关联来源；SOURCE_SYNC在源用例管理，避免误删计划人工关联")
+    private String relationOrigin;
 
     @Serial
     private static final long serialVersionUID = 1L;

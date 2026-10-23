@@ -287,6 +287,7 @@
     <select id="getTestPlanAssociateBugs" resultType="io.metersphere.dto.BugProviderDTO">
         SELECT
         brc.id as id,
+        brc.sync_origin AS relationOrigin,
         brc.bug_id bugId,
         b.num as num,
         b.title as name,
@@ -298,7 +299,7 @@
         brc.test_plan_id testPlanId,
         tp.name testPlanName
         FROM
-        bug_relation_case brc
+        plan_case_effective_bug_relation brc
         INNER JOIN bug b ON brc.bug_id = b.id
         INNER JOIN bug_content bc ON brc.bug_id = bc.bug_id
         LEFT JOIN test_plan tp on brc.test_plan_id = tp.id

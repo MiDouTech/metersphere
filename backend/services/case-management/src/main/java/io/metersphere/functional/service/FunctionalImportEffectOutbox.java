@@ -1,0 +1,116 @@
+package io.metersphere.functional.service;
+
+import io.metersphere.functional.hub.service.DefaultHubCaseSyncService;
+import io.metersphere.sdk.util.JSON;
+import io.metersphere.system.mapper.UserMapper;
+import io.metersphere.system.notice.constants.NoticeConstants;
+import io.metersphere.system.service.CommonNoticeSendService;
+import io.metersphere.system.uid.IDGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.util.List;
+import java.util.Map;
+
+/** At-least-once, bounded post-import effects, persisted atomically with the imported cases. */
+@Service
+public class FunctionalImportEffectOutbox {
+    private static final Logger LOG = LoggerFactory.getLogger(FunctionalImportEffectOutbox.class);
+    private final JdbcTemplate jdbc;
+    private final TransactionTemplate transaction;
+    private final DefaultHubCaseSyncService hub;
+    private final FunctionalCaseService cases;
+    private final UserMapper users;
+    private final CommonNoticeSendService notices;
+    private volatile long nextScan;
+    private final java.util.concurrent.atomic.LongAdder delivered = new java.util.concurrent.atomic.LongAdder();
+    private final java.util.concurrent.atomic.LongAdder failures = new java.util.concurrent.atomic.LongAdder();
+    public long deliveredCount() { return delivered.sum(); }
+    public long failureCount() { return failures.sum(); }
+
+    public FunctionalImportEffectOutbox(JdbcTemplate jdbc, PlatformTransactionManager manager,
+            @Lazy DefaultHubCaseSyncService hub, @Lazy FunctionalCaseService cases,
+            UserMapper users, CommonNoticeSendService notices) {
+        this.jdbc = jdbc;
+        this.transaction = new TransactionTemplate(manager);
+        this.transaction.setTimeout(25);
+        this.hub = hub;
+        this.cases = cases;
+        this.users = users;
+        this.notices = notices;
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void enqueue(String projectId, String userId, List<String> ids, List<Map> resources, String event) {
+        long now = System.currentTimeMillis();
+        for (String id : ids) insert("CASE_SYNC", projectId, userId, Map.of("caseId", id), now);
+        for (Map resource : resources) insert("NOTICE", projectId, userId, Map.of("resource", resource, "event", event), now);
+    }
+
+    private void insert(String type, String project, String user, Object payload, long now) {
+        jdbc.update("INSERT INTO functional_import_effect_outbox(id,effect_type,project_id,user_id,payload,next_retry_at,create_time,update_time) VALUES (?,?,?,?,?,?,?,?)",
+                java.util.UUID.randomUUID().toString(), type, project, user, JSON.toJSONString(payload), now, now, now);
+    }
+
+    @Scheduled(fixedDelay = 1000, initialDelay = 30000, scheduler = "functionalImportEffectsScheduler")
+    public void drain() {
+        if (System.currentTimeMillis() < nextScan) return;
+        try {
+            for (int i = 0; i < 5; i++) {
+                String[] selected = new String[1];
+                try {
+                    Boolean processed = transaction.execute(status -> {
+                        var rows = jdbc.queryForList("SELECT id,effect_type,project_id,user_id,payload FROM functional_import_effect_outbox WHERE state='PENDING' AND next_retry_at<=? ORDER BY next_retry_at,id LIMIT 1 FOR UPDATE SKIP LOCKED", System.currentTimeMillis());
+                        if (rows.isEmpty()) return false;
+                        var row = rows.getFirst();
+                        selected[0] = (String) row.get("id");
+                        Map payload = JSON.parseObject((String) row.get("payload"), Map.class);
+                        String project = (String) row.get("project_id"), user = (String) row.get("user_id");
+                        if ("CASE_SYNC".equals(row.get("effect_type"))) {
+                            String caseId = (String) payload.get("caseId");
+                            hub.syncCaseUpsert(project, caseId, user);
+                            cases.publishImportedCaseAsset(caseId, user);
+                        } else {
+                            var operator = users.selectByPrimaryKey(user);
+                            if (operator == null) throw new IllegalStateException("Import operator no longer exists");
+                            java.util.Locale previous = org.springframework.context.i18n.LocaleContextHolder.getLocale();
+                            try {
+                                notices.sendNoticeNow(NoticeConstants.TaskType.FUNCTIONAL_CASE_TASK, (String) payload.get("event"),
+                                        List.of((Map) payload.get("resource")), operator, project);
+                            } finally {
+                                org.springframework.context.i18n.LocaleContextHolder.setLocale(previous);
+                            }
+                        }
+                        jdbc.update("UPDATE functional_import_effect_outbox SET state='SUCCESS',update_time=?,error_code=NULL WHERE id=?", System.currentTimeMillis(), selected[0]);
+                        return true;
+                    });
+                    if (!Boolean.TRUE.equals(processed)) break;
+                    delivered.increment();
+                } catch (Exception failure) {
+                    failures.increment();
+                    if (selected[0] == null) throw failure;
+                    long now = System.currentTimeMillis();
+                    jdbc.update("UPDATE functional_import_effect_outbox SET next_retry_at=?+LEAST(900000,30000*POW(2,LEAST(attempts,5))),attempts=attempts+1,state=IF(attempts>=8,'FAILED','PENDING'),error_code='IMPORT_EFFECT_FAILED',update_time=? WHERE id=? AND state='PENDING'", now, now, selected[0]);
+                    LOG.warn("Import effect failed id={}; retry recorded", selected[0], failure);
+                }
+            }
+        } catch (Exception unavailable) {
+            nextScan = System.currentTimeMillis() + 30000;
+            LOG.warn("Import effect store unavailable; pausing scan for 30 seconds", unavailable);
+        }
+    }
+
+    @Scheduled(fixedDelay = 3600000, initialDelay = 3600000, scheduler = "functionalImportEffectsScheduler")
+    public void cleanupDelivered() {
+        // Preserve failed/pending work for reconciliation; delete only old completed payloads, in bounded batches.
+        jdbc.update("DELETE FROM functional_import_effect_outbox WHERE state='SUCCESS' AND update_time<? ORDER BY update_time,id LIMIT 1000",
+                System.currentTimeMillis() - java.time.Duration.ofDays(7).toMillis());
+    }
+}
