@@ -20,6 +20,11 @@ import java.util.*;
 /** Same durable tasks and authorization as the web UI; each chunk is reauthorized. */
 @Configuration
 public class AgentCaseExportTools {
+    @jakarta.annotation.Resource private io.metersphere.functional.service.FunctionalCaseExportRetryService retryService;
+    @Bean public AgentMcpToolHandler caseExportRetry(AgentProjectService projects, FunctionalCaseExportTaskService tasks,
+            FunctionalCaseFileService files, FunctionalCaseXmindService xmind) {
+        return handler("retry", projects, tasks, files, xmind);
+    }
     @Bean public AgentMcpToolHandler caseExportStart(AgentProjectService projects, FunctionalCaseExportTaskService tasks,
             FunctionalCaseFileService files, FunctionalCaseXmindService xmind) {
         return handler("start", projects, tasks, files, xmind);
@@ -43,6 +48,7 @@ public class AgentCaseExportTools {
             public String name() { return "metersphere.functional.export." + action; }
             public String description() { return "start".equals(action)
                     ? "Create an idempotent Excel/XMind export. request uses web export fields: selectIds/selectAll, moduleIds, systemFields/customFields/otherFields (id/name), isMerge. Poll status, then download chunks."
+                    : "retry".equals(action) ? "Retry your failed, cancelled or expired export using its original filters and fields against CURRENT case content. Creates a new linked task. Reuse requestId after a lost response."
                     : "download".equals(action) ? "Read up to 65536 bytes as base64 at offset, with fresh authorization. Append chunks until eof. Never returns a public file URL."
                     : "Read or stop your own durable export task. Stopping a completed task preserves success."; }
             public String requiredScope() { return AgentTokenScope.FUNCTIONAL_READ; }
@@ -56,7 +62,7 @@ public class AgentCaseExportTools {
                     return Map.of("type","object","properties",fields,"required",List.of("projectId","format","requestId","request"),"additionalProperties",false);
                 }
                 fields.put("taskId", AgentMcpToolSchemas.string(1,64));
-                if ("stop".equals(action)) {
+                if (Set.of("stop", "retry").contains(action)) {
                     fields.put("requestId", AgentMcpToolSchemas.string(1,64));
                     return Map.of("type","object","properties",fields,"required",List.of("projectId","taskId","requestId"),"additionalProperties",false);
                 }
@@ -87,6 +93,7 @@ public class AgentCaseExportTools {
                 String id = (String)args.get("taskId");
                 var task = tasks.get(id,userId);
                 if (!projectId.equals(task.getProjectId())) throw new MSException("导出任务不存在或当前账号无权访问");
+                if ("retry".equals(action)) return retryService.retry(id, userId, SessionUtils.getCurrentOrganizationId(), (String) args.get("requestId"));
                 if ("stop".equals(action)) return tasks.stop(id,userId);
                 if (!"download".equals(action)) return task;
                 long offset = ((Number)args.getOrDefault("offset",0)).longValue();

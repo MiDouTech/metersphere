@@ -10,18 +10,6 @@
         </div>
         <a-space class="asset-toolbar-actions">
           <a-button
-            v-if="userStore.isAdmin"
-            v-permission="['AI_EXECUTION:READ']"
-            @click="router.push({ name: 'AgentPageObject' })"
-            >页面对象</a-button
-          >
-          <a-button
-            v-if="userStore.isAdmin"
-            v-permission="['AI_EXECUTION:READ']"
-            @click="router.push({ name: 'AgentBusinessFlow' })"
-            >业务流</a-button
-          >
-          <a-button
             v-if="canAdd"
             v-visible-permission="{
               code: 'CASE_ASSET_ADD_BUTTON',
@@ -177,23 +165,6 @@
             />
             <a-checkbox v-model="caseQuery.includeAssetCategoryDescendants" @change="searchCases">含子分类</a-checkbox>
             <div class="asset-toolbar-actions ml-auto flex gap-2">
-              <a-select
-                v-model="environmentProfileId"
-                class="w-[220px]"
-                allow-clear
-                placeholder="选择 AI 执行环境"
-                :loading="environmentLoading"
-              >
-                <a-option v-for="profile in environmentProfiles" :key="profile.id" :value="profile.id">
-                  {{ profile.name }}
-                </a-option>
-              </a-select>
-              <a-button
-                :loading="readinessLoading"
-                :disabled="!environmentProfileId || !cases.length"
-                @click="checkReadiness"
-                >检查 AI 可执行性</a-button
-              >
               <a-button
                 v-if="canAdd"
                 v-operable-permission="{
@@ -308,28 +279,6 @@
                   </a-tooltip>
                 </template>
               </a-table-column>
-              <a-table-column title="AI 可执行性" :width="180">
-                <template #cell="{ record }">
-                  <a-tooltip
-                    :content="
-                      readinessByCase[record.id]?.issues
-                        ?.map(
-                          (issue) =>
-                            `${issue.stepIndex ? `第 ${issue.stepIndex} 步：` : ''}${issue.message}；${
-                              issue.suggestion
-                            } (${issue.code})`
-                        )
-                        .join('、') ||
-                      readinessByCase[record.id]?.missingItems?.join('、') ||
-                      '请选择环境并执行检查'
-                    "
-                  >
-                    <a-tag :color="readinessColor(readinessByCase[record.id]?.automationReadiness)">
-                      {{ readinessByCase[record.id]?.automationReadiness || '未检查' }}
-                    </a-tag>
-                  </a-tooltip>
-                </template>
-              </a-table-column>
               <a-table-column title="更新人" data-index="updateUserName" :width="110" />
               <a-table-column title="更新时间" :width="165"
                 ><template #cell="{ record }">{{ formatTime(record.updateTime) }}</template></a-table-column
@@ -407,7 +356,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, reactive, ref, watch } from 'vue';
+  import { computed, onMounted, reactive, ref } from 'vue';
   import { useRouter } from 'vue-router';
   import { Message, Modal } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
@@ -417,11 +366,7 @@
   import TestAssetCategoryDrawer from './components/TestAssetCategoryDrawer.vue';
 
   import {
-    type AiCaseExecutability,
-    type AiEnvironmentProfile,
     assignTestAssetCategory,
-    checkAiCaseExecutability,
-    listAiEnvironmentProfiles,
     listTestAssetCategories,
     type TestAssetCategory,
     type TestAssetCreationSource,
@@ -443,7 +388,6 @@
     updateCaseAssetCatalog,
   } from '@/api/modules/case-management/featureCase';
   import { useUserStore } from '@/store';
-  import useAppStore from '@/store/modules/app';
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { CaseManagementTable } from '@/models/caseManagement/featureCase';
@@ -452,7 +396,6 @@
   const userStore = useUserStore();
 
   const router = useRouter();
-  const appStore = useAppStore();
   const canAdd = hasAnyPermission(['CASE_ASSET:READ+ADD']);
   const canUpdate = hasAnyPermission(['CASE_ASSET:READ+UPDATE']);
   const canDelete = hasAnyPermission(['CASE_ASSET:READ+DELETE']);
@@ -470,12 +413,6 @@
   const catalogTotal = ref(0);
   const selectedCatalogId = ref('');
   const cases = ref<CaseManagementTable[]>([]);
-  const environmentProfiles = ref<AiEnvironmentProfile[]>([]);
-  const environmentProfileId = ref('');
-  const environmentLoading = ref(false);
-  const readinessLoading = ref(false);
-  let readinessGeneration = 0;
-  const readinessByCase = reactive<Record<string, AiCaseExecutability>>({});
   const caseTotal = ref(0);
   const catalogQuery = reactive({ current: 1, pageSize: 12, keyword: '' });
   const caseQuery = reactive({
@@ -530,54 +467,6 @@
   const formatTime = (value?: number | string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
   const getPriority = (record: CaseManagementTable) =>
     record.priority || record.customFields?.find((field: any) => field.fieldName === '用例等级')?.value || '-';
-  function readinessColor(readiness?: string) {
-    if (readiness === 'READY') return 'green';
-    if (readiness === 'PARTIAL') return 'orange';
-    if (readiness === 'NOT_READY') return 'red';
-    return 'gray';
-  }
-
-  async function loadEnvironmentProfiles() {
-    if (!appStore.currentProjectId) return;
-    environmentLoading.value = true;
-    try {
-      environmentProfiles.value = await listAiEnvironmentProfiles(appStore.currentProjectId);
-      if (!environmentProfiles.value.some((item) => item.id === environmentProfileId.value)) {
-        environmentProfileId.value = environmentProfiles.value.find((item) => item.enabled)?.id || '';
-      }
-    } finally {
-      environmentLoading.value = false;
-    }
-  }
-
-  async function checkReadiness() {
-    if (!appStore.currentProjectId || !environmentProfileId.value || !cases.value.length) return;
-    Object.keys(readinessByCase).forEach((id) => delete readinessByCase[id]);
-    const generation = ++readinessGeneration;
-    readinessLoading.value = true;
-    try {
-      const result = await checkAiCaseExecutability({
-        projectId: appStore.currentProjectId,
-        environmentProfileId: environmentProfileId.value,
-        caseIds: cases.value.map((item) => item.id),
-      });
-      if (generation !== readinessGeneration) return;
-      result.forEach((item) => {
-        readinessByCase[item.caseId] = item;
-        const source = cases.value.find((record) => record.id === item.caseId || (record as any).refId === item.caseId);
-        if (source) readinessByCase[source.id] = item;
-      });
-    } finally {
-      readinessLoading.value = false;
-    }
-  }
-
-  watch([() => appStore.currentProjectId, environmentProfileId], () => {
-    readinessGeneration += 1;
-    Object.keys(readinessByCase).forEach((id) => delete readinessByCase[id]);
-  });
-  watch(() => appStore.currentProjectId, loadEnvironmentProfiles);
-
   async function loadCases() {
     if (!selectedCatalogId.value) {
       cases.value = [];
@@ -799,7 +688,6 @@
   }
   onMounted(async () => {
     assetCategories.value = await listTestAssetCategories();
-    await loadEnvironmentProfiles();
     await loadCatalogs();
     await restoreLatestHistorySync();
   });

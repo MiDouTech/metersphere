@@ -14,13 +14,14 @@
 
 <script setup lang="ts">
   import { Ref, ref, watch } from 'vue';
-  import { RouteRecordName, RouteRecordRaw, useRouter } from 'vue-router';
+  import { RouteLocationNormalized, RouteRecordName, RouteRecordRaw, useRouter } from 'vue-router';
   import { cloneDeep, debounce } from 'lodash-es';
 
   import { useI18n } from '@/hooks/useI18n';
   import usePermission from '@/hooks/usePermission';
   import appClientMenus from '@/router/app-menus';
   import { useAppStore } from '@/store';
+  import useAIStore from '@/store/modules/setting/ai';
   import useLicenseStore from '@/store/modules/setting/license';
   import { listenerRouteChange } from '@/utils/route-listener';
 
@@ -75,7 +76,7 @@
   /**
    * 监听路由变化，存储打开的顶部菜单
    */
-  listenerRouteChange((newRoute) => {
+  function refreshTopMenus(newRoute: RouteLocationNormalized) {
     const { name } = newRoute;
     const matchedRouteNames = new Set(newRoute.matched.map((item) => item.name).filter(Boolean));
     for (let i = 0; i < copyRouters.length; i++) {
@@ -109,7 +110,13 @@
     // 切换到没有顶部菜单的路由时，清空顶部菜单
     appStore.setTopMenus([]);
     setCurrentTopMenu('');
-  }, true);
+  }
+
+  listenerRouteChange(refreshTopMenus, true);
+  watch(
+    () => useAIStore().llmUiEnabled,
+    () => refreshTopMenus(router.currentRoute.value)
+  );
 
   const menuClickHandler = debounce((route: RouteRecordName | undefined) => {
     activeMenus.value = [appStore.getCurrentTopMenu?.name || ''];

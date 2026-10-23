@@ -10,6 +10,7 @@ export type Component<T = any> =
   | (() => Promise<T>);
 
 export interface RouteMeta {
+  requiresLlm?: boolean;
   roles?: string[]; // 角色数组
   adminOnly?: boolean; // 是否仅系统管理员可访问
   resourceCode?: string; // UI 权限资源编码

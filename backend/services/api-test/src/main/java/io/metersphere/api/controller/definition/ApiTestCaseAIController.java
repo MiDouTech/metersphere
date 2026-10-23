@@ -23,6 +23,7 @@ public class ApiTestCaseAIController {
     @Resource
     private ApiTestCaseAIService apiTestCaseAIService;
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping(value = "/chat")
     @Operation(summary = "聊天")
     @CheckOwner(resourceId = "#request.apiDefinitionId", resourceType = "api_definition")

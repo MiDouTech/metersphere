@@ -16,6 +16,14 @@ export interface CommentItem {
   content: string;
   commentUserInfos: CommentUserInfo[];
   childComments: CommentItem[];
+  deleted?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  childTotal?: number;
+  childCurrent?: number;
+  childPageSize?: number;
+  childLoading?: boolean;
+  childError?: string;
   [key: string]: any;
 }
 

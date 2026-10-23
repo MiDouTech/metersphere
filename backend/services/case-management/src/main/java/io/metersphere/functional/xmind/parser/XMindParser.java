@@ -14,7 +14,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -93,16 +92,11 @@ public class XMindParser {
     }
 
     private static List<JsonRootBean> contentsToBeans(List<String> contents) {
-        int caseCount = 0;
         List<JsonRootBean> jsonRootBeans = new ArrayList<>();
         if (contents != null) {
             for (String content : contents) {
-                caseCount += content.toLowerCase(Locale.ROOT).split("case").length;
                 JsonRootBean jsonRootBean = JSON.parseObject(content, JsonRootBean.class);
                 jsonRootBeans.add(jsonRootBean);
-            }
-            if (caseCount > 800) {
-                throw new MSException(Translator.get("import_xmind_count_error"));
             }
         }
         return jsonRootBeans;

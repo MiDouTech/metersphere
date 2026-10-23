@@ -15,6 +15,6 @@ public class FunctionalCaseBatchRequest extends BaseFunctionalCaseBatchDTO {
     private String projectId;
 
     @Schema(description = "删除列表版本/删除全部版本")
-    private Boolean deleteAll = true;
+    private Boolean deleteAll = false;
 
 }

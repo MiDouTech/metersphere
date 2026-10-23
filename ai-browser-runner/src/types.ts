@@ -116,7 +116,7 @@ export interface RunnerEvent {
 
 export interface RunnerControl {
   taskStatus: string;
-  command: "NONE" | "CANCEL" | "PAUSE" | "WAIT_LOGIN" | "CONTINUE";
+  command: "NONE" | "CANCEL" | "PAUSE" | "WAIT_LOGIN" | "WAIT_HUMAN" | "CONTINUE";
   serverTime: number;
 }
 

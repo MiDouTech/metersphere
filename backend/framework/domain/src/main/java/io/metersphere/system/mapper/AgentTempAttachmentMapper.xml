@@ -46,11 +46,20 @@
 
     <select id="selectExpiredUnlinked" resultMap="BaseResultMap">
         select *
-        from agent_temp_attachment
+        from agent_temp_attachment t
         where linked = 0
           and expires_at &lt; #{expiresBefore}
+          and not exists (select 1 from agent_exec_attachment e where e.file_id=t.file_id
+              and (e.exec_log_id is not null or e.exec_history_id is not null))
+          and not exists (select 1 from agent_temp_attachment other where other.file_id=t.file_id
+              and other.id != t.id and (other.linked=1 or other.expires_at &gt;= #{expiresBefore}))
         order by expires_at asc
         limit #{limit}
+        for update skip locked
+    </select>
+
+    <select id="selectForLink" resultMap="BaseResultMap">
+        select * from agent_temp_attachment where id = #{id} for update
     </select>
 
     <delete id="deleteByPrimaryKey">

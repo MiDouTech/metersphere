@@ -68,10 +68,10 @@ public class AgentModelProfileService {
 
     @Transactional(rollbackFor = Exception.class)
     public AgentModelProfileDTO update(String id, AgentModelProfileRequest request) {
+        int expected = AgentConfigurationVersion.require(request.getVersion());
         AgentModelProfileDTO existing = get(id);
         if (!existing.getProjectId().equals(projectService.resolveProjectId(request.getProjectId()))) throw new MSException("MODEL_PROFILE_PROJECT_MISMATCH");
         validate(request);
-        int expected = request.getVersion() == null ? existing.getVersion() : request.getVersion();
         int changed = jdbcTemplate.update("""
             UPDATE ai_model_profile SET name=?,gateway_app_caller=?,gateway_service_key_ref=?,logical_model_public_id=?,
             prompt_policy_id=?,gateway_prompt_policy_id=?,required_capabilities=?,request_timeout_ms=?,max_output_tokens=?,

@@ -4,7 +4,7 @@
       <div class="text-[var(--color-text-4)]">
         {{
           t('ms.minders.commentTotal', {
-            num: activeComment === 'caseComment' ? commentList.length : reviewCommentList.length,
+            num: activeComment === 'caseComment' ? commentTotal : reviewCommentList.length,
           })
         }}
       </div>
@@ -24,14 +24,13 @@
         show-step-detail-trigger
       />
       <template v-else>
-        <MsComment
+        <FunctionalCommentList
+          ref="commentPanelRef"
+          :case-id="props.activeCase.id"
           :upload-image="handleUploadImage"
-          :comment-list="commentList"
           :preview-url="`${PreviewEditorImageUrl}/${appStore.currentProjectId}`"
-          @delete="handleDelete"
-          @update-or-add="handleUpdateOrAdd"
+          @total="commentTotal = $event"
         />
-        <MsEmpty v-if="commentList.length === 0" />
       </template>
     </div>
     <inputComment
@@ -43,6 +42,7 @@
       v-permission="['FUNCTIONAL_CASE:READ+COMMENT']"
       :preview-url="`${PreviewEditorImageUrl}/${appStore.currentProjectId}`"
       :is-active="isActive"
+      :disabled="publishing"
       is-show-avatar
       is-use-bottom
       :upload-image="handleUploadImage"
@@ -55,25 +55,21 @@
 <script setup lang="ts">
   import { Message } from '@arco-design/web-vue';
 
-  import MsEmpty from '@/components/pure/ms-empty/index.vue';
-  import MsComment from '@/components/business/ms-comment/comment';
+  import FunctionalCommentList from '@/components/business/ms-comment/functional-comment-list.vue';
   import inputComment from '@/components/business/ms-comment/input.vue';
   import { CommentItem, CommentParams } from '@/components/business/ms-comment/types';
   import ReviewCommentList from '@/views/case-management/caseManagementFeature/components/tabContent/tabComment/reviewCommentList.vue';
 
   import {
-    addOrUpdateCommentList,
     createCommentList,
-    deleteCommentList,
     editorUploadFile,
-    getCommentList,
     getReviewCommentList,
     getTestPlanExecuteCommentList,
   } from '@/api/modules/case-management/featureCase';
   import { PreviewEditorImageUrl } from '@/api/requrls/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
-  import useModal from '@/hooks/useModal';
   import { useAppStore } from '@/store';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
   import { hasAnyPermission } from '@/utils/permission';
 
   const props = defineProps<{
@@ -81,10 +77,9 @@
   }>();
 
   const { t } = useI18n();
-  const { openModal } = useModal();
   const appStore = useAppStore();
 
-  const hasEditPermission = hasAnyPermission(['FUNCTIONAL_CASE:READ+COMMENT']);
+  const hasEditPermission = computed(() => hasAnyPermission(['FUNCTIONAL_CASE:READ+COMMENT']));
 
   async function handleUploadImage(file: File) {
     const { data } = await editorUploadFile({
@@ -108,25 +103,17 @@
       value: 'executiveComment',
     },
   ];
-  const commentList = ref<CommentItem[]>([]);
+  const commentTotal = ref(0);
+  const commentPanelRef = ref<InstanceType<typeof FunctionalCommentList>>();
   const reviewCommentList = ref<CommentItem[]>([]);
 
   /**
    * 初始化评论列表
    */
   async function initCommentList() {
-    try {
-      const result = await getCommentList(props.activeCase.id);
-      commentList.value = result;
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    }
+    await commentPanelRef.value?.reload();
   }
 
-  /**
-   * 初始化评审评论
-   */
   async function initReviewCommentList() {
     try {
       const result = await getReviewCommentList(props.activeCase.id);
@@ -169,56 +156,21 @@
   /**
    * 添加或者更新评论
    */
-  async function handleUpdateOrAdd(item: CommentParams, cb: (result: boolean) => void) {
-    try {
-      await addOrUpdateCommentList(item);
-      getAllCommentList();
-      cb(true);
-    } catch (error) {
-      cb(false);
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
-  }
-
-  /**
-   * 删除评论
-   */
-  async function handleDelete(caseCommentId: string) {
-    openModal({
-      type: 'error',
-      title: t('ms.comment.deleteConfirm'),
-      content: t('ms.comment.deleteContent'),
-      okText: t('common.confirmDelete'),
-      cancelText: t('common.cancel'),
-      okButtonProps: {
-        status: 'danger',
-      },
-      onBeforeOk: async () => {
-        try {
-          await deleteCommentList(caseCommentId);
-          Message.success(t('common.deleteSuccess'));
-          getAllCommentList();
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error(error);
-        }
-      },
-      hideCancel: false,
-    });
-  }
-
   const commentInputRef = ref<InstanceType<typeof inputComment>>();
   const content = ref('');
   const isActive = ref<boolean>(false);
   const uploadFileIds = ref<string[]>([]);
   const noticeUserIds = ref<string[]>([]);
+  const publishing = ref(false);
 
   /**
    * 发布评论
    * @param currentContent 当前评论内容
    */
   async function publishHandler(currentContent: string) {
+    if (publishing.value || !currentContent.trim()) return;
+    const caseId = props.activeCase.id;
+    publishing.value = true;
     try {
       const params: CommentParams = {
         caseId: props.activeCase.id,
@@ -230,11 +182,17 @@
         uploadFileIds: uploadFileIds.value,
       };
       await createCommentList(params);
-      getAllCommentList();
+      if (props.activeCase.id !== caseId) return;
+      content.value = '';
+      noticeUserIds.value = [];
+      uploadFileIds.value = [];
+      await commentPanelRef.value?.reload(true);
       Message.success(t('common.publishSuccessfully'));
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      if (props.activeCase.id === caseId)
+        Message.error(formatAppErrorMessage(ensureAppError(error, t('common.publishFailed'))));
+    } finally {
+      publishing.value = false;
     }
   }
 

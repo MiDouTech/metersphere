@@ -126,6 +126,22 @@ public class AgentMcpStreamableService {
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
         if(StringUtils.isNotBlank(effectiveIdempotencyKey)) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
         if(java.util.Set.of("metersphere.bug.create","metersphere.bug.import.commit","metersphere.bug.export","metersphere.functional.execution.evidence.upload","metersphere.functional.execution.submit","metersphere.case_review.create","metersphere.case_review.associate_cases","metersphere.functional.comment.create","metersphere.functional.comment.update","metersphere.functional.case.update","metersphere.functional.module.update","metersphere.functional.module.move").contains(name))return callToolInternal(name,arguments);
+        // These protocols reauthorize their resource on every call. Upload/job/preview/run IDs
+        // govern transitions and replay in their own transactions; a generic response cache
+        // would bypass current ownership, expiry and state checks. Snapshot/preview creation
+        // intentionally creates a new bounded temporary read/confirmation resource.
+        if (java.util.Set.of(
+                "metersphere.functional.attachment.upload.prepare", "metersphere.functional.attachment.upload.complete",
+                "metersphere.functional.attachment.import_url", "metersphere.bug.attachment.import_url",
+                "metersphere.functional.execution.evidence.import_url",
+                "metersphere.functional.import.precheck", "metersphere.functional.import.commit",
+                "metersphere.functional.import.stop", "metersphere.functional.import.retry",
+                "metersphere.functional.snapshot.create", "metersphere.functional.snapshot.release",
+                "metersphere.functional.case.delete_preview", "metersphere.functional.case.delete",
+                "metersphere.functional.case.batch_delete", "metersphere.functional.case.restore",
+                "metersphere.functional.comment.delete", "metersphere.functional.archive.prepare",
+                "metersphere.functional.archive.retry", "metersphere.functional.archive.data"
+        ).contains(name)) return callToolInternal(name, arguments);
         // Runtime protocols validate current lease/state on every request. Never persist lease
         // credentials or replay an expired capability through the generic response cache.
         if (java.util.Set.of("metersphere.task.claim", "metersphere.task.lease.heartbeat",

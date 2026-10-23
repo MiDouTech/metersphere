@@ -120,10 +120,10 @@ public class AgentCredentialReferenceService {
 
     @Transactional(rollbackFor = Exception.class)
     public AgentCredentialReferenceDTO update(String id, AgentCredentialReferenceRequest request) {
+        int version = AgentConfigurationVersion.require(request.getVersion());
         AgentCredentialReferenceDTO existing = getMetadata(id);
         if (!existing.getProjectId().equals(projectService.resolveProjectId(request.getProjectId()))) throw new MSException("凭据引用不允许跨项目迁移");
         validate(request);
-        int version = request.getVersion() == null ? existing.getVersion() : request.getVersion();
         int changed = jdbcTemplate.update("""
           UPDATE ai_credential_reference SET environment_id=?,name=?,credential_type=?,business_role=?,provider_type=?,
           secret_ref=?,username_hint=?,status='UNVERIFIED',expires_at=?,last_verified_at=NULL,last_verify_status=NULL,

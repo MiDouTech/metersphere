@@ -125,6 +125,7 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         }
         lockProjectTree(updateModule.getProjectId());
         updateModule = currentModule(request.getId());
+        requireRevision(updateModule, request.getExpectedUpdateTime());
         updateModule.setName(request.getName());
         this.checkDataValidity(updateModule);
         updateModule.setUpdateTime(Math.max(System.currentTimeMillis(), updateModule.getUpdateTime()+1));
@@ -139,6 +140,8 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         FunctionalCaseModule source = functionalCaseModuleMapper.selectByPrimaryKey(request.getDragNodeId());
         if (source == null) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
         lockProjectTree(source.getProjectId());
+        source = currentModule(source.getId());
+        requireRevision(source, request.getExpectedUpdateTime());
         NodeSortDTO nodeSortDTO = super.getNodeSortDTO(request,
                 extFunctionalCaseModuleMapper::selectBaseModuleById,
                 extFunctionalCaseModuleMapper::selectModuleByParentIdAndPosOperator);
@@ -177,6 +180,21 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
                 org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(FunctionalCaseModule.class), id);
         if (rows.size()!=1) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
         return rows.getFirst();
+    }
+
+    public FunctionalCaseModule requireCurrentRevision(String projectId, String id, Long expectedUpdateTime) {
+        lockProjectTree(projectId);
+        FunctionalCaseModule module = currentModule(id);
+        if (!projectId.equals(module.getProjectId())) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
+        requireRevision(module, expectedUpdateTime);
+        return module;
+    }
+
+    static void requireRevision(FunctionalCaseModule module, Long expectedUpdateTime) {
+        if (expectedUpdateTime == null || !Objects.equals(module.getUpdateTime(), expectedUpdateTime)) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.CONFLICT,
+                    "目录已更新，请刷新后重试");
+        }
     }
 
     private void checkParent(String projectId, String movingId, String parentId) {

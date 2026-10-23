@@ -51,6 +51,7 @@ public class AiCaseAgentConversationController {
     @Resource
     private AiCaseAgentOrchestrator agentOrchestrator;
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "向用例 Agent 发送消息并订阅执行事件")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
@@ -67,6 +68,7 @@ public class AiCaseAgentConversationController {
         agentOrchestrator.cancel(request, SessionUtils.getUserId());
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping(value = "/chat/retry", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "重试失败或已取消的用例 Agent 执行")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)

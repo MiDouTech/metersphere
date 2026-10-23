@@ -12,7 +12,7 @@ public class AgentConstants {
     /** Agent 检索每页上限（禁止大页无节制拉取） */
     public static final int MAX_PAGE_SIZE = 100;
     /** 单 Token 全局请求：滑动窗口内上限 */
-    public static final int RATE_LIMIT_PER_MINUTE = 120;
+    public static final int RATE_LIMIT_PER_MINUTE = 720;
     /** 单 Token 检索类接口：滑动窗口内上限（防轮询） */
     public static final int SEARCH_RATE_LIMIT_PER_MINUTE = 30;
     /** 相邻两次检索最小间隔（毫秒） */

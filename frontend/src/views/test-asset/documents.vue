@@ -13,9 +13,6 @@
           <a-button v-permission="['FUNCTIONAL_CASE_AI:UPLOAD']" :loading="uploading" @click="fileInput?.click()"
             >上传文档</a-button
           >
-          <a-button v-permission="['FUNCTIONAL_CASE_AI:GENERATE']" type="primary" @click="openAiGenerate()"
-            >AI 生成用例</a-button
-          >
         </div>
       </div>
       <div class="mb-4 flex flex-wrap items-center gap-3">
@@ -135,12 +132,6 @@
                   v-permission="['FUNCTIONAL_CASE_AI:UPLOAD']"
                   @click="retryDocument(record)"
                   >重新解析</a-link
-                >
-                <a-link
-                  v-permission="['FUNCTIONAL_CASE_AI:GENERATE']"
-                  :disabled="record.parseStatus !== 'PARSED'"
-                  @click="openAiGenerate(record)"
-                  >生成用例</a-link
                 >
                 <a-link :disabled="!record.assetVersionNo" @click="openRelations(record)">追溯</a-link>
                 <a-link
@@ -352,12 +343,6 @@
     query.pageSize = pageSize;
     query.current = 1;
     load();
-  }
-  function openAiGenerate(document?: TestAssetDocument) {
-    router.push({
-      path: '/case-management/caseGenerate',
-      query: document ? { sourceDocumentId: document.id } : undefined,
-    });
   }
   function openVersions(document: TestAssetDocument) {
     router.push({ path: '/test-assets/versions', query: { assetType: 'DOCUMENT', assetId: document.id } });

@@ -17,6 +17,8 @@ export interface MsPaginationI {
   pageSize: number;
   total: number;
   showPageSize?: boolean;
+  pageSizeOptions?: number[];
+  autoAdjust?: boolean;
   showTotal?: boolean;
   showJumper?: boolean;
   hideOnSinglePage?: boolean;

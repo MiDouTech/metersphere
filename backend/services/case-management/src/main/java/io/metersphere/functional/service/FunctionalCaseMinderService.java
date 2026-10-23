@@ -286,6 +286,15 @@ public class FunctionalCaseMinderService {
     }
 
     public void editFunctionalCaseBatch(FunctionalCaseMinderEditRequest request, String userId) {
+        functionalCaseModuleService.lockProjectTree(request.getProjectId());
+        if (request.getUpdateModuleList() != null) {
+            for (FunctionalCaseModuleEditRequest module : request.getUpdateModuleList()) {
+                if (OperationLogType.UPDATE.toString().equals(module.getType())) {
+                    functionalCaseModuleService.requireCurrentRevision(request.getProjectId(), module.getId(),
+                            module.getExpectedUpdateTime());
+                }
+            }
+        }
         //处理删除的模块和用例和空白节点
         User user = userMapper.selectByPrimaryKey(userId);
         FunctionalMinderUpdateDTO functionalMinderUpdateDTO = new FunctionalMinderUpdateDTO(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
@@ -1053,7 +1062,7 @@ public class FunctionalCaseMinderService {
         }
         updateModule.setName(functionalCaseModuleEditRequest.getName());
         updateModule.setParentId(functionalCaseModuleEditRequest.getParentId());
-        updateModule.setUpdateTime(System.currentTimeMillis());
+        updateModule.setUpdateTime(Math.max(System.currentTimeMillis(), functionalCaseModuleEditRequest.getExpectedUpdateTime() + 1));
         updateModule.setUpdateUser(userId);
         updateModule.setCreateUser(null);
         updateModule.setCreateTime(null);

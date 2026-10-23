@@ -74,6 +74,7 @@ public class FunctionalCaseAiDraftController {
         functionalCaseAiDraftService.delete(request, SessionUtils.getUserId());
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping("/regenerate")
     @Operation(summary = "重新生成 AI 用例草稿")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)

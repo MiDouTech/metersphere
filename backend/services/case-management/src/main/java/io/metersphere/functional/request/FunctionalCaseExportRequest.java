@@ -37,6 +37,11 @@ public class FunctionalCaseExportRequest extends BaseFunctionalCaseBatchDTO impl
     @Schema(description = "客户端幂等请求标识")
     private String requestId;
 
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    @Schema(description = "服务端关联的原导出任务，只读")
+    private String sourceTaskId;
+
     @Schema(description = "单元格拆分")
     private Boolean isMerge = false;
 

@@ -48,6 +48,12 @@ const router = createRouter({
       },
     },
     ...appRoutes,
+    {
+      path: '/feature-disabled',
+      name: 'featureDisabled',
+      component: () => import('@/views/base/feature-disabled.vue'),
+      meta: { hideInMenu: true, roles: ['*'] },
+    },
     REDIRECT_MAIN,
     NOT_FOUND_ROUTE,
     NOT_FOUND_RESOURCE,

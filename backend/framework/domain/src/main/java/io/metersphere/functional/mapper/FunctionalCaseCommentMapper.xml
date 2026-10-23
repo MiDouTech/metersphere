@@ -11,6 +11,9 @@
     <result column="reply_user" jdbcType="VARCHAR" property="replyUser" />
     <result column="create_time" jdbcType="BIGINT" property="createTime" />
     <result column="update_time" jdbcType="BIGINT" property="updateTime" />
+    <result column="deleted" jdbcType="BIT" property="deleted" />
+    <result column="deleted_at" jdbcType="BIGINT" property="deletedAt" />
+    <result column="deleted_by" jdbcType="VARCHAR" property="deletedBy" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="io.metersphere.functional.domain.FunctionalCaseComment">
     <result column="content" jdbcType="LONGVARCHAR" property="content" />
@@ -75,7 +78,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, case_id, create_user, parent_id, resource_id, notifier, reply_user, create_time, 
-    update_time
+    update_time, deleted, deleted_at, deleted_by
   </sql>
   <sql id="Blob_Column_List">
     content

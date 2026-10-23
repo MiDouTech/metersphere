@@ -291,13 +291,23 @@ public class FunctionalCaseController {
     }
 
 
+    @Resource
+    private io.metersphere.functional.service.FunctionalLegacyImportService legacyImportService;
+
+    @GetMapping("/import/jobs")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_IMPORT)
+    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    public java.util.List<java.util.Map<String,Object>> legacyImportJobs(@RequestParam String projectId) {
+        return legacyImportService.recent(projectId, SessionUtils.getUserId());
+    }
+
     @PostMapping("/import/excel")
     @Operation(summary = "用例管理-功能用例-excel导入")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_IMPORT)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public FunctionalCaseImportResponse importExcel(@RequestPart("request") FunctionalCaseImportRequest request, @RequestPart(value = "file", required = false) MultipartFile file) {
         SessionUser user = SessionUtils.getUser();
-        return functionalCaseFileService.importExcel(request, user, file);
+        return legacyImportService.run(request, user.getId(), file, () -> functionalCaseFileService.importExcel(request, user, file));
     }
 
     @PostMapping("/import/xmind")
@@ -340,6 +350,35 @@ public class FunctionalCaseController {
         return exportTaskService.stop(taskId, SessionUtils.getUserId());
     }
 
+    @Resource
+    private io.metersphere.functional.service.FunctionalCaseExportRetryService exportRetryService;
+
+    public record ExportRetryRequest(@jakarta.validation.constraints.NotBlank
+                                    @jakarta.validation.constraints.Pattern(regexp = "[A-Za-z0-9_-]{1,64}") String requestId) { }
+
+    @PostMapping("/export/tasks/{taskId}/retry")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
+    public ExportTaskDTO retryExportTask(@PathVariable String taskId, @Validated @RequestBody ExportRetryRequest request) {
+        return exportRetryService.retry(taskId, SessionUtils.getUserId(), SessionUtils.getCurrentOrganizationId(), request.requestId());
+    }
+
+    @Resource
+    private io.metersphere.functional.service.CaseExportNotificationTickets exportNotificationTickets;
+
+    @PostMapping("/export/tasks/{taskId}/ws-ticket")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
+    public io.metersphere.functional.service.CaseExportNotificationTickets.Ticket exportNotificationTicket(
+            @PathVariable String taskId, jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store");
+        response.setHeader("Pragma", "no-cache");
+        try {
+            return exportNotificationTickets.issue(taskId, SessionUtils.getUserId(), SessionUtils.getSessionId(), request.getHeader("Origin"));
+        } catch (io.metersphere.functional.service.CaseExportNotificationTickets.TicketException exception) {
+            if (exception.status() == 429) response.setHeader("Retry-After", "60");
+            throw exception;
+        }
+    }
+
     @GetMapping("/export/tasks/{taskId}")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
     public ExportTaskDTO exportTask(@PathVariable String taskId) {
@@ -350,6 +389,14 @@ public class FunctionalCaseController {
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
     public List<ExportTaskDTO> exportTasks(@RequestParam String projectId) {
         return exportTaskService.recent(projectId, SessionUtils.getUserId());
+    }
+
+    @GetMapping("/export/tasks/history")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_EXPORT)
+    public Pager<List<ExportTaskDTO>> exportHistory(@RequestParam String projectId,
+                                                   @RequestParam(defaultValue = "1") int current,
+                                                   @RequestParam(defaultValue = "10") int pageSize) {
+        return exportTaskService.history(projectId, SessionUtils.getUserId(), current, pageSize);
     }
 
     @GetMapping("/download/xmind/template/{projectId}")

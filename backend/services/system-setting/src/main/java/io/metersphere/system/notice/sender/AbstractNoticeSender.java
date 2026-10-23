@@ -84,7 +84,7 @@ public abstract class AbstractNoticeSender implements NoticeSender {
         //处理自定义字段的值
         handleCustomFields(noticeModel);
         // 处理 userIds 中包含的特殊值
-        noticeModel.setReceivers(getRealUserIds(messageDetail, noticeModel, messageDetail.getEvent()));
+        if (!noticeModel.isFrozenRecipients()) noticeModel.setReceivers(getRealUserIds(messageDetail, noticeModel, messageDetail.getEvent()));
         // 如果配置了模版就直接使用模版
         if (StringUtils.isNotBlank(messageDetail.getTemplate())) {
             return MessageTemplateUtils.getContent(messageDetail.getTemplate(), noticeModel.getParamMap());
@@ -94,6 +94,10 @@ public abstract class AbstractNoticeSender implements NoticeSender {
             context = noticeModel.getContext();
         }
         return MessageTemplateUtils.getContent(context, noticeModel.getParamMap());
+    }
+
+    public List<Receiver> resolveRecipients(MessageDetail detail, NoticeModel model) {
+        return getReceivers(getRealUserIds(detail, model, detail.getEvent()), model.isExcludeSelf(), model.getOperator());
     }
 
     protected String getSubjectText(MessageDetail messageDetail, NoticeModel noticeModel) {

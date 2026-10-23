@@ -41,6 +41,10 @@ public class FunctionalCaseComment implements Serializable {
     @Schema(description = "更新时间")
     private Long updateTime;
 
+    private Boolean deleted = false;
+    private Long deletedAt;
+    private String deletedBy;
+
     @Schema(description = "内容", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{functional_case_comment.content.not_blank}", groups = {Created.class})
     @Size(min = 1, max = 65535, message = "{functional_case_comment.content.length_range}", groups = {Created.class, Updated.class})
@@ -58,6 +62,9 @@ public class FunctionalCaseComment implements Serializable {
         replyUser("reply_user", "replyUser", "VARCHAR", false),
         createTime("create_time", "createTime", "BIGINT", false),
         updateTime("update_time", "updateTime", "BIGINT", false),
+        deleted("deleted", "deleted", "BIT", false),
+        deletedAt("deleted_at", "deletedAt", "BIGINT", false),
+        deletedBy("deleted_by", "deletedBy", "VARCHAR", false),
         content("content", "content", "LONGVARCHAR", false);
 
         private static final String BEGINNING_DELIMITER = "`";

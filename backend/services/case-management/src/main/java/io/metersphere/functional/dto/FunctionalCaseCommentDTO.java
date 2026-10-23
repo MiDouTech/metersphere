@@ -16,4 +16,10 @@ public class FunctionalCaseCommentDTO extends FunctionalCaseComment {
     @Schema(description =  "该条评论下的所有回复数据")
     private List<FunctionalCaseCommentDTO> childComments;
 
+    private long childTotal;
+    private int childCurrent = 1;
+    private int childPageSize = 10;
+    private boolean canEdit;
+    private boolean canDelete;
+
 }

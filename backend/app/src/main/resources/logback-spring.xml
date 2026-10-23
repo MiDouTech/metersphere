@@ -4,7 +4,7 @@
     <springProperty scope="context" name="loggingFilePath" source="logging.file.path" defaultValue="./local-runtime/logs/metersphere"/>
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d %5p %40.40c:%4L - %m%n</pattern>
+            <pattern>%d %5p %40.40c:%4L [traceId=%X{traceId}] - %m%n</pattern>
         </encoder>
     </appender>
 
@@ -17,13 +17,14 @@
         </filter>
         <File>${loggingFilePath}/debug.log</File>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <FileNamePattern>${loggingFilePath}/history/debug.%d{yyyyMMdd}-%i.log</FileNamePattern>
+            <FileNamePattern>${loggingFilePath}/history/debug.%d{yyyyMMdd}-%i.log.gz</FileNamePattern>
             <maxHistory>${logger.max.history:-30}</maxHistory>
             <maxFileSize>50MB</maxFileSize>
+            <totalSizeCap>${logger.total.size.cap:-2GB}</totalSizeCap>
         </rollingPolicy>
         <encoder>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
+            <Pattern>%d [%thread] %-5level %logger{36} %line [traceId=%X{traceId}] - %msg%n</Pattern>
         </encoder>
     </appender>
 
@@ -34,13 +35,14 @@
         </filter>
         <File>${loggingFilePath}/info.log</File>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <FileNamePattern>${loggingFilePath}/history/info.%d{yyyyMMdd}-%i.log</FileNamePattern>
+            <FileNamePattern>${loggingFilePath}/history/info.%d{yyyyMMdd}-%i.log.gz</FileNamePattern>
             <maxHistory>${logger.max.history:-30}</maxHistory>
             <maxFileSize>50MB</maxFileSize>
+            <totalSizeCap>${logger.total.size.cap:-2GB}</totalSizeCap>
         </rollingPolicy>
         <encoder>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
+            <Pattern>%d [%thread] %-5level %logger{36} %line [traceId=%X{traceId}] - %msg%n</Pattern>
         </encoder>
     </appender>
 
@@ -54,13 +56,14 @@
 
         <File>${loggingFilePath}/error.log</File>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <FileNamePattern>${loggingFilePath}/history/error.%d{yyyyMMdd}-%i.log</FileNamePattern>
+            <FileNamePattern>${loggingFilePath}/history/error.%d{yyyyMMdd}-%i.log.gz</FileNamePattern>
             <maxHistory>${logger.max.history:-30}</maxHistory>
             <maxFileSize>50MB</maxFileSize>
+            <totalSizeCap>${logger.total.size.cap:-2GB}</totalSizeCap>
         </rollingPolicy>
         <encoder>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
+            <Pattern>%d [%thread] %-5level %logger{36} %line [traceId=%X{traceId}] - %msg%n</Pattern>
         </encoder>
     </appender>
 
@@ -73,13 +76,14 @@
         </filter>
         <File>${loggingFilePath}/warn.log</File>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <FileNamePattern>${loggingFilePath}/history/warn.%d{yyyyMMdd}-%i.log</FileNamePattern>
+            <FileNamePattern>${loggingFilePath}/history/warn.%d{yyyyMMdd}-%i.log.gz</FileNamePattern>
             <maxHistory>${logger.max.history:-30}</maxHistory>
             <maxFileSize>50MB</maxFileSize>
+            <totalSizeCap>${logger.total.size.cap:-2GB}</totalSizeCap>
         </rollingPolicy>
         <encoder>
             <charset>UTF-8</charset>
-            <Pattern>%d [%thread] %-5level %logger{36} %line - %msg%n</Pattern>
+            <Pattern>%d [%thread] %-5level %logger{36} %line [traceId=%X{traceId}] - %msg%n</Pattern>
         </encoder>
     </appender>
 
@@ -137,34 +141,34 @@
     </logger>
 
     <!--  包名不支持通配符 * ，这里需要每个模块固定好mapper  -->
-    <logger name="io.metersphere.sdk.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.sdk.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.system.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.system.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.project.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.project.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.api.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.api.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.load.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.load.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.ui.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.ui.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.plan.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.plan.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.workstation.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.workstation.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.bug.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.bug.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
-    <logger name="io.metersphere.functional.mapper" level="${logger.sql.level}">
+    <logger name="io.metersphere.functional.mapper" level="${logger.sql.level:-INFO}">
         <appender-ref ref="console"/>
     </logger>
 

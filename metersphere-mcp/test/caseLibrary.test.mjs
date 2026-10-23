@@ -53,3 +53,16 @@ test("comment edit requires version, stable request identity and bounded content
   assert.equal(schema.safeParse({...args,content:""}).success,false);
   assert.equal(schema.safeParse({...args,requestId:""}).success,false);
 });
+
+test("comment deletion and independent reply pages validate lifecycle inputs",()=>{
+  const deletion=z.object(caseLibraryTools.find(t=>t.name.endsWith("comment.delete")).inputSchema);
+  const args={projectId:"p",caseId:"c",commentId:"comment",expectedUpdateTime:10,requestId:"delete-1"};
+  assert.equal(deletion.safeParse(args).success,true);
+  for(const field of ["projectId","caseId","commentId","expectedUpdateTime","requestId"])
+    assert.equal(deletion.safeParse({...args,[field]:undefined}).success,false,field);
+  assert.equal(deletion.safeParse({...args,expectedUpdateTime:-1}).success,false);
+  const page=z.object(caseLibraryTools.find(t=>t.name.endsWith("comments.list")).inputSchema);
+  assert.equal(page.safeParse({caseId:"c",parentId:"root",current:2,pageSize:20}).success,true);
+  assert.equal(page.safeParse({caseId:"c",pageSize:101}).success,false);
+  assert.equal(page.safeParse({caseId:"c",current:0}).success,false);
+});

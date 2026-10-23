@@ -1,6 +1,7 @@
 # Isolated local acceptance environment; no shared dev/production volumes.
 services:
   mysql:
+    stop_grace_period: 120s
     image: mysql:8.0.35
     environment:
       MYSQL_ROOT_PASSWORD: ${QUALITY_DB_PASSWORD:?Set an isolated test database password}

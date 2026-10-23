@@ -37,6 +37,7 @@ public class AgentEnvironmentProfileService {
     @Resource private JdbcTemplate jdbcTemplate;
     @Resource(name = "agentProjectService") private AgentProjectService projectService;
     @Resource private ProjectMapper projectMapper;
+    @Resource private TestAssetCatalogService testAssetCatalogService;
 
     public List<AgentEnvironmentProfileDTO> list(String projectId) {
         String resolved = projectService.resolveProjectId(projectId);
@@ -67,9 +68,10 @@ public class AgentEnvironmentProfileService {
         String projectId = projectService.resolveProjectId(request.getProjectId());
         Project project = projectMapper.selectByPrimaryKey(projectId);
         if (project == null) throw new MSException("项目不存在");
-        // Personal platform configuration does not require a published environment asset.
+        // This stable ID scopes credentials; it is not an ENVIRONMENT asset reference.
         if (StringUtils.isBlank(request.getEnvironmentId())) request.setEnvironmentId(IDGenerator.nextStr());
         validate(request);
+        validateAssetBinding(projectId, request.getEnvironmentAssetId());
         if (StringUtils.isNotBlank(request.getLoginProfileId()) || StringUtils.isNotBlank(request.getDefaultCredentialReferenceId())) {
             throw new MSException("ENVIRONMENT_BINDINGS_REQUIRE_PROFILE_UPDATE_AFTER_CREATE");
         }
@@ -81,42 +83,51 @@ public class AgentEnvironmentProfileService {
                 INSERT INTO ai_environment_execution_profile
                 (id,organization_id,project_id,environment_id,name,base_url,allowed_origins,network_zone,
                  environment_type,login_profile_id,default_credential_reference_id,runner_type,required_capabilities,
-                 production_allowed,enabled,version,create_user,update_user,create_time,update_time)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,b'0',?,0,?,?,?,?)
+                 production_allowed,enabled,version,create_user,update_user,create_time,update_time,environment_asset_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,b'0',?,0,?,?,?,?,?)
                 """, id, project.getOrganizationId(), projectId, request.getEnvironmentId(), request.getName().trim(),
                     normalizeUrl(request.getBaseUrl()), JSON.toJSONString(normalizeOrigins(request.getAllowedOrigins())),
                     request.getNetworkZone(), request.getEnvironmentType().toUpperCase(Locale.ROOT), request.getLoginProfileId(),
                     request.getDefaultCredentialReferenceId(), request.getRunnerType().toUpperCase(Locale.ROOT),
-                    JSON.toJSONString(nullSafe(request.getRequiredCapabilities())), request.getEnabled() == null || request.getEnabled(), user, user, now, now);
+                    JSON.toJSONString(nullSafe(request.getRequiredCapabilities())), request.getEnabled() == null || request.getEnabled(), user, user, now, now,
+                    StringUtils.trimToNull(request.getEnvironmentAssetId()));
         } catch (DuplicateKeyException ex) {
-            throw new MSException("同一项目下环境执行配置名称不能重复");
+            throw new MSException("ENVIRONMENT_PROFILE_NAME_CONFLICT");
         }
         return get(id);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public AgentEnvironmentProfileDTO update(String id, AgentEnvironmentProfileRequest request) {
+        int expectedVersion = AgentConfigurationVersion.require(request.getVersion());
         AgentEnvironmentProfileDTO existing = get(id);
         if (StringUtils.isBlank(request.getEnvironmentId())) request.setEnvironmentId(existing.getEnvironmentId());
+        if (!StringUtils.equals(request.getEnvironmentId(), existing.getEnvironmentId())) {
+            throw new MSException("ENVIRONMENT_CREDENTIAL_SCOPE_IMMUTABLE");
+        }
         if (!StringUtils.equals(existing.getProjectId(), projectService.resolveProjectId(request.getProjectId()))) {
             throw new MSException("环境执行配置不允许跨项目迁移");
         }
         validate(request);
+        // Omitted means preserve for legacy clients; empty string explicitly unbinds.
+        if (request.getEnvironmentAssetId() == null) request.setEnvironmentAssetId(existing.getEnvironmentAssetId());
+        if (!StringUtils.equals(StringUtils.trimToNull(request.getEnvironmentAssetId()), existing.getEnvironmentAssetId())) {
+            validateAssetBinding(existing.getProjectId(), request.getEnvironmentAssetId());
+        }
         validateBindings(id, existing.getProjectId(), request);
-        int expectedVersion = request.getVersion() == null ? existing.getVersion() : request.getVersion();
         int changed = jdbcTemplate.update("""
             UPDATE ai_environment_execution_profile
                SET environment_id=?,name=?,base_url=?,allowed_origins=?,network_zone=?,environment_type=?,
                    login_profile_id=?,default_credential_reference_id=?,runner_type=?,required_capabilities=?,
-                   production_allowed=b'0',enabled=?,version=version+1,update_user=?,update_time=?
+                   production_allowed=b'0',enabled=?,version=version+1,update_user=?,update_time=?,environment_asset_id=?
              WHERE id=? AND project_id=? AND version=?
             """, request.getEnvironmentId(), request.getName().trim(), normalizeUrl(request.getBaseUrl()),
                 JSON.toJSONString(normalizeOrigins(request.getAllowedOrigins())), request.getNetworkZone(),
                 request.getEnvironmentType().toUpperCase(Locale.ROOT), request.getLoginProfileId(),
                 request.getDefaultCredentialReferenceId(), request.getRunnerType().toUpperCase(Locale.ROOT),
                 JSON.toJSONString(nullSafe(request.getRequiredCapabilities())), request.getEnabled(), SessionUtils.getUserId(),
-                System.currentTimeMillis(), id, existing.getProjectId(), expectedVersion);
-        if (changed != 1) throw new MSException("环境执行配置已被修改，请刷新后重试");
+                System.currentTimeMillis(), StringUtils.trimToNull(request.getEnvironmentAssetId()), id, existing.getProjectId(), expectedVersion);
+        if (changed != 1) throw new MSException("ENVIRONMENT_PROFILE_VERSION_CONFLICT");
         return get(id);
     }
 
@@ -184,14 +195,14 @@ public class AgentEnvironmentProfileService {
         AgentEnvironmentProfileDTO existing = get(id);
         int changed = jdbcTemplate.update("UPDATE ai_environment_execution_profile SET enabled=?,version=version+1,update_user=?,update_time=? WHERE id=? AND project_id=? AND version=?",
                 enabled, SessionUtils.getUserId(), System.currentTimeMillis(), id, existing.getProjectId(), existing.getVersion());
-        if (changed != 1) throw new MSException("环境执行配置已被修改，请刷新后重试");
+        if (changed != 1) throw new MSException("ENVIRONMENT_PROFILE_VERSION_CONFLICT");
         return get(id);
     }
 
     public void assertTargetAllowed(AgentEnvironmentProfileDTO profile, String targetUrl) {
         URI target = requireSafeHttpUri(targetUrl);
         if (!profile.getAllowedOrigins().contains(origin(target))) {
-            throw new MSException("目标地址不在环境允许范围内");
+            throw new MSException("ENVIRONMENT_ORIGIN_MISMATCH");
         }
     }
 
@@ -206,16 +217,33 @@ public class AgentEnvironmentProfileService {
         if ("PRODUCTION".equals(profile.getEnvironmentType()) || Boolean.TRUE.equals(profile.getProductionAllowed())) {
             throw new MSException("PRODUCTION_EXECUTION_FORBIDDEN");
         }
+        if (StringUtils.isBlank(profile.getEnvironmentAssetId())) {
+            throw new MSException("ENVIRONMENT_ASSET_BINDING_REQUIRED");
+        }
         return profile;
     }
 
     public String freezeSnapshot(AgentEnvironmentProfileDTO profile) {
-        return JSON.toJSONString(java.util.Map.of(
+        var snapshot = new java.util.LinkedHashMap<String, Object>(java.util.Map.of(
                 "id", profile.getId(), "environmentId", profile.getEnvironmentId(), "version", profile.getVersion(),
                 "baseUrl", profile.getBaseUrl(), "allowedOrigins", profile.getAllowedOrigins(),
                 "networkZone", StringUtils.defaultString(profile.getNetworkZone()), "environmentType", profile.getEnvironmentType(),
                 "runnerType", profile.getRunnerType(), "requiredCapabilities", profile.getRequiredCapabilities(),
                 "loginProfileId", StringUtils.defaultString(profile.getLoginProfileId())));
+        snapshot.put("environmentAssetId", profile.getEnvironmentAssetId());
+        return JSON.toJSONString(snapshot);
+    }
+
+    private void validateAssetBinding(String projectId, String assetId) {
+        if (StringUtils.isBlank(assetId)) return;
+        var ref = new io.metersphere.agent.dto.TestAssetRefDTO();
+        ref.setAssetType("ENVIRONMENT");
+        ref.setAssetId(assetId.trim());
+        try {
+            testAssetCatalogService.resolveContext(projectId, List.of(ref));
+        } catch (MSException invalidBinding) {
+            throw new MSException("ENVIRONMENT_ASSET_UNAVAILABLE");
+        }
     }
 
     private void validate(AgentEnvironmentProfileRequest request) {
@@ -225,7 +253,7 @@ public class AgentEnvironmentProfileService {
         if (!RUNNER_TYPES.contains(request.getRunnerType().toUpperCase(Locale.ROOT))) throw new MSException("不支持的 Runner 类型");
         URI base = requireSafeHttpUri(request.getBaseUrl());
         List<String> origins = normalizeOrigins(request.getAllowedOrigins());
-        if (!origins.contains(origin(base))) throw new MSException("基础地址必须属于 allowedOrigins");
+        if (!origins.contains(origin(base))) throw new MSException("ENVIRONMENT_ORIGIN_MISMATCH");
     }
 
     private void validateBindings(String profileId,String projectId,AgentEnvironmentProfileRequest request){
@@ -236,24 +264,24 @@ public class AgentEnvironmentProfileService {
     private URI requireSafeHttpUri(String value) {
         try {
             URI uri = URI.create(value).normalize();
-            if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme())) || uri.getHost() == null) {
-                throw new MSException("只允许完整的 HTTP/HTTPS 地址");
+            if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme())) || uri.getHost() == null || uri.getUserInfo() != null) {
+                throw new MSException("ENVIRONMENT_URL_INVALID");
             }
             String host = uri.getHost().toLowerCase(Locale.ROOT);
-            if (host.equals("localhost") || host.equals("169.254.169.254")) throw new MSException("禁止访问本机或云元数据地址");
+            if (host.equals("localhost") || host.equals("169.254.169.254")) throw new MSException("ENVIRONMENT_TARGET_FORBIDDEN");
             // Do not make profile validation depend on DNS availability. Runner must resolve again
             // immediately before connecting and reject private/loopback/link-local resolved addresses.
             if (isIpLiteral(host)) {
                 InetAddress address = InetAddress.getByName(host);
                 if (address.isLoopbackAddress() || address.isLinkLocalAddress() || address.isSiteLocalAddress()) {
-                    throw new MSException("禁止访问本机、私网或链路本地地址");
+                    throw new MSException("ENVIRONMENT_TARGET_FORBIDDEN");
                 }
             }
             return uri;
         } catch (MSException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new MSException("环境地址格式无效或无法解析");
+            throw new MSException("ENVIRONMENT_URL_INVALID");
         }
     }
 
@@ -267,7 +295,11 @@ public class AgentEnvironmentProfileService {
     }
 
     private List<String> normalizeOrigins(List<String> values) {
-        return values.stream().map(this::requireSafeHttpUri).map(this::origin).distinct().toList();
+        if(values==null || values.isEmpty())throw new MSException("ENVIRONMENT_ORIGIN_INVALID");
+        return values.stream().map(this::requireSafeHttpUri).peek(uri->{
+            if((uri.getPath()!=null && !uri.getPath().isEmpty() && !"/".equals(uri.getPath())) || uri.getQuery()!=null || uri.getFragment()!=null)
+                throw new MSException("ENVIRONMENT_ORIGIN_INVALID");
+        }).map(this::origin).distinct().toList();
     }
 
     private String origin(URI uri) {
@@ -284,6 +316,7 @@ public class AgentEnvironmentProfileService {
         AgentEnvironmentProfileDTO dto = new AgentEnvironmentProfileDTO();
         dto.setId(rs.getString("id")); dto.setOrganizationId(rs.getString("organization_id"));
         dto.setProjectId(rs.getString("project_id")); dto.setEnvironmentId(rs.getString("environment_id"));
+        dto.setEnvironmentAssetId(rs.getString("environment_asset_id"));
         dto.setName(rs.getString("name")); dto.setBaseUrl(rs.getString("base_url"));
         dto.setAllowedOrigins(jsonList(rs.getString("allowed_origins"))); dto.setNetworkZone(rs.getString("network_zone"));
         dto.setEnvironmentType(rs.getString("environment_type")); dto.setLoginProfileId(rs.getString("login_profile_id"));

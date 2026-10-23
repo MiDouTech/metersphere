@@ -82,6 +82,8 @@ public class AgentRunnerService {
     private long leaseTtlMs = 60_000L;
     @Value("${agent.execution.event-batch-size:100}")
     private int eventBatchSize = 100;
+    @Value("${features.llm-ui-enabled:false}")
+    private boolean llmEnabled;
 
     public AgentRunnerRegisterResponse register(AgentRunnerRegisterRequest request) {
         if (!CONTRACT_VERSION.equals(request.getContractVersion())) {
@@ -151,6 +153,7 @@ public class AgentRunnerService {
         catch(Exception error){return java.util.Arrays.stream(capabilities.split(",")).map(String::trim).anyMatch("ASSERTION_V2"::equalsIgnoreCase);}
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     public AgentRunnerLeaseAssignmentDTO poll(String authorization, AgentRunnerPollRequest request) {
         AgentRunnerDTO runner = authenticate(authorization, request.getRunnerId());
         long now = System.currentTimeMillis();
@@ -257,6 +260,8 @@ public class AgentRunnerService {
             case AgentExecutionStatus.RUNNING -> "CONTINUE";
             default -> "NONE";
         };
+        if (!llmEnabled && !AgentExecutionStatus.TERMINAL.contains(task.getStatus())
+                && ("CONTINUE".equals(command) || "NONE".equals(command))) command = "PAUSE";
         return new AgentRunnerControlDTO(task.getStatus(), command, System.currentTimeMillis());
     }
 

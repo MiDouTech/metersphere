@@ -47,6 +47,16 @@ public class AgentExecutionAlertService {
         if (changed != 1) throw new MSException("ALERT_NOT_OPEN_OR_NOT_FOUND");
     }
 
+    public void recoveryFailure(String category) {
+        var organizations=jdbc.queryForList("SELECT DISTINCT organization_id FROM project WHERE deleted=0");
+        for(var organization:organizations) {
+            var row=new java.util.HashMap<String,Object>(organization);
+            row.put("resource_id","WRITEBACK");
+            row.put("message","回写恢复扫描暂不可用，已进入受控退避。错误分类："+category);
+            emit("RECOVERY_SCAN_FAILED","CRITICAL",row);
+        }
+    }
+
     private void emitRows(String type, String severity, List<Map<String, Object>> rows) { rows.forEach(row -> emit(type, severity, row)); }
 
     private void emit(String type, String severity, Map<String, Object> row) {

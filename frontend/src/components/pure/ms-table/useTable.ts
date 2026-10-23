@@ -5,6 +5,7 @@ import { ref, watchEffect } from 'vue';
 import { cloneDeep } from 'lodash-es';
 import dayjs from 'dayjs';
 
+import useListRefresh from '@/hooks/useListRefresh';
 import { useAppStore, useTableStore } from '@/store';
 
 import type { CommonList, TableQueryParams } from '@/models/common';
@@ -105,6 +106,7 @@ export default function useTableProps<T>(
       showJumper: appStore.showJumper,
       hideOnSinglePage: appStore.hideOnSinglePage,
       simple: defaultProps.pageSimple,
+      ...props?.msPagination,
     };
   }
 
@@ -119,8 +121,9 @@ export default function useTableProps<T>(
   };
 
   // 如果表格设置了tableKey，设置缓存的分页大小
+  let preferenceReady: Promise<void> = Promise.resolve();
   if (propsRes.value.msPagination && typeof propsRes.value.msPagination === 'object' && propsRes.value.tableKey) {
-    tableStore.getPageSize(propsRes.value.tableKey).then((res) => {
+    preferenceReady = tableStore.getPageSize(propsRes.value.tableKey).then((res) => {
       if (propsRes.value.msPagination && res) {
         propsRes.value.msPagination.pageSize = res;
       }
@@ -221,7 +224,12 @@ export default function useTableProps<T>(
   };
 
   // 加载分页列表数据
+  let requestSequence = 0;
+  let loadedOnce = false;
   const loadList = async () => {
+    const sequence = ++requestSequence;
+    await preferenceReady;
+    if (sequence !== requestSequence) return;
     if (propsRes.value.showPagination) {
       const { current, pageSize } = propsRes.value.msPagination as Pagination;
       let currentPageSize = pageSize;
@@ -229,6 +237,7 @@ export default function useTableProps<T>(
         // 如果表格设置了tableKey，缓存分页大小
         currentPageSize = await tableStore.getPageSize(propsRes.value.tableKey);
       }
+      if (sequence !== requestSequence) return;
       try {
         if (loadListFunc) {
           setLoading(true);
@@ -245,11 +254,22 @@ export default function useTableProps<T>(
               ...loadListParams.value.filter,
             },
           };
-          const data = await loadListFunc(tableQueryParams.value);
+          let data = await loadListFunc(cloneDeep(tableQueryParams.value));
+          if (sequence !== requestSequence) return;
+          const lastPage = Math.max(1, Math.ceil(data.total / currentPageSize));
+          if (current > lastPage) {
+            propsRes.value.selectorStatus = SelectAllEnum.NONE;
+            propsRes.value.selectedKeys.clear();
+            propsRes.value.excludeKeys.clear();
+            tableQueryParams.value.current = lastPage;
+            data = await loadListFunc(cloneDeep(tableQueryParams.value));
+            if (sequence !== requestSequence) return;
+          }
           const tmpArr = data.list || data.data.list;
           propsRes.value.data = tmpArr.map((item: MsTableDataItem<T>) => {
             return processRecordItem(item);
           });
+          loadedOnce = true;
           if (data.total === 0) {
             setTableErrorStatus('empty');
           } else {
@@ -258,6 +278,7 @@ export default function useTableProps<T>(
           setPagination({ current: data.current, total: data.total });
         }
       } catch (err) {
+        if (sequence !== requestSequence) return;
         setTableErrorStatus('error');
         propsRes.value.data = [];
         // eslint-disable-next-line no-console
@@ -265,7 +286,7 @@ export default function useTableProps<T>(
 
         throw err; // 将错误抛出
       } finally {
-        setLoading(false);
+        if (sequence === requestSequence) setLoading(false);
         // debug 模式下打印属性
         if (propsRes.value.debug && import.meta.env.DEV) {
           // eslint-disable-next-line no-console
@@ -278,6 +299,8 @@ export default function useTableProps<T>(
         if (loadListFunc) {
           setLoading(true);
           const data = await loadListFunc({ keyword: keyword.value, ...loadListParams.value });
+          if (sequence !== requestSequence) return;
+          loadedOnce = true;
           if (data.length === 0) {
             setTableErrorStatus('empty');
             propsRes.value.data = [];
@@ -299,15 +322,18 @@ export default function useTableProps<T>(
           return data;
         }
       } catch (err) {
+        if (sequence !== requestSequence) return;
         setTableErrorStatus('error');
         propsRes.value.data = [];
         // eslint-disable-next-line no-console
         console.log(err);
       } finally {
-        setLoading(false);
+        if (sequence === requestSequence) setLoading(false);
       }
     }
   };
+
+  useListRefresh(loadList, () => loadedOnce && !propsRes.value.loading);
 
   // 重置页码和条数
   const resetPagination = () => {
@@ -506,13 +532,18 @@ export default function useTableProps<T>(
     // 修改每页显示条数
     pageSizeChange: async (pageSize: number) => {
       if (propsRes.value.msPagination && typeof propsRes.value.msPagination === 'object') {
+        const allowed = propsRes.value.msPagination.pageSizeOptions;
+        if (!Number.isInteger(pageSize) || pageSize <= 0 || (allowed && !allowed.includes(pageSize))) return;
+        requestSequence += 1;
+        propsRes.value.msPagination.current = 1;
         propsRes.value.msPagination.pageSize = pageSize;
+        resetSelector();
         if (propsRes.value.tableKey) {
           // 如果表格设置了tableKey，缓存分页大小
           await tableStore.setPageSize(propsRes.value.tableKey, pageSize);
         }
       }
-      loadList();
+      await loadList();
     },
     change: (_data: MsTableDataItem<T>[]) => {
       if (propsRes.value.draggable && _data instanceof Array) {

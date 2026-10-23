@@ -17,7 +17,25 @@ import java.util.Map;
 @Service
 public class MiduoSsoSessionStore {
 
-    private static final String KEY_PREFIX = "miduo:sso:session:";
+    private static final String KEY_PREFIX = "miduo:sso:session:v2:";
+    @org.springframework.beans.factory.annotation.Value("${spring.session.redis.namespace:spring:session}")
+    private String instance = "spring:session";
+
+    private String userIndex(String userId) { return KEY_PREFIX + instance + ":user:" + userId; }
+
+    private String sessionKey(String userId) {
+        var session = org.apache.shiro.SecurityUtils.getSubject().getSession(false);
+        if (session == null || !userId.equals(io.metersphere.system.utils.SessionUtils.getUserId())) {
+            throw new IllegalStateException("SSO session ownership is unavailable");
+        }
+        return KEY_PREFIX + instance + ":" + userId + ":" + session.getId();
+    }
+
+    public void revokeUser(String userId) {
+        var keys = stringRedisTemplate.opsForSet().members(userIndex(userId));
+        if (keys != null && !keys.isEmpty()) stringRedisTemplate.delete(keys);
+        stringRedisTemplate.delete(userIndex(userId));
+    }
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
@@ -33,8 +51,10 @@ public class MiduoSsoSessionStore {
         value.put("expiresAt", expiresAtMillis);
         value.put("savedAt", System.currentTimeMillis());
         value.put("needReauth", false);
+        stringRedisTemplate.opsForSet().add(userIndex(userId), sessionKey(userId));
+        stringRedisTemplate.expire(userIndex(userId), Duration.ofDays(14));
         long ttl = resolveTtlSeconds(expiresAtMillis);
-        stringRedisTemplate.opsForValue().set(KEY_PREFIX + userId, JSON.toJSONString(value), Duration.ofSeconds(ttl));
+        stringRedisTemplate.opsForValue().set(sessionKey(userId), JSON.toJSONString(value), Duration.ofSeconds(ttl));
     }
 
     public String getSessionToken(String userId) {
@@ -73,7 +93,7 @@ public class MiduoSsoSessionStore {
     public boolean isNeedReauth(String userId) {
         Map<String, Object> data = load(userId);
         if (data == null) {
-            return false;
+            return true; // Legacy user-key credentials cannot be assigned to an individual session.
         }
         Object flag = data.get("needReauth");
         return Boolean.TRUE.equals(flag) || "true".equalsIgnoreCase(String.valueOf(flag));
@@ -86,7 +106,7 @@ public class MiduoSsoSessionStore {
         }
         data.put("needReauth", true);
         long ttl = Math.max(60, properties.getSessionTtlSeconds());
-        stringRedisTemplate.opsForValue().set(KEY_PREFIX + userId, JSON.toJSONString(data), Duration.ofSeconds(ttl));
+        stringRedisTemplate.opsForValue().set(sessionKey(userId), JSON.toJSONString(data), Duration.ofSeconds(ttl));
     }
 
     public void clearNeedReauth(String userId) {
@@ -96,14 +116,16 @@ public class MiduoSsoSessionStore {
         }
         data.put("needReauth", false);
         long ttl = resolveTtlSeconds(getExpiresAt(userId));
-        stringRedisTemplate.opsForValue().set(KEY_PREFIX + userId, JSON.toJSONString(data), Duration.ofSeconds(ttl));
+        stringRedisTemplate.opsForValue().set(sessionKey(userId), JSON.toJSONString(data), Duration.ofSeconds(ttl));
     }
 
     public void delete(String userId) {
         if (StringUtils.isBlank(userId)) {
             return;
         }
-        stringRedisTemplate.delete(KEY_PREFIX + userId);
+        String key = sessionKey(userId);
+        stringRedisTemplate.delete(key);
+        stringRedisTemplate.opsForSet().remove(userIndex(userId), key);
     }
 
     @SuppressWarnings("unchecked")
@@ -111,7 +133,7 @@ public class MiduoSsoSessionStore {
         if (StringUtils.isBlank(userId)) {
             return null;
         }
-        String json = stringRedisTemplate.opsForValue().get(KEY_PREFIX + userId);
+        String json = stringRedisTemplate.opsForValue().get(sessionKey(userId));
         if (StringUtils.isBlank(json)) {
             return null;
         }

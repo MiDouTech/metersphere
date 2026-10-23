@@ -392,7 +392,7 @@ export default defineComponent({
         return null;
       }
 
-      if (props.total === 0) return null;
+      if (props.total === 0 && !props.showPageSize) return null;
 
       return (
         <div class={cls.value}>

@@ -73,6 +73,7 @@ public class AgentTaskTriggerService {
     private AgentModelProfileService modelProfileService;
     @Resource
     private JdbcTemplate jdbcTemplate;
+    @Resource private org.springframework.transaction.PlatformTransactionManager triggerTransactions;
 
     @Transactional(rollbackFor = Exception.class)
     public AgentTaskTriggerDTO create(AgentTaskTriggerRequest request) {
@@ -155,11 +156,13 @@ public class AgentTaskTriggerService {
         return mapper.selectHistory(id, Math.min(Math.max(limit == null ? 50 : limit, 1), 200));
     }
 
+    @Transactional(rollbackFor=Exception.class)
     public AgentTaskTriggerHistoryDTO manualFire(String id) {
         AgentTaskTriggerDTO trigger = requireAccessible(id);
         return fire(trigger, "manual-" + IDGenerator.nextStr(), null, null);
     }
 
+    @Transactional(rollbackFor=Exception.class)
     public AgentTaskTriggerHistoryDTO webhook(String id, String eventId, String timestamp,
                                               String signature, String rawBody) {
         AgentTaskTriggerDTO trigger = mapper.selectById(id);
@@ -193,21 +196,45 @@ public class AgentTaskTriggerService {
             long scheduledAt = trigger.getNextFireAt();
             boolean missed = now - scheduledAt > 60_000L;
             Long next = nextFire(trigger.getCronExpression(), trigger.getTimezone(), missed ? now : scheduledAt);
-            if (mapper.claimScheduledFire(trigger.getId(), trigger.getVersion() == null ? 0 : trigger.getVersion(),
-                    scheduledAt, next, now) != 1) {
-                continue;
+            new org.springframework.transaction.support.TransactionTemplate(triggerTransactions).executeWithoutResult(status->{
+                if (mapper.claimScheduledFire(trigger.getId(), trigger.getVersion() == null ? 0 : trigger.getVersion(),scheduledAt,next,now)!=1)return;
+                if("SKIP".equals(trigger.getMissedPolicy())&&missed)history(trigger,null,"schedule-"+scheduledAt,scheduledAt,"SKIPPED","MISSED_SCHEDULE");
+                else jdbcTemplate.update("INSERT INTO ai_trigger_dispatch(trigger_id,scheduled_at,trigger_json,next_attempt) VALUES (?,?,?,?)",trigger.getId(),scheduledAt,JSON.toJSONString(trigger),now);
+            });
+        }
+        drainScheduledDispatches();
+    }
+
+    void drainScheduledDispatches() {
+        var jobs=jdbcTemplate.queryForList("SELECT trigger_id,scheduled_at FROM ai_trigger_dispatch WHERE state='PENDING' AND next_attempt<=? ORDER BY scheduled_at LIMIT 20",System.currentTimeMillis());
+        for(var job:jobs) {
+            String id=(String)job.get("trigger_id");long scheduled=((Number)job.get("scheduled_at")).longValue();
+            try {
+                new org.springframework.transaction.support.TransactionTemplate(triggerTransactions).executeWithoutResult(status->{
+                    var rows=jdbcTemplate.queryForList("SELECT trigger_json FROM ai_trigger_dispatch WHERE trigger_id=? AND scheduled_at=? AND state='PENDING' FOR UPDATE SKIP LOCKED",String.class,id,scheduled);
+                    if(rows.isEmpty())return;
+                    // Serialize cron, manual and webhook dispatch for the same definition.
+                    jdbcTemplate.queryForList("SELECT id FROM ai_task_trigger WHERE id=? FOR UPDATE",id);
+                    var snapshot=JSON.parseObject(rows.getFirst(),AgentTaskTriggerDTO.class);
+                    var current=mapper.selectById(id);
+                    if(current==null||!Boolean.TRUE.equals(current.getEnabled()))history(snapshot,null,"schedule-"+scheduled,scheduled,"SKIPPED","TRIGGER_DISABLED");
+                    else fire(snapshot,"schedule-"+scheduled,scheduled,null);
+                    jdbcTemplate.update("UPDATE ai_trigger_dispatch SET state='DONE' WHERE trigger_id=? AND scheduled_at=?",id,scheduled);
+                });
+            }catch(Exception failure) {
+                org.slf4j.LoggerFactory.getLogger(getClass()).warn("Scheduled dispatch {} will retry",id,failure);
+                jdbcTemplate.update("UPDATE ai_trigger_dispatch SET attempts=attempts+1,state=IF(attempts>=8,'FAILED','PENDING'),next_attempt=? WHERE trigger_id=? AND scheduled_at=? AND state='PENDING'",System.currentTimeMillis()+60000,id,scheduled);
+                mapper.updateFireResult(id,"BLOCKED","调度暂未成功，系统将有限重试；持续失败时请检查配置后手动触发",System.currentTimeMillis());
             }
-            if ("SKIP".equals(trigger.getMissedPolicy()) && missed) {
-                history(trigger, null, null, scheduledAt, "SKIPPED", "MISSED_SCHEDULE");
-                continue;
-            }
-            fire(trigger, "schedule-" + scheduledAt, scheduledAt, null);
         }
     }
 
     private AgentTaskTriggerHistoryDTO fire(AgentTaskTriggerDTO trigger, String eventId,
                                             Long scheduledAt, Map<String, Object> payload) {
         long now = System.currentTimeMillis();
+        jdbcTemplate.queryForList("SELECT id FROM ai_task_trigger WHERE id=? FOR UPDATE",trigger.getId());
+        var previous=mapper.selectHistoryByEvent(trigger.getId(),eventId);
+        if(previous!=null)return previous;
         if ("FORBID".equals(trigger.getConcurrencyPolicy()) && mapper.countActiveTasks(trigger.getId()) > 0) {
             return history(trigger, null, eventId, scheduledAt, "SKIPPED", "ACTIVE_TASK_EXISTS");
         }
@@ -237,7 +264,8 @@ public class AgentTaskTriggerService {
             mapper.updateFireResult(trigger.getId(), "CREATED", null, now);
             return history(trigger, task.getId(), eventId, scheduledAt, "CREATED", null);
         } catch (Exception ex) {
-            String message = StringUtils.abbreviate(StringUtils.defaultIfBlank(ex.getMessage(), ex.getClass().getSimpleName()), 1000);
+            org.slf4j.LoggerFactory.getLogger(getClass()).warn("Task trigger {} failed",trigger.getId(),ex);
+            String message = "任务启动失败，请检查配置及执行端状态后重试";
             mapper.updateFireResult(trigger.getId(), "FAILED", message, now);
             return history(trigger, null, eventId, scheduledAt, "FAILED", message);
         } finally {
@@ -261,7 +289,7 @@ public class AgentTaskTriggerService {
         trigger.setEventType(StringUtils.upperCase(StringUtils.trimToNull(source.getEventType())));
         trigger.setEventFilter(normalizeJson(source.getEventFilter()));
         trigger.setConcurrencyPolicy(normalizeEnum(source.getConcurrencyPolicy(), "FORBID", CONCURRENCY_POLICIES, "concurrencyPolicy"));
-        trigger.setMissedPolicy(normalizeEnum(source.getMissedPolicy(), "FIRE_ONCE", MISSED_POLICIES, "missedPolicy"));
+        trigger.setMissedPolicy(normalizeEnum(source.getMissedPolicy(), "SKIP", MISSED_POLICIES, "missedPolicy"));
         trigger.setEnabled(source.getEnabled() == null || source.getEnabled());
         trigger.setTriggerVersion(1);
         trigger.setModelProfileId(StringUtils.trimToNull(source.getModelProfileId()));

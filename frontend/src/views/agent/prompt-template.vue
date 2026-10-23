@@ -12,7 +12,7 @@
           ><a-button v-permission="['AI_MODEL:MANAGE']" type="primary" @click="open">新建版本</a-button></a-space
         ></div
       ><a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert
-      ><a-table :data="items" :loading="loading" :pagination="false" row-key="id"
+      ><a-table :data="items" :loading="loading" v-bind="tablePaging" row-key="id"
         ><template #empty><a-empty description="暂无 Prompt 模板" /></template
         ><template #columns
           ><a-table-column title="模板 ID" data-index="promptTemplateId" /><a-table-column
@@ -68,10 +68,12 @@
     listAiPromptTemplateVersions,
     publishAiPromptTemplateVersion,
   } from '@/api/modules/ai-execution';
+  import useClientTablePaging from '@/hooks/useClientTablePaging';
   import useAppStore from '@/store/modules/app';
 
   const app = useAppStore();
   const items = ref<AiPromptTemplateVersion[]>([]);
+  const tablePaging = useClientTablePaging('prompt-template', () => items.value.length);
   const loading = ref(false);
   const saving = ref(false);
   const visible = ref(false);

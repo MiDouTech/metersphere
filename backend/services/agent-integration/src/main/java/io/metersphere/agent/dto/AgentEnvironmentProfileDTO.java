@@ -10,6 +10,7 @@ public class AgentEnvironmentProfileDTO {
     private String organizationId;
     private String projectId;
     private String environmentId;
+    private String environmentAssetId;
     private String name;
     private String baseUrl;
     private List<String> allowedOrigins;

@@ -165,9 +165,8 @@ public class AgentExecutionPreflightService {
         }
         if(blockedReason==null){
             try{
-                List<TestAssetRefDTO> refs=new ArrayList<>(request.getAssetRefs()==null?List.of():request.getAssetRefs());
-                String environmentAssetId=environment==null?null:environment.getEnvironmentId();
-                if(environmentAssetId!=null&&refs.stream().noneMatch(ref->"ENVIRONMENT".equals(StringUtils.upperCase(ref.getAssetType()))&&environmentAssetId.equals(ref.getAssetId()))){TestAssetRefDTO environmentRef=new TestAssetRefDTO();environmentRef.setAssetType("ENVIRONMENT");environmentRef.setAssetId(environmentAssetId);refs.add(environmentRef);}
+                List<TestAssetRefDTO> refs=AgentEnvironmentAssetBinding.normalize(request.getAssetRefs(),
+                        environment==null?null:environment.getEnvironmentAssetId());
                 request.setAssetRefs(refs);
                 additionalAssets=testAssetCatalogService.resolveContext(projectId,refs);
                 pass(checks,"ADDITIONAL_ASSETS","Explicit asset references are published, authorized and frozen",Map.of("count",additionalAssets.size()),now);
@@ -281,6 +280,16 @@ public class AgentExecutionPreflightService {
         TestAssetVersionDTO version=frozenCaseVersion(preflightId,caseRowId,stableAssetId);
         if(!sha(contentSnapshot).equals(version.getContentHash()))throw new MSException("PREFLIGHT_CASE_ASSET_CHANGED");
         return version;
+    }
+
+    public void assertEnvironmentUnchanged(String preflightId, AgentEnvironmentProfileDTO current) {
+        Map<?, ?> frozen = JSON.parseObject(frozenSnapshotSection(preflightId, "environment"), Map.class);
+        Object boundAsset = frozen.containsKey("environmentAssetId") ? frozen.get("environmentAssetId") : frozen.get("environmentId");
+        if (!Objects.equals(current.getId(), frozen.get("id"))
+                || !String.valueOf(current.getVersion()).equals(String.valueOf(frozen.get("version")))
+                || !Objects.equals(current.getEnvironmentAssetId(), boundAsset)) {
+            throw new MSException("PREFLIGHT_ENVIRONMENT_CHANGED");
+        }
     }
 
     public String frozenSnapshotSection(String preflightId, String section) {

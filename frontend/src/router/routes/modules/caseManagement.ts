@@ -36,16 +36,10 @@ const CaseManagement: AppRouteRecordRaw = {
     // AI 生成用例
     {
       path: 'caseGenerate',
+      component: null,
       name: CaseManagementRouteEnum.CASE_MANAGEMENT_CASE_GENERATE,
-      component: () => import('@/views/case-management/caseGenerate/index.vue'),
-      meta: {
-        locale: 'menu.caseManagement.caseGenerate',
-        adminOnly: true,
-        roles: ['FUNCTIONAL_CASE_AI:READ'],
-        resourceCode: 'FUNCTIONAL_CASE_AI_GENERATE_TAB',
-        isTopMenu: true,
-        keepModuleAlive: true,
-      },
+      redirect: { name: CaseManagementRouteEnum.CASE_MANAGEMENT_CASE, query: {} },
+      meta: { hideInMenu: true, locale: 'menu.caseManagement.caseGenerate' },
     },
     // 创建用例&编辑用例
     {

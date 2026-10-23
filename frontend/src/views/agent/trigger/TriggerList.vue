@@ -13,7 +13,7 @@
       >
     </div>
     <a-alert v-if="error" type="error" class="mb-3">{{ error }}</a-alert>
-    <a-table :data="items" :loading="loading" :pagination="false" row-key="id">
+    <a-table :data="items" :loading="loading" v-bind="tablePaging" row-key="id">
       <template #columns>
         <a-table-column title="名称" data-index="name" /><a-table-column
           title="类型"
@@ -68,8 +68,15 @@
 
 <script setup lang="ts">
   import type { AiTaskTrigger } from '@/api/modules/ai-execution';
+  import useClientTablePaging from '@/hooks/useClientTablePaging';
 
-  defineProps<{ items: AiTaskTrigger[]; loading: boolean; error?: string; formatTime: (value?: number) => string }>();
+  const props = defineProps<{
+    items: AiTaskTrigger[];
+    loading: boolean;
+    error?: string;
+    formatTime: (value?: number) => string;
+  }>();
+  const tablePaging = useClientTablePaging('task-triggers', () => props.items.length);
   defineEmits<{
     refresh: [];
     create: [];

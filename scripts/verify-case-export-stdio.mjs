@@ -40,7 +40,25 @@ try {
   assert(complete);
   assert.equal(createHash('sha256').update(Buffer.concat(chunks)).digest('hex'), process.env.CASE_EXPORT_SHA256);
   assert.equal((await call('stop', { taskId: task.taskId, requestId: `stdio-stop-${task.taskId}` })).state, 'SUCCEEDED');
-  console.log('PASS: installed MCP export replay, status, authorized byte-identical download and stop.');
+  const original = JSON.parse(process.env.CASE_EXPORT_REQUEST_JSON);
+  const empty = await call('start', { ...original, requestId: `stdio-empty-${Date.now()}`,
+    request: { ...original.request, selectAll: false, selectIds: [] } });
+  const waitEmpty = async (id) => {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const state = await call('status', { taskId: id });
+      if (state.state !== 'RUNNING') { assert.equal(state.errorCode, 'EXPORT_EMPTY'); return; }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    assert.fail('Empty export did not terminate');
+  };
+  await waitEmpty(empty.taskId);
+  const retryArgs = { taskId: empty.taskId, requestId: `stdio-retry-${empty.taskId}` };
+  const retry = await call('retry', retryArgs);
+  assert.notEqual(retry.taskId, empty.taskId);
+  assert.equal(retry.sourceTaskId, empty.taskId);
+  assert.equal((await call('retry', retryArgs)).taskId, retry.taskId);
+  await waitEmpty(retry.taskId);
+  console.log('PASS: installed MCP export replay, status, authorized byte-identical download, stop and linked idempotent retry.');
 } catch {
   console.error(`FAIL: installed MCP export stage ${stage}; inspect isolated service logs.`);
   process.exitCode = 1;

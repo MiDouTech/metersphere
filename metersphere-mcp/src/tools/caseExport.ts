@@ -15,6 +15,9 @@ export const caseExportTools = [
     requestId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/), request: z.record(z.unknown()),
   }),
   tool("status", "Read your export task state and safe error details.", task),
+  tool("retry", "Retry a failed, cancelled or expired export with original filters and CURRENT content. Creates a linked new task; reuse requestId if a response is lost.", {
+    ...task, requestId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  }),
   tool("stop", "Stop your export with a stable requestId; a completed task stays successful.", {
     ...task, requestId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   }),

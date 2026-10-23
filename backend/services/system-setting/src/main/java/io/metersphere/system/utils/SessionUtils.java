@@ -67,13 +67,16 @@ public class SessionUtils {
         if (MapUtils.isNotEmpty(users)) {
             users.keySet().forEach(k -> {
                 sessionRepository.deleteById(k);
-                sessionRepository.getSessionRedisOperations().delete("spring:session:sessions:" + k);
             });
         }
+        var ssoStore = CommonBeanFactory.getBean(io.metersphere.system.sso.miduo.MiduoSsoSessionStore.class);
+        if (ssoStore != null) ssoStore.revokeUser(username);
     }
 
     //
     public static void putUser(SessionUser sessionUser) {
+        Session session = SecurityUtils.getSubject().getSession();
+        io.metersphere.system.security.SessionLifetime.initialize(session, session.getAttribute(ATTR_USER) == null, System.currentTimeMillis());
         SecurityUtils.getSubject().getSession().setAttribute(ATTR_USER, sessionUser);
         SecurityUtils.getSubject().getSession().setAttribute(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, sessionUser.getId());
     }

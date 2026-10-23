@@ -20,6 +20,16 @@ import java.nio.charset.StandardCharsets;
 public class MsAuthenticationFilter extends FormAuthenticationFilter {
 
     @Override
+    protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
+        var subject = getSubject(request, response);
+        if (subject.isAuthenticated() && SessionLifetime.expired(subject.getSession(false), System.currentTimeMillis())) {
+            subject.logout();
+            return false;
+        }
+        return super.isAccessAllowed(request, response, mappedValue);
+    }
+
+    @Override
     protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws Exception {
         if (isApiRequest(WebUtils.toHttp(request))) {
             writeUnauthorized(WebUtils.toHttp(response));

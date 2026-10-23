@@ -28,6 +28,7 @@ public class FunctionalCasePretreatmentListener extends AnalysisEventListener {
     @Override
     public void invoke(Object integerStringMap, AnalysisContext analysisContext) {
         Integer rowIndex = analysisContext.readRowHolder().getRowIndex();
+        if (rowIndex > 100000) throw new io.metersphere.sdk.exception.MSException("导入表格行数超过限制，请拆分文件");
         if (rowIndex - lastRowIndex > 1) {
             // 记录空行的行号
             for (int i = lastRowIndex + 1; i < rowIndex; i++) {
@@ -40,6 +41,7 @@ public class FunctionalCasePretreatmentListener extends AnalysisEventListener {
     @Override
     public void extra(CellExtra extra, AnalysisContext context) {
         if (extra.getType() == CellExtraTypeEnum.MERGE) {
+            if (mergeInfoSet.size() >= 100000) throw new io.metersphere.sdk.exception.MSException("导入合并单元格过多，请拆分文件");
             // 将合并单元格信息保留
             ExcelMergeInfo mergeInfo = new ExcelMergeInfo();
             BeanUtils.copyBean(mergeInfo, extra);

@@ -25,16 +25,6 @@
           <MsIcon type="icon-icon_edit_outlined" class="mr-[8px]" />
           {{ t('common.edit') }}
         </MsButton>
-        <MsTableMoreAction
-          v-if="countDetail.status !== 'ARCHIVED'"
-          :list="reportMoreAction"
-          @select="handleMoreReportSelect"
-        >
-          <MsButton v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+EXECUTE'])" type="button" status="default">
-            <MsIcon type="icon-icon_generate_report" class="mr-[8px]" />
-            {{ t('testPlan.testPlanDetail.generateReport') }}
-          </MsButton>
-        </MsTableMoreAction>
         <MsButton
           v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+ADD']) && countDetail.status !== 'ARCHIVED'"
           type="button"
@@ -100,7 +90,12 @@
       />
     </MsCard>
   </div>
+  <a-alert v-if="detailError" type="error" class="mb-4">
+    {{ detailError }} <a-button type="text" @click="initDetail">重试</a-button>
+  </a-alert>
   <MsCard
+    v-if="detail.id === planId && !detailError"
+    :key="`${appStore.currentProjectId}:${planId}`"
     class="plan-detail-content"
     :class="{ 'plan-detail-content--doc': activeTab === 'plan' }"
     simple
@@ -149,7 +144,7 @@
 
 <script setup lang="ts">
   import { computed, ref } from 'vue';
-  import { useRoute, useRouter } from 'vue-router';
+  import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
   import { cloneDeep } from 'lodash-es';
 
@@ -174,7 +169,6 @@
   import {
     archivedPlan,
     followPlanRequest,
-    generateReport,
     getPlanPassRate,
     getTestPlanDetail,
     getTestPlanModule,
@@ -183,12 +177,12 @@
   import { defaultDetailCount, testPlanDefaultDetail } from '@/config/testPlan';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
-  import useOpenNewPage from '@/hooks/useOpenNewPage';
   import useAppStore from '@/store/modules/app';
   import useCacheStore from '@/store/modules/cache/cache';
   import useMinderStore from '@/store/modules/components/minder-editor';
   import useUserStore from '@/store/modules/user';
   import { characterLimit } from '@/utils';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
   import { hasAnyPermission } from '@/utils/permission';
 
   import { ModuleTreeNode } from '@/models/common';
@@ -205,14 +199,15 @@
   const appStore = useAppStore();
   const { openModal } = useModal();
   const { t } = useI18n();
-  const { openNewPage } = useOpenNewPage();
 
   const route = useRoute();
   const router = useRouter();
   const minderStore = useMinderStore();
 
   const loading = ref(false);
-  const planId = ref(route.query.id as string);
+  const planId = computed(() => (typeof route.query.id === 'string' ? route.query.id : ''));
+  const detailError = ref('');
+  let detailSequence = 0;
   const detail = ref<TestPlanDetail>({
     ...testPlanDefaultDetail,
   });
@@ -223,21 +218,9 @@
     const { successCount, fakeErrorCount, errorCount, blockCount } = countDetail.value;
     return successCount + fakeErrorCount + errorCount + blockCount;
   });
-  // 初始化统计
-  async function getStatistics() {
-    try {
-      const result = await getPlanPassRate([planId.value]);
-      // eslint-disable-next-line prefer-destructuring
-      countDetail.value = result[0];
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    }
-  }
-
   const createdBugCount = ref<number>(0);
 
-  async function initBugList() {
+  async function initBugList(sequence: number, projectId: string) {
     if (!hasAnyPermission(['PROJECT_BUG:READ'])) {
       return;
     }
@@ -249,23 +232,41 @@
       keyword: '',
       combine: {},
       searchMode: 'AND',
-      projectId: appStore.currentProjectId,
+      projectId,
     });
-    createdBugCount.value = res.total || 0;
+    if (sequence === detailSequence && projectId === appStore.currentProjectId) createdBugCount.value = res.total || 0;
   }
   provide('existedDefect', createdBugCount);
 
   async function initDetail() {
-    try {
-      loading.value = true;
-      detail.value = await getTestPlanDetail(planId.value);
-      getStatistics();
-      initBugList();
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    } finally {
+    const sequence = ++detailSequence;
+    const id = planId.value;
+    const projectId = appStore.currentProjectId;
+    detailError.value = '';
+    if (!id || !projectId) {
+      detail.value = { ...testPlanDefaultDetail };
+      countDetail.value = { ...defaultDetailCount };
+      detailError.value = '请选择有效的测试计划';
       loading.value = false;
+      return;
+    }
+    loading.value = true;
+    try {
+      const [record, statistics] = await Promise.all([getTestPlanDetail(id), getPlanPassRate([id])]);
+      if (sequence !== detailSequence || id !== planId.value || projectId !== appStore.currentProjectId) return;
+      if (record.id !== id) throw new Error('测试计划详情不匹配，请刷新重试');
+      detail.value = record;
+      countDetail.value = statistics[0] || { ...defaultDetailCount };
+      initBugList(sequence, projectId).catch(() => {
+        if (sequence === detailSequence) createdBugCount.value = 0;
+      });
+    } catch (error) {
+      if (sequence !== detailSequence) return;
+      detail.value = { ...testPlanDefaultDetail };
+      countDetail.value = { ...defaultDetailCount };
+      detailError.value = formatAppErrorMessage(ensureAppError(error, '测试计划加载失败，请重试'));
+    } finally {
+      if (sequence === detailSequence) loading.value = false;
     }
   }
 
@@ -293,10 +294,16 @@
   });
 
   const isEnableEdit = computed(() => {
-    return hasAnyPermission(['PROJECT_TEST_PLAN:READ+UPDATE']) && countDetail.value.status !== 'ARCHIVED';
+    return (
+      !loading.value &&
+      detail.value.id === planId.value &&
+      hasAnyPermission(['PROJECT_TEST_PLAN:READ+UPDATE']) &&
+      countDetail.value.status !== 'ARCHIVED'
+    );
   });
 
   function archiveHandler() {
+    const targetId = planId.value;
     openModal({
       type: 'warning',
       title: t('common.archiveConfirmTitle', { name: characterLimit(detail.value.name) }),
@@ -308,7 +315,8 @@
       },
       onBeforeOk: async () => {
         try {
-          await archivedPlan(planId.value);
+          if (targetId !== planId.value || detail.value.id !== targetId) return;
+          await archivedPlan(targetId);
           Message.success(t('common.batchArchiveSuccess'));
           initDetail();
         } catch (error) {
@@ -425,69 +433,6 @@
 
   const showPlanDrawer = ref(false);
 
-  // 生成报告
-  async function handleGenerateReport() {
-    try {
-      loading.value = true;
-      const reportId = await generateReport({
-        projectId: appStore.currentProjectId,
-        testPlanId: detail.value.id as string,
-        triggerMode: 'MANUAL',
-      });
-      openNewPage(TestPlanRouteEnum.TEST_PLAN_REPORT_DETAIL, {
-        id: reportId,
-        type: testPlanTypeEnum.TEST_PLAN,
-      });
-      Message.success(t('testPlan.testPlanDetail.successfullyGenerated'));
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    } finally {
-      loading.value = false;
-    }
-  }
-  // 自定义报告
-  function configReportHandler() {
-    try {
-      router.push({
-        name: TestPlanRouteEnum.TEST_PLAN_INDEX_CONFIG,
-        query: {
-          id: detail.value.id,
-          type: detail.value.type === testPlanTypeEnum.GROUP ? 'GROUP' : 'TEST_PLAN',
-        },
-      });
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    }
-  }
-
-  const reportMoreAction: ActionsItem[] = [
-    {
-      label: t('testPlan.planAutomaticGeneration'),
-      eventTag: 'autoGeneration',
-      permission: ['PROJECT_TEST_PLAN:READ+EXECUTE'],
-    },
-    {
-      label: t('testPlan.planConfigReport'),
-      eventTag: 'configReport',
-      permission: ['PROJECT_TEST_PLAN:READ+EXECUTE'],
-    },
-  ];
-
-  function handleMoreReportSelect(item: ActionsItem) {
-    switch (item.eventTag) {
-      case 'autoGeneration':
-        handleGenerateReport();
-        break;
-      case 'configReport':
-        configReportHandler();
-        break;
-      default:
-        break;
-    }
-  }
-
   // 更新 | 复制
   const isCopy = ref<boolean>(false);
   function editorCopyHandler(copyFlog: boolean) {
@@ -498,6 +443,8 @@
   const followLoading = ref<boolean>(false);
   // 关注
   async function followHandler() {
+    if (loading.value || detail.value.id !== planId.value) return;
+    const targetId = planId.value;
     try {
       followLoading.value = true;
       await followPlanRequest({
@@ -509,7 +456,7 @@
           ? t('caseManagement.caseReview.unFollowSuccess')
           : t('caseManagement.caseReview.followSuccess')
       );
-      detail.value.followFlag = !detail.value.followFlag;
+      if (targetId === planId.value) detail.value.followFlag = !detail.value.followFlag;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(error);
@@ -574,17 +521,17 @@
   // 复制
   const copyLoading = ref<boolean>(false);
   async function copyHandler() {
+    if (loading.value || detail.value.id !== planId.value) return;
     copyLoading.value = true;
     try {
       const res = await testPlanAndGroupCopy(route.query.id as string);
       Message.success(t('common.copySuccess'));
-      router.push({
+      await router.push({
         name: TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL,
         query: {
           id: res.operationId,
         },
       });
-      initDetail();
       initPlanTree();
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -606,18 +553,48 @@
 
   provide('isActivated', isActivated);
 
-  onBeforeMount(() => {
-    if (route.query.type === 'featureCase') {
-      activeTab.value = 'featureCase';
-    }
-    initDetail();
-    initPlanTree();
-  });
-
+  function confirmPlanLeave() {
+    const status = planTabRef.value?.getAutoSaveStatus?.();
+    if (!minderStore.minderUnsaved && !['dirty', 'error', 'saving'].includes(status || '')) return true;
+    return new Promise<boolean>((resolve) => {
+      openModal({
+        type: 'warning',
+        title: t('common.unSaveLeaveTitle'),
+        content: t('common.unSaveLeaveContent'),
+        okText: t('common.leave'),
+        cancelText: t('common.stay'),
+        onBeforeOk: async () => {
+          resolve(true);
+        },
+        onCancel: () => resolve(false),
+        hideCancel: false,
+      });
+    });
+  }
+  onBeforeRouteLeave(confirmPlanLeave);
+  onBeforeRouteUpdate((to, from) => (to.query.id !== from.query.id ? confirmPlanLeave() : true));
+  watch(
+    [planId, () => appStore.currentProjectId],
+    () => {
+      detailSequence += 1;
+      detail.value = { ...testPlanDefaultDetail };
+      countDetail.value = { ...defaultDetailCount };
+      createdBugCount.value = 0;
+      showPlanDrawer.value = false;
+      showStatusDeleteModal.value = false;
+      activeTab.value = route.query.type === 'featureCase' ? 'featureCase' : 'plan';
+      initDetail();
+      initPlanTree();
+    },
+    { immediate: true }
+  );
+  let activatedOnce = false;
   onActivated(() => {
-    if (route.query.type === 'featureCase') {
-      activeTab.value = 'featureCase';
-    }
+    if (activatedOnce && !loading.value) initDetail();
+    activatedOnce = true;
+  });
+  onBeforeUnmount(() => {
+    detailSequence += 1;
   });
 </script>
 

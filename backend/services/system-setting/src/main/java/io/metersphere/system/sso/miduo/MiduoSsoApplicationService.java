@@ -133,15 +133,13 @@ public class MiduoSsoApplicationService {
             SecurityUtils.getSubject().logout();
             return;
         }
-        String sessionToken = miduoSsoSessionStore.getSessionToken(userId);
         try {
-            if (StringUtils.isNotBlank(sessionToken) && properties.isConfigured()) {
-                miduoSsoClient.revokeSessionToken(sessionToken);
-            }
+            // Ordinary logout revokes only this platform session. Upstream global logout
+            // may revoke another browser's authorization and is not part of this operation.
+            miduoSsoSessionStore.delete(userId);
         } catch (Exception e) {
             log.warn("miduo revoke failed userId={} err={}", userId, e.getMessage());
         } finally {
-            miduoSsoSessionStore.delete(userId);
             try {
                 userLoginService.saveLog(userId, HttpMethodConstants.POST.name(),
                         "/auth/miduo/logout", "米多 SSO 登出", OperationLogType.LOGOUT.name());

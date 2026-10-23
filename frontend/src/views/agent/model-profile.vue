@@ -14,7 +14,7 @@
         >
       </div>
       <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
-      <a-table :data="items" :loading="loading" :pagination="false" row-key="id">
+      <a-table :data="items" :loading="loading" v-bind="tablePaging" row-key="id">
         <template #empty><a-empty description="暂无模型配置" /></template>
         <template #columns>
           <a-table-column title="名称" data-index="name" />
@@ -121,10 +121,13 @@
     updateAiModelProfile,
     verifyAiModelProfile,
   } from '@/api/modules/ai-execution';
+  import useClientTablePaging from '@/hooks/useClientTablePaging';
+  import useListRefresh from '@/hooks/useListRefresh';
   import useAppStore from '@/store/modules/app';
 
   const app = useAppStore();
   const items = ref<AiModelProfile[]>([]);
+  const tablePaging = useClientTablePaging('model-profile', () => items.value.length);
   const loading = ref(false);
   const saving = ref(false);
   const visible = ref(false);
@@ -150,15 +153,25 @@
     const value = appError?.message || '请求失败，请稍后重试';
     return appError?.requestId ? `${value} (${appError.requestId})` : value;
   };
+  let loadSequence = 0;
   async function load() {
+    const sequence = ++loadSequence;
+    const projectId = app.currentProjectId;
+    if (!projectId) {
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     error.value = '';
     try {
-      items.value = await listAiModelProfiles(app.currentProjectId);
+      const response = await listAiModelProfiles(projectId);
+      if (sequence !== loadSequence || projectId !== app.currentProjectId) return;
+      items.value = response;
     } catch (e) {
+      if (sequence !== loadSequence) return;
       error.value = message(e);
     } finally {
-      loading.value = false;
+      if (sequence === loadSequence) loading.value = false;
     }
   }
   function open(item?: AiModelProfile) {
@@ -267,5 +280,17 @@
       Message.error(message(e));
     }
   }
+  watch(
+    () => app.currentProjectId,
+    () => {
+      visible.value = false;
+      items.value = [];
+      load();
+    }
+  );
   onMounted(load);
+  useListRefresh(load, () => !!app.currentProjectId && !loading.value && !visible.value);
+  onBeforeUnmount(() => {
+    loadSequence += 1;
+  });
 </script>

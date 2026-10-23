@@ -264,7 +264,7 @@
 
   import { ActionsItem } from '../ms-table-more-action/types';
   import type { SelectOptionData, TableColumnData, TableData, TableRowSelection } from '@arco-design/web-vue';
-  import { TableOperationColumn } from '@arco-design/web-vue/es/table/interface';
+  import type { TableOperationColumn } from '@arco-design/web-vue/es/table/interface';
 
   export interface FormTableColumn extends MsTableColumnData {
     enable?: boolean; // 是否启用

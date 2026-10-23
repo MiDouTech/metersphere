@@ -40,6 +40,39 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "ENVIRONMENT_ORIGIN_INVALID" -> "允许 Origin 只包含协议、主机及端口，不能包含路径或参数";
+            case "IMPORT_RATE_LIMIT" -> "当前导入预检繁忙，请稍后使用相同请求标识重试";
+            case "EXTERNAL_IMAGE_URL_INVALID" -> "请提供有效的公网 HTTP/HTTPS 图片链接，仅支持端口 80/443";
+            case "EXTERNAL_IMAGE_TARGET_FORBIDDEN" -> "图片来源地址不允许访问，请使用公网图片链接";
+            case "EXTERNAL_IMAGE_FETCH_FAILED" -> "无法获取图片，请检查链接是否可直接访问或已过期";
+            case "EXTERNAL_IMAGE_TIMEOUT" -> "获取图片超时，请稍后重试";
+            case "EXTERNAL_IMAGE_TOO_LARGE" -> "图片超过 5MiB 或解码像素超过限制";
+            case "EXTERNAL_IMAGE_TYPE_UNSUPPORTED" -> "仅支持可解码的 PNG/JPEG 图片";
+            case "EXTERNAL_IMAGE_INVALID" -> "图片内容损坏或无法解码";
+            case "EXTERNAL_IMAGE_RATE_LIMIT" -> "图片导入繁忙，请稍后使用相同请求标识重试";
+            case "EXTERNAL_IMAGE_NOT_AVAILABLE" -> "外部图片导入暂未启用";
+            case "ATTACHMENT_ASSOCIATION_FAILED" -> "附件未能关联，请提供 traceId 排查";
+            case "ENVIRONMENT_URL_INVALID" -> "地址必须包含 http:// 或 https://，例如 https://test.example.com";
+            case "ENVIRONMENT_TARGET_FORBIDDEN" -> "不允许使用本机、私网或云元数据地址";
+            case "ENVIRONMENT_ORIGIN_MISMATCH" -> "地址的 Origin 必须包含在所选平台允许的 Origin 中";
+            case "ENVIRONMENT_BINDINGS_REQUIRE_PROFILE_UPDATE_AFTER_CREATE" -> "请先保存平台，再配置登录方式和默认凭据";
+            case "LOGIN_USERNAME_LOCATOR_INVALID" -> "用户名定位器结构不符合要求，请检查策略及对应字段";
+            case "LOGIN_PASSWORD_LOCATOR_INVALID" -> "密码定位器结构不符合要求，请检查策略及对应字段";
+            case "LOGIN_SUBMIT_LOCATOR_INVALID" -> "提交定位器结构不符合要求，请检查策略及对应字段";
+            case "LOGIN_SUCCESS_ASSERTION_INVALID" -> "成功断言结构不符合要求，请检查类型、运算符及超时";
+            case "LOGIN_SESSION_ASSERTION_INVALID" -> "会话断言结构不符合要求，请检查类型、运算符及超时";
+            case "LOGIN_TYPE_INVALID" -> "登录类型不受支持";
+            case "MFA_POLICY_INVALID" -> "请选择有效的 MFA 策略";
+            case "CONFIGURATION_VERSION_REQUIRED" -> "缺少有效的配置版本，请刷新后重新编辑";
+            case "ENVIRONMENT_ASSET_BINDING_REQUIRED" -> "受管任务需要已发布的环境资产，请在测试平台配置中绑定；个人直连不受影响";
+            case "ENVIRONMENT_ASSET_UNAVAILABLE" -> "环境资产未发布、不属于当前项目或无权读取，请重新选择已发布环境";
+            case "ENVIRONMENT_ASSET_BINDING_CONFLICT" -> "环境资产引用与平台配置不一致，请重新选择环境并预检";
+            case "PREFLIGHT_ENVIRONMENT_CHANGED" -> "平台配置在预检后已变化，请重新预检，原任务尚未创建";
+            case "ASSET_REFERENCE_INVALID" -> "资产引用不能为空，请重新选择资产";
+            case "ENVIRONMENT_CREDENTIAL_SCOPE_IMMUTABLE" -> "不能更换已有配置的凭据范围，请新建平台配置";
+            case "ENVIRONMENT_PROFILE_VERSION_CONFLICT" -> "平台配置已被修改，请刷新后重新编辑";
+            case "ENVIRONMENT_PROFILE_NAME_CONFLICT" -> "当前项目已存在同名平台配置，请使用其他名称";
+            case "FEATURE_DISABLED" -> "平台模型功能未启用，请返回使用其他功能";
             case "SCOPE_DENIED", "RBAC_DENIED", "PROJECT_NOT_ALLOWED" -> "当前令牌或账号没有执行此项目操作的权限";
             case "PROJECT_NOT_FOUND" -> "项目不存在或当前账号无权访问";
             case "IDEMPOTENCY_CONFLICT" -> "相同请求标识的参数已变化，请使用新的请求标识";

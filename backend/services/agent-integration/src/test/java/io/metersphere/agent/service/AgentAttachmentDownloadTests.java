@@ -18,11 +18,14 @@ class AgentAttachmentDownloadTests {
         var files = mock(CommonFileService.class);
         var projects = mock(AgentProjectService.class);
         var metadata = mock(io.metersphere.system.mapper.AgentTempAttachmentMapper.class);
+        var guard=mock(AgentUploadStorageGuard.class);
+        ReflectionTestUtils.setField(service,"storageGuard",guard);
+        when(guard.reserve("payload.txt")).thenReturn("file");
         ReflectionTestUtils.setField(service, "commonFileService", files);
         ReflectionTestUtils.setField(service, "agentProjectService", projects);
         ReflectionTestUtils.setField(service, "agentTempAttachmentMapper", metadata);
         when(projects.resolveProjectId("project")).thenReturn("project");
-        when(files.uploadTempImgFile(any())).thenReturn("file");
+        when(files.uploadTempImgFile(any(),eq("file"))).thenReturn("file");
         var token = new io.metersphere.system.domain.AgentToken();
         token.setId("token"); token.setUserId("user");
         io.metersphere.agent.security.AgentTokenContext.set(token);
@@ -34,7 +37,7 @@ class AgentAttachmentDownloadTests {
                     "text/plain", new byte[]{1, 2, 3});
             var result = service.upload(upload, "project", "CASE_DETAIL", null);
             var captured = ArgumentCaptor.forClass(org.springframework.web.multipart.MultipartFile.class);
-            verify(files).uploadTempImgFile(captured.capture());
+            verify(files).uploadTempImgFile(captured.capture(),eq("file"));
             assertEquals("payload.txt", captured.getValue().getOriginalFilename());
             assertEquals("payload.txt", result.getFileName());
         } finally {

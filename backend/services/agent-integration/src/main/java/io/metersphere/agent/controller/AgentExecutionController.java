@@ -60,6 +60,7 @@ public class AgentExecutionController {
         return agentExecutionService.resolve(request);
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping("/task")
     @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
     @Operation(summary = "创建 AI 自动化执行任务")

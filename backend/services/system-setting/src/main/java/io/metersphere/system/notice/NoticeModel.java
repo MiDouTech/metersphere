@@ -9,7 +9,10 @@ import java.util.Map;
 
 @Data
 @Builder
+@lombok.extern.jackson.Jacksonized
 public class NoticeModel implements Serializable {
+    /** Outbox delivery uses recipients resolved in the originating transaction. */
+    private boolean frozenRecipients;
     /**
      * 保存 测试id
      */

@@ -426,6 +426,21 @@
       desc: '允许修改本人评论正文，要求当前版本；保留回复及附件，不修改执行结果。',
     },
     {
+      value: 'FUNCTIONAL_READ;CASE_COMMENT_DELETE_V2',
+      label: '用例评论删除（需明确授权）',
+      desc: '按当前版本删除本人评论；具有用例删除和评论权限时可管理删除。保留墓碑及回复，旧全能力 Token 不自动取得该权限。',
+    },
+    {
+      value: 'FUNCTIONAL_READ;CASE_DELETE_V2;CASE_RESTORE_V2',
+      label: '用例删除与恢复（需明确授权）',
+      desc: '删除须先在平台确认具体目标和任务处理方式；恢复默认仅当前版本。旧全能力 Token 不自动取得权限。',
+    },
+    {
+      value: 'FUNCTIONAL_READ;CASE_IMPORT_V2',
+      label: '异步用例导入（需明确授权）',
+      desc: '预检固定文件、覆盖目标和模板，再提交后台导入；可查询逐项结果、停止及重试失败项。',
+    },
+    {
       value: 'FUNCTIONAL_READ;CASE_MODULE_WRITE_V2',
       label: '用例目录管理（需明确授权）',
       desc: '允许目录改名和移动；旧全能力 Token 不自动包含此权限，仍受项目权限约束。',

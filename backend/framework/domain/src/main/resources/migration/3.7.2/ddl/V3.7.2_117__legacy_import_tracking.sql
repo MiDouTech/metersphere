@@ -1,0 +1,22 @@
+CREATE TABLE functional_legacy_import_job (
+    id VARCHAR(50) NOT NULL PRIMARY KEY,
+    project_id VARCHAR(50) NOT NULL,
+    user_id VARCHAR(50) NOT NULL,
+    instance_id VARCHAR(64) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    source_hash VARCHAR(64) NOT NULL,
+    state VARCHAR(24) NOT NULL,
+    stage VARCHAR(32) NOT NULL,
+    processed_rows INT NOT NULL DEFAULT 0,
+    success_count INT NOT NULL DEFAULT 0,
+    fail_count INT NOT NULL DEFAULT 0,
+    trace_id VARCHAR(128) NOT NULL,
+    error_code VARCHAR(64) NULL,
+    create_time BIGINT NOT NULL,
+    update_time BIGINT NOT NULL,
+    heartbeat_at BIGINT NOT NULL,
+    finish_time BIGINT NULL,
+    KEY ix_legacy_import_project(project_id,user_id,create_time),
+    KEY ix_legacy_import_state(state,heartbeat_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

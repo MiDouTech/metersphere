@@ -10,13 +10,17 @@
           ><a-button v-permission="['AI_EXECUTION:RUN']" type="primary" @click="open()">新增</a-button></a-space
         ></div
       ><a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert
-      ><a-table :data="items" :loading="loading" :pagination="false"
+      ><a-table
+        :data="platformId ? items.filter((item) => item.environmentProfileId === platformId) : items"
+        :loading="loading"
+        v-bind="tablePaging"
         ><template #empty><a-empty description="暂无登录配置" /></template
         ><template #columns
-          ><a-table-column title="名称" data-index="name" /><a-table-column
-            title="环境配置"
-            data-index="environmentProfileId"
-          /><a-table-column title="登录地址" data-index="loginUrl" /><a-table-column
+          ><a-table-column title="名称" data-index="name" /><a-table-column title="环境配置"
+            ><template #cell="{ record }">{{
+              environments.find((item) => item.id === record.environmentProfileId)?.name || '待关联平台'
+            }}</template></a-table-column
+          ><a-table-column title="登录地址" data-index="loginUrl" /><a-table-column
             title="MFA 策略"
             data-index="mfaPolicy"
           /><a-table-column title="状态"
@@ -28,8 +32,8 @@
           ><a-table-column title="操作"
             ><template #cell="{ record }"
               ><a-space
-                ><a-button type="text" @click="open(record)">编辑</a-button
-                ><a-button type="text" @click="toggle(record)">{{
+                ><a-button v-permission="['AI_EXECUTION:RUN']" type="text" @click="open(record)">编辑</a-button
+                ><a-button v-permission="['AI_EXECUTION:RUN']" type="text" @click="toggle(record)">{{
                   record.enabled ? '停用' : '启用'
                 }}</a-button></a-space
               ></template
@@ -47,12 +51,13 @@
         ><div class="grid grid-cols-2 gap-x-4"
           ><a-form-item field="name" label="名称" required><a-input v-model="form.name" /></a-form-item
           ><a-form-item field="environmentProfileId" label="环境执行配置" required
-            ><a-select v-model="form.environmentProfileId"
+            ><a-select v-model="form.environmentProfileId" :disabled="!!platformId"
               ><a-option v-for="e in environments" :key="e.id" :value="e.id"
                 >{{ e.name }}（{{ e.enabled ? '已启用' : '已停用' }}）</a-option
               ></a-select
             ></a-form-item
-          ><a-form-item field="loginUrl" label="登录地址" required><a-input v-model="form.loginUrl" /></a-form-item
+          ><a-form-item field="loginUrl" label="登录地址" required
+            ><a-input v-model="form.loginUrl" placeholder="https://test.example.com/login" /></a-form-item
           ><a-form-item field="mfaPolicy" label="MFA 策略" required
             ><a-select v-model="form.mfaPolicy"
               ><a-option value="BLOCK">BLOCK</a-option><a-option value="CHECKPOINT">CHECKPOINT</a-option></a-select
@@ -87,12 +92,24 @@
     listAiLoginProfiles,
     updateAiLoginProfile,
   } from '@/api/modules/ai-execution';
+  import useClientTablePaging from '@/hooks/useClientTablePaging';
+  import useListRefresh from '@/hooks/useListRefresh';
   import useAppStore from '@/store/modules/app';
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
+  import { platformUrl, validateLoginJson } from '@/utils/platformConfiguration';
+
+  const props = defineProps<{ platformId?: string }>();
 
   const app = useAppStore();
   const items = ref<AiLoginProfile[]>([]);
   const environments = ref<AiEnvironmentProfile[]>([]);
+  const tablePaging = useClientTablePaging(
+    'login-profile',
+    () =>
+      (props.platformId ? items.value.filter((item) => item.environmentProfileId === props.platformId) : items.value)
+        .length,
+    () => props.platformId
+  );
   const loading = ref(false);
   const saving = ref(false);
   const visible = ref(false);
@@ -118,27 +135,58 @@
   const msg = (e: unknown) => {
     return formatAppErrorMessage(ensureAppError(e, '请求失败，请稍后重试'));
   };
+  let loadSequence = 0;
   async function load() {
+    const sequence = ++loadSequence;
+    const projectId = app.currentProjectId;
+    if (!projectId) {
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     error.value = '';
     try {
-      [items.value, environments.value] = await Promise.all([
-        listAiLoginProfiles(app.currentProjectId),
-        listAiEnvironmentProfiles(app.currentProjectId),
-      ]);
+      const response = await Promise.all([listAiLoginProfiles(projectId), listAiEnvironmentProfiles(projectId)]);
+      if (sequence !== loadSequence || projectId !== app.currentProjectId) return;
+      [items.value, environments.value] = response;
     } catch (e) {
+      if (sequence !== loadSequence) return;
       error.value = msg(e);
     } finally {
-      loading.value = false;
+      if (sequence === loadSequence) loading.value = false;
     }
   }
   function open(r?: AiLoginProfile) {
     Object.assign(form, r ? { ...r, sessionValidation: r.sessionValidation || '' } : defaults);
+    if (!r && props.platformId) {
+      form.environmentProfileId = props.platformId;
+      form.loginUrl = environments.value.find((item) => item.id === props.platformId)?.baseUrl || '';
+    }
     visible.value = true;
   }
   async function save(done: (v: boolean) => void) {
     if (!form.name.trim() || !form.environmentProfileId || !form.loginUrl.trim()) {
       Message.warning('请填写必填字段');
+      done(false);
+      return;
+    }
+    if (saving.value) {
+      done(false);
+      return;
+    }
+    try {
+      const login = platformUrl(form.loginUrl);
+      const environment = environments.value.find((item) => item.id === form.environmentProfileId);
+      if (
+        !environment ||
+        !environment.allowedOrigins.map((value) => platformUrl(value, true).origin).includes(login.origin)
+      ) {
+        throw new Error('登录地址必须属于所选平台允许的 Origin');
+      }
+      if (!form.timeoutMs || form.timeoutMs < 1000 || form.timeoutMs > 60000)
+        throw new Error('超时必须在 1000～60000ms 之间');
+    } catch (failure) {
+      Message.warning((failure as Error).message);
       done(false);
       return;
     }
@@ -150,7 +198,7 @@
       ...(form.sessionValidation ? [form.sessionValidation] : []),
     ].some((value) => {
       try {
-        JSON.parse(value);
+        validateLoginJson(value, '定位器和断言');
         return false;
       } catch {
         return true;
@@ -181,9 +229,9 @@
     try {
       if (form.id) await updateAiLoginProfile(form.id, data);
       else await createAiLoginProfile(data);
-      await load();
       Message.success('保存成功');
       done(true);
+      await load();
     } catch (e) {
       Message.error(msg(e));
       done(false);
@@ -205,10 +253,15 @@
     () => {
       visible.value = false;
       items.value = [];
-      if (app.currentProjectId) load();
+      environments.value = [];
+      load();
     }
   );
   onMounted(() => {
     if (app.currentProjectId) load();
+  });
+  useListRefresh(load, () => !!app.currentProjectId && !loading.value && !visible.value);
+  onBeforeUnmount(() => {
+    loadSequence += 1;
   });
 </script>

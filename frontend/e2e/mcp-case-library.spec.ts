@@ -53,7 +53,7 @@ test('repository paging, detail, module version and explicit grants through real
     await expect(page.locator('.arco-table').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /AI\s*自动化执行/ })).toHaveCount(0);
     const legacy = await token('AGENT_ALL');
-    const granted = await token('AGENT_ALL;CASE_MODULE_WRITE_V2;CASE_COMMENT_EDIT_V2');
+    const granted = await token('AGENT_ALL;CASE_MODULE_WRITE_V2;CASE_COMMENT_EDIT_V2;CASE_COMMENT_DELETE_V2');
     const managementDenied = await page.request.get('/api/personal/agent-tokens', {
       headers: { ...headers, ...granted },
     });
@@ -130,9 +130,17 @@ test('repository paging, detail, module version and explicit grants through real
     const staleComment = await call(granted, 'comment.update', { ...commentPatch, requestId: `${key}-comment-stale` });
     expect(staleComment.error?.data?.code).toBe('VERSION_CONFLICT');
     const comments = await call(granted, 'comments.list', { caseId: cases[0] });
-    expect(comments.result.structuredContent.result.find((item) => item.id === savedComment.id)?.content).toBe(
+    expect(comments.result.structuredContent.result.list.find((item) => item.id === savedComment.id)?.content).toBe(
       'edited comment'
     );
+    const deletion = { projectId, caseId: cases[0], commentId: savedComment.id,
+      expectedUpdateTime: editedComment.result.structuredContent.result.updateTime, requestId: `${key}-comment-delete` };
+    expect((await call(legacy, 'comment.delete', deletion)).error).toBeTruthy();
+    const deletedComment = await call(granted, 'comment.delete', deletion);
+    expect(deletedComment.error).toBeUndefined();
+    expect(deletedComment.result.structuredContent.result.deleted).toBe(true);
+    const tombstone = await call(granted, 'comments.list', { caseId: cases[0] });
+    expect(tombstone.result.structuredContent.result.list.find((item) => item.id === savedComment.id)).toMatchObject({ content: '', deleted: true });
     const metadata = await call(granted, 'module.get', { projectId, moduleId });
     const mutation = {
       projectId,

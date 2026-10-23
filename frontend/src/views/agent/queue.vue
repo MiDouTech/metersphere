@@ -139,6 +139,7 @@
     importCasesFromAssets,
   } from '@/api/modules/case-management/featureCase';
   import { useAppStore } from '@/store';
+  import { formatPreflightBlockedMessage } from '@/utils/appError';
 
   const appStore = useAppStore();
   const props = defineProps<{ scheduleOnly?: boolean }>();
@@ -176,7 +177,7 @@
     eventType: '',
     eventFilter: '',
     concurrencyPolicy: 'FORBID' as 'FORBID' | 'ALLOW',
-    missedPolicy: 'FIRE_ONCE' as 'SKIP' | 'FIRE_ONCE',
+    missedPolicy: 'SKIP' as 'SKIP' | 'FIRE_ONCE',
     enabled: true,
     taskName: '',
     objective: '',
@@ -261,7 +262,7 @@
       eventType: '',
       eventFilter: '',
       concurrencyPolicy: 'FORBID',
-      missedPolicy: 'FIRE_ONCE',
+      missedPolicy: 'SKIP',
       enabled: true,
       taskName: '',
       objective: '',
@@ -349,7 +350,7 @@
         eventType: record.eventType || '',
         eventFilter: record.eventFilter || '',
         concurrencyPolicy: record.concurrencyPolicy || 'FORBID',
-        missedPolicy: record.missedPolicy || 'FIRE_ONCE',
+        missedPolicy: record.missedPolicy || 'SKIP',
         enabled: record.enabled,
         taskName: template.name || '',
         objective: template.objective || '',
@@ -451,11 +452,7 @@
         responsibleUserIds,
       });
       if (preview.status !== 'PASSED') {
-        Message.error(
-          `Preflight 未通过：${preview.blockedReason || preview.blockedDetail || '配置不可执行'}；traceId=${
-            preview.traceId
-          }`
-        );
+        Message.error(`${formatPreflightBlockedMessage(preview)}；traceId=${preview.traceId}`);
         done(false);
         return;
       }

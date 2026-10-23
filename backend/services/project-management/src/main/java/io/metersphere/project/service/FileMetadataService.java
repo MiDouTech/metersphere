@@ -214,10 +214,24 @@ public class FileMetadataService {
      * @throws Exception
      */
     public String transferFile(String fileName, String originFileName, String projectId, String moduleId, String operator, byte[] fileBytes) {
+        return transferFileWithId(null,fileName,originFileName,projectId,moduleId,operator,fileBytes);
+    }
+
+    /** Stable internal object identity for durable archive retries; never taken from an upload request. */
+    public String transferFileWithId(String reservedId,String fileName,String originFileName,String projectId,String moduleId,String operator,byte[] fileBytes) {
+        if(reservedId!=null&&!reservedId.matches("arc-[a-f0-9-]{36}"))throw new MSException("归档文件标识无效");
+        if(reservedId!=null) {
+            var existing=fileMetadataMapper.selectByPrimaryKey(reservedId);
+            if(existing!=null) {
+                if(!projectId.equals(existing.getProjectId()))throw new MSException("归档文件范围不一致");
+                return reservedId;
+            }
+        }
         if (StringUtils.isBlank(originFileName)) {
             throw new MSException(Translator.get("file.name.cannot.be.empty"));
         }
         FileMetadata fileMetadata = this.genFileMetadata(fileName, originFileName, StorageType.MINIO.name(), fileBytes.length, false, projectId, moduleId, operator);
+        if(reservedId!=null){fileMetadata.setId(reservedId);fileMetadata.setRefId(reservedId);}
         if (StringUtils.isNotBlank(fileName)) {
             fileMetadata.setName(fileName);
         }

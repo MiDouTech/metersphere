@@ -18,6 +18,8 @@ import java.util.*;
 @Getter
 @Setter
 public class FunctionalCaseExcelData {
+    @ExcelIgnore
+    private String importedCaseId;
     public static final String FUNCTIONAL_PRIORITY_KEY = "functional_priority";
 
     @ExcelIgnore

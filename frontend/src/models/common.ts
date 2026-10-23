@@ -58,6 +58,7 @@ export interface BatchApiParams {
 
 // 移动模块树
 export interface MoveModules {
+  expectedUpdateTime?: number;
   dragNodeId: string; // 被拖拽的节点
   dropNodeId: string; // 放入的节点
   dropPosition: number; // 放入的位置（取值：-1，,0，,1。 -1：dropNodeId节点之前。 0:dropNodeId节点内。 1：dropNodeId节点后）
@@ -70,6 +71,7 @@ export interface AddModuleParams {
 }
 // 模块树节点
 export interface ModuleTreeNode extends TreeNodeData {
+  updateTime?: number;
   id: string;
   name: string;
   type: 'MODULE' | 'API';

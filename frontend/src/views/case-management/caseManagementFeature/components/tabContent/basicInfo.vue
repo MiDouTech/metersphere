@@ -95,7 +95,7 @@
   import { ModuleTreeNode } from '@/models/common';
 
   import { initFormCreate } from '../utils';
-  import { LabelValue } from '@arco-design/web-vue/es/tree-select/interface';
+  import type { LabelValue } from '@arco-design/web-vue/es/tree-select/interface';
   import debounce from 'lodash-es/debounce';
 
   const { t } = useI18n();

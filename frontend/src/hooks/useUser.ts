@@ -17,7 +17,11 @@ export default function useUser() {
   const logout = async (logoutTo?: string, noRedirect?: boolean, silenceToast = false) => {
     try {
       const userStore = useUserStore();
-      await userStore.logout(silenceToast);
+      try {
+        await userStore.logout(silenceToast);
+      } catch {
+        // logout() always clears local credentials, including when the expired server session rejects it.
+      }
       const appStore = useAppStore();
       const currentRoute = router.currentRoute.value;
       // 清空顶部菜单
@@ -32,6 +36,7 @@ export default function useUser() {
           : {
               ...router.currentRoute.value.query,
               redirect: currentRoute.name as string,
+              returnTo: currentRoute.fullPath,
             },
       });
     } catch (error) {
@@ -43,7 +48,7 @@ export default function useUser() {
   };
 
   const isLoginPage = () => {
-    return window.location.hash.indexOf('login') > -1;
+    return ['login', 'loginAdmin'].includes(String(router.currentRoute.value.name));
   };
 
   const isWhiteListPage = () => {

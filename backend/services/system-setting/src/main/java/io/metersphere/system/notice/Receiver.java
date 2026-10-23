@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @AllArgsConstructor
+@lombok.NoArgsConstructor
 @EqualsAndHashCode
 public class Receiver {
     private String userId;

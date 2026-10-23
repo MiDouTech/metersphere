@@ -30,6 +30,7 @@ public class AgentExecutionPlanningService {
     @Resource private AgentBudgetGuard budgetGuard;
     @Resource private AgentExecutionPreflightService preflightService;
 
+    @io.metersphere.system.security.RequiresLlmFeature
     public void plan(String projectId,String organizationId,String modelProfileId,String taskId,
                      String targetUrl,List<AgentExecutionStepDTO> steps,String userId){
         AgentModelProfileDTO profile=profiles.assertUsable(modelProfileId,projectId,List.of("STRUCTURED_OUTPUT"));

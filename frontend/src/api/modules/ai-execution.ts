@@ -93,6 +93,7 @@ export interface AiEnvironmentProfile {
   organizationId: string;
   projectId: string;
   environmentId: string;
+  environmentAssetId?: string;
   name: string;
   baseUrl: string;
   allowedOrigins: string[];
@@ -945,7 +946,11 @@ export function getAiExecutionAgents(projectId: string) {
 }
 
 export function listAiEnvironmentProfiles(projectId: string) {
-  return MSR.get<AiEnvironmentProfile[]>({ url: AiEnvironmentProfilesUrl, params: { projectId } });
+  // Platform, login and credential panels can load this shared catalog concurrently.
+  return MSR.get<AiEnvironmentProfile[]>(
+    { url: AiEnvironmentProfilesUrl, params: { projectId } },
+    { ignoreCancelToken: true }
+  );
 }
 
 export function checkAiCaseExecutability(data: { projectId: string; caseIds: string[]; environmentProfileId: string }) {
@@ -957,11 +962,11 @@ export function saveAiCaseExecutabilityConfig(data: AiCaseExecutabilityConfigReq
 }
 
 export function createAiEnvironmentProfile(data: AiEnvironmentProfileRequest) {
-  return MSR.post<AiEnvironmentProfile>({ url: AiEnvironmentProfilesUrl, data });
+  return MSR.post<AiEnvironmentProfile>({ url: AiEnvironmentProfilesUrl, data }, { errorMessageMode: 'none' });
 }
 
 export function updateAiEnvironmentProfile(id: string, data: AiEnvironmentProfileRequest) {
-  return MSR.put<AiEnvironmentProfile>({ url: AiEnvironmentProfileUrl(id), data });
+  return MSR.put<AiEnvironmentProfile>({ url: AiEnvironmentProfileUrl(id), data }, { errorMessageMode: 'none' });
 }
 
 export function verifyAiEnvironmentProfile(id: string, data?: { targetUrl?: string; runnerId?: string }) {

@@ -1,6 +1,7 @@
 import { getTestReportProject } from '@/api/modules/case-management/testReport';
 import usePermission from '@/hooks/usePermission';
 import useAppStore from '@/store/modules/app';
+import useAIStore from '@/store/modules/setting/ai';
 
 import { ShareEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
 
@@ -10,6 +11,15 @@ import type { Router } from 'vue-router';
 
 export default function setupPermissionGuard(router: Router) {
   router.beforeEach(async (to, from, next) => {
+    if (to.meta.requiresLlm) {
+      const aiStore = useAIStore();
+      await aiStore.getAISourceNameList();
+      if (!aiStore.llmUiEnabled) {
+        next({ name: 'featureDisabled', replace: true });
+        NProgress.done();
+        return;
+      }
+    }
     const appStore = useAppStore();
     if (to.name === TestPlanRouteEnum.TEST_PLAN_TEST_REPORT_DETAIL && to.query.id) {
       try {

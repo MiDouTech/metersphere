@@ -250,7 +250,7 @@
           });
           return;
         }
-        const { redirect, ...othersQuery } = router.currentRoute.value.query;
+        const { redirect, returnTo, ...othersQuery } = router.currentRoute.value.query;
         const redirectHasPermission =
           redirect &&
           ![NO_RESOURCE_ROUTE_NAME, NO_PROJECT_ROUTE_NAME].includes(redirect as string) &&
@@ -264,6 +264,19 @@
         }
         if (res) {
           appStore.setCurrentMenuConfig(res?.moduleIds || []);
+        }
+        const restorePath =
+          typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')
+            ? router.resolve(returnTo)
+            : undefined;
+        if (
+          redirectHasPermission &&
+          restorePath?.name === redirect &&
+          (!restorePath.query.pId || restorePath.query.pId === appStore.currentProjectId) &&
+          (!restorePath.query.orgId || restorePath.query.orgId === appStore.currentOrgId)
+        ) {
+          await router.push(restorePath.fullPath);
+          return;
         }
         router.push({
           name: redirectHasPermission ? (redirect as string) : currentRouteName,
@@ -360,8 +373,9 @@
     userStore.getAuthentication();
     initPlatformInfo();
     isLogin()
-      .then((res) => {
+      .then(async (res) => {
         preheat.value = res;
+        if (res) await userStore.checkIsLogin();
       })
       .catch(() => {
         preheat.value = false;
@@ -436,6 +450,7 @@
         const loggedIn = await isLogin();
         if (loggedIn) {
           preheat.value = true;
+          await userStore.checkIsLogin();
           return;
         }
       } catch {

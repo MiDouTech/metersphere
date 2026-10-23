@@ -18,6 +18,9 @@ public class FunctionalCaseImportResponse implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    @Schema(description = "导入追踪任务标识")
+    private String jobId;
+
     @Schema(description = "成功数量")
     private int successCount;
     @Schema(description = "失败数量")

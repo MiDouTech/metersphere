@@ -1,5 +1,7 @@
 // eslint-disable-next-line no-shadow
 
+import { Button, Pagination, Spin } from '@arco-design/web-vue';
+
 import Item from './comment-item.vue';
 import CommentInput from './input.vue';
 
@@ -45,6 +47,8 @@ export default defineComponent({
     /* eslint-disable @typescript-eslint/no-unused-vars */
     updateOrAdd: (value: CommentParams, cb: (result: boolean) => void) => true, // 更新或者新增评论
     delete: (value: string) => true, // 删除评论
+    replyPage: (parentId: string, current: number, pageSize: number) => true,
+    editingChange: (editing: boolean) => true,
   },
   setup(props, { emit }) {
     const { commentList, disabled, uploadImage, previewUrl } = toRefs(props);
@@ -59,15 +63,22 @@ export default defineComponent({
     const noticeUserIds = ref<string[]>([]);
     const uploadFileIds = ref<string[]>([]);
     const { t } = useI18n();
+    watch(
+      () => currentItem.id,
+      (id) => emit('editingChange', !!id)
+    );
 
     const resetCurrentItem = () => {
       currentItem.id = '';
       currentItem.commentType = 'ADD';
       currentItem.commentStatus = 'normal';
       noticeUserIds.value = [];
+      uploadFileIds.value = [];
+      currentItem.replyId = '';
     };
 
     const handlePublish = (content: string, item: CommentItem) => {
+      if (disabled.value) return;
       // 这个组件里的都是回复和编辑不涉及新增，所以是 COMMENT 或 REPLY
       let parentId = '';
       let event: CommentEvent = 'COMMENT';
@@ -107,6 +118,7 @@ export default defineComponent({
     };
 
     const handleDelete = (item: CommentItem) => {
+      if (disabled.value) return;
       emit('delete', item.id);
     };
 
@@ -120,8 +132,11 @@ export default defineComponent({
     };
 
     const handleReply = (item: CommentItem) => {
+      if (disabled.value) return;
+      noticeUserIds.value = [];
+      uploadFileIds.value = [];
       currentItem.replyId = '';
-      if (item.childComments && Array.isArray(item.childComments)) {
+      if (!item.parentId) {
         // 点击的是父级评论的回复
         currentItem.id = item.id;
       } else {
@@ -133,6 +148,10 @@ export default defineComponent({
     };
 
     const handelEdit = (item: CommentItem) => {
+      if (disabled.value) return;
+      noticeUserIds.value = item.notifier?.split(';').filter(Boolean) || [];
+      uploadFileIds.value = [];
+      currentItem.replyId = '';
       currentItem.id = item.id;
       currentItem.commentType = 'EDIT';
     };
@@ -140,6 +159,7 @@ export default defineComponent({
     const renderInput = (item: CommentItem) => {
       return (
         <CommentInput
+          disabled={disabled.value}
           isShowAvatar={false}
           isUseBottom={false}
           onPublish={(content: string) => handlePublish(content, item)}
@@ -182,7 +202,7 @@ export default defineComponent({
             expandKeys={expendedIds.value}
             element={item}
           />
-          {item.id === currentItem.id && renderInput(item)}
+          {item.id === currentItem.id && !item.deleted && renderInput(item)}
         </div>
       ));
     };
@@ -208,9 +228,41 @@ export default defineComponent({
             expandKeys={expendedIds.value}
           />
           {expendedIds.value.has(item.id) && (
-            <div class="ms-comment-child-container">{renderChildrenList(item.childComments)}</div>
+            <div class="ms-comment-child-container">
+              {item.childError && (
+                <div role="alert" class="mb-2 text-[rgb(var(--danger-6))]">
+                  {item.childError}
+                  <Button
+                    type="text"
+                    onClick={() => emit('replyPage', item.id, item.childCurrent || 1, item.childPageSize || 10)}
+                  >
+                    {t('ms.comment.retry')}
+                  </Button>
+                </div>
+              )}
+              <Spin loading={!!item.childLoading} class="w-full">
+                {renderChildrenList(item.childComments)}
+              </Spin>
+              {item.childTotal !== undefined && (
+                <Pagination
+                  class="mt-3 flex flex-wrap"
+                  size="small"
+                  showTotal
+                  showPageSize
+                  total={item.childTotal}
+                  current={item.childCurrent || 1}
+                  pageSize={item.childPageSize || 10}
+                  pageSizeOptions={[10, 20, 50, 100]}
+                  disabled={!!item.childLoading || !!currentItem.id}
+                  onChange={(page: number) => emit('replyPage', item.id, page, item.childPageSize || 10)}
+                  onPageSizeChange={(size: number) => emit('replyPage', item.id, 1, size)}
+                />
+              )}
+            </div>
           )}
-          {item.id === currentItem.id && renderInput(item)}
+          {item.id === currentItem.id &&
+            (!item.deleted || (currentItem.commentType === 'REPLY' && !!currentItem.replyId)) &&
+            renderInput(item)}
         </>
       ));
     };

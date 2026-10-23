@@ -44,6 +44,7 @@ public class AiProviderController {
         return aiProviderAdapter.testConnection(request, SessionUtils.getUserId());
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping("/invoke")
     @Operation(summary = "AI Provider 统一调用")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)
@@ -52,6 +53,7 @@ public class AiProviderController {
         return aiProviderAdapter.invoke(request, SessionUtils.getUserId());
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "AI Provider 统一流式调用")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)

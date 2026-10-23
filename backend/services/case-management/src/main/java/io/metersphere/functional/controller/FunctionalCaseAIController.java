@@ -47,6 +47,7 @@ public class FunctionalCaseAIController {
         return functionalCaseAIService.transformToDTO(request);
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping(value = "/chat")
     @Operation(summary = "用例管理-功能用例-AI对话")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)

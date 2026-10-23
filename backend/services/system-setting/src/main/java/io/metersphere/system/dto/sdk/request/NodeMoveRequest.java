@@ -12,6 +12,8 @@ public class NodeMoveRequest {
     @NotEmpty(message = "{node.not_blank}")
     private String dragNodeId;
 
+    private Long expectedUpdateTime;
+
     @Schema(description = "放入的节点", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotEmpty(message = "{node.not_blank}")
     private String dropNodeId;

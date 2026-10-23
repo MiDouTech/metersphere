@@ -26,6 +26,20 @@ public class AgentAttachmentController {
     private AgentTempAttachmentService agentTempAttachmentService;
     @Resource
     private AgentAttachmentService agentAttachmentService;
+    @Resource private io.metersphere.agent.service.AgentAttachmentUploadIntentService uploadIntents;
+
+    @PostMapping("/upload/prepare")
+    public io.metersphere.agent.service.AgentAttachmentUploadIntentService.Prepared prepare(
+            @org.springframework.web.bind.annotation.RequestBody io.metersphere.agent.service.AgentAttachmentUploadIntentService.Prepare request) {
+        AgentScopeAssert.assertScope(AgentTokenScope.CASE_ATTACHMENT);
+        return uploadIntents.prepare(request);
+    }
+
+    @PostMapping("/upload/complete/{id}")
+    public AgentTempAttachmentUploadResponse complete(@PathVariable String id, @RequestParam("file") MultipartFile file) throws java.io.IOException {
+        AgentScopeAssert.assertScope(AgentTokenScope.CASE_ATTACHMENT);
+        return uploadIntents.complete(id, file);
+    }
 
     @PostMapping("/upload")
     @Operation(summary = "上传 Agent 通用临时附件")

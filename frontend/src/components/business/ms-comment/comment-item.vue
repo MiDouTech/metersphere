@@ -6,7 +6,9 @@
         {{ creatorInfo.name }}
         <span v-if="props.element.replyUser">{{ t('ms.comment.reply') }} {{ replyUserName }}</span>
       </div>
+      <div v-if="props.element.deleted" class="mt-1 text-[var(--color-text-3)]">{{ t('ms.comment.deleted') }}</div>
       <div
+        v-else
         ref="contentRef"
         v-dompurify-html="props.element.content"
         class="markdown-body mt-[4px] break-words break-all"
@@ -25,10 +27,10 @@
                 props.expandKeys.has(props.element.id) ? t('ms.comment.collapseComment') : t('ms.comment.expendComment')
               }}
             </span>
-            <span class="text-[var(--color-text-4)]">({{ element.childComments?.length }})</span>
+            <span class="text-[var(--color-text-4)]">({{ element.childTotal ?? element.childComments?.length }})</span>
           </div>
           <div
-            v-if="hasAnyPermission(props.permissions || [])"
+            v-if="!props.element.deleted && hasAnyPermission(props.permissions || [])"
             class="comment-btn hover:bg-[var(--color-bg-3)]"
             :class="{ 'bg-[var(--color-text-n8)]': status === 'reply' }"
             @click="replyClick"
@@ -128,7 +130,12 @@
 
   // 是否拥有编辑｜删除权限
   const hasAuth = computed(() => {
-    return props.element.createUser === userStore.id && hasAnyPermission(props.permissions || []);
+    return (
+      !props.element.deleted &&
+      hasAnyPermission(props.permissions || []) &&
+      ((props.element.canEdit ?? props.element.createUser === userStore.id) ||
+        (props.element.canDelete ?? props.element.createUser === userStore.id))
+    );
   });
 
   const status = defineModel<'normal' | 'edit' | 'reply' | 'delete'>('status', { default: 'normal' });
@@ -141,7 +148,7 @@
   }>();
 
   const expendChange = () => {
-    if (!props.element.childComments?.length) {
+    if (!(props.element.childTotal ?? props.element.childComments?.length)) {
       return;
     }
 
@@ -162,21 +169,27 @@
     status.value = 'delete';
   };
 
-  const actionsList: ActionsItem[] = [
-    {
-      label: t('ms.comment.edit'),
-      eventTag: 'edit',
-      permission: ['PROJECT_BUG:READ+COMMENT', 'FUNCTIONAL_CASE:READ+COMMENT'],
-      icon: 'icon-icon_edit_outlined',
-    },
-    {
-      label: t('ms.comment.delete'),
-      eventTag: 'delete',
-      permission: ['PROJECT_BUG:READ+COMMENT', 'FUNCTIONAL_CASE:READ+COMMENT'],
-      danger: true,
-      icon: 'icon-icon_delete-trash_outlined1',
-    },
-  ];
+  const actionsList = computed<ActionsItem[]>(() =>
+    [
+      {
+        label: t('ms.comment.edit'),
+        eventTag: 'edit',
+        permission: ['PROJECT_BUG:READ+COMMENT', 'FUNCTIONAL_CASE:READ+COMMENT'],
+        icon: 'icon-icon_edit_outlined',
+      },
+      {
+        label: t('ms.comment.delete'),
+        eventTag: 'delete',
+        permission: ['PROJECT_BUG:READ+COMMENT', 'FUNCTIONAL_CASE:READ+COMMENT'],
+        danger: true,
+        icon: 'icon-icon_delete-trash_outlined1',
+      },
+    ].filter((action) =>
+      action.eventTag === 'edit'
+        ? props.element.canEdit ?? props.element.createUser === userStore.id
+        : props.element.canDelete ?? props.element.createUser === userStore.id
+    )
+  );
 
   function handleMoreActionSelect(item: ActionsItem) {
     if (item.eventTag === 'edit') {
@@ -187,12 +200,19 @@
   }
 
   const creatorInfo = computed(() => {
-    return props.element.commentUserInfos.filter((item) => item != null && item.id === props.element.createUser)[0];
+    return (
+      props.element.commentUserInfos?.find((item) => item != null && item.id === props.element.createUser) || {
+        avatar: '',
+        name: t('ms.comment.unknownUser'),
+      }
+    );
   });
   const replyUserName = computed(() => {
     if (props.element.replyUser) {
-      return props.element.commentUserInfos.filter((item) => item != null && item.id === props.element.replyUser)[0]
-        .name;
+      return (
+        props.element.commentUserInfos?.find((item) => item != null && item.id === props.element.replyUser)?.name ||
+        t('ms.comment.unknownUser')
+      );
     }
     return '';
   });

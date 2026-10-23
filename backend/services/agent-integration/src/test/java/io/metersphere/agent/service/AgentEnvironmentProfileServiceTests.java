@@ -13,6 +13,14 @@ class AgentEnvironmentProfileServiceTests {
     private final AgentEnvironmentProfileService service = new AgentEnvironmentProfileService();
 
     @Test
+    void updateRequiresClientVersionInsteadOfSilentlyUsingLatest() {
+        var request = new io.metersphere.agent.dto.AgentEnvironmentProfileRequest();
+        assertThrows(MSException.class, () -> service.update("environment", request));
+        request.setVersion(-1);
+        assertThrows(MSException.class, () -> service.update("environment", request));
+    }
+
+    @Test
     void shouldAcceptOnlyConfiguredOrigin() {
         AgentEnvironmentProfileDTO profile = profile("https://test.example.com");
         assertDoesNotThrow(() -> service.assertTargetAllowed(profile, "https://test.example.com/users?id=1"));

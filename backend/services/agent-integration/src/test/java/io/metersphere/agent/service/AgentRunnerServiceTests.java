@@ -19,6 +19,28 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class AgentRunnerServiceTests {
+    @Test
+    void disabledFeaturePausesRunningWorkerButPreservesCancellation() {
+        var mapper = mock(AgentExecutionMapper.class);
+        var service = service(mapper, mock(AgentExecLogService.class));
+        var authorization = mock(AgentRunnerLeaseAuthorizationService.class);
+        ReflectionTestUtils.setField(service, "runnerLeaseAuthorizationService", authorization);
+        var lease = new io.metersphere.agent.dto.AgentRunnerLeaseDTO();
+        lease.setTaskId("task");
+        Mockito.when(authorization.authenticateLease("auth", "lease")).thenReturn(lease);
+        var task = new io.metersphere.agent.dto.AgentExecutionTaskDTO();
+        task.setRunnerLeaseId("lease"); task.setStatus("RUNNING");
+        Mockito.when(mapper.selectTaskById("task")).thenReturn(task);
+        assertEquals("PAUSE", service.control("auth", "lease").getCommand());
+        task.setStatus("PREPARING_BROWSER");
+        assertEquals("PAUSE", service.control("auth", "lease").getCommand());
+        task.setStatus("RUNNING");
+        ReflectionTestUtils.setField(service, "llmEnabled", true);
+        assertEquals("CONTINUE", service.control("auth", "lease").getCommand());
+        ReflectionTestUtils.setField(service, "llmEnabled", false);
+        task.setStatus("CANCELED");
+        assertEquals("CANCEL", service.control("auth", "lease").getCommand());
+    }
     @org.mockito.Mock private AgentExecutionClaimSafetyService claimSafety;
 
     @Test

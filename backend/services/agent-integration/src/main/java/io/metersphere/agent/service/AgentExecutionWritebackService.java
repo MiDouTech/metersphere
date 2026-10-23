@@ -21,11 +21,25 @@ import java.util.stream.Collectors;
 public class AgentExecutionWritebackService {
     private static final org.slf4j.Logger LOG=org.slf4j.LoggerFactory.getLogger(AgentExecutionWritebackService.class);
     @Resource private AgentExecutionFinalizationService finalization;
+    @Resource private AgentRecoveryScanHealth recoveryHealth;
+    @Resource private AgentExecutionAlertService recoveryAlerts;
 
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay=30000)
     public void recoverPendingSync(){
-        for(String taskId:finalization.recoverableTasks()){
-            try{writeback(taskId);}catch(Exception error){LOG.warn("Quality sync recovery failed task={}",taskId,error);}
+        try {
+            if (!recoveryHealth.begin()) return;
+            for(String taskId:finalization.recoverableTasks()) {
+                try { writeback(taskId); }
+                catch(Exception error) { LOG.warn("Quality sync task recovery failed task={}",taskId,error); }
+            }
+            recoveryHealth.success();
+        } catch(Exception error) {
+            boolean report = recoveryHealth.failure(error);
+            if (report) {
+                LOG.error("Writeback recovery scan unavailable; category={}, retries are bounded",AgentRecoveryScanHealth.category(error),error);
+                try { recoveryAlerts.recoveryFailure(AgentRecoveryScanHealth.category(error)); }
+                catch(Exception alertFailure) { LOG.warn("Recovery alert store unavailable; local cooldown remains active"); }
+            }
         }
     }
     @Resource

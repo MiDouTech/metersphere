@@ -111,6 +111,8 @@ public class AgentExecutionFinalizationService {
         return true;
     }
     public List<String> recoverableTasks(){
-        return jdbc.queryForList("SELECT DISTINCT t.id FROM ai_execution_task t LEFT JOIN ai_execution_case_sync s ON t.id=s.task_id AND t.current_execution_id=s.execution_id WHERE t.status='WRITING_BACK' OR (s.status IN ('PENDING','FAILED') AND s.attempt_count<20 AND s.next_retry_at<=?) ORDER BY t.id LIMIT 20",String.class,System.currentTimeMillis());
+        // Legacy task columns use general_ci while later migrations use 0900_ai_ci.
+        // IDs are opaque identifiers: compare exact bytes without relying on database defaults.
+        return jdbc.queryForList("SELECT DISTINCT t.id FROM ai_execution_task t LEFT JOIN ai_execution_case_sync s ON BINARY t.id=BINARY s.task_id AND BINARY t.current_execution_id=BINARY s.execution_id WHERE t.status='WRITING_BACK' OR (s.status IN ('PENDING','FAILED') AND s.attempt_count<20 AND s.next_retry_at<=?) ORDER BY t.id LIMIT 20",String.class,System.currentTimeMillis());
     }
 }

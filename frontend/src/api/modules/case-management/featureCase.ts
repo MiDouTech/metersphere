@@ -509,6 +509,20 @@ export function getCommentList(caseId: string) {
   return MSR.get<CommentItem[]>({ url: `${GetCommentListUrl}/${caseId}` });
 }
 
+export interface CaseCommentPage {
+  list: CommentItem[];
+  total: number;
+  current: number;
+  pageSize: number;
+}
+
+export function getCaseCommentPage(caseId: string, current: number, pageSize: number, parentId?: string) {
+  return MSR.get<CaseCommentPage>({
+    url: `/functional/case/comment/page/${encodeURIComponent(caseId)}`,
+    params: { current, pageSize, parentId },
+  });
+}
+
 // 获取评审评论
 export function getReviewCommentList(caseId: string) {
   return MSR.get<CommentItem[]>({ url: `${GetReviewCommentListUrl}/${caseId}` });
@@ -528,8 +542,8 @@ export function addOrUpdateCommentList(data: CommentParams) {
 }
 
 // 删除评论
-export function deleteCommentList(commentId: string) {
-  return MSR.get({ url: `${DeleteCommentItemUrl}/${commentId}` });
+export function deleteCommentList(commentId: string, caseId: string, expectedUpdateTime: number) {
+  return MSR.post({ url: '/functional/case/comment/delete', data: { commentId, caseId, expectedUpdateTime } });
 }
 
 // 评审
@@ -675,7 +689,11 @@ export function getDefaultHubJob(jobId: string) {
 }
 export interface CaseExportTask {
   taskId: string;
+  sourceTaskId?: string;
   projectId: string;
+  name?: string;
+  createTime?: number;
+  finishedAt?: number;
   fileId: string;
   state: 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'EXPIRED';
   fileType: string;
@@ -685,6 +703,13 @@ export interface CaseExportTask {
   errorCode?: string;
   message?: string;
   traceId: string;
+}
+
+export function getCaseExportHistory(projectId: string, current: number, pageSize: number) {
+  return MSR.get<{ list: CaseExportTask[]; total: number; current: number; pageSize: number }>({
+    url: '/functional/case/export/tasks/history',
+    params: { projectId, current, pageSize },
+  });
 }
 
 // 导出excel
@@ -709,6 +734,9 @@ export function getCaseDownloadFile(projectId: string, fileId: string) {
 // 停止导出
 export function stopCaseExport(taskId: string) {
   return MSR.post<CaseExportTask>({ url: `/functional/case/export/tasks/${taskId}/stop` });
+}
+export function retryCaseExport(taskId: string, requestId: string) {
+  return MSR.post<CaseExportTask>({ url: `/functional/case/export/tasks/${taskId}/retry`, data: { requestId } });
 }
 // 获取导出字段配置
 export function getCaseExportConfig(projectId: string) {
@@ -765,6 +793,13 @@ export function caseAiBatchSave(data: CaseAiBatchSaveParams) {
 
 export function getCaseExportTask(taskId: string) {
   return MSR.get<CaseExportTask>({ url: `/functional/case/export/tasks/${encodeURIComponent(taskId)}` });
+}
+
+export function getCaseExportNotificationTicket(taskId: string) {
+  return MSR.post<{ enabled: boolean; ticket?: string; taskId: string; protocol: string }>(
+    { url: `/functional/case/export/tasks/${encodeURIComponent(taskId)}/ws-ticket`, timeout: 5000 },
+    { errorMessageMode: 'none' }
+  );
 }
 
 export function getRecentCaseExports(projectId: string) {

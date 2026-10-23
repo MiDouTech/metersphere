@@ -41,6 +41,7 @@ public class AiAgentGatewayController {
         return aiAgentGatewayService.save(request, SessionUtils.getUserId());
     }
 
+    @io.metersphere.system.security.RequiresLlmFeature
     @PostMapping("/invoke")
     @Operation(summary = "调用企业 Agent 网关")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_GENERATE)

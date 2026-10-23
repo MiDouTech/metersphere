@@ -146,9 +146,18 @@ const transform: AxiosTransform = {
   /**
    * @description: 响应错误处理
    */
-  responseInterceptorsCatch: (error: any) => {
+  responseInterceptorsCatch: async (error: any) => {
     const { t } = useI18n();
     const { response, code, message, config } = error || {};
+    // Download failures may arrive as JSON in a Blob. Decode before classifying credentials.
+    if (response?.data instanceof Blob && response.data.size <= 1024 * 1024) {
+      try {
+        const body = JSON.parse(await response.data.text());
+        if (body && typeof body === 'object' && !Array.isArray(body)) response.data = body;
+      } catch {
+        // Non-JSON bodies use the safe normalized fallback below.
+      }
+    }
     const errorMessageMode = config?.requestOptions?.errorMessageMode || 'none';
     const appError = localizeAppError(normalizeAppError(response, t('api.apiRequestFailed')), t);
     const msg = formatAppErrorMessage(appError);

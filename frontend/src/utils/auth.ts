@@ -57,8 +57,8 @@ const isLoginExpires = () => {
   if (!Number.isFinite(lastLoginTime) || lastLoginTime <= 0) {
     return false;
   }
-  const thirtyDay = 24 * 60 * 60 * 1000 * 30;
-  return Date.now() - lastLoginTime > thirtyDay;
+  const fourteenDays = 24 * 60 * 60 * 1000 * 14;
+  return Date.now() - lastLoginTime >= fourteenDays;
 };
 
 export { clearToken, getLongType, getToken, hasToken, isLogin, isLoginExpires, setLoginExpires, setLongType, setToken };

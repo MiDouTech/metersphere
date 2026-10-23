@@ -45,6 +45,7 @@ public class AgentTempAttachmentService {
     private AgentExecAttachmentMapper agentExecAttachmentMapper;
     @Resource
     private AgentProjectService agentProjectService;
+    @Resource private AgentUploadStorageGuard storageGuard;
 
     public AgentTempAttachmentUploadResponse upload(MultipartFile file, String projectId, String purpose, Integer stepNum) {
         if (AgentTokenContext.get() == null) throw AgentBusinessAccess.denied();
@@ -67,10 +68,11 @@ public class AgentTempAttachmentService {
 
         // The storage layer uses MultipartFile.originalFilename, not the metadata
         // written below. Pass the normalized name to both, including legacy uploads.
-        String fileId = commonFileService.uploadTempImgFile(new NamedMultipartFile(file, originalName));
-        long now = System.currentTimeMillis();
         String userId = requireUserId();
         AgentToken token = AgentTokenContext.get();
+        String fileId = storageGuard.reserve(originalName);
+        commonFileService.uploadTempImgFile(new NamedMultipartFile(file, originalName),fileId);
+        long now = System.currentTimeMillis();
 
         AgentTempAttachment temp = new AgentTempAttachment();
         temp.setId(IDGenerator.nextStr());
@@ -100,6 +102,7 @@ public class AgentTempAttachmentService {
             agentExecAttachmentMapper.insert(exec);
         }
 
+        storageGuard.published(fileId);
         AgentTempAttachmentUploadResponse response = new AgentTempAttachmentUploadResponse();
         response.setAttachmentId(temp.getId());
         response.setFileId(fileId);
@@ -130,7 +133,7 @@ public class AgentTempAttachmentService {
         long now = System.currentTimeMillis();
         List<AgentTempAttachment> result = new ArrayList<>();
         for (String attachmentId : attachmentIds) {
-            AgentTempAttachment attachment = agentTempAttachmentMapper.selectByPrimaryKey(attachmentId);
+            AgentTempAttachment attachment = agentTempAttachmentMapper.selectForLink(attachmentId);
             if (attachment == null || !token.getId().equals(attachment.getTokenId())
                     || !token.getUserId().equals(attachment.getUserId())) {
                 throw AgentBusinessAccess.denied();
@@ -205,7 +208,14 @@ public class AgentTempAttachmentService {
     public void cleanupExpired() {
         List<AgentTempAttachment> expired = agentTempAttachmentMapper.selectExpiredUnlinked(System.currentTimeMillis(), 200);
         for (AgentTempAttachment attachment : expired) {
-            agentTempAttachmentMapper.deleteByPrimaryKey(attachment.getId());
+            try {
+                commonFileService.deleteExpiredTempUpload(attachment.getFileId(), attachment.getFileName());
+                jdbc.update("DELETE FROM agent_exec_attachment WHERE id=? AND exec_log_id IS NULL AND exec_history_id IS NULL", attachment.getId());
+                agentTempAttachmentMapper.deleteByPrimaryKey(attachment.getId());
+            } catch (Exception failure) {
+                // Retain metadata so the next sweep can retry; never lose the storage locator first.
+                io.metersphere.sdk.util.LogUtils.error("Temporary upload cleanup failed, attachmentId=" + attachment.getId(), failure);
+            }
         }
     }
 

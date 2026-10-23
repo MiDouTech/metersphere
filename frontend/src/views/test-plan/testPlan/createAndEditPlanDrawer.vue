@@ -164,7 +164,7 @@
   import { TestPlanRouteEnum } from '@/enums/routeEnum';
   import { testPlanTypeEnum } from '@/enums/testPlanEnum';
 
-  import { DisabledTimeProps } from '@arco-design/web-vue/es/date-picker/interface';
+  import type { DisabledTimeProps } from '@arco-design/web-vue/es/date-picker/interface';
 
   const props = defineProps<{
     planId?: string;

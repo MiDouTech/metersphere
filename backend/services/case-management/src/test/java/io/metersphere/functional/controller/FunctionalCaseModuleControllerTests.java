@@ -350,6 +350,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         assert a1Node != null;
         FunctionalCaseModuleUpdateRequest updateRequest = new FunctionalCaseModuleUpdateRequest();
         updateRequest.setId(a1Node.getId());
+        updateRequest.setExpectedUpdateTime(moduleRevision(updateRequest.getId()));
         updateRequest.setName("a1-a1");
         this.requestPostWithOkAndReturn(URL_MODULE_TREE_UPDATE, updateRequest);
 
@@ -368,12 +369,14 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         //id不存在
         updateRequest = new FunctionalCaseModuleUpdateRequest();
         updateRequest.setId(IDGenerator.nextStr());
+        updateRequest.setExpectedUpdateTime(moduleRevision(updateRequest.getId()));
         updateRequest.setName(IDGenerator.nextStr());
         this.requestPost(URL_MODULE_TREE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
 
         //名称重复   a1-a1改为a1-b1
         updateRequest = new FunctionalCaseModuleUpdateRequest();
         updateRequest.setId(a1Node.getId());
+        updateRequest.setExpectedUpdateTime(moduleRevision(updateRequest.getId()));
         updateRequest.setName("a1-b1");
         this.requestPost(URL_MODULE_TREE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
     }
@@ -409,6 +412,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         NodeMoveRequest request = new NodeMoveRequest();
         {
             request.setDragNodeId(a1Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a3Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -418,6 +422,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         {
             request = new NodeMoveRequest();
             request.setDragNodeId(a1Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(-1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -428,6 +433,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         {
             request = new NodeMoveRequest();
             request.setDragNodeId(a1Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -435,6 +441,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a1Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(-1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -445,6 +452,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         {
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a1b1Node.getId());
             request.setDropPosition(-1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -452,6 +460,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -462,6 +471,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         {
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a1a1Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -469,6 +479,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -479,6 +490,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         {
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a1b1Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -486,6 +498,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -503,6 +516,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //开始移动
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a1Node.getId());
             request.setDropPosition(-1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -511,6 +525,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -531,6 +546,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //开始移动
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a1Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -539,6 +555,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -555,6 +572,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //开始移动
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a1b1Node.getId());
             request.setDropPosition(-1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -563,6 +581,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -582,6 +601,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //开始移动
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a1a1Node.getId());
             request.setDropPosition(-1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -590,6 +610,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -600,6 +621,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //开始移动
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(0);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -609,6 +631,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
             //移动回去
             request = new NodeMoveRequest();
             request.setDragNodeId(a3Node.getId());
+            request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
             request.setDropNodeId(a2Node.getId());
             request.setDropPosition(1);
             this.requestPostWithOk(URL_MODULE_TREE_MOVE, request);
@@ -626,12 +649,14 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         //drag节点为空
         NodeMoveRequest request = new NodeMoveRequest();
         request.setDragNodeId(null);
+        request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
         this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().isBadRequest());
         //drag节点不存在
         request = new NodeMoveRequest();
         request.setDragNodeId(IDGenerator.nextStr());
+        request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
         this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
@@ -639,6 +664,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         //drop节点为空
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
+        request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
         request.setDropNodeId(null);
         request.setDropPosition(1);
         this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().isBadRequest());
@@ -646,6 +672,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         //drop节点不存在
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
+        request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
         request.setDropNodeId(IDGenerator.nextStr());
         request.setDropPosition(1);
         this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
@@ -653,6 +680,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         //position为0的时候节点不存在
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
+        request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
         request.setDropNodeId(IDGenerator.nextStr());
         request.setDropPosition(0);
         this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
@@ -660,6 +688,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         //dragNode和dropNode一样
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
+        request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
         this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
@@ -667,6 +696,7 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         //position不是-1 0 1
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
+        request.setExpectedUpdateTime(moduleRevision(request.getDragNodeId()));
         request.setDropNodeId(a2Node.getId());
         request.setDropPosition(4);
         this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
@@ -833,4 +863,8 @@ public class FunctionalCaseModuleControllerTests extends BaseTest {
         }
     }
 
+    private Long moduleRevision(String id) {
+        var module = functionalCaseModuleMapper.selectByPrimaryKey(id);
+        return module == null ? 0L : module.getUpdateTime();
+    }
 }
