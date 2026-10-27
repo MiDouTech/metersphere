@@ -37,7 +37,8 @@ public class AgentExternalImageService {
         required(args,"url");
         Runnable authorize=() -> authorize(kind,args);
         var previous=operations.completed(operation,requestId,args,Map.class,authorize);
-        if(previous.isPresent()) return previous.get();
+        if(previous.isPresent()) return "execution".equals(kind)?executions.evidenceState(args,previous.get()):previous.get();
+        if("execution".equals(kind))executions.assertWritesEnabled();
         // Network I/O deliberately runs outside the database/idempotency transaction.
         var image=downloader.download(required(args,"url"),(String)args.get("fileName"));
         return operations.execute(operation,requestId,args,Map.class,authorize,() -> {

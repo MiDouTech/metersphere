@@ -54,6 +54,13 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class FunctionalCaseAttachmentService {
+    @Resource private org.springframework.jdbc.core.JdbcTemplate syncJdbc;
+    @Resource private FunctionalImportEffectOutbox importEffects;
+
+    private void enqueueMirror(String caseId,String userId) {
+        var projects=syncJdbc.queryForList("SELECT project_id FROM functional_case WHERE id=?",String.class,caseId);
+        if(!projects.isEmpty()) importEffects.enqueue(projects.getFirst(),userId,List.of(caseId),List.of(),"UPDATE");
+    }
 
     @Resource private FunctionalCaseEvidenceStore evidenceStore;
 
@@ -92,6 +99,7 @@ public class FunctionalCaseAttachmentService {
     public void saveCaseAttachment(String fileId, MultipartFile file, String caseId, Boolean isLocal, String userId) {
         FunctionalCaseAttachment caseAttachment = creatAttachment(fileId, file.getOriginalFilename(), file.getSize(), caseId, isLocal, userId);
         functionalCaseAttachmentMapper.insertSelective(caseAttachment);
+        enqueueMirror(caseId,userId);
     }
 
 
@@ -198,7 +206,8 @@ public class FunctionalCaseAttachmentService {
         example.createCriteria().andFileIdIn(deleteFileMetaIds).andCaseIdEqualTo(caseId).andLocalEqualTo(true);
         List<FunctionalCaseAttachment> delAttachment = functionalCaseAttachmentMapper.selectByExample(example);
         functionalCaseAttachmentMapper.deleteByExample(example);
-        this.deleteMinioFile(delAttachment, projectId, caseId);
+        this.deleteMinioFile(delAttachment, caseId, projectId);
+        enqueueMirror(caseId,io.metersphere.system.utils.SessionUtils.getUserId());
     }
 
 
@@ -263,6 +272,7 @@ public class FunctionalCaseAttachmentService {
      */
     public void association(List<String> relateFileMetaIds, String caseId, String userId, String logUrl, String projectId) {
         fileAssociationService.association(caseId, FileAssociationSourceUtil.SOURCE_TYPE_FUNCTIONAL_CASE, relateFileMetaIds, createFileLogRecord(logUrl, userId, projectId));
+        enqueueMirror(caseId,userId);
     }
 
     private FileLogRecord createFileLogRecord(String logUrl, String operator, String projectId) {
@@ -285,6 +295,7 @@ public class FunctionalCaseAttachmentService {
      */
     public void unAssociation(String sourceId, List<String> unLinkFilesIds, String logUrl, String userId, String projectId) {
         fileAssociationService.deleteBySourceIdAndFileIds(sourceId, unLinkFilesIds, createFileLogRecord(logUrl, userId, projectId));
+        enqueueMirror(sourceId,userId);
     }
 
 

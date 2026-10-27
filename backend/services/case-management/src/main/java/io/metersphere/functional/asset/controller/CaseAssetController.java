@@ -14,6 +14,7 @@ import io.metersphere.functional.hub.dto.DefaultHubCaseImportRequest;
 import io.metersphere.functional.hub.dto.DefaultHubJobResponse;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.utils.Pager;
+import io.metersphere.system.utils.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -40,6 +41,51 @@ import java.util.Map;
 @RequestMapping("/case-asset")
 public class CaseAssetController {
     @Resource private CaseAssetService caseAssetService;
+    @Resource private io.metersphere.functional.asset.service.CaseAssetExportAccess exportAccess;
+    @Resource private io.metersphere.functional.service.FunctionalCaseFileService exportFiles;
+    @Resource private io.metersphere.functional.service.FunctionalCaseExportTaskService exportTasks;
+
+    @GetMapping("/catalog/{catalogId}/export-columns")
+    @RequiresPermissions("CASE_ASSET:READ+EXPORT")
+    public io.metersphere.functional.excel.domain.FunctionalCaseExportColumns exportColumns(@PathVariable String catalogId) {
+        var request=new io.metersphere.functional.request.FunctionalCaseExportRequest();
+        request.setAssetCatalogId(catalogId);
+        request.setProjectId((String)exportAccess.catalog(catalogId).get("projectId"));
+        // Check directory scope before exposing template field names.
+        exportAccess.authorizeCatalog(catalogId,SessionUtils.getUserId());
+        return exportFiles.getExportColumns(request.getProjectId());
+    }
+
+    @PostMapping("/catalog/{catalogId}/export")
+    @RequiresPermissions("CASE_ASSET:READ+EXPORT")
+    public io.metersphere.functional.dto.ExportTaskDTO export(@PathVariable String catalogId,
+            @Validated @RequestBody io.metersphere.functional.request.FunctionalCaseExportRequest request) {
+        var catalog=exportAccess.catalog(catalogId);
+        request.setProjectId((String)catalog.get("projectId"));request.setAssetCatalogId(catalogId);request.setModuleIds(null);
+        exportAccess.authorize(request,SessionUtils.getUserId());
+        String id=exportFiles.export(SessionUtils.getUserId(),request,(String)catalog.get("organizationId"));
+        return exportTasks.get(id,SessionUtils.getUserId());
+    }
+
+    @GetMapping("/export/{taskId}")
+    @RequiresPermissions("CASE_ASSET:READ+EXPORT")
+    public io.metersphere.functional.dto.ExportTaskDTO exportStatus(@PathVariable String taskId) {
+        return exportTasks.get(taskId,SessionUtils.getUserId());
+    }
+
+    @GetMapping("/export/{taskId}/download")
+    @RequiresPermissions("CASE_ASSET:READ+EXPORT")
+    public ResponseEntity<org.springframework.core.io.InputStreamResource> downloadExport(@PathVariable String taskId) {
+        var task=exportTasks.get(taskId,SessionUtils.getUserId());
+        return exportFiles.downloadFile(task.getProjectId(),task.getFileId(),SessionUtils.getUserId());
+    }
+
+    @GetMapping("/catalog/{catalogId}/sync-failures")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
+    public List<Map<String,Object>> syncFailures(@PathVariable String catalogId){return caseAssetService.syncFailures(catalogId);}
+    @PostMapping("/catalog/{catalogId}/sync-failures/{effectId}/retry")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_UPDATE)
+    public void retrySyncFailure(@PathVariable String catalogId,@PathVariable String effectId){caseAssetService.retrySyncFailure(catalogId,effectId);}
 
     @PostMapping("/catalog/page")
     @Operation(summary = "用例资产目录分页")
@@ -60,6 +106,18 @@ public class CaseAssetController {
     @RequiresPermissions(PermissionConstants.CASE_ASSET_UPDATE)
     public Map<String, Object> updateCatalog(@Validated @RequestBody CaseAssetCatalogRequest request) {
         return caseAssetService.updateCatalog(request);
+    }
+
+    @PutMapping("/catalog/{catalogId}/pin")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_UPDATE)
+    public void pinCatalog(@PathVariable String catalogId) {
+        caseAssetService.pinCatalog(catalogId, true);
+    }
+
+    @DeleteMapping("/catalog/{catalogId}/pin")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_UPDATE)
+    public void unpinCatalog(@PathVariable String catalogId) {
+        caseAssetService.pinCatalog(catalogId, false);
     }
 
     @DeleteMapping("/catalog/{catalogId}")

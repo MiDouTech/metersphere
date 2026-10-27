@@ -2,6 +2,7 @@ package io.metersphere.functional.controller;
 
 import io.metersphere.functional.request.FunctionalCaseModuleCreateRequest;
 import io.metersphere.functional.request.FunctionalCaseModuleUpdateRequest;
+import io.metersphere.functional.request.FunctionalCaseModuleMoveRequest;
 import io.metersphere.functional.service.FunctionalCaseModuleService;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.dto.sdk.BaseTreeNode;
@@ -55,6 +56,14 @@ public class FunctionalCaseModuleController {
     @CheckOwner(resourceId = "#request.getDragNodeId()", resourceType = "functional_case_module")
     public void moveNode(@Validated @RequestBody NodeMoveRequest request) {
         functionalCaseModuleService.moveNode(request, SessionUtils.getUserId());
+    }
+
+    @PostMapping("/move-to-parent")
+    @Operation(summary = "用例目录-移动至指定父目录")
+    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE)
+    @CheckOwner(resourceId = "#request.getModuleId()", resourceType = "functional_case_module")
+    public void moveToParent(@Validated @RequestBody FunctionalCaseModuleMoveRequest request) {
+        functionalCaseModuleService.moveToParent(request, SessionUtils.getUserId());
     }
 
     @GetMapping("/delete/{moduleId}")

@@ -14,6 +14,9 @@ import java.util.List;
  */
 @Data
 public class FunctionalCaseDetailDTO implements Serializable {
+    private java.util.Map<String, String> executionRef;
+    private java.util.Map<String, Object> executionFacts;
+    private java.util.List<java.util.Map<String, Object>> sourceBindings;
 
     @Serial
     private static final long serialVersionUID = 1L;

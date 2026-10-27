@@ -58,7 +58,9 @@ public class AgentCaseExportTools {
                 if ("start".equals(action)) {
                     fields.put("format", Map.of("type","string","enum",List.of("xlsx","xmind")));
                     fields.put("requestId", AgentMcpToolSchemas.string(1,64));
-                    fields.put("request", Map.of("type","object"));
+                    Map<String,Object> column = AgentMcpToolSchemas.object(Map.of("id",AgentMcpToolSchemas.string(1,128),"name",AgentMcpToolSchemas.string(0,255)),List.of("id"));
+                    Map<String,Object> columns = Map.of("type","array","maxItems",200,"items",column);
+                    fields.put("request", Map.of("type","object","properties",Map.of("systemFields",columns,"customFields",columns,"otherFields",columns),"additionalProperties",true));
                     return Map.of("type","object","properties",fields,"required",List.of("projectId","format","requestId","request"),"additionalProperties",false);
                 }
                 fields.put("taskId", AgentMcpToolSchemas.string(1,64));
@@ -82,7 +84,14 @@ public class AgentCaseExportTools {
                 if ("start".equals(action)) {
                     String format = (String)args.get("format");
                     if (!Set.of("xlsx","xmind").contains(format)) throw new MSException("导出格式无效");
-                    var request = JSON.parseObject(JSON.toJSONString(args.get("request")), FunctionalCaseExportRequest.class);
+                    FunctionalCaseExportRequest request;
+                    try {
+                        Object raw = args.get("request");
+                        if (!(raw instanceof Map<?,?>)) throw new IllegalArgumentException();
+                        request = JSON.parseObject(JSON.toJSONString(raw), FunctionalCaseExportRequest.class);
+                    } catch (Exception invalid) {
+                        throw new MSException("AGENT_VALIDATION_ERROR");
+                    }
                     request.setProjectId(projectId);
                     request.setRequestId((String)args.get("requestId"));
                     if (request.getRequestId() == null) throw new MSException("导出请求标识不能为空");

@@ -9,6 +9,7 @@ import java.util.List;
 
 @Data
 public class DefaultHubCaseImportRequest {
+    private java.util.Map<String,Object> followup;
     @NotBlank
     @Schema(description = "目标业务项目ID")
     private String targetProjectId;

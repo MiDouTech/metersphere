@@ -14,9 +14,10 @@ const tool = (name: string, description: string, inputSchema: z.ZodRawShape) => 
 });
 
 export const caseLibraryTools = [
+  tool("metersphere.operation.get","Find personal execution upload/submit state after a lost response. NOT_FOUND does not prove no execution; reuse the original requestId.",{...resource,requestId,toolName:z.enum(["metersphere.functional.execution.evidence.upload","metersphere.functional.execution.submit","metersphere.functional.execution.evidence.import_url"])}),
   tool("metersphere.functional.attachment.import_url", "Download a public PNG/JPEG URL (max 5 MiB) and persist it in the case attachment area. Same requestId replays safely, even if the source expires.", { ...resource, url:z.string().url().max(8192), requestId, fileName:z.string().min(1).max(200).optional() }),
   tool("metersphere.bug.attachment.import_url", "Download a public PNG/JPEG URL (max 5 MiB) and persist it in the bug attachment area; requires BUG_ATTACHMENT and current bug update permission.", { projectId:id, bugId:id, url:z.string().url().max(8192), requestId, fileName:z.string().min(1).max(200).optional() }),
-  tool("metersphere.functional.execution.evidence.import_url", "Stage PNG/JPEG evidence from a public URL (max 5 MiB). Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT. Visible only after execution.submit passes the existing gate.", { ...resource, url:z.string().url().max(8192), requestId, contentHash:z.string().length(64), stepNum:z.number().int().min(1).max(1000), purpose:z.enum(["BEFORE_STEP","AFTER_STEP"]), fileName:z.string().min(1).max(200).optional() }),
+  tool("metersphere.functional.execution.evidence.import_url", "Stage PNG/JPEG evidence from a public URL (max 5 MiB). Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT. Visible only after execution.submit passes the existing gate.", { ...resource, url:z.string().url().max(8192), requestId, contentHash:z.string().length(64).optional(), stepNum:z.number().int().min(1).max(1000).optional(), purpose:z.enum(["BEFORE_STEP","AFTER_STEP"]).optional(), fileName:z.string().min(1).max(200).optional() }),
   tool("metersphere.functional.archive.prepare","Archive an ended TASK or accepted personal SUBMISSION into project documents. Separate status from test success. Requires ARTIFACT_WRITE; no new task/lease for personal submissions.",{projectId:id,sourceType:z.enum(["TASK","SUBMISSION"]),sourceId:id}),
   tool("metersphere.functional.archive.get","Read archive status and document/dataset references. PENDING/FAILED is not a completed archive.",{projectId:id,archiveId:id}),
   tool("metersphere.functional.archive.retry","Retry failed archival without rerunning the test or changing its result.",{projectId:id,archiveId:id}),
@@ -43,7 +44,9 @@ export const caseLibraryTools = [
     },
   },
   tool("metersphere.functional.import.get","Read durable import state and paginated item results; PENDING is not success.",{jobId:id,current:z.number().int().positive().optional(),pageSize:z.number().int().min(1).max(100).optional()}),
-  ...["commit","stop","retry"].map(action=>tool(`metersphere.functional.import.${action}`,`Import ${action}: same jobId safely replays; successful items are never reimported. Stop preserves completed writes. Retry uses the frozen file and versions.`,{jobId:id})),
+  tool("metersphere.functional.import.followup.options","List explicitly linked plan/review groups for this import.",{jobId:id}),
+  tool("metersphere.functional.import.followup.retry","Retry frozen plan/review followup without importing successful rows again.",{jobId:id}),
+  ...["commit","stop","retry"].map(action=>tool(`metersphere.functional.import.${action}`,`Import ${action}: same jobId safely replays; successful items are never reimported. Stop preserves completed writes. Retry uses the frozen file and versions.`,{jobId:id,...(action==="commit"?{followup:z.object({policy:z.enum(["CREATE_NEW_PAIR","APPEND_EXISTING","IMPORT_ONLY"]),targetGroupId:id.optional(),expectedGroupRevision:z.number().int().positive().optional(),planName:z.string().min(1).max(255).optional(),reviewName:z.string().min(1).max(255).optional(),reviewers:z.array(id).min(1).max(100).optional(),reviewPassRule:z.enum(["SINGLE","MULTIPLE"]).optional()}).strict().optional()}: {})})),
   tool("metersphere.functional.case.delete_preview", "Preview explicit case versions and active tasks. Return confirmationPath for the user to choose cancel/wait/stop/delete. Never replace the user's choice with confirm=true. Requires explicit CASE_DELETE_V2.", {
     projectId: id, caseIds: z.array(id).min(1).max(100), versionScope: z.enum(["CURRENT","ALL"]).optional(),
   }),
@@ -89,8 +92,8 @@ export const caseLibraryTools = [
   tool("metersphere.functional.execution.get", "Read step outcomes, evidence mapping and the frozen global policy of a submitted execution.", { ...resource, submissionId: id }),
   {
     name: "metersphere.functional.execution.evidence.upload",
-    description: "Stage step evidence from a local PNG/JPEG filePath or base64 (max 5 MiB). Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT; published only after submit passes the gate.",
-    inputSchema: { ...resource, contentHash: z.string().length(64), stepNum: z.number().int().min(1).max(1000), purpose: z.enum(["BEFORE_STEP", "AFTER_STEP"]), fileName: z.string().min(1).max(200), contentType: z.enum(["image/png", "image/jpeg"]), filePath: z.string().min(1).optional(), base64: z.string().min(1).max(6990508).optional(), requestId },
+    description: "Stage case evidence: one image covers all steps; legacy hash/step fields optional. from a local PNG/JPEG filePath or base64 (max 5 MiB). Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT; published only after submit passes the gate.",
+    inputSchema: { ...resource, contentHash: z.string().length(64).optional(), stepNum: z.number().int().min(1).max(1000).optional(), purpose: z.enum(["BEFORE_STEP", "AFTER_STEP"]).optional(), fileName: z.string().min(1).max(200), contentType: z.enum(["image/png", "image/jpeg"]), filePath: z.string().min(1).optional(), base64: z.string().min(1).max(6990508).optional(), requestId },
     handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
       if (Boolean(args.filePath) === Boolean(args.base64)) throw new Error("Provide exactly one of filePath or base64");
       const { filePath, ...payload } = args;
@@ -114,8 +117,8 @@ export const caseLibraryTools = [
     },
   },
   tool("metersphere.functional.execution.submit", "Validate original-step coverage and evidence structure; retain extra/repeated positions. Agent reports SUCCESS/ERROR without expected-text comparison or content review. Any ERROR makes the case ERROR. ACCEPTED/PUBLISHED means structure accepted, not execution verified. Same requestId retries safely.", {
-    ...resource, contentHash: z.string().length(64), policyHash: z.string().length(64), requestId,
-    steps: z.array(z.object({ stepNum: z.number().int().min(1).max(1000), actual: z.string().min(1).max(20000), result: z.enum(["SUCCESS", "ERROR"]), evidenceIds: z.array(id).min(1).max(10) }).strict()).min(1).max(1000),
+    ...resource, contentHash: z.string().length(64).optional(), policyHash: z.string().length(64).optional(), requestId, evidenceIds: z.array(id).min(1).max(10).optional(),
+    steps: z.array(z.object({ stepNum: z.number().int().min(1).max(1000), actual: z.string().min(1).max(20000), result: z.enum(["SUCCESS", "ERROR"]), evidenceIds: z.array(id).max(10).optional() }).strict()).min(1).max(1000),
   }),
   tool("metersphere.functional.comment.update", "Edit your own comment text with version checking. Explicit CASE_COMMENT_EDIT_V2 required; preserves replies and attachments.", {
     ...resource, commentId: id, content: z.string().min(1).max(20000), expectedUpdateTime: version, requestId,
@@ -131,6 +134,7 @@ export const caseLibraryTools = [
     caseId: id, projectId: id.optional(), parentId: id.optional(),
     current: z.number().int().min(1).max(2147483647).optional(), pageSize: z.number().int().min(1).max(100).optional(),
   }),
+  tool("metersphere.functional.attachment.read","Read a published PNG/JPEG as MCP image content (max 5 MiB), including retained submission evidence.",{...resource,fileId:id,submissionId:id.optional()}),
   tool("metersphere.functional.attachments.list", "Read case attachment metadata. Execution artifacts are a separate resource.", resource),
   tool("metersphere.functional.case.update", "Update selected case fields using the current updateTime. Does not set execution results.", {
     ...resource, expectedUpdateTime: version, requestId, reason: z.string().max(2000).optional(),

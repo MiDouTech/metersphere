@@ -880,7 +880,8 @@
         set last_exec_result = nullif(#{lastExecResult}, ''),
             last_exec_time = #{lastExecTime},
             execute_user = #{executeUser}
-        where functional_case_id in
+        where test_plan_id in (select id from test_plan where status &lt;&gt; 'ARCHIVED')
+        and functional_case_id in
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>

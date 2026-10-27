@@ -45,7 +45,7 @@ type ToolDef = {
   description: string;
   inputSchema: Record<string, unknown>;
   handler: (client: MeterSphereClient, args: Record<string, unknown>) => Promise<{
-    content: Array<{ type: "text"; text: string }>;
+    content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>;
     isError?: boolean;
   }>;
 };
@@ -93,7 +93,7 @@ async function main() {
 
   const server = new McpServer({
     name: "metersphere-mcp",
-    version: "0.7.0",
+    version: "0.8.0",
   });
 
   for (const tool of tools) {

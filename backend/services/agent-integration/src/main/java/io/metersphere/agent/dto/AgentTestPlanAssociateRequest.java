@@ -9,6 +9,10 @@ import java.util.List;
 
 @Data
 public class AgentTestPlanAssociateRequest {
+    @NotBlank
+    @jakarta.validation.constraints.Pattern(regexp="[A-Za-z0-9_.:-]{1,128}")
+    @jakarta.validation.constraints.Size(min=1,max=128)
+    private String requestId;
     @Schema(description = "项目ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank
     private String projectId;

@@ -18,7 +18,7 @@ public class AgentBusinessAccess {
     private final JdbcTemplate jdbc;
     public AgentBusinessAccess(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
-    public String project(String projectId, String permission, boolean write, String... scopes) {
+    public AgentToken activeToken(String... scopes) {
         AgentToken context = AgentTokenContext.get();
         if (context == null || StringUtils.isBlank(context.getId())) throw denied();
         var tokens = jdbc.query("SELECT * FROM agent_token WHERE id=?", BeanPropertyRowMapper.newInstance(AgentToken.class), context.getId());
@@ -29,9 +29,31 @@ public class AgentBusinessAccess {
                 || (token.getExpireTime()!=null && token.getExpireTime()<=System.currentTimeMillis())
                 || !java.util.Objects.equals(context.getUserId(),token.getUserId())) throw denied();
         if (Arrays.stream(scopes).noneMatch(scope->AgentTokenScopeParser.hasScope(token.getScopes(),scope))) throw denied();
+        return token;
+    }
+
+    public String project(String projectId, String permission, boolean write, String... scopes) {
+        var token=activeToken(scopes);
         if (StringUtils.isBlank(projectId) || !AgentTokenProjectAccess.allows(token,projectId)) throw denied();
         long active=jdbc.queryForObject("SELECT COUNT(*) FROM project WHERE id=? AND deleted=0"+(write?" AND enable=1":""),Long.class,projectId);
         if (active!=1 || !userHasPermission(token.getUserId(),projectId,permission)) throw denied();
+        return token.getUserId();
+    }
+
+    public String organization(String organizationId,String permission,String systemPermission,String... scopes) {
+        var token=activeToken(scopes);
+        Long allowed=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM user u JOIN user_role_relation rel ON rel.user_id=u.id
+            JOIN user_role role ON role.id=rel.role_id AND role.enabled=1
+            WHERE u.id=? AND u.enable=1 AND u.deleted=0 AND (
+              (rel.source_id='system' AND role.type='SYSTEM' AND (role.id='admin' OR EXISTS
+                (SELECT 1 FROM user_role_permission p WHERE p.role_id=role.id AND p.permission_id=?)))
+              OR (rel.source_id=? AND role.type='ORGANIZATION' AND EXISTS
+                (SELECT 1 FROM user_role_permission p WHERE p.role_id=role.id AND p.permission_id=?)))
+            """,Long.class,token.getUserId(),systemPermission,organizationId,permission);
+        if(allowed==null||allowed<1)throw denied();
+        Long exists=jdbc.queryForObject("SELECT COUNT(*) FROM organization WHERE id=?",Long.class,organizationId);
+        if(exists==null||exists!=1)throw denied();
         return token.getUserId();
     }
 

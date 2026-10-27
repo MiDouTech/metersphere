@@ -17,6 +17,7 @@ import io.metersphere.functional.mapper.FunctionalCaseMapper;
 import io.metersphere.functional.mapper.FunctionalCaseModuleMapper;
 import io.metersphere.functional.request.FunctionalCaseModuleCreateRequest;
 import io.metersphere.functional.request.FunctionalCaseModuleUpdateRequest;
+import io.metersphere.functional.request.FunctionalCaseModuleMoveRequest;
 import io.metersphere.project.dto.ModuleCountDTO;
 import io.metersphere.project.dto.NodeSortDTO;
 import io.metersphere.project.service.ModuleTreeService;
@@ -52,6 +53,9 @@ import java.util.regex.Pattern;
 public class FunctionalCaseModuleService extends ModuleTreeService {
     @Resource
     private org.springframework.jdbc.core.JdbcTemplate moduleJdbc;
+
+    @Resource private io.metersphere.functional.hub.service.DefaultHubModuleResolver hubModules;
+    @Resource @org.springframework.context.annotation.Lazy private FunctionalCaseService lifecycleCases;
 
     private static final Pattern NATURAL_PART_PATTERN = Pattern.compile("\\d+|\\D+");
     @Resource
@@ -134,6 +138,7 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         updateModule.setCreateTime(null);
         functionalCaseModuleMapper.updateByPrimaryKeySelective(updateModule);
         functionalCaseModuleLogService.updateModuleLog(updateModule, userId);
+        enqueueModuleMirrors(updateModule.getProjectId(),updateModule.getId(),userId);
     }
 
     public void moveNode(NodeMoveRequest request, String userId) {
@@ -167,6 +172,7 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         super.sort(nodeSortDTO);
         moduleJdbc.update("UPDATE functional_case_module SET update_time=GREATEST(COALESCE(update_time,0)+1,?),update_user=? WHERE id=?",
                 System.currentTimeMillis(),userId,request.getDragNodeId());
+        enqueueModuleMirrors(source.getProjectId(),source.getId(),userId);
     }
 
     /** Shared by UI and Agent tree writers; serializes ancestor validation and mutation. */
@@ -208,6 +214,13 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         }
     }
 
+    public FunctionalCaseModule moveToParent(FunctionalCaseModuleMoveRequest request, String userId) {
+        FunctionalCaseModule source = functionalCaseModuleMapper.selectByPrimaryKey(request.getModuleId());
+        if (source == null) throw new MSException("目录不存在或不可访问");
+        requireCurrentRevision(source.getProjectId(), source.getId(), request.getExpectedUpdateTime());
+        return moveToParent(source.getId(), request.getParentId(), userId);
+    }
+
     public FunctionalCaseModule moveToParent(String moduleId, String parentId, String userId) {
         FunctionalCaseModule module = functionalCaseModuleMapper.selectByPrimaryKey(moduleId);
         if (module == null) throw new MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
@@ -221,7 +234,18 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         module.setUpdateUser(userId);
         functionalCaseModuleMapper.updateByPrimaryKeySelective(module);
         functionalCaseModuleLogService.updateModuleLog(module, userId);
+        enqueueModuleMirrors(module.getProjectId(),module.getId(),userId);
         return module;
+    }
+
+    private void enqueueModuleMirrors(String projectId,String moduleId,String userId) {
+        List<String> subtree=hubModules.listDescendantModuleIds(projectId,List.of(moduleId));
+        if(subtree.isEmpty())return;
+        List<Object> args=new ArrayList<>();args.add(projectId);args.add(userId);
+        long now=System.currentTimeMillis();args.add(now);args.add(now);args.add(now);args.add(projectId);args.addAll(subtree);
+        moduleJdbc.update("INSERT INTO functional_import_effect_outbox(id,effect_type,project_id,user_id,payload,next_retry_at,create_time,update_time) "
+                + "SELECT UUID(),'CASE_SYNC',?,?,JSON_OBJECT('caseId',id),?,?,? FROM functional_case WHERE project_id=? AND latest=1 AND deleted=0 AND module_id IN ("
+                + String.join(",",Collections.nCopies(subtree.size(),"?"))+")",args.toArray());
     }
 
     public void deleteModule(String moduleId, String userId) {
@@ -234,8 +258,7 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
             //模块日志
             functionalCaseModuleLogService.handleModuleLog(List.of(deleteModule), deleteModule.getProjectId(), userId, "/functional/case/module/delete/" + moduleId, OperationLogType.DELETE.name(), " " + Translator.get("log.delete_module"));
             List<String> ids = functionalCases.stream().map(FunctionalCase::getId).toList();
-            User user = userMapper.selectByPrimaryKey(userId);
-            functionalCaseNoticeService.batchSendNotice(deleteModule.getProjectId(), ids, user, NoticeConstants.Event.DELETE);
+            // Case deletion notices are emitted by the shared lifecycle service.
         }
     }
 
@@ -250,7 +273,10 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         if (CollectionUtils.isNotEmpty(functionalCaseList)) {
             functionalCases.addAll(functionalCaseList);
         }
-        extFunctionalCaseMapper.removeToTrashByModuleIds(deleteIds, userId);
+        // Reuse deletion locks, active-run protection, review reconciliation and mirror outbox.
+        Map<String,List<FunctionalCase>> active=functionalCaseList.stream().filter(c->!Boolean.TRUE.equals(c.getDeleted()))
+                .collect(java.util.stream.Collectors.groupingBy(FunctionalCase::getProjectId));
+        active.forEach((project,cases)->lifecycleCases.handDeleteFunctionalCase(cases.stream().map(FunctionalCase::getId).toList(),false,userId,project));
         List<String> childrenIds = extFunctionalCaseModuleMapper.selectChildrenIdsByParentIds(deleteIds);
         if (CollectionUtils.isNotEmpty(childrenIds)) {
             deleteModuleByIds(childrenIds, functionalCases, userId);

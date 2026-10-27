@@ -1,5 +1,5 @@
 <template>
-  <MsCard simple no-content-padding>
+  <MsCard simple no-content-padding :min-width="0" class="management-review">
     <MsSplitBox :not-show-first="isAdvancedSearchMode">
       <template #first>
         <div class="p-[16px]">
@@ -110,4 +110,6 @@
   }
 </script>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+  @import '@/assets/style/management-review.less';
+</style>

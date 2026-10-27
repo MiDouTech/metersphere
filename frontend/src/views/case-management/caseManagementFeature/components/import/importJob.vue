@@ -13,13 +13,102 @@
     <a-alert v-if="error" type="error" class="mb-3">{{ error }}</a-alert>
     <template v-if="job">
       <p>{{ job.fileName }} · {{ labels[job.state] || job.state }} · 共 {{ job.total }} 条</p>
+      <div
+        v-if="job.state === 'PRECHECKED' && followupOptions"
+        class="mb-4 rounded border border-solid border-[var(--color-border-2)] p-4"
+      >
+        <template v-if="followupOptions.groups.length && !policy">
+          <p>检测到再次导入测试用例，是否更新已有测试计划和评审计划？</p>
+          <a-space v-if="!declinedUpdate"
+            ><a-button @click="policy = 'APPEND_EXISTING'">是，更新已有</a-button
+            ><a-button @click="declinedUpdate = true">否</a-button></a-space
+          >
+          <template v-else
+            ><p>是否新建测试计划和评审计划，并关联本次成功导入的用例？</p
+            ><a-space
+              ><a-button :disabled="!followupOptions.canCreate" @click="policy = 'CREATE_NEW_PAIR'"
+                >是，新建并关联</a-button
+              ><a-button @click="policy = 'IMPORT_ONLY'">否，仅导入</a-button></a-space
+            ></template
+          >
+        </template>
+        <a-alert v-if="!followupOptions.canCreate" type="warning" class="mb-2"
+          >当前账号缺少创建或关联权限；可选择仅导入，已有任务结果不会因此回滚。</a-alert
+        >
+        <a-select
+          v-if="policy === 'APPEND_EXISTING'"
+          v-model="targetGroup"
+          placeholder="选择要更新的计划与评审"
+          class="mb-3"
+        >
+          <a-option v-for="group in followupOptions.groups" :key="group.id" :value="group.id"
+            >{{ group.planName }} / {{ group.reviewName }}</a-option
+          >
+        </a-select>
+        <template v-if="policy && policy !== 'IMPORT_ONLY'">
+          <p>{{
+            policy === 'CREATE_NEW_PAIR'
+              ? '成功导入后自动创建测试计划和评审计划'
+              : '增量关联到选定目标，保留原执行和评审记录'
+          }}</p>
+          <a-select
+            v-model="reviewers"
+            :options="reviewerOptions"
+            multiple
+            placeholder="选择评审人（必填）"
+            allow-search
+            class="mb-3"
+          />
+          <a-select
+            v-if="policy === 'CREATE_NEW_PAIR'"
+            v-model="reviewPassRule"
+            :options="[
+              { value: 'SINGLE', label: '单人通过' },
+              { value: 'MULTIPLE', label: '多人通过' },
+            ]"
+          />
+        </template>
+        <a-space class="mt-3"
+          ><a-button
+            v-if="policy"
+            type="text"
+            @click="
+              policy = '';
+              declinedUpdate = false;
+            "
+            >重新选择</a-button
+          ><a-button v-if="policy !== 'IMPORT_ONLY'" type="text" @click="policy = 'IMPORT_ONLY'"
+            >仅导入，不创建或关联计划/评审</a-button
+          ><span v-else>仅导入</span></a-space
+        >
+      </div>
+      <a-alert
+        v-if="job.followup && !['LEGACY', 'SKIPPED'].includes(job.followup.state)"
+        class="mb-3"
+        :type="job.followup.state === 'FAILED' ? 'warning' : 'info'"
+      >
+        计划/评审关联：{{ followupLabels[job.followup.state] || job.followup.state }}
+        <div v-if="job.followup.message">{{ job.followup.message }}</div>
+        <a-button v-if="job.followup.planId" type="text" @click="openTarget(false)">{{
+          job.followup.planName || '查看测试计划'
+        }}</a-button>
+        <a-button v-if="job.followup.reviewId" type="text" @click="openTarget(true)">{{
+          job.followup.reviewName || '查看评审'
+        }}</a-button>
+        <a-button v-if="job.followup.state === 'FAILED'" :disabled="saving" @click="retryFollowup">只重试关联</a-button>
+      </a-alert>
       <a-space class="my-3" wrap>
         <span v-for="count in job.counts" :key="count.state"
           >{{ labels[count.state] || count.state }}：{{ count.total }}</span
         >
       </a-space>
       <a-space class="mb-3" wrap>
-        <a-button v-if="job.state === 'PRECHECKED'" type="primary" :loading="saving" @click="action('commit')"
+        <a-button
+          v-if="job.state === 'PRECHECKED'"
+          type="primary"
+          :loading="saving"
+          :disabled="!policy || (policy !== 'IMPORT_ONLY' && !reviewers.length)"
+          @click="action('commit')"
           >提交有效用例</a-button
         >
         <a-button
@@ -58,10 +147,14 @@
 
 <script setup lang="ts">
   import { onBeforeUnmount, ref, watch } from 'vue';
+  import { useRouter } from 'vue-router';
 
   import MSR from '@/api/http';
+  import { getReviewUsers } from '@/api/modules/case-management/caseReview';
   import useClientTablePaging from '@/hooks/useClientTablePaging';
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
+
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
 
   const props = defineProps<{ jobId: string; visible: boolean }>();
   const emit = defineEmits<{ (event: 'update:visible', value: boolean): void; (event: 'changed'): void }>();
@@ -72,8 +165,43 @@
     total: number;
     counts: { state: string; total: number }[];
     items: { position: number; action: string; state: string; message?: string }[];
+    followup?: {
+      state: string;
+      message?: string;
+      planId?: string;
+      reviewId?: string;
+      planName?: string;
+      reviewName?: string;
+    };
   }
+  interface FollowupOptions {
+    projectId: string;
+    canCreate: boolean;
+    groups: { id: string; revision: number; planName: string; reviewName: string }[];
+  }
+  const followupOptions = ref<FollowupOptions>();
+  const policy = ref('');
+  const targetGroup = ref('');
+  const declinedUpdate = ref(false);
+  const reviewers = ref<string[]>([]);
+  const reviewerOptions = ref<{ label: string; value: string }[]>([]);
+  const reviewPassRule = ref('SINGLE');
+  const router = useRouter();
+  const followupLabels: Record<string, string> = {
+    PENDING: '等待或正在关联',
+    SUCCEEDED: '已完成',
+    FAILED: '部分关联未完成',
+  };
+
   const job = ref<Job>();
+  function openTarget(review: boolean) {
+    const id = review ? job.value?.followup?.reviewId : job.value?.followup?.planId;
+    if (id)
+      router.push({
+        name: review ? TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL : TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL,
+        query: { id },
+      });
+  }
   const paging = useClientTablePaging(
     'case-import-items',
     () => job.value?.total || 0,
@@ -118,10 +246,26 @@
       });
       if (request !== sequence) return;
       job.value = result;
+      if (result.state === 'PRECHECKED' && !followupOptions.value) {
+        const options = await MSR.get<FollowupOptions>({
+          url: `/ai/case-imports/${encodeURIComponent(props.jobId)}/followup-options`,
+        });
+        if (request !== sequence) return;
+        followupOptions.value = options;
+        if (!options.groups.length && options.canCreate) policy.value = 'CREATE_NEW_PAIR';
+        if (options.groups.length === 1) targetGroup.value = options.groups[0].id;
+        try {
+          const users = await getReviewUsers(options.projectId, '');
+          if (request === sequence) reviewerOptions.value = users.map((user) => ({ label: user.name, value: user.id }));
+        } catch {
+          if (request === sequence) error.value = '无法加载评审人，请刷新重试或选择仅导入';
+        }
+      }
       if (previous && previous !== result.state && ['COMPLETED', 'PARTIAL', 'STOPPED'].includes(result.state))
         emit('changed');
       previous = result.state;
-      if (['QUEUED', 'RUNNING'].includes(result.state)) timer = setTimeout(load, 3000);
+      if (['QUEUED', 'RUNNING'].includes(result.state) || result.followup?.state === 'PENDING')
+        timer = setTimeout(load, 3000);
     } catch (failure) {
       if (request === sequence)
         error.value = formatAppErrorMessage(ensureAppError(failure, '无法查询导入状态，请重试'));
@@ -136,11 +280,40 @@
     saving.value = true;
     clearTimer();
     try {
-      await MSR.post({ url: `/ai/case-imports/${encodeURIComponent(id)}/${value}` });
+      const group = followupOptions.value?.groups.find((item) => item.id === targetGroup.value);
+      if (value === 'commit' && (!policy.value || (policy.value === 'APPEND_EXISTING' && !group))) {
+        error.value = '请选择导入关联策略与目标';
+        return;
+      }
+      await MSR.post({
+        url: `/ai/case-imports/${encodeURIComponent(id)}/${value}`,
+        data:
+          value === 'commit'
+            ? {
+                policy: policy.value,
+                targetGroupId: group?.id,
+                expectedGroupRevision: group?.revision,
+                reviewers: reviewers.value,
+                reviewPassRule: reviewPassRule.value,
+              }
+            : undefined,
+      });
       if (captured === sequence) await load();
     } catch (failure) {
       if (captured === sequence)
         error.value = formatAppErrorMessage(ensureAppError(failure, '导入操作失败，请刷新重试'));
+    } finally {
+      saving.value = false;
+    }
+  }
+  async function retryFollowup() {
+    if (saving.value) return;
+    saving.value = true;
+    try {
+      await MSR.post({ url: `/ai/case-imports/${encodeURIComponent(props.jobId)}/followup/retry` });
+      await load();
+    } catch (failure) {
+      error.value = formatAppErrorMessage(ensureAppError(failure, '关联重试失败'));
     } finally {
       saving.value = false;
     }
@@ -157,6 +330,11 @@
       ++sequence;
       clearTimer();
       job.value = undefined;
+      followupOptions.value = undefined;
+      policy.value = '';
+      targetGroup.value = '';
+      reviewers.value = [];
+      declinedUpdate.value = false;
       previous = '';
       paging.value.onPageChange(1);
       if (props.visible) load();

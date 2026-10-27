@@ -25,13 +25,13 @@ public class AgentExternalImageTools {
                 fields.put("projectId",AgentMcpToolSchemas.string(1,128));
                 fields.put("bug".equals(kind)?"bugId":"caseId",AgentMcpToolSchemas.string(1,128));
                 fields.put("url",AgentMcpToolSchemas.string(1,8192));
-                fields.put("requestId",AgentMcpToolSchemas.string(1,128));
+                fields.put("requestId",AgentMcpToolSchemas.requestId());
                 if("execution".equals(kind)) {
                     fields.put("contentHash",AgentMcpToolSchemas.string(64,64));
                     fields.put("stepNum",Map.of("type","integer","minimum",1,"maximum",1000));
                     fields.put("purpose",Map.of("type","string","enum",List.of("BEFORE_STEP","AFTER_STEP")));
                 }
-                var required=new ArrayList<>(fields.keySet());
+                var required=new ArrayList<>(fields.keySet());required.removeAll(List.of("contentHash","stepNum","purpose"));
                 fields.put("fileName",AgentMcpToolSchemas.string(1,200));
                 return AgentMcpToolSchemas.object(fields,required);
             }

@@ -79,6 +79,16 @@
         </MsPopConfirm>
       </template>
     </MsTree>
+    <a-modal
+      v-model:visible="moveVisible"
+      :title="t('common.move')"
+      :ok-loading="moveLoading"
+      :mask-closable="false"
+      @before-ok="confirmMove"
+    >
+      <div class="mb-3">{{ movingNode?.name }}</div>
+      <a-select v-model="targetParent" :options="moveOptions" allow-search :disabled="moveLoading" />
+    </a-modal>
   </a-spin>
 </template>
 
@@ -98,6 +108,7 @@
     createCaseModuleTree,
     deleteCaseModuleTree,
     getCaseModuleTree,
+    moveCaseModuleToParent,
     moveCaseModuleTree,
     updateCaseModuleTree,
   } from '@/api/modules/case-management/featureCase';
@@ -106,6 +117,7 @@
   import useAppStore from '@/store/modules/app';
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
   import { characterLimit, mapTree, traverseTree } from '@/utils';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { CreateOrUpdateModule, UpdateModule } from '@/models/caseManagement/featureCase';
@@ -151,6 +163,11 @@
 
   const caseMoreActions: ActionsItem[] = [
     {
+      label: 'common.move',
+      eventTag: 'move',
+      permission: ['FUNCTIONAL_CASE:READ+UPDATE'],
+    },
+    {
       label: 'caseManagement.featureCase.rename',
       eventTag: 'rename',
       permission: ['FUNCTIONAL_CASE:READ+UPDATE'],
@@ -164,6 +181,30 @@
   ];
 
   const selectedNodeKeys = ref(props.selectedKeys || []);
+  const moveVisible = ref(false);
+  const moveLoading = ref(false);
+  const movingNode = ref<MsTreeNodeData>();
+  const targetParent = ref('NONE');
+  const moveOptions = computed(() => {
+    const blocked = new Set<string>();
+    const collect = (nodes: MsTreeNodeData[]) => {
+      nodes.forEach((node) => {
+        blocked.add(String(node.id));
+        collect(node.children || []);
+      });
+    };
+    if (movingNode.value) collect([movingNode.value]);
+    const options = [{ value: 'NONE', label: t('caseManagement.featureCase.allCase') }];
+    const walk = (nodes: MsTreeNodeData[], path = '') => {
+      nodes.forEach((node) => {
+        const name = path ? `${path} / ${node.name}` : node.name;
+        if (!blocked.has(String(node.id)) && node.id !== 'root') options.push({ value: String(node.id), label: name });
+        if (!blocked.has(String(node.id))) walk(node.children || [], name);
+      });
+    };
+    walk(caseTree.value);
+    return options;
+  });
 
   watch(
     () => props.selectedKeys,
@@ -228,6 +269,28 @@
     }
   }
 
+  async function confirmMove() {
+    const node = movingNode.value;
+    if (!node || node.updateTime === undefined || moveLoading.value) return false;
+    moveLoading.value = true;
+    try {
+      await moveCaseModuleToParent({
+        moduleId: String(node.id),
+        parentId: targetParent.value,
+        expectedUpdateTime: node.updateTime,
+      });
+      await initModules();
+      emits('dragUpdate');
+      Message.success(t('caseManagement.featureCase.moduleMoveSuccess'));
+      return true;
+    } catch (error) {
+      Message.error(formatAppErrorMessage(ensureAppError(error, '目录移动失败，请刷新后重试')));
+      return false;
+    } finally {
+      moveLoading.value = false;
+    }
+  }
+
   // 删除节点（文件夹/模块均级联删除子树及用例）
   const deleteHandler = (node: MsTreeNodeData) => {
     const isFolder = node.type === 'folder';
@@ -283,6 +346,11 @@
   // 用例树节点更多事件
   const handleCaseMoreSelect = (item: ActionsItem, node: MsTreeNodeData) => {
     switch (item.eventTag) {
+      case 'move':
+        movingNode.value = node;
+        targetParent.value = node.parentId || 'NONE';
+        moveVisible.value = true;
+        break;
       case 'delete':
         deleteHandler(node);
         resetFocusNodeKey();

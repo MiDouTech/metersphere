@@ -88,6 +88,17 @@
         </template>
       </a-dropdown>
     </template> -->
+    <template #name="{ record }">
+      <a-button
+        v-if="record.type === testPlanTypeEnum.TEST_PLAN"
+        type="text"
+        class="max-w-full px-0"
+        @click.stop="openDetail(record.id)"
+      >
+        <span class="one-line-text">{{ record.name }}</span>
+      </a-button>
+      <span v-else>{{ record.name }}</span>
+    </template>
     <template #num="{ record }">
       <div class="flex items-center">
         <PlanExpandRow

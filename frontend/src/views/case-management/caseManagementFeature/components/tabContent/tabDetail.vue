@@ -1,6 +1,7 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
   <div class="caseDetailWrapper ml-1 !break-words break-all">
+    <MsExecutionFacts :facts="detailForm.executionFacts" />
     <a-form ref="caseFormRef" class="rounded-[4px]" :model="detailForm" layout="vertical">
       <!-- 前置：只读行式；编辑纵向富文本 -->
       <a-form-item
@@ -472,6 +473,7 @@
   import FunctionalCommentList from '@/components/business/ms-comment/functional-comment-list.vue';
   import inputComment from '@/components/business/ms-comment/input.vue';
   import type { CommentParams } from '@/components/business/ms-comment/types';
+  import MsExecutionFacts from '@/components/business/ms-execution-facts/index.vue';
   import LinkFileDrawer from '@/components/business/ms-link-file/associatedFileDrawer.vue';
   import AddStep from '../addStep.vue';
   import StepDescription from '@/views/case-management/caseManagementFeature/components/tabContent/stepDescription.vue';
@@ -702,6 +704,8 @@
         versionId: data.versionId || detailForm.value.versionId,
         tags: data.tags || [],
         lastExecuteResult: data.lastExecuteResult,
+        executionRef: data.executionRef,
+        executionFacts: data.executionFacts,
         publicCase: data.publicCase === true || data.publicCase === 'true',
       };
       setStepData(data.steps || '[]');

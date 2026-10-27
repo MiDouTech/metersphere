@@ -726,6 +726,8 @@ public class BuiltinAgentMcpToolConfig {
             for(Field field:current.getDeclaredFields()){
                 if(java.lang.reflect.Modifier.isStatic(field.getModifiers())||field.isSynthetic())continue;
                 Map<String,Object> schema=new LinkedHashMap<>(fieldSchema(field.getGenericType()));
+                var requestPattern=field.getAnnotation(jakarta.validation.constraints.Pattern.class);
+                if(requestPattern!=null)schema.put("pattern",requestPattern.regexp());
                 Size size=field.getAnnotation(Size.class);
                 if(size!=null){
                     if(CharSequence.class.isAssignableFrom(field.getType())){schema.put("minLength",size.min());schema.put("maxLength",size.max());}

@@ -9,6 +9,34 @@ import java.util.HashMap;
 import java.util.Map;
 
 class AgentMcpStreamableServiceTests {
+    @Test
+    void genericWriteDiscoveryContainsUsableIdempotencyKeyWithoutChangingStateProtocols() {
+        var registry=org.mockito.Mockito.mock(io.metersphere.agent.tool.AgentMcpToolRegistry.class);
+        var handler=org.mockito.Mockito.mock(io.metersphere.agent.tool.AgentMcpToolHandler.class);
+        org.mockito.Mockito.when(handler.name()).thenReturn("metersphere.functional.case.create");
+        org.mockito.Mockito.when(handler.inputSchema()).thenReturn(Map.of("type","object","properties",Map.of(),"required",java.util.List.of(),"additionalProperties",false));
+        org.mockito.Mockito.when(registry.isWriteTool("metersphere.functional.case.create")).thenReturn(true);
+        ReflectionTestUtils.setField(service,"agentMcpToolRegistry",registry);
+        Map<?,?> schema=ReflectionTestUtils.invokeMethod(service,"schemaWithIdempotency",handler);
+        Assertions.assertTrue(((Map<?,?>)schema.get("properties")).containsKey("requestId"));
+        Assertions.assertTrue(((java.util.List<?>)schema.get("required")).contains("requestId"));
+        var plan=new io.metersphere.agent.tool.BuiltinAgentMcpToolConfig().testPlanCreateTool(org.mockito.Mockito.mock(AgentTestPlanWriteService.class));
+        var planSchema=plan.inputSchema();
+        var keySchema=(Map<?,?>)((Map<?,?>)planSchema.get("properties")).get("requestId");
+        Assertions.assertEquals(128,keySchema.get("maxLength"));Assertions.assertEquals("[A-Za-z0-9_.:-]{1,128}",keySchema.get("pattern"));
+        Assertions.assertTrue(((java.util.List<?>)planSchema.get("required")).contains("requestId"));
+        org.mockito.Mockito.when(handler.name()).thenReturn("metersphere.functional.attachment.upload.prepare");
+        org.mockito.Mockito.when(registry.isWriteTool(handler.name())).thenReturn(true);
+        Assertions.assertEquals(handler.inputSchema(),ReflectionTestUtils.invokeMethod(service,"schemaWithIdempotency",handler));
+    }
+
+    @Test
+    void malformedIdempotencyKeyReturnsValidationError() {
+        var response=service.handle(Map.of("jsonrpc","2.0","id",88,"method","tools/call",
+                "params",Map.of("name","metersphere.test_plan.create","arguments",Map.of("requestId",42))));
+        var data=(Map<?,?>)((Map<?,?>)response.get("error")).get("data");
+        Assertions.assertEquals("AGENT_VALIDATION_ERROR",data.get("code"));
+    }
 
     private AgentMcpStreamableService service;
 

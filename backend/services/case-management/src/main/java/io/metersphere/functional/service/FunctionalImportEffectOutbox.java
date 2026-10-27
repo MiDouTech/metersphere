@@ -47,8 +47,11 @@ public class FunctionalImportEffectOutbox {
         this.notices = notices;
     }
 
+    @jakarta.annotation.Resource private FunctionalReviewRecountService reviewRecount;
+
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     public void enqueue(String projectId, String userId, List<String> ids, List<Map> resources, String event) {
+        reviewRecount.enqueueForCases(ids);
         long now = System.currentTimeMillis();
         for (String id : ids) insert("CASE_SYNC", projectId, userId, Map.of("caseId", id), now);
         for (Map resource : resources) insert("NOTICE", projectId, userId, Map.of("resource", resource, "event", event), now);
@@ -88,7 +91,7 @@ public class FunctionalImportEffectOutbox {
                                 org.springframework.context.i18n.LocaleContextHolder.setLocale(previous);
                             }
                         }
-                        jdbc.update("UPDATE functional_import_effect_outbox SET state='SUCCESS',update_time=?,error_code=NULL WHERE id=?", System.currentTimeMillis(), selected[0]);
+                        jdbc.update("UPDATE functional_import_effect_outbox SET state='SUCCESS',update_time=?,error_code=NULL,error_message=NULL WHERE id=?", System.currentTimeMillis(), selected[0]);
                         return true;
                     });
                     if (!Boolean.TRUE.equals(processed)) break;
@@ -97,7 +100,7 @@ public class FunctionalImportEffectOutbox {
                     failures.increment();
                     if (selected[0] == null) throw failure;
                     long now = System.currentTimeMillis();
-                    jdbc.update("UPDATE functional_import_effect_outbox SET next_retry_at=?+LEAST(900000,30000*POW(2,LEAST(attempts,5))),attempts=attempts+1,state=IF(attempts>=8,'FAILED','PENDING'),error_code='IMPORT_EFFECT_FAILED',update_time=? WHERE id=? AND state='PENDING'", now, now, selected[0]);
+                    jdbc.update("UPDATE functional_import_effect_outbox SET next_retry_at=?+LEAST(900000,30000*POW(2,LEAST(attempts,5))),attempts=attempts+1,state=IF(attempts>=8,'FAILED','PENDING'),error_code='IMPORT_EFFECT_FAILED',error_message=?,update_time=? WHERE id=? AND state='PENDING'", now, safeSyncFailure(failure,selected[0]), now, selected[0]);
                     LOG.warn("Import effect failed id={}; retry recorded", selected[0], failure);
                 }
             }
@@ -105,6 +108,16 @@ public class FunctionalImportEffectOutbox {
             nextScan = System.currentTimeMillis() + 30000;
             LOG.warn("Import effect store unavailable; pausing scan for 30 seconds", unavailable);
         }
+    }
+
+    private String safeSyncFailure(Exception failure,String reference) {
+        String message=failure.getMessage();
+        if(failure instanceof io.metersphere.sdk.exception.MSException && message!=null &&
+                (message.startsWith("同一源用例存在重复资产映射") || message.startsWith("历史资产映射已失效") ||
+                 message.startsWith("资产持续同步已关闭") || message.startsWith("资产存储项目未配置") ||
+                 message.startsWith("项目资产目录尚未就绪") || message.startsWith("资产镜像已被彻底删除")))
+            return org.apache.commons.lang3.StringUtils.left(message,900)+"；排查编号 "+reference;
+        return "资产同步未完成，请使用排查编号联系管理员："+reference;
     }
 
     @Scheduled(fixedDelay = 3600000, initialDelay = 3600000, scheduler = "functionalImportEffectsScheduler")

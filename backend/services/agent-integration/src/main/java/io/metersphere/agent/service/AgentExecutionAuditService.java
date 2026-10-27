@@ -21,6 +21,6 @@ public class AgentExecutionAuditService {
                 id,actorParts[0],actorParts[1],StringUtils.abbreviate(StringUtils.defaultIfBlank(action,"UNKNOWN"),128),targetParts[0],targetParts[1],safe(before),safe(after),StringUtils.defaultIfBlank(traceId,IDGenerator.nextStr()),System.currentTimeMillis());
         return id;
     }
-    private String safe(Object value){if(value==null)return null;return AgentSensitiveDataSanitizer.sanitize(JSON.toJSONString(value));}
+    private String safe(Object value){if(value==null)return null;return AgentSensitiveDataSanitizer.sanitizeJson(JSON.toJSONString(value));}
     private String[] split(String value,String fallback){String normalized=StringUtils.defaultIfBlank(value,fallback+":unknown");int i=normalized.indexOf(':');return i<1?new String[]{fallback,normalized}:new String[]{normalized.substring(0,i).toUpperCase(),normalized.substring(i+1)};}
 }

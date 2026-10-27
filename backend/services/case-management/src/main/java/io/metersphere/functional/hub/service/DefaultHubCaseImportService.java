@@ -90,13 +90,16 @@ public class DefaultHubCaseImportService {
     @Resource
     private DefaultHubCaseImportService self;
 
+    @Resource @Lazy private List<io.metersphere.functional.service.CaseImportFollowupBridge> followupBridges;
+
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public DefaultHubJobResponse startImport(DefaultHubCaseImportRequest request, String operator) {
         if (defaultHubProjectService.isDefaultProject(request.getTargetProjectId())) {
             throw new MSException("不能导入到默认枢纽项目");
         }
         String hubProjectId = defaultHubProjectService.getDefaultProjectId();
         if (StringUtils.isBlank(hubProjectId)) {
-            throw new MSException("default hub project not configured");
+            throw new MSException("资产存储项目未配置，请联系管理员");
         }
         assertSelectModeAllowed(request.getSelectMode());
         List<String> sourceCaseIds = resolveSourceCaseIds(hubProjectId, request);
@@ -109,8 +112,17 @@ public class DefaultHubCaseImportService {
         }
         String jobId = defaultHubSyncJobDao.createJob(DefaultHubConstants.JOB_TYPE_IMPORT_CASE,
                 request.getTargetProjectId(), operator, request.getIdempotencyKey());
-        // 经代理调用以保证 @Async 生效
-        self.executeImportAsync(jobId, hubProjectId, request, sourceCaseIds, operator);
+        if(request.getFollowup()!=null) {
+            if(followupBridges.isEmpty())throw new MSException("导入关联服务不可用，请稍后重试");
+            for(var bridge:followupBridges)bridge.prepareAssetImport(jobId,operator,request.getFollowup());
+        }
+        List<String> frozenSources=List.copyOf(sourceCaseIds);
+        Runnable start=()->self.executeImportAsync(jobId,hubProjectId,request,frozenSources,operator);
+        if(org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive())
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization(){
+                @Override public void afterCommit(){start.run();}
+            });
+        else start.run();
         DefaultHubJobResponse resp = new DefaultHubJobResponse();
         resp.setJobId(jobId);
         resp.setStatus(DefaultHubConstants.JOB_STATUS_PENDING);
@@ -124,7 +136,7 @@ public class DefaultHubCaseImportService {
     public List<BaseTreeNode> getImportTree() {
         String hubProjectId = defaultHubProjectService.getDefaultProjectId();
         if (StringUtils.isBlank(hubProjectId)) {
-            throw new MSException("default hub project not configured");
+            throw new MSException("资产存储项目未配置，请联系管理员");
         }
         List<BaseTreeNode> tree = functionalCaseModuleService.getTreeWithoutVirtualRoot(hubProjectId);
         Map<String, List<BaseTreeNode>> casesByModule = loadPlannedCaseLeaves(hubProjectId);
@@ -175,7 +187,7 @@ public class DefaultHubCaseImportService {
                 success++;
             } catch (Exception e) {
                 fail++;
-                lastError = StringUtils.defaultString(e.getMessage());
+                lastError = safeImportFailure(e,jobId,hubCaseId);
                 LogUtils.error("case asset import item failed, job=" + jobId + ", case=" + hubCaseId, e);
                 recordImportResult(jobId, hubCaseId, null, request.getTargetProjectId(), "FAILED", null, lastError);
             }
@@ -184,6 +196,13 @@ public class DefaultHubCaseImportService {
         String status = fail == 0 ? DefaultHubConstants.JOB_STATUS_SUCCESS
                 : success == 0 ? DefaultHubConstants.JOB_STATUS_FAILED : DefaultHubConstants.JOB_STATUS_PARTIAL_SUCCESS;
         defaultHubSyncJobDao.finish(jobId, status, 100, success, fail, lastError);
+    }
+
+    private String safeImportFailure(Exception failure,String job,String source) {
+        String message=failure.getMessage();
+        if(failure instanceof MSException && message!=null && (message.startsWith("资产用例不存在或已删除")||message.startsWith("复制资产用例附件失败")))
+            return StringUtils.left(message,800)+"；排查编号 "+job+":"+source;
+        return "用例导入未完成，请核对源资产、模板和权限；排查编号 "+job+":"+source;
     }
 
     private ImportOutcome importOne(String jobId, String hubProjectId, String hubCaseId, DefaultHubCaseImportRequest request, String operator) {
@@ -280,6 +299,7 @@ public class DefaultHubCaseImportService {
         update.setUpdateUser(operator);
         update.setUpdateTime(System.currentTimeMillis());
         functionalCaseMapper.updateByPrimaryKeySelective(update);
+        functionalCaseService.clearPersonalExecutionReference(List.of(target.getId()),System.currentTimeMillis());
         copyBlob(hubCaseId, target.getId(), false);
         String targetTemplateId = StringUtils.defaultIfBlank(target.getTemplateId(),
                 projectTemplateService.getDefaultTemplateDTO(request.getTargetProjectId(), TemplateScene.FUNCTIONAL.name()).getId());
@@ -290,7 +310,7 @@ public class DefaultHubCaseImportService {
         jdbcTemplate.update("UPDATE functional_case SET imported_from_hub_case_id = ? WHERE id = ?", hubCaseId, target.getId());
     }
 
-    private void copyAttachments(String sourceProjectId, String sourceCaseId, String targetProjectId,
+    public void copyAttachments(String sourceProjectId, String sourceCaseId, String targetProjectId,
                                  String targetCaseId, String operator, boolean replace) {
         if (replace) {
             FunctionalCaseAttachmentExample targetExample = new FunctionalCaseAttachmentExample();

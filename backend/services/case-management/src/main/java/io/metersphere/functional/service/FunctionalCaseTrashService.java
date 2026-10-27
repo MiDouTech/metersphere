@@ -32,6 +32,8 @@ import java.util.Map;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class FunctionalCaseTrashService {
+    @Resource private FunctionalImportEffectOutbox importEffects;
+    @Resource private FunctionalReviewRecountService reviewRecount;
     @Resource
     private FunctionalCaseMapper functionalCaseMapper;
     @Resource
@@ -67,6 +69,10 @@ public class FunctionalCaseTrashService {
         //检查自定义字段是否还存在，不存在，删除关联关系（与恢复流程没关系可异步执行）
         delCustomFields(ids);
         extFunctionalCaseMapper.recoverCase(ids, userId, System.currentTimeMillis());
+        for(String id:ids) {
+            FunctionalCase source=functionalCaseMapper.selectByPrimaryKey(id);
+            if(source!=null)importEffects.enqueue(source.getProjectId(),userId,List.of(id),List.of(),"UPDATE");
+        }
         Map<String, Object> param = new HashMap<>();
         param.put(CaseEvent.Param.CASE_IDS, ids);
         param.put(CaseEvent.Param.USER_ID, userId);
@@ -216,6 +222,7 @@ public class FunctionalCaseTrashService {
     }
 
     public void deleteByIds(String projectId, List<String> deleteIds, String userId) {
+        reviewRecount.enqueueForCases(deleteIds);
         deleteFunctionalCaseService.deleteFunctionalCaseResource(deleteIds, projectId);
         Map<String, Object> param = new HashMap<>();
         param.put(CaseEvent.Param.CASE_IDS, deleteIds);

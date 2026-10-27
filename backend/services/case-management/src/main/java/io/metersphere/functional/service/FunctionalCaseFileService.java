@@ -438,7 +438,7 @@ public class FunctionalCaseFileService {
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public String export(String userId, FunctionalCaseExportRequest request, String orgId) {
-        exportTaskService.authorize(request.getProjectId(), userId);
+        exportTaskService.authorizeRequest(request, userId);
         validateExportFields(request);
         return exportTaskService.start(request, userId, XLSX,
                 taskId -> {
@@ -466,7 +466,8 @@ public class FunctionalCaseFileService {
         Set<String> seen = new HashSet<>();
         for (FunctionalCaseHeader field : selected) {
             if (field == null || !names.containsKey(field.getId()) || !seen.add(field.getId())) throw new MSException("导出字段无效");
-            field.setName(names.get(field.getId()));
+            String title = names.get(field.getId());
+            field.setName(title == null || title.startsWith("Not Support Key:") ? field.getId() : title);
         }
     }
 
@@ -575,7 +576,7 @@ public class FunctionalCaseFileService {
             Map<Integer, Integer> merges = new HashMap<>();
             List<FunctionalCaseExcelData> data = parseCaseData2ExcelData(batch, merges, request, customFields, modules,
                     parameter == null ? "" : parameter.getParamValue());
-            List<List<Object>> rows = parseExcelData2List(heads, data);
+            List<List<Object>> rows = data.stream().map(item -> FunctionalCaseExportRowMapper.row(request, item)).toList();
             bytes[0] += JSON.toJSONString(rows).getBytes(StandardCharsets.UTF_8).length;
             if (bytes[0] > 8 * 1024 * 1024) throw new MSException("导出内容过大，请缩小范围分批导出");
             batches.add(new ExcelBatch(rows, merges));
@@ -754,9 +755,9 @@ public class FunctionalCaseFileService {
         otherFields.forEach(header -> {
             FunctionalCaseExportConverter converter = converterMaps.get(header.getId());
             if (converter != null) {
-                other.put(header.getName(), converter.parse(functionalCase, caseCommentMap, executeCommentMap, reviewCommentMap));
+                other.put(header.getId(), converter.parse(functionalCase, caseCommentMap, executeCommentMap, reviewCommentMap));
             } else {
-                other.put(header.getName(), StringUtils.EMPTY);
+                other.put(header.getId(), StringUtils.EMPTY);
             }
         });
         data.setOtherFields(other);
@@ -826,6 +827,11 @@ public class FunctionalCaseFileService {
                     map.put(v.getFieldName(), caseFieldvalueMap.get(k));
                 }
             }
+        });
+        customFieldsMap.forEach((id, field) -> {
+            Object value = map.get(field.getFieldName());
+            if (field.getInternal() && value == null) value = map.get(Translator.get("custom_field.functional_priority"));
+            if (value != null) map.put(id, value);
         });
         data.setCustomData(map);
     }

@@ -62,7 +62,10 @@ public class AgentProjectService {
     @Resource
     private AgentExecLogService agentExecLogService;
 
+    @Resource private AgentBusinessAccess writeAccess;
     public AgentProjectDTO create(AgentProjectCreateRequest request) {
+        writeAccess.organization(request.getOrganizationId(),io.metersphere.sdk.constants.PermissionConstants.ORGANIZATION_PROJECT_READ_ADD,
+                io.metersphere.sdk.constants.PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_READ_ADD,io.metersphere.agent.constants.AgentTokenScope.PROJECT_WRITE);
         String userId = requireUserId();
         assertOrgAccessible(request.getOrganizationId(), userId);
 
@@ -98,6 +101,10 @@ public class AgentProjectService {
         if (project == null) {
             throw new MSException("Project does not exist: " + request.getProjectId());
         }
+        var actor=writeAccess.activeToken(io.metersphere.agent.constants.AgentTokenScope.PROJECT_WRITE);
+        if(!io.metersphere.agent.security.AgentTokenProjectAccess.allows(actor,project.getId()) || Boolean.TRUE.equals(project.getDeleted()) || !Boolean.TRUE.equals(project.getEnable()))throw AgentBusinessAccess.denied();
+        writeAccess.organization(project.getOrganizationId(),io.metersphere.sdk.constants.PermissionConstants.ORGANIZATION_PROJECT_MEMBER_ADD,
+                io.metersphere.sdk.constants.PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_MEMBER_ADD,io.metersphere.agent.constants.AgentTokenScope.PROJECT_WRITE);
         assertOrgAccessible(project.getOrganizationId(), userId);
 
         ProjectAddMemberRequest memberRequest = new ProjectAddMemberRequest();

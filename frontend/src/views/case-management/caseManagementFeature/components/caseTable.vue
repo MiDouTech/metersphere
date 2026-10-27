@@ -159,6 +159,7 @@
             filter-icon-align-left
             class="mt-[8px]"
             :action-config="tableBatchActions"
+            show-select-all-after-export
             :not-show-table-filter="isAdvancedSearchMode"
             v-on="tableEventHandlers"
             @batch-action="handleTableBatch"

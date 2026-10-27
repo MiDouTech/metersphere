@@ -181,7 +181,7 @@ public class AgentMcpMaintenanceService {
         version.setUpdateUser(actor());
         planMapper.updateByPrimaryKeySelective(version);
         execLogService.audit("TEST_PLAN_UPDATE", plan.getId(), JSON.toJSONString(patch));
-        return planWriteService.get(plan.getId());
+        return planWriteService.getAuthorized(plan.getId());
     }
 
     @Transactional(rollbackFor = Exception.class)

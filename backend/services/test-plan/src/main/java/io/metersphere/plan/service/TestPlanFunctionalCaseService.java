@@ -691,6 +691,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         });
         sqlSession.flushStatements();
         SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+        functionalCaseService.clearPersonalExecutionReference(ids,lastExecuteTime);
     }
 
 

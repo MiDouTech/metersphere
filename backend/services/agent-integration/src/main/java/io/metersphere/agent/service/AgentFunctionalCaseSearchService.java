@@ -113,6 +113,8 @@ public class AgentFunctionalCaseSearchService {
         }
         if (!includeSteps) {
             agentCase.setSteps(new ArrayList<>());
+        } else {
+            agentFunctionalCaseExportService.enrichWithSteps(List.of(agentCase), warnings);
         }
         return agentCase;
     }

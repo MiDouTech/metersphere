@@ -36,11 +36,14 @@ public class AgentAttachmentUploadIntentService {
         access.project(request.projectId(), "FUNCTIONAL_CASE:READ", true, AgentTokenScope.CASE_ATTACHMENT);
         var token = AgentTokenContext.get();
         jdbc.queryForList("SELECT id FROM agent_token WHERE id=? FOR UPDATE", token.getId());
-        String hash = DigestUtils.sha256Hex(JSON.toJSONString(request));
-        var prior = jdbc.queryForList("SELECT * FROM agent_attachment_upload_intent WHERE token_id=? AND request_id=?", token.getId(), request.requestId());
+        String legacyHash = DigestUtils.sha256Hex(JSON.toJSONString(request));
+        var canonical = new Prepare(request.projectId(),request.purpose(),request.fileName(),request.contentType(),request.size(),request.sha256().toLowerCase(Locale.ROOT),request.requestId());
+        String hash = DigestUtils.sha256Hex(JSON.toJSONString(canonical));
+        var prior = jdbc.queryForList("SELECT * FROM agent_attachment_upload_intent WHERE token_id=? AND (request_id=? OR (identity_version='legacy-ci-v1' AND request_id COLLATE utf8mb4_general_ci=? COLLATE utf8mb4_general_ci))", token.getId(), request.requestId(), request.requestId());
+        if(prior.size()>1)throw new MSException("IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED");
         if (!prior.isEmpty()) {
             var row = prior.getFirst();
-            if (!hash.equals(row.get("request_hash"))) throw new MSException("请求标识已用于其他文件，请使用新的请求标识");
+            if (!hash.equals(row.get("request_hash")) && !legacyHash.equals(row.get("request_hash"))) throw new MSException("请求标识已用于其他文件，请使用新的请求标识");
             if (((Number) row.get("expires_at")).longValue() <= System.currentTimeMillis()) throw new MSException("上传准备已过期，请使用新的请求标识");
             return prepared((String) row.get("id"), ((Number) row.get("expires_at")).longValue());
         }
@@ -49,8 +52,8 @@ public class AgentAttachmentUploadIntentService {
         if (reserved != null && reserved + request.size() > 50L * 1024 * 1024) throw new MSException("当前上传额度已满，请等待暂存上传过期后重试");
         String id = UUID.randomUUID().toString(); long expires = now + 15 * 60_000L;
         jdbc.update("""
-            INSERT INTO agent_attachment_upload_intent(id,token_id,user_id,project_id,request_id,request_hash,file_name,content_type,expected_size,expected_sha256,purpose,expires_at,create_time)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            INSERT INTO agent_attachment_upload_intent(id,token_id,user_id,project_id,request_id,request_hash,file_name,content_type,expected_size,expected_sha256,purpose,expires_at,create_time,identity_version)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'binary-v2')
             """, id, token.getId(), token.getUserId(), request.projectId(), request.requestId(), hash, request.fileName(), request.contentType(), request.size(), request.sha256().toLowerCase(Locale.ROOT), request.purpose(), expires, now);
         return prepared(id, expires);
     }
@@ -62,7 +65,7 @@ public class AgentAttachmentUploadIntentService {
         if (rows.size() != 1) throw AgentBusinessAccess.denied();
         var row = rows.getFirst();
         access.project((String) row.get("project_id"), "FUNCTIONAL_CASE:READ", true, AgentTokenScope.CASE_ATTACHMENT);
-        if (((Number) row.get("expires_at")).longValue() <= System.currentTimeMillis()) throw new MSException("上传准备已过期，请重新准备上传");
+
         if (file == null || file.getSize() != ((Number) row.get("expected_size")).longValue()
                 || !Objects.equals(file.getOriginalFilename(), row.get("file_name")) || !Objects.equals(file.getContentType(), row.get("content_type")))
             throw new MSException("上传文件与准备信息不一致");
@@ -70,6 +73,7 @@ public class AgentAttachmentUploadIntentService {
             if (!DigestUtils.sha256Hex(stream).equals(row.get("expected_sha256"))) throw new MSException("上传文件摘要不一致，请重新选择原文件");
         }
         if ("COMPLETED".equals(row.get("state"))) return JSON.parseObject((String) row.get("result_json"), AgentTempAttachmentUploadResponse.class);
+        if (((Number) row.get("expires_at")).longValue() <= System.currentTimeMillis()) throw new MSException("ATTACHMENT_EXPIRED");
         var result = attachments.upload(file, (String) row.get("project_id"), (String) row.get("purpose"), null);
         jdbc.update("UPDATE agent_attachment_upload_intent SET state='COMPLETED',result_json=? WHERE id=?", JSON.toJSONString(result), id);
         return result;
@@ -79,5 +83,5 @@ public class AgentAttachmentUploadIntentService {
         return new Prepared(id, expires, "/api/agent/v1/attachment/upload/complete/" + id, 5L * 1024 * 1024);
     }
     @Scheduled(fixedDelay = 60000, initialDelay = 60000)
-    public void cleanup() { jdbc.update("DELETE FROM agent_attachment_upload_intent WHERE expires_at<? LIMIT 100", System.currentTimeMillis()); }
+    public void cleanup() { jdbc.update("DELETE FROM agent_attachment_upload_intent WHERE expires_at<? AND state='PREPARED' LIMIT 100", System.currentTimeMillis()); }
 }

@@ -15,6 +15,22 @@
           >该资产用例已被删除，仅保留历史查看；不能编辑或再次导入。</a-alert
         >
         <a-form :model="form" layout="vertical" class="mx-auto max-w-[900px]">
+          <a-form-item v-if="sourceBindings.length" label="来源绑定：本次修改方式" required>
+            <a-radio-group v-model="sourceEditMode"
+              ><a-radio value="WRITE_BACK">回写源用例</a-radio
+              ><a-radio value="DETACH">脱离来源，成为独立资产</a-radio></a-radio-group
+            >
+          </a-form-item>
+          <a-form-item v-if="sourceBindings.length && sourceEditMode === 'WRITE_BACK'" label="源用例" required>
+            <a-select v-model="sourceCaseId"
+              ><a-option v-for="binding in sourceBindings" :key="binding.caseId" :value="binding.caseId"
+                >{{ binding.projectId }} / {{ binding.caseId }}</a-option
+              ></a-select
+            >
+          </a-form-item>
+          <a-alert v-if="sourceBindings.length" class="mb-4"
+            >回写会校验源修改权限与版本；脱离后保留原引用历史。附件请在源用例维护，或先保存脱离来源再上传。</a-alert
+          >
           <a-form-item label="用例 ID"><a-input :model-value="caseId" disabled /></a-form-item>
           <a-form-item label="用例名称" required
             ><a-input v-model="form.name" :disabled="deleted || !canUpdate"
@@ -51,7 +67,12 @@
           </a-form-item>
           <a-divider>附件</a-divider>
           <div class="mb-3 flex items-center gap-2">
-            <a-button v-if="canUpdate && !deleted" @click="attachmentInput?.click()">上传附件</a-button>
+            <a-button
+              v-if="canUpdate && !deleted"
+              :disabled="sourceBindings.length > 0"
+              @click="attachmentInput?.click()"
+              >上传附件</a-button
+            >
             <input ref="attachmentInput" class="hidden" type="file" multiple @change="uploadAttachments" />
           </div>
           <a-list :data="attachments" bordered>
@@ -59,7 +80,11 @@
               <a-list-item>
                 <a-link @click="downloadAttachment(item)">{{ item.fileName }}</a-link>
                 <template #actions
-                  ><a-link v-if="canUpdate && !deleted" status="danger" @click="removeAttachment(item)"
+                  ><a-link
+                    v-if="canUpdate && !deleted"
+                    :disabled="sourceBindings.length > 0"
+                    status="danger"
+                    @click="removeAttachment(item)"
                     >删除</a-link
                   ></template
                 >
@@ -96,6 +121,10 @@
   const caseId = String(route.params.caseId);
   const loading = ref(false);
   const saving = ref(false);
+  const sourceBindings = ref<{ caseId: string; projectId: string; updateTime: number }[]>([]);
+  const sourceEditMode = ref<'WRITE_BACK' | 'DETACH'>();
+  const sourceCaseId = ref('');
+  const expectedUpdateTime = ref<number>();
   const canUpdate = hasAnyPermission(['CASE_ASSET:READ+UPDATE']);
   const deleted = ref(false);
   const attachmentInput = ref<HTMLInputElement>();
@@ -115,6 +144,10 @@
     try {
       const detail: any = await getCaseAssetDetail(catalogId, caseId);
       form.name = detail.name || '';
+      sourceBindings.value = detail.sourceBindings || [];
+      sourceEditMode.value = undefined;
+      sourceCaseId.value = sourceBindings.value.length === 1 ? sourceBindings.value[0].caseId : '';
+      expectedUpdateTime.value = detail.updateTime;
       form.caseEditType = detail.caseEditType || 'STEP';
       form.prerequisite = detail.prerequisite || '';
       form.body = form.caseEditType === 'STEP' ? detail.steps || '' : detail.textDescription || '';
@@ -124,7 +157,7 @@
       form.customFields = (detail.customFields || []).map((field: any) => ({
         fieldId: field.fieldId || field.id,
         name: field.fieldName || field.name,
-        value: field.value == null ? '' : String(field.value),
+        value: String(field.value ?? field.defaultValue ?? ''),
       }));
       attachments.value = detail.attachments || [];
       deleted.value = Boolean(detail.deleted);
@@ -133,6 +166,13 @@
     }
   }
   async function save() {
+    if (
+      sourceBindings.value.length &&
+      (!sourceEditMode.value || (sourceEditMode.value === 'WRITE_BACK' && !sourceCaseId.value))
+    ) {
+      Message.warning('请选择回写源用例或脱离来源，并确认源用例');
+      return;
+    }
     if (!form.name.trim()) {
       Message.warning('请输入用例名称');
       return;
@@ -142,6 +182,11 @@
       await updateCaseAsset({
         id: caseId,
         catalogId,
+        sourceEditMode: sourceEditMode.value,
+        sourceCaseId: sourceCaseId.value,
+        expectedUpdateTime: expectedUpdateTime.value,
+        expectedSourceUpdateTime: sourceBindings.value.find((binding) => binding.caseId === sourceCaseId.value)
+          ?.updateTime,
         name: form.name.trim(),
         tags: form.tags,
         customFields: form.customFields.map(({ fieldId, value }) => ({ fieldId, value })),
@@ -153,7 +198,8 @@
         expectedResult: form.expectedResult,
         description: form.description,
       });
-      Message.success('保存成功');
+      Message.success(sourceEditMode.value === 'WRITE_BACK' ? '源用例已保存，资产同步正在处理' : '保存成功');
+      await load();
     } finally {
       saving.value = false;
     }

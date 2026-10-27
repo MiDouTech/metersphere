@@ -1,7 +1,5 @@
 package io.metersphere.system.controller;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 import io.metersphere.sdk.constants.PermissionConstants;
 import io.metersphere.system.dto.department.DepartmentTreeNode;
 import io.metersphere.system.dto.department.OrgStructureMemberDetailDTO;
@@ -9,7 +7,6 @@ import io.metersphere.system.dto.department.OrgStructureMemberItemDTO;
 import io.metersphere.system.dto.department.OrgStructureMemberPageRequest;
 import io.metersphere.system.service.department.DepartmentQueryService;
 import io.metersphere.system.service.department.OrgStructureMemberService;
-import io.metersphere.system.utils.PageUtils;
 import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,8 +59,7 @@ public class OrgStructureMemberController {
     public Pager<List<OrgStructureMemberItemDTO>> page(@Validated OrgStructureMemberPageRequest request) {
         SessionUtils.setCurrentOrganizationId(request.getOrganizationId());
         try {
-            Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-            return PageUtils.setPageInfo(page, orgStructureMemberService.page(request));
+            return orgStructureMemberService.pageWithTotal(request);
         } finally {
             SessionUtils.clearCurrentOrganizationId();
         }

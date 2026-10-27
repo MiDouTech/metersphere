@@ -1,9 +1,9 @@
 <template>
   <!-- 详情头 + Tab 冻结，正文走页面全局滚动 -->
-  <div class="plan-detail-sticky sticky top-0 z-[10] bg-[var(--color-bg-3)] pb-[16px]">
+  <div class="management-review plan-detail-sticky sticky top-0 z-[10] bg-[var(--color-bg-3)] pb-[16px]">
     <MsCard
       :loading="loading"
-      :header-min-width="1100"
+      :header-min-width="0"
       :min-width="150"
       auto-height
       hide-footer
@@ -206,7 +206,9 @@
   const minderStore = useMinderStore();
 
   const loading = ref(false);
-  const planId = computed(() => (typeof route.query.id === 'string' ? route.query.id : ''));
+  const planId = computed(() =>
+    route.name === TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL && typeof route.query.id === 'string' ? route.query.id : ''
+  );
   const detailError = ref('');
   let detailSequence = 0;
   const detail = ref<TestPlanDetail>({
@@ -580,6 +582,7 @@
     [planId, () => appStore.currentProjectId],
     () => {
       detailSequence += 1;
+      if (!planId.value) return;
       detail.value = { ...testPlanDefaultDetail };
       countDetail.value = { ...defaultDetailCount };
       createdBugCount.value = 0;
@@ -642,4 +645,8 @@
       }
     }
   }
+</style>
+
+<style lang="less" scoped>
+  @import '@/assets/style/management-review.less';
 </style>

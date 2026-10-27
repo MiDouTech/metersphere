@@ -146,6 +146,10 @@ export function moveCaseModuleTree(data: MoveModules) {
   return MSR.post({ url: MoveCaseModuleTreeUrl, data });
 }
 
+export function moveCaseModuleToParent(data: { moduleId: string; parentId: string; expectedUpdateTime: number }) {
+  return MSR.post({ url: '/functional/case/module/move-to-parent', data });
+}
+
 // 回收站-模块-获取模块树
 export function getTrashCaseModuleTree(projectId: string) {
   return MSR.get<ModulesTreeType[]>({ url: `${GetTrashCaseModuleTreeUrl}/${projectId}` });
@@ -167,6 +171,7 @@ export function getCaseAssetOptions(data: { ids: string[]; targetProjectId?: str
   return MSR.post<CaseManagementTable[]>({ url: '/case-asset/case/options', data });
 }
 export interface CaseAssetCatalog {
+  pinned?: boolean;
   id: string;
   name: string;
   source: 'MANUAL' | 'PROJECT' | 'MIGRATION';
@@ -175,6 +180,10 @@ export interface CaseAssetCatalog {
   updateTime: number;
 }
 export interface CaseAssetSaveParams {
+  sourceEditMode?: 'WRITE_BACK' | 'DETACH';
+  sourceCaseId?: string;
+  expectedUpdateTime?: number;
+  expectedSourceUpdateTime?: number;
   id?: string;
   catalogId: string;
   name: string;
@@ -199,6 +208,12 @@ export function updateCaseAssetCatalog(id: string, name: string) {
 }
 export function deleteCaseAssetCatalog(id: string) {
   return MSR.delete({ url: `/case-asset/catalog/${id}` });
+}
+
+export function setCaseAssetCatalogPinned(id: string, pinned: boolean) {
+  return pinned
+    ? MSR.put({ url: `/case-asset/catalog/${id}/pin` })
+    : MSR.delete({ url: `/case-asset/catalog/${id}/pin` });
 }
 export function backfillCaseAssetCatalogs() {
   return MSR.post<{
@@ -305,6 +320,7 @@ export function downloadCaseAssetFileImportErrors(jobId: string) {
   );
 }
 export function importCasesFromAssets(data: {
+  followup?: Record<string, unknown>;
   targetProjectId: string;
   selectMode: 'CASE_IDS';
   ids: string[];
@@ -804,4 +820,65 @@ export function getCaseExportNotificationTicket(taskId: string) {
 
 export function getRecentCaseExports(projectId: string) {
   return MSR.get<CaseExportTask[]>({ url: '/functional/case/export/tasks', params: { projectId } });
+}
+
+export interface AssetExportTask {
+  fileType?: 'xlsx' | 'zip';
+  taskId: string;
+  state: string;
+  message?: string;
+  traceId?: string;
+}
+export function getAssetExportColumns(catalogId: string) {
+  return MSR.get<{
+    systemColumns: Record<string, string>;
+    customColumns: Record<string, string>;
+    otherColumns: Record<string, string>;
+  }>({ url: `/case-asset/catalog/${catalogId}/export-columns` });
+}
+export function startAssetExport(catalogId: string, data: Record<string, unknown>) {
+  return MSR.post<AssetExportTask>({ url: `/case-asset/catalog/${catalogId}/export`, data });
+}
+export function getAssetExportTask(taskId: string) {
+  return MSR.get<AssetExportTask>({ url: `/case-asset/export/${taskId}` });
+}
+export function downloadAssetExport(taskId: string) {
+  return MSR.get(
+    { url: `/case-asset/export/${taskId}/download`, responseType: 'blob' },
+    { isTransformResponse: false }
+  );
+}
+
+export interface AssetBatchTask {
+  id: string;
+  catalogId: string;
+  state: 'PENDING' | 'PARTIAL_SUCCESS' | 'SUCCEEDED';
+  items: Array<{ caseId: string; state: string; message?: string }>;
+}
+export function createAssetBatch(data: Record<string, unknown>) {
+  return MSR.post<AssetBatchTask>({ url: '/case-asset-batches', data });
+}
+export function advanceAssetBatch(id: string) {
+  return MSR.post<AssetBatchTask>({ url: `/case-asset-batches/${id}/advance` });
+}
+export function latestAssetBatch() {
+  return MSR.get<Partial<AssetBatchTask>>({ url: '/case-asset-batches/latest' });
+}
+
+export function retryAssetBatch(id: string) {
+  return MSR.post<AssetBatchTask>({ url: `/case-asset-batches/${id}/retry` });
+}
+
+export interface AssetSyncFailure {
+  id: string;
+  state: string;
+  caseId: string;
+  message?: string;
+  attempts: number;
+}
+export function getAssetSyncFailures(catalogId: string) {
+  return MSR.get<AssetSyncFailure[]>({ url: `/case-asset/catalog/${catalogId}/sync-failures` });
+}
+export function retryAssetSyncFailure(catalogId: string, id: string) {
+  return MSR.post({ url: `/case-asset/catalog/${catalogId}/sync-failures/${id}/retry` });
 }

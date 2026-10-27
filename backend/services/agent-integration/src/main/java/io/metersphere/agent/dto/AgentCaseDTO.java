@@ -8,6 +8,8 @@ import java.util.List;
 
 @Data
 public class AgentCaseDTO {
+    private java.util.Map<String, String> executionRef;
+    private java.util.Map<String, Object> executionFacts;
     private String projectId;
     private String moduleId;
     private String versionId;

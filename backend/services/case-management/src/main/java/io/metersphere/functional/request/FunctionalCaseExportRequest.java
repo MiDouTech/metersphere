@@ -15,6 +15,8 @@ import java.util.List;
  */
 @Data
 public class FunctionalCaseExportRequest extends BaseFunctionalCaseBatchDTO implements Serializable {
+    @jakarta.validation.constraints.Size(max=50)
+    private String assetCatalogId;
     @Serial
     private static final long serialVersionUID = 1L;
 

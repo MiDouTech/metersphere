@@ -14,6 +14,10 @@ import java.util.List;
 @Service
 public class AgentFunctionalCaseExportService {
     @Resource
+    private io.metersphere.functional.service.FunctionalExecutionViewService executionViews;
+    @Resource
+    private io.metersphere.plan.service.TestPlanFunctionalCaseService planCases;
+    @Resource
     private FunctionalCaseService functionalCaseService;
     @Resource
     private AgentCaseSchemaMapper agentCaseSchemaMapper;
@@ -33,6 +37,15 @@ public class AgentFunctionalCaseExportService {
                 if (detail == null || (item.getProjectId() != null && !item.getProjectId().equals(detail.getProjectId())))
                     throw new io.metersphere.sdk.exception.MSException("用例已变更或无权访问，请重新检索");
                 agentCaseSchemaMapper.enrichDetail(item, detail, warnings);
+                if (item.getTestPlanCaseId() != null) {
+                    var effective = planCases.getFunctionalCaseDetail(item.getTestPlanCaseId(), SessionUtils.getUserId());
+                    item.setExecutionRef(effective.getExecutionRef());
+                    item.setExecutionFacts(effective.getExecutionFacts());
+                } else {
+                    executionViews.enrich(detail);
+                    item.setExecutionRef(detail.getExecutionRef());
+                    item.setExecutionFacts(detail.getExecutionFacts());
+                }
             }
         }
     }

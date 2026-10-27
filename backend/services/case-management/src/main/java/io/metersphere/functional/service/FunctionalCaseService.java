@@ -83,6 +83,8 @@ import java.util.stream.Stream;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class FunctionalCaseService {
+    @Resource
+    private FunctionalExecutionViewService executionViewService;
 
 
     @Resource
@@ -244,21 +246,14 @@ public class FunctionalCaseService {
         return functionalCase;
     }
 
-    /** 枢纽同步：失败仅日志，不阻断主流程 */
+    /** Persist with the source transaction; a retry must never be lost to a log-only hook. */
     private void triggerHubCaseSync(String projectId, String caseId, String userId) {
-        try {
-            defaultHubCaseSyncService.syncCaseUpsert(projectId, caseId, userId);
-        } catch (Exception e) {
-            LogUtils.error("default hub case sync hook failed, caseId=" + caseId, e);
-        }
+        importEffectOutbox.enqueue(projectId,userId,List.of(caseId),List.of(),NoticeConstants.Event.UPDATE);
     }
 
     private void triggerHubCaseDelete(String caseId, String userId) {
-        try {
-            defaultHubCaseSyncService.syncCaseDelete(caseId, userId);
-        } catch (Exception e) {
-            LogUtils.error("default hub case delete sync failed, caseId=" + caseId, e);
-        }
+        FunctionalCase source=functionalCaseMapper.selectByPrimaryKey(caseId);
+        if(source!=null)triggerHubCaseSync(source.getProjectId(),caseId,userId);
     }
 
     private void filterCaseDetailTmpFile(FunctionalCaseAddRequest request) {
@@ -568,6 +563,7 @@ public class FunctionalCaseService {
             handleCount(functionalCaseDetailDTO);
         }
 
+        executionViewService.enrich(functionalCaseDetailDTO);
         return functionalCaseDetailDTO;
 
     }
@@ -897,14 +893,30 @@ public class FunctionalCaseService {
     /**
      * 用例库执行状态同步到测试计划关联行（同一 functional_case_id 的全部关联）
      */
+    /** Publish a personal execution without modifying authoring steps; caller owns the transaction and authorization. */
+    public void publishPersonalExecution(String projectId,String caseId,String submissionId,String result,String userId,long now) {
+        if(!java.util.Set.of("SUCCESS","ERROR").contains(result))throw new MSException("AGENT_VALIDATION_ERROR");
+        if(caseLifecycleJdbc.update("UPDATE functional_case SET last_execute_result=?,last_execute_user=?,last_execute_time=? WHERE id=? AND project_id=? AND deleted=0",result,userId,now,caseId,projectId)!=1)
+            throw new MSException("VERSION_CONFLICT");
+        caseLifecycleJdbc.update("INSERT INTO agent_case_current_execution(case_id,submission_id,execute_time) VALUES (?,?,?) ON DUPLICATE KEY UPDATE submission_id=VALUES(submission_id),execute_time=VALUES(execute_time)",caseId,submissionId,now);
+        caseLifecycleJdbc.update("UPDATE test_plan_functional_case pc JOIN test_plan p ON p.id=pc.test_plan_id SET pc.last_exec_result=?,pc.last_exec_time=?,pc.execute_user=? WHERE pc.functional_case_id=? AND p.project_id=? AND p.status<>'ARCHIVED'",result,now,userId,caseId,projectId);
+    }
+
     public void syncAssociatedPlanCaseExec(List<String> caseIds, String lastExecResult, String executeUser) {
         syncAssociatedPlanCaseExec(caseIds, lastExecResult, executeUser, System.currentTimeMillis());
+    }
+
+    public void clearPersonalExecutionReference(List<String> caseIds,Long time) {
+        if(caseIds==null||caseIds.isEmpty())return;
+        var rows=caseIds.stream().map(id->new Object[]{id,time==null?0L:time}).toList();
+        caseLifecycleJdbc.batchUpdate("INSERT INTO agent_case_current_execution(case_id,submission_id,execute_time) VALUES (?,'',?) ON DUPLICATE KEY UPDATE submission_id='',execute_time=VALUES(execute_time)",rows);
     }
 
     private void syncAssociatedPlanCaseExec(List<String> caseIds, String lastExecResult, String executeUser, Long now) {
         if (CollectionUtils.isEmpty(caseIds)) {
             return;
         }
+        clearPersonalExecutionReference(caseIds,now);
         extFunctionalCaseMapper.syncPlanExecByCaseIds(caseIds, lastExecResult, executeUser, now);
     }
 
