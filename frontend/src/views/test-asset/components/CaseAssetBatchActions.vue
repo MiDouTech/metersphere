@@ -43,7 +43,7 @@
     <a-alert v-if="action === 'DELETE'" type="warning"
       >删除会进入回收站。被业务用例持续同步的资产可能再次同步出现；不会删除源用例。已有执行任务等业务限制仍生效。</a-alert
     >
-    <a-form layout="vertical">
+    <a-form :model="{ categoryId, priority, tags, tagMode, sourceEditMode }" layout="vertical">
       <a-form-item v-if="action === 'CATEGORY'" label="资产分类（留空表示移出分类）">
         <a-tree-select
           v-model="categoryId"
