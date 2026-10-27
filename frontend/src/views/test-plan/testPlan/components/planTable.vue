@@ -30,6 +30,8 @@
   <MsBaseTable
     v-bind="propsRes"
     ref="tableRef"
+    batch-action-placement="top"
+    always-show-selected-count
     class="mt-4"
     :not-show-table-filter="isAdvancedSearchMode"
     :action-config="testPlanBatchActions"

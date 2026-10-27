@@ -1,0 +1,200 @@
+[
+  {
+    "file": "raw/case-list-final.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "c2966e9dceb6b6ca1312527cba194972bbc2a94ad82ea2560eb5baf57ec2d962",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:31:22.600788+08:00"
+  },
+  {
+    "file": "raw/select-all-page2.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "8b332bf0ec176fb5540f26713ded987ab742e7a71b0f6e575a0c37f5ee7bf636",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:30:50.570389+08:00"
+  },
+  {
+    "file": "raw/plan-a.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "8f977ec09065fa67afd44015dea9798947359d86092c0990d983c07c5b178a48",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:26:00.649608+08:00"
+  },
+  {
+    "file": "raw/plan-b.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "446e46034a8dde352dd84ed6609269728b8a4bf3ca928ea565c999575d76100c",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:26:35.012388+08:00"
+  },
+  {
+    "file": "raw/plan-auto-refresh.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "0568c77f4298abd05918dc7f21e88c24a4e8494aa1eb9796c303ff141b069238",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:02:09.649157+08:00"
+  },
+  {
+    "file": "raw/plan-defect-synced.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "e7428c7978b4482bd6aef30684e2335700631d02862b80834a806b9d87f19bd9",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:11:10.719541+08:00"
+  },
+  {
+    "file": "raw/execution-facts-page.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "f71ce6a2971695a6eca06a6e89604ec3abd22c96830584b2bcb4841ca2b006aa",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:00:23.147988+08:00"
+  },
+  {
+    "file": "raw/token-1908.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "60e4161b8b6f95fbf483befb4e1c052a04a90b12144f60b7819eb13b25361585",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:26:56.349123+08:00"
+  },
+  {
+    "file": "raw/token-narrow-final.png",
+    "width": 971,
+    "height": 796,
+    "sha256": "be352103da32844e8190bdff187ccea333818347764962de0e64e05465cf17ac",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:15:27.661800+08:00"
+  },
+  {
+    "file": "raw/assets-initial.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "e7bfc8f790345221f811ace01da56fa64740ca451d149413f60dd4ca6a42b0ef",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:33:03.180354+08:00"
+  },
+  {
+    "file": "raw/asset-sync-errors-before.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "4b7a3b9c3d08bd286ae405a3e31628f78cec0c861523f778280d804a101df15f",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:33:27.196567+08:00"
+  },
+  {
+    "file": "raw/asset-sync-errors-after.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "0aaf8974be11cb1f4718b2b4e93e73993d741c9fff3b1d52f5dc4e28e875a75d",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:34:03.138902+08:00"
+  },
+  {
+    "file": "raw/asset-priority-display.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "c5745d19017af05e7a4472ffe89d1c28f8a70e7c8ab963fbb0fec3ed98c8a93a",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:44:09.472746+08:00"
+  },
+  {
+    "file": "raw/asset-batch-delete-final.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "0ff0c347374aa950a3e9a466c3cb30a7d025164ba19cbed34fd3bd5457ab9b7b",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:26:32.542660+08:00"
+  },
+  {
+    "file": "raw/import-followup-missing.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "e1aedb23f856acc688e4ce9a7363e0b6656d42e0e30e568b3ea3e3cdbc5ad457",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:55:45.775059+08:00"
+  },
+  {
+    "file": "raw/review-import-linked.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "8b23eaf561d17c7cc70e9bca5864ef391a4d26ea083bdafbaa20d81daa740480",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:02:51.157695+08:00"
+  },
+  {
+    "file": "raw/review-after-source-delete.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "3ba61b15f04da819adbf1e46447a2a5aa8859bd14ee9892284f0fea0dfcabf1c",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:19:18.995039+08:00"
+  },
+  {
+    "file": "raw/directory-moved.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "45b9742cba4484c593580ee50da9bcb16d90efd87db31efb34f47372632e8ac8",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T14:52:03.366703+08:00"
+  },
+  {
+    "file": "raw/directory-move-out-stuck.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "c2b3bb2cb0de3ba59fd7af505bee636e92ee346ac8abca586458877d2e3c1fdf",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:22:58.617264+08:00"
+  },
+  {
+    "file": "raw/platform-validation.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "f60bfc98639b7812d4ce0f566761798ed6192ebee385230298c30a05a0595dcf",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:04:47.734057+08:00"
+  },
+  {
+    "file": "raw/platform-created.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "b768575d5d2a767554782134100d45ab633337e54a4bddfd3d112f781b0bc0f6",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:05:11.339999+08:00"
+  },
+  {
+    "file": "raw/login-profile-created.png",
+    "width": 1908,
+    "height": 895,
+    "sha256": "194e62d7f1a18485882b0bf31e1e710e279992b96e9f16d64e8027bc920a0e12",
+    "run": "MSP-ACCEPTANCE-20261027-EGO8",
+    "role": "陈启芬",
+    "capturedAt": "2026-10-27T15:06:54.616411+08:00"
+  }
+]

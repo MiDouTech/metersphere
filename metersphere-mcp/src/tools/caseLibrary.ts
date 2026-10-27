@@ -25,7 +25,7 @@ export const caseLibraryTools = [
   {
     name: "metersphere.functional.import.precheck",
     description: "Freeze an Excel/XMind import before committing. Maximum 10000 logical cases/50 MiB, expires in 24h. Explicit CASE_IMPORT_V2 required; cover defaults false. Inspect per-item report, then use import.commit.",
-    inputSchema: { projectId:id, versionId:id.optional(), moduleId:id.optional(), cover:z.boolean().optional(), requestId:z.string().regex(/^[A-Za-z0-9_-]{1,64}$/), fileName:z.string().min(1).max(255), filePath:z.string().min(1).optional(), base64:z.string().min(1).max(69905068).optional() },
+    inputSchema: { projectId:id, versionId:id.optional(), moduleId:id.optional(), cover:z.boolean().optional(), requestId:z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/), fileName:z.string().min(1).max(255), filePath:z.string().min(1).optional(), base64:z.string().min(1).max(69905068).optional() },
     handler: async (client:MeterSphereClient,args:Record<string,unknown>) => {
       if(Boolean(args.filePath)===Boolean(args.base64))throw new Error("Provide exactly one of filePath or base64");
       const {filePath,...payload}=args;

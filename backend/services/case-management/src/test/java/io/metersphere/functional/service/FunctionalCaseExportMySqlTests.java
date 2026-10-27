@@ -43,6 +43,7 @@ class FunctionalCaseExportMySqlTests {
         try (var connection = source.getConnection()) {
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("migration/3.7.2/ddl/V3.7.2_104__case_export_recovery.sql"));
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("migration/3.7.2/ddl/V3.7.2_106__case_export_retry_lineage.sql"));
+            ScriptUtils.executeSqlScript(connection, new ClassPathResource("migration/3.7.2/ddl/V3.7.2_134__export_request_identity.sql"));
         }
     }
 
@@ -75,15 +76,15 @@ class FunctionalCaseExportMySqlTests {
     }
 
     @Test void successIsDurableAndReplayDoesNotGenerateAgain() throws Exception {
-        String id = service.start(request("same"), "u1", "xlsx", task -> new FunctionalCaseExportTaskService.Result("xlsx", 2));
+        String id = service.start(request("audit:export."+"x".repeat(115)), "u1", "xlsx", task -> new FunctionalCaseExportTaskService.Result("xlsx", 2));
         awaitState(id, "SUCCEEDED");
-        String replay = service.start(request("same"), "u1", "xlsx", task -> { fail("must not execute replay"); return null; });
+        String replay = service.start(request("audit:export."+"x".repeat(115)), "u1", "xlsx", task -> { fail("must not execute replay"); return null; });
         assertEquals(id, replay);
         assertEquals(2, service.get(id, "u1").getCount());
         assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM export_task", Integer.class));
         assertThrows(Exception.class, () -> service.get(id, "another-user"));
         assertThrows(Exception.class, () -> service.stop(id, "another-user"));
-        assertThrows(Exception.class, () -> service.start(request("same"), "u1", "xmind", task -> null));
+        assertThrows(Exception.class, () -> service.start(request("audit:export."+"x".repeat(115)), "u1", "xmind", task -> null));
         service.stop(id, "u1");
         assertEquals("SUCCEEDED", service.get(id, "u1").getState());
     }

@@ -1,0 +1,17 @@
+{
+  "checkpointTotal": 27,
+  "checkpointStatus": {
+    "失败": 7,
+    "通过": 17,
+    "待确认": 1,
+    "阻塞": 2
+  },
+  "cumulativeRequirementTotal": 36,
+  "cumulativeRequirementStatus": {
+    "未执行": 9,
+    "通过": 17,
+    "失败": 9,
+    "阻塞": 1
+  },
+  "warning": "子检查不是原36需求或75复合用例，不得混用覆盖率；原未完整矩阵保持未执行"
+}

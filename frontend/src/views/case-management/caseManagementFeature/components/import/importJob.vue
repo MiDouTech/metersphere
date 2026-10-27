@@ -45,7 +45,7 @@
             >{{ group.planName }} / {{ group.reviewName }}</a-option
           >
         </a-select>
-        <template v-if="policy && policy !== 'IMPORT_ONLY'">
+        <template v-if="policy === 'CREATE_NEW_PAIR'">
           <p>{{
             policy === 'CREATE_NEW_PAIR'
               ? '成功导入后自动创建测试计划和评审计划'
@@ -107,7 +107,11 @@
           v-if="job.state === 'PRECHECKED'"
           type="primary"
           :loading="saving"
-          :disabled="!policy || (policy !== 'IMPORT_ONLY' && !reviewers.length)"
+          :disabled="
+            !policy ||
+            (policy === 'CREATE_NEW_PAIR' && !reviewers.length) ||
+            (policy === 'APPEND_EXISTING' && !targetGroup)
+          "
           @click="action('commit')"
           >提交有效用例</a-button
         >
@@ -233,46 +237,90 @@
     if (timer) clearTimeout(timer);
     timer = undefined;
   }
-  async function load() {
-    if (!props.visible || !props.jobId) return;
+  let generation = 0;
+  let optionsPromise: Promise<void> | undefined;
+  let pendingLoad: { key: string; promise: Promise<void> } | undefined;
+  let reviewersLoaded = false;
+  let reviewersPromise: Promise<void> | undefined;
+  function loadReviewers(context: number): Promise<void> {
+    if (!followupOptions.value || reviewersLoaded || policy.value !== 'CREATE_NEW_PAIR') return Promise.resolve();
+    if (reviewersPromise) return reviewersPromise;
+    const promise = (async () => {
+      const { projectId } = followupOptions.value;
+      try {
+        const users = await getReviewUsers(projectId, '');
+        if (context !== generation) return;
+        reviewerOptions.value = users.map((user) => ({ label: user.name, value: user.id }));
+        reviewersLoaded = true;
+      } catch {
+        if (context === generation) error.value = '无法加载评审人，请刷新重试或选择仅导入';
+      }
+    })();
+    reviewersPromise = promise;
+    return promise.finally(() => {
+      if (reviewersPromise === promise) reviewersPromise = undefined;
+    });
+  }
+  function loadOptions(id: string, context: number): Promise<void> {
+    if (followupOptions.value) return loadReviewers(context);
+    if (optionsPromise) return optionsPromise;
+    const promise = (async () => {
+      const options = await MSR.get<FollowupOptions>({
+        url: `/ai/case-imports/${encodeURIComponent(id)}/followup-options`,
+      });
+      if (context !== generation) return;
+      followupOptions.value = options;
+      if (!options.groups.length && options.canCreate) policy.value = 'CREATE_NEW_PAIR';
+      if (options.groups.length === 1) targetGroup.value = options.groups[0].id;
+      await loadReviewers(context);
+    })();
+    optionsPromise = promise;
+    return promise.finally(() => {
+      if (optionsPromise === promise) optionsPromise = undefined;
+    });
+  }
+  function load(): Promise<void> {
+    if (!props.visible || !props.jobId) return Promise.resolve();
     clearTimer();
+    const id = props.jobId;
+    const context = generation;
+    const { current } = paging.value.pagination;
+    const { pageSize } = paging.value.pagination;
+    const key = `${context}:${id}:${current}:${pageSize}`;
+    if (pendingLoad?.key === key) return pendingLoad.promise;
     const request = ++sequence;
     loading.value = true;
     error.value = '';
-    try {
-      const result = await MSR.get<Job>({
-        url: `/ai/case-imports/${encodeURIComponent(props.jobId)}`,
-        params: { current: paging.value.pagination.current, pageSize: paging.value.pagination.pageSize },
-      });
-      if (request !== sequence) return;
-      job.value = result;
-      if (result.state === 'PRECHECKED' && !followupOptions.value) {
-        const options = await MSR.get<FollowupOptions>({
-          url: `/ai/case-imports/${encodeURIComponent(props.jobId)}/followup-options`,
+    const promise = (async () => {
+      try {
+        const result = await MSR.get<Job>({
+          url: `/ai/case-imports/${encodeURIComponent(id)}`,
+          params: { current, pageSize },
         });
-        if (request !== sequence) return;
-        followupOptions.value = options;
-        if (!options.groups.length && options.canCreate) policy.value = 'CREATE_NEW_PAIR';
-        if (options.groups.length === 1) targetGroup.value = options.groups[0].id;
-        try {
-          const users = await getReviewUsers(options.projectId, '');
-          if (request === sequence) reviewerOptions.value = users.map((user) => ({ label: user.name, value: user.id }));
-        } catch {
-          if (request === sequence) error.value = '无法加载评审人，请刷新重试或选择仅导入';
-        }
+        if (request !== sequence || context !== generation) return;
+        job.value = result;
+        if (result.state === 'PRECHECKED') await loadOptions(id, context);
+        if (request !== sequence || context !== generation) return;
+        if (previous && previous !== result.state && ['COMPLETED', 'PARTIAL', 'STOPPED'].includes(result.state))
+          emit('changed');
+        previous = result.state;
+        if (
+          ['QUEUED', 'RUNNING'].includes(result.state) ||
+          (result.state !== 'PRECHECKED' && result.followup?.state === 'PENDING')
+        )
+          timer = setTimeout(load, 3000);
+      } catch (failure) {
+        if (request === sequence && context === generation)
+          error.value = formatAppErrorMessage(ensureAppError(failure, '无法查询导入状态，请重试'));
+      } finally {
+        if (request === sequence && context === generation) loading.value = false;
+        if (pendingLoad?.key === key) pendingLoad = undefined;
       }
-      if (previous && previous !== result.state && ['COMPLETED', 'PARTIAL', 'STOPPED'].includes(result.state))
-        emit('changed');
-      previous = result.state;
-      if (['QUEUED', 'RUNNING'].includes(result.state) || result.followup?.state === 'PENDING')
-        timer = setTimeout(load, 3000);
-    } catch (failure) {
-      if (request === sequence)
-        error.value = formatAppErrorMessage(ensureAppError(failure, '无法查询导入状态，请重试'));
-    } finally {
-      if (request === sequence) loading.value = false;
-    }
+    })();
+    pendingLoad = { key, promise };
+    return promise;
   }
+  watch(policy, () => loadReviewers(generation));
   async function action(value: string) {
     if (saving.value) return;
     const id = props.jobId;
@@ -293,8 +341,8 @@
                 policy: policy.value,
                 targetGroupId: group?.id,
                 expectedGroupRevision: group?.revision,
-                reviewers: reviewers.value,
-                reviewPassRule: reviewPassRule.value,
+                reviewers: policy.value === 'CREATE_NEW_PAIR' ? reviewers.value : undefined,
+                reviewPassRule: policy.value === 'CREATE_NEW_PAIR' ? reviewPassRule.value : undefined,
               }
             : undefined,
       });
@@ -318,16 +366,19 @@
       saving.value = false;
     }
   }
+  watch([() => paging.value.pagination.current, () => paging.value.pagination.pageSize], () => {
+    if (props.visible) load();
+  });
   watch(
-    () => [paging.value.pagination.current, paging.value.pagination.pageSize],
+    [() => props.jobId, () => props.visible],
     () => {
-      if (props.visible) load();
-    }
-  );
-  watch(
-    () => [props.jobId, props.visible],
-    () => {
+      ++generation;
       ++sequence;
+      optionsPromise = undefined;
+      pendingLoad = undefined;
+      reviewersLoaded = false;
+      reviewersPromise = undefined;
+      reviewerOptions.value = [];
       clearTimer();
       job.value = undefined;
       followupOptions.value = undefined;
@@ -342,6 +393,7 @@
     { immediate: true }
   );
   onBeforeUnmount(() => {
+    ++generation;
     ++sequence;
     clearTimer();
   });

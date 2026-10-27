@@ -44,6 +44,8 @@
     <template v-if="showType === 'list'">
       <MsBaseTable
         ref="tableRef"
+        batch-action-placement="top"
+        always-show-selected-count
         v-bind="propsRes"
         :action-config="batchActions"
         :selectable="hasOperationPermission"

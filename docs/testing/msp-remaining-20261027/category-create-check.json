@@ -1,0 +1,30 @@
+{
+  "tree": {
+    "status": 200,
+    "body": {
+      "code": 100200,
+      "message": null,
+      "messageDetail": null,
+      "data": []
+    }
+  },
+  "requests": [
+    {
+      "method": "POST",
+      "url": "https://msp.ebcone.net/api/test-assets/categories",
+      "body": "{\"name\":\"REMAINING-20261027-批改分类\"}",
+      "status": 500,
+      "response": {
+        "code": 100200,
+        "message": null,
+        "messageDetail": null,
+        "data": {
+          "code": "AI_EXECUTION_INTERNAL_ERROR",
+          "message": "服务暂时不可用，请使用 traceId 联系管理员",
+          "details": {},
+          "traceId": "e7dcc41c-c3e5-4042-ad67-9fb566c92656"
+        }
+      }
+    }
+  ]
+}

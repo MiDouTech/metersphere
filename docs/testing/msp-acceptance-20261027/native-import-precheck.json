@@ -1,0 +1,61 @@
+{
+  "precheck": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"b202aec0-b4e8-462e-8909-46ba0c61a4da\",\"expiresAt\":1793170584541,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"acceptance-native.xlsx\",\"state\":\"PRECHECKED\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "pageSize": 10,
+          "current": 1,
+          "total": 1,
+          "jobId": "b202aec0-b4e8-462e-8909-46ba0c61a4da",
+          "expiresAt": 1793170584541,
+          "counts": [
+            {
+              "state": "PENDING",
+              "total": 1
+            }
+          ],
+          "items": [
+            {
+              "position": 1,
+              "action": "CREATE",
+              "caseId": null,
+              "state": "PENDING",
+              "message": null
+            }
+          ],
+          "fileName": "acceptance-native.xlsx",
+          "state": "PRECHECKED"
+        }
+      }
+    }
+  },
+  "options": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"projectId\":\"1704667279923322880\",\"canCreate\":true,\"groups\":[]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "canCreate": true,
+          "groups": []
+        }
+      }
+    }
+  }
+}

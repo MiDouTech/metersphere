@@ -57,7 +57,7 @@ public class AgentCaseExportTools {
                 fields.put("projectId", AgentMcpToolSchemas.string(1,128));
                 if ("start".equals(action)) {
                     fields.put("format", Map.of("type","string","enum",List.of("xlsx","xmind")));
-                    fields.put("requestId", AgentMcpToolSchemas.string(1,64));
+                    fields.put("requestId", Map.of("type","string","minLength",1,"maxLength",128,"pattern","^[A-Za-z0-9_.:-]{1,128}$"));
                     Map<String,Object> column = AgentMcpToolSchemas.object(Map.of("id",AgentMcpToolSchemas.string(1,128),"name",AgentMcpToolSchemas.string(0,255)),List.of("id"));
                     Map<String,Object> columns = Map.of("type","array","maxItems",200,"items",column);
                     fields.put("request", Map.of("type","object","properties",Map.of("systemFields",columns,"customFields",columns,"otherFields",columns),"additionalProperties",true));
@@ -65,7 +65,7 @@ public class AgentCaseExportTools {
                 }
                 fields.put("taskId", AgentMcpToolSchemas.string(1,64));
                 if (Set.of("stop", "retry").contains(action)) {
-                    fields.put("requestId", AgentMcpToolSchemas.string(1,64));
+                    fields.put("requestId", Map.of("type","string","minLength",1,"maxLength",128,"pattern","^[A-Za-z0-9_.:-]{1,128}$"));
                     return Map.of("type","object","properties",fields,"required",List.of("projectId","taskId","requestId"),"additionalProperties",false);
                 }
                 if ("download".equals(action)) {

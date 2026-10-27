@@ -1,0 +1,30 @@
+{
+  "url": "https://msp.ebcone.net/#/case-management/featureCase?orgId=100001&pId=1704667279923322880",
+  "viewport": [
+    1908,
+    895
+  ],
+  "selected": "已选择 0 条",
+  "pageSize20": true,
+  "requestsTotal": 5248,
+  "cancelled": 1950,
+  "errors": [
+    {
+      "url": "https://msp.ebcone.net/api/functional/case/module/move-to-parent",
+      "method": "POST",
+      "status": 400,
+      "code": 100400,
+      "message": "Validation failed",
+      "at": 1793085778166
+    }
+  ],
+  "importLoopLast": {
+    "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56/followup-options?_t=1793084145994",
+    "method": "GET",
+    "status": 200,
+    "code": 100200,
+    "message": null,
+    "at": 1793084146064
+  },
+  "endedAt": "2026-10-27T07:31:22.172Z"
+}

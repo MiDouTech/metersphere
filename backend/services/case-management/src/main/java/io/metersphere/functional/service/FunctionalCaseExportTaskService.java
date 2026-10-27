@@ -64,7 +64,7 @@ public class FunctionalCaseExportTaskService {
 
     public ExportTaskDTO existingRetry(String sourceId, String userId, String requestId) {
         ExportTaskDTO original = get(sourceId, userId);
-        if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{1,64}")) throw new MSException("重试请求标识无效");
+        if (requestId == null || !requestId.matches("[A-Za-z0-9_.:-]{1,128}")) throw new MSException("AGENT_VALIDATION_ERROR");
         var rows = jdbc.queryForList("SELECT id,source_task_id FROM export_task WHERE project_id=? AND create_user=? AND type='CASE' AND request_key=?",
                 original.getProjectId(), userId, requestId);
         if (rows.isEmpty()) return null;
@@ -77,8 +77,8 @@ public class FunctionalCaseExportTaskService {
         ExportTaskDTO original = get(sourceId, userId);
         if (!Set.of("FAILED", "CANCELLED", "EXPIRED").contains(original.getState()))
             throw new MSException("只能重试失败、已停止或已过期的导出任务");
-        if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{1,64}"))
-            throw new MSException("重试请求标识无效");
+        if (requestId == null || !requestId.matches("[A-Za-z0-9_.:-]{1,128}"))
+            throw new MSException("AGENT_VALIDATION_ERROR");
         String payload = jdbc.queryForObject("SELECT request_payload FROM export_task WHERE id=? AND create_user=? AND type='CASE'",
                 String.class, sourceId, userId);
         if (StringUtils.isBlank(payload)) throw new MSException("旧任务没有完整导出参数，请重新选择用例导出");
@@ -117,7 +117,7 @@ public class FunctionalCaseExportTaskService {
         else authorize(request.getProjectId(),userId);
     }
     private void authorizeRow(Map<String,Object> row,String userId) {
-        String raw=(String)row.get("request_json");
+        String raw=(String)row.get("request_payload");
         FunctionalCaseExportRequest request=StringUtils.isBlank(raw)?null:JSON.parseObject(raw,FunctionalCaseExportRequest.class);
         if(request!=null && StringUtils.isNotBlank(request.getAssetCatalogId()))authorizeRequest(request,userId);
         else authorize((String)row.get("project_id"),userId);
@@ -134,7 +134,7 @@ public class FunctionalCaseExportTaskService {
                            Function<String, T> freeze, java.util.function.BiFunction<String, T, Result> generate) {
         authorizeRequest(request, userId);
         String key = StringUtils.defaultIfBlank(request.getRequestId(), UUID.randomUUID().toString());
-        if (!key.matches("[A-Za-z0-9_-]{1,64}")) throw new MSException("导出请求标识无效");
+        if (!key.matches("[A-Za-z0-9_.:-]{1,128}")) throw new MSException("AGENT_VALIDATION_ERROR");
         // Client file IDs are deliberately excluded; only the server allocates storage names.
         request.setRequestId(key);
         request.setFileId(null);
@@ -351,7 +351,7 @@ public class FunctionalCaseExportTaskService {
         String raw = jdbc.queryForObject("SELECT snapshot_ids FROM export_task WHERE id=?", String.class, id);
         if (raw == null) return; // pre-migration exports have no recoverable content snapshot
         List<String> ids = JSON.parseArray(raw, String.class);
-        String requestJson=jdbc.queryForObject("SELECT request_json FROM export_task WHERE id=?",String.class,id);
+        String requestJson=jdbc.queryForObject("SELECT request_payload FROM export_task WHERE id=?",String.class,id);
         if(StringUtils.isNotBlank(requestJson)) {
             var request=JSON.parseObject(requestJson,FunctionalCaseExportRequest.class);
             if(StringUtils.isNotBlank(request.getAssetCatalogId()))assetAccess.validateIds(request.getAssetCatalogId(),ids);

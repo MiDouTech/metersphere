@@ -1,0 +1,41 @@
+{
+  "scopeUpdate": {
+    "http": 200,
+    "code": 100200
+  },
+  "batch": {
+    "catalogId": "1704667279923322961",
+    "id": "1710914756531986432",
+    "state": "SUCCEEDED",
+    "items": [
+      {
+        "caseId": "1710864574134099968",
+        "state": "SUCCEEDED",
+        "message": "处理成功"
+      },
+      {
+        "caseId": "1710913794459312128",
+        "state": "SUCCEEDED",
+        "message": "处理成功"
+      }
+    ]
+  },
+  "moveErrors": [
+    {
+      "url": "https://msp.ebcone.net/api/functional/case/module/move-to-parent",
+      "method": "POST",
+      "status": 200,
+      "code": 100200,
+      "message": null,
+      "at": 1793083922019
+    },
+    {
+      "url": "https://msp.ebcone.net/api/functional/case/module/move-to-parent",
+      "method": "POST",
+      "status": 400,
+      "code": 100400,
+      "message": "Validation failed",
+      "at": 1793085778166
+    }
+  ]
+}

@@ -1,0 +1,225 @@
+{
+  "B": {
+    "precheck": {
+      "http": 200,
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"57d8d9de-d012-4183-b4dd-b4d250f79e85\",\"expiresAt\":1793171021402,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"acceptance-B.xlsx\",\"state\":\"PRECHECKED\"}",
+            "type": "text"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "pageSize": 10,
+            "current": 1,
+            "total": 1,
+            "jobId": "57d8d9de-d012-4183-b4dd-b4d250f79e85",
+            "expiresAt": 1793171021402,
+            "counts": [
+              {
+                "state": "PENDING",
+                "total": 1
+              }
+            ],
+            "items": [
+              {
+                "position": 1,
+                "action": "CREATE",
+                "caseId": null,
+                "state": "PENDING",
+                "message": null
+              }
+            ],
+            "fileName": "acceptance-B.xlsx",
+            "state": "PRECHECKED"
+          }
+        }
+      }
+    },
+    "commit": {
+      "http": 200,
+      "jsonrpc": "2.0",
+      "id": 1,
+      "error": {
+        "data": {
+          "code": "AGENT_VALIDATION_ERROR",
+          "traceId": "4f0d8850-8e3e-4c82-829c-45922baff9ce"
+        },
+        "message": "参数不符合要求，请检查必填项、数量与字段格式",
+        "code": -32001
+      }
+    },
+    "last": {
+      "http": 200,
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"57d8d9de-d012-4183-b4dd-b4d250f79e85\",\"expiresAt\":1793171021402,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"acceptance-B.xlsx\",\"state\":\"PRECHECKED\",\"followup\":{\"state\":\"LEGACY\"}}",
+            "type": "text"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "pageSize": 10,
+            "current": 1,
+            "total": 1,
+            "jobId": "57d8d9de-d012-4183-b4dd-b4d250f79e85",
+            "expiresAt": 1793171021402,
+            "counts": [
+              {
+                "state": "PENDING",
+                "total": 1
+              }
+            ],
+            "items": [
+              {
+                "position": 1,
+                "action": "CREATE",
+                "caseId": null,
+                "state": "PENDING",
+                "message": null
+              }
+            ],
+            "fileName": "acceptance-B.xlsx",
+            "state": "PRECHECKED",
+            "followup": {
+              "state": "LEGACY"
+            }
+          }
+        }
+      }
+    }
+  },
+  "C": {
+    "precheck": {
+      "http": 200,
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"b9a0da80-b7c6-43c0-9bd1-d61fc6b5c11d\",\"expiresAt\":1793171049275,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"acceptance-C.xlsx\",\"state\":\"PRECHECKED\"}",
+            "type": "text"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "pageSize": 10,
+            "current": 1,
+            "total": 1,
+            "jobId": "b9a0da80-b7c6-43c0-9bd1-d61fc6b5c11d",
+            "expiresAt": 1793171049275,
+            "counts": [
+              {
+                "state": "PENDING",
+                "total": 1
+              }
+            ],
+            "items": [
+              {
+                "position": 1,
+                "action": "CREATE",
+                "caseId": null,
+                "state": "PENDING",
+                "message": null
+              }
+            ],
+            "fileName": "acceptance-C.xlsx",
+            "state": "PRECHECKED"
+          }
+        }
+      }
+    },
+    "commit": {
+      "http": 200,
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"b9a0da80-b7c6-43c0-9bd1-d61fc6b5c11d\",\"expiresAt\":1793171049275,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"acceptance-C.xlsx\",\"state\":\"QUEUED\"}",
+            "type": "text"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "pageSize": 10,
+            "current": 1,
+            "total": 1,
+            "jobId": "b9a0da80-b7c6-43c0-9bd1-d61fc6b5c11d",
+            "expiresAt": 1793171049275,
+            "counts": [
+              {
+                "state": "PENDING",
+                "total": 1
+              }
+            ],
+            "items": [
+              {
+                "position": 1,
+                "action": "CREATE",
+                "caseId": null,
+                "state": "PENDING",
+                "message": null
+              }
+            ],
+            "fileName": "acceptance-C.xlsx",
+            "state": "QUEUED"
+          }
+        }
+      }
+    },
+    "last": {
+      "http": 200,
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"b9a0da80-b7c6-43c0-9bd1-d61fc6b5c11d\",\"expiresAt\":1793171049275,\"counts\":[{\"state\":\"SUCCESS\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":\"1710892491421523968\",\"state\":\"SUCCESS\",\"message\":null}],\"fileName\":\"acceptance-C.xlsx\",\"state\":\"COMPLETED\",\"followup\":{\"state\":\"SKIPPED\",\"message\":null,\"planId\":null,\"reviewId\":null,\"planName\":null,\"reviewName\":null}}",
+            "type": "text"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "pageSize": 10,
+            "current": 1,
+            "total": 1,
+            "jobId": "b9a0da80-b7c6-43c0-9bd1-d61fc6b5c11d",
+            "expiresAt": 1793171049275,
+            "counts": [
+              {
+                "state": "SUCCESS",
+                "total": 1
+              }
+            ],
+            "items": [
+              {
+                "position": 1,
+                "action": "CREATE",
+                "caseId": "1710892491421523968",
+                "state": "SUCCESS",
+                "message": null
+              }
+            ],
+            "fileName": "acceptance-C.xlsx",
+            "state": "COMPLETED",
+            "followup": {
+              "state": "SKIPPED",
+              "message": null,
+              "planId": null,
+              "reviewId": null,
+              "planName": null,
+              "reviewName": null
+            }
+          }
+        }
+      }
+    }
+  }
+}

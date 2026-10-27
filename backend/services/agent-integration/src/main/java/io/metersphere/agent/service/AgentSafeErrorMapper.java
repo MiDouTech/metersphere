@@ -12,6 +12,8 @@ import java.util.UUID;
 public class AgentSafeErrorMapper {
     public AgentApiErrorDTO toApiError(Throwable error, String suppliedTraceId) {
         String traceId = StringUtils.defaultIfBlank(suppliedTraceId, UUID.randomUUID().toString());
+        if (error instanceof io.metersphere.sdk.exception.ModuleNameConflictException)
+            return new AgentApiErrorDTO("MODULE_NAME_CONFLICT", "同一父目录下已存在同名目录，请修改名称", Map.of(), traceId);
         if (error instanceof MSException business
                 && business.getErrorCode() == io.metersphere.system.controller.handler.result.MsHttpResultCode.CONFLICT) {
             return new AgentApiErrorDTO("VERSION_CONFLICT", safeMessage("VERSION_CONFLICT"), Map.of(), traceId);
@@ -44,6 +46,8 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "QUALITY_CASE_EVIDENCE_REQUIRED" -> "请为本次用例执行补充有效图片证据，一张图片可覆盖所有步骤";
+            case "QUALITY_CASE_EVIDENCE_INVALID" -> "用例图片证据无效，请检查PNG/JPEG格式、大小及所属用例后重试";
             case "ENVIRONMENT_ORIGIN_INVALID" -> "允许 Origin 只包含协议、主机及端口，不能包含路径或参数";
             case "IMPORT_RATE_LIMIT" -> "当前导入预检繁忙，请稍后使用相同请求标识重试";
             case "EXTERNAL_IMAGE_URL_INVALID" -> "请提供有效的公网 HTTP/HTTPS 图片链接，仅支持端口 80/443";

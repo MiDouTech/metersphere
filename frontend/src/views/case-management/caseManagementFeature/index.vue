@@ -11,7 +11,7 @@
     <!-- 用 v-show 保留执行用例树/表状态，避免切到 Xmind 再回来时因 keep-alive 缓存跳过 mountedLoad 导致无数据 -->
     <div v-show="activeTab === 'execute' && canShowExecuteTab" class="h-full">
       <!-- 高级搜索时仍展示左侧树，便于点模块退出高级搜索并刷新列表 -->
-      <MsSplitBox :not-show-first="false">
+      <MsSplitBox :size="reviewTreeWidth" :min="reviewTreeWidth" :not-show-first="false">
         <template #first>
           <div class="p-[16px] pb-0">
             <div class="feature-case h-[100%] min-w-0 overflow-x-hidden">
@@ -152,6 +152,7 @@
    */
   import { computed, nextTick, onMounted, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
+  import { useWindowSize } from '@vueuse/core';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
   import MsCard from '@/components/pure/ms-card/index.vue';
@@ -176,6 +177,13 @@
   import { CaseManagementRouteEnum, ProjectManagementRouteEnum } from '@/enums/routeEnum';
 
   import Message from '@arco-design/web-vue/es/message';
+
+  const { width: reviewViewportWidth } = useWindowSize();
+  const reviewTreeWidth = computed(() => {
+    if (reviewViewportWidth.value <= 1100) return '190px';
+    if (reviewViewportWidth.value <= 1400) return '220px';
+    return '252px';
+  });
 
   defineOptions({
     name: CaseManagementRouteEnum.CASE_MANAGEMENT_CASE,

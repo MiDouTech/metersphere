@@ -1,0 +1,21 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"caseId\":\"1710858183222763620\",\"name\":\"ACCEPTANCE-20261027-100步骤一图协议测试-已刷新\",\"updateTime\":1793088997983,\"moduleId\":\"root\"}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "caseId": "1710858183222763620",
+        "name": "ACCEPTANCE-20261027-100步骤一图协议测试-已刷新",
+        "updateTime": 1793088997983,
+        "moduleId": "root"
+      }
+    }
+  }
+}

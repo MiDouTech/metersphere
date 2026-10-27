@@ -1,0 +1,21 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"caseId\":\"1710961296797605989\",\"num\":100012,\"name\":\"REMAINING-20261027-101步骤空预期\",\"moduleId\":\"root\"}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "caseId": "1710961296797605989",
+        "num": 100012,
+        "name": "REMAINING-20261027-101步骤空预期",
+        "moduleId": "root"
+      }
+    }
+  }
+}

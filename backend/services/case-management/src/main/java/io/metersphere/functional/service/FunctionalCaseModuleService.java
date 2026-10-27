@@ -332,7 +332,7 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         }
         example.createCriteria().andParentIdEqualTo(functionalCaseModule.getParentId()).andNameEqualTo(functionalCaseModule.getName()).andIdNotEqualTo(functionalCaseModule.getId()).andProjectIdEqualTo(functionalCaseModule.getProjectId());
         if (functionalCaseModuleMapper.countByExample(example) > 0) {
-            throw new MSException(Translator.get("node.name.repeat"));
+            throw new io.metersphere.sdk.exception.ModuleNameConflictException(Translator.get("node.name.repeat"));
         }
         example.clear();
     }

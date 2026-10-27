@@ -86,6 +86,8 @@ public class CaseAssetService {
     @Lazy
     @Resource private CaseAssetHistorySyncWorker caseAssetHistorySyncWorker;
     @Resource private FunctionalCaseAttachmentService functionalCaseAttachmentService;
+    @Lazy @Resource private io.metersphere.functional.service.FunctionalImportEffectOutbox syncEffects;
+    @Resource private io.metersphere.functional.hub.service.DefaultHubConfigService syncConfig;
 
     @Transactional(readOnly = true)
     public Map<String, Object> pageCatalogs(CaseAssetCatalogPageRequest request) {
@@ -465,12 +467,40 @@ public class CaseAssetService {
         return defaultHubCaseImportService.getImportResults(jobId);
     }
 
+    private static final String SOURCE_CASES = " FROM functional_case f JOIN case_asset_catalog_project_rel c ON c.project_id=f.project_id WHERE c.catalog_id=? AND f.deleted=0 AND f.latest=1 ";
+    private static final String MISSING_MIRROR = " AND NOT EXISTS (SELECT 1 FROM case_asset_source_relation r JOIN functional_case a ON a.id=r.asset_case_id AND a.deleted=0 WHERE r.source_project_id=f.project_id AND r.source_case_id=COALESCE(NULLIF(f.ref_id,''),f.id) AND r.source_update_time>=f.update_time) ";
+
     @Transactional(readOnly=true)
+    public Map<String,Object> syncStatus(String catalogId) {
+        requireCatalog(catalogId);
+        var result = new LinkedHashMap<String,Object>();
+        Long projects=jdbcTemplate.queryForObject("SELECT COUNT(*) FROM case_asset_catalog_project_rel WHERE catalog_id=?",Long.class,catalogId);
+        Long source=jdbcTemplate.queryForObject("SELECT COUNT(*)"+SOURCE_CASES,Long.class,catalogId);
+        Long missing=jdbcTemplate.queryForObject("SELECT COUNT(*)"+SOURCE_CASES+MISSING_MIRROR,Long.class,catalogId);
+        var effects=jdbcTemplate.queryForMap("SELECT COALESCE(SUM(e.state='PENDING'),0) pending,COALESCE(SUM(e.state='FAILED'),0) failed,MAX(CASE WHEN e.state='SUCCESS' THEN e.update_time END) lastSuccessTime FROM functional_import_effect_outbox e JOIN case_asset_catalog_project_rel c ON c.project_id=e.project_id WHERE c.catalog_id=? AND e.effect_type='CASE_SYNC'",catalogId);
+        boolean enabled=syncConfig.isSyncEnabled();
+        String state=projects==0?"NOT_BOUND":!enabled?"DISABLED":((Number)effects.get("failed")).longValue()>0?"FAILED":((Number)effects.get("pending")).longValue()>0?"WAITING":missing>0?"NOT_SCHEDULED":"UP_TO_DATE";
+        result.put("state",state);result.put("enabled",enabled);result.put("sourceCount",source);result.put("missingCount",missing);result.putAll(effects);
+        result.put("message",switch(state){case "NOT_BOUND"->"独立资产目录，无关联源项目";case "DISABLED"->"资产持续同步已关闭，请联系管理员";case "FAILED"->"存在失败项，请查看下方具体原因";case "WAITING"->"同步已排队，等待处理";case "NOT_SCHEDULED"->"存在未同步或过期镜像，可分批补偿同步";default->"当前未发现缺失镜像或待处理事件";});
+        return result;
+    }
+
+    public Map<String,Object> reconcileMissing(String catalogId) {
+        requireCatalog(catalogId);
+        if(!syncConfig.isSyncEnabled())throw new MSException("资产持续同步已关闭，请联系管理员");
+        // Serialize repeated compensation requests; no source data is overwritten here.
+        jdbcTemplate.queryForList("SELECT id FROM case_asset_catalog WHERE id=? FOR UPDATE",catalogId);
+        var rows=jdbcTemplate.queryForList("SELECT f.id,f.project_id"+SOURCE_CASES+MISSING_MIRROR+
+                " AND NOT EXISTS (SELECT 1 FROM functional_import_effect_outbox e WHERE e.project_id=f.project_id AND e.effect_type='CASE_SYNC' AND e.state IN ('PENDING','FAILED') AND JSON_UNQUOTE(JSON_EXTRACT(e.payload,'$.caseId'))=f.id) ORDER BY f.id LIMIT 100",catalogId);
+        for(var row:rows)syncEffects.enqueue((String)row.get("project_id"),SessionUtils.getUserId(),List.of((String)row.get("id")),List.of(),"UPDATE");
+        return Map.of("queued",rows.size(),"limit",100,"status",syncStatus(catalogId));
+    }
+
     public List<Map<String,Object>> syncFailures(String catalogId) {
         requireCatalog(catalogId);
         return jdbcTemplate.queryForList("SELECT e.id,e.state,e.attempts,e.error_message message,e.update_time updateTime,JSON_UNQUOTE(JSON_EXTRACT(e.payload,'$.caseId')) caseId "
                 + "FROM functional_import_effect_outbox e JOIN case_asset_catalog_project_rel r ON r.project_id=e.project_id "
-                + "WHERE r.catalog_id=? AND e.effect_type='CASE_SYNC' AND e.state IN ('PENDING','FAILED') AND e.attempts>0 ORDER BY e.update_time DESC LIMIT 100",catalogId);
+                + "WHERE r.catalog_id=? AND e.effect_type='CASE_SYNC' AND e.state IN ('PENDING','FAILED') ORDER BY e.update_time DESC LIMIT 100",catalogId);
     }
     public void retrySyncFailure(String catalogId,String effectId) {
         requireCatalog(catalogId);

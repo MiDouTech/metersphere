@@ -1,0 +1,75 @@
+{
+  "updated": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"id\":\"1710975487369551872\",\"caseId\":\"1710963736339030026\",\"createUser\":null,\"parentId\":null,\"resourceId\":null,\"notifier\":\"\",\"replyUser\":null,\"createTime\":null,\"updateTime\":1793089505709,\"deleted\":false,\"deletedAt\":null,\"deletedBy\":null,\"content\":\"REMAINING-20261027-评论修改后，不应被旧版本覆盖\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "id": "1710975487369551872",
+          "caseId": "1710963736339030026",
+          "createUser": null,
+          "parentId": null,
+          "resourceId": null,
+          "notifier": "",
+          "replyUser": null,
+          "createTime": null,
+          "updateTime": 1793089505709,
+          "deleted": false,
+          "deletedAt": null,
+          "deletedBy": null,
+          "content": "REMAINING-20261027-评论修改后，不应被旧版本覆盖"
+        }
+      }
+    }
+  },
+  "replay": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"id\":\"1710975487369551872\",\"caseId\":\"1710963736339030026\",\"createUser\":null,\"parentId\":null,\"resourceId\":null,\"notifier\":\"\",\"replyUser\":null,\"createTime\":null,\"updateTime\":1793089505709,\"deleted\":false,\"deletedAt\":null,\"deletedBy\":null,\"content\":\"REMAINING-20261027-评论修改后，不应被旧版本覆盖\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "id": "1710975487369551872",
+          "caseId": "1710963736339030026",
+          "createUser": null,
+          "parentId": null,
+          "resourceId": null,
+          "notifier": "",
+          "replyUser": null,
+          "createTime": null,
+          "updateTime": 1793089505709,
+          "deleted": false,
+          "deletedAt": null,
+          "deletedBy": null,
+          "content": "REMAINING-20261027-评论修改后，不应被旧版本覆盖"
+        }
+      }
+    }
+  },
+  "stale": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "VERSION_CONFLICT",
+        "traceId": "baec366d-f8c5-4389-ab86-1e64ea14a307"
+      },
+      "message": "数据已被更新，请重新查询后重试",
+      "code": -32001
+    }
+  }
+}

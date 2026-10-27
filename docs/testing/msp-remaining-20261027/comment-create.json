@@ -1,0 +1,30 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"id\":\"1710975487369551872\",\"caseId\":\"1710963736339030026\",\"createUser\":\"1559871391069831258\",\"parentId\":null,\"resourceId\":null,\"notifier\":null,\"replyUser\":null,\"createTime\":1793089481177,\"updateTime\":1793089481177,\"deleted\":false,\"deletedAt\":null,\"deletedBy\":null,\"content\":\"REMAINING-20261027-评论冲突隔离验收，无通知对象\"}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "id": "1710975487369551872",
+        "caseId": "1710963736339030026",
+        "createUser": "1559871391069831258",
+        "parentId": null,
+        "resourceId": null,
+        "notifier": null,
+        "replyUser": null,
+        "createTime": 1793089481177,
+        "updateTime": 1793089481177,
+        "deleted": false,
+        "deletedAt": null,
+        "deletedBy": null,
+        "content": "REMAINING-20261027-评论冲突隔离验收，无通知对象"
+      }
+    }
+  }
+}

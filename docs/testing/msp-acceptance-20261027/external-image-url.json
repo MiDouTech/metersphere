@@ -1,0 +1,56 @@
+{
+  "import": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"state\":\"ATTACHED\",\"projectId\":\"1704667279923322880\",\"caseId\":\"1710858183222763620\",\"attachmentId\":\"1710906115057786881\",\"fileId\":\"1710906115057786880\",\"associationId\":\"1710906115057786882\",\"fileName\":\"acceptance-external-public.png\",\"contentType\":\"image/png\",\"sizeBytes\":8090,\"sha256\":\"541a1ef5373be3dc49fc542fd9a65177b664aec01c8d8608f99e6ec95577d8c1\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "state": "ATTACHED",
+          "projectId": "1704667279923322880",
+          "caseId": "1710858183222763620",
+          "attachmentId": "1710906115057786881",
+          "fileId": "1710906115057786880",
+          "associationId": "1710906115057786882",
+          "fileName": "acceptance-external-public.png",
+          "contentType": "image/png",
+          "sizeBytes": 8090,
+          "sha256": "541a1ef5373be3dc49fc542fd9a65177b664aec01c8d8608f99e6ec95577d8c1"
+        }
+      }
+    }
+  },
+  "replay": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"state\":\"ATTACHED\",\"projectId\":\"1704667279923322880\",\"caseId\":\"1710858183222763620\",\"attachmentId\":\"1710906115057786881\",\"fileId\":\"1710906115057786880\",\"associationId\":\"1710906115057786882\",\"fileName\":\"acceptance-external-public.png\",\"contentType\":\"image/png\",\"sizeBytes\":8090,\"sha256\":\"541a1ef5373be3dc49fc542fd9a65177b664aec01c8d8608f99e6ec95577d8c1\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "state": "ATTACHED",
+          "projectId": "1704667279923322880",
+          "caseId": "1710858183222763620",
+          "attachmentId": "1710906115057786881",
+          "fileId": "1710906115057786880",
+          "associationId": "1710906115057786882",
+          "fileName": "acceptance-external-public.png",
+          "contentType": "image/png",
+          "sizeBytes": 8090,
+          "sha256": "541a1ef5373be3dc49fc542fd9a65177b664aec01c8d8608f99e6ec95577d8c1"
+        }
+      }
+    }
+  }
+}

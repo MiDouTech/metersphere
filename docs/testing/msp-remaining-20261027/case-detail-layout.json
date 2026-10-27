@@ -1,0 +1,32 @@
+{
+  "wide": {
+    "url": "https://msp.ebcone.net/#/case-management/featureCase?orgId=100001&pId=1704667279923322880",
+    "viewport": [
+      1920,
+      963
+    ],
+    "bodyWidth": 1920,
+    "visibleTables": [
+      {
+        "r": {
+          "x": 538,
+          "y": 564,
+          "width": 1300,
+          "height": 4988,
+          "top": 564,
+          "right": 1838,
+          "bottom": 5552,
+          "left": 538
+        },
+        "rows": 102
+      }
+    ]
+  },
+  "narrow": {
+    "viewport": [
+      1280,
+      900
+    ],
+    "bodyWidth": 1280
+  }
+}

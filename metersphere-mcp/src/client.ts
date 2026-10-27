@@ -313,6 +313,7 @@ export class MeterSphereClient {
   }
 
   createFunctionalModule(payload: {
+    requestId: string;
     projectId?: string;
     name?: string;
     parentId?: string;
@@ -332,6 +333,7 @@ export class MeterSphereClient {
   }
 
   batchCreateFunctionalCases(payload: {
+    requestId: string;
     projectId?: string;
     moduleId?: string;
     modulePath?: string;

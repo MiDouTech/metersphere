@@ -26,6 +26,8 @@
       </MsAdvanceFilter>
     </div>
     <ms-base-table
+      batch-action-placement="top"
+      always-show-selected-count
       v-bind="propsRes"
       :action-config="batchActions"
       no-disable

@@ -1,0 +1,29 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"projectId\":\"1704667279923322880\",\"canCreate\":true,\"groups\":[{\"id\":\"48b1ccb8-6fa9-4334-a701-85006ac5aa1c\",\"revision\":1,\"planId\":\"1710884880739475461\",\"reviewId\":\"1710884932279083008\",\"planName\":\"ACCEPTANCE-20261027-导入联动计划\",\"reviewName\":\"ACCEPTANCE-20261027-导入联动评审\"}]}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "projectId": "1704667279923322880",
+        "canCreate": true,
+        "groups": [
+          {
+            "id": "48b1ccb8-6fa9-4334-a701-85006ac5aa1c",
+            "revision": 1,
+            "planId": "1710884880739475461",
+            "reviewId": "1710884932279083008",
+            "planName": "ACCEPTANCE-20261027-导入联动计划",
+            "reviewName": "ACCEPTANCE-20261027-导入联动评审"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,275 @@
+{
+  "syncFailures": {
+    "http": 200,
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": []
+  },
+  "exportTask": {
+    "http": 200,
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": {
+      "fileId": "33555af0-4e7b-40a8-a32d-070532b0e1d4",
+      "taskId": "28ae898b-3b35-4922-85dd-1a5b3b78d6d0",
+      "sourceTaskId": null,
+      "projectId": "100001100001",
+      "name": null,
+      "createTime": 1793083405076,
+      "finishedAt": 1793083406829,
+      "state": "FAILED",
+      "fileType": "xlsx",
+      "count": 0,
+      "stateVersion": 2,
+      "expiresAt": null,
+      "errorCode": "EXPORT_FAILED",
+      "message": "导出失败，请重新导出并提供任务编号以便排查",
+      "traceId": "28ae898b-3b35-4922-85dd-1a5b3b78d6d0"
+    }
+  },
+  "assetPage": {
+    "http": 200,
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": {
+      "list": [
+        {
+          "id": "1710864574134099968",
+          "workspaceId": "100001",
+          "num": 101140,
+          "moduleId": "1704667279923322960",
+          "projectId": "100001100001",
+          "systemId": null,
+          "systemModuleId": null,
+          "templateId": null,
+          "name": "ACCEPTANCE-20261027-批量资产A",
+          "reviewStatus": "UN_REVIEWED",
+          "tags": [
+            "ACCEPTANCE-20261027"
+          ],
+          "caseEditType": "STEP",
+          "pos": null,
+          "versionId": "100000000000001",
+          "refId": null,
+          "lastExecuteResult": "PENDING",
+          "executeUser": null,
+          "lastExecuteUser": null,
+          "lastExecuteTime": null,
+          "deleted": null,
+          "aiCreate": false,
+          "publicCase": null,
+          "latest": null,
+          "createUser": "1559871391069831258",
+          "updateUser": "1559871391069831258",
+          "deleteUser": null,
+          "createTime": 1793083025361,
+          "updateTime": 1793083403046,
+          "deleteTime": null,
+          "customFields": [
+            {
+              "caseId": "1710864574134099968",
+              "fieldId": "101981398780347604",
+              "defaultValue": "P1",
+              "fieldName": "用例等级",
+              "internal": true,
+              "options": [
+                {
+                  "fieldId": "101981398780347604",
+                  "value": "P0",
+                  "text": "P0",
+                  "internal": true,
+                  "pos": 1
+                },
+                {
+                  "fieldId": "101981398780347604",
+                  "value": "P1",
+                  "text": "P1",
+                  "internal": true,
+                  "pos": 2
+                },
+                {
+                  "fieldId": "101981398780347604",
+                  "value": "P2",
+                  "text": "P2",
+                  "internal": true,
+                  "pos": 3
+                },
+                {
+                  "fieldId": "101981398780347604",
+                  "value": "P3",
+                  "text": "P3",
+                  "internal": true,
+                  "pos": 4
+                }
+              ],
+              "type": "SELECT",
+              "internalFieldKey": "functional_priority"
+            }
+          ],
+          "versionName": "v1.0",
+          "moduleName": "MSP需求验收-20261023",
+          "createUserName": "陈启芬",
+          "updateUserName": "陈启芬",
+          "deleteUserName": null,
+          "executeUserName": null,
+          "lastExecuteUserName": null,
+          "testPlans": [],
+          "personalProgress": {
+            "total": 0,
+            "executed": 0,
+            "passed": 0,
+            "failed": 0,
+            "blocked": 0,
+            "skipped": 0,
+            "unexecuted": 0
+          },
+          "referencedProjectCount": 0,
+          "referencedProjects": [],
+          "creationSource": "MANUAL",
+          "assetCategoryId": null,
+          "assetCategoryName": null,
+          "assetCategoryPath": null
+        }
+      ],
+      "total": 1,
+      "pageSize": 20,
+      "current": 1
+    }
+  },
+  "catalogs": {
+    "http": 200,
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": {
+      "total": 10,
+      "current": 1,
+      "pageSize": 20,
+      "list": [
+        {
+          "id": "1710860846102487042",
+          "name": "测试1",
+          "source": "PROJECT",
+          "hubModuleId": "1569996467232727116",
+          "manuallyRenamed": false,
+          "createTime": 1793082808236,
+          "updateTime": 1793082808236,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1710860846102487040",
+          "name": "测试项目1",
+          "source": "PROJECT",
+          "hubModuleId": "1569981005350461454",
+          "manuallyRenamed": false,
+          "createTime": 1793082808221,
+          "updateTime": 1793082808221,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1704667279923322961",
+          "name": "MSP需求验收-20261023",
+          "source": "PROJECT",
+          "hubModuleId": "1704667279923322960",
+          "manuallyRenamed": false,
+          "createTime": 1792722295802,
+          "updateTime": 1792722295802,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1698710057204473882",
+          "name": "米多星球-订单与质量门禁复测-20261019",
+          "source": "PROJECT",
+          "hubModuleId": "1698710057204473881",
+          "manuallyRenamed": false,
+          "createTime": 1792375539076,
+          "updateTime": 1792375539076,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1660836314033823825",
+          "name": "米多星球-订单生效与质量门禁验证-20260923",
+          "source": "PROJECT",
+          "hubModuleId": "1660836314033823824",
+          "manuallyRenamed": false,
+          "createTime": 1790170997581,
+          "updateTime": 1790170997581,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1606852595212337233",
+          "name": "ces",
+          "source": "PROJECT",
+          "hubModuleId": "1606852595212337232",
+          "manuallyRenamed": false,
+          "createTime": 1787028731746,
+          "updateTime": 1787028731746,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1605133096465432586",
+          "name": "业务部测试",
+          "source": "PROJECT",
+          "hubModuleId": "1605133096465432585",
+          "manuallyRenamed": false,
+          "createTime": 1786928643945,
+          "updateTime": 1786928643945,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1605133096465432583",
+          "name": "防窜物流T3.3.4（防窜物流6月常规优化）",
+          "source": "PROJECT",
+          "hubModuleId": "1605133096465432582",
+          "manuallyRenamed": false,
+          "createTime": 1786928643942,
+          "updateTime": 1786928643942,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1605133096465432580",
+          "name": "智能营销T3.1.14（扫码模板新增商品信息组件）",
+          "source": "PROJECT",
+          "hubModuleId": "1605133096465432579",
+          "manuallyRenamed": false,
+          "createTime": 1786928643939,
+          "updateTime": 1786928643939,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        },
+        {
+          "id": "1605133096465432577",
+          "name": "坤-测试",
+          "source": "PROJECT",
+          "hubModuleId": "1605133096465432576",
+          "manuallyRenamed": false,
+          "createTime": 1786928643931,
+          "updateTime": 1786928643931,
+          "pinned": false,
+          "pinTime": null,
+          "relatedProjectCount": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "http": 200,
+  "body": {
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": {
+      "catalogId": "1710955352562868225",
+      "id": "1710970436488011776",
+      "state": "SUCCEEDED",
+      "items": [
+        {
+          "caseId": "1710956400534888448",
+          "state": "SUCCEEDED",
+          "message": "处理成功"
+        }
+      ]
+    }
+  }
+}

@@ -24,9 +24,15 @@ public class DefaultHubModuleResolver {
     private JdbcTemplate jdbcTemplate;
 
     public String findHubFolderId(String hubProjectId, String bizProjectId) {
+        List<String> linked = jdbcTemplate.queryForList(
+                "SELECT c.hub_module_id FROM case_asset_catalog c JOIN case_asset_catalog_project_rel r ON r.catalog_id=c.id JOIN functional_case_module m ON m.id=c.hub_module_id WHERE r.project_id=? AND c.deleted=0 AND m.project_id=? LIMIT 2",
+                String.class,bizProjectId,hubProjectId);
+        if(linked.size()>1) throw new io.metersphere.sdk.exception.MSException("同一项目存在多个资产目录映射，请核对来源后重试");
+        if(!linked.isEmpty()) return linked.getFirst();
         List<String> ids = jdbcTemplate.queryForList(
-                "SELECT id FROM functional_case_module WHERE project_id = ? AND ref_project_id = ? AND module_type = ? LIMIT 1",
+                "SELECT id FROM functional_case_module WHERE project_id = ? AND ref_project_id = ? AND module_type = ? LIMIT 2",
                 String.class, hubProjectId, bizProjectId, DefaultHubConstants.MODULE_TYPE_FOLDER);
+        if(ids.size()>1) throw new io.metersphere.sdk.exception.MSException("同一项目存在多个资产目录映射，请核对来源后重试");
         return ids.isEmpty() ? null : ids.getFirst();
     }
 

@@ -1,0 +1,41 @@
+{
+  "badColumns": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "AGENT_VALIDATION_ERROR",
+        "traceId": "cc824220-e67e-40a8-b05d-5216c403bed2"
+      },
+      "message": "参数不符合要求，请检查必填项、数量与字段格式",
+      "code": -32001
+    }
+  },
+  "longKey": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "AI_EXECUTION_INTERNAL_ERROR",
+        "traceId": "640b52ed-0b9a-426c-8f08-0323a7cddd16"
+      },
+      "message": "服务暂时不可用，请使用 traceId 联系管理员",
+      "code": -32001
+    }
+  },
+  "export": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "AI_EXECUTION_INTERNAL_ERROR",
+        "traceId": "dc0b66a6-f8df-4aca-b0ed-fc5c3fb56a3d"
+      },
+      "message": "服务暂时不可用，请使用 traceId 联系管理员",
+      "code": -32001
+    }
+  }
+}

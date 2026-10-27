@@ -48,6 +48,7 @@ public class FunctionalImportEffectOutbox {
     }
 
     @jakarta.annotation.Resource private FunctionalReviewRecountService reviewRecount;
+    @Lazy @jakarta.annotation.Resource private io.metersphere.functional.asset.service.CaseAssetService assets;
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     public void enqueue(String projectId, String userId, List<String> ids, List<Map> resources, String event) {
@@ -78,6 +79,7 @@ public class FunctionalImportEffectOutbox {
                         String project = (String) row.get("project_id"), user = (String) row.get("user_id");
                         if ("CASE_SYNC".equals(row.get("effect_type"))) {
                             String caseId = (String) payload.get("caseId");
+                            assets.upsertForProject(project);
                             hub.syncCaseUpsert(project, caseId, user);
                             cases.publishImportedCaseAsset(caseId, user);
                         } else {
@@ -115,7 +117,10 @@ public class FunctionalImportEffectOutbox {
         if(failure instanceof io.metersphere.sdk.exception.MSException && message!=null &&
                 (message.startsWith("同一源用例存在重复资产映射") || message.startsWith("历史资产映射已失效") ||
                  message.startsWith("资产持续同步已关闭") || message.startsWith("资产存储项目未配置") ||
-                 message.startsWith("项目资产目录尚未就绪") || message.startsWith("资产镜像已被彻底删除")))
+                 message.startsWith("项目资产目录尚未就绪") || message.startsWith("资产镜像已被彻底删除") ||
+                 message.equals("同一项目存在多个资产目录映射，请核对来源后重试") ||
+                 message.equals("该项目存在多个历史资产目录，请先核对目录来源后重试") ||
+                 message.equals("项目资产目录名称冲突，请修改项目名称后重试")))
             return org.apache.commons.lang3.StringUtils.left(message,900)+"；排查编号 "+reference;
         return "资产同步未完成，请使用排查编号联系管理员："+reference;
     }

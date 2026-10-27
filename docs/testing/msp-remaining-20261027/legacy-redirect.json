@@ -1,0 +1,6 @@
+{
+  "script": "round-12.mjs",
+  "requested": "https://msp.ebcone.net/#/case-management/caseGenerate",
+  "observed": "https://msp.ebcone.net/#/case-management/featureCase?orgId=100001&pId=1704667279923322880",
+  "result": "通过"
+}

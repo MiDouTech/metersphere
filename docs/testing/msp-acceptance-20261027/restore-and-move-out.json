@@ -1,0 +1,35 @@
+{
+  "restored": {
+    "http": 200,
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": null
+  },
+  "childBefore": {
+    "id": "1710873353047252993",
+    "name": "ACCEPTANCE-20261027-移动子目录",
+    "type": "module",
+    "parentId": "1710873353047252992",
+    "projectId": null,
+    "updateTime": null,
+    "children": [],
+    "attachInfo": {},
+    "count": 0,
+    "path": "/ACCEPTANCE-20261027-移动父目录/ACCEPTANCE-20261027-移动子目录"
+  },
+  "moveBack": {
+    "http": 400,
+    "code": 100400,
+    "message": "Validation failed",
+    "messageDetail": {
+      "expectedUpdateTime": "不能为null"
+    },
+    "messageKey": "api.validationFailed",
+    "requestId": "f9888e13-079b-4a25-bdeb-f0167ee16cbb",
+    "fieldErrors": {
+      "expectedUpdateTime": "不能为null"
+    },
+    "data": null
+  }
+}

@@ -1,6 +1,6 @@
 <template>
   <MsCard simple no-content-padding :min-width="0" class="management-review">
-    <MsSplitBox :not-show-first="isAdvancedSearchMode">
+    <MsSplitBox :size="reviewTreeWidth" :min="reviewTreeWidth" :not-show-first="isAdvancedSearchMode">
       <template #first>
         <div class="p-[16px]">
           <ModuleTree
@@ -38,6 +38,7 @@
    * @description 功能测试-用例评审-评审列表
    */
   import { useRouter } from 'vue-router';
+  import { useWindowSize } from '@vueuse/core';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
   import MsSplitBox from '@/components/pure/ms-split-box/index.vue';
@@ -49,6 +50,13 @@
   import { ReviewListQueryParams } from '@/models/caseManagement/caseReview';
   import { ModuleTreeNode } from '@/models/common';
   import { TestPlanRouteEnum } from '@/enums/routeEnum';
+
+  const { width: reviewViewportWidth } = useWindowSize();
+  const reviewTreeWidth = computed(() => {
+    if (reviewViewportWidth.value <= 1100) return '190px';
+    if (reviewViewportWidth.value <= 1400) return '220px';
+    return '252px';
+  });
 
   defineOptions({
     name: TestPlanRouteEnum.TEST_PLAN_REVIEW,

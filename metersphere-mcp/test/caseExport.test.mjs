@@ -21,8 +21,8 @@ test('export creation requires a stable bounded idempotency key', () => {
   const schema = z.object(start.inputSchema).strict();
   const base = { projectId: 'p', format: 'xlsx', request: { selectIds: ['c'] } };
   assert.equal(schema.safeParse(base).success, false);
-  assert.equal(schema.safeParse({ ...base, requestId: 'x'.repeat(65) }).success, false);
-  assert.equal(schema.safeParse({ ...base, requestId: 'stable-1' }).success, true);
+  assert.equal(schema.safeParse({ ...base, requestId: 'x'.repeat(129) }).success, false);
+  assert.equal(schema.safeParse({ ...base, requestId: 'audit:export.2026-10-27' }).success, true);
 });
 
 test('export stop declares the idempotency key required by the native write gate', () => {

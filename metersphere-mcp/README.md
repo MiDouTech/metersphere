@@ -217,3 +217,7 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 - `metersphere.bug.import.preview` 接受 `projectId`、可选 `templateId` 和互斥的 `rows` 或 `fileName + base64`。XLSX 只允许一个工作表，首行列名 `title`, `description`, `handleUser`, `custom:<fieldId>`；title 必须存在。枚举填内部值，处理人填项目成员 ID。文件不超过5MiB，最多100条，禁止公式。
 - `metersphere.bug.import.commit` 传相同导入内容、预检返回的 `previewHash` 和 `requestId`。返回每行 CREATED/FAILED 和总状态 SUCCEEDED/PARTIAL/FAILED；每行独立事务，使用同一 requestId 重试不会重复创建成功行。模板变化需重新预检；需要 BUG_WRITE 和用户项目创建权限。重试幂等保留7天。
 - 网页导出文件保留原有布局，不能假定可以直接原样回导；按上述稳定列头整理后再预检导入。第一版不批量导入附件、不更新同名既有缺陷、不同步第三方平台项目。第三方项目导入将在提交前拒绝，防止远端副作用与本地回滚不一致。
+
+## 0.8.1 写入请求标识
+
+创建目录、单条/批量创建用例必须提供调用方稳定的 `requestId`；同一业务请求重试复用原值，不自动生成新值。导出与这些创建工具采用 1–128 位 `A-Z a-z 0-9 _ . : -`。升级后重启 MCP 进程并在客户端刷新工具 schema；旧的外部连接器缓存不会随仓库提交自动刷新。

@@ -49,7 +49,7 @@
             </a-form-item>
           </a-form>
           <!-- 自定义字段结束 -->
-          <div v-if="!props.isPlatformDefaultTemplate" class="baseItem">
+          <div v-if="!props.isPlatformDefaultTemplate" class="bug-tags-field">
             <a-form
               :model="{}"
               :label-col-props="{
@@ -61,7 +61,7 @@
               label-align="left"
               content-class="tags-class"
             >
-              <a-form-item field="tags" :label="t('system.orgTemplate.tags')">
+              <a-form-item field="tags" :label="t('system.orgTemplate.tags')" class="bug-tags-item">
                 <MsTagsInput
                   v-model:model-value="innerTags"
                   :disabled="
@@ -283,6 +283,29 @@
 </script>
 
 <style scoped lang="less">
+  .bug-tags-field {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 16px;
+    :deep(.arco-form-item-content-wrapper),
+    :deep(.arco-form-item-content),
+    :deep(.arco-input-tag) {
+      min-width: 0;
+      max-width: 100%;
+      height: auto;
+    }
+    :deep(.arco-input-tag) {
+      min-height: 32px;
+    }
+    :deep(.arco-tag) {
+      max-width: 100%;
+    }
+    :deep(.arco-tag-content) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
   .form-item-container {
     max-width: 50%;
     &--sidebar {
@@ -290,7 +313,7 @@
     }
     .baseItem {
       margin-bottom: 16px;
-      height: 32px;
+      min-height: 32px;
       line-height: 32px;
       @apply flex items-center;
       .label {

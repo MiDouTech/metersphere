@@ -8,6 +8,7 @@ const stepSchema = z.object({
 });
 
 export const createFunctionalModuleInputSchema = {
+  requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),
   projectId: z.string().optional().describe("Project ID; uses MS_PROJECT_ID when omitted"),
   name: z.string().optional().describe("Module name when not using modulePath"),
   parentId: z.string().optional(),
@@ -25,6 +26,7 @@ export const createFunctionalModuleTool = {
 };
 
 export const createFunctionalCaseInputSchema = {
+  requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),
   projectId: z.string().optional(),
   moduleId: z.string().optional(),
   modulePath: z.string().optional(),
@@ -48,6 +50,7 @@ export const createFunctionalCaseTool = {
 };
 
 export const batchCreateFunctionalCasesInputSchema = {
+  requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),
   projectId: z.string().optional(),
   moduleId: z.string().optional(),
   modulePath: z.string().optional(),
