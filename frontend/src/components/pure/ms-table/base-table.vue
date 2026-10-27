@@ -3,6 +3,31 @@
     <div v-if="$slots.quickCreate" class="ms-base-table-quickCreate">
       <slot name="quickCreate"></slot>
     </div>
+    <div
+      v-if="props.batchActionPlacement === 'top' && (showBatchAction || alwaysShowSelectedCount)"
+      :id="toolbarId"
+      ref="tableToolbar"
+      class="ms-table-batch-toolbar"
+    >
+      <batch-action
+        v-if="showBatchAction || alwaysShowSelectedCount"
+        class="flex-1"
+        :select-row-count="selectedCount"
+        :disabled="!!attrs.loading"
+        :show-select-all-after-export="props.showSelectAllAfterExport"
+        :select-all-disabled="!!attrs.loading || !(attrs.msPagination as MsPaginationI)?.total"
+        :action-config="props.actionConfig"
+        :wrapper-id="toolbarId"
+        :size="props.paginationSize"
+        @batch-action="handleBatchAction"
+        @clear="() => emit('clearSelector')"
+        @select-all-pages="handleSelectAllChange(SelectAllEnum.ALL, true)"
+      >
+        <template #count>
+          <slot name="count"></slot>
+        </template>
+      </batch-action>
+    </div>
     <a-table
       v-bind="{ ...$attrs, ...scrollObj, ...viewportScroll }"
       v-model:selected-keys="originalSelectedKeys"
@@ -270,7 +295,10 @@
           {{ t('msTable.batch.clear') }}
         </a-button>
       </span>
-      <div class="flex min-w-0 max-w-full flex-grow basis-full items-center">
+      <div
+        v-if="props.batchActionPlacement !== 'top'"
+        class="flex min-w-0 max-w-full flex-grow basis-full items-center"
+      >
         <batch-action
           v-if="showBatchAction || alwaysShowSelectedCount"
           class="flex-1"
@@ -315,6 +343,7 @@
 </template>
 
 <script lang="ts" setup>
+  import { getCurrentInstance } from 'vue';
   import { Message } from '@arco-design/web-vue';
   import { debounce, throttle } from 'lodash-es';
 
@@ -380,6 +409,7 @@
     showSelectAllAfterExport?: boolean;
     firstColumnWidth?: number; // 选择、拖拽列的宽度
     paginationSize?: 'small' | 'mini' | 'medium' | 'large';
+    batchActionPlacement?: 'top' | 'bottom';
     alwaysShowSelectedCount?: boolean; // 是否总是保持显示已选项
     notShowTableFilter?: boolean; // 不显示表头筛选
   }>();
@@ -470,6 +500,8 @@
   const scrollObj = ref<Record<string, any>>({});
   const tableWrapper = ref<HTMLElement>();
   const tableFooter = ref<HTMLElement>();
+  const tableToolbar = ref<HTMLElement>();
+  const toolbarId = `ms-table-toolbar-${getCurrentInstance()?.uid}`;
   const availableBodyHeight = ref<number>();
   let layoutObserver: ResizeObserver | undefined;
   let layoutFrame = 0;
@@ -486,6 +518,7 @@
           root.getBoundingClientRect().top -
           (header?.getBoundingClientRect().height || 48) -
           footerHeight -
+          (tableToolbar.value?.getBoundingClientRect().height || 0) -
           48
       );
     });
@@ -499,8 +532,14 @@
     layoutObserver = new ResizeObserver(measureLayout);
     if (tableWrapper.value) layoutObserver.observe(tableWrapper.value);
     if (tableFooter.value) layoutObserver.observe(tableFooter.value);
+    if (tableToolbar.value) layoutObserver.observe(tableToolbar.value);
     window.addEventListener('resize', measureLayout);
     measureLayout();
+  });
+  watch(tableToolbar, (element, previous) => {
+    if (previous) layoutObserver?.unobserve(previous);
+    if (element) layoutObserver?.observe(element);
+    nextTick(measureLayout);
   });
   onActivated(measureLayout);
   onUnmounted(() => {

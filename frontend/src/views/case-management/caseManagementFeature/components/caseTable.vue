@@ -156,6 +156,8 @@
           <ms-base-table
             v-bind="propsRes"
             ref="tableRef"
+            batch-action-placement="top"
+            always-show-selected-count
             filter-icon-align-left
             class="mt-[8px]"
             :action-config="tableBatchActions"

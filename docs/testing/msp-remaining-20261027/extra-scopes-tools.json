@@ -1,0 +1,164 @@
+[
+  {
+    "name": "metersphere.functional.comment.update",
+    "description": "Edit your own comment text using expectedUpdateTime. Preserves replies, recipients and attachments; does not resend notifications. Explicit CASE_COMMENT_EDIT_V2 required.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20000
+        },
+        "expectedUpdateTime": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "caseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "commentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "projectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "projectId",
+        "caseId",
+        "commentId",
+        "content",
+        "expectedUpdateTime",
+        "requestId"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "oneOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "required": [
+        "result"
+      ]
+    },
+    "annotations": {
+      "scope": "CASE_COMMENT_EDIT_V2",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true
+    }
+  },
+  {
+    "name": "metersphere.functional.case.delete_preview",
+    "description": "Versioned case lifecycle: case.delete_preview. Deletion requires a short-lived preview and the owner's explicit decision in confirmationPath; never substitute confirm=true. CURRENT is default; ALL is explicit. Restore never restarts tasks. New delete/restore scopes are not implied by AGENT_ALL.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "versionScope": {
+          "type": "string",
+          "enum": [
+            "CURRENT",
+            "ALL"
+          ]
+        },
+        "caseIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "projectId",
+        "caseIds"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "oneOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "required": [
+        "result"
+      ]
+    },
+    "annotations": {
+      "scope": "CASE_DELETE_V2",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false
+    }
+  }
+]

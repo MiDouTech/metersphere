@@ -1,0 +1,112 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"projectId\":\"1704667279923322880\",\"current\":1,\"pageSize\":10,\"hasMore\":false,\"matchedBy\":[],\"matchedModules\":[],\"matchedModuleIds\":[],\"total\":1,\"warnings\":[],\"cases\":[{\"executionRef\":{\"id\":\"1710884863559606273\",\"type\":\"SOURCE_CASE\"},\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"1710884863559606272\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793084206902,\"description\":\"仅用于回归\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"用例等级\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P1\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1710884863559606273\",\"num\":100009,\"name\":\"ACCEPTANCE-20261027-导入联动A\",\"modulePath\":\"ACCEPTANCE-20261027-导入目录\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P1\",\"prerequisite\":\"隔离验收\",\"testPlanId\":\"1710884880739475461\",\"testPlanCaseId\":\"1710884983818690560\",\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"7ed47d8b-0f7b-48d8-b3a3-dd278ac4848f\",\"num\":0,\"desc\":\"[1]检查导入数据\",\"expected\":\"[1]计划及评审关联此用例\",\"actualResult\":null,\"executeResult\":null}]}]}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "projectId": "1704667279923322880",
+        "current": 1,
+        "pageSize": 10,
+        "hasMore": false,
+        "matchedBy": [],
+        "matchedModules": [],
+        "matchedModuleIds": [],
+        "total": 1,
+        "warnings": [],
+        "cases": [
+          {
+            "executionRef": {
+              "id": "1710884863559606273",
+              "type": "SOURCE_CASE"
+            },
+            "executionFacts": null,
+            "projectId": "1704667279923322880",
+            "moduleId": "1710884863559606272",
+            "versionId": "1704667279923322928",
+            "reviewStatus": "UN_REVIEWED",
+            "updateTime": 1793084206902,
+            "description": "仅用于回归",
+            "customFields": [
+              {
+                "fieldId": "1704667279923322929",
+                "fieldName": "用例等级",
+                "fieldKey": null,
+                "required": true,
+                "apiFieldId": null,
+                "defaultValue": "P1",
+                "type": "SELECT",
+                "options": [
+                  {
+                    "fieldId": "1704667279923322929",
+                    "value": "P0",
+                    "text": "P0",
+                    "internal": true,
+                    "pos": 1
+                  },
+                  {
+                    "fieldId": "1704667279923322929",
+                    "value": "P1",
+                    "text": "P1",
+                    "internal": true,
+                    "pos": 2
+                  },
+                  {
+                    "fieldId": "1704667279923322929",
+                    "value": "P2",
+                    "text": "P2",
+                    "internal": true,
+                    "pos": 3
+                  },
+                  {
+                    "fieldId": "1704667279923322929",
+                    "value": "P3",
+                    "text": "P3",
+                    "internal": true,
+                    "pos": 4
+                  }
+                ],
+                "supportSearch": null,
+                "optionMethod": null,
+                "internal": true,
+                "platformOptionJson": null,
+                "platformPlaceHolder": null,
+                "platformSystemField": null,
+                "internalFieldKey": "functional_priority"
+              }
+            ],
+            "caseId": "1710884863559606273",
+            "num": 100009,
+            "name": "ACCEPTANCE-20261027-导入联动A",
+            "modulePath": "ACCEPTANCE-20261027-导入目录",
+            "caseEditType": "STEP",
+            "tags": [],
+            "priority": "P1",
+            "prerequisite": "隔离验收",
+            "testPlanId": "1710884880739475461",
+            "testPlanCaseId": "1710884983818690560",
+            "lastExecuteResult": "PENDING",
+            "lastExecuteUser": null,
+            "lastExecuteUserName": null,
+            "steps": [
+              {
+                "id": "7ed47d8b-0f7b-48d8-b3a3-dd278ac4848f",
+                "num": 0,
+                "desc": "[1]检查导入数据",
+                "expected": "[1]计划及评审关联此用例",
+                "actualResult": null,
+                "executeResult": null
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

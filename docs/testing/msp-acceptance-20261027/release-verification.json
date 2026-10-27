@@ -1,0 +1,26 @@
+{
+  "manifestHttp": 200,
+  "manifestHeaders": {
+    "accept-ranges": "bytes",
+    "content-length": "434",
+    "content-type": "application/json",
+    "date": "Tue, 27 Oct 2026 07:28:49 GMT",
+    "etag": "\"6ae03d89-1b2\"",
+    "last-modified": "Tue, 27 Oct 2026 05:58:33 GMT",
+    "server": "nginx/1.30.2"
+  },
+  "revision": "129de8747bd0bf800357c57cb65fde5641c4c35c",
+  "indexHttp": 200,
+  "indexHeaders": {
+    "accept-ranges": "bytes",
+    "content-length": "936",
+    "content-type": "text/html",
+    "date": "Tue, 27 Oct 2026 07:28:49 GMT",
+    "etag": "\"6ae03d83-3a8\"",
+    "last-modified": "Tue, 27 Oct 2026 05:58:27 GMT",
+    "server": "nginx/1.30.2"
+  },
+  "expectedIndexSha256": "ebdbbac754da800dedc92b32c371afbbebe748ec9204c7d5fb20da1d6cae226c",
+  "actualIndexSha256": "ebdbbac754da800dedc92b32c371afbbebe748ec9204c7d5fb20da1d6cae226c",
+  "matches": true
+}

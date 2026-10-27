@@ -12,14 +12,14 @@ const tool = (action: string, description: string, inputSchema: z.ZodRawShape) =
 export const caseExportTools = [
   tool("start", "Create a durable Excel/XMind export. Poll status, then read download chunks. request uses the web export field/range schema.", {
     projectId: id, format: z.enum(["xlsx", "xmind"]),
-    requestId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/), request: z.record(z.unknown()),
+    requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/), request: z.record(z.unknown()),
   }),
   tool("status", "Read your export task state and safe error details.", task),
   tool("retry", "Retry a failed, cancelled or expired export with original filters and CURRENT content. Creates a linked new task; reuse requestId if a response is lost.", {
-    ...task, requestId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+    ...task, requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),
   }),
   tool("stop", "Stop your export with a stable requestId; a completed task stays successful.", {
-    ...task, requestId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+    ...task, requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),
   }),
   tool("download", "Read a freshly authorized base64 chunk. Append bytes in offset order until eof; no public download URL.", {
     ...task, offset: z.number().int().min(0).max(67108864).optional(),

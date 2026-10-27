@@ -1,0 +1,958 @@
+{
+  "created": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1710961296797605989\",\"num\":100012,\"name\":\"REMAINING-20261027-101步骤空预期\",\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1710961296797605989",
+          "num": 100012,
+          "name": "REMAINING-20261027-101步骤空预期",
+          "moduleId": "root"
+        }
+      }
+    }
+  },
+  "replay": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1710961296797605989\",\"num\":100012,\"name\":\"REMAINING-20261027-101步骤空预期\",\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1710961296797605989",
+          "num": 100012,
+          "name": "REMAINING-20261027-101步骤空预期",
+          "moduleId": "root"
+        }
+      }
+    }
+  },
+  "changedOrder": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "IDEMPOTENCY_CONFLICT",
+        "traceId": "c2fc1daa-7367-479f-9a00-ca534b3257c6"
+      },
+      "message": "相同请求标识的参数已变化，请使用新的请求标识",
+      "code": -32001
+    }
+  },
+  "contract": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"comparison\":\"NONE_AGENT_REPORTED\",\"resultSource\":\"AGENT_REPORTED\",\"contentHash\":\"218afb44dd7db932dd865d63b41d959623fabe7c5d5d435b92f268091dc379bc\",\"instructions\":\"One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.\",\"policy\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"case\":{\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":null,\"versionId\":\"1704667279923322928\",\"reviewStatus\":null,\"updateTime\":null,\"description\":\"\",\"customFields\":[],\"caseId\":\"1710961296797605989\",\"num\":null,\"name\":\"REMAINING-20261027-101步骤空预期\",\"modulePath\":null,\"caseEditType\":\"STEP\",\"tags\":null,\"priority\":\"P0\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":null,\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1710961296797605888\",\"num\":1,\"desc\":\"验收边界位置 1\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605889\",\"num\":2,\"desc\":\"验收边界位置 2\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605890\",\"num\":3,\"desc\":\"验收边界位置 3\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605891\",\"num\":4,\"desc\":\"验收边界位置 4\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605892\",\"num\":5,\"desc\":\"验收边界位置 5\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605893\",\"num\":6,\"desc\":\"验收边界位置 6\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605894\",\"num\":7,\"desc\":\"验收边界位置 7\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605895\",\"num\":8,\"desc\":\"验收边界位置 8\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605896\",\"num\":9,\"desc\":\"验收边界位置 9\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605897\",\"num\":10,\"desc\":\"验收边界位置 10\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605898\",\"num\":11,\"desc\":\"验收边界位置 11\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605899\",\"num\":12,\"desc\":\"验收边界位置 12\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605900\",\"num\":13,\"desc\":\"验收边界位置 13\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605901\",\"num\":14,\"desc\":\"验收边界位置 14\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605902\",\"num\":15,\"desc\":\"验收边界位置 15\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605903\",\"num\":16,\"desc\":\"验收边界位置 16\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605904\",\"num\":17,\"desc\":\"验收边界位置 17\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605905\",\"num\":18,\"desc\":\"验收边界位置 18\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605906\",\"num\":19,\"desc\":\"验收边界位置 19\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605907\",\"num\":20,\"desc\":\"验收边界位置 20\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605908\",\"num\":21,\"desc\":\"验收边界位置 21\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605909\",\"num\":22,\"desc\":\"验收边界位置 22\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605910\",\"num\":23,\"desc\":\"验收边界位置 23\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605911\",\"num\":24,\"desc\":\"验收边界位置 24\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605912\",\"num\":25,\"desc\":\"验收边界位置 25\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605913\",\"num\":26,\"desc\":\"验收边界位置 26\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605914\",\"num\":27,\"desc\":\"验收边界位置 27\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605915\",\"num\":28,\"desc\":\"验收边界位置 28\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605916\",\"num\":29,\"desc\":\"验收边界位置 29\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605917\",\"num\":30,\"desc\":\"验收边界位置 30\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605918\",\"num\":31,\"desc\":\"验收边界位置 31\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605919\",\"num\":32,\"desc\":\"验收边界位置 32\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605920\",\"num\":33,\"desc\":\"验收边界位置 33\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605921\",\"num\":34,\"desc\":\"验收边界位置 34\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605922\",\"num\":35,\"desc\":\"验收边界位置 35\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605923\",\"num\":36,\"desc\":\"验收边界位置 36\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605924\",\"num\":37,\"desc\":\"验收边界位置 37\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605925\",\"num\":38,\"desc\":\"验收边界位置 38\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605926\",\"num\":39,\"desc\":\"验收边界位置 39\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605927\",\"num\":40,\"desc\":\"验收边界位置 40\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605928\",\"num\":41,\"desc\":\"验收边界位置 41\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605929\",\"num\":42,\"desc\":\"验收边界位置 42\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605930\",\"num\":43,\"desc\":\"验收边界位置 43\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605931\",\"num\":44,\"desc\":\"验收边界位置 44\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605932\",\"num\":45,\"desc\":\"验收边界位置 45\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605933\",\"num\":46,\"desc\":\"验收边界位置 46\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605934\",\"num\":47,\"desc\":\"验收边界位置 47\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605935\",\"num\":48,\"desc\":\"验收边界位置 48\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605936\",\"num\":49,\"desc\":\"验收边界位置 49\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605937\",\"num\":50,\"desc\":\"验收边界位置 50\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605938\",\"num\":51,\"desc\":\"验收边界位置 51\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605939\",\"num\":52,\"desc\":\"验收边界位置 52\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605940\",\"num\":53,\"desc\":\"验收边界位置 53\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605941\",\"num\":54,\"desc\":\"验收边界位置 54\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605942\",\"num\":55,\"desc\":\"验收边界位置 55\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605943\",\"num\":56,\"desc\":\"验收边界位置 56\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605944\",\"num\":57,\"desc\":\"验收边界位置 57\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605945\",\"num\":58,\"desc\":\"验收边界位置 58\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605946\",\"num\":59,\"desc\":\"验收边界位置 59\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605947\",\"num\":60,\"desc\":\"验收边界位置 60\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605948\",\"num\":61,\"desc\":\"验收边界位置 61\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605949\",\"num\":62,\"desc\":\"验收边界位置 62\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605950\",\"num\":63,\"desc\":\"验收边界位置 63\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605951\",\"num\":64,\"desc\":\"验收边界位置 64\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605952\",\"num\":65,\"desc\":\"验收边界位置 65\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605953\",\"num\":66,\"desc\":\"验收边界位置 66\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605954\",\"num\":67,\"desc\":\"验收边界位置 67\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605955\",\"num\":68,\"desc\":\"验收边界位置 68\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605956\",\"num\":69,\"desc\":\"验收边界位置 69\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605957\",\"num\":70,\"desc\":\"验收边界位置 70\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605958\",\"num\":71,\"desc\":\"验收边界位置 71\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605959\",\"num\":72,\"desc\":\"验收边界位置 72\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605960\",\"num\":73,\"desc\":\"验收边界位置 73\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605961\",\"num\":74,\"desc\":\"验收边界位置 74\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605962\",\"num\":75,\"desc\":\"验收边界位置 75\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605963\",\"num\":76,\"desc\":\"验收边界位置 76\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605964\",\"num\":77,\"desc\":\"验收边界位置 77\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605965\",\"num\":78,\"desc\":\"验收边界位置 78\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605966\",\"num\":79,\"desc\":\"验收边界位置 79\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605967\",\"num\":80,\"desc\":\"验收边界位置 80\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605968\",\"num\":81,\"desc\":\"验收边界位置 81\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605969\",\"num\":82,\"desc\":\"验收边界位置 82\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605970\",\"num\":83,\"desc\":\"验收边界位置 83\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605971\",\"num\":84,\"desc\":\"验收边界位置 84\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605972\",\"num\":85,\"desc\":\"验收边界位置 85\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605973\",\"num\":86,\"desc\":\"验收边界位置 86\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605974\",\"num\":87,\"desc\":\"验收边界位置 87\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605975\",\"num\":88,\"desc\":\"验收边界位置 88\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605976\",\"num\":89,\"desc\":\"验收边界位置 89\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605977\",\"num\":90,\"desc\":\"验收边界位置 90\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605978\",\"num\":91,\"desc\":\"验收边界位置 91\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605979\",\"num\":92,\"desc\":\"验收边界位置 92\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605980\",\"num\":93,\"desc\":\"验收边界位置 93\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605981\",\"num\":94,\"desc\":\"验收边界位置 94\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605982\",\"num\":95,\"desc\":\"验收边界位置 95\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605983\",\"num\":96,\"desc\":\"验收边界位置 96\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605984\",\"num\":97,\"desc\":\"验收边界位置 97\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605985\",\"num\":98,\"desc\":\"验收边界位置 98\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605986\",\"num\":99,\"desc\":\"验收边界位置 99\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605987\",\"num\":100,\"desc\":\"验收边界位置 100\",\"expected\":\"应保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710961296797605988\",\"num\":101,\"desc\":\"验收边界位置 101\",\"expected\":\"\",\"actualResult\":null,\"executeResult\":null}]},\"validationMode\":\"STRUCTURE_ONLY_V1\",\"writesEnabled\":true,\"evidenceScope\":\"CASE\",\"minimumEvidenceCount\":1,\"maximumEvidenceCount\":10,\"stepEvidenceRequired\":false,\"clientHashesRequired\":false,\"definitionType\":\"STEP\",\"supported\":false,\"limitations\":{\"originalSteps\":100,\"factsBytes\":1048576,\"submittedSteps\":1000},\"unsupportedReason\":\"当前个人执行仅支持包含完整操作和预期的1至100步结构化用例\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "comparison": "NONE_AGENT_REPORTED",
+          "resultSource": "AGENT_REPORTED",
+          "contentHash": "218afb44dd7db932dd865d63b41d959623fabe7c5d5d435b92f268091dc379bc",
+          "instructions": "One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.",
+          "policy": {
+            "name": "订单复测-证据与冻结断言-20261019",
+            "rules": [
+              {
+                "parameters": {
+                  "allowedMimeTypes": [
+                    "image/png",
+                    "image/jpeg"
+                  ],
+                  "maxArtifactBytes": 5242880,
+                  "requiredRoles": [
+                    "BEFORE_ACTION",
+                    "AFTER_ACTION"
+                  ]
+                },
+                "ruleId": "Q-EVIDENCE-01"
+              },
+              {
+                "parameters": {
+                  "allowedOperators": [
+                    "EQUALS",
+                    "IN_RANGE"
+                  ],
+                  "expectedSource": "FROZEN_CONTRACT"
+                },
+                "ruleId": "Q-ASSERT-01"
+              }
+            ],
+            "schemaVersion": "quality-policy.v1"
+          },
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "case": {
+            "executionRef": null,
+            "executionFacts": null,
+            "projectId": "1704667279923322880",
+            "moduleId": null,
+            "versionId": "1704667279923322928",
+            "reviewStatus": null,
+            "updateTime": null,
+            "description": "",
+            "customFields": [],
+            "caseId": "1710961296797605989",
+            "num": null,
+            "name": "REMAINING-20261027-101步骤空预期",
+            "modulePath": null,
+            "caseEditType": "STEP",
+            "tags": null,
+            "priority": "P0",
+            "prerequisite": "",
+            "testPlanId": null,
+            "testPlanCaseId": null,
+            "lastExecuteResult": null,
+            "lastExecuteUser": null,
+            "lastExecuteUserName": null,
+            "steps": [
+              {
+                "id": "1710961296797605888",
+                "num": 1,
+                "desc": "验收边界位置 1",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605889",
+                "num": 2,
+                "desc": "验收边界位置 2",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605890",
+                "num": 3,
+                "desc": "验收边界位置 3",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605891",
+                "num": 4,
+                "desc": "验收边界位置 4",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605892",
+                "num": 5,
+                "desc": "验收边界位置 5",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605893",
+                "num": 6,
+                "desc": "验收边界位置 6",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605894",
+                "num": 7,
+                "desc": "验收边界位置 7",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605895",
+                "num": 8,
+                "desc": "验收边界位置 8",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605896",
+                "num": 9,
+                "desc": "验收边界位置 9",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605897",
+                "num": 10,
+                "desc": "验收边界位置 10",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605898",
+                "num": 11,
+                "desc": "验收边界位置 11",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605899",
+                "num": 12,
+                "desc": "验收边界位置 12",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605900",
+                "num": 13,
+                "desc": "验收边界位置 13",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605901",
+                "num": 14,
+                "desc": "验收边界位置 14",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605902",
+                "num": 15,
+                "desc": "验收边界位置 15",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605903",
+                "num": 16,
+                "desc": "验收边界位置 16",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605904",
+                "num": 17,
+                "desc": "验收边界位置 17",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605905",
+                "num": 18,
+                "desc": "验收边界位置 18",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605906",
+                "num": 19,
+                "desc": "验收边界位置 19",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605907",
+                "num": 20,
+                "desc": "验收边界位置 20",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605908",
+                "num": 21,
+                "desc": "验收边界位置 21",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605909",
+                "num": 22,
+                "desc": "验收边界位置 22",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605910",
+                "num": 23,
+                "desc": "验收边界位置 23",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605911",
+                "num": 24,
+                "desc": "验收边界位置 24",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605912",
+                "num": 25,
+                "desc": "验收边界位置 25",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605913",
+                "num": 26,
+                "desc": "验收边界位置 26",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605914",
+                "num": 27,
+                "desc": "验收边界位置 27",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605915",
+                "num": 28,
+                "desc": "验收边界位置 28",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605916",
+                "num": 29,
+                "desc": "验收边界位置 29",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605917",
+                "num": 30,
+                "desc": "验收边界位置 30",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605918",
+                "num": 31,
+                "desc": "验收边界位置 31",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605919",
+                "num": 32,
+                "desc": "验收边界位置 32",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605920",
+                "num": 33,
+                "desc": "验收边界位置 33",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605921",
+                "num": 34,
+                "desc": "验收边界位置 34",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605922",
+                "num": 35,
+                "desc": "验收边界位置 35",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605923",
+                "num": 36,
+                "desc": "验收边界位置 36",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605924",
+                "num": 37,
+                "desc": "验收边界位置 37",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605925",
+                "num": 38,
+                "desc": "验收边界位置 38",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605926",
+                "num": 39,
+                "desc": "验收边界位置 39",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605927",
+                "num": 40,
+                "desc": "验收边界位置 40",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605928",
+                "num": 41,
+                "desc": "验收边界位置 41",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605929",
+                "num": 42,
+                "desc": "验收边界位置 42",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605930",
+                "num": 43,
+                "desc": "验收边界位置 43",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605931",
+                "num": 44,
+                "desc": "验收边界位置 44",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605932",
+                "num": 45,
+                "desc": "验收边界位置 45",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605933",
+                "num": 46,
+                "desc": "验收边界位置 46",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605934",
+                "num": 47,
+                "desc": "验收边界位置 47",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605935",
+                "num": 48,
+                "desc": "验收边界位置 48",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605936",
+                "num": 49,
+                "desc": "验收边界位置 49",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605937",
+                "num": 50,
+                "desc": "验收边界位置 50",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605938",
+                "num": 51,
+                "desc": "验收边界位置 51",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605939",
+                "num": 52,
+                "desc": "验收边界位置 52",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605940",
+                "num": 53,
+                "desc": "验收边界位置 53",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605941",
+                "num": 54,
+                "desc": "验收边界位置 54",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605942",
+                "num": 55,
+                "desc": "验收边界位置 55",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605943",
+                "num": 56,
+                "desc": "验收边界位置 56",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605944",
+                "num": 57,
+                "desc": "验收边界位置 57",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605945",
+                "num": 58,
+                "desc": "验收边界位置 58",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605946",
+                "num": 59,
+                "desc": "验收边界位置 59",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605947",
+                "num": 60,
+                "desc": "验收边界位置 60",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605948",
+                "num": 61,
+                "desc": "验收边界位置 61",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605949",
+                "num": 62,
+                "desc": "验收边界位置 62",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605950",
+                "num": 63,
+                "desc": "验收边界位置 63",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605951",
+                "num": 64,
+                "desc": "验收边界位置 64",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605952",
+                "num": 65,
+                "desc": "验收边界位置 65",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605953",
+                "num": 66,
+                "desc": "验收边界位置 66",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605954",
+                "num": 67,
+                "desc": "验收边界位置 67",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605955",
+                "num": 68,
+                "desc": "验收边界位置 68",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605956",
+                "num": 69,
+                "desc": "验收边界位置 69",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605957",
+                "num": 70,
+                "desc": "验收边界位置 70",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605958",
+                "num": 71,
+                "desc": "验收边界位置 71",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605959",
+                "num": 72,
+                "desc": "验收边界位置 72",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605960",
+                "num": 73,
+                "desc": "验收边界位置 73",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605961",
+                "num": 74,
+                "desc": "验收边界位置 74",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605962",
+                "num": 75,
+                "desc": "验收边界位置 75",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605963",
+                "num": 76,
+                "desc": "验收边界位置 76",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605964",
+                "num": 77,
+                "desc": "验收边界位置 77",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605965",
+                "num": 78,
+                "desc": "验收边界位置 78",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605966",
+                "num": 79,
+                "desc": "验收边界位置 79",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605967",
+                "num": 80,
+                "desc": "验收边界位置 80",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605968",
+                "num": 81,
+                "desc": "验收边界位置 81",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605969",
+                "num": 82,
+                "desc": "验收边界位置 82",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605970",
+                "num": 83,
+                "desc": "验收边界位置 83",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605971",
+                "num": 84,
+                "desc": "验收边界位置 84",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605972",
+                "num": 85,
+                "desc": "验收边界位置 85",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605973",
+                "num": 86,
+                "desc": "验收边界位置 86",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605974",
+                "num": 87,
+                "desc": "验收边界位置 87",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605975",
+                "num": 88,
+                "desc": "验收边界位置 88",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605976",
+                "num": 89,
+                "desc": "验收边界位置 89",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605977",
+                "num": 90,
+                "desc": "验收边界位置 90",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605978",
+                "num": 91,
+                "desc": "验收边界位置 91",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605979",
+                "num": 92,
+                "desc": "验收边界位置 92",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605980",
+                "num": 93,
+                "desc": "验收边界位置 93",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605981",
+                "num": 94,
+                "desc": "验收边界位置 94",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605982",
+                "num": 95,
+                "desc": "验收边界位置 95",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605983",
+                "num": 96,
+                "desc": "验收边界位置 96",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605984",
+                "num": 97,
+                "desc": "验收边界位置 97",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605985",
+                "num": 98,
+                "desc": "验收边界位置 98",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605986",
+                "num": 99,
+                "desc": "验收边界位置 99",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605987",
+                "num": 100,
+                "desc": "验收边界位置 100",
+                "expected": "应保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1710961296797605988",
+                "num": 101,
+                "desc": "验收边界位置 101",
+                "expected": "",
+                "actualResult": null,
+                "executeResult": null
+              }
+            ]
+          },
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "writesEnabled": true,
+          "evidenceScope": "CASE",
+          "minimumEvidenceCount": 1,
+          "maximumEvidenceCount": 10,
+          "stepEvidenceRequired": false,
+          "clientHashesRequired": false,
+          "definitionType": "STEP",
+          "supported": false,
+          "limitations": {
+            "originalSteps": 100,
+            "factsBytes": 1048576,
+            "submittedSteps": 1000
+          },
+          "unsupportedReason": "当前个人执行仅支持包含完整操作和预期的1至100步结构化用例"
+        }
+      }
+    }
+  }
+}

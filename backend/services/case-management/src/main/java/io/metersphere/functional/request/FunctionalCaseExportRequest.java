@@ -35,7 +35,8 @@ public class FunctionalCaseExportRequest extends BaseFunctionalCaseBatchDTO impl
     @Schema(description = "文件id")
     private String fileId;
 
-    @jakarta.validation.constraints.Size(max = 64)
+    @jakarta.validation.constraints.Size(max = 128)
+    @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z0-9_.:-]{1,128}$")
     @Schema(description = "客户端幂等请求标识")
     private String requestId;
 

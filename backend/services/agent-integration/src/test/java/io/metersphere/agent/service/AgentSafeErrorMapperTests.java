@@ -50,4 +50,17 @@ class AgentSafeErrorMapperTests {
         assertEquals("Secret 引用格式无效，请使用 env://变量名 或 vault://mount/path#field", credential.getMessage());
         assertEquals("Gateway Service Key 引用必须使用 env:// 或 vault:// 格式", model.getMessage());
     }
+    @Test
+    void moduleConflictUsesTypedCodeAndNeverExposesLocalizedDetails() {
+        var result = mapper.toApiError(new io.metersphere.sdk.exception.ModuleNameConflictException("localized SQL detail"), "m");
+        assertEquals("MODULE_NAME_CONFLICT", result.getCode());
+        assertFalse(result.getMessage().contains("SQL"));
+    }
+
+    @Test
+    void caseEvidenceErrorsDescribeWholeCaseWithoutChangingRunnerErrors() {
+        var result = mapper.toApiError(new MSException("QUALITY_CASE_EVIDENCE_REQUIRED"), "case");
+        assertEquals("QUALITY_CASE_EVIDENCE_REQUIRED", result.getCode());
+        org.junit.jupiter.api.Assertions.assertTrue(result.getMessage().contains("所有步骤"));
+    }
 }

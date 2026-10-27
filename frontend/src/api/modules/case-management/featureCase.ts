@@ -147,7 +147,7 @@ export function moveCaseModuleTree(data: MoveModules) {
 }
 
 export function moveCaseModuleToParent(data: { moduleId: string; parentId: string; expectedUpdateTime: number }) {
-  return MSR.post({ url: '/functional/case/module/move-to-parent', data });
+  return MSR.post({ url: '/functional/case/module/move-to-parent', data }, { errorMessageMode: 'none' });
 }
 
 // 回收站-模块-获取模块树
@@ -881,4 +881,23 @@ export function getAssetSyncFailures(catalogId: string) {
 }
 export function retryAssetSyncFailure(catalogId: string, id: string) {
   return MSR.post({ url: `/case-asset/catalog/${catalogId}/sync-failures/${id}/retry` });
+}
+
+export interface AssetSyncStatus {
+  state: string;
+  enabled: boolean;
+  sourceCount: number;
+  missingCount: number;
+  pending: number;
+  failed: number;
+  lastSuccessTime?: number;
+  message: string;
+}
+export function getAssetSyncStatus(catalogId: string) {
+  return MSR.get<AssetSyncStatus>({ url: `/case-asset/catalog/${catalogId}/sync-status` });
+}
+export function reconcileAssetSync(catalogId: string) {
+  return MSR.post<{ queued: number; status: AssetSyncStatus }>({
+    url: `/case-asset/catalog/${catalogId}/sync-reconcile`,
+  });
 }

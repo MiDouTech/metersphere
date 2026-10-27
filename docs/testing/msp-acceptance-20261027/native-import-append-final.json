@@ -1,0 +1,47 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"57d8d9de-d012-4183-b4dd-b4d250f79e85\",\"expiresAt\":1793171021402,\"counts\":[{\"state\":\"SUCCESS\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":\"1710898109238747136\",\"state\":\"SUCCESS\",\"message\":null}],\"fileName\":\"acceptance-B.xlsx\",\"state\":\"COMPLETED\",\"followup\":{\"state\":\"SUCCEEDED\",\"message\":null,\"planId\":\"1710884880739475461\",\"reviewId\":\"1710884932279083008\",\"planName\":\"ACCEPTANCE-20261027-导入联动计划\",\"reviewName\":\"ACCEPTANCE-20261027-导入联动评审\"}}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "pageSize": 10,
+        "current": 1,
+        "total": 1,
+        "jobId": "57d8d9de-d012-4183-b4dd-b4d250f79e85",
+        "expiresAt": 1793171021402,
+        "counts": [
+          {
+            "state": "SUCCESS",
+            "total": 1
+          }
+        ],
+        "items": [
+          {
+            "position": 1,
+            "action": "CREATE",
+            "caseId": "1710898109238747136",
+            "state": "SUCCESS",
+            "message": null
+          }
+        ],
+        "fileName": "acceptance-B.xlsx",
+        "state": "COMPLETED",
+        "followup": {
+          "state": "SUCCEEDED",
+          "message": null,
+          "planId": "1710884880739475461",
+          "reviewId": "1710884932279083008",
+          "planName": "ACCEPTANCE-20261027-导入联动计划",
+          "reviewName": "ACCEPTANCE-20261027-导入联动评审"
+        }
+      }
+    }
+  }
+}

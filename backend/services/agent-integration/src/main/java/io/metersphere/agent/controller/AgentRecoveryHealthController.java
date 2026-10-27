@@ -16,6 +16,13 @@ public class AgentRecoveryHealthController {
     @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
     public List<Map<String,Object>> status(){return health.status();}
 
+    @GetMapping("/facts-readiness")
+    @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
+    public Map<String,Object> factsReadiness() {
+        boolean ready=context.getBean(io.metersphere.agent.security.AgentFactCipher.class).configured();
+        return Map.of("ready",ready,"code",ready?"READY":"QUALITY_FACTS_KEY_NOT_CONFIGURED");
+    }
+
     @GetMapping("/runtime")
     @RequiresPermissions(PermissionConstants.AI_EXECUTION_READ)
     public Map<String,Object> runtime() {

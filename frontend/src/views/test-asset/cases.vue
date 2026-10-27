@@ -201,12 +201,26 @@
               >
             </div>
           </div>
+          <a-alert
+            v-if="syncStatus && syncStatus.state !== 'NOT_BOUND'"
+            class="mb-3"
+            :type="['DISABLED', 'FAILED', 'NOT_SCHEDULED'].includes(syncStatus.state) ? 'warning' : 'info'"
+          >
+            {{ syncStatus.message }} · 源用例 {{ syncStatus.sourceCount }} · 未收敛 {{ syncStatus.missingCount }} ·
+            待处理 {{ syncStatus.pending }} · 失败 {{ syncStatus.failed }}
+            <a-button
+              v-if="canUpdate && syncStatus.enabled && syncStatus.missingCount > 0"
+              :loading="syncRetryBusy"
+              @click="reconcileSync"
+              >分批补偿同步（最多100条）</a-button
+            >
+          </a-alert>
           <a-alert v-if="syncFailures.length" type="warning" class="mb-3">
             <details
               ><summary>持续同步存在 {{ syncFailures.length }} 条未完成记录（最多显示最近 100 条）</summary>
               <div v-for="failure in syncFailures" :key="failure.id" class="my-2">
                 用例 {{ failure.caseId }} · {{ failure.state }} ·
-                {{ failure.message || `同步失败，排查编号 ${failure.id}` }}
+                {{ failure.message || (failure.attempts ? `同步未完成，排查编号 ${failure.id}` : '等待首次处理') }}
                 <a-button
                   v-if="canUpdate && failure.state === 'FAILED'"
                   size="mini"
@@ -428,6 +442,7 @@
   import {
     type AssetExportTask,
     type AssetSyncFailure,
+    type AssetSyncStatus,
     backfillCaseAssetCatalogs,
     type CaseAssetCatalog,
     type CaseAssetHistorySyncJob,
@@ -439,11 +454,13 @@
     getAssetExportColumns,
     getAssetExportTask,
     getAssetSyncFailures,
+    getAssetSyncStatus,
     getCaseAssetHistorySyncJob,
     getCaseAssetList,
     getCaseAssetReferencedProjects,
     getLatestCaseAssetHistorySyncJob,
     pageCaseAssetCatalogs,
+    reconcileAssetSync,
     retryAssetSyncFailure,
     retryCaseAssetHistorySyncJob,
     setCaseAssetCatalogPinned,
@@ -465,6 +482,7 @@
   const exportTask = ref<AssetExportTask>();
   const exportBusy = ref(false);
   const syncFailures = ref<AssetSyncFailure[]>([]);
+  const syncStatus = ref<AssetSyncStatus>();
   const syncRetryBusy = ref(false);
   let exportTimer: ReturnType<typeof setTimeout> | undefined;
   const canUpdate = hasAnyPermission(['CASE_ASSET:READ+UPDATE']);
@@ -536,11 +554,28 @@
   });
   const formatTime = (value?: number | string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
   const getPriority = (record: CaseManagementTable) =>
-    record.priority || record.customFields?.find((field: any) => field.fieldName === '用例等级')?.value || '-';
+    record.priority ||
+    record.customFields?.find((field: any) => field.internalFieldKey === 'functional_priority')?.value ||
+    record.customFields?.find((field: any) => field.internalFieldKey === 'functional_priority')?.defaultValue ||
+    '-';
+  async function reconcileSync() {
+    if (syncRetryBusy.value) return;
+    syncRetryBusy.value = true;
+    try {
+      const result = await reconcileAssetSync(selectedCatalogId.value);
+      syncStatus.value = result.status;
+      Message.success(`已分批排队 ${result.queued} 条；剩余未完成项请查看同步状态`);
+      syncFailures.value = await getAssetSyncFailures(selectedCatalogId.value);
+    } finally {
+      syncRetryBusy.value = false;
+    }
+  }
   let caseLoadSequence = 0;
   async function loadCases() {
     const sequence = ++caseLoadSequence;
     const catalogId = selectedCatalogId.value;
+    syncStatus.value = undefined;
+    syncFailures.value = [];
     if (!selectedCatalogId.value) {
       cases.value = [];
       caseTotal.value = 0;
@@ -554,11 +589,14 @@
         ...caseQuery,
         keyword: caseQuery.keyword.trim() || undefined,
       } as any);
-      const failures = await getAssetSyncFailures(catalogId);
       if (sequence !== caseLoadSequence || catalogId !== selectedCatalogId.value) return;
       cases.value = result.list || [];
-      syncFailures.value = failures;
       caseTotal.value = result.total || 0;
+      const failures = await getAssetSyncFailures(catalogId);
+      const status = await getAssetSyncStatus(catalogId);
+      if (sequence !== caseLoadSequence || catalogId !== selectedCatalogId.value) return;
+      syncFailures.value = failures;
+      syncStatus.value = status;
     } finally {
       if (sequence === caseLoadSequence) caseLoading.value = false;
     }
@@ -568,7 +606,7 @@
     syncRetryBusy.value = true;
     try {
       await retryAssetSyncFailure(selectedCatalogId.value, failure.id);
-      syncFailures.value = await getAssetSyncFailures(selectedCatalogId.value);
+      await loadCases();
       Message.success('已重新排队，请稍后刷新查看同步结果');
     } finally {
       syncRetryBusy.value = false;

@@ -97,7 +97,7 @@ public class ImportFollowupCoordinator {
             if(!"IMPORT_ONLY".equals(request.getPolicy())) {
                 checkTokenPolicy(job,user);
                 permissions(project,user,request.getReviewers(),request.getPolicy());
-                if(request.getReviewPassRule()==null||!Set.of("SINGLE","MULTIPLE").contains(request.getReviewPassRule()))throw new MSException("请选择评审通过规则");
+                if("CREATE_NEW_PAIR".equals(request.getPolicy()) && (request.getReviewPassRule()==null||!Set.of("SINGLE","MULTIPLE").contains(request.getReviewPassRule())))throw new MSException("请选择评审通过规则");
             }
             if("APPEND_EXISTING".equals(request.getPolicy())) {
                 var groups=jdbc.queryForList("SELECT * FROM functional_import_followup_group WHERE id=? AND project_id=? FOR UPDATE",request.getTargetGroupId(),project);
@@ -106,6 +106,9 @@ public class ImportFollowupCoordinator {
                 if(request.getExpectedGroupRevision()==null || ((Number)g.get("revision")).longValue()!=request.getExpectedGroupRevision())throw new MSException("关联组已更新，请刷新后重新选择");
                 group=(String)g.get("id"); plan=(String)g.get("plan_id");review=(String)g.get("review_id");
                 validateTargets(project,plan,review);
+                var currentReviewers = targetReviewers(project,review);
+                if(request.getReviewers()!=null && !request.getReviewers().isEmpty() && !new HashSet<>(request.getReviewers()).equals(new HashSet<>(currentReviewers)))
+                    throw new MSException("AGENT_VALIDATION_ERROR");
                 jdbc.update("UPDATE functional_import_followup_group SET revision=revision+1 WHERE id=?",group);
             }
             long now=System.currentTimeMillis();
@@ -119,7 +122,13 @@ public class ImportFollowupCoordinator {
         if("CREATE_NEW_PAIR".equals(policy))required.addAll(List.of(PermissionConstants.TEST_PLAN_READ_ADD,PermissionConstants.CASE_REVIEW_READ_ADD));
         for(String permission:required)
             if(!access.userHasPermission(user,project,permission))throw new MSException("当前账号缺少创建或关联计划/评审的权限，可选择仅导入");
+        if("CREATE_NEW_PAIR".equals(policy)) access.reviewers(project,reviewers);
+    }
+
+    private List<String> targetReviewers(String project,String review) {
+        var reviewers = jdbc.queryForList("SELECT u.user_id FROM case_review_user u JOIN case_review r ON BINARY r.id=BINARY u.review_id WHERE r.id=? AND r.project_id=? ORDER BY u.user_id",String.class,review,project);
         access.reviewers(project,reviewers);
+        return reviewers;
     }
 
     private void validateTargets(String project,String plan,String review) {
@@ -165,6 +174,10 @@ public class ImportFollowupCoordinator {
         String token="ASSET".equals(row.get("source_kind"))?"WEB":jdbc.queryForObject("SELECT token_id FROM functional_import_job WHERE id=? AND user_id=?",String.class,id,user);
         var job=owned(id,user,token);checkTokenPolicy(job,user);var request=JSON.parseObject((String)row.get("request_json"),ImportFollowupRequest.class);
         permissions(project,user,request.getReviewers(),request.getPolicy());
+        if("APPEND_EXISTING".equals(request.getPolicy())) {
+            validateTargets(project,(String)row.get("plan_id"),(String)row.get("review_id"));
+            request.setReviewers(targetReviewers(project,(String)row.get("review_id")));
+        }
         if("ASSET".equals(row.get("source_kind")))jdbc.update("INSERT IGNORE INTO functional_import_followup_item(job_id,case_id) SELECT job_id,target_case_id FROM case_asset_import_result WHERE job_id=? AND status='SUCCESS' AND target_case_id IS NOT NULL",id);
         else jdbc.update("INSERT IGNORE INTO functional_import_followup_item(job_id,case_id) SELECT job_id,target_id FROM functional_import_item WHERE job_id=? AND state='SUCCESS' AND target_id IS NOT NULL",id);
         Long total=jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_followup_item WHERE job_id=?",Long.class,id);

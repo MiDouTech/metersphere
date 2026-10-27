@@ -1,0 +1,12 @@
+{
+  "stopBrowserPrecheck": {
+    "http": 200,
+    "code": 100200,
+    "message": null
+  },
+  "deleteTemporaryToken": {
+    "http": 200,
+    "code": 100200,
+    "message": null
+  }
+}

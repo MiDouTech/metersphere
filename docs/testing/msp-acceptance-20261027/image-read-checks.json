@@ -1,0 +1,33 @@
+{
+  "normal": {
+    "http": 200,
+    "type": "image",
+    "mimeType": "image/png",
+    "size": 105733,
+    "sha256": "446e46034a8dde352dd84ed6609269728b8a4bf3ca928ea565c999575d76100c",
+    "expected": "446e46034a8dde352dd84ed6609269728b8a4bf3ca928ea565c999575d76100c",
+    "matches": true
+  },
+  "historical": {
+    "http": 200,
+    "type": "image",
+    "mimeType": "image/png",
+    "size": 105733,
+    "sha256": "446e46034a8dde352dd84ed6609269728b8a4bf3ca928ea565c999575d76100c",
+    "expected": "446e46034a8dde352dd84ed6609269728b8a4bf3ca928ea565c999575d76100c",
+    "matches": true
+  },
+  "crossProject": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "AGENT_RESOURCE_NOT_ACCESSIBLE",
+        "traceId": "6ea16582-24ec-4ae3-a0a4-dd1934f9d4f1"
+      },
+      "message": "资源不存在或当前账号和令牌无权访问，请检查项目授权",
+      "code": -32001
+    }
+  }
+}

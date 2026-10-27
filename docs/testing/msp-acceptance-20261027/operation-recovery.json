@@ -1,0 +1,42 @@
+{
+  "submit": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"state\":\"SUCCEEDED\",\"submissionId\":\"d6e6eb1b-2255-48b6-915e-a4599265ffae\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "state": "SUCCEEDED",
+          "submissionId": "d6e6eb1b-2255-48b6-915e-a4599265ffae"
+        }
+      }
+    }
+  },
+  "upload": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"resourceState\":\"CONSUMED\",\"evidenceId\":\"a6171be9-d5de-42be-bde5-ecc44735b5b1\",\"state\":\"SUCCEEDED\",\"expiresAt\":1793169087844}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "resourceState": "CONSUMED",
+          "evidenceId": "a6171be9-d5de-42be-bde5-ecc44735b5b1",
+          "state": "SUCCEEDED",
+          "expiresAt": 1793169087844
+        }
+      }
+    }
+  }
+}

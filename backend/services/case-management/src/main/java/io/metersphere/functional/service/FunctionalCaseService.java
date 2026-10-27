@@ -900,6 +900,7 @@ public class FunctionalCaseService {
             throw new MSException("VERSION_CONFLICT");
         caseLifecycleJdbc.update("INSERT INTO agent_case_current_execution(case_id,submission_id,execute_time) VALUES (?,?,?) ON DUPLICATE KEY UPDATE submission_id=VALUES(submission_id),execute_time=VALUES(execute_time)",caseId,submissionId,now);
         caseLifecycleJdbc.update("UPDATE test_plan_functional_case pc JOIN test_plan p ON p.id=pc.test_plan_id SET pc.last_exec_result=?,pc.last_exec_time=?,pc.execute_user=? WHERE pc.functional_case_id=? AND p.project_id=? AND p.status<>'ARCHIVED'",result,now,userId,caseId,projectId);
+        importEffectOutbox.enqueue(projectId,userId,List.of(caseId),List.of(),"UPDATE");
     }
 
     public void syncAssociatedPlanCaseExec(List<String> caseIds, String lastExecResult, String executeUser) {

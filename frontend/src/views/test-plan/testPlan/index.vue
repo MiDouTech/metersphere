@@ -1,8 +1,8 @@
 <template>
   <MsCard simple no-content-padding :min-width="0" class="management-review relative">
-    <MsSplitBox :not-show-first="isAdvancedSearchMode">
+    <MsSplitBox :size="reviewTreeWidth" :min="reviewTreeWidth" :not-show-first="isAdvancedSearchMode">
       <template #first>
-        <div class="min-w-[300px] p-[16px]">
+        <div class="min-w-0 p-[16px]">
           <div class="mb-[16px] flex justify-between">
             <a-input-search
               v-model:model-value="groupKeyword"
@@ -132,6 +132,7 @@
 
 <script setup lang="ts">
   import { computed, nextTick, ref, watch } from 'vue';
+  import { useWindowSize } from '@vueuse/core';
 
   import MsButton from '@/components/pure/ms-button/index.vue';
   import MsCard from '@/components/pure/ms-card/index.vue';
@@ -157,6 +158,13 @@
   import { testPlanTypeEnum } from '@/enums/testPlanEnum';
 
   import Message from '@arco-design/web-vue/es/message';
+
+  const { width: reviewViewportWidth } = useWindowSize();
+  const reviewTreeWidth = computed(() => {
+    if (reviewViewportWidth.value <= 1100) return '190px';
+    if (reviewViewportWidth.value <= 1400) return '220px';
+    return '252px';
+  });
 
   defineOptions({
     name: RouteEnum.TEST_PLAN_INDEX,

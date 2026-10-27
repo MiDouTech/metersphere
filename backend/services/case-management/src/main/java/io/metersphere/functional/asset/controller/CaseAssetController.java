@@ -80,6 +80,13 @@ public class CaseAssetController {
         return exportFiles.downloadFile(task.getProjectId(),task.getFileId(),SessionUtils.getUserId());
     }
 
+    @GetMapping("/catalog/{catalogId}/sync-status")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
+    public Map<String,Object> syncStatus(@PathVariable String catalogId){return caseAssetService.syncStatus(catalogId);}
+    @PostMapping("/catalog/{catalogId}/sync-reconcile")
+    @RequiresPermissions(PermissionConstants.CASE_ASSET_UPDATE)
+    public Map<String,Object> reconcileMissing(@PathVariable String catalogId){return caseAssetService.reconcileMissing(catalogId);}
+
     @GetMapping("/catalog/{catalogId}/sync-failures")
     @RequiresPermissions(PermissionConstants.CASE_ASSET_READ)
     public List<Map<String,Object>> syncFailures(@PathVariable String catalogId){return caseAssetService.syncFailures(catalogId);}

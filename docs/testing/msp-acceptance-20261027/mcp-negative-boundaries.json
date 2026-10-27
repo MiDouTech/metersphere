@@ -1,0 +1,54 @@
+{
+  "missingEvidence": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "QUALITY_EVIDENCE_REQUIRED",
+        "traceId": "684a14ea-8dd4-4984-bae2-c41ae0b62809"
+      },
+      "message": "执行证据不符合平台门禁要求，请补充本步骤的有效证据",
+      "code": -32001
+    }
+  },
+  "over1000Facts": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "QUALITY_FINAL_FACTS_INCOMPLETE",
+        "traceId": "77d454a7-bc69-4aa4-bfb8-e3ee36984743"
+      },
+      "message": "执行事实不完整或与申报结果不一致，不能同步正式结果",
+      "code": -32001
+    }
+  },
+  "invalidImage": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "QUALITY_EVIDENCE_INVALID",
+        "traceId": "aa7ad1d8-eb58-4df0-b359-e9d02e4c1759"
+      },
+      "message": "执行证据不符合平台门禁要求，请补充本步骤的有效证据",
+      "code": -32001
+    }
+  },
+  "privateUrl": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "EXTERNAL_IMAGE_URL_INVALID",
+        "traceId": "fc3578bb-5e99-4a8c-a6ef-ce2acee1bde1"
+      },
+      "message": "请提供有效的公网 HTTP/HTTPS 图片链接，仅支持端口 80/443",
+      "code": -32001
+    }
+  }
+}

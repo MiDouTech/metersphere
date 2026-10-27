@@ -1,0 +1,7 @@
+{
+  "tool": "mcp__metersphere_test__metersphere_functional_case_create",
+  "observed": "IDEMPOTENCY_KEY_REQUIRED",
+  "traceId": "296e6b6f-a52f-40a6-8458-9d5e17e1918e",
+  "schemaIssue": "当前连接器未暴露 requestId，原生工具必填",
+  "result": "失败"
+}

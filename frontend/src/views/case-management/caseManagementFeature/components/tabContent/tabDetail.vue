@@ -2,352 +2,365 @@
 <template>
   <div class="caseDetailWrapper ml-1 !break-words break-all">
     <MsExecutionFacts :facts="detailForm.executionFacts" />
-    <a-form ref="caseFormRef" class="rounded-[4px]" :model="detailForm" layout="vertical">
-      <!-- 前置：只读行式；编辑纵向富文本 -->
-      <a-form-item
-        class="case-inline-field relative"
-        :class="{ 'is-editing': isEditPreposition }"
-        field="precondition"
-        :label="t('system.orgTemplate.precondition')"
-        asterisk-position="end"
-      >
-        <span class="absolute right-[6px] top-0 inline-flex items-center gap-2">
-          <MsAutoSaveStatus
+    <div class="case-detail-review-grid">
+      <a-form ref="caseFormRef" class="rounded-[4px]" :model="detailForm" layout="vertical">
+        <!-- 前置：只读行式；编辑纵向富文本 -->
+        <a-form-item
+          class="case-inline-field relative"
+          :class="{ 'is-editing': isEditPreposition }"
+          field="precondition"
+          :label="t('system.orgTemplate.precondition')"
+          asterisk-position="end"
+        >
+          <span class="absolute right-[6px] top-0 inline-flex items-center gap-2">
+            <MsAutoSaveStatus
+              v-if="isEditPreposition"
+              :status="autoSaveStatus"
+              :last-saved-at="lastSavedAt"
+              :lock-message="lockMessage"
+              show-retry
+              @retry="manualSave"
+            />
+            <a-button
+              v-if="props.allowEdit && !props.isTestPlan"
+              v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
+              type="text"
+              class="px-0"
+              :disabled="autoSaveStatus === 'locked-readonly'"
+              @click="prepositionEdit"
+            >
+              <MsIcon type="icon-icon_edit_outlined" class="mr-1 font-[16px] text-[rgb(var(--primary-5))]" />
+              {{ t('caseManagement.featureCase.contentEdit') }}
+            </a-button>
+          </span>
+          <MsRichText
             v-if="isEditPreposition"
+            v-model:raw="detailForm.prerequisite"
+            v-model:filed-ids="prerequisiteFileIds"
+            :upload-image="handleUploadImage"
+            :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
+            class="mt-2"
+          />
+          <div v-else class="case-inline-row">
+            <span class="case-inline-label">{{ t('system.orgTemplate.precondition') }}：</span>
+            <div
+              v-dompurify-html="detailForm?.prerequisite || '-'"
+              class="case-inline-value case-prerequisite-value markdown-body list-item-css !break-words break-all"
+            ></div>
+          </div>
+        </a-form-item>
+        <!-- 备注：前置下方 -->
+        <a-form-item
+          field="description"
+          class="case-inline-field"
+          :class="{ 'is-editing': isEditPreposition }"
+          :label="t('caseManagement.featureCase.remark')"
+        >
+          <MsRichText
+            v-if="isEditPreposition"
+            v-model:filed-ids="descriptionFileIds"
+            v-model:raw="detailForm.description"
+            :upload-image="handleUploadImage"
+            :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
+          />
+          <div v-else class="case-inline-row">
+            <span class="case-inline-label">{{ t('caseManagement.featureCase.remark') }}：</span>
+            <div
+              v-dompurify-html="detailForm.description || '-'"
+              class="case-inline-value case-strong-rich-value markdown-body !break-words break-all"
+            ></div>
+          </div>
+        </a-form-item>
+        <StepDescription v-model:caseEditType="detailForm.caseEditType" :is-test-plan="props.isTestPlan" />
+        <!-- 步骤描述 -->
+        <div v-if="detailForm.caseEditType === 'STEP'" class="mb-[20px] w-full">
+          <AddStep
+            v-model:step-list="stepData"
+            :is-scroll-y="false"
+            :is-test-plan="props.isTestPlan"
+            :is-disabled-test-plan="props.isDisabledTestPlan"
+            :is-disabled="!isEditPreposition && !props.enableExecute && !props.autoSave"
+            :enable-execute="props.enableExecute || props.isTestPlan"
+            :case-result="detailForm.lastExecuteResult"
+            @change="handleStepChange"
+            @set-case-result="handleSetCaseResult"
+            @report-defect="handleReportDefect"
+          />
+        </div>
+        <!-- 文本描述 -->
+        <template v-if="detailForm.caseEditType === 'TEXT'">
+          <MsRichText
+            v-if="isEditPreposition"
+            v-model:raw="detailForm.textDescription"
+            v-model:filed-ids="textDescriptionFileIds"
+            :upload-image="handleUploadImage"
+            :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
+          />
+          <div
+            v-else
+            v-dompurify-html="detailForm.textDescription || '-'"
+            class="markdown-body !break-words break-all"
+          ></div>
+          <a-form-item field="remark" class="mt-[20px]">
+            <template #label>
+              <div class="flex w-full items-center justify-between">
+                <span>{{ t('caseManagement.featureCase.expectedResult') }}</span>
+                <a-button
+                  v-if="showTextReportDefectButton"
+                  type="outline"
+                  size="small"
+                  class="report-defect-btn arco-btn-outline--secondary"
+                  @click.stop="handleReportDefect"
+                >
+                  <template #icon>
+                    <icon-plus class="text-[16px]" />
+                  </template>
+                  {{ t('caseManagement.featureCase.reportDefect') }}
+                </a-button>
+              </div>
+            </template>
+            <MsRichText
+              v-if="isEditPreposition"
+              v-model:raw="detailForm.expectedResult"
+              v-model:filed-ids="expectedResultFileIds"
+              :upload-image="handleUploadImage"
+              :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
+            />
+            <div
+              v-else
+              v-dompurify-html="detailForm.expectedResult || '-'"
+              class="markdown-body !break-words break-all"
+            ></div>
+          </a-form-item>
+          <!-- TEXT 模式用例级四按钮 -->
+          <div v-if="showTextCaseResultButtons" class="mb-2 mt-2 flex flex-wrap items-center justify-end gap-2">
+            <button
+              v-for="item in caseResultButtons"
+              :key="item.key"
+              type="button"
+              class="case-result-btn"
+              :class="[`case-result-btn--${item.theme}`, { 'is-active': detailForm.lastExecuteResult === item.key }]"
+              @click="handleSetCaseResult(item.key)"
+            >
+              <MsIcon :type="item.icon" :size="16" class="mr-1" />
+              {{ t(item.label) }}
+            </button>
+          </div>
+        </template>
+        <div v-if="isEditPreposition" class="flex items-center justify-end gap-3">
+          <MsAutoSaveStatus
             :status="autoSaveStatus"
             :last-saved-at="lastSavedAt"
             :lock-message="lockMessage"
             show-retry
             @retry="manualSave"
           />
-          <a-button
-            v-if="props.allowEdit && !props.isTestPlan"
-            v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
-            type="text"
-            class="px-0"
-            :disabled="autoSaveStatus === 'locked-readonly'"
-            @click="prepositionEdit"
-          >
-            <MsIcon type="icon-icon_edit_outlined" class="mr-1 font-[16px] text-[rgb(var(--primary-5))]" />
-            {{ t('caseManagement.featureCase.contentEdit') }}
+          <a-button type="secondary" @click="handleCancel">{{ t('common.cancel') }}</a-button>
+          <a-button class="ml-[12px]" type="primary" :loading="confirmLoading || autoSaveSaving" @click="handleOK">
+            {{ t('common.save') }}
           </a-button>
-        </span>
-        <MsRichText
-          v-if="isEditPreposition"
-          v-model:raw="detailForm.prerequisite"
-          v-model:filed-ids="prerequisiteFileIds"
-          :upload-image="handleUploadImage"
-          :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
-          class="mt-2"
-        />
-        <div v-else class="case-inline-row">
-          <span class="case-inline-label">{{ t('system.orgTemplate.precondition') }}：</span>
-          <div
-            v-dompurify-html="detailForm?.prerequisite || '-'"
-            class="case-inline-value case-prerequisite-value markdown-body list-item-css !break-words break-all"
-          ></div>
         </div>
-      </a-form-item>
-      <!-- 备注：前置下方 -->
-      <a-form-item
-        field="description"
-        class="case-inline-field"
-        :class="{ 'is-editing': isEditPreposition }"
-        :label="t('caseManagement.featureCase.remark')"
-      >
-        <MsRichText
-          v-if="isEditPreposition"
-          v-model:filed-ids="descriptionFileIds"
-          v-model:raw="detailForm.description"
-          :upload-image="handleUploadImage"
-          :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
-        />
-        <div v-else class="case-inline-row">
-          <span class="case-inline-label">{{ t('caseManagement.featureCase.remark') }}：</span>
-          <div
-            v-dompurify-html="detailForm.description || '-'"
-            class="case-inline-value case-strong-rich-value markdown-body !break-words break-all"
-          ></div>
-        </div>
-      </a-form-item>
-      <StepDescription v-model:caseEditType="detailForm.caseEditType" :is-test-plan="props.isTestPlan" />
-      <!-- 步骤描述 -->
-      <div v-if="detailForm.caseEditType === 'STEP'" class="mb-[20px] w-full">
-        <AddStep
-          v-model:step-list="stepData"
-          :is-scroll-y="false"
-          :is-test-plan="props.isTestPlan"
-          :is-disabled-test-plan="props.isDisabledTestPlan"
-          :is-disabled="!isEditPreposition && !props.enableExecute && !props.autoSave"
-          :enable-execute="props.enableExecute || props.isTestPlan"
-          :case-result="detailForm.lastExecuteResult"
-          @change="handleStepChange"
-          @set-case-result="handleSetCaseResult"
-          @report-defect="handleReportDefect"
-        />
-      </div>
-      <!-- 文本描述 -->
-      <template v-if="detailForm.caseEditType === 'TEXT'">
-        <MsRichText
-          v-if="isEditPreposition"
-          v-model:raw="detailForm.textDescription"
-          v-model:filed-ids="textDescriptionFileIds"
-          :upload-image="handleUploadImage"
-          :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
-        />
+        <!-- 四按钮下方：自动下一条 + 上下条 -->
         <div
-          v-else
-          v-dompurify-html="detailForm.textDescription || '-'"
-          class="markdown-body !break-words break-all"
-        ></div>
-        <a-form-item field="remark" class="mt-[20px]">
-          <template #label>
-            <div class="flex w-full items-center justify-between">
-              <span>{{ t('caseManagement.featureCase.expectedResult') }}</span>
-              <a-button
-                v-if="showTextReportDefectButton"
-                type="outline"
-                size="small"
-                class="report-defect-btn arco-btn-outline--secondary"
-                @click.stop="handleReportDefect"
-              >
-                <template #icon>
-                  <icon-plus class="text-[16px]" />
-                </template>
-                {{ t('caseManagement.featureCase.reportDefect') }}
-              </a-button>
-            </div>
-          </template>
-          <MsRichText
-            v-if="isEditPreposition"
-            v-model:raw="detailForm.expectedResult"
-            v-model:filed-ids="expectedResultFileIds"
-            :upload-image="handleUploadImage"
-            :preview-url="`${PreviewEditorImageUrl}/${currentProjectId}`"
-          />
-          <div
-            v-else
-            v-dompurify-html="detailForm.expectedResult || '-'"
-            class="markdown-body !break-words break-all"
-          ></div>
-        </a-form-item>
-        <!-- TEXT 模式用例级四按钮 -->
-        <div v-if="showTextCaseResultButtons" class="mb-2 mt-2 flex flex-wrap items-center justify-end gap-2">
-          <button
-            v-for="item in caseResultButtons"
-            :key="item.key"
-            type="button"
-            class="case-result-btn"
-            :class="[`case-result-btn--${item.theme}`, { 'is-active': detailForm.lastExecuteResult === item.key }]"
-            @click="handleSetCaseResult(item.key)"
-          >
-            <MsIcon :type="item.icon" :size="16" class="mr-1" />
-            {{ t(item.label) }}
-          </button>
-        </div>
-      </template>
-      <div v-if="isEditPreposition" class="flex items-center justify-end gap-3">
-        <MsAutoSaveStatus
-          :status="autoSaveStatus"
-          :last-saved-at="lastSavedAt"
-          :lock-message="lockMessage"
-          show-retry
-          @retry="manualSave"
-        />
-        <a-button type="secondary" @click="handleCancel">{{ t('common.cancel') }}</a-button>
-        <a-button class="ml-[12px]" type="primary" :loading="confirmLoading || autoSaveSaving" @click="handleOK">
-          {{ t('common.save') }}
-        </a-button>
-      </div>
-      <!-- 四按钮下方：自动下一条 + 上下条 -->
-      <div
-        v-if="props.showCaseNav && !props.isTestPlan"
-        class="case-nav-bar mb-3 mt-1 flex items-center justify-between gap-3"
-      >
-        <div class="inline-flex items-center gap-2">
-          <a-switch v-model:model-value="autoNext" size="small" />
-          <span class="text-[13px] text-[var(--color-text-1)]">{{ t('caseManagement.featureCase.autoNext') }}</span>
-          <span class="text-[12px] text-[var(--color-text-4)]">{{
-            t('caseManagement.featureCase.autoNextNeedAttachment')
-          }}</span>
-        </div>
-        <div class="case-nav-actions inline-flex items-center gap-2">
-          <a-button size="small" :disabled="!props.canGoPrev" @click="emit('prevCase')">
-            {{ t('caseManagement.featureCase.prevCase') }}
-          </a-button>
-          <a-button size="small" type="primary" :disabled="!props.canGoNext" @click="emit('nextCase')">
-            {{ t('caseManagement.featureCase.nextCase') }}
-          </a-button>
-        </div>
-      </div>
-      <!-- 附件粘贴热区：仅「添加附件」整块（标题/按钮/提示 + 文件列表），不外扩、不遮挡操作区 -->
-      <div
-        v-if="!props.isTestPlan"
-        v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
-        class="attachment-paste-region"
-        :class="{ 'attachment-paste-region--active': isHoverPasteZone }"
-        tabindex="0"
-        @mouseenter="isHoverPasteZone = true"
-        @mouseleave="isHoverPasteZone = false"
-        @focusin="isPasteZoneFocused = true"
-        @focusout="isPasteZoneFocused = false"
-        @paste="onAttachmentPaste"
-      >
-        <AddAttachment v-model:file-list="fileList" multiple @change="handleChange" @link-file="associatedFile" />
-        <MsFileList
-          ref="fileListRef"
-          v-model:file-list="fileList"
-          :show-tab="false"
-          :request-params="{
-            caseId: detailForm.id,
-            projectId: currentProjectId,
-          }"
-          :upload-func="uploadOrAssociationFile"
-          :handle-view="handlePreview"
-          :get-thumbnail="getAttachmentThumbnail"
-          :show-delete="false"
-          @finish="uploadFileOver"
+          v-if="props.showCaseNav && !props.isTestPlan"
+          class="case-nav-bar mb-3 mt-1 flex items-center justify-between gap-3"
         >
-          <template #actions="{ item }">
-            <div v-if="props.allowEdit">
-              <!-- 本地文件 -->
-              <div v-if="item.local || item.status === 'init'" class="flex items-center font-normal">
-                <MsButton
-                  v-if="item.file.type.includes('/image')"
-                  type="button"
-                  status="primary"
-                  class="!mr-0"
-                  @click="handlePreview(item)"
-                >
-                  {{ t('ms.upload.preview') }}
-                </MsButton>
-                <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
-                <SaveAsFilePopover
-                  v-if="!props.isTestPlan && item.uid === activeTransferFileParams?.uid"
-                  v-model:visible="transferVisible"
-                  :saving-file="activeTransferFileParams"
-                  :file-save-as-source-id="(form.id as string)"
-                  :file-save-as-api="transferFileRequest"
-                  :file-module-options-api="getTransferFileTree"
-                  source-id-key="caseId"
-                  @finish="emit('updateSuccess')"
-                />
-                <MsButton
-                  v-if="props.allowEdit && !props.isTestPlan && hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])"
-                  type="button"
-                  status="primary"
-                  class="!mr-0"
-                  @click="transferFileHandler(item)"
-                >
-                  {{ t('caseManagement.featureCase.storage') }}
-                </MsButton>
-                <a-divider
-                  v-if="props.allowEdit && !props.isTestPlan && hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])"
-                  direction="vertical"
-                />
-                <MsButton
-                  v-if="
-                    item.status === 'done' &&
-                    props.allowEdit &&
-                    !props.isTestPlan &&
-                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                  "
-                  type="button"
-                  status="primary"
-                  class="!mr-0"
-                  @click="downloadFile(item)"
-                >
-                  {{ t('caseManagement.featureCase.download') }}
-                </MsButton>
-                <a-divider
-                  v-if="
-                    item.status === 'done' &&
-                    props.allowEdit &&
-                    !props.isTestPlan &&
-                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                  "
-                  direction="vertical"
-                />
-                <MsButton
-                  v-if="item.status !== 'uploading' && props.allowEdit && !props.isTestPlan"
-                  type="button"
-                  :status="item.deleteContent ? 'primary' : 'danger'"
-                  class="!mr-0"
-                  @click="deleteFileHandler(item)"
-                >
-                  {{ t(item.deleteContent) || t('ms.upload.delete') }}
-                </MsButton>
+          <div class="inline-flex items-center gap-2">
+            <a-switch v-model:model-value="autoNext" size="small" />
+            <span class="text-[13px] text-[var(--color-text-1)]">{{ t('caseManagement.featureCase.autoNext') }}</span>
+            <span class="text-[12px] text-[var(--color-text-4)]">{{
+              t('caseManagement.featureCase.autoNextNeedAttachment')
+            }}</span>
+          </div>
+          <div class="case-nav-actions inline-flex items-center gap-2">
+            <a-button size="small" :disabled="!props.canGoPrev" @click="emit('prevCase')">
+              {{ t('caseManagement.featureCase.prevCase') }}
+            </a-button>
+            <a-button size="small" type="primary" :disabled="!props.canGoNext" @click="emit('nextCase')">
+              {{ t('caseManagement.featureCase.nextCase') }}
+            </a-button>
+          </div>
+        </div>
+        <!-- 附件粘贴热区：仅「添加附件」整块（标题/按钮/提示 + 文件列表），不外扩、不遮挡操作区 -->
+        <div
+          v-if="!props.isTestPlan"
+          v-permission="['FUNCTIONAL_CASE:READ+UPDATE']"
+          class="attachment-paste-region"
+          :class="{ 'attachment-paste-region--active': isHoverPasteZone }"
+          tabindex="0"
+          @mouseenter="isHoverPasteZone = true"
+          @mouseleave="isHoverPasteZone = false"
+          @focusin="isPasteZoneFocused = true"
+          @focusout="isPasteZoneFocused = false"
+          @paste="onAttachmentPaste"
+        >
+          <AddAttachment v-model:file-list="fileList" multiple @change="handleChange" @link-file="associatedFile" />
+          <MsFileList
+            ref="fileListRef"
+            v-model:file-list="fileList"
+            :show-tab="false"
+            :request-params="{
+              caseId: detailForm.id,
+              projectId: currentProjectId,
+            }"
+            :upload-func="uploadOrAssociationFile"
+            :handle-view="handlePreview"
+            :get-thumbnail="getAttachmentThumbnail"
+            :show-delete="false"
+            @finish="uploadFileOver"
+          >
+            <template #actions="{ item }">
+              <div v-if="props.allowEdit">
+                <!-- 本地文件 -->
+                <div v-if="item.local || item.status === 'init'" class="flex items-center font-normal">
+                  <MsButton
+                    v-if="item.file.type.includes('/image')"
+                    type="button"
+                    status="primary"
+                    class="!mr-0"
+                    @click="handlePreview(item)"
+                  >
+                    {{ t('ms.upload.preview') }}
+                  </MsButton>
+                  <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
+                  <SaveAsFilePopover
+                    v-if="!props.isTestPlan && item.uid === activeTransferFileParams?.uid"
+                    v-model:visible="transferVisible"
+                    :saving-file="activeTransferFileParams"
+                    :file-save-as-source-id="(form.id as string)"
+                    :file-save-as-api="transferFileRequest"
+                    :file-module-options-api="getTransferFileTree"
+                    source-id-key="caseId"
+                    @finish="emit('updateSuccess')"
+                  />
+                  <MsButton
+                    v-if="props.allowEdit && !props.isTestPlan && hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])"
+                    type="button"
+                    status="primary"
+                    class="!mr-0"
+                    @click="transferFileHandler(item)"
+                  >
+                    {{ t('caseManagement.featureCase.storage') }}
+                  </MsButton>
+                  <a-divider
+                    v-if="props.allowEdit && !props.isTestPlan && hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])"
+                    direction="vertical"
+                  />
+                  <MsButton
+                    v-if="
+                      item.status === 'done' &&
+                      props.allowEdit &&
+                      !props.isTestPlan &&
+                      hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                    "
+                    type="button"
+                    status="primary"
+                    class="!mr-0"
+                    @click="downloadFile(item)"
+                  >
+                    {{ t('caseManagement.featureCase.download') }}
+                  </MsButton>
+                  <a-divider
+                    v-if="
+                      item.status === 'done' &&
+                      props.allowEdit &&
+                      !props.isTestPlan &&
+                      hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                    "
+                    direction="vertical"
+                  />
+                  <MsButton
+                    v-if="item.status !== 'uploading' && props.allowEdit && !props.isTestPlan"
+                    type="button"
+                    :status="item.deleteContent ? 'primary' : 'danger'"
+                    class="!mr-0"
+                    @click="deleteFileHandler(item)"
+                  >
+                    {{ t(item.deleteContent) || t('ms.upload.delete') }}
+                  </MsButton>
+                </div>
+                <!-- 关联文件 -->
+                <div v-else class="flex items-center font-normal">
+                  <MsButton
+                    v-if="item.file.type.includes('/image')"
+                    type="button"
+                    status="primary"
+                    class="!mr-0"
+                    @click="handlePreview(item)"
+                  >
+                    {{ t('ms.upload.preview') }}
+                  </MsButton>
+                  <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
+                  <MsButton
+                    v-if="item.status === 'done'"
+                    type="button"
+                    status="primary"
+                    class="!mr-0"
+                    @click="downloadFile(item)"
+                  >
+                    {{ t('caseManagement.featureCase.download') }}
+                  </MsButton>
+                  <a-divider v-if="item.status === 'done'" direction="vertical" />
+                  <MsButton
+                    v-if="
+                      item.isUpdateFlag &&
+                      props.allowEdit &&
+                      !props.isTestPlan &&
+                      hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                    "
+                    type="button"
+                    status="primary"
+                    class="!mr-0"
+                    @click="handleUpdateFile(item)"
+                  >
+                    {{ t('common.update') }}
+                  </MsButton>
+                  <a-divider
+                    v-if="
+                      item.isUpdateFlag &&
+                      props.allowEdit &&
+                      !props.isTestPlan &&
+                      hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                    "
+                    direction="vertical"
+                  />
+                  <MsButton
+                    v-if="
+                      item.status !== 'uploading' &&
+                      props.allowEdit &&
+                      !props.isTestPlan &&
+                      hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
+                    "
+                    type="button"
+                    :status="item.deleteContent ? 'primary' : 'danger'"
+                    class="!mr-0"
+                    @click="deleteFileHandler(item)"
+                  >
+                    {{ t(item.deleteContent) }}
+                  </MsButton>
+                </div>
               </div>
-              <!-- 关联文件 -->
-              <div v-else class="flex items-center font-normal">
-                <MsButton
-                  v-if="item.file.type.includes('/image')"
-                  type="button"
-                  status="primary"
-                  class="!mr-0"
-                  @click="handlePreview(item)"
-                >
-                  {{ t('ms.upload.preview') }}
-                </MsButton>
-                <a-divider v-if="item.file.type.includes('/image')" direction="vertical" />
-                <MsButton
-                  v-if="item.status === 'done'"
-                  type="button"
-                  status="primary"
-                  class="!mr-0"
-                  @click="downloadFile(item)"
-                >
-                  {{ t('caseManagement.featureCase.download') }}
-                </MsButton>
-                <a-divider v-if="item.status === 'done'" direction="vertical" />
-                <MsButton
-                  v-if="
-                    item.isUpdateFlag &&
-                    props.allowEdit &&
-                    !props.isTestPlan &&
-                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                  "
-                  type="button"
-                  status="primary"
-                  class="!mr-0"
-                  @click="handleUpdateFile(item)"
-                >
-                  {{ t('common.update') }}
-                </MsButton>
-                <a-divider
-                  v-if="
-                    item.isUpdateFlag &&
-                    props.allowEdit &&
-                    !props.isTestPlan &&
-                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                  "
-                  direction="vertical"
-                />
-                <MsButton
-                  v-if="
-                    item.status !== 'uploading' &&
-                    props.allowEdit &&
-                    !props.isTestPlan &&
-                    hasAllPermission(['FUNCTIONAL_CASE:READ+UPDATE'])
-                  "
-                  type="button"
-                  :status="item.deleteContent ? 'primary' : 'danger'"
-                  class="!mr-0"
-                  @click="deleteFileHandler(item)"
-                >
-                  {{ t(item.deleteContent) }}
-                </MsButton>
-              </div>
-            </div>
-          </template>
-          <template #title="{ item }">
-            <span v-if="item.isUpdateFlag" class="ml-4 flex items-center font-normal text-[rgb(var(--warning-6))]"
-              ><icon-exclamation-circle-fill /> <span>{{ t('caseManagement.featureCase.fileIsUpdated') }}</span>
-            </span>
-          </template>
-        </MsFileList>
-      </div>
-    </a-form>
+            </template>
+            <template #title="{ item }">
+              <span v-if="item.isUpdateFlag" class="ml-4 flex items-center font-normal text-[rgb(var(--warning-6))]"
+                ><icon-exclamation-circle-fill /> <span>{{ t('caseManagement.featureCase.fileIsUpdated') }}</span>
+              </span>
+            </template>
+          </MsFileList>
+        </div>
+      </a-form>
+      <aside class="case-detail-review-summary">
+        <div class="mb-3 font-medium">用例概览</div>
+        <dl>
+          <dt>用例名称</dt><dd>{{ detailForm.name || '-' }}</dd> <dt>ID</dt
+          ><dd>{{ detailForm.num || detailForm.id || '-' }}</dd> <dt>标签</dt
+          ><dd
+            ><a-tag v-for="tag in detailForm.tags || []" :key="tag">{{ tag }}</a-tag
+            ><span v-if="!detailForm.tags?.length">-</span></dd
+          >
+        </dl>
+      </aside>
+    </div>
     <!-- 测试计划等只读场景：仅展示附件列表 -->
     <div v-if="props.isTestPlan" class="w-[90%]">
       <div class="mb-[16px] font-medium text-[var(--color-text-1)]">
@@ -1579,6 +1592,46 @@
         color: #ffffff;
         background: var(--color-text-4);
       }
+    }
+  }
+</style>
+
+<style scoped lang="less">
+  .case-detail-review-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 24px;
+  }
+  .case-detail-review-grid > form {
+    min-width: 0;
+  }
+  .case-detail-review-summary {
+    align-self: start;
+    padding: 16px;
+    background: var(--color-fill-1);
+    border: 1px solid var(--color-border-2);
+    border-radius: 6px;
+  }
+  .case-detail-review-summary dt {
+    margin-top: 12px;
+    color: var(--color-text-3);
+  }
+  .case-detail-review-summary dd {
+    margin: 6px 0 0;
+    overflow-wrap: anywhere;
+  }
+  .case-detail-review-summary :deep(.arco-tag) {
+    max-width: 100%;
+    height: auto;
+    margin: 0 4px 4px 0;
+    white-space: normal;
+  }
+  @media (max-width: 1100px) {
+    .case-detail-review-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .case-detail-review-summary {
+      order: -1;
     }
   }
 </style>

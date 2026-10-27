@@ -1,0 +1,560 @@
+[
+  {
+    "id": "UI01",
+    "requirement": "AC-018",
+    "status": "失败",
+    "expected": "用例批量条布局与Demo一致",
+    "actual": "批量条位置/底色/内边距不一致",
+    "evidence": [
+      "raw/cases-live.png",
+      "raw/cases-demo.png",
+      "case-style-live-ready.json"
+    ],
+    "script": "round-07.mjs",
+    "source": {
+      "file": "msp-integrated-delivery-plan-20261023.md",
+      "line": 63,
+      "baseline": "| UI-BASE | 原case/plan/review SFC局部样式 | 不替换API和Ms组件 | 无业务迁移 | 常驻按钮、权限、列配置无回退 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "UI02",
+    "requirement": "AC-018",
+    "status": "失败",
+    "expected": "目录和计划列表采用确认样式",
+    "actual": "约299px目录、49px计划行高；优化目标未完整落地",
+    "evidence": [
+      "raw/plan-list-live.png",
+      "raw/plan-list-demo.png"
+    ],
+    "script": "round-08.mjs",
+    "source": {
+      "file": "msp-integrated-delivery-plan-20261023.md",
+      "line": 63,
+      "baseline": "| UI-BASE | 原case/plan/review SFC局部样式 | 不替换API和Ms组件 | 无业务迁移 | 常驻按钮、权限、列配置无回退 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "UI03",
+    "requirement": "AC-018",
+    "status": "失败",
+    "expected": "用例/计划详情采用确认布局且保留入口",
+    "actual": "详情结构仍有明确差异",
+    "evidence": [
+      "raw/case-detail-live.png",
+      "raw/case-detail-demo.png",
+      "raw/plan-detail-live.png",
+      "raw/plan-detail-demo.png"
+    ],
+    "script": "round-10.mjs/round-33.mjs",
+    "source": {
+      "file": "msp-integrated-delivery-plan-20261023.md",
+      "line": 63,
+      "baseline": "| UI-BASE | 原case/plan/review SFC局部样式 | 不替换API和Ms组件 | 无业务迁移 | 常驻按钮、权限、列配置无回退 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "UI04",
+    "requirement": "AC-018",
+    "status": "失败",
+    "expected": "原型优化开关真正切换CSS",
+    "actual": "开关true但根元素没有optimized类；原型缺陷",
+    "evidence": [
+      "demo-toggle-check.json"
+    ],
+    "script": "round-07.mjs",
+    "source": {
+      "file": "msp-integrated-delivery-plan-20261023.md",
+      "line": 63,
+      "baseline": "| UI-BASE | 原case/plan/review SFC局部样式 | 不替换API和Ms组件 | 无业务迁移 | 常驻按钮、权限、列配置无回退 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "UI05",
+    "requirement": "AC-018",
+    "status": "通过",
+    "expected": "抽样1280宽布局无整页水平溢出",
+    "actual": "用例/计划/评审/资产抽样，独立滚动；不代表全列均操作验收",
+    "evidence": [
+      "narrow-layout.json",
+      "asset-narrow.json",
+      "raw/plan-list-1280.png"
+    ],
+    "script": "round-14.mjs/round-33.mjs/round-35.mjs",
+    "source": {
+      "file": "msp-integrated-delivery-plan-20261023.md",
+      "line": 63,
+      "baseline": "| UI-BASE | 原case/plan/review SFC局部样式 | 不替换API和Ms组件 | 无业务迁移 | 常驻按钮、权限、列配置无回退 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "SYNC01",
+    "requirement": "AC-001",
+    "status": "通过",
+    "expected": "可见计划无需手刷反映源名称、等级、标签",
+    "actual": "约34秒后观察已更新，源字段已恢复",
+    "evidence": [
+      "visible-refresh-observation.json",
+      "refresh-source-update.json",
+      "source-restored.json"
+    ],
+    "script": "round-28.mjs/round-29.mjs/native-08.mjs",
+    "source": {
+      "file": "msp-live-issues-detailed-remediation-plan-20261023.md",
+      "line": 41,
+      "baseline": "| SYNC-01 新增 | 进入、返回、激活测试计划列表/详情/用例页自动显示最新数据 | 计划页面接入统一刷新，按组织/项目/计划/版本隔离状态 | 查询返回统一有效数据及revision | AT01～05 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "SYNC02",
+    "requirement": "AC-001",
+    "status": "待确认",
+    "expected": "未保存草稿切页/自动刷新不丢",
+    "actual": "内容保留但已自动保存，不能证明未保存草稿保护",
+    "evidence": [
+      "draft-tab-check.json",
+      "plan-document-cleanup.json"
+    ],
+    "script": "round-11.mjs/round-12.mjs/round-39.mjs",
+    "source": {
+      "file": "msp-live-issues-detailed-remediation-plan-20261023.md",
+      "line": 41,
+      "baseline": "| SYNC-01 新增 | 进入、返回、激活测试计划列表/详情/用例页自动显示最新数据 | 计划页面接入统一刷新，按组织/项目/计划/版本隔离状态 | 查询返回统一有效数据及revision | AT01～05 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "COMPAT01",
+    "requirement": "AC-006",
+    "status": "通过",
+    "expected": "旧生成入口转当前执行用例",
+    "actual": "重定向到featureCase",
+    "evidence": [
+      "legacy-redirect.json"
+    ],
+    "script": "round-12.mjs",
+    "source": {
+      "file": "msp-live-issues-detailed-remediation-plan-20261023.md",
+      "line": 46,
+      "baseline": "| LIVE-03 | 隐藏生成用例，旧链接兼容 | caseManagement.ts、顶部页签 | 模型能力开关与接口权限 | AT19 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "CACHE01",
+    "requirement": "AC-017",
+    "status": "通过",
+    "expected": "实际切换项目后不显示前项目详情",
+    "actual": "测试1用例页未显示旧101步用例，原项目已恢复",
+    "evidence": [
+      "cross-project-settled.json",
+      "raw/cross-project-settled.png"
+    ],
+    "script": "round-44.mjs/round-45.mjs/round-47.mjs",
+    "source": {
+      "file": "msp-live-issues-detailed-remediation-plan-20261023.md",
+      "line": 57,
+      "baseline": "| LIVE-14 | 跨项目详情不得显示旧项目内容 | 用例父页、列表/详情切换、缓存键 | 资源项目归属校验 | AT03/28 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "ASSET01",
+    "requirement": "AC-023",
+    "status": "通过",
+    "expected": "批量清空分类产生真实任务结果",
+    "actual": "单条本轮人工资产任务SUCCEEDED",
+    "evidence": [
+      "batch-category-result.json",
+      "raw/batch-category-result.png"
+    ],
+    "script": "round-35.mjs/round-36.mjs/round-37.mjs",
+    "source": {
+      "file": "msp-integrated-delivery-plan-20261023.md",
+      "line": 71,
+      "baseline": "| ASSET-BATCH | 资产复选/批量/导出 | 独立资产scope适配原任务 | 权限/任务/审计 | XLSX内容、引用、逐项失败 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "ASSET02",
+    "requirement": "AC-023",
+    "status": "失败",
+    "expected": "有效名称可以新建分类",
+    "actual": "POST分类HTTP500，树为空",
+    "evidence": [
+      "category-create-check.json",
+      "raw/category-create-failure.png"
+    ],
+    "script": "round-25.mjs/round-26.mjs",
+    "source": {
+      "file": "msp-integrated-delivery-plan-20261023.md",
+      "line": 71,
+      "baseline": "| ASSET-BATCH | 资产复选/批量/导出 | 独立资产scope适配原任务 | 权限/任务/审计 | XLSX内容、引用、逐项失败 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "ASSET03",
+    "requirement": "AC-023",
+    "status": "阻塞",
+    "expected": "批量修改至非空目标分类",
+    "actual": "分类创建500，无有效目标分类；不算清空分类通过即全通过",
+    "evidence": [
+      "category-create-check.json"
+    ],
+    "script": "round-26.mjs",
+    "source": {
+      "file": "msp-integrated-delivery-plan-20261023.md",
+      "line": 71,
+      "baseline": "| ASSET-BATCH | 资产复选/批量/导出 | 独立资产scope适配原任务 | 权限/任务/审计 | XLSX内容、引用、逐项失败 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "MCP01",
+    "requirement": "AC-033",
+    "status": "失败",
+    "expected": "当前连接器支持服务端必填参数",
+    "actual": "连接器无requestId，创建被拒绝",
+    "evidence": [
+      "connector-create-blocked.json"
+    ],
+    "script": "functions.exec实际连接器调用",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 408,
+      "baseline": "| X10 | 两端工具、文档和技能包一致 | Node 包、原生 tools/list、下载包 | schema 契约测试、README/模板 | 不含旧逐步骤强制规则 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "MCP02",
+    "requirement": "AC-031",
+    "status": "通过",
+    "expected": "101原步骤明确不支持且不隐式截断",
+    "actual": "contract完整101步supported=false，upload拒绝",
+    "evidence": [
+      "mcp-101-canonical.json",
+      "mcp-update-unsupported.json"
+    ],
+    "script": "native-04.mjs/native-09.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 406,
+      "baseline": "| X08 | 文本用例及数量边界透明 | contract、submit | 类型能力声明、分类型定义和结果模型 | 文本/空步骤/100 与 101/1000 与 1001 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "MCP03",
+    "requirement": "AC-031",
+    "status": "通过",
+    "expected": "零步骤及空预期明确能力边界",
+    "actual": "均supported=false及明确原因",
+    "evidence": [
+      "mcp-boundaries.json"
+    ],
+    "script": "native-05.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 406,
+      "baseline": "| X08 | 文本用例及数量边界透明 | contract、submit | 类型能力声明、分类型定义和结果模型 | 文本/空步骤/100 与 101/1000 与 1001 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "IDEM01",
+    "requirement": "AC-029",
+    "status": "通过",
+    "expected": "嵌套对象键序等价",
+    "actual": "同caseId原结果重放",
+    "evidence": [
+      "mcp-101-canonical.json"
+    ],
+    "script": "native-04.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 404,
+      "baseline": "| X06 | 幂等重放授权、并发和外部副作用 | 全部 MCP 写入口及关联 REST | 通用缓存、OperationExecutor、上传状态机 | 第 21～22 节；不改 Runner 租约规则 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "IDEM02",
+    "requirement": "AC-029",
+    "status": "通过",
+    "expected": "有序步骤变更不当作等价",
+    "actual": "倒序相同key冲突",
+    "evidence": [
+      "mcp-101-canonical.json"
+    ],
+    "script": "native-04.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 404,
+      "baseline": "| X06 | 幂等重放授权、并发和外部副作用 | 全部 MCP 写入口及关联 REST | 通用缓存、OperationExecutor、上传状态机 | 第 21～22 节；不改 Runner 租约规则 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "IDEM03",
+    "requirement": "AC-026",
+    "status": "通过",
+    "expected": "大小写不同key独立",
+    "actual": "不同名称控制组两次成功",
+    "evidence": [
+      "mcp-key-case-diagnostic.json"
+    ],
+    "script": "native-06.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 401,
+      "baseline": "| X03 | 统一参数和幂等身份 | Node/原生工具及 HTTP 头 | dispatcher、OperationExecutor、import job、upload intent | 长度、字符、大小写、操作隔离 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "IDEM04",
+    "requirement": "AC-026",
+    "status": "通过",
+    "expected": "含空白key明确参数拒绝",
+    "actual": "AGENT_VALIDATION_ERROR",
+    "evidence": [
+      "mcp-boundaries.json"
+    ],
+    "script": "native-05.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 401,
+      "baseline": "| X03 | 统一参数和幂等身份 | Node/原生工具及 HTTP 头 | dispatcher、OperationExecutor、import job、upload intent | 长度、字符、大小写、操作隔离 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "ERR01",
+    "requirement": "AC-028",
+    "status": "失败",
+    "expected": "同名目录的拒绝为友好业务错误",
+    "actual": "不同key重复名称得到内部错误；不是大小写冲突",
+    "evidence": [
+      "mcp-key-case-diagnostic.json"
+    ],
+    "script": "native-05.mjs/native-06.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 403,
+      "baseline": "| X05 | 统一安全错误与未知结果处理 | Node client、原生 MCP | 业务错误映射、日志 traceId | HTTP/Holder/RPC 三条路径一致 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "IDEM05",
+    "requirement": "AC-029",
+    "status": "通过",
+    "expected": "版本更新重放原结果、旧版新请求拒绝",
+    "actual": "原updateTime重放，旧版本VERSION_CONFLICT",
+    "evidence": [
+      "mcp-update-unsupported.json"
+    ],
+    "script": "native-09.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 404,
+      "baseline": "| X06 | 幂等重放授权、并发和外部副作用 | 全部 MCP 写入口及关联 REST | 通用缓存、OperationExecutor、上传状态机 | 第 21～22 节；不改 Runner 租约规则 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "MCP04",
+    "requirement": "AC-025",
+    "status": "通过",
+    "expected": "三次普通事实发布不嵌套运行历史",
+    "actual": "三次独立ID，定义Hash一致；未改显示字段不覆盖整个T21",
+    "evidence": [
+      "mcp-consecutive-sanitize.json",
+      "mcp-consecutive-final.json"
+    ],
+    "script": "native-11.mjs/native-12.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 400,
+      "baseline": "| X02 | 定义快照不混入历史运行事实 | contract、execution.get、用例详情 | CaseDefinitionSnapshot、指纹版本、facts schemaVersion | 连续执行不嵌套；定义变更可识别 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "MCP05",
+    "requirement": "AC-028",
+    "status": "通过",
+    "expected": "非敏感事实引号换行不破坏JSON",
+    "actual": "真实换行及引号保存、查询可解析",
+    "evidence": [
+      "mcp-consecutive-final.json"
+    ],
+    "script": "native-12.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 403,
+      "baseline": "| X05 | 统一安全错误与未知结果处理 | Node client、原生 MCP | 业务错误映射、日志 traceId | HTTP/Holder/RPC 三条路径一致 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "MCP06",
+    "requirement": "AC-028",
+    "status": "阻塞",
+    "expected": "敏感事实加密脱敏后可读",
+    "actual": "环境缺加密密钥，安全拒绝；未降保护门槛",
+    "evidence": [
+      "mcp-consecutive-sanitize.json"
+    ],
+    "script": "native-11.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 403,
+      "baseline": "| X05 | 统一安全错误与未知结果处理 | Node client、原生 MCP | 业务错误映射、日志 traceId | HTTP/Holder/RPC 三条路径一致 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "MCP07",
+    "requirement": "AC-029",
+    "status": "通过",
+    "expected": "未知操作不得当作未执行",
+    "actual": "NOT_FOUND/UNKNOWN/原key重试提示",
+    "evidence": [
+      "mcp-boundaries.json"
+    ],
+    "script": "native-05.mjs",
+    "source": {
+      "file": "personal-execution-case-evidence-implementation-plan-20261027.md",
+      "line": 404,
+      "baseline": "| X06 | 幂等重放授权、并发和外部副作用 | 全部 MCP 写入口及关联 REST | 通用缓存、OperationExecutor、上传状态机 | 第 21～22 节；不改 Runner 租约规则 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "COMMENT01",
+    "requirement": "AC-013",
+    "status": "通过",
+    "expected": "评论版本冲突由原生MCP明确拒绝",
+    "actual": "编辑及重放成功，旧版VERSION_CONFLICT；不含浏览器UI",
+    "evidence": [
+      "comment-create.json",
+      "comment-conflict.json"
+    ],
+    "script": "native-14.mjs/native-15.mjs",
+    "source": {
+      "file": "msp-live-issues-detailed-remediation-plan-20261023.md",
+      "line": 53,
+      "baseline": "| LIVE-10 | 评论冲突明确提示 | 评论编辑交互 | 类型化业务码和错误映射 | AT24 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  },
+  {
+    "id": "DELETE01",
+    "requirement": "AC-016",
+    "status": "通过",
+    "expected": "预检链接在实际浏览器可达",
+    "actual": "准确目标/待确认/真人确认按钮；没有代真人点击",
+    "evidence": [
+      "delete-preview.json",
+      "raw/delete-confirmation.png"
+    ],
+    "script": "native-14.mjs/round-41.mjs",
+    "source": {
+      "file": "msp-live-issues-detailed-remediation-plan-20261023.md",
+      "line": 56,
+      "baseline": "| LIVE-13 | 删除预检确认链接可达 | caseDeletion.ts、confirm页面、路由过滤 | 预检归属、版本、真人确认状态机 | AT27 |"
+    },
+    "role": "陈启芬/米多公司",
+    "environment": "https://msp.ebcone.net",
+    "method": "ego DOM/真实截图/原生MCP/真实HTTP",
+    "annotation": "见 evidence-index.json 和报告指认图；非视觉接口不适用"
+  }
+]

@@ -1,0 +1,89 @@
+{
+  "count": 3443,
+  "first": {
+    "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56?current=1&pageSize=10&_t=1793084056459",
+    "method": "GET",
+    "status": 200,
+    "code": 100200,
+    "message": null,
+    "at": 1793084056694
+  },
+  "last": {
+    "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56/followup-options?_t=1793084123168",
+    "method": "GET",
+    "status": 0,
+    "at": 1793084123243
+  },
+  "last10": [
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56?current=1&pageSize=10&_t=1793084123052",
+      "method": "GET",
+      "status": 200,
+      "code": 100200,
+      "message": null,
+      "at": 1793084123083
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56/followup-options?_t=1793084123052",
+      "method": "GET",
+      "status": 0,
+      "at": 1793084123084
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56?current=1&pageSize=10&_t=1793084123083",
+      "method": "GET",
+      "status": 200,
+      "code": 100200,
+      "message": null,
+      "at": 1793084123106
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56/followup-options?_t=1793084123083",
+      "method": "GET",
+      "status": 0,
+      "at": 1793084123107
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56?current=1&pageSize=10&_t=1793084123107",
+      "method": "GET",
+      "status": 200,
+      "code": 100200,
+      "message": null,
+      "at": 1793084123136
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56/followup-options?_t=1793084123106",
+      "method": "GET",
+      "status": 0,
+      "at": 1793084123138
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56?current=1&pageSize=10&_t=1793084123136",
+      "method": "GET",
+      "status": 200,
+      "code": 100200,
+      "message": null,
+      "at": 1793084123168
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56/followup-options?_t=1793084123136",
+      "method": "GET",
+      "status": 0,
+      "at": 1793084123172
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56?current=1&pageSize=10&_t=1793084123168",
+      "method": "GET",
+      "status": 200,
+      "code": 100200,
+      "message": null,
+      "at": 1793084123241
+    },
+    {
+      "url": "https://msp.ebcone.net/api/ai/case-imports/9d548938-946a-4d91-a611-a43532727d56/followup-options?_t=1793084123168",
+      "method": "GET",
+      "status": 0,
+      "at": 1793084123243
+    }
+  ]
+}

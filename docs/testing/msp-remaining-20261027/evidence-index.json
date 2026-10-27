@@ -1,0 +1,232 @@
+[
+  {
+    "path": "raw/asset-1280.png",
+    "width": 1280,
+    "height": 900,
+    "sha256": "a0fc41acf6ae558eb90bec139989e961c4043bf2d3ae5b9c06a26fe0cb5c3db5",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089167.8115542,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/batch-category-result.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "97de8998f736445d2c5eb81d4457ad464f40c10a566c4566a297c1887f7b3286",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089203.609583,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/case-detail-1280.png",
+    "width": 1280,
+    "height": 900,
+    "sha256": "4a606af5e41b4524965a2a264ca1bae5eff72b93247ae6b2b29bae5cbd610da7",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089083.414745,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/case-detail-demo.png",
+    "width": 1908,
+    "height": 951,
+    "sha256": "d400ca3c7f46fb15c14a3966203aa66d57d8b25f3828efa0e2534497b400baef",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089025.912326,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/case-detail-live.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "9fffd8302b574825bc65ee0b6f50bfc35bf853e81446008aa59e8edf33743867",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089081.6870434,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/cases-1280.png",
+    "width": 1280,
+    "height": 900,
+    "sha256": "435d64f0007010b87c2ea5c25f2a5e1cf81e81291a2fa7f896ee59a111a36a9c",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088193.2877073,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/cases-demo.png",
+    "width": 1908,
+    "height": 951,
+    "sha256": "5a8b7cb696d59d3acf09596f2bb10b050f30fc9760902d3cd1466d9471f32ad9",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793087960.9707184,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/cases-live.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "dd5c3b341e5962c57fc0b038fd9f613457cdc0897c74a82014ea882bd6e38a99",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793087999.7468717,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/category-create-failure.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "96b222a8676279b29e89fe202c41332f7ade4bb3699e60ff59922ec69ee3bf0b",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088485.2171495,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/category-manager.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "f9fa376b89047d375bd7893e749fd1cf410ccf446b2e5cf167dc2cb1920231c0",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088429.9605772,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/cross-project-cleared.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "9206c0e71c1465a352d906269c04a9f7d57faa6034a13d6d58171c82e78eea55",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089598.721661,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/cross-project-settled.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "f8a6bd63e4c53a3b3551683701e8dc3a828b37e8aec468d4d772066396e1134c",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089639.7826767,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/delete-confirmation.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "37e9264cfa25559394419d174832977fffee73b20b56311cd62f72f5129e5b1e",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089548.4536414,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/plan-cases-live.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "014814d13932f116bc082f7bc53a1401057231b2e7638dbb8481d582ef1cf7b8",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088152.8116634,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/plan-detail-demo.png",
+    "width": 1908,
+    "height": 951,
+    "sha256": "c9da75c1d6d193752024dfa3aa4425b5823154c4e7e2fd2bb7acee1107c063fc",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088090.5159662,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/plan-detail-live.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "87389bf305cac859a802fe9e55dc3b83c0d35d41f37e88c20ad01ec889b26470",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088089.8940482,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/plan-list-1280.png",
+    "width": 1280,
+    "height": 900,
+    "sha256": "a905f09cf1826c46f5d17dd921ce51c49e41104859dd75a86a3ec35c3d387e9f",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793089086.2106683,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/plan-list-demo.png",
+    "width": 1908,
+    "height": 951,
+    "sha256": "fbeca324dc2b37942e5a5491d85fde046ee3b3c67b3216b18d543b4334f5dcf7",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088072.1363385,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/plan-list-live.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "e9d12566c1d082f54a9cf02b4d2abb3f6cf983ae8176f090a12e301f8d2ccc1e",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088069.777441,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/review-detail-1280.png",
+    "width": 1280,
+    "height": 900,
+    "sha256": "90959c177a78f2fd4f5c7d6488220c2d48d94842310f7e72e24a0579bec6d571",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088192.428805,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/review-detail-live.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "86ef70767d6ead78bcf52140f1cecfadaa1e37ec55f9679623100895a3d355f1",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088192.1231668,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/review-list-live.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "7ad68a491ecd31b68981cc5c76f1a84bea145d246194b26959bd46993d0bba72",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088172.81661,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  },
+  {
+    "path": "raw/visible-plan-refresh.png",
+    "width": 1920,
+    "height": 963,
+    "sha256": "10f028a1756fbe1139d3b3889b577f75554ec369fbe608fc8c584d5273d6a36c",
+    "run": "msp-remaining-20261027",
+    "mtime": 1793088948.2863564,
+    "role": "陈启芬/米多公司",
+    "note": "原始浏览器截图；Demo截图为示例原型，非业务运行证据"
+  }
+]

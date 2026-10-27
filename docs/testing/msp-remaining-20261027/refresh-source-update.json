@@ -1,0 +1,39 @@
+{
+  "at": "2026-10-27T08:15:12.805Z",
+  "request": {
+    "projectId": "1704667279923322880",
+    "caseId": "1710858183222763620",
+    "expectedUpdateTime": 1793084477893,
+    "requestId": "remaining.20261027:visible-refresh",
+    "patch": {
+      "name": "ACCEPTANCE-20261027-100步骤一图协议测试-已刷新-可见页刷新验收",
+      "description": "隔离验收数据；仅测试证据结构，不代表真实业务执行。REMAINING共享字段刷新验收",
+      "tags": [
+        "ACCEPTANCE-20261027",
+        "REMAINING-SYNC"
+      ],
+      "priority": "P2"
+    }
+  },
+  "response": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1710858183222763620\",\"name\":\"ACCEPTANCE-20261027-100步骤一图协议测试-已刷新-可见页刷新验收\",\"updateTime\":1793088913678,\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1710858183222763620",
+          "name": "ACCEPTANCE-20261027-100步骤一图协议测试-已刷新-可见页刷新验收",
+          "updateTime": 1793088913678,
+          "moduleId": "root"
+        }
+      }
+    }
+  }
+}

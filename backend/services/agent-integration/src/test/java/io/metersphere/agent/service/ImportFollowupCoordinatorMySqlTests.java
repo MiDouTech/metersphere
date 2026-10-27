@@ -33,6 +33,7 @@ class ImportFollowupCoordinatorMySqlTests {
   jdbc.execute("CREATE TABLE project(id VARCHAR(50),organization_id VARCHAR(50),deleted BOOLEAN,enable BOOLEAN)");jdbc.update("INSERT INTO project VALUES ('project','org',0,1)");
   jdbc.execute("CREATE TABLE test_plan(id VARCHAR(50) PRIMARY KEY,project_id VARCHAR(50),status VARCHAR(30),name VARCHAR(100))");
   jdbc.execute("CREATE TABLE case_review(id VARCHAR(50) PRIMARY KEY,project_id VARCHAR(50),status VARCHAR(30),name VARCHAR(100))");
+  jdbc.execute("CREATE TABLE case_review_user(review_id VARCHAR(50),user_id VARCHAR(50))");
   jdbc.execute("CREATE TABLE default_hub_sync_job(id VARCHAR(50) PRIMARY KEY,scope_project_id VARCHAR(50),create_user VARCHAR(50),job_type VARCHAR(30),status VARCHAR(30))");
   jdbc.execute("CREATE TABLE case_asset_import_result(job_id VARCHAR(50),target_case_id VARCHAR(50),status VARCHAR(30))");
   var imports=mock(AgentCaseImportService.class);var access=mock(AgentBusinessAccess.class);
@@ -64,5 +65,16 @@ class ImportFollowupCoordinatorMySqlTests {
   for(int i=0;i<5;i++)process("asset");
   assertEquals(List.of("asset-success"),jdbc.queryForList("SELECT case_id FROM functional_import_followup_item",String.class));
   assertEquals("SUCCEEDED",coordinator.status("asset","user").get("state"));
+ }
+ @Test void appendUsesExistingReviewersWithoutAskingForNewOnes() {
+  file();
+  jdbc.update("INSERT INTO test_plan VALUES ('existing-plan','project','PREPARED','plan')");
+  jdbc.update("INSERT INTO case_review VALUES ('existing-review','project','PREPARED','review')");
+  jdbc.update("INSERT INTO case_review_user VALUES ('existing-review','existing-reviewer')");
+  jdbc.update("INSERT INTO functional_import_followup_group VALUES ('group','project','existing-plan','existing-review',1,'user',1)");
+  var request=new ImportFollowupRequest();request.setPolicy("APPEND_EXISTING");request.setTargetGroupId("group");request.setExpectedGroupRevision(1L);
+  assertDoesNotThrow(()->coordinator.prepare("file","user",request));
+  assertEquals("existing-review",jdbc.queryForObject("SELECT review_id FROM functional_import_followup WHERE job_id='file'",String.class));
+  verifyNoInteractions(plans,reviews,planCases);
  }
 }

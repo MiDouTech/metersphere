@@ -1,0 +1,57 @@
+[
+  {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1710858183222763620\",\"num\":100008,\"name\":\"ACCEPTANCE-20261027-100步骤一图协议测试\",\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1710858183222763620",
+          "num": 100008,
+          "name": "ACCEPTANCE-20261027-100步骤一图协议测试",
+          "moduleId": "root"
+        }
+      }
+    }
+  },
+  {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1710858183222763620\",\"num\":100008,\"name\":\"ACCEPTANCE-20261027-100步骤一图协议测试\",\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1710858183222763620",
+          "num": 100008,
+          "name": "ACCEPTANCE-20261027-100步骤一图协议测试",
+          "moduleId": "root"
+        }
+      }
+    }
+  },
+  {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "IDEMPOTENCY_CONFLICT",
+        "traceId": "e237b5da-fe42-44ab-93be-56e7701c81f5"
+      },
+      "message": "相同请求标识的参数已变化，请使用新的请求标识",
+      "code": -32001
+    }
+  }
+]

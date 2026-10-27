@@ -1,0 +1,8 @@
+{
+  "http": 401,
+  "message": "Agent 凭据无效或已失效，请重新配置",
+  "context": {
+    "credentialOwner": "AGENT"
+  },
+  "code": 401
+}

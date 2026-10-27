@@ -1,0 +1,16 @@
+{
+  "requirements": {
+    "未执行": 10,
+    "通过": 16,
+    "待确认": 1,
+    "失败": 8,
+    "阻塞": 1
+  },
+  "requirementsTotal": 36,
+  "acceptanceCases": {
+    "未执行": 68,
+    "通过": 3,
+    "失败": 4
+  },
+  "acceptanceCasesTotal": 75
+}

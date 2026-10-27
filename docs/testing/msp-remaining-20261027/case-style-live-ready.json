@@ -1,0 +1,130 @@
+{
+  "viewport": [
+    1920,
+    963
+  ],
+  "url": "https://msp.ebcone.net/#/case-management/featureCase?orgId=100001&pId=1704667279923322880",
+  "optimizedClass": true,
+  "selectors": [
+    {
+      "selector": ".arco-split-pane-first",
+      "items": [
+        {
+          "text": "全部用例\n(11)\n未规划用例\n4\nMSP需求验收-20261023\n4\nACCEPTANCE-20261027-移动父目录\n0\nACCEPTANCE-20261027-导入目录\n3\nACCEPTAN",
+          "rect": {
+            "x": 201,
+            "y": 120,
+            "width": 298.5,
+            "height": 891,
+            "top": 120,
+            "right": 499.5,
+            "bottom": 1011,
+            "left": 201
+          },
+          "bg": "rgba(0, 0, 0, 0)",
+          "padding": "0px",
+          "radius": "0px"
+        }
+      ]
+    },
+    {
+      "selector": "#ms-table-footer-wrapper",
+      "items": [
+        {
+          "text": "已选择 0 条\n导出\n全选所有页\n编辑\n批量修改执行结果\n批量修改执行人\n移动到\n复制到\n清空\n共 11 条\n20 条/页\n1",
+          "rect": {
+            "x": 518.5,
+            "y": 880,
+            "width": 1356.5,
+            "height": 52,
+            "top": 880,
+            "right": 1875,
+            "bottom": 932,
+            "left": 518.5
+          },
+          "bg": "rgba(0, 0, 0, 0)",
+          "padding": "0px",
+          "radius": "0px"
+        }
+      ]
+    },
+    {
+      "selector": ".arco-table-th",
+      "items": [
+        {
+          "text": "",
+          "rect": {
+            "x": 518.5,
+            "y": 374.5,
+            "width": 40,
+            "height": 39,
+            "top": 374.5,
+            "right": 558.5,
+            "bottom": 413.5,
+            "left": 518.5
+          },
+          "bg": "rgb(255, 255, 255)",
+          "padding": "0px",
+          "radius": "0px"
+        },
+        {
+          "text": "",
+          "rect": {
+            "x": 558.5,
+            "y": 374.5,
+            "width": 60,
+            "height": 39,
+            "top": 374.5,
+            "right": 618.5,
+            "bottom": 413.5,
+            "left": 558.5
+          },
+          "bg": "rgb(255, 255, 255)",
+          "padding": "0px",
+          "radius": "0px"
+        },
+        {
+          "text": "ID",
+          "rect": {
+            "x": 618.5,
+            "y": 374.5,
+            "width": 150,
+            "height": 39,
+            "top": 374.5,
+            "right": 768.5,
+            "bottom": 413.5,
+            "left": 618.5
+          },
+          "bg": "rgb(255, 255, 255)",
+          "padding": "0px",
+          "radius": "0px"
+        }
+      ]
+    },
+    {
+      "selector": ".arco-table-tbody .arco-table-tr",
+      "items": []
+    },
+    {
+      "selector": ".ms-card",
+      "items": [
+        {
+          "text": "执行用例\nXmind用例\n刷新\n全部用例\n(11)\n未规划用例\n4\nMSP需求验收-20261023\n4\nACCEPTANCE-20261027-移动父目录\n0\nACCEPTANCE-20261027",
+          "rect": {
+            "x": 200,
+            "y": 56,
+            "width": 1698,
+            "height": 893,
+            "top": 56,
+            "right": 1898,
+            "bottom": 949,
+            "left": 200
+          },
+          "bg": "rgb(255, 255, 255)",
+          "padding": "0px",
+          "radius": "8px"
+        }
+      ]
+    }
+  ]
+}

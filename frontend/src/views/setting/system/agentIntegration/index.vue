@@ -544,7 +544,7 @@
       width: 170,
     },
     { title: 'system.agentIntegration.invocationCount', dataIndex: 'invocationCount', width: 120 },
-    { title: 'system.agentIntegration.enable', dataIndex: 'enable', slotName: 'enable', width: 100 },
+    { title: 'system.agentIntegration.enable', dataIndex: 'enable', slotName: 'enable', fixed: 'right', width: 100 },
     { title: 'common.operation', slotName: 'action', fixed: 'right', width: 140 },
   ];
 
@@ -770,5 +770,16 @@
   .agent-integration-viewport :deep(.arco-scrollbar) {
     min-width: 0;
     max-width: 100%;
+  }
+  .agent-integration-viewport :deep(.ms-base-table),
+  .agent-integration-viewport :deep(.arco-table),
+  .agent-integration-viewport :deep(.arco-table-container),
+  .agent-integration-viewport :deep(.arco-table-content) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .agent-integration-viewport :deep(.arco-table-body.arco-scrollbar-container) {
+    overflow-x: auto !important;
   }
 </style>

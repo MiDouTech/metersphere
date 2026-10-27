@@ -1,0 +1,57 @@
+{
+  "upper": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"id\":\"1710964097116282880\",\"name\":\"REMAINING-20261027-大小写独立A\",\"path\":null,\"parentId\":null}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "id": "1710964097116282880",
+          "name": "REMAINING-20261027-大小写独立A",
+          "path": null,
+          "parentId": null
+        }
+      }
+    }
+  },
+  "lower": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"id\":\"1710964097116282881\",\"name\":\"REMAINING-20261027-大小写独立B\",\"path\":null,\"parentId\":null}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "id": "1710964097116282881",
+          "name": "REMAINING-20261027-大小写独立B",
+          "path": null,
+          "parentId": null
+        }
+      }
+    }
+  },
+  "control": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "AI_EXECUTION_INTERNAL_ERROR",
+        "traceId": "0041f53e-7041-45f5-b3a8-7aa0cd2faaae"
+      },
+      "message": "服务暂时不可用，请使用 traceId 联系管理员",
+      "code": -32001
+    }
+  }
+}

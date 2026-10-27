@@ -1,0 +1,33 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"previewId\":\"f23a6972-ba87-49e0-95e2-7c9f8f651df9\",\"projectId\":\"1704667279923322880\",\"targets\":[{\"id\":\"1710963736339030026\",\"name\":\"REMAINING-20261027-零步骤\",\"updateTime\":1793088797929,\"moduleId\":\"root\"}],\"activeTaskIds\":[],\"state\":\"PENDING\",\"expiresAt\":1793090381568,\"confirmationPath\":\"/#/case-deletion/confirm/f23a6972-ba87-49e0-95e2-7c9f8f651df9\",\"message\":\"请核对目标版本。只有当前用户在确认页面作出选择后，才能继续删除。\",\"webRequest\":false}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "previewId": "f23a6972-ba87-49e0-95e2-7c9f8f651df9",
+        "projectId": "1704667279923322880",
+        "targets": [
+          {
+            "id": "1710963736339030026",
+            "name": "REMAINING-20261027-零步骤",
+            "updateTime": 1793088797929,
+            "moduleId": "root"
+          }
+        ],
+        "activeTaskIds": [],
+        "state": "PENDING",
+        "expiresAt": 1793090381568,
+        "confirmationPath": "/#/case-deletion/confirm/f23a6972-ba87-49e0-95e2-7c9f8f651df9",
+        "message": "请核对目标版本。只有当前用户在确认页面作出选择后，才能继续删除。",
+        "webRequest": false
+      }
+    }
+  }
+}

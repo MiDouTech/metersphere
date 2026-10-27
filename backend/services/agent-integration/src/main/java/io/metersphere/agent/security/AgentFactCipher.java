@@ -42,6 +42,10 @@ public class AgentFactCipher {
         }catch(MSException error){throw error;}catch(Exception error){throw new MSException("QUALITY_FACTS_DECRYPTION_FAILED");}
     }
     public static boolean protectedValue(String value){return value!=null && value.startsWith(PREFIX);}
+    /** Configuration readiness only; never returns key material or decrypted facts. */
+    public boolean configured() {
+        try { key(); return true; } catch (MSException unavailable) { return false; }
+    }
     private SecretKeySpec key(){
         try {byte[] bytes=Base64.getDecoder().decode(encodedKey);if(bytes.length!=32)throw new IllegalArgumentException();return new SecretKeySpec(bytes,"AES");}
         catch(Exception error){throw new MSException("QUALITY_FACTS_KEY_NOT_CONFIGURED");}

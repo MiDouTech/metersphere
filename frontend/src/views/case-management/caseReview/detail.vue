@@ -1,7 +1,8 @@
 <template>
   <MsCard
+    class="management-review"
     :loading="loading"
-    :header-min-width="1100"
+    :header-min-width="0"
     :min-width="150"
     auto-height
     hide-footer
@@ -385,4 +386,8 @@
   :deep(.arco-tabs-content) {
     @apply hidden;
   }
+</style>
+
+<style scoped lang="less">
+  @import '@/assets/style/management-review.less';
 </style>

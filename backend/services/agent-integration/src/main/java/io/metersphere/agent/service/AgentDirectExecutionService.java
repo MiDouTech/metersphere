@@ -73,10 +73,10 @@ public class AgentDirectExecutionService {
                     var source=source(args);
                     if(MAPPER.valueToTree(definition(source)).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length>1048576)fail("STEP_FACTS_LIMIT_EXCEEDED");
                     String name=string(args,"fileName"), type=string(args,"contentType");
-                    if(name.length()>200 || name.contains("/") || name.contains("\\") || name.chars().anyMatch(c->c<32 || c=='"')) fail("QUALITY_EVIDENCE_INVALID");
+                    if(name.length()>200 || name.contains("/") || name.contains("\\") || name.chars().anyMatch(c->c<32 || c=='"')) fail("QUALITY_CASE_EVIDENCE_INVALID");
                     byte[] bytes=decodeImage(string(args,"base64"),type);
                     String suffix="image/png".equals(type)?".png":".jpg";
-                    if(!(name.toLowerCase(Locale.ROOT).endsWith(suffix) || "image/jpeg".equals(type) && name.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) fail("QUALITY_EVIDENCE_INVALID");
+                    if(!(name.toLowerCase(Locale.ROOT).endsWith(suffix) || "image/jpeg".equals(type) && name.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) fail("QUALITY_CASE_EVIDENCE_INVALID");
                     var token=AgentTokenContext.get();
                     // Serialize a token's pending upload quota, including concurrent requests.
                     jdbc.queryForList("SELECT id FROM agent_token WHERE id=? FOR UPDATE",token.getId());
@@ -148,7 +148,7 @@ public class AgentDirectExecutionService {
                     for(String evidenceId:new TreeSet<>(evidenceIds)) {
                         var rows=jdbc.queryForList("SELECT id,file_name,content_type,size_bytes,sha256,evidence_scope,definition_hash_version,content_hash FROM agent_case_evidence WHERE id=? AND token_id=? AND user_id=? AND project_id=? AND case_id=? AND submission_id IS NULL AND expires_at>? FOR UPDATE",
                                 evidenceId,token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),now);
-                        if(rows.size()!=1) fail("QUALITY_EVIDENCE_INVALID");
+                        if(rows.size()!=1) fail("QUALITY_CASE_EVIDENCE_INVALID");
                         var file=rows.getFirst();
                         String algorithm=Objects.toString(file.get("definition_hash_version"),"legacy-dto-v1");
                         if("definition-v2".equals(algorithm)) {
@@ -246,14 +246,14 @@ public class AgentDirectExecutionService {
         Set<String> ids=new LinkedHashSet<>();
         if(args.containsKey("evidenceIds")) collectIds(MAPPER.valueToTree(args.get("evidenceIds")),ids);
         for(JsonNode step:steps) if(step.has("evidenceIds")) collectIds(step.get("evidenceIds"),ids);
-        if(ids.isEmpty()) fail("QUALITY_EVIDENCE_REQUIRED");
+        if(ids.isEmpty()) fail("QUALITY_CASE_EVIDENCE_REQUIRED");
         if(ids.size()>1000) fail("STEP_FACTS_LIMIT_EXCEEDED");
         return ids;
     }
     private static void collectIds(JsonNode values,Set<String> ids) {
-        if(!values.isArray() || values.size()>10) fail("QUALITY_EVIDENCE_INVALID");
+        if(!values.isArray() || values.size()>10) fail("QUALITY_CASE_EVIDENCE_INVALID");
         for(JsonNode value:values) {
-            if(!value.isTextual() || value.asText().isBlank() || value.asText().length()>64) fail("QUALITY_EVIDENCE_INVALID");
+            if(!value.isTextual() || value.asText().isBlank() || value.asText().length()>64) fail("QUALITY_CASE_EVIDENCE_INVALID");
             ids.add(value.asText());
         }
     }
@@ -278,7 +278,7 @@ public class AgentDirectExecutionService {
         result.put("steps",steps);return result;
     }
     static byte[] decodeImage(String base64,String type) {
-        if(base64.length()>((MAX_FILE+2)/3)*4 || !Set.of("image/png","image/jpeg").contains(type)) throw new MSException("QUALITY_EVIDENCE_INVALID");
+        if(base64.length()>((MAX_FILE+2)/3)*4 || !Set.of("image/png","image/jpeg").contains(type)) throw new MSException("QUALITY_CASE_EVIDENCE_INVALID");
         try {
             byte[] bytes=Base64.getDecoder().decode(base64);
             if(bytes.length==0 || bytes.length>MAX_FILE) throw new IllegalArgumentException();
@@ -295,7 +295,7 @@ public class AgentDirectExecutionService {
                 } finally {reader.dispose();}
             }
             return bytes;
-        } catch(Exception error) { throw new MSException("QUALITY_EVIDENCE_INVALID"); }
+        } catch(Exception error) { throw new MSException("QUALITY_CASE_EVIDENCE_INVALID"); }
     }
     @Scheduled(fixedDelay=3600000)
     public void expirePendingEvidence() {

@@ -1,0 +1,2003 @@
+{
+  "planCases": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"projectId\":\"1704667279923322880\",\"current\":1,\"pageSize\":10,\"hasMore\":false,\"matchedBy\":[],\"matchedModules\":[],\"matchedModuleIds\":[],\"total\":1,\"warnings\":[],\"cases\":[{\"executionRef\":{\"id\":\"d6e6eb1b-2255-48b6-915e-a4599265ffae\",\"type\":\"DIRECT_SUBMISSION\"},\"executionFacts\":{\"schemaVersion\":\"direct-execution.v2\",\"definition\":{\"caseId\":\"1710858183222763620\",\"projectId\":\"1704667279923322880\",\"versionId\":\"1704667279923322928\",\"name\":\"ACCEPTANCE-20261027-100步骤一图协议测试\",\"caseEditType\":\"STEP\",\"description\":\"隔离验收数据；仅测试证据结构，不代表真实业务执行\",\"prerequisite\":\"\",\"priority\":\"P1\",\"customFields\":[],\"steps\":[{\"position\":1,\"description\":\"协议验收检查位置 1\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":2,\"description\":\"协议验收检查位置 2\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":3,\"description\":\"协议验收检查位置 3\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":4,\"description\":\"协议验收检查位置 4\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":5,\"description\":\"协议验收检查位置 5\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":6,\"description\":\"协议验收检查位置 6\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":7,\"description\":\"协议验收检查位置 7\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":8,\"description\":\"协议验收检查位置 8\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":9,\"description\":\"协议验收检查位置 9\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":10,\"description\":\"协议验收检查位置 10\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":11,\"description\":\"协议验收检查位置 11\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":12,\"description\":\"协议验收检查位置 12\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":13,\"description\":\"协议验收检查位置 13\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":14,\"description\":\"协议验收检查位置 14\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":15,\"description\":\"协议验收检查位置 15\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":16,\"description\":\"协议验收检查位置 16\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":17,\"description\":\"协议验收检查位置 17\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":18,\"description\":\"协议验收检查位置 18\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":19,\"description\":\"协议验收检查位置 19\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":20,\"description\":\"协议验收检查位置 20\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":21,\"description\":\"协议验收检查位置 21\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":22,\"description\":\"协议验收检查位置 22\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":23,\"description\":\"协议验收检查位置 23\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":24,\"description\":\"协议验收检查位置 24\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":25,\"description\":\"协议验收检查位置 25\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":26,\"description\":\"协议验收检查位置 26\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":27,\"description\":\"协议验收检查位置 27\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":28,\"description\":\"协议验收检查位置 28\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":29,\"description\":\"协议验收检查位置 29\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":30,\"description\":\"协议验收检查位置 30\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":31,\"description\":\"协议验收检查位置 31\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":32,\"description\":\"协议验收检查位置 32\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":33,\"description\":\"协议验收检查位置 33\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":34,\"description\":\"协议验收检查位置 34\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":35,\"description\":\"协议验收检查位置 35\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":36,\"description\":\"协议验收检查位置 36\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":37,\"description\":\"协议验收检查位置 37\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":38,\"description\":\"协议验收检查位置 38\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":39,\"description\":\"协议验收检查位置 39\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":40,\"description\":\"协议验收检查位置 40\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":41,\"description\":\"协议验收检查位置 41\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":42,\"description\":\"协议验收检查位置 42\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":43,\"description\":\"协议验收检查位置 43\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":44,\"description\":\"协议验收检查位置 44\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":45,\"description\":\"协议验收检查位置 45\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":46,\"description\":\"协议验收检查位置 46\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":47,\"description\":\"协议验收检查位置 47\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":48,\"description\":\"协议验收检查位置 48\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":49,\"description\":\"协议验收检查位置 49\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":50,\"description\":\"协议验收检查位置 50\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":51,\"description\":\"协议验收检查位置 51\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":52,\"description\":\"协议验收检查位置 52\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":53,\"description\":\"协议验收检查位置 53\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":54,\"description\":\"协议验收检查位置 54\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":55,\"description\":\"协议验收检查位置 55\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":56,\"description\":\"协议验收检查位置 56\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":57,\"description\":\"协议验收检查位置 57\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":58,\"description\":\"协议验收检查位置 58\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":59,\"description\":\"协议验收检查位置 59\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":60,\"description\":\"协议验收检查位置 60\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":61,\"description\":\"协议验收检查位置 61\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":62,\"description\":\"协议验收检查位置 62\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":63,\"description\":\"协议验收检查位置 63\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":64,\"description\":\"协议验收检查位置 64\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":65,\"description\":\"协议验收检查位置 65\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":66,\"description\":\"协议验收检查位置 66\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":67,\"description\":\"协议验收检查位置 67\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":68,\"description\":\"协议验收检查位置 68\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":69,\"description\":\"协议验收检查位置 69\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":70,\"description\":\"协议验收检查位置 70\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":71,\"description\":\"协议验收检查位置 71\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":72,\"description\":\"协议验收检查位置 72\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":73,\"description\":\"协议验收检查位置 73\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":74,\"description\":\"协议验收检查位置 74\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":75,\"description\":\"协议验收检查位置 75\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":76,\"description\":\"协议验收检查位置 76\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":77,\"description\":\"协议验收检查位置 77\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":78,\"description\":\"协议验收检查位置 78\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":79,\"description\":\"协议验收检查位置 79\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":80,\"description\":\"协议验收检查位置 80\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":81,\"description\":\"协议验收检查位置 81\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":82,\"description\":\"协议验收检查位置 82\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":83,\"description\":\"协议验收检查位置 83\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":84,\"description\":\"协议验收检查位置 84\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":85,\"description\":\"协议验收检查位置 85\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":86,\"description\":\"协议验收检查位置 86\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":87,\"description\":\"协议验收检查位置 87\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":88,\"description\":\"协议验收检查位置 88\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":89,\"description\":\"协议验收检查位置 89\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":90,\"description\":\"协议验收检查位置 90\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":91,\"description\":\"协议验收检查位置 91\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":92,\"description\":\"协议验收检查位置 92\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":93,\"description\":\"协议验收检查位置 93\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":94,\"description\":\"协议验收检查位置 94\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":95,\"description\":\"协议验收检查位置 95\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":96,\"description\":\"协议验收检查位置 96\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":97,\"description\":\"协议验收检查位置 97\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":98,\"description\":\"协议验收检查位置 98\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":99,\"description\":\"协议验收检查位置 99\",\"expected\":\"结构化步骤保留，图片按用例归属\"},{\"position\":100,\"description\":\"协议验收检查位置 100\",\"expected\":\"结构化步骤保留，图片按用例归属\"}]},\"steps\":[{\"stepNum\":1,\"actual\":\"隔离协议验收数据：位置1已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":2,\"actual\":\"隔离协议验收数据：位置2已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":3,\"actual\":\"隔离协议验收数据：位置3已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":4,\"actual\":\"隔离协议验收数据：位置4已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":5,\"actual\":\"隔离协议验收数据：位置5已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":6,\"actual\":\"隔离协议验收数据：位置6已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":7,\"actual\":\"隔离协议验收数据：位置7已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":8,\"actual\":\"隔离协议验收数据：位置8已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":9,\"actual\":\"隔离协议验收数据：位置9已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":10,\"actual\":\"隔离协议验收数据：位置10已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":11,\"actual\":\"隔离协议验收数据：位置11已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":12,\"actual\":\"隔离协议验收数据：位置12已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":13,\"actual\":\"隔离协议验收数据：位置13已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":14,\"actual\":\"隔离协议验收数据：位置14已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":15,\"actual\":\"隔离协议验收数据：位置15已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":16,\"actual\":\"隔离协议验收数据：位置16已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":17,\"actual\":\"隔离协议验收数据：位置17已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":18,\"actual\":\"隔离协议验收数据：位置18已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":19,\"actual\":\"隔离协议验收数据：位置19已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":20,\"actual\":\"隔离协议验收数据：位置20已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":21,\"actual\":\"隔离协议验收数据：位置21已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":22,\"actual\":\"隔离协议验收数据：位置22已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":23,\"actual\":\"隔离协议验收数据：位置23已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":24,\"actual\":\"隔离协议验收数据：位置24已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":25,\"actual\":\"隔离协议验收数据：位置25已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":26,\"actual\":\"隔离协议验收数据：位置26已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":27,\"actual\":\"隔离协议验收数据：位置27已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":28,\"actual\":\"隔离协议验收数据：位置28已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":29,\"actual\":\"隔离协议验收数据：位置29已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":30,\"actual\":\"隔离协议验收数据：位置30已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":31,\"actual\":\"隔离协议验收数据：位置31已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":32,\"actual\":\"隔离协议验收数据：位置32已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":33,\"actual\":\"隔离协议验收数据：位置33已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":34,\"actual\":\"隔离协议验收数据：位置34已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":35,\"actual\":\"隔离协议验收数据：位置35已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":36,\"actual\":\"隔离协议验收数据：位置36已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":37,\"actual\":\"隔离协议验收数据：位置37已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":38,\"actual\":\"隔离协议验收数据：位置38已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":39,\"actual\":\"隔离协议验收数据：位置39已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":40,\"actual\":\"隔离协议验收数据：位置40已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":41,\"actual\":\"隔离协议验收数据：位置41已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":42,\"actual\":\"隔离协议验收数据：位置42已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":43,\"actual\":\"隔离协议验收数据：位置43已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":44,\"actual\":\"隔离协议验收数据：位置44已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":45,\"actual\":\"隔离协议验收数据：位置45已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":46,\"actual\":\"隔离协议验收数据：位置46已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":47,\"actual\":\"隔离协议验收数据：位置47已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":48,\"actual\":\"隔离协议验收数据：位置48已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":49,\"actual\":\"隔离协议验收数据：位置49已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":50,\"actual\":\"隔离协议验收数据：位置50已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":51,\"actual\":\"隔离协议验收数据：位置51已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":52,\"actual\":\"隔离协议验收数据：位置52已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":53,\"actual\":\"隔离协议验收数据：位置53已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":54,\"actual\":\"隔离协议验收数据：位置54已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":55,\"actual\":\"隔离协议验收数据：位置55已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":56,\"actual\":\"隔离协议验收数据：位置56已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":57,\"actual\":\"隔离协议验收数据：位置57已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":58,\"actual\":\"隔离协议验收数据：位置58已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":59,\"actual\":\"隔离协议验收数据：位置59已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":60,\"actual\":\"隔离协议验收数据：位置60已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":61,\"actual\":\"隔离协议验收数据：位置61已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":62,\"actual\":\"隔离协议验收数据：位置62已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":63,\"actual\":\"隔离协议验收数据：位置63已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":64,\"actual\":\"隔离协议验收数据：位置64已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":65,\"actual\":\"隔离协议验收数据：位置65已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":66,\"actual\":\"隔离协议验收数据：位置66已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":67,\"actual\":\"隔离协议验收数据：位置67已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":68,\"actual\":\"隔离协议验收数据：位置68已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":69,\"actual\":\"隔离协议验收数据：位置69已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":70,\"actual\":\"隔离协议验收数据：位置70已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":71,\"actual\":\"隔离协议验收数据：位置71已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":72,\"actual\":\"隔离协议验收数据：位置72已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":73,\"actual\":\"隔离协议验收数据：位置73已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":74,\"actual\":\"隔离协议验收数据：位置74已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":75,\"actual\":\"隔离协议验收数据：位置75已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":76,\"actual\":\"隔离协议验收数据：位置76已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":77,\"actual\":\"隔离协议验收数据：位置77已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":78,\"actual\":\"隔离协议验收数据：位置78已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":79,\"actual\":\"隔离协议验收数据：位置79已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":80,\"actual\":\"隔离协议验收数据：位置80已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":81,\"actual\":\"隔离协议验收数据：位置81已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":82,\"actual\":\"隔离协议验收数据：位置82已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":83,\"actual\":\"隔离协议验收数据：位置83已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":84,\"actual\":\"隔离协议验收数据：位置84已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":85,\"actual\":\"隔离协议验收数据：位置85已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":86,\"actual\":\"隔离协议验收数据：位置86已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":87,\"actual\":\"隔离协议验收数据：位置87已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":88,\"actual\":\"隔离协议验收数据：位置88已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":89,\"actual\":\"隔离协议验收数据：位置89已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":90,\"actual\":\"隔离协议验收数据：位置90已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":91,\"actual\":\"隔离协议验收数据：位置91已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":92,\"actual\":\"隔离协议验收数据：位置92已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":93,\"actual\":\"隔离协议验收数据：位置93已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":94,\"actual\":\"隔离协议验收数据：位置94已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":95,\"actual\":\"隔离协议验收数据：位置95已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":96,\"actual\":\"隔离协议验收数据：位置96已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":97,\"actual\":\"隔离协议验收数据：位置97已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":98,\"actual\":\"隔离协议验收数据：位置98已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":99,\"actual\":\"隔离协议验收数据：位置99已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"SUCCESS\"},{\"stepNum\":100,\"actual\":\"隔离协议验收数据：位置100已提交，关联同一张真实平台页面截图；本条只验证证据结构\",\"result\":\"ERROR\"}],\"policySnapshot\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"evidence\":[{\"id\":\"a6171be9-d5de-42be-bde5-ecc44735b5b1\",\"file_name\":\"acceptance-real-plan-page.png\",\"content_type\":\"image/png\",\"size_bytes\":105733,\"sha256\":\"446e46034a8dde352dd84ed6609269728b8a4bf3ca928ea565c999575d76100c\",\"evidence_scope\":\"CASE\",\"definition_hash_version\":\"definition-v2\",\"content_hash\":\"5068f9e34f957d9a5ce883e595640f706c750bde25ca082c24e40e38851d1864\"}],\"evidenceIds\":[\"a6171be9-d5de-42be-bde5-ecc44735b5b1\"],\"evidenceScope\":\"CASE\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"resultSource\":\"AGENT_REPORTED\",\"directEvidenceRuleVersion\":\"case-image-v1\"},\"projectId\":\"1704667279923322880\",\"moduleId\":\"root\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793082653566,\"description\":\"隔离验收数据；仅测试证据结构，不代表真实业务执行\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"用例等级\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P1\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1710858183222763620\",\"num\":100008,\"name\":\"ACCEPTANCE-20261027-100步骤一图协议测试\",\"modulePath\":\"未规划用例\",\"caseEditType\":\"STEP\",\"tags\":[\"ACCEPTANCE-20261027\"],\"priority\":\"P1\",\"prerequisite\":\"\",\"testPlanId\":\"1710858750158446592\",\"testPlanCaseId\":\"1710858750158446601\",\"lastExecuteResult\":\"ERROR\",\"lastExecuteUser\":\"1559871391069831258\",\"lastExecuteUserName\":\"陈启芬\",\"steps\":[{\"id\":\"1710858183222763520\",\"num\":1,\"desc\":\"协议验收检查位置 1\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763521\",\"num\":2,\"desc\":\"协议验收检查位置 2\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763522\",\"num\":3,\"desc\":\"协议验收检查位置 3\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763523\",\"num\":4,\"desc\":\"协议验收检查位置 4\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763524\",\"num\":5,\"desc\":\"协议验收检查位置 5\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763525\",\"num\":6,\"desc\":\"协议验收检查位置 6\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763526\",\"num\":7,\"desc\":\"协议验收检查位置 7\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763527\",\"num\":8,\"desc\":\"协议验收检查位置 8\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763528\",\"num\":9,\"desc\":\"协议验收检查位置 9\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763529\",\"num\":10,\"desc\":\"协议验收检查位置 10\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763530\",\"num\":11,\"desc\":\"协议验收检查位置 11\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763531\",\"num\":12,\"desc\":\"协议验收检查位置 12\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763532\",\"num\":13,\"desc\":\"协议验收检查位置 13\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763533\",\"num\":14,\"desc\":\"协议验收检查位置 14\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763534\",\"num\":15,\"desc\":\"协议验收检查位置 15\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763535\",\"num\":16,\"desc\":\"协议验收检查位置 16\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763536\",\"num\":17,\"desc\":\"协议验收检查位置 17\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763537\",\"num\":18,\"desc\":\"协议验收检查位置 18\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763538\",\"num\":19,\"desc\":\"协议验收检查位置 19\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763539\",\"num\":20,\"desc\":\"协议验收检查位置 20\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763540\",\"num\":21,\"desc\":\"协议验收检查位置 21\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763541\",\"num\":22,\"desc\":\"协议验收检查位置 22\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763542\",\"num\":23,\"desc\":\"协议验收检查位置 23\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763543\",\"num\":24,\"desc\":\"协议验收检查位置 24\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763544\",\"num\":25,\"desc\":\"协议验收检查位置 25\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763545\",\"num\":26,\"desc\":\"协议验收检查位置 26\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763546\",\"num\":27,\"desc\":\"协议验收检查位置 27\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763547\",\"num\":28,\"desc\":\"协议验收检查位置 28\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763548\",\"num\":29,\"desc\":\"协议验收检查位置 29\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763549\",\"num\":30,\"desc\":\"协议验收检查位置 30\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763550\",\"num\":31,\"desc\":\"协议验收检查位置 31\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763551\",\"num\":32,\"desc\":\"协议验收检查位置 32\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763552\",\"num\":33,\"desc\":\"协议验收检查位置 33\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763553\",\"num\":34,\"desc\":\"协议验收检查位置 34\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763554\",\"num\":35,\"desc\":\"协议验收检查位置 35\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763555\",\"num\":36,\"desc\":\"协议验收检查位置 36\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763556\",\"num\":37,\"desc\":\"协议验收检查位置 37\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763557\",\"num\":38,\"desc\":\"协议验收检查位置 38\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763558\",\"num\":39,\"desc\":\"协议验收检查位置 39\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763559\",\"num\":40,\"desc\":\"协议验收检查位置 40\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763560\",\"num\":41,\"desc\":\"协议验收检查位置 41\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763561\",\"num\":42,\"desc\":\"协议验收检查位置 42\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763562\",\"num\":43,\"desc\":\"协议验收检查位置 43\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763563\",\"num\":44,\"desc\":\"协议验收检查位置 44\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763564\",\"num\":45,\"desc\":\"协议验收检查位置 45\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763565\",\"num\":46,\"desc\":\"协议验收检查位置 46\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763566\",\"num\":47,\"desc\":\"协议验收检查位置 47\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763567\",\"num\":48,\"desc\":\"协议验收检查位置 48\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763568\",\"num\":49,\"desc\":\"协议验收检查位置 49\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763569\",\"num\":50,\"desc\":\"协议验收检查位置 50\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763570\",\"num\":51,\"desc\":\"协议验收检查位置 51\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763571\",\"num\":52,\"desc\":\"协议验收检查位置 52\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763572\",\"num\":53,\"desc\":\"协议验收检查位置 53\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763573\",\"num\":54,\"desc\":\"协议验收检查位置 54\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763574\",\"num\":55,\"desc\":\"协议验收检查位置 55\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763575\",\"num\":56,\"desc\":\"协议验收检查位置 56\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763576\",\"num\":57,\"desc\":\"协议验收检查位置 57\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763577\",\"num\":58,\"desc\":\"协议验收检查位置 58\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763578\",\"num\":59,\"desc\":\"协议验收检查位置 59\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763579\",\"num\":60,\"desc\":\"协议验收检查位置 60\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763580\",\"num\":61,\"desc\":\"协议验收检查位置 61\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763581\",\"num\":62,\"desc\":\"协议验收检查位置 62\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763582\",\"num\":63,\"desc\":\"协议验收检查位置 63\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763583\",\"num\":64,\"desc\":\"协议验收检查位置 64\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763584\",\"num\":65,\"desc\":\"协议验收检查位置 65\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763585\",\"num\":66,\"desc\":\"协议验收检查位置 66\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763586\",\"num\":67,\"desc\":\"协议验收检查位置 67\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763587\",\"num\":68,\"desc\":\"协议验收检查位置 68\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763588\",\"num\":69,\"desc\":\"协议验收检查位置 69\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763589\",\"num\":70,\"desc\":\"协议验收检查位置 70\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763590\",\"num\":71,\"desc\":\"协议验收检查位置 71\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763591\",\"num\":72,\"desc\":\"协议验收检查位置 72\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763592\",\"num\":73,\"desc\":\"协议验收检查位置 73\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763593\",\"num\":74,\"desc\":\"协议验收检查位置 74\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763594\",\"num\":75,\"desc\":\"协议验收检查位置 75\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763595\",\"num\":76,\"desc\":\"协议验收检查位置 76\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763596\",\"num\":77,\"desc\":\"协议验收检查位置 77\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763597\",\"num\":78,\"desc\":\"协议验收检查位置 78\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763598\",\"num\":79,\"desc\":\"协议验收检查位置 79\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763599\",\"num\":80,\"desc\":\"协议验收检查位置 80\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763600\",\"num\":81,\"desc\":\"协议验收检查位置 81\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763601\",\"num\":82,\"desc\":\"协议验收检查位置 82\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763602\",\"num\":83,\"desc\":\"协议验收检查位置 83\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763603\",\"num\":84,\"desc\":\"协议验收检查位置 84\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763604\",\"num\":85,\"desc\":\"协议验收检查位置 85\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763605\",\"num\":86,\"desc\":\"协议验收检查位置 86\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763606\",\"num\":87,\"desc\":\"协议验收检查位置 87\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763607\",\"num\":88,\"desc\":\"协议验收检查位置 88\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763608\",\"num\":89,\"desc\":\"协议验收检查位置 89\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763609\",\"num\":90,\"desc\":\"协议验收检查位置 90\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763610\",\"num\":91,\"desc\":\"协议验收检查位置 91\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763611\",\"num\":92,\"desc\":\"协议验收检查位置 92\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763612\",\"num\":93,\"desc\":\"协议验收检查位置 93\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763613\",\"num\":94,\"desc\":\"协议验收检查位置 94\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763614\",\"num\":95,\"desc\":\"协议验收检查位置 95\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763615\",\"num\":96,\"desc\":\"协议验收检查位置 96\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763616\",\"num\":97,\"desc\":\"协议验收检查位置 97\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763617\",\"num\":98,\"desc\":\"协议验收检查位置 98\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763618\",\"num\":99,\"desc\":\"协议验收检查位置 99\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1710858183222763619\",\"num\":100,\"desc\":\"协议验收检查位置 100\",\"expected\":\"结构化步骤保留，图片按用例归属\",\"actualResult\":null,\"executeResult\":null}]}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "current": 1,
+          "pageSize": 10,
+          "hasMore": false,
+          "matchedBy": [],
+          "matchedModules": [],
+          "matchedModuleIds": [],
+          "total": 1,
+          "warnings": [],
+          "cases": [
+            {
+              "executionRef": {
+                "id": "d6e6eb1b-2255-48b6-915e-a4599265ffae",
+                "type": "DIRECT_SUBMISSION"
+              },
+              "executionFacts": {
+                "schemaVersion": "direct-execution.v2",
+                "definition": {
+                  "caseId": "1710858183222763620",
+                  "projectId": "1704667279923322880",
+                  "versionId": "1704667279923322928",
+                  "name": "ACCEPTANCE-20261027-100步骤一图协议测试",
+                  "caseEditType": "STEP",
+                  "description": "隔离验收数据；仅测试证据结构，不代表真实业务执行",
+                  "prerequisite": "",
+                  "priority": "P1",
+                  "customFields": [],
+                  "steps": [
+                    {
+                      "position": 1,
+                      "description": "协议验收检查位置 1",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 2,
+                      "description": "协议验收检查位置 2",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 3,
+                      "description": "协议验收检查位置 3",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 4,
+                      "description": "协议验收检查位置 4",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 5,
+                      "description": "协议验收检查位置 5",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 6,
+                      "description": "协议验收检查位置 6",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 7,
+                      "description": "协议验收检查位置 7",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 8,
+                      "description": "协议验收检查位置 8",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 9,
+                      "description": "协议验收检查位置 9",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 10,
+                      "description": "协议验收检查位置 10",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 11,
+                      "description": "协议验收检查位置 11",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 12,
+                      "description": "协议验收检查位置 12",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 13,
+                      "description": "协议验收检查位置 13",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 14,
+                      "description": "协议验收检查位置 14",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 15,
+                      "description": "协议验收检查位置 15",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 16,
+                      "description": "协议验收检查位置 16",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 17,
+                      "description": "协议验收检查位置 17",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 18,
+                      "description": "协议验收检查位置 18",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 19,
+                      "description": "协议验收检查位置 19",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 20,
+                      "description": "协议验收检查位置 20",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 21,
+                      "description": "协议验收检查位置 21",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 22,
+                      "description": "协议验收检查位置 22",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 23,
+                      "description": "协议验收检查位置 23",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 24,
+                      "description": "协议验收检查位置 24",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 25,
+                      "description": "协议验收检查位置 25",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 26,
+                      "description": "协议验收检查位置 26",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 27,
+                      "description": "协议验收检查位置 27",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 28,
+                      "description": "协议验收检查位置 28",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 29,
+                      "description": "协议验收检查位置 29",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 30,
+                      "description": "协议验收检查位置 30",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 31,
+                      "description": "协议验收检查位置 31",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 32,
+                      "description": "协议验收检查位置 32",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 33,
+                      "description": "协议验收检查位置 33",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 34,
+                      "description": "协议验收检查位置 34",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 35,
+                      "description": "协议验收检查位置 35",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 36,
+                      "description": "协议验收检查位置 36",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 37,
+                      "description": "协议验收检查位置 37",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 38,
+                      "description": "协议验收检查位置 38",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 39,
+                      "description": "协议验收检查位置 39",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 40,
+                      "description": "协议验收检查位置 40",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 41,
+                      "description": "协议验收检查位置 41",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 42,
+                      "description": "协议验收检查位置 42",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 43,
+                      "description": "协议验收检查位置 43",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 44,
+                      "description": "协议验收检查位置 44",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 45,
+                      "description": "协议验收检查位置 45",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 46,
+                      "description": "协议验收检查位置 46",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 47,
+                      "description": "协议验收检查位置 47",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 48,
+                      "description": "协议验收检查位置 48",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 49,
+                      "description": "协议验收检查位置 49",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 50,
+                      "description": "协议验收检查位置 50",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 51,
+                      "description": "协议验收检查位置 51",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 52,
+                      "description": "协议验收检查位置 52",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 53,
+                      "description": "协议验收检查位置 53",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 54,
+                      "description": "协议验收检查位置 54",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 55,
+                      "description": "协议验收检查位置 55",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 56,
+                      "description": "协议验收检查位置 56",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 57,
+                      "description": "协议验收检查位置 57",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 58,
+                      "description": "协议验收检查位置 58",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 59,
+                      "description": "协议验收检查位置 59",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 60,
+                      "description": "协议验收检查位置 60",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 61,
+                      "description": "协议验收检查位置 61",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 62,
+                      "description": "协议验收检查位置 62",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 63,
+                      "description": "协议验收检查位置 63",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 64,
+                      "description": "协议验收检查位置 64",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 65,
+                      "description": "协议验收检查位置 65",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 66,
+                      "description": "协议验收检查位置 66",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 67,
+                      "description": "协议验收检查位置 67",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 68,
+                      "description": "协议验收检查位置 68",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 69,
+                      "description": "协议验收检查位置 69",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 70,
+                      "description": "协议验收检查位置 70",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 71,
+                      "description": "协议验收检查位置 71",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 72,
+                      "description": "协议验收检查位置 72",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 73,
+                      "description": "协议验收检查位置 73",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 74,
+                      "description": "协议验收检查位置 74",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 75,
+                      "description": "协议验收检查位置 75",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 76,
+                      "description": "协议验收检查位置 76",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 77,
+                      "description": "协议验收检查位置 77",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 78,
+                      "description": "协议验收检查位置 78",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 79,
+                      "description": "协议验收检查位置 79",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 80,
+                      "description": "协议验收检查位置 80",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 81,
+                      "description": "协议验收检查位置 81",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 82,
+                      "description": "协议验收检查位置 82",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 83,
+                      "description": "协议验收检查位置 83",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 84,
+                      "description": "协议验收检查位置 84",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 85,
+                      "description": "协议验收检查位置 85",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 86,
+                      "description": "协议验收检查位置 86",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 87,
+                      "description": "协议验收检查位置 87",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 88,
+                      "description": "协议验收检查位置 88",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 89,
+                      "description": "协议验收检查位置 89",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 90,
+                      "description": "协议验收检查位置 90",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 91,
+                      "description": "协议验收检查位置 91",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 92,
+                      "description": "协议验收检查位置 92",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 93,
+                      "description": "协议验收检查位置 93",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 94,
+                      "description": "协议验收检查位置 94",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 95,
+                      "description": "协议验收检查位置 95",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 96,
+                      "description": "协议验收检查位置 96",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 97,
+                      "description": "协议验收检查位置 97",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 98,
+                      "description": "协议验收检查位置 98",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 99,
+                      "description": "协议验收检查位置 99",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    },
+                    {
+                      "position": 100,
+                      "description": "协议验收检查位置 100",
+                      "expected": "结构化步骤保留，图片按用例归属"
+                    }
+                  ]
+                },
+                "steps": [
+                  {
+                    "stepNum": 1,
+                    "actual": "隔离协议验收数据：位置1已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 2,
+                    "actual": "隔离协议验收数据：位置2已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 3,
+                    "actual": "隔离协议验收数据：位置3已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 4,
+                    "actual": "隔离协议验收数据：位置4已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 5,
+                    "actual": "隔离协议验收数据：位置5已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 6,
+                    "actual": "隔离协议验收数据：位置6已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 7,
+                    "actual": "隔离协议验收数据：位置7已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 8,
+                    "actual": "隔离协议验收数据：位置8已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 9,
+                    "actual": "隔离协议验收数据：位置9已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 10,
+                    "actual": "隔离协议验收数据：位置10已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 11,
+                    "actual": "隔离协议验收数据：位置11已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 12,
+                    "actual": "隔离协议验收数据：位置12已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 13,
+                    "actual": "隔离协议验收数据：位置13已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 14,
+                    "actual": "隔离协议验收数据：位置14已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 15,
+                    "actual": "隔离协议验收数据：位置15已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 16,
+                    "actual": "隔离协议验收数据：位置16已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 17,
+                    "actual": "隔离协议验收数据：位置17已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 18,
+                    "actual": "隔离协议验收数据：位置18已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 19,
+                    "actual": "隔离协议验收数据：位置19已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 20,
+                    "actual": "隔离协议验收数据：位置20已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 21,
+                    "actual": "隔离协议验收数据：位置21已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 22,
+                    "actual": "隔离协议验收数据：位置22已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 23,
+                    "actual": "隔离协议验收数据：位置23已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 24,
+                    "actual": "隔离协议验收数据：位置24已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 25,
+                    "actual": "隔离协议验收数据：位置25已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 26,
+                    "actual": "隔离协议验收数据：位置26已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 27,
+                    "actual": "隔离协议验收数据：位置27已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 28,
+                    "actual": "隔离协议验收数据：位置28已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 29,
+                    "actual": "隔离协议验收数据：位置29已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 30,
+                    "actual": "隔离协议验收数据：位置30已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 31,
+                    "actual": "隔离协议验收数据：位置31已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 32,
+                    "actual": "隔离协议验收数据：位置32已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 33,
+                    "actual": "隔离协议验收数据：位置33已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 34,
+                    "actual": "隔离协议验收数据：位置34已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 35,
+                    "actual": "隔离协议验收数据：位置35已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 36,
+                    "actual": "隔离协议验收数据：位置36已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 37,
+                    "actual": "隔离协议验收数据：位置37已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 38,
+                    "actual": "隔离协议验收数据：位置38已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 39,
+                    "actual": "隔离协议验收数据：位置39已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 40,
+                    "actual": "隔离协议验收数据：位置40已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 41,
+                    "actual": "隔离协议验收数据：位置41已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 42,
+                    "actual": "隔离协议验收数据：位置42已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 43,
+                    "actual": "隔离协议验收数据：位置43已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 44,
+                    "actual": "隔离协议验收数据：位置44已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 45,
+                    "actual": "隔离协议验收数据：位置45已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 46,
+                    "actual": "隔离协议验收数据：位置46已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 47,
+                    "actual": "隔离协议验收数据：位置47已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 48,
+                    "actual": "隔离协议验收数据：位置48已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 49,
+                    "actual": "隔离协议验收数据：位置49已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 50,
+                    "actual": "隔离协议验收数据：位置50已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 51,
+                    "actual": "隔离协议验收数据：位置51已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 52,
+                    "actual": "隔离协议验收数据：位置52已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 53,
+                    "actual": "隔离协议验收数据：位置53已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 54,
+                    "actual": "隔离协议验收数据：位置54已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 55,
+                    "actual": "隔离协议验收数据：位置55已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 56,
+                    "actual": "隔离协议验收数据：位置56已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 57,
+                    "actual": "隔离协议验收数据：位置57已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 58,
+                    "actual": "隔离协议验收数据：位置58已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 59,
+                    "actual": "隔离协议验收数据：位置59已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 60,
+                    "actual": "隔离协议验收数据：位置60已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 61,
+                    "actual": "隔离协议验收数据：位置61已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 62,
+                    "actual": "隔离协议验收数据：位置62已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 63,
+                    "actual": "隔离协议验收数据：位置63已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 64,
+                    "actual": "隔离协议验收数据：位置64已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 65,
+                    "actual": "隔离协议验收数据：位置65已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 66,
+                    "actual": "隔离协议验收数据：位置66已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 67,
+                    "actual": "隔离协议验收数据：位置67已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 68,
+                    "actual": "隔离协议验收数据：位置68已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 69,
+                    "actual": "隔离协议验收数据：位置69已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 70,
+                    "actual": "隔离协议验收数据：位置70已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 71,
+                    "actual": "隔离协议验收数据：位置71已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 72,
+                    "actual": "隔离协议验收数据：位置72已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 73,
+                    "actual": "隔离协议验收数据：位置73已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 74,
+                    "actual": "隔离协议验收数据：位置74已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 75,
+                    "actual": "隔离协议验收数据：位置75已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 76,
+                    "actual": "隔离协议验收数据：位置76已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 77,
+                    "actual": "隔离协议验收数据：位置77已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 78,
+                    "actual": "隔离协议验收数据：位置78已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 79,
+                    "actual": "隔离协议验收数据：位置79已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 80,
+                    "actual": "隔离协议验收数据：位置80已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 81,
+                    "actual": "隔离协议验收数据：位置81已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 82,
+                    "actual": "隔离协议验收数据：位置82已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 83,
+                    "actual": "隔离协议验收数据：位置83已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 84,
+                    "actual": "隔离协议验收数据：位置84已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 85,
+                    "actual": "隔离协议验收数据：位置85已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 86,
+                    "actual": "隔离协议验收数据：位置86已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 87,
+                    "actual": "隔离协议验收数据：位置87已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 88,
+                    "actual": "隔离协议验收数据：位置88已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 89,
+                    "actual": "隔离协议验收数据：位置89已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 90,
+                    "actual": "隔离协议验收数据：位置90已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 91,
+                    "actual": "隔离协议验收数据：位置91已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 92,
+                    "actual": "隔离协议验收数据：位置92已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 93,
+                    "actual": "隔离协议验收数据：位置93已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 94,
+                    "actual": "隔离协议验收数据：位置94已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 95,
+                    "actual": "隔离协议验收数据：位置95已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 96,
+                    "actual": "隔离协议验收数据：位置96已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 97,
+                    "actual": "隔离协议验收数据：位置97已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 98,
+                    "actual": "隔离协议验收数据：位置98已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 99,
+                    "actual": "隔离协议验收数据：位置99已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 100,
+                    "actual": "隔离协议验收数据：位置100已提交，关联同一张真实平台页面截图；本条只验证证据结构",
+                    "result": "ERROR"
+                  }
+                ],
+                "policySnapshot": {
+                  "name": "订单复测-证据与冻结断言-20261019",
+                  "rules": [
+                    {
+                      "parameters": {
+                        "allowedMimeTypes": [
+                          "image/png",
+                          "image/jpeg"
+                        ],
+                        "maxArtifactBytes": 5242880,
+                        "requiredRoles": [
+                          "BEFORE_ACTION",
+                          "AFTER_ACTION"
+                        ]
+                      },
+                      "ruleId": "Q-EVIDENCE-01"
+                    },
+                    {
+                      "parameters": {
+                        "allowedOperators": [
+                          "EQUALS",
+                          "IN_RANGE"
+                        ],
+                        "expectedSource": "FROZEN_CONTRACT"
+                      },
+                      "ruleId": "Q-ASSERT-01"
+                    }
+                  ],
+                  "schemaVersion": "quality-policy.v1"
+                },
+                "evidence": [
+                  {
+                    "id": "a6171be9-d5de-42be-bde5-ecc44735b5b1",
+                    "file_name": "acceptance-real-plan-page.png",
+                    "content_type": "image/png",
+                    "size_bytes": 105733,
+                    "sha256": "446e46034a8dde352dd84ed6609269728b8a4bf3ca928ea565c999575d76100c",
+                    "evidence_scope": "CASE",
+                    "definition_hash_version": "definition-v2",
+                    "content_hash": "5068f9e34f957d9a5ce883e595640f706c750bde25ca082c24e40e38851d1864"
+                  }
+                ],
+                "evidenceIds": [
+                  "a6171be9-d5de-42be-bde5-ecc44735b5b1"
+                ],
+                "evidenceScope": "CASE",
+                "validationMode": "STRUCTURE_ONLY_V1",
+                "resultSource": "AGENT_REPORTED",
+                "directEvidenceRuleVersion": "case-image-v1"
+              },
+              "projectId": "1704667279923322880",
+              "moduleId": "root",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793082653566,
+              "description": "隔离验收数据；仅测试证据结构，不代表真实业务执行",
+              "customFields": [
+                {
+                  "fieldId": "1704667279923322929",
+                  "fieldName": "用例等级",
+                  "fieldKey": null,
+                  "required": true,
+                  "apiFieldId": null,
+                  "defaultValue": "P1",
+                  "type": "SELECT",
+                  "options": [
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P0",
+                      "text": "P0",
+                      "internal": true,
+                      "pos": 1
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P1",
+                      "text": "P1",
+                      "internal": true,
+                      "pos": 2
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P2",
+                      "text": "P2",
+                      "internal": true,
+                      "pos": 3
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P3",
+                      "text": "P3",
+                      "internal": true,
+                      "pos": 4
+                    }
+                  ],
+                  "supportSearch": null,
+                  "optionMethod": null,
+                  "internal": true,
+                  "platformOptionJson": null,
+                  "platformPlaceHolder": null,
+                  "platformSystemField": null,
+                  "internalFieldKey": "functional_priority"
+                }
+              ],
+              "caseId": "1710858183222763620",
+              "num": 100008,
+              "name": "ACCEPTANCE-20261027-100步骤一图协议测试",
+              "modulePath": "未规划用例",
+              "caseEditType": "STEP",
+              "tags": [
+                "ACCEPTANCE-20261027"
+              ],
+              "priority": "P1",
+              "prerequisite": "",
+              "testPlanId": "1710858750158446592",
+              "testPlanCaseId": "1710858750158446601",
+              "lastExecuteResult": "ERROR",
+              "lastExecuteUser": "1559871391069831258",
+              "lastExecuteUserName": "陈启芬",
+              "steps": [
+                {
+                  "id": "1710858183222763520",
+                  "num": 1,
+                  "desc": "协议验收检查位置 1",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763521",
+                  "num": 2,
+                  "desc": "协议验收检查位置 2",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763522",
+                  "num": 3,
+                  "desc": "协议验收检查位置 3",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763523",
+                  "num": 4,
+                  "desc": "协议验收检查位置 4",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763524",
+                  "num": 5,
+                  "desc": "协议验收检查位置 5",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763525",
+                  "num": 6,
+                  "desc": "协议验收检查位置 6",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763526",
+                  "num": 7,
+                  "desc": "协议验收检查位置 7",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763527",
+                  "num": 8,
+                  "desc": "协议验收检查位置 8",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763528",
+                  "num": 9,
+                  "desc": "协议验收检查位置 9",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763529",
+                  "num": 10,
+                  "desc": "协议验收检查位置 10",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763530",
+                  "num": 11,
+                  "desc": "协议验收检查位置 11",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763531",
+                  "num": 12,
+                  "desc": "协议验收检查位置 12",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763532",
+                  "num": 13,
+                  "desc": "协议验收检查位置 13",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763533",
+                  "num": 14,
+                  "desc": "协议验收检查位置 14",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763534",
+                  "num": 15,
+                  "desc": "协议验收检查位置 15",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763535",
+                  "num": 16,
+                  "desc": "协议验收检查位置 16",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763536",
+                  "num": 17,
+                  "desc": "协议验收检查位置 17",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763537",
+                  "num": 18,
+                  "desc": "协议验收检查位置 18",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763538",
+                  "num": 19,
+                  "desc": "协议验收检查位置 19",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763539",
+                  "num": 20,
+                  "desc": "协议验收检查位置 20",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763540",
+                  "num": 21,
+                  "desc": "协议验收检查位置 21",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763541",
+                  "num": 22,
+                  "desc": "协议验收检查位置 22",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763542",
+                  "num": 23,
+                  "desc": "协议验收检查位置 23",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763543",
+                  "num": 24,
+                  "desc": "协议验收检查位置 24",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763544",
+                  "num": 25,
+                  "desc": "协议验收检查位置 25",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763545",
+                  "num": 26,
+                  "desc": "协议验收检查位置 26",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763546",
+                  "num": 27,
+                  "desc": "协议验收检查位置 27",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763547",
+                  "num": 28,
+                  "desc": "协议验收检查位置 28",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763548",
+                  "num": 29,
+                  "desc": "协议验收检查位置 29",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763549",
+                  "num": 30,
+                  "desc": "协议验收检查位置 30",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763550",
+                  "num": 31,
+                  "desc": "协议验收检查位置 31",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763551",
+                  "num": 32,
+                  "desc": "协议验收检查位置 32",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763552",
+                  "num": 33,
+                  "desc": "协议验收检查位置 33",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763553",
+                  "num": 34,
+                  "desc": "协议验收检查位置 34",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763554",
+                  "num": 35,
+                  "desc": "协议验收检查位置 35",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763555",
+                  "num": 36,
+                  "desc": "协议验收检查位置 36",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763556",
+                  "num": 37,
+                  "desc": "协议验收检查位置 37",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763557",
+                  "num": 38,
+                  "desc": "协议验收检查位置 38",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763558",
+                  "num": 39,
+                  "desc": "协议验收检查位置 39",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763559",
+                  "num": 40,
+                  "desc": "协议验收检查位置 40",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763560",
+                  "num": 41,
+                  "desc": "协议验收检查位置 41",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763561",
+                  "num": 42,
+                  "desc": "协议验收检查位置 42",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763562",
+                  "num": 43,
+                  "desc": "协议验收检查位置 43",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763563",
+                  "num": 44,
+                  "desc": "协议验收检查位置 44",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763564",
+                  "num": 45,
+                  "desc": "协议验收检查位置 45",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763565",
+                  "num": 46,
+                  "desc": "协议验收检查位置 46",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763566",
+                  "num": 47,
+                  "desc": "协议验收检查位置 47",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763567",
+                  "num": 48,
+                  "desc": "协议验收检查位置 48",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763568",
+                  "num": 49,
+                  "desc": "协议验收检查位置 49",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763569",
+                  "num": 50,
+                  "desc": "协议验收检查位置 50",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763570",
+                  "num": 51,
+                  "desc": "协议验收检查位置 51",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763571",
+                  "num": 52,
+                  "desc": "协议验收检查位置 52",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763572",
+                  "num": 53,
+                  "desc": "协议验收检查位置 53",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763573",
+                  "num": 54,
+                  "desc": "协议验收检查位置 54",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763574",
+                  "num": 55,
+                  "desc": "协议验收检查位置 55",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763575",
+                  "num": 56,
+                  "desc": "协议验收检查位置 56",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763576",
+                  "num": 57,
+                  "desc": "协议验收检查位置 57",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763577",
+                  "num": 58,
+                  "desc": "协议验收检查位置 58",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763578",
+                  "num": 59,
+                  "desc": "协议验收检查位置 59",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763579",
+                  "num": 60,
+                  "desc": "协议验收检查位置 60",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763580",
+                  "num": 61,
+                  "desc": "协议验收检查位置 61",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763581",
+                  "num": 62,
+                  "desc": "协议验收检查位置 62",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763582",
+                  "num": 63,
+                  "desc": "协议验收检查位置 63",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763583",
+                  "num": 64,
+                  "desc": "协议验收检查位置 64",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763584",
+                  "num": 65,
+                  "desc": "协议验收检查位置 65",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763585",
+                  "num": 66,
+                  "desc": "协议验收检查位置 66",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763586",
+                  "num": 67,
+                  "desc": "协议验收检查位置 67",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763587",
+                  "num": 68,
+                  "desc": "协议验收检查位置 68",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763588",
+                  "num": 69,
+                  "desc": "协议验收检查位置 69",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763589",
+                  "num": 70,
+                  "desc": "协议验收检查位置 70",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763590",
+                  "num": 71,
+                  "desc": "协议验收检查位置 71",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763591",
+                  "num": 72,
+                  "desc": "协议验收检查位置 72",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763592",
+                  "num": 73,
+                  "desc": "协议验收检查位置 73",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763593",
+                  "num": 74,
+                  "desc": "协议验收检查位置 74",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763594",
+                  "num": 75,
+                  "desc": "协议验收检查位置 75",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763595",
+                  "num": 76,
+                  "desc": "协议验收检查位置 76",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763596",
+                  "num": 77,
+                  "desc": "协议验收检查位置 77",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763597",
+                  "num": 78,
+                  "desc": "协议验收检查位置 78",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763598",
+                  "num": 79,
+                  "desc": "协议验收检查位置 79",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763599",
+                  "num": 80,
+                  "desc": "协议验收检查位置 80",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763600",
+                  "num": 81,
+                  "desc": "协议验收检查位置 81",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763601",
+                  "num": 82,
+                  "desc": "协议验收检查位置 82",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763602",
+                  "num": 83,
+                  "desc": "协议验收检查位置 83",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763603",
+                  "num": 84,
+                  "desc": "协议验收检查位置 84",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763604",
+                  "num": 85,
+                  "desc": "协议验收检查位置 85",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763605",
+                  "num": 86,
+                  "desc": "协议验收检查位置 86",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763606",
+                  "num": 87,
+                  "desc": "协议验收检查位置 87",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763607",
+                  "num": 88,
+                  "desc": "协议验收检查位置 88",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763608",
+                  "num": 89,
+                  "desc": "协议验收检查位置 89",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763609",
+                  "num": 90,
+                  "desc": "协议验收检查位置 90",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763610",
+                  "num": 91,
+                  "desc": "协议验收检查位置 91",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763611",
+                  "num": 92,
+                  "desc": "协议验收检查位置 92",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763612",
+                  "num": 93,
+                  "desc": "协议验收检查位置 93",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763613",
+                  "num": 94,
+                  "desc": "协议验收检查位置 94",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763614",
+                  "num": 95,
+                  "desc": "协议验收检查位置 95",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763615",
+                  "num": 96,
+                  "desc": "协议验收检查位置 96",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763616",
+                  "num": 97,
+                  "desc": "协议验收检查位置 97",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763617",
+                  "num": 98,
+                  "desc": "协议验收检查位置 98",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763618",
+                  "num": 99,
+                  "desc": "协议验收检查位置 99",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1710858183222763619",
+                  "num": 100,
+                  "desc": "协议验收检查位置 100",
+                  "expected": "结构化步骤保留，图片按用例归属",
+                  "actualResult": null,
+                  "executeResult": null
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "attachments": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":\"eaf6b221-19fb-41f5-80fe-00b23c72ed6c\",\"associationId\":\"eaf6b221-19fb-41f5-80fe-00b23c72ed6c\",\"fileId\":\"a6171be9-d5de-42be-bde5-ecc44735b5b1\",\"fileName\":\"acceptance-real-plan-page.png\",\"size\":105733,\"createUser\":\"1559871391069831258\",\"createUserName\":\"陈启芬\",\"createTime\":1793082721793,\"local\":true,\"source\":\"ATTACHMENT\"}]",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": [
+          {
+            "id": "eaf6b221-19fb-41f5-80fe-00b23c72ed6c",
+            "associationId": "eaf6b221-19fb-41f5-80fe-00b23c72ed6c",
+            "fileId": "a6171be9-d5de-42be-bde5-ecc44735b5b1",
+            "fileName": "acceptance-real-plan-page.png",
+            "size": 105733,
+            "createUser": "1559871391069831258",
+            "createUserName": "陈启芬",
+            "createTime": 1793082721793,
+            "local": true,
+            "source": "ATTACHMENT"
+          }
+        ]
+      }
+    }
+  }
+}

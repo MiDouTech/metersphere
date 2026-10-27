@@ -75,6 +75,10 @@ public abstract class ModuleTreeService {
                     continue;
                 }
                 BaseTreeNode node = new BaseTreeNode(treeNode.getId(), treeNode.getName(), treeNode.getType(), treeNode.getParentId());
+                node.setProjectId(treeNode.getProjectId());
+                node.setUpdateTime(treeNode.getUpdateTime());
+                node.setCount(treeNode.getCount());
+                node.setAttachInfo(treeNode.getAttachInfo() == null ? new HashMap<>() : new HashMap<>(treeNode.getAttachInfo()));
                 node.genModulePath(baseTreeNodeMap.get(treeNode.getParentId()));
                 baseTreeNodeMap.put(treeNode.getId(), node);
 

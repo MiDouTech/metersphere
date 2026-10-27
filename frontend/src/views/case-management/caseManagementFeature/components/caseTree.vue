@@ -271,7 +271,12 @@
 
   async function confirmMove() {
     const node = movingNode.value;
-    if (!node || node.updateTime === undefined || moveLoading.value) return false;
+    if (!node || moveLoading.value) return false;
+    if (node.updateTime == null) {
+      await initModules();
+      Message.warning('目录信息已刷新，请重新选择要移动的目录');
+      return false;
+    }
     moveLoading.value = true;
     try {
       await moveCaseModuleToParent({

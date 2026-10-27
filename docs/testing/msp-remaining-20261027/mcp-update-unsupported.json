@@ -1,0 +1,49 @@
+{
+  "updateReplay": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1710858183222763620\",\"name\":\"ACCEPTANCE-20261027-100步骤一图协议测试-已刷新-可见页刷新验收\",\"updateTime\":1793088913678,\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1710858183222763620",
+          "name": "ACCEPTANCE-20261027-100步骤一图协议测试-已刷新-可见页刷新验收",
+          "updateTime": 1793088913678,
+          "moduleId": "root"
+        }
+      }
+    }
+  },
+  "staleUpdate": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "VERSION_CONFLICT",
+        "traceId": "35c48b1c-9e30-41c8-8c99-860d4a3617ab"
+      },
+      "message": "数据已被更新，请重新查询后重试",
+      "code": -32001
+    }
+  },
+  "unsupportedUpload": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "CASE_CONTENT_MISSING",
+        "traceId": "1283bf5a-89b9-4ee9-82f2-edcecbaa12b5"
+      },
+      "message": "用例缺少有效操作或预期，请核对并重新发布",
+      "code": -32001
+    }
+  }
+}

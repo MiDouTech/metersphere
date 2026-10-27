@@ -1,0 +1,12 @@
+{
+  "before": {
+    "root": "<div id=\"app\" :class=\"{optimized}\" data-v-app=\"\"><header class=\"top\"><span class=\"logo\">⬡ 测试资产云平台</span><div class=\"row\"><span>测试项目-测试一体化</span><div role=\"separator\" class=\"arco-di",
+    "optimized": false,
+    "tree": "300px"
+  },
+  "after": {
+    "optimized": false,
+    "tree": "300px",
+    "checked": "true"
+  }
+}

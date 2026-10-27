@@ -18,7 +18,7 @@
           >{{ group.planName }} / {{ group.reviewName }}</a-option
         ></a-select
       >
-      <template v-if="policy && policy !== 'IMPORT_ONLY'">
+      <template v-if="policy === 'CREATE_NEW_PAIR'">
         <p>{{
           policy === 'CREATE_NEW_PAIR'
             ? '本次导入成功后新建测试计划和评审计划'
@@ -72,7 +72,7 @@
       !options.value ||
       !policy.value ||
       (policy.value === 'APPEND_EXISTING' && !group) ||
-      (policy.value !== 'IMPORT_ONLY' && !reviewers.value.length)
+      (policy.value === 'CREATE_NEW_PAIR' && !reviewers.value.length)
     ) {
       Message.warning('请选择导入关联策略、目标与评审人');
       return undefined;
@@ -81,8 +81,8 @@
       policy: policy.value,
       targetGroupId: group?.id,
       expectedGroupRevision: group?.revision,
-      reviewers: reviewers.value,
-      reviewPassRule: rule.value,
+      reviewers: policy.value === 'CREATE_NEW_PAIR' ? reviewers.value : undefined,
+      reviewPassRule: policy.value === 'CREATE_NEW_PAIR' ? rule.value : undefined,
     };
   }
   defineExpose({ decision });

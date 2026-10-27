@@ -1,0 +1,308 @@
+{
+  "upload": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"sizeBytes\":191151,\"evidenceScope\":\"CASE\",\"projectId\":\"1704667279923322880\",\"caseId\":\"1710971570359377921\",\"sha256\":\"dd5c3b341e5962c57fc0b038fd9f613457cdc0897c74a82014ea882bd6e38a99\",\"evidenceId\":\"835128cd-0c3b-4fbb-96b3-e1e956e0c614\",\"expiresAt\":1793175680576,\"resourceState\":\"STAGED\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "sizeBytes": 191151,
+          "evidenceScope": "CASE",
+          "projectId": "1704667279923322880",
+          "caseId": "1710971570359377921",
+          "sha256": "dd5c3b341e5962c57fc0b038fd9f613457cdc0897c74a82014ea882bd6e38a99",
+          "evidenceId": "835128cd-0c3b-4fbb-96b3-e1e956e0c614",
+          "expiresAt": 1793175680576,
+          "resourceState": "STAGED"
+        }
+      }
+    }
+  },
+  "submit": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"result\":\"SUCCESS\",\"caseId\":\"1710971570359377921\",\"attachmentIds\":[\"835128cd-0c3b-4fbb-96b3-e1e956e0c614\"],\"publishStatus\":\"PUBLISHED\",\"gateStatus\":\"ACCEPTED\",\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"submissionId\":\"d554c77c-36c9-42b2-9632-5a5dd8f824e2\",\"resultSource\":\"AGENT_REPORTED\",\"evidenceIds\":[\"835128cd-0c3b-4fbb-96b3-e1e956e0c614\"],\"evidenceScope\":\"CASE\",\"attachments\":[{\"sha256\":\"dd5c3b341e5962c57fc0b038fd9f613457cdc0897c74a82014ea882bd6e38a99\",\"fileName\":\"actual-ui.png\",\"fileId\":\"835128cd-0c3b-4fbb-96b3-e1e956e0c614\",\"contentType\":\"image/png\",\"evidenceId\":\"835128cd-0c3b-4fbb-96b3-e1e956e0c614\",\"associationId\":\"bc31f076-3eac-44aa-b92c-56d2c4918481\",\"submissionId\":\"d554c77c-36c9-42b2-9632-5a5dd8f824e2\",\"sizeBytes\":191151}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "result": "SUCCESS",
+          "caseId": "1710971570359377921",
+          "attachmentIds": [
+            "835128cd-0c3b-4fbb-96b3-e1e956e0c614"
+          ],
+          "publishStatus": "PUBLISHED",
+          "gateStatus": "ACCEPTED",
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "submissionId": "d554c77c-36c9-42b2-9632-5a5dd8f824e2",
+          "resultSource": "AGENT_REPORTED",
+          "evidenceIds": [
+            "835128cd-0c3b-4fbb-96b3-e1e956e0c614"
+          ],
+          "evidenceScope": "CASE",
+          "attachments": [
+            {
+              "sha256": "dd5c3b341e5962c57fc0b038fd9f613457cdc0897c74a82014ea882bd6e38a99",
+              "fileName": "actual-ui.png",
+              "fileId": "835128cd-0c3b-4fbb-96b3-e1e956e0c614",
+              "contentType": "image/png",
+              "evidenceId": "835128cd-0c3b-4fbb-96b3-e1e956e0c614",
+              "associationId": "bc31f076-3eac-44aa-b92c-56d2c4918481",
+              "submissionId": "d554c77c-36c9-42b2-9632-5a5dd8f824e2",
+              "sizeBytes": 191151
+            }
+          ]
+        }
+      }
+    }
+  },
+  "report": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"id\":\"d554c77c-36c9-42b2-9632-5a5dd8f824e2\",\"result\":\"SUCCESS\",\"gate_status\":\"ACCEPTED\",\"review_code\":\"STRUCTURE_VALIDATED\",\"reviewer_version\":\"structure-v1\",\"content_hash\":\"6ff6b7abcdbff73fd31e297e30745ab994aee1cbc4d96104bd1a292c1efb33c0\",\"policy_hash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"facts\":{\"schemaVersion\":\"direct-execution.v2\",\"definition\":{\"caseId\":\"1710971570359377921\",\"projectId\":\"1704667279923322880\",\"versionId\":\"1704667279923322928\",\"name\":\"REMAINING-20261027-连续执行与脱敏结构\",\"caseEditType\":\"STEP\",\"description\":\"隔离协议验收，结果不代表业务测试；敏感词使用虚构标记\",\"prerequisite\":\"\",\"priority\":\"P0\",\"customFields\":[],\"steps\":[{\"position\":1,\"description\":\"核验执行事实序列化与脱敏\",\"expected\":\"JSON可解析且定义稳定\"}]},\"steps\":[{\"stepNum\":1,\"actual\":\"第三次成功结构发布；实际文字包含引号\\\"与换行\\n但无敏感字段\",\"result\":\"SUCCESS\"}],\"policySnapshot\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"evidence\":[{\"id\":\"835128cd-0c3b-4fbb-96b3-e1e956e0c614\",\"file_name\":\"actual-ui.png\",\"content_type\":\"image/png\",\"size_bytes\":191151,\"sha256\":\"dd5c3b341e5962c57fc0b038fd9f613457cdc0897c74a82014ea882bd6e38a99\",\"evidence_scope\":\"CASE\",\"definition_hash_version\":\"definition-v2\",\"content_hash\":\"6ff6b7abcdbff73fd31e297e30745ab994aee1cbc4d96104bd1a292c1efb33c0\"}],\"evidenceIds\":[\"835128cd-0c3b-4fbb-96b3-e1e956e0c614\"],\"evidenceScope\":\"CASE\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"resultSource\":\"AGENT_REPORTED\",\"directEvidenceRuleVersion\":\"case-image-v1\"},\"create_time\":1793089280937,\"submissionId\":\"d554c77c-36c9-42b2-9632-5a5dd8f824e2\",\"caseId\":\"1710971570359377921\",\"gateStatus\":\"ACCEPTED\",\"publishStatus\":\"PUBLISHED\",\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"contentHash\":\"6ff6b7abcdbff73fd31e297e30745ab994aee1cbc4d96104bd1a292c1efb33c0\",\"reviewerVersion\":\"structure-v1\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"resultSource\":\"AGENT_REPORTED\",\"evidenceScope\":\"CASE\",\"evidenceIds\":[\"835128cd-0c3b-4fbb-96b3-e1e956e0c614\"],\"issues\":[]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "id": "d554c77c-36c9-42b2-9632-5a5dd8f824e2",
+          "result": "SUCCESS",
+          "gate_status": "ACCEPTED",
+          "review_code": "STRUCTURE_VALIDATED",
+          "reviewer_version": "structure-v1",
+          "content_hash": "6ff6b7abcdbff73fd31e297e30745ab994aee1cbc4d96104bd1a292c1efb33c0",
+          "policy_hash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "facts": {
+            "schemaVersion": "direct-execution.v2",
+            "definition": {
+              "caseId": "1710971570359377921",
+              "projectId": "1704667279923322880",
+              "versionId": "1704667279923322928",
+              "name": "REMAINING-20261027-连续执行与脱敏结构",
+              "caseEditType": "STEP",
+              "description": "隔离协议验收，结果不代表业务测试；敏感词使用虚构标记",
+              "prerequisite": "",
+              "priority": "P0",
+              "customFields": [],
+              "steps": [
+                {
+                  "position": 1,
+                  "description": "核验执行事实序列化与脱敏",
+                  "expected": "JSON可解析且定义稳定"
+                }
+              ]
+            },
+            "steps": [
+              {
+                "stepNum": 1,
+                "actual": "第三次成功结构发布；实际文字包含引号\"与换行\n但无敏感字段",
+                "result": "SUCCESS"
+              }
+            ],
+            "policySnapshot": {
+              "name": "订单复测-证据与冻结断言-20261019",
+              "rules": [
+                {
+                  "parameters": {
+                    "allowedMimeTypes": [
+                      "image/png",
+                      "image/jpeg"
+                    ],
+                    "maxArtifactBytes": 5242880,
+                    "requiredRoles": [
+                      "BEFORE_ACTION",
+                      "AFTER_ACTION"
+                    ]
+                  },
+                  "ruleId": "Q-EVIDENCE-01"
+                },
+                {
+                  "parameters": {
+                    "allowedOperators": [
+                      "EQUALS",
+                      "IN_RANGE"
+                    ],
+                    "expectedSource": "FROZEN_CONTRACT"
+                  },
+                  "ruleId": "Q-ASSERT-01"
+                }
+              ],
+              "schemaVersion": "quality-policy.v1"
+            },
+            "evidence": [
+              {
+                "id": "835128cd-0c3b-4fbb-96b3-e1e956e0c614",
+                "file_name": "actual-ui.png",
+                "content_type": "image/png",
+                "size_bytes": 191151,
+                "sha256": "dd5c3b341e5962c57fc0b038fd9f613457cdc0897c74a82014ea882bd6e38a99",
+                "evidence_scope": "CASE",
+                "definition_hash_version": "definition-v2",
+                "content_hash": "6ff6b7abcdbff73fd31e297e30745ab994aee1cbc4d96104bd1a292c1efb33c0"
+              }
+            ],
+            "evidenceIds": [
+              "835128cd-0c3b-4fbb-96b3-e1e956e0c614"
+            ],
+            "evidenceScope": "CASE",
+            "validationMode": "STRUCTURE_ONLY_V1",
+            "resultSource": "AGENT_REPORTED",
+            "directEvidenceRuleVersion": "case-image-v1"
+          },
+          "create_time": 1793089280937,
+          "submissionId": "d554c77c-36c9-42b2-9632-5a5dd8f824e2",
+          "caseId": "1710971570359377921",
+          "gateStatus": "ACCEPTED",
+          "publishStatus": "PUBLISHED",
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "contentHash": "6ff6b7abcdbff73fd31e297e30745ab994aee1cbc4d96104bd1a292c1efb33c0",
+          "reviewerVersion": "structure-v1",
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "resultSource": "AGENT_REPORTED",
+          "evidenceScope": "CASE",
+          "evidenceIds": [
+            "835128cd-0c3b-4fbb-96b3-e1e956e0c614"
+          ],
+          "issues": []
+        }
+      }
+    }
+  },
+  "finalContract": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"comparison\":\"NONE_AGENT_REPORTED\",\"resultSource\":\"AGENT_REPORTED\",\"contentHash\":\"6ff6b7abcdbff73fd31e297e30745ab994aee1cbc4d96104bd1a292c1efb33c0\",\"instructions\":\"One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.\",\"policy\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"case\":{\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":null,\"versionId\":\"1704667279923322928\",\"reviewStatus\":null,\"updateTime\":null,\"description\":\"隔离协议验收，结果不代表业务测试；敏感词使用虚构标记\",\"customFields\":[],\"caseId\":\"1710971570359377921\",\"num\":null,\"name\":\"REMAINING-20261027-连续执行与脱敏结构\",\"modulePath\":null,\"caseEditType\":\"STEP\",\"tags\":null,\"priority\":\"P0\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":null,\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1710971570359377920\",\"num\":1,\"desc\":\"核验执行事实序列化与脱敏\",\"expected\":\"JSON可解析且定义稳定\",\"actualResult\":null,\"executeResult\":null}]},\"validationMode\":\"STRUCTURE_ONLY_V1\",\"writesEnabled\":true,\"evidenceScope\":\"CASE\",\"minimumEvidenceCount\":1,\"maximumEvidenceCount\":10,\"stepEvidenceRequired\":false,\"clientHashesRequired\":false,\"definitionType\":\"STEP\",\"supported\":true,\"limitations\":{\"originalSteps\":100,\"factsBytes\":1048576,\"submittedSteps\":1000}}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "comparison": "NONE_AGENT_REPORTED",
+          "resultSource": "AGENT_REPORTED",
+          "contentHash": "6ff6b7abcdbff73fd31e297e30745ab994aee1cbc4d96104bd1a292c1efb33c0",
+          "instructions": "One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.",
+          "policy": {
+            "name": "订单复测-证据与冻结断言-20261019",
+            "rules": [
+              {
+                "parameters": {
+                  "allowedMimeTypes": [
+                    "image/png",
+                    "image/jpeg"
+                  ],
+                  "maxArtifactBytes": 5242880,
+                  "requiredRoles": [
+                    "BEFORE_ACTION",
+                    "AFTER_ACTION"
+                  ]
+                },
+                "ruleId": "Q-EVIDENCE-01"
+              },
+              {
+                "parameters": {
+                  "allowedOperators": [
+                    "EQUALS",
+                    "IN_RANGE"
+                  ],
+                  "expectedSource": "FROZEN_CONTRACT"
+                },
+                "ruleId": "Q-ASSERT-01"
+              }
+            ],
+            "schemaVersion": "quality-policy.v1"
+          },
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "case": {
+            "executionRef": null,
+            "executionFacts": null,
+            "projectId": "1704667279923322880",
+            "moduleId": null,
+            "versionId": "1704667279923322928",
+            "reviewStatus": null,
+            "updateTime": null,
+            "description": "隔离协议验收，结果不代表业务测试；敏感词使用虚构标记",
+            "customFields": [],
+            "caseId": "1710971570359377921",
+            "num": null,
+            "name": "REMAINING-20261027-连续执行与脱敏结构",
+            "modulePath": null,
+            "caseEditType": "STEP",
+            "tags": null,
+            "priority": "P0",
+            "prerequisite": "",
+            "testPlanId": null,
+            "testPlanCaseId": null,
+            "lastExecuteResult": null,
+            "lastExecuteUser": null,
+            "lastExecuteUserName": null,
+            "steps": [
+              {
+                "id": "1710971570359377920",
+                "num": 1,
+                "desc": "核验执行事实序列化与脱敏",
+                "expected": "JSON可解析且定义稳定",
+                "actualResult": null,
+                "executeResult": null
+              }
+            ]
+          },
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "writesEnabled": true,
+          "evidenceScope": "CASE",
+          "minimumEvidenceCount": 1,
+          "maximumEvidenceCount": 10,
+          "stepEvidenceRequired": false,
+          "clientHashesRequired": false,
+          "definitionType": "STEP",
+          "supported": true,
+          "limitations": {
+            "originalSteps": 100,
+            "factsBytes": 1048576,
+            "submittedSteps": 1000
+          }
+        }
+      }
+    }
+  },
+  "failedUploadState": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"resourceState\":\"STAGED\",\"evidenceId\":\"19fb4189-e5bb-40e3-983c-0fa2dec5786a\",\"state\":\"SUCCEEDED\",\"expiresAt\":1793175653874}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "resourceState": "STAGED",
+          "evidenceId": "19fb4189-e5bb-40e3-983c-0fa2dec5786a",
+          "state": "SUCCEEDED",
+          "expiresAt": 1793175653874
+        }
+      }
+    }
+  }
+}

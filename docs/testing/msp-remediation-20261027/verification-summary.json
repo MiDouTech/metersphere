@@ -1,0 +1,37 @@
+{
+  "status": "PARTIAL",
+  "backendFocusedTests": {
+    "passed": 19,
+    "failed": 0
+  },
+  "mcpProtocolTests": {
+    "passed": 30,
+    "failed": 0
+  },
+  "importComponentTests": {
+    "passed": 2,
+    "failed": 0
+  },
+  "vueSfcCompile": {
+    "checked": 16,
+    "failed": 0
+  },
+  "eslint": {
+    "errors": 0,
+    "warnings": 22
+  },
+  "backendIncrementalCompilation": "PASS against existing local classpath, not Maven clean build",
+  "mcpTypeScriptBuild": "PASS",
+  "apiContractStaticCheck": "PASS",
+  "layoutOverflowStaticCheck": "PASS",
+  "notExecuted": [
+    "frontend full typecheck and production build",
+    "Maven clean package/full suite",
+    "real MySQL integration and migration",
+    "Docker image build/start/health",
+    "ego live pages and screenshot comparison",
+    "real external MCP connector refresh",
+    "controlled deployment key injection"
+  ],
+  "resourcePolicy": "serial constrained heaps 160/192 MiB; no environment started; approximately 0.8–1.2 GiB free during work"
+}

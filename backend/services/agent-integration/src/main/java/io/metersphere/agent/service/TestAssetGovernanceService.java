@@ -71,7 +71,7 @@ public class TestAssetGovernanceService {
         String path = parent == null ? name : parent.path + " / " + name;
         Long sort = jdbc.queryForObject("SELECT COALESCE(MAX(sort),0)+5000 FROM test_asset_category WHERE organization_id=? AND parent_id=? AND deleted=b'0'", Long.class, organizationId, parentId);
         try {
-            jdbc.update("INSERT INTO test_asset_category(id,organization_id,parent_id,name,normalized_name,path,level,sort,deleted,create_user,create_time,update_user,update_time) VALUES(?,?,?,?,?,?,?,?,b'0',?,?,?,?,?)",
+            jdbc.update("INSERT INTO test_asset_category(id,organization_id,parent_id,name,normalized_name,path,level,sort,deleted,create_user,create_time,update_user,update_time) VALUES(?,?,?,?,?,?,?,?,b'0',?,?,?,?)",
                     id, organizationId, parentId, name, normalizeName(name), path, level, sort, user, now, user, now);
         } catch (DuplicateKeyException ex) {
             throw new MSException("同一父分类下名称不能重复");
