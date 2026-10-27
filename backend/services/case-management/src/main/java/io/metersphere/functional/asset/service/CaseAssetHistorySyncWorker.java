@@ -112,10 +112,16 @@ public class CaseAssetHistorySyncWorker {
     }
 
     private String safeFailureMessage(Exception error, String reference) {
+        Throwable cause = error;
+        while (cause.getCause() != null && cause.getCause() != cause) cause = cause.getCause();
+        if (error instanceof org.springframework.dao.DuplicateKeyException || cause instanceof java.sql.SQLIntegrityConstraintViolationException) {
+            return "目录或用例映射冲突，请核对历史目录来源后重试。错误编号：" + reference;
+        }
+        if (error instanceof TransientDataAccessException) return "数据暂时不可用，自动重试后仍未成功，请稍后重试。错误编号：" + reference;
         if (error instanceof MSException && StringUtils.isNotBlank(error.getMessage())) {
             return StringUtils.left(error.getMessage(), 1500);
         }
-        return "同步失败，请根据错误编号 " + reference + " 查看服务日志";
+        return "同步未完成，请重试失败项；如仍失败，请联系管理员核对项目、模板和存储配置。错误编号：" + reference;
     }
 
     private void refresh(String jobId, boolean finish) {

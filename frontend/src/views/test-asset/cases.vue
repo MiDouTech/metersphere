@@ -1,6 +1,6 @@
 <template>
-  <div class="p-4">
-    <MsCard simple>
+  <div class="asset-page min-w-0 max-w-full p-4">
+    <MsCard simple :min-width="0">
       <div class="mb-4 flex items-start justify-between gap-4">
         <div>
           <div class="text-base font-medium">用例资产</div>
@@ -91,12 +91,15 @@
               @click="selectCatalog(item.id)"
             >
               <div class="min-w-0 flex-1">
-                <div class="catalog-name">{{ item.name }}</div>
+                <div class="catalog-name">{{ item.pinned ? '📌 ' : '' }}{{ item.name }}</div>
                 <div class="catalog-id">ID: {{ item.id }}</div>
               </div>
               <a-dropdown v-if="canUpdate || canDelete" trigger="click" @click.stop>
                 <a-button type="text" size="mini"><icon-more /></a-button>
                 <template #content>
+                  <a-doption v-if="canUpdate" @click="toggleCatalogPin(item)">{{
+                    item.pinned ? '取消置顶' : '置顶（组织）'
+                  }}</a-doption>
                   <a-doption
                     v-if="canUpdate"
                     v-operable-permission="{
@@ -198,7 +201,57 @@
               >
             </div>
           </div>
+          <a-alert v-if="syncFailures.length" type="warning" class="mb-3">
+            <details
+              ><summary>持续同步存在 {{ syncFailures.length }} 条未完成记录（最多显示最近 100 条）</summary>
+              <div v-for="failure in syncFailures" :key="failure.id" class="my-2">
+                用例 {{ failure.caseId }} · {{ failure.state }} ·
+                {{ failure.message || `同步失败，排查编号 ${failure.id}` }}
+                <a-button
+                  v-if="canUpdate && failure.state === 'FAILED'"
+                  size="mini"
+                  :disabled="syncRetryBusy"
+                  @click="retrySync(failure)"
+                  >重试</a-button
+                >
+              </div>
+            </details>
+          </a-alert>
+          <a-space class="mb-3" wrap>
+            <span>已选择 {{ selectedAssetIds.length }} 条（当前页）</span>
+            <CaseAssetBatchActions
+              :catalog-id="selectedCatalogId"
+              :ids="selectedAssetIds"
+              :categories="assetCategories"
+              @changed="loadCases"
+            />
+            <a-button
+              v-if="canExport"
+              v-operable-permission="{
+                code: 'CASE_ASSET_EXPORT_BUTTON',
+                permissions: ['CASE_ASSET:READ+EXPORT'],
+                typeList: ['ORGANIZATION'],
+              }"
+              :disabled="!selectedAssetIds.length || exportBusy"
+              :loading="exportBusy"
+              @click="exportSelectedAssets"
+              >导出</a-button
+            >
+            <a-button v-if="exportTask?.state === 'SUCCEEDED'" @click="downloadExportResult">下载导出文件</a-button>
+            <span v-if="exportTask"
+              >导出任务：{{ exportTask.state }} {{ exportTask.message || '' }} {{ exportTask.traceId || '' }}</span
+            >
+          </a-space>
+          <a-empty
+            v-if="!caseLoading && !cases.length"
+            :description="selectedCatalogId ? '当前目录暂无资产用例' : '请先选择用例项目'"
+            class="py-12"
+          />
           <a-table
+            v-show="caseLoading || cases.length > 0"
+            v-model:selected-keys="selectedAssetIds"
+            :row-selection="{ type: 'checkbox', showCheckedAll: true }"
+            :scroll="{ x: 1400 }"
             :data="cases"
             :loading="caseLoading"
             :pagination="casePagination"
@@ -356,12 +409,13 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, reactive, ref } from 'vue';
+  import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
   import { useRouter } from 'vue-router';
   import { Message, Modal } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
+  import CaseAssetBatchActions from './components/CaseAssetBatchActions.vue';
   import CaseAssetFileImport from './components/CaseAssetFileImport.vue';
   import TestAssetCategoryDrawer from './components/TestAssetCategoryDrawer.vue';
 
@@ -372,6 +426,8 @@
     type TestAssetCreationSource,
   } from '@/api/modules/ai-execution';
   import {
+    type AssetExportTask,
+    type AssetSyncFailure,
     backfillCaseAssetCatalogs,
     type CaseAssetCatalog,
     type CaseAssetHistorySyncJob,
@@ -379,12 +435,19 @@
     createCaseAssetCatalog,
     deleteCaseAsset,
     deleteCaseAssetCatalog,
+    downloadAssetExport,
+    getAssetExportColumns,
+    getAssetExportTask,
+    getAssetSyncFailures,
     getCaseAssetHistorySyncJob,
     getCaseAssetList,
     getCaseAssetReferencedProjects,
     getLatestCaseAssetHistorySyncJob,
     pageCaseAssetCatalogs,
+    retryAssetSyncFailure,
     retryCaseAssetHistorySyncJob,
+    setCaseAssetCatalogPinned,
+    startAssetExport,
     updateCaseAssetCatalog,
   } from '@/api/modules/case-management/featureCase';
   import { useUserStore } from '@/store';
@@ -397,6 +460,13 @@
 
   const router = useRouter();
   const canAdd = hasAnyPermission(['CASE_ASSET:READ+ADD']);
+  const canExport = hasAnyPermission(['CASE_ASSET:READ+EXPORT']);
+  const selectedAssetIds = ref<string[]>([]);
+  const exportTask = ref<AssetExportTask>();
+  const exportBusy = ref(false);
+  const syncFailures = ref<AssetSyncFailure[]>([]);
+  const syncRetryBusy = ref(false);
+  let exportTimer: ReturnType<typeof setTimeout> | undefined;
   const canUpdate = hasAnyPermission(['CASE_ASSET:READ+UPDATE']);
   const canDelete = hasAnyPermission(['CASE_ASSET:READ+DELETE']);
   const canImport = hasAnyPermission(['CASE_ASSET:READ+IMPORT']);
@@ -467,25 +537,87 @@
   const formatTime = (value?: number | string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
   const getPriority = (record: CaseManagementTable) =>
     record.priority || record.customFields?.find((field: any) => field.fieldName === '用例等级')?.value || '-';
+  let caseLoadSequence = 0;
   async function loadCases() {
+    const sequence = ++caseLoadSequence;
+    const catalogId = selectedCatalogId.value;
     if (!selectedCatalogId.value) {
       cases.value = [];
       caseTotal.value = 0;
       return;
     }
+    selectedAssetIds.value = [];
     caseLoading.value = true;
     try {
       const result = await getCaseAssetList({
-        catalogId: selectedCatalogId.value,
+        catalogId,
         ...caseQuery,
         keyword: caseQuery.keyword.trim() || undefined,
       } as any);
+      const failures = await getAssetSyncFailures(catalogId);
+      if (sequence !== caseLoadSequence || catalogId !== selectedCatalogId.value) return;
       cases.value = result.list || [];
+      syncFailures.value = failures;
       caseTotal.value = result.total || 0;
     } finally {
-      caseLoading.value = false;
+      if (sequence === caseLoadSequence) caseLoading.value = false;
     }
   }
+  async function retrySync(failure: AssetSyncFailure) {
+    if (syncRetryBusy.value) return;
+    syncRetryBusy.value = true;
+    try {
+      await retryAssetSyncFailure(selectedCatalogId.value, failure.id);
+      syncFailures.value = await getAssetSyncFailures(selectedCatalogId.value);
+      Message.success('已重新排队，请稍后刷新查看同步结果');
+    } finally {
+      syncRetryBusy.value = false;
+    }
+  }
+  async function pollAssetExport() {
+    if (!exportTask.value) return;
+    try {
+      exportTask.value = await getAssetExportTask(exportTask.value.taskId);
+      if (['SUCCEEDED', 'FAILED', 'EXPIRED', 'STOPPED'].includes(exportTask.value.state)) {
+        exportBusy.value = false;
+        return;
+      }
+      exportTimer = setTimeout(pollAssetExport, 2500);
+    } catch {
+      exportBusy.value = false;
+      Message.error('无法读取导出任务，请稍后重新查询');
+    }
+  }
+  async function exportSelectedAssets() {
+    if (!selectedCatalogId.value || !selectedAssetIds.value.length || exportBusy.value) return;
+    exportBusy.value = true;
+    try {
+      const fields = await getAssetExportColumns(selectedCatalogId.value);
+      const headers = (values: Record<string, string>) => Object.entries(values).map(([id, name]) => ({ id, name }));
+      exportTask.value = await startAssetExport(selectedCatalogId.value, {
+        selectAll: false,
+        selectIds: [...selectedAssetIds.value],
+        requestId: crypto.randomUUID(),
+        systemFields: headers(fields.systemColumns),
+        customFields: headers(fields.customColumns),
+        otherFields: headers(fields.otherColumns),
+      });
+      await pollAssetExport();
+    } catch {
+      exportBusy.value = false;
+    }
+  }
+  async function downloadExportResult() {
+    if (!exportTask.value) return;
+    const blob = await downloadAssetExport(exportTask.value.taskId);
+    const url = URL.createObjectURL(blob as Blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `用例资产.${exportTask.value.fileType === 'zip' ? 'zip' : 'xlsx'}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+  onUnmounted(() => clearTimeout(exportTimer));
   async function changeCaseCategory(record: CaseManagementTable, categoryId?: string) {
     const previous = record.assetCategoryId;
     try {
@@ -497,6 +629,7 @@
       record.assetCategoryId = previous;
     }
   }
+  const pinLoading = ref(false);
   async function loadCatalogs() {
     catalogLoading.value = true;
     try {
@@ -511,6 +644,17 @@
       await loadCases();
     } finally {
       catalogLoading.value = false;
+    }
+  }
+  async function toggleCatalogPin(item: CaseAssetCatalog) {
+    if (pinLoading.value) return;
+    pinLoading.value = true;
+    try {
+      await setCaseAssetCatalogPinned(item.id, !item.pinned);
+      catalogQuery.current = 1;
+      await loadCatalogs();
+    } finally {
+      pinLoading.value = false;
     }
   }
   function searchCatalogs() {
@@ -694,17 +838,34 @@
 </script>
 
 <style scoped lang="less">
+  .asset-page :deep(.ms-card-container),
+  .asset-page :deep(.arco-spin),
+  .asset-page :deep(.arco-scrollbar) {
+    min-width: 0;
+    max-width: 100%;
+  }
   .asset-layout {
     display: flex;
     gap: 16px;
   }
   .asset-toolbar-actions {
-    margin-right: 100px;
+    flex-wrap: wrap;
   }
   @media (max-width: 1200px) {
     .asset-toolbar-actions {
       margin-right: 0;
       flex-wrap: wrap;
+    }
+  }
+  @media (max-width: 900px) {
+    .asset-layout {
+      flex-direction: column;
+    }
+    .asset-layout .catalog-panel {
+      width: 100%;
+      max-height: 280px;
+      overflow: auto;
+      border-right: none;
     }
   }
   .catalog-panel {

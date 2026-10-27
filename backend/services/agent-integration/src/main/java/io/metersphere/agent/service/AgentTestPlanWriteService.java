@@ -33,7 +33,33 @@ public class AgentTestPlanWriteService {
     @Resource
     private AgentExecLogService agentExecLogService;
 
+    @Resource private AgentOperationExecutor operations;
+    @Resource private AgentBusinessAccess access;
+    @Resource private jakarta.validation.Validator validator;
+
     public AgentTestPlanDTO create(AgentTestPlanCreateRequest request) {
+        if(request==null || !validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+        request.setAutomaticStatusUpdate(Boolean.TRUE.equals(request.getAutomaticStatusUpdate()));
+        request.setRepeatCase(Boolean.TRUE.equals(request.getRepeatCase()));
+        request.setPassThreshold(request.getPassThreshold()==null?100.0:request.getPassThreshold());
+        request.setModuleId(StringUtils.defaultIfBlank(request.getModuleId(),ModuleConstants.DEFAULT_NODE_ID));
+        if(request.getCaseIds()==null)request.setCaseIds(java.util.List.of());
+        return operations.execute("test_plan.create",request.getRequestId(),request,AgentTestPlanDTO.class,
+                ()->authorize(request.getProjectId(),null,io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ_ADD),()->createOnce(request));
+    }
+    private void authorize(String project,String plan,String permission) {
+        access.project(project,permission,true,io.metersphere.agent.constants.AgentTokenScope.PLAN_WRITE);
+        if(plan!=null) {
+            TestPlan target=testPlanMapper.selectByPrimaryKey(plan);
+            if(target==null || !project.equals(target.getProjectId()) || "ARCHIVED".equals(target.getStatus())) throw AgentBusinessAccess.denied();
+        }
+    }
+    private void validateCases(String project,java.util.List<String> cases) {
+        if(cases==null)return;
+        for(int offset=0;offset<cases.size();offset+=100)access.cases(project,cases.subList(offset,Math.min(offset+100,cases.size())).stream().distinct().toList());
+    }
+    private AgentTestPlanDTO createOnce(AgentTestPlanCreateRequest request) {
+        validateCases(request.getProjectId(),request.getCaseIds());
         String userId = requireUserId();
         SessionUser user = requireSessionUser();
 
@@ -66,8 +92,14 @@ public class AgentTestPlanWriteService {
     }
 
     public void associate(AgentTestPlanAssociateRequest request) {
-        associate(request, requireSessionUser());
-        agentExecLogService.audit("TEST_PLAN_ASSOCIATE", request.getTestPlanId(), JSON.toJSONString(request));
+        if(request==null || !validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+        operations.execute("test_plan.associate_cases",request.getRequestId(),request,java.util.Map.class,
+                ()->authorize(request.getProjectId(),request.getTestPlanId(),io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ_ASSOCIATION),()->{
+                    validateCases(request.getProjectId(),request.getCaseIds());
+                    associate(request,requireSessionUser());
+                    agentExecLogService.audit("TEST_PLAN_ASSOCIATE",request.getTestPlanId(),JSON.toJSONString(request));
+                    return java.util.Map.of("ok",true);
+                });
     }
 
     private void associate(AgentTestPlanAssociateRequest request, SessionUser user) {
@@ -81,6 +113,15 @@ public class AgentTestPlanWriteService {
     }
 
     public AgentTestPlanDTO get(String id) {
+        TestPlan plan = testPlanMapper.selectByPrimaryKey(id);
+        if (plan == null) throw new MSException("RESOURCE_NOT_FOUND");
+        access.project(plan.getProjectId(), io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ,
+                false, io.metersphere.agent.constants.AgentTokenScope.PLAN_READ);
+        return toDto(plan, null);
+    }
+
+    // Mutation callers have already checked their write permission; no hidden read-scope requirement.
+    AgentTestPlanDTO getAuthorized(String id) {
         TestPlan plan = testPlanMapper.selectByPrimaryKey(id);
         if (plan == null) {
             throw new MSException("测试计划不存在: " + id);

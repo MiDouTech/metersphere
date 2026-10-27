@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class CaseReviewCaseProvider implements BaseCaseProvider {
+    @Resource private io.metersphere.functional.service.FunctionalReviewRecountService reviewRecount;
 
     @Resource
     private CaseReviewMapper caseReviewMapper;
@@ -57,7 +58,7 @@ public class CaseReviewCaseProvider implements BaseCaseProvider {
     @Override
     public void updateCaseReview(Map<String, Object> paramMap) {
         String event = paramMap.get(CaseEvent.Param.EVENT_NAME).toString();
-        switch (event) {
+        try { switch (event) {
             case CaseEvent.Event.ASSOCIATE -> updateCaseReviewByAssociate(paramMap);
             case CaseEvent.Event.DISASSOCIATE -> updateCaseReviewByDisAssociate(paramMap);
             case CaseEvent.Event.DELETE_FUNCTIONAL_CASE -> updateCaseReviewByDeleteFunctionalCase(paramMap);
@@ -65,6 +66,11 @@ public class CaseReviewCaseProvider implements BaseCaseProvider {
             case CaseEvent.Event.RECOVER_FUNCTIONAL_CASE -> updateCaseReviewByRecoverFunctionalCase(paramMap);
             case CaseEvent.Event.REVIEW_FUNCTIONAL_CASE -> updateCaseReviewByReviewFunctionalCase(paramMap);
             default -> LogUtils.info("CaseProvider: " + event);
+        } } finally {
+            Object ids=paramMap.get(CaseEvent.Param.CASE_IDS);
+            if(ids!=null)reviewRecount.enqueueForCases(JSON.parseArray(JSON.toJSONString(ids),String.class));
+            Object review=paramMap.get(CaseEvent.Param.REVIEW_ID);
+            if(review!=null)reviewRecount.enqueue(String.valueOf(review));
         }
 
     }

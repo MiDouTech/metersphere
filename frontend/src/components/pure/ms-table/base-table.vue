@@ -39,6 +39,7 @@
               :exclude-keys="Array.from(props.excludeKeys)"
               :current-data="attrs.data as Record<string,any>[]"
               :show-select-all="!!attrs.showPagination && props.showSelectorAll"
+              :selector-status="props.selectorStatus"
               :disabled="(attrs.data as []).length === 0"
               :row-key="rowKey"
               :row-selection-disabled-config="attrs.rowSelectionDisabledConfig as MsTableRowSelectionDisabledConfig"
@@ -275,11 +276,14 @@
           class="flex-1"
           :select-row-count="selectedCount"
           :disabled="!!attrs.loading"
+          :show-select-all-after-export="props.showSelectAllAfterExport"
+          :select-all-disabled="!!attrs.loading || !(attrs.msPagination as MsPaginationI)?.total"
           :action-config="props.actionConfig"
           wrapper-id="ms-table-footer-wrapper"
           :size="props.paginationSize"
           @batch-action="handleBatchAction"
           @clear="() => emit('clearSelector')"
+          @select-all-pages="handleSelectAllChange(SelectAllEnum.ALL, true)"
         >
           <template #count>
             <slot name="count"></slot>
@@ -373,6 +377,7 @@
     rowClass?: string | any[] | Record<string, any> | ((record: TableData, rowIndex: number) => any);
     spanAll?: boolean;
     showSelectorAll?: boolean;
+    showSelectAllAfterExport?: boolean;
     firstColumnWidth?: number; // 选择、拖拽列的宽度
     paginationSize?: 'small' | 'mini' | 'medium' | 'large';
     alwaysShowSelectedCount?: boolean; // 是否总是保持显示已选项

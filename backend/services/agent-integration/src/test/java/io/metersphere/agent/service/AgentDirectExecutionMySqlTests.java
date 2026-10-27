@@ -36,12 +36,30 @@ class AgentDirectExecutionMySqlTests {
                 for(String sql:new String(stream.readAllBytes(),StandardCharsets.UTF_8).split(";"))
                     if(!sql.isBlank())jdbc.execute(sql.replace("CREATE TABLE","CREATE TEMPORARY TABLE"));
             }
+            try(var stream=getClass().getResourceAsStream("/migration/3.7.2/ddl/V3.7.2_131__case_scoped_execution_evidence.sql")) {
+                assertNotNull(stream);
+                for(String sql:new String(stream.readAllBytes(),StandardCharsets.UTF_8).split(";"))
+                    if(!sql.isBlank())jdbc.execute(sql.replace("CREATE TABLE","CREATE TEMPORARY TABLE"));
+            }
+            jdbc.execute("CREATE TEMPORARY TABLE functional_import_job(request_id VARCHAR(64) NOT NULL)");
+            try(var stream=getClass().getResourceAsStream("/migration/3.7.2/ddl/V3.7.2_132__mcp_import_request_identity.sql")) {
+                assertNotNull(stream);jdbc.execute(new String(stream.readAllBytes(),StandardCharsets.UTF_8));
+            }
+            jdbc.update("INSERT INTO functional_import_job VALUES (?)","a".repeat(128));
+            assertEquals(128,jdbc.queryForObject("SELECT LENGTH(request_id) FROM functional_import_job",Integer.class));
+            jdbc.execute("CREATE TEMPORARY TABLE test_plan(id VARCHAR(64) PRIMARY KEY,status VARCHAR(32),project_id VARCHAR(64))");
+            jdbc.execute("CREATE TEMPORARY TABLE test_plan_functional_case(functional_case_id VARCHAR(64),test_plan_id VARCHAR(64),last_exec_result VARCHAR(32),last_exec_time BIGINT,execute_user VARCHAR(64))");
             jdbc.execute("CREATE TEMPORARY TABLE agent_token(id VARCHAR(64) PRIMARY KEY)");
             jdbc.update("INSERT INTO agent_token VALUES ('t')");
             jdbc.execute("CREATE TEMPORARY TABLE functional_case(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64),deleted BOOLEAN,last_execute_result VARCHAR(32),last_execute_user VARCHAR(64),last_execute_time BIGINT)");
             jdbc.update("INSERT INTO functional_case VALUES ('c','p',0,'PENDING',NULL,NULL)");
             jdbc.execute("CREATE TEMPORARY TABLE functional_case_attachment(id VARCHAR(64) PRIMARY KEY,case_id VARCHAR(64),file_id VARCHAR(64),file_name VARCHAR(255),size BIGINT,local BOOLEAN,create_user VARCHAR(64),create_time BIGINT,file_source VARCHAR(32))");
             jdbc.execute("CREATE TEMPORARY TABLE agent_idempotency_record(id VARCHAR(64) PRIMARY KEY,token_id VARCHAR(64),tool_name VARCHAR(128),request_id VARCHAR(128),request_hash CHAR(64),response_json MEDIUMTEXT,create_time BIGINT,status VARCHAR(32),hash_version VARCHAR(32),completed_time BIGINT,UNIQUE KEY(token_id,tool_name,request_id))");
+            jdbc.execute("CREATE TEMPORARY TABLE agent_attachment_upload_intent(request_id VARCHAR(128) NOT NULL)");
+            try(var stream=getClass().getResourceAsStream("/migration/3.7.2/ddl/V3.7.2_133__mcp_request_key_comparison.sql")) {
+                assertNotNull(stream);
+                for(String sql:new String(stream.readAllBytes(),StandardCharsets.UTF_8).split(";"))if(!sql.isBlank())jdbc.execute(sql);
+            }
             jdbc.execute("CREATE TEMPORARY TABLE execution_quality_policy_global_state(scope VARCHAR(32),current_policy_id VARCHAR(64))");
             jdbc.execute("CREATE TEMPORARY TABLE execution_quality_policy_global(id VARCHAR(64),version_no INT,content_hash CHAR(64),rules_json TEXT,status VARCHAR(32))");
             var validated=new QualityPolicyValidator().validate(AgentDirectExecutionTests.POLICY);
@@ -51,11 +69,18 @@ class AgentDirectExecutionMySqlTests {
             var token=new AgentToken();token.setId("t");token.setUserId("u");AgentTokenContext.set(token);
             var source=new AgentCaseDTO();source.setCaseId("c");source.setProjectId("p");source.setUpdateTime(1L);
             var step=new AgentCaseStepDTO();step.setNum(1);step.setDesc("open");step.setExpected("visible");source.setSteps(List.of(step));
+            var detail=new io.metersphere.functional.dto.FunctionalCaseDetailDTO();detail.setId("c");detail.setProjectId("p");detail.setName("case");detail.setCaseEditType("STEP");
+            detail.setSteps("[{\"num\":1,\"desc\":\"open\",\"result\":\"visible\"}]");
+            var definitions=spy(new io.metersphere.functional.service.FunctionalCaseService());
+            ReflectionTestUtils.setField(definitions,"caseLifecycleJdbc",jdbc);
+            doReturn(Map.of("c",detail)).when(definitions).getAgentCaseDetails(List.of("c"),"p",true);
             var search=mock(AgentFunctionalCaseSearchService.class);when(search.getById("c",true,null)).thenReturn(source);
             var service=new AgentDirectExecutionService();
             ReflectionTestUtils.setField(service,"jdbc",jdbc);
             ReflectionTestUtils.setField(service,"access",mock(AgentBusinessAccess.class));
             ReflectionTestUtils.setField(service,"cases",search);
+            ReflectionTestUtils.setField(service,"definitions",definitions);
+            ReflectionTestUtils.setField(service,"schemaMapper",new io.metersphere.agent.mapper.AgentCaseSchemaMapper());
             ReflectionTestUtils.setField(service,"operations",new AgentOperationExecutor(jdbc,new DataSourceTransactionManager(ds)));
             ReflectionTestUtils.setField(service,"gate",new GlobalQualityGate(jdbc,null,new QualityPolicyValidator()));
             ReflectionTestUtils.setField(service,"cipher",new AgentFactCipher());
@@ -67,7 +92,7 @@ class AgentDirectExecutionMySqlTests {
             upload.put("purpose","AFTER_STEP");upload.put("requestId","after");
             String after=(String)service.upload(upload).get("evidenceId");
             var submit=new LinkedHashMap<>(base);submit.put("policyHash",contract.get("policyHash"));submit.put("requestId","result");
-            submit.put("steps",List.of(Map.of("stepNum",1,"actual","observed with different wording","result","SUCCESS","evidenceIds",List.of(after))));
+            submit.put("steps",List.of(Map.of("stepNum",1,"actual","observed with different wording","result","SUCCESS")));
             assertEquals("QUALITY_EVIDENCE_REQUIRED",assertThrows(MSException.class,()->service.submit(submit)).getMessage());
             assertEquals("PENDING",jdbc.queryForObject("SELECT last_execute_result FROM functional_case",String.class));
             assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
@@ -75,7 +100,7 @@ class AgentDirectExecutionMySqlTests {
             assertNull(store.read("p","c",before));
             submit.put("steps",List.of(Map.of("stepNum",1,"actual","observed with different wording","result","SUCCESS","evidenceIds",List.of(before,after))));
             token.setId("other-token");assertThrows(MSException.class,()->service.submit(submit));token.setId("t");
-            submit.put("contentHash","0".repeat(64));assertEquals("VERSION_CONFLICT",assertThrows(MSException.class,()->service.submit(submit)).getMessage());submit.put("contentHash",contract.get("contentHash"));
+            detail.setName("changed definition");assertEquals("VERSION_CONFLICT",assertThrows(MSException.class,()->service.submit(submit)).getMessage());detail.setName("case");
             jdbc.execute("ALTER TABLE functional_case_attachment ADD UNIQUE KEY forced_failure(file_name)");
             assertThrows(org.springframework.dao.DataIntegrityViolationException.class,()->service.submit(submit));
             assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Integer.class));
@@ -135,6 +160,48 @@ class AgentDirectExecutionMySqlTests {
             service.expirePendingEvidence();
             assertEquals(8,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_evidence",Integer.class));
             assertNotNull(store.read("p","c",before));
+            jdbc.update("INSERT INTO test_plan VALUES ('active','UNDERWAY','p'),('archived','ARCHIVED','p')");
+            jdbc.update("INSERT INTO test_plan_functional_case VALUES ('c','active','SUCCESS',1,'u'),('c','archived','SUCCESS',1,'u')");
+            var hundred=new ArrayList<Map<String,Object>>();var outcomes=new ArrayList<Map<String,Object>>();
+            for(int n=1;n<=100;n++){hundred.add(Map.of("num",n,"desc","operation "+n,"result","expected "+n));outcomes.add(Map.of("stepNum",n,"actual","observed "+n,"result",n==100?"ERROR":"SUCCESS"));}
+            detail.setSteps(io.metersphere.sdk.util.JSON.toJSONString(hundred));
+            var minimal=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c","requestId","hundred-single","fileName","one.png","contentType","image/png","base64",AgentDirectExecutionTests.png()));
+            String one=(String)service.upload(minimal).get("evidenceId");
+            var singleSubmit=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c","requestId","hundred-single","evidenceIds",List.of(one),"steps",outcomes));
+            var published=service.submit(singleSubmit);
+            assertEquals("ERROR",published.get("result"));assertEquals("CASE",published.get("evidenceScope"));
+            org.springframework.test.util.ReflectionTestUtils.setField(service,"writesEnabled",false);
+            assertEquals(published.get("submissionId"),service.submit(singleSubmit).get("submissionId"));
+            var paused=new LinkedHashMap<>(minimal);paused.put("requestId","paused-new");
+            assertEquals("PERSONAL_EXECUTION_WRITE_DISABLED",assertThrows(MSException.class,()->service.upload(paused)).getMessage());
+            org.springframework.test.util.ReflectionTestUtils.setField(service,"writesEnabled",true);
+            assertEquals(9,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
+            assertArrayEquals(Base64.getDecoder().decode(AgentDirectExecutionTests.png()),store.read("p","c",one));
+            assertEquals("ERROR",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='active'",String.class));
+            assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='archived'",String.class));
+            var read=new io.metersphere.agent.tool.functional.FunctionalAttachmentReadTool();
+            ReflectionTestUtils.setField(read,"access",mock(AgentBusinessAccess.class));ReflectionTestUtils.setField(read,"jdbc",jdbc);
+            var attachmentService=new io.metersphere.functional.service.FunctionalCaseAttachmentService();ReflectionTestUtils.setField(attachmentService,"evidenceStore",store);
+            ReflectionTestUtils.setField(read,"attachments",attachmentService);
+            var readArgs=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c","fileId",one));
+            assertEquals(AgentDirectExecutionTests.png(),((io.metersphere.agent.tool.AgentMcpImageResult)read.execute(readArgs)).data());
+            jdbc.update("DELETE FROM functional_case_attachment WHERE file_id=?",one);
+            assertThrows(MSException.class,()->read.execute(readArgs));
+            readArgs.put("submissionId",published.get("submissionId"));
+            assertEquals(AgentDirectExecutionTests.png(),((io.metersphere.agent.tool.AgentMcpImageResult)read.execute(readArgs)).data());
+            readArgs.put("projectId","foreign");assertThrows(MSException.class,()->read.execute(readArgs));
+            var lookup=new io.metersphere.agent.tool.functional.PersonalOperationGetTool();
+            ReflectionTestUtils.setField(lookup,"access",mock(AgentBusinessAccess.class));ReflectionTestUtils.setField(lookup,"jdbc",jdbc);
+            var lookupArgs=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c","requestId","hundred-single","toolName","metersphere.functional.execution.evidence.upload"));
+            assertEquals("CONSUMED",((Map<?,?>)lookup.execute(lookupArgs)).get("resourceState"));
+            lookupArgs.put("toolName","metersphere.functional.execution.submit");assertEquals(published.get("submissionId"),((Map<?,?>)lookup.execute(lookupArgs)).get("submissionId"));
+            lookupArgs.put("requestId","missing");assertEquals("UNKNOWN",((Map<?,?>)lookup.execute(lookupArgs)).get("outcome"));
+            var provider=new AgentDirectExecutionViewProvider(jdbc,new AgentFactCipher());
+            detail.setLastExecuteResult("ERROR");detail.setLastExecuteUser("u");
+            detail.setLastExecuteTime(jdbc.queryForObject("SELECT last_execute_time FROM functional_case WHERE id='c'",Long.class));
+            assertEquals(published.get("submissionId"),provider.current(detail).orElseThrow().id());
+            jdbc.update("UPDATE agent_case_current_execution SET submission_id='' WHERE case_id='c'");
+            assertTrue(provider.current(detail).isEmpty());
         } finally {AgentTokenContext.clear();ds.destroy();}
     }
 }

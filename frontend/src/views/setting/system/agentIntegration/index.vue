@@ -1,7 +1,7 @@
 <template>
-  <div>
+  <div class="agent-integration-viewport w-full min-w-0 max-w-full">
     <template v-if="canReadTokens">
-      <MsCard simple>
+      <MsCard simple :min-width="0" class="w-full min-w-0 max-w-full">
         <div class="mb-3">
           <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
           <div class="mt-1 text-sm text-[var(--color-text-3)]">
@@ -550,7 +550,7 @@
 
   const { propsRes, propsEvent, loadList, setLoadListParams } = useTable(getAgentTokenPage, {
     columns,
-    scroll: { x: '100%' },
+    scroll: { x: 1660 },
     selectable: false,
     heightUsed: 280,
   });
@@ -763,3 +763,12 @@
     loadList();
   });
 </script>
+
+<style scoped>
+  .agent-integration-viewport :deep(.ms-card-container),
+  .agent-integration-viewport :deep(.arco-spin),
+  .agent-integration-viewport :deep(.arco-scrollbar) {
+    min-width: 0;
+    max-width: 100%;
+  }
+</style>

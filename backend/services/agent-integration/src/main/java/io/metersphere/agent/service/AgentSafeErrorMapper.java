@@ -98,6 +98,9 @@ public class AgentSafeErrorMapper {
             case "STEP_RESULT_REQUEST_CONFLICT" -> "同一请求标识对应的提交内容已变化，请使用新的请求标识";
             case "STEP_RESULT_LEGACY_REQUEST_CONFLICT" -> "历史结果没有可验证摘要，请查询原结果，不要重放提交";
             case "STEP_FACTS_LIMIT_EXCEEDED" -> "步骤事实超过允许容量，请减少非必要信息后重新提交";
+            case "PERSONAL_EXECUTION_WRITE_DISABLED", "MCP_BUSINESS_WRITE_DISABLED" -> "写入暂时关闭，请稍后使用原请求标识查询或重试";
+            case "MCP_TOOL_PROTOCOL_NOT_CONFIGURED" -> "该写工具尚未配置安全的幂等协议，请联系管理员；未执行写入";
+            case "AGENT_FACTS_INVALID" -> "执行事实暂时无法读取，请提供 traceId 排查";
             case "CASE_CONTENT_MISSING" -> "用例缺少有效操作或预期，请核对并重新发布";
             case "CASE_CONTENT_FORMAT_INVALID", "CASE_CONTENT_DECODE_FAILED", "CASE_CONTENT_HASH_INVALID" -> "发布版本内容无法读取，请提供 traceId 联系管理员";
             case "CASE_CONTENT_LIMIT_EXCEEDED" -> "用例内容超过安全读取限制，请联系管理员";

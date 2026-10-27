@@ -51,7 +51,7 @@ public class AgentCaseImportService {
     }
     private Map<String,Object> precheckInternal(FunctionalCaseImportRequest request,MultipartFile file,String requestId,String user,String tokenId) {
         authorize(request.getProjectId(),user,tokenId);
-        if(requestId==null||!requestId.matches("[A-Za-z0-9_-]{1,64}"))throw new MSException("导入请求标识无效");
+        if(requestId==null||!requestId.matches("[A-Za-z0-9_.:-]{1,128}"))throw new MSException("导入请求标识无效");
         if(file==null||file.isEmpty()||file.getSize()>50L*1024*1024)throw new MSException("请选择不超过50MiB的导入文件");
         String name=Objects.toString(file.getOriginalFilename(),"");
         if(name.length()>255||!name.toLowerCase(Locale.ROOT).matches(".*\\.(xlsx|xls|xmind)"))throw new MSException("仅支持Excel或XMind文件");
@@ -60,7 +60,8 @@ public class AgentCaseImportService {
         if(bytes.length>50*1024*1024)throw new MSException("导入文件不能超过50MiB");
         String sourceHash=DigestUtils.sha256Hex(bytes);
         String requestHash=DigestUtils.sha256Hex(JSON.toJSONString(request)+":"+sourceHash+":"+name);
-        var existing=jdbc.queryForList("SELECT id,request_hash FROM functional_import_job WHERE user_id=? AND token_id=? AND request_id=?",user,tokenId,requestId);
+        var existing=jdbc.queryForList("SELECT id,request_hash FROM functional_import_job WHERE user_id=? AND token_id=? AND (request_id=? OR (identity_version='legacy-ci-v1' AND request_id COLLATE utf8mb4_general_ci=? COLLATE utf8mb4_general_ci))",user,tokenId,requestId,requestId);
+        if(existing.size()>1)throw new MSException("IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED");
         if(!existing.isEmpty()) {
             if(!requestHash.equals(existing.getFirst().get("request_hash")))throw new MSException("相同请求标识对应的导入内容已变化，请重新预检");
             return get((String)existing.getFirst().get("id"),user,tokenId,1,10);
@@ -118,14 +119,15 @@ public class AgentCaseImportService {
         String persistedId=new TransactionTemplate(transactionManager).execute(status->{
             // Serialize quota and request key across application instances.
             jdbc.queryForList("SELECT id FROM user WHERE id=? FOR UPDATE",user);
-            var replay=jdbc.queryForList("SELECT id,request_hash FROM functional_import_job WHERE user_id=? AND token_id=? AND request_id=?",user,tokenId,requestId);
+            var replay=jdbc.queryForList("SELECT id,request_hash FROM functional_import_job WHERE user_id=? AND token_id=? AND (request_id=? OR (identity_version='legacy-ci-v1' AND request_id COLLATE utf8mb4_general_ci=? COLLATE utf8mb4_general_ci))",user,tokenId,requestId,requestId);
+            if(replay.size()>1)throw new MSException("IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED");
             if(!replay.isEmpty()) {
                 if(!requestHash.equals(replay.getFirst().get("request_hash")))throw new MSException("相同请求标识对应的导入内容已变化，请重新预检");
                 return (String)replay.getFirst().get("id");
             }
             Long active=jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_job WHERE user_id=? AND expires_at>? AND state IN ('PRECHECKED','QUEUED','RUNNING')",Long.class,user,now);
             if(active!=null&&active>=5)throw new MSException("最多保留5个待处理导入，请先完成或停止现有任务");
-            jdbc.update("INSERT INTO functional_import_job(id,project_id,user_id,token_id,request_id,request_hash,request_json,template_hash,source_hash,source_name,source_bytes,create_time,update_time,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",id,request.getProjectId(),user,tokenId,requestId,requestHash,JSON.toJSONString(request),templateHash,sourceHash,name,bytes,now,now,now+86400000);
+            jdbc.update("INSERT INTO functional_import_job(id,project_id,user_id,token_id,request_id,request_hash,request_json,template_hash,source_hash,source_name,source_bytes,create_time,update_time,expires_at,identity_version) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'binary-v2')",id,request.getProjectId(),user,tokenId,requestId,requestHash,JSON.toJSONString(request),templateHash,sourceHash,name,bytes,now,now,now+86400000);
             int position=0;
             for(var item:prepared)jdbc.update("INSERT INTO functional_import_item(job_id,position,action,payload,target_id,expected_version,state,message) VALUES (?,?,?,?,?,?,?,?)",id,++position,item.action(),item.data()==null?null:JSON.toJSONString(item.data()),item.target(),item.version(),Set.of("INVALID","SKIPPED").contains(item.action())?item.action():"PENDING",item.message());
             return id;

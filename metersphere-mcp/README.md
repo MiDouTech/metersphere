@@ -194,18 +194,18 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 - `functional.archive.prepare` 接受已结束 TASK 或已接收 SUBMISSION 的来源 ID；`archive.get` 查看独立归档状态，失败后 `archive.retry` 不重新执行测试。需要 `ARTIFACT_WRITE` 和当前项目来源读取权限。归档仍明确保留 `AGENT_REPORTED / STRUCTURE_ONLY_V1`，不代表独立业务核验。
 - 有真实可复用业务数据时调用 `functional.archive.data`，每条提供 `sourceObjectId`、`reuseConditions`、`cleanupStatus` 和 `values`，另需项目文件新增权限。没有实际数据时不创建空数据资产。相同内容重放不会重复生成文档或数据集；不同内容不能覆盖同一次运行的原始归档。
 
-# 个人 Agent 直接执行用例（0.7.0）
+# 个人 Agent 直接执行用例（0.8.0）
 
-个人直接提交采用 `STRUCTURE_ONLY_V1`：要求原用例步骤至少覆盖一次，允许额外和重复步骤并原样保留。按冻结 contentHash 和 stepNum 匹配，不比较 actual 与 expected 文字；提交方声明 SUCCESS 或 ERROR，任一记录 ERROR 则汇总 ERROR。
+个人直接提交采用 `STRUCTURE_ONLY_V1`：要求原用例步骤至少覆盖一次，允许额外和重复步骤并原样保留。服务端冻结定义版本，按步骤位置覆盖，不比较 actual 与 expected 文字；提交方声明 SUCCESS 或 ERROR，任一记录 ERROR 则汇总 ERROR。
 
 门禁继续检查权限、内容/策略摘要、证据角色与归属、图片有效性及容量。单次最多1000条记录、序号1..1000；额外序号不计入原步骤覆盖。重复同一步可引用同一证据 ID，正式附件只发布一次；跨步骤证据仍拒绝。ACCEPTED/PUBLISHED 表示结构被接收并保存声明结果，不代表独立证明实际执行或图片语义。无需外部内容核验服务；既有 NEEDS_REVIEW 历史不会自动发布。
 
 平台个人 Token 选择“个人 Agent 测试闭环”，包括 FUNCTIONAL_READ、FUNCTIONAL_SUBMIT 和 CASE_ATTACHMENT；仍受本人项目读取和更新权限约束。
 
-1. 使用 functional.execution.contract 获取步骤、contentHash、policyHash；stepNum 是冻结步骤数组从1开始的位置。
-2. 执行后保存真实观察，使用 functional.execution.evidence.upload 上传每个位置的前后证据；Node 可用 filePath，原生使用 base64。PNG/JPEG 单文件最多5MiB，最低64乘64像素；还受当前策略更小的大小和类型限制。暂存有效期24小时，单Token暂存总量50MiB。
-3. 使用 functional.execution.submit 提交全部记录；每条包含 stepNum、actual、SUCCESS或ERROR、evidenceIds。不可遗漏原步骤、不可跨步骤复用证据。附件与用例结果在一个事务内发布。
-4. 使用 functional.execution.get 回读完整步骤、附件映射、冻结策略、validationMode 和 resultSource。既有旧报告按其原状态读取。
+1. contract 可选，用于获取步骤及支持范围；无需维护 contentHash/policyHash，stepNum 是原步骤数组从1开始的位置。
+2. 执行后保存真实观察，使用 functional.execution.evidence.upload 或 import_url 上传至少一张本次用例图片，不要求逐步配图。Node 可用 filePath，原生使用 base64；PNG/JPEG 单文件最多5MiB、最低64乘64像素、最多2000万像素。暂存24小时，单Token有效暂存额度50MiB。
+3. submit 顶层传 evidenceIds（1～10张），每步传 stepNum、actual、SUCCESS或ERROR；不用每步 evidenceIds。原步骤不可遗漏，允许额外和重复记录。旧步骤级证据兼容合并去重。附件与结果同事务发布。
+4. execution.get 回读结果；attachments.list 查文件标识，functional.attachment.read 读取图片，历史图片可传 submissionId。响应丢失用 operation.get 按原 requestId 查询；NOT_FOUND 不证明未执行，不要换新 key 重做。
 
 相同操作重试使用相同 requestId 和参数；同号不同内容被拒绝。已发布证据不能用于新提交。附件删除关联不改历史执行事实，数据库备份需包含证据与报告表。
 

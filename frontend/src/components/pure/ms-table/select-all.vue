@@ -45,6 +45,7 @@
   const props = withDefaults(
     defineProps<{
       selectedKeys: Set<string>;
+      selectorStatus?: SelectAllEnum;
       total: number;
       currentData: MsTableDataItem<Record<string, any>>[];
       showSelectAll: boolean;
@@ -74,6 +75,13 @@
   });
 
   const selectAllStatus = ref<SelectAllEnum>(SelectAllEnum.NONE);
+  watch(
+    () => props.selectorStatus,
+    (value) => {
+      if (value !== undefined) selectAllStatus.value = value;
+    },
+    { immediate: true }
+  );
   const checked = computed({
     get: () => {
       // 如果是选中所有页则是全选状态（选中所有页分两种情况：一是直接通过下拉选项选中所有页；二是当前已选的数量等于表格总数）

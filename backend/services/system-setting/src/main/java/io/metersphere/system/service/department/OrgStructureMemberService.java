@@ -14,6 +14,12 @@ import java.util.List;
 @Service
 @Transactional(readOnly = true)
 public class OrgStructureMemberService {
+    public io.metersphere.system.utils.Pager<List<OrgStructureMemberItemDTO>> pageWithTotal(OrgStructureMemberPageRequest request) {
+        orgStructureAccessService.validateReadable(request.getOrganizationId());
+        try (com.github.pagehelper.Page<Object> page = com.github.pagehelper.PageHelper.startPage(request.getCurrent(), request.getPageSize())) {
+            return io.metersphere.system.utils.PageUtils.setPageInfo(page, extOrgStructureMemberMapper.pageMembers(request));
+        }
+    }
 
     @Resource
     private ExtOrgStructureMemberMapper extOrgStructureMemberMapper;

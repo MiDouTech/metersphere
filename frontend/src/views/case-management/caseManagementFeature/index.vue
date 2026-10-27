@@ -1,5 +1,5 @@
 <template>
-  <MsCard v-if="currentProjectId" simple no-content-padding :min-width="0">
+  <MsCard v-if="currentProjectId" class="management-review" simple no-content-padding :min-width="0">
     <a-tabs v-model:active-key="activeTab" class="no-content" @change="handleTabChange">
       <a-tab-pane v-if="canShowExecuteTab" key="execute" :title="t('menu.caseManagement.executeCase')" />
       <a-tab-pane v-if="canShowXmindTab" key="xmind" :title="t('menu.caseManagement.xmindCase')" />
@@ -450,6 +450,7 @@
 </script>
 
 <style scoped lang="less">
+  @import '@/assets/style/management-review.less';
   .case {
     padding: 8px 4px;
     border-radius: var(--border-radius-small);

@@ -19,6 +19,7 @@
         >{{ t(element.label as string) }}</a-button
       >
       <!-- baseAction多菜单选择 -->
+
       <a-dropdown
         v-if="!element.isDivider && element.children && hasAllPermission(element.permission as string[]) && hasAnyPermission(element.anyPermission as string[])"
         position="tr"
@@ -51,6 +52,15 @@
         </template>
       </a-dropdown>
       <!-- baseAction多菜单选择 -->
+      <a-button
+        v-if="props.showSelectAllAfterExport && element.eventTag === 'export'"
+        class="ml-[8px]"
+        type="outline"
+        :size="props.size"
+        :disabled="props.selectAllDisabled"
+        @click="emit('selectAllPages')"
+        >{{ t('msTable.all') }}</a-button
+      >
     </template>
     <div v-if="moreActionLength > 0" class="drop-down ml-[8px] flex items-center">
       <a-dropdown position="tr" @select="handleSelect">
@@ -97,6 +107,8 @@
   const props = defineProps<{
     selectRowCount?: number;
     disabled?: boolean;
+    showSelectAllAfterExport?: boolean;
+    selectAllDisabled?: boolean;
     actionConfig?: BatchActionConfig;
     wrapperId: string;
     size?: 'mini' | 'small' | 'medium' | 'large';
@@ -104,6 +116,7 @@
   const emit = defineEmits<{
     (e: 'batchAction', value: BatchActionParams): void;
     (e: 'clear'): void;
+    (e: 'selectAllPages'): void;
   }>();
 
   const actionsDisabled = computed(() => !!props.disabled || !props.selectRowCount);

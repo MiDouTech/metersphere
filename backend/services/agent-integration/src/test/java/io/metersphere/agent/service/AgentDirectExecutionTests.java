@@ -63,6 +63,52 @@ class AgentDirectExecutionTests {
         for(String invalid:List.of("[]","[{\"stepNum\":1},{\"stepNum\":1},{\"stepNum\":3}]","[{\"stepNum\":0},{\"stepNum\":2}]","[{\"stepNum\":1.5},{\"stepNum\":2}]","[{\"stepNum\":\"1\"},{\"stepNum\":2}]"))
             assertThrows(MSException.class,()->AgentDirectExecutionService.requireStepCoverage(json.readTree(invalid),2));
     }
+    @Test void oneCaseImageDoesNotInheritRunnerBeforeAfterRoles() throws Exception {
+        var gate=new GlobalQualityGate(null,null,new QualityPolicyValidator());
+        assertDoesNotThrow(()->gate.verifyDirectCaseEvidence(List.of(artifact("AFTER_STEP"))));
+        assertThrows(MSException.class,()->gate.verifyDirectCaseEvidence(List.of()));
+        var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        var steps=json.readTree("[{\"stepNum\":1},{\"stepNum\":2}]");
+        assertEquals(Set.of("e"),AgentDirectExecutionService.collectEvidence(Map.of("evidenceIds",List.of("e","e")),steps));
+        assertEquals(Set.of("e"),AgentDirectExecutionService.collectEvidence(Map.of(),json.readTree("[{\"evidenceIds\":[\"e\"]},{\"evidenceIds\":[]}]")));
+        assertThrows(MSException.class,()->AgentDirectExecutionService.collectEvidence(Map.of(),steps));
+        assertThrows(MSException.class,()->AgentDirectExecutionService.collectEvidence(Map.of("evidenceIds",Collections.nCopies(11,"e")),steps));
+    }
+    @Test void redactionPreservesJsonStructureAndPrimitiveTypes() throws Exception {
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
+        var input=Map.of("actual","password=abc", "token","private", "count",2,"ok",true,"nested",List.of(Map.of("actual","Bearer secret")));
+        var result=mapper.readTree(io.metersphere.agent.security.AgentSensitiveDataSanitizer.sanitizeJson(mapper.writeValueAsString(input)));
+        assertEquals("password=***",result.path("actual").asText());assertEquals("***",result.path("token").asText());
+        assertEquals(2,result.path("count").asInt());assertTrue(result.path("ok").asBoolean());assertEquals("Bearer ***",result.path("nested").get(0).path("actual").asText());
+    }
+    @Test void canonicalRequestsIgnoreNestedObjectOrderButRetainArrayOrder() {
+        var first=new LinkedHashMap<String,Object>();first.put("a",1);first.put("b",2);
+        var second=new LinkedHashMap<String,Object>();second.put("b",2);second.put("a",1);
+        assertEquals(AgentRequestFingerprint.hash(Map.of("nested",first,"requestId","old")),AgentRequestFingerprint.hash(Map.of("nested",second,"requestId","new")));
+        assertNotEquals(AgentRequestFingerprint.hash(Map.of("items",List.of(1,2))),AgentRequestFingerprint.hash(Map.of("items",List.of(2,1))));
+    }
+    @Test void contractUsesDefinitionOnlyAndReportsUnsupportedTypesWithoutPublicReadToolDependency() {
+        var service=new AgentDirectExecutionService();
+        var detail=new io.metersphere.functional.dto.FunctionalCaseDetailDTO();
+        detail.setId("c");detail.setProjectId("p");detail.setName("definition");detail.setCaseEditType("STEP");
+        detail.setSteps("[{\"num\":1,\"desc\":\"open\",\"result\":\"visible\",\"actualResult\":\"old result\"}]");
+        var definitions=org.mockito.Mockito.mock(io.metersphere.functional.service.FunctionalCaseService.class);
+        org.mockito.Mockito.when(definitions.getAgentCaseDetails(List.of("c"),"p",true)).thenReturn(Map.of("c",detail));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"definitions",definitions);
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"access",org.mockito.Mockito.mock(AgentBusinessAccess.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"schemaMapper",new io.metersphere.agent.mapper.AgentCaseSchemaMapper());
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"operations",new AgentOperationExecutor(org.mockito.Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class),org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class)));
+        var gate=org.mockito.Mockito.mock(GlobalQualityGate.class);
+        org.mockito.Mockito.when(gate.currentForSubmission()).thenReturn(new GlobalQualityGate.Binding("p",1,"policy",POLICY));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"gate",gate);
+        var args=Map.<String,Object>of("projectId","p","caseId","c");
+        var first=service.contract(args);assertEquals(true,first.get("supported"));
+        var frozen=(io.metersphere.agent.dto.AgentCaseDTO)first.get("case");assertNull(frozen.getSteps().getFirst().getActualResult());
+        detail.setLastExecuteResult("ERROR");detail.setUpdateTime(999L);detail.setExecutionFacts(Map.of("previous","not a definition"));
+        assertEquals(first.get("contentHash"),service.contract(args).get("contentHash"));
+        detail.setName("changed definition");assertNotEquals(first.get("contentHash"),service.contract(args).get("contentHash"));
+        detail.setCaseEditType("TEXT");assertEquals(false,service.contract(args).get("supported"));
+    }
     private AgentExecutionArtifactDTO artifact(String purpose) {
         var artifact=new AgentExecutionArtifactDTO();artifact.setPurpose(purpose);artifact.setContentType("image/png");artifact.setSizeBytes(100L);return artifact;
     }

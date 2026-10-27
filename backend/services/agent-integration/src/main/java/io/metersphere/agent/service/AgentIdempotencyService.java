@@ -35,13 +35,15 @@ public class AgentIdempotencyService {
         if (existing == null) {
             return Optional.empty();
         }
-        String hash = hashArguments(arguments);
+        if(existing.getStatus()!=null && !"SUCCEEDED".equals(existing.getStatus()))
+            throw new MSException("RUNNING".equals(existing.getStatus())?"REQUEST_IN_PROGRESS":"IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED");
+        String hash = existingHash(existing,arguments);
         if (!StringUtils.equals(existing.getRequestHash(), hash)) {
             throw new MSException(AgentErrorCode.IDEMPOTENCY_CONFLICT,
                     "相同 requestId 参数不一致: " + requestId);
         }
         if (StringUtils.isBlank(existing.getResponseJson())) {
-            return Optional.empty();
+            throw new MSException("IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED");
         }
         @SuppressWarnings("unchecked")
         Map<String, Object> cached = JSON.parseObject(existing.getResponseJson(), Map.class);
@@ -56,7 +58,7 @@ public class AgentIdempotencyService {
         String tokenId = currentTokenId();
         AgentIdempotencyRecord existing = agentIdempotencyRecordMapper.selectByTokenToolRequest(tokenId, toolName, requestId.trim());
         if (existing != null) {
-            String hash = hashArguments(arguments);
+            String hash = existingHash(existing,arguments);
             if (!StringUtils.equals(existing.getRequestHash(), hash)) {
                 throw new MSException(AgentErrorCode.IDEMPOTENCY_CONFLICT,
                         "相同 requestId 参数不一致: " + requestId);
@@ -68,7 +70,9 @@ public class AgentIdempotencyService {
         record.setTokenId(tokenId);
         record.setToolName(toolName);
         record.setRequestId(requestId.trim());
-        record.setRequestHash(hashArguments(arguments));
+        record.setRequestHash(AgentRequestFingerprint.hash(arguments));
+        record.setHashVersion("generic-canonical-v1");
+        record.setStatus("SUCCEEDED");
         record.setResponseJson(JSON.toJSONString(response));
         record.setCreateTime(System.currentTimeMillis());
         try {
@@ -79,7 +83,7 @@ public class AgentIdempotencyService {
             if (raced == null) {
                 throw ex;
             }
-            if (!StringUtils.equals(raced.getRequestHash(), hashArguments(arguments))) {
+            if (!StringUtils.equals(raced.getRequestHash(), existingHash(raced,arguments))) {
                 throw new MSException(AgentErrorCode.IDEMPOTENCY_CONFLICT,
                         "相同 requestId 参数不一致: " + requestId);
             }
@@ -90,6 +94,12 @@ public class AgentIdempotencyService {
     public void cleanupExpired() {
         long expiresBefore = System.currentTimeMillis() - AgentConstants.IDEMPOTENCY_TTL_MS;
         agentIdempotencyRecordMapper.deleteExpired(expiresBefore);
+    }
+
+    private String existingHash(AgentIdempotencyRecord record,Map<String,Object> arguments) {
+        if("generic-canonical-v1".equals(record.getHashVersion()))return AgentRequestFingerprint.hash(arguments);
+        if(record.getHashVersion()!=null && !"legacy-v0".equals(record.getHashVersion()))throw new MSException("IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED");
+        return hashArguments(arguments);
     }
 
     private String hashArguments(Map<String, Object> arguments) {

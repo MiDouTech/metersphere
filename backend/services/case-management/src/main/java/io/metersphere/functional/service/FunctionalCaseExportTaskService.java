@@ -27,6 +27,7 @@ import java.util.function.Function;
 @Service
 public class FunctionalCaseExportTaskService {
     @Resource private JdbcTemplate jdbc;
+    @Resource private io.metersphere.functional.asset.service.CaseAssetExportAccess assetAccess;
     @Resource private ProjectMapper projectMapper;
     @Resource private UserLoginService userLoginService;
     @Resource private org.springframework.transaction.PlatformTransactionManager transactionManager;
@@ -111,6 +112,17 @@ public class FunctionalCaseExportTaskService {
         }
     }
 
+    public void authorizeRequest(FunctionalCaseExportRequest request,String userId) {
+        if(StringUtils.isNotBlank(request.getAssetCatalogId()))assetAccess.authorize(request,userId);
+        else authorize(request.getProjectId(),userId);
+    }
+    private void authorizeRow(Map<String,Object> row,String userId) {
+        String raw=(String)row.get("request_json");
+        FunctionalCaseExportRequest request=StringUtils.isBlank(raw)?null:JSON.parseObject(raw,FunctionalCaseExportRequest.class);
+        if(request!=null && StringUtils.isNotBlank(request.getAssetCatalogId()))authorizeRequest(request,userId);
+        else authorize((String)row.get("project_id"),userId);
+    }
+
     private MSException denied() { return new MSException("导出任务不存在或当前账号无权访问"); }
 
     public String start(FunctionalCaseExportRequest request, String userId, String format,
@@ -120,7 +132,7 @@ public class FunctionalCaseExportTaskService {
 
     public <T> String start(FunctionalCaseExportRequest request, String userId, String format,
                            Function<String, T> freeze, java.util.function.BiFunction<String, T, Result> generate) {
-        authorize(request.getProjectId(), userId);
+        authorizeRequest(request, userId);
         String key = StringUtils.defaultIfBlank(request.getRequestId(), UUID.randomUUID().toString());
         if (!key.matches("[A-Za-z0-9_-]{1,64}")) throw new MSException("导出请求标识无效");
         // Client file IDs are deliberately excluded; only the server allocates storage names.
@@ -155,7 +167,7 @@ public class FunctionalCaseExportTaskService {
         request.setFileId(fileId);
         final T snapshot;
         try {
-            authorize(request.getProjectId(), userId);
+            authorizeRequest(request, userId);
             checkActive(id);
             snapshot = freeze.apply(id);
             checkActive(id);
@@ -167,10 +179,10 @@ public class FunctionalCaseExportTaskService {
         }
         FutureTask<Void> future = new FutureTask<>(() -> {
             try {
-                authorize(request.getProjectId(), userId);
+                authorizeRequest(request, userId);
                 if (!active(id)) return null;
                 Result result = generate.apply(id, snapshot);
-                authorize(request.getProjectId(), userId);
+                authorizeRequest(request, userId);
                 assertSnapshotScope(id, request.getProjectId());
                 long finished = System.currentTimeMillis();
                 int published = jdbc.update("""
@@ -242,7 +254,7 @@ public class FunctionalCaseExportTaskService {
         var rows = jdbc.queryForList("SELECT * FROM export_task WHERE id=? AND create_user=? AND type='CASE'", id, userId);
         if (rows.isEmpty()) throw denied();
         var row = rows.getFirst();
-        authorize((String) row.get("project_id"), userId);
+        authorizeRow(row,userId);
         return toDTO(row);
     }
 
@@ -275,10 +287,10 @@ public class FunctionalCaseExportTaskService {
     }
 
     public ExportTaskDTO forDownload(String projectId, String fileId, String userId) {
-        authorize(projectId, userId);
         var rows = jdbc.queryForList("SELECT * FROM export_task WHERE project_id=? AND file_id=? AND create_user=? AND type='CASE' ORDER BY create_time DESC LIMIT 1",
                 projectId, fileId, userId);
         if (rows.isEmpty()) throw denied();
+        authorizeRow(rows.getFirst(),userId);
         ExportTaskDTO task = toDTO(rows.getFirst());
         assertSnapshotScope(task.getTaskId(), projectId);
         if (!"SUCCEEDED".equals(task.getState())) throw new MSException("导出文件未就绪或已过期，请重新导出");
@@ -339,6 +351,11 @@ public class FunctionalCaseExportTaskService {
         String raw = jdbc.queryForObject("SELECT snapshot_ids FROM export_task WHERE id=?", String.class, id);
         if (raw == null) return; // pre-migration exports have no recoverable content snapshot
         List<String> ids = JSON.parseArray(raw, String.class);
+        String requestJson=jdbc.queryForObject("SELECT request_json FROM export_task WHERE id=?",String.class,id);
+        if(StringUtils.isNotBlank(requestJson)) {
+            var request=JSON.parseObject(requestJson,FunctionalCaseExportRequest.class);
+            if(StringUtils.isNotBlank(request.getAssetCatalogId()))assetAccess.validateIds(request.getAssetCatalogId(),ids);
+        }
         for (int offset = 0; offset < ids.size(); offset += 1000) {
             List<String> batch = ids.subList(offset, Math.min(offset + 1000, ids.size()));
             List<Object> args = new ArrayList<>(batch);

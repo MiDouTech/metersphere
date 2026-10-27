@@ -34,6 +34,14 @@ public class GlobalQualityGate {
         return rows.getFirst();
     }
 
+    /** Personal evidence is scoped to a case, never to Runner before/after roles. */
+    public void verifyDirectCaseEvidence(List<AgentExecutionArtifactDTO> artifacts) {
+        if(artifacts==null || artifacts.isEmpty()) throw new MSException("QUALITY_EVIDENCE_REQUIRED");
+        for(var artifact:artifacts) if(artifact.getSizeBytes()==null || artifact.getSizeBytes()<1
+                || artifact.getSizeBytes()>5L*1024*1024 || !Set.of("image/png","image/jpeg").contains(artifact.getContentType()))
+            throw new MSException("QUALITY_EVIDENCE_INVALID");
+    }
+
     /** Direct submissions validate evidence structure; business verdicts are Agent-reported. */
     public void verifyDirectEvidence(Binding policy, List<AgentExecutionArtifactDTO> artifacts) {
         JsonNode rules=read(policy.rulesJson());

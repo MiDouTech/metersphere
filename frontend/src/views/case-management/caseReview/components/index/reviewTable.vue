@@ -54,6 +54,11 @@
           </a-tooltip>
         </div>
       </template>
+      <template #name="{ record }">
+        <a-button type="text" class="max-w-full px-0" @click.stop="openDetail(record.id)">
+          <span class="one-line-text">{{ record.name }}</span>
+        </a-button>
+      </template>
       <template #num="{ record }">
         <a-button type="text" class="px-0 !text-[14px] !leading-[22px]" @click="openDetail(record.id)">
           <div class="one-line-text max-w-[168px]">{{ record.num }}</div>
@@ -393,6 +398,7 @@
     {
       title: 'caseManagement.caseReview.name',
       dataIndex: 'name',
+      slotName: 'name',
       sortable: {
         sortDirections: ['ascend', 'descend'],
         sorter: true,

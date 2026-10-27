@@ -21,9 +21,10 @@ public class PlanCaseEffectiveViewService {
     }
 
     public boolean followsSource(String planId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject(
-                "SELECT status<>? FROM test_plan WHERE id=?", Boolean.class,
-                TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED, planId));
+        var rows = jdbc.queryForList("SELECT status<>? FROM test_plan WHERE id=?", Boolean.class,
+                TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED, planId);
+        if (rows.isEmpty()) throw new io.metersphere.sdk.exception.MSException("测试计划不存在或已删除");
+        return Boolean.TRUE.equals(rows.getFirst());
     }
 
     public void requireManualBugRelation(String relationId) {

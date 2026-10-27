@@ -1,5 +1,5 @@
 <template>
-  <MsCard simple no-content-padding class="relative">
+  <MsCard simple no-content-padding :min-width="0" class="management-review relative">
     <MsSplitBox :not-show-first="isAdvancedSearchMode">
       <template #first>
         <div class="min-w-[300px] p-[16px]">
@@ -338,6 +338,7 @@
 </script>
 
 <style scoped lang="less">
+  @import '@/assets/style/management-review.less';
   .case {
     padding: 8px 0;
     border-radius: var(--border-radius-small);

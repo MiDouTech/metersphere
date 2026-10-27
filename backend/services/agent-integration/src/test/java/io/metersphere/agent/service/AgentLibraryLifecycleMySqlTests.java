@@ -47,6 +47,7 @@ class AgentLibraryLifecycleMySqlTests {
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_114__agent_trigger_dispatch.sql"));
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_115__execution_archive.sql"));
         }
+        jdbc.execute("ALTER TABLE agent_attachment_upload_intent ADD COLUMN identity_version VARCHAR(32) NOT NULL DEFAULT 'legacy-ci-v1',MODIFY COLUMN request_id VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL");
         var token=new AgentToken();token.setId("token");token.setUserId("user");AgentTokenContext.set(token);
         access=mock(AgentBusinessAccess.class);
         when(access.userHasPermission(anyString(),anyString(),anyString())).thenReturn(true);

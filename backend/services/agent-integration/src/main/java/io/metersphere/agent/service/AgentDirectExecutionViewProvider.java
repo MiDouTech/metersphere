@@ -25,15 +25,22 @@ public class AgentDirectExecutionViewProvider implements FunctionalExecutionView
     @SuppressWarnings("unchecked")
     public Optional<View> current(FunctionalCaseDetailDTO source) {
         if (source.getLastExecuteTime() == null) return Optional.empty();
+        var references=jdbc.queryForList("SELECT submission_id FROM agent_case_current_execution WHERE case_id=?",String.class,source.getId());
+        if(!references.isEmpty() && (references.getFirst()==null || references.getFirst().isBlank()))return Optional.empty();
         var rows = jdbc.queryForList("""
+                SELECT s.id,s.facts FROM agent_case_current_execution r
+                JOIN agent_case_submission s ON s.id=r.submission_id AND s.case_id=r.case_id
+                WHERE r.case_id=? AND s.project_id=? AND r.execute_time=? AND s.gate_status='ACCEPTED' AND s.result=? AND s.user_id=?
+                """, source.getId(), source.getProjectId(), source.getLastExecuteTime(),source.getLastExecuteResult(),source.getLastExecuteUser());
+        if (rows.isEmpty() && references.isEmpty()) rows = jdbc.queryForList("""
                 SELECT id, facts FROM agent_case_submission
-                 WHERE case_id=? AND project_id=? AND create_time=? AND gate_status='ACCEPTED'
-                 ORDER BY id LIMIT 1
-                """, source.getId(), source.getProjectId(), source.getLastExecuteTime());
-        if (rows.isEmpty()) return Optional.empty();
+                 WHERE case_id=? AND project_id=? AND create_time=? AND gate_status='ACCEPTED' AND result=? AND user_id=?
+                 LIMIT 2
+                """, source.getId(), source.getProjectId(), source.getLastExecuteTime(),source.getLastExecuteResult(),source.getLastExecuteUser());
+        if (rows.size()!=1) return Optional.empty();
         var row = rows.getFirst();
         Map<String, Object> facts = JSON.parseObject(
-                AgentSensitiveDataSanitizer.sanitize(cipher.reveal((String) row.get("facts"))), Map.class);
+                AgentSensitiveDataSanitizer.sanitizeJson(cipher.reveal((String) row.get("facts"))), Map.class);
         return Optional.of(new View("DIRECT_SUBMISSION", (String) row.get("id"), facts));
     }
 }

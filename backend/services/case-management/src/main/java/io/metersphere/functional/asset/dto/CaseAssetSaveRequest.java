@@ -10,6 +10,10 @@ import java.util.List;
 @Data
 public class CaseAssetSaveRequest {
     private String id;
+    private String sourceEditMode;
+    private String sourceCaseId;
+    private Long expectedUpdateTime;
+    private Long expectedSourceUpdateTime;
     @NotBlank
     private String catalogId;
     @NotBlank

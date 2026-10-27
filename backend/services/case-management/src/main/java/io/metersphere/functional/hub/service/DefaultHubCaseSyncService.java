@@ -57,38 +57,49 @@ public class DefaultHubCaseSyncService {
     @Resource
     private JdbcTemplate jdbcTemplate;
 
+    @Lazy
+    @Resource
+    private DefaultHubCaseImportService attachmentCopier;
+
     /**
-     * 业务用例 upsert 到枢纽；导入副本（imported_from_hub）跳过
+     * 业务用例 upsert 到枢纽；仅排除枢纽项目自身以防循环
      */
     public void syncCaseUpsert(String bizProjectId, String bizCaseId, String operator) {
         if (!defaultHubConfigService.isSyncEnabled()) {
-            return;
+            throw new io.metersphere.sdk.exception.MSException("资产持续同步已关闭，请核对系统配置后重试");
         }
         if (defaultHubProjectService.isDefaultProject(bizProjectId)) {
             return;
         }
-        if (isImportedFromHub(bizCaseId)) {
-            return;
-        }
+
+        jdbcTemplate.queryForList("SELECT id FROM functional_case WHERE id=? AND project_id=? FOR UPDATE",bizCaseId,bizProjectId);
         FunctionalCase bizCase = functionalCaseMapper.selectByPrimaryKey(bizCaseId);
         if (bizCase == null || Boolean.TRUE.equals(bizCase.getDeleted())) {
+            syncCaseDelete(bizCaseId,operator);
             return;
         }
+        if (!bizProjectId.equals(bizCase.getProjectId()) || !Boolean.TRUE.equals(bizCase.getLatest())) return;
         DefaultHubCaseMapRow map = defaultHubCaseMapDao.findByBizCaseId(bizCaseId);
-        // 防环：更新路径仅处理已建立映射的用例；新建时 map 为空仍允许首次同步
-        if (map != null && isImportedFromHub(bizCaseId)) {
-            return;
+        String sourceRefId=StringUtils.defaultIfBlank(bizCase.getRefId(),bizCaseId);
+        List<String> historical=jdbcTemplate.queryForList("SELECT asset_case_id FROM case_asset_source_relation WHERE source_project_id=? AND source_case_id=?",String.class,bizProjectId,sourceRefId);
+        if(map!=null && !historical.isEmpty() && !map.getHubCaseId().equals(historical.getFirst()))throw new io.metersphere.sdk.exception.MSException("同一源用例存在重复资产映射，请先核对引用并修复映射");
+        if(map==null && !historical.isEmpty()) {
+            var target=functionalCaseMapper.selectByPrimaryKey(historical.getFirst());
+            if(target==null || !defaultHubProjectService.isDefaultProject(target.getProjectId()))throw new io.metersphere.sdk.exception.MSException("历史资产映射已失效，请核对来源");
+            defaultHubCaseMapDao.insert(bizProjectId,bizCaseId,target.getId(),"");
+            map=defaultHubCaseMapDao.findByBizCaseId(bizCaseId);
         }
+
+        // 防环：更新路径仅处理已建立映射的用例；新建时 map 为空仍允许首次同步
+
 
         String hubProjectId = defaultHubProjectService.getDefaultProjectId();
         if (StringUtils.isBlank(hubProjectId)) {
-            LogUtils.warn("default hub sync skipped, no default project");
-            return;
+            throw new io.metersphere.sdk.exception.MSException("资产存储项目未配置，请联系管理员");
         }
         String hubModuleId = defaultHubModuleResolver.resolveHubModuleId(bizProjectId, bizCase.getModuleId(), hubProjectId, operator);
         if (StringUtils.isBlank(hubModuleId)) {
-            LogUtils.warn("default hub sync skipped, no hub folder for project=" + bizProjectId);
-            return;
+            throw new io.metersphere.sdk.exception.MSException("项目资产目录尚未就绪，请修复目录后重试");
         }
 
         FunctionalCaseBlob blob = functionalCaseBlobMapper.selectByPrimaryKey(bizCaseId);
@@ -99,30 +110,38 @@ public class DefaultHubCaseSyncService {
             defaultHubCaseMapDao.insert(bizProjectId, bizCaseId, hubCaseId, contentHash);
         } else {
             FunctionalCase hubExisting = functionalCaseMapper.selectByPrimaryKey(map.getHubCaseId());
+            if(hubExisting==null)throw new io.metersphere.sdk.exception.MSException("资产镜像已被彻底删除，请先修复来源映射");
             boolean moduleChanged = hubExisting != null && !StringUtils.equals(hubExisting.getModuleId(), hubModuleId);
-            if (!StringUtils.equals(contentHash, map.getContentHash()) || moduleChanged) {
+            if (!StringUtils.equals(contentHash, map.getContentHash()) || moduleChanged || hubExisting == null || Boolean.TRUE.equals(hubExisting.getDeleted())) {
                 updateHubMirror(map.getHubCaseId(), bizCase, blob, hubModuleId, operator);
                 defaultHubCaseMapDao.updateHash(bizCaseId, contentHash);
             }
         }
+        DefaultHubCaseMapRow current=defaultHubCaseMapDao.findByBizCaseId(bizCaseId);
+        if(current!=null)jdbcTemplate.update("INSERT INTO case_asset_source_relation(id,asset_case_id,source_project_id,source_case_id,source_update_time,create_user,create_time,update_time) VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE asset_case_id=VALUES(asset_case_id),source_update_time=VALUES(source_update_time),update_time=VALUES(update_time)",
+                IDGenerator.nextStr(),current.getHubCaseId(),bizProjectId,sourceRefId,bizCase.getUpdateTime(),operator,System.currentTimeMillis(),System.currentTimeMillis());
     }
 
-    /** 业务用例删除 → 枢纽镜像进回收站并删 map */
+    /** 业务用例删除：镜像进回收站，保留来源身份以支持恢复。 */
     public void syncCaseDelete(String bizCaseId, String operator) {
         if (!defaultHubConfigService.isSyncEnabled()) {
-            return;
+            throw new io.metersphere.sdk.exception.MSException("资产持续同步已关闭，请核对系统配置后重试");
         }
         DefaultHubCaseMapRow map = defaultHubCaseMapDao.findByBizCaseId(bizCaseId);
         if (map == null) {
             return;
         }
+        // A delete event for an older physical version must not tombstone the current source mirror.
+        List<String> latest=jdbcTemplate.queryForList("SELECT f.id FROM case_asset_source_relation r JOIN functional_case f ON f.project_id=r.source_project_id AND COALESCE(NULLIF(f.ref_id,''),f.id)=r.source_case_id WHERE r.asset_case_id=? AND r.source_project_id=? AND f.deleted=0 AND f.latest=1 ORDER BY f.id LIMIT 2",String.class,map.getHubCaseId(),map.getBizProjectId());
+        if(latest.size()>1)throw new io.metersphere.sdk.exception.MSException("来源存在多个最新版本，请先修复版本状态");
+        if(!latest.isEmpty()&&!latest.getFirst().equals(bizCaseId)){syncCaseUpsert(map.getBizProjectId(),latest.getFirst(),operator);return;}
         FunctionalCase hubCase = new FunctionalCase();
         hubCase.setId(map.getHubCaseId());
         hubCase.setDeleted(true);
         hubCase.setDeleteUser(operator);
         hubCase.setDeleteTime(System.currentTimeMillis());
         functionalCaseMapper.updateByPrimaryKeySelective(hubCase);
-        defaultHubCaseMapDao.deleteByBizCaseId(bizCaseId);
+        // Retain source identity so restoration updates the same asset instead of creating a duplicate.
     }
 
     public void reconcileProjectCases(String bizProjectId, String operator, ProgressCallback callback) {
@@ -130,8 +149,7 @@ public class DefaultHubCaseSyncService {
             return;
         }
         List<String> allBizCaseIds = jdbcTemplate.queryForList(
-                "SELECT id FROM functional_case WHERE project_id = ? AND deleted = 0 " +
-                        "AND (imported_from_hub_case_id IS NULL OR imported_from_hub_case_id = '')",
+                "SELECT id FROM functional_case WHERE project_id = ? AND deleted = 0 AND latest=1",
                 String.class, bizProjectId);
         int total = allBizCaseIds.size();
         int done = 0;
@@ -157,16 +175,6 @@ public class DefaultHubCaseSyncService {
         }
     }
 
-    private boolean isImportedFromHub(String caseId) {
-        try {
-            String imported = jdbcTemplate.queryForObject(
-                    "SELECT imported_from_hub_case_id FROM functional_case WHERE id = ?", String.class, caseId);
-            return StringUtils.isNotBlank(imported);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     private String createHubMirror(FunctionalCase src, FunctionalCaseBlob blob, String hubProjectId, String hubModuleId, String operator) {
         String hubCaseId = IDGenerator.nextStr();
         FunctionalCase hub = copyCaseHeader(src, hubCaseId, hubProjectId, hubModuleId, operator);
@@ -175,6 +183,7 @@ public class DefaultHubCaseSyncService {
         functionalCaseMapper.insertSelective(hub);
         insertBlob(hubCaseId, blob);
         functionalCaseCustomFieldService.copyCustomField(src.getId(), hubCaseId);
+        attachmentCopier.copyAttachments(src.getProjectId(),src.getId(),hubProjectId,hubCaseId,operator,true);
         return hubCaseId;
     }
 
@@ -182,6 +191,8 @@ public class DefaultHubCaseSyncService {
         String hubProjectId = defaultHubProjectService.getDefaultProjectId();
         FunctionalCase hub = copyCaseHeader(src, hubCaseId, hubProjectId, hubModuleId, operator);
         hub.setReviewStatus(FunctionalCaseReviewStatus.UN_REVIEWED.name());
+        hub.setCreateTime(null);
+        hub.setCreateUser(null);
         hub.setLastExecuteResult(ExecStatus.PENDING.name());
         hub.setExecuteUser(null);
         functionalCaseMapper.updateByPrimaryKeySelective(hub);
@@ -196,6 +207,7 @@ public class DefaultHubCaseSyncService {
         }
         functionalCaseBlobMapper.updateByPrimaryKeyWithBLOBs(hubBlob);
         functionalCaseCustomFieldService.copyCustomField(src.getId(), hubCaseId);
+        attachmentCopier.copyAttachments(src.getProjectId(),src.getId(),hubProjectId,hubCaseId,operator,true);
     }
 
     private FunctionalCase copyCaseHeader(FunctionalCase src, String id, String projectId, String moduleId, String operator) {
@@ -207,8 +219,7 @@ public class DefaultHubCaseSyncService {
         c.setName(src.getName());
         c.setTags(src.getTags());
         c.setCaseEditType(src.getCaseEditType());
-        c.setVersionId(StringUtils.defaultIfBlank(src.getVersionId(),
-                extBaseProjectVersionMapper.getDefaultVersion(projectId)));
+        c.setVersionId(extBaseProjectVersionMapper.getDefaultVersion(projectId));
         c.setRefId(id);
         c.setReviewStatus(FunctionalCaseReviewStatus.UN_REVIEWED.name());
         c.setLastExecuteResult(ExecStatus.PENDING.name());
@@ -245,7 +256,10 @@ public class DefaultHubCaseSyncService {
 
     String computeHash(FunctionalCase c, FunctionalCaseBlob blob) {
         StringBuilder sb = new StringBuilder();
-        sb.append(c.getName()).append('|').append(c.getModuleId()).append('|').append(c.getCaseEditType());
+        sb.append(c.getName()).append('|').append(c.getModuleId()).append('|').append(c.getCaseEditType()).append('|').append(c.getTags());
+        sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT field_id,value FROM functional_case_custom_field WHERE case_id=? ORDER BY field_id",c.getId())));
+        sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT file_id,file_name FROM functional_case_attachment WHERE case_id=? ORDER BY id",c.getId())));
+        sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT file_id,deleted FROM file_association WHERE source_id=? ORDER BY id",c.getId())));
         if (blob != null) {
             sb.append('|').append(bytes(blob.getSteps())).append(bytes(blob.getTextDescription()))
                     .append(bytes(blob.getExpectedResult())).append(bytes(blob.getPrerequisite()))

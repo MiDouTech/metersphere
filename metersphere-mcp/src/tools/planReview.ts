@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { MeterSphereClient } from "../client.js";
 
 export const createTestPlanInputSchema = {
+  requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),
   projectId: z.string().optional(),
   name: z.string(),
   description: z.string().optional(),
@@ -23,6 +24,7 @@ export const createTestPlanTool = {
 };
 
 export const associateTestPlanCasesInputSchema = {
+  requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),
   projectId: z.string().optional(),
   testPlanId: z.string(),
   caseIds: z.array(z.string()).min(1),

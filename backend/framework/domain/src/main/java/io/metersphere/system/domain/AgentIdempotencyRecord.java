@@ -11,6 +11,8 @@ public class AgentIdempotencyRecord implements Serializable {
     private String toolName;
     private String requestId;
     private String requestHash;
+    private String hashVersion;
+    private String status;
     private String responseJson;
     private Long createTime;
 }

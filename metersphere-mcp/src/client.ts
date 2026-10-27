@@ -27,8 +27,18 @@ export class MsApiError extends Error {
       if (typeof nested.code === "string") value = nested;
     }
     const code = typeof value.code === "string" && /^[A-Z][A-Z0-9_]{2,80}$/.test(value.code) ? value.code : "MCP_HTTP_ERROR";
-    const message = status === 401 ? "身份已失效，请重新配置令牌" : status === 403 ? "没有此操作权限，请检查用户角色和令牌范围"
-      : status === 409 ? "请求与当前数据冲突，请先查询结果或刷新版本" : "请求失败，请检查参数、权限或服务状态；响应不明确时先查询结果";
+    const hints: Record<string,string>={
+      PERSONAL_EXECUTION_WRITE_DISABLED:"个人执行写入暂时关闭，请稍后使用原 requestId 查询或重试",MCP_BUSINESS_WRITE_DISABLED:"MCP 业务写入暂时关闭，请稍后使用原 requestId 查询或重试",
+      EVIDENCE_EXPIRED:"图片暂存已过期，请重新上传",ATTACHMENT_EXPIRED:"附件已过期，请重新上传",
+      VERSION_CONFLICT:"用例内容已变化，请重新查询并执行",IDEMPOTENCY_CONFLICT:"相同请求标识对应的参数不同，请先核对原操作",
+      QUALITY_EVIDENCE_REQUIRED:"请上传至少一张本次用例执行图片",QUALITY_EVIDENCE_INVALID:"图片无效、过期或不属于当前用例，请核对后重新上传",
+      REQUEST_IN_PROGRESS:"请求仍在处理中，请稍后使用原 requestId 查询或重试",
+      IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED:"历史请求需要核对，请先查询原资源，不要重复创建",
+      AGENT_FACTS_INVALID:"历史执行事实暂时无法读取，请提供 traceId 排查",
+      CASE_CONTENT_MISSING:"当前用例类型或步骤不满足个人执行要求，请查询 contract 的限制",
+    };
+    const message = hints[code] ?? (status === 401 ? "身份已失效，请重新配置令牌" : status === 403 ? "没有此操作权限，请检查用户角色和令牌范围"
+      : status === 409 ? "请求与当前数据冲突，请先查询结果或刷新版本" : "请求失败，请检查参数、权限或服务状态；响应不明确时先查询结果");
     super(message);
     this.status = status; this.code = code;
     this.traceId = typeof value.traceId === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(value.traceId) ? value.traceId : undefined;
@@ -62,12 +72,12 @@ export class MeterSphereClient {
   constructor(private readonly config: MsConfig) {}
 
   async callNativeTool(name: string, args: Record<string, unknown>): Promise<{
-    content: Array<{ type: "text"; text: string }>;
+    content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>;
     isError?: boolean;
   }> {
     try {
       const response = await this.request<{
-        result?: { content: Array<{ type: "text"; text: string }>; isError?: boolean };
+        result?: { content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>; isError?: boolean };
         error?: { code: number; message: string; data?: unknown };
       }>("POST", "/api/mcp", {
         jsonrpc: "2.0", id: crypto.randomUUID(), method: "tools/call", params: { name, arguments: args },
@@ -85,8 +95,9 @@ export class MeterSphereClient {
       return response.result;
     } catch (error) {
       return { isError: true, content: [{ type: "text", text: JSON.stringify({
-        code: error instanceof MsApiError ? "MCP_HTTP_ERROR" : "MCP_TRANSPORT_ERROR",
-        message: "无法完成 MCP 请求，请检查连接、身份和服务状态后重试",
+        code: error instanceof MsApiError ? error.code : "MCP_TRANSPORT_ERROR",
+        message: error instanceof MsApiError ? error.message : "请求结果未知，请使用原 requestId 查询或重试",
+        ...(error instanceof MsApiError && error.traceId ? {traceId:error.traceId} : {}),
         ...(error instanceof MsApiError ? { status: error.status } : {}),
       }) }] };
     }
@@ -335,6 +346,7 @@ export class MeterSphereClient {
   }
 
   createTestPlan(payload: {
+    requestId: string;
     projectId?: string;
     name: string;
     description?: string;
@@ -351,6 +363,7 @@ export class MeterSphereClient {
   }
 
   associateTestPlanCases(payload: {
+    requestId: string;
     projectId?: string;
     testPlanId: string;
     caseIds: string[];

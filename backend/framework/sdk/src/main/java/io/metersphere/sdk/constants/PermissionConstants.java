@@ -250,6 +250,7 @@ public class PermissionConstants {
     public static final String CASE_ASSET_UPDATE = "CASE_ASSET:READ+UPDATE";
     public static final String CASE_ASSET_DELETE = "CASE_ASSET:READ+DELETE";
     public static final String CASE_ASSET_IMPORT = "CASE_ASSET:READ+IMPORT";
+    public static final String CASE_ASSET_EXPORT = "CASE_ASSET:READ+EXPORT";
     /*------ end: CASE_ASSET ------*/
     /*------ start: FUNCTIONAL_CASE_AI (独立 AI 生成用例权限) ------*/
     public static final String FUNCTIONAL_CASE_AI_READ = "FUNCTIONAL_CASE_AI:READ";

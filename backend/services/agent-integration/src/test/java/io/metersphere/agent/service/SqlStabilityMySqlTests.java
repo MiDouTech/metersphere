@@ -106,11 +106,15 @@ class SqlStabilityMySqlTests {
     @Test void effectsRollbackWithBusinessAndFailedEffectsRetryWithoutLosingCommittedRows() throws Exception {
         try(var c=ds.getConnection()) {
             ScriptUtils.executeSqlScript(c,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_119__functional_import_effect_outbox.sql"));
+            ScriptUtils.executeSqlScript(c,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_127__review_recount_queue.sql"));
+            ScriptUtils.executeSqlScript(c,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_128__asset_sync_failure_detail.sql"));
         }
         var hub=mock(DefaultHubCaseSyncService.class);
         var cases=mock(FunctionalCaseService.class);
         var manager=new DataSourceTransactionManager(ds);
         var outbox=new FunctionalImportEffectOutbox(jdbc,manager,hub,cases,mock(UserMapper.class),mock(CommonNoticeSendService.class));
+        jdbc.execute("CREATE TABLE case_review_functional_case(review_id VARCHAR(50),case_id VARCHAR(50))");
+        org.springframework.test.util.ReflectionTestUtils.setField(outbox,"reviewRecount",new io.metersphere.functional.service.FunctionalReviewRecountService(jdbc,manager));
         var tx=new TransactionTemplate(manager);
         assertThrows(IllegalStateException.class,()->tx.executeWithoutResult(status->{
             outbox.enqueue("p","u",List.of("rolled-back"),List.of(),"CREATE");

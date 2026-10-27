@@ -25,6 +25,12 @@ public final class AgentMcpToolSchemas {
         return schema;
     }
 
+    public static Map<String,Object> requestId() {
+        var schema=new LinkedHashMap<>(string(1,128));
+        schema.put("pattern","^[A-Za-z0-9_.:-]{1,128}$");
+        return schema;
+    }
+
     public static Map<String, Object> stringArray(int maxItems) {
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("type", "array");

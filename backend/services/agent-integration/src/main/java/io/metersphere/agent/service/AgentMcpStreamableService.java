@@ -28,6 +28,7 @@ public class AgentMcpStreamableService {
     private AgentTokenRateLimiter agentTokenRateLimiter;
     @Resource
     private AgentIdempotencyService agentIdempotencyService;
+    @Resource private AgentGenericMcpWriteService genericWrites;
     @Resource
     private AgentMcpToolRegistry agentMcpToolRegistry;
     @Resource
@@ -104,13 +105,67 @@ public class AgentMcpStreamableService {
             if (!io.metersphere.agent.tool.AgentMcpToolExposure.discoverable(handler.name())) continue;
             if (token == null || !AgentScopeAssert.hasScope(token.getScopes(), handler.requiredScope())) continue;
             tools.add(tool(handler.name(), handler.description(), handler.requiredScope(),
-                    handler.inputSchema(), handler.outputSchema(), handler.annotations()));
+                    schemaWithIdempotency(handler), handler.outputSchema(), handler.annotations()));
         }
         return tools;
     }
 
+    private static boolean bypassesGenericIdempotency(String name) {
+        return java.util.Set.of(
+                "metersphere.functional.export.start",
+                "metersphere.functional.export.stop",
+                "metersphere.functional.export.retry",
+                "metersphere.test_plan.create",
+                "metersphere.test_plan.associate_cases",
+                "metersphere.bug.create",
+                "metersphere.bug.import.commit",
+                "metersphere.bug.export",
+                "metersphere.functional.execution.evidence.upload",
+                "metersphere.functional.execution.submit",
+                "metersphere.case_review.create",
+                "metersphere.case_review.associate_cases",
+                "metersphere.functional.comment.create",
+                "metersphere.functional.comment.update",
+                "metersphere.functional.case.update",
+                "metersphere.functional.module.update",
+                "metersphere.functional.module.move",
+                "metersphere.functional.attachment.upload.prepare",
+                "metersphere.functional.attachment.upload.complete",
+                "metersphere.functional.attachment.import_url",
+                "metersphere.bug.attachment.import_url",
+                "metersphere.functional.execution.evidence.import_url",
+                "metersphere.functional.import.precheck",
+                "metersphere.functional.import.commit",
+                "metersphere.functional.import.followup.retry",
+                "metersphere.functional.import.stop",
+                "metersphere.functional.import.retry",
+                "metersphere.functional.snapshot.create",
+                "metersphere.functional.snapshot.release",
+                "metersphere.functional.case.delete_preview",
+                "metersphere.functional.case.delete",
+                "metersphere.functional.case.batch_delete",
+                "metersphere.functional.case.restore",
+                "metersphere.functional.comment.delete",
+                "metersphere.functional.archive.prepare",
+                "metersphere.functional.archive.retry",
+                "metersphere.functional.archive.data").contains(name);
+    }
+
+    private Map<String, Object> schemaWithIdempotency(AgentMcpToolHandler handler) {
+        if (!agentMcpToolRegistry.isWriteTool(handler.name()) || bypassesGenericIdempotency(handler.name())) return handler.inputSchema();
+        Map<String, Object> schema = new LinkedHashMap<>(handler.inputSchema());
+        Map<String, Object> properties = new LinkedHashMap<>((Map<String, Object>) schema.getOrDefault("properties", Map.of()));
+        properties.putIfAbsent("requestId", io.metersphere.agent.tool.AgentMcpToolSchemas.requestId());
+        List<String> required = new ArrayList<>((List<String>) schema.getOrDefault("required", List.of()));
+        if (!required.contains("requestId")) required.add("requestId");
+        schema.put("properties", properties);
+        schema.put("required", required);
+        return schema;
+    }
+
     private Map<String, Object> callTool(Map<String, Object> params, String idempotencyKey) {
-        String name = StringUtils.defaultString((String) params.get("name"));
+        if(!(params.get("name") instanceof String) || (params.get("arguments")!=null && !(params.get("arguments") instanceof Map)) || (idempotencyKey!=null && !idempotencyKey.matches("[A-Za-z0-9_.:-]{1,128}")))throw new MSException("AGENT_VALIDATION_ERROR");
+        String name = (String)params.get("name");
         Map<String, Object> arguments = asMap(params.get("arguments"));
         if (io.metersphere.agent.tool.AgentMcpToolExposure.legacyResultWrite(name)) throw new MSException("QUALITY_LEGACY_SUBMIT_FORBIDDEN");
         if (name.startsWith(TRIGGER_TOOL_PREFIX)) {
@@ -121,27 +176,17 @@ public class AgentMcpStreamableService {
         if (token != null && !agentTokenRateLimiter.tryAcquireTool(token.getId(), name)) {
             throw new MSException("Agent MCP tool requests are too frequent. Please retry later.");
         }
-        String argumentKey=(String)arguments.get("requestId");
+        Object rawKey=arguments.get("requestId");
+        if(rawKey!=null && (!(rawKey instanceof String) || !((String)rawKey).matches("[A-Za-z0-9_.:-]{1,128}")))throw new MSException("AGENT_VALIDATION_ERROR");
+        String argumentKey=(String)rawKey;
         if(StringUtils.isNotBlank(idempotencyKey) && StringUtils.isNotBlank(argumentKey) && !idempotencyKey.equals(argumentKey))throw new MSException("IDEMPOTENCY_CONFLICT");
-        String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, (String) arguments.get("requestId"));
+        String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, argumentKey);
         if(StringUtils.isNotBlank(effectiveIdempotencyKey)) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
-        if(java.util.Set.of("metersphere.bug.create","metersphere.bug.import.commit","metersphere.bug.export","metersphere.functional.execution.evidence.upload","metersphere.functional.execution.submit","metersphere.case_review.create","metersphere.case_review.associate_cases","metersphere.functional.comment.create","metersphere.functional.comment.update","metersphere.functional.case.update","metersphere.functional.module.update","metersphere.functional.module.move").contains(name))return callToolInternal(name,arguments);
         // These protocols reauthorize their resource on every call. Upload/job/preview/run IDs
         // govern transitions and replay in their own transactions; a generic response cache
         // would bypass current ownership, expiry and state checks. Snapshot/preview creation
         // intentionally creates a new bounded temporary read/confirmation resource.
-        if (java.util.Set.of(
-                "metersphere.functional.attachment.upload.prepare", "metersphere.functional.attachment.upload.complete",
-                "metersphere.functional.attachment.import_url", "metersphere.bug.attachment.import_url",
-                "metersphere.functional.execution.evidence.import_url",
-                "metersphere.functional.import.precheck", "metersphere.functional.import.commit",
-                "metersphere.functional.import.stop", "metersphere.functional.import.retry",
-                "metersphere.functional.snapshot.create", "metersphere.functional.snapshot.release",
-                "metersphere.functional.case.delete_preview", "metersphere.functional.case.delete",
-                "metersphere.functional.case.batch_delete", "metersphere.functional.case.restore",
-                "metersphere.functional.comment.delete", "metersphere.functional.archive.prepare",
-                "metersphere.functional.archive.retry", "metersphere.functional.archive.data"
-        ).contains(name)) return callToolInternal(name, arguments);
+        if (bypassesGenericIdempotency(name)) return callToolInternal(name, arguments);
         // Runtime protocols validate current lease/state on every request. Never persist lease
         // credentials or replay an expired capability through the generic response cache.
         if (java.util.Set.of("metersphere.task.claim", "metersphere.task.lease.heartbeat",
@@ -157,6 +202,12 @@ public class AgentMcpStreamableService {
         if (agentMcpToolRegistry.isWriteTool(name) && StringUtils.isBlank(effectiveIdempotencyKey)) {
             throw new MSException("IDEMPOTENCY_KEY_REQUIRED");
         }
+        if(AgentGenericMcpWriteService.handles(name)) {
+            Map<String,Object> original=arguments;
+            return genericWrites.execute(name,original,()->callToolInternal(name,original));
+        }
+        // New business writers must opt into an atomic/resource-owned protocol; never fall back to a scope-only cache.
+        if(agentMcpToolRegistry.isWriteTool(name) && !(name.startsWith("metersphere.execution.")||name.startsWith("metersphere.task.")||name.startsWith("metersphere.human_request.")||name.startsWith("metersphere.artifact.")))throw new MSException("MCP_TOOL_PROTOCOL_NOT_CONFIGURED");
         if (StringUtils.isNotBlank(effectiveIdempotencyKey) && agentMcpToolRegistry.isWriteTool(name)) {
             Optional<Map<String, Object>> cached = agentIdempotencyService.findCachedResponse(name, effectiveIdempotencyKey, arguments);
             if (cached.isPresent()) {
@@ -180,6 +231,10 @@ public class AgentMcpStreamableService {
     }
 
     private Map<String, Object> toolResponse(Object result) {
+        if(result instanceof io.metersphere.agent.tool.AgentMcpImageResult image) {
+            return Map.of("content",List.of(Map.of("type","image","data",image.data(),"mimeType",image.mimeType()),
+                    Map.of("type","text","text",JSON.toJSONString(image.metadata()))),"structuredContent",Map.of("result",image.metadata()));
+        }
         Object safeResult = result == null ? Map.of() : result;
         return Map.of("content", List.of(Map.of("type", "text", "text", JSON.toJSONString(safeResult))),
                 "structuredContent", Map.of("result", safeResult));
