@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: 20.8.1
           cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache-dependency-path: frontend/package.json
       - run: pnpm install --no-frozen-lockfile
         working-directory: frontend
       - run: pnpm run test:selection-toggle && pnpm run test:weekly-remediation-sfc
