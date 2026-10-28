@@ -6,6 +6,7 @@ import hashlib
 import io
 import json
 import zipfile
+import zlib
 from pathlib import Path
 
 MAX_BYTES = 8 * 1024 * 1024
@@ -41,7 +42,7 @@ def diagnose(raw, steps=True):
                                     "SINGLE_ZIP_VALID" if result["layers"] == 1 else "NESTED_RECOVERABLE")
         result["logicalSha256"] = hashlib.sha256(body).hexdigest()
         return result
-    except (ValueError, OSError, EOFError, zipfile.BadZipFile, RuntimeError):
+    except (ValueError, OSError, EOFError, zipfile.BadZipFile, RuntimeError, zlib.error):
         result["classification"] = "NEEDS_SOURCE"
         return result
 

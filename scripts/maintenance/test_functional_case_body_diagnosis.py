@@ -43,6 +43,13 @@ class BodyDiagnosisTests(unittest.TestCase):
     def test_expansion_limit(self):
         self.assertEqual("NEEDS_SOURCE", module.diagnose(pack(b" " * (module.MAX_BYTES + 1)))["classification"])
 
+    def test_invalid_deflate_block_requires_source_without_traceback(self):
+        raw = bytearray(pack(b'[{"description":"step"}]'))
+        # The local entry header is 30 bytes plus the three-byte "zip" name.
+        # BTYPE=3 is reserved and must be rejected by a DEFLATE decoder.
+        raw[33] = (raw[33] & ~6) | 6
+        self.assertEqual("NEEDS_SOURCE", module.diagnose(bytes(raw))["classification"])
+
 
 if __name__ == "__main__":
     unittest.main()

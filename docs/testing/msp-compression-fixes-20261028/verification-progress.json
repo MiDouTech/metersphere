@@ -66,6 +66,31 @@
       "localPath": ".codex-tmp\\weekly-fixes-20261028\\module-registry-tests.log",
       "sha256": "fd7c8d4ce12dc5d87203cca1e0568abd388de0d6a3cb87f47263ec49aa4ba556",
       "bytes": 29349
+    },
+    {
+      "localPath": ".codex-tmp/weekly-fixes-20261028/isolation-after.log",
+      "sha256": "90c007b5172de0d5a68dc050aea7cbf723ba56334a914abe650e7a93062bc8cb",
+      "bytes": 1384
+    },
+    {
+      "localPath": ".codex-tmp/weekly-fixes-20261028/isolation-mysql.log",
+      "sha256": "94facf986808420493378be40e5b8f9d6d6c7e4e454744680ec28d172de45727",
+      "bytes": 481
+    },
+    {
+      "localPath": ".codex-tmp/weekly-fixes-20261028/fixture-final-test.log",
+      "sha256": "081286c7c5ff54d54cc02c526010fab1366432e8833d37b32703a8df221439be",
+      "bytes": 481
+    },
+    {
+      "localPath": ".codex-tmp/weekly-fixes-20261028/diagnostic-final.log",
+      "sha256": "7e33de1125c5e8eee5c7a7e786b0cf227c6556dd9b00dcd285ea876591a68dc3",
+      "bytes": 108
+    },
+    {
+      "localPath": ".codex-tmp/weekly-fixes-20261028/ci-last-failure.log",
+      "sha256": "646afd648cc0611f2577db7bb0223eeef03df141f0ed2937e0fb1dfed11392e4",
+      "bytes": 18816403
     }
   ],
   "currentFocusedSourceCompile": 23,
@@ -77,14 +102,15 @@
     "abortedReason": "POSIX apply/crash retry branch requires Linux; Windows fail-closed path verified"
   },
   "latestFullBackendRun": {
-    "url": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40694298189",
+    "url": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40698030451",
     "skipped": 0,
     "health": "not executed",
     "tests": 541,
     "image": "blocked: vendor base image CDN network timeout",
     "packaging": "passed with tests skipped for independent runtime diagnosis",
-    "failures": 71,
-    "errors": 11
+    "failures": 70,
+    "errors": 10,
+    "downstreamTests": "not executed after system-setting failure"
   },
   "additionalChecks": [
     {
@@ -101,5 +127,22 @@
       "name": "named mapper repeated write roundtrip",
       "overlapsOriginalFocusedSuite": true
     }
-  ]
+  ],
+  "freshSchemaMigrations": {
+    "scope": "real test database, not packaged app health",
+    "passed": 173,
+    "version": "3.7.2.136",
+    "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40698030451"
+  },
+  "pythonDiagnosisFinal": {
+    "passed": 5,
+    "corruptDeflateRegression": "failed before fix, passed after fix",
+    "failed": 0
+  },
+  "applicationSourceTrees": {
+    "backend": "32dc93a7cd4339a25a38a6556f49fb94eb04233a",
+    "fullSuitePassed": false,
+    "frontend": "7bb84350812c8e26621b6fc305cea91ae8a0a000",
+    "verifiedCommit": "baa75c80827a126261dad9266a9713e169309dce"
+  }
 }
