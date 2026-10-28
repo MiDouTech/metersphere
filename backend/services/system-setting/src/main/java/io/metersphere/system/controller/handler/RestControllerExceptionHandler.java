@@ -168,15 +168,20 @@ public class RestControllerExceptionHandler {
         return message;
     }
 
+    @ExceptionHandler(io.metersphere.sdk.util.FunctionalCaseBlobCodec.BodyFormatException.class)
+    public ResponseEntity<ResultHolder> handleCaseBodyFormat(HttpServletRequest request, HttpServletResponse response) {
+        return ResponseEntity.unprocessableEntity().body(ResultHolder.structuredError(
+                100200, "functional.case.bodyInvalid", "用例正文格式异常或超过限制，原始内容已保留，请联系管理员核对数据",
+                ensureRequestId(request, response), false, Map.of()));
+    }
+
     @ExceptionHandler({Exception.class})
     public ResponseEntity<ResultHolder> handleException(Exception e, HttpServletRequest request,
                                                          HttpServletResponse response) {
         Throwable cause = e;
         for (int depth = 0; cause != null && depth < 16; depth++, cause = cause.getCause()) {
             if (cause instanceof io.metersphere.sdk.util.FunctionalCaseBlobCodec.BodyFormatException) {
-                return ResponseEntity.unprocessableEntity().body(ResultHolder.structuredError(
-                        100200, "functional.case.bodyInvalid", cause.getMessage(),
-                        ensureRequestId(request, response), false, Map.of()));
+                return handleCaseBodyFormat(request, response);
             }
         }
         String requestId = recordInternalError(request, response, e);

@@ -26,8 +26,7 @@ jobs:
           run_id=40672471196
           source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha)
           frontend_ok=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" --jq '[.jobs[] | select(.name == "frontend" and .conclusion == "success")] | length')
-          if [ "$frontend_ok" = 1 ] && [ "$(git rev-parse "$source_sha:frontend")" = "$(git rev-parse HEAD:frontend)" ]; then
-            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name frontend-static --dir frontend/dist
+          if [ "$frontend_ok" = 1 ] && [ "$(git rev-parse "$source_sha:frontend")" = "$(git rev-parse HEAD:frontend)" ] && gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name frontend-static --dir frontend/dist; then
             echo "reused=true" >> "$GITHUB_OUTPUT"
             echo "Verified frontend artifact reused from $source_sha" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -83,6 +82,8 @@ jobs:
         with:
           name: frontend-static
           path: frontend/dist
+      - name: Build pinned official MinIO test dependency
+        run: docker build -t minio/minio:RELEASE.2023-03-13T19-46-17Z -f deploy/quality-verify/Dockerfile.minio-test-source .
       - run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package
         env:
           MAVEN_OPTS: -Xmx1536m

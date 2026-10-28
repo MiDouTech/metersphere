@@ -532,7 +532,13 @@ public class FunctionalCaseService {
             if(!value.trim().startsWith("["))throw new IllegalArgumentException();
             var parsed=JSON.parseArray(value,FunctionalCaseStepDTO.class);
             if(parsed==null || parsed.stream().anyMatch(Objects::isNull))throw new IllegalArgumentException();
-            parsed.forEach(step->{if(StringUtils.isBlank(step.getId()))step.setId(UUID.randomUUID().toString());});
+            for (int index = 0; index < parsed.size(); index++) {
+                var step = parsed.get(index);
+                if (StringUtils.isBlank(step.getId())) {
+                    String identity = caseId + ":" + index + ":" + JSON.toJSONString(step);
+                    step.setId(UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8)).toString());
+                }
+            }
             return parsed;
         } catch(Exception failure) {
             org.slf4j.LoggerFactory.getLogger(FunctionalCaseService.class).warn("Case definition steps invalid; caseId={}",caseId);

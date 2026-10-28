@@ -16,4 +16,10 @@ class FunctionalCaseDefinitionStepsTests {
         for (String invalid : new String[]{"PK binary", "{}", "[null]", "[1]", "[] {}", "[{\"description\":42}]"})
             assertThrows(MSException.class, () -> FunctionalCaseService.validateWriteSteps("STEP", invalid));
     }
+    @Test void legacyMissingStepIdsAreStableAcrossContractReads() {
+        String steps = "[{\"description\":\"step\"}]";
+        String first = FunctionalCaseService.parseDefinitionSteps(steps, "one").getFirst().getId();
+        assertEquals(first, FunctionalCaseService.parseDefinitionSteps(steps, "one").getFirst().getId());
+        assertNotEquals(first, FunctionalCaseService.parseDefinitionSteps(steps, "two").getFirst().getId());
+    }
 }

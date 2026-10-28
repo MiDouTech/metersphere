@@ -261,4 +261,21 @@ class RestControllerExceptionHandlerTests {
         assertEquals(204, responseEntity.getStatusCode().value());
         assertEquals(null, responseEntity.getBody());
     }
+    @Test
+    void corruptedCaseBodyRemainsTraceableWhenWrappedByPersistence() {
+        var failure = org.junit.jupiter.api.Assertions.assertThrows(
+                io.metersphere.sdk.util.FunctionalCaseBlobCodec.BodyFormatException.class,
+                () -> io.metersphere.sdk.util.FunctionalCaseBlobCodec.unpack(new byte[]{80,75,3,4,0}));
+        var handler = new RestControllerExceptionHandler();
+        var request = new MockHttpServletRequest("GET", "/functional/case/detail/fixture");
+        for (var result : java.util.List.of(
+                handler.handleCaseBodyFormat(request, new MockHttpServletResponse()),
+                handler.handleException(new RuntimeException("internal database detail", failure), request, new MockHttpServletResponse()))) {
+            assertEquals(422, result.getStatusCode().value());
+            assertEquals("functional.case.bodyInvalid", result.getBody().getMessageKey());
+            assertFalse(result.getBody().isRetryable());
+            assertNotNull(result.getBody().getRequestId());
+            assertFalse(result.getBody().getMessage().contains("database"));
+        }
+    }
 }
