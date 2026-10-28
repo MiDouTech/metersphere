@@ -51,6 +51,29 @@
       "localPath": ".codex-tmp\\weekly-fixes-20261028\\diagnostic-tests.log",
       "sha256": "1a6dbf47a906b0ea5e1b75650ef80f019c6459e1e01def9e5fbd7309f7016fd9",
       "bytes": 107
+    },
+    {
+      "localPath": ".codex-tmp\\weekly-fixes-20261028\\all-current-compile.log",
+      "sha256": "7848e47258c22465e791c34175bb481c512d783a673b475a0c43a410d3033137",
+      "bytes": 841
+    },
+    {
+      "localPath": ".codex-tmp\\weekly-fixes-20261028\\all-current-tests.log",
+      "sha256": "330cf509bac0d957eacadebc29eff1f968b13ea3c78349b9c7f6668d0a469c1f",
+      "bytes": 49275
+    },
+    {
+      "localPath": ".codex-tmp\\weekly-fixes-20261028\\module-registry-tests.log",
+      "sha256": "fd7c8d4ce12dc5d87203cca1e0568abd388de0d6a3cb87f47263ec49aa4ba556",
+      "bytes": 29349
     }
-  ]
+  ],
+  "currentFocusedSourceCompile": 23,
+  "currentFocusedTests": {
+    "found": 63,
+    "successful": 62,
+    "failed": 0,
+    "aborted": 1,
+    "abortedReason": "POSIX apply/crash retry branch requires Linux; Windows fail-closed path verified"
+  }
 }

@@ -29,7 +29,14 @@ class AgentBatchBodyFailureTests {
             return Map.of("good",detail);
         });
         var good=item("good");var bad=item("bad");var warnings=new ArrayList<String>();
-        service(cases,mapper).enrichWithSteps(List.of(good,bad),warnings);
+        String previous=org.slf4j.MDC.get("traceId");
+        try {
+            org.slf4j.MDC.put("traceId","trace-fixture");
+            service(cases,mapper).enrichWithSteps(List.of(good,bad),warnings);
+            assertEquals("trace-fixture",bad.getContentErrorTraceId());
+        } finally {
+            if(previous==null)org.slf4j.MDC.remove("traceId");else org.slf4j.MDC.put("traceId",previous);
+        }
         verify(mapper).enrichDetail(eq(good),any(),eq(warnings));
         assertNull(good.getContentError());assertEquals("CASE_BODY_INVALID",bad.getContentError());
         assertNull(bad.getSteps());assertEquals(List.of("CASE_BODY_INVALID:bad"),warnings);

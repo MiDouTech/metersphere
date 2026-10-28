@@ -39,6 +39,7 @@ public class AgentFunctionalCaseExportService {
             for (AgentCaseDTO item : chunk) {
                 if (failures.containsKey(item.getCaseId())) {
                     item.setContentError(failures.get(item.getCaseId()));
+                    item.setContentErrorTraceId(org.slf4j.MDC.get("traceId"));
                     item.setSteps(null);
                     item.setExecutionRef(null);
                     item.setExecutionFacts(null);

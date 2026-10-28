@@ -16,7 +16,9 @@ public final class FunctionalCaseBlobCodec {
         if (isZip(bytes)) throw invalid();
         validateText(bytes);
         try (var output = new ByteArrayOutputStream(); var zip = new ZipOutputStream(output)) {
-            zip.putNextEntry(new ZipEntry("zip"));
+            ZipEntry entry = new ZipEntry("zip");
+            entry.setTime(0); // Canonical bytes support repair retries and raw-hash compare-and-set.
+            zip.putNextEntry(entry);
             zip.write(bytes);zip.closeEntry();zip.finish();
             return output.toByteArray();
         } catch (IOException failure) { throw invalid(); }

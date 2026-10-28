@@ -10,6 +10,7 @@ import java.util.List;
 public class AgentCaseDTO {
     @Schema(description = "正文未能读取时的错误码；非空时不得将此用例作为可执行定义")
     private String contentError;
+    private String contentErrorTraceId;
     private java.util.Map<String, String> executionRef;
     private java.util.Map<String, Object> executionFacts;
     private String projectId;

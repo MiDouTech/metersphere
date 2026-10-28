@@ -47,4 +47,9 @@ class FunctionalCaseBlobCodecTests {
             assertThrows(MSException.class,()->FunctionalCaseBlobCodec.unpack(bytes));
         }
     }
+    @Test void canonicalStorageHasStableTimestampAndBytes() throws Exception {
+        byte[] first=(byte[])FunctionalCaseBlobCodec.pack(text("[]"));
+        assertArrayEquals(first,(byte[])FunctionalCaseBlobCodec.pack(text("[]")));
+        try(var zip=new ZipInputStream(new ByteArrayInputStream(first))) { assertEquals(0L,zip.getNextEntry().getTime()); }
+    }
 }

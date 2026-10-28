@@ -621,7 +621,7 @@ public class FunctionalCaseService {
         functionalCaseDetailDTO.setModuleName(name);
 
         User user = userMapper.selectByPrimaryKey(functionalCaseDetailDTO.getCreateUser());
-        functionalCaseDetailDTO.setCreateUserName(user.getName());
+        if (user != null) functionalCaseDetailDTO.setCreateUserName(user.getName());
         if (StringUtils.isNotBlank(functionalCaseDetailDTO.getExecuteUser())) {
             User executeUser = userMapper.selectByPrimaryKey(functionalCaseDetailDTO.getExecuteUser());
             if (executeUser != null) {

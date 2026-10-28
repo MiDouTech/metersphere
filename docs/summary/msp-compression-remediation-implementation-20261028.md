@@ -53,3 +53,15 @@
 - 远端完整测试越过MinIO依赖后暴露独立模块缺LocalLoginProperties，新增SystemLoginConfiguration统一注册Local/Miduo属性，绑定测试通过，不禁用安全组件。
 - 测试MinIO源码镜像引入按Dockerfile/OS/架构身份缓存，成功构建后立即保存，后端测试失败不会丢失缓存；后续复验不重复构建未改动依赖。
 - 原始日志保留本机忽略目录，仓库提交verification-progress.json记录摘要/命令与GitHub链接；未将本机未提交的原始恢复候选内容公开。全量CI与部署E2E尚未通过，PR继续为草稿。
+
+## 历史恢复工具及最终本机定向检查
+
+新增FunctionalCaseBodyRepairTool维护入口（无公开HTTP）：默认只读DRY_RUN，apply要求项目/原BLOB摘要/版本/来源内容摘要确认，校验活跃运维操作人；只允许五正文列，先锁定并检查长度，避免无界加载。Linux私有备份目录700/文件600，文件及目录fsync后才改数据库。正文、单调版本和CASE_SYNC事件同事务，失败回滚；ZIP时间戳规范化，重复请求不重复事件。rollback仅接受目标/摘要匹配的私有原始备份，同样CAS和备份，不覆盖新编辑。
+
+[维护命令与限制](../../scripts/maintenance/README-case-body-repair.md)。本次没有对MSP业务库执行恢复，仍缺可信原始内容。工具不将Windows不安全备份方式作为回退，不自动填空步骤；恢复及回滚都需要先预览。
+
+其他补修：历史用例创建人已删除时保留原ID、名称为空，不再空指针导致详情500；ResourceEditAdapterRegistry的可选适配器列表不再阻止独立模块启动，实际编辑仍拒绝未安装的类型。
+
+当前源码23个文件定向javac编译通过；17个测试类共63项，62成功、0失败、1项因本机非POSIX中止（恢复重试Linux分支）。不是全量Maven/容器/部署E2E通过。Linux CI须实际完成恢复/回滚/失败重试。前端完整构建已有远端通过证据，Node31项、前端逻辑6项及Python4项保持已通过记录；未受后续Java修改影响，不重跑这些构建。
+
+新一轮全量CI将继续核对模块启动修复及新维护工具。仍未满足全部验收，chenqifen/main合并保持草稿，不宣称完成。

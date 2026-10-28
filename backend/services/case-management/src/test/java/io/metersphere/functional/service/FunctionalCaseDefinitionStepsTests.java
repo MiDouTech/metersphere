@@ -22,4 +22,15 @@ class FunctionalCaseDefinitionStepsTests {
         assertEquals(first, FunctionalCaseService.parseDefinitionSteps(steps, "one").getFirst().getId());
         assertNotEquals(first, FunctionalCaseService.parseDefinitionSteps(steps, "two").getFirst().getId());
     }
+    @Test void deletedCreatorDoesNotBreakHistoricalDetail() {
+        var service=new FunctionalCaseService();
+        var users=org.mockito.Mockito.mock(io.metersphere.system.mapper.UserMapper.class);
+        var modules=org.mockito.Mockito.mock(FunctionalCaseModuleService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"userMapper",users);
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"functionalCaseModuleService",modules);
+        var detail=new io.metersphere.functional.dto.FunctionalCaseDetailDTO();
+        detail.setCreateUser("deleted-user");detail.setModuleId("module");
+        assertDoesNotThrow(()->org.springframework.test.util.ReflectionTestUtils.invokeMethod(service,"handDTO",detail));
+        assertEquals("deleted-user",detail.getCreateUser());assertNull(detail.getCreateUserName());
+    }
 }
