@@ -36,9 +36,15 @@ public class AgentCaseImportController {
     @PostMapping("/{id}/followup/retry")
     public void retryFollowup(@PathVariable String id) { followups.retry(id,SessionUtils.getUserId()); }
 
-    @PostMapping("/{id}/{action}") public Map<String,Object> action(@PathVariable String id,@PathVariable String action,
+    @PostMapping("/{id}/commit")
+    public Map<String,Object> commit(@PathVariable String id,
             @jakarta.validation.Valid @RequestBody(required=false) ImportFollowupRequest followup) {
-        if("commit".equals(action))followups.prepare(id,SessionUtils.getUserId(),followup);
+        followups.prepare(id,SessionUtils.getUserId(),followup);
+        return service.action(id,"commit",SessionUtils.getUserId(),"WEB");
+    }
+
+    @PostMapping("/{id}/{action:stop|retry}")
+    public Map<String,Object> action(@PathVariable String id,@PathVariable String action) {
         var result=service.action(id,action,SessionUtils.getUserId(),"WEB");
         if("retry".equals(action))followups.retry(id,SessionUtils.getUserId());
         return result;

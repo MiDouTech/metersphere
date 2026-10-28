@@ -56,7 +56,7 @@ public class AgentCaseImportService {
         String name=Objects.toString(file.getOriginalFilename(),"");
         if(name.length()>255||!name.toLowerCase(Locale.ROOT).matches(".*\\.(xlsx|xls|xmind)"))throw new MSException("仅支持Excel或XMind文件");
         byte[] bytes;
-        try { bytes=file.getBytes(); }catch(Exception failure){throw new MSException("读取导入文件失败，请重试");}
+        try { bytes=file.getBytes(); }catch(Exception failure){throw new MSException("IMPORT_FILE_READ_FAILED");}
         if(bytes.length>50*1024*1024)throw new MSException("导入文件不能超过50MiB");
         String sourceHash=DigestUtils.sha256Hex(bytes);
         String requestHash=DigestUtils.sha256Hex(JSON.toJSONString(request)+":"+sourceHash+":"+name);
@@ -96,11 +96,7 @@ public class AgentCaseImportService {
                 for(var error:errors)prepared.add(new Item("INVALID",null,null,null,safeValidation(error.getErrMsg())));
                 parser.clear();
             } else {
-                List<Integer> sheets;
-                try(var reader=EasyExcel.read(file.getInputStream()).build()) {
-                    sheets=reader.excelExecutor().sheetList().stream().map(sheet->sheet.getSheetNo()).toList();
-                }
-                if(sheets.size()>100)throw new MSException("工作表超过100个，请拆分文件");
+                var sheets=io.metersphere.functional.excel.util.FunctionalCaseWorkbookSheets.select(file,deadline);
                 for(int sheet:sheets) {
                     Set<ExcelMergeInfo> merges=new TreeSet<>();
                     EasyExcel.read(file.getInputStream(),null,new FunctionalCasePretreatmentListener(merges)).extraRead(CellExtraTypeEnum.MERGE).sheet(sheet).doRead();
@@ -112,7 +108,7 @@ public class AgentCaseImportService {
                 }
             }
         } catch(MSException failure){throw failure;}
-        catch(Exception failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("Import precheck failed",failure);throw new MSException("导入文件解析失败，请使用当前模板检查文件格式");}
+        catch(Exception failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("Import precheck failed",failure);throw new MSException("IMPORT_FILE_PARSE_FAILED");}
         if(prepared.isEmpty()||prepared.size()>MAX_ITEMS)throw new MSException("未找到可处理的用例，或超过10000条限制");
         if(prepared.stream().filter(item->item.target()!=null).map(Item::target).distinct().count()!=prepared.stream().filter(item->item.target()!=null).count())throw new MSException("文件多次覆盖同一用例，请合并后重新预检");
         String id=UUID.randomUUID().toString();long now=System.currentTimeMillis();

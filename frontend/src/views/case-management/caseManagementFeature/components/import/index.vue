@@ -40,9 +40,9 @@
   import { useUserStore } from '@/store';
   import useAppStore from '@/store/modules/app';
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
+  import { showHttpErrorMessage } from '@/utils/httpMessage';
 
   import type { FileItem } from '@arco-design/web-vue';
-  import Message from '@arco-design/web-vue/es/message';
 
   const props = withDefaults(
     defineProps<{
@@ -148,7 +148,7 @@
       pendingFile = undefined;
     } catch (failure) {
       if (key === storageKey.value)
-        Message.error(formatAppErrorMessage(ensureAppError(failure, '导入预检失败，请检查文件后重试')));
+        showHttpErrorMessage(formatAppErrorMessage(ensureAppError(failure, '导入预检失败，请检查文件后重试')));
     } finally {
       validateLoading.value = false;
     }
