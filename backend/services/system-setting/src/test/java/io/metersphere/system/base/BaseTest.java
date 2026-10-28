@@ -296,6 +296,7 @@ public abstract class BaseTest {
      * @param mockBody
      */
     protected void mockGet(String path, String mockBody) {
+        mockServerClient.clear(request().withMethod("GET").withPath(path));
         mockServerClient
                 .when(
                         request()
@@ -316,6 +317,7 @@ public abstract class BaseTest {
      * @param mockBody
      */
     protected void mockPost(String path, String mockBody) {
+        mockServerClient.clear(request().withMethod("POST").withPath(path));
         mockServerClient
                 .when(
                         request()

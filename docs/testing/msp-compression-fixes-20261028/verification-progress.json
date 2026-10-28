@@ -75,5 +75,31 @@
     "failed": 0,
     "aborted": 1,
     "abortedReason": "POSIX apply/crash retry branch requires Linux; Windows fail-closed path verified"
-  }
+  },
+  "latestFullBackendRun": {
+    "url": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40694298189",
+    "skipped": 0,
+    "health": "not executed",
+    "tests": 541,
+    "image": "blocked: vendor base image CDN network timeout",
+    "packaging": "passed with tests skipped for independent runtime diagnosis",
+    "failures": 71,
+    "errors": 11
+  },
+  "additionalChecks": [
+    {
+      "passed": 2,
+      "name": "MyBatis parameter and mixed-list isolation",
+      "failedBeforeFix": 2
+    },
+    {
+      "name": "Spring SQL organization and department fixture repeated on real MySQL",
+      "passed": 1
+    },
+    {
+      "passed": 1,
+      "name": "named mapper repeated write roundtrip",
+      "overlapsOriginalFocusedSuite": true
+    }
+  ]
 }

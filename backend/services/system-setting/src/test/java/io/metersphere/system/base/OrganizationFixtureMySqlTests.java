@@ -43,6 +43,21 @@ class OrganizationFixtureMySqlTests {
             assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM organization WHERE id='keep'", Integer.class));
             assertEquals(6, jdbc.queryForObject("SELECT COUNT(*) FROM user", Integer.class));
             assertEquals(4, jdbc.queryForObject("SELECT COUNT(*) FROM user_role_relation", Integer.class));
+            String departmentDdl = new ClassPathResource("migration/3.7.0/ddl/V3.7.0_1__org_structure.sql")
+                    .getContentAsString(StandardCharsets.UTF_8);
+            var department = Pattern.compile("CREATE TABLE IF NOT EXISTS department\\s*\\(.*?;", Pattern.DOTALL).matcher(departmentDdl);
+            assertTrue(department.find());
+            jdbc.execute(department.group());
+            jdbc.execute("ALTER TABLE user ADD COLUMN cft_token VARCHAR(255) NOT NULL DEFAULT 'NONE'");
+            try (var connection = ds.getConnection()) {
+                ScriptUtils.executeSqlScript(connection, new EncodedResource(new ClassPathResource(
+                        "migration/3.7.0/ddl/V3.7.0_2__user_org_structure.sql"), StandardCharsets.UTF_8));
+                var resource = new EncodedResource(new ClassPathResource("dml/init_org_structure_test_data.sql"), StandardCharsets.UTF_8);
+                ScriptUtils.executeSqlScript(connection, resource);
+                ScriptUtils.executeSqlScript(connection, resource);
+            }
+            assertEquals(5, jdbc.queryForObject("SELECT COUNT(*) FROM department", Integer.class));
+            assertEquals(4, jdbc.queryForObject("SELECT COUNT(*) FROM user WHERE id LIKE 'org_structure_user_%'", Integer.class));
         } finally {
             admin.execute("DROP DATABASE " + schema);
         }
