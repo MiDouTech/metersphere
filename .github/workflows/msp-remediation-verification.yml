@@ -5,6 +5,7 @@ on:
     branches: ['codex/weekly-remediation-20261028']
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: remediation-${{ github.ref }}
   cancel-in-progress: true
@@ -14,19 +15,40 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: reuse
+        name: Reuse verified unchanged frontend
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run_id=40672471196
+          source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha)
+          frontend_ok=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" --jq '[.jobs[] | select(.name == "frontend" and .conclusion == "success")] | length')
+          if [ "$frontend_ok" = 1 ] && [ "$(git rev-parse "$source_sha:frontend")" = "$(git rev-parse HEAD:frontend)" ]; then
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name frontend-static --dir frontend/dist
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+            echo "Verified frontend artifact reused from $source_sha" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: pnpm/action-setup@v4
+        if: steps.reuse.outputs.reused != 'true'
         with:
           version: 8.4.0
       - uses: actions/setup-node@v4
+        if: steps.reuse.outputs.reused != 'true'
         with:
           node-version: 20.8.1
           cache: pnpm
           cache-dependency-path: frontend/package.json
       - run: pnpm install --no-frozen-lockfile
+        if: steps.reuse.outputs.reused != 'true'
         working-directory: frontend
       - run: pnpm run test:selection-toggle && pnpm run test:weekly-remediation-sfc
+        if: steps.reuse.outputs.reused != 'true'
         working-directory: frontend
       - run: pnpm run build
+        if: steps.reuse.outputs.reused != 'true'
         working-directory: frontend
         env:
           NODE_OPTIONS: --max-old-space-size=4096
