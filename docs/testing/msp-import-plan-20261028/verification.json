@@ -1,0 +1,55 @@
+{
+  "status": "PARTIAL",
+  "backendFocusedTests": {
+    "passed": 10,
+    "failed": 0
+  },
+  "frontendRegressionTests": {
+    "passed": 9,
+    "failed": 0
+  },
+  "sfcCompile": {
+    "checked": 3,
+    "failed": 0
+  },
+  "eslint": {
+    "errors": 0,
+    "existingWarnings": 12
+  },
+  "stylelint": "PASS",
+  "originalWorkbook": {
+    "readOnly": true,
+    "selectedSheets": [
+      0
+    ],
+    "oldParserRejectsQualityReport": true
+  },
+  "livePrecheck": {
+    "singleCaseFixture": "SUCCESS, not committed",
+    "originalWorkbook": "HTTP 400 BUSINESS_ERROR reproduced",
+    "cleanup": "owned fixture task STOPPED using compatibility payload; no import committed"
+  },
+  "uiIsolation": {
+    "productionTemplate": true,
+    "actualArcoAndVue": true,
+    "fixtureData": true,
+    "progressCount": 1,
+    "switch": "25% -> 75%",
+    "screenshot": "captured and visually inspected: raw/overview-plan-two.png, raw/overview-dropdown.png, raw/overview-plan-one.png",
+    "additionalSwitch": "25% -> 100% -> 75%; exactly one plan progress throughout",
+    "geometry": "983x836; select, progress bar and percentage do not overlap",
+    "geometryEvidence": "overview-switch-geometry.json",
+    "screenshotViewport": {
+      "width": 1908,
+      "height": 895
+    },
+    "visualResult": "one selected plan, dropdown lists three plans; 75% to 25% switch; no observed overlap; isolated fixture only"
+  },
+  "notExecuted": [
+    "full vue-tsc and Vite build",
+    "full Maven package",
+    "database integration",
+    "Docker image/start/health",
+    "post-deployment end-to-end import and plan switching"
+  ]
+}

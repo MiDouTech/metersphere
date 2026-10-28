@@ -46,6 +46,11 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "IMPORT_FILE_READ_FAILED" -> "读取导入文件失败，请重新选择文件后重试";
+            case "IMPORT_FILE_PARSE_FAILED" -> "导入文件无法解析，请检查是否加密或损坏，并使用当前模板保存为Excel文件后重试";
+            case "IMPORT_CASE_SHEET_NOT_FOUND" -> "未找到用例工作表，请使用当前模板，并保留第一行的用例名称列；报告和说明工作表不会导入";
+            case "IMPORT_WORKSHEET_LIMIT" -> "工作表超过100个，请拆分文件后重试";
+            case "IMPORT_PARSE_LIMIT" -> "文件解析超过时间限制，请拆分文件后重试";
             case "QUALITY_CASE_EVIDENCE_REQUIRED" -> "请为本次用例执行补充有效图片证据，一张图片可覆盖所有步骤";
             case "QUALITY_CASE_EVIDENCE_INVALID" -> "用例图片证据无效，请检查PNG/JPEG格式、大小及所属用例后重试";
             case "ENVIRONMENT_ORIGIN_INVALID" -> "允许 Origin 只包含协议、主机及端口，不能包含路径或参数";

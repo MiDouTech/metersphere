@@ -110,17 +110,34 @@
           <div class="case-list-overview">
             <div class="case-list-overview-item">
               <span class="case-list-overview-label">{{ t('caseManagement.featureCase.testPlanSummary') }}：</span>
-              <div v-if="pageCaseTestPlans.length" class="case-list-overview-content">
-                <div v-for="plan in pageCaseTestPlans" :key="plan.id" class="case-progress-item">
-                  <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
-                    <span class="case-progress-name">{{ formatOverviewTitle(plan.name, plan.num, plan.id) }}</span>
-                  </a-tooltip>
-                  <a-tooltip :content="formatPlanProgressTooltip(plan)" position="top">
-                    <div class="case-plan-progress" :aria-label="formatPlanProgressTooltip(plan)">
-                      <div class="case-plan-progress-fill" :style="{ width: `${normalizeRate(plan.rate)}%` }"></div>
+              <div v-if="selectedOverviewPlan" class="case-list-overview-content">
+                <div class="case-progress-item">
+                  <a-select
+                    v-model="selectedOverviewPlanId"
+                    class="case-overview-plan-select"
+                    :aria-label="t('caseManagement.featureCase.testPlanSummary')"
+                    :title="
+                      formatOverviewTitle(selectedOverviewPlan.name, selectedOverviewPlan.num, selectedOverviewPlan.id)
+                    "
+                    :options="
+                      pageCaseTestPlans.map((plan) => ({
+                        value: plan.id,
+                        label: formatOverviewTitle(plan.name, plan.num, plan.id),
+                      }))
+                    "
+                    :allow-search="true"
+                    :allow-clear="false"
+                    size="small"
+                  />
+                  <a-tooltip :content="formatPlanProgressTooltip(selectedOverviewPlan)" position="top">
+                    <div class="case-plan-progress" :aria-label="formatPlanProgressTooltip(selectedOverviewPlan)">
+                      <div
+                        class="case-plan-progress-fill"
+                        :style="{ width: `${normalizeRate(selectedOverviewPlan.rate)}%` }"
+                      ></div>
                     </div>
                   </a-tooltip>
-                  <span class="case-progress-percent">{{ normalizeRate(plan.rate) }}%</span>
+                  <span class="case-progress-percent">{{ normalizeRate(selectedOverviewPlan.rate) }}%</span>
                 </div>
               </div>
               <span v-else class="text-[var(--color-text-4)]">-</span>
@@ -660,6 +677,7 @@
   import { NAV_NAVIGATION } from '@/config/workbench';
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
+  import useSinglePlanOverview from '@/hooks/useSinglePlanOverview';
   import { useAppStore, useTableStore, useUserStore } from '@/store';
   import useCacheStore from '@/store/modules/cache/cache';
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
@@ -1483,6 +1501,11 @@
     });
     return Array.from(planMap.values());
   });
+
+  const { selectedPlanId: selectedOverviewPlanId, selectedPlan: selectedOverviewPlan } = useSinglePlanOverview(
+    () => pageCaseTestPlans.value,
+    () => currentProjectId.value
+  );
 
   const emptyPersonalProgress = (): FunctionalCasePersonalProgress => ({
     total: 0,
@@ -2878,6 +2901,14 @@
     align-items: center;
     gap: 8px;
     min-width: 0;
+  }
+  .case-list-overview-content .case-progress-item {
+    flex-wrap: wrap;
+  }
+  .case-overview-plan-select {
+    width: 260px;
+    min-width: 0;
+    max-width: min(260px, 45vw);
   }
   .case-progress-name {
     overflow: hidden;

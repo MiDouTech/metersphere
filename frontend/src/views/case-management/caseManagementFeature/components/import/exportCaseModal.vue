@@ -22,6 +22,9 @@
           </MsButton>
         </div>
       </a-alert>
+      <div class="mb-3 text-[12px] text-[var(--color-text-3)]">
+        仅导入首行包含标准用例名称列的工作表；质量报告、说明等辅助工作表不参与导入。
+      </div>
       <MsUpload
         v-model:file-list="fileList"
         class="mb-6 w-full"

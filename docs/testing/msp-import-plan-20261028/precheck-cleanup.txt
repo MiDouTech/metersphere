@@ -1,0 +1,13 @@
+{
+  "httpStatus": 200,
+  "jobId": "255a1e22-c558-4c46-abee-200e32140bc4",
+  "state": "STOPPED",
+  "counts": [
+    {
+      "state": "PENDING",
+      "total": 1
+    }
+  ],
+  "importCommitted": false,
+  "compatibilityPayloadUsed": true
+}
