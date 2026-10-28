@@ -221,3 +221,11 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 ## 0.8.1 写入请求标识
 
 创建目录、单条/批量创建用例必须提供调用方稳定的 `requestId`；同一业务请求重试复用原值，不自动生成新值。导出与这些创建工具采用 1–128 位 `A-Z a-z 0-9 _ . : -`。升级后重启 MCP 进程并在客户端刷新工具 schema；旧的外部连接器缓存不会随仓库提交自动刷新。
+
+## 0.8.2 契约与版本核对
+
+服务初始化声明的版本现在读取 package.json，修正此前包版本 0.8.1、服务仍声明 0.8.0 的不一致。构建后可运行 `node --test test/stdioContract.test.mjs`，实际启动 stdio 服务检查版本及工具列表。
+
+客户端更新后应从实际 tools/list 核对：execution.submit 有用例级 evidenceIds，contentHash/policyHash 可选；evidence.upload 的 contentHash/stepNum/purpose 可选；创建用例和目录要求稳定 requestId。Node 包、远程服务和下载技能包有各自版本，不要求版本号相等，但参数语义必须一致。
+
+本次代码准备 0.8.2 不代表已经发布 npm。发布前使用本地构建启动；发布后更新客户端绑定的实际包/端点，重新连接并刷新工具缓存。若刷新后仍看到旧 required 字段，应检查该连接器的工具定义来源，不能只靠重启后端认定已修复。

@@ -58,6 +58,7 @@ public class FunctionalCaseAttachmentService {
     @Resource private FunctionalImportEffectOutbox importEffects;
 
     private void enqueueMirror(String caseId,String userId) {
+        syncJdbc.update("UPDATE functional_case SET update_time=GREATEST(COALESCE(update_time,0)+1,?) WHERE id=?",System.currentTimeMillis(),caseId);
         var projects=syncJdbc.queryForList("SELECT project_id FROM functional_case WHERE id=?",String.class,caseId);
         if(!projects.isEmpty()) importEffects.enqueue(projects.getFirst(),userId,List.of(caseId),List.of(),"UPDATE");
     }
@@ -449,6 +450,7 @@ public class FunctionalCaseAttachmentService {
         // 上传文件到对象存储
         LogUtils.info("上传文件到对象存储");
         uploadFileResource(functionalCaseDir, addFileMap, projectId, caseId);
+        enqueueMirror(caseId,userId);
         LogUtils.info("上传富文本里的附件结束");
     }
 

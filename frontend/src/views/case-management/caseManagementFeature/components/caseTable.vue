@@ -112,25 +112,41 @@
               <span class="case-list-overview-label">{{ t('caseManagement.featureCase.testPlanSummary') }}：</span>
               <div v-if="selectedOverviewPlan" class="case-list-overview-content">
                 <div class="case-progress-item">
-                  <a-select
-                    v-model="selectedOverviewPlanId"
-                    class="case-overview-plan-select"
-                    :aria-label="t('caseManagement.featureCase.testPlanSummary')"
-                    :title="
+                  <div class="case-overview-plan-picker">
+                    <span class="case-overview-plan-sizer" aria-hidden="true">{{
                       formatOverviewTitle(selectedOverviewPlan.name, selectedOverviewPlan.num, selectedOverviewPlan.id)
-                    "
-                    :options="
-                      pageCaseTestPlans.map((plan) => ({
-                        value: plan.id,
-                        label: formatOverviewTitle(plan.name, plan.num, plan.id),
-                      }))
-                    "
-                    :allow-search="true"
-                    :allow-clear="false"
-                    size="small"
-                  />
+                    }}</span>
+                    <a-select
+                      v-model="selectedOverviewPlanId"
+                      class="case-overview-plan-select"
+                      :aria-label="t('caseManagement.featureCase.testPlanSummary')"
+                      :title="
+                        formatOverviewTitle(
+                          selectedOverviewPlan.name,
+                          selectedOverviewPlan.num,
+                          selectedOverviewPlan.id
+                        )
+                      "
+                      :options="
+                        pageCaseTestPlans.map((plan) => ({
+                          value: plan.id,
+                          label: formatOverviewTitle(plan.name, plan.num, plan.id),
+                        }))
+                      "
+                      :allow-search="true"
+                      :allow-clear="false"
+                      size="small"
+                    />
+                  </div>
                   <a-tooltip :content="formatPlanProgressTooltip(selectedOverviewPlan)" position="top">
-                    <div class="case-plan-progress" :aria-label="formatPlanProgressTooltip(selectedOverviewPlan)">
+                    <div
+                      class="case-plan-progress"
+                      role="progressbar"
+                      :aria-valuenow="normalizeRate(selectedOverviewPlan.rate)"
+                      :aria-valuemin="0"
+                      :aria-valuemax="100"
+                      :aria-label="formatPlanProgressTooltip(selectedOverviewPlan)"
+                    >
                       <div
                         class="case-plan-progress-fill"
                         :style="{ width: `${normalizeRate(selectedOverviewPlan.rate)}%` }"
@@ -173,10 +189,10 @@
           <ms-base-table
             v-bind="propsRes"
             ref="tableRef"
+            class="msp-polished-table mt-[8px]"
             batch-action-placement="top"
             always-show-selected-count
             filter-icon-align-left
-            class="mt-[8px]"
             :action-config="tableBatchActions"
             show-select-all-after-export
             :not-show-table-filter="isAdvancedSearchMode"
@@ -2867,10 +2883,14 @@
   }
   .case-list-overview {
     display: flex;
+    overflow-x: auto;
     margin-top: 8px;
-    padding-left: 16px;
-    min-height: 24px;
+    padding: 12px 16px;
+    min-height: 56px;
+    border: 1px solid var(--color-border-2);
+    border-radius: 8px;
     color: var(--color-text-2);
+    background: var(--color-bg-2);
     flex-wrap: wrap;
     gap: 8px 24px;
   }
@@ -2878,7 +2898,9 @@
     display: flex;
     align-items: center;
     min-width: 0;
+    max-width: 100%;
     font-size: 13px;
+    gap: 8px;
   }
   .case-list-overview-label {
     flex: none;
@@ -2886,7 +2908,7 @@
   }
   .case-list-overview-content {
     display: flex;
-    flex-wrap: wrap;
+    flex: 0 1 auto;
     gap: 6px 16px;
     min-width: 0;
   }
@@ -2903,12 +2925,30 @@
     min-width: 0;
   }
   .case-list-overview-content .case-progress-item {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    max-width: 100%;
+  }
+  .case-overview-plan-picker {
+    display: inline-grid;
+    align-items: center;
+    overflow: hidden;
+    min-width: 160px;
+    flex: 0 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .case-overview-plan-sizer {
+    padding: 0 36px 0 12px;
+    font-size: 14px;
+    white-space: pre;
+    visibility: hidden;
+    grid-area: 1 / 1;
   }
   .case-overview-plan-select {
-    width: 260px;
+    grid-area: 1 / 1;
+    width: 100%;
     min-width: 0;
-    max-width: min(260px, 45vw);
+    max-width: 100%;
+    height: 32px;
   }
   .case-progress-name {
     overflow: hidden;
@@ -2921,6 +2961,8 @@
     min-width: 38px;
     text-align: right;
     color: var(--color-text-2);
+    flex: none;
+    font-variant-numeric: tabular-nums;
   }
   .case-progress-more {
     color: var(--color-text-3);
@@ -2929,9 +2971,10 @@
     display: flex;
     overflow: hidden;
     width: 90px;
-    height: 8px;
+    height: 6px;
+    flex: none;
     border-radius: 999px;
-    background: rgb(var(--primary-4));
+    background: var(--color-fill-3);
   }
   .case-plan-progress-fill {
     height: 100%;

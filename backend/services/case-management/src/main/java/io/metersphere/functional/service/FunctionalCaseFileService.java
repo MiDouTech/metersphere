@@ -110,6 +110,8 @@ public class FunctionalCaseFileService {
     @Resource
     private FunctionalCaseExportTempFiles exportTempFiles;
     @Resource
+    private org.springframework.jdbc.core.JdbcTemplate exportJdbc;
+    @Resource
     private ExportTaskMapper exportTaskMapper;
     private static final String XLSX = "xlsx";
     private static final String ZIP = "zip";
@@ -607,6 +609,11 @@ public class FunctionalCaseFileService {
         Map<String, FunctionalCaseBlob> functionalCaseBlobMap = functionalCaseService.copyBlobInfo(ids);
         //自定义字段
         Map<String, List<FunctionalCaseCustomField>> customFieldMap = functionalCaseCustomFieldService.getCustomFieldMapByCaseIds(ids);
+        Map<String,List<String>> assetPriorities=new HashMap<>();
+        if(StringUtils.isNotBlank(request.getAssetCatalogId()) && !ids.isEmpty()) {
+            var rows=exportJdbc.queryForList("SELECT v.case_id,v.value FROM functional_case_custom_field v JOIN custom_field f ON f.id=v.field_id WHERE v.case_id IN ("+String.join(",",Collections.nCopies(ids.size(),"?"))+") AND f.name='functional_priority'",ids.toArray());
+            for(var row:rows)assetPriorities.computeIfAbsent((String)row.get("case_id"),ignored->new ArrayList<>()).add((String)row.get("value"));
+        }
         //用例评论
         Map<String, List<FunctionalCaseComment>> caseCommentMap = getCaseComment(ids);
         //执行评论
@@ -627,6 +634,8 @@ public class FunctionalCaseFileService {
             buildBaseField(data, functionalCase, functionalCaseBlob, moduleMap, textDescriptionList, expectedResultList, url, project);
             //构建自定义字段
             buildExportCustomField(customFields, customFieldMap.getOrDefault(id, List.of()), data, request);
+            // Mirrors retain their source template's field identities, not the hub default template's IDs.
+            applyAssetPriority(customFields,assetPriorities.getOrDefault(id,List.of()),data);
             //构建其他字段
             buildExportOtherField(functionalCase, data, caseCommentMap, executeCommentMap, reviewCommentMap, request);
             validateExportTextField(data);
@@ -834,6 +843,16 @@ public class FunctionalCaseFileService {
             if (value != null) map.put(id, value);
         });
         data.setCustomData(map);
+    }
+
+    static void applyAssetPriority(List<TemplateCustomFieldDTO> fields,List<String> priorities,FunctionalCaseExcelData data) {
+        if(priorities.stream().distinct().count()>1)throw new MSException("资产用例等级映射冲突，请核对模板后重试");
+        if(!priorities.isEmpty()) for(var field:fields) {
+            if("functional_priority".equals(field.getInternalFieldKey())) {
+                data.getCustomData().put(field.getFieldId(),priorities.getFirst());
+                data.getCustomData().put(field.getFieldName(),priorities.getFirst());
+            }
+        }
     }
 
 

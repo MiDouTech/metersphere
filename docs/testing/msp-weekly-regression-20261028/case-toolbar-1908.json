@@ -1,0 +1,113 @@
+{
+  "width": 1908,
+  "bulk": [
+    {
+      "text": "导出",
+      "disabled": true,
+      "rect": {
+        "x": 583.078125,
+        "y": 413,
+        "width": 48,
+        "height": 20,
+        "top": 413,
+        "right": 631.078125,
+        "bottom": 433,
+        "left": 583.078125
+      }
+    },
+    {
+      "text": "全选所有页",
+      "disabled": false,
+      "rect": {
+        "x": 639.078125,
+        "y": 413,
+        "width": 84,
+        "height": 20,
+        "top": 413,
+        "right": 723.078125,
+        "bottom": 433,
+        "left": 639.078125
+      }
+    },
+    {
+      "text": "编辑",
+      "disabled": true,
+      "rect": {
+        "x": 731.078125,
+        "y": 413,
+        "width": 48,
+        "height": 20,
+        "top": 413,
+        "right": 779.078125,
+        "bottom": 433,
+        "left": 731.078125
+      }
+    },
+    {
+      "text": "批量修改执行结果",
+      "disabled": true,
+      "rect": {
+        "x": 787.078125,
+        "y": 413,
+        "width": 120,
+        "height": 20,
+        "top": 413,
+        "right": 907.078125,
+        "bottom": 433,
+        "left": 787.078125
+      }
+    },
+    {
+      "text": "批量修改执行人",
+      "disabled": true,
+      "rect": {
+        "x": 915.078125,
+        "y": 413,
+        "width": 108,
+        "height": 20,
+        "top": 413,
+        "right": 1023.078125,
+        "bottom": 433,
+        "left": 915.078125
+      }
+    },
+    {
+      "text": "移动到",
+      "disabled": true,
+      "rect": {
+        "x": 1031.078125,
+        "y": 413,
+        "width": 60,
+        "height": 20,
+        "top": 413,
+        "right": 1091.078125,
+        "bottom": 433,
+        "left": 1031.078125
+      }
+    },
+    {
+      "text": "复制到",
+      "disabled": true,
+      "rect": {
+        "x": 1099.078125,
+        "y": 413,
+        "width": 60,
+        "height": 20,
+        "top": 413,
+        "right": 1159.078125,
+        "bottom": 433,
+        "left": 1099.078125
+      }
+    }
+  ],
+  "tree": {
+    "x": 228,
+    "y": 137,
+    "width": 182.5,
+    "height": 30,
+    "top": 137,
+    "right": 410.5,
+    "bottom": 167,
+    "left": 228
+  }
+}

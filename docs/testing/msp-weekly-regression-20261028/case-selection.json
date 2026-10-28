@@ -1,0 +1,107 @@
+{
+  "width": 971,
+  "height": 852,
+  "overview": "测试计划：ACCEPTANCE-20261027-导入联动计划（100005）0%ACCEPTANCE-20261027-自动刷新与证据计划（100004）0%个人执行进度：-",
+  "dropdown": 0,
+  "progress": 2,
+  "buttons": [
+    {
+      "text": "导出",
+      "disabled": false,
+      "rect": {
+        "x": 528.859375,
+        "y": 624,
+        "width": 48,
+        "height": 20,
+        "top": 624,
+        "right": 576.859375,
+        "bottom": 644,
+        "left": 528.859375
+      }
+    },
+    {
+      "text": "全选所有页",
+      "disabled": false,
+      "rect": {
+        "x": 584.859375,
+        "y": 624,
+        "width": 84,
+        "height": 20,
+        "top": 624,
+        "right": 668.859375,
+        "bottom": 644,
+        "left": 584.859375
+      }
+    },
+    {
+      "text": "编辑",
+      "disabled": false,
+      "rect": {
+        "x": 676.859375,
+        "y": 624,
+        "width": 48,
+        "height": 20,
+        "top": 624,
+        "right": 724.859375,
+        "bottom": 644,
+        "left": 676.859375
+      }
+    },
+    {
+      "text": "批量修改执行结果",
+      "disabled": false,
+      "rect": {
+        "x": 732.859375,
+        "y": 624,
+        "width": 120,
+        "height": 20,
+        "top": 624,
+        "right": 852.859375,
+        "bottom": 644,
+        "left": 732.859375
+      }
+    },
+    {
+      "text": "批量修改执行人",
+      "disabled": false,
+      "rect": {
+        "x": 449.5,
+        "y": 651.5,
+        "width": 108,
+        "height": 20,
+        "top": 651.5,
+        "right": 557.5,
+        "bottom": 671.5,
+        "left": 449.5
+      }
+    },
+    {
+      "text": "移动到",
+      "disabled": false,
+      "rect": {
+        "x": 565.5,
+        "y": 651.5,
+        "width": 60,
+        "height": 20,
+        "top": 651.5,
+        "right": 625.5,
+        "bottom": 671.5,
+        "left": 565.5
+      }
+    },
+    {
+      "text": "复制到",
+      "disabled": false,
+      "rect": {
+        "x": 633.5,
+        "y": 651.5,
+        "width": 60,
+        "height": 20,
+        "top": 651.5,
+        "right": 693.5,
+        "bottom": 671.5,
+        "left": 633.5
+      }
+    }
+  ]
+}

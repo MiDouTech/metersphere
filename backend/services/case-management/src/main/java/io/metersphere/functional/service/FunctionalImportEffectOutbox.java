@@ -63,6 +63,15 @@ public class FunctionalImportEffectOutbox {
                 java.util.UUID.randomUUID().toString(), type, project, user, JSON.toJSONString(payload), now, now, now);
     }
 
+    @Scheduled(fixedDelay = 30000, initialDelay = 45000, scheduler = "functionalImportEffectsScheduler")
+    @Transactional
+    public void reconcileStaleProjection() {
+        // Only the migration-marked backlog; normal writes enqueue in their source transaction.
+        var rows=jdbc.queryForList("SELECT f.id,f.project_id,f.update_user FROM case_asset_source_relation r JOIN functional_case f ON BINARY f.project_id=BINARY r.source_project_id AND BINARY COALESCE(NULLIF(f.ref_id,''),f.id)=BINARY r.source_case_id WHERE r.source_update_time=0 AND f.deleted=0 AND f.latest=1 AND NOT EXISTS (SELECT 1 FROM functional_import_effect_outbox e WHERE BINARY e.project_id=BINARY f.project_id AND e.effect_type='CASE_SYNC' AND e.state IN ('PENDING','FAILED') AND BINARY JSON_UNQUOTE(JSON_EXTRACT(e.payload,'$.caseId'))=BINARY f.id) ORDER BY r.id LIMIT 10 FOR UPDATE SKIP LOCKED");
+        long now=System.currentTimeMillis();
+        for(var row:rows)insert("CASE_SYNC",(String)row.get("project_id"),(String)row.get("update_user"),Map.of("caseId",row.get("id")),now);
+    }
+
     @Scheduled(fixedDelay = 1000, initialDelay = 30000, scheduler = "functionalImportEffectsScheduler")
     public void drain() {
         if (System.currentTimeMillis() < nextScan) return;

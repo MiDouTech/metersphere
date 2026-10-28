@@ -1,0 +1,52 @@
+[
+  {
+    "current": 6,
+    "isError": true,
+    "error": [
+      {
+        "type": "text",
+        "text": "tool call error: tool call failed for `metersphere_test/metersphere.functional.search`\n\nCaused by:\n    Mcp error: -32603: 服务暂时不可用，请使用 traceId 联系管理员({\"code\":\"AI_EXECUTION_INTERNAL_ERROR\",\"traceId\":\"101c4807-2c96-4bc9-897b-c7acc0b358f3\"})"
+      }
+    ]
+  },
+  {
+    "current": 7,
+    "isError": true,
+    "error": [
+      {
+        "type": "text",
+        "text": "tool call error: tool call failed for `metersphere_test/metersphere.functional.search`\n\nCaused by:\n    Mcp error: -32603: 服务暂时不可用，请使用 traceId 联系管理员({\"code\":\"AI_EXECUTION_INTERNAL_ERROR\",\"traceId\":\"b549553a-5375-4def-93d7-1810276a8ca6\"})"
+      }
+    ]
+  },
+  {
+    "current": 8,
+    "isError": true,
+    "error": [
+      {
+        "type": "text",
+        "text": "tool call error: tool call failed for `metersphere_test/metersphere.functional.search`\n\nCaused by:\n    Mcp error: -32603: 服务暂时不可用，请使用 traceId 联系管理员({\"code\":\"AI_EXECUTION_INTERNAL_ERROR\",\"traceId\":\"a852207d-c684-48d7-a0bf-069c1312c883\"})"
+      }
+    ]
+  },
+  {
+    "current": 9,
+    "isError": true,
+    "error": [
+      {
+        "type": "text",
+        "text": "tool call error: tool call failed for `metersphere_test/metersphere.functional.search`\n\nCaused by:\n    Mcp error: -32603: 服务暂时不可用，请使用 traceId 联系管理员({\"code\":\"AI_EXECUTION_INTERNAL_ERROR\",\"traceId\":\"061a0d7a-5f75-4900-bc1c-8e7a553b3e93\"})"
+      }
+    ]
+  },
+  {
+    "current": 10,
+    "isError": true,
+    "error": [
+      {
+        "type": "text",
+        "text": "tool call error: tool call failed for `metersphere_test/metersphere.functional.search`\n\nCaused by:\n    Mcp error: -32603: 服务暂时不可用，请使用 traceId 联系管理员({\"code\":\"AI_EXECUTION_INTERNAL_ERROR\",\"traceId\":\"a1e5a481-d05d-4aaf-a2dc-544e8ba3a6dc\"})"
+      }
+    ]
+  }
+]

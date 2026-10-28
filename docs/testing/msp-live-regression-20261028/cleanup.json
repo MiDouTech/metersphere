@@ -1,0 +1,18 @@
+{
+  "compatibilityCleanup": true,
+  "importCommitted": false,
+  "responses": [
+    {
+      "method": "POST",
+      "url": "https://msp.ebcone.net/api/ai/case-imports/d92aaf90-ffc4-4b20-a1c6-f239673fdc5c/stop",
+      "status": 200,
+      "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"STOPPED\",\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"d92aaf90-ffc4-4b20-a1c6-f239673fdc5c\",\"expiresAt\":1793252225836,\"counts\":[{\"state\":\"PENDING\",\"total\":1}]}}"
+    },
+    {
+      "method": "GET",
+      "url": "https://msp.ebcone.net/api/ai/case-imports/d92aaf90-ffc4-4b20-a1c6-f239673fdc5c?current=1&pageSize=10&_t=1793165853327",
+      "status": 200,
+      "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"STOPPED\",\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"d92aaf90-ffc4-4b20-a1c6-f239673fdc5c\",\"expiresAt\":1793252225836,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"followup\":{\"state\":\"LEGACY\"}}}"
+    }
+  ]
+}

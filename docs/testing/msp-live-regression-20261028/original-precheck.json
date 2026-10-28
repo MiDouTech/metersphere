@@ -1,0 +1,14 @@
+{
+  "responses": [
+    {
+      "method": "POST",
+      "url": "https://msp.ebcone.net/api/ai/case-imports/precheck?requestId=7720669a-05d2-4000-8176-c87bd902c34d",
+      "status": 400,
+      "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"code\":\"BUSINESS_ERROR\",\"message\":\"请求未能完成，请根据错误码和 traceId 排查\",\"details\":{},\"traceId\":\"6d937685-1d45-48cc-b8f7-dc10de34289b\"}}"
+    }
+  ],
+  "alerts": [
+    "请求未能完成，请根据错误码和 traceId 排查 (6d937685-1d45-48cc-b8f7-dc10de34289b)",
+    "请求未能完成，请根据错误码和 traceId 排查 (6d937685-1d45-48cc-b8f7-dc10de34289b)"
+  ]
+}

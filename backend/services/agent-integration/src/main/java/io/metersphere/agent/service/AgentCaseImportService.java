@@ -144,18 +144,32 @@ public class AgentCaseImportService {
         new TransactionTemplate(transactionManager).executeWithoutResult(status->{
             var row=owned(id,user,token,true);String state=(String)row.get("state");
             if("stop".equals(action)) {
-                if(Set.of("PRECHECKED","QUEUED","RUNNING").contains(state))jdbc.update("UPDATE functional_import_job SET state='STOPPED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
+                if(Set.of("PRECHECKED","QUEUED","RUNNING").contains(state))jdbc.update("UPDATE functional_import_job SET stopped_from=state,state='STOPPED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
             } else if("commit".equals(action)) {
-                if("PRECHECKED".equals(state))jdbc.update("UPDATE functional_import_job SET state='QUEUED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
+                if("PRECHECKED".equals(state)) {
+                    if("WEB".equals(token) && jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_followup WHERE job_id=?",Long.class,id)==0)
+                        throw new MSException("请先确认测试计划和评审关联方式再提交");
+                    long now=System.currentTimeMillis();
+                    jdbc.update("UPDATE functional_import_item SET state='PENDING',message=NULL WHERE job_id=? AND state='FAILED'",id);
+                    jdbc.update("UPDATE functional_import_job SET committed_at=?,stopped_from=NULL,state='QUEUED',update_time=? WHERE id=?",now,now,id);
+                }
                 else if(!Set.of("QUEUED","RUNNING","COMPLETED","PARTIAL").contains(state))throw new MSException("当前导入不可提交");
             } else if("retry".equals(action)) {
                 if(Set.of("STOPPED","PARTIAL","FAILED").contains(state)) {
+                    if(!hasCommitted(row.get("committed_at"))) {
+                        jdbc.update("UPDATE functional_import_job SET state='PRECHECKED',stopped_from=NULL,update_time=? WHERE id=?",System.currentTimeMillis(),id);
+                        return;
+                    }
                     jdbc.update("UPDATE functional_import_item SET state='PENDING',message=NULL WHERE job_id=? AND state='FAILED'",id);
                     jdbc.update("UPDATE functional_import_job SET state='QUEUED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
                 } else if(!Set.of("QUEUED","RUNNING").contains(state))throw new MSException("当前导入没有可重试的条目");
             } else throw new MSException("导入操作无效");
         });
         return get(id,user,token,1,10);
+    }
+
+    static boolean hasCommitted(Object committedAt) {
+        return committedAt instanceof Number value && value.longValue()>0;
     }
 
     @Scheduled(fixedDelay=1000,initialDelay=30000)
@@ -186,6 +200,10 @@ public class AgentCaseImportService {
         var jobs=jdbc.queryForList("SELECT * FROM functional_import_job WHERE id=? AND state IN ('QUEUED','RUNNING') FOR UPDATE SKIP LOCKED",id);
         if(jobs.isEmpty())return null;
         var job=jobs.getFirst();
+        if(!hasCommitted(job.get("committed_at"))) {
+            jdbc.update("UPDATE functional_import_job SET stopped_from=state,state='STOPPED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
+            return null;
+        }
         if(((Number)job.get("expires_at")).longValue()<=System.currentTimeMillis()){jdbc.update("UPDATE functional_import_job SET state='EXPIRED' WHERE id=?",id);return null;}
         authorize((String)job.get("project_id"),(String)job.get("user_id"),(String)job.get("token_id"));
         var pending=jdbc.queryForList("SELECT * FROM functional_import_item WHERE job_id=? AND state='PENDING' ORDER BY position LIMIT 1 FOR UPDATE",id);

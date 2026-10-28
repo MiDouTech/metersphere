@@ -1,0 +1,114 @@
+{
+  "lastPage": {
+    "pageSize": 10,
+    "current": 9,
+    "total": 89,
+    "jobId": "1c8077db-9f1a-441a-bc48-3dcac3566982",
+    "expiresAt": 1793257348716,
+    "counts": [
+      {
+        "state": "SUCCESS",
+        "total": 89
+      }
+    ],
+    "items": [
+      {
+        "position": 81,
+        "action": "CREATE",
+        "caseId": "1712375835686641664",
+        "state": "SUCCESS",
+        "message": null
+      },
+      {
+        "position": 82,
+        "action": "CREATE",
+        "caseId": "1712375835686641665",
+        "state": "SUCCESS",
+        "message": null
+      },
+      {
+        "position": 83,
+        "action": "CREATE",
+        "caseId": "1712375835686641666",
+        "state": "SUCCESS",
+        "message": null
+      },
+      {
+        "position": 84,
+        "action": "CREATE",
+        "caseId": "1712375835686641668",
+        "state": "SUCCESS",
+        "message": null
+      },
+      {
+        "position": 85,
+        "action": "CREATE",
+        "caseId": "1712375835686641669",
+        "state": "SUCCESS",
+        "message": null
+      },
+      {
+        "position": 86,
+        "action": "CREATE",
+        "caseId": "1712375835686641670",
+        "state": "SUCCESS",
+        "message": null
+      },
+      {
+        "position": 87,
+        "action": "CREATE",
+        "caseId": "1712375835686641672",
+        "state": "SUCCESS",
+        "message": null
+      },
+      {
+        "position": 88,
+        "action": "CREATE",
+        "caseId": "1712375835686641673",
+        "state": "SUCCESS",
+        "message": null
+      },
+      {
+        "position": 89,
+        "action": "CREATE",
+        "caseId": "1712375835686641674",
+        "state": "SUCCESS",
+        "message": null
+      }
+    ],
+    "fileName": "source-original.xlsx",
+    "state": "COMPLETED",
+    "followup": {
+      "state": "SKIPPED",
+      "message": null,
+      "planId": null,
+      "reviewId": null,
+      "planName": null,
+      "reviewName": null
+    }
+  },
+  "details": [
+    {
+      "status": 200,
+      "id": "1712375732607426562",
+      "hasName": true,
+      "templateId": "1704667279923322930",
+      "versionId": "1704667279923322928",
+      "moduleId": "1712375732607426561",
+      "withinDedicatedModule": false,
+      "stepCount": 5,
+      "validStepsJson": true
+    },
+    {
+      "status": 200,
+      "id": "1712375835686641674",
+      "hasName": true,
+      "templateId": "1704667279923322930",
+      "versionId": "1704667279923322928",
+      "moduleId": "1712375835686641671",
+      "withinDedicatedModule": false,
+      "stepCount": 8,
+      "validStepsJson": true
+    }
+  ]
+}

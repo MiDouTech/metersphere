@@ -28,13 +28,15 @@
           :table-data="props.tableData"
           @loading-detail="setDetailLoading"
           @loaded="handleDetailLoaded"
+          @failed="handleDetailFailure"
           @change="handleNavChange"
         />
         <slot name="titleRight" :loading="loading" :detail="detail"></slot>
       </div>
     </div>
     <div class="min-h-0 flex-1 overflow-auto">
-      <slot :loading="loading" :detail="detail"></slot>
+      <a-alert v-if="loadError" type="error" class="m-4">{{ loadError }}</a-alert>
+      <slot v-else :loading="loading" :detail="detail"></slot>
     </div>
     <div v-if="$slots.footer" class="shrink-0 border-t border-[var(--color-text-n8)] px-4 py-3">
       <slot name="footer" :loading="loading" :detail="detail"></slot>
@@ -78,13 +80,15 @@
             :table-data="props.tableData"
             @loading-detail="setDetailLoading"
             @loaded="handleDetailLoaded"
+            @failed="handleDetailFailure"
             @change="handleNavChange"
           />
           <slot name="titleRight" :loading="loading" :detail="detail"></slot>
         </div>
       </div>
     </template>
-    <slot :loading="loading" :detail="detail"></slot>
+    <a-alert v-if="loadError" type="error" class="m-4">{{ loadError }}</a-alert>
+    <slot v-else :loading="loading" :detail="detail"></slot>
   </MsDrawer>
 </template>
 
@@ -94,6 +98,8 @@
   import MsDrawer from '@/components/pure/ms-drawer/index.vue';
   import type { MsPaginationI } from '@/components/pure/ms-table/type';
   import MsPrevNextButton from '@/components/business/ms-prev-next-button/index.vue';
+
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
 
   const props = withDefaults(
     defineProps<{
@@ -123,6 +129,7 @@
   const innerVisible = ref(!!props.visible);
   const loading = ref(false);
   const detail = ref<any>({});
+  const loadError = ref('');
   let loadingDetail = false;
 
   watch(
@@ -145,6 +152,7 @@
   );
 
   function handleDetailLoaded(val: any) {
+    loadError.value = '';
     detail.value = val || {};
     emit('loaded', val);
   }
@@ -154,7 +162,13 @@
   }
 
   function setDetailLoading() {
+    loadError.value = '';
     emit('loadingDetail');
+  }
+
+  function handleDetailFailure(error: unknown) {
+    detail.value = {};
+    loadError.value = formatAppErrorMessage(ensureAppError(error, '详情加载失败，请关闭后重试'));
   }
 
   async function loadDetailDirect(id?: string) {
@@ -164,13 +178,13 @@
     }
     loadingDetail = true;
     loading.value = true;
+    loadError.value = '';
     emit('loadingDetail');
     try {
       const res = await props.getDetailFunc(targetId);
       handleDetailLoaded(res);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      handleDetailFailure(error);
     } finally {
       loading.value = false;
       loadingDetail = false;

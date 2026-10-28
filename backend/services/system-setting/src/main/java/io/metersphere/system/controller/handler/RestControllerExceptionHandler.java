@@ -171,6 +171,14 @@ public class RestControllerExceptionHandler {
     @ExceptionHandler({Exception.class})
     public ResponseEntity<ResultHolder> handleException(Exception e, HttpServletRequest request,
                                                          HttpServletResponse response) {
+        Throwable cause = e;
+        for (int depth = 0; cause != null && depth < 16; depth++, cause = cause.getCause()) {
+            if (cause instanceof io.metersphere.sdk.util.FunctionalCaseBlobCodec.BodyFormatException) {
+                return ResponseEntity.unprocessableEntity().body(ResultHolder.structuredError(
+                        100200, "functional.case.bodyInvalid", cause.getMessage(),
+                        ensureRequestId(request, response), false, Map.of()));
+            }
+        }
         String requestId = recordInternalError(request, response, e);
         return ResponseEntity.internalServerError()
                 .body(ResultHolder.structuredError(MsHttpResultCode.FAILED.getCode(), "api.internalError",

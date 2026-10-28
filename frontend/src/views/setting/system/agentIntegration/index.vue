@@ -1,7 +1,7 @@
 <template>
   <div class="agent-integration-viewport w-full min-w-0 max-w-full">
     <template v-if="canReadTokens">
-      <MsCard simple :min-width="0" class="w-full min-w-0 max-w-full">
+      <MsCard simple auto-width :min-width="0" class="w-full min-w-0 max-w-full">
         <div class="mb-3">
           <div class="text-base font-medium">{{ t('system.agentIntegration.myTokens') }}</div>
           <div class="mt-1 text-sm text-[var(--color-text-3)]">
@@ -64,33 +64,10 @@
           {{ t('system.agentIntegration.myTokensSecretTip') }}
         </a-alert>
 
-        <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
-          <template #enable="{ record }">
-            <a-switch
-              v-visible-permission="{
-                code: 'AGENT_TOKEN_UPDATE_BUTTON',
-                permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
-                typeList: ['SYSTEM'],
-              }"
-              v-operable-permission="{
-                code: 'AGENT_TOKEN_UPDATE_BUTTON',
-                permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
-                typeList: ['SYSTEM'],
-              }"
-              :model-value="record.enable"
-              size="small"
-              :before-change="(val) => toggleEnable(val, record)"
-            />
-          </template>
-          <template #scopes="{ record }">
-            {{ formatScopeLabel(record.scopes) }}
-          </template>
-          <template #lastUsedAt="{ record }">
-            {{ formatTime(record.lastUsedAt) }}
-          </template>
-          <template #action="{ record }">
-            <div class="flex gap-2">
-              <MsButton
+        <div class="agent-token-table-scroll">
+          <ms-base-table v-bind="propsRes" no-disable v-on="propsEvent">
+            <template #enable="{ record }">
+              <a-switch
                 v-visible-permission="{
                   code: 'AGENT_TOKEN_UPDATE_BUTTON',
                   permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
@@ -101,29 +78,54 @@
                   permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
                   typeList: ['SYSTEM'],
                 }"
-                @click="openEditModal(record)"
-              >
-                {{ t('system.agentIntegration.tokenSettings') }}
-              </MsButton>
-              <MsButton
-                v-visible-permission="{
-                  code: 'AGENT_TOKEN_DELETE_BUTTON',
-                  permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE'],
-                  typeList: ['SYSTEM'],
-                }"
-                v-operable-permission="{
-                  code: 'AGENT_TOKEN_DELETE_BUTTON',
-                  permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE'],
-                  typeList: ['SYSTEM'],
-                }"
-                status="danger"
-                @click="removeToken(record)"
-              >
-                {{ t('common.delete') }}
-              </MsButton>
-            </div>
-          </template>
-        </ms-base-table>
+                :model-value="record.enable"
+                size="small"
+                :before-change="(val) => toggleEnable(val, record)"
+              />
+            </template>
+            <template #scopes="{ record }">
+              {{ formatScopeLabel(record.scopes) }}
+            </template>
+            <template #lastUsedAt="{ record }">
+              {{ formatTime(record.lastUsedAt) }}
+            </template>
+            <template #action="{ record }">
+              <div class="flex gap-2">
+                <MsButton
+                  v-visible-permission="{
+                    code: 'AGENT_TOKEN_UPDATE_BUTTON',
+                    permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
+                    typeList: ['SYSTEM'],
+                  }"
+                  v-operable-permission="{
+                    code: 'AGENT_TOKEN_UPDATE_BUTTON',
+                    permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+CONNECT'],
+                    typeList: ['SYSTEM'],
+                  }"
+                  @click="openEditModal(record)"
+                >
+                  {{ t('system.agentIntegration.tokenSettings') }}
+                </MsButton>
+                <MsButton
+                  v-visible-permission="{
+                    code: 'AGENT_TOKEN_DELETE_BUTTON',
+                    permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE'],
+                    typeList: ['SYSTEM'],
+                  }"
+                  v-operable-permission="{
+                    code: 'AGENT_TOKEN_DELETE_BUTTON',
+                    permissions: ['SYSTEM_PERSONAL_AI_AGENT:READ+REVOKE'],
+                    typeList: ['SYSTEM'],
+                  }"
+                  status="danger"
+                  @click="removeToken(record)"
+                >
+                  {{ t('common.delete') }}
+                </MsButton>
+              </div>
+            </template>
+          </ms-base-table>
+        </div>
       </MsCard>
 
       <a-modal
@@ -765,6 +767,19 @@
 </script>
 
 <style scoped>
+  .agent-token-table-scroll {
+    overflow-x: auto;
+    width: 100%;
+    min-width: 0;
+  }
+  .agent-token-table-scroll :deep(.arco-table-container) {
+    overflow-x: auto;
+  }
+  .agent-integration-viewport :deep(.ms-card),
+  .agent-integration-viewport :deep(.ms-card-container > .arco-scrollbar > .arco-scrollbar-container) {
+    min-width: 0;
+    max-width: 100%;
+  }
   .agent-integration-viewport :deep(.ms-card-container),
   .agent-integration-viewport :deep(.arco-spin),
   .agent-integration-viewport :deep(.arco-scrollbar) {

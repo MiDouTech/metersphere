@@ -1,0 +1,16 @@
+{
+  "url": "https://msp.ebcone.net/#/test-plan/testPlanIndex?orgId=100001&pId=1704667279923322880",
+  "alerts": [],
+  "resources": [
+    "https://msp.ebcone.net/api/test-plan/functional/case/sync-jobs/174a59af-63a2-41ed-bcfa-ac845887a4b0?_t=1793166638273",
+    "https://msp.ebcone.net/api/test-plan/functional/case/user-option/1704667279923322880?keyword=&_t=1793166638742",
+    "https://msp.ebcone.net/api/test-plan/functional/case/sync-jobs/174a59af-63a2-41ed-bcfa-ac845887a4b0?_t=1793166638768",
+    "https://msp.ebcone.net/api/test-plan/functional/case/user-option/1704667279923322880?keyword=&_t=1793166639009",
+    "https://msp.ebcone.net/api/test-plan/module/tree/1704667279923322880?_t=1793166661166",
+    "https://msp.ebcone.net/api/user-view/test-plan/grouped/list?scopeId=1704667279923322880&_t=1793166661465",
+    "https://msp.ebcone.net/api/user-view/test-plan/get/all_data?_t=1793166661641",
+    "https://msp.ebcone.net/api/test-plan/module/count",
+    "https://msp.ebcone.net/api/test-plan/page",
+    "https://msp.ebcone.net/api/test-plan/statistics"
+  ]
+}

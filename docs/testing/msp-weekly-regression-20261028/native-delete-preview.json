@@ -1,0 +1,33 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"previewId\":\"669147db-6d5c-4c14-8d46-c795b4ce68cc\",\"projectId\":\"1704667279923322880\",\"targets\":[{\"id\":\"1712313455581634560\",\"name\":\"ACCEPTANCE-20261027-导入联动A\",\"updateTime\":1793167361683,\"moduleId\":\"1710884863559606272\"}],\"activeTaskIds\":[],\"state\":\"PENDING\",\"expiresAt\":1793169385147,\"confirmationPath\":\"/#/case-deletion/confirm/669147db-6d5c-4c14-8d46-c795b4ce68cc\",\"message\":\"请核对目标版本。只有当前用户在确认页面作出选择后，才能继续删除。\",\"webRequest\":false}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "previewId": "669147db-6d5c-4c14-8d46-c795b4ce68cc",
+        "projectId": "1704667279923322880",
+        "targets": [
+          {
+            "id": "1712313455581634560",
+            "name": "ACCEPTANCE-20261027-导入联动A",
+            "updateTime": 1793167361683,
+            "moduleId": "1710884863559606272"
+          }
+        ],
+        "activeTaskIds": [],
+        "state": "PENDING",
+        "expiresAt": 1793169385147,
+        "confirmationPath": "/#/case-deletion/confirm/669147db-6d5c-4c14-8d46-c795b4ce68cc",
+        "message": "请核对目标版本。只有当前用户在确认页面作出选择后，才能继续删除。",
+        "webRequest": false
+      }
+    }
+  }
+}

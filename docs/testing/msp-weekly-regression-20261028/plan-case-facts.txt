@@ -1,0 +1,205 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      container
+        text "计划"
+        container
+          text "..."
+          svg_root
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=336]
+            svg_root
+        list_item
+          button [ref=337]
+            svg_root
+        list_item
+          button [ref=338]
+            svg_root
+        list_item
+          switch [ref=339]
+            svg_root
+        list_item
+          button [ref=340]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "测试计划"
+          container
+            svg_root
+            text "测试用例"
+          container
+            svg_root
+            text "接口测试"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "缺陷管理"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container [ref=341]
+        list
+          listitem
+            text "测试计划"
+          svg_root
+          listitem
+            text "测试计划详情"
+        container
+          container
+            container
+              text "进行中"
+              container
+                text "[100006]"
+                text "WEEKLY-20261028-导入计划"
+              container
+                container
+                  svg_root
+                  text "编辑"
+                container
+                  svg_root
+                  text "复制"
+                container
+                  svg_root
+                  text "关注"
+                container
+                  svg_root
+                  text "更多"
+              container
+                container
+                  text "已执行"
+                  container
+                    text "1"
+                    text "/"
+                    text "3"
+                container
+                  text "通过率"
+                  text "0.00%"
+            container
+              container [ref=416]
+                text "测试计划"
+              container [ref=417]
+                container
+                  text "测试用例"
+                  text "3"
+              container [ref=418]
+                text "缺陷列表"
+              container [ref=419]
+                text "执行历史"
+          container [ref=446]
+            container
+              container
+                text "测试点"
+                text "模块"
+              container
+                textbox [ref=447, loc=css:input[placeholder="请输入名称"]]
+                  text "请输入名称"
+                container
+                  svg_root
+                  text "功能用例"
+                  text "(3)"
+                container
+                  text "基本功能点"
+                  text "3"
+            container
+              svg_root
+              container
+                container
+                  container
+                    textbox [ref=448, loc=css:input[placeholder="通过 ID/名称搜索"]]
+                      text "通过 ID/名称搜索"
+                    svg_root
+                  container
+                    text "视图"
+                    text "全部数据"
+                    svg_root
+                  button [ref=449]
+                    svg_root
+                    text "筛选"
+                container
+                  container
+                    text "已选择 0 条"
+                    button [ref=450]
+                      text "执行"
+                    button [ref=451]
+                      text "修改执行人"
+                    button [ref=452]
+                      text "移动"
+                    button [ref=453]
+                      text "取消关联"
+                    button [ref=454]
+                    button [ref=455]
+                      text "清空"
+                  container
+                    table
+                      table_row
+                        table_cell
+                          svg_root
+                        table_cell
+                          text "ID"
+                        table_cell
+                          text "用例名称"
+                        table_cell
+                          text "所属模块"
+                    container [ref=457]
+                      table
+                        table_row
+                          table_cell
+                          table_cell
+                            text "100029"
+                          table_cell
+                            text "ACCEPTANCE-20261027-导入联动A"
+                          table_cell
+                            text "ACCEPTANCE-20261027-导入目录"
+                        table_row
+                          table_cell
+                          table_cell
+                            text "100026"
+                          table_cell
+                            text "WEEKLY-20261028-自动刷新已更新"
+                          table_cell
+                            text "未规划用例"
+                        table_row
+                          table_cell
+                          table_cell
+                            text "100027"
+                          table_cell
+                            text "ACCEPTANCE-20261027-导入联动A"
+                          table_cell
+                            text "ACCEPTANCE-20261027-导入目录"
+                  unordered_list
+                    svg_root
+                    list_item
+                      text "1"
+                    svg_root
+  svg_root
+  text "WEEKLY-20261028-自动刷新已更新"

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { caseExportTools } from "./tools/caseExport.js";
+import { readFileSync } from "node:fs";
 import { bugTransferTools } from "./tools/bugTransfer.js";
 import { caseLibraryTools } from "./tools/caseLibrary.js";
 import { managedExecutionTools } from "./tools/managedExecution.js";
@@ -93,7 +94,7 @@ async function main() {
 
   const server = new McpServer({
     name: "metersphere-mcp",
-    version: "0.8.0",
+    version: JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version,
   });
 
   for (const tool of tools) {

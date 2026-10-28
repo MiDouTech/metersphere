@@ -1,0 +1,41 @@
+{
+  "status": 200,
+  "body": {
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": {
+      "id": "1712352728762589184",
+      "workspaceId": "100001",
+      "num": 101165,
+      "moduleId": "1710955352562868224",
+      "projectId": "100001100001",
+      "systemId": null,
+      "systemModuleId": null,
+      "templateId": "101981398780347606",
+      "name": "WEEKLY-20261028-待批量删除01",
+      "reviewStatus": "UN_REVIEWED",
+      "tags": [
+        "WEEKLY-DELETE-FIXTURE"
+      ],
+      "caseEditType": "STEP",
+      "pos": 3301376,
+      "versionId": "100000000000001",
+      "refId": "1712352728762589184",
+      "lastExecuteResult": "PENDING",
+      "executeUser": null,
+      "lastExecuteUser": null,
+      "lastExecuteTime": null,
+      "deleted": null,
+      "aiCreate": false,
+      "publicCase": null,
+      "latest": true,
+      "createUser": "1559871391069831258",
+      "updateUser": "1559871391069831258",
+      "deleteUser": null,
+      "createTime": 1793169647778,
+      "updateTime": 1793169647778,
+      "deleteTime": null
+    }
+  }
+}
