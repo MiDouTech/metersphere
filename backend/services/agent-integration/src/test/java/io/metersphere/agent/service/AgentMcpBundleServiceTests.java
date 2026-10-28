@@ -22,7 +22,7 @@ class AgentMcpBundleServiceTests {
     @Test void downloadedZipUsesRuntimeCatalogAndChecksums() throws Exception {
         var bundle=new AgentMcpBundleService();
         ReflectionTestUtils.setField(bundle,"registry",new AgentMcpToolRegistry(List.of(tool("metersphere.task.search"),tool("metersphere.functional.submit"),tool("metersphere.execution.trigger.create"))));
-        var response=bundle.download();assertEquals("1.4.0",bundle.getManifest().getVersion());
+        var response=bundle.download();assertEquals("1.4.1",bundle.getManifest().getVersion());
         Map<String,String> files=new LinkedHashMap<>();
         try(var zip=new ZipInputStream(new ByteArrayInputStream(response.getBody()),StandardCharsets.UTF_8)) {
             ZipEntry entry;while((entry=zip.getNextEntry())!=null)files.put(entry.getName(),new String(zip.readAllBytes(),StandardCharsets.UTF_8));
@@ -35,6 +35,8 @@ class AgentMcpBundleServiceTests {
         assertTrue(files.get("metersphere-agent/references/workflows.md").contains("No task, claim, heartbeat or lease"));
         assertTrue(files.values().stream().anyMatch(text->text.contains("extra and repeated positions")));
         assertFalse(files.values().stream().anyMatch(text->text.contains("use exact EQUALS")));
+        assertTrue(files.get("metersphere-agent/SKILL.md").contains("contentError"));
+        assertTrue(files.get("metersphere-agent/SKILL.md").contains("CASE_CONTENT_READ_LIMIT"));
         String sums=files.get("metersphere-agent/checksums.txt");
         files.forEach((name,body)->{if(!name.endsWith("checksums.txt"))assertTrue(sums.contains(org.apache.commons.codec.digest.DigestUtils.sha256Hex(body)+"  "+name));});
         assertTrue(files.get("metersphere-agent/manifest.json").contains("capabilityDigest"));

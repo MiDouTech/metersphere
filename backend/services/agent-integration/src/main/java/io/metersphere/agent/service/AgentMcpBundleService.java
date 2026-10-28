@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class AgentMcpBundleService {
     private static final String PACKAGE_NAME = "metersphere-agent-skill";
-    private static final String VERSION = "1.4.0";
+    private static final String VERSION = "1.4.1";
     @jakarta.annotation.Resource private io.metersphere.agent.tool.AgentMcpToolRegistry registry;
     private static final String FILE_NAME = PACKAGE_NAME + "-" + VERSION + ".zip";
     private static final String TEST_BASE_URL = "https://msp.ebcone.net";
@@ -108,6 +108,7 @@ public class AgentMcpBundleService {
                 Only ask the user for a base URL when they are using a non-standard private deployment.
                 Transport: Streamable HTTP
 
+                Search results with contentError must not be executed. CASE_BODY_INVALID means damaged historical content; CASE_CONTENT_READ_LIMIT means narrow the query and retry. Such rows have no usable steps; inspect top-level warnings instead of assuming zero steps.
                 Personal case execution (no task or lease): grant FUNCTIONAL_READ, FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.
                 Contract is optional. One PNG/JPEG image per case execution is sufficient. Do not require client contentHash/policyHash or per-step screenshots.
                 Upload a case PNG/JPEG with metersphere.functional.execution.evidence.upload (base64, at most 5 MiB) or import_url. Put evidenceIds at submit's top level; steps do not require images.

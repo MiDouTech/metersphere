@@ -430,6 +430,13 @@ public class FunctionalCaseService {
      * @param functionalCaseId functionalCaseId
      * @return FunctionalCaseDetailDTO
      */
+    /** Isolate failed read attempts so a malformed row cannot poison a surrounding transaction. */
+    @Transactional(readOnly = true, propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW,
+            timeoutString = "${ms.db.interactive-transaction-seconds:25}")
+    public Map<String, FunctionalCaseDetailDTO> getAgentCaseDetailsForSearch(List<String> caseIds, String projectId) {
+        return getAgentCaseDetails(caseIds, projectId, true);
+    }
+
     /** Internal, bounded projection for already-authorized Agent targets; no attachment or follow queries. */
     @Transactional(readOnly = true, timeoutString = "${ms.db.interactive-transaction-seconds:25}")
     public Map<String, FunctionalCaseDetailDTO> getAgentCaseDetails(List<String> caseIds, String projectId, boolean includeSteps) {
@@ -542,7 +549,7 @@ public class FunctionalCaseService {
             return parsed;
         } catch(Exception failure) {
             org.slf4j.LoggerFactory.getLogger(FunctionalCaseService.class).warn("Case definition steps invalid; caseId={}",caseId);
-            throw new MSException("历史用例步骤格式异常，请联系管理员核对数据后重试");
+            throw new io.metersphere.sdk.util.FunctionalCaseBlobCodec.BodyFormatException();
         }
     }
 

@@ -58,7 +58,7 @@ public final class FunctionalCaseBlobCodec {
         } catch (CharacterCodingException failure) { throw invalid(); }
     }
     public static final class BodyFormatException extends MSException {
-        private BodyFormatException() { super("用例正文格式异常或超过限制，原始内容已保留，请联系管理员核对数据"); }
+        public BodyFormatException() { super("用例正文格式异常或超过限制，原始内容已保留，请联系管理员核对数据"); }
     }
     private static MSException invalid() { return new BodyFormatException(); }
 }

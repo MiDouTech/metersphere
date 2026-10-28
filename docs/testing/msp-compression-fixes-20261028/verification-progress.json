@@ -1,0 +1,56 @@
+{
+  "status": "partial",
+  "frontendFullBuild": {
+    "passed": true,
+    "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40672471196",
+    "tree": "7bb84350812c8e26621b6fc305cea91ae8a0a000"
+  },
+  "checks": [
+    {
+      "command": "Maven original focused reactor including real MySQL",
+      "passed": 32
+    },
+    {
+      "command": "Maven codec/protocol/configuration/batch isolation/roundtrip reactor",
+      "passed": 32
+    },
+    {
+      "command": "MCP Node full test suite",
+      "passed": 31
+    },
+    {
+      "command": "Python maintenance diagnosis",
+      "passed": 4
+    }
+  ],
+  "countsOverlap": true,
+  "productionDataRecovered": false,
+  "merged": false,
+  "logs": [
+    {
+      "localPath": ".codex-tmp\\weekly-fixes-20261028\\full-reactor-focused-final.log",
+      "sha256": "c75991d0283d00e3064e8798d20b604d98cf4c48b2c9981f86f0f1e68731e038",
+      "bytes": 81794
+    },
+    {
+      "localPath": ".codex-tmp\\weekly-fixes-20261028\\batch-isolation-final.log",
+      "sha256": "9f10759353653c26cf13e717b81a54978ab6264cec9accb4f866c55ca2efa450",
+      "bytes": 135389
+    },
+    {
+      "localPath": ".codex-tmp\\weekly-fixes-20261028\\bundle-isolation-tests.log",
+      "sha256": "8f6b4e90d7f33d00db1ee52c049289a2febc2cdb826af9de444a45f3350b3dc3",
+      "bytes": 77633
+    },
+    {
+      "localPath": ".codex-tmp\\weekly-fixes-20261028\\node-all-tests.log",
+      "sha256": "b92002b80ccb426d1a52af13b73c9d830dc5bff3bacf08ee2dbcf195ea41cb2b",
+      "bytes": 2812
+    },
+    {
+      "localPath": ".codex-tmp\\weekly-fixes-20261028\\diagnostic-tests.log",
+      "sha256": "1a6dbf47a906b0ea5e1b75650ef80f019c6459e1e01def9e5fbd7309f7016fd9",
+      "bytes": 107
+    }
+  ]
+}

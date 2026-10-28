@@ -42,3 +42,14 @@
 - 新增deploy/quality-verify/Dockerfile.minio-test-source，固定官方2023版本源码commit c7f7e67a100ce35af559e3f49a2ed0b67deaa919构建真实测试依赖，尚待远端验证。生产MinIO配置不变，不换Mock。
 - GitHub已提交修复分支；PR #4面向chenqifen、#5面向main均保持草稿，未合并。代码/环境验收尚未全部通过，不能关闭所有需求。
 - 本次分支提交因本机资源保护禁用本地Husky完整检查，未宣称钩子通过；完整前端已在远端补验通过。新后端修改继续进入真实全测。
+
+## MCP批量读取隔离与公共配置补修
+
+- 新增AgentCaseDTO.contentError：异常行steps为null，不是零步骤成功；warnings列出错误码及caseId。CASE_BODY_INVALID为正文异常，CASE_CONTENT_READ_LIMIT为隔离预算不足，应缩小范围重试。单条get仍严格失败。
+- AgentFunctionalCaseExportService保持正常批量路径，只有明确BodyFormatException才按二分隔离；最多64次读取，10秒软预算（在查询之间检查，单次数据库查询仍受原事务超时限制），累计正文估算32MiB。权限/数据库/消失异常不吞掉。
+- FunctionalCaseService.getAgentCaseDetailsForSearch使用独立只读事务，避免一次坏记录读取将外层事务标为回滚；其他严格调用保留原事务语义。
+- 3项坏正文隔离测试、原500条3批读取测试、SDK/错误协议/配置与真实mapper往返定向reactor共32项通过，0跳过；与前面的32项集合存在重叠，不累加成64项。
+- 下载技能包升级1.4.1并加入contentError不可执行说明；Node README同步，运行时目录和校验和测试通过。
+- 远端完整测试越过MinIO依赖后暴露独立模块缺LocalLoginProperties，新增SystemLoginConfiguration统一注册Local/Miduo属性，绑定测试通过，不禁用安全组件。
+- 测试MinIO源码镜像引入按Dockerfile/OS/架构身份缓存，成功构建后立即保存，后端测试失败不会丢失缓存；后续复验不重复构建未改动依赖。
+- 原始日志保留本机忽略目录，仓库提交verification-progress.json记录摘要/命令与GitHub链接；未将本机未提交的原始恢复候选内容公开。全量CI与部署E2E尚未通过，PR继续为草稿。

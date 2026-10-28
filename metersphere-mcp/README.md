@@ -229,3 +229,7 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 客户端更新后应从实际 tools/list 核对：execution.submit 有用例级 evidenceIds，contentHash/policyHash 可选；evidence.upload 的 contentHash/stepNum/purpose 可选；创建用例和目录要求稳定 requestId。Node 包、远程服务和下载技能包有各自版本，不要求版本号相等，但参数语义必须一致。
 
 本次代码准备 0.8.2 不代表已经发布 npm。发布前使用本地构建启动；发布后更新客户端绑定的实际包/端点，重新连接并刷新工具缓存。若刷新后仍看到旧 required 字段，应检查该连接器的工具定义来源，不能只靠重启后端认定已修复。
+
+### 部分正文读取失败
+
+原生接口与Node透传的用例检索结果可能包含`contentError`。`CASE_BODY_INVALID`表示历史正文异常；`CASE_CONTENT_READ_LIMIT`表示错误隔离达到读取预算，请缩小范围重试。该行的`steps`为null/缺省，并在顶层warnings中包含`错误码:caseId`；不能把它当作零步骤可执行用例。正常行仍返回正文，单条get仍明确失败。权限、对象消失和数据库异常不会被当作正文错误吞掉。

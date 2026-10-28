@@ -82,8 +82,24 @@ jobs:
         with:
           name: frontend-static
           path: frontend/dist
-      - name: Build pinned official MinIO test dependency
-        run: docker build -t minio/minio:RELEASE.2023-03-13T19-46-17Z -f deploy/quality-verify/Dockerfile.minio-test-source .
+      - uses: actions/cache/restore@v4
+        id: minio-cache
+        with:
+          path: .ci-minio-image.tar
+          key: minio-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('deploy/quality-verify/Dockerfile.minio-test-source') }}
+      - name: Load or build pinned official MinIO test dependency
+        run: |
+          if [ -f .ci-minio-image.tar ]; then
+            docker load -i .ci-minio-image.tar
+          else
+            docker build -t minio/minio:RELEASE.2023-03-13T19-46-17Z -f deploy/quality-verify/Dockerfile.minio-test-source .
+            docker save -o .ci-minio-image.tar minio/minio:RELEASE.2023-03-13T19-46-17Z
+          fi
+      - uses: actions/cache/save@v4
+        if: steps.minio-cache.outputs.cache-hit != 'true'
+        with:
+          path: .ci-minio-image.tar
+          key: ${{ steps.minio-cache.outputs.cache-primary-key }}
       - run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package
         env:
           MAVEN_OPTS: -Xmx1536m
