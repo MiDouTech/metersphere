@@ -121,3 +121,17 @@
 ## Git提交说明
 
 本机提交钩子 `frontend/.husky/pre-commit` 包含全量 `npm run type:check`，本次为遵守低资源约束，通过命令级 `HUSKY=0` 跳过本机钩子，未永久修改钩子或CI配置。上文定向验证仍有效；不能将本次提交/合并解释为全量类型检查、生产构建或部署验收通过。
+
+## CI构建回归修复：importJob异步闭包类型收窄
+
+2026-10-27，提交dcd9c9b018的CI前端构建在 `importJob.vue:249` 报TS2339：`followupOptions.value` 在函数入口已判断存在，但这个可变响应式属性在新的异步闭包内不会保留该类型收窄。此前SFC/transpile检查只证明语法转换通过，没有发现语义类型错误。
+
+| 需求 | 前端入口/实现 | 后端/数据影响 | 验证 |
+|---|---|---|---|
+| 修复预检弹窗构建失败，保留原请求去重及任务隔离 | 测试用例导入；loadReviewers捕获options并在进入闭包前取出projectId | getReviewUsers接口、权限、数据库均不变；无新增迁移 | 4项组件/语义回归通过；旧版本反验可复现同一projectId/undefined诊断 |
+
+修改文件：`frontend/src/views/case-management/caseManagementFeature/components/import/importJob.vue`、`frontend/scripts/test-import-job-requests.mjs`及本文。测试增加自动选择新建时评审人请求去重，并从真实组件提取loadReviewers，通过真实Vue ref类型执行严格TypeScript语义检查，避免只用transpile漏掉此类错误。
+
+实际执行：`node --max-old-space-size=160 --test frontend/scripts/test-import-job-requests.mjs`，4/4通过；对两处前端文件运行ESLint，0错误、3条测试替身空函数警告；`git diff --check`通过。旧HEAD源文件运行新增语义检查按预期失败，确认回归测试能识别原错误。
+
+本次约560MiB空闲内存，继续跳过本机全量提交钩子。未运行全量vue-tsc/Vite构建、后端/数据库/镜像或浏览器E2E；此修复不改后端和业务交互，完整前端构建由新提交的CI验证。状态：局部修复和回归通过；远端构建结果待确认，原方案的部署验收欠项不变。

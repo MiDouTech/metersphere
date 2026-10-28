@@ -243,10 +243,11 @@
   let reviewersLoaded = false;
   let reviewersPromise: Promise<void> | undefined;
   function loadReviewers(context: number): Promise<void> {
-    if (!followupOptions.value || reviewersLoaded || policy.value !== 'CREATE_NEW_PAIR') return Promise.resolve();
+    const options = followupOptions.value;
+    if (!options || reviewersLoaded || policy.value !== 'CREATE_NEW_PAIR') return Promise.resolve();
     if (reviewersPromise) return reviewersPromise;
+    const { projectId } = options;
     const promise = (async () => {
-      const { projectId } = followupOptions.value;
       try {
         const users = await getReviewUsers(projectId, '');
         if (context !== generation) return;
