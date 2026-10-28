@@ -1,6 +1,7 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.functional.domain.FunctionalCaseBlob;
+import io.metersphere.functional.domain.FunctionalCaseBlobExample;
 import io.metersphere.functional.mapper.FunctionalCaseBlobMapper;
 import io.metersphere.system.config.interceptor.FunctionalCaseInterceptor;
 import io.metersphere.system.interceptor.MybatisInterceptor;
@@ -46,6 +47,14 @@ class FunctionalCaseBlobRoundTripTests {
                 }
                 var copy=mapper.selectByPrimaryKey("one");copy.setId("two");mapper.insertSelective(copy);
                 session.clearCache();assertArrayEquals(original,mapper.selectByPrimaryKey("two").getSteps());
+                var example = new FunctionalCaseBlobExample();
+                example.createCriteria().andIdEqualTo("two");
+                for (int i = 0; i < 2; i++) {
+                    assertEquals(1, mapper.updateByExampleSelective(copy, example));
+                    assertArrayEquals(original, copy.getSteps());
+                    byte[] raw = jdbc.queryForObject("SELECT steps FROM functional_case_blob WHERE id='two'", byte[].class);
+                    assertArrayEquals(original, (byte[]) CompressUtils.unzip(raw));
+                }
                 jdbc.update("INSERT INTO functional_case_blob(id,steps) VALUES ('legacy',?)",CompressUtils.zip(CompressUtils.zip(original)));
                 session.clearCache();assertArrayEquals(original,mapper.selectByPrimaryKey("legacy").getSteps());
                 jdbc.update("INSERT INTO functional_case_blob(id,steps) VALUES ('bad',?)",new byte[]{80,75,3,4,0});
