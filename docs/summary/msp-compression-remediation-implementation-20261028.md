@@ -77,3 +77,9 @@
 MybatisBodyParameterIsolationTests在修复前两项均失败：命名别名参数被替换为不同的压缩DTO；混合结果首项非正文时后续正文未解码。MybatisInterceptor现复制Map并按对象身份复用转换结果，保留MyBatis ParamMap缺失键语义、不改变调用方；结果处理覆盖任意List并保留全部行。该公共改动需继续通过全量集成回归，不宣称历史370字节损坏必由此造成。
 
 修复后新增2项专项均通过；真实MySQL插入/编辑/复制及updateByExampleSelective重复写入1项通过（原始存储仅一层，调用方保持逻辑正文）；既有63项定向回归62成功、1项Windows非POSIX中止、0失败。运行命令分别为java @.codex-tmp/weekly-fixes-20261028/isolation-unit.args、isolation-mysql.args、all-current-unit.args，原始日志保留本机忽略目录。
+
+## 远端全量测试仍未通过（40691237576）
+
+真实登录前置故障消除后，剩余报告包含旧测试预期500而现统一业务错误返回422、内置角色禁止删除策略与旧断言冲突、项目默认模块配置变化、权限探针失败后残留、AI功能默认关闭等。不能将这些报告计为通过，也不批量替换断言。新SQL注释的解析问题已修正并新增真实MySQL+Spring ScriptUtils回归：同一组织夹具执行两遍且保留无关身份，1项通过。测试基类显式清理PageHelper线程状态、权限探针合成角色残留，并在权限变更后重新执行真实登录取得新session/CSRF；仅测试配置开启AI提供方路径，生产默认及禁用保护单测保持。
+
+本地单独编译BaseTest的临时javac类路径缺MockServer/AutoConfigureMockMvc测试依赖，未通过；该检查不能代替Maven测试编译，交由完整CI验证。当前仍未达到全部通过门槛，PR4/5保持草稿、未合并。

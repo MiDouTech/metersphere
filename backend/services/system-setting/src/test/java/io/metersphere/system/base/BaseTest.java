@@ -1,6 +1,7 @@
 package io.metersphere.system.base;
 
 import com.jayway.jsonpath.JsonPath;
+import com.github.pagehelper.PageHelper;
 import io.fabric8.kubernetes.api.model.AuthInfo;
 import io.metersphere.sdk.constants.SessionConstants;
 import io.metersphere.sdk.constants.StorageType;
@@ -36,6 +37,7 @@ import org.apache.http.HttpHeaders;
 import org.apache.poi.ss.formula.functions.T;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.mockserver.client.MockServerClient;
@@ -113,6 +115,8 @@ public abstract class BaseTest {
 
     @BeforeEach
     public void login() throws Exception {
+        // A preceding failed request must not paginate this test's authentication queries.
+        PageHelper.clearPage();
         // Disposable integration-test database only: exercise the real LOCAL login route.
         SystemParameter loginEntry = new SystemParameter();
         loginEntry.setParamKey(AdminLoginEntryService.PARAM_KEY);
@@ -148,6 +152,15 @@ public abstract class BaseTest {
         this.adminAuthInfo = initAuthInfo(user, password);
         this.sessionId = this.adminAuthInfo.getSessionId();
         this.csrfToken = this.adminAuthInfo.getCsrfToken();
+    }
+
+    @AfterEach
+    void cleanPermissionProbeState() {
+        PageHelper.clearPage();
+        UserRolePermissionExample example = new UserRolePermissionExample();
+        example.createCriteria().andRoleIdIn(List.of("SYSTEM", "ORGANIZATION", "PROJECT"));
+        userRolePermissionMapper.deleteByExample(example);
+        permissionAuthInfoMap.clear();
     }
 
     private AuthInfo initAuthInfo(String username, String password) throws Exception {
@@ -671,17 +684,12 @@ public abstract class BaseTest {
      * @throws Exception
      */
     private void refreshUserPermission(String roleId) throws Exception {
-        AuthInfo authInfo = getPermissionAuthInfo(roleId);
-        MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.get("/is-login");
-        requestBuilder = setRequestBuilderHeader(requestBuilder, authInfo);
-        mockMvc.perform(requestBuilder);
+        // Obtain a fresh real session after fixture permission changes, including its CSRF token.
+        permissionAuthInfoMap.put(roleId, initAuthInfo(roleId, DEFAULT_USER_PASSWORD));
     }
 
     private void refreshUserPermissionByRoleId(String roleId) throws Exception {
-        AuthInfo authInfo = getPermissionAuthInfo(roleId);
-        MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.get("/is-login");
-        requestBuilder = setRequestBuilderHeader(requestBuilder, authInfo);
-        mockMvc.perform(requestBuilder);
+        refreshUserPermission(roleId);
     }
 
     protected void requestPostPermissionTest(String permissionId, String url, Object param, Object... uriVariables) throws Exception {

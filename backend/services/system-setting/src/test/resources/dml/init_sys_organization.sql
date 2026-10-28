@@ -1,4 +1,4 @@
-# Reset only this fixture's identities; multiple controller classes share the test database.
+-- Reset only these fixture identities; controller classes share the test database.
 DELETE FROM user_role_relation WHERE organization_id IN
  ('sys_default_organization_1','sys_default_organization_2','sys_default_organization_3',
   'sys_default_organization_4','sys_default_organization_5','sys_default_organization_6','sys_default_organization_7');
@@ -15,7 +15,7 @@ DELETE FROM user WHERE id IN
 DELETE FROM organization WHERE id IN
  ('sys_default_organization_1','sys_default_organization_2','sys_default_organization_3',
   'sys_default_organization_4','sys_default_organization_5','sys_default_organization_6','sys_default_organization_7');
-# 组织列表数据准备
+-- 组织列表数据准备
 INSERT INTO organization(id,num, name, description, create_time, update_time, create_user, update_user, delete_user, delete_time) VALUE
     ('sys_default_organization_1',null, 'organization_name_1', 'XXX-1', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin', null, null);
 INSERT INTO organization(id, num, name, description, create_time, update_time, create_user, update_user, delete_user, delete_time) VALUE
