@@ -100,10 +100,18 @@ jobs:
         with:
           path: .ci-minio-image.tar
           key: ${{ steps.minio-cache.outputs.cache-primary-key }}
-      - run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package
+      - id: full-tests
+        run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package
+        env:
+          MAVEN_OPTS: -Xmx1536m
+      - name: Package runtime for independent health diagnosis after test failure
+        id: diagnostic-package
+        if: failure() && steps.full-tests.outcome == 'failure'
+        run: ./mvnw -B -pl backend/app -am -DskipTests package
         env:
           MAVEN_OPTS: -Xmx1536m
       - name: Build application image and verify isolated health
+        if: always() && (steps.full-tests.outcome == 'success' || steps.diagnostic-package.outcome == 'success')
         run: bash deploy/quality-verify/ci-health.sh
         env:
           QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
