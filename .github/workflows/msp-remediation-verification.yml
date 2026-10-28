@@ -103,6 +103,20 @@ jobs:
       - run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package
         env:
           MAVEN_OPTS: -Xmx1536m
+      - name: Build application image and verify isolated health
+        run: bash deploy/quality-verify/ci-health.sh
+        env:
+          QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-health-evidence
+          path: |
+            .ci-health.json
+            .ci-readiness.json
+            .ci-health-container.log
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always()
         with:

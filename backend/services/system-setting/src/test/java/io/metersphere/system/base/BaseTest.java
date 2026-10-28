@@ -16,6 +16,9 @@ import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.base.param.InvalidateParamInfo;
 import io.metersphere.system.base.param.ParamGeneratorFactory;
 import io.metersphere.system.domain.User;
+import io.metersphere.system.domain.SystemParameter;
+import io.metersphere.system.config.AdminLoginEntryService;
+import io.metersphere.system.mapper.SystemParameterMapper;
 import io.metersphere.system.domain.UserRolePermission;
 import io.metersphere.system.domain.UserRolePermissionExample;
 import io.metersphere.system.log.constants.OperationLogType;
@@ -85,6 +88,8 @@ public abstract class BaseTest {
     @Resource
     private UserMapper userMapper;
     @Resource
+    private SystemParameterMapper systemParameterMapper;
+    @Resource
     private MockServerClient mockServerClient;
     @Resource
     private MinioClient client;
@@ -108,6 +113,16 @@ public abstract class BaseTest {
 
     @BeforeEach
     public void login() throws Exception {
+        // Disposable integration-test database only: exercise the real LOCAL login route.
+        SystemParameter loginEntry = new SystemParameter();
+        loginEntry.setParamKey(AdminLoginEntryService.PARAM_KEY);
+        loginEntry.setParamValue("true");
+        loginEntry.setType("TEST_AUTH");
+        if (systemParameterMapper.selectByPrimaryKey(loginEntry.getParamKey()) == null) {
+            systemParameterMapper.insert(loginEntry);
+        } else {
+            systemParameterMapper.updateByPrimaryKey(loginEntry);
+        }
         if (this.adminAuthInfo == null) {
             this.adminAuthInfo = initAuthInfo("admin", DEFAULT_USER_PASSWORD);
             this.sessionId = this.adminAuthInfo.getSessionId();
