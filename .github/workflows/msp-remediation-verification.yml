@@ -61,7 +61,7 @@ jobs:
         with:
           name: frontend-static
           path: frontend/dist
-      - run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -DskipTests=false package
+      - run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package
         env:
           MAVEN_OPTS: -Xmx1536m
       - uses: actions/upload-artifact@v4
