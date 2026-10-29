@@ -786,7 +786,7 @@ public class TestPlanControllerTests extends BaseTest {
         functionalCase.setPos(4096L);
         functionalCase.setVersionId("root");
         functionalCase.setRefId(functionalCase.getId());
-        functionalCase.setLastExecuteResult("PREPARED");
+        functionalCase.setLastExecuteResult("SUCCESS");
         functionalCase.setDeleted(false);
         functionalCase.setPublicCase(false);
         functionalCase.setLatest(true);
@@ -810,7 +810,17 @@ public class TestPlanControllerTests extends BaseTest {
         testPlanFunctionalCaseMapper.insert(testPlanFunctionalCase);
 
         if (!isFinish) {
+            // Effective plan results come from source cases. A second state needs a second source.
+            FunctionalCase pendingCase = new FunctionalCase();
+            BeanUtils.copyBean(pendingCase, functionalCase);
+            pendingCase.setId(IDGenerator.nextStr());
+            pendingCase.setRefId(pendingCase.getId());
+            pendingCase.setNum(NumGenerator.nextNum(project.getId(), ApplicationNumScope.CASE_MANAGEMENT));
+            pendingCase.setLastExecuteResult("PENDING");
+            functionalCaseMapper.insert(pendingCase);
+            functionalCaseId.add(pendingCase.getId());
             testPlanFunctionalCase.setId(IDGenerator.nextStr());
+            testPlanFunctionalCase.setFunctionalCaseId(pendingCase.getId());
             testPlanFunctionalCase.setPos(8192L);
             testPlanFunctionalCase.setLastExecResult("PENDING");
             testPlanFunctionalCaseMapper.insert(testPlanFunctionalCase);

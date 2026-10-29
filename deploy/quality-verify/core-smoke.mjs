@@ -43,7 +43,7 @@ try {
   };
   checkpoint = 'isolated-project';
   const key = `CI-${process.env.GITHUB_RUN_ID}`;
-  const project = await api('POST', '/organization-project/add', {
+  const project = await api('POST', '/organization/project/add', {
     organizationId: '100001', name: key, enable: true, userIds: ['admin'],
   });
   const projectId = project.id;

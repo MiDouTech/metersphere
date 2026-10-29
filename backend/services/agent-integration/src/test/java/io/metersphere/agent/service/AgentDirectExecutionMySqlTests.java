@@ -227,12 +227,27 @@ class AgentDirectExecutionMySqlTests {
             assertEquals("CONSUMED",((Map<?,?>)lookup.execute(lookupArgs)).get("resourceState"));
             lookupArgs.put("toolName","metersphere.functional.execution.submit");assertEquals(published.get("submissionId"),((Map<?,?>)lookup.execute(lookupArgs)).get("submissionId"));
             lookupArgs.put("requestId","missing");assertEquals("UNKNOWN",((Map<?,?>)lookup.execute(lookupArgs)).get("outcome"));
+            // The execution view checks asset identity even when the input is a business case.
+            try(var stream=getClass().getResourceAsStream("/migration/3.7.2/ddl/V3.7.2_72__workflow_activation_wecom_position_case_asset_history.sql")) {
+                assertNotNull(stream);
+                String ddl=new String(stream.readAllBytes(),StandardCharsets.UTF_8);
+                int start=ddl.indexOf("CREATE TABLE IF NOT EXISTS case_asset_source_relation");
+                assertTrue(start>=0);
+                jdbc.execute(ddl.substring(start,ddl.indexOf(';',start)).replace("CREATE TABLE","CREATE TEMPORARY TABLE"));
+            }
+            jdbc.execute("ALTER TABLE functional_case ADD ref_id VARCHAR(64), ADD latest BOOLEAN NOT NULL DEFAULT TRUE");
+            jdbc.execute("CREATE TEMPORARY TABLE project(id VARCHAR(64),organization_id VARCHAR(64),deleted BOOLEAN)");
+            jdbc.update("INSERT INTO project VALUES ('p','org',FALSE),('hub','org',FALSE)");
             var provider=new AgentDirectExecutionViewProvider(jdbc,new AgentFactCipher());
             detail.setLastExecuteResult("ERROR");detail.setLastExecuteUser("u");
             detail.setLastExecuteTime(jdbc.queryForObject("SELECT last_execute_time FROM functional_case WHERE id='c'",Long.class));
             assertEquals(published.get("submissionId"),provider.current(detail).orElseThrow().id());
+            jdbc.update("INSERT INTO case_asset_source_relation(id,asset_case_id,source_project_id,source_case_id,create_time,update_time) VALUES ('binding','asset','p','c',1,1)");
+            var asset=new io.metersphere.functional.dto.FunctionalCaseDetailDTO();asset.setId("asset");asset.setProjectId("hub");
+            assertEquals(published.get("submissionId"),provider.current(asset).orElseThrow().id());
             jdbc.update("UPDATE agent_case_current_execution SET submission_id='' WHERE case_id='c'");
             assertTrue(provider.current(detail).isEmpty());
+            assertTrue(provider.current(asset).isEmpty());
         } finally {AgentTokenContext.clear();ds.destroy();}
     }
 }

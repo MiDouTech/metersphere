@@ -7,11 +7,18 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 MODULES = {"sdk": "backend/framework/sdk", "system-setting": "backend/services/system-setting",
-           "project-management": "backend/services/project-management"}
+           "project-management": "backend/services/project-management",
+           "api-test": "backend/services/api-test", "bug-management": "backend/services/bug-management",
+           "case-management": "backend/services/case-management", "dashboard": "backend/services/dashboard",
+           "app": "backend/app"}
 DEPENDENCIES = ["pom.xml", "backend/pom.xml", ".mvn", "mvnw", "mvnw.cmd",
                 "backend/framework/domain", "backend/framework/sdk", "backend/framework/provider",
                 "backend/framework/ai-engine", "backend/services/system-setting",
-                "backend/services/project-management", "deploy/quality-verify/Dockerfile.minio-test-source"]
+                "backend/services/project-management", "deploy/quality-verify/Dockerfile.minio-test-source",
+                "backend/services/api-test", "backend/services/bug-management", "backend/services/case-management",
+                "backend/services/dashboard", "backend/app", "backend/services/agent-integration/src/main",
+                "backend/services/agent-integration/pom.xml", "backend/services/test-plan/src/main",
+                "backend/services/test-plan/pom.xml"]
 
 
 def matching_trees(source_sha):

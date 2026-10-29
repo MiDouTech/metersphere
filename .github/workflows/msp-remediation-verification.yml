@@ -17,6 +17,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   frontend:
+    if: "!contains(github.event.head_commit.message, '[runtime-only]')"
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -151,7 +152,7 @@ jobs:
           chmod +x mvnw && ./mvnw -B -pl backend/app -am
           -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true
           -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true
-          '-Dtest=io.metersphere.api.**,io.metersphere.bug.**,io.metersphere.functional.**,io.metersphere.plan.**,io.metersphere.dashboard.**,io.metersphere.agent.**,io.metersphere.app.**'
+          '-Dtest=io.metersphere.plan.**,io.metersphere.agent.**'
           -Dsurefire.failIfNoSpecifiedTests=false package
         env:
           MAVEN_OPTS: -Xmx1536m
@@ -162,9 +163,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          source_run=40862145183
+          source_run=40870448518
           source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$source_run" --jq .head_sha)
-          test "$source_sha" = eba4337912181fc1f4c0c617f0c844523b066f90
+          test "$source_sha" = 4d7b200bd068b0dc00d0eabc1b6b6407dbab28b8
           git fetch --no-tags --depth=1 origin "$source_sha"
           gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name backend-test-reports --dir .ci-retained-source
           gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name all-module-test-summary --dir .ci-retained-summary
