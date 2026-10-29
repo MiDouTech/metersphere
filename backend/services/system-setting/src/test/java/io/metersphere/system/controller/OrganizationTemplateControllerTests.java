@@ -464,6 +464,7 @@ public class OrganizationTemplateControllerTests extends BaseTest {
     @Test
     @Order(5)
     public void disableOrganizationTemplate() throws Exception {
+        assertErrorCode(requestGet(DISABLE_ORG_TEMPLATE, "missing-org-" + java.util.UUID.randomUUID(), addTemplate.getScene()), NOT_FOUND);
         // @@请求成功
         this.requestGetWithOk(DISABLE_ORG_TEMPLATE, addTemplate.getScopeId(), addTemplate.getScene());
         String value = organizationParameterService.getValue(addTemplate.getScopeId(),

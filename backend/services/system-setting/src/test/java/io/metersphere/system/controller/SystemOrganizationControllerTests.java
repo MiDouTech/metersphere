@@ -409,7 +409,8 @@ public class SystemOrganizationControllerTests extends BaseTest {
         organizationMemberRequest.setOrganizationId("default-organization-3");
         organizationMemberRequest.setUserIds(Arrays.asList("SccNotExistOne", "default-admin"));
         organizationMemberRequest.setUserRoleIds(List.of("default-role-1"));
-        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, businessError(io.metersphere.sdk.util.Translator.get("user.not.exist")));
+        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest,
+                businessError(io.metersphere.sdk.util.Translator.get("user.not.exist") + ", id: SccNotExistOne"));
         // 组织不存在
         organizationMemberRequest = new OrganizationMemberRequest();
         organizationMemberRequest.setOrganizationId("default-organization-x");

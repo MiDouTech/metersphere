@@ -366,6 +366,7 @@
   import AddUserModal from './addUserModal.vue';
   import CreateUserGroupPopup from './createOrUpdateUserGroup.vue';
 
+  import { deleteUserGroup as deleteProjectUserGroup } from '@/api/modules/project-management/usergroup';
   import {
     deleteOrgUserGroup,
     deleteUserGroup,
@@ -474,7 +475,10 @@
       label: 'system.userGroup.delete',
       danger: true,
       eventTag: 'delete',
-      permission: ['ORGANIZATION_USER_ROLE:READ+DELETE'],
+      permission:
+        systemType === AuthScopeEnum.SYSTEM
+          ? ['SYSTEM_PERMISSION_CONTROL:READ+DELETE']
+          : ['ORGANIZATION_USER_ROLE:READ+DELETE'],
     },
   ];
   const projectMoreAction: ActionsItem[] = [
@@ -491,7 +495,8 @@
       label: 'system.userGroup.delete',
       danger: true,
       eventTag: 'delete',
-      permission: ['PROJECT_GROUP:READ+DELETE'],
+      permission:
+        systemType === AuthScopeEnum.SYSTEM ? ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'] : ['PROJECT_GROUP:READ+DELETE'],
     },
   ];
 
@@ -576,16 +581,20 @@
           try {
             if (systemType === AuthScopeEnum.SYSTEM) {
               await deleteUserGroup(id);
-            }
-            if (systemType === AuthScopeEnum.ORGANIZATION) {
+            } else if (systemType === AuthScopeEnum.ORGANIZATION) {
               await deleteOrgUserGroup(id);
+            } else if (systemType === AuthScopeEnum.PROJECT) {
+              await deleteProjectUserGroup(id);
+            } else {
+              return false;
             }
-            // TODO 项目用户组删除用户组
             Message.success(t('system.user.deleteUserSuccess'));
             initData();
+            return true;
           } catch (error) {
             // eslint-disable-next-line no-console
             console.log(error);
+            return false;
           }
         },
         hideCancel: false,
@@ -645,13 +654,21 @@
   };
 
   const isSystemShowAll = computed(() => {
-    return hasAnyPermission([...props.updatePermission, 'SYSTEM_USER_ROLE:READ+DELETE']);
+    return hasAnyPermission([...props.updatePermission, 'SYSTEM_PERMISSION_CONTROL:READ+DELETE']);
   });
   const isOrdShowAll = computed(() => {
-    return hasAnyPermission([...props.updatePermission, 'ORGANIZATION_USER_ROLE:READ+DELETE']);
+    return hasAnyPermission([
+      ...props.updatePermission,
+      systemType === AuthScopeEnum.SYSTEM
+        ? 'SYSTEM_PERMISSION_CONTROL:READ+DELETE'
+        : 'ORGANIZATION_USER_ROLE:READ+DELETE',
+    ]);
   });
   const isProjectShowAll = computed(() => {
-    return hasAnyPermission([...props.updatePermission, 'PROJECT_GROUP:READ+DELETE']);
+    return hasAnyPermission([
+      ...props.updatePermission,
+      systemType === AuthScopeEnum.SYSTEM ? 'SYSTEM_PERMISSION_CONTROL:READ+DELETE' : 'PROJECT_GROUP:READ+DELETE',
+    ]);
   });
 </script>
 

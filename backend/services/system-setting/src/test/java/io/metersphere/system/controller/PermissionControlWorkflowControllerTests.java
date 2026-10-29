@@ -57,10 +57,14 @@ class PermissionControlWorkflowControllerTests extends BaseTest {
         assertEquals(1, stored.getTransitions().size());
         WorkflowValidationDTO validation = getResultData(requestPostWithOkAndReturn(base + "/validate", null), WorkflowValidationDTO.class);
         assertTrue(validation.isValid(), () -> validation.getErrors().toString());
+        String listUrl = "/permission-control/flow/list?scene=BUG&scopeType=SYSTEM&scopeId=system";
+        requestGetWithOk(listUrl); // Warm the mapper cache before a JDBC state transition.
         requestPost(base + "/publish?expectedVersion=" + (flow.getVersion() + 1), null)
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value(100409));
         WorkflowDefinition published = getResultData(requestPostWithOkAndReturn(base + "/publish?expectedVersion=" + flow.getVersion(), null), WorkflowDefinition.class);
         assertEquals("PUBLISHED", published.getLifecycle());
+        assertEquals("PUBLISHED", getResultDataArray(requestGetWithOkAndReturn(listUrl), WorkflowDefinition.class).stream()
+                .filter(item -> item.getId().equals(flow.getId())).findFirst().orElseThrow().getLifecycle());
         WorkflowDefinition active = getResultData(requestPostWithOkAndReturn(base + "/activate", null), WorkflowDefinition.class);
         assertTrue(active.getActiveForNew());
         requestPost("/permission-control/flow/delete?flowId=" + flow.getId(), null)
