@@ -91,7 +91,7 @@ public class MyViewController {
 	@CheckOwner(resourceId = "#viewRequest.getProjectId()", resourceType = "project")
 	public Pager<List<FunctionalCasePageDTO>> getFunctionalCasePage(@Validated @RequestBody DashboardViewTableRequest viewRequest) {
 		Page<Object> page = PageHelper.startPage(viewRequest.getCurrent(), viewRequest.getPageSize(),
-				StringUtils.isNotBlank(viewRequest.getSortString()) ? viewRequest.getSortString() : "pos desc");
+				StringUtils.isNotBlank(viewRequest.getSortString()) ? viewRequest.getSortString("id", "functional_case") : "functional_case.pos desc, functional_case.id asc");
 		return PageUtils.setPageInfo(page, functionalCaseService.getFunctionalCasePage(buildTargetRequest(new FunctionalCasePageRequest(), viewRequest), false, true));
 	}
 

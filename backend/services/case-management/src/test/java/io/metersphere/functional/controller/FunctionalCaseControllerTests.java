@@ -242,7 +242,7 @@ public class FunctionalCaseControllerTests extends BaseTest {
         files.add(file);
         paramMap.add("files", files);
         ResultActions resultActions = this.requestMultipart(FUNCTIONAL_CASE_ADD_URL, paramMap);
-        resultActions.andExpect(status().is5xxServerError());
+        resultActions.andExpect(businessValidationError());
     }
 
     public String uploadTemp(MultipartFile file) {
@@ -924,13 +924,22 @@ public class FunctionalCaseControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("request", JSON.toJSONString(request));
         paramMap.add("file", null);
-        this.requestMultipart(IMPORT_XMIND_URL, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(IMPORT_XMIND_URL, paramMap).andExpect(businessValidationError());
 
         request.setCount(null);
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("request", JSON.toJSONString(request));
         paramMap.add("file", file2);
-        this.requestMultipart(IMPORT_XMIND_URL, paramMap).andExpect(status().is5xxServerError());
+        FunctionalCaseExample beforeImport = new FunctionalCaseExample();
+        beforeImport.createCriteria().andProjectIdEqualTo(DEFAULT_PROJECT_ID);
+        long beforeCount = functionalCaseMapper.countByExample(beforeImport);
+        MvcResult emptyImport = this.requestMultipartWithOkAndReturn(IMPORT_XMIND_URL, paramMap);
+        ResultHolder emptyResponse = JSON.parseObject(emptyImport.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
+        FunctionalCaseImportResponse emptyResult = JSON.parseObject(JSON.toJSONString(emptyResponse.getData()), FunctionalCaseImportResponse.class);
+        Assertions.assertEquals(0, emptyResult.getSuccessCount());
+        Assertions.assertTrue(emptyResult.getFailCount() > 0);
+        Assertions.assertFalse(emptyResult.getErrorMessages().isEmpty());
+        Assertions.assertEquals(beforeCount, functionalCaseMapper.countByExample(beforeImport));
     }
 
     @Test
@@ -996,7 +1005,7 @@ public class FunctionalCaseControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("request", JSON.toJSONString(request));
         paramMap.add("file", null);
-        this.requestMultipart(CHECK_XMIND_URL, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(CHECK_XMIND_URL, paramMap).andExpect(businessError(100422, "文件不能为空！"));
 
     }
 
@@ -1110,7 +1119,8 @@ public class FunctionalCaseControllerTests extends BaseTest {
     @Test
     @Order(25)
     public void stopExport() throws Exception {
-        this.requestGetExcel(STOP_EXPORT_URL + DEFAULT_PROJECT_ID);
+        this.requestGet(STOP_EXPORT_URL + DEFAULT_PROJECT_ID)
+                .andExpect(businessError("导出任务不存在或当前账号无权访问"));
     }
 
     @Test

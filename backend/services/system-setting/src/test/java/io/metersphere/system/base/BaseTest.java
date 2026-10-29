@@ -1,6 +1,7 @@
 package io.metersphere.system.base;
 
 import com.jayway.jsonpath.JsonPath;
+import com.github.pagehelper.PageHelper;
 import io.fabric8.kubernetes.api.model.AuthInfo;
 import io.metersphere.sdk.constants.SessionConstants;
 import io.metersphere.sdk.constants.StorageType;
@@ -16,6 +17,9 @@ import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.system.base.param.InvalidateParamInfo;
 import io.metersphere.system.base.param.ParamGeneratorFactory;
 import io.metersphere.system.domain.User;
+import io.metersphere.system.domain.SystemParameter;
+import io.metersphere.system.config.AdminLoginEntryService;
+import io.metersphere.system.mapper.SystemParameterMapper;
 import io.metersphere.system.domain.UserRolePermission;
 import io.metersphere.system.domain.UserRolePermissionExample;
 import io.metersphere.system.log.constants.OperationLogType;
@@ -33,6 +37,7 @@ import org.apache.http.HttpHeaders;
 import org.apache.poi.ss.formula.functions.T;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.mockserver.client.MockServerClient;
@@ -45,6 +50,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -72,6 +78,48 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public abstract class BaseTest {
+    /** Safe business validation envelope; excludes permission, missing-resource and server failures. */
+    protected static ResultMatcher businessValidationError() {
+        return result -> {
+            status().isUnprocessableEntity().match(result);
+            jsonPath("$.code").value(100422).match(result);
+            jsonPath("$.messageKey").value("api.businessError").match(result);
+            jsonPath("$.message").isNotEmpty().match(result);
+            jsonPath("$.requestId").isNotEmpty().match(result);
+            Assertions.assertEquals(result.getResponse().getHeader("X-Request-ID"),
+                    JsonPath.read(result.getResponse().getContentAsString(), "$.requestId"));
+        };
+    }
+    /** Exact contract for a safe, string-based MSException; never matches an unexpected 500. */
+    protected static org.springframework.test.web.servlet.ResultMatcher businessError(String expectedMessage) {
+        return businessError(100422, expectedMessage);
+    }
+
+    protected static org.springframework.test.web.servlet.ResultMatcher businessError(int expectedCode, String expectedMessage) {
+        return result -> {
+            status().isUnprocessableEntity().match(result);
+            jsonPath("$.code").value(expectedCode).match(result);
+            jsonPath("$.messageKey").value("api.businessError").match(result);
+            jsonPath("$.message").value(expectedMessage).match(result);
+            jsonPath("$.requestId").isNotEmpty().match(result);
+            jsonPath("$.retryable").doesNotExist().match(result);
+            Assertions.assertEquals(result.getResponse().getHeader("X-Request-ID"),
+                    JsonPath.read(result.getResponse().getContentAsString(), "$.requestId"));
+        };
+    }
+
+    protected static ResultMatcher notFoundError(String expectedMessageKey, String expectedMessage) {
+        return result -> {
+            status().isNotFound().match(result);
+            jsonPath("$.code").value(100404).match(result);
+            jsonPath("$.messageKey").value(expectedMessageKey).match(result);
+            jsonPath("$.message").value(expectedMessage).match(result);
+            jsonPath("$.requestId").isNotEmpty().match(result);
+            jsonPath("$.retryable").doesNotExist().match(result);
+            Assertions.assertEquals(result.getResponse().getHeader("X-Request-ID"),
+                    JsonPath.read(result.getResponse().getContentAsString(), "$.requestId"));
+        };
+    }
     @Resource
     protected MockMvc mockMvc;
     protected static String sessionId;
@@ -84,6 +132,8 @@ public abstract class BaseTest {
     private UserRolePermissionMapper userRolePermissionMapper;
     @Resource
     private UserMapper userMapper;
+    @Resource
+    private SystemParameterMapper systemParameterMapper;
     @Resource
     private MockServerClient mockServerClient;
     @Resource
@@ -108,6 +158,18 @@ public abstract class BaseTest {
 
     @BeforeEach
     public void login() throws Exception {
+        // A preceding failed request must not paginate this test's authentication queries.
+        PageHelper.clearPage();
+        // Disposable integration-test database only: exercise the real LOCAL login route.
+        SystemParameter loginEntry = new SystemParameter();
+        loginEntry.setParamKey(AdminLoginEntryService.PARAM_KEY);
+        loginEntry.setParamValue("true");
+        loginEntry.setType("TEST_AUTH");
+        if (systemParameterMapper.selectByPrimaryKey(loginEntry.getParamKey()) == null) {
+            systemParameterMapper.insert(loginEntry);
+        } else {
+            systemParameterMapper.updateByPrimaryKey(loginEntry);
+        }
         if (this.adminAuthInfo == null) {
             this.adminAuthInfo = initAuthInfo("admin", DEFAULT_USER_PASSWORD);
             this.sessionId = this.adminAuthInfo.getSessionId();
@@ -133,6 +195,15 @@ public abstract class BaseTest {
         this.adminAuthInfo = initAuthInfo(user, password);
         this.sessionId = this.adminAuthInfo.getSessionId();
         this.csrfToken = this.adminAuthInfo.getCsrfToken();
+    }
+
+    @AfterEach
+    void cleanPermissionProbeState() {
+        PageHelper.clearPage();
+        UserRolePermissionExample example = new UserRolePermissionExample();
+        example.createCriteria().andRoleIdIn(List.of("SYSTEM", "ORGANIZATION", "PROJECT"));
+        userRolePermissionMapper.deleteByExample(example);
+        permissionAuthInfoMap.clear();
     }
 
     private AuthInfo initAuthInfo(String username, String password) throws Exception {
@@ -168,12 +239,49 @@ public abstract class BaseTest {
         // 使用对应的用户认证信息来请求, 非Admin
         AuthInfo authInfo = permissionAuthInfoMap.get(userRoleType);
         MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.get(getBasePath() + url, uriVariables);
-        return setRequestBuilderHeader(requestBuilder, authInfo == null ? adminAuthInfo : authInfo);
+        Assertions.assertNotNull(authInfo, "Missing real permission-probe identity: " + userRoleType);
+        return setRequestBuilderHeader(requestBuilder, authInfo);
+    }
+
+    protected void requestGetPermissionTestInOrganization(String permissionId, String url, String organizationId) throws Exception {
+        UserRolePermission grant = initUserRolePermission("ORGANIZATION", permissionId);
+        try {
+            refreshUserPermission("ORGANIZATION");
+            mockMvc.perform(getRequestBuilderByRole(url, "ORGANIZATION")
+                    .header(SessionConstants.CURRENT_ORGANIZATION, organizationId)).andExpect(status().isOk());
+            // These APIs intentionally resolve their canonical scope from organizationId, not
+            // the optional active-organization header. Test actual membership isolation.
+            String crossOrganizationUrl = url.replace("organizationId=" + organizationId,
+                    "organizationId=sys_default_organization_2");
+            Assertions.assertNotEquals(url, crossOrganizationUrl);
+            mockMvc.perform(getRequestBuilderByRole(crossOrganizationUrl, "ORGANIZATION")
+                    .header(SessionConstants.CURRENT_ORGANIZATION, organizationId)).andExpect(status().isForbidden());
+        } finally {
+            userRolePermissionMapper.deleteByPrimaryKey(grant.getId());
+            refreshUserPermission("ORGANIZATION");
+        }
+        mockMvc.perform(getRequestBuilderByRole(url, "ORGANIZATION")
+                .header(SessionConstants.CURRENT_ORGANIZATION, organizationId)).andExpect(status().isForbidden());
+    }
+
+    // Legacy callers pass ResultMatcher in the varargs slot. Never silently treat it as a URI value.
+    private Object[] actualUriVariables(Object[] values) {
+        return values == null ? new Object[0] : Arrays.stream(values)
+                .filter(value -> !(value instanceof ResultMatcher)).toArray();
+    }
+
+    private ResultActions inlineAssertions(ResultActions actions, Object[] values) throws Exception {
+        if (values != null) {
+            for (Object value : values) {
+                if (value instanceof ResultMatcher matcher) actions.andExpect(matcher);
+            }
+        }
+        return actions;
     }
 
     protected ResultActions requestPost(String url, Object param, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getPostRequestBuilder(url, param, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        return inlineAssertions(mockMvc.perform(getPostRequestBuilder(url, param, actualUriVariables(uriVariables)))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected MvcResult requestGetDownloadFile(String url, MediaType contentType, Object... uriVariables) throws Exception {
@@ -200,8 +308,16 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestGet(String url, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getRequestBuilder(url, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        return inlineAssertions(mockMvc.perform(getRequestBuilder(url, actualUriVariables(uriVariables)))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
+    }
+
+    protected ResultActions requestDelete(String url, Object... uriVariables) throws Exception {
+        return inlineAssertions(mockMvc.perform(MockMvcRequestBuilders.delete(getBasePath() + url, actualUriVariables(uriVariables))
+                        .header(SessionConstants.HEADER_TOKEN, sessionId)
+                        .header(SessionConstants.CSRF_TOKEN, csrfToken)
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "zh-CN"))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected MvcResult requestGetAndReturn(String url, Object... uriVariables) throws Exception {
@@ -209,9 +325,7 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestGetWithOk(String url, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getRequestBuilder(url, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        return requestGet(url, uriVariables).andExpect(status().isOk());
     }
 
     protected MvcResult requestGetWithOkAndReturn(String url, Object... uriVariables) throws Exception {
@@ -219,9 +333,7 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestPostWithOk(String url, Object param, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getPostRequestBuilder(url, param, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        return requestPost(url, param, uriVariables).andExpect(status().isOk());
     }
 
     protected MvcResult requestPostWithOkAndReturn(String url, Object param, Object... uriVariables) throws Exception {
@@ -229,17 +341,13 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestMultipartWithOk(String url, MultiValueMap<String, Object> paramMap, Object... uriVariables) throws Exception {
-        MockHttpServletRequestBuilder requestBuilder = getMultipartRequestBuilder(url, paramMap, uriVariables);
-        return mockMvc.perform(requestBuilder)
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isOk());
+        return requestMultipart(url, paramMap, uriVariables).andDo(print()).andExpect(status().isOk());
     }
 
     protected ResultActions requestMultipart(String url, MultiValueMap<String, Object> paramMap, Object... uriVariables) throws Exception {
-        MockHttpServletRequestBuilder requestBuilder = getMultipartRequestBuilder(url, paramMap, uriVariables);
-        return mockMvc.perform(requestBuilder)
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        MockHttpServletRequestBuilder requestBuilder = getMultipartRequestBuilder(url, paramMap, actualUriVariables(uriVariables));
+        return inlineAssertions(mockMvc.perform(requestBuilder)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected MvcResult requestMultipartWithOkAndReturn(String url, MultiValueMap<String, Object> paramMap, Object... uriVariables) throws Exception {
@@ -247,8 +355,8 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestUploadFile(String url, MockMultipartFile file, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getUploadRequestBuilder(url, file, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        return inlineAssertions(mockMvc.perform(getUploadRequestBuilder(url, file, actualUriVariables(uriVariables)))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected ResultActions requestUploadFileWithOk(String url, MockMultipartFile file) throws Exception {
@@ -268,6 +376,7 @@ public abstract class BaseTest {
      * @param mockBody
      */
     protected void mockGet(String path, String mockBody) {
+        mockServerClient.clear(request().withMethod("GET").withPath(path));
         mockServerClient
                 .when(
                         request()
@@ -288,6 +397,7 @@ public abstract class BaseTest {
      * @param mockBody
      */
     protected void mockPost(String path, String mockBody) {
+        mockServerClient.clear(request().withMethod("POST").withPath(path));
         mockServerClient
                 .when(
                         request()
@@ -557,48 +667,28 @@ public abstract class BaseTest {
      * @param requestBuilderGetFunc 请求构造器，一个 builder 只能使用一次，需要重新生成
      * @throws Exception
      */
+    @Resource
+    private io.metersphere.system.mapper.UserRoleRelationMapper permissionProbeRelationMapper;
+
+    private java.util.Set<String> probeRelationIds(String userId) {
+        io.metersphere.system.domain.UserRoleRelationExample example = new io.metersphere.system.domain.UserRoleRelationExample();
+        example.createCriteria().andUserIdEqualTo(userId);
+        return permissionProbeRelationMapper.selectByExample(example).stream()
+                .map(io.metersphere.system.domain.UserRoleRelation::getId).collect(java.util.stream.Collectors.toSet());
+    }
+
+    private void cleanProbeCreatedAssignments(String userId, java.util.Set<String> originalIds) {
+        java.util.Set<String> newIds = probeRelationIds(userId);
+        newIds.removeAll(originalIds);
+        if (!newIds.isEmpty()) {
+            io.metersphere.system.domain.UserRoleRelationExample example = new io.metersphere.system.domain.UserRoleRelationExample();
+            example.createCriteria().andUserIdEqualTo(userId).andIdIn(new java.util.ArrayList<>(newIds));
+            permissionProbeRelationMapper.deleteByExample(example);
+        }
+    }
+
     private void requestPermissionTest(String permissionId, String url, Supplier<MockHttpServletRequestBuilder> requestBuilderGetFunc) throws Exception {
-        String roleId = permissionId.split("_")[0];
-        // 先给初始化的用户组添加权限
-        UserRolePermission userRolePermission = initUserRolePermission(roleId, permissionId);
-
-        // 添加后刷新下权限
-        refreshUserPermission(roleId);
-
-        int status = 200;
-        try {
-            status = mockMvc.perform(requestBuilderGetFunc.get())
-                    .andReturn()
-                    .getResponse()
-                    .getStatus();
-        } catch (Exception e) {
-            LogUtils.error(e);
-        }
-
-        // 校验是否有权限
-        if (status == HttpStatus.FORBIDDEN.value()) {
-            throw new MSException(String.format("接口 %s 权限校验失败 %s", getBasePath() + url, permissionId));
-        }
-
-        // 删除权限
-        userRolePermissionMapper.deleteByPrimaryKey(userRolePermission.getId());
-
-        // 删除后刷新下权限
-        refreshUserPermission(roleId);
-
-        // 删除权限后，调用接口，校验是否没有权限
-        try {
-            status = mockMvc.perform(requestBuilderGetFunc.get())
-                    .andReturn()
-                    .getResponse()
-                    .getStatus();
-        } catch (Exception e) {
-            LogUtils.error(e);
-        }
-
-        if (status != HttpStatus.FORBIDDEN.value()) {
-            throw new MSException(String.format("接口 %s 没有设置权限 %s", getBasePath() + url, permissionId));
-        }
+        requestPermissionsTest(List.of(permissionId), url, requestBuilderGetFunc);
     }
 
     /**
@@ -610,43 +700,32 @@ public abstract class BaseTest {
      * @throws Exception 请求抛出异常
      */
     private void requestPermissionsTest(List<String> permissionIds, String url, Supplier<MockHttpServletRequestBuilder> requestBuilderGetFunc) throws Exception {
-        // 相同的用户组
+        requestPermissionsTest(permissionIds, url, requestBuilderGetFunc, false);
+    }
+
+    private void requestPermissionsTest(List<String> permissionIds, String url,
+                                        Supplier<MockHttpServletRequestBuilder> requestBuilderGetFunc, boolean requireOk) throws Exception {
         String roleId = permissionIds.getFirst().split("_")[0];
-        for (String permissionId : permissionIds) {
-            // 多个权限插入同一个用户组
-            initUserRolePermission(roleId, permissionId);
+        java.util.Set<String> originalRelations = probeRelationIds(roleId);
+        List<String> grantIds = new java.util.ArrayList<>();
+        try {
+            for (String permissionId : permissionIds) grantIds.add(initUserRolePermission(roleId, permissionId).getId());
+            refreshUserPermission(roleId);
+            ResultActions allowed = mockMvc.perform(requestBuilderGetFunc.get());
+            if (requireOk) allowed.andExpect(status().isOk());
+            int allowedStatus = allowed.andReturn().getResponse().getStatus();
+            Assertions.assertTrue(allowedStatus < 500 && allowedStatus != 401 && allowedStatus != 403,
+                    () -> "Permission probe did not reach business validation: " + url + " -> " + allowedStatus);
+        } finally {
+            // Creation endpoints can grant their creator project-admin status. Removing only the
+            // tested grant would leave this legitimate bypass and contaminate all later probes.
+            grantIds.forEach(userRolePermissionMapper::deleteByPrimaryKey);
+            cleanProbeCreatedAssignments(roleId, originalRelations);
+            refreshUserPermission(roleId);
         }
-
-        // 根据roleId刷新用户
-        refreshUserPermissionByRoleId(roleId);
-
-        int status = mockMvc.perform(requestBuilderGetFunc.get())
-                .andReturn()
-                .getResponse()
-                .getStatus();
-
-        // 校验是否有权限
-        if (status == HttpStatus.FORBIDDEN.value()) {
-            throw new MSException(String.format("接口 %s 权限校验失败 %s", getBasePath() + url, permissionIds));
-        }
-
-        // 删除权限
-        UserRolePermissionExample example = new UserRolePermissionExample();
-        example.createCriteria().andRoleIdEqualTo(roleId);
-        userRolePermissionMapper.deleteByExample(example);
-
-        // 删除后刷新下权限
-        refreshUserPermissionByRoleId(roleId);
-
-        // 删除权限后，调用接口，校验是否没有权限
-        status = mockMvc.perform(requestBuilderGetFunc.get())
-                .andReturn()
-                .getResponse()
-                .getStatus();
-
-        if (status != HttpStatus.FORBIDDEN.value()) {
-            throw new MSException(String.format("接口 %s 没有设置权限 %s", getBasePath() + url, permissionIds));
-        }
+        ResultActions denied = mockMvc.perform(requestBuilderGetFunc.get()).andExpect(status().isForbidden());
+        if (requireOk) denied.andExpect(jsonPath("$.code").value(100403))
+                .andExpect(jsonPath("$.messageKey").value("auth.forbidden"));
     }
 
     /**
@@ -656,21 +735,26 @@ public abstract class BaseTest {
      * @throws Exception
      */
     private void refreshUserPermission(String roleId) throws Exception {
-        AuthInfo authInfo = getPermissionAuthInfo(roleId);
-        MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.get("/is-login");
-        requestBuilder = setRequestBuilderHeader(requestBuilder, authInfo);
-        mockMvc.perform(requestBuilder);
+        // Obtain a fresh real session after fixture permission changes, including its CSRF token.
+        permissionAuthInfoMap.put(roleId, initAuthInfo(roleId, DEFAULT_USER_PASSWORD));
     }
 
     private void refreshUserPermissionByRoleId(String roleId) throws Exception {
-        AuthInfo authInfo = getPermissionAuthInfo(roleId);
-        MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.get("/is-login");
-        requestBuilder = setRequestBuilderHeader(requestBuilder, authInfo);
-        mockMvc.perform(requestBuilder);
+        refreshUserPermission(roleId);
     }
 
     protected void requestPostPermissionTest(String permissionId, String url, Object param, Object... uriVariables) throws Exception {
         requestPermissionTest(permissionId, url, () -> getPermissionPostRequestBuilder(permissionId.split("_")[0], url, param, uriVariables));
+    }
+
+    protected void requestPostPermissionTestWithOk(String permissionId, String url, Object param, Object... uriVariables) throws Exception {
+        requestPermissionsTest(List.of(permissionId), url,
+                () -> getPermissionPostRequestBuilder(permissionId.split("_")[0], url, param, uriVariables), true);
+    }
+
+    protected void requestGetPermissionTestWithOk(String permissionId, String url, Object... uriVariables) throws Exception {
+        requestPermissionsTest(List.of(permissionId), url,
+                () -> getPermissionRequestBuilder(permissionId.split("_")[0], url, uriVariables), true);
     }
 
     protected void requestGetPermissionTest(String permissionId, String url, Object... uriVariables) throws Exception {
@@ -698,8 +782,8 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestGetWithNoAdmin(String url, String userRoleType, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getRequestBuilderByRole(url, userRoleType, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        return inlineAssertions(mockMvc.perform(getRequestBuilderByRole(url, userRoleType, actualUriVariables(uriVariables)))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     /**

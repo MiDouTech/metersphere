@@ -200,7 +200,7 @@ public class PluginControllerTests extends BaseTest {
                 getDefaultMultiPartParam(request, quota));
         // 设置文件限制为1M
         setMaxFileSizeTo1M();
-        this.requestMultipart(DEFAULT_ADD, getDefaultMultiPartParam(request, quota), status().is5xxServerError());
+        this.requestMultipart(DEFAULT_ADD, getDefaultMultiPartParam(request, quota), businessValidationError());
         // 清理掉
         this.requestGetWithOk(DEFAULT_DELETE, "cloud-quota-plugin");
 

@@ -1,0 +1,326 @@
+[
+  {
+    "id": "@midoo/metersphere-mcp@0.8.2",
+    "name": "@midoo/metersphere-mcp",
+    "version": "0.8.2",
+    "size": 40852,
+    "unpackedSize": 228640,
+    "shasum": "311d5fa2ce55caa0d9ed5d84bb3175b66e2badbb",
+    "integrity": "sha512-xBPV4tU39bH+xKoQlps40wttmx3ooz54+igPlCa2xtCnWu0dSn97ed54FmZvffyqHdDhWBZxtxJYUbKI+91YSg==",
+    "filename": "midoo-metersphere-mcp-0.8.2.tgz",
+    "files": [
+      {
+        "path": "README.md",
+        "size": 18254,
+        "mode": 420
+      },
+      {
+        "path": "dist/client.d.ts",
+        "size": 7744,
+        "mode": 420
+      },
+      {
+        "path": "dist/client.js",
+        "size": 14982,
+        "mode": 420
+      },
+      {
+        "path": "dist/client.js.map",
+        "size": 13208,
+        "mode": 420
+      },
+      {
+        "path": "dist/index.d.ts",
+        "size": 31,
+        "mode": 420
+      },
+      {
+        "path": "dist/index.js",
+        "size": 4555,
+        "mode": 420
+      },
+      {
+        "path": "dist/index.js.map",
+        "size": 3244,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/addProjectMembers.d.ts",
+        "size": 721,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/addProjectMembers.js",
+        "size": 690,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/addProjectMembers.js.map",
+        "size": 873,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/bugTransfer.d.ts",
+        "size": 4152,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/bugTransfer.js",
+        "size": 1881,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/bugTransfer.js.map",
+        "size": 2127,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/bugWrite.d.ts",
+        "size": 4826,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/bugWrite.js",
+        "size": 4147,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/bugWrite.js.map",
+        "size": 4730,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseExport.d.ts",
+        "size": 506,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseExport.js",
+        "size": 1552,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseExport.js.map",
+        "size": 1533,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseLibrary.d.ts",
+        "size": 507,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseLibrary.js",
+        "size": 18455,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseLibrary.js.map",
+        "size": 15636,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseWrite.d.ts",
+        "size": 7139,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseWrite.js",
+        "size": 3011,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/caseWrite.js.map",
+        "size": 3302,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/createProject.d.ts",
+        "size": 1109,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/createProject.js",
+        "size": 903,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/createProject.js.map",
+        "size": 1074,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/getFunctionalCase.d.ts",
+        "size": 675,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/getFunctionalCase.js",
+        "size": 964,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/getFunctionalCase.js.map",
+        "size": 980,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/listModules.d.ts",
+        "size": 509,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/listModules.js",
+        "size": 652,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/listModules.js.map",
+        "size": 694,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/maintenance.d.ts",
+        "size": 11633,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/maintenance.js",
+        "size": 4818,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/maintenance.js.map",
+        "size": 4709,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/managedExecution.d.ts",
+        "size": 512,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/managedExecution.js",
+        "size": 3037,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/managedExecution.js.map",
+        "size": 3379,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/planReview.d.ts",
+        "size": 4378,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/planReview.js",
+        "size": 3646,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/planReview.js.map",
+        "size": 4011,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/searchFunctionalCases.d.ts",
+        "size": 3985,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/searchFunctionalCases.js",
+        "size": 1884,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/searchFunctionalCases.js.map",
+        "size": 2053,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/searchProjects.d.ts",
+        "size": 593,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/searchProjects.js",
+        "size": 887,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/searchProjects.js.map",
+        "size": 806,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/submitFunctionalResult.d.ts",
+        "size": 2921,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/submitFunctionalResult.js",
+        "size": 1737,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/submitFunctionalResult.js.map",
+        "size": 1704,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/submitFunctionalResultsBatch.d.ts",
+        "size": 5471,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/submitFunctionalResultsBatch.js",
+        "size": 1318,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/submitFunctionalResultsBatch.js.map",
+        "size": 1620,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/testPlanExecution.d.ts",
+        "size": 4264,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/testPlanExecution.js",
+        "size": 5141,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/testPlanExecution.js.map",
+        "size": 5502,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/uploadExecutionAttachment.d.ts",
+        "size": 681,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/uploadExecutionAttachment.js",
+        "size": 848,
+        "mode": 420
+      },
+      {
+        "path": "dist/tools/uploadExecutionAttachment.js.map",
+        "size": 829,
+        "mode": 420
+      },
+      {
+        "path": "package.json",
+        "size": 907,
+        "mode": 420
+      }
+    ],
+    "entryCount": 62,
+    "bundled": []
+  }
+]

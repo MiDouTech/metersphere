@@ -1,0 +1,4 @@
+# Reuse the existing isolated quality project/dependencies; never start a second stack.
+services:
+  app:
+    image: msp-weekly-fix:20261028

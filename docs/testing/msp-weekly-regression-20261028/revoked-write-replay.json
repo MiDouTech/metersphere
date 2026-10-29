@@ -1,0 +1,123 @@
+{
+  "replay": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "SCOPE_DENIED",
+        "traceId": "30344389-d814-45ce-aead-e4553e5b390f"
+      },
+      "message": "当前令牌或账号没有执行此项目操作的权限",
+      "code": -32001
+    }
+  },
+  "read": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"contentHash\":\"4612536d8767b1e14b0f6b8da435712d5fa2036179699028c748af7868341ca3\",\"instructions\":\"One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.\",\"policy\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"case\":{\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":null,\"versionId\":\"1704667279923322928\",\"reviewStatus\":null,\"updateTime\":null,\"description\":\"仅协议验收，不代表真实业务执行；本轮隔离数据\",\"customFields\":[],\"caseId\":\"1712306377475530754\",\"num\":null,\"name\":\"WEEKLY-20261028-证据与幂等隔离\",\"modulePath\":null,\"caseEditType\":\"STEP\",\"tags\":null,\"priority\":\"P3\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":null,\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1712306377475530752\",\"num\":1,\"desc\":\"协议位置1\",\"expected\":\"结构保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712306377475530753\",\"num\":2,\"desc\":\"协议位置2\",\"expected\":\"结构保留\",\"actualResult\":null,\"executeResult\":null}]},\"validationMode\":\"STRUCTURE_ONLY_V1\",\"comparison\":\"NONE_AGENT_REPORTED\",\"resultSource\":\"AGENT_REPORTED\",\"writesEnabled\":true,\"evidenceScope\":\"CASE\",\"minimumEvidenceCount\":1,\"maximumEvidenceCount\":10,\"stepEvidenceRequired\":false,\"clientHashesRequired\":false,\"definitionType\":\"STEP\",\"supported\":true,\"limitations\":{\"originalSteps\":100,\"factsBytes\":1048576,\"submittedSteps\":1000}}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "contentHash": "4612536d8767b1e14b0f6b8da435712d5fa2036179699028c748af7868341ca3",
+          "instructions": "One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.",
+          "policy": {
+            "name": "订单复测-证据与冻结断言-20261019",
+            "rules": [
+              {
+                "parameters": {
+                  "allowedMimeTypes": [
+                    "image/png",
+                    "image/jpeg"
+                  ],
+                  "maxArtifactBytes": 5242880,
+                  "requiredRoles": [
+                    "BEFORE_ACTION",
+                    "AFTER_ACTION"
+                  ]
+                },
+                "ruleId": "Q-EVIDENCE-01"
+              },
+              {
+                "parameters": {
+                  "allowedOperators": [
+                    "EQUALS",
+                    "IN_RANGE"
+                  ],
+                  "expectedSource": "FROZEN_CONTRACT"
+                },
+                "ruleId": "Q-ASSERT-01"
+              }
+            ],
+            "schemaVersion": "quality-policy.v1"
+          },
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "case": {
+            "executionRef": null,
+            "executionFacts": null,
+            "projectId": "1704667279923322880",
+            "moduleId": null,
+            "versionId": "1704667279923322928",
+            "reviewStatus": null,
+            "updateTime": null,
+            "description": "仅协议验收，不代表真实业务执行；本轮隔离数据",
+            "customFields": [],
+            "caseId": "1712306377475530754",
+            "num": null,
+            "name": "WEEKLY-20261028-证据与幂等隔离",
+            "modulePath": null,
+            "caseEditType": "STEP",
+            "tags": null,
+            "priority": "P3",
+            "prerequisite": "",
+            "testPlanId": null,
+            "testPlanCaseId": null,
+            "lastExecuteResult": null,
+            "lastExecuteUser": null,
+            "lastExecuteUserName": null,
+            "steps": [
+              {
+                "id": "1712306377475530752",
+                "num": 1,
+                "desc": "协议位置1",
+                "expected": "结构保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712306377475530753",
+                "num": 2,
+                "desc": "协议位置2",
+                "expected": "结构保留",
+                "actualResult": null,
+                "executeResult": null
+              }
+            ]
+          },
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "comparison": "NONE_AGENT_REPORTED",
+          "resultSource": "AGENT_REPORTED",
+          "writesEnabled": true,
+          "evidenceScope": "CASE",
+          "minimumEvidenceCount": 1,
+          "maximumEvidenceCount": 10,
+          "stepEvidenceRequired": false,
+          "clientHashesRequired": false,
+          "definitionType": "STEP",
+          "supported": true,
+          "limitations": {
+            "originalSteps": 100,
+            "factsBytes": 1048576,
+            "submittedSteps": 1000
+          }
+        }
+      }
+    }
+  }
+}

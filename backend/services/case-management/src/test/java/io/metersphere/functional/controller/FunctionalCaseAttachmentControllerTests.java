@@ -190,7 +190,7 @@ public class FunctionalCaseAttachmentControllerTests extends BaseTest {
         this.requestPost(ATTACHMENT_TRANSFER_URL, request);
         request.setFileId("TEST_ATTACHMENT_FILE_ID");
         this.requestPost(ATTACHMENT_TRANSFER_URL, request);
-        functionalCaseAttachmentService.deleteCaseAttachment(List.of("TEST_ATTACHMENT_FILE_ID"), "TEST_FUNCTIONAL_CASE_ATTACHMENT_ID", "WX_TEST_PROJECT_ID");
+        functionalCaseAttachmentService.deleteCaseAttachment(List.of("TEST_ATTACHMENT_FILE_ID"), "TEST_FUNCTIONAL_CASE_ATTACHMENT_ID", "WX_TEST_PROJECT_ID", "admin");
 
     }
 
@@ -337,7 +337,7 @@ public class FunctionalCaseAttachmentControllerTests extends BaseTest {
     }
 
     private void doUploadTempFileFalse(MockMultipartFile file) throws Exception {
-        this.requestUploadFile(UPLOAD_TEMP, file).andExpect(status().is5xxServerError());
+        this.requestUploadFile(UPLOAD_TEMP, file).andExpect(businessError("文件名称不能为空"));
     }
 
 }

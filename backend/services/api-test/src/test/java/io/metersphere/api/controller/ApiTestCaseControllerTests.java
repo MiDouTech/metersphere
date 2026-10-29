@@ -396,16 +396,16 @@ public class ApiTestCaseControllerTests extends BaseTest {
         testHandleFileAssociationUpgrade();
 
         // @@重名校验异常
-        this.requestPost(ADD, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_name_exist")));
         // 校验接口是否存在
         request.setApiDefinitionId("111");
-        this.requestPost(ADD, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_definition_not_exist")));
 
         // 校验项目是否存在
         request.setProjectId("111");
         request.setApiDefinitionId(apiDefinitionId);
         request.setName("test123");
-        this.requestPost(ADD, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project_is_not_exist")));
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.ADD);
         // @@异常参数校验
@@ -413,7 +413,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         // @@校验权限
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setName("permission");
-        requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_ADD, ADD, request);
+        requestPostPermissionTestWithOk(PermissionConstants.PROJECT_API_DEFINITION_CASE_ADD, ADD, request);
     }
 
     @Test
@@ -739,7 +739,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         this.requestGetWithOk(GET + anotherApiTestCase.getId())
                 .andReturn();
 
-        this.requestGet(GET + "111").andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(GET + "111").andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
 
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_READ, GET + apiTestCase.getId());
@@ -756,7 +756,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         Assertions.assertNotNull(apiCase.getDeleteTime());
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.DELETE);
-        this.requestGet(DELETE_TO_GC, "111").andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(DELETE_TO_GC, "111").andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_DELETE, DELETE_TO_GC, apiTestCase.getId());
     }
@@ -795,7 +795,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         Assertions.assertTrue(CollectionUtils.isNotEmpty(followers));
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.UPDATE);
-        this.requestGet(FOLLOW + "111").andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(FOLLOW + "111").andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_UPDATE, FOLLOW + apiTestCase.getId());
     }
@@ -811,7 +811,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         Assertions.assertTrue(CollectionUtils.isEmpty(followers));
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.UPDATE);
-        this.requestGet(UNFOLLOW + "111").andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(UNFOLLOW + "111").andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_UPDATE, UNFOLLOW + apiTestCase.getId());
     }
@@ -878,17 +878,19 @@ public class ApiTestCaseControllerTests extends BaseTest {
         // @@重名校验异常
         request.setName("update");
         request.setId(anotherApiTestCase.getId());
-        this.requestPost(UPDATE, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_name_exist")));
         // 校验接口是否存在
         request.setId("111");
-        this.requestPost(UPDATE, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
 
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.UPDATE);
         // @@异常参数校验
         createdGroupParamValidateTest(ApiTestCaseUpdateRequest.class, UPDATE);
         // @@校验权限
-        requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_UPDATE, UPDATE, request);
+        request.setId(apiTestCase.getId());
+        request.setName("permission-update-valid");
+        requestPostPermissionTestWithOk(PermissionConstants.PROJECT_API_DEFINITION_CASE_UPDATE, UPDATE, request);
     }
 
     @Test
@@ -907,7 +909,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         this.requestPost("transfer", apiTransferRequest).andExpect(status().isOk());
         //文件不存在
         apiTransferRequest.setFileId("111");
-        this.requestPost("transfer", apiTransferRequest).andExpect(status().is5xxServerError());
+        this.requestPost("transfer", apiTransferRequest).andExpect(businessError("file not found!"));
         //文件已经上传
         ApiFileResourceExample apiFileResourceExample = new ApiFileResourceExample();
         apiFileResourceExample.createCriteria().andResourceIdEqualTo(apiTestCase.getId());
@@ -1075,7 +1077,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         Assertions.assertEquals(apiCase.getStatus(), "Underway");
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.UPDATE);
-        this.requestGet(UPDATE_STATUS + "/" + "11111" + "/Underway").andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(UPDATE_STATUS + "/" + "11111" + "/Underway").andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_UPDATE, UPDATE_STATUS + "/" + apiTestCase.getId() + "/Underway");
     }
@@ -1089,7 +1091,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         Assertions.assertEquals(apiCase.getPriority(), "P1");
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.UPDATE);
-        this.requestGet(UPDATE_PRIORITY + "/" + "11111" + "/P1").andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(UPDATE_PRIORITY + "/" + "11111" + "/P1").andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_UPDATE, UPDATE_PRIORITY + "/" + apiTestCase.getId() + "/P1");
     }
@@ -1129,12 +1131,13 @@ public class ApiTestCaseControllerTests extends BaseTest {
         apiTestCaseMapper.selectByExample(example).forEach(apiTestCase -> {
             Assertions.assertTrue(CollectionUtils.isEmpty(apiTestCase.getTags()));
         });
-        //标签为空  报错
+        // clear=true 时空标签仍是幂等清空操作
         request.setTags(new LinkedHashSet<>());
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, status().isOk());
         //标签超出10个报错
         request.setTags(new LinkedHashSet<>(List.of("tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10", "tag11")));
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, status().isOk());
+                apiTestCaseMapper.selectByExample(example).forEach(row -> Assertions.assertTrue(CollectionUtils.isEmpty(row.getTags())));
         //ids为空的时候
         request.setTags(new LinkedHashSet<>(List.of("tag1")));
         request.setSelectAll(true);
@@ -1162,7 +1165,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         caseList.forEach(apiTestCase -> Assertions.assertEquals(apiTestCase.getPriority(), "P3"));
         //优先级数据为空
         request.setPriority(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //ids为空的时候
         request.setPriority("P3");
         request.setSelectAll(false);
@@ -1181,7 +1184,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         caseList.forEach(apiTestCase -> Assertions.assertEquals(apiTestCase.getStatus(), ApiDefinitionStatus.DEBUGGING.name()));
         //状态数据为空
         request.setStatus(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //环境
         request.setStatus(null);
         request.setType("Environment");
@@ -1195,13 +1198,13 @@ public class ApiTestCaseControllerTests extends BaseTest {
         caseList.forEach(apiTestCase -> Assertions.assertEquals(apiTestCase.getEnvironmentId(), environments.getFirst().getId()));
         //环境数据为空
         request.setEnvironmentId(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //环境不存在
         request.setEnvironmentId("111");
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //类型错误
         request.setType("111");
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
 
         //校验日志
         checkLog(apiTestCase.getId(), OperationLogType.UPDATE);
@@ -1400,7 +1403,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         Assertions.assertEquals(0, fileNames.size());
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.DELETE);
-        this.requestGet(DELETE + "111").andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(DELETE + "111").andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_DELETE, DELETE + apiTestCase.getId());
     }

@@ -15,6 +15,7 @@ import io.metersphere.plan.dto.TestPlanResourceAssociationParam;
 import io.metersphere.plan.dto.TestPlanResourceExecResultDTO;
 import io.metersphere.plan.dto.request.BaseCollectionAssociateRequest;
 import io.metersphere.plan.dto.request.BasePlanCaseBatchRequest;
+import io.metersphere.plan.dto.request.ResourceSortRequest;
 import io.metersphere.plan.dto.request.TestPlanCaseAssociateBugRequest;
 import io.metersphere.plan.dto.response.TestPlanAssociationResponse;
 import io.metersphere.plan.mapper.ExtTestPlanBugMapper;
@@ -41,6 +42,7 @@ import io.metersphere.system.uid.IDGenerator;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
@@ -141,6 +143,22 @@ public abstract class TestPlanResourceService extends TestPlanSortService {
         if (testPlanCollectionMapper.countByExample(collectionExample) == 0) {
             throw new MSException(Translator.get("test_plan.collection_not_exist"));
         }
+    }
+
+    /** Sorting reorders within one collection; it must not move resources across scopes. */
+    protected void checkSortScope(ResourceSortRequest request, String planId, String collectionId,
+                                  String targetPlanId, String targetCollectionId, String type) {
+        if (StringUtils.isBlank(planId) || StringUtils.isBlank(collectionId)
+                || !StringUtils.equals(collectionId, request.getTestCollectionId())
+                || !StringUtils.equals(collectionId, targetCollectionId)
+                || !StringUtils.equals(planId, targetPlanId)) {
+            throw new MSException(Translator.get("test_plan.drag.node.error"));
+        }
+        TestPlan plan = testPlanMapper.selectByPrimaryKey(planId);
+        if (plan == null || !StringUtils.equals(plan.getProjectId(), request.getProjectId())) {
+            throw new MSException(Translator.get("test_plan.drag.node.error"));
+        }
+        checkCollection(planId, collectionId, type);
     }
 
 

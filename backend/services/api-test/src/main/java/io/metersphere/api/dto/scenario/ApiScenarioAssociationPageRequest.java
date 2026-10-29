@@ -11,6 +11,7 @@ import lombok.EqualsAndHashCode;
 public class ApiScenarioAssociationPageRequest extends BasePageRequest {
 
     @Schema(description = "场景pk")
+    @jakarta.validation.constraints.NotBlank
     @Size(min = 1, max = 50, message = "{api_scenario_step.scenario_id.length_range}")
     private String id;
 }

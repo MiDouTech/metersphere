@@ -26,6 +26,7 @@
       </MsAdvanceFilter>
     </div>
     <ms-base-table
+      class="msp-polished-table"
       batch-action-placement="top"
       always-show-selected-count
       v-bind="propsRes"

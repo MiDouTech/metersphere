@@ -6,6 +6,23 @@ import org.springframework.mock.web.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RequestTraceFilterTests {
+    @Test void paginationIsRequestScopedEvenWhenNoSqlRuns() throws Exception {
+        com.github.pagehelper.PageHelper.startPage(9, 10);
+        new RequestTraceFilter().doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(), (req, res) -> {
+            assertNull(com.github.pagehelper.PageHelper.getLocalPage());
+            com.github.pagehelper.PageHelper.startPage(1, 10);
+        });
+        assertNull(com.github.pagehelper.PageHelper.getLocalPage());
+    }
+
+    @Test void failedRequestCannotLeakPaginationIntoNextRequest() {
+        assertThrows(java.io.IOException.class, () -> new RequestTraceFilter().doFilter(
+                new MockHttpServletRequest(), new MockHttpServletResponse(), (req, res) -> {
+                    com.github.pagehelper.PageHelper.startPage(1, 10);
+                    throw new java.io.IOException("test");
+                }));
+        assertNull(com.github.pagehelper.PageHelper.getLocalPage());
+    }
     @Test void propagatesSafeIdentifierAndClearsThreadContext()throws Exception {
         var request=new MockHttpServletRequest();var response=new MockHttpServletResponse();
         request.addHeader("X-Request-ID","request-123");

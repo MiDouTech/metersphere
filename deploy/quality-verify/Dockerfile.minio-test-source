@@ -1,0 +1,19 @@
+# Test dependency only: upstream's original image/binary is no longer publicly retrievable.
+# Official RELEASE.2023-03-13T19-46-17Z peeled commit, verified with git ls-remote.
+FROM golang:1.20.14-alpine3.19 AS build
+RUN apk add --no-cache git ca-certificates
+WORKDIR /src
+RUN git init && git remote add origin https://github.com/minio/minio.git \
+    && git fetch --depth=1 origin c7f7e67a100ce35af559e3f49a2ed0b67deaa919 \
+    && git checkout --detach FETCH_HEAD \
+    && test "$(git rev-parse HEAD)" = c7f7e67a100ce35af559e3f49a2ed0b67deaa919
+ENV CGO_ENABLED=0 GOMAXPROCS=2 GOMEMLIMIT=1GiB
+RUN go build -trimpath -ldflags="-s -w" -o /minio .
+FROM alpine:3.22
+RUN apk add --no-cache ca-certificates curl
+COPY --from=build /minio /usr/local/bin/minio
+LABEL org.opencontainers.image.source="https://github.com/minio/minio" \
+      org.opencontainers.image.revision="c7f7e67a100ce35af559e3f49a2ed0b67deaa919"
+EXPOSE 9000 9001
+ENTRYPOINT ["/usr/local/bin/minio"]
+CMD ["server", "/data"]

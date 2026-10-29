@@ -33,6 +33,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,6 +42,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @AutoConfigureMockMvc
 public class FunctionalCaseCommentControllerTests {
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate commentJdbc;
+
+    private static org.springframework.test.web.servlet.ResultMatcher businessError(String message) {
+        return result -> {
+            status().isUnprocessableEntity().match(result);
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value(100422).match(result);
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message").value(message).match(result);
+        };
+    }
 
     @Resource
     private MockMvc mockMvc;
@@ -170,12 +181,16 @@ public class FunctionalCaseCommentControllerTests {
     }
 
     private ResultHolder postFalse(FunctionalCaseCommentRequest functionalCaseCommentRequest, String url) throws Exception {
+        return postFalse(functionalCaseCommentRequest, url, status().isForbidden());
+    }
+
+    private ResultHolder postFalse(FunctionalCaseCommentRequest functionalCaseCommentRequest, String url, org.springframework.test.web.servlet.ResultMatcher expected) throws Exception {
         MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post(url).header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .header(SessionConstants.CURRENT_PROJECT, projectId)
                         .content(JSON.toJSONString(functionalCaseCommentRequest))
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(expected)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         String contentAsString = mvcResult.getResponse().getContentAsString(StandardCharsets.UTF_8);
         return JSON.parseObject(contentAsString, ResultHolder.class);
@@ -227,13 +242,13 @@ public class FunctionalCaseCommentControllerTests {
     public void saveCommentReplySuccess() throws Exception {
         FunctionalCaseComment functionalCaseComment1 = getFunctionalCaseComment();
         FunctionalCaseCommentRequest functionalCaseCommentRequest = new FunctionalCaseCommentRequest();
-        functionalCaseCommentRequest.setCaseId("xiaomeinvGTestOne");
+        functionalCaseCommentRequest.setCaseId("xiaomeinvGTest");
         functionalCaseCommentRequest.setContent("评论你好");
-        functionalCaseCommentRequest.setReplyUser("default-project-member-user-guo-5");
+        functionalCaseCommentRequest.setReplyUser(functionalCaseComment1.getCreateUser());
         functionalCaseCommentRequest.setParentId(functionalCaseComment1.getId());
         functionalCaseCommentRequest.setEvent(NoticeConstants.Event.REPLY);
         FunctionalCaseComment functionalCaseComment = getFunctionalCaseComment(functionalCaseCommentRequest,SAVE_URL);
-        Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getCaseId(), "xiaomeinvGTestOne"));
+        Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getCaseId(), "xiaomeinvGTest"));
         Assertions.assertTrue(StringUtils.isBlank(functionalCaseComment.getNotifier()));
         Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getContent(), "评论你好"));
         FunctionalCaseComment functionalCaseComment2 = functionalCaseCommentMapper.selectByPrimaryKey(functionalCaseComment.getId());
@@ -254,7 +269,7 @@ public class FunctionalCaseCommentControllerTests {
         functionalCaseCommentRequestUpdate2.setReplyUser("default-project-member-user-guo");
         functionalCaseCommentRequestUpdate2.setParentId(functionalCaseComment1.getId());
         functionalCaseCommentRequestUpdate2.setEvent(NoticeConstants.Event.REPLY);
-        functionalCaseCommentRequestUpdate2.setNotifier("default-project-member-user-guo-3;default-project-member-user-guo-4;");
+        functionalCaseCommentRequestUpdate2.setNotifier("default-project-member-user-guo-3;default-project-member-user-guo-4");
         FunctionalCaseComment functionalCaseComment5 = getFunctionalCaseComment(functionalCaseCommentRequestUpdate2,UPDATE_URL);
         FunctionalCaseComment functionalCaseComment6 = functionalCaseCommentMapper.selectByPrimaryKey(functionalCaseComment5.getId());
         Assertions.assertTrue(StringUtils.equals(functionalCaseComment6.getContent(), "更新回复评论你好@"));
@@ -267,7 +282,7 @@ public class FunctionalCaseCommentControllerTests {
         functionalCaseCommentRequest.setCaseId("xiaomeinvGTestOne");
         functionalCaseCommentRequest.setContent("评论你好");
         functionalCaseCommentRequest.setEvent(NoticeConstants.Event.REPLY);
-        ResultHolder resultHolder = postFalse(functionalCaseCommentRequest,SAVE_URL);
+        ResultHolder resultHolder = postFalse(functionalCaseCommentRequest,SAVE_URL,businessError(Translator.get("case_comment.parent_id_is_null")));
         String message = resultHolder.getMessage();
         Assertions.assertTrue(StringUtils.equals(message, Translator.get("case_comment.parent_id_is_null")));
 
@@ -283,7 +298,7 @@ public class FunctionalCaseCommentControllerTests {
         functionalCaseCommentRequest.setEvent(NoticeConstants.Event.REPLY);
         ResultHolder resultHolder = postFalse(functionalCaseCommentRequest,SAVE_URL);
         String message = resultHolder.getMessage();
-        Assertions.assertTrue(StringUtils.equals(message, Translator.get("case_comment.parent_case_is_null")));
+        Assertions.assertTrue(StringUtils.equals(message, "评论不存在或当前账号无权操作"));
 
 
     }
@@ -310,23 +325,22 @@ public class FunctionalCaseCommentControllerTests {
     public void saveCommentReplyNoReply() throws Exception {
         FunctionalCaseComment functionalCaseComment1 = getFunctionalCaseComment();
         FunctionalCaseCommentRequest functionalCaseCommentRequest = new FunctionalCaseCommentRequest();
-        functionalCaseCommentRequest.setCaseId("xiaomeinvGTestOne");
+        functionalCaseCommentRequest.setCaseId("xiaomeinvGTest");
         functionalCaseCommentRequest.setContent("评论你好");
         functionalCaseCommentRequest.setParentId(functionalCaseComment1.getId());
         functionalCaseCommentRequest.setEvent(NoticeConstants.Event.REPLY);
         ResultHolder resultHolder = postFalse(functionalCaseCommentRequest,SAVE_URL);
         String message = resultHolder.getMessage();
-        Assertions.assertTrue(StringUtils.equals(message, Translator.get("case_comment.reply_user_is_null")));
+        Assertions.assertTrue(StringUtils.equals(message, "评论不存在或当前账号无权操作"));
         FunctionalCaseCommentRequest functionalCaseCommentRequestUpdate = new FunctionalCaseCommentRequest();
         functionalCaseCommentRequestUpdate.setId(functionalCaseComment1.getId());
-        functionalCaseCommentRequestUpdate.setCaseId("xiaomeinvGTestOne");
+        functionalCaseCommentRequestUpdate.setCaseId("xiaomeinvGTest");
         functionalCaseCommentRequestUpdate.setContent("评论你好");
         functionalCaseCommentRequestUpdate.setParentId(functionalCaseComment1.getId());
         functionalCaseCommentRequestUpdate.setEvent(NoticeConstants.Event.REPLY);
-        ResultHolder resultHolderUpdate = postFalse(functionalCaseCommentRequestUpdate,UPDATE_URL);
-        String messageUpdate = resultHolderUpdate.getMessage();
-        Assertions.assertTrue(StringUtils.equals(messageUpdate, Translator.get("case_comment.reply_user_is_null")));
-
+        FunctionalCaseComment updated = getFunctionalCaseComment(functionalCaseCommentRequestUpdate, UPDATE_URL);
+        Assertions.assertEquals("评论你好", functionalCaseCommentMapper.selectByPrimaryKey(updated.getId()).getContent());
+        Assertions.assertEquals(functionalCaseComment1.getParentId(), functionalCaseCommentMapper.selectByPrimaryKey(updated.getId()).getParentId());
     }
 
     @Test
@@ -356,34 +370,64 @@ public class FunctionalCaseCommentControllerTests {
         FunctionalCaseComment functionalCaseComment1 = getFunctionalCaseComment();
         FunctionalCaseCommentRequest functionalCaseCommentRequest = new FunctionalCaseCommentRequest();
         functionalCaseCommentRequest.setCaseId("xiaomeinvGTest");
-        functionalCaseCommentRequest.setNotifier("default-project-member-user-guo-3;default-project-member-user-guo-4;");
+        functionalCaseCommentRequest.setNotifier("default-project-member-user-guo-3;default-project-member-user-guo-4");
         functionalCaseCommentRequest.setContent("评论你好");
         functionalCaseCommentRequest.setEvent(NoticeConstants.Event.REPLY);
         functionalCaseCommentRequest.setReplyUser("default-project-member-user-guo");
         functionalCaseCommentRequest.setParentId(functionalCaseComment1.getId());
         FunctionalCaseComment functionalCaseComment = getFunctionalCaseComment(functionalCaseCommentRequest,SAVE_URL);
         Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getCaseId(), "xiaomeinvGTest"));
-        Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getNotifier(), "default-project-member-user-guo-3;default-project-member-user-guo-4;"));
+        Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getNotifier(), "default-project-member-user-guo-3;default-project-member-user-guo-4"));
         Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getContent(), "评论你好"));
     }
 
     @Test
     @Order(16)
-    public void saveCommentATWidthReplyUser() throws Exception {
+    public void saveCommentATDeduplicatesRecipients() throws Exception {
         FunctionalCaseComment functionalCaseComment1 = getFunctionalCaseComment();
         FunctionalCaseCommentRequest functionalCaseCommentRequest = new FunctionalCaseCommentRequest();
         functionalCaseCommentRequest.setCaseId("xiaomeinvGTest");
-        functionalCaseCommentRequest.setNotifier("default-project-member-user-guo;default-project-member-user-guo;default-project-member-user-guo-4;");
+        functionalCaseCommentRequest.setNotifier("default-project-member-user-guo;default-project-member-user-guo;default-project-member-user-guo-4");
         functionalCaseCommentRequest.setContent("评论你好哇");
         functionalCaseCommentRequest.setEvent(NoticeConstants.Event.AT);
-        functionalCaseCommentRequest.setReplyUser("default-project-member-user-guo");
-        functionalCaseCommentRequest.setParentId(functionalCaseComment1.getId());
         FunctionalCaseComment functionalCaseComment = getFunctionalCaseComment(functionalCaseCommentRequest,SAVE_URL);
         Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getCaseId(), "xiaomeinvGTest"));
-        Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getNotifier(), "default-project-member-user-guo;default-project-member-user-guo;default-project-member-user-guo-4;"));
+        Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getNotifier(), "default-project-member-user-guo;default-project-member-user-guo-4"));
         Assertions.assertTrue(StringUtils.equals(functionalCaseComment.getContent(), "评论你好哇"));
         Assertions.assertTrue(StringUtils.isBlank(functionalCaseComment.getReplyUser()));
 
+    }
+
+    @Test
+    @Order(17)
+    public void invalidReplyEventAndMissingEditVersionDoNotMutateComments() throws Exception {
+        var current = getFunctionalCaseComment();
+        long count = functionalCaseCommentMapper.countByExample(new FunctionalCaseCommentExample());
+        var request = new FunctionalCaseCommentRequest();
+        request.setCaseId(current.getCaseId()); request.setContent("invalid reply");
+        request.setParentId(current.getId()); request.setReplyUser(current.getCreateUser());
+        request.setEvent(NoticeConstants.Event.AT);
+        mockMvc.perform(MockMvcRequestBuilders.post(SAVE_URL)
+                .header(SessionConstants.HEADER_TOKEN, sessionId).header(SessionConstants.CSRF_TOKEN, csrfToken)
+                .header(SessionConstants.CURRENT_PROJECT, projectId)
+                .contentType(MediaType.APPLICATION_JSON).content(JSON.toJSONString(request)))
+                .andExpect(status().isBadRequest());
+        Assertions.assertEquals(count, functionalCaseCommentMapper.countByExample(new FunctionalCaseCommentExample()));
+        request.setId(current.getId()); request.setParentId(null); request.setReplyUser(null);
+        request.setEvent(NoticeConstants.Event.COMMENT);
+        mockMvc.perform(MockMvcRequestBuilders.post(UPDATE_URL)
+                .header(SessionConstants.HEADER_TOKEN, sessionId).header(SessionConstants.CSRF_TOKEN, csrfToken)
+                .header(SessionConstants.CURRENT_PROJECT, projectId)
+                .contentType(MediaType.APPLICATION_JSON).content(JSON.toJSONString(request)))
+                .andExpect(status().isBadRequest());
+        Assertions.assertEquals(current.getContent(), functionalCaseCommentMapper.selectByPrimaryKey(current.getId()).getContent());
+        request.setExpectedUpdateTime(0L);
+        mockMvc.perform(MockMvcRequestBuilders.post(UPDATE_URL)
+                .header(SessionConstants.HEADER_TOKEN, sessionId).header(SessionConstants.CSRF_TOKEN, csrfToken)
+                .header(SessionConstants.CURRENT_PROJECT, projectId)
+                .contentType(MediaType.APPLICATION_JSON).content(JSON.toJSONString(request)))
+                .andExpect(status().isConflict());
+        Assertions.assertEquals(current.getContent(), functionalCaseCommentMapper.selectByPrimaryKey(current.getId()).getContent());
     }
 
     @Test
@@ -424,7 +468,7 @@ public class FunctionalCaseCommentControllerTests {
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .header(SessionConstants.CURRENT_PROJECT, projectId)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(status().isForbidden())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
     }
 
@@ -432,45 +476,31 @@ public class FunctionalCaseCommentControllerTests {
     @Test
     @Order(19)
     public void deleteCommentSuccess() throws Exception {
-        FunctionalCaseCommentExample functionalCaseCommentExample = new FunctionalCaseCommentExample();
-        functionalCaseCommentExample.createCriteria().andCaseIdEqualTo("xiaomeinvGTest").andNotifierEqualTo("default-project-member-user-guo;default-project-member-user-guo;default-project-member-user-guo-4;");
-        List<FunctionalCaseComment> functionalCaseComments = functionalCaseCommentMapper.selectByExample(functionalCaseCommentExample);
-        String id = functionalCaseComments.getFirst().getId();
-        Assertions.assertFalse(functionalCaseComments.isEmpty());
-        delFunctionalCaseComment(id);
-        functionalCaseCommentExample = new FunctionalCaseCommentExample();
-        functionalCaseCommentExample.createCriteria().andParentIdEqualTo(id);
-        List<FunctionalCaseComment> functionalCaseComments1 = functionalCaseCommentMapper.selectByExample(functionalCaseCommentExample);
-        Assertions.assertTrue(functionalCaseComments1.isEmpty());
-        FunctionalCaseComment functionalCaseComment = functionalCaseCommentMapper.selectByPrimaryKey(id);
-        Assertions.assertNull(functionalCaseComment);
-
+        FunctionalCaseComment current = getFunctionalCaseComment();
+        FunctionalCaseCommentExample replies = new FunctionalCaseCommentExample();
+        replies.createCriteria().andParentIdEqualTo(current.getId());
+        long before = functionalCaseCommentMapper.countByExample(replies);
+        delFunctionalCaseComment(current.getId());
+        var deleted = functionalCaseCommentMapper.selectByPrimaryKey(current.getId());
+        Assertions.assertTrue(commentJdbc.queryForObject("SELECT deleted FROM functional_case_comment WHERE id=?", Boolean.class, current.getId()));
+        Assertions.assertEquals("", deleted.getContent());
+        Assertions.assertEquals(before, functionalCaseCommentMapper.countByExample(replies));
     }
 
     @Test
     @Order(20)
     public void deleteNoCommentSuccess() throws Exception {
-        delFunctionalCaseComment("no_comment");
-        FunctionalCaseCommentExample functionalCaseCommentExample = new FunctionalCaseCommentExample();
-        functionalCaseCommentExample.createCriteria().andParentIdEqualTo("no_comment");
-        List<FunctionalCaseComment> functionalCaseComments1 = functionalCaseCommentMapper.selectByExample(functionalCaseCommentExample);
-        Assertions.assertTrue(functionalCaseComments1.isEmpty());
-        FunctionalCaseComment functionalCaseComment = functionalCaseCommentMapper.selectByPrimaryKey("no_comment");
-        Assertions.assertNull(functionalCaseComment);
-
+        versionedDelete("xiaomeinvGTest", "no_comment", 0L, status().isForbidden());
+        Assertions.assertNull(functionalCaseCommentMapper.selectByPrimaryKey("no_comment"));
     }
 
     @Test
     @Order(21)
     public void deleteCommentFirstSuccess() throws Exception {
-        delFunctionalCaseComment("xiaomeinvGTest");
-        FunctionalCaseCommentExample functionalCaseCommentExample = new FunctionalCaseCommentExample();
-        functionalCaseCommentExample.createCriteria().andParentIdEqualTo("xiaomeinvGTest");
-        List<FunctionalCaseComment> functionalCaseComments1 = functionalCaseCommentMapper.selectByExample(functionalCaseCommentExample);
-        Assertions.assertTrue(functionalCaseComments1.isEmpty());
-        FunctionalCaseComment functionalCaseComment = functionalCaseCommentMapper.selectByPrimaryKey("xiaomeinvGTest");
-        Assertions.assertNull(functionalCaseComment);
-
+        FunctionalCaseComment current = getFunctionalCaseComment();
+        Assertions.assertTrue(commentJdbc.queryForObject("SELECT deleted FROM functional_case_comment WHERE id=?", Boolean.class, current.getId()));
+        delFunctionalCaseComment(current.getId());
+        Assertions.assertEquals(current.getUpdateTime(), functionalCaseCommentMapper.selectByPrimaryKey(current.getId()).getUpdateTime());
     }
 
     @Test
@@ -483,6 +513,11 @@ public class FunctionalCaseCommentControllerTests {
     }
 
     private FunctionalCaseComment getFunctionalCaseComment(FunctionalCaseCommentRequest functionalCaseCommentRequest, String url) throws Exception {
+        if (UPDATE_URL.equals(url)) {
+            var current = functionalCaseCommentMapper.selectByPrimaryKey(functionalCaseCommentRequest.getId());
+            Assertions.assertNotNull(current);
+            functionalCaseCommentRequest.setExpectedUpdateTime(current.getUpdateTime());
+        }
         MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post(url).header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .header(SessionConstants.CURRENT_PROJECT, projectId)
@@ -496,28 +531,29 @@ public class FunctionalCaseCommentControllerTests {
     }
 
     private void delFunctionalCaseComment(String commentId) throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get(DELETE_URL+commentId).header(SessionConstants.HEADER_TOKEN, sessionId)
-                        .header(SessionConstants.CSRF_TOKEN, csrfToken)
-                        .header(SessionConstants.CURRENT_PROJECT, projectId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        var current = functionalCaseCommentMapper.selectByPrimaryKey(commentId);
+        Assertions.assertNotNull(current);
+        versionedDelete(current.getCaseId(), commentId, current.getUpdateTime(), status().isOk());
+    }
+
+    private void versionedDelete(String caseId, String commentId, Long version,
+                                 org.springframework.test.web.servlet.ResultMatcher expected) throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/functional/case/comment/delete")
+                .header(SessionConstants.HEADER_TOKEN, sessionId).header(SessionConstants.CSRF_TOKEN, csrfToken)
+                .header(SessionConstants.CURRENT_PROJECT, projectId)
+                .content(JSON.toJSONString(Map.of("caseId", caseId, "commentId", commentId, "expectedUpdateTime", version)))
+                .contentType(MediaType.APPLICATION_JSON)).andExpect(expected);
     }
 
     private void delFunctionalCaseCommentError() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get(DELETE_URL+ "user_not_exist").header(SessionConstants.HEADER_TOKEN, sessionId)
-                        .header(SessionConstants.CSRF_TOKEN, csrfToken)
-                        .header(SessionConstants.CURRENT_PROJECT, projectId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        versionedDelete("comment_case", "user_not_exist", 0L, status().isForbidden());
     }
 
     private FunctionalCaseComment getFunctionalCaseComment() {
         FunctionalCaseCommentExample functionalCaseCommentExample = new FunctionalCaseCommentExample();
         functionalCaseCommentExample.createCriteria().andCaseIdEqualTo("xiaomeinvGTest");
         List<FunctionalCaseComment> functionalCaseComments = functionalCaseCommentMapper.selectByExample(functionalCaseCommentExample);
-        return functionalCaseComments.getFirst();
+        return functionalCaseCommentMapper.selectByPrimaryKey(functionalCaseComments.getFirst().getId());
     }
 
 }

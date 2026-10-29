@@ -191,7 +191,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         projectRobotDTO.setPlatform(NoticeConstants.Type.DING_TALK);
         projectRobotDTO.setProjectId("test_project");
         projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=e971f376669334cd44c585d419f0fdfa1600f97f906109b377999d8a0986b11e");
-        getPostResult(projectRobotDTO, ROBOT_ADD, status().is5xxServerError());
+        getPostResult(projectRobotDTO, ROBOT_ADD, businessError(io.metersphere.sdk.util.Translator.get("ding_type_is_null")));
     }
 
     @Test
@@ -203,7 +203,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         projectRobotDTO.setProjectId("test_project");
         projectRobotDTO.setType(NoticeConstants.DingType.ENTERPRISE);
         projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=e971f376669334cd44c585d419f0fdfa1600f97f906109b377999d8a0986b11e");
-        getPostResult(projectRobotDTO, ROBOT_ADD, status().is5xxServerError());
+        getPostResult(projectRobotDTO, ROBOT_ADD, businessError(io.metersphere.sdk.util.Translator.get("ding_app_key_is_null")));
     }
 
     @Test
@@ -216,7 +216,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         projectRobotDTO.setType(NoticeConstants.DingType.ENTERPRISE);
         projectRobotDTO.setAppKey("dingxwd71o7kj4qoixo7");
         projectRobotDTO.setWebhook("https://oapi.dingtalk.com/robot/send?access_token=e971f376669334cd44c585d419f0fdfa1600f97f906109b377999d8a0986b11e");
-        getPostResult(projectRobotDTO, ROBOT_ADD, status().is5xxServerError());
+        getPostResult(projectRobotDTO, ROBOT_ADD, businessError(io.metersphere.sdk.util.Translator.get("ding_app_secret_is_null")));
     }
 
     @Test
@@ -250,7 +250,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         setCustomRobot("测试没有ID失败","test_project");
         ProjectRobot projectRobot = getRobot("test_project", "测试没有ID失败");
         projectRobot.setId("noId");
-        checkUpdate(projectRobot, "测试没有ID失败", status().is5xxServerError());
+        checkUpdate(projectRobot, "测试没有ID失败", businessError(io.metersphere.sdk.util.Translator.get("robot_is_null")));
     }
 
     @Test
@@ -268,7 +268,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         setDingCustom("test_project","测试更新没有Type失败");
         ProjectRobot projectRobot = getRobot("test_project", "测试更新没有Type失败");
         projectRobot.setType(null);
-        checkUpdate(projectRobot, "测试更新没有Type失败", status().is5xxServerError());
+        checkUpdate(projectRobot, "测试更新没有Type失败", businessError(io.metersphere.sdk.util.Translator.get("ding_type_is_null")));
     }
 
     @Test
@@ -277,7 +277,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         setDingEn("测试更新没有key失败");
         ProjectRobot projectRobot = getRobot("test_project", "测试更新没有key失败");
         projectRobot.setAppKey(null);
-        checkUpdate(projectRobot, "测试更新没有key失败", status().is5xxServerError());
+        checkUpdate(projectRobot, "测试更新没有key失败", businessError(io.metersphere.sdk.util.Translator.get("ding_app_key_is_null")));
     }
 
     @Test
@@ -286,7 +286,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         setDingEn("测试更新没有Secret失败");
         ProjectRobot projectRobot = getRobot("test_project", "测试更新没有Secret失败");
         projectRobot.setAppSecret(null);
-        checkUpdate(projectRobot, "测试更新没有Secret失败", status().is5xxServerError());
+        checkUpdate(projectRobot, "测试更新没有Secret失败", businessError(io.metersphere.sdk.util.Translator.get("ding_app_secret_is_null")));
     }
 
     @Test
@@ -304,7 +304,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         mockMvc.perform(MockMvcRequestBuilders.get(ROBOT_DETAIL + "/" + projectRobotId)
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("robot_is_null")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
     }
 
@@ -315,7 +315,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         mockMvc.perform(MockMvcRequestBuilders.get(ROBOT_DELETE + "/no_id")
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("robot_is_null")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -325,7 +325,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         mockMvc.perform(MockMvcRequestBuilders.get(ROBOT_DETAIL + "/no_id")
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("robot_is_null")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
@@ -421,7 +421,7 @@ public class ProjectRobotControllerTests extends BaseTest {
         mockMvc.perform(MockMvcRequestBuilders.get(ROBOT_ENABLE + "/no_id")
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("robot_is_null")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
     }

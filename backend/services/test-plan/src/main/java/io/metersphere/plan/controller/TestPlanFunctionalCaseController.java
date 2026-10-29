@@ -64,7 +64,7 @@ public class TestPlanFunctionalCaseController {
     @PostMapping(value = "/sort")
     @Operation(summary = "测试计划功能用例-功能用例拖拽排序")
     @RequiresPermissions(PermissionConstants.TEST_PLAN_READ_UPDATE)
-    @CheckOwner(resourceId = "#request.getTestPlanId()", resourceType = "test_plan")
+    @CheckOwner(resourceId = "#request.getTestCollectionId()", resourceType = "test_plan", relationType = "test_plan_collection")
     public TestPlanOperationResponse sortNode(@Validated @RequestBody ResourceSortRequest request) {
         return testPlanFunctionalCaseService.sortNode(request, new LogInsertModule(SessionUtils.getUserId(), "/test-plan/functional/case/sort", HttpMethodConstants.POST.name()));
     }
@@ -82,7 +82,7 @@ public class TestPlanFunctionalCaseController {
     @PostMapping("/tree")
     @Operation(summary = "测试计划-已关联功能用例列表模块树")
     @RequiresPermissions(PermissionConstants.TEST_PLAN_READ)
-    @CheckOwner(resourceId = "#testPlanId", resourceType = "test_plan")
+    @CheckOwner(resourceId = "#request.getTestPlanId()", resourceType = "test_plan")
     public List<BaseTreeNode> getTree(@Validated @RequestBody TestPlanTreeRequest request) {
         return testPlanFunctionalCaseService.getTree(request);
     }

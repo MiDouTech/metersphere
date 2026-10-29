@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "tool call error: tool call failed for `metersphere_test/metersphere.functional.get`\n\nCaused by:\n    Mcp error: -32603: 服务暂时不可用，请使用 traceId 联系管理员({\"code\":\"AI_EXECUTION_INTERNAL_ERROR\",\"traceId\":\"ad76145f-2023-4e82-9b64-e1585ac4bf94\"})"
+    }
+  ],
+  "isError": true
+}

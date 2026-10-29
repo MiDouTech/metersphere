@@ -1,0 +1,196 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      container
+        text "缺陷"
+        container
+          text "..."
+          svg_root
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=336]
+            svg_root
+        list_item
+          button [ref=337]
+            svg_root
+        list_item
+          button [ref=338]
+            svg_root
+        list_item
+          switch [ref=339]
+            svg_root
+        list_item
+          button [ref=340]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "测试计划"
+          container
+            svg_root
+            text "测试用例"
+          container
+            svg_root
+            text "接口测试"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "缺陷管理"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container [ref=373]
+        container
+          button [ref=374]
+            text "创建缺陷"
+          container
+            container
+              textbox [ref=375, loc=css:input[placeholder="通过 ID/名称/标签搜索"]]
+                text "通过 ID/名称/标签搜索"
+              svg_root
+            container
+              text "视图"
+              text "全部数据"
+              svg_root
+            button [ref=376]
+              svg_root
+              text "筛选"
+            anchor [ref=377]
+              text "缺陷资产与历史引用"
+        container
+          container
+            table
+              table_row
+                table_cell
+                  svg_root
+                table_cell
+                  text "ID"
+                table_cell
+                  text "缺陷名称"
+                table_cell
+                  container
+                    text "状态"
+                    svg_root
+                table_cell
+                  container
+                    container
+                      text "处理人"
+                      svg_root [ref=378]
+                    svg_root
+                table_cell
+                  container
+                    text "严重程度"
+                    svg_root
+            container [ref=379]
+              table
+                table_row
+                  table_cell
+                  table_cell
+                    button [ref=380]
+                      text "100004"
+                  table_cell
+                    button [ref=381]
+                      text "WEEKLY-20261028-多标签布局验收"
+                  table_cell
+                    button [ref=382]
+                      text "创建"
+                      svg_root
+                  table_cell
+                    text "陈启芬"
+                  table_cell
+                    text "一般"
+                table_row
+                  table_cell
+                  table_cell
+                    button [ref=383]
+                      text "100003"
+                  table_cell
+                    button [ref=384]
+                      text "ACCEPTANCE-20261027-缺陷关联同步验收数据"
+                  table_cell
+                    button [ref=385]
+                      text "创建"
+                      svg_root
+                  table_cell
+                    text "陈启芬"
+                  table_cell
+                    text "一般"
+                table_row
+                  table_cell
+                  table_cell
+                    button [ref=386]
+                      text "100002"
+                  table_cell
+                    button [ref=387]
+                      text "REGRESSION-20261023-缺陷关联验证"
+                  table_cell
+                    button [ref=388]
+                      text "创建"
+                      svg_root
+                  table_cell
+                    text "陈启芬"
+                  table_cell
+                    text "一般"
+                table_row
+                  table_cell
+                  table_cell
+                    button [ref=389]
+                      text "100001"
+                  table_cell
+                    button [ref=390]
+                      text "LIVE-AUDIT-20261023-缺陷A"
+                  table_cell
+                    button [ref=391]
+                      text "创建"
+                      svg_root
+                  table_cell
+                    text "陈启芬"
+                  table_cell
+                    text "一般"
+          container
+            container
+              text "已选择 0 条"
+              button [ref=392]
+                text "导出"
+              button [ref=393]
+                text "编辑"
+              button [ref=394]
+                text "删除"
+              button [ref=395]
+                text "清空"
+            unordered_list
+              svg_root
+              list_item
+                text "1"
+              svg_root
+  svg_root
+  tooltip
+    text "WEEKLY-20261028-多标签布局验收"

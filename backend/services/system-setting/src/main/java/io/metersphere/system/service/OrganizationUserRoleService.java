@@ -40,6 +40,14 @@ public class OrganizationUserRoleService extends BaseUserRoleService {
     ExtUserRoleMapper extUserRoleMapper;
     @Resource
     UserRoleRelationMapper userRoleRelationMapper;
+    @Resource
+    private RoleRelationWriter roleRelationWriter;
+    @Resource
+    private PermissionSessionRefreshService permissionSessionRefreshService;
+    @Resource
+    private io.metersphere.system.log.service.OperationLogService operationLogService;
+    @Resource
+    private io.metersphere.system.mapper.OrganizationMapper organizationMapper;
 
     public List<UserRole> list(String organizationId) {
         UserRoleExample example = new UserRoleExample();
@@ -84,7 +92,17 @@ public class OrganizationUserRoleService extends BaseUserRoleService {
     }
 
     public void addMember(OrganizationUserRoleMemberEditRequest request, String createUserId) {
-        request.getUserIds().forEach(userId -> {
+        UserRole role = get(request.getUserRoleId());
+        checkOrgUserRole(role);
+        if (!UserRoleEnum.GLOBAL.toString().equals(role.getScopeId())
+                && !request.getOrganizationId().equals(role.getScopeId())) {
+            throw new MSException(NO_ORG_USER_ROLE_PERMISSION);
+        }
+        if (organizationMapper.selectByPrimaryKey(request.getOrganizationId()) == null) {
+            throw new MSException(Translator.get("organization_not_exist"));
+        }
+        java.util.List<String> insertedUsers = new java.util.ArrayList<>();
+        request.getUserIds().stream().distinct().sorted().forEach(userId -> {
             checkMemberParam(userId, request.getUserRoleId());
             UserRoleRelation relation = new UserRoleRelation();
             relation.setId(IDGenerator.nextStr());
@@ -94,8 +112,24 @@ public class OrganizationUserRoleService extends BaseUserRoleService {
             relation.setCreateTime(System.currentTimeMillis());
             relation.setCreateUser(createUserId);
             relation.setOrganizationId(request.getOrganizationId());
-            userRoleRelationMapper.insert(relation);
+            if (roleRelationWriter.ensurePresent(relation)) insertedUsers.add(userId);
         });
+        if (!insertedUsers.isEmpty()) {
+            OrganizationUserRoleMemberEditRequest inserted = new OrganizationUserRoleMemberEditRequest();
+            inserted.setOrganizationId(request.getOrganizationId());
+            inserted.setUserRoleId(request.getUserRoleId());
+            inserted.setUserIds(insertedUsers);
+            io.metersphere.system.log.dto.LogDTO log = new io.metersphere.system.log.dto.LogDTO(
+                    io.metersphere.sdk.constants.OperationLogConstants.ORGANIZATION, request.getOrganizationId(),
+                    io.metersphere.sdk.constants.OperationLogConstants.SYSTEM, createUserId,
+                    io.metersphere.system.log.constants.OperationLogType.UPDATE.name(),
+                    io.metersphere.system.log.constants.OperationLogModule.SETTING_ORGANIZATION_USER_ROLE, role.getName());
+            log.setMethod("POST");
+            log.setPath("/user/role/organization/add-member");
+            log.setModifiedValue(io.metersphere.sdk.util.JSON.toJSONBytes(inserted));
+            operationLogService.add(log);
+            permissionSessionRefreshService.refreshUsersAfterCommit(insertedUsers);
+        }
     }
 
     public void removeMember(OrganizationUserRoleMemberEditRequest request) {

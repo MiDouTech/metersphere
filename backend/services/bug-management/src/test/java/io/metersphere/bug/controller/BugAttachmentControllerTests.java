@@ -58,7 +58,7 @@ public class BugAttachmentControllerTests extends BaseTest {
         MockMultipartFile fileTooLarge = new MockMultipartFile("file", "test.txt", MediaType.APPLICATION_OCTET_STREAM_VALUE, new byte[50 * 1024 * 1024 + 1]);
         this.requestUploadFile(BUG_ATTACHMENT_UPLOAD_MD, fileTooLarge).andExpect(status().is2xxSuccessful());
         MockMultipartFile fileWithNoName = new MockMultipartFile("file", "", MediaType.APPLICATION_OCTET_STREAM_VALUE, "aa".getBytes());
-        this.requestUploadFile(BUG_ATTACHMENT_UPLOAD_MD, fileWithNoName).andExpect(status().is5xxServerError());
+        this.requestUploadFile(BUG_ATTACHMENT_UPLOAD_MD, fileWithNoName).andExpect(businessError(io.metersphere.sdk.util.Translator.get("file.name.cannot.be.empty")));
         // Mock minio save file exception
         MockMultipartFile file = new MockMultipartFile("file", "test.txt", MediaType.APPLICATION_OCTET_STREAM_VALUE, "aa".getBytes());
         this.requestUploadFile(BUG_ATTACHMENT_UPLOAD_MD, file);
@@ -120,14 +120,17 @@ public class BugAttachmentControllerTests extends BaseTest {
         request.setProjectId("default-project-for-attachment");
         request.setAssociated(false);
         request.setFileId("not-exist-file-id");
-        this.requestPostDownloadFile(BUG_ATTACHMENT_PREVIEW, null, request);
+        this.requestPost(BUG_ATTACHMENT_PREVIEW, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("file.not.exist")));
         List<BugFileDTO> files = getBugFiles("default-attachment-bug-id");
         files.forEach(file -> {
             request.setFileId(file.getFileId());
             request.setAssociated(!file.getLocal());
             try {
-                this.requestPostDownloadFile(BUG_ATTACHMENT_PREVIEW, null, request);
-                this.requestPostDownloadFile(BUG_ATTACHMENT_DOWNLOAD, null, request);
+                byte[] expected = "xlsx".equalsIgnoreCase(file.getFileType())
+                        ? java.nio.file.Files.readAllBytes(java.nio.file.Path.of(Objects.requireNonNull(getClass().getClassLoader().getResource("file/test.xlsx")).toURI()))
+                        : (file.getFileName().startsWith("TEST1") ? "aa" : "bb").getBytes(StandardCharsets.UTF_8);
+                Assertions.assertArrayEquals(expected, this.requestPostDownloadFile(BUG_ATTACHMENT_PREVIEW, null, request).getResponse().getContentAsByteArray());
+                Assertions.assertArrayEquals(expected, this.requestPostDownloadFile(BUG_ATTACHMENT_DOWNLOAD, null, request).getResponse().getContentAsByteArray());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -145,7 +148,7 @@ public class BugAttachmentControllerTests extends BaseTest {
         request.setAssociated(false);
         request.setFileId("not-exist-file-id");
         request.setFileName(UUID.randomUUID().toString());
-        this.requestPost(BUG_ATTACHMENT_TRANSFER, request).andExpect(status().is5xxServerError());
+        this.requestPost(BUG_ATTACHMENT_TRANSFER, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("file.transfer.failed")));
         List<BugFileDTO> files = getBugFiles("default-attachment-bug-id");
         files.stream().filter(BugFileDTO::getLocal).forEach(file -> {
             request.setFileId(file.getFileId());
@@ -168,7 +171,7 @@ public class BugAttachmentControllerTests extends BaseTest {
         request.setBugId("default-attachment-bug-id");
         request.setProjectId("default-project-for-attachment");
         request.setAssociated(true);
-        bugFiles.forEach(file -> {
+        bugFiles.stream().filter(file -> !file.getLocal()).forEach(file -> {
             try {
                 request.setRefId(file.getRefId());
                 this.requestPostWithOk(BUG_ATTACHMENT_UPDATE, request);

@@ -1,3 +1,10 @@
+-- Reset only this class's fixture identities; previous role tests may already bind admin to org 2.
+DELETE FROM user_role_relation WHERE source_id IN ('default-organization-1','default-organization-2','default-organization-3','default-organization-4','default-organization-5','default-organization-6','default-project');
+DELETE FROM organization_parameter WHERE organization_id IN ('default-organization-1','default-organization-2','default-organization-3','default-organization-4','default-organization-5','default-organization-6');
+DELETE FROM project WHERE id='default-project';
+DELETE FROM user WHERE id='default-admin';
+DELETE FROM organization WHERE id IN ('default-organization-1','default-organization-2','default-organization-3','default-organization-4','default-organization-5','default-organization-6');
+
 # 组织列表数据准备
 INSERT INTO organization(id,num, name, description, create_time, update_time, create_user, update_user, delete_user, delete_time) VALUE
     ('default-organization-1',null, 'default-1', 'XXX-1', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin', null, null);

@@ -20,7 +20,7 @@ VALUES (UUID(), 'default-dashboard-member-user-gyq', 'project_admin', 'project-r
         'admin');
 
 INSERT INTO user_role_permission(id, role_id, permission_id)
-VALUES ('user_role_gyq_permission1', 'project_admin', 'FUNCTIONAL_CASE:READ+COMMENT');
+SELECT 'user_role_gyq_permission1', 'project_admin', 'FUNCTIONAL_CASE:READ+COMMENT' WHERE NOT EXISTS (SELECT 1 FROM user_role_permission WHERE role_id='project_admin' AND permission_id='FUNCTIONAL_CASE:READ+COMMENT');
 
 INSERT INTO functional_case(id, num, module_id, project_id, template_id, name, review_status, tags, case_edit_type, pos, version_id, ref_id, last_execute_result, deleted, public_case, latest, create_user, update_user, delete_user, create_time, update_time, delete_time)
 VALUES ('dashboard_TEST_FUNCTIONAL_CASE_ID_g', 8, 'Trash_TEST_MOUDLE_ID_1', '100001100001', '100001', 'copy_测试多版本g', 'UN_REVIEWED', NULL, 'STEP', 0, 'v3.0.0', 'Trash_TEST_FUNCTIONAL_CASE_ID_f', 'UN_EXECUTED',false, b'0', b'1', 'gyq', 'gyq', '', 1698058347559, 1698058347559, NULL);

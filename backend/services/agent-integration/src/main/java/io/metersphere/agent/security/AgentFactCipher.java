@@ -23,15 +23,7 @@ public class AgentFactCipher {
         }catch(MSException error){throw error;}catch(Exception error){throw new MSException("QUALITY_FACTS_ENCRYPTION_FAILED");}
     }
     private boolean sensitive(String value){
-        if(!Objects.equals(value,AgentSensitiveDataSanitizer.sanitize(value)))return true;
-        try {return sensitiveNode(new com.fasterxml.jackson.databind.ObjectMapper().readTree(value));}catch(Exception ignored){return false;}
-    }
-    private boolean sensitiveNode(com.fasterxml.jackson.databind.JsonNode node){
-        if(node==null)return false;
-        if(node.isObject()){
-            var fields=node.fields();while(fields.hasNext()){var field=fields.next();if(field.getKey().matches("(?i)password|passwd|token|secret|authorization|cookie|api[-_]?key") || sensitiveNode(field.getValue()))return true;}
-        } else if(node.isArray()){for(var item:node)if(sensitiveNode(item))return true;}
-        return false;
+        return AgentSensitiveDataSanitizer.containsSensitive(value);
     }
     public String reveal(String value){
         if(value==null || !value.startsWith(PREFIX))return value;

@@ -159,7 +159,7 @@ public class OperationLogControllerTests extends BaseTest {
         request.setStartTime(1689149059000l);
         request.setEndTime(1689131059000l);
         ResultActions resultActions = this.requestPost(OPERATION_LOG_LIST, request);
-        resultActions.andExpect(status().is5xxServerError());
+        resultActions.andExpect(businessError("开始日期必须小于结束日期"));
     }
 
 

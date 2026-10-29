@@ -1,0 +1,32 @@
+[p1 "selection-preview.html" | space "MSP remediation verification 20261028"(13): 1 managed, 0 untracked — p1* "selection-preview.html"]
+root
+  paragraph
+    text "真实 batchAction 模板/脚本、base-table 切换处理器和 useTable 选择逻辑；6 条合成数据的隔离组件验证，不代表部署环境已通过。"
+  container
+    container
+      text "已选择"
+      button [ref=5]
+        text "导出"
+      button [ref=6]
+        text "取消全选所有页"
+      button [ref=7]
+        text "清空"
+    paragraph
+      text "跨页模式：true，选择 6 条"
+
+--- cancelled ---
+[p1 "selection-preview.html" | space "MSP remediation verification 20261028"(13): 1 managed, 0 untracked — p1* "selection-preview.html"]
+root
+  paragraph
+    text "真实 batchAction 模板/脚本、base-table 切换处理器和 useTable 选择逻辑；6 条合成数据的隔离组件验证，不代表部署环境已通过。"
+  container
+    container
+      text "已选择"
+      button [ref=5]
+        text "导出"
+      button [ref=6]
+        text "全选所有页"
+      button [ref=7]
+        text "清空"
+    paragraph
+      text "跨页模式：false，选择 0 条"

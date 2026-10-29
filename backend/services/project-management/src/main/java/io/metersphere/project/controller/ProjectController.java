@@ -78,7 +78,7 @@ public class ProjectController {
     @Operation(summary = "切换项目")
     // 切换目标项目权限由 CheckOwner 校验；勿用当前 PROJECT 请求头上的 PROJECT_BASE_INFO:READ，
     // 否则从系统设置新建项目后进入新项目会因「当前上下文无项目权限」失败。
-    public UserDTO switchProject(@RequestBody ProjectSwitchRequest request) {
+    public UserDTO switchProject(@Validated @RequestBody ProjectSwitchRequest request) {
         if (!projectService.canAccessProject(request.getProjectId(), SessionUtils.getUserId())) {
             throw new io.metersphere.sdk.exception.MSException("无权进入该项目");
         }

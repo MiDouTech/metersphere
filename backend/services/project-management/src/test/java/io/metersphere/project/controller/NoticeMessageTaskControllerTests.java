@@ -627,7 +627,7 @@ public class NoticeMessageTaskControllerTests extends BaseTest {
                         .param("event", NoticeConstants.Event.CREATE)
                         .param("robotId", "test_message_robotX")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("robot_is_null")))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
     }
 

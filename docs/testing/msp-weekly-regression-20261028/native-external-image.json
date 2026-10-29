@@ -1,0 +1,69 @@
+{
+  "imported": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"state\":\"ATTACHED\",\"projectId\":\"1704667279923322880\",\"caseId\":\"1712306377475530754\",\"attachmentId\":\"1712322629631778817\",\"fileId\":\"1712322629631778816\",\"associationId\":\"1712322629631778818\",\"fileName\":\"weekly-external.png\",\"contentType\":\"image/png\",\"sizeBytes\":8090,\"sha256\":\"541a1ef5373be3dc49fc542fd9a65177b664aec01c8d8608f99e6ec95577d8c1\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "state": "ATTACHED",
+          "projectId": "1704667279923322880",
+          "caseId": "1712306377475530754",
+          "attachmentId": "1712322629631778817",
+          "fileId": "1712322629631778816",
+          "associationId": "1712322629631778818",
+          "fileName": "weekly-external.png",
+          "contentType": "image/png",
+          "sizeBytes": 8090,
+          "sha256": "541a1ef5373be3dc49fc542fd9a65177b664aec01c8d8608f99e6ec95577d8c1"
+        }
+      }
+    }
+  },
+  "replay": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"state\":\"ATTACHED\",\"projectId\":\"1704667279923322880\",\"caseId\":\"1712306377475530754\",\"attachmentId\":\"1712322629631778817\",\"fileId\":\"1712322629631778816\",\"associationId\":\"1712322629631778818\",\"fileName\":\"weekly-external.png\",\"contentType\":\"image/png\",\"sizeBytes\":8090,\"sha256\":\"541a1ef5373be3dc49fc542fd9a65177b664aec01c8d8608f99e6ec95577d8c1\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "state": "ATTACHED",
+          "projectId": "1704667279923322880",
+          "caseId": "1712306377475530754",
+          "attachmentId": "1712322629631778817",
+          "fileId": "1712322629631778816",
+          "associationId": "1712322629631778818",
+          "fileName": "weekly-external.png",
+          "contentType": "image/png",
+          "sizeBytes": 8090,
+          "sha256": "541a1ef5373be3dc49fc542fd9a65177b664aec01c8d8608f99e6ec95577d8c1"
+        }
+      }
+    }
+  },
+  "denied": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "EXTERNAL_IMAGE_URL_INVALID",
+        "traceId": "4bd860ae-65d7-4dc8-9b2a-bd6cbb22c8a7"
+      },
+      "message": "请提供有效的公网 HTTP/HTTPS 图片链接，仅支持端口 80/443",
+      "code": -32001
+    }
+  }
+}

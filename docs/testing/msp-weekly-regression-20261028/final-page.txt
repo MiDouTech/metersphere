@@ -1,0 +1,594 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      text "用例"
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=908]
+            svg_root
+        list_item
+          button [ref=909]
+            svg_root
+        list_item
+          button [ref=910]
+            svg_root
+        list_item
+          switch [ref=911]
+            svg_root
+        list_item
+          button [ref=912]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "测试计划"
+          container
+            svg_root
+            text "测试用例"
+          container
+            svg_root
+            text "接口测试"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "缺陷管理"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container [ref=913]
+        container [ref=914]
+          container
+            container
+              container [ref=915]
+                text "执行用例"
+              container [ref=916]
+                text "Xmind用例"
+            button [ref=917]
+              svg_root
+              text "刷新"
+          splitter
+          container
+            container
+              textbox [ref=918, loc=css:input[placeholder="请输入模块名称"]]
+                text "请输入模块名称"
+              container
+                container
+                  svg_root
+                  text "全部用例"
+                  text "(119)"
+                container
+                  svg_root
+                  svg_root
+                  svg_root
+              container [ref=919]
+                container
+                  svg_root
+                  text "未规划用例"
+                  text "10"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "MSP需求验收-20261023"
+                    text "14"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "ACCEPTANCE-20261027-移动父目录"
+                    text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-导入目录"
+                  text "6"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-并发去重目录"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-1"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-64"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-65"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-128"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写幂等键"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写独立A"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写独立B"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-key128"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-并发同键"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-key1"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-原文件完整导入"
+                  text "0"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "扫码防翻拍"
+                    text "89"
+            container [ref=920]
+              container
+                container [ref=921]
+                  text "用例列表"
+                container [ref=922]
+                  text "用例详情"
+              container
+                container
+                  container
+                    button [ref=923]
+                      text "新建"
+                    container
+                      button [ref=924]
+                        text "导入"
+                      button [ref=925]
+                        text "旧版导入记录"
+                      button [ref=926]
+                        text "最近导入任务"
+                      container
+                        text "从 Excel 导入"
+                        text "从用例资产导入"
+                    button [ref=927]
+                      text "导出记录"
+                    button [ref=928]
+                      text "同步全部用例数据至测试计划"
+                    text "同步进度：6/6 · 已完成"
+                  container
+                    container
+                      textbox [ref=929, loc=css:input[placeholder="通过 ID/名称/标签搜索"]]
+                        text "通过 ID/名称/标签搜索"
+                      svg_root
+                    container
+                      text "视图"
+                      text "全部数据"
+                      svg_root
+                    button [ref=930]
+                      svg_root
+                      text "筛选"
+                    container
+                      svg_root
+                      svg_root
+                    svg_root
+                container
+                  container
+                    text "测试计划："
+                    text "-"
+                  container
+                    text "个人执行进度："
+                    text "-"
+                container
+                  container
+                    text "已选择 0 条"
+                    button [ref=931]
+                      text "导出"
+                    button [ref=932]
+                      text "全选所有页"
+                    button [ref=933]
+                      text "编辑"
+                    button [ref=934]
+                      text "批量修改执行结果"
+                    button [ref=935]
+                      text "批量修改执行人"
+                    button [ref=936]
+                      text "移动到"
+                    button [ref=937]
+                      text "复制到"
+                    button [ref=938]
+                      text "清空"
+                  container
+                    table
+                      table_row
+                        table_cell
+                        table_cell
+                          svg_root
+                        table_cell
+                          text "ID"
+                        table_cell
+                          text "用例名称"
+                        table_cell
+                          container
+                            text "用例等级"
+                            svg_root
+                        table_cell
+                          container
+                            text "评审结果"
+                            svg_root
+                        table_cell
+                          container
+                            text "执行结果"
+                            svg_root
+                        table_cell
+                          text "最后执行时间"
+                        table_cell
+                          container
+                            text "执行人"
+                            svg_root
+                        table_cell
+                          container
+                            text "最后执行人"
+                            svg_root
+                        table_cell
+                          text "所属模块"
+                        table_cell
+                          text "操作"
+                          svg_root
+                    container [ref=939]
+                      table
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100119"
+                          table_cell
+                            text "扫码过程中关闭网络后重新进入扫码"
+                            svg_root
+                          table_cell
+                            text "P1"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=942]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "/扫码防翻拍/11 相机授权与网络中断"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100118"
+                          table_cell
+                            text "拒绝隐私授权后取消本次扫码"
+                            svg_root
+                          table_cell
+                            text "P1"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=943]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "/扫码防翻拍/11 相机授权与网络中断"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100117"
+                          table_cell
+                            text "拒绝相机授权后取消本次扫码"
+                            svg_root
+                          table_cell
+                            text "P1"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=944]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "/扫码防翻拍/11 相机授权与网络中断"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100116"
+                          table_cell
+                            text "连续扫码风险拦截后改扫B"
+                            svg_root
+                          table_cell
+                            text "P1"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=945]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "/扫码防翻拍/10 连续识别轮次"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100115"
+                          table_cell
+                            text "连续扫码的新轮次再次识别同一码A"
+                            svg_root
+                          table_cell
+                            text "P1"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=946]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "/扫码防翻拍/10 连续识别轮次"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100114"
+                          table_cell
+                            text "连续扫码完成A后开始B的防翻拍识别"
+                            svg_root
+                          table_cell
+                            text "P0"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=947]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "/扫码防翻拍/10 连续识别轮次"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100113"
+                          table_cell
+                            text "识别结果出现后继续让同一码留在镜头位置"
+                            svg_root
+                          table_cell
+                            text "P1"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=948]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "/扫码防翻拍/09 重试与页面状态"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100112"
+                          table_cell
+                            text "采集过程中切到手机桌面后重新进入扫码"
+                            svg_root
+                          table_cell
+                            text "P1"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=949]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "/扫码防翻拍/09 重试与页面状态"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                  container
+                    text "共 119 条"
+                    container
+                      text "20 条/页"
+                      svg_root
+                    unordered_list
+                      svg_root
+                      list_item
+                        text "1"
+                      list_item
+                        text "2"
+                      list_item
+                        text "3"
+                      list_item
+                        text "4"
+                      list_item
+                        text "5"
+                      list_item
+                        text "6"
+                      svg_root
+                    container
+                      text "跳至"
+                      spinbutton [ref=950]
+                        text "1"
+                      text "/6 页"
+  svg_root

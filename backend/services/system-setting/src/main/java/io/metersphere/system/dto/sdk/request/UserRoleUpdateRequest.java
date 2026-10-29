@@ -39,5 +39,5 @@ public class UserRoleUpdateRequest implements Serializable {
     private String type;
 
     @Schema(description = "是否启用")
-    private Boolean enabled = true;
+    private Boolean enabled;
 }

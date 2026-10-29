@@ -1,0 +1,22 @@
+[
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_execution_submit",
+    "description": "Validate original-step coverage and evidence structure, then publish Agent-reported results. Extra and repeated positions are retained; any ERROR makes the case ERROR. No expected-text comparison or content reviewer. ACCEPTED/PUBLISHED means structure accepted, not independently verified execution. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_execution_submit(args: { caseId: string; contentHash: string; policyHash: string; projectId: string; requestId: string; steps: Array<{ actual: string; evidenceIds: Array<string>; result: \"SUCCESS\" | \"ERROR\"; stepNum: number; }>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_execution_evidence_upload",
+    "description": "Stage a PNG/JPEG evidence file as base64 (max 5 MiB), bound to case contentHash and 1-based stepNum. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT. Not visible until gate passes.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_execution_evidence_upload(args: { base64: string; caseId: string; contentHash: string; contentType: \"image/png\" | \"image/jpeg\"; fileName: string; projectId: string; purpose: \"BEFORE_STEP\" | \"AFTER_STEP\"; requestId: string; stepNum: number; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_case_create",
+    "description": "Create functional case. projectId accepts internal project id, UI project number, or exact project name.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_case_create(args: { description?: string; moduleId?: string; modulePath?: string; name: string; prerequisite?: string; priority?: string; projectId: string; steps?: Array<{ actualResult?: string; desc?: string; executeResult?: string; expected?: string; id?: string; num?: number; }>; tags?: Array<string>; templateId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_module_create",
+    "description": "Create functional case module. projectId accepts internal project id, UI project number, or exact project name.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_module_create(args: { modulePath?: string; name: string; parentId?: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_test_plan_create",
+    "description": "Create test plan\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_test_plan_create(args: { automaticStatusUpdate?: boolean; caseIds?: Array<string>; description?: string; moduleId?: string; name: string; passThreshold?: number; projectId: string; repeatCase?: boolean; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  }
+]

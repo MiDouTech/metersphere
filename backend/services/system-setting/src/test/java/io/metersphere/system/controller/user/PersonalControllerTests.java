@@ -59,7 +59,7 @@ public class PersonalControllerTests extends BaseTest {
         //查询自己的
         this.requestGetWithOk(String.format(PersonalRequestUtils.URL_PERSONAL_GET, loginUser));
         //查询非登录人
-        this.requestGet(String.format(PersonalRequestUtils.URL_PERSONAL_GET, IDGenerator.nextStr())).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(PersonalRequestUtils.URL_PERSONAL_GET, IDGenerator.nextStr())).andExpect(businessError("无权操作非本人账户"));
 
     }
 
@@ -133,7 +133,7 @@ public class PersonalControllerTests extends BaseTest {
         request.setEmail("admin@metersphere.io");
         request.setUsername("'Administrator'");
         request.setPhone("12345678901");
-        this.requestPost(PersonalRequestUtils.URL_PERSONAL_UPDATE_INFO, request).andExpect(status().is5xxServerError());
+        this.requestPost(PersonalRequestUtils.URL_PERSONAL_UPDATE_INFO, request).andExpect(businessError("无权操作非本人账户"));
 
         //参数校验
         request = new PersonalUpdateRequest();
@@ -244,7 +244,7 @@ public class PersonalControllerTests extends BaseTest {
         request.setId(loginUser);
         request.setOldPassword(RsaUtils.publicEncrypt("metersphere222", rsaKey.getPublicKey()));
         request.setNewPassword(RsaUtils.publicEncrypt("metersphere", rsaKey.getPublicKey()));
-        this.requestPost(PersonalRequestUtils.URL_PERSONAL_UPDATE_PASSWORD, request).andExpect(status().is5xxServerError());
+        this.requestPost(PersonalRequestUtils.URL_PERSONAL_UPDATE_PASSWORD, request).andExpect(businessError("旧密码输入错误，请重新输入"));
 
         //参数校验
         request = new PersonalUpdatePasswordRequest();
@@ -267,7 +267,7 @@ public class PersonalControllerTests extends BaseTest {
         request.setId(IDGenerator.nextStr());
         request.setOldPassword(RsaUtils.publicEncrypt("metersphere", rsaKey.getPublicKey()));
         request.setNewPassword(CodingUtils.md5("metersphere333"));
-        this.requestPost(PersonalRequestUtils.URL_PERSONAL_UPDATE_PASSWORD, request).andExpect(status().is5xxServerError());
+        this.requestPost(PersonalRequestUtils.URL_PERSONAL_UPDATE_PASSWORD, request).andExpect(businessError("无权操作非本人账户"));
 
         //权限校验
         request = new PersonalUpdatePasswordRequest();
@@ -323,11 +323,11 @@ public class PersonalControllerTests extends BaseTest {
     @Test
     @Order(6)
     public void testDetail() throws Exception {
-        this.requestGet(PersonalRequestUtils.URL_PERSONAL_MODEL_DETAIL+"1").andExpect(status().is5xxServerError());
+        this.requestGet(PersonalRequestUtils.URL_PERSONAL_MODEL_DETAIL+"1").andExpect(businessError("模型信息不存在"));
         String id = saveModel("个人测试模型1", "admin");
         this.requestGetWithOk(PersonalRequestUtils.URL_PERSONAL_MODEL_DETAIL+id);
         String id2 = saveModel("个人测试模型2", "admin2");
-        this.requestGet(PersonalRequestUtils.URL_PERSONAL_MODEL_DETAIL+id2).andExpect(status().is5xxServerError());
+        this.requestGet(PersonalRequestUtils.URL_PERSONAL_MODEL_DETAIL+id2).andExpect(businessError("模型信息不存在"));
 
 
     }

@@ -204,7 +204,9 @@
     where id = #{id}
   </update>
 
-  <select id="selectWorkflowDefinitions" resultMap="WorkflowDefinitionMap">
+  <!-- Workflow transitions also write through JdbcTemplate in the same transaction. Reads must
+       invalidate MyBatis local cache, otherwise publish/activate responses can return old state. -->
+  <select id="selectWorkflowDefinitions" resultMap="WorkflowDefinitionMap" useCache="false" flushCache="true">
     select id, code, name, scene, scope_type, scope_id, default_flow, active_for_new, enabled, description, version, lifecycle,
            published_time, published_by, source_flow_id, create_time, update_time
     from workflow_definition
@@ -218,7 +220,7 @@
     order by active_for_new desc, code asc, version desc, create_time asc
   </select>
 
-  <select id="selectWorkflowDefinitionById" resultMap="WorkflowDefinitionMap">
+  <select id="selectWorkflowDefinitionById" resultMap="WorkflowDefinitionMap" useCache="false" flushCache="true">
     select id, code, name, scene, scope_type, scope_id, default_flow, active_for_new, enabled, description, version, lifecycle,
            published_time, published_by, source_flow_id, create_time, update_time
     from workflow_definition

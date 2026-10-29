@@ -1,0 +1,62 @@
+[
+  {
+    "id": "W01",
+    "status": "失败",
+    "requirement": "Token启用/操作列可达",
+    "actual": "971/1366/1908宽度均裁切；1908时操作列右边2098越界",
+    "evidence": [
+      "token-new-geometry.json",
+      "annotated/W01-token.svg"
+    ]
+  },
+  {
+    "id": "W02",
+    "status": "通过",
+    "requirement": "组织成员真实分页",
+    "actual": "两页各10条，总数154，页码正确且ID无交集",
+    "evidence": [
+      "org-pagination.json"
+    ]
+  },
+  {
+    "id": "W03",
+    "status": "待确认",
+    "requirement": "发布SHA及资源可追溯",
+    "actual": "manifest revision d6e3bd9不在本地Git对象/远端main/chenqifen/v3.2分支头；不能仅据此断言错包。入口资源前后变化已记录",
+    "evidence": [
+      "build-and-skill-manifests.json",
+      "deployment-recheck.json"
+    ]
+  },
+  {
+    "id": "W04",
+    "status": "阻塞",
+    "requirement": "敏感执行事实密钥就绪",
+    "actual": "ready=false，普通敏感事实安全拒绝；无法验收加密及重启读取",
+    "evidence": [
+      "asset-readiness-api.json",
+      "sensitive-plain-control.json"
+    ]
+  },
+  {
+    "id": "W05",
+    "status": "失败",
+    "requirement": "本周关联读取服务对已有用例兼容",
+    "actual": "原有100021～100025带步骤MCP读取均报错；100025 Web详情HTTP500。新用例对照可读",
+    "evidence": [
+      "mcp-search-single-row-diagnosis-2.json",
+      "legacy-source-ui-responses.json",
+      "annotated/W05-detail.svg"
+    ]
+  },
+  {
+    "id": "W06",
+    "status": "待确认",
+    "requirement": "导入目标目录与文件模块路径优先级",
+    "actual": "所选专用目录未包含导入记录；文件模块路径生成独立树，原始导入目标语义须明确。未覆盖既有用例",
+    "evidence": [
+      "original-full-import-persistence.json",
+      "original-import-module-root.json"
+    ]
+  }
+]

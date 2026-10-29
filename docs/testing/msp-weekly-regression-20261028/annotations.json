@@ -1,0 +1,87 @@
+[
+  {
+    "source": "token-new-1908.png",
+    "annotation": "W01-token.svg",
+    "width": 1908,
+    "height": 900,
+    "regions": [
+      [
+        1660,
+        343,
+        245,
+        110,
+        "01 FAIL: enable/action clipped"
+      ]
+    ],
+    "baseline": "用户需求/批准Demo；图像仅加证据索引，不补画控件"
+  },
+  {
+    "source": "bug-tags.png",
+    "annotation": "NEW04-tags.svg",
+    "width": 971,
+    "height": 852,
+    "regions": [
+      [
+        633,
+        342,
+        312,
+        33,
+        "02 PASS: date field"
+      ],
+      [
+        633,
+        390,
+        312,
+        222,
+        "03 PASS: tags below date"
+      ]
+    ],
+    "baseline": "用户需求/批准Demo；图像仅加证据索引，不补画控件"
+  },
+  {
+    "source": "legacy-source-ui.png",
+    "annotation": "W05-detail.svg",
+    "width": 1908,
+    "height": 951,
+    "regions": [
+      [
+        703,
+        40,
+        502,
+        44,
+        "04 FAIL: server error"
+      ],
+      [
+        1000,
+        500,
+        360,
+        90,
+        "05 FAIL: detail remains loading"
+      ]
+    ],
+    "baseline": "用户需求/批准Demo；图像仅加证据索引，不补画控件"
+  },
+  {
+    "source": "cases-demo-comparison-1908.png",
+    "annotation": "AC18-layout.svg",
+    "width": 1908,
+    "height": 900,
+    "regions": [
+      [
+        490,
+        400,
+        900,
+        47,
+        "06 FAIL: mini buttons vs demo"
+      ],
+      [
+        490,
+        460,
+        1000,
+        41,
+        "07 FAIL: white header vs demo"
+      ]
+    ],
+    "baseline": "用户需求/批准Demo；图像仅加证据索引，不补画控件"
+  }
+]

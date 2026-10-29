@@ -1,0 +1,63 @@
+{
+  "rect": {
+    "x": 664.5,
+    "y": 394.5,
+    "width": 125,
+    "height": 32,
+    "top": 394.5,
+    "right": 789.5,
+    "bottom": 426.5,
+    "left": 664.5
+  },
+  "hit": "<div data-v-4f9345a0=\"\" data-v-33729652=\"\" class=\"ms-button ms-button-text ms-button--primary ms-button--medium !mx-0\" disabled=\"false\">详情<!----></div>",
+  "overlays": [
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-drawer-mask",
+      "display": "none"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-modal-wrapper arco-modal-wrapper-align-center",
+      "display": "block"
+    },
+    {
+      "class": "arco-drawer-mask",
+      "display": "none"
+    }
+  ]
+}

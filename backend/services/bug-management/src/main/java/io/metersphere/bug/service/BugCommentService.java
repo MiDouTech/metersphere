@@ -117,6 +117,9 @@ public class BugCommentService {
     public BugComment addComment(BugCommentEditRequest request, String currentUser) {
         Bug bug = checkBug(request.getBugId());
         BugComment bugComment = getBugComment(request, currentUser, false);
+        if (StringUtils.equals(request.getEvent(), NoticeConstants.Event.REPLY)) {
+            checkAndSetReplyComment(request, bugComment);
+        }
         // 评论富文本附件处理
         bugAttachmentService.transferTmpFile(bug.getId(), bug.getProjectId(), request.getRichTextTmpFileIds(), currentUser, BugAttachmentSourceType.COMMENT.name());
         if (StringUtils.equals(request.getEvent(), NoticeConstants.Event.REPLY)) {
@@ -258,6 +261,10 @@ public class BugCommentService {
         if (parentComment == null) {
             throw new MSException(Translator.get("bug_comment.parent.not_exist"));
         }
+        if (!StringUtils.equals(parentComment.getBugId(), request.getBugId())) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    "回复评论不属于当前缺陷");
+        }
         bugComment.setParentId(request.getParentId());
         if (StringUtils.isEmpty(request.getReplyUser())) {
             throw new MSException(Translator.get("bug_comment.reply_user.not_blank"));
@@ -272,8 +279,8 @@ public class BugCommentService {
      */
     private Bug checkBug(String bugId) {
         Bug bug = bugMapper.selectByPrimaryKey(bugId);
-        if (bug == null) {
-            throw new IllegalArgumentException(Translator.get("bug_not_exist"));
+        if (bug == null || Boolean.TRUE.equals(bug.getDeleted())) {
+            throw new MSException(io.metersphere.bug.enums.result.BugResultCode.BUG_NOT_EXIST);
         }
         return bug;
     }
@@ -285,10 +292,12 @@ public class BugCommentService {
     private void checkComment(String commentId, String currentUser) {
         BugComment bugComment = bugCommentMapper.selectByPrimaryKey(commentId);
         if (bugComment == null) {
-            throw new IllegalArgumentException(Translator.get("bug_comment_not_exist"));
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.NOT_FOUND,
+                    Translator.get("bug_comment_not_exist"));
         }
         if (!StringUtils.equals(bugComment.getCreateUser(), currentUser)) {
-            throw new IllegalArgumentException(Translator.get("bug_comment_not_owner"));
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    Translator.get("bug_comment_not_owner"));
         }
     }
 

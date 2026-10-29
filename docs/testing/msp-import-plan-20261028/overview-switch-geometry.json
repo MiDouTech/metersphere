@@ -1,0 +1,99 @@
+{
+  "environment": "isolated production component, fixture data",
+  "screenshots": "blocked: runtime still reports minimized window",
+  "results": [
+    {
+      "width": 983,
+      "height": 836,
+      "progressCount": 1,
+      "percentage": "25%",
+      "selected": "计划一：导入与回归（100001）",
+      "select": {
+        "x": 126,
+        "y": 97,
+        "width": 260,
+        "height": 28,
+        "right": 386,
+        "bottom": 125
+      },
+      "progress": {
+        "x": 394,
+        "y": 107,
+        "width": 90,
+        "height": 8,
+        "right": 484,
+        "bottom": 115
+      },
+      "percentageBounds": {
+        "x": 492,
+        "y": 103.5,
+        "width": 38,
+        "height": 15,
+        "right": 530,
+        "bottom": 118.5
+      }
+    },
+    {
+      "width": 983,
+      "height": 836,
+      "progressCount": 1,
+      "percentage": "100%",
+      "selected": "计划三（100003）",
+      "select": {
+        "x": 126,
+        "y": 97,
+        "width": 260,
+        "height": 28,
+        "right": 386,
+        "bottom": 125
+      },
+      "progress": {
+        "x": 394,
+        "y": 107,
+        "width": 90,
+        "height": 8,
+        "right": 484,
+        "bottom": 115
+      },
+      "percentageBounds": {
+        "x": 492,
+        "y": 103.5,
+        "width": 38,
+        "height": 15,
+        "right": 530,
+        "bottom": 118.5
+      }
+    },
+    {
+      "width": 983,
+      "height": 836,
+      "progressCount": 1,
+      "percentage": "75%",
+      "selected": "计划二：较长名称用于验证下拉列表与进度切换（100002）",
+      "select": {
+        "x": 126,
+        "y": 97,
+        "width": 260,
+        "height": 28,
+        "right": 386,
+        "bottom": 125
+      },
+      "progress": {
+        "x": 394,
+        "y": 107,
+        "width": 90,
+        "height": 8,
+        "right": 484,
+        "bottom": 115
+      },
+      "percentageBounds": {
+        "x": 492,
+        "y": 103.5,
+        "width": 38,
+        "height": 15,
+        "right": 530,
+        "bottom": 118.5
+      }
+    }
+  ]
+}

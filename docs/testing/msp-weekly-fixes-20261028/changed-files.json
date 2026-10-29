@@ -1,0 +1,158 @@
+[
+  {
+    "path": ".github/workflows/cnb-build.yml",
+    "sha256": "3d384307917bc8de1ddabb37ffec267ac9bb9cfe0257954e0eb1c2bcc322f1f6"
+  },
+  {
+    "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_135__import_commit_stage.sql",
+    "sha256": "3e300109c5f07bbf8fa548873483166f93ceef4d4e9dfd32d3d8ff35c802213a"
+  },
+  {
+    "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_136__asset_execution_projection_reconcile.sql",
+    "sha256": "3e9fcc6fced2343351b23461bcbaa1576aa2954a1c46e282487132a91769a06c"
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentCaseImportController.java",
+    "sha256": "71e6adaeb274a2fbeb1d360b2a8d552783b4bd74a3de46ac2781a1fd059cafb4"
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/security/AgentFactCipher.java",
+    "sha256": "8df477ff6d16db8f3440dd309f1022bf7eb71c556868714153cc3e50b7f566e3"
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/security/AgentSensitiveDataSanitizer.java",
+    "sha256": "834c0fe2d2e461bc0d3a0f9cff1ec58227f4e3c00ecdad3e9595780403eb67bd"
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentCaseImportService.java",
+    "sha256": "75fd4387254b2a4bafa3078dd6a53e4181f7479f41df900ee49b3b52b3674eef"
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentDirectExecutionViewProvider.java",
+    "sha256": "919193a8bd4e9da35c6081c63adfb00d12d9439c32b9011845a4542f6d840ec5"
+  },
+  {
+    "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/security/AgentSensitiveDataSanitizerTests.java",
+    "sha256": "65f626fb4f8481c12cdffb84b8ab279756bf5cd166404df077cf5f761e7da74a"
+  },
+  {
+    "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentAssetExecutionViewTests.java",
+    "sha256": "d74acddea43708f79c3062d88d3808fe249b23ad22323b7c90162e93bd83dee7"
+  },
+  {
+    "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentCaseImportStageTests.java",
+    "sha256": "c8c4928e7a83fa8d230ac959a4888c51df91b5944d7bf03bb5004f5d27a5665a"
+  },
+  {
+    "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentFactCipherTests.java",
+    "sha256": "988a27560c3533b895e0358d2042fcaf2fc344e92deca1979503a4c14f974b8f"
+  },
+  {
+    "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/WeeklyRemediationMigrationMySqlTests.java",
+    "sha256": "ea269eb948ab2e5660abc5678c67e53266e4bab74b53269ea8aa6186f0229c33"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/hub/service/DefaultHubCaseSyncService.java",
+    "sha256": "88d698d5c95d941b85753e56f152e5af779bd3578b16039e478221512eeac78f"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseAttachmentService.java",
+    "sha256": "1139e8265be34b377eacc8e306e558d0fc475b6d30e38dc4041c74980cc046c1"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseFileService.java",
+    "sha256": "c0533b1181514796e2673e6bd737f4bd415e81ffd2090e813991daa1d86f3d7d"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseService.java",
+    "sha256": "5371cc043891c1df812ea7e783b9ceecce262491a986cec2bc2340feeb23d972"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalImportEffectOutbox.java",
+    "sha256": "3ffa1ae8b8726f32f3d92a7c37b0bcbe2a40a382b78a6d2c6e44f523ef1c8118"
+  },
+  {
+    "path": "backend/services/case-management/src/test/java/io/metersphere/functional/hub/service/DefaultHubExecutionProjectionTests.java",
+    "sha256": "79828fb86108b85c286e2e37e9a2546010e32ef248c9f70c3b49161ab8a083c7"
+  },
+  {
+    "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/FunctionalCaseDefinitionStepsTests.java",
+    "sha256": "cf690df0b8d2d920a32b9f15ac638f8c77a8de2c5dbadb472fb8474b6679b41a"
+  },
+  {
+    "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/FunctionalCaseExportRowMapperTests.java",
+    "sha256": "8cf7ea6f647bd8ba550a6f5e776d90107a9d6206c21fc4fe60a9b9fb2e3f146b"
+  },
+  {
+    "path": "deploy/weekly-fix-verify.override.yml",
+    "sha256": "3934661ccca9f85c8dd41189201affb08b1332b1646b76a76ec69eba988e420d"
+  },
+  {
+    "path": "frontend/package.json",
+    "sha256": "2a9afba7b717fb6fb66065fcb3c8652752c67cb7628407449a048f49ca062c53"
+  },
+  {
+    "path": "frontend/scripts/test-all-pages-toggle.mjs",
+    "sha256": "a7246c379a9b67b0d6746f5dcfb6d67c7e1406e730e4fd4d2e92b3d5a2ffa296"
+  },
+  {
+    "path": "frontend/scripts/test-selection-toggle.mjs",
+    "sha256": "cbd8ac364014b585723307b49ecb1cd703fad9bd622be18220961290e8c7bf1c"
+  },
+  {
+    "path": "frontend/scripts/verify-weekly-remediation-sfc.mjs",
+    "sha256": "9007334068b932669e064cf447d1abf7e741e465127adf0e8e0ad1c886c90a51"
+  },
+  {
+    "path": "frontend/src/components/business/ms-detail-drawer/index.vue",
+    "sha256": "8333f384d69914adda0593e56eee82dbaa47a6b606fe067760fb74c1390f26af"
+  },
+  {
+    "path": "frontend/src/components/business/ms-prev-next-button/index.vue",
+    "sha256": "83fad98e92719c1758703199b1ec26abe10d9991e474bdb2294d584bcd793f21"
+  },
+  {
+    "path": "frontend/src/components/pure/ms-table/base-table.vue",
+    "sha256": "cedc27eb39594b8beab0f52e8ddfd9896934a447510fa9fc8242d0533c0ebacd"
+  },
+  {
+    "path": "frontend/src/components/pure/ms-table/batchAction.vue",
+    "sha256": "07199429a671dfd43f6385ad6d552d9304f7041b15b16b01457b15ccd0de89e5"
+  },
+  {
+    "path": "frontend/src/views/case-management/caseManagementFeature/components/caseTable.vue",
+    "sha256": "2ebe396fe6990e7fee2035ba34d7b698c1ad25090ee61c441da788cf0735b1f0"
+  },
+  {
+    "path": "frontend/src/views/case-management/caseReview/components/index/reviewTable.vue",
+    "sha256": "8767cf27f739c52e7c6bf37218c7f9f44700825e7fe204e6fc58e0115a189caa"
+  },
+  {
+    "path": "frontend/src/views/setting/system/agentIntegration/index.vue",
+    "sha256": "460f4e636d0428ab5bb2c0fdfda00f8e5c2fdfa1577fc622279d701d90a5b03d"
+  },
+  {
+    "path": "frontend/src/views/test-plan/testPlan/components/planTable.vue",
+    "sha256": "ebced32e84cba5d66c1e0b86555049e89a54b2197d6cb617dcee4a27f44cc089"
+  },
+  {
+    "path": "metersphere-mcp/README.md",
+    "sha256": "c8a7796d51e2199d9e1fb7e3cd218f77e12dd546ece4dff921cf15e792edaf4c"
+  },
+  {
+    "path": "metersphere-mcp/package-lock.json",
+    "sha256": "3e40c5cd9a32d1ef8f3aec4d5f3fcf498311f134e6d860f9a5bd1a70fe3f58ec"
+  },
+  {
+    "path": "metersphere-mcp/package.json",
+    "sha256": "6a06aa5b8aa3e21eb2d2fc18e987906ae50bb99ea5df63f8c2c87282aa1f8c5c"
+  },
+  {
+    "path": "metersphere-mcp/src/index.ts",
+    "sha256": "2d5e77bda089a4c3cad2a3524f186930f80afb229f561d516e9331d21fe666cf"
+  },
+  {
+    "path": "metersphere-mcp/test/stdioContract.test.mjs",
+    "sha256": "c29d54c7d8af68deb96859ae0fd096d63442517123fb1a387650511a675fc5e4"
+  }
+]

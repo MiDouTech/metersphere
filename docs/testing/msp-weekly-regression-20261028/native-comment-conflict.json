@@ -1,0 +1,96 @@
+{
+  "update": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"id\":\"1712332748574728192\",\"caseId\":\"1712306377475530754\",\"createUser\":null,\"parentId\":null,\"resourceId\":null,\"notifier\":\"\",\"replyUser\":null,\"createTime\":null,\"updateTime\":1793168513467,\"deleted\":false,\"deletedAt\":null,\"deletedBy\":null,\"content\":\"WEEKLY-20261028-评论新版本\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "id": "1712332748574728192",
+          "caseId": "1712306377475530754",
+          "createUser": null,
+          "parentId": null,
+          "resourceId": null,
+          "notifier": "",
+          "replyUser": null,
+          "createTime": null,
+          "updateTime": 1793168513467,
+          "deleted": false,
+          "deletedAt": null,
+          "deletedBy": null,
+          "content": "WEEKLY-20261028-评论新版本"
+        }
+      }
+    }
+  },
+  "conflict": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "VERSION_CONFLICT",
+        "traceId": "e3d6df76-6d37-4a52-83da-4c2cb2411a29"
+      },
+      "message": "数据已被更新，请重新查询后重试",
+      "code": -32001
+    }
+  },
+  "list": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"total\":1,\"current\":1,\"pageSize\":10,\"list\":[{\"id\":\"1712332748574728192\",\"caseId\":\"1712306377475530754\",\"createUser\":\"1559871391069831258\",\"parentId\":null,\"resourceId\":null,\"notifier\":\"\",\"replyUser\":null,\"createTime\":1793168484408,\"updateTime\":1793168513467,\"deleted\":false,\"deletedAt\":null,\"deletedBy\":null,\"content\":\"WEEKLY-20261028-评论新版本\",\"commentUserInfos\":[{\"id\":\"1559871391069831258\",\"name\":\"陈启芬\",\"email\":\"13509818644@wecom.sync.internal\",\"avatar\":null}],\"childComments\":[],\"childTotal\":0,\"childCurrent\":1,\"childPageSize\":10,\"canEdit\":true,\"canDelete\":true}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "total": 1,
+          "current": 1,
+          "pageSize": 10,
+          "list": [
+            {
+              "id": "1712332748574728192",
+              "caseId": "1712306377475530754",
+              "createUser": "1559871391069831258",
+              "parentId": null,
+              "resourceId": null,
+              "notifier": "",
+              "replyUser": null,
+              "createTime": 1793168484408,
+              "updateTime": 1793168513467,
+              "deleted": false,
+              "deletedAt": null,
+              "deletedBy": null,
+              "content": "WEEKLY-20261028-评论新版本",
+              "commentUserInfos": [
+                {
+                  "id": "1559871391069831258",
+                  "name": "陈启芬",
+                  "email": "13509818644@wecom.sync.internal",
+                  "avatar": null
+                }
+              ],
+              "childComments": [],
+              "childTotal": 0,
+              "childCurrent": 1,
+              "childPageSize": 10,
+              "canEdit": true,
+              "canDelete": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -170,14 +170,14 @@ public class TestPlanControllerTests extends BaseTest {
             project = commonProjectService.add(initProject, "admin", "/organization-project/add", OperationLogModule.SETTING_ORGANIZATION_PROJECT);
 
 
-            //测试没指定module的项目检查模块菜单是否会报错
+            // 新项目未指定模块时默认启用标准模块。
             boolean methodHasError = false;
             try {
                 testPlanManagementService.checkModuleIsOpen(project.getId(), TestPlanResourceConfig.CHECK_TYPE_PROJECT, new ArrayList<>());
             } catch (Exception e) {
                 methodHasError = true;
             }
-            Assertions.assertTrue(methodHasError);
+            Assertions.assertFalse(methodHasError);
             //测试完之后，赋值module
             testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
         }
@@ -207,8 +207,8 @@ public class TestPlanControllerTests extends BaseTest {
 
         //先测试一下没有开启模块时接口能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_TEST_PLAN_PAGE, testPlanTableRequest).andExpect(status().is5xxServerError());
-        this.requestGet(String.format(URL_GET_MODULE_TREE, project.getId())).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_PAGE, testPlanTableRequest).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestGet(String.format(URL_GET_MODULE_TREE, project.getId())).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -255,7 +255,7 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -443,34 +443,34 @@ public class TestPlanControllerTests extends BaseTest {
         request.setProjectId(project.getId());
         request.setName("ParentIsUUID");
         request.setParentId(IDGenerator.nextStr());
-        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(businessValidationError());
 
         //添加重复的a1节点
         request = new FileModuleCreateRequest();
         request.setProjectId(project.getId());
         request.setName("a1");
-        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(businessValidationError());
 
         //a1节点下添加重复的a1-b1节点
         request = new FileModuleCreateRequest();
         request.setProjectId(project.getId());
         request.setName("a1-b1");
         request.setParentId(a1Node.getId());
-        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(businessValidationError());
 
         //子节点的项目ID和父节点的不匹配
         request = new FileModuleCreateRequest();
         request.setProjectId(IDGenerator.nextStr());
         request.setName("RandomUUID");
         request.setParentId(a1Node.getId());
-        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(businessValidationError());
 
         //项目ID和父节点的不匹配
         request = new FileModuleCreateRequest();
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setName("RandomUUID");
         request.setParentId(a1Node.getId());
-        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(businessValidationError());
 
         //判断权限
         this.requestPostPermissionTest(PermissionConstants.TEST_PLAN_READ_ADD, URL_POST_MODULE_ADD, request);
@@ -500,7 +500,7 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_MODULE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_UPDATE, updateRequest).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -521,13 +521,13 @@ public class TestPlanControllerTests extends BaseTest {
         updateRequest = new FileModuleUpdateRequest();
         updateRequest.setId(IDGenerator.nextStr());
         updateRequest.setName(IDGenerator.nextStr());
-        this.requestPost(URL_POST_MODULE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_UPDATE, updateRequest).andExpect(businessValidationError());
 
         //名称重复   a1-a1改为a1-b1
         updateRequest = new FileModuleUpdateRequest();
         updateRequest.setId(a1Node.getId());
         updateRequest.setName("a1-b1");
-        this.requestPost(URL_POST_MODULE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_UPDATE, updateRequest).andExpect(businessValidationError());
 
         //判断权限
         this.requestPostPermissionTest(PermissionConstants.TEST_PLAN_READ_UPDATE, URL_POST_MODULE_UPDATE, updateRequest);
@@ -667,12 +667,12 @@ public class TestPlanControllerTests extends BaseTest {
             if (i == 0) {
                 //测试项目没有开启测试计划模块时能否使用
                 testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(status().is5xxServerError());
+                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(businessError("该项目的模块菜单检查失败"));
                 //恢复
                 testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
             }
             if (i == 20) {
-                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(status().is5xxServerError());
+                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(businessError("测试计划组下最多只能有20个子计划"));
             } else {
                 MvcResult mvcResult = this.requestPostWithOkAndReturn(URL_POST_TEST_PLAN_ADD, itemRequest);
                 String returnStr = mvcResult.getResponse().getContentAsString();
@@ -685,7 +685,7 @@ public class TestPlanControllerTests extends BaseTest {
             itemRequest.setName("testPlan_group15_" + i);
 
             if (i == 20) {
-                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(status().is5xxServerError());
+                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(businessValidationError());
             } else {
                 MvcResult mvcResult = this.requestPostWithOkAndReturn(URL_POST_TEST_PLAN_ADD, itemRequest);
                 String returnStr = mvcResult.getResponse().getContentAsString();
@@ -753,10 +753,10 @@ public class TestPlanControllerTests extends BaseTest {
         this.requestPost(URL_POST_TEST_PLAN_ADD, request).andExpect(status().isBadRequest());
         request.setName(IDGenerator.nextStr());
         request.setModuleId(IDGenerator.nextStr());
-        this.requestPost(URL_POST_TEST_PLAN_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_ADD, request).andExpect(businessValidationError());
         request.setModuleId(a1Node.getId());
         request.setGroupId(testPlanTestService.selectTestPlanByName("testPlan_60").getId());
-        this.requestPost(URL_POST_TEST_PLAN_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_ADD, request).andExpect(businessValidationError());
         request.setGroupId(TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID);
         request.setPassThreshold(100.11);
         this.requestPost(URL_POST_TEST_PLAN_ADD, request).andExpect(status().isBadRequest());
@@ -786,7 +786,7 @@ public class TestPlanControllerTests extends BaseTest {
         functionalCase.setPos(4096L);
         functionalCase.setVersionId("root");
         functionalCase.setRefId(functionalCase.getId());
-        functionalCase.setLastExecuteResult("PREPARED");
+        functionalCase.setLastExecuteResult("SUCCESS");
         functionalCase.setDeleted(false);
         functionalCase.setPublicCase(false);
         functionalCase.setLatest(true);
@@ -810,7 +810,17 @@ public class TestPlanControllerTests extends BaseTest {
         testPlanFunctionalCaseMapper.insert(testPlanFunctionalCase);
 
         if (!isFinish) {
+            // Effective plan results come from source cases. A second state needs a second source.
+            FunctionalCase pendingCase = new FunctionalCase();
+            BeanUtils.copyBean(pendingCase, functionalCase);
+            pendingCase.setId(IDGenerator.nextStr());
+            pendingCase.setRefId(pendingCase.getId());
+            pendingCase.setNum(NumGenerator.nextNum(project.getId(), ApplicationNumScope.CASE_MANAGEMENT));
+            pendingCase.setLastExecuteResult("PENDING");
+            functionalCaseMapper.insert(pendingCase);
+            functionalCaseId.add(pendingCase.getId());
             testPlanFunctionalCase.setId(IDGenerator.nextStr());
+            testPlanFunctionalCase.setFunctionalCaseId(pendingCase.getId());
             testPlanFunctionalCase.setPos(8192L);
             testPlanFunctionalCase.setLastExecResult("PENDING");
             testPlanFunctionalCaseMapper.insert(testPlanFunctionalCase);
@@ -1002,18 +1012,18 @@ public class TestPlanControllerTests extends BaseTest {
         request.setSelectIds(movePlanIds);
         request.setMoveType(TestPlanConstants.TEST_PLAN_TYPE_GROUP);
         request.setTargetId(groupId);
-        this.requestPost(URL_TEST_PLAN_BATCH_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_TEST_PLAN_BATCH_MOVE, request).andExpect(businessValidationError());
 
         //判断组不存在
         request.setTargetId(IDGenerator.nextStr());
-        this.requestPost(URL_TEST_PLAN_BATCH_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_TEST_PLAN_BATCH_MOVE, request).andExpect(businessValidationError());
 
         //判断组归档
         TestPlan updatePlan = new TestPlan();
         updatePlan.setId(groupTestPlanId45);
         updatePlan.setStatus(TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED);
         testPlanMapper.updateByPrimaryKeySelective(updatePlan);
-        this.requestPost(URL_TEST_PLAN_BATCH_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_TEST_PLAN_BATCH_MOVE, request).andExpect(businessValidationError());
         //改回来
         updatePlan.setStatus(TestPlanConstants.TEST_PLAN_STATUS_NOT_ARCHIVED);
         testPlanMapper.updateByPrimaryKeySelective(updatePlan);
@@ -1048,13 +1058,13 @@ public class TestPlanControllerTests extends BaseTest {
         // 测试计划组内的测试计划不能归档
         List<TestPlanResponse> testPlanResponseList = this.selectByGroupId(groupId);
         TestPlanResponse cannotArchivedPlan = testPlanResponseList.getFirst();
-        this.requestGet(String.format(URL_TEST_PLAN_ARCHIVED, cannotArchivedPlan.getId())).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_TEST_PLAN_ARCHIVED, cannotArchivedPlan.getId())).andExpect(businessValidationError());
 
         //归档测试组内的测试计划
         this.requestGetWithOk(String.format(URL_TEST_PLAN_ARCHIVED, groupId));
 
         //归档不能归档的测试计划
-        this.requestGet(String.format(URL_TEST_PLAN_ARCHIVED, rootPlanIds.getFirst())).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_TEST_PLAN_ARCHIVED, rootPlanIds.getFirst())).andExpect(businessValidationError());
 
         //归档普通测试计划
         this.requestGetWithOk(String.format(URL_TEST_PLAN_ARCHIVED, testPlanId6));
@@ -1077,8 +1087,8 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_TEST_PLAN_MODULE_COUNT, dataRequest).andExpect(status().is5xxServerError());
-        this.requestPost(URL_POST_TEST_PLAN_MODULE_COUNT, dataRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_MODULE_COUNT, dataRequest).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestPost(URL_POST_TEST_PLAN_MODULE_COUNT, dataRequest).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -1525,7 +1535,7 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_TEST_PLAN_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_UPDATE, updateRequest).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -1690,7 +1700,7 @@ public class TestPlanControllerTests extends BaseTest {
         //反例：id是错的
         updateRequest = testPlanTestService.generateUpdateRequest(testPlan.getId());
         updateRequest.setId(IDGenerator.nextStr());
-        this.requestPost(URL_POST_TEST_PLAN_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_UPDATE, updateRequest).andExpect(businessValidationError());
 
     }
 
@@ -1713,9 +1723,9 @@ public class TestPlanControllerTests extends BaseTest {
 
         //先测试一下没有开启模块时接口能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(status().is5xxServerError());
-        this.requestPost(URL_POST_TEST_PLAN_BATCH_SCHEDULE, batchRequest).andExpect(status().is5xxServerError());
-        this.requestGet(String.format(URL_POST_TEST_PLAN_SCHEDULE_DELETE, groupTestPlanId7)).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestPost(URL_POST_TEST_PLAN_BATCH_SCHEDULE, batchRequest).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestGet(String.format(URL_POST_TEST_PLAN_SCHEDULE_DELETE, groupTestPlanId7)).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -1840,7 +1850,7 @@ public class TestPlanControllerTests extends BaseTest {
         request.setCron("0 0 0 * * ?");
         this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(status().isBadRequest());
         request.setResourceId(IDGenerator.nextStr());
-        this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(businessValidationError());
 
         //反例：不配置cron表达式
         request = new BaseScheduleConfigRequest();
@@ -1852,7 +1862,7 @@ public class TestPlanControllerTests extends BaseTest {
         request.setResourceId(IDGenerator.nextStr());
         request.setEnable(true);
         request.setCron(IDGenerator.nextStr());
-        this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(businessValidationError());
 
         //测试删除
         this.requestGetWithOk(String.format(URL_POST_TEST_PLAN_SCHEDULE_DELETE, groupTestPlanId7));
@@ -1934,7 +1944,7 @@ public class TestPlanControllerTests extends BaseTest {
         request.setTargetId(groupTestPlanId7);
         request.setMoveType("GROUP");
         request.setSelectIds(Collections.singletonList(simpleTestPlan.getId()));
-        this.requestPost(URL_TEST_PLAN_BATCH_COPY, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_TEST_PLAN_BATCH_COPY, request).andExpect(businessValidationError());
 
         //删除
         this.requestGet(String.format(URL_GET_TEST_PLAN_DELETE, copyGroup.getId())).andExpect(status().isOk());
@@ -1978,7 +1988,7 @@ public class TestPlanControllerTests extends BaseTest {
 
             //测试项目没有开启测试计划模块时能否使用
             testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-            this.requestPost(URL_POST_MODULE_MOVE, request).andExpect(status().is5xxServerError());
+            this.requestPost(URL_POST_MODULE_MOVE, request).andExpect(businessError("该项目的模块菜单检查失败"));
             //恢复
             testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -2235,8 +2245,8 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestGet(String.format(URL_GET_TEST_PLAN_DELETE, testPlanList.getFirst().getId())).andExpect(status().is5xxServerError());
-        this.requestPost(URL_POST_TEST_PLAN_BATCH_DELETE, request).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_GET_TEST_PLAN_DELETE, testPlanList.getFirst().getId())).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestPost(URL_POST_TEST_PLAN_BATCH_DELETE, request).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -2301,7 +2311,7 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestGet(String.format(URL_GET_MODULE_DELETE, a1b1Node.getId())).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_GET_MODULE_DELETE, a1b1Node.getId())).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -2321,9 +2331,9 @@ public class TestPlanControllerTests extends BaseTest {
         );
 
         //删除不存在的节点
-        this.requestGet(String.format(URL_GET_MODULE_DELETE, IDGenerator.nextNum())).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_GET_MODULE_DELETE, IDGenerator.nextNum())).andExpect(businessValidationError());
         // 测试删除根节点(根节点无法删除）
-        this.requestGet(String.format(URL_GET_MODULE_DELETE, ModuleConstants.DEFAULT_NODE_ID)).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_GET_MODULE_DELETE, ModuleConstants.DEFAULT_NODE_ID)).andExpect(businessValidationError());
 
         //service层判断：测试删除空集合
         testPlanModuleService.deleteModule(new ArrayList<>(), project.getId(), null, null, null);
@@ -2563,16 +2573,23 @@ public class TestPlanControllerTests extends BaseTest {
     @Order(302)
     public void testArchived() throws Exception {
         //计划 -- 首先状态不是已完成
-        this.requestGet(String.format(URL_TEST_PLAN_ARCHIVED, "wx_test_plan_id_1")).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_TEST_PLAN_ARCHIVED, "wx_test_plan_id_1")).andExpect(businessValidationError());
         //计划组没有可归档的测试计划：
-        this.requestGet(String.format(URL_TEST_PLAN_ARCHIVED, "wx_test_plan_id_2")).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_TEST_PLAN_ARCHIVED, "wx_test_plan_id_2")).andExpect(businessValidationError());
     }
 
     @Test
     @Order(303)
     public void testCopy() throws Exception {
-        // 1. 已归档的不能再归档计划  无用例
-        requestGet(String.format(URL_TEST_PLAN_COPY, groupTestPlanId35)).andExpect(status().is5xxServerError());
+        // Explicit precondition: copying an archived group is rejected.
+        TestPlan archivedGroup = new TestPlan();
+        BeanUtils.copyBean(archivedGroup, testPlanMapper.selectByPrimaryKey("wx_test_plan_id_2"));
+        archivedGroup.setId(IDGenerator.nextStr());
+        archivedGroup.setName("ARCHIVED-COPY-" + archivedGroup.getId());
+        archivedGroup.setNum(NumGenerator.nextNum(archivedGroup.getProjectId(), ApplicationNumScope.TEST_PLAN));
+        archivedGroup.setStatus(TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED);
+        testPlanMapper.insert(archivedGroup);
+        requestGet(String.format(URL_TEST_PLAN_COPY, archivedGroup.getId())).andExpect(businessValidationError());
 
         // 2.计划 有用例
         MvcResult mvcResult1 = this.requestGetWithOkAndReturn(String.format(URL_TEST_PLAN_COPY, "wx_test_plan_id_4"));
@@ -2639,7 +2656,9 @@ public class TestPlanControllerTests extends BaseTest {
         request.setType("ALL");
         request.setTargetId("3");
         request.setSelectIds(List.of("wx_test_plan_id_2"));
-        this.requestPost(URL_TEST_PLAN_BATCH_ARCHIVED, request, status().is5xxServerError());
+        String originalStatus = testPlanMapper.selectByPrimaryKey("wx_test_plan_id_2").getStatus();
+        this.requestPostWithOk(URL_TEST_PLAN_BATCH_ARCHIVED, request);
+        Assertions.assertEquals(originalStatus, testPlanMapper.selectByPrimaryKey("wx_test_plan_id_2").getStatus());
         request.setSelectIds(List.of("wx_test_plan_id_7"));
         this.requestPostWithOkAndReturn(URL_TEST_PLAN_BATCH_ARCHIVED, request);
     }

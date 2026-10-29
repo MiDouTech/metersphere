@@ -1,0 +1,517 @@
+{
+  "modules": {
+    "api-test": {
+      "tests": 139,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "total": {
+    "tests": 139,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failures": [
+    {
+      "module": "api-test",
+      "classname": "io.metersphere.api.controller.ApiDefinitionMockControllerTests",
+      "test": "testUpdate",
+      "kind": "failure",
+      "message": "Status expected:<404> but was:<422>"
+    },
+    {
+      "module": "api-test",
+      "classname": "io.metersphere.api.controller.ApiTestCaseControllerTests",
+      "test": "add",
+      "kind": "failure",
+      "message": "Status expected:<404> but was:<422>"
+    }
+  ],
+  "original80": [
+    {
+      "id": "E001",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "add",
+      "status": "not-executed"
+    },
+    {
+      "id": "F001",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "update",
+      "status": "not-executed"
+    },
+    {
+      "id": "E002",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "updatePermissionSetting",
+      "status": "not-executed"
+    },
+    {
+      "id": "F002",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "getPermissionSetting",
+      "status": "not-executed"
+    },
+    {
+      "id": "F003",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "delete",
+      "status": "not-executed"
+    },
+    {
+      "id": "F004",
+      "classname": "io.metersphere.system.controller.OperationLogControllerTests",
+      "test": "testGetOperationLogParamsError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F005",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F006",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F007",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F008",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberToRoleError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F009",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addOrgMemberToProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F010",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F011",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F012",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getProjectListByOrgError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F013",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getUserRoleListByOrgError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F014",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getNotExistUserListByOrgError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F015",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F016",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F017",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F018",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F019",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F020",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMember",
+      "status": "not-executed"
+    },
+    {
+      "id": "F021",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F022",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F023",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "enableError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F024",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "disableError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F025",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetAdminList",
+      "status": "not-executed"
+    },
+    {
+      "id": "F026",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetMemberList",
+      "status": "not-executed"
+    },
+    {
+      "id": "F027",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateNameError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F028",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "getStatusFlowSetting",
+      "status": "not-executed"
+    },
+    {
+      "id": "F029",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "addStatusItem",
+      "status": "not-executed"
+    },
+    {
+      "id": "E003",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusItem",
+      "status": "not-executed"
+    },
+    {
+      "id": "E004",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusDefinition",
+      "status": "not-executed"
+    },
+    {
+      "id": "E005",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusFlow",
+      "status": "not-executed"
+    },
+    {
+      "id": "E006",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "deleteStatusItem",
+      "status": "not-executed"
+    },
+    {
+      "id": "F030",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "sortStatusItem",
+      "status": "not-executed"
+    },
+    {
+      "id": "F031",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F032",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleUpdateError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F033",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F034",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionSettingError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F035",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionUpdateError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F036",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F037",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleRemoveMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F038",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteOnlyMemberSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "E007",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "adminTreeWithStats",
+      "status": "not-executed"
+    },
+    {
+      "id": "E008",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberPage",
+      "status": "not-executed"
+    },
+    {
+      "id": "E009",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberDetailMasked",
+      "status": "not-executed"
+    },
+    {
+      "id": "F039",
+      "classname": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testEdit",
+      "status": "not-executed"
+    },
+    {
+      "id": "F040",
+      "classname": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testDetail",
+      "status": "not-executed"
+    },
+    {
+      "id": "F041",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testUpdateOrganizationError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F042",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testDeleteOrganization",
+      "status": "not-executed"
+    },
+    {
+      "id": "F043",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F044",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F045",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F046",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F047",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testSwitchOrganizationError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F048",
+      "classname": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEmailConnect",
+      "status": "not-executed"
+    },
+    {
+      "id": "F049",
+      "classname": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEditUploadConfigInfoError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F050",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F051",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F052",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F053",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F054",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F055",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F056",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F057",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "enableError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F058",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "disableError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F059",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateNameError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F060",
+      "classname": "io.metersphere.system.controller.TaskCenterScheduleControllerTests",
+      "test": "getPageError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F061",
+      "classname": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "getResourcePoolsDetailFiled",
+      "status": "not-executed"
+    },
+    {
+      "id": "F062",
+      "classname": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "updateUiTestResourcePoolFiled",
+      "status": "not-executed"
+    },
+    {
+      "id": "F063",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalGetId",
+      "status": "not-executed"
+    },
+    {
+      "id": "F064",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdateInfo",
+      "status": "not-executed"
+    },
+    {
+      "id": "F065",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdatePassword",
+      "status": "not-executed"
+    },
+    {
+      "id": "F066",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testDetail",
+      "status": "not-executed"
+    },
+    {
+      "id": "F067",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testAdd",
+      "status": "not-executed"
+    },
+    {
+      "id": "E010",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testList",
+      "status": "not-executed"
+    },
+    {
+      "id": "F068",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testDisable",
+      "status": "not-executed"
+    },
+    {
+      "id": "F069",
+      "classname": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testAdd",
+      "status": "not-executed"
+    },
+    {
+      "id": "F070",
+      "classname": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testGet",
+      "status": "not-executed"
+    }
+  ],
+  "runId": 40835521265,
+  "commit": "deea21fdae",
+  "scope": "targeted-api-only"
+}

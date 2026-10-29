@@ -1,0 +1,35 @@
+{
+  "status": 200,
+  "body": {
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": {
+      "pageSize": 10,
+      "current": 1,
+      "total": 1,
+      "jobId": "4199cf0e-c5eb-4b2b-8cac-db9f870116f7",
+      "expiresAt": 1793253457625,
+      "counts": [
+        {
+          "state": "SUCCESS",
+          "total": 1
+        }
+      ],
+      "items": [
+        {
+          "position": 1,
+          "action": "CREATE",
+          "caseId": "1712309005995515904",
+          "state": "SUCCESS",
+          "message": null
+        }
+      ],
+      "fileName": "import-one.xlsx",
+      "state": "COMPLETED",
+      "followup": {
+        "state": "LEGACY"
+      }
+    }
+  }
+}

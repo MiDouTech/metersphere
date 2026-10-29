@@ -23,7 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -234,7 +234,7 @@ public class TestPlanCollectionMinderControllerTests extends BaseTest {
         editList.add(deleteDTO);
         editList.add(deleteDTO);
         request.setEditList(editList);
-        this.requestPost(EDIT_MIND, request).andExpect(status().is5xxServerError());
+        this.requestPost(EDIT_MIND, request).andExpect(businessError(100422, "测试集名称重复"));
         ;
         testPlanCollectionExample = new TestPlanCollectionExample();
         testPlanCollectionExample.createCriteria().andNameEqualTo("新建名称");

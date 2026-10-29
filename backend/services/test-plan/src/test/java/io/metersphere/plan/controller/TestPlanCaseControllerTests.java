@@ -83,6 +83,8 @@ public class TestPlanCaseControllerTests extends BaseTest {
     FunctionalCaseBlobMapper functionalCaseBlobMapper;
     @Resource
     private TestPlanFunctionalCaseService testPlanFunctionalCaseService;
+    @Resource
+    private io.metersphere.functional.mapper.FunctionalCaseMapper functionalCaseMapper;
 
 
     @Test
@@ -232,14 +234,18 @@ public class TestPlanCaseControllerTests extends BaseTest {
         request.setProjectId("1234");
         request.setId("relate_case_3");
         request.setTestPlanId("plan_2");
-        request.setCaseId("fc_1");
+        request.setCaseId("fc_3");
         request.setLastExecResult("SUCCESS");
-        request.setStepsExecResult("123");
+        request.setStepsExecResult("[]");
         request.setContent("12334");
         request.setNotifier("123");
         this.requestPostWithOk(FUNCTIONAL_CASE_RUN_URL, request);
+        Assertions.assertEquals("SUCCESS", functionalCaseMapper.selectByPrimaryKey("fc_3").getLastExecuteResult());
+        Assertions.assertEquals("SUCCESS", testPlanFunctionalCaseMapper.selectByPrimaryKey("relate_case_3").getLastExecResult());
         request.setLastExecResult("ERROR");
         this.requestPostWithOk(FUNCTIONAL_CASE_RUN_URL, request);
+        Assertions.assertEquals("ERROR", functionalCaseMapper.selectByPrimaryKey("fc_3").getLastExecuteResult());
+        Assertions.assertEquals("ERROR", testPlanFunctionalCaseMapper.selectByPrimaryKey("relate_case_3").getLastExecResult());
 
     }
 
@@ -304,7 +310,9 @@ public class TestPlanCaseControllerTests extends BaseTest {
     @Test
     @Order(16)
     public void testGetDetail() throws Exception {
-        this.requestGet(FUNCTIONAL_CASE_DETAIL + "relate_case_1").andExpect(status().is5xxServerError());
+        this.requestGet(FUNCTIONAL_CASE_DETAIL + "relate_case_1").andExpect(status().isUnprocessableEntity())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value(100422))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.messageKey").value("functional.case.bodyInvalid"));
         MvcResult mvcResult = this.requestGetWithOkAndReturn(FUNCTIONAL_CASE_DETAIL + "gyq_disassociate_case_4");
         String returnData = mvcResult.getResponse().getContentAsString(StandardCharsets.UTF_8);
         ResultHolder resultHolder = JSON.parseObject(returnData, ResultHolder.class);
@@ -317,7 +325,7 @@ public class TestPlanCaseControllerTests extends BaseTest {
         functionalCaseStepDTO.setResult("步骤一结果");
         functionalCaseStepDTO.setActualResult("步骤一实际结果");
         functionalCaseStepDTO.setExecuteResult("SUCCESS");
-        String jsonString = JSON.toJSONString(functionalCaseStepDTO);
+        String jsonString = JSON.toJSONString(List.of(functionalCaseStepDTO));
         FunctionalCaseBlob functionalCaseBlob = new FunctionalCaseBlob();
         functionalCaseBlob.setId("gyq_disassociate_fc_4");
         functionalCaseBlob.setSteps(jsonString.getBytes());

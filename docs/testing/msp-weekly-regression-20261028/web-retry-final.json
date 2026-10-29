@@ -1,0 +1,13 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "data": {
+      "code": "AGENT_RESOURCE_NOT_ACCESSIBLE",
+      "traceId": "6dc5631c-67da-4c8e-9995-b95455dbb9f8"
+    },
+    "message": "资源不存在或当前账号和令牌无权访问，请检查项目授权",
+    "code": -32001
+  }
+}

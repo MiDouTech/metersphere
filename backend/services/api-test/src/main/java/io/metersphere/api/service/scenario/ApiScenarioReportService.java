@@ -1,5 +1,7 @@
 package io.metersphere.api.service.scenario;
 
+import io.metersphere.sdk.exception.MSException;
+
 import io.metersphere.api.constants.ApiScenarioStepType;
 import io.metersphere.api.domain.*;
 import io.metersphere.api.dto.definition.ApiReportBatchRequest;
@@ -190,7 +192,7 @@ public class ApiScenarioReportService {
         example.createCriteria().andIdEqualTo(id);
         List<ApiScenarioReport> scenarioReport = apiScenarioReportMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(scenarioReport)) {
-            throw new RuntimeException(Translator.get("api_scenario_report_not_exist"));
+            throw new MSException(Translator.get("api_scenario_report_not_exist"));
         }
         return scenarioReport.getFirst();
     }

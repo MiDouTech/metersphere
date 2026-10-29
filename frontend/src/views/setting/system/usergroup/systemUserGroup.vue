@@ -4,8 +4,9 @@
       <template #first>
         <UserGroupLeft
           ref="ugLeftRef"
-          :add-permission="['SYSTEM_USER_ROLE:READ+ADD', 'SYSTEM_PERMISSION_CONTROL:READ+ADD']"
-          :update-permission="['SYSTEM_USER_ROLE:READ+UPDATE', 'SYSTEM_PERMISSION_CONTROL:READ+UPDATE']"
+          :add-permission="['SYSTEM_PERMISSION_CONTROL:READ+ADD']"
+          :update-permission="['SYSTEM_PERMISSION_CONTROL:READ+UPDATE']"
+          :member-permission="['SYSTEM_USER_ROLE:READ+UPDATE', 'SYSTEM_PERMISSION_CONTROL:READ+UPDATE']"
           :is-global-disable="false"
           @handle-select="handleSelect"
           @add-user-success="handleAddMember"
@@ -36,15 +37,15 @@
               ref="userRef"
               :keyword="currentKeyword"
               :current="currentUserGroupItem"
-              :delete-permission="['SYSTEM_USER_ROLE:READ+DELETE', 'SYSTEM_PERMISSION_CONTROL:READ+DELETE']"
+              :delete-permission="['SYSTEM_USER_ROLE:READ+UPDATE', 'SYSTEM_PERMISSION_CONTROL:READ+UPDATE']"
               :read-permission="['SYSTEM_USER_ROLE:READ', 'SYSTEM_PERMISSION_CONTROL:READ']"
               :update-permission="['SYSTEM_USER_ROLE:READ+UPDATE', 'SYSTEM_PERMISSION_CONTROL:READ+UPDATE']"
             />
             <AuthTable
               v-if="currentTable === 'auth'"
               :current="currentUserGroupItem"
-              :save-permission="['SYSTEM_USER_ROLE:READ+UPDATE', 'SYSTEM_PERMISSION_CONTROL:READ+UPDATE']"
-              :disabled="!hasAnyPermission(['SYSTEM_USER_ROLE:READ+UPDATE', 'SYSTEM_PERMISSION_CONTROL:READ+UPDATE'])"
+              :save-permission="['SYSTEM_PERMISSION_CONTROL:READ+UPDATE']"
+              :disabled="!hasAnyPermission(['SYSTEM_PERMISSION_CONTROL:READ+UPDATE'])"
             />
           </div>
         </div>

@@ -56,7 +56,7 @@ public class AgentCaseImportService {
         String name=Objects.toString(file.getOriginalFilename(),"");
         if(name.length()>255||!name.toLowerCase(Locale.ROOT).matches(".*\\.(xlsx|xls|xmind)"))throw new MSException("仅支持Excel或XMind文件");
         byte[] bytes;
-        try { bytes=file.getBytes(); }catch(Exception failure){throw new MSException("读取导入文件失败，请重试");}
+        try { bytes=file.getBytes(); }catch(Exception failure){throw new MSException("IMPORT_FILE_READ_FAILED");}
         if(bytes.length>50*1024*1024)throw new MSException("导入文件不能超过50MiB");
         String sourceHash=DigestUtils.sha256Hex(bytes);
         String requestHash=DigestUtils.sha256Hex(JSON.toJSONString(request)+":"+sourceHash+":"+name);
@@ -96,11 +96,7 @@ public class AgentCaseImportService {
                 for(var error:errors)prepared.add(new Item("INVALID",null,null,null,safeValidation(error.getErrMsg())));
                 parser.clear();
             } else {
-                List<Integer> sheets;
-                try(var reader=EasyExcel.read(file.getInputStream()).build()) {
-                    sheets=reader.excelExecutor().sheetList().stream().map(sheet->sheet.getSheetNo()).toList();
-                }
-                if(sheets.size()>100)throw new MSException("工作表超过100个，请拆分文件");
+                var sheets=io.metersphere.functional.excel.util.FunctionalCaseWorkbookSheets.select(file,deadline);
                 for(int sheet:sheets) {
                     Set<ExcelMergeInfo> merges=new TreeSet<>();
                     EasyExcel.read(file.getInputStream(),null,new FunctionalCasePretreatmentListener(merges)).extraRead(CellExtraTypeEnum.MERGE).sheet(sheet).doRead();
@@ -112,7 +108,7 @@ public class AgentCaseImportService {
                 }
             }
         } catch(MSException failure){throw failure;}
-        catch(Exception failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("Import precheck failed",failure);throw new MSException("导入文件解析失败，请使用当前模板检查文件格式");}
+        catch(Exception failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("Import precheck failed",failure);throw new MSException("IMPORT_FILE_PARSE_FAILED");}
         if(prepared.isEmpty()||prepared.size()>MAX_ITEMS)throw new MSException("未找到可处理的用例，或超过10000条限制");
         if(prepared.stream().filter(item->item.target()!=null).map(Item::target).distinct().count()!=prepared.stream().filter(item->item.target()!=null).count())throw new MSException("文件多次覆盖同一用例，请合并后重新预检");
         String id=UUID.randomUUID().toString();long now=System.currentTimeMillis();
@@ -148,18 +144,32 @@ public class AgentCaseImportService {
         new TransactionTemplate(transactionManager).executeWithoutResult(status->{
             var row=owned(id,user,token,true);String state=(String)row.get("state");
             if("stop".equals(action)) {
-                if(Set.of("PRECHECKED","QUEUED","RUNNING").contains(state))jdbc.update("UPDATE functional_import_job SET state='STOPPED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
+                if(Set.of("PRECHECKED","QUEUED","RUNNING").contains(state))jdbc.update("UPDATE functional_import_job SET stopped_from=state,state='STOPPED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
             } else if("commit".equals(action)) {
-                if("PRECHECKED".equals(state))jdbc.update("UPDATE functional_import_job SET state='QUEUED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
+                if("PRECHECKED".equals(state)) {
+                    if("WEB".equals(token) && jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_followup WHERE job_id=?",Long.class,id)==0)
+                        throw new MSException("请先确认测试计划和评审关联方式再提交");
+                    long now=System.currentTimeMillis();
+                    jdbc.update("UPDATE functional_import_item SET state='PENDING',message=NULL WHERE job_id=? AND state='FAILED'",id);
+                    jdbc.update("UPDATE functional_import_job SET committed_at=?,stopped_from=NULL,state='QUEUED',update_time=? WHERE id=?",now,now,id);
+                }
                 else if(!Set.of("QUEUED","RUNNING","COMPLETED","PARTIAL").contains(state))throw new MSException("当前导入不可提交");
             } else if("retry".equals(action)) {
                 if(Set.of("STOPPED","PARTIAL","FAILED").contains(state)) {
+                    if(!hasCommitted(row.get("committed_at"))) {
+                        jdbc.update("UPDATE functional_import_job SET state='PRECHECKED',stopped_from=NULL,update_time=? WHERE id=?",System.currentTimeMillis(),id);
+                        return;
+                    }
                     jdbc.update("UPDATE functional_import_item SET state='PENDING',message=NULL WHERE job_id=? AND state='FAILED'",id);
                     jdbc.update("UPDATE functional_import_job SET state='QUEUED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
                 } else if(!Set.of("QUEUED","RUNNING").contains(state))throw new MSException("当前导入没有可重试的条目");
             } else throw new MSException("导入操作无效");
         });
         return get(id,user,token,1,10);
+    }
+
+    static boolean hasCommitted(Object committedAt) {
+        return committedAt instanceof Number value && value.longValue()>0;
     }
 
     @Scheduled(fixedDelay=1000,initialDelay=30000)
@@ -190,6 +200,10 @@ public class AgentCaseImportService {
         var jobs=jdbc.queryForList("SELECT * FROM functional_import_job WHERE id=? AND state IN ('QUEUED','RUNNING') FOR UPDATE SKIP LOCKED",id);
         if(jobs.isEmpty())return null;
         var job=jobs.getFirst();
+        if(!hasCommitted(job.get("committed_at"))) {
+            jdbc.update("UPDATE functional_import_job SET stopped_from=state,state='STOPPED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
+            return null;
+        }
         if(((Number)job.get("expires_at")).longValue()<=System.currentTimeMillis()){jdbc.update("UPDATE functional_import_job SET state='EXPIRED' WHERE id=?",id);return null;}
         authorize((String)job.get("project_id"),(String)job.get("user_id"),(String)job.get("token_id"));
         var pending=jdbc.queryForList("SELECT * FROM functional_import_item WHERE job_id=? AND state='PENDING' ORDER BY position LIMIT 1 FOR UPDATE",id);

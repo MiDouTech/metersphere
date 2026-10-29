@@ -1,0 +1,277 @@
+name: MSP Remediation Verification
+on:
+  workflow_dispatch:
+    inputs:
+      verification_scope:
+        description: 'Target failed API classes first; full is required for final acceptance'
+        type: choice
+        default: full
+        options: [full, api-failures, downstream, affected]
+  push:
+    branches: ['codex/weekly-remediation-20261028']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: remediation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  frontend:
+    if: "!contains(github.event.head_commit.message, '[runtime-only]')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: reuse
+        name: Reuse verified unchanged frontend
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run_id=40815944705
+          source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha)
+          frontend_ok=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" --jq '[.jobs[] | select(.name == "frontend" and .conclusion == "success")] | length')
+          if [ "$frontend_ok" = 1 ] && [ "$(git rev-parse "$source_sha:frontend")" = "$(git rev-parse HEAD:frontend)" ] && gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name frontend-static --dir frontend/dist; then
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+            echo "Verified frontend artifact reused from $source_sha" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: pnpm/action-setup@v4
+        if: steps.reuse.outputs.reused != 'true'
+        with:
+          version: 8.4.0
+      - uses: actions/setup-node@v4
+        if: steps.reuse.outputs.reused != 'true'
+        with:
+          node-version: 20.8.1
+          cache: pnpm
+          cache-dependency-path: frontend/package.json
+      - run: pnpm install --no-frozen-lockfile
+        if: steps.reuse.outputs.reused != 'true'
+        working-directory: frontend
+      - run: pnpm run test:selection-toggle && pnpm run test:weekly-remediation-sfc && pnpm run test:modal-contract
+        if: steps.reuse.outputs.reused != 'true'
+        working-directory: frontend
+      - run: pnpm exec eslint src/hooks/useModal.ts src/components/business/ms-user-group-comp/msUserGroupLeft.vue src/views/setting/system/usergroup/systemUserGroup.vue scripts/test-modal-contract.mjs
+        if: steps.reuse.outputs.reused != 'true'
+        working-directory: frontend
+      - run: pnpm run build
+        if: steps.reuse.outputs.reused != 'true'
+        working-directory: frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: frontend-static
+          path: frontend/dist/
+          retention-days: 1
+          if-no-files-found: error
+  backend:
+    needs: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      redis:
+        image: redis:7.2-alpine
+        ports: ['16479:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=12
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: quality-test-only
+        ports: ['13326:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pquality-test-only"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-static
+          path: frontend/dist
+      - uses: actions/cache/restore@v4
+        id: minio-cache
+        with:
+          path: .ci-minio-image.tar
+          key: minio-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('deploy/quality-verify/Dockerfile.minio-test-source') }}
+      - name: Load or build pinned official MinIO test dependency
+        run: |
+          if [ -f .ci-minio-image.tar ]; then
+            docker load -i .ci-minio-image.tar
+          else
+            docker build -t minio/minio:RELEASE.2023-03-13T19-46-17Z -f deploy/quality-verify/Dockerfile.minio-test-source .
+            docker save -o .ci-minio-image.tar minio/minio:RELEASE.2023-03-13T19-46-17Z
+          fi
+      - uses: actions/cache/save@v4
+        if: steps.minio-cache.outputs.cache-hit != 'true'
+        with:
+          path: .ci-minio-image.tar
+          key: ${{ steps.minio-cache.outputs.cache-primary-key }}
+      - name: Prepare the disposable manual-integration database
+        env:
+          QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+        run: docker exec "$QUALITY_MYSQL_CONTAINER" mysql -uroot -pquality-test-only -e 'CREATE DATABASE IF NOT EXISTS quality_verify CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci'
+      - id: full-tests
+        if: inputs.verification_scope != 'api-failures' && inputs.verification_scope != 'downstream' && inputs.verification_scope != 'affected' && !contains(github.event.head_commit.message, '[api-failures]') && !contains(github.event.head_commit.message, '[downstream]') && !contains(github.event.head_commit.message, '[affected]')
+        run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true package
+        env:
+          MAVEN_OPTS: -Xmx1536m
+      - name: Run previously failing API classes without rerunning upstream suites
+        if: inputs.verification_scope == 'api-failures' || contains(github.event.head_commit.message, '[api-failures]')
+        run: >-
+          chmod +x mvnw && ./mvnw -B -pl backend/services/api-test -am
+          -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false
+          -Dtest=ApiDefinitionControllerTests,ApiDefinitionMockControllerTests,ApiReportControllerTests,ApiScenarioControllerTests,ApiScenarioReportControllerTests,ApiTaskCenterControllerTests,ApiTestCaseControllerTests,ApiResourceContractBoundaryTests
+          -Dsurefire.failIfNoSpecifiedTests=false test
+        env:
+          MAVEN_OPTS: -Xmx1536m
+      - name: Collect the six unresolved downstream modules without rerunning upstream suites
+        id: downstream-tests
+        if: inputs.verification_scope == 'downstream' || contains(github.event.head_commit.message, '[downstream]')
+        run: >-
+          chmod +x mvnw && ./mvnw -B -pl backend/app -am
+          -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true
+          -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true
+          '-Dtest=io.metersphere.bug.**,io.metersphere.functional.**,io.metersphere.plan.**,io.metersphere.dashboard.**,io.metersphere.agent.**,io.metersphere.app.**'
+          -Dsurefire.failIfNoSpecifiedTests=false test
+        env:
+          MAVEN_OPTS: -Xmx1536m
+      - name: Run affected modules while retaining source-identical successful upstream evidence
+        id: affected-tests
+        if: inputs.verification_scope == 'affected' || contains(github.event.head_commit.message, '[affected]')
+        run: >-
+          chmod +x mvnw && ./mvnw -B -pl backend/app -am
+          -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true
+          -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true
+          '-Dtest=io.metersphere.agent.**,io.metersphere.functional.controller.AiSourceDocumentControllerSecurityTests'
+          -Dsurefire.failIfNoSpecifiedTests=false package
+        env:
+          MAVEN_OPTS: -Xmx1536m
+      - name: Verify upstream source hashes and retained test reports
+        id: retained-upstream
+        if: always() && (inputs.verification_scope == 'affected' || contains(github.event.head_commit.message, '[affected]'))
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          source_run=40874331855
+          source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$source_run" --jq .head_sha)
+          test "$source_sha" = ef1051a64885109a55bbc95930f81faead237be0
+          git fetch --no-tags --depth=1 origin "$source_sha"
+          gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name backend-test-reports --dir .ci-retained-source
+          gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name all-module-test-summary --dir .ci-retained-summary
+          gh run download 40870448518 --repo "$GITHUB_REPOSITORY" --name all-module-test-summary --dir .ci-baseline-summary
+          python3 deploy/quality-verify/test_retained_reports.py
+          python3 deploy/quality-verify/retain-upstream-reports.py --source-sha "$source_sha" --source-run "$source_run" --reports .ci-retained-source --summary .ci-retained-summary/.ci-test-summary.json
+      - name: Require complete current or source-verified retained coverage with zero failures, errors or skips
+        id: test-results
+        if: always() && (steps.full-tests.outcome != 'skipped' || steps.downstream-tests.outcome != 'skipped' || steps.affected-tests.outcome != 'skipped')
+        run: |
+          if [ '${{ steps.affected-tests.outcome }}' != 'skipped' ] && [ '${{ steps.retained-upstream.outcome }}' != 'success' ]; then
+            echo 'Source-verified upstream evidence is required for affected verification'
+            exit 1
+          fi
+          python3 deploy/quality-verify/test_report_gate.py
+          if [ '${{ steps.downstream-tests.outcome }}' != 'skipped' ]; then
+            python3 deploy/quality-verify/check-test-reports.py --modules bug-management case-management test-plan dashboard agent-integration app
+          elif [ '${{ steps.affected-tests.outcome }}' != 'skipped' ]; then
+            python3 deploy/quality-verify/check-test-reports.py --inventory .ci-baseline-summary/.ci-test-summary.json
+          else
+            python3 deploy/quality-verify/check-test-reports.py
+          fi
+      - name: Record a verified build for isolated runtime retries
+        id: verified-build
+        if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        env:
+          BUILD_INPUTS_HASH: ${{ hashFiles('pom.xml', 'backend/**/pom.xml', '!backend/**/target/**', '.mvn/wrapper/maven-wrapper.properties', 'mvnw', 'mvnw.cmd') }}
+        run: |
+          backend_tree=$(git rev-parse HEAD:backend)
+          frontend_tree=$(git rev-parse HEAD:frontend)
+          jar_sha=$(sha256sum backend/app/target/app-3.x.jar | cut -d' ' -f1)
+          jq -n --arg commit "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" --arg backend "$backend_tree" --arg frontend "$frontend_tree" --arg inputs "$BUILD_INPUTS_HASH" --arg jar "$jar_sha" '{sourceCommit:$commit,sourceRun:$run,backendTree:$backend,frontendTree:$frontend,buildInputsHash:$inputs,jarSha256:$jar}' > .ci-backend-build.json
+          echo "key=msp-verified-app-${RUNNER_OS}-${backend_tree}-${frontend_tree}-${BUILD_INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/save@v4
+        if: steps.verified-build.outcome == 'success'
+        with:
+          key: ${{ steps.verified-build.outputs.key }}
+          path: |
+            backend/app/target/app-3.x.jar
+            .ci-backend-build.json
+            .ci-test-summary.json
+      - uses: pnpm/action-setup@v4
+        if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        with:
+          version: 8.4.0
+      - uses: actions/setup-node@v4
+        if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        with:
+          node-version: 20.8.1
+          cache: pnpm
+          cache-dependency-path: frontend/package.json
+      - name: Prepare browser smoke dependencies without rebuilding verified frontend
+        if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        working-directory: frontend
+        run: |
+          pnpm install --no-frozen-lockfile
+          if ! command -v google-chrome >/dev/null; then pnpm exec playwright install chrome --with-deps; fi
+          if command -v fc-list >/dev/null; then fc-list :lang=zh > "$RUNNER_TEMP/msp-fonts-zh.txt"; else : > "$RUNNER_TEMP/msp-fonts-zh.txt"; fi
+          if [ ! -s "$RUNNER_TEMP/msp-fonts-zh.txt" ]; then sudo apt-get update && sudo apt-get install -y fontconfig fonts-noto-cjk; fi
+          google-chrome --version
+      - name: Build application image and verify isolated health and core browser/MCP paths
+        if: always() && (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        run: bash deploy/quality-verify/ci-health.sh
+        env:
+          QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+          QUALITY_REDIS_CONTAINER: ${{ job.services.redis.id }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-health-evidence
+          include-hidden-files: true
+          path: |
+            .ci-health.json
+            .ci-readiness.json
+            .ci-phase.json
+            .ci-health-container.log
+            .ci-core-proxy.log
+            .ci-core-smoke/
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-reports
+          path: '**/target/surefire-reports/'
+          retention-days: 7
+      - name: Extract unsuccessful testcase details without copying passing logs
+        if: always()
+        run: |
+          python3 deploy/quality-verify/test_failed_report_collection.py
+          python3 deploy/quality-verify/collect-failed-reports.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-failed-test-details
+          include-hidden-files: true
+          path: .ci-failed-reports/
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.test-results.outcome != 'skipped'
+        with:
+          name: all-module-test-summary
+          include-hidden-files: true
+          path: |
+            .ci-test-summary.json
+            .ci-retained-upstream.json
+          if-no-files-found: error
+          retention-days: 7

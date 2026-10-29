@@ -1,0 +1,223 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      container
+        text "业务文档"
+        container
+          text "..."
+          svg_root
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=2]
+            svg_root
+        list_item
+          button [ref=3]
+            svg_root
+        list_item
+          button [ref=4]
+            svg_root
+        list_item
+          switch [ref=5]
+            svg_root
+        list_item
+          button [ref=6]
+            svg_root
+    container
+      container
+        container
+          container
+            container
+              svg_root
+              text "工作台"
+            container
+              svg_root
+              text "项目管理"
+            container
+              svg_root
+              text "测试资产"
+            container
+              svg_root
+              text "执行中心"
+            container
+              svg_root
+              text "系统设置"
+              svg_root
+          container
+            container
+              svg_root
+              text "陈启芬"
+            svg_root
+        svg_root
+      container [ref=7]
+        container
+          anchor [ref=128]
+            text "按版本检索资产与引用"
+          container
+            container
+              container
+                text "业务文档"
+                text "项目内已授权的需求与业务资料；解析成功后自动形成不可变资产版本。"
+              button [ref=129]
+                text "上传文档"
+            container
+              container
+                textbox [ref=130, loc=css:input[placeholder="搜索名称、摘要或 ID"]]
+                  text "搜索名称、摘要或 ID"
+                svg_root
+              container
+                textbox [ref=131, loc=css:input[placeholder="解析状态"]]
+                  text "解析状态"
+                svg_root
+              container
+                textbox [ref=132, loc=css:input[placeholder="建立方式"]]
+                  text "建立方式"
+                svg_root
+              container
+                textbox [ref=133, loc=css:input[placeholder="资产分类"]]
+                  text "资产分类"
+                svg_root
+              container
+                svg_root
+                text "含子分类"
+              button [ref=134]
+                text "刷新"
+              button [ref=135]
+                text "批量归类"
+            container [ref=136]
+              table
+                table_row
+                  table_cell
+                  table_cell
+                    text "文档"
+                  table_cell
+                    text "解析状态"
+                  table_cell
+                    text "建立方式"
+                  table_cell
+                    text "资产分类"
+                  table_cell
+                    text "操作"
+                table_row
+                  table_cell
+                  table_cell
+                    text "执行理解与事实-d554c77c-36c9-42b2-9632-5a5dd8f824e2.json"
+                    text "仅整理来源执行的已记录事实；推断与待确认项单独保留，不把声明当成核验。"
+                  table_cell
+                    text "解析成功"
+                  table_cell
+                    text "自动化建立"
+                  table_cell
+                  table_cell
+                    anchor [ref=137]
+                      text "详情"
+                    anchor [ref=138]
+                      text "下载"
+                    anchor [ref=139]
+                      text "追溯"
+                    anchor [ref=140]
+                      text "删除"
+                table_row
+                  table_cell
+                  table_cell
+                    text "执行理解与事实-8fd3862f-7c23-4ffe-b5d4-5d7974f4ee33.json"
+                    text "仅整理来源执行的已记录事实；推断与待确认项单独保留，不把声明当成核验。"
+                  table_cell
+                    text "解析成功"
+                  table_cell
+                    text "自动化建立"
+                  table_cell
+                  table_cell
+                    anchor [ref=141]
+                      text "详情"
+                    anchor [ref=142]
+                      text "下载"
+                    anchor [ref=143]
+                      text "追溯"
+                    anchor [ref=144]
+                      text "删除"
+                table_row
+                  table_cell
+                  table_cell
+                    text "执行理解与事实-9b4d802a-1cac-46eb-94b3-8bb052f0cdaf.json"
+                    text "仅整理来源执行的已记录事实；推断与待确认项单独保留，不把声明当成核验。"
+                  table_cell
+                    text "解析成功"
+                  table_cell
+                    text "自动化建立"
+                  table_cell
+                  table_cell
+                    anchor [ref=145]
+                      text "详情"
+                    anchor [ref=146]
+                      text "下载"
+                    anchor [ref=147]
+                      text "追溯"
+                    anchor [ref=148]
+                      text "删除"
+                table_row
+                  table_cell
+                  table_cell
+                    text "执行理解与事实-d6e6eb1b-2255-48b6-915e-a4599265ffae.json"
+                    text "仅整理来源执行的已记录事实；推断与待确认项单独保留，不把声明当成核验。"
+                  table_cell
+                    text "解析成功"
+                  table_cell
+                    text "自动化建立"
+                  table_cell
+                  table_cell
+                    anchor [ref=149]
+                      text "详情"
+                    anchor [ref=150]
+                      text "下载"
+                    anchor [ref=151]
+                      text "追溯"
+                    anchor [ref=152]
+                      text "删除"
+                table_row
+                  table_cell
+                  table_cell
+                    text "执行理解与事实-18d9e743-ad82-4f42-b8f1-7ca899ed0fbb.json"
+                    text "仅整理来源执行的已记录事实；推断与待确认项单独保留，不把声明当成核验。"
+                  table_cell
+                    text "解析成功"
+                  table_cell
+                    text "自动化建立"
+                  table_cell
+                  table_cell
+                    anchor [ref=153]
+                      text "详情"
+                    anchor [ref=154]
+                      text "下载"
+                    anchor [ref=155]
+                      text "追溯"
+                    anchor [ref=156]
+                      text "删除"
+                table_row
+                  table_cell
+                  table_cell
+                    text "执行理解与事实-27ce07f5-3984-4c6e-8089-1a030a8ca53a.json"
+                    text "仅整理来源执行的已记录事实；推断与待确认项单独保留，不把声明当成核验。"
+                  table_cell
+                    text "解析成功"
+                  table_cell
+                    text "自动化建立"
+                  table_cell
+                  table_cell
+                    anchor [ref=157]
+                      text "详情"
+                    anchor [ref=158]
+                      text "下载"
+                    anchor [ref=159]
+                      text "追溯"
+                    anchor [ref=160]
+                      text "删除"
+  svg_root

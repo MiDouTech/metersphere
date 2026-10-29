@@ -184,7 +184,7 @@ VALUES (UUID(), 'default-project-member-user-gyq', 'project_admin', 'project-rev
         'admin');
 
 INSERT INTO user_role_permission(id, role_id, permission_id)
-VALUES ('user_role_gyq_permission1', 'project_admin', 'FUNCTIONAL_CASE:READ+COMMENT');
+SELECT 'user_role_gyq_permission1', 'project_admin', 'FUNCTIONAL_CASE:READ+COMMENT' WHERE NOT EXISTS (SELECT 1 FROM user_role_permission WHERE role_id='project_admin' AND permission_id='FUNCTIONAL_CASE:READ+COMMENT');
 
 
 

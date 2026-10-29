@@ -41,6 +41,7 @@
         "id": "FUNCTIONAL_CASE_AI",
         "name": "permission.functional_case_ai.name",
         "permissions": [
+          { "id": "FUNCTIONAL_CASE_AI:REVIEW", "name": "permission.functional_case_ai.review" },
           {
             "id": "FUNCTIONAL_CASE_AI:READ",
             "name": "permission.functional_case_ai.read"
@@ -71,7 +72,8 @@
           { "id": "CASE_ASSET:READ+ADD" },
           { "id": "CASE_ASSET:READ+UPDATE" },
           { "id": "CASE_ASSET:READ+DELETE" },
-          { "id": "CASE_ASSET:READ+IMPORT" }
+          { "id": "CASE_ASSET:READ+IMPORT" },
+          { "id": "CASE_ASSET:READ+EXPORT" }
         ]
       },
       {
