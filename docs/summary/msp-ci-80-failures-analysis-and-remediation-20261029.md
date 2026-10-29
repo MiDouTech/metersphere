@@ -423,6 +423,8 @@ WHERE NOT (r.organization_id <=> p.organization_id);
 - 相关 8 个 Java 测试/辅助类在 384 MiB 上限下编译通过。真实数据库结果待定向 CI，不能把编译视为集成通过。
 - 自检改为两阶段：workflow_dispatch 可选 `api-failures`，只执行本次失败的 7 个 API 控制器测试类和契约单元；依赖模块仍编译，但不重跑已通过套件。默认 `full` 继续执行完整 reactor，只有 full 测试成功才执行镜像与健康检查。移除每次测试失败后的重复 skipTests 打包诊断。定向成功不能代替最终全量验收。
 
+定向 CI 40835521265 / deea21fdae：139 项，137 通过，2 failure、0 error、0 skipped。两项均为本轮错误使用404预期的 Mock 缺失/用例项目缺失分支，实际422；它们已按控制器前置模块检查及服务校验修正，尚待新版本运行。本轮未运行原始80项是定向范围选择，不能将其记为回归通过或失败。其余原12项对应分支均已执行通过。
+
 ### 6.12 防止下游未执行和重复自检的结果收集
 
 - 全量 reactor 使用 Surefire 的 failure-ignore **仅用于继续执行下游模块**，不是放行失败。构建后独立 `check-test-reports.py` 强制检查 SDK、系统、项目、API、缺陷、用例、计划、工作台、Agent、app 十个有测试模块的 XML；缺模块、零测试、failure、error 或 skipped 均使 CI 非零退出。编译/打包本身失败也仍使流水线失败。
