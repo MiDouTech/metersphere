@@ -255,7 +255,7 @@ try {
   passed('CORE-BUG-LONG-TAGS-NO-OVERLAP', { tagBounds, dateBounds, metaBounds });
   recordCheckpoint('personal-token-columns-and-controls');
   await page.goto(`${origin}/#/case-management/featureCase?orgId=100001&pId=${projectId}`);
-  await page.getByText('Administrator', { exact: true }).click();
+  await page.locator('#app .arco-menu-item .one-line-text').filter({ hasText: /^Administrator$/ }).click();
   await page.getByText('个人中心', { exact: true }).click();
   await page.getByText('Agent配置', { exact: true }).click();
   const personal = page.locator('.ms-personal-page-window');
