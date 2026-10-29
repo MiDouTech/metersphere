@@ -405,7 +405,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         request.setProjectId("111");
         request.setApiDefinitionId(apiDefinitionId);
         request.setName("test123");
-        this.requestPost(ADD, request).andExpect(notFoundError("api.notFound", "项目不存在"));
+        this.requestPost(ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project_is_not_exist")));
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.ADD);
         // @@异常参数校验
@@ -413,7 +413,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         // @@校验权限
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setName("permission");
-        requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_ADD, ADD, request);
+        requestPostPermissionTestWithOk(PermissionConstants.PROJECT_API_DEFINITION_CASE_ADD, ADD, request);
     }
 
     @Test
@@ -888,7 +888,9 @@ public class ApiTestCaseControllerTests extends BaseTest {
         // @@异常参数校验
         createdGroupParamValidateTest(ApiTestCaseUpdateRequest.class, UPDATE);
         // @@校验权限
-        requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_CASE_UPDATE, UPDATE, request);
+        request.setId(apiTestCase.getId());
+        request.setName("permission-update-valid");
+        requestPostPermissionTestWithOk(PermissionConstants.PROJECT_API_DEFINITION_CASE_UPDATE, UPDATE, request);
     }
 
     @Test

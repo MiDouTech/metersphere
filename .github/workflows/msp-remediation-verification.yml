@@ -111,7 +111,7 @@ jobs:
           key: ${{ steps.minio-cache.outputs.cache-primary-key }}
       - id: full-tests
         if: inputs.verification_scope != 'api-failures' && !contains(github.event.head_commit.message, '[api-failures]')
-        run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package
+        run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true package
         env:
           MAVEN_OPTS: -Xmx1536m
       - name: Run previously failing API classes without rerunning upstream suites
@@ -123,8 +123,14 @@ jobs:
           -Dsurefire.failIfNoSpecifiedTests=false test
         env:
           MAVEN_OPTS: -Xmx1536m
+      - name: Require all modules executed with zero failures, errors or skips
+        id: test-results
+        if: always() && steps.full-tests.outcome != 'skipped'
+        run: |
+          python3 deploy/quality-verify/test_report_gate.py
+          python3 deploy/quality-verify/check-test-reports.py
       - name: Build application image and verify isolated health
-        if: always() && steps.full-tests.outcome == 'success'
+        if: always() && steps.full-tests.outcome == 'success' && steps.test-results.outcome == 'success'
         run: bash deploy/quality-verify/ci-health.sh
         env:
           QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
@@ -143,4 +149,11 @@ jobs:
         with:
           name: backend-test-reports
           path: '**/target/surefire-reports/'
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.full-tests.outcome != 'skipped'
+        with:
+          name: all-module-test-summary
+          path: .ci-test-summary.json
+          if-no-files-found: error
           retention-days: 7

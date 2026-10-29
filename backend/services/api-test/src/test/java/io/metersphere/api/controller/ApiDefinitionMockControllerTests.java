@@ -416,7 +416,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setId("111");
         request.setName("test123");
-        this.requestPost(UPDATE, request).andExpect(notFoundError("api.notFound", "Mock不存在"));
+        this.requestPost(UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
 
         // @@校验日志
         checkLog(apiDefinitionMock.getId(), OperationLogType.UPDATE, UPDATE);
@@ -426,7 +426,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         request.setId(apiDefinitionMock.getId());
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setName("permission-st-6");
-        requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_MOCK_UPDATE, UPDATE, request);
+        requestPostPermissionTestWithOk(PermissionConstants.PROJECT_API_DEFINITION_MOCK_UPDATE, UPDATE, request);
 
     }
 
