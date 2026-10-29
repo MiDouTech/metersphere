@@ -428,7 +428,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         userRoleRelation.setUserId("admin");
         userRoleRelation.setSourceId("default-project-2");
         userRoleRelation.setCreateTime(System.currentTimeMillis());
-        userRoleRelation.setOrganizationId("default-project-2");
+        userRoleRelation.setOrganizationId("default-organization-2");
         userRoleRelationMapper.insert(userRoleRelation);
         request = new ProjectUserRoleMemberEditRequest();
         request.setProjectId("default-project-2");

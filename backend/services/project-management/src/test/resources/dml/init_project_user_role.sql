@@ -26,11 +26,11 @@ VALUES ('default-pro-role-id-1', 'default-pro-role-1', 'XXX', FALSE, 'PROJECT', 
         UNIX_TIMESTAMP() * 1000, 'admin', 'default-project-2');
 INSERT INTO user_role_permission (id, role_id, permission_id) VALUE (uuid(), 'default-org-role-id-3', 'PROJECT_USER_GROUP:READ');
 INSERT INTO user_role_relation (id, user_id, role_id, source_id, organization_id, create_time, create_user)
-VALUES (UUID(), 'default-pro-admin-user', 'default-pro-role-id-3', 'default-project-2', 'default-project-2',
+VALUES (UUID(), 'default-pro-admin-user', 'default-pro-role-id-3', 'default-project-2', 'default-organization-2',
         UNIX_TIMESTAMP() * 1000, 'admin'),
-       (UUID(), 'default-pro-admin-user', 'default-pro-role-id-4', 'default-project-2', 'default-project-2',
+       (UUID(), 'default-pro-admin-user', 'default-pro-role-id-4', 'default-project-2', 'default-organization-2',
         UNIX_TIMESTAMP() * 1000, 'admin'),
-       (UUID(), 'default-admin-user-x', 'default-pro-role-id-4', 'default-project-2', 'default-project-2',
+       (UUID(), 'default-admin-user-x', 'default-pro-role-id-4', 'default-project-2', 'default-organization-2',
         UNIX_TIMESTAMP() * 1000, 'admin'),
        (UUID(), 'default-admin-user-x', 'default-pro-role-id-3', 'default-organization-4', 'default-project-4',
         UNIX_TIMESTAMP() * 1000, 'admin');
