@@ -363,7 +363,7 @@ public class ApiScenarioController {
     @GetMapping("/stop/{taskId}")
     @Operation(summary = "接口测试-接口场景管理-导出-停止导出")
     @RequiresPermissions(PermissionConstants.PROJECT_API_SCENARIO_EXPORT)
-    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    @CheckOwner(resourceId = "#taskId", resourceType = "export_task")
     public void caseStopExport(@PathVariable String taskId) {
         apiScenarioDataTransferService.stopExport(taskId, SessionUtils.getUserId());
     }

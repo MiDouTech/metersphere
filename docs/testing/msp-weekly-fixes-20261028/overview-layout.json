@@ -1,0 +1,131 @@
+[
+  {
+    "viewport": 971,
+    "boxes": [
+      {
+        "selector": ".case-overview-plan-select",
+        "x": 135,
+        "y": 110,
+        "width": 200,
+        "height": 32,
+        "right": 335,
+        "centerY": 126
+      },
+      {
+        "selector": ".case-plan-progress",
+        "x": 343,
+        "y": 123,
+        "width": 90,
+        "height": 6,
+        "right": 433,
+        "centerY": 126
+      },
+      {
+        "selector": ".case-progress-percent",
+        "x": 441,
+        "y": 118.5,
+        "width": 38,
+        "height": 15,
+        "right": 479,
+        "centerY": 126
+      },
+      {
+        "selector": ".preview-frame",
+        "x": 24,
+        "y": 68,
+        "width": 493,
+        "height": 135,
+        "right": 517,
+        "centerY": 135.5
+      }
+    ],
+    "aligned": true,
+    "fits": true
+  },
+  {
+    "viewport": 1366,
+    "boxes": [
+      {
+        "selector": ".case-overview-plan-select",
+        "x": 135,
+        "y": 122,
+        "width": 418.71875,
+        "height": 32,
+        "right": 553.71875,
+        "centerY": 138
+      },
+      {
+        "selector": ".case-plan-progress",
+        "x": 561.71875,
+        "y": 135,
+        "width": 90,
+        "height": 6,
+        "right": 651.71875,
+        "centerY": 138
+      },
+      {
+        "selector": ".case-progress-percent",
+        "x": 659.71875,
+        "y": 130.5,
+        "width": 38,
+        "height": 15,
+        "right": 697.71875,
+        "centerY": 138
+      },
+      {
+        "selector": ".preview-frame",
+        "x": 24,
+        "y": 68,
+        "width": 888,
+        "height": 132,
+        "right": 912,
+        "centerY": 134
+      }
+    ],
+    "aligned": true,
+    "fits": true
+  },
+  {
+    "viewport": 1908,
+    "boxes": [
+      {
+        "selector": ".case-overview-plan-select",
+        "x": 135,
+        "y": 122,
+        "width": 418.71875,
+        "height": 32,
+        "right": 553.71875,
+        "centerY": 138
+      },
+      {
+        "selector": ".case-plan-progress",
+        "x": 561.71875,
+        "y": 135,
+        "width": 90,
+        "height": 6,
+        "right": 651.71875,
+        "centerY": 138
+      },
+      {
+        "selector": ".case-progress-percent",
+        "x": 659.71875,
+        "y": 130.5,
+        "width": 38,
+        "height": 15,
+        "right": 697.71875,
+        "centerY": 138
+      },
+      {
+        "selector": ".preview-frame",
+        "x": 24,
+        "y": 68,
+        "width": 1430,
+        "height": 132,
+        "right": 1454,
+        "centerY": 134
+      }
+    ],
+    "aligned": true,
+    "fits": true
+  }
+]

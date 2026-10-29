@@ -130,7 +130,6 @@ public class ProjectUserRoleController {
     @PostMapping("/add-member")
     @Operation(summary = "项目管理-项目与权限-用户组-添加用户组成员")
     @RequiresPermissions(PermissionConstants.PROJECT_GROUP_UPDATE)
-    @Log(type = OperationLogType.UPDATE, expression = "#msClass.editMemberLog(#request)", msClass = ProjectUserRoleLogService.class)
     public void addMember(@Validated @RequestBody ProjectUserRoleMemberEditRequest request) {
         projectUserRoleService.addMember(request, SessionUtils.getUserId());
     }

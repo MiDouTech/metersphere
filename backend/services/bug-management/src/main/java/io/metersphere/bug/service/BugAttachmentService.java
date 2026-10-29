@@ -271,6 +271,22 @@ public class BugAttachmentService {
      */
     public String upgrade(BugDeleteFileRequest request, String currentUser) {
         Bug bug = bugMapper.selectByPrimaryKey(request.getBugId());
+        if (bug == null) {
+            throw new MSException(io.metersphere.bug.enums.result.BugResultCode.BUG_NOT_EXIST);
+        }
+        if (!StringUtils.equals(bug.getProjectId(), request.getProjectId())) {
+            throw new org.apache.shiro.authz.UnauthorizedException();
+        }
+        FileAssociation association = fileAssociationMapper.selectByPrimaryKey(request.getRefId());
+        if (association == null || Boolean.TRUE.equals(association.getDeleted())
+                || !StringUtils.equals(association.getSourceId(), bug.getId())
+                || !StringUtils.equals(association.getSourceType(), FileAssociationSourceUtil.SOURCE_TYPE_BUG)) {
+            throw new MSException(Translator.get("file.association.not.exist"));
+        }
+        FileMetadata metadata = fileMetadataMapper.selectByPrimaryKey(association.getFileId());
+        if (metadata == null || !StringUtils.equals(metadata.getProjectId(), bug.getProjectId())) {
+            throw new MSException(Translator.get("file.not.exist"));
+        }
         // 取消关联附件->同步
         List<SyncAttachmentToPlatformRequest> syncUnlinkFiles = unLinkFile(bug.getPlatformBugId(), request.getProjectId(), request.getRefId(), currentUser, bug.getPlatform(), true);
         // 更新后的文件需要同步
@@ -509,9 +525,16 @@ public class BugAttachmentService {
                                                                  String refId, String currentUser, String platformName, boolean syncOnly) {
         List<SyncAttachmentToPlatformRequest> linkSyncFiles = new ArrayList<>();
         FileAssociation association = fileAssociationMapper.selectByPrimaryKey(refId);
+        if (association == null) {
+            throw new MSException(Translator.get("file.association.not.exist"));
+        }
         FileMetadataExample example = new FileMetadataExample();
         example.createCriteria().andIdEqualTo(association.getFileId());
-        FileMetadata fileMetadata = fileMetadataMapper.selectByExample(example).getFirst();
+        List<FileMetadata> metadata = fileMetadataMapper.selectByExample(example);
+        if (metadata.isEmpty()) {
+            throw new MSException(Translator.get("file.not.exist"));
+        }
+        FileMetadata fileMetadata = metadata.getFirst();
         // 取消关联的附件同步至平台
         if (!StringUtils.equals(platformName, BugPlatform.LOCAL.getName())) {
             File deleteTmpFile = new File(FilenameUtils.normalize(LocalRepositoryDir.getBugTmpDir() + File.separator + fileMetadata.getName() + "." + fileMetadata.getType()));

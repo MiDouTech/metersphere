@@ -1,0 +1,88 @@
+{
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40894938103",
+  "codeCommit": "5878b1178dc2439f804202234e27f0589388b307",
+  "status": "partial",
+  "coreSmoke": {
+    "commit": "5878b1178dc2439f804202234e27f0589388b307",
+    "viewport": {
+      "width": 1366,
+      "height": 900
+    },
+    "checks": [
+      {
+        "id": "CORE-LOGIN",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CREATE-IDEMPOTENT",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-PLAN-ONE-SELECTOR-AUTO-WIDTH-ALIGNED",
+        "status": "passed",
+        "shortWidth": 273.703125,
+        "longWidth": 581.6875,
+        "planBounds": {
+          "selector": {
+            "x": 544.515625,
+            "y": 364,
+            "width": 581.6875,
+            "height": 32
+          },
+          "progress": {
+            "x": 1134.203125,
+            "y": 377,
+            "width": 90,
+            "height": 6
+          }
+        },
+        "annotations": {
+          "1": "selector",
+          "2": "progress"
+        }
+      },
+      {
+        "id": "CORE-SELECT-ALL-TOGGLE",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CASE-IMAGE-PUBLISH-REPLAY-DOWNLOAD-PLAN-SYNC",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-PLAN-REENTER-FRESH-STATE-AND-SWITCH",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-SOURCE-DEFECT-PLAN-SYNC",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-BUG-LONG-TAGS-NO-OVERLAP",
+        "status": "passed",
+        "tagBounds": {
+          "x": 1034,
+          "y": 390.5,
+          "width": 318,
+          "height": 266
+        },
+        "dateBounds": {
+          "x": 1034,
+          "y": 342.5,
+          "width": 318,
+          "height": 32
+        },
+        "metaBounds": {
+          "x": 1034,
+          "y": 672.5,
+          "width": 318,
+          "height": 185
+        }
+      }
+    ],
+    "status": "failed",
+    "currentCheckpoint": "personal-token-columns-and-controls",
+    "failedCheckpoint": "personal-token-columns-and-controls"
+  },
+  "failure": "Token header accessible-name locator did not match; actual columns visible in screenshot"
+}

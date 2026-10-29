@@ -83,27 +83,27 @@ public class BugCommentControllerTests extends BaseTest {
         request.setBugId("default-bug-id-for-comment-x");
         request.setContent("This is a comment test!");
         request.setEvent(NoticeConstants.Event.COMMENT);
-        this.requestPost(BUG_COMMENT_ADD, request, status().is5xxServerError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessError(108001, "缺陷不存在"));
         // 回复评论, 没有父级评论ID
         request.setReplyUser("oasis-user-id1");
         request.setBugId("default-bug-id-for-comment");
         request.setContent("This is a comment test!");
         request.setEvent(NoticeConstants.Event.REPLY);
-        this.requestPost(BUG_COMMENT_ADD, request, status().is5xxServerError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessValidationError());
         // 回复评论, 父级评论不存在
         request.setReplyUser("oasis-user-id1");
         request.setBugId("default-bug-id-for-comment");
         request.setContent("This is a comment test!");
         request.setParentId("default-bug-comment-id-3-x");
         request.setEvent(NoticeConstants.Event.REPLY);
-        this.requestPost(BUG_COMMENT_ADD, request, status().is5xxServerError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessValidationError());
         // 回复评论, 但回复人为空
         request.setReplyUser(null);
         request.setBugId("default-bug-id-for-comment");
         request.setContent("This is a comment test!");
         request.setParentId("default-bug-comment-id-3");
         request.setEvent(NoticeConstants.Event.REPLY);
-        this.requestPost(BUG_COMMENT_ADD, request, status().is5xxServerError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessValidationError());
     }
 
     @Test
@@ -203,15 +203,17 @@ public class BugCommentControllerTests extends BaseTest {
     @Order(10)
     public void testDeleteBugCommentSuccess() throws Exception {
         // 删除第一级评论
-        this.requestGet(BUG_COMMENT_DELETE + "/default-bug-comment-id-1");
+        this.requestDelete(BUG_COMMENT_DELETE + "/default-bug-comment-id-1").andExpect(status().isOk());
         BugComment comment = bugCommentMapper.selectByPrimaryKey("default-bug-comment-id-2");
         Assertions.assertNull(comment);
         // 删除第二级评论
-        this.requestGet(BUG_COMMENT_DELETE + "/default-bug-comment-id-4");
+        this.requestDelete(BUG_COMMENT_DELETE + "/default-bug-comment-id-4").andExpect(status().isOk());
         BugComment comment1 = bugCommentMapper.selectByPrimaryKey("default-bug-comment-id-4");
         Assertions.assertNull(comment1);
         // 删除非当前评论人的评论
-        this.requestGet(BUG_COMMENT_DELETE + "/default-bug-comment-id-5");
+        this.requestDelete(BUG_COMMENT_DELETE + "/default-bug-comment-id-5").andExpect(status().isForbidden())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value(100403))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.messageKey").value("api.forbidden"));
         BugComment comment2 = bugCommentMapper.selectByPrimaryKey("default-bug-comment-id-5");
         Assertions.assertTrue(StringUtils.equals(comment2.getId(), "default-bug-comment-id-5"));
     }
@@ -220,7 +222,7 @@ public class BugCommentControllerTests extends BaseTest {
     @Order(11)
     public void testDeleteBugCommentError() throws Exception {
         // 评论不存在
-        this.requestGet(BUG_COMMENT_DELETE + "/default-bug-comment-id-x");
+        this.requestDelete(BUG_COMMENT_DELETE + "/default-bug-comment-id-x").andExpect(notFoundError("api.notFound", io.metersphere.sdk.util.Translator.get("bug_comment_not_exist")));
     }
 
     private BugComment saveOrUpdateComment(BugCommentEditRequest request, boolean isUpdated) throws Exception{

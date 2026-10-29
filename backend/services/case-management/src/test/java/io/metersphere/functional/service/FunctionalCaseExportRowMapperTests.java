@@ -9,6 +9,21 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FunctionalCaseExportRowMapperTests {
+    @Test void sourceTemplatePriorityIsAliasedToTheRequestedHubFieldIdentity() {
+        var header=new io.metersphere.system.dto.sdk.TemplateCustomFieldDTO();
+        header.setFieldId("hub-priority-id");header.setFieldName("Priority");header.setInternalFieldKey("functional_priority");
+        for(String priority:List.of("P0","P1","P2","P3")) {
+            var data=new FunctionalCaseExcelData();data.setCustomData(new java.util.HashMap<>());
+            FunctionalCaseFileService.applyAssetPriority(List.of(header),List.of(priority),data);
+            var request=new FunctionalCaseExportRequest();request.setSystemFields(List.of(field("hub-priority-id","Priority")));
+            assertEquals(List.of(priority),FunctionalCaseExportRowMapper.row(request,data));
+        }
+        var empty=new FunctionalCaseExcelData();empty.setCustomData(new java.util.HashMap<>());
+        FunctionalCaseFileService.applyAssetPriority(List.of(header),List.of(),empty);
+        org.junit.jupiter.api.Assertions.assertTrue(empty.getCustomData().isEmpty());
+        org.junit.jupiter.api.Assertions.assertThrows(io.metersphere.sdk.exception.MSException.class,
+                ()->FunctionalCaseFileService.applyAssetPriority(List.of(header),List.of("P0","P3"),empty));
+    }
     private FunctionalCaseHeader field(String id,String title) {
         var field=new FunctionalCaseHeader();field.setId(id);field.setName(title);return field;
     }

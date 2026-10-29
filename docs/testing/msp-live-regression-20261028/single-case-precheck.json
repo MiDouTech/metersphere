@@ -1,0 +1,20 @@
+[
+  {
+    "method": "POST",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/precheck?requestId=59fce6b6-5bf5-413c-9632-1873891a988c",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"PRECHECKED\",\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"d92aaf90-ffc4-4b20-a1c6-f239673fdc5c\",\"expiresAt\":1793252225836,\"counts\":[{\"state\":\"PENDING\",\"total\":1}]}}"
+  },
+  {
+    "method": "GET",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/d92aaf90-ffc4-4b20-a1c6-f239673fdc5c?current=1&pageSize=10&_t=1793165824947",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"PRECHECKED\",\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"d92aaf90-ffc4-4b20-a1c6-f239673fdc5c\",\"expiresAt\":1793252225836,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"followup\":{\"state\":\"LEGACY\"}}}"
+  },
+  {
+    "method": "GET",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/d92aaf90-ffc4-4b20-a1c6-f239673fdc5c/followup-options?_t=1793165825146",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"canCreate\":true,\"groups\":[{\"id\":\"48b1ccb8-6fa9-4334-a701-85006ac5aa1c\",\"revision\":3,\"planId\":\"1710884880739475461\",\"reviewId\":\"1710884932279083008\",\"planName\":\"ACCEPTANCE-20261027-导入联动计划\",\"reviewName\":\"ACCEPTANCE-20261027-导入联动评审\"}],\"projectId\":\"1704667279923322880\"}}"
+  }
+]

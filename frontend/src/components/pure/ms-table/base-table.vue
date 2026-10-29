@@ -15,13 +15,14 @@
         :select-row-count="selectedCount"
         :disabled="!!attrs.loading"
         :show-select-all-after-export="props.showSelectAllAfterExport"
+        :all-pages-selected="props.selectorStatus === SelectAllEnum.ALL"
         :select-all-disabled="!!attrs.loading || !(attrs.msPagination as MsPaginationI)?.total"
         :action-config="props.actionConfig"
         :wrapper-id="toolbarId"
         :size="props.paginationSize"
         @batch-action="handleBatchAction"
         @clear="() => emit('clearSelector')"
-        @select-all-pages="handleSelectAllChange(SelectAllEnum.ALL, true)"
+        @select-all-pages="toggleAllPages"
       >
         <template #count>
           <slot name="count"></slot>
@@ -35,7 +36,7 @@
       :row-class="getRowClass"
       :column-resizable="true"
       :span-method="spanMethod"
-      :columns="currentColumns"
+      :columns="layoutColumns"
       :span-all="props.spanAll"
       @select="originalRowSelectChange"
       @select-all="originalSelectAll"
@@ -93,7 +94,7 @@
         </a-table-column>
         <!-- 最小宽度200+16的内边距 -->
         <a-table-column
-          v-for="(item, idx) in currentColumns"
+          v-for="(item, idx) in layoutColumns"
           :key="idx"
           :width="item.isTag || item.isStringTag ? 216 : item.width"
           :min-width="item.isTag || item.isStringTag ? 216 : 80"
@@ -305,13 +306,14 @@
           :select-row-count="selectedCount"
           :disabled="!!attrs.loading"
           :show-select-all-after-export="props.showSelectAllAfterExport"
+          :all-pages-selected="props.selectorStatus === SelectAllEnum.ALL"
           :select-all-disabled="!!attrs.loading || !(attrs.msPagination as MsPaginationI)?.total"
           :action-config="props.actionConfig"
           wrapper-id="ms-table-footer-wrapper"
           :size="props.paginationSize"
           @batch-action="handleBatchAction"
           @clear="() => emit('clearSelector')"
-          @select-all-pages="handleSelectAllChange(SelectAllEnum.ALL, true)"
+          @select-all-pages="toggleAllPages"
         >
           <template #count>
             <slot name="count"></slot>
@@ -503,6 +505,13 @@
   const tableToolbar = ref<HTMLElement>();
   const toolbarId = `ms-table-toolbar-${getCurrentInstance()?.uid}`;
   const availableBodyHeight = ref<number>();
+  const availableTableWidth = ref<number>();
+  const layoutColumns = computed(() => {
+    const narrow = availableTableWidth.value !== undefined && availableTableWidth.value < 640;
+    if (!narrow || !tableWrapper.value?.classList.contains('msp-polished-table')) return currentColumns.value;
+    // Keep every action rendered, but let it scroll rather than cover the name in a narrow pane.
+    return currentColumns.value.map((column) => (column.fixed === 'right' ? { ...column, fixed: undefined } : column));
+  });
   let layoutObserver: ResizeObserver | undefined;
   let layoutFrame = 0;
   const measureLayout = () => {
@@ -510,6 +519,7 @@
     layoutFrame = requestAnimationFrame(() => {
       const root = tableWrapper.value;
       if (!root || !root.getClientRects().length) return;
+      availableTableWidth.value = root.getBoundingClientRect().width;
       const header = root.querySelector('.arco-table-header');
       const footerHeight = tableFooter.value?.getBoundingClientRect().height || 0;
       availableBodyHeight.value = Math.max(
@@ -722,6 +732,12 @@
   // 全选change事件
   const handleSelectAllChange = (v: SelectAllEnum, onlyCurrent: boolean) => {
     emit('selectAllChange', v, onlyCurrent);
+  };
+  const toggleAllPages = () => {
+    handleSelectAllChange(
+      props.selectorStatus === SelectAllEnum.ALL ? SelectAllEnum.CANCEL_ALL : SelectAllEnum.ALL,
+      true
+    );
   };
   // 行选择器change事件
   const rowSelectChange = (record: TableData) => {
@@ -1147,6 +1163,16 @@
 </script>
 
 <style lang="less" scoped>
+  .ms-base-table.msp-polished-table {
+    :deep(.arco-table-th) {
+      background: #f8f9fc;
+    }
+    .ms-table-batch-toolbar :deep(.arco-btn) {
+      padding: 0 12px;
+      height: 32px;
+      font-size: 13px;
+    }
+  }
   .ms-base-table {
     position: relative;
     .ms-table-edit-active {

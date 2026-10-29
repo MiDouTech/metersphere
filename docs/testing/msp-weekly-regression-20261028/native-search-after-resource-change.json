@@ -1,0 +1,13 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "data": {
+      "code": "AI_EXECUTION_INTERNAL_ERROR",
+      "traceId": "5f50425c-af34-4f18-bf6a-c65470d8a222"
+    },
+    "message": "服务暂时不可用，请使用 traceId 联系管理员",
+    "code": -32603
+  }
+}

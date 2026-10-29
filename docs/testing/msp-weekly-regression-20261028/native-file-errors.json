@@ -1,0 +1,28 @@
+{
+  "invalid": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "IMPORT_CASE_SHEET_NOT_FOUND",
+        "traceId": "3083f2a0-73c5-4591-b8b3-bb5e75ad4896"
+      },
+      "message": "未找到用例工作表，请使用当前模板，并保留第一行的用例名称列；报告和说明工作表不会导入",
+      "code": -32001
+    }
+  },
+  "badImage": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "QUALITY_CASE_EVIDENCE_INVALID",
+        "traceId": "e7eb7f18-d4af-4028-8ec0-91d17c3f3da9"
+      },
+      "message": "用例图片证据无效，请检查PNG/JPEG格式、大小及所属用例后重试",
+      "code": -32001
+    }
+  }
+}

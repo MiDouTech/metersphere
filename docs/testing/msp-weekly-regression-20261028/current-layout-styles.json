@@ -1,0 +1,10 @@
+{
+  "width": 1908,
+  "height": 951,
+  "headerBackground": "rgb(255, 255, 255)",
+  "batchButtonHeight": 20,
+  "select": {
+    "width": 438.359375,
+    "maxWidth": "none"
+  }
+}

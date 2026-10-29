@@ -1,0 +1,9 @@
+{
+  "writes": [],
+  "alerts": [
+    "请填写完整 HTTP/HTTPS 地址，例如 https://test.example.com"
+  ],
+  "modal": [
+    "新增测试平台配置名称 环境类型 测试受管任务环境资产 个人直连无需绑定。受管任务请选择已发布的环境资产；不改变原凭据范围。基础地址 允许 Origin msp.ebcone.net\n每行一个，必须包含基础地址的 OriginRunner 类型 Browser网络区域 所需能力 逗号分隔状态 取消确定"
+  ]
+}

@@ -1,4 +1,21 @@
-# 组织列表数据准备
+-- Reset only these fixture identities; controller classes share the test database.
+DELETE FROM user_role_relation WHERE organization_id IN
+ ('sys_default_organization_1','sys_default_organization_2','sys_default_organization_3',
+  'sys_default_organization_4','sys_default_organization_5','sys_default_organization_6','sys_default_organization_7');
+DELETE FROM user_role_permission WHERE role_id IN
+ ('sys_default_org_role_id_1','sys_default_org_role_id_2','sys_default_org_role_id_3',
+  'sys_default_org_role_id_4','sys_default_org_role_id_5','sys_default_org_role_id_7',
+  'sys_default_org_role_id_8','sys_default_project_role_id_3');
+DELETE FROM user_role WHERE id IN
+ ('sys_default_org_role_id_1','sys_default_org_role_id_2','sys_default_org_role_id_3',
+  'sys_default_org_role_id_4','sys_default_org_role_id_5','sys_default_org_role_id_7',
+  'sys_default_org_role_id_8','sys_default_project_role_id_3');
+DELETE FROM user WHERE id IN
+ ('sys_default_user','sys_default_user2','sys_default_user3','sys_default_user4','sys_default_user5','sys_default_user6');
+DELETE FROM organization WHERE id IN
+ ('sys_default_organization_1','sys_default_organization_2','sys_default_organization_3',
+  'sys_default_organization_4','sys_default_organization_5','sys_default_organization_6','sys_default_organization_7');
+-- 组织列表数据准备
 INSERT INTO organization(id,num, name, description, create_time, update_time, create_user, update_user, delete_user, delete_time) VALUE
     ('sys_default_organization_1',null, 'organization_name_1', 'XXX-1', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'admin', null, null);
 INSERT INTO organization(id, num, name, description, create_time, update_time, create_user, update_user, delete_user, delete_time) VALUE

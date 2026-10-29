@@ -1,0 +1,26 @@
+{
+  "root": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"id\":\"1712375732607426560\",\"projectId\":\"1704667279923322880\",\"name\":\"扫码防翻拍\",\"parentId\":\"NONE\",\"pos\":1793088346595,\"createTime\":1793170986753,\"updateTime\":1793170986753,\"createUser\":\"1559871391069831258\",\"updateUser\":\"1559871391069831258\",\"moduleType\":\"MODULE\",\"refProjectId\":null}"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "id": "1712375732607426560",
+        "projectId": "1704667279923322880",
+        "name": "扫码防翻拍",
+        "parentId": "NONE",
+        "pos": 1793088346595,
+        "createTime": 1793170986753,
+        "updateTime": 1793170986753,
+        "createUser": "1559871391069831258",
+        "updateUser": "1559871391069831258",
+        "moduleType": "MODULE",
+        "refProjectId": null
+      }
+    }
+  },
+  "projectTotal": 119
+}

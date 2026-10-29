@@ -1,3 +1,11 @@
+-- This role fixture owns its required organizations; do not rely on a later test class.
+INSERT INTO organization (id,name,create_time,update_time,create_user,update_user)
+SELECT 'default-organization-2','default-2',UNIX_TIMESTAMP()*1000,UNIX_TIMESTAMP()*1000,'admin','admin'
+WHERE NOT EXISTS (SELECT 1 FROM organization WHERE id='default-organization-2');
+INSERT INTO organization (id,name,create_time,update_time,create_user,update_user)
+SELECT 'default-organization-4','default-4',UNIX_TIMESTAMP()*1000,UNIX_TIMESTAMP()*1000,'admin','admin'
+WHERE NOT EXISTS (SELECT 1 FROM organization WHERE id='default-organization-4');
+
 # 组织用户组数据准备
 INSERT INTO user_role(id, name, description, internal, type, create_time, update_time, create_user, scope_id) VALUE
     ('default-org-role-id-1', 'default-org-role-1', 'XXX', FALSE, 'ORGANIZATION', UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', 'default-organization-2');

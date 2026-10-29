@@ -1,0 +1,138 @@
+{
+  "status": 200,
+  "body": {
+    "code": 100200,
+    "message": null,
+    "messageDetail": null,
+    "data": {
+      "executionRef": null,
+      "executionFacts": null,
+      "sourceBindings": [
+        {
+          "caseId": "1712306377475530754",
+          "projectId": "1704667279923322880",
+          "updateTime": 1793167783705
+        }
+      ],
+      "id": "1712306377475530758",
+      "num": 101150,
+      "moduleId": "1704667279923322960",
+      "moduleName": "MSP需求验收-20261023",
+      "projectId": "100001100001",
+      "templateId": "1704667279923322930",
+      "name": "WEEKLY-20261028-证据与幂等隔离",
+      "reviewStatus": "UN_REVIEWED",
+      "tags": [
+        "WEEKLY-20261028-tag"
+      ],
+      "caseEditType": "STEP",
+      "versionId": "100000000000001",
+      "versionName": "v1.0",
+      "publicCase": false,
+      "latest": true,
+      "deleted": false,
+      "aiCreate": false,
+      "createUser": "1559871391069831258",
+      "createUserName": "陈启芬",
+      "createTime": 1793166949657,
+      "updateTime": 1793167784086,
+      "steps": "[{\"id\":\"1712306377475530752\",\"num\":1,\"desc\":\"协议位置1\",\"result\":\"结构保留\",\"actualResult\":null,\"executeResult\":null,\"attachmentIds\":null,\"attachmentNames\":null},{\"id\":\"1712306377475530753\",\"num\":2,\"desc\":\"协议位置2\",\"result\":\"结构保留\",\"actualResult\":null,\"executeResult\":null,\"attachmentIds\":null,\"attachmentNames\":null}]",
+      "textDescription": "",
+      "expectedResult": "",
+      "prerequisite": "",
+      "description": "仅协议验收，不代表真实业务执行；本轮隔离数据",
+      "customFields": [
+        {
+          "fieldId": "1704667279923322929",
+          "fieldName": "用例等级",
+          "fieldKey": null,
+          "required": true,
+          "apiFieldId": null,
+          "defaultValue": "P3",
+          "type": "SELECT",
+          "options": [
+            {
+              "fieldId": "1704667279923322929",
+              "value": "P0",
+              "text": "P0",
+              "internal": true,
+              "pos": 1
+            },
+            {
+              "fieldId": "1704667279923322929",
+              "value": "P1",
+              "text": "P1",
+              "internal": true,
+              "pos": 2
+            },
+            {
+              "fieldId": "1704667279923322929",
+              "value": "P2",
+              "text": "P2",
+              "internal": true,
+              "pos": 3
+            },
+            {
+              "fieldId": "1704667279923322929",
+              "value": "P3",
+              "text": "P3",
+              "internal": true,
+              "pos": 4
+            }
+          ],
+          "supportSearch": null,
+          "optionMethod": null,
+          "internal": true,
+          "platformOptionJson": null,
+          "platformPlaceHolder": null,
+          "platformSystemField": null,
+          "internalFieldKey": "functional_priority"
+        }
+      ],
+      "attachments": [
+        {
+          "id": "b4451427-cf4e-4300-9ebf-fd68ae304ed9",
+          "associationId": "1712320722666299392",
+          "fileName": "protocol-ui-evidence.png",
+          "size": 104112,
+          "fileSource": "ATTACHMENT",
+          "local": true,
+          "createUser": "1559871391069831258",
+          "createUserName": "陈启芬",
+          "createTime": 1793167784100,
+          "deleted": false
+        }
+      ],
+      "followFlag": false,
+      "functionalPriority": "P3",
+      "demandCount": 0,
+      "caseCount": 0,
+      "bugCount": 0,
+      "relateEdgeCount": 0,
+      "caseReviewCount": 0,
+      "testPlanCount": 0,
+      "commentCount": 0,
+      "commentList": [
+        {
+          "id": "caseComment",
+          "name": "0"
+        },
+        {
+          "id": "reviewComment",
+          "name": "0"
+        },
+        {
+          "id": "executiveComment",
+          "name": "0"
+        }
+      ],
+      "historyCount": 0,
+      "lastExecuteResult": "PENDING",
+      "executeUser": null,
+      "executeUserName": null,
+      "lastExecuteUser": null,
+      "lastExecuteUserName": null,
+      "lastExecuteTime": null
+    }
+  }
+}

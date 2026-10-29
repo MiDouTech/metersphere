@@ -1,0 +1,218 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      text "用例"
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=618]
+            svg_root
+        list_item
+          button [ref=619]
+            svg_root
+        list_item
+          button [ref=620]
+            svg_root
+        list_item
+          switch [ref=621]
+            svg_root
+        list_item
+          button [ref=622]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "测试计划"
+          container
+            svg_root
+            text "测试用例"
+          container
+            svg_root
+            text "接口测试"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "缺陷管理"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container [ref=623]
+        container [ref=747]
+          container
+            container
+              container [ref=748]
+                text "执行用例"
+              container [ref=749]
+                text "Xmind用例"
+            button [ref=750]
+              svg_root
+              text "刷新"
+          splitter
+          container
+            container
+              textbox [ref=751]
+                text "请输入模块名称"
+              container
+                container
+                  svg_root
+                  text "全部用例"
+                  text "(1)"
+                container
+                  svg_root
+                  svg_root
+                  svg_root
+              container [ref=752]
+                container
+                  svg_root
+                  text "未规划用例"
+                  text "0"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "MSP需求验收-20261023"
+                    text "1"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "ACCEPTANCE-20261027-移动父目录"
+                    text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-导入目录"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-并发去重目录"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-1"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-64"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-65"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-128"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写幂等键"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写独立A"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写独立B"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-key128"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-并发同键"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-key1"
+                  text "0"
+            container
+              svg_root
+              container
+                container
+                  container [ref=753]
+                    text "用例列表"
+                  container [ref=754]
+                    text "用例详情"
+                container
+                  container
+                    container
+                      text "P0"
+                      text "[ ]"
+                    container
+                      container
+                        svg_root
+                        text "编辑"
+                      container
+                        svg_root
+                        text "分享"
+                      container
+                        svg_root
+                        text "关注"
+                      container
+                        svg_root
+                        text "更多"
+                  container [ref=860]
+                    container
+                      container
+                        text "评审："
+                        text "-"
+                      container
+                        text "测试计划："
+                        text "-"
+                      container
+                        text "个人执行进度："
+                        text "0/0"
+                        container "个人执行进度 0/0"
+                    container
+                      container
+                        container [ref=861]
+                          text "基本信息"
+                        container [ref=862]
+                          text "详情"
+                        container [ref=863]
+                          text "前置用例"
+                        container [ref=864]
+                          text "需求"
+                        container [ref=865]
+                          container
+                            text "缺陷"
+                            text "2"
+                        container [ref=866]
+                          container
+                            text "变更历史"
+                            text "1"
+                      text "显示设置"
+                    text "加载中..."
+  svg_root
+  unordered_list
+    alert
+      svg_root
+      text "服务暂时异常，请稍后重试 (b7b7eda5-bafa-4146-8b37-de08bbd8fbee)"

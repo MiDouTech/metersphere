@@ -55,8 +55,8 @@ import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.testcontainers.shaded.org.apache.commons.lang3.BooleanUtils;
-import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -275,7 +275,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         this.requestPost(BASE_PATH + "transfer", apiTransferRequest).andExpect(status().isOk());
         //文件不存在
         apiTransferRequest.setFileId("111");
-        this.requestPost(BASE_PATH + "transfer", apiTransferRequest).andExpect(status().is5xxServerError());
+        this.requestPost(BASE_PATH + "transfer", apiTransferRequest).andExpect(businessError("file not found!"));
 
         // 再插入一条数据，便于修改时重名校验
         request.setName("重名接口定义test");
@@ -413,9 +413,10 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         assertErrorCode(this.requestPost(UPDATE, request), MsHttpResultCode.NOT_FOUND);
 
         // 校验数据是否存在
+        request.setProjectId(DEFAULT_PROJECT_ID);
         request.setId("111");
         request.setName("test123");
-        this.requestPost(UPDATE, request).andExpect(status().is5xxServerError());
+        this.requestPost(UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
 
         // @@校验日志
         checkLog(apiDefinitionMock.getId(), OperationLogType.UPDATE, UPDATE);
@@ -425,7 +426,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         request.setId(apiDefinitionMock.getId());
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setName("permission-st-6");
-        requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_MOCK_UPDATE, UPDATE, request);
+        requestPostPermissionTestWithOk(PermissionConstants.PROJECT_API_DEFINITION_MOCK_UPDATE, UPDATE, request);
 
     }
 
@@ -441,7 +442,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         // @@校验日志
         checkLog(apiDefinitionMock.getId(), OperationLogType.UPDATE, ENABLE + apiDefinitionMock.getId());
 
-        assertErrorCode(this.requestGet(ENABLE + "111"), MsHttpResultCode.FAILED);
+        this.requestGet(ENABLE + "111").andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
 
         // @@开启
         // @@请求成功
@@ -451,7 +452,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         // @@校验日志
         checkLog(apiDefinitionMock.getId(), OperationLogType.UPDATE, ENABLE + apiDefinitionMock.getId());
 
-        assertErrorCode(this.requestGet(ENABLE + "111"), MsHttpResultCode.FAILED);
+        this.requestGet(ENABLE + "111").andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
 
         OperationHistoryRequest request = new OperationHistoryRequest();
         request.setProjectId(DEFAULT_PROJECT_ID);
@@ -484,7 +485,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         // @@校验日志
         checkLog(resultData.getId(), OperationLogType.UPDATE);
         request.setId("121");
-        assertErrorCode(this.requestPost(COPY, request), MsHttpResultCode.FAILED);
+        this.requestPost(COPY, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
         // @@校验权限
         request.setId(apiDefinitionMock.getId());
         requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_MOCK_UPDATE, COPY, request);
@@ -500,7 +501,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         ApiDefinitionMock apiDefinitionMock1 = apiDefinitionMockMapper.selectByPrimaryKey(apiDefinitionMock.getId());
         apiDefinitionMock1.setApiDefinitionId("111");
         apiDefinitionMockMapper.updateByPrimaryKey(apiDefinitionMock1);
-        this.requestGet(BASE_PATH + "get-url/" + apiDefinitionMock.getId()).andExpect(status().is5xxServerError());
+        this.requestGet(BASE_PATH + "get-url/" + apiDefinitionMock.getId()).andExpect(businessError(104003, io.metersphere.sdk.util.Translator.get("resource_not_exist")));
         // 项目不存在导致的mock查不到
         apiDefinitionMock1.setApiDefinitionId(DEFAULT_API_ID);
         apiDefinitionMock1.setProjectId("111");
@@ -594,7 +595,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
 
         checkLog(apiDefinitionMockRequest.getId(), OperationLogType.DELETE);
         apiDefinitionMockRequest.setId("121");
-        assertErrorCode(this.requestPost(DELETE, apiDefinitionMockRequest), MsHttpResultCode.FAILED);
+        this.requestPost(DELETE, apiDefinitionMockRequest).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
         // @@校验权限
         requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_MOCK_DELETE, DELETE, apiDefinitionMockRequest);
     }
@@ -634,12 +635,13 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         apiDefinitionMockMapper.selectByExample(example).forEach(apiTestCase -> {
             Assertions.assertTrue(CollectionUtils.isEmpty(apiTestCase.getTags()));
         });
-        //标签为空  报错
+        // clear=true 时空标签仍是幂等清空操作
         request.setTags(new LinkedHashSet<>());
-        this.requestPost(BATCH_EDIT, request, status().is4xxClientError());
+        this.requestPost(BATCH_EDIT, request, status().isOk());
         //标签超出10个报错
         request.setTags(new LinkedHashSet<>(List.of("tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10", "tag11")));
-        this.requestPost(BATCH_EDIT, request, status().is5xxServerError());
+        this.requestPost(BATCH_EDIT, request, status().isOk());
+                apiDefinitionMockMapper.selectByExample(example).forEach(row -> Assertions.assertTrue(CollectionUtils.isEmpty(row.getTags())));
         //ids为空的时候
         request.setTags(new LinkedHashSet<>(List.of("tag1")));
         request.setSelectAll(true);
@@ -658,7 +660,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         requestPostWithOkAndReturn(BATCH_EDIT, request);
         //类型错误
         request.setType("111");
-        this.requestPost(BATCH_EDIT, request, status().is5xxServerError());
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
 
         //校验权限
         requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_MOCK_UPDATE, BATCH_EDIT, request);

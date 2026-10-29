@@ -1518,6 +1518,9 @@ public class BugService {
             example.createCriteria().andBugIdEqualTo(request.getId()).andFileIdIn(request.getDeleteLocalFileIds());
             List<BugLocalAttachment> bugLocalAttachments = bugLocalAttachmentMapper.selectByExample(example);
             Map<String, BugLocalAttachment> localAttachmentMap = bugLocalAttachments.stream().collect(Collectors.toMap(BugLocalAttachment::getFileId, v -> v));
+            if (!localAttachmentMap.keySet().containsAll(request.getDeleteLocalFileIds())) {
+                throw new MSException(Translator.get("file.not.exist"));
+            }
             // 删除本地上传的附件, BUG_LOCAL_ATTACHMENT表
             request.getDeleteLocalFileIds().forEach(deleteFileId -> {
                 FileRequest fileRequest = buildBugFileRequest(request.getProjectId(), request.getId(), deleteFileId, localAttachmentMap.get(deleteFileId).getFileName());
@@ -2255,6 +2258,9 @@ public class BugService {
      */
     private List<LogDTO> getBatchLogByRequest(List<String> batchIds, String operationType, String module, String path, String projectId, boolean batchUpdate,
                                               boolean appendTag, List<String> modifiedTags, String currentUser) {
+        if (CollectionUtils.isEmpty(batchIds)) {
+            return List.of();
+        }
         Project project = projectMapper.selectByPrimaryKey(projectId);
         BugExample example = new BugExample();
         example.createCriteria().andIdIn(batchIds);

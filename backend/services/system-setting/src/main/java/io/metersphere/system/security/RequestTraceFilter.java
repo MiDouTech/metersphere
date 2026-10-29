@@ -16,6 +16,7 @@ import java.util.UUID;
 public class RequestTraceFilter extends OncePerRequestFilter {
     private static final Logger LOG=LoggerFactory.getLogger(RequestTraceFilter.class);
     @Override protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain)throws ServletException,IOException {
+        com.github.pagehelper.PageHelper.clearPage();
         String candidate=request.getHeader("X-Request-ID");
         String id=candidate!=null && candidate.matches("[A-Za-z0-9_.:-]{1,128}")?candidate:UUID.randomUUID().toString();
         String previous=MDC.get("traceId");
@@ -25,6 +26,8 @@ public class RequestTraceFilter extends OncePerRequestFilter {
         var previousDb = io.metersphere.system.interceptor.DatabaseQueryTelemetry.startRequest();
         try {chain.doFilter(request,response);}
         finally {
+            // Empty/short-circuited page handlers may never reach MyBatis's cleanup.
+            com.github.pagehelper.PageHelper.clearPage();
             long ms=(System.nanoTime()-start)/1_000_000;
             var db = io.metersphere.system.interceptor.DatabaseQueryTelemetry.finishRequest(previousDb);
             Object route=request.getAttribute("org.springframework.web.servlet.HandlerMapping.bestMatchingPattern");

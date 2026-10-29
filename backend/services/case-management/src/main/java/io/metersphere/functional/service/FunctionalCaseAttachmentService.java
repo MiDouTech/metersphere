@@ -58,6 +58,7 @@ public class FunctionalCaseAttachmentService {
     @Resource private FunctionalImportEffectOutbox importEffects;
 
     private void enqueueMirror(String caseId,String userId) {
+        syncJdbc.update("UPDATE functional_case SET update_time=GREATEST(COALESCE(update_time,0)+1,?) WHERE id=?",System.currentTimeMillis(),caseId);
         var projects=syncJdbc.queryForList("SELECT project_id FROM functional_case WHERE id=?",String.class,caseId);
         if(!projects.isEmpty()) importEffects.enqueue(projects.getFirst(),userId,List.of(caseId),List.of(),"UPDATE");
     }
@@ -202,12 +203,27 @@ public class FunctionalCaseAttachmentService {
      * @param deleteFileMetaIds deleteFileMetaIds
      */
     public void deleteCaseAttachment(List<String> deleteFileMetaIds, String caseId, String projectId) {
+        deleteCaseAttachment(deleteFileMetaIds, caseId, projectId, io.metersphere.system.utils.SessionUtils.getUserId());
+    }
+
+    public void deleteCaseAttachment(List<String> deleteFileMetaIds, String caseId, String projectId, String userId) {
+        if (StringUtils.isBlank(userId)) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.UNAUTHORIZED,
+                    "当前操作缺少用户身份，请重新登录后重试");
+        }
+        if (CollectionUtils.isEmpty(deleteFileMetaIds)) return;
+        var projects = syncJdbc.queryForList("SELECT project_id FROM functional_case WHERE id=?", String.class, caseId);
+        if (projects.size() != 1 || !StringUtils.equals(projects.getFirst(), projectId)) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    "请求用例不属于当前项目");
+        }
         FunctionalCaseAttachmentExample example = new FunctionalCaseAttachmentExample();
         example.createCriteria().andFileIdIn(deleteFileMetaIds).andCaseIdEqualTo(caseId).andLocalEqualTo(true);
         List<FunctionalCaseAttachment> delAttachment = functionalCaseAttachmentMapper.selectByExample(example);
+        if (delAttachment.isEmpty()) return;
         functionalCaseAttachmentMapper.deleteByExample(example);
         this.deleteMinioFile(delAttachment, caseId, projectId);
-        enqueueMirror(caseId,io.metersphere.system.utils.SessionUtils.getUserId());
+        enqueueMirror(caseId,userId);
     }
 
 
@@ -395,7 +411,7 @@ public class FunctionalCaseAttachmentService {
 
     public void deleteFile(FunctionalCaseDeleteFileRequest request, String userId) {
         if (BooleanUtils.isTrue(request.getLocal())) {
-            this.deleteCaseAttachment(Arrays.asList(request.getId()), request.getCaseId(), userId);
+            this.deleteCaseAttachment(Arrays.asList(request.getId()), request.getCaseId(), request.getProjectId(), userId);
         } else {
             this.unAssociation(request.getCaseId(), Arrays.asList(request.getId()), DELETED_FILE, userId, request.getProjectId());
         }
@@ -449,6 +465,7 @@ public class FunctionalCaseAttachmentService {
         // 上传文件到对象存储
         LogUtils.info("上传文件到对象存储");
         uploadFileResource(functionalCaseDir, addFileMap, projectId, caseId);
+        enqueueMirror(caseId,userId);
         LogUtils.info("上传富文本里的附件结束");
     }
 

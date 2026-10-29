@@ -190,18 +190,18 @@ public class EnvironmentGroupControllerTests extends BaseTest {
         environmentGroupProjectDTO.setEnvironmentId(null);
         environmentGroupProjectDTO.setProjectId(DEFAULT_PROJECT_ID);
         request.setEnvGroupProject(List.of(environmentGroupProjectDTO));
-        requestPost(add, request, ERROR_REQUEST_MATCHER);
+        requestPost(add, request, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_not_exist")));
         //项目不存在
         environmentGroupProjectDTO.setProjectId("ceshi");
         environmentGroupProjectDTO.setEnvironmentId("ceshi");
         request.setEnvGroupProject(List.of(environmentGroupProjectDTO));
-        requestPost(add, request, ERROR_REQUEST_MATCHER);
+        requestPost(add, request, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
         //重名
         environmentGroupProjectDTO.setProjectId(DEFAULT_PROJECT_ID);
         environmentGroupProjectDTO.setEnvironmentId("environmentId");
         request.setEnvGroupProject(List.of(environmentGroupProjectDTO));
         request.setName("group");
-        requestPost(add, request, ERROR_REQUEST_MATCHER);
+        requestPost(add, request, businessError(io.metersphere.sdk.util.Translator.get("environment_group_name") + request.getName() + io.metersphere.sdk.util.Translator.get("environment_group_exist")));
 
     }
 
@@ -252,7 +252,7 @@ public class EnvironmentGroupControllerTests extends BaseTest {
         groupRequest.setEnvGroupProject(new ArrayList<>());
         requestPost(update, groupRequest);
         groupRequest.setEnvGroupProject(List.of(environmentGroupProjectDTO, environmentGroupProjectDTO));
-        requestPost(update, groupRequest, ERROR_REQUEST_MATCHER);
+        requestPost(update, groupRequest, businessError(io.metersphere.sdk.util.Translator.get("environment_group_has_duplicate_project")));
         //校验权限
         groupRequest.setName("校验权限");
         requestPostPermissionTest(PermissionConstants.PROJECT_ENVIRONMENT_READ_UPDATE, update, groupRequest);
@@ -280,19 +280,19 @@ public class EnvironmentGroupControllerTests extends BaseTest {
         environmentGroupProjectDTO.setProjectId(DEFAULT_PROJECT_ID);
         request.setEnvGroupProject(List.of(environmentGroupProjectDTO));
         request.setId(getEnvironmentGroup());
-        requestPost(update, request, ERROR_REQUEST_MATCHER);
+        requestPost(update, request, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_not_exist")));
         //项目不存在
         environmentGroupProjectDTO.setProjectId("ceshi");
         environmentGroupProjectDTO.setEnvironmentId("ceshi");
         request.setEnvGroupProject(List.of(environmentGroupProjectDTO));
         request.setId(getEnvironmentGroup());
-        requestPost(update, request, ERROR_REQUEST_MATCHER);
+        requestPost(update, request, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
         //资源id不存在
         request.setId(null);
-        requestPost(update, request, ERROR_REQUEST_MATCHER);
+        requestPost(update, request, businessError(io.metersphere.sdk.util.Translator.get("project_version.id.not_blank")));
         //资源不存在
         request.setId("ceshi");
-        requestPost(update, request, ERROR_REQUEST_MATCHER);
+        requestPost(update, request, businessError(io.metersphere.sdk.util.Translator.get("null_environment_group_name")));
 
     }
 
@@ -339,7 +339,7 @@ public class EnvironmentGroupControllerTests extends BaseTest {
         requestGetPermissionTest(PermissionConstants.PROJECT_ENVIRONMENT_READ_DELETE, delete + getEnvironmentGroup());
 
         //删除环境不存在的
-        this.requestGet(delete + "environmentId2", ERROR_REQUEST_MATCHER);
+        this.requestGet(delete + "environmentId2", businessValidationError());
 
     }
 

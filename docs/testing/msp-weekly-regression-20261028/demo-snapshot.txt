@@ -1,0 +1,225 @@
+[p1 "MSP 真实组件样式评审" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "MSP 真实组件样式评审"]
+root
+  container
+    container
+      text "⬡ 测试资产云平台"
+      container
+        text "测试项目-测试一体化"
+        splitter
+        text "当前组织：米多公司"
+    container
+      container
+        button [ref=539]
+          text "▧　工作台"
+        button [ref=540]
+          text "▣　项目管理"
+        button [ref=541]
+          text "▤　测试资产"
+        button [ref=542]
+          text "◫　测试计划"
+        button [ref=543]
+          text "▤　测试用例"
+        button [ref=544]
+          text "▧　接口测试"
+        button [ref=545]
+          text "◷　执行中心"
+        button [ref=546]
+          text "⚑　缺陷管理"
+      container [ref=547]
+        container
+          text "样式评审 · 仓库 Vue 3 / Arco 真实组件 · 示例数据，不连接业务接口"
+          container
+            text "仅切换视觉样式"
+            switch [ref=548]
+              text "优化"
+              text "优化"
+        container
+          container
+            text "新增交互预演"
+            text "内存示例 · 不提交平台数据"
+          container
+            container
+              container [ref=549]
+                text "导入 → 计划与评审"
+              container [ref=550]
+                text "资产目录与置顶"
+            container
+              container
+                button [ref=551]
+                  text "模拟导入2条用例"
+                text "首次自动创建；再次导入按选择更新、新建或仅导入"
+              container
+                heading
+                  text "计划"
+                heading
+                  text "评审"
+              container
+                text "源用例："
+                text "点 × 模拟删除，计划/评审数量同步减少"
+        container
+          container
+            container
+              container [ref=552]
+                text "执行用例"
+              container [ref=553]
+                text "XMind用例"
+            button [ref=554]
+              text "↻ 刷新模块"
+          container
+            container
+              container
+                textbox [ref=555, loc=css:input[placeholder="搜索模块"]]
+                  text "搜索模块"
+                svg_root
+              container
+                text "▣ 全部用例（6）"
+                container
+                  button [ref=556]
+                    text "⇵"
+                  button [ref=557]
+                    text "＋"
+              container
+                text "▱　订单管理"
+                container
+                  text "2"
+                  button [ref=558]
+                    text "···"
+              container
+                text "▱　用户权限"
+                container
+                  text "2"
+                  button [ref=559]
+                    text "···"
+              container
+                text "▱　库存管理"
+                container
+                  text "2"
+                  button [ref=560]
+                    text "···"
+            container
+              container
+                container [ref=561]
+                  text "用例列表"
+                container [ref=562]
+                  text "用例详情"
+              container
+                container
+                  button [ref=563]
+                    text "新建"
+                  button [ref=564]
+                    text "导入 ▾"
+                  button [ref=565]
+                    text "导出历史"
+                  button [ref=566]
+                    text "同步状态至测试计划"
+                  button [ref=567]
+                    text "✧ AI"
+                container
+                  container
+                    textbox [ref=568, loc=css:input[placeholder="搜索 ID / 名称 / 标签"]]
+                      text "搜索 ID / 名称 / 标签"
+                    svg_root
+                  button [ref=569]
+                    text "高级搜索"
+                  button [ref=570]
+                    text "↻ 刷新"
+                  container
+                    text "☷"
+                    text "⌘"
+              container
+                text "测试计划：订单回归　━━━━　84.62%"
+                text "个人执行进度：12 / 13　━━━━　92.31%"
+              container
+                text "已选择 0 项"
+                button "原复选框选择下拉箭头" [ref=571, loc=css:button[aria-label="原复选框选择下拉箭头"]]
+                  text "⌄"
+                button [ref=572]
+                  text "导出 ▾"
+                button [ref=573]
+                  text "全选所有页"
+                button [ref=574]
+                  text "编辑"
+                button [ref=575]
+                  text "修改执行结果"
+                button [ref=576]
+                  text "修改执行人"
+                button [ref=577]
+                  text "移动到"
+                button [ref=578]
+                  text "复制到"
+                button [ref=579]
+                  text "清空"
+              container [ref=580]
+                table
+                  table_row
+                    table_cell
+                    table_cell
+                      text "ID"
+                    table_cell
+                      text "用例名称"
+                    table_cell
+                      text "用例等级"
+                    table_cell
+                      text "评审结果"
+                    table_cell
+                      text "执行结果"
+                    table_cell
+                      text "最后执行时间"
+                    table_cell
+                      text "执行人"
+                    table_cell
+                      text "所属模块"
+                    table_cell
+                      text "标签"
+                    table_cell
+                      text "操作"
+                  table_row
+                    table_cell
+                    table_cell
+                      text "100005"
+                    table_cell
+                      text "订单创建成功后展示最新状态"
+                    table_cell
+                      text "P0"
+                    table_cell
+                      text "已评审"
+                    table_cell
+                      text "成功"
+                    table_cell
+                      text "2026-10-23 14:30"
+                    table_cell
+                      text "陈启芬"
+                    table_cell
+                      text "订单管理"
+                    table_cell
+                      text "回归"
+                    table_cell
+                      button [ref=581]
+                        text "编辑"
+                      button [ref=582]
+                        text "更多"
+                  table_row
+                    table_cell
+                    table_cell
+                      text "100006"
+                    table_cell
+                      text "未登录用户访问订单详情"
+                    table_cell
+                      text "P1"
+                    table_cell
+                      text "已评审"
+                    table_cell
+                      text "失败"
+                    table_cell
+                      text "2026-10-23 14:30"
+                    table_cell
+                      text "陈启芬"
+                    table_cell
+                      text "用户权限"
+                    table_cell
+                      text "回归"
+                    table_cell
+                      button [ref=583]
+                        text "编辑"
+                      button [ref=584]
+                        text "更多"

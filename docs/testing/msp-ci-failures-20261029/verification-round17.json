@@ -1,0 +1,214 @@
+{
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40862145183",
+  "codeCommit": "eba4337912181fc1f4c0c617f0c844523b066f90",
+  "scope": "full",
+  "status": "failed",
+  "total": {
+    "tests": 2121,
+    "failures": 15,
+    "errors": 2,
+    "skipped": 0
+  },
+  "modules": {
+    "app": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sdk": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "agent-integration": {
+      "tests": 462,
+      "failures": 0,
+      "errors": 1,
+      "skipped": 0
+    },
+    "api-test": {
+      "tests": 271,
+      "failures": 6,
+      "errors": 0,
+      "skipped": 0
+    },
+    "bug-management": {
+      "tests": 77,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "case-management": {
+      "tests": 284,
+      "failures": 5,
+      "errors": 0,
+      "skipped": 0
+    },
+    "dashboard": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "project-management": {
+      "tests": 301,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "system-setting": {
+      "tests": 556,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test-plan": {
+      "tests": 140,
+      "failures": 2,
+      "errors": 1,
+      "skipped": 0
+    }
+  },
+  "missingModules": [],
+  "original80IndividualEvidence": "verification-round16.json",
+  "failures": [
+    {
+      "classname": "io.metersphere.agent.service.AgentDirectExecutionMySqlTests",
+      "test": "realTransactionsGatePublishDownloadRollbackAndReplay",
+      "kind": "error",
+      "code": null,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.api.controller.ApiDefinitionMockControllerTests",
+      "test": "batchEdit",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.api.controller.ApiDefinitionScheduleControllerTests",
+      "test": "update",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.api.controller.ApiScenarioControllerTests",
+      "test": "batchEdit",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.api.controller.ApiScenarioReportControllerTests",
+      "test": "testRename",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.api.controller.ApiScenarioReportControllerTests",
+      "test": "testGet",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.api.controller.ApiTestCaseControllerTests",
+      "test": "batchEdit",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.bug.controller.BugCommentControllerTests",
+      "test": "testAddBugCommentOnlyError",
+      "kind": "failure",
+      "code": 100500,
+      "messageKey": "api.internalError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.bug.service.BugSyncExtraServiceTests",
+      "test": "test",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAttachmentControllerTests",
+      "test": "testUploadTemp",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "invalidReplyEventAndMissingEditVersionDoNotMutateComments",
+      "kind": "failure",
+      "code": 100400,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testImportXmind",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "deleteModuleTestSuccess",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "testUploadTemp",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanAddTest",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanPageCountTest",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testCopy",
+      "kind": "error",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    }
+  ]
+}

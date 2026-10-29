@@ -1,0 +1,75 @@
+{
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40890432868",
+  "codeCommit": "8591abc71cc6418ba91b3a2174b4ef40f4cd6bee",
+  "status": "partial",
+  "testEvidence": "verification-round20.json",
+  "health": {
+    "commit": "8591abc71cc6418ba91b3a2174b4ef40f4cd6bee",
+    "image": "sha256:0150c85232aa87d2654f1b20300911a313768228b7d062990b28620d79fb17d7",
+    "backendEmbeddedStaticHttpStatus": "200",
+    "readiness": {
+      "status": "UP"
+    },
+    "frontendHttpStatus": "200",
+    "frontendTree": "df82344053b5c5199271586145b87144ecae001f",
+    "frontendDelivery": "separate-production-static"
+  },
+  "coreSmoke": {
+    "commit": "8591abc71cc6418ba91b3a2174b4ef40f4cd6bee",
+    "viewport": {
+      "width": 1366,
+      "height": 900
+    },
+    "checks": [
+      {
+        "id": "CORE-LOGIN",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CREATE-IDEMPOTENT",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-PLAN-ONE-SELECTOR-AUTO-WIDTH-ALIGNED",
+        "status": "passed",
+        "shortWidth": 273.703125,
+        "longWidth": 581.6875,
+        "planBounds": {
+          "selector": {
+            "x": 544.515625,
+            "y": 364,
+            "width": 581.6875,
+            "height": 32
+          },
+          "progress": {
+            "x": 1134.203125,
+            "y": 377,
+            "width": 90,
+            "height": 6
+          }
+        },
+        "annotations": {
+          "1": "selector",
+          "2": "progress"
+        }
+      },
+      {
+        "id": "CORE-SELECT-ALL-TOGGLE",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CASE-IMAGE-PUBLISH-REPLAY-DOWNLOAD-PLAN-SYNC",
+        "status": "passed"
+      }
+    ],
+    "status": "failed",
+    "currentCheckpoint": "plan-detail-refresh-and-switch",
+    "failedCheckpoint": "plan-detail-refresh-and-switch"
+  },
+  "frontendBuild": {
+    "sourceCommit": "ff552bc0f30c76c34a6fd38873c3f209dccebd49",
+    "sourceRun": "40888480458",
+    "frontendTree": "df82344053b5c5199271586145b87144ecae001f"
+  },
+  "failure": "Smoke locator requested a tab role; actual MsTab/Arco entry uses text without that role"
+}

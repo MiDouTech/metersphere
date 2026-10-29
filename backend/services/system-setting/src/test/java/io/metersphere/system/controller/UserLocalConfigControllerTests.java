@@ -38,6 +38,28 @@ public class UserLocalConfigControllerTests extends BaseTest {
     @Resource
     private UserLocalConfigMapper userLocalConfigMapper;
 
+    @BeforeEach
+    void prepareIndependentConfigs(TestInfo testInfo) throws Exception {
+        UserLocalConfigExample example = new UserLocalConfigExample();
+        example.createCriteria().andCreateUserEqualTo("admin");
+        userLocalConfigMapper.deleteByExample(example);
+        if (!testInfo.getTestMethod().orElseThrow().getName().equals("testAdd")) {
+            for (String type : List.of("API", "UI")) {
+                UserLocalConfigAddRequest request = new UserLocalConfigAddRequest();
+                request.setType(type);
+                request.setUserUrl("http://127.0.0.1:8080");
+                requestPost(ADD, request).andExpect(status().isOk());
+            }
+        }
+    }
+
+    @AfterEach
+    void cleanIndependentConfigs() {
+        UserLocalConfigExample example = new UserLocalConfigExample();
+        example.createCriteria().andCreateUserEqualTo("admin");
+        userLocalConfigMapper.deleteByExample(example);
+    }
+
     public static <T> T parseObjectFromMvcResult(MvcResult mvcResult, Class<T> parseClass) {
         try {
             String returnData = mvcResult.getResponse().getContentAsString(StandardCharsets.UTF_8);
@@ -66,16 +88,16 @@ public class UserLocalConfigControllerTests extends BaseTest {
 
         //已经存在
         request.setUserUrl("https://{ip}:{port}}");
-        requestPost(ADD, request).andExpect(status().is5xxServerError());
+        requestPost(ADD, request).andExpect(businessError("当前用户本地配置已存在"));
         request.setType("UI");
         requestPost(ADD, request);
         //url为空
         request.setUserUrl("");
-        requestPost(ADD, request, status().is4xxClientError());
+        requestPost(ADD, request).andExpect(status().is4xxClientError());
         //类型为空
         request.setUserUrl("https://www.baidu.com");
         request.setType("");
-        requestPost(ADD, request, status().is4xxClientError());
+        requestPost(ADD, request).andExpect(status().is4xxClientError());
 
     }
 
@@ -95,11 +117,11 @@ public class UserLocalConfigControllerTests extends BaseTest {
         checkLog(userLocalConfig.getId(), OperationLogType.UPDATE);
         //不存在的
         request.setId(UUID.randomUUID().toString());
-        requestPost(UPDATE, request, status().is5xxServerError());
+        requestPost(UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("current_user_local_config_not_exist")));
         //id为空
         request.setId("");
         request.setUserUrl("https://www.baidu.com");
-        requestPost(UPDATE, request, status().is4xxClientError());
+        requestPost(UPDATE, request).andExpect(status().is4xxClientError());
     }
 
     @Test
@@ -114,7 +136,7 @@ public class UserLocalConfigControllerTests extends BaseTest {
         //校验日志
         checkLog(userLocalConfig.getId(), OperationLogType.UPDATE);
         //不存在的
-        requestGet(String.format(ENABLE, UUID.randomUUID().toString()), status().is5xxServerError());
+        requestGet(String.format(ENABLE, UUID.randomUUID().toString())).andExpect(businessError(io.metersphere.sdk.util.Translator.get("current_user_local_config_not_exist")));
     }
 
     @Test
@@ -129,16 +151,17 @@ public class UserLocalConfigControllerTests extends BaseTest {
         //校验日志
         checkLog(userLocalConfig.getId(), OperationLogType.UPDATE);
         //不存在的
-        requestGet(String.format(DISABLE, UUID.randomUUID().toString()), status().is5xxServerError());
+        requestGet(String.format(DISABLE, UUID.randomUUID().toString())).andExpect(businessError(io.metersphere.sdk.util.Translator.get("current_user_local_config_not_exist")));
     }
 
     @Test
     @Order(6)
     public void testGet() throws Exception {
         ResultActions resultActions = requestGet(GET).andExpect(status().isOk());
-        List<UserLocalConfig> userLocalConfigs = parseObjectFromMvcResult(resultActions.andReturn(), List.class);
+        List<UserLocalConfig> userLocalConfigs = getResultDataArray(resultActions.andReturn(), UserLocalConfig.class);
         assert userLocalConfigs != null;
         Assertions.assertEquals(2, userLocalConfigs.size());
+        Assertions.assertEquals(java.util.Set.of("API", "UI"), userLocalConfigs.stream().map(UserLocalConfig::getType).collect(java.util.stream.Collectors.toSet()));
     }
 
 }

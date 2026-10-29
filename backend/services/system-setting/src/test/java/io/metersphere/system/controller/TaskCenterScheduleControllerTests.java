@@ -144,7 +144,8 @@ class TaskCenterScheduleControllerTests extends BaseTest {
                         .header(SessionConstants.CURRENT_ORGANIZATION, "DEFAULT_ORGANIZATION_ID")
                         .content(JSON.toJSONString(request))
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(ERROR_REQUEST_MATCHER);
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get(
+                        SCHEDULED_ORG_PAGE.equals(url) ? "organization_not_exist" : "project_not_exist")));
     }
 
 
@@ -179,7 +180,7 @@ class TaskCenterScheduleControllerTests extends BaseTest {
         Assertions.assertNull(schedule);
         this.requestGet("/task/center/org/schedule/delete/" + "API_IMPORT/" + "4");
         this.requestGet("/task/center/project/schedule/delete/" + "API_SCENARIO/" + "2");
-        this.requestGet("/task/center/system/schedule/delete/" + "API_SCENARIO/" + "schedule-121", ERROR_REQUEST_MATCHER);
+        this.requestGet("/task/center/system/schedule/delete/" + "API_SCENARIO/" + "schedule-121", businessValidationError());
     }
 
     @Test

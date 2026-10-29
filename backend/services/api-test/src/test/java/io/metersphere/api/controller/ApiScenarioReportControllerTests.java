@@ -222,7 +222,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
         Assertions.assertEquals(apiReport.getName(), newName);
         mockMvc.perform(getPostRequestBuilder(RENAME + "api-report", newName))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessValidationError());
         // @@校验权限
         requestPostPermissionTest(PermissionConstants.PROJECT_API_REPORT_UPDATE, RENAME + "scenario-report-id0", newName);
     }
@@ -237,7 +237,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
         Assertions.assertTrue(apiReport.getDeleted());
         mockMvc.perform(getRequestBuilder(DETAIL + "api-report"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(notFoundError("http_result_not_found", "请求的资源不存在"));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_REPORT_DELETE, DELETE + "scenario-report-id1");
     }
@@ -379,11 +379,11 @@ public class ApiScenarioReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(GET + "test"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessValidationError());
 
         mockMvc.perform(getRequestBuilder(GET + "scenario-report-id200000"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessValidationError());
 
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_REPORT_READ, GET + "test-scenario-report-id");
@@ -455,7 +455,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(DETAIL + "api-report-id10"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(notFoundError("http_result_not_found", "请求的资源不存在"));
 
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_REPORT_READ, GET + "api-report-id0");
@@ -506,7 +506,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(BASIC + "/share/" + shareId + "/" + "test-scenario-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("connection_expired")));
 
 
         shareInfo = new ApiReportShareRequest();
@@ -548,7 +548,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(BASIC + "/share/" + shareId + "/" + "test-scenario-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("connection_expired")));
     }
 
     @Test

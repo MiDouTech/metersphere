@@ -188,6 +188,26 @@ public class TestPlanApiCaseControllerTests extends BaseTest {
         Assertions.assertEquals(apiList.getFirst().getId(), request.getTargetId());
         Assertions.assertEquals(apiList.get(1).getId(), request.getMoveId());
 
+        // The normal project member must really sort successfully, then be denied after revocation.
+        org.springframework.jdbc.core.JdbcTemplate jdbc = CommonBeanFactory.getBean(org.springframework.jdbc.core.JdbcTemplate.class);
+        String memberBinding = IDGenerator.nextStr();
+        try {
+            Assertions.assertEquals(1, jdbc.update("INSERT INTO user_role_relation (id,user_id,role_id,source_id,organization_id,create_time,create_user) "
+                            + "SELECT ?, 'PROJECT', 'PROJECT', id, organization_id, ?, 'admin' FROM project WHERE id = ?",
+                    memberBinding, System.currentTimeMillis(), request.getProjectId()));
+            requestPostPermissionTestWithOk(PermissionConstants.TEST_PLAN_READ_UPDATE, URL_POST_RESOURCE_API_CASE_SORT, request);
+        } finally {
+            jdbc.update("DELETE FROM user_role_relation WHERE id = ?", memberBinding);
+        }
+
+        Map<String, Long> beforeRejectedSort = new HashMap<>();
+        testPlanApiCaseMapper.selectByExample(new TestPlanApiCaseExample())
+                .forEach(row -> beforeRejectedSort.put(row.getId(), row.getPos()));
+        request.setTargetId("wxxx_3"); // Another plan's collection cannot be used as a sorting target.
+        this.requestPost(URL_POST_RESOURCE_API_CASE_SORT, request)
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("test_plan.drag.node.error")));
+        testPlanApiCaseMapper.selectByExample(new TestPlanApiCaseExample())
+                .forEach(row -> Assertions.assertEquals(beforeRejectedSort.get(row.getId()), row.getPos()));
     }
 
     @Test
@@ -505,7 +525,7 @@ public class TestPlanApiCaseControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder("/report/get/plan-test-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(100422, "用例报告不存在"));
 
         apiReport1.setTestPlanCaseId("test-plan-case-id");
         apiReportMapper.updateByPrimaryKey(apiReport1);

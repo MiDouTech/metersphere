@@ -1,0 +1,34 @@
+{
+  "select": {
+    "x": 135,
+    "y": 122,
+    "width": 250.71875,
+    "height": 32,
+    "centerY": 138,
+    "right": 385.71875
+  },
+  "progress": {
+    "x": 393.71875,
+    "y": 135,
+    "width": 90,
+    "height": 6,
+    "centerY": 138,
+    "right": 483.71875
+  },
+  "percent": {
+    "x": 491.71875,
+    "y": 130.5,
+    "width": 38,
+    "height": 15,
+    "centerY": 138,
+    "right": 529.71875
+  },
+  "container": {
+    "x": 24,
+    "y": 68,
+    "width": 862,
+    "height": 132,
+    "centerY": 134,
+    "right": 886
+  }
+}

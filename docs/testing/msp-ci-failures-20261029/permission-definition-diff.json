@@ -1,0 +1,72 @@
+{
+  "run": "40803524899",
+  "actualMissingAfterPackageDefinitionRepair": {
+    "CASE_ASSET:READ": {
+      "state": "external-module-not-on-system-classpath",
+      "definition": "backend/services/case-management/src/main/resources/permission.json"
+    },
+    "CASE_REVIEW:READ": {
+      "state": "external-module-not-on-system-classpath",
+      "definition": "backend/services/case-management/src/main/resources/permission.json"
+    },
+    "FUNCTIONAL_CASE:READ": {
+      "state": "external-module-not-on-system-classpath",
+      "definition": "backend/services/case-management/src/main/resources/permission.json"
+    },
+    "FUNCTIONAL_CASE_SYSTEM:CLASSIFY": {
+      "state": "retired",
+      "evidence": {
+        "registry": "backend/services/case-management/src/main/resources/retired-permissions.json",
+        "migration": "V3.7.2_57__permission_resource_runtime_alignment.sql"
+      }
+    },
+    "FUNCTIONAL_CASE_WORKSPACE:ADD": {
+      "state": "retired",
+      "evidence": {
+        "registry": "backend/services/case-management/src/main/resources/retired-permissions.json",
+        "migration": "V3.7.2_57__permission_resource_runtime_alignment.sql"
+      }
+    },
+    "FUNCTIONAL_CASE_WORKSPACE:READ": {
+      "state": "retired",
+      "evidence": {
+        "registry": "backend/services/case-management/src/main/resources/retired-permissions.json",
+        "migration": "V3.7.2_57__permission_resource_runtime_alignment.sql"
+      }
+    },
+    "FUNCTIONAL_CASE_WORKSPACE:UPDATE": {
+      "state": "retired",
+      "evidence": {
+        "registry": "backend/services/case-management/src/main/resources/retired-permissions.json",
+        "migration": "V3.7.2_57__permission_resource_runtime_alignment.sql"
+      }
+    },
+    "PROJECT_BASE_INFO:READ": {
+      "state": "active-definition-gap-repaired",
+      "definition": "backend/services/project-management/src/main/resources/permission.json"
+    },
+    "PROJECT_TEST_PLAN_REPORT:READ": {
+      "state": "external-module-not-on-system-classpath",
+      "definition": "backend/services/test-plan/src/main/resources/permission.json"
+    },
+    "TEST_ASSET_CATEGORY:ASSIGN": {
+      "state": "active-definition-gap-repaired",
+      "definition": "backend/services/agent-integration/src/main/resources/permission.json"
+    },
+    "TEST_ASSET_CATEGORY:MANAGE": {
+      "state": "active-definition-gap-repaired",
+      "definition": "backend/services/agent-integration/src/main/resources/permission.json"
+    },
+    "TEST_ASSET_SOURCE:GOVERN": {
+      "state": "active-definition-gap-repaired",
+      "definition": "backend/services/agent-integration/src/main/resources/permission.json"
+    }
+  },
+  "initialProductDefinitionGapRepaired": [
+    "SYSTEM_AGENT_PACKAGE:READ",
+    "SYSTEM_AGENT_PACKAGE:READ+ADD",
+    "SYSTEM_AGENT_PACKAGE:READ+UPDATE",
+    "SYSTEM_AGENT_PACKAGE:READ+DELETE"
+  ],
+  "conclusion": "8 active definition gaps, 4 explicitly retired grants, 4 external active definitions. No grant deletion or retired UI resurrection."
+}

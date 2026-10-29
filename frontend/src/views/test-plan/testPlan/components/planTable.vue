@@ -30,9 +30,9 @@
   <MsBaseTable
     v-bind="propsRes"
     ref="tableRef"
+    class="msp-polished-table mt-4"
     batch-action-placement="top"
     always-show-selected-count
-    class="mt-4"
     :not-show-table-filter="isAdvancedSearchMode"
     :action-config="testPlanBatchActions"
     :selectable="hasOperationPermission && showType !== testPlanTypeEnum.ALL && !isArchived"

@@ -2204,6 +2204,9 @@ public class ApiScenarioService extends MoveNodeService {
 
     public ApiStepResourceInfo getStepResourceInfo(String resourceId, String resourceType) {
         ApiResourceType apiResourceType = EnumValidator.validateEnum(ApiResourceType.class, resourceType);
+        if (apiResourceType == null) {
+            throw new MSException(Translator.get("invalid_parameter"));
+        }
         ApiStepResourceInfo apiStepResourceInfo = null;
         switch (apiResourceType) {
             case API_SCENARIO ->

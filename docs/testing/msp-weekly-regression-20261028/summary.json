@@ -1,0 +1,28 @@
+{
+  "run": "msp-weekly-regression-20261028",
+  "mainRequirements": 40,
+  "mainResults": {
+    "部分完成": 16,
+    "通过": 15,
+    "失败": 7,
+    "阻塞": 2
+  },
+  "mappedCoverage": "40/40 = 100%",
+  "verifiedCoverage": "15/40 = 37.5%",
+  "executedPassRate": "15/22 = 68.2%",
+  "supplementalResults": {
+    "失败": 2,
+    "通过": 1,
+    "待确认": 2,
+    "阻塞": 1
+  },
+  "compositeResults": {
+    "未完整执行": 72,
+    "通过": 2,
+    "失败": 1
+  },
+  "testDelivery": "部分完成",
+  "productStatus": "部分完成/存在失败项",
+  "playwrightSpec": "新增5项只读回放spec，未运行浏览器，仅目标ESLint通过",
+  "ego": "同一任务12，串行；没有启动本地服务或Docker"
+}

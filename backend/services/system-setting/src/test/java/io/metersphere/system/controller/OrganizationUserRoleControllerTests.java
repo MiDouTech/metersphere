@@ -9,6 +9,7 @@ import io.metersphere.system.controller.handler.ResultHolder;
 import io.metersphere.system.domain.User;
 import io.metersphere.system.domain.UserRole;
 import io.metersphere.system.domain.UserRoleRelation;
+import io.metersphere.system.domain.UserRoleRelationExample;
 import io.metersphere.system.dto.OrganizationDTO;
 import io.metersphere.system.dto.request.OrganizationUserRoleEditRequest;
 import io.metersphere.system.dto.request.OrganizationUserRoleMemberEditRequest;
@@ -46,6 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class OrganizationUserRoleControllerTests extends BaseTest {
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Resource
     private MockMvc mockMvc;
@@ -113,7 +116,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         // 同名用户组已存在
         request.setName("default-org-role-2");
         request.setScopeId("default-organization-2");
-        this.requestPost(ORGANIZATION_USER_ROLE_ADD, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_ADD, request, businessError("用户组已存在"));
     }
 
     @Test
@@ -124,7 +127,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setId("default-org-role-id-10");
         request.setName("default-org-role-x");
         request.setScopeId("default-organization-2");
-        this.requestPost(ORGANIZATION_USER_ROLE_UPDATE, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_UPDATE, request, businessError("用户组不存在"));
         // 非组织下用户组异常
         request = new OrganizationUserRoleEditRequest();
         request.setId(InternalUserRole.ADMIN.getValue());
@@ -142,7 +145,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setId("default-org-role-id-2");
         request.setName("组织管理员");
         request.setScopeId("default-organization-2");
-        this.requestPost(ORGANIZATION_USER_ROLE_UPDATE, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_UPDATE, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_exist")));
     }
 
     @Test
@@ -172,7 +175,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
     @Order(5)
     public void testOrganizationUserRoleDeleteError() throws Exception {
         // 用户组不存在
-        this.requestGet(ORGANIZATION_USER_ROLE_DELETE + "/default-org-role-id-10", status().is5xxServerError());
+        this.requestGet(ORGANIZATION_USER_ROLE_DELETE + "/default-org-role-id-10", businessError("用户组不存在"));
         // 非组织下用户组异常
         this.requestGet(ORGANIZATION_USER_ROLE_DELETE + "/" + InternalUserRole.ADMIN.getValue()).andExpect(jsonPath("$.code").value(NO_ORG_USER_ROLE_PERMISSION.getCode()));
         // 非内置用户组异常
@@ -206,7 +209,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
     @Order(8)
     public void testOrganizationUserRolePermissionSettingError() throws Exception {
         // 用户组不存在
-        this.requestGet(ORGANIZATION_USER_ROLE_PERMISSION_SETTING + "/default-org-role-id-10", status().is5xxServerError());
+        this.requestGet(ORGANIZATION_USER_ROLE_PERMISSION_SETTING + "/default-org-role-id-10", businessError("用户组不存在"));
         // 非组织下用户组异常
         this.requestGet(ORGANIZATION_USER_ROLE_PERMISSION_SETTING + "/" + InternalUserRole.ADMIN.getValue())
                 .andExpect(jsonPath("$.code").value(NO_ORG_USER_ROLE_PERMISSION.getCode()));
@@ -236,7 +239,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         // 用户组不存在
         PermissionSettingUpdateRequest request = getPermissionSettingUpdateRequest();
         request.setUserRoleId("default-org-role-id-10");
-        this.requestPost(ORGANIZATION_USER_ROLE_PERMISSION_UPDATE, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_PERMISSION_UPDATE, request, businessError("用户组不存在"));
         // 非组织下用户组异常
         request.setUserRoleId(InternalUserRole.ADMIN.getValue());
         this.requestPost(ORGANIZATION_USER_ROLE_PERMISSION_UPDATE, request)
@@ -312,8 +315,21 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setUserRoleId("default-org-role-id-3");
         request.setUserIds(List.of("admin"));
         this.requestPost(ORGANIZATION_USER_ROLE_ADD_MEMBER, request, status().isOk());
+        UserRoleRelationExample replayExample = new UserRoleRelationExample();
+        replayExample.createCriteria().andUserIdEqualTo("admin").andRoleIdEqualTo(request.getUserRoleId())
+                .andSourceIdEqualTo(request.getOrganizationId());
+        String relationId = userRoleRelationMapper.selectByExample(replayExample).getFirst().getId();
+        Long auditCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM operation_log WHERE path='/user/role/organization/add-member' AND organization_id=?",
+                Long.class, request.getOrganizationId());
+        request.setUserIds(List.of("admin", "admin"));
+        this.requestPost(ORGANIZATION_USER_ROLE_ADD_MEMBER, request, status().isOk());
+        Assertions.assertEquals(1, userRoleRelationMapper.countByExample(replayExample));
+        Assertions.assertEquals(relationId, userRoleRelationMapper.selectByExample(replayExample).getFirst().getId());
+        Assertions.assertEquals(auditCount, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM operation_log WHERE path='/user/role/organization/add-member' AND organization_id=?",
+                Long.class, request.getOrganizationId()));
         // 权限校验
         request.setOrganizationId(getDefault().getId());
+        request.setUserRoleId(InternalUserRole.ORG_MEMBER.getValue());
         requestPostPermissionTest(PermissionConstants.ORGANIZATION_USER_ROLE_READ_UPDATE, ORGANIZATION_USER_ROLE_ADD_MEMBER, request);
     }
 
@@ -325,13 +341,13 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setUserIds(List.of("admin-x"));
         request.setUserRoleId("default-org-role-id-3");
         // 用户不存在
-        this.requestPost(ORGANIZATION_USER_ROLE_ADD_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_ADD_MEMBER, request, businessError("用户不存在"));
         request = new OrganizationUserRoleMemberEditRequest();
         request.setOrganizationId("default-organization-2");
         request.setUserIds(List.of("admin"));
         request.setUserRoleId("default-org-role-id-x");
         // 用户组不存在
-        this.requestPost(ORGANIZATION_USER_ROLE_ADD_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_ADD_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
     }
 
     @Test
@@ -368,19 +384,19 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setUserIds(List.of("admin-x"));
         request.setUserRoleId("default-org-role-id-3");
         // 用户不存在
-        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, businessError("用户不存在"));
         request = new OrganizationUserRoleMemberEditRequest();
         request.setOrganizationId("default-organization-2");
         request.setUserIds(List.of("admin"));
         request.setUserRoleId("default-org-role-id-x");
         // 用户组不存在
-        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
         request = new OrganizationUserRoleMemberEditRequest();
         request.setOrganizationId("default-organization-2");
         request.setUserRoleId("default-org-role-id-3");
         request.setUserIds(List.of("admin"));
         // 成员用户组只有一个, 移除失败
-        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("org_at_least_one_user_role_require")));
         //移除最后一个管理员移除失败
         UserRoleRelation userRoleRelation = new UserRoleRelation();
         userRoleRelation.setId(IDGenerator.nextStr());
@@ -396,7 +412,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setUserRoleId(InternalUserRole.ORG_ADMIN.getValue());
         request.setUserIds(List.of("admin"));
         // 成员用户组只有一个, 移除失败
-        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("keep_at_least_one_administrator")));
     }
 
     @Test

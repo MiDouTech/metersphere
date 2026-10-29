@@ -1,6 +1,6 @@
 package io.metersphere.system.edit;
 
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +16,7 @@ public class ResourceEditAdapterRegistry {
 
     private final Map<String, ResourceEditAdapter> adapterMap = new HashMap<>();
 
-    @Resource
+    @Autowired(required = false)
     public void setAdapters(List<ResourceEditAdapter> adapters) {
         if (CollectionUtils.isEmpty(adapters)) {
             return;

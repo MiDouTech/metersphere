@@ -118,6 +118,9 @@ public class DefaultHubCaseSyncService {
             }
         }
         DefaultHubCaseMapRow current=defaultHubCaseMapDao.findByBizCaseId(bizCaseId);
+        // Selective mapper updates cannot clear a previous executor/time when the source resets.
+        if(current!=null)jdbcTemplate.update("UPDATE functional_case SET review_status=?,last_execute_result=?,execute_user=?,last_execute_user=?,last_execute_time=? WHERE id=?",
+                bizCase.getReviewStatus(),bizCase.getLastExecuteResult(),bizCase.getExecuteUser(),bizCase.getLastExecuteUser(),bizCase.getLastExecuteTime(),current.getHubCaseId());
         if(current!=null)jdbcTemplate.update("INSERT INTO case_asset_source_relation(id,asset_case_id,source_project_id,source_case_id,source_update_time,create_user,create_time,update_time) VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE asset_case_id=VALUES(asset_case_id),source_update_time=VALUES(source_update_time),update_time=VALUES(update_time)",
                 IDGenerator.nextStr(),current.getHubCaseId(),bizProjectId,sourceRefId,bizCase.getUpdateTime(),operator,System.currentTimeMillis(),System.currentTimeMillis());
     }
@@ -190,11 +193,8 @@ public class DefaultHubCaseSyncService {
     private void updateHubMirror(String hubCaseId, FunctionalCase src, FunctionalCaseBlob blob, String hubModuleId, String operator) {
         String hubProjectId = defaultHubProjectService.getDefaultProjectId();
         FunctionalCase hub = copyCaseHeader(src, hubCaseId, hubProjectId, hubModuleId, operator);
-        hub.setReviewStatus(FunctionalCaseReviewStatus.UN_REVIEWED.name());
         hub.setCreateTime(null);
         hub.setCreateUser(null);
-        hub.setLastExecuteResult(ExecStatus.PENDING.name());
-        hub.setExecuteUser(null);
         functionalCaseMapper.updateByPrimaryKeySelective(hub);
         FunctionalCaseBlob hubBlob = new FunctionalCaseBlob();
         hubBlob.setId(hubCaseId);
@@ -221,8 +221,11 @@ public class DefaultHubCaseSyncService {
         c.setCaseEditType(src.getCaseEditType());
         c.setVersionId(extBaseProjectVersionMapper.getDefaultVersion(projectId));
         c.setRefId(id);
-        c.setReviewStatus(FunctionalCaseReviewStatus.UN_REVIEWED.name());
-        c.setLastExecuteResult(ExecStatus.PENDING.name());
+        c.setReviewStatus(src.getReviewStatus());
+        c.setLastExecuteResult(src.getLastExecuteResult());
+        c.setExecuteUser(src.getExecuteUser());
+        c.setLastExecuteUser(src.getLastExecuteUser());
+        c.setLastExecuteTime(src.getLastExecuteTime());
         c.setDeleted(false);
         c.setAiCreate(false);
         c.setPublicCase(false);
@@ -257,6 +260,8 @@ public class DefaultHubCaseSyncService {
     String computeHash(FunctionalCase c, FunctionalCaseBlob blob) {
         StringBuilder sb = new StringBuilder();
         sb.append(c.getName()).append('|').append(c.getModuleId()).append('|').append(c.getCaseEditType()).append('|').append(c.getTags());
+        sb.append('|').append(c.getReviewStatus()).append('|').append(c.getLastExecuteResult())
+                .append('|').append(c.getExecuteUser()).append('|').append(c.getLastExecuteUser()).append('|').append(c.getLastExecuteTime());
         sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT field_id,value FROM functional_case_custom_field WHERE case_id=? ORDER BY field_id",c.getId())));
         sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT file_id,file_name FROM functional_case_attachment WHERE case_id=? ORDER BY id",c.getId())));
         sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT file_id,deleted FROM file_association WHERE source_id=? ORDER BY id",c.getId())));

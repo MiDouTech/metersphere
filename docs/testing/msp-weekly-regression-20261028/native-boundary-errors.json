@@ -1,0 +1,41 @@
+{
+  "missingRequestId": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "IDEMPOTENCY_KEY_REQUIRED",
+        "traceId": "eeebfb6c-55de-4b88-ad0b-5c660f6badf2"
+      },
+      "message": "请求未能完成，请根据错误码和 traceId 排查",
+      "code": -32001
+    }
+  },
+  "invalidKey": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "AGENT_VALIDATION_ERROR",
+        "traceId": "db13bcb9-ec7d-4339-b956-0e8783466811"
+      },
+      "message": "参数不符合要求，请检查必填项、数量与字段格式",
+      "code": -32001
+    }
+  },
+  "crossProject": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "AGENT_RESOURCE_NOT_ACCESSIBLE",
+        "traceId": "7b75f7bc-30b9-4171-b1c8-a2c0ff12998c"
+      },
+      "message": "资源不存在或当前账号和令牌无权访问，请检查项目授权",
+      "code": -32001
+    }
+  }
+}

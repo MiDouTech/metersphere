@@ -30,7 +30,10 @@ class AgentCaseImportMySqlTests {
         admin=new JdbcTemplate(new DriverManagerDataSource(server+options,"root","quality-test-only"));admin.execute("CREATE DATABASE "+schema+" CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
         var source=new DriverManagerDataSource(server+schema+options,"root","quality-test-only");jdbc=new JdbcTemplate(source);
         var manager=new DataSourceTransactionManager(source);tx=new TransactionTemplate(manager);
-        try(var connection=source.getConnection()){ScriptUtils.executeSqlScript(connection,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_112__functional_import_job.sql"));}
+        try(var connection=source.getConnection()) {
+            for(String migration:List.of("112__functional_import_job", "123__functional_import_followup", "130__asset_import_followup_adapter", "135__import_commit_stage"))
+                ScriptUtils.executeSqlScript(connection,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_"+migration+".sql"));
+        }
         jdbc.execute("CREATE TABLE project(id VARCHAR(50),deleted BOOLEAN,enable BOOLEAN,organization_id VARCHAR(50))");jdbc.update("INSERT INTO project VALUES ('project',0,1,'org')");
         jdbc.execute("CREATE TABLE project_version(id VARCHAR(50),project_id VARCHAR(50))");jdbc.update("INSERT INTO project_version VALUES ('version','project')");
         jdbc.execute("CREATE TABLE import_business_write(name VARCHAR(100))");
@@ -48,6 +51,7 @@ class AgentCaseImportMySqlTests {
     private void job(String id,int count){
         var request=new FunctionalCaseImportRequest();request.setProjectId("project");request.setVersionId("version");long now=System.currentTimeMillis();
         jdbc.update("INSERT INTO functional_import_job(id,project_id,user_id,token_id,request_id,request_hash,request_json,template_hash,source_hash,source_name,source_bytes,create_time,update_time,expires_at) VALUES (?,'project','user','WEB',?,'hash',?,?,'source','cases.xlsx',?,?,?,?)",id,id,JSON.toJSONString(request),org.apache.commons.codec.digest.DigestUtils.sha256Hex("[]"),new byte[]{1},now,now,now+86400000);
+        jdbc.update("INSERT INTO functional_import_followup(job_id,project_id,user_id,policy,request_json,group_id,state,create_time,update_time,source_kind) VALUES (?,'project','user','IMPORT_ONLY','{}','NONE','SKIPPED',?,?,'FILE')",id,now,now);
         for(int i=1;i<=count;i++){var item=new FunctionalCaseExcelData();item.setName("case"+i);jdbc.update("INSERT INTO functional_import_item(job_id,position,action,payload,state) VALUES (?,?,'CREATE',?,'PENDING')",id,i,JSON.toJSONString(item));}
     }
     @Test void stopResumeAndReplayNeverDuplicateCommittedItems(){

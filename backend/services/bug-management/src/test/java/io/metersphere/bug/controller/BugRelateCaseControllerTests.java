@@ -162,21 +162,24 @@ public class BugRelateCaseControllerTests extends BaseTest {
     @Test
     @Order(6)
     void testBugUnRelateSuccess() throws Exception {
-        this.requestGetWithOk(BUG_CASE_UN_RELATE + "/bug-relate-case-default-id");
-        this.requestGetWithOk(BUG_CASE_UN_RELATE + "/bug-relate-case-default-id-1");
+        this.requestDelete(BUG_CASE_UN_RELATE + "/bug-relate-case-default-id").andExpect(status().isOk());
+        this.requestDelete(BUG_CASE_UN_RELATE + "/bug-relate-case-default-id-1").andExpect(status().isOk());
+        var mapper = io.metersphere.sdk.util.CommonBeanFactory.getBean(io.metersphere.bug.mapper.BugRelationCaseMapper.class);
+        Assertions.assertNull(mapper.selectByPrimaryKey("bug-relate-case-default-id"));
+        Assertions.assertNull(mapper.selectByPrimaryKey("bug-relate-case-default-id-1"));
     }
 
     @Test
     @Order(7)
     void testBugUnRelateError() throws Exception {
-        this.requestGet(BUG_CASE_UN_RELATE + "/bug-relate-case-default-id-x", status().is5xxServerError());
+        this.requestDelete(BUG_CASE_UN_RELATE + "/bug-relate-case-default-id-x").andExpect(businessError(io.metersphere.sdk.util.Translator.get("bug_relate_case_not_found")));
     }
 
     @Test
     @Order(8)
     void testBugRelateCheckPermissionError() throws Exception {
         // 非功能用例类型参数
-        this.requestGet(BUG_CASE_CHECK + "/100001100001/UI", status().is5xxServerError());
+        this.requestGet(BUG_CASE_CHECK + "/100001100001/UI", businessValidationError());
     }
 
     @Test

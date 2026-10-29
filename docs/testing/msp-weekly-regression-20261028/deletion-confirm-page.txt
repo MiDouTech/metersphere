@@ -1,0 +1,92 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=459]
+            svg_root
+        list_item
+          button [ref=460]
+            svg_root
+        list_item
+          button [ref=461]
+            svg_root
+        list_item
+          switch [ref=462]
+            svg_root
+        list_item
+          button [ref=463]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container
+        text "确认用例删除"
+        container
+          alert
+            svg_root
+            text "此请求由你的 Agent 发起，确认后由 Agent 继续提交删除。 删除进入回收站，不永久移除用例。"
+          paragraph
+            text "请核对目标版本。只有当前用户在确认页面作出选择后，才能继续删除。"
+          paragraph
+            text "确认有效期：10/28/2026, 2:36:25 PM · 状态：待你确认"
+          container
+            table
+              table_row
+                table_cell
+                  text "用例名称"
+                table_cell
+                  text "最后修改时间"
+              table_row
+                table_cell
+                  text "ACCEPTANCE-20261027-导入联动A"
+                table_cell
+                  text "10/28/2026, 2:02:41 PM"
+            container
+              text "共 1 条"
+              unordered_list
+                svg_root
+                list_item
+                  text "1"
+                svg_root
+              container
+                text "10 条/页"
+                svg_root
+          container
+            button [ref=536]
+              text "取消删除"
+            button [ref=537]
+              text "确认删除这些用例"
+            button [ref=538]
+              text "刷新状态"
+  svg_root

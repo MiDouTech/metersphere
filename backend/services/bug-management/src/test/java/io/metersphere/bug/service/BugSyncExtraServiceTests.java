@@ -58,7 +58,7 @@ public class BugSyncExtraServiceTests extends BaseTest {
         MSException deleteException = assertThrows(MSException.class, () ->
                 bugAttachmentService.deleteSyncAttachmentFromMs(Set.of("sync-extra-file-associate-B", "sync-extra-file-local-B", "sync-extra-file-local-A.txt"),
                         allBugFile, "bug-for-sync-extra", "project-for-sync-extra"));
-        assertEquals(deleteException.getMessage(), "delete minio error!");
+        assertEquals("delete minio error!", org.apache.commons.lang3.exception.ExceptionUtils.getRootCause(deleteException).getMessage());
         // Reset minio mock
         Mockito.reset(minioMock);
         bugAttachmentService.deleteSyncAttachmentFromMs(Set.of("sync-extra-file-associate-B", "sync-extra-file-local-B"),
@@ -81,6 +81,6 @@ public class BugSyncExtraServiceTests extends BaseTest {
         bugAttachmentService.saveSyncAttachmentToMs(platform, "bug-for-sync-extra", "sync-extra-file-associate-B", "TEST-1", "project-for-sync-extra");
         MSException msException = assertThrows(MSException.class, () ->
                 bugAttachmentService.saveSyncAttachmentToMs(platform, "bug-for-sync-extra", "sync-extra-file-associate-B", "TEST-2", "project-for-sync-extra"));
-        assertEquals(msException.getMessage(), "read bytes exception occurred!");
+        assertEquals("read bytes exception occurred!", org.apache.commons.lang3.exception.ExceptionUtils.getThrowableList(msException).getLast().getMessage());
     }
 }

@@ -55,6 +55,7 @@
   const emit = defineEmits<{
     (e: 'update:loading', val: boolean): void;
     (e: 'loaded', val: any): void;
+    (e: 'failed', error: unknown): void;
     (e: 'loadingDetail'): void;
     (e: 'change', payload: { id: string; index: number }): void;
   }>();
@@ -107,8 +108,7 @@
       const res = await props.getDetailFunc(id || activeDetailId.value);
       emit('loaded', res);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
+      emit('failed', error);
     } finally {
       innerLoading.value = false;
     }

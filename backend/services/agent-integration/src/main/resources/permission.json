@@ -1,4 +1,114 @@
 [
+{
+  "id": "AGENT_PROJECT_CONFIGURATION",
+  "name": "permission.agent_project_configuration.name",
+  "type": "PROJECT",
+  "children": [
+    {
+      "id": "AI_MODEL",
+      "name": "permission.ai_model.name",
+      "permissions": [
+        {
+          "id": "AI_MODEL:READ",
+          "name": "permission.ai_model.read"
+        },
+        {
+          "id": "AI_MODEL:MANAGE",
+          "name": "permission.ai_model.manage"
+        },
+        {
+          "id": "AI_MODEL:VERIFY",
+          "name": "permission.ai_model.verify"
+        }
+      ]
+    },
+    {
+      "id": "AI_CREDENTIAL",
+      "name": "permission.ai_credential.name",
+      "permissions": [
+        {
+          "id": "AI_CREDENTIAL:READ_METADATA",
+          "name": "permission.ai_credential.read_metadata"
+        },
+        {
+          "id": "AI_CREDENTIAL:MANAGE",
+          "name": "permission.ai_credential.manage"
+        },
+        {
+          "id": "AI_CREDENTIAL:VERIFY",
+          "name": "permission.ai_credential.verify"
+        }
+      ]
+    },
+    {
+      "id": "AI_TRIGGER",
+      "name": "permission.ai_trigger.name",
+      "permissions": [
+        {
+          "id": "AI_TRIGGER:READ",
+          "name": "permission.ai_trigger.read"
+        },
+        {
+          "id": "AI_TRIGGER:MANAGE",
+          "name": "permission.ai_trigger.manage"
+        }
+      ]
+    },
+    {
+      "id": "AI_EVIDENCE",
+      "name": "permission.ai_evidence.name",
+      "permissions": [
+        {
+          "id": "AI_EVIDENCE:READ",
+          "name": "permission.ai_evidence.read"
+        }
+      ]
+    }
+  ]
+},
+{
+  "id": "AGENT_ORGANIZATION_RUNTIME",
+  "name": "permission.agent_organization_runtime.name",
+  "type": "ORGANIZATION",
+  "children": [
+    {
+      "id": "AI_RUNNER",
+      "name": "permission.ai_runner.name",
+      "permissions": [
+        {
+          "id": "AI_RUNNER:READ",
+          "name": "permission.ai_runner.read"
+        },
+        {
+          "id": "AI_RUNNER:MANAGE",
+          "name": "permission.ai_runner.manage"
+        }
+      ]
+    }
+  ]
+},
+  {
+    "id": "TEST_ASSET_GOVERNANCE",
+    "name": "permission.test_asset_governance.name",
+    "type": "ORGANIZATION",
+    "children": [
+      {
+        "id": "TEST_ASSET_CATEGORY",
+        "name": "permission.test_asset_category.name",
+        "permissions": [
+          { "id": "TEST_ASSET_CATEGORY:MANAGE", "name": "permission.test_asset_category.manage" },
+          { "id": "TEST_ASSET_CATEGORY:ASSIGN", "name": "permission.test_asset_category.assign" }
+        ]
+      },
+      {
+        "id": "TEST_ASSET_SOURCE",
+        "name": "permission.test_asset_source.name",
+        "permissions": [
+          { "id": "TEST_ASSET_SOURCE:GOVERN", "name": "permission.test_asset_source.govern" }
+        ]
+      }
+    ]
+  },
   {
     "id": "SYSTEM_EXECUTION_QUALITY",
     "name": "平台质量门禁",

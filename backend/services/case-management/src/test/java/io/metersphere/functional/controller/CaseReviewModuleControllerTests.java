@@ -276,34 +276,34 @@ public class CaseReviewModuleControllerTests extends BaseTest {
         request.setProjectId(project.getId());
         request.setName("ParentIsUUID");
         request.setParentId(IDGenerator.nextStr());
-        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(businessValidationError());
 
         //添加重复的a1节点
         request = new CaseReviewModuleCreateRequest();
         request.setProjectId(project.getId());
         request.setName("a1");
-        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(businessValidationError());
 
         //a1节点下添加重复的a1-b1节点
         request = new CaseReviewModuleCreateRequest();
         request.setProjectId(project.getId());
         request.setName("a1-b1");
         request.setParentId(a1Node.getId());
-        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(businessValidationError());
 
         //子节点的项目ID和父节点的不匹配
         request = new CaseReviewModuleCreateRequest();
         request.setProjectId(IDGenerator.nextStr());
         request.setName("RandomUUID");
         request.setParentId(a1Node.getId());
-        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(businessValidationError());
 
         //项目ID和父节点的不匹配
         request = new CaseReviewModuleCreateRequest();
         request.setProjectId("100001100001");
         request.setName("RandomUUID");
         request.setParentId(a1Node.getId());
-        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_ADD, request).andExpect(businessValidationError());
     }
 
     public static BaseTreeNode getNodeByName(List<BaseTreeNode> preliminaryTreeNodes, String nodeName) {
@@ -368,13 +368,13 @@ public class CaseReviewModuleControllerTests extends BaseTest {
         updateRequest = new CaseReviewModuleUpdateRequest();
         updateRequest.setId(IDGenerator.nextStr());
         updateRequest.setName(IDGenerator.nextStr());
-        this.requestPost(URL_MODULE_TREE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_UPDATE, updateRequest).andExpect(businessValidationError());
 
         //名称重复   a1-a1改为a1-b1
         updateRequest = new CaseReviewModuleUpdateRequest();
         updateRequest.setId(a1Node.getId());
         updateRequest.setName("a1-b1");
-        this.requestPost(URL_MODULE_TREE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_UPDATE, updateRequest).andExpect(businessValidationError());
     }
 
     @Test
@@ -633,7 +633,7 @@ public class CaseReviewModuleControllerTests extends BaseTest {
         request.setDragNodeId(IDGenerator.nextStr());
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
-        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(businessValidationError());
 
         //drop节点为空
         request = new NodeMoveRequest();
@@ -647,28 +647,28 @@ public class CaseReviewModuleControllerTests extends BaseTest {
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(IDGenerator.nextStr());
         request.setDropPosition(1);
-        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(businessValidationError());
 
         //position为0的时候节点不存在
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(IDGenerator.nextStr());
         request.setDropPosition(0);
-        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(businessValidationError());
 
         //dragNode和dropNode一样
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
-        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(businessValidationError());
 
         //position不是-1 0 1
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(a2Node.getId());
         request.setDropPosition(4);
-        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_MODULE_TREE_MOVE, request).andExpect(businessValidationError());
     }
 
     @Test

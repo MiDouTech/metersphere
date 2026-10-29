@@ -1,0 +1,219 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      container
+        text "业务文档"
+        container
+          text "..."
+          svg_root
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=336]
+            svg_root
+        list_item
+          button [ref=337]
+            svg_root
+        list_item
+          button [ref=338]
+            svg_root
+        list_item
+          switch [ref=339]
+            svg_root
+        list_item
+          button [ref=340]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "测试计划"
+          container
+            svg_root
+            text "测试用例"
+          container
+            svg_root
+            text "接口测试"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "缺陷管理"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container [ref=341]
+        container [ref=342]
+          container
+            container
+              text "用例资产"
+              text "用例项目仅是资产分类目录，不会创建可进入的业务项目。"
+            container
+              button [ref=343]
+                text "同步历史项目及用例"
+              button [ref=344]
+                text "新建用例项目"
+          alert
+            svg_root
+            text "历史同步 SUCCESS：项目成功 10/11， 用例新增 0、更新 0、跳过 0"
+          container
+            container
+              container
+                textbox [ref=345, loc=css:input[placeholder="搜索目录名称或 ID"]]
+                  text "搜索目录名称或 ID"
+                svg_root
+              container
+                container
+                  container
+                    text "📌 MSP需求验收-20261023"
+                    text "ID: 1704667279923322961"
+                  button [ref=346]
+                    svg_root
+                container
+                  container
+                    text "REMAINING-20261027-资产交互验收"
+                    text "ID: 1710955352562868225"
+                  button [ref=347]
+                    svg_root
+                container
+                  container
+                    text "测试1"
+                    text "ID: 1710860846102487042"
+                  button [ref=348]
+                    svg_root
+                container
+                  container
+                    text "测试项目1"
+                    text "ID: 1710860846102487040"
+                  button [ref=349]
+                    svg_root
+                container
+                  container
+                    text "米多星球-订单与质量门禁复测-20261019"
+                    text "ID: 1698710057204473882"
+                  button [ref=350]
+                    svg_root
+                container
+                  container
+                    text "米多星球-订单生效与质量门禁验证-20260923"
+                    text "ID: 1660836314033823825"
+                  button [ref=351]
+                    svg_root
+                container
+                  container
+                    text "ces"
+                    text "ID: 1606852595212337233"
+                  button [ref=352]
+                    svg_root
+                text "业务部测试"
+                svg_root
+            container
+              container
+                text "MSP需求验收-20261023"
+                container
+                  textbox [ref=353, loc=css:input[placeholder="搜索用例 ID 或名称"]]
+                    text "搜索用例 ID 或名称"
+                  svg_root
+                container
+                  textbox [ref=354, loc=css:input[placeholder="建立方式"]]
+                    text "建立方式"
+                  svg_root
+                container
+                  textbox [ref=355, loc=css:input[placeholder="资产分类"]]
+                    text "资产分类"
+                  svg_root
+                container
+                  svg_root
+                  text "含子分类"
+                container
+                  button [ref=356]
+                    text "新建用例"
+                  button [ref=357]
+                    text "导入测试用例"
+                  button [ref=358]
+                    text "刷新"
+                  button [ref=359]
+                    text "分类管理"
+              alert
+                svg_root
+                text "当前未发现缺失镜像或待处理事件 · 源用例 29 · 未收敛 0 · 待处理 0 · 失败 0"
+              container
+                text "已选择 0 条（当前页）"
+                container
+                  button [ref=360]
+                    text "批量删除"
+                  button [ref=361]
+                    text "批量修改资产分类"
+                  button [ref=362]
+                    text "批量修改用例等级"
+                  button [ref=363]
+                    text "批量修改标签"
+                  button [ref=364]
+                    text "批量处理结果"
+                button [ref=365]
+                  text "导出"
+              container [ref=366]
+                table
+                  table_row
+                    table_cell
+                    table_cell
+                      text "用例 ID"
+                    table_cell
+                      text "用例名称"
+                    table_cell
+                      text "操作"
+                  table_row
+                    table_cell
+                    table_cell
+                      anchor [ref=367]
+                        text "1712306377475530758"
+                    table_cell
+                      anchor [ref=368]
+                        text "WEEKLY-20261028-证据与幂等隔离"
+                    table_cell
+                      anchor [ref=369]
+                        text "删除"
+                  table_row
+                    table_cell
+                    table_cell
+                      anchor [ref=370]
+                        text "1712313472761503746"
+                    table_cell
+                      anchor [ref=371]
+                        text "ACCEPTANCE-20261027-导入联动A"
+                    table_cell
+                      anchor [ref=372]
+                        text "删除"
+  svg_root
+  unordered_list
+    list_item
+      text "取消置顶"
+    list_item
+      text "重命名"
+    list_item
+      text "删除"

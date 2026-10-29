@@ -29,6 +29,8 @@
         "id": "PROJECT_API_DEFINITION",
         "name": "permission.api_definition.name",
         "permissions": [
+          { "id": "PROJECT_API_DEFINITION_DOC:READ" },
+          { "id": "PROJECT_API_DEFINITION_DOC:READ+SHARE", "name": "permission.api_doc.share" },
           {
             "id": "PROJECT_API_DEFINITION:READ"
           },

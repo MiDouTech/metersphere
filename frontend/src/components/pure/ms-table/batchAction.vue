@@ -58,8 +58,9 @@
         type="outline"
         :size="props.size"
         :disabled="props.selectAllDisabled"
+        :aria-pressed="props.allPagesSelected"
         @click="emit('selectAllPages')"
-        >{{ t('msTable.all') }}</a-button
+        >{{ t(props.allPagesSelected ? 'msTable.cancelAll' : 'msTable.all') }}</a-button
       >
     </template>
     <div v-if="moreActionLength > 0" class="drop-down ml-[8px] flex items-center">
@@ -109,6 +110,7 @@
     disabled?: boolean;
     showSelectAllAfterExport?: boolean;
     selectAllDisabled?: boolean;
+    allPagesSelected?: boolean;
     actionConfig?: BatchActionConfig;
     wrapperId: string;
     size?: 'mini' | 'small' | 'medium' | 'large';

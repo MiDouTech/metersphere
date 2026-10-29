@@ -1,0 +1,383 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      text "用例"
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=240]
+            svg_root
+        list_item
+          button [ref=241]
+            svg_root
+        list_item
+          button [ref=242]
+            svg_root
+        list_item
+          switch [ref=243]
+            svg_root
+        list_item
+          button [ref=244]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "测试计划"
+          container
+            svg_root
+            text "测试用例"
+          container
+            svg_root
+            text "接口测试"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "缺陷管理"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container [ref=245]
+        container [ref=246]
+          container
+            container
+              container [ref=247]
+                text "执行用例"
+              container [ref=248]
+                text "Xmind用例"
+            button [ref=249]
+              svg_root
+              text "刷新"
+          splitter
+          container
+            container
+              textbox [ref=250, loc=css:input[placeholder="请输入模块名称"]]
+                text "请输入模块名称"
+              container
+                container
+                  svg_root
+                  text "全部用例"
+                  text "(28)"
+                container
+                  svg_root
+                  svg_root
+                  svg_root
+              container [ref=251]
+                container
+                  svg_root
+                  text "未规划用例"
+                  text "9"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "MSP需求验收-20261023"
+                    text "14"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "ACCEPTANCE-20261027-移动父目录"
+                    text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-导入目录"
+                  text "5"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-并发去重目录"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-1"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-64"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-65"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-128"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写幂等键"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写独立A"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写独立B"
+                  text "0"
+            container [ref=252]
+              container
+                container [ref=253]
+                  text "用例列表"
+                container [ref=254]
+                  text "用例详情"
+              container
+                container
+                  container
+                    button [ref=255]
+                      text "新建"
+                    container
+                      button [ref=256]
+                        text "导入"
+                      button [ref=257]
+                        text "旧版导入记录"
+                      button [ref=258]
+                        text "最近导入任务"
+                      container
+                        text "从 Excel 导入"
+                        text "从用例资产导入"
+                    button [ref=259]
+                      text "导出记录"
+                    button [ref=260]
+                      text "同步全部用例数据至测试计划"
+                    text "同步进度：5/5 · 已完成"
+                  container
+                    container
+                      textbox [ref=261, loc=css:input[placeholder="通过 ID/名称/标签搜索"]]
+                        text "通过 ID/名称/标签搜索"
+                      svg_root
+                    container
+                      text "视图"
+                      text "全部数据"
+                      svg_root
+                    button [ref=262]
+                      svg_root
+                      text "筛选"
+                    container
+                      svg_root
+                      svg_root
+                    svg_root
+                container
+                  container
+                    text "测试计划："
+                    container
+                      container "测试计划"
+                        text "WEEKLY-20261028-导入计划（100006）"
+                        svg_root
+                      container "测试计划: WEEKLY-20261028-导入计划（100006）, 通过率: 0/1, 0%"
+                      text "0%"
+                  container
+                    text "个人执行进度："
+                    text "-"
+                container
+                  container
+                    text "已选择 0 条"
+                    button [ref=263]
+                      text "导出"
+                    button [ref=264]
+                      text "全选所有页"
+                    button [ref=265]
+                      text "编辑"
+                    button [ref=266]
+                      text "批量修改执行结果"
+                    button [ref=267]
+                      text "批量修改执行人"
+                    button [ref=268]
+                      text "移动到"
+                    button [ref=269]
+                      text "复制到"
+                    button [ref=270]
+                      text "清空"
+                  container
+                    table
+                      table_row
+                        table_cell
+                        table_cell
+                          svg_root
+                        table_cell
+                          text "ID"
+                        table_cell
+                          text "用例名称"
+                        table_cell
+                          text "用例等级"
+                        table_cell
+                          text "操作"
+                          svg_root
+                    container [ref=271]
+                      table
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100028"
+                          table_cell
+                            text "ACCEPTANCE-20261027-导入联动A"
+                            svg_root
+                          table_cell
+                            text "P1"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100027"
+                          table_cell
+                            text "ACCEPTANCE-20261027-导入联动A"
+                            svg_root
+                          table_cell
+                            text "P1"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+  svg_root
+  container
+    container
+      text "导入预检与任务"
+      button "Close" [ref=282, loc=role:button[name="Close"]]
+        svg_root
+    container [ref=275]
+      alert
+        svg_root
+        text "预检已固定文件、模板和覆盖目标。提交后在后台逐条导入；关闭窗口不会停止任务，停止会保留已成功写入的用例。"
+      paragraph
+        text "source-original.xlsx · 等待提交 · 共 89 条"
+      container
+        paragraph
+          text "检测到再次导入测试用例，是否更新已有测试计划和评审计划？"
+        container
+          button [ref=276]
+            text "是，更新已有"
+          button [ref=277]
+            text "否"
+        button [ref=278]
+          text "仅导入，不创建或关联计划/评审"
+      text "待处理：89"
+      container
+        button [ref=279]
+          text "提交有效用例"
+        button [ref=280]
+          text "停止导入"
+        button [ref=281]
+          text "刷新"
+      table
+        table_row
+          table_cell
+            text "条目"
+          table_cell
+            text "处理"
+          table_cell
+            text "状态"
+          table_cell
+            text "说明"
+        table_row
+          table_cell
+            text "1"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell
+        table_row
+          table_cell
+            text "2"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell
+        table_row
+          table_cell
+            text "3"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell
+        table_row
+          table_cell
+            text "4"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell
+        table_row
+          table_cell
+            text "5"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell
+        table_row
+          table_cell
+            text "6"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell
+        table_row
+          table_cell
+            text "7"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell
+        table_row
+          table_cell
+            text "8"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell
+        table_row
+          table_cell
+            text "9"
+          table_cell
+            text "新增"
+          table_cell
+            text "待处理"
+          table_cell

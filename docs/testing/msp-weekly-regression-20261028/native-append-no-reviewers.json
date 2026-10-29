@@ -1,0 +1,117 @@
+{
+  "options": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"projectId\":\"1704667279923322880\",\"canCreate\":true,\"groups\":[{\"id\":\"9bec08f0-88d5-4aed-a15c-dbd7dff57166\",\"revision\":1,\"planId\":\"1712308215721533445\",\"reviewId\":\"1712308267261140992\",\"planName\":\"WEEKLY-20261028-导入计划\",\"reviewName\":\"WEEKLY-20261028-导入评审\"},{\"id\":\"48b1ccb8-6fa9-4334-a701-85006ac5aa1c\",\"revision\":3,\"planId\":\"1710884880739475461\",\"reviewId\":\"1710884932279083008\",\"planName\":\"ACCEPTANCE-20261027-导入联动计划\",\"reviewName\":\"ACCEPTANCE-20261027-导入联动评审\"}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "canCreate": true,
+          "groups": [
+            {
+              "id": "9bec08f0-88d5-4aed-a15c-dbd7dff57166",
+              "revision": 1,
+              "planId": "1712308215721533445",
+              "reviewId": "1712308267261140992",
+              "planName": "WEEKLY-20261028-导入计划",
+              "reviewName": "WEEKLY-20261028-导入评审"
+            },
+            {
+              "id": "48b1ccb8-6fa9-4334-a701-85006ac5aa1c",
+              "revision": 3,
+              "planId": "1710884880739475461",
+              "reviewId": "1710884932279083008",
+              "planName": "ACCEPTANCE-20261027-导入联动计划",
+              "reviewName": "ACCEPTANCE-20261027-导入联动评审"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "precheck": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"e6a8793d-848f-425d-9efa-6fee0bc501af\",\"expiresAt\":1793253760412,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"weekly-append.xlsx\",\"state\":\"PRECHECKED\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "pageSize": 10,
+          "current": 1,
+          "total": 1,
+          "jobId": "e6a8793d-848f-425d-9efa-6fee0bc501af",
+          "expiresAt": 1793253760412,
+          "counts": [
+            {
+              "state": "PENDING",
+              "total": 1
+            }
+          ],
+          "items": [
+            {
+              "position": 1,
+              "action": "CREATE",
+              "caseId": null,
+              "state": "PENDING",
+              "message": null
+            }
+          ],
+          "fileName": "weekly-append.xlsx",
+          "state": "PRECHECKED"
+        }
+      }
+    }
+  },
+  "commit": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"e6a8793d-848f-425d-9efa-6fee0bc501af\",\"expiresAt\":1793253760412,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"weekly-append.xlsx\",\"state\":\"QUEUED\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "pageSize": 10,
+          "current": 1,
+          "total": 1,
+          "jobId": "e6a8793d-848f-425d-9efa-6fee0bc501af",
+          "expiresAt": 1793253760412,
+          "counts": [
+            {
+              "state": "PENDING",
+              "total": 1
+            }
+          ],
+          "items": [
+            {
+              "position": 1,
+              "action": "CREATE",
+              "caseId": null,
+              "state": "PENDING",
+              "message": null
+            }
+          ],
+          "fileName": "weekly-append.xlsx",
+          "state": "QUEUED"
+        }
+      }
+    }
+  }
+}

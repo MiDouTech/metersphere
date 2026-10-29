@@ -49,6 +49,15 @@ public class TestCasePageProviderRequest extends BaseCondition implements Serial
     @Schema(description = "模块ID")
     private List<@NotBlank String> moduleIds;
 
+    @Schema(description = "测试资产建立方式")
+    private List<String> creationSources;
+
+    @Schema(description = "测试资产业务分类 ID")
+    private String assetCategoryId;
+
+    @Schema(description = "分类筛选是否包含子分类")
+    private Boolean includeAssetCategoryDescendants;
+
     @Schema(description = "版本fk(只在关联接口的时候用)")
     private String versionId;
 

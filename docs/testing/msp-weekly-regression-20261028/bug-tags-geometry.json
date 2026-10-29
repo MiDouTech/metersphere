@@ -1,0 +1,26 @@
+{
+  "width": 971,
+  "height": 852,
+  "tags": {
+    "x": 633,
+    "y": 390.5,
+    "width": 312,
+    "height": 222,
+    "top": 390.5,
+    "right": 945,
+    "bottom": 612.5,
+    "left": 633
+  },
+  "date": {
+    "x": 633,
+    "y": 342.5,
+    "width": 312,
+    "height": 32,
+    "top": 342.5,
+    "right": 945,
+    "bottom": 374.5,
+    "left": 633
+  },
+  "overlap": false,
+  "longTag": []
+}

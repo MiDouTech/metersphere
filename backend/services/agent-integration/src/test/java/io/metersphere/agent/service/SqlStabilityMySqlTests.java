@@ -113,6 +113,7 @@ class SqlStabilityMySqlTests {
         var cases=mock(FunctionalCaseService.class);
         var manager=new DataSourceTransactionManager(ds);
         var outbox=new FunctionalImportEffectOutbox(jdbc,manager,hub,cases,mock(UserMapper.class),mock(CommonNoticeSendService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(outbox,"assets",mock(io.metersphere.functional.asset.service.CaseAssetService.class));
         jdbc.execute("CREATE TABLE case_review_functional_case(review_id VARCHAR(50),case_id VARCHAR(50))");
         org.springframework.test.util.ReflectionTestUtils.setField(outbox,"reviewRecount",new io.metersphere.functional.service.FunctionalReviewRecountService(jdbc,manager));
         var tx=new TransactionTemplate(manager);

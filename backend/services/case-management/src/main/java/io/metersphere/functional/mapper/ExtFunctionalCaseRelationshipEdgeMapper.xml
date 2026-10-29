@@ -55,7 +55,7 @@
             </if>
             order by
             <if test="sort != null and sort != ''">
-                fc.${sort}
+                ${sort}
             </if>
             <if test="sort == null or sort == ''">
                 fcre.create_time desc

@@ -694,7 +694,7 @@ public class EnvironmentControllerTests extends BaseTest {
         request.setName("name");
         request.setConfig(new EnvironmentConfig());
         paramMap.set("request", JSON.toJSONString(request));
-        requestMultipart(add, paramMap, ERROR_REQUEST_MATCHER);
+        requestMultipart(add, paramMap, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_already_exists")));
 
     }
 
@@ -837,7 +837,7 @@ public class EnvironmentControllerTests extends BaseTest {
         request.setConfig(new EnvironmentConfig());
         MultiValueMap<String, Object> paramMap = new LinkedMultiValueMap<>();
         paramMap.set("request", JSON.toJSONString(request));
-        MvcResult mvcResult = requestMultipartWithOkAndReturn(update, paramMap, ERROR_REQUEST_MATCHER);
+        MvcResult mvcResult = requestMultipartWithOkAndReturn(update, paramMap);
         Environment response = parseObjectFromMvcResult(mvcResult, Environment.class);
         Assertions.assertNotNull(response);
         Environment environment = environmentMapper.selectByPrimaryKey(response.getId());
@@ -898,7 +898,7 @@ public class EnvironmentControllerTests extends BaseTest {
         request.setConfig(new EnvironmentConfig());
         MultiValueMap<String, Object> paramMap = new LinkedMultiValueMap<>();
         paramMap.set("request", JSON.toJSONString(request));
-        requestMultipart(update, paramMap, ERROR_REQUEST_MATCHER);
+        requestMultipart(update, paramMap, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_not_exist")));
         //重名
         EnvironmentExample example = new EnvironmentExample();
         example.createCriteria().andProjectIdEqualTo(DEFAULT_PROJECT_ID).andNameEqualTo("test-edit-name");
@@ -910,7 +910,7 @@ public class EnvironmentControllerTests extends BaseTest {
         request.setName("uploadFile");
         request.setConfig(new EnvironmentConfig());
         paramMap.set("request", JSON.toJSONString(request));
-        requestMultipart(update, paramMap, ERROR_REQUEST_MATCHER);
+        requestMultipart(update, paramMap, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_already_exists")));
 
     }
 
@@ -962,9 +962,9 @@ public class EnvironmentControllerTests extends BaseTest {
         requestGetPermissionTest(PermissionConstants.PROJECT_ENVIRONMENT_READ_DELETE, delete + id);
 
         //删除环境不存在的
-        this.requestGet(delete + "environmentId2", ERROR_REQUEST_MATCHER);
+        this.requestGet(delete + "environmentId2", businessValidationError());
 
-        this.requestGet(delete + MOCKID, ERROR_REQUEST_MATCHER);
+        this.requestGet(delete + MOCKID, businessValidationError());
 
         //删除包含文件的环境
         example = new EnvironmentExample();
@@ -1034,7 +1034,7 @@ public class EnvironmentControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("file", List.of(file));
         paramMap.set("request", password);
-        requestMultipartWithOkAndReturn(getEnTry, paramMap, ERROR_REQUEST_MATCHER);
+        requestMultipartWithOkAndReturn(getEnTry, paramMap);
 
         //文件名称有问题
         password = "123456";
@@ -1043,7 +1043,7 @@ public class EnvironmentControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("file", List.of(file));
         paramMap.set("request", password);
-        requestMultipartWithOkAndReturn(getEnTry, paramMap, ERROR_REQUEST_MATCHER);
+        requestMultipartWithOkAndReturn(getEnTry, paramMap);
 
 
     }

@@ -1,0 +1,513 @@
+{
+  "modules": {
+    "sdk": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "project-management": {
+      "tests": 280,
+      "failures": 61,
+      "errors": 4,
+      "skipped": 0
+    },
+    "system-setting": {
+      "tests": 543,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "total": {
+    "tests": 834,
+    "failures": 61,
+    "errors": 4,
+    "skipped": 0
+  },
+  "original80": [
+    {
+      "id": "E001",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "add",
+      "status": "passed"
+    },
+    {
+      "id": "F001",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "update",
+      "status": "passed"
+    },
+    {
+      "id": "E002",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "updatePermissionSetting",
+      "status": "passed"
+    },
+    {
+      "id": "F002",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "getPermissionSetting",
+      "status": "passed"
+    },
+    {
+      "id": "F003",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "delete",
+      "status": "passed"
+    },
+    {
+      "id": "F004",
+      "classname": "io.metersphere.system.controller.OperationLogControllerTests",
+      "test": "testGetOperationLogParamsError",
+      "status": "passed"
+    },
+    {
+      "id": "F005",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F006",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgError",
+      "status": "passed"
+    },
+    {
+      "id": "F007",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F008",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberToRoleError",
+      "status": "passed"
+    },
+    {
+      "id": "F009",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addOrgMemberToProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F010",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F011",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F012",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getProjectListByOrgError",
+      "status": "passed"
+    },
+    {
+      "id": "F013",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getUserRoleListByOrgError",
+      "status": "passed"
+    },
+    {
+      "id": "F014",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getNotExistUserListByOrgError",
+      "status": "passed"
+    },
+    {
+      "id": "F015",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F016",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F017",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F018",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F019",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F020",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMember",
+      "status": "passed"
+    },
+    {
+      "id": "F021",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F022",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F023",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "enableError",
+      "status": "passed"
+    },
+    {
+      "id": "F024",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "disableError",
+      "status": "passed"
+    },
+    {
+      "id": "F025",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetAdminList",
+      "status": "passed"
+    },
+    {
+      "id": "F026",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetMemberList",
+      "status": "passed"
+    },
+    {
+      "id": "F027",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateNameError",
+      "status": "passed"
+    },
+    {
+      "id": "F028",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "getStatusFlowSetting",
+      "status": "passed"
+    },
+    {
+      "id": "F029",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "addStatusItem",
+      "status": "passed"
+    },
+    {
+      "id": "E003",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusItem",
+      "status": "passed"
+    },
+    {
+      "id": "E004",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusDefinition",
+      "status": "passed"
+    },
+    {
+      "id": "E005",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusFlow",
+      "status": "passed"
+    },
+    {
+      "id": "E006",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "deleteStatusItem",
+      "status": "passed"
+    },
+    {
+      "id": "F030",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "sortStatusItem",
+      "status": "passed"
+    },
+    {
+      "id": "F031",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddError",
+      "status": "passed"
+    },
+    {
+      "id": "F032",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleUpdateError",
+      "status": "passed"
+    },
+    {
+      "id": "F033",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteError",
+      "status": "passed"
+    },
+    {
+      "id": "F034",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionSettingError",
+      "status": "passed"
+    },
+    {
+      "id": "F035",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionUpdateError",
+      "status": "passed"
+    },
+    {
+      "id": "F036",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F037",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleRemoveMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F038",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteOnlyMemberSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "E007",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "adminTreeWithStats",
+      "status": "passed"
+    },
+    {
+      "id": "E008",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberPage",
+      "status": "passed"
+    },
+    {
+      "id": "E009",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberDetailMasked",
+      "status": "passed"
+    },
+    {
+      "id": "F039",
+      "classname": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testEdit",
+      "status": "passed"
+    },
+    {
+      "id": "F040",
+      "classname": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testDetail",
+      "status": "passed"
+    },
+    {
+      "id": "F041",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testUpdateOrganizationError",
+      "status": "passed"
+    },
+    {
+      "id": "F042",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testDeleteOrganization",
+      "status": "passed"
+    },
+    {
+      "id": "F043",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F044",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F045",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F046",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationError",
+      "status": "passed"
+    },
+    {
+      "id": "F047",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testSwitchOrganizationError",
+      "status": "passed"
+    },
+    {
+      "id": "F048",
+      "classname": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEmailConnect",
+      "status": "passed"
+    },
+    {
+      "id": "F049",
+      "classname": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEditUploadConfigInfoError",
+      "status": "passed"
+    },
+    {
+      "id": "F050",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F051",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F052",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F053",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F054",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F055",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F056",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F057",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "enableError",
+      "status": "passed"
+    },
+    {
+      "id": "F058",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "disableError",
+      "status": "passed"
+    },
+    {
+      "id": "F059",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateNameError",
+      "status": "passed"
+    },
+    {
+      "id": "F060",
+      "classname": "io.metersphere.system.controller.TaskCenterScheduleControllerTests",
+      "test": "getPageError",
+      "status": "passed"
+    },
+    {
+      "id": "F061",
+      "classname": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "getResourcePoolsDetailFiled",
+      "status": "passed"
+    },
+    {
+      "id": "F062",
+      "classname": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "updateUiTestResourcePoolFiled",
+      "status": "passed"
+    },
+    {
+      "id": "F063",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalGetId",
+      "status": "passed"
+    },
+    {
+      "id": "F064",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdateInfo",
+      "status": "passed"
+    },
+    {
+      "id": "F065",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdatePassword",
+      "status": "passed"
+    },
+    {
+      "id": "F066",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testDetail",
+      "status": "passed"
+    },
+    {
+      "id": "F067",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testAdd",
+      "status": "passed"
+    },
+    {
+      "id": "E010",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testList",
+      "status": "passed"
+    },
+    {
+      "id": "F068",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testDisable",
+      "status": "passed"
+    },
+    {
+      "id": "F069",
+      "classname": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testAdd",
+      "status": "passed"
+    },
+    {
+      "id": "F070",
+      "classname": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testGet",
+      "status": "passed"
+    }
+  ],
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40815944705",
+  "testedCommit": "13bd2c3f15",
+  "state": "original-80-passed-downstream-failed"
+}

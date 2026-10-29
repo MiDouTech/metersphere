@@ -22,12 +22,16 @@ INSERT INTO user_role_relation (id, user_id, role_id, source_id, organization_id
 VALUES (UUID(), 'aspect-member-user-guo', 'org_member', '100001', '100001', UNIX_TIMESTAMP() * 1000, 'admin');
 
 INSERT INTO user_role_relation (id, user_id, role_id, source_id, organization_id, create_time, create_user)
-VALUES (UUID(), 'aspect-member-user-guo', 'project_admin', '100001100001', '100001', UNIX_TIMESTAMP() * 1000,
+VALUES (UUID(), 'aspect-member-user-guo', 'aspect_project_role', '100001100001', '100001', UNIX_TIMESTAMP() * 1000,
         'admin');
 
+INSERT INTO user_role(id, name, description, internal, type, create_time, update_time, create_user, scope_id)
+VALUES ('aspect_project_role', 'aspect notice fixture', '', FALSE, 'PROJECT',
+        UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000, 'admin', '100001100001');
+
 INSERT INTO user_role_permission(id, role_id, permission_id)
-VALUES ('aspect_user_role_guo_permission1', 'project_admin', 'FUNCTIONAL_CASE_COMMENT:READ+ADD'),
-       ('aspect_user_role_guo_permission2', 'project_admin', 'FUNCTIONAL_CASE:READ+ADD');
+VALUES ('aspect_user_role_guo_permission1', 'aspect_project_role', 'FUNCTIONAL_CASE_COMMENT:READ+ADD'),
+       ('aspect_user_role_guo_permission2', 'aspect_project_role', 'FUNCTIONAL_CASE:READ+ADD');
 
 INSERT INTO custom_field(id, name, scene, type, remark, create_time, update_time, create_user, ref_id, scope_id, internal, enable_option_key, scope_type)
 values ('aspect_test_one','aspect_test','FUNCTIONAL', 'INPUT','aspect_test',  UNIX_TIMESTAMP() * 1000,  UNIX_TIMESTAMP() * 1000, 'admin' , 'aspect_test_one', '100001100001',false, false, 'PROJECT');

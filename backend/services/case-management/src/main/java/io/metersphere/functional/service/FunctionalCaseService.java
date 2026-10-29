@@ -339,6 +339,7 @@ public class FunctionalCaseService {
      * @param request request
      */
     private FunctionalCase addCase(String caseId, FunctionalCaseAddRequest request, String userId) {
+        validateWriteSteps(request.getCaseEditType(), request.getSteps());
         FunctionalCase functionalCase = new FunctionalCase();
         BeanUtils.copyBean(functionalCase, request);
         resolveWorkspaceId(functionalCase, request.getProjectId());
@@ -429,6 +430,13 @@ public class FunctionalCaseService {
      * @param functionalCaseId functionalCaseId
      * @return FunctionalCaseDetailDTO
      */
+    /** Isolate failed read attempts so a malformed row cannot poison a surrounding transaction. */
+    @Transactional(readOnly = true, propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW,
+            timeoutString = "${ms.db.interactive-transaction-seconds:25}")
+    public Map<String, FunctionalCaseDetailDTO> getAgentCaseDetailsForSearch(List<String> caseIds, String projectId) {
+        return getAgentCaseDetails(caseIds, projectId, true);
+    }
+
     /** Internal, bounded projection for already-authorized Agent targets; no attachment or follow queries. */
     @Transactional(readOnly = true, timeoutString = "${ms.db.interactive-transaction-seconds:25}")
     public Map<String, FunctionalCaseDetailDTO> getAgentCaseDetails(List<String> caseIds, String projectId, boolean includeSteps) {
@@ -471,8 +479,7 @@ public class FunctionalCaseService {
             detail.setPrerequisite(agentText(blob.getPrerequisite()));
             if (includeSteps) {
                 String steps = agentText(blob.getSteps());
-                List<FunctionalCaseStepDTO> parsed = StringUtils.isBlank(steps) ? new ArrayList<>() : JSON.parseArray(steps, FunctionalCaseStepDTO.class);
-                parsed.forEach(step -> { if (StringUtils.isBlank(step.getId())) step.setId(UUID.randomUUID().toString()); });
+                List<FunctionalCaseStepDTO> parsed = parseDefinitionSteps(steps, item.getId());
                 detail.setSteps(JSON.toJSONString(parsed));
                 detail.setTextDescription(agentText(blob.getTextDescription()));
                 detail.setExpectedResult(agentText(blob.getExpectedResult()));
@@ -506,6 +513,46 @@ public class FunctionalCaseService {
         return new String(bytes == null ? new byte[0] : bytes, StandardCharsets.UTF_8);
     }
 
+    static void validateWriteSteps(String mode, String steps) {
+        if (!"STEP".equals(mode) || StringUtils.isBlank(steps)) return;
+        try {
+            if (steps.getBytes(StandardCharsets.UTF_8).length > 8 * 1024 * 1024) throw new IllegalArgumentException();
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+            var root = mapper.readTree(steps);
+            if (root == null || !root.isArray()) throw new IllegalArgumentException();
+            for (var item : root) {
+                if (!item.isObject()) throw new IllegalArgumentException();
+                for (String field : List.of("id", "description", "expectedResult")) {
+                    var value = item.get(field);
+                    if (value != null && !value.isNull() && !value.isTextual()) throw new IllegalArgumentException();
+                }
+            }
+        } catch (Exception failure) {
+            throw new MSException("用例步骤必须为有效的步骤数组，请检查格式和内容大小");
+        }
+    }
+
+    static List<FunctionalCaseStepDTO> parseDefinitionSteps(String value,String caseId) {
+        if(StringUtils.isBlank(value))return new ArrayList<>();
+        try {
+            if(!value.trim().startsWith("["))throw new IllegalArgumentException();
+            var parsed=JSON.parseArray(value,FunctionalCaseStepDTO.class);
+            if(parsed==null || parsed.stream().anyMatch(Objects::isNull))throw new IllegalArgumentException();
+            for (int index = 0; index < parsed.size(); index++) {
+                var step = parsed.get(index);
+                if (StringUtils.isBlank(step.getId())) {
+                    String identity = caseId + ":" + index + ":" + JSON.toJSONString(step);
+                    step.setId(UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8)).toString());
+                }
+            }
+            return parsed;
+        } catch(Exception failure) {
+            org.slf4j.LoggerFactory.getLogger(FunctionalCaseService.class).warn("Case definition steps invalid; caseId={}",caseId);
+            throw new io.metersphere.sdk.util.FunctionalCaseBlobCodec.BodyFormatException();
+        }
+    }
+
     public FunctionalCaseDetailDTO getFunctionalCaseDetail(String functionalCaseId, String userId, boolean checkDetailCount) {
         return getFunctionalCaseDetail(functionalCaseId, userId, checkDetailCount, false);
     }
@@ -520,14 +567,10 @@ public class FunctionalCaseService {
         FunctionalCaseDetailDTO functionalCaseDetailDTO = new FunctionalCaseDetailDTO();
         BeanUtils.copyBean(functionalCaseDetailDTO, functionalCase);
         FunctionalCaseBlob caseBlob = functionalCaseBlobMapper.selectByPrimaryKey(functionalCaseId);
+        if(caseBlob==null)throw new MSException("用例正文不存在，请联系管理员核对数据");
         String caseDetailSteps = new String(caseBlob.getSteps() == null ? new byte[0] : caseBlob.getSteps(), StandardCharsets.UTF_8);
         if (StringUtils.isNotBlank(caseDetailSteps)) {
-            List<FunctionalCaseStepDTO> newCaseSteps = JSON.parseArray(caseDetailSteps, FunctionalCaseStepDTO.class);
-            newCaseSteps.forEach(step -> {
-                if (StringUtils.isBlank(step.getId())) {
-                    step.setId(UUID.randomUUID().toString());
-                }
-            });
+            List<FunctionalCaseStepDTO> newCaseSteps = parseDefinitionSteps(caseDetailSteps,functionalCaseId);
             functionalCaseDetailDTO.setSteps(JSON.toJSONString(newCaseSteps));
         } else {
             functionalCaseDetailDTO.setSteps(JSON.toJSONString(Collections.emptyList()));
@@ -578,7 +621,7 @@ public class FunctionalCaseService {
         functionalCaseDetailDTO.setModuleName(name);
 
         User user = userMapper.selectByPrimaryKey(functionalCaseDetailDTO.getCreateUser());
-        functionalCaseDetailDTO.setCreateUserName(user.getName());
+        if (user != null) functionalCaseDetailDTO.setCreateUserName(user.getName());
         if (StringUtils.isNotBlank(functionalCaseDetailDTO.getExecuteUser())) {
             User executeUser = userMapper.selectByPrimaryKey(functionalCaseDetailDTO.getExecuteUser());
             if (executeUser != null) {
@@ -748,7 +791,7 @@ public class FunctionalCaseService {
 
         //处理删除文件id
         if (CollectionUtils.isNotEmpty(request.getDeleteFileMetaIds())) {
-            functionalCaseAttachmentService.deleteCaseAttachment(request.getDeleteFileMetaIds(), request.getId(), request.getProjectId());
+            functionalCaseAttachmentService.deleteCaseAttachment(request.getDeleteFileMetaIds(), request.getId(), request.getProjectId(), userId);
         }
 
         //处理取消关联文件id
@@ -833,6 +876,7 @@ public class FunctionalCaseService {
 
 
     private void updateCase(FunctionalCaseEditRequest request, String userId, FunctionalCase functionalCase, FunctionalCase oldCase) {
+        validateWriteSteps(StringUtils.defaultIfBlank(request.getCaseEditType(), oldCase.getCaseEditType()), request.getSteps());
         long now = System.currentTimeMillis();
         functionalCase.setUpdateUser(userId);
         functionalCase.setUpdateTime(now);
@@ -896,10 +940,10 @@ public class FunctionalCaseService {
     /** Publish a personal execution without modifying authoring steps; caller owns the transaction and authorization. */
     public void publishPersonalExecution(String projectId,String caseId,String submissionId,String result,String userId,long now) {
         if(!java.util.Set.of("SUCCESS","ERROR").contains(result))throw new MSException("AGENT_VALIDATION_ERROR");
-        if(caseLifecycleJdbc.update("UPDATE functional_case SET last_execute_result=?,last_execute_user=?,last_execute_time=? WHERE id=? AND project_id=? AND deleted=0",result,userId,now,caseId,projectId)!=1)
+        if(caseLifecycleJdbc.update("UPDATE functional_case SET last_execute_result=?,last_execute_user=?,last_execute_time=?,update_time=GREATEST(COALESCE(update_time,0)+1,?) WHERE id=? AND project_id=? AND deleted=0",result,userId,now,now,caseId,projectId)!=1)
             throw new MSException("VERSION_CONFLICT");
         caseLifecycleJdbc.update("INSERT INTO agent_case_current_execution(case_id,submission_id,execute_time) VALUES (?,?,?) ON DUPLICATE KEY UPDATE submission_id=VALUES(submission_id),execute_time=VALUES(execute_time)",caseId,submissionId,now);
-        caseLifecycleJdbc.update("UPDATE test_plan_functional_case pc JOIN test_plan p ON p.id=pc.test_plan_id SET pc.last_exec_result=?,pc.last_exec_time=?,pc.execute_user=? WHERE pc.functional_case_id=? AND p.project_id=? AND p.status<>'ARCHIVED'",result,now,userId,caseId,projectId);
+        caseLifecycleJdbc.update("UPDATE test_plan_functional_case pc JOIN test_plan p ON p.id=pc.test_plan_id SET pc.last_exec_result=?,pc.last_exec_time=?,pc.execute_user=? WHERE pc.functional_case_id=? AND p.status<>'ARCHIVED'",result,now,userId,caseId);
         importEffectOutbox.enqueue(projectId,userId,List.of(caseId),List.of(),"UPDATE");
     }
 
@@ -1505,6 +1549,7 @@ public class FunctionalCaseService {
      * @param user            user
      */
     public void saveImportData(List<FunctionalCaseExcelData> list, FunctionalCaseImportRequest request, List<BaseTreeNode> moduleTree, Map<String, TemplateCustomFieldDTO> customFieldsMap, Map<String, String> pathMap, SessionUser user, AtomicLong lastPos) {
+        for (var item : list) validateWriteSteps(item.getCaseEditType(), item.getSteps());
         //默认模板
         TemplateDTO defaultTemplateDTO = projectTemplateService.getDefaultTemplateDTO(request.getProjectId(), TemplateScene.FUNCTIONAL.name());
         //模块路径
@@ -1773,6 +1818,7 @@ public class FunctionalCaseService {
      * @param user            用户
      */
     public void updateImportData(List<FunctionalCaseExcelData> updateList, FunctionalCaseImportRequest request, List<BaseTreeNode> moduleTree, Map<String, TemplateCustomFieldDTO> customFieldsMap, Map<String, String> pathMap, SessionUser user) {
+        for (var item : updateList) validateWriteSteps(item.getCaseEditType(), item.getSteps());
         //默认模板
         TemplateDTO defaultTemplateDTO = projectTemplateService.getDefaultTemplateDTO(request.getProjectId(), TemplateScene.FUNCTIONAL.name());
         //模块路径

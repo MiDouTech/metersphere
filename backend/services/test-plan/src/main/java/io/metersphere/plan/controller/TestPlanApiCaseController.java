@@ -67,7 +67,7 @@ public class TestPlanApiCaseController {
     @PostMapping(value = "/sort")
     @Operation(summary = "测试计划功能用例-功能用例拖拽排序")
     @RequiresPermissions(PermissionConstants.TEST_PLAN_READ_UPDATE)
-    @CheckOwner(resourceId = "#request.getTestPlanId()", resourceType = "test_plan")
+    @CheckOwner(resourceId = "#request.getTestCollectionId()", resourceType = "test_plan", relationType = "test_plan_collection")
     public TestPlanOperationResponse sortNode(@Validated @RequestBody ResourceSortRequest request) {
         return testPlanApiCaseService.sortNode(request, new LogInsertModule(SessionUtils.getUserId(), "/test-plan/api/case/sort", HttpMethodConstants.POST.name()));
     }
