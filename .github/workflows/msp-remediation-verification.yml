@@ -152,7 +152,7 @@ jobs:
           chmod +x mvnw && ./mvnw -B -pl backend/app -am
           -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true
           -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true
-          '-Dtest=io.metersphere.plan.**,io.metersphere.agent.**'
+          '-Dtest=io.metersphere.agent.**,io.metersphere.functional.controller.AiSourceDocumentControllerSecurityTests'
           -Dsurefire.failIfNoSpecifiedTests=false package
         env:
           MAVEN_OPTS: -Xmx1536m
@@ -163,12 +163,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          source_run=40870448518
+          source_run=40874331855
           source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$source_run" --jq .head_sha)
-          test "$source_sha" = 4d7b200bd068b0dc00d0eabc1b6b6407dbab28b8
+          test "$source_sha" = ef1051a64885109a55bbc95930f81faead237be0
           git fetch --no-tags --depth=1 origin "$source_sha"
           gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name backend-test-reports --dir .ci-retained-source
           gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name all-module-test-summary --dir .ci-retained-summary
+          gh run download 40870448518 --repo "$GITHUB_REPOSITORY" --name all-module-test-summary --dir .ci-baseline-summary
           python3 deploy/quality-verify/test_retained_reports.py
           python3 deploy/quality-verify/retain-upstream-reports.py --source-sha "$source_sha" --source-run "$source_run" --reports .ci-retained-source --summary .ci-retained-summary/.ci-test-summary.json
       - name: Require complete current or source-verified retained coverage with zero failures, errors or skips
@@ -182,6 +183,8 @@ jobs:
           python3 deploy/quality-verify/test_report_gate.py
           if [ '${{ steps.downstream-tests.outcome }}' != 'skipped' ]; then
             python3 deploy/quality-verify/check-test-reports.py --modules bug-management case-management test-plan dashboard agent-integration app
+          elif [ '${{ steps.affected-tests.outcome }}' != 'skipped' ]; then
+            python3 deploy/quality-verify/check-test-reports.py --inventory .ci-baseline-summary/.ci-test-summary.json
           else
             python3 deploy/quality-verify/check-test-reports.py
           fi

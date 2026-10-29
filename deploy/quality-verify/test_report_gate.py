@@ -49,6 +49,19 @@ class ReportGateTests(unittest.TestCase):
         self.assertEqual("failure", result["executedTests"][0]["state"])
         self.assertNotIn("secret", str(result))
 
+    def test_same_module_cannot_silently_drop_a_testcase(self):
+        result = self.inspect('<testsuite tests="1"><testcase classname="c" name="ok"/></testsuite>')
+        baseline = {"executedTests": result["executedTests"] + [dict(module="sample", classname="c", test="missing")]}
+        gate.require_inventory(result, baseline)
+        self.assertFalse(result["passed"])
+        self.assertEqual("missing", result["missingTestcases"][0]["test"])
+
+    def test_exact_inventory_passes_but_empty_inventory_is_rejected(self):
+        result = self.inspect('<testsuite tests="1"><testcase classname="c" name="ok"/></testsuite>')
+        gate.require_inventory(result, {"executedTests": result["executedTests"]})
+        self.assertTrue(result["passed"])
+        with self.assertRaises(ValueError): gate.require_inventory(result, {})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,8 +24,11 @@ import static org.mockito.Mockito.*;
 class AgentDirectExecutionMySqlTests {
     @Test void realTransactionsGatePublishDownloadRollbackAndReplay() throws Exception {
         var ds=new SingleConnectionDataSource("jdbc:mysql://127.0.0.1:13326/quality_verify?useSSL=false&allowPublicKeyRetrieval=true","root","quality-test-only",true);
+        String schema="quality_direct_"+UUID.randomUUID().toString().replace("-","");
         try {
             var jdbc=new JdbcTemplate(ds);
+            jdbc.execute("CREATE DATABASE `"+schema+"` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+            jdbc.execute("USE `"+schema+"`");
             try(var stream=getClass().getResourceAsStream("/migration/3.7.2/ddl/V3.7.2_102__personal_execution_evidence.sql")) {
                 assertNotNull(stream);
                 for(String sql:new String(stream.readAllBytes(),StandardCharsets.UTF_8).split(";"))
@@ -236,7 +239,7 @@ class AgentDirectExecutionMySqlTests {
                 jdbc.execute(ddl.substring(start,ddl.indexOf(';',start)).replace("CREATE TABLE","CREATE TEMPORARY TABLE"));
             }
             jdbc.execute("ALTER TABLE functional_case ADD ref_id VARCHAR(64), ADD latest BOOLEAN NOT NULL DEFAULT TRUE");
-            jdbc.execute("CREATE TEMPORARY TABLE project(id VARCHAR(64),organization_id VARCHAR(64),deleted BOOLEAN)");
+            jdbc.execute("CREATE TABLE project(id VARCHAR(64),organization_id VARCHAR(64),deleted BOOLEAN)");
             jdbc.update("INSERT INTO project VALUES ('p','org',FALSE),('hub','org',FALSE)");
             var provider=new AgentDirectExecutionViewProvider(jdbc,new AgentFactCipher());
             detail.setLastExecuteResult("ERROR");detail.setLastExecuteUser("u");
@@ -248,6 +251,10 @@ class AgentDirectExecutionMySqlTests {
             jdbc.update("UPDATE agent_case_current_execution SET submission_id='' WHERE case_id='c'");
             assertTrue(provider.current(detail).isEmpty());
             assertTrue(provider.current(asset).isEmpty());
-        } finally {AgentTokenContext.clear();ds.destroy();}
+        } finally {
+            AgentTokenContext.clear();
+            try {new JdbcTemplate(ds).execute("DROP DATABASE IF EXISTS `"+schema+"`");}
+            finally {ds.destroy();}
+        }
     }
 }

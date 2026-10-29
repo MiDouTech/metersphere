@@ -47,13 +47,27 @@ def inspect_reports(root, required_modules=REQUIRED_MODULES):
                 executedTests=executed, reportIntegrityErrors=integrity_errors)
 
 
+def require_inventory(summary, baseline):
+    if not baseline.get("executedTests"):
+        raise ValueError("Baseline testcase inventory is required")
+    key = lambda item: (item["module"], item["classname"], item["test"])
+    current = {key(item) for item in summary["executedTests"]}
+    summary["missingTestcases"] = [item for item in baseline["executedTests"] if key(item) not in current]
+    summary["passed"] = summary["passed"] and not summary["missingTestcases"]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("backend"))
     parser.add_argument("--output", type=Path, default=Path(".ci-test-summary.json"))
     parser.add_argument("--modules", nargs="+", help="Explicit module boundary for a targeted verification")
+    parser.add_argument("--inventory", type=Path, help="Require every testcase from an earlier complete execution inventory")
     args = parser.parse_args()
     summary = inspect_reports(args.root, set(args.modules) if args.modules else REQUIRED_MODULES)
+    if args.inventory:
+        baseline = json.loads(args.inventory.read_text(encoding="utf-8"))
+        require_inventory(summary, baseline)
+        summary["inventorySource"] = str(args.inventory)
     provenance = Path(".ci-retained-upstream.json")
     if provenance.exists():
         summary["retainedEvidence"] = json.loads(provenance.read_text())
