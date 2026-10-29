@@ -109,6 +109,11 @@ try {
   assert.ok(caseId);
   assert.equal((await tool('case.create', creation)).caseId, caseId);
   passed('CORE-MCP-CREATE-IDEMPOTENT');
+  const sentinelName = `${key}-仅长计划的上下文校验用例`;
+  const sentinelId = (await tool('case.create', {
+    ...creation, requestId: `${key}-sentinel`, name: sentinelName,
+  })).caseId;
+  assert.ok(sentinelId);
   recordCheckpoint('associate-two-plans');
   const shortName = `${key}-短计划`;
   const longName = `${key}-用于验证名称长度自适应和进度条对齐的长名称测试计划`;
@@ -117,7 +122,7 @@ try {
     const plan = await api('POST', '/test-plan/add', { projectId, name });
     plans.push(plan.id);
     await api('POST', '/test-plan/functional/case/associate', {
-      projectId, testPlanId: plan.id, selectAll: false, selectIds: [caseId],
+      projectId, testPlanId: plan.id, selectAll: false, selectIds: name === longName ? [caseId, sentinelId] : [caseId],
     });
   }
   await page.goto(`${origin}/#/case-management/featureCase?orgId=100001&pId=${projectId}`);
@@ -132,6 +137,7 @@ try {
     await selector.click();
     await page.locator('.arco-select-dropdown:visible .arco-select-option').filter({ hasText: name }).click();
     await expect(selector).toContainText(name);
+    await expect(page.locator('.arco-select-dropdown:visible')).toHaveCount(0);
     const selectBox = await selector.boundingBox();
     const progressBox = await progress.boundingBox();
     assert.ok(selectBox && progressBox);
@@ -185,19 +191,24 @@ try {
   const image = await toolRaw('attachment.read', { projectId, caseId, fileId: uploaded.evidenceId });
   const downloaded = image.content.find(item => item.type === 'image');
   assert.ok(downloaded); assert.ok(Buffer.from(downloaded.data, 'base64').equals(png), 'Downloaded evidence bytes differ');
-  for (const testPlanId of plans) {
+  for (const [index, testPlanId] of plans.entries()) {
     const rows = await api('POST', '/test-plan/functional/case/page', { projectId, testPlanId, current: 1, pageSize: 10 });
-    assert.equal(rows.list.length, 1); assert.equal(rows.list[0].lastExecResult, 'SUCCESS');
+    assert.equal(rows.list.length, index + 1);
+    assert.equal(rows.list.find(row => row.caseId === caseId)?.lastExecResult, 'SUCCESS');
+    if (index === 1) assert.notEqual(rows.list.find(row => row.caseId === sentinelId)?.lastExecResult, 'SUCCESS');
   }
   passed('CORE-MCP-CASE-IMAGE-PUBLISH-REPLAY-DOWNLOAD-PLAN-SYNC');
   recordCheckpoint('plan-detail-refresh-and-switch');
   for (const [index, testPlanId] of plans.entries()) {
     await page.goto(`${origin}/#/test-plan/testPlanIndexDetail?id=${testPlanId}&orgId=100001&pId=${projectId}`);
     await expect(page.getByText([shortName, longName][index], { exact: false }).first()).toBeVisible();
-    await page.getByRole('tab', { name: /测试用例/ }).click();
+    await page.locator('.plan-detail-sticky').getByText('测试用例', { exact: true }).click();
     const row = page.getByRole('row').filter({ hasText: creation.name });
     await expect(row).toBeVisible();
     await expect(row.getByText('成功', { exact: true })).toBeVisible();
+    const sentinelRow = page.getByRole('row').filter({ hasText: sentinelName });
+    if (index === 0) await expect(sentinelRow).toHaveCount(0);
+    else await expect(sentinelRow).toBeVisible();
     await page.screenshot({ path: path.join(output, `plan-detail-${index + 1}.png`), fullPage: true });
   }
   passed('CORE-PLAN-REENTER-FRESH-STATE-AND-SWITCH');
@@ -218,8 +229,16 @@ try {
     '第四个验收标签系统版本', '第五个验收标签长内容', '第六个验收标签布局'];
   const bug = await tool('metersphere.bug.create', {
     projectId, requestId: `${key}-bug`, title: `${key}-多标签布局验收`,
-    description: '独立CI临时缺陷，仅验证长标签布局', templateId: template.id, tags, customFields,
+    description: '独立CI临时缺陷，验证长标签布局和源用例缺陷关联同步',
+    templateId: template.id, tags, customFields, caseId, caseType: 'FUNCTIONAL',
   });
+  for (const testPlanId of plans) {
+    const rows = await api('POST', '/test-plan/functional/case/page', { projectId, testPlanId, current: 1, pageSize: 10 });
+    const primary = rows.list.find(row => row.caseId === caseId);
+    assert.equal(primary?.bugCount, 1);
+    assert.equal(primary.bugList[0].title, bug.title);
+  }
+  passed('CORE-SOURCE-DEFECT-PLAN-SYNC');
   await page.goto(`${origin}/#/bug-management/index?orgId=100001&pId=${projectId}&id=${bug.id}`);
   const tagField = page.locator('.bug-tags-field');
   await expect(tagField).toContainText(tags.at(-1));
