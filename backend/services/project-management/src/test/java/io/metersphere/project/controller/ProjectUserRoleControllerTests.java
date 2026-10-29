@@ -13,6 +13,7 @@ import io.metersphere.system.base.BaseTest;
 import io.metersphere.system.controller.handler.ResultHolder;
 import io.metersphere.system.domain.User;
 import io.metersphere.system.domain.UserRoleRelation;
+import io.metersphere.system.domain.UserRoleRelationExample;
 import io.metersphere.system.dto.request.OrganizationUserRoleEditRequest;
 import io.metersphere.system.dto.sdk.request.PermissionSettingUpdateRequest;
 import io.metersphere.system.mapper.UserRoleRelationMapper;
@@ -144,7 +145,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         // 同名用户组已存在
         request.setName("default-pro-role-2");
         request.setScopeId("default-project-2");
-        this.requestPost(PROJECT_USER_ROLE_ADD, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_ADD, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_exist")));
     }
 
     @Test
@@ -155,7 +156,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         request.setId("default-pro-role-id-10");
         request.setName("default-pro-role-x");
         request.setScopeId("default-project-2");
-        this.requestPost(PROJECT_USER_ROLE_UPDATE, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_UPDATE, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
         // 非项目下用户组异常
         request = new ProjectUserRoleEditRequest();
         request.setId(InternalUserRole.ADMIN.getValue());
@@ -210,7 +211,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
     @Order(5)
     public void testProjectUserRoleDeleteError() throws Exception {
         // 用户组不存在
-        this.requestGet(PROJECT_USER_ROLE_DELETE + "/default-pro-role-id-10", status().is5xxServerError());
+        this.requestGet(PROJECT_USER_ROLE_DELETE + "/default-pro-role-id-10", businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
         // 非项目下用户组异常
         this.requestGet(PROJECT_USER_ROLE_DELETE + "/" + InternalUserRole.ADMIN.getValue()).andExpect(jsonPath("$.code").value(NO_PROJECT_USER_ROLE_PERMISSION.getCode()));
         // 非内置用户组异常
@@ -244,7 +245,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
     @Order(8)
     public void testProjectUserRolePermissionSettingError() throws Exception {
         // 用户组不存在
-        this.requestGet(PROJECT_USER_ROLE_PERMISSION_SETTING + "/default-pro-role-id-10", status().is5xxServerError());
+        this.requestGet(PROJECT_USER_ROLE_PERMISSION_SETTING + "/default-pro-role-id-10", businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
         // 非项目下用户组异常
         this.requestGet(PROJECT_USER_ROLE_PERMISSION_SETTING + "/" + InternalUserRole.ADMIN.getValue())
                 .andExpect(jsonPath("$.code").value(NO_PROJECT_USER_ROLE_PERMISSION.getCode()));
@@ -274,7 +275,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         // 用户组不存在
         PermissionSettingUpdateRequest request = getPermissionSettingUpdateRequest();
         request.setUserRoleId("default-pro-role-id-10");
-        this.requestPost(PROJECT_USER_ROLE_PERMISSION_UPDATE, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_PERMISSION_UPDATE, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
         // 非项目下用户组异常
         request.setUserRoleId(InternalUserRole.ADMIN.getValue());
         this.requestPost(PROJECT_USER_ROLE_PERMISSION_UPDATE, request)
@@ -363,7 +364,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         request.setUserIds(List.of("admin-x"));
         request.setUserRoleId("default-pro-role-id-3");
         // 用户不存在
-        this.requestPost(PROJECT_USER_ROLE_ADD_MEMBER, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_ADD_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("user_not_exist")));
         request = new ProjectUserRoleMemberEditRequest();
         request.setProjectId("default-project-2");
         request.setUserIds(List.of("admin"));
@@ -406,7 +407,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         request.setUserIds(List.of("admin-x"));
         request.setUserRoleId("default-pro-role-id-3");
         // 用户不存在
-        this.requestPost(PROJECT_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_REMOVE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("user_not_exist")));
         request = new ProjectUserRoleMemberEditRequest();
         request.setProjectId("default-project-2");
         request.setUserIds(List.of("admin"));
@@ -446,6 +447,13 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         request.setUserRoleId("default-pro-role-id-4");
         request.setUserIds(List.of("default-pro-admin-user"));
         this.requestPost(PROJECT_USER_ROLE_ADD_MEMBER, request, status().isOk());
+        UserRoleRelationExample replay = new UserRoleRelationExample();
+        replay.createCriteria().andUserIdEqualTo("default-pro-admin-user")
+                .andRoleIdEqualTo("default-pro-role-id-4").andSourceIdEqualTo("default-project-2");
+        List<UserRoleRelation> original = userRoleRelationMapper.selectByExample(replay);
+        Assertions.assertEquals(1, original.size());
+        this.requestPost(PROJECT_USER_ROLE_ADD_MEMBER, request, status().isOk());
+        Assertions.assertEquals(original, userRoleRelationMapper.selectByExample(replay));
         // 移除用户组, 且存在成员仅有该用户组
         this.requestGet(PROJECT_USER_ROLE_DELETE + "/default-pro-role-id-3", status().isOk());
     }

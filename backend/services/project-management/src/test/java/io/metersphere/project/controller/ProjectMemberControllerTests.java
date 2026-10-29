@@ -32,6 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ProjectMemberControllerTests extends BaseTest {
+    @jakarta.annotation.Resource
+    private io.metersphere.system.mapper.UserMapper commonUserMapper;
 
     public static final String LIST_MEMBER = "/project/member/list";
     public static final String GET_MEMBER = "/project/member/get-member/option";
@@ -148,6 +150,7 @@ public class ProjectMemberControllerTests extends BaseTest {
         this.requestPost(INVITE, userInviteRequest);
         // 权限校验
         userInviteRequest.setProjectId(DEFAULT_PROJECT_ID);
+        userInviteRequest.setInviteEmails(List.of(commonUserMapper.selectByPrimaryKey("admin").getEmail()));
         requestPostPermissionTest(PermissionConstants.PROJECT_USER_INVITE, INVITE, userInviteRequest);
     }
 
@@ -168,7 +171,7 @@ public class ProjectMemberControllerTests extends BaseTest {
         request.setProjectId("default-project-member-x");
         request.setUserIds(List.of("default-project-member-user-1", "default-project-member-user-del"));
         request.setRoleIds(List.of("project_admin", "project_admin_x", "project_member"));
-        this.requestPost(ADD_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ADD_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
     }
 
     @Test
@@ -195,7 +198,7 @@ public class ProjectMemberControllerTests extends BaseTest {
         request.setProjectId("default-project-member-x");
         request.setUserId("default-project-member-user-1");
         request.setRoleIds(List.of("project_admin", "project_admin_x", "project_member"));
-        this.requestPost(UPDATE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(UPDATE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
     }
 
     @Test
@@ -209,7 +212,7 @@ public class ProjectMemberControllerTests extends BaseTest {
     @Test
     @Order(12)
     public void testRemoveMemberError() throws Exception {
-        this.requestGet(REMOVE_MEMBER + "/default-project-member-x/default-project-member-user-1", status().is5xxServerError());
+        this.requestGet(REMOVE_MEMBER + "/default-project-member-x/default-project-member-user-1", businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
         this.requestGet(REMOVE_MEMBER + "/default-project-member-test-1/admin", status().is5xxServerError());
     }
 
@@ -240,7 +243,7 @@ public class ProjectMemberControllerTests extends BaseTest {
         request.setSelectAll(false);
         request.setSelectIds(List.of("default-project-member-user-1", "default-project-member-user-2"));
         request.setRoleIds(List.of("project_admin", "project_member"));
-        this.requestPost(ADD_ROLE, request, status().is5xxServerError());
+        this.requestPost(ADD_ROLE, request, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
         request.setProjectId("default-project-member-test");
         request.setSelectIds(List.of());
         this.requestPost(ADD_ROLE, request, status().is5xxServerError());
@@ -264,7 +267,7 @@ public class ProjectMemberControllerTests extends BaseTest {
         ProjectMemberBatchDeleteRequest request = new ProjectMemberBatchDeleteRequest();
         request.setProjectId("default-project-member-x");
         request.setSelectIds(List.of("default-project-member-user-1", "default-project-member-user-2"));
-        this.requestPost(BATCH_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(BATCH_REMOVE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
     }
 
     @Test

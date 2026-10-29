@@ -10,6 +10,7 @@ import io.metersphere.project.request.ProjectUserRoleMemberRequest;
 import io.metersphere.project.request.ProjectUserRoleRequest;
 import io.metersphere.sdk.constants.InternalUserRole;
 import io.metersphere.sdk.constants.UserRoleType;
+import io.metersphere.sdk.constants.UserRoleScope;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.util.Translator;
 import io.metersphere.system.domain.User;
@@ -22,6 +23,7 @@ import io.metersphere.system.mapper.UserRoleMapper;
 import io.metersphere.system.mapper.UserRolePermissionMapper;
 import io.metersphere.system.mapper.UserRoleRelationMapper;
 import io.metersphere.system.service.BaseUserRoleService;
+import io.metersphere.system.service.RoleRelationWriter;
 import io.metersphere.system.uid.IDGenerator;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
@@ -53,6 +55,8 @@ public class ProjectUserRoleService extends BaseUserRoleService {
     private UserRoleRelationMapper userRoleRelationMapper;
     @Resource
     private ExtProjectUserRoleMapper extProjectUserRoleMapper;
+    @Resource
+    private RoleRelationWriter roleRelationWriter;
 	@Autowired
 	private UserRolePermissionMapper userRolePermissionMapper;
 
@@ -113,8 +117,16 @@ public class ProjectUserRoleService extends BaseUserRoleService {
 
     public void addMember(ProjectUserRoleMemberEditRequest request, String createUserId) {
         Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
-        request.getUserIds().forEach(userId -> {
-            checkMemberParam(userId, request.getUserRoleId());
+        if (project == null) {
+            throw new MSException(Translator.get("project_not_exist"));
+        }
+        request.getUserIds().stream().distinct().forEach(userId -> checkMemberParam(userId, request.getUserRoleId()));
+        UserRole role = get(request.getUserRoleId());
+        checkProjectUserRole(role);
+        if (!org.apache.commons.lang3.StringUtils.equalsAny(role.getScopeId(), request.getProjectId(), UserRoleScope.GLOBAL)) {
+            throw new MSException(NO_PROJECT_USER_ROLE_PERMISSION);
+        }
+        request.getUserIds().stream().distinct().sorted().forEach(userId -> {
             UserRoleRelation relation = new UserRoleRelation();
             relation.setId(IDGenerator.nextStr());
             relation.setUserId(userId);
@@ -123,7 +135,7 @@ public class ProjectUserRoleService extends BaseUserRoleService {
             relation.setCreateTime(System.currentTimeMillis());
             relation.setCreateUser(createUserId);
             relation.setOrganizationId(project.getOrganizationId());
-            userRoleRelationMapper.insert(relation);
+            roleRelationWriter.ensurePresent(relation);
         });
     }
 

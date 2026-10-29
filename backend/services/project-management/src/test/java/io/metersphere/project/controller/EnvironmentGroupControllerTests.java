@@ -190,7 +190,7 @@ public class EnvironmentGroupControllerTests extends BaseTest {
         environmentGroupProjectDTO.setEnvironmentId(null);
         environmentGroupProjectDTO.setProjectId(DEFAULT_PROJECT_ID);
         request.setEnvGroupProject(List.of(environmentGroupProjectDTO));
-        requestPost(add, request, ERROR_REQUEST_MATCHER);
+        requestPost(add, request, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_not_exist")));
         //项目不存在
         environmentGroupProjectDTO.setProjectId("ceshi");
         environmentGroupProjectDTO.setEnvironmentId("ceshi");
@@ -252,7 +252,7 @@ public class EnvironmentGroupControllerTests extends BaseTest {
         groupRequest.setEnvGroupProject(new ArrayList<>());
         requestPost(update, groupRequest);
         groupRequest.setEnvGroupProject(List.of(environmentGroupProjectDTO, environmentGroupProjectDTO));
-        requestPost(update, groupRequest, ERROR_REQUEST_MATCHER);
+        requestPost(update, groupRequest, businessError(io.metersphere.sdk.util.Translator.get("environment_group_has_duplicate_project")));
         //校验权限
         groupRequest.setName("校验权限");
         requestPostPermissionTest(PermissionConstants.PROJECT_ENVIRONMENT_READ_UPDATE, update, groupRequest);

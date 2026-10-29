@@ -694,7 +694,7 @@ public class EnvironmentControllerTests extends BaseTest {
         request.setName("name");
         request.setConfig(new EnvironmentConfig());
         paramMap.set("request", JSON.toJSONString(request));
-        requestMultipart(add, paramMap, ERROR_REQUEST_MATCHER);
+        requestMultipart(add, paramMap, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_already_exists")));
 
     }
 
@@ -898,7 +898,7 @@ public class EnvironmentControllerTests extends BaseTest {
         request.setConfig(new EnvironmentConfig());
         MultiValueMap<String, Object> paramMap = new LinkedMultiValueMap<>();
         paramMap.set("request", JSON.toJSONString(request));
-        requestMultipart(update, paramMap, ERROR_REQUEST_MATCHER);
+        requestMultipart(update, paramMap, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_already_exists")));
         //重名
         EnvironmentExample example = new EnvironmentExample();
         example.createCriteria().andProjectIdEqualTo(DEFAULT_PROJECT_ID).andNameEqualTo("test-edit-name");

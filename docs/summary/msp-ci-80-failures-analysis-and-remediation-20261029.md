@@ -326,3 +326,25 @@ testAdd 在“配置重复”分支得到正确业务拒绝后，旧 5xx 断言�
 
 
 - CI [40815278015](https://github.com/chenqifen-miduo/metersphere/actions/runs/40815278015)：新增 5 项弹窗运行时契约测试通过；scoped lint 指出新测试脚本的导入排序及两个 Promise executor 返回值，已按真实项目规则修正，未关闭规则。后端尚未执行。前端产物仅在该 job 成功时上传，避免失败后的“无产物”次生错误误导排查。
+
+
+### 6.5 原始 80 条已全部通过，首次进入下游模块
+
+- CI [40815944705](https://github.com/chenqifen-miduo/metersphere/actions/runs/40815944705)，提交 `13bd2c3f15`：前端运行时测试、scoped lint、完整类型检查和 Vite 生产构建全部通过。
+- Surefire XML 逐项核对：**原始 80 条全部实际执行且通过**，没有将未执行计为通过。SDK 11 项、system-setting 543 项全部通过、零跳过。包括真实 MySQL 并发/回滚、新工作流保存—发布—启用—删除保护，以及原始角色元数据、成员回放等路径。[可审计逐项结果](../testing/msp-ci-failures-20261029/verification-round6.json)。
+- 首次进入 project-management：280 项中 61 failure、4 error；全 reactor 到此累计 834 项、61 failure、4 error。它们是此前未执行的下游失败，不能说原始 80 项仍失败，也不能说整个项目已通过。后续 API/缺陷/用例/计划/Agent/app 模块仍未执行。
+- 镜像及健康检查因完整测试失败而未执行，不能把独立 `skipTests package` 的诊断成功视为验收成功。发布后真实 UI 尚未验证。
+
+### 6.6 下游进一步定位及修复（待 CI 复验）
+
+|问题/影响|修改入口及范围|修改内容|通过标准|
+|---|---|---|---|
+|项目用户组重复 add-member 返回 500，阻断角色删除前置|用户组成员弹窗 → `/user/role/project/add-member` → ProjectUserRoleService|相邻漏接路径接入 RoleRelationWriter；校验项目存在、角色类型和项目归属；同批用户去重并稳定排序；保留唯一索引|同批重复仅调用一次 writer；重复请求保持原关系 ID/数量；无关项目/非项目角色拒绝且不写入|
+|切换项目 DTO 约束未启用；旧权限测试模型不适用|项目切换 → `/project/switch` → ProjectController|启用已有 DTO 的 @Validated；仍按目标项目访问资格和本人身份授权，不能恢复当前页头权限位要求|空参数 400；匿名 401；替他人切换拒绝；无目标权限拒绝；真实授权切换成功|
+|项目旧 BUG 流程测试共享 static 前置失败连锁 4 个 error|ProjectStatusFlowSettingControllerTest 6 个写入口|每条独立从 GET 准备数据；精确验证迁移提示；对 status_item/status_flow/status_definition 快照验证未变化|六条均独立执行，无测试端空指针，不重新开放旧写入口|
+|文件管理先在“非仓库节点不存在”旧 5xx 断言中断，后续重名连锁失败|FileManagementControllerTests|首条初始化继续走完；已观测的非仓库、旧文件不存在、文件不存在分别使用严格安全业务错误断言|原成功路径真实走完，错误路径同时验证 HTTP/业务码/具体提示/请求关联 ID|
+|项目多类旧 5xx 断言与现行安全错误协议不符|环境、环境组、全局参数、机器人、成员及角色集成测试|按每条已观测消息和实际服务端 key 修正，未把全部 5xx 全局替换为任意 4xx；[34 条精确观测清单](../testing/msp-ci-failures-20261029/downstream-observed-contracts.json)|逐分支运行，服务异常仍失败；后续新分支继续核对源代码|
+|默认语言显示 Not Support Key|commons.properties|补环境不存在、全局参数不存在两个默认语言 key，其他三种语言原本已有|默认语言返回可理解提示；不能再输出内部翻译 key|
+|权限探针依赖无效外部 SMTP；全局参数不存在依赖前序测试删除|ProjectMemberControllerTests、GlobalParamsControllerTests|邀请权限探针以已注册邮箱触发确定业务拒绝；缺失参数 GET 独立准备缺失状态|权限探针撤权仍 403；不将探针计作邮件投递验证；缺失测试不依赖前序提前退出|
+
+本轮涉及 12 个 Java 修改文件及测试辅助源码有界 javac 通过；新增 4 个 ProjectUserRoleMemberReplayTests 全部通过（同批去重/回放、其他项目、其他类型、项目不存在）。新增的实际接口重放断言和上述下游整改仍待远端 MySQL 复验，未标记完成。本机继续保持无 Docker、无应用启动。前端源码未变，下一轮只在 exact frontend tree hash 与第 6 轮一致并成功取得产物时复用其已验证构建。

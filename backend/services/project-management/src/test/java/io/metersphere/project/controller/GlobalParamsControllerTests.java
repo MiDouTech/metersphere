@@ -351,12 +351,12 @@ public class GlobalParamsControllerTests extends BaseTest {
         // 添加全局参数 projectId不存在
         request = new GlobalParamsRequest();
         request.setProjectId("projectId1111");
-        this.requestPost(add, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(add, request, businessError(io.metersphere.sdk.util.Translator.get("project_is_not_exist")));
 
         // 添加全局参数 已存在
         request = new GlobalParamsRequest();
         request.setProjectId("projectId1");
-        this.requestPost(add, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(add, request, businessError(io.metersphere.sdk.util.Translator.get("global_parameters_already_exist")));
     }
 
     @Test
@@ -413,7 +413,7 @@ public class GlobalParamsControllerTests extends BaseTest {
         request = new GlobalParamsRequest();
         request.setId("id");
         request.setProjectId("projectId1111");
-        this.requestPost(update, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(update, request, businessError(io.metersphere.sdk.util.Translator.get("global_parameters_is_not_exist")));
 
         ProjectParameterExample example = new ProjectParameterExample();
         example.createCriteria().andProjectIdEqualTo("projectId2");
@@ -422,7 +422,7 @@ public class GlobalParamsControllerTests extends BaseTest {
         request = new GlobalParamsRequest();
         request.setId("id");
         request.setProjectId("projectId2");
-        this.requestPost(update, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(update, request, businessError(io.metersphere.sdk.util.Translator.get("global_parameters_is_not_exist")));
 
     }
 
@@ -441,6 +441,9 @@ public class GlobalParamsControllerTests extends BaseTest {
         requestGetPermissionTest(PermissionConstants.PROJECT_ENVIRONMENT_READ, get + "100001100001");
 
         //获取全局参数 全局参数不存在
+        ProjectParameterExample absent = new ProjectParameterExample();
+        absent.createCriteria().andProjectIdEqualTo("projectId2");
+        projectParametersMapper.deleteByExample(absent);
         mvcResult = this.responseGet(get + "projectId2");
         globalParamsRequest = parseObjectFromMvcResult(mvcResult, GlobalParamsDTO.class);
         Assertions.assertNull(globalParamsRequest);

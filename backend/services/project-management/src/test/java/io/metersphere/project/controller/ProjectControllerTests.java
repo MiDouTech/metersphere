@@ -320,7 +320,13 @@ public class ProjectControllerTests extends BaseTest {
         Assertions.assertEquals("projectId", userDTO.getLastProjectId());
         request.setProjectId(DEFAULT_PROJECT_ID);
         //权限校验
-        requestPostPermissionTest(PermissionConstants.PROJECT_BASE_INFO_READ, prefix + "/switch", request);
+        // Switching is authorized by target membership and self identity, not a permission bit
+        // on the currently selected project. A caller cannot change another user's context.
+        request.setUserId("another-user");
+        requestPost(prefix + "/switch", request, businessError(io.metersphere.sdk.util.Translator.get("not_authorized")));
+        mockMvc.perform(MockMvcRequestBuilders.post(prefix + "/switch")
+                .content(JSON.toJSONString(request)).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -339,7 +345,7 @@ public class ProjectControllerTests extends BaseTest {
         request = new ProjectSwitchRequest();
         request.setProjectId("111111");
         request.setUserId("admin");
-        requestPost(prefix + "/switch", request, status().is5xxServerError());
+        requestPost(prefix + "/switch", request, businessError("无权进入该项目"));
 
         MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post("/login")
                         .content(String.format("{\"username\":\"%s\",\"password\":\"%s\"}", "delete", "deleted@metersphere.io"))
@@ -351,11 +357,12 @@ public class ProjectControllerTests extends BaseTest {
         String csrfToken = JsonPath.read(mvcResult.getResponse().getContentAsString(), "$.data.csrfToken");
         request.setProjectId("projectId");
 
-        mockMvc.perform(MockMvcRequestBuilders.post(prefix + "/switch", request)
+        mockMvc.perform(MockMvcRequestBuilders.post(prefix + "/switch")
+                        .content(JSON.toJSONString(request))
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError("无权进入该项目"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
     }

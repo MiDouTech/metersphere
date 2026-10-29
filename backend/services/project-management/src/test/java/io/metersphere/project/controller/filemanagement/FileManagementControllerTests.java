@@ -179,7 +179,7 @@ public class FileManagementControllerTests extends BaseTest {
                 new CheckLogModel(a1Node.getId(), OperationLogType.ADD, FileManagementRequestUtils.URL_MODULE_ADD)
         );
         //测试a1无法获取存储库详情
-        this.requestGet(String.format(FileManagementRequestUtils.URL_FILE_REPOSITORY_INFO, a1Node.getId())).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(FileManagementRequestUtils.URL_FILE_REPOSITORY_INFO, a1Node.getId())).andExpect(businessError(io.metersphere.sdk.util.Translator.get("file_repository.not.exist")));
 
         //根目录下创建节点a2和a3，在a1下创建子节点a1-b1   parentId设置为小写
         request = new FileModuleCreateRequest();
@@ -784,7 +784,7 @@ public class FileManagementControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("file", file);
         paramMap.add("request", JSON.toJSONString(fileReUploadRequest));
-        this.requestMultipart(FileManagementRequestUtils.URL_FILE_RE_UPLOAD, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(FileManagementRequestUtils.URL_FILE_RE_UPLOAD, paramMap).andExpect(businessError(io.metersphere.sdk.util.Translator.get("old.file.not.exist")));
     }
 
     @Test
@@ -1235,7 +1235,7 @@ public class FileManagementControllerTests extends BaseTest {
 
         //文件不存在
         updateRequest.setId(IDGenerator.nextStr());
-        this.requestPost(FileManagementRequestUtils.URL_FILE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_FILE_UPDATE, updateRequest).andExpect(businessError(io.metersphere.sdk.util.Translator.get("file.not.exist")));
 
         //判断更改非jar文件的启用禁用
         updateRequest = new FileUpdateRequest();
