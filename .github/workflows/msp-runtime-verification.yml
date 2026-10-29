@@ -2,7 +2,6 @@ name: MSP Verified Package Runtime Acceptance
 on:
   push:
     branches: ['codex/weekly-remediation-20261028']
-    paths: ['.github/workflows/msp-runtime-verification.yml']
   workflow_dispatch:
     inputs:
       source_run:
