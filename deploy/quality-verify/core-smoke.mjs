@@ -82,7 +82,7 @@ try {
   };
   const tool = async (name, args) => (await toolRaw(name, args)).structuredContent.result;
   checkpoint = 'mcp-create-and-replay';
-  const module = await tool('module.create', { projectId, name: key, requestId: `${key}-module` });
+  const module = await tool('module.create', { projectId, name: `${key}-执行目录`, requestId: `${key}-module` });
   const creation = { projectId, moduleId: module.id, requestId: `${key}-case`, name: `${key}-核心用例`, steps: [
     { num: 1, desc: '查看测试用例列表', expected: '本次创建的用例可见' },
   ] };

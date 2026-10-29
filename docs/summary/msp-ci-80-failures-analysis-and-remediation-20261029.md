@@ -603,3 +603,12 @@ CI 40843550676 / 564297b1ce：1072项，72failure、65error、0skipped、0缺失
 第19轮40874331855：计划140项全部通过；Agent461项1错误，其余8模块复用1521项。零断言失败/零跳过，但仍有1错误且比第18轮少1项，不能声称完整通过。最后错误为MySQL的临时project表被生产查询自连接两次，触发1137 Can't reopen table。修正测试为每次建立随机quality_direct_独立库，project使用普通表；finally删除该独立库并关闭连接，生产SQL不改。其余事务表仍是该连接的临时表。不得在公共业务库建/删project表。
 
 通过逐条比较第18/19轮executedTests确认漏项是Agent模块中包名为io.metersphere.functional.controller的AiSourceDocumentControllerSecurityTests.documentDetailShouldRequireProjectOwnershipAndAiReadPermission；仅按agent包过滤漏掉这项。第20轮显式纳入该类，只重跑Agent，计划140及其他通过模块合计1661项按20处依赖树验证后复用。新增基准testcase清单门禁，以第18轮完整2123条记录为最低范围；同一模块里漏类也拒绝通过，新增2项门禁回归并对第19轮真实汇总验证确实检测到此漏项。第19轮JSON已补录缺失清单，保留实际601实跑/1521复用边界，不将2122条当完整范围。Java有界编译、8项门禁与3项复用工具单元、YAML与diff检查通过。第20轮尚待执行，容器/页面验收仍未执行。
+
+
+### 6.23 十模块测试通过与首次容器/浏览器实测（部分完成）
+
+第20轮40876632979 / e9bdac6fea：十模块2123项，0失败/0错误/0跳过/0缺失模块/0缺失testcase/0报告计数错误；本轮Agent462实跑，其余1661项按源码树校验复用。完整清单和来源见verification-round20.json。包括此前漏掉的AiSourceDocumentControllerSecurityTests；不得把保留证据声称为本轮重跑。正式前端继续复用一致源码产物。
+
+真实运行阶段已构建生产Dockerfile镜像sha256:79ff043749d472f8dd4106f45fdef58e2a94c85fc04bfd54013dde8ef8762292，173条迁移到v3.7.2.136成功，readiness UP、静态前端HTTP200、真实Chrome管理员登录通过。本轮核心MCP/页面冒烟未完成：项目创建已自动生成同名目录，而脚本再次用项目名调用module.create，正确收到MODULE_NAME_CONFLICT。只将冒烟目录改为独立名称，不修改生产重名校验，不把该拒绝当成功；后续检查尚未执行。
+
+启用此前准备的独立runtime入口，来源固定本轮通过测试门禁的运行40876632979，恢复其已保存JAR/构建身份/汇总缓存；逐项检查来源、后端/前端树、POM及包装器输入、JAR SHA256和十模块无失败/跳过后，再重新建一套临时容器运行验收。不会重新Maven测试/打包或前端构建。本机4项包校验回归、JS语法、workflow YAML、diff检查通过；下一次运行尚未开始。当前仍未合并。

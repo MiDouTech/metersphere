@@ -1,0 +1,107 @@
+name: MSP Verified Package Runtime Acceptance
+on:
+  push:
+    branches: ['codex/weekly-remediation-20261028']
+    paths: ['.github/workflows/msp-runtime-verification.yml']
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: 'Run with a successful complete test gate and verified package cache'
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: remediation-runtime-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  runtime:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[runtime-only]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require successful source test gate and compute exact package identity
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run || '40876632979' }}
+          BUILD_INPUTS_HASH: ${{ hashFiles('pom.xml', 'backend/**/pom.xml', '.mvn/**', 'mvnw') }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > "$RUNNER_TEMP/source-run.json"
+          test "$(jq -r .path "$RUNNER_TEMP/source-run.json")" = .github/workflows/msp-remediation-verification.yml
+          test "$(jq -r .status "$RUNNER_TEMP/source-run.json")" = completed
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/jobs" > "$RUNNER_TEMP/source-jobs.json"
+          jq -e '[.jobs[] | select(.name == "backend") | .steps[] | select(.name == "Require complete current or source-verified retained coverage with zero failures, errors or skips" and .conclusion == "success")] | length == 1' "$RUNNER_TEMP/source-jobs.json"
+          source_sha=$(jq -r .head_sha "$RUNNER_TEMP/source-run.json")
+          echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
+          backend_tree=$(git rev-parse HEAD:backend)
+          frontend_tree=$(git rev-parse HEAD:frontend)
+          echo "key=msp-verified-app-${RUNNER_OS}-${backend_tree}-${frontend_tree}-${BUILD_INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --name frontend-static --dir frontend/dist
+      - uses: actions/cache/restore@v4
+        with:
+          key: ${{ steps.source.outputs.key }}
+          fail-on-cache-miss: true
+          path: |
+            backend/app/target/app-3.x.jar
+            .ci-backend-build.json
+            .ci-test-summary.json
+      - name: Validate package, source and complete test evidence
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_RUN: ${{ inputs.source_run || '40876632979' }}
+          BUILD_INPUTS_HASH: ${{ hashFiles('pom.xml', 'backend/**/pom.xml', '.mvn/**', 'mvnw') }}
+        run: |
+          python3 deploy/quality-verify/test_runtime_build.py
+          python3 deploy/quality-verify/verify-runtime-build.py --source-sha "$SOURCE_SHA" --source-run "$SOURCE_RUN" --inputs-hash "$BUILD_INPUTS_HASH"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/cache/restore@v4
+        id: minio-cache
+        with:
+          path: .ci-minio-image.tar
+          key: minio-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('deploy/quality-verify/Dockerfile.minio-test-source') }}
+      - name: Prepare pinned MinIO dependency
+        run: |
+          if [ -f .ci-minio-image.tar ]; then docker load -i .ci-minio-image.tar; else docker build -t minio/minio:RELEASE.2023-03-13T19-46-17Z -f deploy/quality-verify/Dockerfile.minio-test-source .; fi
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.8.1
+          cache: pnpm
+          cache-dependency-path: frontend/package.json
+      - name: Prepare single browser without rebuilding frontend
+        working-directory: frontend
+        run: |
+          pnpm install --no-frozen-lockfile
+          if ! command -v google-chrome >/dev/null; then pnpm exec playwright install chrome --with-deps; fi
+          if command -v fc-list >/dev/null; then fc-list :lang=zh > "$RUNNER_TEMP/msp-fonts-zh.txt"; else : > "$RUNNER_TEMP/msp-fonts-zh.txt"; fi
+          if [ ! -s "$RUNNER_TEMP/msp-fonts-zh.txt" ]; then sudo apt-get update && sudo apt-get install -y fontconfig fonts-noto-cjk; fi
+      - name: Build image, migrate, start, check health and execute real browser MCP smoke
+        run: |
+          set -o pipefail
+          bash deploy/quality-verify/ci-health.sh 2>&1 | tee .ci-runtime.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-health-evidence
+          include-hidden-files: true
+          path: |
+            .ci-health.json
+            .ci-readiness.json
+            .ci-health-container.log
+            .ci-core-proxy.log
+            .ci-runtime.log
+            .ci-core-smoke/
+            .ci-backend-build.json
+            .ci-test-summary.json
+          if-no-files-found: ignore
+          retention-days: 7
