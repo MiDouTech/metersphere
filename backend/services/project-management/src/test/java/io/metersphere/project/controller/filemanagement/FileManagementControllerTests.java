@@ -1276,6 +1276,10 @@ public class FileManagementControllerTests extends BaseTest {
         } finally {
             fileModuleMapper.deleteByPrimaryKey(foreignModuleId);
         }
+        updateRequest.setModuleId("");
+        this.requestPost(FileManagementRequestUtils.URL_FILE_UPDATE, updateRequest)
+                .andExpect(businessError(Translator.get("file_module.not.exist")));
+        Assertions.assertEquals(originalModule, fileMetadataMapper.selectByPrimaryKey(updateFileId).getModuleId());
 
     }
 
@@ -2284,8 +2288,9 @@ public class FileManagementControllerTests extends BaseTest {
         this.requestPost(FileManagementRequestUtils.URL_FILE_BATCH_UPDATE, moveRequest).andExpect(status().isBadRequest());
         //权限设置
         moveRequest = new FileBatchMoveRequest();
-        moveRequest.setMoveModuleId(IDGenerator.nextStr());
+        moveRequest.setMoveModuleId(ModuleConstants.DEFAULT_NODE_ID);
         moveRequest.setProjectId(DEFAULT_PROJECT_ID);
+        moveRequest.setSelectAll(true);
         this.requestPostPermissionTest(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ_UPDATE, FileManagementRequestUtils.URL_FILE_BATCH_UPDATE, moveRequest);
     }
 

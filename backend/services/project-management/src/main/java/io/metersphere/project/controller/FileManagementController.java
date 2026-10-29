@@ -128,7 +128,6 @@ public class FileManagementController {
     @PostMapping(value = "/batch-move")
     @Operation(summary = "项目管理-文件管理-批量移动文件")
     @RequiresPermissions(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ_UPDATE)
-    @CheckOwner(resourceId = "#request.getSelectIds()", resourceType = "file_metadata")
     public void batchMoveFiles(@Validated @RequestBody FileBatchMoveRequest request) {
         fileMetadataService.batchMove(request, SessionUtils.getUserId());
     }

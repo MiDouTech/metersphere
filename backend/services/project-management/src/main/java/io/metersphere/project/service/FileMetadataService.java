@@ -77,6 +77,8 @@ public class FileMetadataService {
     private FileModuleService fileModuleService;
     @Resource
     private FileService fileService;
+    @Resource
+    private io.metersphere.project.mapper.ProjectMapper projectMapper;
 
 
     @Value("${metersphere.file.batch-download-max:600MB}")
@@ -340,7 +342,7 @@ public class FileMetadataService {
             throw new MSException(Translator.get("file.not.exist"));
         }
 
-        if (StringUtils.isNotBlank(request.getModuleId())) {
+        if (request.getModuleId() != null) {
             fileManagementService.checkModule(request.getModuleId(), ModuleConstants.NODE_TYPE_DEFAULT, fileMetadata.getProjectId());
         }
 
@@ -519,6 +521,14 @@ public class FileMetadataService {
     }
 
     public void batchMove(FileBatchMoveRequest request, String operator) {
+        Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
+        if (project == null) {
+            throw new MSException(Translator.get("project_not_exist"));
+        }
+        if (!io.metersphere.system.utils.SessionUtils.hasPermission(project.getOrganizationId(), project.getId(),
+                io.metersphere.sdk.constants.PermissionConstants.PROJECT_FILE_MANAGEMENT_READ_UPDATE)) {
+            throw new org.apache.shiro.authz.UnauthorizedException();
+        }
         //检查模块的合法性
         fileManagementService.checkModule(request.getMoveModuleId(), ModuleConstants.NODE_TYPE_DEFAULT, request.getProjectId());
         List<FileMetadata> fileMetadataList = fileManagementService.getProcessList(request);

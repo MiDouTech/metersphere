@@ -57,6 +57,9 @@ public class FileManagementService {
     }
 
     public void checkModule(String moduleId, String nodeTypeDefault, String projectId) {
+        if (StringUtils.isAnyBlank(moduleId, projectId)) {
+            throw new MSException("file_module.not.exist");
+        }
         if (!StringUtils.equals(moduleId, ModuleConstants.DEFAULT_NODE_ID)) {
             FileModuleExample example = new FileModuleExample();
             example.createCriteria().andIdEqualTo(moduleId).andModuleTypeEqualTo(nodeTypeDefault)

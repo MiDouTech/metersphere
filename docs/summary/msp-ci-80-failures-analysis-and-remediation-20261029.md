@@ -376,10 +376,21 @@ testAdd 在“配置重复”分支得到正确业务拒绝后，旧 5xx 断言�
 SELECT r.id, r.user_id, r.role_id, r.source_id,
        r.organization_id, p.organization_id AS expected_organization_id
 FROM user_role_relation r
-JOIN user_role role ON role.id = r.role_id AND role.type = 'PROJECT'
+JOIN user_role ur ON ur.id = r.role_id AND ur.type = 'PROJECT'
 JOIN project p ON p.id = r.source_id
 WHERE NOT (r.organization_id <=> p.organization_id);
 ```
+
+
+### 6.9 仅剩一条批量移动权限探针：真实空集合 SQL 缺陷
+
+- CI [40823167885](https://github.com/chenqifen-miduo/metersphere/actions/runs/40823167885)，提交 `a85a1deff0`：SDK 11、system-setting 543 全通过，project-management 291 项仅剩 1 failure、0 error。原始 80 条全部通过。[逐项证据](../testing/msp-ci-failures-20261029/verification-round10.json)。新增真实目录归属拒绝、删除项目角色补位的组织归属断言、下载异常 6 项都通过。
+- 唯一失败不是应放宽的测试：普通 PROJECT 权限用户调用批量移动，`@CheckOwner(selectIds)` 将空的显式 ID 列表直接拼成 `IN ()`，MySQL 语法错误返回 500；管理员会跳过该切面，所以管理账号的正向用例未暴露。全选的合法请求本来就可能没有显式 ID，不能靠前端构造假 ID 解决。
+- ExtCheckOwnerMapper.xml 六条动态归属查询对空/null 输入渲染 `IN (NULL)`，返回拒绝而非无效 SQL；对非空输入继续绑定 ID 与用户参数，不将空集默认为授权。新增真实 XML/BoundSql 渲染测试 3 项，覆盖六查询的空、null、有效 ID，共 18 种渲染组合。
+- 文件批量移动保留既有 RequiresPermissions；移除不适用全选的显式 ID 切面，服务端读取真实项目，然后调用既有 `SessionUtils.hasPermission(actualOrganizationId,actualProjectId,PROJECT_FILE_MANAGEMENT_READ_UPDATE)` 做实际目标权限校验。项目管理员/组织管理员按现行范围规则判断，不能使用其他当前页头的管理身份授权目标项目；无权限返回统一 403。
+- 进入业务层后，目录必须属于该项目，实际选择的每个文件也必须属于该项目。全选按项目过滤，显式跨项目集合拒绝。新增服务授权 4 项，覆盖合法空显式集、拒绝时不读写文件、其他项目权限无效、跨项目文件不写入。权限探针改用真实合法的目标默认目录和 selectAll=true，不再只用一个随机不存在目录制造业务错误。
+- 同时补目录更新边界：省略 moduleId 保留；显式空串或空项目拒绝，不允许写入空目录；新增 3 项模块范围测试及实际接口空串拒绝断言。
+- 本地有界 javac 成功，当前项目/文件/归属 SQL 共 21 项定向单元测试全通过（0 跳过/0 失败）；对应真实数据库和整套 reactor 待下一轮。其他批量 API 的 selectAll 业务授权须按各自接口验收，不能把通用 SQL 空输入护栏当作这些功能已验收的证据。
 
 ## 7. 交付与验证边界
 
