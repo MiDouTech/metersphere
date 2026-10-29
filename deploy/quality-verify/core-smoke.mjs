@@ -263,7 +263,7 @@ try {
   assert.ok(panelBounds);
   const tokenColumnBounds = {};
   for (const title of ['启用', '操作']) {
-    const column = personal.getByRole('columnheader', { name: title, exact: true });
+    const column = personal.locator('.arco-table-th').filter({ hasText: new RegExp(`^\\s*${title}\\s*$`) });
     await expect(column).toBeVisible();
     const box = await column.boundingBox(); assert.ok(box);
     assert.ok(box.x >= panelBounds.x && box.x + box.width <= panelBounds.x + panelBounds.width + 1,
