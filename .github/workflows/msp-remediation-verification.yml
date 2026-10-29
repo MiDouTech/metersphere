@@ -6,7 +6,7 @@ on:
         description: 'Target failed API classes first; full is required for final acceptance'
         type: choice
         default: full
-        options: [full, api-failures]
+        options: [full, api-failures, downstream]
   push:
     branches: ['codex/weekly-remediation-20261028']
 permissions:
@@ -72,6 +72,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:
+      redis:
+        image: redis:7.2-alpine
+        ports: ['16479:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=12
       mysql:
         image: mysql:8.0
         env:
@@ -109,9 +115,13 @@ jobs:
         with:
           path: .ci-minio-image.tar
           key: ${{ steps.minio-cache.outputs.cache-primary-key }}
+      - name: Prepare the disposable manual-integration database
+        env:
+          QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+        run: docker exec "$QUALITY_MYSQL_CONTAINER" mysql -uroot -pquality-test-only -e 'CREATE DATABASE IF NOT EXISTS quality_verify CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci'
       - id: full-tests
-        if: inputs.verification_scope != 'api-failures' && !contains(github.event.head_commit.message, '[api-failures]')
-        run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true package
+        if: inputs.verification_scope != 'api-failures' && inputs.verification_scope != 'downstream' && !contains(github.event.head_commit.message, '[api-failures]') && !contains(github.event.head_commit.message, '[downstream]')
+        run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true package
         env:
           MAVEN_OPTS: -Xmx1536m
       - name: Run previously failing API classes without rerunning upstream suites
@@ -123,12 +133,27 @@ jobs:
           -Dsurefire.failIfNoSpecifiedTests=false test
         env:
           MAVEN_OPTS: -Xmx1536m
+      - name: Collect the six unresolved downstream modules without rerunning upstream suites
+        id: downstream-tests
+        if: inputs.verification_scope == 'downstream' || contains(github.event.head_commit.message, '[downstream]')
+        run: >-
+          chmod +x mvnw && ./mvnw -B -pl backend/app -am
+          -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true
+          -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true
+          '-Dtest=io.metersphere.bug.**,io.metersphere.functional.**,io.metersphere.plan.**,io.metersphere.dashboard.**,io.metersphere.agent.**,io.metersphere.app.**'
+          -Dsurefire.failIfNoSpecifiedTests=false test
+        env:
+          MAVEN_OPTS: -Xmx1536m
       - name: Require all modules executed with zero failures, errors or skips
         id: test-results
-        if: always() && steps.full-tests.outcome != 'skipped'
+        if: always() && (steps.full-tests.outcome != 'skipped' || steps.downstream-tests.outcome != 'skipped')
         run: |
           python3 deploy/quality-verify/test_report_gate.py
-          python3 deploy/quality-verify/check-test-reports.py
+          if [ '${{ steps.downstream-tests.outcome }}' != 'skipped' ]; then
+            python3 deploy/quality-verify/check-test-reports.py --modules bug-management case-management test-plan dashboard agent-integration app
+          else
+            python3 deploy/quality-verify/check-test-reports.py
+          fi
       - name: Build application image and verify isolated health
         if: always() && steps.full-tests.outcome == 'success' && steps.test-results.outcome == 'success'
         run: bash deploy/quality-verify/ci-health.sh
@@ -138,6 +163,7 @@ jobs:
         if: always()
         with:
           name: runtime-health-evidence
+          include-hidden-files: true
           path: |
             .ci-health.json
             .ci-readiness.json
@@ -151,9 +177,10 @@ jobs:
           path: '**/target/surefire-reports/'
           retention-days: 7
       - uses: actions/upload-artifact@v4
-        if: always() && steps.full-tests.outcome != 'skipped'
+        if: always() && steps.test-results.outcome != 'skipped'
         with:
           name: all-module-test-summary
+          include-hidden-files: true
           path: .ci-test-summary.json
           if-no-files-found: error
           retention-days: 7

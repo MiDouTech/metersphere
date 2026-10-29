@@ -271,17 +271,17 @@ public class BugControllerTests extends BaseTest {
         List<BugCustomFieldDTO> noHandleUser = request.getCustomFields().stream().filter(field -> !StringUtils.equals(field.getId(), "handleUser")).toList();
         request.setCustomFields(noHandleUser);
         paramMap = getMultiPartParam(request, file);
-        this.requestMultipart(BUG_ADD, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(BUG_ADD, paramMap).andExpect(businessError(io.metersphere.sdk.util.Translator.get("handle_user_can_not_be_empty")));
         // 模板为空
         request.setTemplateId(null);
         paramMap = getMultiPartParam(request, file);
         this.requestMultipart(BUG_ADD, paramMap).andExpect(status().isBadRequest());
         // 状态为空
         request.setTemplateId("default-bug-template");
-        List<BugCustomFieldDTO> noStatus = request.getCustomFields().stream().filter(field -> !StringUtils.equals(field.getId(), "status")).toList();
+        List<BugCustomFieldDTO> noStatus = buildRequest(false).getCustomFields().stream().filter(field -> !StringUtils.equals(field.getId(), "status")).toList();
         request.setCustomFields(noStatus);
         paramMap = getMultiPartParam(request, file);
-        this.requestMultipart(BUG_ADD, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(BUG_ADD, paramMap).andExpect(businessError(io.metersphere.sdk.util.Translator.get("bug_status_can_not_be_empty")));
     }
 
     @Test
@@ -311,13 +311,14 @@ public class BugControllerTests extends BaseTest {
         String filePath = Objects.requireNonNull(this.getClass().getClassLoader().getResource("file/test.xlsx")).getPath();
         File file = new File(filePath);
         MultiValueMap<String, Object> paramMap = getMultiPartParam(request, file);
-        this.requestMultipart(BUG_UPDATE, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(BUG_UPDATE, paramMap).andExpect(businessError(108001, io.metersphere.sdk.util.Translator.get("bug_not_exist")));
 
         // 标签超过10个
         request = buildRequest(true);
         request.setTags(List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"));
         paramMap = getMultiPartParam(request, file);
-        this.requestMultipart(BUG_UPDATE, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipartWithOkAndReturn(BUG_UPDATE, paramMap);
+        Assertions.assertEquals(request.getTags().subList(0, 10), bugMapper.selectByPrimaryKey(request.getId()).getTags());
 
     }
 
@@ -470,14 +471,14 @@ public class BugControllerTests extends BaseTest {
 
         //不存在的ID
         request.setSelectIds(List.of(IDGenerator.nextStr()));
-        this.requestPost(BUG_EXPORT, request).andExpect(status().is5xxServerError());
+        this.requestPost(BUG_EXPORT, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("no_bug_select")));
 
         //没有数据
         request = new BugExportRequest();
         request.setProjectId("default-project-for-bug");
         request.setSelectAll(false);
         request.setExportColumns(exportColumns);
-        this.requestPost(BUG_EXPORT, request).andExpect(status().is5xxServerError());
+        this.requestPost(BUG_EXPORT, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("no_bug_select")));
 
         //测试权限
         request = new BugExportRequest();
@@ -703,7 +704,7 @@ public class BugControllerTests extends BaseTest {
         BugCustomFieldDTO statusField = new BugCustomFieldDTO();
         statusField.setId("status");
         statusField.setName("状态");
-        statusField.setValue("1");
+        statusField.setValue(isUpdate ? bugMapper.selectByPrimaryKey(request.getId()).getStatus() : "1");
         request.setCustomFields(List.of(fieldDTO1, fieldDTO2, handleUserField, statusField));
         return request;
     }

@@ -285,10 +285,12 @@ public class BugCommentService {
     private void checkComment(String commentId, String currentUser) {
         BugComment bugComment = bugCommentMapper.selectByPrimaryKey(commentId);
         if (bugComment == null) {
-            throw new IllegalArgumentException(Translator.get("bug_comment_not_exist"));
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.NOT_FOUND,
+                    Translator.get("bug_comment_not_exist"));
         }
         if (!StringUtils.equals(bugComment.getCreateUser(), currentUser)) {
-            throw new IllegalArgumentException(Translator.get("bug_comment_not_owner"));
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    Translator.get("bug_comment_not_owner"));
         }
     }
 

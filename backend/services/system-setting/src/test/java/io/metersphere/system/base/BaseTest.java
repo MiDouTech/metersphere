@@ -285,6 +285,14 @@ public abstract class BaseTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
+    protected ResultActions requestDelete(String url, Object... uriVariables) throws Exception {
+        return mockMvc.perform(MockMvcRequestBuilders.delete(getBasePath() + url, uriVariables)
+                        .header(SessionConstants.HEADER_TOKEN, sessionId)
+                        .header(SessionConstants.CSRF_TOKEN, csrfToken)
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "zh-CN"))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
     protected MvcResult requestGetAndReturn(String url, Object... uriVariables) throws Exception {
         return this.requestGet(url, uriVariables).andReturn();
     }

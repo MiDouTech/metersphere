@@ -447,6 +447,25 @@ WHERE NOT (r.organization_id <=> p.organization_id);
 
 本节13个相关Java文件在384 MiB上限下编译通过；共享排序安全边界4项、覆盖337处getter及根参数引用的全仓控制器契约1项，共5项通过。真实普通成员排序200/撤权403、跨计划拒绝且位置不变的集成已补，待后续CI。测试夹具只交换原来绑定错计划的两个collection引用，保留用例身份和各计划数量；没有迁移或改写业务历史数据。
 
+### 6.14 首次全模块收集与共同根因（实施中）
+
+CI 40836860193 / b9ff143c82 收集10模块2079项：15 failure、328 error、8 skipped。原80项、SDK11、系统546、项目299、API271、app现有2项全部通过。case279中177error、plan130中123error、dashboard16全部error：三者共同缺少 qualified functionalImportEffectsScheduler，并非316个独立业务缺陷。Agent451有1failure/12error/3skip；缺陷74有14failure。原始模块XML统计见verification-round14.json；上下文初始化错误不视为实际执行业务路径。
+
+|根因/影响范围|修改范围与内容|通过标准|
+|---|---|---|
+|导入副作用/评审重算调度器只定义在app层，模块应用无法加载|将既有默认与专用调度器移到case-management功能配置，app保留指标；不禁用定时任务|最小Spring上下文启动、两种调度器独立；用例/计划/工作台真实上下文正常加载|
+|Agent真实MySQL测试依赖quality_verify库未创建|CI在自己的MySQL服务显式创建该专用空库；不接触用户环境|所有quality.mysql条件测试实际执行，不以跳过代替|
+|AgentCaseImportMySqlTests只执行112旧迁移|夹具补123/130/135，按真实WEB提交规则保存IMPORT_ONLY明确选择；不绕过提交校验|暂停/恢复、事务回滚及重复提交保持原断言通过|
+|Outbox手工构造测试遗漏新增assets依赖，实际未进入它声称的hub失败路径|仅测试注入真实存在的CaseAssetService mock，保留hub故障/重试/事务断言|首次失败可重试、随后一次成功且业务写入不重复|
+|Redis/外部图片网络共8项条件测试未启用|CI添加独立Redis服务16479，启用quality.redis及external.image.network|8项都实际执行；零跳过门禁保留，外部源失败如实失败|
+|缺陷14项|核对旧500/GET删除、状态409专用流转、附件前置数据中断；按真实路由与业务边界修正，500进一步溯源|普通字段更新不绕过状态流转；附件真实字节及数据库结果核验|
+
+具体缺陷修改：旧GET删除改为现有DELETE/POST，缺失项目ID的批量删除补合法项目；编辑夹具使用数据库当前状态，不绕过专用状态流转；11标签更新沿用真实截取前10条规则并检查持久化；空集批量恢复按既有幂等无操作规则检查数据库不变。附件缺失返回精确业务错误，真实预览/下载比较原始字节；升级只测试已关联文件，并在生产服务拒绝缺失/已删/其他缺陷关联及跨项目文件后再执行升级，防止空指针和越界写。评论不存在/非本人操作改为安全404/403，删除测试核验实际数据库结果。
+
+本节15个Java文件有界编译成功；独立调度器最小Spring上下文1项与附件范围3项，共4项本机通过。真实MySQL、Redis、MinIO及外部图片需后续CI；不因局部通过宣称328项已全部修复。下一轮downstream范围只运行缺陷、用例、计划、工作台、Agent与app六模块，使用独立模块门禁，暂不重复SDK/系统/项目/API测试；最终仍需full验收。
+
+汇总JSON生成后因upload-artifact默认排除隐藏文件而没有上传；配置显式include-hidden-files，同步修复既有健康证据的隐藏文件上传。门禁本身已正常拒绝失败套件，没有放行镜像或健康步骤。
+
 ## 7. 交付与验证边界
 
 - [本轮累计文件清单](../testing/msp-ci-failures-20261029/changed-files.json) 记录分析基线及代码提交。主要产品文件包括 RoleRelationWriter、ExtUserRoleRelationMapper、OrganizationUserRoleService、CommonProjectService、PermissionControlService、BaseOrganizationParameterService、OrganizationTemplateService、BaseUserRoleService、PermissionControlMapper、SystemProjectController、ProjectController、ProjectUserRoleService，以及前端系统用户组页面、共享用户组组件与 useModal。其余为权限资源/语言资源、定向及控制器集成测试、夹具和 CI 门禁，详见清单。

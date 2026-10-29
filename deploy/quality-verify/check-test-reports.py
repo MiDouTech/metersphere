@@ -39,8 +39,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("backend"))
     parser.add_argument("--output", type=Path, default=Path(".ci-test-summary.json"))
+    parser.add_argument("--modules", nargs="+", help="Explicit module boundary for a targeted verification")
     args = parser.parse_args()
-    summary = inspect_reports(args.root)
+    summary = inspect_reports(args.root, set(args.modules) if args.modules else REQUIRED_MODULES)
     args.output.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({k: v for k, v in summary.items() if k != "unsuccessfulTests"}, indent=2))
     return 0 if summary["passed"] else 1
