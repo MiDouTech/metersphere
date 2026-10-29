@@ -17,6 +17,42 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Full reactor classpath contract, complementary to the system module's scoped HTTP test. */
 class PermissionManifestCoverageTests {
     @Test
+    void activeControllerPermissionReferencesHaveAssignableDefinitions() throws Exception {
+        Set<String> runtime = new HashSet<>();
+        collect(new PermissionConfig().permissionCache().getPermissionDefinition(), runtime);
+        java.util.Map<String, String> constants = new java.util.HashMap<>();
+        for (var field : io.metersphere.sdk.constants.PermissionConstants.class.getFields()) {
+            if (field.getType() == String.class && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                constants.put(field.getName(), (String) field.get(null));
+            }
+        }
+        Path root = Path.of("").toAbsolutePath();
+        while (root != null && !Files.isDirectory(root.resolve("backend/services"))) root = root.getParent();
+        assertNotNull(root, "Repository root required for controller permission contract test");
+        Pattern annotations = Pattern.compile("@RequiresPermissions\\((.*?)\\)", Pattern.DOTALL);
+        Pattern names = Pattern.compile("PermissionConstants\\.(\\w+)");
+        Pattern literals = Pattern.compile("\"([^\"\\s]+:[^\"\\s]+)\"");
+        java.util.Map<String, String> missing = new java.util.TreeMap<>();
+        try (var sources = Files.walk(root.resolve("backend/services"))) {
+            for (Path source : sources.filter(path -> path.toString().endsWith("Controller.java")
+                    && path.toString().replace('\\', '/').contains("/src/main/java/")).toList()) {
+                var annotation = annotations.matcher(Files.readString(source));
+                while (annotation.find()) {
+                    var name = names.matcher(annotation.group(1));
+                    while (name.find()) {
+                        String id = constants.get(name.group(1));
+                        assertNotNull(id, () -> "Unresolved permission constant in " + source);
+                        if (!runtime.contains(id)) missing.put(id, source.toString());
+                    }
+                    var literal = literals.matcher(annotation.group(1));
+                    while (literal.find()) if (!runtime.contains(literal.group(1))) missing.put(literal.group(1), source.toString());
+                }
+            }
+        }
+        assertTrue(missing.isEmpty(), () -> "Active controller permissions missing from assignable definitions: " + missing);
+    }
+
+    @Test
     void completeApplicationLoadsAllModuleDefinitionsAndLiteralAdminSeedGrants() throws Exception {
         Set<String> runtime = new HashSet<>();
         collect(new PermissionConfig().permissionCache().getPermissionDefinition(), runtime);

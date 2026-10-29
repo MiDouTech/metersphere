@@ -441,7 +441,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         project = this.generatorAdd("organizationId", null, null, true, List.of("admin"));
         this.requestPost(addProject, project, BAD_REQUEST_MATCHER);
         //项目成员在系统中不存在
-        project = this.generatorAdd("organizationId", "name", null, true, List.of("admin", "admin1", "admin3"));
+        project = this.generatorAdd("organizationId", "missing-member-" + java.util.UUID.randomUUID(), null, true, List.of("admin", "admin1", "admin3"));
         this.requestPost(addProject, project, businessError(io.metersphere.sdk.util.Translator.get("user_not_exist")));
         //资源池不存在
         project = this.generatorAdd("organizationId", "org-pool-error", null, true, List.of("admin"));

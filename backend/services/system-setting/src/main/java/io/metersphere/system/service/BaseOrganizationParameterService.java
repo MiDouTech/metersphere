@@ -22,6 +22,8 @@ public class BaseOrganizationParameterService {
 
     @Resource
     private OrganizationParameterMapper organizationParameterMapper;
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public String getValue(String orgId, String key) {
         OrganizationParameter organizationParameter = organizationParameterMapper.selectByPrimaryKey(orgId, key);
@@ -40,5 +42,14 @@ public class BaseOrganizationParameterService {
 
     public void add(OrganizationParameter organizationParameter) {
         organizationParameterMapper.insert(organizationParameter);
+    }
+
+    /** Atomic assignment on the (organization_id, param_key) primary key, including replay. */
+    public void setValue(String orgId, String key, String value) {
+        if (org.apache.commons.lang3.StringUtils.isAnyBlank(orgId, key) || orgId.length() > 50 || key.length() > 50) {
+            throw new io.metersphere.sdk.exception.MSException("组织参数不合法");
+        }
+        jdbcTemplate.update("INSERT INTO organization_parameter (organization_id, param_key, param_value) VALUES (?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE param_value=VALUES(param_value)", orgId, key, value);
     }
 }

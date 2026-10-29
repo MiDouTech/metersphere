@@ -20,12 +20,13 @@ class PermissionControlWorkflowControllerTests extends BaseTest {
     @Resource JdbcTemplate jdbcTemplate;
 
     // All requests are synchronous MockMvc calls in the test transaction. Rollback restores
-    // the previous active workflow as well as removing this test's entire draft and audit data.
+    // the previous active workflow and removes this test's draft/status/transition data.
     @Test
     @Transactional
     void currentWorkflowApiSupportsDesignPublishActivateAndProtectedDeletion() throws Exception {
         WorkflowDefinition request = new WorkflowDefinition();
         request.setId(UUID.randomUUID().toString());
+        request.setCode("CI_" + request.getId());
         request.setName("CI workflow " + request.getId());
         request.setScopeType("SYSTEM");
         request.setScopeId("system");

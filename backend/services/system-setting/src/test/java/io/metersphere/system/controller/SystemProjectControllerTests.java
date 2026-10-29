@@ -623,7 +623,7 @@ public class SystemProjectControllerTests extends BaseTest {
         project = this.generatorAdd(DEFAULT_ORGANIZATION_ID, null, null, true, List.of("admin"));
         this.requestPost(addProject, project, BAD_REQUEST_MATCHER);
         //项目成员在系统中不存在
-        project = this.generatorAdd(DEFAULT_ORGANIZATION_ID, "name", null, true, List.of("admin", "admin1", "admin3"));
+        project = this.generatorAdd(DEFAULT_ORGANIZATION_ID, "missing-member-" + java.util.UUID.randomUUID(), null, true, List.of("admin", "admin1", "admin3"));
         this.requestPost(addProject, project, businessError(io.metersphere.sdk.util.Translator.get("user_not_exist")));
         //资源池不存在
         project = this.generatorAdd(DEFAULT_ORGANIZATION_ID, "pool", null, true, List.of("admin"));

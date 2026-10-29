@@ -54,6 +54,13 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PermissionControlServiceTests {
     @Test
+    void addFlowRejectsMissingCodeBeforeDatabaseWrite() {
+        WorkflowDefinition request = new WorkflowDefinition();
+        request.setName("Missing code");
+        assertThrows(io.metersphere.sdk.exception.MSException.class, () -> service.addFlow(request));
+        verify(permissionControlMapper, never()).insertWorkflowDefinition(any());
+    }
+    @Test
     void legacyMetadataUpdatePreservesDisabledStateAndUnrepresentedPermissions() {
         UserRole original = new UserRole();
         original.setId("legacy-role");

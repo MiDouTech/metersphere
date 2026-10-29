@@ -1,0 +1,64 @@
+{
+  "state": "definitions-repaired-pending-full-ci",
+  "items": {
+    "AI_CREDENTIAL:READ_METADATA": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentCredentialReferenceController.java"
+    ],
+    "AI_CREDENTIAL:MANAGE": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentCredentialReferenceController.java"
+    ],
+    "AI_CREDENTIAL:VERIFY": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentCredentialReferenceController.java"
+    ],
+    "AI_EVIDENCE:READ": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentExecutionArtifactController.java"
+    ],
+    "AI_RUNNER:MANAGE": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentExecutionOperationsController.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentRunnerAdminController.java"
+    ],
+    "AI_MODEL:READ": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentModelInvocationController.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentModelProfileController.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentPromptTemplateController.java"
+    ],
+    "AI_MODEL:MANAGE": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentModelProfileController.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentPromptTemplateController.java"
+    ],
+    "AI_MODEL:VERIFY": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentModelProfileController.java"
+    ],
+    "AI_RUNNER:READ": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentRunnerAdminController.java"
+    ],
+    "AI_TRIGGER:MANAGE": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentTaskTriggerController.java"
+    ],
+    "AI_TRIGGER:READ": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentTaskTriggerController.java"
+    ],
+    "ORGANIZATION_TASK_CENTER:READ": [
+      "backend/services/api-test/src/main/java/io/metersphere/api/controller/ApiTaskCenterController.java",
+      "backend/services/system-setting/src/main/java/io/metersphere/system/controller/TaskCenterController.java",
+      "backend/services/test-plan/src/main/java/io/metersphere/plan/controller/TestPlanTaskCenterController.java"
+    ],
+    "SYSTEM_TASK_CENTER:READ": [
+      "backend/services/api-test/src/main/java/io/metersphere/api/controller/ApiTaskCenterController.java",
+      "backend/services/system-setting/src/main/java/io/metersphere/system/controller/TaskCenterController.java",
+      "backend/services/test-plan/src/main/java/io/metersphere/plan/controller/TestPlanTaskCenterController.java"
+    ],
+    "PROJECT_API_DEFINITION_DOC:READ": [
+      "backend/services/api-test/src/main/java/io/metersphere/api/controller/definition/ApiDefinitionController.java"
+    ],
+    "PROJECT_API_DEFINITION_DOC:READ+SHARE": [
+      "backend/services/api-test/src/main/java/io/metersphere/api/controller/definition/ApiDefinitionController.java"
+    ],
+    "FUNCTIONAL_CASE_AI:REVIEW": [
+      "backend/services/case-management/src/main/java/io/metersphere/functional/controller/FunctionalCaseAiDraftController.java"
+    ],
+    "CASE_ASSET:READ+EXPORT": [
+      "backend/services/case-management/src/main/java/io/metersphere/functional/asset/controller/CaseAssetController.java"
+    ]
+  }
+}

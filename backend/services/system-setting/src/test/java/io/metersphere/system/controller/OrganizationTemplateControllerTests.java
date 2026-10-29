@@ -476,6 +476,14 @@ public class OrganizationTemplateControllerTests extends BaseTest {
         // 提高覆盖率
         this.requestGetWithOk(DISABLE_ORG_TEMPLATE, addTemplate.getScopeId(), addTemplate.getScene());
 
+        this.requestGetWithOk(DISABLE_ORG_TEMPLATE, addTemplate.getScopeId(), addTemplate.getScene());
+        OrganizationParameterExample replayParameter = new OrganizationParameterExample();
+        replayParameter.createCriteria().andOrganizationIdEqualTo(addTemplate.getScopeId())
+                .andParamKeyEqualTo(organizationParameterService.getOrgTemplateEnableKeyByScene(addTemplate.getScene()));
+        Assertions.assertEquals(1, organizationParameterMapper.countByExample(replayParameter));
+        Assertions.assertEquals("false", organizationParameterService.getValue(addTemplate.getScopeId(),
+                organizationParameterService.getOrgTemplateEnableKeyByScene(addTemplate.getScene())));
+
         // @@校验日志
         checkLog(addTemplate.getScene(), OperationLogType.UPDATE);
         // @@校验权限

@@ -148,6 +148,7 @@ public class PermissionControlService {
                 throw new MSException("无权保存当前角色设置");
             }
             UserRole original = globalUserRoleService.getWithCheck(request.getId());
+            globalUserRoleService.checkGlobalUserRole(original);
             globalUserRoleService.checkInternalUserRole(original);
             globalUserRoleService.checkAdminUserRole(original);
             if (request.getType() != null && !StringUtils.equals(original.getType(), request.getType())) {
@@ -549,6 +550,12 @@ public class PermissionControlService {
     }
 
     public WorkflowDefinition addFlow(WorkflowDefinition request) {
+        if (StringUtils.isAnyBlank(request.getCode(), request.getName())) {
+            throw new MSException("流程名称和编码不能为空");
+        }
+        if (request.getCode().length() > 100 || request.getName().length() > 255) {
+            throw new MSException("流程编码或名称超出允许长度");
+        }
         WorkflowDefinition workflowDefinition = new WorkflowDefinition();
         BeanUtils.copyBean(workflowDefinition, request);
         workflowDefinition.setId(StringUtils.defaultIfBlank(workflowDefinition.getId(), IDGenerator.nextStr()));

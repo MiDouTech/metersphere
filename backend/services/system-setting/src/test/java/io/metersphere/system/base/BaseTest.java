@@ -219,8 +219,13 @@ public abstract class BaseTest {
             refreshUserPermission("ORGANIZATION");
             mockMvc.perform(getRequestBuilderByRole(url, "ORGANIZATION")
                     .header(SessionConstants.CURRENT_ORGANIZATION, organizationId)).andExpect(status().isOk());
-            mockMvc.perform(getRequestBuilderByRole(url, "ORGANIZATION")
-                    .header(SessionConstants.CURRENT_ORGANIZATION, "another-organization")).andExpect(status().isForbidden());
+            // These APIs intentionally resolve their canonical scope from organizationId, not
+            // the optional active-organization header. Test actual membership isolation.
+            String crossOrganizationUrl = url.replace("organizationId=" + organizationId,
+                    "organizationId=sys_default_organization_2");
+            Assertions.assertNotEquals(url, crossOrganizationUrl);
+            mockMvc.perform(getRequestBuilderByRole(crossOrganizationUrl, "ORGANIZATION")
+                    .header(SessionConstants.CURRENT_ORGANIZATION, organizationId)).andExpect(status().isForbidden());
         } finally {
             userRolePermissionMapper.deleteByPrimaryKey(grant.getId());
             refreshUserPermission("ORGANIZATION");

@@ -72,7 +72,8 @@ public class BaseUserRoleService {
                 .filter(item -> includeAllTypes
                         || StringUtils.equals(item.getType(), userRole.getType())
                         || StringUtils.equals(userRole.getId(), InternalUserRole.ADMIN.getValue()))
-                .sorted(Comparator.comparing(PermissionDefinitionItem::getOrder))
+                .sorted(Comparator.comparing(PermissionDefinitionItem::getOrder, Comparator.nullsLast(Integer::compareTo))
+                        .thenComparing(PermissionDefinitionItem::getId, Comparator.nullsLast(String::compareTo)))
 
 
                 .collect(Collectors.toList());

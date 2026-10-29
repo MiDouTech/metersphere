@@ -29,6 +29,8 @@ import java.util.Objects;
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UserControllerPermissionTests extends BaseTest {
+    @jakarta.annotation.Resource
+    private io.metersphere.system.mapper.UserMapper userMapper;
     @Test
     public void permissionTest() throws Exception {
         //获取用户
@@ -116,7 +118,8 @@ public class UserControllerPermissionTests extends BaseTest {
         //  邀请用户
         UserInviteRequest userInviteRequest = new UserInviteRequest();
         userInviteRequest.setUserRoleIds(Collections.singletonList("member"));
-        userInviteRequest.setInviteEmails(Collections.singletonList("tianyang.song.invite.permission.1@test.email"));
+        // Reach real business rejection after authorization, without using external SMTP in an ACL probe.
+        userInviteRequest.setInviteEmails(Collections.singletonList(userMapper.selectByPrimaryKey("admin").getEmail()));
         this.requestPostPermissionTest(PermissionConstants.SYSTEM_USER_INVITE, UserRequestUtils.URL_INVITE, userInviteRequest);
     }
 

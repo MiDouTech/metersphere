@@ -255,6 +255,7 @@
         "id": "SYSTEM_TASK_CENTER",
         "name": "permission.organization_task_center.name",
         "permissions": [
+          { "id": "SYSTEM_TASK_CENTER:READ" },
           {
             "id": "SYSTEM_CASE_TASK_CENTER:READ",
             "name": "permission.case_task_center.read"
@@ -420,6 +421,7 @@
         "id": "ORGANIZATION_TASK_CENTER",
         "name": "permission.organization_task_center.name",
         "permissions": [
+          { "id": "ORGANIZATION_TASK_CENTER:READ" },
           {
             "id": "ORGANIZATION_CASE_TASK_CENTER:READ",
             "name": "permission.case_task_center.read"
