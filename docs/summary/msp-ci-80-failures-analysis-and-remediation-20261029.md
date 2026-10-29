@@ -269,13 +269,13 @@ testAdd 在“配置重复”分支得到正确业务拒绝后，旧 5xx 断言�
 
 |需求|前端入口/实现|后端接口/实现|数据或配置|验证与状态|
 |---|---|---|---|---|
-|S02 重复成员绑定|组织/项目成员添加，沿用现有入口|add-members、organization/add-member → RoleRelationWriter|保留 V56 唯一约束；补精确业务键锁定查询|5 个写入单元测试通过；真实 MySQL 并发/回滚测试已补，待执行|
-|S03 元数据部分更新|系统用户组编辑，原有入口|saveRoleMetadata 选择性更新，不再重建权限|旧 DTO enabled 未传为 null；新建仍默认启用|新增保留停用状态/权限、禁止改类型测试通过|
-|S04 权限对齐|用户组新增、重命名、删除、保存权限按新权限；成员操作独立兼容|保留既有控制器权限门禁|不批量扩张授权|前端类型/lint/构建待执行|
-|S07 权限树|系统权限控制/授权树|permission.json 与安装包控制器对应|确定缺失 SYSTEM_AGENT_PACKAGE:READ、READ+ADD、READ+UPDATE、READ+DELETE；补定义，不恢复已撤销的页面按钮|迁移 V49 和所有模块定义交叉检查已确认；完整 DB 差集复验待 CI|
-|S01/S05/S09|沿用错误展示与默认模块入口|严格业务错误断言；必备角色保留 100003|默认四模块精确断言；没有改历史迁移|57 条直接断言及 2 条辅助路径已更新；后续分支仍需运行验证|
-|S06|旧 BUG 写入口保持关闭|6 个退役写入口测试独立准备，只断言拒绝及数据库未变化|不放开旧接口|新流程入口端到端验证尚未完成|
-|S08/S10/S11|组织成员、个人 API Key、本地执行配置|组织权限测试附目标归属与上下文；Key 按本人隔离测试；配置独立夹具|仅测试 schema 夹具|集成测试待 CI|
+|S02 重复成员绑定|组织/项目成员添加，沿用现有入口|add-members、organization/add-member → RoleRelationWriter|保留 V56 唯一约束；补精确业务键锁定查询|5 个写入单元、2 个真实 MySQL 并发/回滚及系统接口回放均通过；项目相邻路径后续进展见 6.6～6.7|
+|S03 元数据部分更新|系统用户组编辑，原有入口|saveRoleMetadata 选择性更新，不再重建权限|旧 DTO enabled 未传为 null；新建仍默认启用|定向单元及真实控制器集成通过，原始相关项已逐项核对|
+|S04 权限对齐|用户组新增、重命名、删除、保存权限按新权限；成员操作独立兼容|保留既有控制器权限门禁|不批量扩张授权|前端运行时、类型/lint/生产构建通过；发布后真实 UI 未验收|
+|S07 权限树|系统权限控制/授权树|permission.json 与安装包控制器对应|确定缺失 SYSTEM_AGENT_PACKAGE:READ、READ+ADD、READ+UPDATE、READ+DELETE；补定义，不恢复已撤销的页面按钮|最终补 25 个活动定义；模块差集和完整 manifest 定向测试通过。app 完整集成仍受下游阻断|
+|S01/S05/S09|沿用错误展示与默认模块入口|严格业务错误断言；必备角色保留 100003|默认四模块精确断言；没有改历史迁移|原始相关分支在第 6、8 轮均通过；保留未知异常 500 检查，不改为任意 4xx|
+|S06|旧 BUG 写入口保持关闭|6 个退役写入口测试独立准备，只断言拒绝及数据库未变化|不放开旧接口|新入口 MockMvc 全生命周期及旧入口拒绝/数据库不变均通过；真实浏览器链路未验证|
+|S08/S10/S11|组织成员、个人 API Key、本地执行配置|组织权限测试附目标归属与上下文；Key 按本人隔离测试；配置独立夹具|仅测试 schema 夹具|system-setting 对应集成全部通过，80 条原始项已核对|
 
 新发现的测试覆盖缺口：部分用例将 ResultMatcher 作为 BaseTest 的 URI 可变参数传入，实际上未执行状态断言。已在个人 API Key、本地配置本次相关调用改为明确 andExpect；不能把此前这些调用没有失败视为契约正确。
 
@@ -359,3 +359,35 @@ testAdd 在“配置重复”分支得到正确业务拒绝后，旧 5xx 断言�
 - 新暴露的错误分支继续使用具体业务消息和 requestId 严格断言。对尚未执行到的相邻分支只依据对应服务实现设置明确期望，不能以源码核对替代已执行证据；新增观测保存在 downstream-observed-contracts.json。
 - 相邻项目用户组日志切面仍对回放写 UPDATE 审计。进一步调整为只对 writer 返回真实新增的成员生成一次审计，审计同步加入原事务，提交后仅刷新变更用户权限；回放不记“变更”审计。新增“实际插入才审计/刷新”单元测试，当前共 5 项全部通过；真实接口补审计数量不变断言，待下一轮 CI。
 - 后端本轮增量有界 javac 通过。没有启动本机 Docker/应用，也没有合并失败分支。完整镜像/健康、下游未进入模块及部署后 UI 仍不可标记通过。
+
+
+
+### 6.8 文件管理最后 8 项进一步溯源与新增真实修复
+
+- CI [40820882842](https://github.com/chenqifen-miduo/metersphere/actions/runs/40820882842)，代码 `4a4880511a`：SDK 11、system-setting 543 全通过，project-management 285 项剩 8 failure、0 error；原始 80 项全部通过。[逐项证据](../testing/msp-ci-failures-20261029/verification-round9.json)。文件重传/下载/移动以及项目成员真实审计回放通过；项目级状态流和其余项目控制器均通过。
+- 文件批量下载的超限测试临时插入 `test_0`～`test_19` 元数据，但没有对象文件。旧 5xx 断言中断后未清理，后续预览碰到 `test_19`。改为插入、负向断言、finally 删除的完整夹具生命周期；超限与空集分别严格匹配 `file.size.is.too.large`、`file.is.empty`。不向正向测试注入假文件字节，也不将 JSON 错误当下载成功。
+- 同时确认真实代码缺陷：FileMetadataService.getFileByte 吞掉对象读取异常，随后 `TempFileUtils.getFile(null)` 导致空指针，掩盖实际存储错误。改为直接返回真实字节；元数据/MinIO NoSuchKey 缺失按业务错误，其他存储故障保留 cause 并由统一异常处理记录安全 500，不能将 AccessDenied/网络故障误报为文件不存在。新增 6 项定向单元测试全部通过。
+- 文件更新“目录不存在”旧测试遗留 enable=true，先被“非 jar 不能启用”挡住，因此此前从未测试目录校验。重置此字段后，确认 update 原本没有目录存在性校验，会写入无效目录。补 FileManagementService 三参数范围校验（目录 ID/类型/所属项目）；更新按文件真实项目校验，上传及批量移动沿用同一校验，批量移动的显式文件集合也必须属于请求项目。真实集成补不同项目目录必须拒绝、原目录不变断言，待下一轮 CI。
+- 继续追查项目角色组织归属错误的生产来源：ProjectUserRoleService.delete 把 role.scopeId（项目 ID）作为默认角色的 organizationId。改为读取实际 project.organizationId，再执行默认成员补位。夹具不再使用“本地角色却绑定到其他组织 source”这种无效关系，改为真实仅有一条角色的项目成员，接口删除后断言默认角色 source=原项目、organization_id=真实组织，待下一轮 CI。
+- 上述新增生产修复及其相关测试有界 javac 通过；项目角色 5 + 文件下载 6，共 11 项定向单元测试通过，0 跳过/0 失败。剩余旧断言按已观测具体提示和对应 FileLimit/目录/预览实现逐条修正；尚未运行到的分支不标记通过。
+- 历史数据不会由 writer 擅自改写。部署前可只读审计历史项目关系的错误组织归属；只有实际命中并确认项目身份后，才制定有备份、可审计的数据修复，不在未查证时批量覆盖：
+
+```sql
+SELECT r.id, r.user_id, r.role_id, r.source_id,
+       r.organization_id, p.organization_id AS expected_organization_id
+FROM user_role_relation r
+JOIN user_role role ON role.id = r.role_id AND role.type = 'PROJECT'
+JOIN project p ON p.id = r.source_id
+WHERE NOT (r.organization_id <=> p.organization_id);
+```
+
+## 7. 交付与验证边界
+
+- [本轮累计文件清单](../testing/msp-ci-failures-20261029/changed-files.json) 记录分析基线及代码提交。主要产品文件包括 RoleRelationWriter、ExtUserRoleRelationMapper、OrganizationUserRoleService、CommonProjectService、PermissionControlService、BaseOrganizationParameterService、OrganizationTemplateService、BaseUserRoleService、PermissionControlMapper、SystemProjectController、ProjectController、ProjectUserRoleService，以及前端系统用户组页面、共享用户组组件与 useModal。其余为权限资源/语言资源、定向及控制器集成测试、夹具和 CI 门禁，详见清单。
+- 前后端对应：用户组操作页面/共享组件调用既有系统角色与项目角色接口；新元数据权限与接口一致，成员权限独立保留；项目切换的真实导航栏调用保持 projectId/userId 契约；失败请求保留错误提示并保持弹窗可重试。服务端校验和持久化均为真实实现，没有新增 Mock 业务端点。
+- 实际执行的远端主命令：`pnpm run test:selection-toggle && pnpm run test:weekly-remediation-sfc && pnpm run test:modal-contract`；对修改的 3 个 TS/Vue 文件及测试脚本执行 scoped eslint；`pnpm run build` 包含 `vue-tsc --noEmit && vite build`，第 6 轮全部通过。后续仅在 frontend 树哈希完全一致时复用该成功产物。
+- 后端远端主命令：`./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package`。原 80 项按 XML classname/testcase 逐一核对，不能以运行总数抵消或推断缺失项。
+- 本地补充命令：`javac -J-Xmx384m -J-Duser.language=en @.codex-tmp/ci-remediation-20261029/compile-round7.args`；`java @.codex-tmp/ci-remediation-20261029/unit-round7.args`，当前项目角色 5 项通过；此前系统相关 37 项通过。Node 弹窗运行时 5 项以 96 MiB 堆限制通过。局部编译、单元测试不替代真实数据库和应用端到端验收。
+- 未完成检查及风险：完整 reactor 下游、应用全量迁移/镜像构建/启动/健康必须等全部测试成功；修改后真实浏览器的允许/拒绝角色按钮、删除失败保留弹窗、删除成功持久化及项目切换尚未在部署版本验收。这些缺少证据时整体状态为**部分完成**，不能合并为已验收版本。
+- 可复验的准确入口：`gh workflow run msp-remediation-verification.yml --repo chenqifen-miduo/metersphere --ref codex/weekly-remediation-20261028`。工作流顺序执行前端、真实 MySQL reactor，只有测试成功才执行 `bash deploy/quality-verify/ci-health.sh`；该健康脚本刻意限定 GitHub 临时 runner，不应在本机或共享服务上强行执行。已在运行时可用 `gh run watch RUN_ID --repo chenqifen-miduo/metersphere --exit-status` 查看既有结果，无需重复触发。
+- 本机没有执行完整 Maven、Docker 或应用启动，原因是保留用户要求的低资源策略；本机重型 Git hook 不作为通过证据，正式类型/lint/构建门禁仍在远端开启。未将完整 HTTP/session 日志纳入版本库，结构化证据只保存必要的用例标识、业务提示及统计。

@@ -356,5 +356,61 @@
     "line": 416,
     "messageKey": "user_role_not_exist",
     "message": "用户组不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "addModuleTestError",
+    "sourceCommit": "4a4880511a",
+    "line": 389,
+    "messageKey": "node.name.repeat",
+    "message": "该层级已有此模块名称"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "updateModuleTestError",
+    "sourceCommit": "4a4880511a",
+    "line": 461,
+    "messageKey": "node.name.repeat",
+    "message": "该层级已有此模块名称"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "fileUploadTestError",
+    "sourceCommit": "4a4880511a",
+    "line": 683,
+    "messageKey": "file_module.not.exist",
+    "message": "文件模块不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "fileBatchDownload",
+    "sourceCommit": "4a4880511a",
+    "line": 1004,
+    "messageKey": "file.size.is.too.large",
+    "message": "文件不能超过50M"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "fileUpdateError",
+    "sourceCommit": "4a4880511a",
+    "line": 1261,
+    "messageKey": "file.not.jar",
+    "message": "不是jar文件"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "fileAssociationTests",
+    "sourceCommit": "4a4880511a",
+    "line": 1600,
+    "messageKey": "file.not.exist",
+    "message": "文件不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "moveFileTest",
+    "sourceCommit": "4a4880511a",
+    "line": 2259,
+    "messageKey": "file_module.not.exist",
+    "message": "文件模块不存在"
   }
 ]

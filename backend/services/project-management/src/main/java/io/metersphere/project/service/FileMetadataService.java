@@ -184,7 +184,7 @@ public class FileMetadataService {
 
     public String upload(FileUploadRequest request, String operator, MultipartFile uploadFile) throws Exception {
         //检查模块的合法性
-        fileManagementService.checkModule(request.getModuleId(), ModuleConstants.NODE_TYPE_DEFAULT);
+        fileManagementService.checkModule(request.getModuleId(), ModuleConstants.NODE_TYPE_DEFAULT, request.getProjectId());
 
         String fileName = StringUtils.trim(uploadFile.getOriginalFilename());
 
@@ -306,12 +306,22 @@ public class FileMetadataService {
     }
 
     public byte[] getFileByte(FileMetadata fileMetadata) {
-        String filePath = null;
-            try {
-                filePath = TempFileUtils.createFile(TempFileUtils.getTmpFilePath(fileMetadata.getId()), fileManagementService.getFile(fileMetadata));
-            } catch (Exception ignore) {
+        if (fileMetadata == null) {
+            throw new MSException(Translator.get("file.not.exist"));
+        }
+        try {
+            return fileManagementService.getFile(fileMetadata);
+        } catch (MSException expected) {
+            throw expected;
+        } catch (io.minio.errors.ErrorResponseException storageError) {
+            if ("NoSuchKey".equals(storageError.errorResponse().code())) {
+                throw new MSException(Translator.get("file.not.exist"));
             }
-        return TempFileUtils.getFile(filePath);
+            throw new IllegalStateException("Managed file download failed", storageError);
+        } catch (Exception failure) {
+            // Keep the storage failure as the logged cause; never replace it with a null-path NPE.
+            throw new IllegalStateException("Managed file download failed", failure);
+        }
     }
 
     public ResponseEntity<byte[]> downloadById(String id) {
@@ -328,6 +338,10 @@ public class FileMetadataService {
         FileMetadata fileMetadata = fileMetadataMapper.selectByPrimaryKey(request.getId());
         if (fileMetadata == null) {
             throw new MSException(Translator.get("file.not.exist"));
+        }
+
+        if (StringUtils.isNotBlank(request.getModuleId())) {
+            fileManagementService.checkModule(request.getModuleId(), ModuleConstants.NODE_TYPE_DEFAULT, fileMetadata.getProjectId());
         }
 
         //检查是否是空参数
@@ -506,8 +520,11 @@ public class FileMetadataService {
 
     public void batchMove(FileBatchMoveRequest request, String operator) {
         //检查模块的合法性
-        fileManagementService.checkModule(request.getMoveModuleId(), ModuleConstants.NODE_TYPE_DEFAULT);
+        fileManagementService.checkModule(request.getMoveModuleId(), ModuleConstants.NODE_TYPE_DEFAULT, request.getProjectId());
         List<FileMetadata> fileMetadataList = fileManagementService.getProcessList(request);
+        if (fileMetadataList.stream().anyMatch(file -> !StringUtils.equals(request.getProjectId(), file.getProjectId()))) {
+            throw new MSException(Translator.get("check_owner_case"));
+        }
         List<String> updateFileId = new ArrayList<>();
         List<FileMetadata> logList = new ArrayList<>();
         for (FileMetadata fileMetadata : fileMetadataList) {

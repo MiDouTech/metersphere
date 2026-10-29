@@ -114,7 +114,11 @@ public class ProjectUserRoleService extends BaseUserRoleService {
         // 非项目用户组不允许删除, 内置用户组不允许删除
         checkProjectUserRole(userRole);
         checkGlobalUserRole(userRole);
-        super.delete(userRole, InternalUserRole.PROJECT_MEMBER.getValue(), currentUserId, userRole.getScopeId());
+        Project project = projectMapper.selectByPrimaryKey(userRole.getScopeId());
+        if (project == null) {
+            throw new MSException(Translator.get("project_not_exist"));
+        }
+        super.delete(userRole, InternalUserRole.PROJECT_MEMBER.getValue(), currentUserId, project.getOrganizationId());
     }
 
     public List<User> listMember(ProjectUserRoleMemberRequest request) {

@@ -464,6 +464,13 @@ public class ProjectUserRoleControllerTests extends BaseTest {
                 Long.class, request.getProjectId()));
         // 移除用户组, 且存在成员仅有该用户组
         this.requestGet(PROJECT_USER_ROLE_DELETE + "/default-pro-role-id-3", status().isOk());
+        UserRoleRelationExample fallback = new UserRoleRelationExample();
+        fallback.createCriteria().andUserIdEqualTo("default-pro-only-role-user")
+                .andRoleIdEqualTo(InternalUserRole.PROJECT_MEMBER.getValue())
+                .andSourceIdEqualTo("default-project-2");
+        List<UserRoleRelation> fallbackMembers = userRoleRelationMapper.selectByExample(fallback);
+        Assertions.assertEquals(1, fallbackMembers.size());
+        Assertions.assertEquals("default-organization-2", fallbackMembers.getFirst().getOrganizationId());
     }
 
     private PermissionSettingUpdateRequest getPermissionSettingUpdateRequest() {
