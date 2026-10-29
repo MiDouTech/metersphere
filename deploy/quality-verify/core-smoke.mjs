@@ -270,7 +270,31 @@ try {
       `${title} column must remain inside personal window`);
     tokenColumnBounds[title] = box;
   }
+  passed('CORE-PERSONAL-TOKEN-COLUMNS', { panelBounds, tokenColumnBounds });
   const tokenRow = personal.getByRole('row').filter({ hasText: key });
+  await expect(tokenRow).toBeVisible();
+  const scrollMetrics = await personal.locator('.agent-token-table-scroll').evaluate(host => {
+    const candidates = [host, ...host.querySelectorAll('*')].filter(element => {
+      const box = element.getBoundingClientRect();
+      return box.width > 100 && box.height > 0 && element.scrollWidth > element.clientWidth + 8
+        && ['auto', 'scroll'].includes(getComputedStyle(element).overflowX);
+    });
+    candidates.sort((left, right) => Number(right.classList.contains('arco-table-body'))
+      - Number(left.classList.contains('arco-table-body'))
+      || right.clientWidth * right.clientHeight - left.clientWidth * left.clientHeight);
+    if (!candidates.length) return null;
+    const element = candidates[0]; element.setAttribute('data-ci-token-scroll', 'true');
+    return { clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, className: element.className };
+  });
+  assert.ok(scrollMetrics, 'Token table must provide user-accessible horizontal scrolling');
+  const horizontalScroll = personal.locator('[data-ci-token-scroll="true"]');
+  await horizontalScroll.hover();
+  await page.mouse.wheel(500, 0);
+  await expect.poll(() => horizontalScroll.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+  await page.screenshot({ path: path.join(output, 'personal-token-middle-columns.png'), fullPage: true });
+  await page.mouse.wheel(-1000, 0);
+  await expect.poll(() => horizontalScroll.evaluate(element => element.scrollLeft)).toBe(0);
+  passed('CORE-PERSONAL-TOKEN-HORIZONTAL-ACCESS', scrollMetrics);
   const tokenSwitch = tokenRow.getByRole('switch');
   await expect(tokenSwitch).toHaveAttribute('aria-checked', 'true');
   await tokenSwitch.click();
@@ -280,11 +304,15 @@ try {
   await tokenSwitch.click();
   await expect(tokenSwitch).toHaveAttribute('aria-checked', 'true');
   assert.equal((await tool('get', { caseId })).caseId, caseId);
-  await tokenRow.getByRole('button', { name: '设置', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('dialog').getByRole('button', { name: '取消', exact: true }).click();
+  passed('CORE-PERSONAL-TOKEN-ENABLE-DISABLE');
+  await tokenRow.locator('.ms-button').filter({ hasText: /^设置$/ }).click();
+  const settingsDialog = page.locator('.arco-modal:visible');
+  await expect(settingsDialog).toBeVisible();
+  await expect(settingsDialog.locator('.arco-modal-title')).toHaveText('设置');
+  await settingsDialog.getByRole('button', { name: '取消', exact: true }).click();
+  await expect(settingsDialog).toHaveCount(0);
   await page.screenshot({ path: path.join(output, 'personal-token-controls.png'), fullPage: true });
-  passed('CORE-PERSONAL-TOKEN-COLUMNS-AND-REAL-CONTROLS', { panelBounds, tokenColumnBounds });
+  passed('CORE-PERSONAL-TOKEN-SETTINGS-DIALOG');
   recordCheckpoint('token-revocation');
   await api('POST', `/personal/agent-tokens/${token.id}/disable`);
   const denied = await rpc('tools/call', { name: 'metersphere.functional.get', arguments: { caseId } });
