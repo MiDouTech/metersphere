@@ -38,7 +38,7 @@ public class FunctionalCaseMinderController {
     @PostMapping("/tree")
     @Operation(summary = "用例管理-功能用例-脑图-获取空白节点和模块的组合树")
     @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ)
-    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
     public List<BaseTreeNode> getTree(@Validated @RequestBody FunctionalCaseMindTreeRequest request) {
         return functionalCaseMinderService.getTree(request);
     }

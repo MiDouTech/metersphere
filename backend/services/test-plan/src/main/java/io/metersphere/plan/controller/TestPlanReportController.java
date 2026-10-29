@@ -137,7 +137,7 @@ public class TestPlanReportController {
     @GetMapping("/get-result/{taskId}")
     @Operation(summary = "测试计划|组-任务-执行结果")
     @RequiresPermissions(value = {PermissionConstants.TEST_PLAN_REPORT_READ, PermissionConstants.TEST_PLAN_READ_EXECUTE}, logical = Logical.OR)
-    @CheckOwner(resourceId = "#reportId", resourceType = "test_plan_report")
+    @CheckOwner(resourceId = "#taskId", resourceType = "exec_task")
     public TestPlanReportDetailResponse getTaskResult(@PathVariable String taskId) {
         return testPlanReportService.getTaskResult(taskId);
     }

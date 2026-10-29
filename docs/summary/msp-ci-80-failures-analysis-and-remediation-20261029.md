@@ -433,6 +433,20 @@ WHERE NOT (r.organization_id <=> p.organization_id);
 - 汇总 JSON 只记录测试标识和计数，不发布可能包含会话信息的原始失败文本；CI 上传完整原始报告仅用于授权诊断，仓库仍只保存脱敏证据。
 - 远端 workflow_dispatch 返回403，保留原仓库权限；定向验证使用本分支既有 push 触发及明确 `[api-failures]` 标记。普通提交继续执行 full；不取消正在运行的定向任务来反复触发。
 
+### 6.13 相邻资源归属契约审计（实施中）
+
+337 处直接 getter 检查及注解根变量检查确认7处契约缺口。验收需保留 RequiresPermissions，按真实资源找到项目归属；不能仅删除 CheckOwner。
+
+|需求/入口|修改范围|数据与失败行为|测试与状态|
+|---|---|---|---|
+|API定义/场景停止导出|原 stop/{taskId} 注解由不存在的 projectId 改为 taskId/export_task|按导出任务真实项目检查；不改任务消息或表结构|补真实注解表达式与资源类型契约；待集成|
+|功能用例脑图树|FunctionalCaseMinderController.getTree 使用 request.projectId|保留项目归属拒绝|补注解根变量/DTO getter 自动检查；待验证|
+|计划功能用例树|TestPlanFunctionalCaseController.getTree 使用 request.testPlanId|保留计划归属拒绝|同上|
+|计划任务执行结果|get-result/{taskId} 使用 taskId/exec_task，与同控制器 get-task 一致|不能把任务ID当报告ID|同上|
+|计划API/功能用例排序|sortNode 使用 testCollectionId 经 test_plan_collection 关联真实 test_plan；服务校验移动节点/目标节点/集合/计划/项目一致|不允许通过合法集合ID排序其他集合或项目节点；拒绝前无位置写入，无迁移|补同范围通过、跨集合/计划/项目/不存在拒绝单元与普通成员集成；待验证|
+
+本节13个相关Java文件在384 MiB上限下编译通过；共享排序安全边界4项、覆盖337处getter及根参数引用的全仓控制器契约1项，共5项通过。真实普通成员排序200/撤权403、跨计划拒绝且位置不变的集成已补，待后续CI。测试夹具只交换原来绑定错计划的两个collection引用，保留用例身份和各计划数量；没有迁移或改写业务历史数据。
+
 ## 7. 交付与验证边界
 
 - [本轮累计文件清单](../testing/msp-ci-failures-20261029/changed-files.json) 记录分析基线及代码提交。主要产品文件包括 RoleRelationWriter、ExtUserRoleRelationMapper、OrganizationUserRoleService、CommonProjectService、PermissionControlService、BaseOrganizationParameterService、OrganizationTemplateService、BaseUserRoleService、PermissionControlMapper、SystemProjectController、ProjectController、ProjectUserRoleService，以及前端系统用户组页面、共享用户组组件与 useModal。其余为权限资源/语言资源、定向及控制器集成测试、夹具和 CI 门禁，详见清单。

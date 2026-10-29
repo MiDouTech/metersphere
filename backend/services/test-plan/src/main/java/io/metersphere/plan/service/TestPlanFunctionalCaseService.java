@@ -354,6 +354,10 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         if (dragNode == null) {
             throw new MSException(Translator.get("test_plan.drag.node.error"));
         }
+        TestPlanFunctionalCase targetNode = testPlanFunctionalCaseMapper.selectByPrimaryKey(request.getTargetId());
+        checkSortScope(request, dragNode.getTestPlanId(), dragNode.getTestPlanCollectionId(),
+                targetNode == null ? null : targetNode.getTestPlanId(),
+                targetNode == null ? null : targetNode.getTestPlanCollectionId(), CaseType.FUNCTIONAL_CASE.getKey());
         TestPlanOperationResponse response = new TestPlanOperationResponse();
         MoveNodeSortDTO sortDTO = super.getNodeSortDTO(
                 request.getTestCollectionId(),

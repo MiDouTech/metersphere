@@ -393,7 +393,7 @@ public class ApiDefinitionController {
     @GetMapping("/stop/{taskId}")
     @Operation(summary = "接口测试-接口管理-导出-停止导出")
     @RequiresPermissions(PermissionConstants.PROJECT_API_DEFINITION_EXPORT)
-    @CheckOwner(resourceId = "#projectId", resourceType = "project")
+    @CheckOwner(resourceId = "#taskId", resourceType = "export_task")
     public void caseStopExport(@PathVariable String taskId) {
         apiDefinitionExportService.stopExport(taskId, SessionUtils.getUserId());
     }
