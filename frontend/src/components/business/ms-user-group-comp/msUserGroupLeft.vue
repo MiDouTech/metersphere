@@ -578,24 +578,18 @@
           status: 'danger',
         },
         onBeforeOk: async () => {
-          try {
-            if (systemType === AuthScopeEnum.SYSTEM) {
-              await deleteUserGroup(id);
-            } else if (systemType === AuthScopeEnum.ORGANIZATION) {
-              await deleteOrgUserGroup(id);
-            } else if (systemType === AuthScopeEnum.PROJECT) {
-              await deleteProjectUserGroup(id);
-            } else {
-              return false;
-            }
-            Message.success(t('system.user.deleteUserSuccess'));
-            initData();
-            return true;
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.log(error);
-            return false;
+          if (systemType === AuthScopeEnum.SYSTEM) {
+            await deleteUserGroup(id);
+          } else if (systemType === AuthScopeEnum.ORGANIZATION) {
+            await deleteOrgUserGroup(id);
+          } else if (systemType === AuthScopeEnum.PROJECT) {
+            await deleteProjectUserGroup(id);
+          } else {
+            Message.error('暂时无法操作，请刷新页面后重试');
+            throw new Error('User group scope is unavailable');
           }
+          Message.success(t('system.user.deleteUserSuccess'));
+          initData();
         },
         hideCancel: false,
       });

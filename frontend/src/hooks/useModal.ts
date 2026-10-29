@@ -25,12 +25,19 @@ export interface DeleteModalOptions extends ModalConfig {
 const { t } = useI18n();
 
 export default function useModal() {
-  const beforeOkHandler = (options: any, done: (closed: boolean) => void, loading: Ref) => {
+  const beforeOkHandler = async (options: any, done: (closed: boolean) => void, loading: Ref) => {
     loading.value = true;
-    options?.onBeforeOk().finally(() => {
+    let shouldClose = false;
+    try {
+      await options?.onBeforeOk?.();
+      shouldClose = true;
+    } catch {
+      // Request handlers own user-facing errors. Keep the dialog available for correction/retry.
+      shouldClose = false;
+    } finally {
       loading.value = false;
-      done(true);
-    });
+    }
+    done(shouldClose);
   };
   return {
     openModal: (options: ModalOptions) => {

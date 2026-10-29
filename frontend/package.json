@@ -20,6 +20,7 @@
     "test:image-clipboard": "node --test ./scripts/test-image-clipboard.mjs",
     "test:list-refresh": "node --test ./scripts/test-list-refresh.mjs",
     "test:selection-toggle": "node --max-old-space-size=192 --test ./scripts/test-selection-toggle.mjs",
+    "test:modal-contract": "node --max-old-space-size=128 --test ./scripts/test-modal-contract.mjs",
     "test:weekly-remediation-sfc": "node --max-old-space-size=192 ./scripts/verify-weekly-remediation-sfc.mjs",
     "test:export-notifications": "node --test ./scripts/test-case-export-notifications.mjs",
     "test:route-tabs": "node ./scripts/verify-route-tabs.mjs",

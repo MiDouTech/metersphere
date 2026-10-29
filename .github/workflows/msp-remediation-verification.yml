@@ -43,7 +43,10 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
         if: steps.reuse.outputs.reused != 'true'
         working-directory: frontend
-      - run: pnpm run test:selection-toggle && pnpm run test:weekly-remediation-sfc
+      - run: pnpm run test:selection-toggle && pnpm run test:weekly-remediation-sfc && pnpm run test:modal-contract
+        if: steps.reuse.outputs.reused != 'true'
+        working-directory: frontend
+      - run: pnpm exec eslint src/hooks/useModal.ts src/components/business/ms-user-group-comp/msUserGroupLeft.vue src/views/setting/system/usergroup/systemUserGroup.vue scripts/test-modal-contract.mjs
         if: steps.reuse.outputs.reused != 'true'
         working-directory: frontend
       - run: pnpm run build
