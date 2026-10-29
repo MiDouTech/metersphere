@@ -270,7 +270,7 @@ public class CaseReviewControllerTests extends BaseTest {
         CaseReviewFollowerRequest caseReviewFollowerRequest = new CaseReviewFollowerRequest();
         caseReviewFollowerRequest.setCaseReviewId("XXXXX");
         caseReviewFollowerRequest.setUserId("admin");
-        this.requestPost(FOLLOW_CASE_REVIEW, caseReviewFollowerRequest).andExpect(status().is5xxServerError());
+        this.requestPost(FOLLOW_CASE_REVIEW, caseReviewFollowerRequest).andExpect(businessError(105001, "用例评审不存在"));
     }
 
     @Test
@@ -298,16 +298,16 @@ public class CaseReviewControllerTests extends BaseTest {
         CaseReviewRequest caseReviewRequest = getCaseReviewAddRequest("创建评审更新1", CaseReviewPassRule.SINGLE.toString(), null, true, true, null);
         this.requestPost(EDIT_CASE_REVIEW, caseReviewRequest).andExpect(status().is4xxClientError());
         caseReviewRequest = getCaseReviewAddRequest("创建评审更新1", CaseReviewPassRule.SINGLE.toString(), null, true, true, "XXX");
-        this.requestPost(EDIT_CASE_REVIEW, caseReviewRequest).andExpect(status().is5xxServerError());
+        this.requestPost(EDIT_CASE_REVIEW, caseReviewRequest).andExpect(businessError(105001, "用例评审不存在"));
         List<CaseReview> caseReviews = getCaseReviews("创建评审1");
         CaseReview caseReview = caseReviews.getFirst();
         CaseReviewRequest caseReviewRequestWidthStartTime = getCaseReviewAddRequest("创建评审更新1", CaseReviewPassRule.SINGLE.toString(), caseReview.getId(), true, true, null);
         caseReviewRequestWidthStartTime.setStartTime(1678188043000L);
         caseReviewRequestWidthStartTime.setEndTime(1678188103000L);
-        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(status().is5xxServerError());
+        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(businessError(105001, "用例评审不存在"));
         caseReviewRequestWidthStartTime.setStartTime(1901791303000L);
         caseReviewRequestWidthStartTime.setEndTime(1678188103000L);
-        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(status().is5xxServerError());
+        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(businessError(105001, "用例评审不存在"));
     }
 
     @Test
@@ -368,7 +368,7 @@ public class CaseReviewControllerTests extends BaseTest {
         userIds.add("gyq_review_test");
         userIds.add("gyq_review_test2");
         caseReviewAssociateRequest.setReviewers(userIds);
-        this.requestPost(ASSOCIATE_CASE_REVIEW, caseReviewAssociateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(ASSOCIATE_CASE_REVIEW, caseReviewAssociateRequest).andExpect(businessError(105001, "用例评审不存在"));
         List<CaseReview> caseReviews = getCaseReviews("创建评审更新1");
         caseReviewAssociateRequest = new CaseReviewAssociateRequest();
         caseReviewAssociateRequest.setProjectId(projectId);

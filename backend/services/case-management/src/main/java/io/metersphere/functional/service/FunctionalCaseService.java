@@ -791,7 +791,7 @@ public class FunctionalCaseService {
 
         //处理删除文件id
         if (CollectionUtils.isNotEmpty(request.getDeleteFileMetaIds())) {
-            functionalCaseAttachmentService.deleteCaseAttachment(request.getDeleteFileMetaIds(), request.getId(), request.getProjectId());
+            functionalCaseAttachmentService.deleteCaseAttachment(request.getDeleteFileMetaIds(), request.getId(), request.getProjectId(), userId);
         }
 
         //处理取消关联文件id

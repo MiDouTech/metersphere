@@ -362,7 +362,7 @@ public class FunctionalCaseMinderControllerTest extends BaseTest {
         additionalNodeList.add(mindAdditionalNodeRequest);
         request.setAdditionalNodeList(additionalNodeList);
 
-        this.requestPost(FUNCTIONAL_CASE_EDIT_URL, request).andExpect(status().is5xxServerError());
+        this.requestPost(FUNCTIONAL_CASE_EDIT_URL, request).andExpect(businessError(100422, "文本节点名称不能为空"));
         request.getAdditionalNodeList().remove(additionalNodeList.size()-1);
         mindAdditionalNodeRequest = new MindAdditionalNodeRequest();
         mindAdditionalNodeRequest.setId("additional2");
@@ -372,7 +372,7 @@ public class FunctionalCaseMinderControllerTest extends BaseTest {
         additionalNodeList.add(mindAdditionalNodeRequest);
         request.setAdditionalNodeList(additionalNodeList);
 
-        this.requestPost(FUNCTIONAL_CASE_EDIT_URL, request).andExpect(status().is5xxServerError());
+        this.requestPost(FUNCTIONAL_CASE_EDIT_URL, request).andExpect(businessError(100422, "文本节点名称不能为空"));
 
     }
 

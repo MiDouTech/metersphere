@@ -316,7 +316,11 @@ public class BugControllerTests extends BaseTest {
         // 标签超过10个
         request = buildRequest(true);
         request.setTags(List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"));
-        paramMap = getMultiPartParam(request, file);
+        request.setDeleteLocalFileIds(null);
+        request.setUnLinkRefIds(null);
+        request.setLinkFileIds(null);
+        paramMap = new LinkedMultiValueMap<>();
+        paramMap.add("request", JSON.toJSONString(request));
         this.requestMultipartWithOkAndReturn(BUG_UPDATE, paramMap);
         Assertions.assertEquals(request.getTags().subList(0, 10), bugMapper.selectByPrimaryKey(request.getId()).getTags());
 
@@ -504,33 +508,37 @@ public class BugControllerTests extends BaseTest {
     @Order(90)
     void testDeleteBugSuccess() throws Exception {
         // Local
-        this.requestGet(BUG_DELETE + "/default-bug-id", status().isOk());
+        this.requestDelete(BUG_DELETE + "/default-bug-id").andExpect(status().isOk());
+        Assertions.assertTrue(bugMapper.selectByPrimaryKey("default-bug-id").getDeleted());
         // Tapd
-        this.requestGet(BUG_DELETE + "/default-bug-id-tapd1", status().isOk());
+        this.requestDelete(BUG_DELETE + "/default-bug-id-tapd1").andExpect(status().isOk());
+        Assertions.assertNull(bugMapper.selectByPrimaryKey("default-bug-id-tapd1"));
     }
 
     @Test
     @Order(91)
     void testDeleteBugError() throws Exception {
-        this.requestGet(BUG_DELETE + "/default-bug-id-not-exist", status().is5xxServerError());
+        this.requestDelete(BUG_DELETE + "/default-bug-id-not-exist").andExpect(businessError(108001, io.metersphere.sdk.util.Translator.get("bug_not_exist")));
     }
 
     @Test
     @Order(92)
     void testFollowBug() throws Exception {
         // 关注的缺陷存在
-        this.requestGet(BUG_FOLLOW + "/default-bug-id-single", status().isOk());
+        this.requestPostWithOk(BUG_FOLLOW + "/default-bug-id-single", null);
+        Assertions.assertEquals(1, followerCount("default-bug-id-single"));
         // 关注的缺陷不存在
-        this.requestGet(BUG_FOLLOW + "/default-bug-id-not-exist", status().is5xxServerError());
+        this.requestPost(BUG_FOLLOW + "/default-bug-id-not-exist", null).andExpect(businessError(108001, io.metersphere.sdk.util.Translator.get("bug_not_exist")));
     }
 
     @Test
     @Order(93)
     void testUnFollowBug() throws Exception {
         // 取消关注的缺陷存在
-        this.requestGet(BUG_UN_FOLLOW + "/default-bug-id-single", status().isOk());
+        this.requestDelete(BUG_UN_FOLLOW + "/default-bug-id-single").andExpect(status().isOk());
+        Assertions.assertEquals(0, followerCount("default-bug-id-single"));
         // 取消关注的缺陷不存在
-        this.requestGet(BUG_UN_FOLLOW + "/default-bug-id-not-exist", status().is5xxServerError());
+        this.requestDelete(BUG_UN_FOLLOW + "/default-bug-id-not-exist").andExpect(businessError(108001, io.metersphere.sdk.util.Translator.get("bug_not_exist")));
     }
 
     @Test
@@ -678,6 +686,13 @@ public class BugControllerTests extends BaseTest {
      * @param isUpdate 是否更新操作
      * @return 请求参数
      */
+    private long followerCount(String bugId) {
+        var mapper = io.metersphere.sdk.util.CommonBeanFactory.getBean(io.metersphere.bug.mapper.BugFollowerMapper.class);
+        var example = new io.metersphere.bug.domain.BugFollowerExample();
+        example.createCriteria().andBugIdEqualTo(bugId).andUserIdEqualTo("admin");
+        return mapper.countByExample(example);
+    }
+
     private BugEditRequest buildRequest(boolean isUpdate) {
         BugEditRequest request = new BugEditRequest();
         request.setProjectId("default-project-for-bug");

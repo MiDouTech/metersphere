@@ -571,7 +571,7 @@ public class TestPlanApiScenarioControllerTests extends BaseTest {
         apiScenarioReportMapper.updateByPrimaryKeySelective(scenarioReport1);
         mockMvc.perform(getRequestBuilder("/report/get/plan-test-scenario-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(100422, "场景报告不存在"));
         scenarioReport1.setTestPlanScenarioId("test-scenario-id");
         apiScenarioReportMapper.updateByPrimaryKeySelective(scenarioReport1);
 

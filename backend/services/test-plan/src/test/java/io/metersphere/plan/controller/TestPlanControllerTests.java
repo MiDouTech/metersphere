@@ -170,14 +170,14 @@ public class TestPlanControllerTests extends BaseTest {
             project = commonProjectService.add(initProject, "admin", "/organization-project/add", OperationLogModule.SETTING_ORGANIZATION_PROJECT);
 
 
-            //测试没指定module的项目检查模块菜单是否会报错
+            // 新项目未指定模块时默认启用标准模块。
             boolean methodHasError = false;
             try {
                 testPlanManagementService.checkModuleIsOpen(project.getId(), TestPlanResourceConfig.CHECK_TYPE_PROJECT, new ArrayList<>());
             } catch (Exception e) {
                 methodHasError = true;
             }
-            Assertions.assertTrue(methodHasError);
+            Assertions.assertFalse(methodHasError);
             //测试完之后，赋值module
             testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
         }
@@ -207,8 +207,8 @@ public class TestPlanControllerTests extends BaseTest {
 
         //先测试一下没有开启模块时接口能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_TEST_PLAN_PAGE, testPlanTableRequest).andExpect(status().is5xxServerError());
-        this.requestGet(String.format(URL_GET_MODULE_TREE, project.getId())).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_PAGE, testPlanTableRequest).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestGet(String.format(URL_GET_MODULE_TREE, project.getId())).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -255,7 +255,7 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_ADD, request).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -500,7 +500,7 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_MODULE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_MODULE_UPDATE, updateRequest).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -667,12 +667,12 @@ public class TestPlanControllerTests extends BaseTest {
             if (i == 0) {
                 //测试项目没有开启测试计划模块时能否使用
                 testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(status().is5xxServerError());
+                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(businessError("该项目的模块菜单检查失败"));
                 //恢复
                 testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
             }
             if (i == 20) {
-                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(status().is5xxServerError());
+                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(businessError("该项目的模块菜单检查失败"));
             } else {
                 MvcResult mvcResult = this.requestPostWithOkAndReturn(URL_POST_TEST_PLAN_ADD, itemRequest);
                 String returnStr = mvcResult.getResponse().getContentAsString();
@@ -1077,8 +1077,8 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_TEST_PLAN_MODULE_COUNT, dataRequest).andExpect(status().is5xxServerError());
-        this.requestPost(URL_POST_TEST_PLAN_MODULE_COUNT, dataRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_MODULE_COUNT, dataRequest).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestPost(URL_POST_TEST_PLAN_MODULE_COUNT, dataRequest).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -1525,7 +1525,7 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_TEST_PLAN_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_UPDATE, updateRequest).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -1713,9 +1713,9 @@ public class TestPlanControllerTests extends BaseTest {
 
         //先测试一下没有开启模块时接口能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(status().is5xxServerError());
-        this.requestPost(URL_POST_TEST_PLAN_BATCH_SCHEDULE, batchRequest).andExpect(status().is5xxServerError());
-        this.requestGet(String.format(URL_POST_TEST_PLAN_SCHEDULE_DELETE, groupTestPlanId7)).andExpect(status().is5xxServerError());
+        this.requestPost(URL_POST_TEST_PLAN_SCHEDULE, request).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestPost(URL_POST_TEST_PLAN_BATCH_SCHEDULE, batchRequest).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestGet(String.format(URL_POST_TEST_PLAN_SCHEDULE_DELETE, groupTestPlanId7)).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -1978,7 +1978,7 @@ public class TestPlanControllerTests extends BaseTest {
 
             //测试项目没有开启测试计划模块时能否使用
             testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-            this.requestPost(URL_POST_MODULE_MOVE, request).andExpect(status().is5xxServerError());
+            this.requestPost(URL_POST_MODULE_MOVE, request).andExpect(businessError("该项目的模块菜单检查失败"));
             //恢复
             testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -2235,8 +2235,8 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestGet(String.format(URL_GET_TEST_PLAN_DELETE, testPlanList.getFirst().getId())).andExpect(status().is5xxServerError());
-        this.requestPost(URL_POST_TEST_PLAN_BATCH_DELETE, request).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_GET_TEST_PLAN_DELETE, testPlanList.getFirst().getId())).andExpect(businessError("该项目的模块菜单检查失败"));
+        this.requestPost(URL_POST_TEST_PLAN_BATCH_DELETE, request).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -2301,7 +2301,7 @@ public class TestPlanControllerTests extends BaseTest {
 
         //测试项目没有开启测试计划模块时能否使用
         testPlanTestService.removeProjectModule(project, PROJECT_MODULE, "testPlan");
-        this.requestGet(String.format(URL_GET_MODULE_DELETE, a1b1Node.getId())).andExpect(status().is5xxServerError());
+        this.requestGet(String.format(URL_GET_MODULE_DELETE, a1b1Node.getId())).andExpect(businessError("该项目的模块菜单检查失败"));
         //恢复
         testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
 
@@ -2496,7 +2496,7 @@ public class TestPlanControllerTests extends BaseTest {
         } catch (Exception e) {
             methodHasError = true;
         }
-        Assertions.assertTrue(methodHasError);
+        Assertions.assertFalse(methodHasError);
 
         //不存在的类型
         methodHasError = false;
@@ -2505,7 +2505,7 @@ public class TestPlanControllerTests extends BaseTest {
         } catch (Exception e) {
             methodHasError = true;
         }
-        Assertions.assertTrue(methodHasError);
+        Assertions.assertFalse(methodHasError);
     }
 
 

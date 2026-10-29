@@ -57,7 +57,7 @@ public class TestPlanTaskCenterControllerTests extends BaseTest {
     private final static String REAL_TIME_ORG_STOP = BASE_PATH + "org/stop";
     private final static String REAL_TIME_SYSTEM_STOP = BASE_PATH + "system/stop";
 
-    private static final ResultMatcher ERROR_REQUEST_MATCHER = status().is5xxServerError();
+    private static final ResultMatcher ERROR_REQUEST_MATCHER = businessError("项目不存在");
 
     @Resource
     private ApiReportService apiReportService;

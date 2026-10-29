@@ -466,6 +466,21 @@ CI 40836860193 / b9ff143c82 收集10模块2079项：15 failure、328 error、8 s
 
 汇总JSON生成后因upload-artifact默认排除隐藏文件而没有上传；配置显式include-hidden-files，同步修复既有健康证据的隐藏文件上传。门禁本身已正常拒绝失败套件，没有放行镜像或健康步骤。
 
+进一步静态核对HTTP调用，发现缺陷删除/关注/取消关注仍有7处旧GET测试，状态matcher同样误作为URI变量，原“通过”并未验证行为。改为真实DELETE/POST、显式andExpect，并检查软删/物理删除/关注关系数据库结果；组织模块2处本就故意测试错误方法的405，保持原HTTP方法，仅修复显式断言。该补充待下一轮/最终回归，不把此前绿色结果作为这些分支的证据。
+
+### 6.15 六模块复验与共享测试断言修复（实施中）
+
+CI 40843550676 / 564297b1ce：1072项，72failure、65error、0skipped、0缺失模块。app3全通过，Agent462仅1failure/0error；真实Redis7项及公网图片1项实际通过。缺陷77有4failure；用例280有44failure/62error；计划134有20failure/2error；工作台16有3failure/1error。调度器缺失造成的上下文阻断已消除，新增真实普通成员排序200/撤权403及跨计划拒绝测试通过。原80项在本次定向范围没有执行，不能冒称再次通过。
+
+|共同根因/需求|具体修改范围|验收尺度|
+|---|---|---|
+|UID工具静态final在Spring就绪前（如单元静态mock）缓存null，随后23个真实接口及23个初始化路径失败|IDGenerator改为调用时解析现有DefaultUidGenerator单例；不改算法、worker分配、ID位宽，不创建备用时钟ID|类提前加载不污染后续初始化；不可用时明确失败；上下文就绪后恢复；仍使用真实单例分配UID|
+|共享SQL引用creationSources/category属性，Provider DTO缺字段|TestCasePageProviderRequest补与功能用例分页一致的三个可选筛选字段|旧调用默认不筛选，显式值按现有绑定SQL筛选，关联列表实际可查询|
+|空选集批量恢复在日志中拼接IN()|BugService.getBatchLogByRequest空集提前返回，不执行查询或产生变更审计|合法空集幂等无操作；数据库不变；不放开跨项目ID|
+|重复附件删除导致NPE，标签测试误带已删除附件|BugService移除附件前完整校验ID；标签测试只提交标签和元数据，不重发已消费附件；保留状态流转保护|缺失/其他缺陷附件明确拒绝且不发生存储删除；标签前10条正确持久化|
+|共享测试客户端把ResultMatcher吞进URI变量|BaseTest在GET/POST/multipart/upload等辅助路径拆出并真正执行matcher，保留真实URI变量；新独立MockMvc测试用错误预期主动证明会失败|不能以漏断言获得绿色；当前3项独立测试通过。影响所有使用者，下一轮必须全量回归，包括此前绿色模块|
+|已观测旧错误契约及夹具连锁|保留本轮精确响应与实际业务码证据，按根因修复后再处理后续分支|不以任意4xx、跳过或宽松断言代替；尚未执行分支不记通过|
+
 ## 7. 交付与验证边界
 
 - [本轮累计文件清单](../testing/msp-ci-failures-20261029/changed-files.json) 记录分析基线及代码提交。主要产品文件包括 RoleRelationWriter、ExtUserRoleRelationMapper、OrganizationUserRoleService、CommonProjectService、PermissionControlService、BaseOrganizationParameterService、OrganizationTemplateService、BaseUserRoleService、PermissionControlMapper、SystemProjectController、ProjectController、ProjectUserRoleService，以及前端系统用户组页面、共享用户组组件与 useModal。其余为权限资源/语言资源、定向及控制器集成测试、夹具和 CI 门禁，详见清单。
@@ -476,3 +491,25 @@ CI 40836860193 / b9ff143c82 收集10模块2079项：15 failure、328 error、8 s
 - 未完成检查及风险：完整 reactor 下游、应用全量迁移/镜像构建/启动/健康必须等全部测试成功；修改后真实浏览器的允许/拒绝角色按钮、删除失败保留弹窗、删除成功持久化及项目切换尚未在部署版本验收。这些缺少证据时整体状态为**部分完成**，不能合并为已验收版本。
 - 可复验的准确入口：`gh workflow run msp-remediation-verification.yml --repo chenqifen-miduo/metersphere --ref codex/weekly-remediation-20261028`。工作流顺序执行前端、真实 MySQL reactor，只有测试成功才执行 `bash deploy/quality-verify/ci-health.sh`；该健康脚本刻意限定 GitHub 临时 runner，不应在本机或共享服务上强行执行。已在运行时可用 `gh run watch RUN_ID --repo chenqifen-miduo/metersphere --exit-status` 查看既有结果，无需重复触发。
 - 本机没有执行完整 Maven、Docker 或应用启动，原因是保留用户要求的低资源策略；本机重型 Git hook 不作为通过证据，正式类型/lint/构建门禁仍在远端开启。未将完整 HTTP/session 日志纳入版本库，结构化证据只保存必要的用例标识、业务提示及统计。
+
+### 6.16 第15轮根因修复与完整复验准备（部分完成）
+
+基线为 CI 40843550676 / 564297b1ce：六模块1072项，72 failure、65 error、0 skipped，不能视为验收通过。脱敏明细见 verification-round15.json。本轮没有启动本机 Docker 或应用服务。
+
+|需求/问题|前后端与修改范围|数据、边界及验收|
+|---|---|---|
+|创建/导入/附件请求500|system UID工具在调用时获取Spring管理的生成器，避免类首次加载缓存null|不改ID算法、工作节点或ID格式；未初始化明确失败；生命周期2项单元通过|
+|关联用例/工作台查询500|共享Provider查询DTO补齐creationSources、assetCategoryId、includeAssetCategoryDescendants，沿用现有查询接口|默认null兼容旧调用；关联查询真实MySQL待复验|
+|空批次缺陷操作500|BugService空ID集直接返回空日志；删除附件先校验请求ID均属于当前附件|不生成IN()，不删除其他数据；缺陷集成待复验|
+|用例附件删除与镜像同步|功能用例附件服务显式区分projectId/userId，HTTP入口、用例更新调用传递真实操作人|缺身份/跨项目在写入前拒绝；已不存在附件不增加版本/不重复入outbox；3项单元通过|
+|计划执行权限与同步|计划执行服务验证关联行、计划、项目、未删除源用例一致，拒绝归档计划|源用例与所有活跃计划同步原有路径保留；4项安全边界单元通过，真实持久化仍待集成|
+|请求间分页串扰|RequestTraceFilter入口及finally清理PageHelper线程状态|避免上一请求未执行SQL时LIMIT污染下一请求；成功/异常清理单元通过|
+|正文损坏协议|HTTP422同时返回业务code100422，保留bodyInvalid键及原文保护|正向夹具写合法步骤数组；损坏负向夹具继续保留；错误协议单元通过|
+|关系查询排序歧义|关系服务使用字段白名单排序并限定fc别名，XML去除重复前缀|不放宽sort输入；真实关联分页待集成|
+|MCP个人执行证据|数据库集成夹具按用例级evidenceIds提交|保留回滚、重复请求、已消费证据拒绝、100步单图、跨项目读取拒绝等验收；待真实MySQL复验|
+|测试断言被静默忽略|BaseTest将误传至URI参数的ResultMatcher实际执行，覆盖GET/POST/multipart等|新契约3项通过；影响约147处旧调用，因此下一轮必须十模块全量，不沿用旧通过数|
+|旧协议与测试连锁失败|按第15轮真实响应修正缺失资源422/业务码；默认启用项目模块的测试前提改正，保留禁用模块拒绝测试|不统一放宽为任意4xx，不接受500；授权唯一约束保留，仅改夹具为存在检查后插入|
+
+本机40个相关Java文件以javac -J-Xmx384m编译通过；java -Xmx256m定向执行32项，32通过、0跳过。命令参数保存在本机 .codex-tmp/ci-remediation-20261029/compile-round16.args 和 unit-round16.args；正式可复核远端入口为 .github/workflows/msp-remediation-verification.yml。git diff --check通过。
+
+仍须执行：十模块全量集成/打包、数据库迁移、镜像构建/容器启动/健康检查、核心路径E2E。当前代码尚不能标记为全部完成，失败门禁仍保持开启。前端未修改，继续按精确源码树哈希复用既有正式类型/lint/生产构建产物。

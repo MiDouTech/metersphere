@@ -639,6 +639,12 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     }
 
     private void runResult(TestPlanCaseRunRequest request,LogInsertModule logInsertModule,boolean preserveDraft){
+        TestPlanFunctionalCase relation = testPlanFunctionalCaseMapper.selectByPrimaryKey(request.getId());
+        if (relation == null || !StringUtils.equals(relation.getFunctionalCaseId(), request.getCaseId())) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    "请求用例不属于当前测试计划或项目");
+        }
+        validateExecutionScope(List.of(relation), request.getTestPlanId(), request.getProjectId());
         long now = System.currentTimeMillis();
         String operator = logInsertModule.getOperator();
         // 同一用例在所有测试计划中的关联行与用例库执行状态互相同步
@@ -747,6 +753,11 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         TestPlanFunctionalCaseExample example = new TestPlanFunctionalCaseExample();
         example.createCriteria().andIdIn(ids);
         List<TestPlanFunctionalCase> functionalCases = testPlanFunctionalCaseMapper.selectByExample(example);
+        if (functionalCases.size() != new java.util.HashSet<>(ids).size()) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    "请求用例不属于当前测试计划或项目");
+        }
+        validateExecutionScope(functionalCases, request.getTestPlanId(), request.getProjectId());
         List<String> caseIds = functionalCases.stream().map(TestPlanFunctionalCase::getFunctionalCaseId).distinct().collect(Collectors.toList());
         Map<String, String> idsMap = functionalCases.stream().collect(Collectors.toMap(TestPlanFunctionalCase::getId, TestPlanFunctionalCase::getFunctionalCaseId));
         List<FunctionalCase> list = extFunctionalCaseMapper.getProjectIdByIds(caseIds);
@@ -764,6 +775,25 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         //更新用例表执行状态 以及补充用例步骤ID为null的步骤信息
         updateFunctionalCaseStatus(caseIds, request.getLastExecResult(), null, logInsertModule.getOperator(), now);
 
+    }
+
+    private void validateExecutionScope(List<TestPlanFunctionalCase> relations, String planId, String projectId) {
+        TestPlan plan = testPlanMapper.selectByPrimaryKey(planId);
+        if (plan == null || !StringUtils.equals(plan.getProjectId(), projectId)
+                || relations.stream().anyMatch(row -> !StringUtils.equals(row.getTestPlanId(), planId))) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    "请求用例不属于当前测试计划或项目");
+        }
+        if (StringUtils.equals(plan.getStatus(), TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED)) {
+            throw new MSException(Translator.get("test_plan.is.archived"));
+        }
+        var caseIds = relations.stream().map(TestPlanFunctionalCase::getFunctionalCaseId).distinct().toList();
+        FunctionalCaseExample example = new FunctionalCaseExample();
+        example.createCriteria().andIdIn(caseIds).andProjectIdEqualTo(projectId).andDeletedEqualTo(false);
+        if (functionalCaseMapper.selectByExample(example).size() != caseIds.size()) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    "请求用例不属于当前测试计划或项目");
+        }
     }
 
     private List<TestPlanCaseExecuteHistory> getExecHistory(List<String> ids, TestPlanCaseBatchRunRequest request, LogInsertModule logInsertModule, Map<String, String> idsMap, Map<String, String> projectMap) {

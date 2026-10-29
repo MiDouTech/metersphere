@@ -996,7 +996,7 @@ public class FunctionalCaseControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("request", JSON.toJSONString(request));
         paramMap.add("file", null);
-        this.requestMultipart(CHECK_XMIND_URL, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(CHECK_XMIND_URL, paramMap).andExpect(businessError(100422, "文件不能为空！"));
 
     }
 
@@ -1110,7 +1110,8 @@ public class FunctionalCaseControllerTests extends BaseTest {
     @Test
     @Order(25)
     public void stopExport() throws Exception {
-        this.requestGetExcel(STOP_EXPORT_URL + DEFAULT_PROJECT_ID);
+        this.requestGet(STOP_EXPORT_URL + DEFAULT_PROJECT_ID)
+                .andExpect(businessError("导出任务不存在或当前账号无权访问"));
     }
 
     @Test

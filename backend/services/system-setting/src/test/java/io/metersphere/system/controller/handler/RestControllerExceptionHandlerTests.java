@@ -273,6 +273,7 @@ class RestControllerExceptionHandlerTests {
                 handler.handleException(new RuntimeException("internal database detail", failure), request, new MockHttpServletResponse()))) {
             assertEquals(422, result.getStatusCode().value());
             assertEquals("functional.case.bodyInvalid", result.getBody().getMessageKey());
+            assertEquals(100422, result.getBody().getCode());
             assertFalse(result.getBody().isRetryable());
             assertNotNull(result.getBody().getRequestId());
             assertFalse(result.getBody().getMessage().contains("database"));

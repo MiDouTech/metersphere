@@ -156,7 +156,7 @@ public class FunctionalCaseRelationshipControllerTests extends BaseTest {
         //异常覆盖
         request.setId("test");
         request.setType("PRE");
-        assertErrorCode(this.requestPost(DELETE, request), MsHttpResultCode.FAILED);
+        this.requestPost(DELETE, request).andExpect(businessError("资源不存在或已删除"));
     }
 
     @Test
@@ -174,6 +174,6 @@ public class FunctionalCaseRelationshipControllerTests extends BaseTest {
         request.setCaseId("wx_relationship_1");
         request.setId("test");
         request.setType("PRE");
-        assertErrorCode(this.requestPost(DELETE, request), MsHttpResultCode.FAILED);
+        this.requestPost(DELETE, request).andExpect(businessError("资源不存在或已删除"));
     }
 }

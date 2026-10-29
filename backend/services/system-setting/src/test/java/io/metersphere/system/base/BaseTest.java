@@ -252,9 +252,24 @@ public abstract class BaseTest {
                 .header(SessionConstants.CURRENT_ORGANIZATION, organizationId)).andExpect(status().isForbidden());
     }
 
+    // Legacy callers pass ResultMatcher in the varargs slot. Never silently treat it as a URI value.
+    private Object[] actualUriVariables(Object[] values) {
+        return values == null ? new Object[0] : Arrays.stream(values)
+                .filter(value -> !(value instanceof ResultMatcher)).toArray();
+    }
+
+    private ResultActions inlineAssertions(ResultActions actions, Object[] values) throws Exception {
+        if (values != null) {
+            for (Object value : values) {
+                if (value instanceof ResultMatcher matcher) actions.andExpect(matcher);
+            }
+        }
+        return actions;
+    }
+
     protected ResultActions requestPost(String url, Object param, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getPostRequestBuilder(url, param, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        return inlineAssertions(mockMvc.perform(getPostRequestBuilder(url, param, actualUriVariables(uriVariables)))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected MvcResult requestGetDownloadFile(String url, MediaType contentType, Object... uriVariables) throws Exception {
@@ -281,16 +296,16 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestGet(String url, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getRequestBuilder(url, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        return inlineAssertions(mockMvc.perform(getRequestBuilder(url, actualUriVariables(uriVariables)))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected ResultActions requestDelete(String url, Object... uriVariables) throws Exception {
-        return mockMvc.perform(MockMvcRequestBuilders.delete(getBasePath() + url, uriVariables)
+        return inlineAssertions(mockMvc.perform(MockMvcRequestBuilders.delete(getBasePath() + url, actualUriVariables(uriVariables))
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .header(HttpHeaders.ACCEPT_LANGUAGE, "zh-CN"))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected MvcResult requestGetAndReturn(String url, Object... uriVariables) throws Exception {
@@ -298,9 +313,7 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestGetWithOk(String url, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getRequestBuilder(url, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        return requestGet(url, uriVariables).andExpect(status().isOk());
     }
 
     protected MvcResult requestGetWithOkAndReturn(String url, Object... uriVariables) throws Exception {
@@ -308,9 +321,7 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestPostWithOk(String url, Object param, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getPostRequestBuilder(url, param, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        return requestPost(url, param, uriVariables).andExpect(status().isOk());
     }
 
     protected MvcResult requestPostWithOkAndReturn(String url, Object param, Object... uriVariables) throws Exception {
@@ -318,17 +329,13 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestMultipartWithOk(String url, MultiValueMap<String, Object> paramMap, Object... uriVariables) throws Exception {
-        MockHttpServletRequestBuilder requestBuilder = getMultipartRequestBuilder(url, paramMap, uriVariables);
-        return mockMvc.perform(requestBuilder)
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isOk());
+        return requestMultipart(url, paramMap, uriVariables).andDo(print()).andExpect(status().isOk());
     }
 
     protected ResultActions requestMultipart(String url, MultiValueMap<String, Object> paramMap, Object... uriVariables) throws Exception {
-        MockHttpServletRequestBuilder requestBuilder = getMultipartRequestBuilder(url, paramMap, uriVariables);
-        return mockMvc.perform(requestBuilder)
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        MockHttpServletRequestBuilder requestBuilder = getMultipartRequestBuilder(url, paramMap, actualUriVariables(uriVariables));
+        return inlineAssertions(mockMvc.perform(requestBuilder)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected MvcResult requestMultipartWithOkAndReturn(String url, MultiValueMap<String, Object> paramMap, Object... uriVariables) throws Exception {
@@ -336,8 +343,8 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestUploadFile(String url, MockMultipartFile file, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getUploadRequestBuilder(url, file, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        return inlineAssertions(mockMvc.perform(getUploadRequestBuilder(url, file, actualUriVariables(uriVariables)))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     protected ResultActions requestUploadFileWithOk(String url, MockMultipartFile file) throws Exception {
@@ -763,8 +770,8 @@ public abstract class BaseTest {
     }
 
     protected ResultActions requestGetWithNoAdmin(String url, String userRoleType, Object... uriVariables) throws Exception {
-        return mockMvc.perform(getRequestBuilderByRole(url, userRoleType, uriVariables))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        return inlineAssertions(mockMvc.perform(getRequestBuilderByRole(url, userRoleType, actualUriVariables(uriVariables)))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)), uriVariables);
     }
 
     /**

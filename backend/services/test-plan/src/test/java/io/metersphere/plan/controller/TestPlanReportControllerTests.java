@@ -215,7 +215,7 @@ public class TestPlanReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(GET_SHARE_REPORT_API_REPORT_LIST + "/" + GEN_SHARE_ID + "/" + "test"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(100422, "用例报告不存在"));
 
         mockMvc.perform(getRequestBuilder(GET_SHARE_REPORT_API_REPORT_LIST + "/get/" + GEN_SHARE_ID + "/" + "test" + "/111"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -223,7 +223,7 @@ public class TestPlanReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(GET_SHARE_REPORT_SCENARIO_REPORT_LIST + "/" + GEN_SHARE_ID + "/" + "test"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(100422, "用例报告不存在"));
 
         mockMvc.perform(getRequestBuilder(GET_SHARE_REPORT_SCENARIO_REPORT_LIST + "/get/" + GEN_SHARE_ID + "/" + "test" + "/111"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))

@@ -250,7 +250,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
     @Test
     @Order(11)
     public void testListAllOrganizationError() throws Exception {
-        this.requestGet(ORGANIZATION_LIST_OPTION_ALL, status().isMethodNotAllowed());
+        this.requestGet(ORGANIZATION_LIST_OPTION_ALL).andExpect(status().isMethodNotAllowed());
     }
 
     @Test
@@ -514,7 +514,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
     @Test
     @Order(22)
     public void testGetDefaultOrganizationError() throws Exception {
-        this.requestPost(ORGANIZATION_DEFAULT, null, status().isMethodNotAllowed());
+        this.requestPost(ORGANIZATION_DEFAULT, null).andExpect(status().isMethodNotAllowed());
     }
 
     @Test

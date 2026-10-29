@@ -241,7 +241,7 @@ public class DashboardFrontPageControllerTests extends BaseTest {
     @Test
     @Order(2)
     public void testLayout() throws Exception {
-        this.requestGet(GET_LAYOUT + "DEFAULT_ORGANIZATION_ID").andExpect(status().is5xxServerError());
+        this.requestGet(GET_LAYOUT + "DEFAULT_ORGANIZATION_ID").andExpect(businessError(100422, "组织不存在"));
         MvcResult defaultResult =  this.requestGetWithOkAndReturn(GET_LAYOUT + DEFAULT_ORGANIZATION_ID);
         String defaultString = defaultResult.getResponse().getContentAsString(StandardCharsets.UTF_8);
         ResultHolder defaultHolder = JSON.parseObject(defaultString, ResultHolder.class);
@@ -594,8 +594,8 @@ public class DashboardFrontPageControllerTests extends BaseTest {
         project.setModuleSetting("[]");
         project.setId(DEFAULT_PROJECT_ID);
         projectMapper.updateByPrimaryKeySelective(project);
-        this.requestPost(REVIEWING_BY_ME, dashboardFrontPageRequest).andExpect(status().is5xxServerError());
-        this.requestPost(API_CHANGE, dashboardFrontPageRequest).andExpect(status().is5xxServerError());
+        this.requestPost(REVIEWING_BY_ME, dashboardFrontPageRequest).andExpect(businessError(109001, "no_project_permission"));
+        this.requestPost(API_CHANGE, dashboardFrontPageRequest).andExpect(businessError(109001, "no_project_permission"));
         project.setModuleSetting("[\"apiTest\",\"testPlan\",\"caseManagement\",\"bugManagement\"]");
         project.setId(DEFAULT_PROJECT_ID);
         projectMapper.updateByPrimaryKeySelective(project);

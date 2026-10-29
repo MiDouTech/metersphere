@@ -457,7 +457,7 @@ public class CaseReviewFunctionalCaseControllerTests extends BaseTest {
         request.setCaseId("wx_test_5");
         request.setStatus(FunctionalCaseReviewStatus.PASS.toString());
         request.setContent("测试批量评审通过");
-        this.requestPost(REVIEW_FUNCTIONAL_CASE_MIND_REVIEW, request).andExpect(status().is5xxServerError());
+        this.requestPost(REVIEW_FUNCTIONAL_CASE_MIND_REVIEW, request).andExpect(businessError(100422, "功能用例不存在"));
 
         request = new MindReviewFunctionalCaseRequest();
         request.setReviewId("wx_review_id_2");

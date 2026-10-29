@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FunctionalImportSchedulingConfigurationTests {
     @Configuration
+    @org.springframework.context.annotation.Profile("scheduling-contract-only")
     @EnableScheduling
     static class Consumer {
         @Scheduled(initialDelay = 3600000, fixedDelay = 3600000, scheduler = "functionalImportEffectsScheduler")
@@ -22,7 +23,11 @@ class FunctionalImportSchedulingConfigurationTests {
 
     @Test
     void modularContextResolvesQualifiedAndDefaultSchedulersWithoutAppConfiguration() {
-        try (var context = new AnnotationConfigApplicationContext(FunctionalImportSchedulingConfiguration.class, Consumer.class)) {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().setActiveProfiles("scheduling-contract-only");
+            context.register(FunctionalImportSchedulingConfiguration.class, Consumer.class);
+            context.refresh();
+            assertNotNull(context.getBean(Consumer.class));
             var ordinary = context.getBean("taskScheduler", ThreadPoolTaskScheduler.class);
             var imports = context.getBean("functionalImportEffectsScheduler", ThreadPoolTaskScheduler.class);
             assertNotSame(ordinary, imports);

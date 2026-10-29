@@ -525,7 +525,7 @@ public class TestPlanApiCaseControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder("/report/get/plan-test-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(100422, "用例报告不存在"));
 
         apiReport1.setTestPlanCaseId("test-plan-case-id");
         apiReportMapper.updateByPrimaryKey(apiReport1);

@@ -93,12 +93,13 @@ class AgentDirectExecutionMySqlTests {
             String after=(String)service.upload(upload).get("evidenceId");
             var submit=new LinkedHashMap<>(base);submit.put("policyHash",contract.get("policyHash"));submit.put("requestId","result");
             submit.put("steps",List.of(Map.of("stepNum",1,"actual","observed with different wording","result","SUCCESS")));
-            assertEquals("QUALITY_EVIDENCE_REQUIRED",assertThrows(MSException.class,()->service.submit(submit)).getMessage());
+            assertEquals("QUALITY_CASE_EVIDENCE_REQUIRED",assertThrows(MSException.class,()->service.submit(submit)).getMessage());
             assertEquals("PENDING",jdbc.queryForObject("SELECT last_execute_result FROM functional_case",String.class));
             assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
             var store=new FunctionalCaseEvidenceStore();ReflectionTestUtils.setField(store,"jdbc",jdbc);
             assertNull(store.read("p","c",before));
             submit.put("steps",List.of(Map.of("stepNum",1,"actual","observed with different wording","result","SUCCESS","evidenceIds",List.of(before,after))));
+            submit.put("evidenceIds",List.of(before,after));
             token.setId("other-token");assertThrows(MSException.class,()->service.submit(submit));token.setId("t");
             detail.setName("changed definition");assertEquals("VERSION_CONFLICT",assertThrows(MSException.class,()->service.submit(submit)).getMessage());detail.setName("case");
             jdbc.execute("ALTER TABLE functional_case_attachment ADD UNIQUE KEY forced_failure(file_name)");
@@ -128,6 +129,7 @@ class AgentDirectExecutionMySqlTests {
             String extraAfter=(String)service.upload(upload).get("evidenceId");
             var original=Map.of("stepNum",1,"actual","visible","result","SUCCESS","evidenceIds",List.of(secondBefore,secondAfter));
             var extra=Map.of("stepNum",2,"actual","additional observation","result","ERROR","evidenceIds",List.of(extraBefore,extraAfter));
+            submit.put("evidenceIds",List.of(secondBefore,secondAfter,extraBefore,extraAfter));
             submit.put("requestId","missing-original");submit.put("steps",List.of(extra));
             assertEquals("QUALITY_FINAL_FACTS_INCOMPLETE",assertThrows(MSException.class,()->service.submit(submit)).getMessage());
             submit.put("requestId","invalid-status");submit.put("steps",List.of(Map.of("stepNum",1,"actual","visible","result","PASS","evidenceIds",List.of(secondBefore,secondAfter))));
@@ -150,6 +152,7 @@ class AgentDirectExecutionMySqlTests {
             upload.put("requestId","repeat-only-after");upload.put("purpose","AFTER_STEP");
             String repeatAfter=(String)service.upload(upload).get("evidenceId");
             submit.put("requestId","repeat-only");
+            submit.put("evidenceIds",List.of(repeatBefore,repeatAfter));
             submit.put("steps",List.of(
                     Map.of("stepNum",1,"actual","visible","result","ERROR","evidenceIds",List.of(repeatBefore,repeatAfter)),
                     Map.of("stepNum",1,"actual","visible","result","SUCCESS","evidenceIds",List.of(repeatBefore,repeatAfter))));

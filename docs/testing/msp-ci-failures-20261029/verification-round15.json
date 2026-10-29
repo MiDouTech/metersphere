@@ -1,0 +1,1492 @@
+{
+  "modules": {
+    "app": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "agent-integration": {
+      "tests": 462,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "bug-management": {
+      "tests": 77,
+      "failures": 4,
+      "errors": 0,
+      "skipped": 0
+    },
+    "case-management": {
+      "tests": 280,
+      "failures": 44,
+      "errors": 62,
+      "skipped": 0
+    },
+    "dashboard": {
+      "tests": 16,
+      "failures": 3,
+      "errors": 1,
+      "skipped": 0
+    },
+    "test-plan": {
+      "tests": 134,
+      "failures": 20,
+      "errors": 2,
+      "skipped": 0
+    }
+  },
+  "total": {
+    "tests": 972,
+    "failures": 72,
+    "errors": 65,
+    "skipped": 0
+  },
+  "failures": [
+    {
+      "module": "agent-integration",
+      "classname": "io.metersphere.agent.service.AgentDirectExecutionMySqlTests",
+      "test": "realTransactionsGatePublishDownloadRollbackAndReplay",
+      "kind": "failure",
+      "message": "expected: <QUALITY_EVIDENCE_REQUIRED> but was: <QUALITY_CASE_EVIDENCE_REQUIRED>"
+    },
+    {
+      "module": "bug-management",
+      "classname": "io.metersphere.bug.controller.BugAttachmentControllerTests",
+      "test": "testTransfer",
+      "kind": "failure",
+      "message": "JSON path \"$.message\" expected:<Not Support Key: file.transfer.failed> but was:<文件转存失败>"
+    },
+    {
+      "module": "bug-management",
+      "classname": "io.metersphere.bug.controller.BugControllerTests",
+      "test": "testUpdateBugError",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "bug-management",
+      "classname": "io.metersphere.bug.controller.BugTrashControllerTests",
+      "test": "testBatchEmptySelectionDoesNotMutate",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "bug-management",
+      "classname": "io.metersphere.bug.service.BugSyncExtraServiceTests",
+      "test": "test",
+      "kind": "failure",
+      "message": "expected: <delete minio error!> but was: <io.metersphere.sdk.exception.MSException: delete minio error!>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.AssociateCaseProviderTests",
+      "test": "coverCaseProvider",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "addCaseReviewSuccess",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "addCaseReviewWidthOutCaseIdsSuccess",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "addCaseReviewWidthTagsSuccess",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "followCaseReview",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "followCaseReviewFalse",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "editCaseReviewSuccess",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "editCaseReviewFalse",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "associateCaseSuccess",
+      "kind": "failure",
+      "message": "expected: <1> but was: <0>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "associateCaseFalse",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "getPageSuccess",
+      "kind": "failure",
+      "message": "expected: <1> but was: <0>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "testPos",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "testFunctionalCaseDetail",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "testBatchMove",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "testDelete",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "testDisassociate",
+      "kind": "failure",
+      "message": "expected: <1> but was: <0>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "testDisassociateFalse",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewFunctionalCaseControllerTests",
+      "test": "testCaseReviewAddCase",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewFunctionalCaseControllerTests",
+      "test": "testBatchReview",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewFunctionalCaseControllerTests",
+      "test": "testMindReview",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewFunctionalCaseControllerTests",
+      "test": "getReviewerWidthTotalList",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "emptyDataTest",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "addModuleTestSuccess",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "addModuleTestError",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "updateModuleTestSuccess",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "updateModuleTestError",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "moveTest",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "moveTestError",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "deleteModuleTestSuccess",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAIControllerTests",
+      "test": "testEdit",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAIControllerTests",
+      "test": "transform",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAIControllerTests",
+      "test": "setBatchSave",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAttachmentControllerTests",
+      "test": "testAttachmentPreview",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAttachmentControllerTests",
+      "test": "testAttachmentDownload",
+      "kind": "failure",
+      "message": "Content type expected:<application/octet-stream> but was:<application/json>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAttachmentControllerTests",
+      "test": "testAttachmentTransfer",
+      "kind": "error",
+      "message": "PreparedStatementCallback; SQL [INSERT INTO functional_import_effect_outbox(id,effect_type,project_id,user_id,payload,next_retry_at,create_time,update_time) VALUES (?,?,?,?,?,?,?,?)]; Column 'user_id' cannot be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAttachmentControllerTests",
+      "test": "testUploadTemp",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseAttachmentControllerTests",
+      "test": "downTemp",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "login",
+      "kind": "error",
+      "message": "Failed to execute SQL script statement #27 of class path resource [dml/init_case_comment.sql]: INSERT INTO user_role_permission(id, role_id, permission_id) VALUES ('user_role_guo_permission1', 'project_admin', 'FUNCTIONAL_CASE:READ+COMMENT')"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentATSuccess",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "updateCommentATSuccess",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "updateCommentSuccess",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentATFalse",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "updateCommentATFalse",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "updateCommentATWithOutId",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentATExcludeSelfSuccess",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentATNoNotifierSuccess",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveOnlyCommentSuccess",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplySuccess",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplyNoParentId",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplyNoParent",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplyNotifierSuccess",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplyNoReply",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentWidthCustomFields",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentATWidthReplyUser",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "getCommentSuccess",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "getCommentFalse",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "deleteCommentSuccess",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "deleteNoCommentSuccess",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "deleteCommentFirstSuccess",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "deleteCommentUser",
+      "kind": "error",
+      "message": "Header value must not be null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testFunctionalCaseAdd",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testBatchCopy",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testFunctionalCaseDetail",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<422>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testUpdateFunctionalCase",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testGetPageList",
+      "kind": "failure",
+      "message": "expected: not <null>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testImportExcel",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<422>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testImportXmind",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testPreCheckImportXmind",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "operationHistoryList",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<400>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "stopExport",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<422>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "addDemandSuccess",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "addDemandEmpty",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "updateDemandSuccess",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "updateDemandEmpty",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "updateDemandFalse",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "cancelDemand",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "batchRelevanceSuccess",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "batchCaseRelevance",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "addNoParent",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "pageDemandSuccess",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<422>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "syncDemandSuccess",
+      "kind": "error",
+      "message": "请正确配置服务集成或项目应用设置的参数, 并启用;"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseMinderControllerTest",
+      "test": "testEditList",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseMinderControllerTest",
+      "test": "testGetCasePlanList",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "emptyDataTest",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "addModuleTestSuccess",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "addModuleTestError",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "updateModuleTestSuccess",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "updateModuleTestError",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "moveTest",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "moveTestError",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "deleteModuleTestSuccess",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "getTrashTreeSuccess",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseRelationshipControllerTests",
+      "test": "testRelatePage",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseRelationshipControllerTests",
+      "test": "testAddRelationship",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseRelationshipControllerTests",
+      "test": "testDelete",
+      "kind": "failure",
+      "message": "JSON path \"$.code\" expected:<100500> but was:<100422>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseRelationshipControllerTests",
+      "test": "testIds",
+      "kind": "failure",
+      "message": "JSON path \"$.code\" expected:<100500> but was:<100422>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalCaseTrashControllerTests",
+      "test": "recoverCaseFalse",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.FunctionalTestCaseControllerTests",
+      "test": "associateCaseSuccess",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "saveReviewSuccess",
+      "kind": "error",
+      "message": "Failed to execute SQL script statement #26 of class path resource [dml/init_review_case.sql]: INSERT INTO user_role_permission(id, role_id, permission_id) VALUES ('user_role_gyq_permission1', 'project_admin', 'FUNCTIONAL_CASE:READ+COMMENT')"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "saveReviewMultipleSuccess",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "saveReviewMultipleAllSuccess",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "saveReviewFalse",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "getListSuccess",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "testAttachmentPreview",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.uid.impl.DefaultUidGenerator.getUID()\" because \"io.metersphere.system.uid.IDGenerator.DEFAULT_UID_GENERATOR\" is null"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "testUploadTemp",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "case-management",
+      "classname": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "downTemp",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "dashboard",
+      "classname": "io.metersphere.dashboard.controller.DashboardFrontPageControllerTests",
+      "test": "testSql",
+      "kind": "error",
+      "message": "Failed to execute SQL script statement #4 of class path resource [dml/init_dashboard.sql]: INSERT INTO user_role_permission(id, role_id, permission_id) VALUES ('user_role_gyq_permission1', 'project_admin', 'FUNCTIONAL_CASE:READ+COMMENT')"
+    },
+    {
+      "module": "dashboard",
+      "classname": "io.metersphere.dashboard.controller.DashboardFrontPageControllerTests",
+      "test": "testLayout",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "dashboard",
+      "classname": "io.metersphere.dashboard.controller.DashboardFrontPageControllerTests",
+      "test": "testList",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "dashboard",
+      "classname": "io.metersphere.dashboard.controller.MyViewControllerTests",
+      "test": "functional",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanApiCaseControllerTests",
+      "test": "testGet",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanApiScenarioControllerTests",
+      "test": "testGet",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanCaseControllerTests",
+      "test": "testAssociateBugs",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanCaseControllerTests",
+      "test": "testFunctionalCaseRun",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<500>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanCaseControllerTests",
+      "test": "testGetDetail",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanCollectionMinderControllerTests",
+      "test": "editMind",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "emptyDataTest",
+      "kind": "failure",
+      "message": "expected: <true> but was: <false>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "addModuleTest",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "updateModuleTest",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanAddTest",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanPageCountTest",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanUpdateTest",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "scheduleTest",
+      "kind": "error",
+      "message": ""
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanRage",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "copyTestPlan",
+      "kind": "error",
+      "message": "Cannot invoke \"io.metersphere.system.dto.sdk.BaseTreeNode.getId()\" because \"a1b1Node\" is null"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "moveTest",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "deleteTestPlanTest",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "deleteModuleTest",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testAdd",
+      "kind": "failure",
+      "message": "Status expected:<200> but was:<422>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testArchived",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanReportControllerTests",
+      "test": "testGetShareReportTableList",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    },
+    {
+      "module": "test-plan",
+      "classname": "io.metersphere.plan.controller.TestPlanTaskCenterControllerTests",
+      "test": "getPageError",
+      "kind": "failure",
+      "message": "Range for response status value 422 expected:<SERVER_ERROR> but was:<CLIENT_ERROR>"
+    }
+  ],
+  "original80": [
+    {
+      "id": "E001",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "add",
+      "status": "not-executed"
+    },
+    {
+      "id": "F001",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "update",
+      "status": "not-executed"
+    },
+    {
+      "id": "E002",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "updatePermissionSetting",
+      "status": "not-executed"
+    },
+    {
+      "id": "F002",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "getPermissionSetting",
+      "status": "not-executed"
+    },
+    {
+      "id": "F003",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "delete",
+      "status": "not-executed"
+    },
+    {
+      "id": "F004",
+      "classname": "io.metersphere.system.controller.OperationLogControllerTests",
+      "test": "testGetOperationLogParamsError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F005",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F006",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F007",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F008",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberToRoleError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F009",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addOrgMemberToProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F010",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F011",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F012",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getProjectListByOrgError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F013",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getUserRoleListByOrgError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F014",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getNotExistUserListByOrgError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F015",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F016",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F017",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F018",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F019",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F020",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMember",
+      "status": "not-executed"
+    },
+    {
+      "id": "F021",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F022",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F023",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "enableError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F024",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "disableError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F025",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetAdminList",
+      "status": "not-executed"
+    },
+    {
+      "id": "F026",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetMemberList",
+      "status": "not-executed"
+    },
+    {
+      "id": "F027",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateNameError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F028",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "getStatusFlowSetting",
+      "status": "not-executed"
+    },
+    {
+      "id": "F029",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "addStatusItem",
+      "status": "not-executed"
+    },
+    {
+      "id": "E003",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusItem",
+      "status": "not-executed"
+    },
+    {
+      "id": "E004",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusDefinition",
+      "status": "not-executed"
+    },
+    {
+      "id": "E005",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusFlow",
+      "status": "not-executed"
+    },
+    {
+      "id": "E006",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "deleteStatusItem",
+      "status": "not-executed"
+    },
+    {
+      "id": "F030",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "sortStatusItem",
+      "status": "not-executed"
+    },
+    {
+      "id": "F031",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F032",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleUpdateError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F033",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F034",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionSettingError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F035",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionUpdateError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F036",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F037",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleRemoveMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F038",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteOnlyMemberSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "E007",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "adminTreeWithStats",
+      "status": "not-executed"
+    },
+    {
+      "id": "E008",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberPage",
+      "status": "not-executed"
+    },
+    {
+      "id": "E009",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberDetailMasked",
+      "status": "not-executed"
+    },
+    {
+      "id": "F039",
+      "classname": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testEdit",
+      "status": "not-executed"
+    },
+    {
+      "id": "F040",
+      "classname": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testDetail",
+      "status": "not-executed"
+    },
+    {
+      "id": "F041",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testUpdateOrganizationError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F042",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testDeleteOrganization",
+      "status": "not-executed"
+    },
+    {
+      "id": "F043",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F044",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F045",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F046",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F047",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testSwitchOrganizationError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F048",
+      "classname": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEmailConnect",
+      "status": "not-executed"
+    },
+    {
+      "id": "F049",
+      "classname": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEditUploadConfigInfoError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F050",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "status": "not-executed"
+    },
+    {
+      "id": "F051",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F052",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F053",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F054",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F055",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F056",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F057",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "enableError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F058",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "disableError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F059",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateNameError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F060",
+      "classname": "io.metersphere.system.controller.TaskCenterScheduleControllerTests",
+      "test": "getPageError",
+      "status": "not-executed"
+    },
+    {
+      "id": "F061",
+      "classname": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "getResourcePoolsDetailFiled",
+      "status": "not-executed"
+    },
+    {
+      "id": "F062",
+      "classname": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "updateUiTestResourcePoolFiled",
+      "status": "not-executed"
+    },
+    {
+      "id": "F063",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalGetId",
+      "status": "not-executed"
+    },
+    {
+      "id": "F064",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdateInfo",
+      "status": "not-executed"
+    },
+    {
+      "id": "F065",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdatePassword",
+      "status": "not-executed"
+    },
+    {
+      "id": "F066",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testDetail",
+      "status": "not-executed"
+    },
+    {
+      "id": "F067",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testAdd",
+      "status": "not-executed"
+    },
+    {
+      "id": "E010",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testList",
+      "status": "not-executed"
+    },
+    {
+      "id": "F068",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testDisable",
+      "status": "not-executed"
+    },
+    {
+      "id": "F069",
+      "classname": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testAdd",
+      "status": "not-executed"
+    },
+    {
+      "id": "F070",
+      "classname": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testGet",
+      "status": "not-executed"
+    }
+  ],
+  "runId": 40843550676,
+  "commit": "564297b1ce",
+  "scope": "six-downstream-modules"
+}

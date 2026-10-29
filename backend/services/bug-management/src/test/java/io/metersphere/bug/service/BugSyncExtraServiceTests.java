@@ -58,7 +58,7 @@ public class BugSyncExtraServiceTests extends BaseTest {
         MSException deleteException = assertThrows(MSException.class, () ->
                 bugAttachmentService.deleteSyncAttachmentFromMs(Set.of("sync-extra-file-associate-B", "sync-extra-file-local-B", "sync-extra-file-local-A.txt"),
                         allBugFile, "bug-for-sync-extra", "project-for-sync-extra"));
-        assertEquals("delete minio error!", deleteException.getCause().getMessage());
+        assertEquals("delete minio error!", org.apache.commons.lang3.exception.ExceptionUtils.getRootCause(deleteException).getMessage());
         // Reset minio mock
         Mockito.reset(minioMock);
         bugAttachmentService.deleteSyncAttachmentFromMs(Set.of("sync-extra-file-associate-B", "sync-extra-file-local-B"),

@@ -171,7 +171,7 @@ public class RestControllerExceptionHandler {
     @ExceptionHandler(io.metersphere.sdk.util.FunctionalCaseBlobCodec.BodyFormatException.class)
     public ResponseEntity<ResultHolder> handleCaseBodyFormat(HttpServletRequest request, HttpServletResponse response) {
         return ResponseEntity.unprocessableEntity().body(ResultHolder.structuredError(
-                100200, "functional.case.bodyInvalid", "用例正文格式异常或超过限制，原始内容已保留，请联系管理员核对数据",
+                100422, "functional.case.bodyInvalid", "用例正文格式异常或超过限制，原始内容已保留，请联系管理员核对数据",
                 ensureRequestId(request, response), false, Map.of()));
     }
 
