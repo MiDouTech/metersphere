@@ -272,7 +272,7 @@ public class ApiDefinitionControllerTests extends BaseTest {
         this.requestPost("transfer", apiTransferRequest).andExpect(status().isOk());
         //文件不存在
         apiTransferRequest.setFileId("111");
-        this.requestPost("transfer", apiTransferRequest).andExpect(status().is5xxServerError());
+        this.requestPost("transfer", apiTransferRequest).andExpect(businessError("file not found!"));
         //文件已经上传
         ApiFileResourceExample apiFileResourceExample = new ApiFileResourceExample();
         apiFileResourceExample.createCriteria().andResourceIdEqualTo(apiDefinition.getId());
@@ -867,7 +867,8 @@ public class ApiDefinitionControllerTests extends BaseTest {
         request.setId("121");
         assertErrorCode(this.requestPost(COPY, request), ApiResultCode.API_DEFINITION_NOT_EXIST);
         // @@校验权限
-        requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_UPDATE, COPY, request);
+        request.setId(apiDefinition.getId());
+        requestPostPermissionTestWithOk(PermissionConstants.PROJECT_API_DEFINITION_UPDATE, COPY, request);
     }
 
     @Test
@@ -1301,7 +1302,7 @@ public class ApiDefinitionControllerTests extends BaseTest {
         this.requestPostWithOkAndReturn("edit/pos", request);
 
         request.setModuleId("module-st-6");
-        requestPost("edit/pos", request).andExpect(status().is5xxServerError());
+        requestPost("edit/pos", request).andExpect(businessError("模块不存在"));
         apiDefinitionService.refreshPos(DEFAULT_PROJECT_ID);
 
 
@@ -1693,7 +1694,7 @@ public class ApiDefinitionControllerTests extends BaseTest {
         request.setCoverModule(false);
         request.setCoverData(false);
         paramMap.add("request", JSON.toJSONString(request));
-        this.requestMultipart(IMPORT, paramMap, status().is5xxServerError());
+        this.requestMultipart(IMPORT, paramMap, businessError(io.metersphere.sdk.util.Translator.get("parse_data_error")));
 
         paramMap.clear();
         inputStream = new FileInputStream(

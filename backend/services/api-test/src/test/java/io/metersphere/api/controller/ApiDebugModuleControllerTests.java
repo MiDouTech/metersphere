@@ -52,7 +52,6 @@ public class ApiDebugModuleControllerTests extends BaseTest {
     private static final String URL_MODULE_MOVE = "/api/debug/module/move";
     private static final String URL_FILE_MODULE_COUNT = "/api/debug/module/count";
     private static final ResultMatcher BAD_REQUEST_MATCHER = status().isBadRequest();
-    private static final ResultMatcher ERROR_REQUEST_MATCHER = status().is5xxServerError();
     private static Project project;
     private static List<BaseTreeNode> preliminaryTreeNodes = new ArrayList<>();
     @Resource
@@ -352,20 +351,20 @@ public class ApiDebugModuleControllerTests extends BaseTest {
         request.setProjectId(project.getId());
         request.setName("ParentIsUUID");
         request.setParentId(IDGenerator.nextStr());
-        this.requestPost(URL_MODULE_ADD, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("parent.node.not_blank")));
 
         //添加重复的a1节点
         request = new ModuleCreateRequest();
         request.setProjectId(project.getId());
         request.setName("a1");
-        this.requestPost(URL_MODULE_ADD, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("node.name.repeat")));
 
         //a1节点下添加重复的a1-b1节点
         request = new ModuleCreateRequest();
         request.setProjectId(project.getId());
         request.setName("a1-b1");
         request.setParentId(a1Node.getId());
-        this.requestPost(URL_MODULE_ADD, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("node.name.repeat")));
 
     }
 
@@ -432,13 +431,13 @@ public class ApiDebugModuleControllerTests extends BaseTest {
         updateRequest = new ModuleUpdateRequest();
         updateRequest.setId(IDGenerator.nextStr());
         updateRequest.setName(IDGenerator.nextStr());
-        this.requestPost(URL_MODULE_UPDATE, updateRequest).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_UPDATE, updateRequest).andExpect(businessError("模块不存在"));
 
         //名称重复   a1-a1改为a1-b1
         updateRequest = new ModuleUpdateRequest();
         updateRequest.setId(a1Node.getId());
         updateRequest.setName("a1-b1");
-        this.requestPost(URL_MODULE_UPDATE, updateRequest).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_UPDATE, updateRequest).andExpect(businessError(io.metersphere.sdk.util.Translator.get("node.name.repeat")));
     }
 
     @Test
@@ -705,7 +704,7 @@ public class ApiDebugModuleControllerTests extends BaseTest {
         request.setDragNodeId(IDGenerator.nextStr());
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
-        this.requestPost(URL_MODULE_MOVE, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_MOVE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("drag_node.not.exist") + ":" + request.getDragNodeId()));
 
         //drop节点为空
         request = new NodeMoveRequest();
@@ -719,21 +718,21 @@ public class ApiDebugModuleControllerTests extends BaseTest {
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(IDGenerator.nextStr());
         request.setDropPosition(1);
-        this.requestPost(URL_MODULE_MOVE, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_MOVE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("drag_node.not.exist") + ":" + request.getDropNodeId()));
 
         //position为0的时候节点不存在
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(IDGenerator.nextStr());
         request.setDropPosition(0);
-        this.requestPost(URL_MODULE_MOVE, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_MOVE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("drag_node.not.exist") + ":" + request.getDropNodeId()));
 
         //dragNode和dropNode一样
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
-        this.requestPost(URL_MODULE_MOVE, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_MOVE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("invalid_parameter") + ": drag node  and drop node"));
 
         //position不是-1 0 1
         request = new NodeMoveRequest();
@@ -741,7 +740,7 @@ public class ApiDebugModuleControllerTests extends BaseTest {
         assert a2Node != null;
         request.setDropNodeId(a2Node.getId());
         request.setDropPosition(4);
-        this.requestPost(URL_MODULE_MOVE, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(URL_MODULE_MOVE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("invalid_parameter") + ": dropPosition"));
     }
 
     @Test
@@ -778,9 +777,9 @@ public class ApiDebugModuleControllerTests extends BaseTest {
         checkLog(a1a1Node.getId(), OperationLogType.DELETE, URL_MODULE_DELETE);
 
         //删除不存在的节点
-        this.requestGet(String.format(URL_MODULE_DELETE, IDGenerator.nextNum())).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(String.format(URL_MODULE_DELETE, IDGenerator.nextNum())).andExpect(businessError("模块不存在"));
         // 测试删除根节点
-        this.requestGet(String.format(URL_MODULE_DELETE, ModuleConstants.DEFAULT_NODE_ID)).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestGet(String.format(URL_MODULE_DELETE, ModuleConstants.DEFAULT_NODE_ID)).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_module.not.exist")));
 
         //service层判断：测试删除空集合
         apiDebugModuleService.deleteModule(new ArrayList<>(), "admin", DEFAULT_PROJECT_ID);

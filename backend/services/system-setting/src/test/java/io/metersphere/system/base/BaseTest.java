@@ -50,6 +50,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -79,10 +80,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public abstract class BaseTest {
     /** Exact contract for a safe, string-based MSException; never matches an unexpected 500. */
     protected static org.springframework.test.web.servlet.ResultMatcher businessError(String expectedMessage) {
+        return businessError(100422, expectedMessage);
+    }
+
+    protected static org.springframework.test.web.servlet.ResultMatcher businessError(int expectedCode, String expectedMessage) {
         return result -> {
             status().isUnprocessableEntity().match(result);
-            jsonPath("$.code").value(100422).match(result);
+            jsonPath("$.code").value(expectedCode).match(result);
             jsonPath("$.messageKey").value("api.businessError").match(result);
+            jsonPath("$.message").value(expectedMessage).match(result);
+            jsonPath("$.requestId").isNotEmpty().match(result);
+            jsonPath("$.retryable").doesNotExist().match(result);
+            Assertions.assertEquals(result.getResponse().getHeader("X-Request-ID"),
+                    JsonPath.read(result.getResponse().getContentAsString(), "$.requestId"));
+        };
+    }
+
+    protected static ResultMatcher notFoundError(String expectedMessageKey, String expectedMessage) {
+        return result -> {
+            status().isNotFound().match(result);
+            jsonPath("$.code").value(100404).match(result);
+            jsonPath("$.messageKey").value(expectedMessageKey).match(result);
             jsonPath("$.message").value(expectedMessage).match(result);
             jsonPath("$.requestId").isNotEmpty().match(result);
             jsonPath("$.retryable").doesNotExist().match(result);
@@ -655,13 +673,20 @@ public abstract class BaseTest {
      * @throws Exception 请求抛出异常
      */
     private void requestPermissionsTest(List<String> permissionIds, String url, Supplier<MockHttpServletRequestBuilder> requestBuilderGetFunc) throws Exception {
+        requestPermissionsTest(permissionIds, url, requestBuilderGetFunc, false);
+    }
+
+    private void requestPermissionsTest(List<String> permissionIds, String url,
+                                        Supplier<MockHttpServletRequestBuilder> requestBuilderGetFunc, boolean requireOk) throws Exception {
         String roleId = permissionIds.getFirst().split("_")[0];
         java.util.Set<String> originalRelations = probeRelationIds(roleId);
         List<String> grantIds = new java.util.ArrayList<>();
         try {
             for (String permissionId : permissionIds) grantIds.add(initUserRolePermission(roleId, permissionId).getId());
             refreshUserPermission(roleId);
-            int allowedStatus = mockMvc.perform(requestBuilderGetFunc.get()).andReturn().getResponse().getStatus();
+            ResultActions allowed = mockMvc.perform(requestBuilderGetFunc.get());
+            if (requireOk) allowed.andExpect(status().isOk());
+            int allowedStatus = allowed.andReturn().getResponse().getStatus();
             Assertions.assertTrue(allowedStatus < 500 && allowedStatus != 401 && allowedStatus != 403,
                     () -> "Permission probe did not reach business validation: " + url + " -> " + allowedStatus);
         } finally {
@@ -671,7 +696,9 @@ public abstract class BaseTest {
             cleanProbeCreatedAssignments(roleId, originalRelations);
             refreshUserPermission(roleId);
         }
-        mockMvc.perform(requestBuilderGetFunc.get()).andExpect(status().isForbidden());
+        ResultActions denied = mockMvc.perform(requestBuilderGetFunc.get()).andExpect(status().isForbidden());
+        if (requireOk) denied.andExpect(jsonPath("$.code").value(100403))
+                .andExpect(jsonPath("$.messageKey").value("auth.forbidden"));
     }
 
     /**
@@ -691,6 +718,16 @@ public abstract class BaseTest {
 
     protected void requestPostPermissionTest(String permissionId, String url, Object param, Object... uriVariables) throws Exception {
         requestPermissionTest(permissionId, url, () -> getPermissionPostRequestBuilder(permissionId.split("_")[0], url, param, uriVariables));
+    }
+
+    protected void requestPostPermissionTestWithOk(String permissionId, String url, Object param, Object... uriVariables) throws Exception {
+        requestPermissionsTest(List.of(permissionId), url,
+                () -> getPermissionPostRequestBuilder(permissionId.split("_")[0], url, param, uriVariables), true);
+    }
+
+    protected void requestGetPermissionTestWithOk(String permissionId, String url, Object... uriVariables) throws Exception {
+        requestPermissionsTest(List.of(permissionId), url,
+                () -> getPermissionRequestBuilder(permissionId.split("_")[0], url, uriVariables), true);
     }
 
     protected void requestGetPermissionTest(String permissionId, String url, Object... uriVariables) throws Exception {

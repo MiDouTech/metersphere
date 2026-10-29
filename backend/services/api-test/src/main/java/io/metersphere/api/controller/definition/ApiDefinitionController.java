@@ -165,7 +165,7 @@ public class ApiDefinitionController {
     @Operation(summary = "接口测试-接口管理-复制接口定义")
     @RequiresPermissions(PermissionConstants.PROJECT_API_DEFINITION_UPDATE)
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.copyLog(#request)", msClass = ApiDefinitionLogService.class)
-    @CheckOwner(resourceId = "#request.getSelectIds()", resourceType = "api_definition")
+    @CheckOwner(resourceId = "#request.getId()", resourceType = "api_definition")
     public ApiDefinition copy(@Validated @RequestBody ApiDefinitionCopyRequest request) {
         return apiDefinitionService.copy(request, SessionUtils.getUserId());
     }

@@ -436,7 +436,7 @@ public class ApiDebugControllerTests extends BaseTest {
         ApiDebug apiDebug = apiDebugMapper.selectByPrimaryKey(addApiDebug.getId());
         Assertions.assertEquals(apiDebug.getModuleId(), "root");
         request.setModuleId("def");
-        requestPost("edit/pos", request).andExpect(status().is5xxServerError());
+        requestPost("edit/pos", request).andExpect(businessError("模块不存在"));
         request.setModuleId("root");
         apiDebugService.refreshPos("admin");
         // @@校验权限
@@ -735,7 +735,7 @@ public class ApiDebugControllerTests extends BaseTest {
         request.setFileId("111");
         request.setFileName("test-debug-file");
         request.setOriginalName("test-debug-file.txt");
-        this.requestPost(TRANSFER, request).andExpect(status().is5xxServerError());
+        this.requestPost(TRANSFER, request).andExpect(businessError("file not found!"));
         //文件已经上传
         ApiDebugAddRequest addRequest = new ApiDebugAddRequest();
         addRequest.setPath("http://test.com");

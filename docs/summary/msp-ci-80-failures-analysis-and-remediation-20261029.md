@@ -392,6 +392,25 @@ WHERE NOT (r.organization_id <=> p.organization_id);
 - 同时补目录更新边界：省略 moduleId 保留；显式空串或空项目拒绝，不允许写入空目录；新增 3 项模块范围测试及实际接口空串拒绝断言。
 - 本地有界 javac 成功，当前项目/文件/归属 SQL 共 21 项定向单元测试全通过（0 跳过/0 失败）；对应真实数据库和整套 reactor 待下一轮。其他批量 API 的 selectAll 业务授权须按各自接口验收，不能把通用 SQL 空输入护栏当作这些功能已验收的证据。
 
+
+### 6.10 系统及项目模块全通过，首次进入 API 模块后的定位
+
+- CI [40825196007](https://github.com/chenqifen-miduo/metersphere/actions/runs/40825196007)，提交 `54ae3c0d9d`：SDK 11、system-setting 546、project-management 298 项全部通过、零跳过；原始 80 条全部通过。此前下游 65 个项目问题已全部消除，新的文件全选目标权限、空/null 归属 SQL、目录边界及审计回放均通过。[完整模块与原始逐项结果](../testing/msp-ci-failures-20261029/verification-round11.json)。
+- 首次实际进入 api-test：267 项，54 failure、2 error；累计已执行 1122 项。API 模块之后的服务仍未执行，整体仍为部分完成，不合并为全量验收通过版本。
+
+|根因/影响|具体修改范围及内容|验证标准与当前证据|
+|---|---|---|
+|49 个已观测旧错误契约断言|API 调试/定义/Mock/文档/报告/场景/用例测试，逐条按实际 HTTP 422 或 404、具体业务码、消息 key、提示及 requestId 校验；[49 条观测清单](../testing/msp-ci-failures-20261029/api-observed-contracts.json)|不使用任意 4xx；104003 等专有业务码显式保留，404 与 422 分开严格断言。额外相邻树目录负向分支按实际服务抛出路径设置明确期望，待下一轮执行|
+|真实 P01：复制接口 DTO 归属表达式错误|ApiDefinitionController.copy 使用 getSelectIds，但 ApiDefinitionCopyRequest 实际只有 id；改为 getId，保留原 RequiresPermissions 和资源归属检查|新增读取真实控制器注解并执行真实 SpEL 的契约单元通过；控制器集成改用真实存在的源 ID，普通权限用户必须返回 200，撤权必须标准 403|
+|真实 P02：非法资源类型导致 null switch|ApiScenarioService.getStepResourceInfo 在 EnumValidator 返回 null 后仍 switch；先拒绝非法/缺失类型并返回既有安全参数错误|新增非法、空/缺失、合法类型但资源已删除的 3 项单元通过；GET 权限测试用有效资源/类型且强制正向 200，不再用 aa/bb 触发无意义 500|
+|TCP 更新错误、Mock 重名误判的前置连锁|ApiDefinition.testAdd 在旧文件不存在断言中断，后面的 TCP 初始化没有执行；Mock.testAdd 同样在文件断言中断，之后的“重名接口定义test”专用重复夹具未创建，因此更新被正确当作非重名并返回 200|修正早期严格错误契约，让既有真实初始化继续执行；保留 TCP 更新和 Mock 唯一冲突的原业务断言，不将预期冲突改为接受 200|
+|场景 GC 空数据、删除/恢复被拒绝的模块状态连锁|ApiScenarioControllerTests 六处临时关闭默认项目 API 模块，旧 5xx 断言中断后没有恢复，污染本类和之后执行的其他类|逐处 try/finally；ApiScenarioBatchOperationTestService 先读原 module_setting，再按原值恢复，包括 null；不再强行覆盖成固定七模块。业务拒绝仍按模块菜单错误严格断言|
+|普通用户全选移动必须真实可用，而不只是不返回 500|项目文件集成新增真实 MinIO 小文件、匹配筛选全选、普通成员移动、查询目录持久化、撤权拒绝和 finally 只清理自建文件/目录|新增权限辅助方法对这些有效场景强制 200，撤权同时核验 100403/auth.forbidden；新场景已编译，待下一轮真实 MySQL/MinIO 执行|
+
+本轮 18 个 Java 文件有界 javac 通过，API 4 项定向单元全部通过（复制 DTO/SpEL、非法类型、空类型、合法类型缺失资源兼容）。测试不再依赖 Testcontainers 私有 shaded commons-lang3 包，改用仓库已有公开 commons-lang3，没有新增依赖或更换版本。系统/项目上一轮通过的结果不替代新 API 改动验收。
+
+前后端边界：现有 API 管理复制页面通过 openCopyApiTab 打开表单，仓库未发现当前前端模块调用 legacy `/api/definition/copy` 的客户端实现；本轮修复的是已存在 REST 接口的 DTO/归属契约，不声称该旧路由导致当前页面复制按钮失败，也不新造前端入口。资源类型查询仍由原场景步骤接口提供。前端源码未变，继续按相同树哈希复用成功构建。
+
 ## 7. 交付与验证边界
 
 - [本轮累计文件清单](../testing/msp-ci-failures-20261029/changed-files.json) 记录分析基线及代码提交。主要产品文件包括 RoleRelationWriter、ExtUserRoleRelationMapper、OrganizationUserRoleService、CommonProjectService、PermissionControlService、BaseOrganizationParameterService、OrganizationTemplateService、BaseUserRoleService、PermissionControlMapper、SystemProjectController、ProjectController、ProjectUserRoleService，以及前端系统用户组页面、共享用户组组件与 useModal。其余为权限资源/语言资源、定向及控制器集成测试、夹具和 CI 门禁，详见清单。

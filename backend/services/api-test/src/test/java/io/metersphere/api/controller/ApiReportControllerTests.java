@@ -217,7 +217,7 @@ public class ApiReportControllerTests extends BaseTest {
         Assertions.assertEquals(apiReport.getName(), newName);
         mockMvc.perform(getPostRequestBuilder(RENAME + "api-report", newName))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_case_report_not_exist")));
         // @@校验权限
         requestPostPermissionTest(PermissionConstants.PROJECT_API_REPORT_UPDATE, RENAME + "api-report-id0", newName);
     }
@@ -232,7 +232,7 @@ public class ApiReportControllerTests extends BaseTest {
         Assertions.assertTrue(apiReport.getDeleted());
         mockMvc.perform(getRequestBuilder(DELETE + "api-report"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_case_report_not_exist")));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_REPORT_DELETE, DELETE + "api-report-id1");
     }
@@ -356,7 +356,7 @@ public class ApiReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(GET + "test-report-id-no-step-true"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_case_report_not_exist")));
 
         mockMvc.perform(getRequestBuilder(GET + "test"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -396,7 +396,7 @@ public class ApiReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(DETAIL + "api-report-id10"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(notFoundError("http_result_not_found", "请求的资源不存在"));
 
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_REPORT_READ, GET + "api-report-id0");
@@ -448,7 +448,7 @@ public class ApiReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(BASIC + "/share/" + shareId + "/" + "test-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("connection_expired")));
 
         mvcResult = responsePost("/api/report/share/gen", shareInfo);
         shareInfoDTO = parseObjectFromMvcResult(mvcResult, ShareInfoDTO.class);

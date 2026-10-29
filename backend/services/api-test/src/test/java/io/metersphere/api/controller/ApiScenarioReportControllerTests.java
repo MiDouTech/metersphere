@@ -237,7 +237,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
         Assertions.assertTrue(apiReport.getDeleted());
         mockMvc.perform(getRequestBuilder(DETAIL + "api-report"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(notFoundError("http_result_not_found", "请求的资源不存在"));
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_REPORT_DELETE, DELETE + "scenario-report-id1");
     }
@@ -455,7 +455,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(DETAIL + "api-report-id10"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(notFoundError("http_result_not_found", "请求的资源不存在"));
 
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_REPORT_READ, GET + "api-report-id0");
@@ -506,7 +506,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(BASIC + "/share/" + shareId + "/" + "test-scenario-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("connection_expired")));
 
 
         shareInfo = new ApiReportShareRequest();

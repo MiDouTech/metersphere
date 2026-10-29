@@ -2291,7 +2291,47 @@ public class FileManagementControllerTests extends BaseTest {
         moveRequest.setMoveModuleId(ModuleConstants.DEFAULT_NODE_ID);
         moveRequest.setProjectId(DEFAULT_PROJECT_ID);
         moveRequest.setSelectAll(true);
-        this.requestPostPermissionTest(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ_UPDATE, FileManagementRequestUtils.URL_FILE_BATCH_UPDATE, moveRequest);
+        this.requestPostPermissionTestWithOk(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ_UPDATE, FileManagementRequestUtils.URL_FILE_BATCH_UPDATE, moveRequest);
+    }
+
+    @Test
+    @Order(82)
+    public void ordinaryMemberCanMoveAllMatchingFilesWithoutExplicitIds() throws Exception {
+        String marker = "member-scope-move-" + IDGenerator.nextStr();
+        FileModuleCreateRequest target = new FileModuleCreateRequest();
+        target.setProjectId(DEFAULT_PROJECT_ID);
+        target.setName(marker);
+        String targetId = fileModuleService.add(target, "admin");
+        String uploadedId = null;
+        try {
+            FileUploadRequest upload = new FileUploadRequest();
+            upload.setProjectId(DEFAULT_PROJECT_ID);
+            LinkedMultiValueMap<String, Object> form = new LinkedMultiValueMap<>();
+            form.add("request", JSON.toJSONString(upload));
+            form.add("file", new MockMultipartFile("file", marker + ".txt", "text/plain",
+                    "real object for scoped all-page move".getBytes(StandardCharsets.UTF_8)));
+            uploadedId = getResultData(requestMultipartWithOkAndReturn(FileManagementRequestUtils.URL_FILE_UPLOAD, form), String.class);
+            Assertions.assertNotEquals(targetId, fileMetadataMapper.selectByPrimaryKey(uploadedId).getModuleId());
+            FileBatchMoveRequest move = new FileBatchMoveRequest();
+            move.setProjectId(DEFAULT_PROJECT_ID);
+            move.setMoveModuleId(targetId);
+            move.setSelectAll(true);
+            move.getCondition().setKeyword(marker);
+            requestPostPermissionTestWithOk(PermissionConstants.PROJECT_FILE_MANAGEMENT_READ_UPDATE,
+                    FileManagementRequestUtils.URL_FILE_BATCH_UPDATE, move);
+            Assertions.assertEquals(targetId, fileMetadataMapper.selectByPrimaryKey(uploadedId).getModuleId());
+        } finally {
+            try {
+                if (uploadedId != null) {
+                    FileBatchProcessRequest cleanup = new FileBatchProcessRequest();
+                    cleanup.setProjectId(DEFAULT_PROJECT_ID);
+                    cleanup.setSelectIds(List.of(uploadedId));
+                    requestPostWithOk(FileManagementRequestUtils.URL_FILE_DELETE, cleanup);
+                }
+            } finally {
+                fileModuleMapper.deleteByPrimaryKey(targetId);
+            }
+        }
     }
 
     @Test
