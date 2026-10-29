@@ -1,6 +1,6 @@
 # MSP CI 70 项失败、10 项错误：逐项原因、影响与修复方案
 
-日期：2026-10-29。状态：实施与复验中。第 1～5 节保留原始 80 条失败分析；第 6 节记录实际定位、修复及验证结果。尚未通过全部验收门槛，不是完成报告。
+日期：2026-10-29。当前：本轮CI失败修复、前端构建及13个隔离核心路径验收通过，见第7节；完整业务交付仍保留部署/历史数据/客户端矩阵等未执行项。第1～5节为原始80条分析，第6节为过程证据，历史“待查/失败”不代表当前CI结论。
 
 ## 1. 证据范围与统计含义
 
@@ -674,3 +674,50 @@ CI 40843550676 / 564297b1ce：1072项，72failure、65error、0skipped、0缺失
 运行40896294060通过个人窗口内两列表头边界断言；真实UI停用开关后MCP读取被拒绝，重新启用后相同Token可读取原caseId。脚本执行到设置入口才因错误的button角色定位超时，前置断言均未报错；本次已把列边界/启停/设置拆为独立检查点，后续失败不再隐藏已执行结果。
 
 MsButton源码是带clickHandler的div.ms-button，故设置按实际.ms-button文本定位；Arco Modal当前版本也未生成dialog角色，已根据真实.arco-modal/标题/取消按钮定位，并等待弹窗关闭。仍验证确实打开“设置”弹窗，不将按钮存在当操作成功。补真实鼠标水平滚动/回滚与中间列截图，要求表格存在可滚动容器并实际scrollLeft改变，避免只靠固定右列掩盖中间信息不可达。此项尚待执行；没有修改产品或注入改变布局/数据的样式。JS语法、diff检查通过；正式前端/后端及镜像继续按相同身份复用。
+
+
+## 7. 本轮最终验证结果与交付边界（2026-10-29）
+
+代码受验提交a315b8691c254b32a5bb86806c25e947bc89be52；后续若仅补本文/证据，不重跑未改变源码的构建。原始80项已逐项通过，十模块完整测试库存2123项零failure/error/skipped/缺失；第20轮实跑Agent462，另1661项按源码/依赖树身份从已过运行复用，不说成本轮全重跑。各testcase结果/模块来源见verification-round20.json。前端唯一新增生产修复是caseTable.vue的scoped穿透，实际构建运行40888480458已通过选择/SFC/modal契约、目标stylelint、vue-tsc及Vite；后续前端树df82344053b5c5199271586145b87144ecae001f严格一致而复用。
+
+最终运行[40898154538](https://github.com/chenqifen-miduo/metersphere/actions/runs/40898154538)整体success；新临时库173条迁移至3.7.2.136、readiness UP、当前前端index逐字校验/HTTP200，以下13个真实检查全部通过：
+
+|验收项|对应入口/后端与判定|结果|
+|---|---|---|
+|登录|真实生产前端管理员入口→真实会话|通过|
+|MCP创建幂等|个人Token→目录/用例创建；相同case.create请求返回相同caseId|通过|
+|计划概览样式|真实caseTable切换短/长名称，宽273.70→581.69px，只有一组选择器，中心线误差0px|通过|
+|全选切换|全选所有页→取消全选所有页，真实复选框勾选/清除|通过|
+|MCP证据/提交|单张真实截图作为用例证据→提交SUCCESS→请求重放同submissionId→报告AGENT_REPORTED→读取原图字节相同→源及两个计划状态一致|通过|
+|计划进入刷新|短计划1用例/100%，长计划2用例/50%；切换后各自集合正确且主用例最新SUCCESS，无手动刷新|通过|
+|源缺陷同步|MCP创建缺陷关联主用例；两个计划立即读到同一缺陷标题/数量，无手动同步|通过|
+|长标签布局|真实缺陷6个长标签、区域高266px，上/下分别16px间距|通过|
+|Token两列边界|1366窗口内启用列x1080宽100、操作列x1180宽140，完整在右边界1320内|通过|
+|Token水平滚动|真实鼠标轮事件令876px窗口/1660px内容scrollLeft增加并回到0，中间字段可访问|通过|
+|Token真实启停|UI停用→MCP拒绝；UI启用→同Token恢复读取原caseId|通过|
+|Token设置操作|实际MsButton打开“设置”窗口并取消关闭|通过|
+|最终吊销|正式API停用后MCP读取拒绝|通过|
+
+完整摘要、Git树/包SHA256/镜像身份见[verification-round29.json](../testing/msp-ci-failures-20261029/verification-round29.json)。已实际查看最终计划概览（含标注）、两计划详情、长标签、Token右列及中间列截图；runtime-final-*.png均来自真实页面，未用静态Demo或Mock充当验收。数据仅为GitHub临时库，卷/容器结束清理；本机未启动Docker/应用/浏览器，没有并行多套运行环境。
+
+### 7.1 修改范围和前后端对应
+
+- 用例目录删除入口→FunctionalCaseModuleService→既有生命周期保护/回收站/root归档；缺陷评论入口→BugCommentService→资源/回复归属校验→附件转移/评论持久化；Swagger定时配置→ApiScheduleRequest Updated校验；MCP execution.submit→FunctionalCaseService→源版本/派生计划状态及outbox事务。前端API/权限沿用原入口，没有为修复增加人工录入流程。
+- caseTable.vue仅调整选择框样式作用域，按钮/交互/接口不变。历史代码修复与全部测试/资源清单见changed-files.json及分支diff；测试夹具调整与产品修复在第6节分别记录。
+- CI脚本加入实际testcase库存/源码复用校验、缓存生产消费契约、运行超时/阶段证据；不会以failure-ignore跳过最终零失败门禁。最终包/镜像是相同后端源码，浏览器使用独立的当前正式前端产物；现有CNB构建采用前端ZIP与后端skipAntRunForJenkins分离方式，此处不冒充新前端已重新嵌入旧JAR。
+
+### 7.2 实际命令与复核入口
+
+- 后端：第20轮workflow中`./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true '-Dtest=io.metersphere.agent.**,io.metersphere.functional.controller.AiSourceDocumentControllerSecurityTests' -Dsurefire.failIfNoSpecifiedTests=false package`通过；其余模块按完整Git树/真实XML复用后，`python3 deploy/quality-verify/check-test-reports.py --inventory .ci-baseline-summary/.ci-test-summary.json`通过。
+- 前端：`pnpm run test:selection-toggle`、`pnpm run test:weekly-remediation-sfc`、`pnpm run test:modal-contract`、`pnpm exec stylelint src/views/case-management/caseManagementFeature/components/caseTable.vue`、`pnpm run build`通过。
+- 运行：`bash deploy/quality-verify/ci-health.sh`和其调用的`node deploy/quality-verify/core-smoke.mjs`最终通过；镜像首次构建用真实Dockerfile，后续精确校验并加载同imageId，仍全新建库/启动/验收。
+- 脚本单元：报告门禁8项、失败提取2项、源码复用3项、包/前端身份6项、workflow缓存契约3项分别通过；有界Java编译及对应新增缺陷评论2项单元通过。不同阶段重复/重叠不累加为产品独立测试数量。
+- 同身份隔离复核命令：`gh workflow run msp-runtime-verification.yml --repo chenqifen-miduo/metersphere --ref codex/weekly-remediation-20261028 -f source_run=40876632979`。依赖现有受验包缓存；源码或构建输入不同会拒绝，不能用它跳过新后端修改应有的测试。
+
+### 7.3 尚未执行和状态边界
+
+本轮CI/上述13条核心路径已验证通过；完整需求交付仍为部分完成，以下不因代码合并或CI通过自动关闭：用户测试环境重新部署后的真实Ego/客户端回放、生产/历史库敏感事实扫描及真实密钥配置、导入多客户端重启恢复矩阵、源/计划/资产解绑/删除恢复/版本全字段矩阵、真实业务XLSX全字段比对、更多视口/缩放与真实双客户端缓存刷新。没有将单测替代这些部署/数据验收。
+
+原因是新代码尚未由用户发布到现有测试环境，且未提供历史数据库/实际客户端接入的执行前置条件；风险为环境配置、历史数据和客户端缓存行为仍可能与隔离库不同。发布制品入口为既有`gh workflow run cnb-build.yml --repo chenqifen-miduo/metersphere --ref main`（生成制品不等于部署服务器）；服务器部署需沿用现有流程，仓库没有可无条件执行的服务器部署命令，不虚构访问方式。正文恢复维护命令见scripts/maintenance/README-case-body-repair.md；测试坏记录100025已按授权移入回收站，未猜造原步骤或动生产数据。完整业务验收不能标“完全完成”。
+
+本阶段依据用户既有授权整合已通过代码检查及核心隔离验收的代码；合并仅表示代码整合，不作为以上未执行项的通过证据。

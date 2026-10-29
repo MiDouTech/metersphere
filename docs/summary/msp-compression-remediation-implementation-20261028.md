@@ -1,5 +1,7 @@
 # 2026-10-28 压缩与剩余整改实施记录
 
+> 2026-10-29更新：本轮CI失败修复、前端构建与13个核心隔离验收已通过，详见[msp-ci-80-failures-analysis-and-remediation-20261029.md 第7节](msp-ci-80-failures-analysis-and-remediation-20261029.md#7-本轮最终验证结果与交付边界2026-10-29)。下文保留当时状态；部署/真实历史库/客户端全矩阵等未执行项仍保留，完整业务交付不冒充全部验收完成。
+
 基线：[详细方案](msp-compression-and-outstanding-remediation-plan-20261028.md)。当前状态：部分完成，未达到全部测试通过；GitHub完整校验待执行。
 
 ## 实现追踪
