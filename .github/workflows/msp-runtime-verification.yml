@@ -68,6 +68,21 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Compute exact application image identity
+        id: image-identity
+        run: |
+          jar_sha=$(jq -r .jarSha256 .ci-backend-build.json)
+          dockerfile=$(git rev-parse HEAD:Dockerfile.backend)
+          bridge=$(git rev-parse HEAD:wecom-bot-bridge)
+          entry=$(git rev-parse HEAD:deploy/run-with-wecom-bridge.sh)
+          echo "key=msp-runtime-image-${RUNNER_OS}-${jar_sha}-${dockerfile}-${bridge}-${entry}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: image-cache
+        with:
+          key: ${{ steps.image-identity.outputs.key }}
+          path: |
+            .ci-app-image.tar
+            .ci-app-image.json
       - uses: actions/cache/restore@v4
         id: minio-cache
         with:
@@ -92,9 +107,20 @@ jobs:
           if command -v fc-list >/dev/null; then fc-list :lang=zh > "$RUNNER_TEMP/msp-fonts-zh.txt"; else : > "$RUNNER_TEMP/msp-fonts-zh.txt"; fi
           if [ ! -s "$RUNNER_TEMP/msp-fonts-zh.txt" ]; then sudo apt-get update && sudo apt-get install -y fontconfig fonts-noto-cjk; fi
       - name: Build image, migrate, start, check health and execute real browser MCP smoke
+        id: runtime-smoke
+        env:
+          QUALITY_IMAGE_CACHE_HIT: ${{ steps.image-cache.outputs.cache-hit }}
+          QUALITY_IMAGE_KEY: ${{ steps.image-identity.outputs.key }}
         run: |
           set -o pipefail
           bash deploy/quality-verify/ci-health.sh 2>&1 | tee .ci-runtime.log
+      - uses: actions/cache/save@v4
+        if: always() && steps.image-cache.outputs.cache-hit != 'true' && hashFiles('.ci-app-image.json') != ''
+        with:
+          key: ${{ steps.image-identity.outputs.key }}
+          path: |
+            .ci-app-image.tar
+            .ci-app-image.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -103,11 +129,13 @@ jobs:
           path: |
             .ci-health.json
             .ci-readiness.json
+            .ci-phase.json
             .ci-health-container.log
             .ci-core-proxy.log
             .ci-runtime.log
             .ci-core-smoke/
             .ci-backend-build.json
+            .ci-app-image.json
             .ci-test-summary.json
           if-no-files-found: ignore
           retention-days: 7

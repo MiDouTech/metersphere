@@ -240,6 +240,7 @@ jobs:
           path: |
             .ci-health.json
             .ci-readiness.json
+            .ci-phase.json
             .ci-health-container.log
             .ci-core-proxy.log
             .ci-core-smoke/

@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Restricted to the disposable CI runner');
@@ -13,15 +14,30 @@ const output = path.resolve('.ci-core-smoke');
 await mkdir(output, { recursive: true });
 const evidence = { commit: process.env.GITHUB_SHA, viewport: { width: 1366, height: 900 }, checks: [] };
 let checkpoint = 'browser-launch';
+const recordCheckpoint = value => {
+  checkpoint = value;
+  evidence.status = 'running';
+  evidence.currentCheckpoint = value;
+  writeFileSync(path.join(output, 'summary.json'), JSON.stringify(evidence, null, 2));
+};
+const deadline = setTimeout(() => {
+  evidence.status = 'failed';
+  evidence.failedCheckpoint = checkpoint;
+  evidence.failureCode = 'CORE_SMOKE_TIMEOUT';
+  writeFileSync(path.join(output, 'summary.json'), JSON.stringify(evidence, null, 2));
+  process.exit(124);
+}, 240000);
+deadline.unref();
 let browser;
 let page;
 const passed = (id, details = {}) => evidence.checks.push({ id, status: 'passed', ...details });
 try {
+  recordCheckpoint('browser-launch');
   browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ viewport: evidence.viewport, locale: 'zh-CN', timezoneId: 'Asia/Shanghai' });
   page = await context.newPage();
   page.setDefaultTimeout(45000);
-  checkpoint = 'login';
+  recordCheckpoint('login');
   await page.goto(`${origin}/#/login/admin`);
   await page.getByPlaceholder('请输入用户名', { exact: true }).fill('admin');
   await page.getByPlaceholder('请输入密码', { exact: true }).fill('metersphere');
@@ -41,7 +57,7 @@ try {
     assert.equal(body.code, 100200, `${method} ${url}: business code ${body.code}`);
     return body.data;
   };
-  checkpoint = 'isolated-project';
+  recordCheckpoint('isolated-project');
   const key = `CI-${process.env.GITHUB_RUN_ID}`;
   const project = await api('POST', '/organization/project/add', {
     organizationId: '100001', name: key, enable: true, userIds: ['admin'],
@@ -74,14 +90,16 @@ try {
     return { reply: body.data || body, status: response.status() };
   };
   const toolRaw = async (name, args) => {
-    const { reply, status } = await rpc('tools/call', { name: `metersphere.functional.${name}`, arguments: args });
+    const { reply, status } = await rpc('tools/call', {
+      name: name.startsWith('metersphere.') ? name : `metersphere.functional.${name}`, arguments: args,
+    });
     assert.equal(status, 200, `MCP ${name}: HTTP ${status}`);
     assert.equal(reply.error, undefined, `MCP ${name}: error code ${reply.error?.code}`);
     assert.notEqual(reply.result?.isError, true, `MCP ${name}: tool failure`);
     return reply.result;
   };
   const tool = async (name, args) => (await toolRaw(name, args)).structuredContent.result;
-  checkpoint = 'mcp-create-and-replay';
+  recordCheckpoint('mcp-create-and-replay');
   const module = await tool('module.create', { projectId, name: `${key}-执行目录`, requestId: `${key}-module` });
   const creation = { projectId, moduleId: module.id, requestId: `${key}-case`, name: `${key}-核心用例`, steps: [
     { num: 1, desc: '查看测试用例列表', expected: '本次创建的用例可见' },
@@ -91,7 +109,7 @@ try {
   assert.ok(caseId);
   assert.equal((await tool('case.create', creation)).caseId, caseId);
   passed('CORE-MCP-CREATE-IDEMPOTENT');
-  checkpoint = 'associate-two-plans';
+  recordCheckpoint('associate-two-plans');
   const shortName = `${key}-短计划`;
   const longName = `${key}-用于验证名称长度自适应和进度条对齐的长名称测试计划`;
   const plans = [];
@@ -121,7 +139,7 @@ try {
       'Plan selector and progress must share a horizontal centre');
     return selectBox.width;
   };
-  checkpoint = 'plan-summary-layout';
+  recordCheckpoint('plan-summary-layout');
   const shortWidth = await choose(shortName);
   const longWidth = await choose(longName);
   assert.ok(longWidth > shortWidth, 'Selector must adapt to the selected plan name');
@@ -140,7 +158,7 @@ try {
   await page.screenshot({ path: path.join(output, 'plan-summary-annotated.png'), fullPage: true });
   await page.locator('#ci-evidence-annotation').evaluate(element => element.remove());
   passed('CORE-PLAN-ONE-SELECTOR-AUTO-WIDTH-ALIGNED', { shortWidth, longWidth, planBounds, annotations: { 1: 'selector', 2: 'progress' } });
-  checkpoint = 'select-all-toggle';
+  recordCheckpoint('select-all-toggle');
   await page.getByRole('button', { name: '全选所有页', exact: true }).click();
   await expect(page.getByRole('button', { name: '取消全选所有页', exact: true })).toBeVisible();
   await expect(page.getByRole('row').filter({ hasText: creation.name }).getByRole('checkbox')).toBeChecked();
@@ -148,7 +166,7 @@ try {
   await expect(page.getByRole('button', { name: '全选所有页', exact: true })).toBeVisible();
   await expect(page.getByRole('row').filter({ hasText: creation.name }).getByRole('checkbox')).not.toBeChecked();
   passed('CORE-SELECT-ALL-TOGGLE');
-  checkpoint = 'case-evidence-publish';
+  recordCheckpoint('case-evidence-publish');
   const contract = await tool('execution.contract', { projectId, caseId });
   assert.equal(contract.case.steps.length, 1);
   const png = await page.screenshot({ path: path.join(output, 'execution-evidence.png') });
@@ -172,7 +190,7 @@ try {
     assert.equal(rows.list.length, 1); assert.equal(rows.list[0].lastExecResult, 'SUCCESS');
   }
   passed('CORE-MCP-CASE-IMAGE-PUBLISH-REPLAY-DOWNLOAD-PLAN-SYNC');
-  checkpoint = 'plan-detail-refresh-and-switch';
+  recordCheckpoint('plan-detail-refresh-and-switch');
   for (const [index, testPlanId] of plans.entries()) {
     await page.goto(`${origin}/#/test-plan/testPlanIndexDetail?id=${testPlanId}&orgId=100001&pId=${projectId}`);
     await expect(page.getByText([shortName, longName][index], { exact: false }).first()).toBeVisible();
@@ -183,7 +201,72 @@ try {
     await page.screenshot({ path: path.join(output, `plan-detail-${index + 1}.png`), fullPage: true });
   }
   passed('CORE-PLAN-REENTER-FRESH-STATE-AND-SWITCH');
-  checkpoint = 'token-revocation';
+  recordCheckpoint('bug-tag-layout');
+  const template = await tool('metersphere.bug.template.get', { projectId });
+  const customFields = {};
+  for (const field of template.customFields) {
+    if (!field.required || field.serverOwnedOnCreate) continue;
+    if (field.fieldId === 'handleUser' || field.type === 'MEMBER') customFields[field.fieldId] = 'admin';
+    else if (field.defaultValue) customFields[field.fieldId] = field.defaultValue;
+    else if (field.options?.length) {
+      const value = field.options[0].value;
+      customFields[field.fieldId] = field.type.startsWith('MULTIPLE_') ? JSON.stringify([value]) : String(value);
+    } else if (['INPUT', 'TEXT', 'TEXTAREA'].includes(field.type)) customFields[field.fieldId] = key;
+    else assert.fail(`Unsupported required CI fixture field: ${field.fieldId}`);
+  }
+  const tags = ['第一个验收标签组合有礼', '第二个验收标签资金记账', '第三个验收标签商户信息',
+    '第四个验收标签系统版本', '第五个验收标签长内容', '第六个验收标签布局'];
+  const bug = await tool('metersphere.bug.create', {
+    projectId, requestId: `${key}-bug`, title: `${key}-多标签布局验收`,
+    description: '独立CI临时缺陷，仅验证长标签布局', templateId: template.id, tags, customFields,
+  });
+  await page.goto(`${origin}/#/bug-management/index?orgId=100001&pId=${projectId}&id=${bug.id}`);
+  const tagField = page.locator('.bug-tags-field');
+  await expect(tagField).toContainText(tags.at(-1));
+  const expectedDate = page.locator('.arco-form-item:visible').filter({ has: page.getByPlaceholder('请选择日期') });
+  await expect(expectedDate).toHaveCount(1);
+  const tagBounds = await tagField.boundingBox();
+  const dateBounds = await expectedDate.boundingBox();
+  const metaBounds = await page.locator('.meta-block:visible').boundingBox();
+  assert.ok(tagBounds && dateBounds && metaBounds);
+  assert.ok(tagBounds.height > 48, 'Fixture must exercise multiline tags');
+  assert.ok(tagBounds.y >= dateBounds.y + dateBounds.height - 1, 'Tags overlap expected resolution date');
+  assert.ok(metaBounds.y >= tagBounds.y + tagBounds.height - 1, 'Tags overlap following metadata');
+  await page.screenshot({ path: path.join(output, 'bug-tags-layout.png'), fullPage: true });
+  passed('CORE-BUG-LONG-TAGS-NO-OVERLAP', { tagBounds, dateBounds, metaBounds });
+  recordCheckpoint('personal-token-columns-and-controls');
+  await page.goto(`${origin}/#/case-management/featureCase?orgId=100001&pId=${projectId}`);
+  await page.getByText('Administrator', { exact: true }).click();
+  await page.getByText('个人中心', { exact: true }).click();
+  await page.getByText('Agent配置', { exact: true }).click();
+  const personal = page.locator('.ms-personal-page-window');
+  const panelBounds = await personal.boundingBox();
+  assert.ok(panelBounds);
+  const tokenColumnBounds = {};
+  for (const title of ['启用', '操作']) {
+    const column = personal.getByRole('columnheader', { name: title, exact: true });
+    await expect(column).toBeVisible();
+    const box = await column.boundingBox(); assert.ok(box);
+    assert.ok(box.x >= panelBounds.x && box.x + box.width <= panelBounds.x + panelBounds.width + 1,
+      `${title} column must remain inside personal window`);
+    tokenColumnBounds[title] = box;
+  }
+  const tokenRow = personal.getByRole('row').filter({ hasText: key });
+  const tokenSwitch = tokenRow.getByRole('switch');
+  await expect(tokenSwitch).toHaveAttribute('aria-checked', 'true');
+  await tokenSwitch.click();
+  await expect(tokenSwitch).toHaveAttribute('aria-checked', 'false');
+  const uiDenied = await rpc('tools/call', { name: 'metersphere.functional.get', arguments: { caseId } });
+  assert.ok(uiDenied.status >= 400 || uiDenied.reply.error, 'UI disable must revoke MCP access');
+  await tokenSwitch.click();
+  await expect(tokenSwitch).toHaveAttribute('aria-checked', 'true');
+  assert.equal((await tool('get', { caseId })).caseId, caseId);
+  await tokenRow.getByRole('button', { name: '设置', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: '取消', exact: true }).click();
+  await page.screenshot({ path: path.join(output, 'personal-token-controls.png'), fullPage: true });
+  passed('CORE-PERSONAL-TOKEN-COLUMNS-AND-REAL-CONTROLS', { panelBounds, tokenColumnBounds });
+  recordCheckpoint('token-revocation');
   await api('POST', `/personal/agent-tokens/${token.id}/disable`);
   const denied = await rpc('tools/call', { name: 'metersphere.functional.get', arguments: { caseId } });
   assert.ok(denied.status >= 400 || denied.reply.error, 'Disabled token must not read cases');
@@ -196,5 +279,7 @@ try {
   throw error;
 } finally {
   await writeFile(path.join(output, 'summary.json'), JSON.stringify(evidence, null, 2));
+  checkpoint = 'browser-close';
   if (browser) await browser.close();
+  clearTimeout(deadline);
 }
