@@ -96,6 +96,7 @@ jobs:
           SOURCE_RUN: ${{ inputs.source_run || '40876632979' }}
         run: |
           set -euo pipefail
+          python3 deploy/quality-verify/test_workflow_cache_contract.py
           [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > "$RUNNER_TEMP/source-run.json"
           test "$(jq -r .path "$RUNNER_TEMP/source-run.json")" = .github/workflows/msp-remediation-verification.yml
@@ -124,7 +125,6 @@ jobs:
           path: |
             backend/app/target/app-3.x.jar
             .ci-backend-build.json
-            .ci-frontend-build.json
             .ci-test-summary.json
       - name: Validate package, source and complete test evidence
         env:
@@ -205,6 +205,7 @@ jobs:
             .ci-runtime.log
             .ci-core-smoke/
             .ci-backend-build.json
+            .ci-frontend-build.json
             .ci-app-image.json
             .ci-test-summary.json
           if-no-files-found: ignore

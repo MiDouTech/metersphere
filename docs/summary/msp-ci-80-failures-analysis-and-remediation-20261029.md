@@ -639,3 +639,10 @@ CI 40843550676 / 564297b1ce：1072项，72failure、65error、0skipped、0缺失
 为不重打后端，将前后端验收分开：后端JAR及镜像复用第20/23轮，要求当前backend Git树、受控外层构建输入及JAR/imageId一致；当前frontend必须由同轮前端job构建或按精确frontend Git树复用成功产物，并验证产物sourceCommit确实具有该frontend树。浏览器代理实际提供当前生产前端，API请求进入已校验后端；代理根index内容还逐字比对当前dist/index.html。后端JAR内嵌静态资源仍为第20轮版本，不将其声称为新前端；此处验证独立前端/API部署模式，生产发布如使用内嵌前端模式仍须在正式打包流程重新组装。后端源码不变，无需重跑2123项；改动前端必须正式构建，不把旧产物+临时CSS当实现。
 
 第23轮已按JAR/Dockerfile/bridge/入口脚本身份保存451MB应用镜像缓存；后续加载同一imageId，避免重复拉取慢基础镜像或重建应用。验收证据见verification-round23.json。当前UI修复、长标签、Token列交互、后续MCP提交/附件/计划详情路径均待下一轮实际验收，仍不合并。
+
+
+### 6.27 新前端构建通过与缓存路径契约补修
+
+运行40888480458 / ff552bc0f3的frontend job全部成功，包含选择切换/SFC/modal契约、caseTable.vue stylelint、vue-tsc和Vite生产构建；新frontend树df82344053b5c5199271586145b87144ecae001f产物已缓存。runtime尚未启动容器：误将.ci-frontend-build.json加入旧后端缓存恢复path，虽然key相同，但Actions会将path集合计入缓存version，导致找不到旧记录。此项是本次工作流编辑错误，不是依赖被删除或后端失败。
+
+已恢复后端生产端/恢复端完全相同的3个路径；前端元数据仅在其独立产物/缓存及验收证据内。增加3项真实workflow生产/消费缓存path契约测试，包括该误增路径负向回归，并在恢复前执行。新前端、后端JAR和应用镜像可分别复用，无需重跑已过构建。配置单元及YAML/diff检查通过；剩余实际页面/MCP验收继续执行，未合并。
