@@ -1,9 +1,10 @@
+import ts from 'typescript';
+
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import vm from 'node:vm';
-import ts from 'typescript';
 
 const require = createRequire(import.meta.url);
 const source = readFileSync(new URL('../src/hooks/useModal.ts', import.meta.url), 'utf8');
@@ -39,7 +40,9 @@ function modalHarness() {
 async function confirm(dialog) {
   const decisions = [];
   dialog.onBeforeOk((closed) => decisions.push(closed));
-  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
   return decisions;
 }
 
@@ -110,7 +113,9 @@ test('pending request prevents cancellation and only closes after settlement', a
   assert.equal(dialogs[0].onBeforeCancel(), false);
   assert.deepEqual(decisions, []);
   release();
-  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
   assert.deepEqual(decisions, [true]);
   assert.equal(refs[0].value, false);
 });
