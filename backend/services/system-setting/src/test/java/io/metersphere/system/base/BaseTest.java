@@ -209,12 +209,24 @@ public abstract class BaseTest {
         // 使用对应的用户认证信息来请求, 非Admin
         AuthInfo authInfo = permissionAuthInfoMap.get(userRoleType);
         MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.get(getBasePath() + url, uriVariables);
-        return setRequestBuilderHeader(requestBuilder, authInfo == null ? adminAuthInfo : authInfo);
+        Assertions.assertNotNull(authInfo, "Missing real permission-probe identity: " + userRoleType);
+        return setRequestBuilderHeader(requestBuilder, authInfo);
     }
 
     protected void requestGetPermissionTestInOrganization(String permissionId, String url, String organizationId) throws Exception {
-        requestPermissionTest(permissionId, url, () -> getRequestBuilderByRole(url, "ORGANIZATION")
-                .header(SessionConstants.CURRENT_ORGANIZATION, organizationId));
+        UserRolePermission grant = initUserRolePermission("ORGANIZATION", permissionId);
+        try {
+            refreshUserPermission("ORGANIZATION");
+            mockMvc.perform(getRequestBuilderByRole(url, "ORGANIZATION")
+                    .header(SessionConstants.CURRENT_ORGANIZATION, organizationId)).andExpect(status().isOk());
+            mockMvc.perform(getRequestBuilderByRole(url, "ORGANIZATION")
+                    .header(SessionConstants.CURRENT_ORGANIZATION, "another-organization")).andExpect(status().isForbidden());
+        } finally {
+            userRolePermissionMapper.deleteByPrimaryKey(grant.getId());
+            refreshUserPermission("ORGANIZATION");
+        }
+        mockMvc.perform(getRequestBuilderByRole(url, "ORGANIZATION")
+                .header(SessionConstants.CURRENT_ORGANIZATION, organizationId)).andExpect(status().isForbidden());
     }
 
     protected ResultActions requestPost(String url, Object param, Object... uriVariables) throws Exception {
@@ -605,48 +617,28 @@ public abstract class BaseTest {
      * @param requestBuilderGetFunc 请求构造器，一个 builder 只能使用一次，需要重新生成
      * @throws Exception
      */
+    @Resource
+    private io.metersphere.system.mapper.UserRoleRelationMapper permissionProbeRelationMapper;
+
+    private java.util.Set<String> probeRelationIds(String userId) {
+        io.metersphere.system.domain.UserRoleRelationExample example = new io.metersphere.system.domain.UserRoleRelationExample();
+        example.createCriteria().andUserIdEqualTo(userId);
+        return permissionProbeRelationMapper.selectByExample(example).stream()
+                .map(io.metersphere.system.domain.UserRoleRelation::getId).collect(java.util.stream.Collectors.toSet());
+    }
+
+    private void cleanProbeCreatedAssignments(String userId, java.util.Set<String> originalIds) {
+        java.util.Set<String> newIds = probeRelationIds(userId);
+        newIds.removeAll(originalIds);
+        if (!newIds.isEmpty()) {
+            io.metersphere.system.domain.UserRoleRelationExample example = new io.metersphere.system.domain.UserRoleRelationExample();
+            example.createCriteria().andUserIdEqualTo(userId).andIdIn(new java.util.ArrayList<>(newIds));
+            permissionProbeRelationMapper.deleteByExample(example);
+        }
+    }
+
     private void requestPermissionTest(String permissionId, String url, Supplier<MockHttpServletRequestBuilder> requestBuilderGetFunc) throws Exception {
-        String roleId = permissionId.split("_")[0];
-        // 先给初始化的用户组添加权限
-        UserRolePermission userRolePermission = initUserRolePermission(roleId, permissionId);
-
-        // 添加后刷新下权限
-        refreshUserPermission(roleId);
-
-        int status = 200;
-        try {
-            status = mockMvc.perform(requestBuilderGetFunc.get())
-                    .andReturn()
-                    .getResponse()
-                    .getStatus();
-        } catch (Exception e) {
-            LogUtils.error(e);
-        }
-
-        // 校验是否有权限
-        if (status == HttpStatus.FORBIDDEN.value()) {
-            throw new MSException(String.format("接口 %s 权限校验失败 %s", getBasePath() + url, permissionId));
-        }
-
-        // 删除权限
-        userRolePermissionMapper.deleteByPrimaryKey(userRolePermission.getId());
-
-        // 删除后刷新下权限
-        refreshUserPermission(roleId);
-
-        // 删除权限后，调用接口，校验是否没有权限
-        try {
-            status = mockMvc.perform(requestBuilderGetFunc.get())
-                    .andReturn()
-                    .getResponse()
-                    .getStatus();
-        } catch (Exception e) {
-            LogUtils.error(e);
-        }
-
-        if (status != HttpStatus.FORBIDDEN.value()) {
-            throw new MSException(String.format("接口 %s 没有设置权限 %s", getBasePath() + url, permissionId));
-        }
+        requestPermissionsTest(List.of(permissionId), url, requestBuilderGetFunc);
     }
 
     /**
@@ -658,43 +650,23 @@ public abstract class BaseTest {
      * @throws Exception 请求抛出异常
      */
     private void requestPermissionsTest(List<String> permissionIds, String url, Supplier<MockHttpServletRequestBuilder> requestBuilderGetFunc) throws Exception {
-        // 相同的用户组
         String roleId = permissionIds.getFirst().split("_")[0];
-        for (String permissionId : permissionIds) {
-            // 多个权限插入同一个用户组
-            initUserRolePermission(roleId, permissionId);
+        java.util.Set<String> originalRelations = probeRelationIds(roleId);
+        List<String> grantIds = new java.util.ArrayList<>();
+        try {
+            for (String permissionId : permissionIds) grantIds.add(initUserRolePermission(roleId, permissionId).getId());
+            refreshUserPermission(roleId);
+            int allowedStatus = mockMvc.perform(requestBuilderGetFunc.get()).andReturn().getResponse().getStatus();
+            Assertions.assertTrue(allowedStatus < 500 && allowedStatus != 401 && allowedStatus != 403,
+                    () -> "Permission probe did not reach business validation: " + url + " -> " + allowedStatus);
+        } finally {
+            // Creation endpoints can grant their creator project-admin status. Removing only the
+            // tested grant would leave this legitimate bypass and contaminate all later probes.
+            grantIds.forEach(userRolePermissionMapper::deleteByPrimaryKey);
+            cleanProbeCreatedAssignments(roleId, originalRelations);
+            refreshUserPermission(roleId);
         }
-
-        // 根据roleId刷新用户
-        refreshUserPermissionByRoleId(roleId);
-
-        int status = mockMvc.perform(requestBuilderGetFunc.get())
-                .andReturn()
-                .getResponse()
-                .getStatus();
-
-        // 校验是否有权限
-        if (status == HttpStatus.FORBIDDEN.value()) {
-            throw new MSException(String.format("接口 %s 权限校验失败 %s", getBasePath() + url, permissionIds));
-        }
-
-        // 删除权限
-        UserRolePermissionExample example = new UserRolePermissionExample();
-        example.createCriteria().andRoleIdEqualTo(roleId);
-        userRolePermissionMapper.deleteByExample(example);
-
-        // 删除后刷新下权限
-        refreshUserPermissionByRoleId(roleId);
-
-        // 删除权限后，调用接口，校验是否没有权限
-        status = mockMvc.perform(requestBuilderGetFunc.get())
-                .andReturn()
-                .getResponse()
-                .getStatus();
-
-        if (status != HttpStatus.FORBIDDEN.value()) {
-            throw new MSException(String.format("接口 %s 没有设置权限 %s", getBasePath() + url, permissionIds));
-        }
+        mockMvc.perform(requestBuilderGetFunc.get()).andExpect(status().isForbidden());
     }
 
     /**

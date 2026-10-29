@@ -23,7 +23,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          run_id=40672471196
+          run_id=40803524899
           source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha)
           frontend_ok=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs" --jq '[.jobs[] | select(.name == "frontend" and .conclusion == "success")] | length')
           if [ "$frontend_ok" = 1 ] && [ "$(git rev-parse "$source_sha:frontend")" = "$(git rev-parse HEAD:frontend)" ] && gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name frontend-static --dir frontend/dist; then
@@ -111,7 +111,7 @@ jobs:
         env:
           MAVEN_OPTS: -Xmx1536m
       - name: Build application image and verify isolated health
-        if: always() && (steps.full-tests.outcome == 'success' || steps.diagnostic-package.outcome == 'success')
+        if: always() && steps.full-tests.outcome == 'success'
         run: bash deploy/quality-verify/ci-health.sh
         env:
           QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}

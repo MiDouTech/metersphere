@@ -267,7 +267,7 @@ public class PersonalControllerTests extends BaseTest {
         request.setId(IDGenerator.nextStr());
         request.setOldPassword(RsaUtils.publicEncrypt("metersphere", rsaKey.getPublicKey()));
         request.setNewPassword(CodingUtils.md5("metersphere333"));
-        this.requestPost(PersonalRequestUtils.URL_PERSONAL_UPDATE_PASSWORD, request).andExpect(status().is5xxServerError());
+        this.requestPost(PersonalRequestUtils.URL_PERSONAL_UPDATE_PASSWORD, request).andExpect(businessError("无权操作非本人账户"));
 
         //权限校验
         request = new PersonalUpdatePasswordRequest();
@@ -327,7 +327,7 @@ public class PersonalControllerTests extends BaseTest {
         String id = saveModel("个人测试模型1", "admin");
         this.requestGetWithOk(PersonalRequestUtils.URL_PERSONAL_MODEL_DETAIL+id);
         String id2 = saveModel("个人测试模型2", "admin2");
-        this.requestGet(PersonalRequestUtils.URL_PERSONAL_MODEL_DETAIL+id2).andExpect(status().is5xxServerError());
+        this.requestGet(PersonalRequestUtils.URL_PERSONAL_MODEL_DETAIL+id2).andExpect(businessError("模型信息不存在"));
 
 
     }

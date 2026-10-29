@@ -130,7 +130,6 @@ public class OrganizationUserRoleController {
     @PostMapping("/add-member")
     @Operation(summary = "系统设置-组织-用户组-添加用户组成员")
     @RequiresPermissions(PermissionConstants.ORGANIZATION_USER_ROLE_READ_UPDATE)
-    @Log(type = OperationLogType.UPDATE, expression = "#msClass.editMemberLog(#request)", msClass = OrganizationUserRoleLogService.class)
     public void addMember(@Validated @RequestBody OrganizationUserRoleMemberEditRequest request) {
         organizationUserRoleService.addMember(request, SessionUtils.getUserId());
     }

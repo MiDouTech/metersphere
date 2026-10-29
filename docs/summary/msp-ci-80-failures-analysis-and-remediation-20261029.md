@@ -280,3 +280,17 @@ testAdd 在“配置重复”分支得到正确业务拒绝后，旧 5xx 断言�
 新发现的测试覆盖缺口：部分用例将 ResultMatcher 作为 BaseTest 的 URI 可变参数传入，实际上未执行状态断言。已在个人 API Key、本地配置本次相关调用改为明确 andExpect；不能把此前这些调用没有失败视为契约正确。
 
 已执行低资源验证：有界 javac 编译当前改动成功；PermissionControlServiceTests + RoleRelationWriterTests 共 32 项通过（0 跳过、0 失败）。编译/运行日志暂存于 .codex-tmp/ci-remediation-20261029。未启动本机 Docker 或应用栈；当前本机余量约 1.1 GiB，后续真实 MySQL 与完整构建使用既有远端 CI。
+
+
+### 6.1 首轮实际复验与进一步定位
+
+- CI [40803524899](https://github.com/chenqifen-miduo/metersphere/actions/runs/40803524899)，提交 899c03d6fc：前端成功；后端执行 550 项，29 failure、47 error，未通过。测试数增加 9 项，不能仅用失败总数与原 80 比较完成率。
+- 新增真实 MySQL 唯一键并发、重复回放、无关主键冲突回滚 2 项均通过；共享 writer 单元 5 项也通过。
+- S07 已取得精确差集：[逐项证据](../testing/msp-ci-failures-20261029/permission-definition-diff.json)。原漏项不是单一原因：4 个安装包权限定义缺失；另有 4 个实际定义缺口（PROJECT_BASE_INFO:READ、TEST_ASSET_CATEGORY:ASSIGN/MANAGE、TEST_ASSET_SOURCE:GOVERN）；4 个已由 V57 停用的旧 workspace/classify 权限；4 个仅由其他模块提供的现行权限。8 个实际漏项均补活动定义；已退役项保留显式兼容清单并校验停用迁移，不加入活动树、不恢复入口；单模块断言只允许有证据的外部/退役归属，仍拒绝未定义或遗漏的本模块权限。新增 app 完整 classpath 定义覆盖回归。没有删除授权或自动扩权。
+- 多个此前未执行到的权限探针在正向请求创建项目，使探针用户得到该项目管理员身份。原探针只删除一个权限位，既未清理新增管理员关系，也未保证异常时清理，故反向断言及后续探针持续失败。现改为关系快照、finally 删除本次新增关系和授权、刷新真实会话，再准确断言 403；禁止缺少身份时回退管理员身份。产品管理员规则不变。
+- 组织联系人集成断言与 6b05f8d997（2026-07-29，stop syncing email/phone and use userid for @mentions）的明确规则冲突。已有独立单元测试同样要求 phone/email=null、wecomUserid 明文；此次对齐集成断言，没有重新暴露手机号/邮箱。
+- 本轮工作流快照 SQL 错将 status_definition 当作有 id 列，已修为 status_id、definition_id。这是本轮新增测试代码错误，已纠正。
+- 继续逐个核对进入后续分支后暴露的业务错误断言，采用源代码抛出的具体 message key，未使用任意 4xx 替代 500。
+- 默认组织成员、批量项目管理员、批量项目成员相邻写路径补入共享 writer；本次真实新增的审计同步加入原事务。组织角色 add-member 仅对真实新增成员记一次审计，移除无条件日志切面；删除成员入口不变。新增重复回放关系 ID、数量、审计数量不变的集成断言。
+- 新工作流 API 保存、发布版本冲突、启用、使用中禁止删除、禁用后删除的事务回滚集成测试待下一轮 CI；不会改变测试以外的活动流程。
+- CI 只在完整测试成功后运行镜像/健康检查；失败时仍执行独立打包诊断，镜像检查标为未执行而不是通过。前端仅在树哈希相同且既有成功 artifact 可取得时复用本轮成功产物，避免重复构建。

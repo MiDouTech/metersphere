@@ -69,7 +69,7 @@ public class OrganizationStatusFlowSettingControllerTest extends BaseTest {
         return io.metersphere.sdk.util.JSON.toJSONString(List.of(
                 jdbcTemplate.queryForList("SELECT * FROM status_item ORDER BY id"),
                 jdbcTemplate.queryForList("SELECT * FROM status_flow ORDER BY id"),
-                jdbcTemplate.queryForList("SELECT * FROM status_definition ORDER BY id")));
+                jdbcTemplate.queryForList("SELECT * FROM status_definition ORDER BY status_id, definition_id")));
     }
 
     private static StatusItem addStatusItem;

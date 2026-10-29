@@ -1,5 +1,27 @@
 [
   {
+    "id": "TEST_ASSET_GOVERNANCE",
+    "name": "permission.test_asset_governance.name",
+    "type": "ORGANIZATION",
+    "children": [
+      {
+        "id": "TEST_ASSET_CATEGORY",
+        "name": "permission.test_asset_category.name",
+        "permissions": [
+          { "id": "TEST_ASSET_CATEGORY:MANAGE", "name": "permission.test_asset_category.manage" },
+          { "id": "TEST_ASSET_CATEGORY:ASSIGN", "name": "permission.test_asset_category.assign" }
+        ]
+      },
+      {
+        "id": "TEST_ASSET_SOURCE",
+        "name": "permission.test_asset_source.name",
+        "permissions": [
+          { "id": "TEST_ASSET_SOURCE:GOVERN", "name": "permission.test_asset_source.govern" }
+        ]
+      }
+    ]
+  },
+  {
     "id": "SYSTEM_EXECUTION_QUALITY",
     "name": "平台质量门禁",
     "type": "SYSTEM",

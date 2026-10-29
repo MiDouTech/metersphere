@@ -624,11 +624,11 @@ public class SystemProjectControllerTests extends BaseTest {
         this.requestPost(addProject, project, BAD_REQUEST_MATCHER);
         //项目成员在系统中不存在
         project = this.generatorAdd(DEFAULT_ORGANIZATION_ID, "name", null, true, List.of("admin", "admin1", "admin3"));
-        this.requestPost(addProject, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(addProject, project, businessError(io.metersphere.sdk.util.Translator.get("user_not_exist")));
         //资源池不存在
         project = this.generatorAdd(DEFAULT_ORGANIZATION_ID, "pool", null, true, List.of("admin"));
         project.setResourcePoolIds(List.of("resourcePoolId3"));
-        this.requestPost(addProject, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(addProject, project, businessError(io.metersphere.sdk.util.Translator.get("resource_pool_not_exist")));
         //成员为空
         project = this.generatorAdd(DEFAULT_ORGANIZATION_ID, "name", null, true, null);
         this.requestPost(addProject, project, BAD_REQUEST_MATCHER);
@@ -836,11 +836,11 @@ public class SystemProjectControllerTests extends BaseTest {
         this.requestPost(updateProject, project, BAD_REQUEST_MATCHER);
         //项目不存在
         project = this.generatorUpdate(DEFAULT_ORGANIZATION_ID, "1111", "123", null, true, List.of("admin"));
-        this.requestPost(updateProject, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(updateProject, project, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
         //资源池不存在
         project = this.generatorUpdate(DEFAULT_ORGANIZATION_ID, "projectId2", "pool-edit", "description", true, List.of("admin"));
         project.setResourcePoolIds(List.of("resourcePoolId3"));
-        this.requestPost(updateProject, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(updateProject, project, businessError(io.metersphere.sdk.util.Translator.get("resource_pool_not_exist")));
         //成员为空
         project = this.generatorUpdate(DEFAULT_ORGANIZATION_ID, "projectId2", "name", null, true, null);
         this.requestPost(updateProject, project, BAD_REQUEST_MATCHER);
@@ -927,7 +927,7 @@ public class SystemProjectControllerTests extends BaseTest {
         projectAddMemberRequest.setProjectId("projectId111");
         projectAddMemberRequest.setUserIds(List.of("admin1"));
         projectAddMemberRequest.setUserRoleIds(List.of(InternalUserRole.PROJECT_MEMBER.getValue()));
-        this.requestPost(addProjectMember, projectAddMemberRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(addProjectMember, projectAddMemberRequest, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
     }
 
     @Test
@@ -1032,11 +1032,11 @@ public class SystemProjectControllerTests extends BaseTest {
         //项目id不存在
         projectId = "projectId111";
         userId = "admin1";
-        this.responseGet(removeProjectMember + projectId + "/" + userId, ERROR_REQUEST_MATCHER);
+        this.responseGet(removeProjectMember + projectId + "/" + userId, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
         //用户id为最后一个管理员
         projectId = "projectId5";
         userId = "admin";
-        this.responseGet(removeProjectMember + projectId + "/" + userId, ERROR_REQUEST_MATCHER);
+        this.responseGet(removeProjectMember + projectId + "/" + userId, businessError(io.metersphere.sdk.util.Translator.get("keep_at_least_one_administrator")));
     }
 
     @Test
@@ -1155,7 +1155,7 @@ public class SystemProjectControllerTests extends BaseTest {
         project.setId("1111");
         project.setName("updateName");
         project.setOrganizationId(DEFAULT_ORGANIZATION_ID);
-        this.requestPost(updateName, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(updateName, project, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
     }
 
 

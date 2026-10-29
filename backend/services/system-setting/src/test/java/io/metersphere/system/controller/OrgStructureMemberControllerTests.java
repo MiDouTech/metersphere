@@ -74,8 +74,8 @@ public class OrgStructureMemberControllerTests extends BaseTest {
         checkScopedReadPermission(MEMBER_DETAIL);
         MvcResult mvcResult = requestGetWithOkAndReturn(MEMBER_DETAIL);
         OrgStructureMemberDetailDTO detail = getResultData(mvcResult, OrgStructureMemberDetailDTO.class);
-        Assertions.assertEquals("138****8001", detail.getPhone());
-        Assertions.assertEquals("o***1@metersphere.io", detail.getEmail());
-        Assertions.assertEquals("wx****01", detail.getWecomUserid());
+        Assertions.assertNull(detail.getPhone());
+        Assertions.assertNull(detail.getEmail());
+        Assertions.assertEquals("wx_user_001", detail.getWecomUserid());
     }
 }

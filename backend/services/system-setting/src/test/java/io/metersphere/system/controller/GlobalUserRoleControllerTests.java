@@ -284,7 +284,14 @@ class GlobalUserRoleControllerTests extends BaseTest {
             }
         });
         // 校验是不是获取的数据中包含了该用户组所有的权限
-        Assertions.assertTrue(CollectionUtils.isEmpty(permissionIds), () -> "Granted permissions missing from runtime definitions: " + new TreeSet<>(permissionIds));
+        // This module's classpath does not include case/plan/project manifests, while Flyway
+        // seeds grants for the full application. Every remainder must have a real external owner;
+        // missing definitions and missing local definitions still fail, rather than being ignored.
+        Map<String, String> owners = io.metersphere.system.config.RepositoryPermissionDefinitions.owners();
+        for (String id : permissionIds) {
+            Assertions.assertNotNull(owners.get(id), () -> "Granted permission has no definition in any module: " + id);
+            Assertions.assertNotEquals("system-setting", owners.get(id), () -> "Local permission missing from returned tree: " + id);
+        }
 
         // @@操作非全局用户组异常
         assertErrorCode(this.requestGet(PERMISSION_SETTING, getNonGlobalUserRole().getId()), GLOBAL_USER_ROLE_PERMISSION);

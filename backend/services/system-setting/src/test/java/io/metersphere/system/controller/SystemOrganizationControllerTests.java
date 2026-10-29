@@ -194,7 +194,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
         this.requestPost(ORGANIZATION_UPDATE, request).andExpect(businessError("组织不存在"));
         // 组织存在, 但是名称重复
         request.setId("default-organization-5");
-        this.requestPost(ORGANIZATION_UPDATE, request).andExpect(status().is5xxServerError());
+        this.requestPost(ORGANIZATION_UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("organization_name_already_exists")));
         request.setUserIds(new ArrayList<>());
         this.requestPost(ORGANIZATION_UPDATE, request).andExpect(status().isBadRequest());
     }
@@ -409,13 +409,13 @@ public class SystemOrganizationControllerTests extends BaseTest {
         organizationMemberRequest.setOrganizationId("default-organization-3");
         organizationMemberRequest.setUserIds(Arrays.asList("SccNotExistOne", "default-admin"));
         organizationMemberRequest.setUserRoleIds(List.of("default-role-1"));
-        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, businessError(io.metersphere.sdk.util.Translator.get("user.not.exist")));
         // 组织不存在
         organizationMemberRequest = new OrganizationMemberRequest();
         organizationMemberRequest.setOrganizationId("default-organization-x");
         organizationMemberRequest.setUserIds(Arrays.asList("admin", "default-admin"));
         organizationMemberRequest.setUserRoleIds(List.of("default-role-1"));
-        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
     }
 
     @Test
@@ -692,7 +692,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
 
         request.setOrganizationId("default-organization-2");
         request.setUserId("other-user");
-        this.requestPost(ORGANIZATION_SWITCH, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_SWITCH, request, businessError(io.metersphere.sdk.util.Translator.get("not_authorized")));
     }
 
     @Test

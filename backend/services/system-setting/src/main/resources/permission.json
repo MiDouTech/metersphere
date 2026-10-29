@@ -6,7 +6,7 @@
     "children": [
       {
         "id": "SYSTEM_AGENT_PACKAGE",
-        "name": "Agent 安装包接口",
+        "name": "permission.system_agent_package.name",
         "permissions": [
           { "id": "SYSTEM_AGENT_PACKAGE:READ" },
           { "id": "SYSTEM_AGENT_PACKAGE:READ+ADD" },

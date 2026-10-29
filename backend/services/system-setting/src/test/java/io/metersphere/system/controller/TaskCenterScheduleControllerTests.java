@@ -144,7 +144,8 @@ class TaskCenterScheduleControllerTests extends BaseTest {
                         .header(SessionConstants.CURRENT_ORGANIZATION, "DEFAULT_ORGANIZATION_ID")
                         .content(JSON.toJSONString(request))
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(businessError("项目不存在"));
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get(
+                        SCHEDULED_ORG_PAGE.equals(url) ? "organization_not_exist" : "project_not_exist")));
     }
 
 

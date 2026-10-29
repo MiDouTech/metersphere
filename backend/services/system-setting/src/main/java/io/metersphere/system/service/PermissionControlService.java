@@ -148,6 +148,7 @@ public class PermissionControlService {
                 throw new MSException("无权保存当前角色设置");
             }
             UserRole original = globalUserRoleService.getWithCheck(request.getId());
+            globalUserRoleService.checkInternalUserRole(original);
             globalUserRoleService.checkAdminUserRole(original);
             if (request.getType() != null && !StringUtils.equals(original.getType(), request.getType())) {
                 throw new MSException("角色类型创建后不可修改");
