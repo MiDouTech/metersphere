@@ -83,7 +83,7 @@ public class BugCommentControllerTests extends BaseTest {
         request.setBugId("default-bug-id-for-comment-x");
         request.setContent("This is a comment test!");
         request.setEvent(NoticeConstants.Event.COMMENT);
-        this.requestPost(BUG_COMMENT_ADD, request, businessValidationError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessError(108001, "缺陷不存在"));
         // 回复评论, 没有父级评论ID
         request.setReplyUser("oasis-user-id1");
         request.setBugId("default-bug-id-for-comment");

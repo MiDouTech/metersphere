@@ -1165,7 +1165,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         caseList.forEach(apiTestCase -> Assertions.assertEquals(apiTestCase.getPriority(), "P3"));
         //优先级数据为空
         request.setPriority(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //ids为空的时候
         request.setPriority("P3");
         request.setSelectAll(false);
@@ -1184,7 +1184,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         caseList.forEach(apiTestCase -> Assertions.assertEquals(apiTestCase.getStatus(), ApiDefinitionStatus.DEBUGGING.name()));
         //状态数据为空
         request.setStatus(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //环境
         request.setStatus(null);
         request.setType("Environment");
@@ -1198,13 +1198,13 @@ public class ApiTestCaseControllerTests extends BaseTest {
         caseList.forEach(apiTestCase -> Assertions.assertEquals(apiTestCase.getEnvironmentId(), environments.getFirst().getId()));
         //环境数据为空
         request.setEnvironmentId(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //环境不存在
         request.setEnvironmentId("111");
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //类型错误
         request.setType("111");
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
 
         //校验日志
         checkLog(apiTestCase.getId(), OperationLogType.UPDATE);

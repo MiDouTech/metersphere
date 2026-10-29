@@ -81,6 +81,6 @@ public class BugSyncExtraServiceTests extends BaseTest {
         bugAttachmentService.saveSyncAttachmentToMs(platform, "bug-for-sync-extra", "sync-extra-file-associate-B", "TEST-1", "project-for-sync-extra");
         MSException msException = assertThrows(MSException.class, () ->
                 bugAttachmentService.saveSyncAttachmentToMs(platform, "bug-for-sync-extra", "sync-extra-file-associate-B", "TEST-2", "project-for-sync-extra"));
-        assertEquals(msException.getMessage(), "read bytes exception occurred!");
+        assertEquals("read bytes exception occurred!", org.apache.commons.lang3.exception.ExceptionUtils.getThrowableList(msException).getLast().getMessage());
     }
 }

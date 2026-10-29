@@ -672,7 +672,7 @@ public class TestPlanControllerTests extends BaseTest {
                 testPlanTestService.resetProjectModule(project, PROJECT_MODULE);
             }
             if (i == 20) {
-                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(businessError("该项目的模块菜单检查失败"));
+                this.requestPost(URL_POST_TEST_PLAN_ADD, itemRequest).andExpect(businessError("测试计划组下最多只能有20个子计划"));
             } else {
                 MvcResult mvcResult = this.requestPostWithOkAndReturn(URL_POST_TEST_PLAN_ADD, itemRequest);
                 String returnStr = mvcResult.getResponse().getContentAsString();
@@ -2572,10 +2572,14 @@ public class TestPlanControllerTests extends BaseTest {
     @Order(303)
     public void testCopy() throws Exception {
         // Explicit precondition: copying an archived group is rejected.
-        TestPlan archivedGroup = testPlanMapper.selectByPrimaryKey(groupTestPlanId35);
+        TestPlan archivedGroup = new TestPlan();
+        BeanUtils.copyBean(archivedGroup, testPlanMapper.selectByPrimaryKey("wx_test_plan_id_2"));
+        archivedGroup.setId(IDGenerator.nextStr());
+        archivedGroup.setName("ARCHIVED-COPY-" + archivedGroup.getId());
+        archivedGroup.setNum(NumGenerator.nextNum(archivedGroup.getProjectId(), ApplicationNumScope.TEST_PLAN));
         archivedGroup.setStatus(TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED);
-        testPlanMapper.updateByPrimaryKeySelective(archivedGroup);
-        requestGet(String.format(URL_TEST_PLAN_COPY, groupTestPlanId35)).andExpect(businessValidationError());
+        testPlanMapper.insert(archivedGroup);
+        requestGet(String.format(URL_TEST_PLAN_COPY, archivedGroup.getId())).andExpect(businessValidationError());
 
         // 2.计划 有用例
         MvcResult mvcResult1 = this.requestGetWithOkAndReturn(String.format(URL_TEST_PLAN_COPY, "wx_test_plan_id_4"));

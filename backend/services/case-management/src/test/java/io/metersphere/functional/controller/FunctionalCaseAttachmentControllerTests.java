@@ -337,7 +337,7 @@ public class FunctionalCaseAttachmentControllerTests extends BaseTest {
     }
 
     private void doUploadTempFileFalse(MockMultipartFile file) throws Exception {
-        this.requestUploadFile(UPLOAD_TEMP, file).andExpect(status().is5xxServerError());
+        this.requestUploadFile(UPLOAD_TEMP, file).andExpect(businessError("文件名称不能为空"));
     }
 
 }

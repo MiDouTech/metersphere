@@ -222,7 +222,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
         Assertions.assertEquals(apiReport.getName(), newName);
         mockMvc.perform(getPostRequestBuilder(RENAME + "api-report", newName))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessValidationError());
         // @@校验权限
         requestPostPermissionTest(PermissionConstants.PROJECT_API_REPORT_UPDATE, RENAME + "scenario-report-id0", newName);
     }
@@ -379,11 +379,11 @@ public class ApiScenarioReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(GET + "test"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessValidationError());
 
         mockMvc.perform(getRequestBuilder(GET + "scenario-report-id200000"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessValidationError());
 
         // @@校验权限
         requestGetPermissionTest(PermissionConstants.PROJECT_API_REPORT_READ, GET + "test-scenario-report-id");

@@ -6,7 +6,7 @@ on:
         description: 'Target failed API classes first; full is required for final acceptance'
         type: choice
         default: full
-        options: [full, api-failures, downstream]
+        options: [full, api-failures, downstream, affected]
   push:
     branches: ['codex/weekly-remediation-20261028']
 permissions:
@@ -70,7 +70,7 @@ jobs:
   backend:
     needs: frontend
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     services:
       redis:
         image: redis:7.2-alpine
@@ -120,7 +120,7 @@ jobs:
           QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
         run: docker exec "$QUALITY_MYSQL_CONTAINER" mysql -uroot -pquality-test-only -e 'CREATE DATABASE IF NOT EXISTS quality_verify CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci'
       - id: full-tests
-        if: inputs.verification_scope != 'api-failures' && inputs.verification_scope != 'downstream' && !contains(github.event.head_commit.message, '[api-failures]') && !contains(github.event.head_commit.message, '[downstream]')
+        if: inputs.verification_scope != 'api-failures' && inputs.verification_scope != 'downstream' && inputs.verification_scope != 'affected' && !contains(github.event.head_commit.message, '[api-failures]') && !contains(github.event.head_commit.message, '[downstream]') && !contains(github.event.head_commit.message, '[affected]')
         run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true package
         env:
           MAVEN_OPTS: -Xmx1536m
@@ -144,21 +144,90 @@ jobs:
           -Dsurefire.failIfNoSpecifiedTests=false test
         env:
           MAVEN_OPTS: -Xmx1536m
-      - name: Require all modules executed with zero failures, errors or skips
-        id: test-results
-        if: always() && (steps.full-tests.outcome != 'skipped' || steps.downstream-tests.outcome != 'skipped')
+      - name: Run affected modules while retaining source-identical successful upstream evidence
+        id: affected-tests
+        if: inputs.verification_scope == 'affected' || contains(github.event.head_commit.message, '[affected]')
+        run: >-
+          chmod +x mvnw && ./mvnw -B -pl backend/app -am
+          -Dquality.mysql=true -Dquality.redis=true -Dexternal.image.network=true
+          -Dapi.version=1.44 -DskipTests=false -Dmaven.test.failure.ignore=true
+          '-Dtest=io.metersphere.api.**,io.metersphere.bug.**,io.metersphere.functional.**,io.metersphere.plan.**,io.metersphere.dashboard.**,io.metersphere.agent.**,io.metersphere.app.**'
+          -Dsurefire.failIfNoSpecifiedTests=false package
+        env:
+          MAVEN_OPTS: -Xmx1536m
+      - name: Verify upstream source hashes and retained test reports
+        id: retained-upstream
+        if: always() && (inputs.verification_scope == 'affected' || contains(github.event.head_commit.message, '[affected]'))
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          source_run=40862145183
+          source_sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$source_run" --jq .head_sha)
+          test "$source_sha" = eba4337912181fc1f4c0c617f0c844523b066f90
+          git fetch --no-tags --depth=1 origin "$source_sha"
+          gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name backend-test-reports --dir .ci-retained-source
+          gh run download "$source_run" --repo "$GITHUB_REPOSITORY" --name all-module-test-summary --dir .ci-retained-summary
+          python3 deploy/quality-verify/test_retained_reports.py
+          python3 deploy/quality-verify/retain-upstream-reports.py --source-sha "$source_sha" --source-run "$source_run" --reports .ci-retained-source --summary .ci-retained-summary/.ci-test-summary.json
+      - name: Require complete current or source-verified retained coverage with zero failures, errors or skips
+        id: test-results
+        if: always() && (steps.full-tests.outcome != 'skipped' || steps.downstream-tests.outcome != 'skipped' || steps.affected-tests.outcome != 'skipped')
+        run: |
+          if [ '${{ steps.affected-tests.outcome }}' != 'skipped' ] && [ '${{ steps.retained-upstream.outcome }}' != 'success' ]; then
+            echo 'Source-verified upstream evidence is required for affected verification'
+            exit 1
+          fi
           python3 deploy/quality-verify/test_report_gate.py
           if [ '${{ steps.downstream-tests.outcome }}' != 'skipped' ]; then
             python3 deploy/quality-verify/check-test-reports.py --modules bug-management case-management test-plan dashboard agent-integration app
           else
             python3 deploy/quality-verify/check-test-reports.py
           fi
-      - name: Build application image and verify isolated health
-        if: always() && steps.full-tests.outcome == 'success' && steps.test-results.outcome == 'success'
+      - name: Record a verified build for isolated runtime retries
+        id: verified-build
+        if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        env:
+          BUILD_INPUTS_HASH: ${{ hashFiles('pom.xml', 'backend/**/pom.xml', '.mvn/**', 'mvnw') }}
+        run: |
+          backend_tree=$(git rev-parse HEAD:backend)
+          frontend_tree=$(git rev-parse HEAD:frontend)
+          jar_sha=$(sha256sum backend/app/target/app-3.x.jar | cut -d' ' -f1)
+          jq -n --arg commit "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" --arg backend "$backend_tree" --arg frontend "$frontend_tree" --arg inputs "$BUILD_INPUTS_HASH" --arg jar "$jar_sha" '{sourceCommit:$commit,sourceRun:$run,backendTree:$backend,frontendTree:$frontend,buildInputsHash:$inputs,jarSha256:$jar}' > .ci-backend-build.json
+          echo "key=msp-verified-app-${RUNNER_OS}-${backend_tree}-${frontend_tree}-${BUILD_INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/save@v4
+        if: steps.verified-build.outcome == 'success'
+        with:
+          key: ${{ steps.verified-build.outputs.key }}
+          path: |
+            backend/app/target/app-3.x.jar
+            .ci-backend-build.json
+            .ci-test-summary.json
+      - uses: pnpm/action-setup@v4
+        if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        with:
+          version: 8.4.0
+      - uses: actions/setup-node@v4
+        if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        with:
+          node-version: 20.8.1
+          cache: pnpm
+          cache-dependency-path: frontend/package.json
+      - name: Prepare browser smoke dependencies without rebuilding verified frontend
+        if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
+        working-directory: frontend
+        run: |
+          pnpm install --no-frozen-lockfile
+          if ! command -v google-chrome >/dev/null; then pnpm exec playwright install chrome --with-deps; fi
+          if command -v fc-list >/dev/null; then fc-list :lang=zh > "$RUNNER_TEMP/msp-fonts-zh.txt"; else : > "$RUNNER_TEMP/msp-fonts-zh.txt"; fi
+          if [ ! -s "$RUNNER_TEMP/msp-fonts-zh.txt" ]; then sudo apt-get update && sudo apt-get install -y fontconfig fonts-noto-cjk; fi
+          google-chrome --version
+      - name: Build application image and verify isolated health and core browser/MCP paths
+        if: always() && (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
         run: bash deploy/quality-verify/ci-health.sh
         env:
           QUALITY_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+          QUALITY_REDIS_CONTAINER: ${{ job.services.redis.id }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -168,6 +237,8 @@ jobs:
             .ci-health.json
             .ci-readiness.json
             .ci-health-container.log
+            .ci-core-proxy.log
+            .ci-core-smoke/
           if-no-files-found: ignore
           retention-days: 7
       - uses: actions/upload-artifact@v4
@@ -194,6 +265,8 @@ jobs:
         with:
           name: all-module-test-summary
           include-hidden-files: true
-          path: .ci-test-summary.json
+          path: |
+            .ci-test-summary.json
+            .ci-retained-upstream.json
           if-no-files-found: error
           retention-days: 7

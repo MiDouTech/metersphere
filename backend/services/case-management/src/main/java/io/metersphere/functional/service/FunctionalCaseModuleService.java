@@ -276,7 +276,17 @@ public class FunctionalCaseModuleService extends ModuleTreeService {
         // Reuse deletion locks, active-run protection, review reconciliation and mirror outbox.
         Map<String,List<FunctionalCase>> active=functionalCaseList.stream().filter(c->!Boolean.TRUE.equals(c.getDeleted()))
                 .collect(java.util.stream.Collectors.groupingBy(FunctionalCase::getProjectId));
-        active.forEach((project,cases)->lifecycleCases.handDeleteFunctionalCase(cases.stream().map(FunctionalCase::getId).toList(),false,userId,project));
+        active.forEach((project,cases)-> {
+            List<String> caseIds = cases.stream().map(FunctionalCase::getId).toList();
+            lifecycleCases.handDeleteFunctionalCase(caseIds,false,userId,project);
+            // The directory is gone: retain deleted cases in the virtual root so trash
+            // navigation and restore never depend on a deleted module row.
+            FunctionalCase reset = new FunctionalCase();
+            reset.setModuleId(ModuleConstants.DEFAULT_NODE_ID);
+            FunctionalCaseExample deletedCases = new FunctionalCaseExample();
+            deletedCases.createCriteria().andIdIn(caseIds).andProjectIdEqualTo(project).andDeletedEqualTo(true);
+            functionalCaseMapper.updateByExampleSelective(reset, deletedCases);
+        });
         List<String> childrenIds = extFunctionalCaseModuleMapper.selectChildrenIdsByParentIds(deleteIds);
         if (CollectionUtils.isNotEmpty(childrenIds)) {
             deleteModuleByIds(childrenIds, functionalCases, userId);

@@ -930,7 +930,16 @@ public class FunctionalCaseControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("request", JSON.toJSONString(request));
         paramMap.add("file", file2);
-        this.requestMultipart(IMPORT_XMIND_URL, paramMap).andExpect(businessValidationError());
+        FunctionalCaseExample beforeImport = new FunctionalCaseExample();
+        beforeImport.createCriteria().andProjectIdEqualTo(DEFAULT_PROJECT_ID);
+        long beforeCount = functionalCaseMapper.countByExample(beforeImport);
+        MvcResult emptyImport = this.requestMultipartWithOkAndReturn(IMPORT_XMIND_URL, paramMap);
+        ResultHolder emptyResponse = JSON.parseObject(emptyImport.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
+        FunctionalCaseImportResponse emptyResult = JSON.parseObject(JSON.toJSONString(emptyResponse.getData()), FunctionalCaseImportResponse.class);
+        Assertions.assertEquals(0, emptyResult.getSuccessCount());
+        Assertions.assertTrue(emptyResult.getFailCount() > 0);
+        Assertions.assertFalse(emptyResult.getErrorMessages().isEmpty());
+        Assertions.assertEquals(beforeCount, functionalCaseMapper.countByExample(beforeImport));
     }
 
     @Test

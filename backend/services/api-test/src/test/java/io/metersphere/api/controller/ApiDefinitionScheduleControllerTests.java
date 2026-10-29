@@ -99,7 +99,7 @@ public class ApiDefinitionScheduleControllerTests extends BaseTest {
         this.requestPost(UPDATE, request, businessValidationError());
         request.setId(null);
         this.requestPost(UPDATE, request, BAD_REQUEST_MATCHER);
-        request.setId("123");
+        request.setId(ID);
         request.setName(null);
         this.requestPost(UPDATE, request, BAD_REQUEST_MATCHER);
         request.setName("定时任务2");

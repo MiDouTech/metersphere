@@ -73,6 +73,20 @@ class AgentDirectExecutionMySqlTests {
             detail.setSteps("[{\"num\":1,\"desc\":\"open\",\"result\":\"visible\"}]");
             var definitions=spy(new io.metersphere.functional.service.FunctionalCaseService());
             ReflectionTestUtils.setField(definitions,"caseLifecycleJdbc",jdbc);
+            for (String migration : List.of("119__functional_import_effect_outbox", "127__review_recount_queue")) {
+                try (var stream=getClass().getResourceAsStream("/migration/3.7.2/ddl/V3.7.2_"+migration+".sql")) {
+                    assertNotNull(stream);
+                    for (String sql:new String(stream.readAllBytes(),StandardCharsets.UTF_8).split(";"))
+                        if (!sql.isBlank()) jdbc.execute(sql.replace("CREATE TABLE", "CREATE TEMPORARY TABLE"));
+                }
+            }
+            jdbc.execute("CREATE TEMPORARY TABLE case_review_functional_case(review_id VARCHAR(64),case_id VARCHAR(64))");
+            jdbc.update("INSERT INTO case_review_functional_case VALUES ('review','c')");
+            var manager=new DataSourceTransactionManager(ds);
+            var recount=new io.metersphere.functional.service.FunctionalReviewRecountService(jdbc,manager);
+            var effects=new io.metersphere.functional.service.FunctionalImportEffectOutbox(jdbc,manager,null,definitions,null,null);
+            ReflectionTestUtils.setField(effects,"reviewRecount",recount);
+            ReflectionTestUtils.setField(definitions,"importEffectOutbox",effects);
             doReturn(Map.of("c",detail)).when(definitions).getAgentCaseDetails(List.of("c"),"p",true);
             var search=mock(AgentFunctionalCaseSearchService.class);when(search.getById("c",true,null)).thenReturn(source);
             var service=new AgentDirectExecutionService();
@@ -108,11 +122,22 @@ class AgentDirectExecutionMySqlTests {
             assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
             assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_evidence WHERE submission_id IS NOT NULL",Integer.class));
             jdbc.execute("ALTER TABLE functional_case_attachment DROP INDEX forced_failure");
+            jdbc.execute("ALTER TABLE functional_import_effect_outbox MODIFY payload VARCHAR(1) NOT NULL");
+            assertThrows(org.springframework.dao.DataIntegrityViolationException.class,()->service.submit(submit));
+            assertEquals("PENDING",jdbc.queryForObject("SELECT last_execute_result FROM functional_case",String.class));
+            assertEquals(1L,jdbc.queryForObject("SELECT update_time FROM functional_case",Long.class));
+            assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Integer.class));
+            assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
+            assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM functional_review_recount",Integer.class));
+            assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_effect_outbox",Integer.class));
+            jdbc.execute("ALTER TABLE functional_import_effect_outbox MODIFY payload MEDIUMTEXT NOT NULL");
             var result=service.submit(submit);
             assertEquals("SUCCESS",result.get("result"));
             assertEquals(result.get("submissionId"),service.submit(submit).get("submissionId"));
             assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM functional_case_attachment",Integer.class));
             assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Integer.class));
+            assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_effect_outbox",Integer.class));
+            assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM functional_review_recount",Integer.class));
             assertArrayEquals(Base64.getDecoder().decode(AgentDirectExecutionTests.png()),store.read("p","c",before));
             assertNull(store.read("other-project","c",before));
             assertEquals("SUCCESS",service.report(Map.of("projectId","p","caseId","c","submissionId",result.get("submissionId"))).get("result"));
@@ -163,8 +188,8 @@ class AgentDirectExecutionMySqlTests {
             service.expirePendingEvidence();
             assertEquals(8,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_evidence",Integer.class));
             assertNotNull(store.read("p","c",before));
-            jdbc.update("INSERT INTO test_plan VALUES ('active','UNDERWAY','p'),('archived','ARCHIVED','p')");
-            jdbc.update("INSERT INTO test_plan_functional_case VALUES ('c','active','SUCCESS',1,'u'),('c','archived','SUCCESS',1,'u')");
+            jdbc.update("INSERT INTO test_plan VALUES ('active','UNDERWAY','p'),('archived','ARCHIVED','p'),('foreign-active','UNDERWAY','other-project'),('foreign-archived','ARCHIVED','other-project')");
+            jdbc.update("INSERT INTO test_plan_functional_case VALUES ('c','active','SUCCESS',1,'u'),('c','archived','SUCCESS',1,'u'),('c','foreign-active','SUCCESS',1,'u'),('c','foreign-archived','SUCCESS',1,'u'),('unrelated-case','foreign-active','SUCCESS',1,'u')");
             var hundred=new ArrayList<Map<String,Object>>();var outcomes=new ArrayList<Map<String,Object>>();
             for(int n=1;n<=100;n++){hundred.add(Map.of("num",n,"desc","operation "+n,"result","expected "+n));outcomes.add(Map.of("stepNum",n,"actual","observed "+n,"result",n==100?"ERROR":"SUCCESS"));}
             detail.setSteps(io.metersphere.sdk.util.JSON.toJSONString(hundred));
@@ -182,6 +207,9 @@ class AgentDirectExecutionMySqlTests {
             assertArrayEquals(Base64.getDecoder().decode(AgentDirectExecutionTests.png()),store.read("p","c",one));
             assertEquals("ERROR",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='active'",String.class));
             assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='archived'",String.class));
+            assertEquals("ERROR",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='foreign-active' AND functional_case_id='c'",String.class));
+            assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='foreign-archived'",String.class));
+            assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE functional_case_id='unrelated-case'",String.class));
             var read=new io.metersphere.agent.tool.functional.FunctionalAttachmentReadTool();
             ReflectionTestUtils.setField(read,"access",mock(AgentBusinessAccess.class));ReflectionTestUtils.setField(read,"jdbc",jdbc);
             var attachmentService=new io.metersphere.functional.service.FunctionalCaseAttachmentService();ReflectionTestUtils.setField(attachmentService,"evidenceStore",store);

@@ -12,6 +12,7 @@ export QUALITY_FACTS_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 quality_compose=(docker compose -p "$quality_project" -f deploy/quality-verify.compose.yml -f deploy/quality-verify/ci.override.yml)
 cleanup() {
   quality_exit_code=$?
+  if [ -n "${quality_browser_proxy:-}" ]; then kill "$quality_browser_proxy" 2>/dev/null || true; fi
   "${quality_compose[@]}" logs --no-color > .ci-health-container.log 2>&1 || true
   "${quality_compose[@]}" down --volumes --remove-orphans || quality_exit_code=1
   exit "$quality_exit_code"
@@ -19,6 +20,7 @@ cleanup() {
 trap cleanup EXIT
 # These IDs belong only to this fresh runner's test job.
 if [ -n "${QUALITY_MYSQL_CONTAINER:-}" ]; then docker stop "$QUALITY_MYSQL_CONTAINER"; fi
+if [ -n "${QUALITY_REDIS_CONTAINER:-}" ]; then docker stop "$QUALITY_REDIS_CONTAINER"; fi
 while read -r quality_container; do
   [ -z "$quality_container" ] || docker stop "$quality_container"
 done < <(docker ps -q --filter label=org.testcontainers=true)
@@ -37,3 +39,12 @@ grep -Eq 'id="?app"?' .ci-index.html
 quality_image=$(docker image inspect msp-quality:verify --format '{{.Id}}')
 jq -n --arg commit "$GITHUB_SHA" --arg image "$quality_image" --arg status "$quality_frontend_status" --slurpfile health .ci-readiness.json \
   '{commit:$commit,image:$image,frontendHttpStatus:$status,readiness:$health[0]}' > .ci-health.json
+# Enable the existing local-admin entry in this fresh disposable database only.
+"${quality_compose[@]}" exec -T mysql sh -c 'MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysql -uroot metersphere_quality -e "UPDATE system_parameter SET param_value=\"true\" WHERE param_key=\"ui.login.admin.enabled\""'
+node scripts/quality-browser-proxy.mjs > .ci-core-proxy.log 2>&1 &
+quality_browser_proxy=$!
+for quality_attempt in $(seq 1 20); do
+  if curl -fsS http://127.0.0.1:15173/ > /dev/null; then break; fi
+  sleep 1
+done
+node deploy/quality-verify/core-smoke.mjs

@@ -52,7 +52,7 @@ public class ApiScheduleRequest {
     @Schema(description = "是否开启")
     private Boolean enable = true;
     @Schema(description = "cron 表达式", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotBlank(message = "{schedule.value.not_blank}", groups = {Created.class})
+    @NotBlank(message = "{schedule.value.not_blank}", groups = {Created.class, Updated.class})
     @Size(min = 1, max = 255, message = "{schedule.value.length_range}", groups = {Created.class, Updated.class})
     private String value;
     @Schema(description = "配置信息")

@@ -553,7 +553,7 @@ public class FunctionalCaseCommentControllerTests {
         FunctionalCaseCommentExample functionalCaseCommentExample = new FunctionalCaseCommentExample();
         functionalCaseCommentExample.createCriteria().andCaseIdEqualTo("xiaomeinvGTest");
         List<FunctionalCaseComment> functionalCaseComments = functionalCaseCommentMapper.selectByExample(functionalCaseCommentExample);
-        return functionalCaseComments.getFirst();
+        return functionalCaseCommentMapper.selectByPrimaryKey(functionalCaseComments.getFirst().getId());
     }
 
 }

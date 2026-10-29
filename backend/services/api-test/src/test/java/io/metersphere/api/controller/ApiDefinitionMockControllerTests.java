@@ -660,7 +660,7 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         requestPostWithOkAndReturn(BATCH_EDIT, request);
         //类型错误
         request.setType("111");
-        this.requestPost(BATCH_EDIT, request, status().is5xxServerError());
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
 
         //校验权限
         requestPostPermissionTest(PermissionConstants.PROJECT_API_DEFINITION_MOCK_UPDATE, BATCH_EDIT, request);
