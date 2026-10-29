@@ -550,7 +550,9 @@ public class BugControllerTests extends BaseTest {
         request.setSelectAll(true);
         request.setSelectIds(List.of("test"));
         request.setExcludeIds(List.of("default-bug-id-jira-delete", "default-bug-id-jira-sync", "default-bug-id-jira-sync-1"));
-        this.requestPost(BUG_BATCH_DELETE, request, status().is5xxServerError());
+        String excludedBefore = JSON.toJSONString(bugMapper.selectByPrimaryKey("default-bug-id-jira-delete"));
+        this.requestPostWithOk(BUG_BATCH_DELETE, request);
+        Assertions.assertEquals(excludedBefore, JSON.toJSONString(bugMapper.selectByPrimaryKey("default-bug-id-jira-delete")));
     }
 
     @Test
@@ -576,7 +578,7 @@ public class BugControllerTests extends BaseTest {
         record.setId("621103810617344");
         record.setEnable(false);
         serviceIntegrationMapper.updateByPrimaryKeySelective(record);
-        this.requestPost(BUG_TEMPLATE_DETAIL, request, status().is5xxServerError());
+        this.requestPostWithOk(BUG_TEMPLATE_DETAIL, request);
         // 获取处理人选项(Local)
         this.requestGetWithOk(BUG_HEADER_COLUMNS_OPTION + "/default-project-for-bug");
         // 开启插件集成
@@ -631,7 +633,8 @@ public class BugControllerTests extends BaseTest {
         request.setProjectId("default-project-for-bug");
         request.setSelectAll(false);
         request.setSelectIds(List.of("default-bug-id"));
-        this.requestPost(BUG_BATCH_DELETE, request, status().is5xxServerError());
+        this.requestPostWithOk(BUG_BATCH_DELETE, request);
+        Assertions.assertTrue(bugMapper.selectByPrimaryKey("default-bug-id").getDeleted());
 
         // check一下同步状态
         bugSyncExtraService.deleteSyncKey("default-project-for-bug");

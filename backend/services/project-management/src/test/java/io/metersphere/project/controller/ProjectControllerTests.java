@@ -214,8 +214,8 @@ public class ProjectControllerTests extends BaseTest {
         ProjectExample example = new ProjectExample();
         example.createCriteria().andOrganizationIdEqualTo(DEFAULT_ORGANIZATION_ID).andEnableEqualTo(true);
         Assertions.assertEquals(projectMapper.countByExample(example), list.size());
-        requestGet(getOptionsWidthModule + DEFAULT_ORGANIZATION_ID +"/apiTest", status().is5xxServerError());
-        requestGet(getOptionsWidthModule + DEFAULT_ORGANIZATION_ID +"/''", status().is5xxServerError());
+        requestGet(getOptionsWidthModule + DEFAULT_ORGANIZATION_ID +"/apiTest", businessValidationError());
+        requestGet(getOptionsWidthModule + DEFAULT_ORGANIZATION_ID +"/''", businessValidationError());
         MvcResult mvcResultModule = this.responseGet(getOptionsWidthModule + DEFAULT_ORGANIZATION_ID +"/API");
         List<Project> listModule = parseObjectFromMvcResult(mvcResultModule, List.class);
         Assertions.assertNotNull(listModule);
@@ -304,7 +304,7 @@ public class ProjectControllerTests extends BaseTest {
     @Order(4)
     public void testGetOptionsError() throws Exception {
         //组织不存在
-        requestGet(getOptions + "111111", status().is5xxServerError());
+        requestGet(getOptions + "111111", businessValidationError());
     }
 
     @Test
@@ -387,7 +387,8 @@ public class ProjectControllerTests extends BaseTest {
     public void testUpdateProjectError() throws Exception {
         //项目名称存在 500
         ProjectRequest project = this.generatorUpdate(DEFAULT_ORGANIZATION_ID, "projectId1", "project-TestName", "description", true);
-        this.requestPost(updateProject, project, ERROR_REQUEST_MATCHER);
+        this.requestPostWithOk(updateProject, project);
+        Assertions.assertEquals("project-TestName", projectMapper.selectByPrimaryKey("projectId1").getName());
         //参数组织Id为空
         project = this.generatorUpdate(null, "projectId", null, null, true);
         this.requestPost(updateProject, project, BAD_REQUEST_MATCHER);
@@ -399,7 +400,7 @@ public class ProjectControllerTests extends BaseTest {
         this.requestPost(updateProject, project, BAD_REQUEST_MATCHER);
         //项目不存在
         project = this.generatorUpdate(DEFAULT_ORGANIZATION_ID, "1111", "123", null, true);
-        this.requestPost(updateProject, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(updateProject, project, businessValidationError());
 
     }
 

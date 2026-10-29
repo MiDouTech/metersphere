@@ -1,0 +1,1234 @@
+{
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40853057396",
+  "codeCommit": "0f95b5a9b2a5f507966f22f44197296816a462c2",
+  "scope": "full",
+  "status": "failed",
+  "total": {
+    "tests": 2113,
+    "failures": 79,
+    "errors": 4,
+    "skipped": 0
+  },
+  "modules": {
+    "app": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sdk": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "agent-integration": {
+      "tests": 462,
+      "failures": 0,
+      "errors": 1,
+      "skipped": 0
+    },
+    "api-test": {
+      "tests": 271,
+      "failures": 8,
+      "errors": 0,
+      "skipped": 0
+    },
+    "bug-management": {
+      "tests": 77,
+      "failures": 5,
+      "errors": 1,
+      "skipped": 0
+    },
+    "case-management": {
+      "tests": 283,
+      "failures": 38,
+      "errors": 1,
+      "skipped": 0
+    },
+    "dashboard": {
+      "tests": 16,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "project-management": {
+      "tests": 299,
+      "failures": 7,
+      "errors": 1,
+      "skipped": 0
+    },
+    "system-setting": {
+      "tests": 553,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "test-plan": {
+      "tests": 138,
+      "failures": 18,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "original80": [
+    {
+      "id": "E001",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "add",
+      "status": "passed"
+    },
+    {
+      "id": "F001",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "update",
+      "status": "passed"
+    },
+    {
+      "id": "E002",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "updatePermissionSetting",
+      "status": "passed"
+    },
+    {
+      "id": "F002",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "getPermissionSetting",
+      "status": "passed"
+    },
+    {
+      "id": "F003",
+      "classname": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "delete",
+      "status": "passed"
+    },
+    {
+      "id": "F004",
+      "classname": "io.metersphere.system.controller.OperationLogControllerTests",
+      "test": "testGetOperationLogParamsError",
+      "status": "passed"
+    },
+    {
+      "id": "F005",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F006",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgError",
+      "status": "passed"
+    },
+    {
+      "id": "F007",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F008",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberToRoleError",
+      "status": "passed"
+    },
+    {
+      "id": "F009",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addOrgMemberToProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F010",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F011",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F012",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getProjectListByOrgError",
+      "status": "passed"
+    },
+    {
+      "id": "F013",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getUserRoleListByOrgError",
+      "status": "passed"
+    },
+    {
+      "id": "F014",
+      "classname": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getNotExistUserListByOrgError",
+      "status": "passed"
+    },
+    {
+      "id": "F015",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F016",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F017",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F018",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F019",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F020",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMember",
+      "status": "passed"
+    },
+    {
+      "id": "F021",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F022",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F023",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "enableError",
+      "status": "passed"
+    },
+    {
+      "id": "F024",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "disableError",
+      "status": "passed"
+    },
+    {
+      "id": "F025",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetAdminList",
+      "status": "passed"
+    },
+    {
+      "id": "F026",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetMemberList",
+      "status": "passed"
+    },
+    {
+      "id": "F027",
+      "classname": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateNameError",
+      "status": "passed"
+    },
+    {
+      "id": "F028",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "getStatusFlowSetting",
+      "status": "passed"
+    },
+    {
+      "id": "F029",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "addStatusItem",
+      "status": "passed"
+    },
+    {
+      "id": "E003",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusItem",
+      "status": "passed"
+    },
+    {
+      "id": "E004",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusDefinition",
+      "status": "passed"
+    },
+    {
+      "id": "E005",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusFlow",
+      "status": "passed"
+    },
+    {
+      "id": "E006",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "deleteStatusItem",
+      "status": "passed"
+    },
+    {
+      "id": "F030",
+      "classname": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "sortStatusItem",
+      "status": "passed"
+    },
+    {
+      "id": "F031",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddError",
+      "status": "passed"
+    },
+    {
+      "id": "F032",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleUpdateError",
+      "status": "passed"
+    },
+    {
+      "id": "F033",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteError",
+      "status": "passed"
+    },
+    {
+      "id": "F034",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionSettingError",
+      "status": "passed"
+    },
+    {
+      "id": "F035",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionUpdateError",
+      "status": "passed"
+    },
+    {
+      "id": "F036",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F037",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleRemoveMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F038",
+      "classname": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteOnlyMemberSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "E007",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "adminTreeWithStats",
+      "status": "passed"
+    },
+    {
+      "id": "E008",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberPage",
+      "status": "passed"
+    },
+    {
+      "id": "E009",
+      "classname": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberDetailMasked",
+      "status": "passed"
+    },
+    {
+      "id": "F039",
+      "classname": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testEdit",
+      "status": "passed"
+    },
+    {
+      "id": "F040",
+      "classname": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testDetail",
+      "status": "passed"
+    },
+    {
+      "id": "F041",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testUpdateOrganizationError",
+      "status": "passed"
+    },
+    {
+      "id": "F042",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testDeleteOrganization",
+      "status": "passed"
+    },
+    {
+      "id": "F043",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F044",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F045",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F046",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationError",
+      "status": "passed"
+    },
+    {
+      "id": "F047",
+      "classname": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testSwitchOrganizationError",
+      "status": "passed"
+    },
+    {
+      "id": "F048",
+      "classname": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEmailConnect",
+      "status": "passed"
+    },
+    {
+      "id": "F049",
+      "classname": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEditUploadConfigInfoError",
+      "status": "passed"
+    },
+    {
+      "id": "F050",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "status": "passed"
+    },
+    {
+      "id": "F051",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F052",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F053",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F054",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "status": "passed"
+    },
+    {
+      "id": "F055",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F056",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "status": "passed"
+    },
+    {
+      "id": "F057",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "enableError",
+      "status": "passed"
+    },
+    {
+      "id": "F058",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "disableError",
+      "status": "passed"
+    },
+    {
+      "id": "F059",
+      "classname": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateNameError",
+      "status": "passed"
+    },
+    {
+      "id": "F060",
+      "classname": "io.metersphere.system.controller.TaskCenterScheduleControllerTests",
+      "test": "getPageError",
+      "status": "passed"
+    },
+    {
+      "id": "F061",
+      "classname": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "getResourcePoolsDetailFiled",
+      "status": "passed"
+    },
+    {
+      "id": "F062",
+      "classname": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "updateUiTestResourcePoolFiled",
+      "status": "passed"
+    },
+    {
+      "id": "F063",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalGetId",
+      "status": "passed"
+    },
+    {
+      "id": "F064",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdateInfo",
+      "status": "passed"
+    },
+    {
+      "id": "F065",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdatePassword",
+      "status": "passed"
+    },
+    {
+      "id": "F066",
+      "classname": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testDetail",
+      "status": "passed"
+    },
+    {
+      "id": "F067",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testAdd",
+      "status": "passed"
+    },
+    {
+      "id": "E010",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testList",
+      "status": "passed"
+    },
+    {
+      "id": "F068",
+      "classname": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testDisable",
+      "status": "passed"
+    },
+    {
+      "id": "F069",
+      "classname": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testAdd",
+      "status": "passed"
+    },
+    {
+      "id": "F070",
+      "classname": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testGet",
+      "status": "passed"
+    }
+  ],
+  "failures": [
+    {
+      "class": "io.metersphere.agent.service.AgentDirectExecutionMySqlTests",
+      "test": "realTransactionsGatePublishDownloadRollbackAndReplay",
+      "kind": "error",
+      "code": null,
+      "messageKey": null,
+      "causeTypes": [
+        "java.sql.SQLSyntaxErrorException"
+      ]
+    },
+    {
+      "class": "io.metersphere.api.controller.ApiDefinitionMockControllerTests",
+      "test": "batchEdit",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.api.controller.ApiDefinitionScheduleControllerTests",
+      "test": "update",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.api.controller.ApiDefinitionScheduleControllerTests",
+      "test": "get",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.api.controller.ApiDefinitionScheduleControllerTests",
+      "test": "switchSchedule",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.api.controller.ApiDefinitionScheduleControllerTests",
+      "test": "deleteSchedule",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.api.controller.ApiScenarioControllerTests",
+      "test": "testGetAssociatedCase",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.api.controller.ApiScenarioControllerTests",
+      "test": "batchEdit",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.api.controller.ApiTestCaseControllerTests",
+      "test": "batchEdit",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.bug.controller.BugCommentControllerTests",
+      "test": "testAddBugCommentOnlyError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.bug.controller.BugControllerTests",
+      "test": "testBatchDeleteBugSuccess",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.bug.controller.BugControllerTests",
+      "test": "coverPlatformTemplateTests",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.bug.controller.BugControllerTests",
+      "test": "coverExtraBugTests",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.bug.controller.BugRelateCaseControllerTests",
+      "test": "testBugRelateCheckPermissionError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.bug.service.BugSyncExtraServiceTests",
+      "test": "test",
+      "kind": "error",
+      "code": null,
+      "messageKey": null,
+      "causeTypes": [
+        "org.springframework.beans.factory.UnsatisfiedDependencyException",
+        "org.springframework.beans.factory.BeanCreationException",
+        "org.springframework.beans.factory.UnsatisfiedDependencyException",
+        "org.springframework.beans.factory.UnsatisfiedDependencyException",
+        "org.springframework.beans.factory.BeanCreationException"
+      ]
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "addCaseReviewSuccess",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "addCaseReviewFalse",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "editCaseReviewFalse",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "testBatchMove",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewControllerTests",
+      "test": "testDisassociateFalse",
+      "kind": "failure",
+      "code": 105001,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewFunctionalCaseControllerTests",
+      "test": "testBatchReviewFalse",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "addModuleTestError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "updateModuleTestError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.CaseReviewModuleControllerTests",
+      "test": "moveTestError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseAttachmentControllerTests",
+      "test": "testUploadTemp",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "updateCommentATSuccess",
+      "kind": "failure",
+      "code": 100400,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "updateCommentSuccess",
+      "kind": "failure",
+      "code": 100400,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentATFalse",
+      "kind": "failure",
+      "code": 100403,
+      "messageKey": "api.forbidden",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "updateCommentATFalse",
+      "kind": "failure",
+      "code": 100403,
+      "messageKey": "api.forbidden",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplySuccess",
+      "kind": "failure",
+      "code": 100403,
+      "messageKey": "api.forbidden",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplyNoParentId",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplyNoParent",
+      "kind": "failure",
+      "code": 100403,
+      "messageKey": "api.forbidden",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentReplyNoReply",
+      "kind": "failure",
+      "code": 100403,
+      "messageKey": "api.forbidden",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentWidthCustomFields",
+      "kind": "failure",
+      "code": 100403,
+      "messageKey": "api.forbidden",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "saveCommentATWidthReplyUser",
+      "kind": "failure",
+      "code": 100403,
+      "messageKey": "api.forbidden",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "getCommentFalse",
+      "kind": "failure",
+      "code": 100403,
+      "messageKey": "api.forbidden",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "deleteCommentSuccess",
+      "kind": "error",
+      "code": null,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "deleteNoCommentSuccess",
+      "kind": "failure",
+      "code": 100400,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "deleteCommentFirstSuccess",
+      "kind": "failure",
+      "code": 100400,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseCommentControllerTests",
+      "test": "deleteCommentUser",
+      "kind": "failure",
+      "code": 100400,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testFunctionalCaseAdd",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseControllerTests",
+      "test": "testImportXmind",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "addDemandFalse",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "updateDemandFalse",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseDemandControllerTests",
+      "test": "batchRelevanceFalse",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "addModuleTestError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "updateModuleTestError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "moveTestError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "deleteModuleTestSuccess",
+      "kind": "failure",
+      "code": 100500,
+      "messageKey": "api.internalError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseModuleControllerTests",
+      "test": "getTrashTreeSuccess",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseRelationshipControllerTests",
+      "test": "testRelatePage",
+      "kind": "failure",
+      "code": 100500,
+      "messageKey": "api.internalError",
+      "causeTypes": [
+        "java.sql.SQLIntegrityConstraintViolationException"
+      ]
+    },
+    {
+      "class": "io.metersphere.functional.controller.FunctionalCaseRelationshipControllerTests",
+      "test": "testAddRelationship",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "saveReviewFalse",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.functional.controller.ReviewFunctionalCaseControllerTests",
+      "test": "testUploadTemp",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.dashboard.controller.MyViewControllerTests",
+      "test": "functional",
+      "kind": "failure",
+      "code": 100500,
+      "messageKey": "api.internalError",
+      "causeTypes": [
+        "java.sql.SQLIntegrityConstraintViolationException"
+      ]
+    },
+    {
+      "class": "io.metersphere.project.controller.EnvironmentControllerTests",
+      "test": "testUpdateSuccess",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.project.controller.EnvironmentControllerTests",
+      "test": "testUpdateError",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.project.controller.EnvironmentControllerTests",
+      "test": "testDeleteSuccess",
+      "kind": "error",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.project.controller.EnvironmentControllerTests",
+      "test": "testGetEntry",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.project.controller.EnvironmentGroupControllerTests",
+      "test": "testDeleteSuccess",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.project.controller.ProjectControllerTests",
+      "test": "testGetOptionsSuccess",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.project.controller.ProjectControllerTests",
+      "test": "testGetOptionsError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.project.controller.ProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.system.controller.PluginControllerTests",
+      "test": "add",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.system.controller.TaskCenterScheduleControllerTests",
+      "test": "testDel",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "addModuleTest",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "updateModuleTest",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanAddTest",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanPageCountTest",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testPlanUpdateTest",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "scheduleTest",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "copyTestPlan",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "deleteModuleTest",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "serviceCheckTest",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testArchived",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testCopy",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanControllerTests",
+      "test": "testBatchArchived",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanReportControllerTests",
+      "test": "testRenamePlanReportError",
+      "kind": "failure",
+      "code": 100404,
+      "messageKey": "http_result_not_found",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanReportControllerTests",
+      "test": "testGetShareInfo",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanReportControllerTests",
+      "test": "testGetShareReportTableList",
+      "kind": "failure",
+      "code": 100500,
+      "messageKey": "api.internalError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanReportControllerTests",
+      "test": "testGenReportError",
+      "kind": "failure",
+      "code": 100200,
+      "messageKey": null,
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanReportControllerTests",
+      "test": "testEditReportDetail",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    },
+    {
+      "class": "io.metersphere.plan.controller.TestPlanTaskCenterControllerTests",
+      "test": "getPageError",
+      "kind": "failure",
+      "code": 100422,
+      "messageKey": "api.businessError",
+      "causeTypes": []
+    }
+  ]
+}

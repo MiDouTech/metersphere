@@ -179,7 +179,7 @@ public class BugRelateCaseControllerTests extends BaseTest {
     @Order(8)
     void testBugRelateCheckPermissionError() throws Exception {
         // 非功能用例类型参数
-        this.requestGet(BUG_CASE_CHECK + "/100001100001/UI", status().is5xxServerError());
+        this.requestGet(BUG_CASE_CHECK + "/100001100001/UI", businessValidationError());
     }
 
     @Test

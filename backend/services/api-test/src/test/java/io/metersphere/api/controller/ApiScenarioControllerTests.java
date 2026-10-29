@@ -1676,9 +1676,10 @@ public class ApiScenarioControllerTests extends BaseTest {
         apiScenarioMapper.selectByExample(example).forEach(scenario -> {
             Assertions.assertTrue(CollectionUtils.isEmpty(scenario.getTags()));
         });
-        //标签为空  报错
+        // clear=true 时空标签仍是幂等清空操作
         request.setTags(new LinkedHashSet<>());
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, status().isOk());
+                apiScenarioMapper.selectByExample(example).forEach(row -> Assertions.assertTrue(CollectionUtils.isEmpty(row.getTags())));
         //ids为空的时候
         request.setTags(new LinkedHashSet<>(List.of("tag1")));
         request.setSelectAll(true);

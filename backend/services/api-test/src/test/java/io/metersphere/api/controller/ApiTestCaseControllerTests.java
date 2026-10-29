@@ -1131,12 +1131,13 @@ public class ApiTestCaseControllerTests extends BaseTest {
         apiTestCaseMapper.selectByExample(example).forEach(apiTestCase -> {
             Assertions.assertTrue(CollectionUtils.isEmpty(apiTestCase.getTags()));
         });
-        //标签为空  报错
+        // clear=true 时空标签仍是幂等清空操作
         request.setTags(new LinkedHashSet<>());
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, status().isOk());
         //标签超出10个报错
         request.setTags(new LinkedHashSet<>(List.of("tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10", "tag11")));
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, status().isOk());
+                apiTestCaseMapper.selectByExample(example).forEach(row -> Assertions.assertTrue(CollectionUtils.isEmpty(row.getTags())));
         //ids为空的时候
         request.setTags(new LinkedHashSet<>(List.of("tag1")));
         request.setSelectAll(true);

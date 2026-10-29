@@ -51,8 +51,8 @@ class AgentDirectExecutionMySqlTests {
             jdbc.execute("CREATE TEMPORARY TABLE test_plan_functional_case(functional_case_id VARCHAR(64),test_plan_id VARCHAR(64),last_exec_result VARCHAR(32),last_exec_time BIGINT,execute_user VARCHAR(64))");
             jdbc.execute("CREATE TEMPORARY TABLE agent_token(id VARCHAR(64) PRIMARY KEY)");
             jdbc.update("INSERT INTO agent_token VALUES ('t')");
-            jdbc.execute("CREATE TEMPORARY TABLE functional_case(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64),deleted BOOLEAN,last_execute_result VARCHAR(32),last_execute_user VARCHAR(64),last_execute_time BIGINT)");
-            jdbc.update("INSERT INTO functional_case VALUES ('c','p',0,'PENDING',NULL,NULL)");
+            jdbc.execute("CREATE TEMPORARY TABLE functional_case(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64),deleted BOOLEAN,last_execute_result VARCHAR(32),last_execute_user VARCHAR(64),last_execute_time BIGINT,update_time BIGINT)");
+            jdbc.update("INSERT INTO functional_case VALUES ('c','p',0,'PENDING',NULL,NULL,1)");
             jdbc.execute("CREATE TEMPORARY TABLE functional_case_attachment(id VARCHAR(64) PRIMARY KEY,case_id VARCHAR(64),file_id VARCHAR(64),file_name VARCHAR(255),size BIGINT,local BOOLEAN,create_user VARCHAR(64),create_time BIGINT,file_source VARCHAR(32))");
             jdbc.execute("CREATE TEMPORARY TABLE agent_idempotency_record(id VARCHAR(64) PRIMARY KEY,token_id VARCHAR(64),tool_name VARCHAR(128),request_id VARCHAR(128),request_hash CHAR(64),response_json MEDIUMTEXT,create_time BIGINT,status VARCHAR(32),hash_version VARCHAR(32),completed_time BIGINT,UNIQUE KEY(token_id,tool_name,request_id))");
             jdbc.execute("CREATE TEMPORARY TABLE agent_attachment_upload_intent(request_id VARCHAR(128) NOT NULL)");

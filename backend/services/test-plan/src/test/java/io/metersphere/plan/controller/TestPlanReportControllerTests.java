@@ -156,7 +156,7 @@ public class TestPlanReportControllerTests extends BaseTest {
         request.setId("test-plan-report-id-x");
         request.setName("oasis");
         request.setProjectId("100001100001");
-        this.requestPost(RENAME_PLAN_REPORT, request, status().is5xxServerError());
+        this.requestPost(RENAME_PLAN_REPORT, request, notFoundError("http_result_not_found", "请求的资源不存在"));
     }
 
     @Test
@@ -183,7 +183,7 @@ public class TestPlanReportControllerTests extends BaseTest {
         // 报告被删除
         this.requestGet(GET_SHARE_INFO + "/share-1");
         // 分享链接未找到
-        this.requestGet(GET_SHARE_INFO + "/share-2", status().is5xxServerError());
+        this.requestGet(GET_SHARE_INFO + "/share-2", status().isOk());
     }
 
     @Test
@@ -223,7 +223,7 @@ public class TestPlanReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(GET_SHARE_REPORT_SCENARIO_REPORT_LIST + "/" + GEN_SHARE_ID + "/" + "test"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(businessError(100422, "用例报告不存在"));
+                .andExpect(businessError(100422, "场景报告不存在"));
 
         mockMvc.perform(getRequestBuilder(GET_SHARE_REPORT_SCENARIO_REPORT_LIST + "/get/" + GEN_SHARE_ID + "/" + "test" + "/111"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -282,7 +282,7 @@ public class TestPlanReportControllerTests extends BaseTest {
         TestPlanReportGenRequest genRequest = new TestPlanReportGenRequest();
         genRequest.setProjectId("100001100001");
         genRequest.setTestPlanId("plan_id_for_gen_report-x");
-        this.requestPost(AUTO_GEN_PLAN_REPORT, genRequest, status().is5xxServerError());
+        this.requestPost(AUTO_GEN_PLAN_REPORT, genRequest, businessError("测试计划不存在"));
     }
 
     @Test
@@ -355,7 +355,7 @@ public class TestPlanReportControllerTests extends BaseTest {
         request.setComponentValue("This is a summary for report detail");
         this.requestPostWithOk(EDIT_PLAN_REPORT, request);
         request.setRichTextTmpFileIds(List.of("rich-text-file-id-for-report"));
-        this.requestPost(EDIT_PLAN_REPORT, request, status().is5xxServerError());
+        this.requestPost(EDIT_PLAN_REPORT, request, businessError("读取富文本临时文件失败"));
         generateReportMdFile();
         this.requestPostWithOk(EDIT_PLAN_REPORT, request);
         MockMultipartFile file = new MockMultipartFile("file", "test.txt", MediaType.APPLICATION_OCTET_STREAM_VALUE, "aa".getBytes());

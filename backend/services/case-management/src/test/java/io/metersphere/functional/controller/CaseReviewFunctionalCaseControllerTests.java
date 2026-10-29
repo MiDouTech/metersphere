@@ -559,7 +559,7 @@ public class CaseReviewFunctionalCaseControllerTests extends BaseTest {
         request.setReviewPassRule(CaseReviewPassRule.SINGLE.toString());
         request.setStatus(FunctionalCaseReviewStatus.UN_PASS.toString());
         request.setSelectAll(true);
-        this.requestPost(REVIEW_FUNCTIONAL_CASE_BATCH_REVIEW, request).andExpect(status().is5xxServerError());
+        this.requestPost(REVIEW_FUNCTIONAL_CASE_BATCH_REVIEW, request).andExpect(businessValidationError());
     }
 
 

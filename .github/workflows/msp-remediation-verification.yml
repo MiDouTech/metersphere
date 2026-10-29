@@ -176,6 +176,19 @@ jobs:
           name: backend-test-reports
           path: '**/target/surefire-reports/'
           retention-days: 7
+      - name: Extract unsuccessful testcase details without copying passing logs
+        if: always()
+        run: |
+          python3 deploy/quality-verify/test_failed_report_collection.py
+          python3 deploy/quality-verify/collect-failed-reports.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-failed-test-details
+          include-hidden-files: true
+          path: .ci-failed-reports/
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always() && steps.test-results.outcome != 'skipped'
         with:

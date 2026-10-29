@@ -83,27 +83,27 @@ public class BugCommentControllerTests extends BaseTest {
         request.setBugId("default-bug-id-for-comment-x");
         request.setContent("This is a comment test!");
         request.setEvent(NoticeConstants.Event.COMMENT);
-        this.requestPost(BUG_COMMENT_ADD, request, status().is5xxServerError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessValidationError());
         // 回复评论, 没有父级评论ID
         request.setReplyUser("oasis-user-id1");
         request.setBugId("default-bug-id-for-comment");
         request.setContent("This is a comment test!");
         request.setEvent(NoticeConstants.Event.REPLY);
-        this.requestPost(BUG_COMMENT_ADD, request, status().is5xxServerError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessValidationError());
         // 回复评论, 父级评论不存在
         request.setReplyUser("oasis-user-id1");
         request.setBugId("default-bug-id-for-comment");
         request.setContent("This is a comment test!");
         request.setParentId("default-bug-comment-id-3-x");
         request.setEvent(NoticeConstants.Event.REPLY);
-        this.requestPost(BUG_COMMENT_ADD, request, status().is5xxServerError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessValidationError());
         // 回复评论, 但回复人为空
         request.setReplyUser(null);
         request.setBugId("default-bug-id-for-comment");
         request.setContent("This is a comment test!");
         request.setParentId("default-bug-comment-id-3");
         request.setEvent(NoticeConstants.Event.REPLY);
-        this.requestPost(BUG_COMMENT_ADD, request, status().is5xxServerError());
+        this.requestPost(BUG_COMMENT_ADD, request, businessValidationError());
     }
 
     @Test

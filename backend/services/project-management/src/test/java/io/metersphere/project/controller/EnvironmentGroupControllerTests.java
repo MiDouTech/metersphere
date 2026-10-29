@@ -339,7 +339,7 @@ public class EnvironmentGroupControllerTests extends BaseTest {
         requestGetPermissionTest(PermissionConstants.PROJECT_ENVIRONMENT_READ_DELETE, delete + getEnvironmentGroup());
 
         //删除环境不存在的
-        this.requestGet(delete + "environmentId2", ERROR_REQUEST_MATCHER);
+        this.requestGet(delete + "environmentId2", businessValidationError());
 
     }
 

@@ -76,7 +76,7 @@ public class FunctionalCaseRelationshipControllerTests extends BaseTest {
         request.setProjectId("wx_relationship");
         request.setType("PRE");
         request.setSelectIds(List.of("wx_relationship_1"));
-        assertErrorCode(this.requestPost(ADD, request), MsHttpResultCode.FAILED);
+        this.requestPost(ADD, request).andExpect(businessError("关联后存在循环依赖，请检查依赖关系"));
 
         //后置用例
         request.setId("wx_relationship_4");

@@ -96,7 +96,7 @@ public class ApiDefinitionScheduleControllerTests extends BaseTest {
         assert apiDefinitionSwagger.getName().equals("定时任务2");
 
         request.setId("123");
-        this.requestPost(UPDATE, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(UPDATE, request, businessValidationError());
         request.setId(null);
         this.requestPost(UPDATE, request, BAD_REQUEST_MATCHER);
         request.setId("123");
@@ -116,7 +116,7 @@ public class ApiDefinitionScheduleControllerTests extends BaseTest {
     @Order(3)
     @Test
     public void get() throws Exception {
-        this.requestGet(GET + "123", ERROR_REQUEST_MATCHER);
+        this.requestGet(GET + "123", businessValidationError());
         MvcResult mvcResult = this.requestGetWithOk(GET + ID)
                 .andReturn();
         ApiScheduleDTO apiScheduleDTO = ApiDataUtils.parseObject(JSON.toJSONString(parseResponse(mvcResult).get("data")), ApiScheduleDTO.class);
@@ -129,7 +129,7 @@ public class ApiDefinitionScheduleControllerTests extends BaseTest {
     @Order(4)
     @Test
     public void switchSchedule() throws Exception {
-        this.requestGet(BASE_PATH + "switch/123", ERROR_REQUEST_MATCHER);
+        this.requestGet(BASE_PATH + "switch/123", businessValidationError());
         this.requestGetWithOk(BASE_PATH + "switch/" + SCHEDULE_ID);
         Schedule schedule = scheduleMapper.selectByPrimaryKey(SCHEDULE_ID);
         //断言为false
@@ -143,7 +143,7 @@ public class ApiDefinitionScheduleControllerTests extends BaseTest {
     @Order(6)
     @Test
     public void deleteSchedule() throws Exception {
-        this.requestGet(BASE_PATH + "delete/123", ERROR_REQUEST_MATCHER);
+        this.requestGet(BASE_PATH + "delete/123", businessValidationError());
         this.requestGetWithOk(BASE_PATH + "delete/" + SCHEDULE_ID);
         ApiDefinitionSwaggerExample example = new ApiDefinitionSwaggerExample();
         example.createCriteria().andProjectIdEqualTo(DEFAULT_PROJECT_ID);

@@ -242,7 +242,7 @@ public class FunctionalCaseControllerTests extends BaseTest {
         files.add(file);
         paramMap.add("files", files);
         ResultActions resultActions = this.requestMultipart(FUNCTIONAL_CASE_ADD_URL, paramMap);
-        resultActions.andExpect(status().is5xxServerError());
+        resultActions.andExpect(businessValidationError());
     }
 
     public String uploadTemp(MultipartFile file) {
@@ -924,13 +924,13 @@ public class FunctionalCaseControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("request", JSON.toJSONString(request));
         paramMap.add("file", null);
-        this.requestMultipart(IMPORT_XMIND_URL, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(IMPORT_XMIND_URL, paramMap).andExpect(businessValidationError());
 
         request.setCount(null);
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("request", JSON.toJSONString(request));
         paramMap.add("file", file2);
-        this.requestMultipart(IMPORT_XMIND_URL, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(IMPORT_XMIND_URL, paramMap).andExpect(businessValidationError());
     }
 
     @Test

@@ -140,7 +140,7 @@ public class TestPlanTaskCenterControllerTests extends BaseTest {
                         .header(SessionConstants.CURRENT_ORGANIZATION, "DEFAULT_ORGANIZATION_ID")
                         .content(JSON.toJSONString(request))
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(ERROR_REQUEST_MATCHER);
+                .andExpect(businessError(url.equals(REAL_TIME_ORG_PAGE) ? "组织不存在" : "项目不存在"));
 
     }
 

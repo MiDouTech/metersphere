@@ -83,6 +83,8 @@ public class TestPlanCaseControllerTests extends BaseTest {
     FunctionalCaseBlobMapper functionalCaseBlobMapper;
     @Resource
     private TestPlanFunctionalCaseService testPlanFunctionalCaseService;
+    @Resource
+    private io.metersphere.functional.mapper.FunctionalCaseMapper functionalCaseMapper;
 
 
     @Test
@@ -238,8 +240,12 @@ public class TestPlanCaseControllerTests extends BaseTest {
         request.setContent("12334");
         request.setNotifier("123");
         this.requestPostWithOk(FUNCTIONAL_CASE_RUN_URL, request);
+        Assertions.assertEquals("SUCCESS", functionalCaseMapper.selectByPrimaryKey("fc_3").getLastExecuteResult());
+        Assertions.assertEquals("SUCCESS", testPlanFunctionalCaseMapper.selectByPrimaryKey("relate_case_3").getLastExecResult());
         request.setLastExecResult("ERROR");
         this.requestPostWithOk(FUNCTIONAL_CASE_RUN_URL, request);
+        Assertions.assertEquals("ERROR", functionalCaseMapper.selectByPrimaryKey("fc_3").getLastExecuteResult());
+        Assertions.assertEquals("ERROR", testPlanFunctionalCaseMapper.selectByPrimaryKey("relate_case_3").getLastExecResult());
 
     }
 

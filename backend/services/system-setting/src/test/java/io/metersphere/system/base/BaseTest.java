@@ -78,6 +78,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public abstract class BaseTest {
+    /** Safe business validation envelope; excludes permission, missing-resource and server failures. */
+    protected static ResultMatcher businessValidationError() {
+        return result -> {
+            status().isUnprocessableEntity().match(result);
+            jsonPath("$.code").value(100422).match(result);
+            jsonPath("$.messageKey").value("api.businessError").match(result);
+            jsonPath("$.message").isNotEmpty().match(result);
+            jsonPath("$.requestId").isNotEmpty().match(result);
+            Assertions.assertEquals(result.getResponse().getHeader("X-Request-ID"),
+                    JsonPath.read(result.getResponse().getContentAsString(), "$.requestId"));
+        };
+    }
     /** Exact contract for a safe, string-based MSException; never matches an unexpected 500. */
     protected static org.springframework.test.web.servlet.ResultMatcher businessError(String expectedMessage) {
         return businessError(100422, expectedMessage);

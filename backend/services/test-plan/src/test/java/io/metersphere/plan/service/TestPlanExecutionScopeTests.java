@@ -41,12 +41,12 @@ class TestPlanExecutionScopeTests {
         verifyNoInteractions(cases);
     }
 
-    @Test void deletedOrForeignSourceCaseCannotBeExecuted() {
+    @Test void missingOrDeletedSourceCaseCannotBeExecuted() {
         when(cases.selectByExample(any())).thenReturn(List.of());
         assertThrows(MSException.class, () -> validate("project-a"));
         verify(cases).selectByExample(argThat(example -> {
             var conditions = example.getOredCriteria().getFirst().getAllCriteria();
-            return conditions.stream().anyMatch(c -> "project_id =".equals(c.getCondition()) && "project-a".equals(c.getValue()))
+            return conditions.stream().anyMatch(c -> "id in".equals(c.getCondition()) && List.of("case-a").equals(c.getValue()))
                     && conditions.stream().anyMatch(c -> "deleted =".equals(c.getCondition()) && Boolean.FALSE.equals(c.getValue()));
         }));
     }
@@ -60,8 +60,8 @@ class TestPlanExecutionScopeTests {
         verifyNoInteractions(cases);
     }
 
-    @Test void matchingActivePlanAndSourceAreAccepted() {
-        var source = new FunctionalCase(); source.setId("case-a"); source.setProjectId("project-a");
+    @Test void explicitlyAssociatedSourceFromAnotherProjectIsPreserved() {
+        var source = new FunctionalCase(); source.setId("case-a"); source.setProjectId("source-project");
         when(cases.selectByExample(any())).thenReturn(List.of(source));
         assertDoesNotThrow(() -> validate("project-a"));
     }

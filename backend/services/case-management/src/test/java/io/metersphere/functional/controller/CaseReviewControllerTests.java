@@ -141,11 +141,11 @@ public class CaseReviewControllerTests extends BaseTest {
 
         caseReviewRequest.setStartTime(1678188043000L);
         caseReviewRequest.setEndTime(1678188103000L);
-        this.requestPost(ADD_CASE_REVIEW, caseReviewRequest).andExpect(status().is5xxServerError());
+        this.requestPost(ADD_CASE_REVIEW, caseReviewRequest).andExpect(businessValidationError());
 
         caseReviewRequest.setStartTime(1901791303000L);
         caseReviewRequest.setEndTime(1678188103000L);
-        this.requestPost(ADD_CASE_REVIEW, caseReviewRequest).andExpect(status().is5xxServerError());
+        this.requestPost(ADD_CASE_REVIEW, caseReviewRequest).andExpect(businessValidationError());
 
     }
 
@@ -236,10 +236,10 @@ public class CaseReviewControllerTests extends BaseTest {
         CaseReviewRequest caseReviewRequestWidthStartTime = getCaseReviewAddRequest("创建评审5", CaseReviewPassRule.SINGLE.toString(), null, true, true, null);
         caseReviewRequestWidthStartTime.setStartTime(1678188043000L);
         caseReviewRequestWidthStartTime.setEndTime(1678188103000L);
-        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(status().is5xxServerError());
+        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(businessValidationError());
         caseReviewRequestWidthStartTime.setStartTime(1901791303000L);
         caseReviewRequestWidthStartTime.setEndTime(1678188103000L);
-        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(status().is5xxServerError());
+        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(businessValidationError());
     }
 
     @Test
@@ -304,10 +304,10 @@ public class CaseReviewControllerTests extends BaseTest {
         CaseReviewRequest caseReviewRequestWidthStartTime = getCaseReviewAddRequest("创建评审更新1", CaseReviewPassRule.SINGLE.toString(), caseReview.getId(), true, true, null);
         caseReviewRequestWidthStartTime.setStartTime(1678188043000L);
         caseReviewRequestWidthStartTime.setEndTime(1678188103000L);
-        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(businessError(105001, "用例评审不存在"));
+        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(businessValidationError());
         caseReviewRequestWidthStartTime.setStartTime(1901791303000L);
         caseReviewRequestWidthStartTime.setEndTime(1678188103000L);
-        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(businessError(105001, "用例评审不存在"));
+        this.requestPost(ADD_CASE_REVIEW, caseReviewRequestWidthStartTime).andExpect(businessValidationError());
     }
 
     @Test
@@ -620,7 +620,7 @@ public class CaseReviewControllerTests extends BaseTest {
         Assertions.assertTrue(StringUtils.equals(moduleIdNewOne, moduleIdNew));
         request.setMoveModuleId(null);
         request.setSelectAll(false);
-        this.requestPost(BATCH_MOVE_CASE_REVIEW, request).andExpect(status().is5xxServerError());
+        this.requestPost(BATCH_MOVE_CASE_REVIEW, request).andExpect(businessValidationError());
     }
 
     @Test
@@ -728,7 +728,7 @@ public class CaseReviewControllerTests extends BaseTest {
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .header(SessionConstants.CURRENT_PROJECT, projectId)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError(105001, "功能用例不存在"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
     }

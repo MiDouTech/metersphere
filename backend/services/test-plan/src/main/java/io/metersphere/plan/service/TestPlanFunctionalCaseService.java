@@ -644,7 +644,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
             throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
                     "请求用例不属于当前测试计划或项目");
         }
-        validateExecutionScope(List.of(relation), request.getTestPlanId(), request.getProjectId());
+        List<FunctionalCase> sources = validateExecutionScope(List.of(relation), request.getTestPlanId(), request.getProjectId());
         long now = System.currentTimeMillis();
         String operator = logInsertModule.getOperator();
         // 同一用例在所有测试计划中的关联行与用例库执行状态互相同步
@@ -655,7 +655,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
         //执行记录
         TestPlanCaseExecuteHistory executeHistory = buildHistory(request, operator);
-        handleFileAndNotice(request.getCaseId(), request.getProjectId(), request.getPlanCommentFileIds(), operator, CaseFileSourceType.PLAN_COMMENT.toString(), request.getNotifier(), request.getTestPlanId(), request.getLastExecResult());
+        handleFileAndNotice(request.getCaseId(), sources.getFirst().getProjectId(), request.getPlanCommentFileIds(), operator, CaseFileSourceType.PLAN_COMMENT.toString(), request.getNotifier(), request.getTestPlanId(), request.getLastExecResult());
         testPlanCaseExecuteHistoryMapper.insert(executeHistory);
 
     }
@@ -777,7 +777,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
     }
 
-    private void validateExecutionScope(List<TestPlanFunctionalCase> relations, String planId, String projectId) {
+    private List<FunctionalCase> validateExecutionScope(List<TestPlanFunctionalCase> relations, String planId, String projectId) {
         TestPlan plan = testPlanMapper.selectByPrimaryKey(planId);
         if (plan == null || !StringUtils.equals(plan.getProjectId(), projectId)
                 || relations.stream().anyMatch(row -> !StringUtils.equals(row.getTestPlanId(), planId))) {
@@ -789,11 +789,15 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         }
         var caseIds = relations.stream().map(TestPlanFunctionalCase::getFunctionalCaseId).distinct().toList();
         FunctionalCaseExample example = new FunctionalCaseExample();
-        example.createCriteria().andIdIn(caseIds).andProjectIdEqualTo(projectId).andDeletedEqualTo(false);
-        if (functionalCaseMapper.selectByExample(example).size() != caseIds.size()) {
+        // A plan may explicitly associate cases from multiple projects. The persisted relation
+        // authorizes which cases it contains; never substitute an arbitrary request case ID.
+        example.createCriteria().andIdIn(caseIds).andDeletedEqualTo(false);
+        List<FunctionalCase> sources = functionalCaseMapper.selectByExample(example);
+        if (sources.size() != caseIds.size() || sources.stream().anyMatch(source -> StringUtils.isBlank(source.getProjectId()))) {
             throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
                     "请求用例不属于当前测试计划或项目");
         }
+        return sources;
     }
 
     private List<TestPlanCaseExecuteHistory> getExecHistory(List<String> ids, TestPlanCaseBatchRunRequest request, LogInsertModule logInsertModule, Map<String, String> idsMap, Map<String, String> projectMap) {
