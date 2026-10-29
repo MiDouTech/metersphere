@@ -628,3 +628,14 @@ CI 40843550676 / 564297b1ce：1072项，72failure、65error、0skipped、0缺失
 增加构建8分钟、浏览器外层5分钟/脚本内层4分钟上限；依赖及app原180/360秒上限保留；每个子阶段写ci-phase、每个浏览器检查点及时写summary。构建完成即按JAR SHA256、Dockerfile/wecom-bridge/入口脚本Git身份保存应用镜像缓存；后续只改测试脚本时直接校验并加载同一imageId，不再重复构建。新环境仍执行完整迁移/启动/健康及实际页面路径。缓存不存在才构建，错误键/包/镜像ID均拒绝复用。
 
 补入两处此前仅有修改和历史问题截图、尚缺本次部署路径证据的UI验收：通过真实MCP读取模板并创建6个长标签缺陷，检查标签区域多行且不与预计解决时间或后续元数据重叠；个人中心检查启用/操作列完整位于1366宽窗口内，并实际UI停用/启用Token验证MCP权限变化及打开设置弹窗。仅写临时CI库，不使用原业务数据。上述新增脚本语法/工作流解析/bash语法/diff检查通过，实际执行待下一轮。整体仍部分完成，未合并。
+
+
+### 6.26 实际发现计划概览样式未生效（修复与复验中）
+
+运行40885756426成功完成镜像/迁移/健康、登录及真实MCP目录/用例创建和case.create重放。浏览器在计划选择框/进度条中心线断言处失败；截图runtime-round23-plan-layout-before.png可见选择框下移。定位到Arco Select渲染返回Fragment数组，class传到SelectView但未承接父SFC的scope标识；普通scoped .case-overview-plan-select未命中，grid-area:1/1和height:32px没有施加，选择框排在隐藏宽度测量span的下一网格行。源库组件实现可核对frontend/node_modules/@arco-design/web-vue/es/select/select.js的render trigger数组。此项是实际前端缺陷，不能放宽3px断言。
+
+仅将caseTable.vue该规则改为:deep(.case-overview-plan-select)，仍限定当前组件祖先，保留既有按钮、事件、权限、API、名称测宽与工具提示。改动影响当前用例列表计划概览的选择框布局，不改数据/数据库/后端。新增前端构建必须执行类型/Vite生产构建、SFC/交互契约和该文件stylelint；本机192MiB的8个SFC检查、目标stylelint与6项包/前端身份校验单元通过，远端生产构建待执行。
+
+为不重打后端，将前后端验收分开：后端JAR及镜像复用第20/23轮，要求当前backend Git树、受控外层构建输入及JAR/imageId一致；当前frontend必须由同轮前端job构建或按精确frontend Git树复用成功产物，并验证产物sourceCommit确实具有该frontend树。浏览器代理实际提供当前生产前端，API请求进入已校验后端；代理根index内容还逐字比对当前dist/index.html。后端JAR内嵌静态资源仍为第20轮版本，不将其声称为新前端；此处验证独立前端/API部署模式，生产发布如使用内嵌前端模式仍须在正式打包流程重新组装。后端源码不变，无需重跑2123项；改动前端必须正式构建，不把旧产物+临时CSS当实现。
+
+第23轮已按JAR/Dockerfile/bridge/入口脚本身份保存451MB应用镜像缓存；后续加载同一imageId，避免重复拉取慢基础镜像或重建应用。验收证据见verification-round23.json。当前UI修复、长标签、Token列交互、后续MCP提交/附件/计划详情路径均待下一轮实际验收，仍不合并。

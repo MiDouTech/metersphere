@@ -16,12 +16,79 @@ concurrency:
   group: remediation-runtime-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  frontend:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[runtime-only]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: tree
+        run: echo "value=$(git rev-parse HEAD:frontend)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: frontend-cache
+        with:
+          key: msp-runtime-frontend-v1-${{ runner.os }}-${{ steps.tree.outputs.value }}
+          path: |
+            frontend/dist/
+            .ci-frontend-build.json
+      - uses: pnpm/action-setup@v4
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        with:
+          version: 8.4.0
+      - uses: actions/setup-node@v4
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        with:
+          node-version: 20.8.1
+          cache: pnpm
+          cache-dependency-path: frontend/package.json
+      - name: Verify changed frontend and build production artifact
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        working-directory: frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm run test:selection-toggle
+          pnpm run test:weekly-remediation-sfc
+          pnpm run test:modal-contract
+          pnpm exec stylelint src/views/case-management/caseManagementFeature/components/caseTable.vue
+          pnpm run build
+      - name: Record current frontend identity
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        run: jq -n --arg commit "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" --arg tree "$(git rev-parse HEAD:frontend)" '{sourceCommit:$commit,sourceRun:$run,frontendTree:$tree}' > .ci-frontend-build.json
+      - name: Verify frontend source identity
+        run: |
+          test "$(jq -r .frontendTree .ci-frontend-build.json)" = "$(git rev-parse HEAD:frontend)"
+          test "$(git rev-parse "$(jq -r .sourceCommit .ci-frontend-build.json):frontend")" = "$(git rev-parse HEAD:frontend)"
+      - uses: actions/cache/save@v4
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        with:
+          key: msp-runtime-frontend-v1-${{ runner.os }}-${{ steps.tree.outputs.value }}
+          path: |
+            frontend/dist/
+            .ci-frontend-build.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-frontend-static
+          include-hidden-files: true
+          path: |
+            frontend/dist/
+            .ci-frontend-build.json
+          if-no-files-found: error
+          retention-days: 2
   runtime:
+    needs: frontend
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[runtime-only]')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-frontend-static
+          path: .
       - name: Require successful source test gate and compute exact package identity
         id: source
         env:
@@ -39,7 +106,10 @@ jobs:
           git fetch --no-tags --depth=1 origin "$source_sha"
           echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
           backend_tree=$(git rev-parse HEAD:backend)
-          frontend_tree=$(git rev-parse HEAD:frontend)
+          frontend_tree=$(git rev-parse "$source_sha:frontend")
+          front_source_sha=$(jq -r .sourceCommit .ci-frontend-build.json)
+          [[ "$front_source_sha" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags --depth=1 origin "$front_source_sha"
           prefix="msp-verified-app-${RUNNER_OS}-${backend_tree}-${frontend_tree}-"
           gh api --method GET "repos/$GITHUB_REPOSITORY/actions/caches" -f ref="$GITHUB_REF" -f key="$prefix" -f per_page=100 > "$RUNNER_TEMP/package-caches.json"
           cache_key=$(jq -er --arg prefix "$prefix" '[.actions_caches[].key | select(startswith($prefix))] | if length == 1 then .[0] else error("Exactly one matching verified package cache is required") end' "$RUNNER_TEMP/package-caches.json")
@@ -47,7 +117,6 @@ jobs:
           [[ "$inputs_hash" =~ ^[0-9a-f]{64}$ ]]
           echo "key=$cache_key" >> "$GITHUB_OUTPUT"
           echo "inputs=$inputs_hash" >> "$GITHUB_OUTPUT"
-          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --name frontend-static --dir frontend/dist
       - uses: actions/cache/restore@v4
         with:
           key: ${{ steps.source.outputs.key }}
@@ -55,6 +124,7 @@ jobs:
           path: |
             backend/app/target/app-3.x.jar
             .ci-backend-build.json
+            .ci-frontend-build.json
             .ci-test-summary.json
       - name: Validate package, source and complete test evidence
         env:

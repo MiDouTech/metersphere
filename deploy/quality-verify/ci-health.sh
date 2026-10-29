@@ -59,7 +59,7 @@ quality_frontend_status=$(curl -sS -o .ci-index.html -w '%{http_code}' http://12
 grep -Eq 'id="?app"?' .ci-index.html
 quality_image=$(docker image inspect msp-quality:verify --format '{{.Id}}')
 jq -n --arg commit "$GITHUB_SHA" --arg image "$quality_image" --arg status "$quality_frontend_status" --slurpfile health .ci-readiness.json \
-  '{commit:$commit,image:$image,frontendHttpStatus:$status,readiness:$health[0]}' > .ci-health.json
+  '{commit:$commit,image:$image,backendEmbeddedStaticHttpStatus:$status,readiness:$health[0]}' > .ci-health.json
 # Enable the existing local-admin entry in this fresh disposable database only.
 "${quality_compose[@]}" exec -T mysql sh -c 'MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysql -uroot metersphere_quality -e "UPDATE system_parameter SET param_value=\"true\" WHERE param_key=\"ui.login.admin.enabled\""'
 node scripts/quality-browser-proxy.mjs > .ci-core-proxy.log 2>&1 &
@@ -68,5 +68,11 @@ for quality_attempt in $(seq 1 20); do
   if curl -fsS http://127.0.0.1:15173/ > /dev/null; then break; fi
   sleep 1
 done
+curl -fsS http://127.0.0.1:15173/ > .ci-front-index.html
+cmp -s .ci-front-index.html frontend/dist/index.html
+jq --arg frontend "$(git rev-parse HEAD:frontend)" \
+  '. + {frontendHttpStatus:"200",frontendTree:$frontend,frontendDelivery:"separate-production-static"}' \
+  .ci-health.json > .ci-health.current.json
+mv .ci-health.current.json .ci-health.json
 quality_phase browser-mcp-smoke
 timeout --signal=TERM --kill-after=15s 300s node deploy/quality-verify/core-smoke.mjs

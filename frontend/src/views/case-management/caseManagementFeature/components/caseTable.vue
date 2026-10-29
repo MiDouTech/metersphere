@@ -2943,7 +2943,7 @@
     visibility: hidden;
     grid-area: 1 / 1;
   }
-  .case-overview-plan-select {
+  :deep(.case-overview-plan-select) {
     grid-area: 1 / 1;
     width: 100%;
     min-width: 0;

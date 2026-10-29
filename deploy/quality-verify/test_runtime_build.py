@@ -48,5 +48,13 @@ class RuntimeBuildTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Build input changed'):
                 runtime.validate_source_inputs('source')
 
+    def test_current_frontend_must_have_matching_build_source(self):
+        record = dict(frontendTree='current', sourceCommit='a' * 40)
+        with patch.object(runtime.subprocess, 'check_output', return_value='current'):
+            runtime.validate_frontend_artifact(record, 'current')
+        with patch.object(runtime.subprocess, 'check_output', return_value='stale'):
+            with self.assertRaises(ValueError): runtime.validate_frontend_artifact(record, 'current')
+        with self.assertRaises(ValueError): runtime.validate_frontend_artifact(record, 'different')
+
 
 if __name__ == '__main__': unittest.main()

@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import re
 
 MODULES = {'sdk', 'system-setting', 'project-management', 'api-test', 'bug-management',
            'case-management', 'test-plan', 'dashboard', 'agent-integration', 'app'}
@@ -17,6 +18,14 @@ def validate_source_inputs(source_sha):
         current = subprocess.check_output(['git', 'rev-parse', f'HEAD:{name}'], text=True).strip()
         if old != current:
             raise ValueError(f'Build input changed: {name}')
+
+
+def validate_frontend_artifact(record, current_tree):
+    if record.get('frontendTree') != current_tree or not re.fullmatch(r'[0-9a-f]{40}', record.get('sourceCommit', '')):
+        raise ValueError('Current production frontend artifact identity mismatch')
+    source = subprocess.check_output(['git', 'rev-parse', f"{record['sourceCommit']}:frontend"], text=True).strip()
+    if source != current_tree:
+        raise ValueError('Frontend artifact source does not match current frontend')
 
 
 def validate(record, summary, source_sha, source_run, backend, frontend, inputs, jar_sha):
@@ -41,10 +50,12 @@ def main():
     validate_source_inputs(args.source_sha)
     tree = lambda name: subprocess.check_output(['git', 'rev-parse', f'HEAD:{name}'], text=True).strip()
     jar = Path('backend/app/target/app-3.x.jar')
+    validate_frontend_artifact(json.loads(Path('.ci-frontend-build.json').read_text()), tree('frontend'))
+    source_frontend = subprocess.check_output(['git', 'rev-parse', f'{args.source_sha}:frontend'], text=True).strip()
     validate(json.loads(Path('.ci-backend-build.json').read_text()),
              json.loads(Path('.ci-test-summary.json').read_text()), args.source_sha, args.source_run,
-             tree('backend'), tree('frontend'), args.inputs_hash, hashlib.file_digest(jar.open('rb'), 'sha256').hexdigest())
-    print('Verified exact-source package and successful ten-module evidence; runtime checks must still execute')
+             tree('backend'), source_frontend, args.inputs_hash, hashlib.file_digest(jar.open('rb'), 'sha256').hexdigest())
+    print('Verified unchanged backend package and separately built current production frontend; runtime checks must still execute')
 
 
 if __name__ == '__main__':
