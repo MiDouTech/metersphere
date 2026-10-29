@@ -86,7 +86,7 @@
                 >
                   <div v-if="element.type === systemType" class="icon-button">
                     <MsIcon
-                      v-permission="props.updatePermission"
+                      v-permission="props.memberPermission ?? props.updatePermission"
                       type="icon-icon_add_outlined"
                       size="16"
                       @click="handleAddMember"
@@ -392,6 +392,7 @@
   const props = defineProps<{
     addPermission: string[];
     updatePermission: string[];
+    memberPermission?: string[];
     isGlobalDisable: boolean;
   }>();
 
@@ -456,7 +457,7 @@
       label: 'system.userGroup.delete',
       danger: true,
       eventTag: 'delete',
-      permission: ['SYSTEM_USER_ROLE:READ+DELETE'],
+      permission: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
     },
   ];
   const orgMoreAction: ActionsItem[] = [

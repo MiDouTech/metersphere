@@ -144,7 +144,7 @@ class TaskCenterScheduleControllerTests extends BaseTest {
                         .header(SessionConstants.CURRENT_ORGANIZATION, "DEFAULT_ORGANIZATION_ID")
                         .content(JSON.toJSONString(request))
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(ERROR_REQUEST_MATCHER);
+                .andExpect(businessError("项目不存在"));
     }
 
 

@@ -5,6 +5,16 @@
     "type": "SYSTEM",
     "children": [
       {
+        "id": "SYSTEM_AGENT_PACKAGE",
+        "name": "Agent 安装包接口",
+        "permissions": [
+          { "id": "SYSTEM_AGENT_PACKAGE:READ" },
+          { "id": "SYSTEM_AGENT_PACKAGE:READ+ADD" },
+          { "id": "SYSTEM_AGENT_PACKAGE:READ+UPDATE" },
+          { "id": "SYSTEM_AGENT_PACKAGE:READ+DELETE" }
+        ]
+      },
+      {
         "id": "SYSTEM_USER",
         "name": "permission.system_user.name",
         "permissions": [

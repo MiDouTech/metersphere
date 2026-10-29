@@ -40,6 +40,10 @@ public class OrganizationUserRoleService extends BaseUserRoleService {
     ExtUserRoleMapper extUserRoleMapper;
     @Resource
     UserRoleRelationMapper userRoleRelationMapper;
+    @Resource
+    private RoleRelationWriter roleRelationWriter;
+    @Resource
+    private PermissionSessionRefreshService permissionSessionRefreshService;
 
     public List<UserRole> list(String organizationId) {
         UserRoleExample example = new UserRoleExample();
@@ -84,7 +88,13 @@ public class OrganizationUserRoleService extends BaseUserRoleService {
     }
 
     public void addMember(OrganizationUserRoleMemberEditRequest request, String createUserId) {
-        request.getUserIds().forEach(userId -> {
+        UserRole role = get(request.getUserRoleId());
+        checkOrgUserRole(role);
+        if (!UserRoleEnum.GLOBAL.toString().equals(role.getScopeId())
+                && !request.getOrganizationId().equals(role.getScopeId())) {
+            throw new MSException(NO_ORG_USER_ROLE_PERMISSION);
+        }
+        request.getUserIds().stream().distinct().forEach(userId -> {
             checkMemberParam(userId, request.getUserRoleId());
             UserRoleRelation relation = new UserRoleRelation();
             relation.setId(IDGenerator.nextStr());
@@ -94,8 +104,9 @@ public class OrganizationUserRoleService extends BaseUserRoleService {
             relation.setCreateTime(System.currentTimeMillis());
             relation.setCreateUser(createUserId);
             relation.setOrganizationId(request.getOrganizationId());
-            userRoleRelationMapper.insert(relation);
+            roleRelationWriter.ensurePresent(relation);
         });
+        permissionSessionRefreshService.refreshUsersAfterCommit(request.getUserIds());
     }
 
     public void removeMember(OrganizationUserRoleMemberEditRequest request) {

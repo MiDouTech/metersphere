@@ -87,7 +87,7 @@ public class UserApiKeysControllerTests extends BaseTest {
         requestGet(ADD);
         requestGet(ADD);
         Assertions.assertEquals(5, userKeyMapper.countByExample(userKeyExample));
-        requestGet(ADD, status().is5xxServerError());
+        requestGet(ADD).andExpect(businessError(io.metersphere.sdk.util.Translator.get("user_apikey_limit")));
         //用户不存在的
         UserDTO userDTO = new UserDTO();
         userDTO.setId("test-api-keys");
@@ -96,9 +96,9 @@ public class UserApiKeysControllerTests extends BaseTest {
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .header(SessionConstants.ATTR_USER, sessionUser)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError("最多能有5个Api key"));
         //校验权限
-        requestGetPermissionTest(PermissionConstants.SYSTEM_PERSONAL_API_KEY_ADD, ADD);
+        mockMvc.perform(MockMvcRequestBuilders.get(ADD)).andExpect(status().isUnauthorized());
 
     }
 
@@ -116,7 +116,7 @@ public class UserApiKeysControllerTests extends BaseTest {
         //校验日志
         checkLog(list.getFirst(), OperationLogType.DELETE);
         //处理不存在的
-        requestGet(String.format(DELETE, UUID.randomUUID().toString()), status().is5xxServerError());
+        requestGet(String.format(DELETE, UUID.randomUUID().toString())).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_key_not_exist")));
         //校验权限
         // requestGetPermissionTest(PermissionConstants.SYSTEM_PERSONAL_API_KEY_DELETE, DELETE, "test-api-keys");
     }
@@ -134,7 +134,7 @@ public class UserApiKeysControllerTests extends BaseTest {
         Assertions.assertEquals(true, org.getForever());
         userKeyDTO.setForever(false);
         //到期时间为空
-        this.requestPost(UPDATE, userKeyDTO, status().is5xxServerError());
+        this.requestPost(UPDATE, userKeyDTO).andExpect(businessError(io.metersphere.sdk.util.Translator.get("expire_time_not_null")));
         userKeyDTO.setExpireTime(System.currentTimeMillis() - 1000000);
         this.requestPost(UPDATE, userKeyDTO);
         //描述为空
@@ -143,7 +143,7 @@ public class UserApiKeysControllerTests extends BaseTest {
 
         //校验不存在的
         userKeyDTO.setId(UUID.randomUUID().toString());
-        this.requestPost(UPDATE, userKeyDTO, status().is5xxServerError());
+        this.requestPost(UPDATE, userKeyDTO).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_key_not_exist")));
         //校验日志
         checkLog(userKeyId, OperationLogType.UPDATE);
     }
@@ -155,7 +155,23 @@ public class UserApiKeysControllerTests extends BaseTest {
         List<UserKey> userKeys = parseObjectFromMvcResult(mvcResult, List.class);
         assert userKeys != null;
         Assertions.assertEquals(4, userKeys.size());
-        requestGetPermissionTest(PermissionConstants.SYSTEM_PERSONAL_API_KEY_READ, LIST);
+        // Self-service is authenticated and owner-scoped, rather than gated by global role grants.
+        mockMvc.perform(getRequestBuilderByRole(ADD, "SYSTEM")).andExpect(status().isOk());
+        try {
+            List<UserKey> ownKeys = getResultDataArray(mockMvc.perform(getRequestBuilderByRole(LIST, "SYSTEM"))
+                    .andExpect(status().isOk()).andReturn(), UserKey.class);
+            Assertions.assertEquals(1, ownKeys.size());
+            Assertions.assertEquals("SYSTEM", ownKeys.getFirst().getCreateUser());
+            Assertions.assertFalse(ownKeys.stream().anyMatch(key -> key.getId().equals(userKeyId)));
+            mockMvc.perform(getRequestBuilderByRole(String.format(DELETE, userKeyId), "SYSTEM"))
+                    .andExpect(businessError(io.metersphere.sdk.util.Translator.get("current_user_can_not_operation_api_key")));
+            Assertions.assertNotNull(userKeyMapper.selectByPrimaryKey(userKeyId));
+            mockMvc.perform(MockMvcRequestBuilders.get(LIST)).andExpect(status().isUnauthorized());
+        } finally {
+            UserKeyExample otherKeys = new UserKeyExample();
+            otherKeys.createCriteria().andCreateUserEqualTo("SYSTEM");
+            userKeyMapper.deleteByExample(otherKeys);
+        }
     }
 
     @Test
@@ -167,7 +183,7 @@ public class UserApiKeysControllerTests extends BaseTest {
         //校验日志
         checkLog(userKeyId, OperationLogType.UPDATE);
         //校验不存在的
-        requestGet(String.format(DISABLE, UUID.randomUUID().toString()), status().is5xxServerError());
+        requestGet(String.format(DISABLE, UUID.randomUUID().toString())).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_key_not_exist")));
 
         MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.post("/login")
                         .content(String.format("{\"username\":\"%s\",\"password\":\"%s\"}", "test-user-key", "test-user-key@metersphere.io"))
@@ -182,7 +198,7 @@ public class UserApiKeysControllerTests extends BaseTest {
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError("当前用户无操作该ApiKey的权限"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         // requestGetPermissionTest(PermissionConstants.SYSTEM_PERSONAL_API_KEY_UPDATE, DISABLE, "test-user-key");
     }
@@ -196,7 +212,7 @@ public class UserApiKeysControllerTests extends BaseTest {
         //校验日志
         checkLog(userKeyId, OperationLogType.UPDATE);
         //校验不存在的
-        requestGet(String.format(ENABLE, UUID.randomUUID().toString()), status().is5xxServerError());
+        requestGet(String.format(ENABLE, UUID.randomUUID().toString())).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_key_not_exist")));
         //requestGetPermissionTest(PermissionConstants.SYSTEM_PERSONAL_API_KEY_UPDATE, ENABLE, "test-user-key");
     }
 

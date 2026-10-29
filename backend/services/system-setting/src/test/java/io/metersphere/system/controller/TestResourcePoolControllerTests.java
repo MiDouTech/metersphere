@@ -376,7 +376,7 @@ class TestResourcePoolControllerTests extends BaseTest {
     @Order(14)
     void getResourcePoolsDetailFiled() throws Exception {
         String id = "1034";
-        getDetail("/test/resource/pool/detail/" + id, ERROR_REQUEST_MATCHER);
+        getDetail("/test/resource/pool/detail/" + id, businessError("测试资源池不存在"));
 
         TestResourcePool testResourcePoolRequest1 = this.addTestResourcePoolSuccess("test_pool_blob_no_node", true, false, true, false, false, true, ResourcePoolTypeEnum.K8S.getName());
         getDetail("/test/resource/pool/detail/" + testResourcePoolRequest1.getId(), status().isOk());
@@ -505,7 +505,7 @@ class TestResourcePoolControllerTests extends BaseTest {
         TestResourcePoolDTO testPool4 = listByKeyWord("test_pool_4");
         TestResourcePoolRequest testResourcePoolRequest = generatorDto(true, false, false, false, false, false, false, false);
         testResourcePoolRequest.setName("test_pool_blob2");
-        this.requestPost(urlType, url, testPool4.getId(), testResourcePoolRequest, status().is5xxServerError());
+        this.requestPost(urlType, url, testPool4.getId(), testResourcePoolRequest, businessError("资源池名称已存在"));
         //资源池类型为空
         testResourcePoolRequest = generatorDto(true, false, true, false, false, false, false, false);
         this.requestPost(urlType, url, id, testResourcePoolRequest, status().isBadRequest());

@@ -100,7 +100,7 @@ class GlobalUserRoleControllerTests extends BaseTest {
         createdGroupParamValidateTest(UserRoleUpdateRequestDefinition.class, DEFAULT_ADD);
 
         // @@校验权限
-        requestPostPermissionTest(PermissionConstants.SYSTEM_USER_ROLE_ADD, DEFAULT_ADD, request);
+        requestPostPermissionTest(PermissionConstants.SYSTEM_PERMISSION_CONTROL_ADD, DEFAULT_ADD, request);
     }
 
     @Test
@@ -150,7 +150,7 @@ class GlobalUserRoleControllerTests extends BaseTest {
         updatedGroupParamValidateTest(UserRoleUpdateRequestDefinition.class, DEFAULT_UPDATE);
 
         // @@校验权限
-        requestPostPermissionTest(PermissionConstants.SYSTEM_USER_ROLE_UPDATE, DEFAULT_UPDATE, request);
+        requestPostPermissionTest(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE, DEFAULT_UPDATE, request);
     }
 
     @Test
@@ -245,7 +245,7 @@ class GlobalUserRoleControllerTests extends BaseTest {
         paramValidateTest(PermissionSettingUpdateRequestDefinition.class, PERMISSION_UPDATE);
 
         // @@校验权限
-        requestPostPermissionTest(PermissionConstants.SYSTEM_USER_ROLE_UPDATE, PERMISSION_UPDATE, request);
+        requestPostPermissionTest(PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE, PERMISSION_UPDATE, request);
     }
 
     @Test
@@ -284,7 +284,7 @@ class GlobalUserRoleControllerTests extends BaseTest {
             }
         });
         // 校验是不是获取的数据中包含了该用户组所有的权限
-        Assertions.assertTrue(CollectionUtils.isEmpty(permissionIds));
+        Assertions.assertTrue(CollectionUtils.isEmpty(permissionIds), () -> "Granted permissions missing from runtime definitions: " + new TreeSet<>(permissionIds));
 
         // @@操作非全局用户组异常
         assertErrorCode(this.requestGet(PERMISSION_SETTING, getNonGlobalUserRole().getId()), GLOBAL_USER_ROLE_PERMISSION);
@@ -334,7 +334,7 @@ class GlobalUserRoleControllerTests extends BaseTest {
         assertErrorCode(this.requestGet(DEFAULT_DELETE, "111"), NOT_FOUND);
 
         // @@校验权限
-        requestGetPermissionTest(PermissionConstants.SYSTEM_USER_ROLE_DELETE, DEFAULT_DELETE, addUserRole.getId());
+        requestGetPermissionTest(PermissionConstants.SYSTEM_PERMISSION_CONTROL_DELETE, DEFAULT_DELETE, addUserRole.getId());
     }
 
     /**

@@ -125,7 +125,7 @@ public class SystemAIConfigControllerTests  extends BaseTest {
         this.requestPost(EDIT_SOURCE, aiModelSourceDTO).andExpect(status().is5xxServerError());
         aiModelSourceDTO.setId(null);
         aiModelSourceDTO.setStatus(true);
-        this.requestPost(EDIT_SOURCE, aiModelSourceDTO).andExpect(status().is5xxServerError());
+        this.requestPost(EDIT_SOURCE, aiModelSourceDTO).andExpect(businessError("模型名称 测试模型1 已被系统中其他用户占用，请更换唯一名称后重试"));
         aiModelSourceDTO = new AiModelSourceDTO();
         aiModelSourceDTO.setName("智谱 THUDM/GLM-Z1-9B-0414");
         aiModelSourceDTO.setType("LLM");
@@ -160,7 +160,7 @@ public class SystemAIConfigControllerTests  extends BaseTest {
     @Test
     @Order(2)
     public void testDetail() throws Exception {
-        this.requestGet(DETAIL+"1").andExpect(status().is5xxServerError());
+        this.requestGet(DETAIL+"1").andExpect(businessError("模型信息不存在"));
         String id = saveModel("测试模型2");
         this.requestGetWithOk(DETAIL+id);
     }

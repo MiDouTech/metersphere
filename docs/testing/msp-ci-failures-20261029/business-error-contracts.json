@@ -1,0 +1,344 @@
+{
+  "F004": {
+    "test": "io.metersphere.system.controller.OperationLogControllerTests.testGetOperationLogParamsError",
+    "message": "开始日期必须小于结束日期",
+    "http": 422,
+    "code": 100422
+  },
+  "F005": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.addMemberByOrgSuccess",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F006": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.addMemberByOrgError",
+    "message": "用户不能为空",
+    "http": 422,
+    "code": 100422
+  },
+  "F007": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.updateOrgMemberError",
+    "message": "用户不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F008": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.updateOrgMemberToRoleError",
+    "message": "用户不能为空",
+    "http": 422,
+    "code": 100422
+  },
+  "F009": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.addOrgMemberToProjectError",
+    "message": "用户不能为空",
+    "http": 422,
+    "code": 100422
+  },
+  "F010": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.removeOrgMemberSuccess",
+    "message": "至少保留一个管理员",
+    "http": 422,
+    "code": 100422
+  },
+  "F011": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.removeOrgMemberError",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F012": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.getProjectListByOrgError",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F013": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.getUserRoleListByOrgError",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F014": {
+    "test": "io.metersphere.system.controller.OrganizationControllerTests.getNotExistUserListByOrgError",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F016": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testAddProjectError",
+    "message": "项目名称已存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F017": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testUpdateProjectError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F018": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testDeleteProjectError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F019": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testRevokeProjectError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F021": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testAddProjectMemberError",
+    "message": "用户不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F022": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testRemoveProjectMemberError",
+    "message": "用户不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F023": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.enableError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F024": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.disableError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F025": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testGetAdminList",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F026": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testGetMemberList",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F027": {
+    "test": "io.metersphere.system.controller.OrganizationProjectControllerTests.testUpdateNameError",
+    "message": "项目名称已存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F031": {
+    "test": "io.metersphere.system.controller.OrganizationUserRoleControllerTests.testOrganizationUserRoleAddError",
+    "message": "用户组已存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F032": {
+    "test": "io.metersphere.system.controller.OrganizationUserRoleControllerTests.testOrganizationUserRoleUpdateError",
+    "message": "用户组不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F033": {
+    "test": "io.metersphere.system.controller.OrganizationUserRoleControllerTests.testOrganizationUserRoleDeleteError",
+    "message": "用户组不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F034": {
+    "test": "io.metersphere.system.controller.OrganizationUserRoleControllerTests.testOrganizationUserRolePermissionSettingError",
+    "message": "用户组不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F035": {
+    "test": "io.metersphere.system.controller.OrganizationUserRoleControllerTests.testOrganizationUserRolePermissionUpdateError",
+    "message": "用户组不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F036": {
+    "test": "io.metersphere.system.controller.OrganizationUserRoleControllerTests.testOrganizationUserRoleAddMemberError",
+    "message": "用户不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F037": {
+    "test": "io.metersphere.system.controller.OrganizationUserRoleControllerTests.testOrganizationUserRoleRemoveMemberError",
+    "message": "用户不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F039": {
+    "test": "io.metersphere.system.controller.SystemAIConfigControllerTests.testEdit",
+    "message": "模型名称 测试模型1 已被系统中其他用户占用，请更换唯一名称后重试",
+    "http": 422,
+    "code": 100422
+  },
+  "F040": {
+    "test": "io.metersphere.system.controller.SystemAIConfigControllerTests.testDetail",
+    "message": "模型信息不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F041": {
+    "test": "io.metersphere.system.controller.SystemOrganizationControllerTests.testUpdateOrganizationError",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F042": {
+    "test": "io.metersphere.system.controller.SystemOrganizationControllerTests.testDeleteOrganization",
+    "message": "默认组织无法删除",
+    "http": 422,
+    "code": 100422
+  },
+  "F043": {
+    "test": "io.metersphere.system.controller.SystemOrganizationControllerTests.testAddOrganizationMemberError",
+    "message": "用户不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F044": {
+    "test": "io.metersphere.system.controller.SystemOrganizationControllerTests.testRemoveOrganizationMemberError",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F045": {
+    "test": "io.metersphere.system.controller.SystemOrganizationControllerTests.testRemoveOrganizationMemberSuccess",
+    "message": "至少保留一个管理员",
+    "http": 422,
+    "code": 100422
+  },
+  "F046": {
+    "test": "io.metersphere.system.controller.SystemOrganizationControllerTests.testAddOrganizationError",
+    "message": "组织名已存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F047": {
+    "test": "io.metersphere.system.controller.SystemOrganizationControllerTests.testSwitchOrganizationError",
+    "message": "组织不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F048": {
+    "test": "io.metersphere.system.controller.SystemParameterControllerTests.testEmailConnect",
+    "message": "连接失败",
+    "http": 422,
+    "code": 100422
+  },
+  "F049": {
+    "test": "io.metersphere.system.controller.SystemParameterControllerTests.testEditUploadConfigInfoError",
+    "message": "文件限制参数错误",
+    "http": 422,
+    "code": 100422
+  },
+  "F051": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.testAddProjectError",
+    "message": "项目名称已存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F052": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.testUpdateProjectError",
+    "message": "项目名称已存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F053": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.testDeleteProjectError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F054": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.testRevokeProjectError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F055": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.testAddProjectMemberError",
+    "message": "用户不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F056": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.testRemoveProjectMemberError",
+    "message": "用户不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F057": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.enableError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F058": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.disableError",
+    "message": "项目不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F059": {
+    "test": "io.metersphere.system.controller.SystemProjectControllerTests.testUpdateNameError",
+    "message": "项目名称已存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F061": {
+    "test": "io.metersphere.system.controller.TestResourcePoolControllerTests.getResourcePoolsDetailFiled",
+    "message": "测试资源池不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F063": {
+    "test": "io.metersphere.system.controller.user.PersonalControllerTests.testPersonalGetId",
+    "message": "无权操作非本人账户",
+    "http": 422,
+    "code": 100422
+  },
+  "F064": {
+    "test": "io.metersphere.system.controller.user.PersonalControllerTests.testPersonalUpdateInfo",
+    "message": "无权操作非本人账户",
+    "http": 422,
+    "code": 100422
+  },
+  "F065": {
+    "test": "io.metersphere.system.controller.user.PersonalControllerTests.testPersonalUpdatePassword",
+    "message": "旧密码输入错误，请重新输入",
+    "http": 422,
+    "code": 100422
+  },
+  "F066": {
+    "test": "io.metersphere.system.controller.user.PersonalControllerTests.testDetail",
+    "message": "模型信息不存在",
+    "http": 422,
+    "code": 100422
+  },
+  "F067": {
+    "test": "io.metersphere.system.controller.UserApiKeysControllerTests.testAdd",
+    "message": "最多能有5个Api key",
+    "http": 422,
+    "code": 100422
+  },
+  "F068": {
+    "test": "io.metersphere.system.controller.UserApiKeysControllerTests.testDisable",
+    "message": "当前用户无操作该ApiKey的权限",
+    "http": 422,
+    "code": 100422
+  },
+  "F069": {
+    "test": "io.metersphere.system.controller.UserLocalConfigControllerTests.testAdd",
+    "message": "当前用户本地配置已存在",
+    "http": 422,
+    "code": 100422
+  }
+}

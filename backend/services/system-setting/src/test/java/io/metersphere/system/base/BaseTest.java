@@ -77,6 +77,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public abstract class BaseTest {
+    /** Exact contract for a safe, string-based MSException; never matches an unexpected 500. */
+    protected static org.springframework.test.web.servlet.ResultMatcher businessError(String expectedMessage) {
+        return result -> {
+            status().isUnprocessableEntity().match(result);
+            jsonPath("$.code").value(100422).match(result);
+            jsonPath("$.messageKey").value("api.businessError").match(result);
+            jsonPath("$.message").value(expectedMessage).match(result);
+            jsonPath("$.requestId").isNotEmpty().match(result);
+            jsonPath("$.retryable").doesNotExist().match(result);
+            Assertions.assertEquals(result.getResponse().getHeader("X-Request-ID"),
+                    JsonPath.read(result.getResponse().getContentAsString(), "$.requestId"));
+        };
+    }
     @Resource
     protected MockMvc mockMvc;
     protected static String sessionId;
@@ -197,6 +210,11 @@ public abstract class BaseTest {
         AuthInfo authInfo = permissionAuthInfoMap.get(userRoleType);
         MockHttpServletRequestBuilder requestBuilder = MockMvcRequestBuilders.get(getBasePath() + url, uriVariables);
         return setRequestBuilderHeader(requestBuilder, authInfo == null ? adminAuthInfo : authInfo);
+    }
+
+    protected void requestGetPermissionTestInOrganization(String permissionId, String url, String organizationId) throws Exception {
+        requestPermissionTest(permissionId, url, () -> getRequestBuilderByRole(url, "ORGANIZATION")
+                .header(SessionConstants.CURRENT_ORGANIZATION, organizationId));
     }
 
     protected ResultActions requestPost(String url, Object param, Object... uriVariables) throws Exception {

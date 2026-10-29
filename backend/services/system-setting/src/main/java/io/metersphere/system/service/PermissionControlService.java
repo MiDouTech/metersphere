@@ -139,44 +139,42 @@ public class PermissionControlService {
 
     /**
      * Compatibility entry for historical split role writes. All metadata writes are converted to the
-     * atomic role-save command so administrator protection, scope validation, audit and session refresh
-     * cannot diverge from the permission-control page.
+     * creation command or a selective metadata update. Metadata updates preserve existing grants,
+     * while retaining administrator protection, scope validation and session refresh.
      */
     public UserRole saveRoleMetadata(UserRoleUpdateRequest request) {
+        if (StringUtils.isNotBlank(request.getId())) {
+            if (!SessionUtils.hasPermission(null, null, PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)) {
+                throw new MSException("无权保存当前角色设置");
+            }
+            UserRole original = globalUserRoleService.getWithCheck(request.getId());
+            globalUserRoleService.checkAdminUserRole(original);
+            if (request.getType() != null && !StringUtils.equals(original.getType(), request.getType())) {
+                throw new MSException("角色类型创建后不可修改");
+            }
+            UserRole update = new UserRole();
+            update.setId(original.getId());
+            update.setName(request.getName());
+            update.setDescription(request.getDescription());
+            update.setType(original.getType());
+            // This legacy endpoint is selective metadata update. It must never rebuild grants
+            // from a permission tree that may contain only the current module's definitions.
+            globalUserRoleService.update(update);
+            if (request.getEnabled() != null && !Objects.equals(original.getEnabled(), request.getEnabled())) {
+                globalUserRoleService.enable(original.getId(), request.getEnabled());
+            }
+            permissionSessionRefreshService.refreshUsersAfterCommit(
+                    permissionControlMapper.selectRoleMemberUserIds(original.getId(), null));
+            return globalUserRoleService.get(original.getId());
+        }
         RoleSaveRequest saveRequest = new RoleSaveRequest();
         saveRequest.setId(request.getId());
         saveRequest.setName(request.getName());
         saveRequest.setDescription(request.getDescription());
         saveRequest.setType(request.getType());
-        saveRequest.setEnabled(request.getEnabled());
-        if (StringUtils.isBlank(request.getId())) {
-            saveRequest.setPermissions(List.of());
-        } else {
-            saveRequest.setPermissions(flattenPermissionUpdates(getRolePermission(request.getId())));
-        }
+        saveRequest.setEnabled(BooleanUtils.isNotFalse(request.getEnabled()));
+        saveRequest.setPermissions(List.of());
         return saveRole(saveRequest);
-    }
-
-    private List<PermissionSettingUpdateRequest.PermissionUpdateRequest> flattenPermissionUpdates(
-            List<PermissionDefinitionItem> definitions) {
-        List<PermissionSettingUpdateRequest.PermissionUpdateRequest> result = new ArrayList<>();
-        collectPermissionUpdates(definitions, result);
-        return result;
-    }
-
-    private void collectPermissionUpdates(List<PermissionDefinitionItem> definitions,
-                                          List<PermissionSettingUpdateRequest.PermissionUpdateRequest> result) {
-        if (CollectionUtils.isEmpty(definitions)) {
-            return;
-        }
-        for (PermissionDefinitionItem definition : definitions) {
-            if (CollectionUtils.isNotEmpty(definition.getPermissions())) {
-                definition.getPermissions().forEach(permission -> result.add(
-                        new PermissionSettingUpdateRequest.PermissionUpdateRequest(
-                                permission.getId(), BooleanUtils.isTrue(permission.getEnable()))));
-            }
-            collectPermissionUpdates(definition.getChildren(), result);
-        }
     }
 
     public UserRole enableRole(String roleId, Boolean enabled) {
@@ -191,7 +189,7 @@ public class PermissionControlService {
 
     public void deleteRole(String roleId) {
         if (REQUIRED_ROLE_IDS.contains(roleId)) {
-            throw new MSException("系统必备角色不可删除");
+            throw new MSException(io.metersphere.system.controller.handler.result.CommonResultCode.INTERNAL_USER_ROLE_PERMISSION);
         }
         List<String> affectedUsers = permissionControlMapper.selectRoleMemberUserIds(roleId, null);
         globalUserRoleService.delete(roleId, SessionUtils.getUserId());

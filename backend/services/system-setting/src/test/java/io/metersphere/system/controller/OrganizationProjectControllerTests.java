@@ -349,7 +349,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         Assertions.assertTrue(userRoleRelations.stream().map(UserRoleRelation::getUserId).toList().contains("admin"));
         projectId = result.getId();
         Project projectExtend = projectMapper.selectByPrimaryKey(projectId);
-        Assertions.assertNull(projectExtend.getModuleSetting());
+        Assertions.assertEquals(List.of("caseManagement", "bugManagement", "testPlan", "apiTest"), JSON.parseArray(projectExtend.getModuleSetting(), String.class));
         // 校验日志
         checkLog(projectId, OperationLogType.ADD);
 
@@ -366,7 +366,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         checkLog(projectId, OperationLogType.ADD);
 
         compareProjectDTO(projects.getFirst(), result);
-        Assertions.assertNull(projectExtend.getModuleSetting());
+        Assertions.assertEquals(List.of("caseManagement", "bugManagement", "testPlan", "apiTest"), JSON.parseArray(projectExtend.getModuleSetting(), String.class));
 
         //设置了模块模版
         List<String> moduleIds = new ArrayList<>();
@@ -432,7 +432,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         this.responsePost(addProject, project);
         //项目名称存在 500
         project = this.generatorAdd("organizationId", "organization-nameError", "description", true, List.of("admin"));
-        this.requestPost(addProject, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(addProject, project, businessError("项目名称已存在"));
         //参数组织Id为空
         project = this.generatorAdd(null, null, null, true, List.of("admin"));
         this.requestPost(addProject, project, BAD_REQUEST_MATCHER);
@@ -682,7 +682,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         this.requestPost(updateProject, project, BAD_REQUEST_MATCHER);
         //项目不存在
         project = this.generatorUpdate(DEFAULT_ORGANIZATION_ID, "1111", "123", null, true, List.of("admin"));
-        this.requestPost(updateProject, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(updateProject, project, businessError("项目不存在"));
         //资源池不存在
         project = this.generatorUpdate(DEFAULT_ORGANIZATION_ID, "projectId", "org-Module-pool", null, true, List.of("admin"));
         project.setResourcePoolIds(List.of("resourcePoolId3"));
@@ -711,7 +711,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
     @Order(10)
     public void testDeleteProjectError() throws Exception {
         String id = "1111";
-        this.responseGet(deleteProject + id, ERROR_REQUEST_MATCHER);
+        this.responseGet(deleteProject + id, businessError("项目不存在"));
     }
 
     @Test
@@ -733,7 +733,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
     @Order(12)
     public void testRevokeProjectError() throws Exception {
         String id = "1111";
-        this.responseGet(revokeProject + id, ERROR_REQUEST_MATCHER);
+        this.responseGet(revokeProject + id, businessError("项目不存在"));
     }
 
     @Test
@@ -779,7 +779,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         projectAddMemberRequest.setProjectId("projectId");
         projectAddMemberRequest.setUserIds(List.of("admin3"));
         projectAddMemberRequest.setUserRoleIds(List.of(InternalUserRole.PROJECT_ADMIN.getValue(), InternalUserRole.PROJECT_MEMBER.getValue()));
-        this.requestPost(addProjectMember, projectAddMemberRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(addProjectMember, projectAddMemberRequest, businessError("用户不存在"));
         //项目id不存在
         projectAddMemberRequest = new ProjectAddMemberRequest();
         projectAddMemberRequest.setProjectId("projectId111");
@@ -885,7 +885,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         //用户Id不存在
         projectId = "projectId1";
         userId = "admin34";
-        this.responseGet(removeProjectMember + projectId + "/" + userId, ERROR_REQUEST_MATCHER);
+        this.responseGet(removeProjectMember + projectId + "/" + userId, businessError("用户不存在"));
         //项目id不存在
         projectId = "projectId111";
         userId = "admin1";
@@ -909,7 +909,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
     @Order(20)
     public void disableError() throws Exception {
         String id = "1111";
-        this.responseGet(disableProject + id, ERROR_REQUEST_MATCHER);
+        this.responseGet(disableProject + id, businessError("项目不存在"));
     }
 
     @Test
@@ -928,7 +928,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
     @Order(20)
     public void enableError() throws Exception {
         String id = "1111";
-        this.responseGet(enableProject + id, ERROR_REQUEST_MATCHER);
+        this.responseGet(enableProject + id, businessError("项目不存在"));
     }
 
     @Test
@@ -949,7 +949,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
 
         //组织不存在
         organizationId = "organizationId111";
-        this.responseGet(getAdminList + organizationId, ERROR_REQUEST_MATCHER);
+        this.responseGet(getAdminList + organizationId, businessError("组织不存在"));
 
     }
 
@@ -978,7 +978,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         //组织不存在
         organizationId = "organizationId111";
         projectId = "projectId4";
-        this.responseGet(getMemberList + organizationId + "/" + projectId, ERROR_REQUEST_MATCHER);
+        this.responseGet(getMemberList + organizationId + "/" + projectId, businessError("组织不存在"));
         //项目不存在
         organizationId = getDefault().getId();
         projectId = "projectId111";
@@ -1021,7 +1021,7 @@ public class OrganizationProjectControllerTests extends BaseTest {
         project.setId("projectId2");
         project.setName("org-updateName");
         project.setOrganizationId(DEFAULT_ORGANIZATION_ID);
-        this.requestPost(updateName, project, ERROR_REQUEST_MATCHER);
+        this.requestPost(updateName, project, businessError("项目名称已存在"));
         //参数组织Id为空
         project.setOrganizationId(null);
         this.requestPost(updateName, project, BAD_REQUEST_MATCHER);

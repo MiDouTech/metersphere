@@ -53,6 +53,48 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PermissionControlServiceTests {
+    @Test
+    void legacyMetadataUpdatePreservesDisabledStateAndUnrepresentedPermissions() {
+        UserRole original = new UserRole();
+        original.setId("legacy-role");
+        original.setType("SYSTEM");
+        original.setEnabled(false);
+        when(globalUserRoleService.getWithCheck("legacy-role")).thenReturn(original);
+        when(globalUserRoleService.get("legacy-role")).thenReturn(original);
+        io.metersphere.system.dto.sdk.request.UserRoleUpdateRequest request =
+                new io.metersphere.system.dto.sdk.request.UserRoleUpdateRequest();
+        request.setId("legacy-role");
+        request.setName("Renamed");
+        try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class)) {
+            session.when(() -> SessionUtils.hasPermission(null, null, PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)).thenReturn(true);
+            service.saveRoleMetadata(request);
+        }
+        ArgumentCaptor<UserRole> update = ArgumentCaptor.forClass(UserRole.class);
+        verify(globalUserRoleService).update(update.capture());
+        assertEquals("Renamed", update.getValue().getName());
+        org.junit.jupiter.api.Assertions.assertNull(update.getValue().getEnabled());
+        verify(globalUserRoleService, never()).enable(any(), any());
+        verify(globalUserRoleService, never()).updatePermissionSetting(any());
+        verify(globalUserRoleService, never()).getPermissionSettingForControl(any());
+    }
+
+    @Test
+    void legacyMetadataUpdateRejectsExplicitTypeChangeBeforeWriting() {
+        UserRole original = new UserRole();
+        original.setId("legacy-role");
+        original.setType("SYSTEM");
+        when(globalUserRoleService.getWithCheck("legacy-role")).thenReturn(original);
+        io.metersphere.system.dto.sdk.request.UserRoleUpdateRequest request =
+                new io.metersphere.system.dto.sdk.request.UserRoleUpdateRequest();
+        request.setId("legacy-role");
+        request.setType("PROJECT");
+        try (MockedStatic<SessionUtils> session = mockStatic(SessionUtils.class)) {
+            session.when(() -> SessionUtils.hasPermission(null, null, PermissionConstants.SYSTEM_PERMISSION_CONTROL_UPDATE)).thenReturn(true);
+            assertThrows(io.metersphere.sdk.exception.MSException.class, () -> service.saveRoleMetadata(request));
+        }
+        verify(globalUserRoleService, never()).update(any());
+        verify(globalUserRoleService, never()).updatePermissionSetting(any());
+    }
     @Mock
     private GlobalUserRoleService globalUserRoleService;
     @Mock

@@ -82,6 +82,10 @@ public class CommonProjectService {
     private DefaultHubProjectService defaultHubProjectService;
     @Resource
     private DefaultHubFolderService defaultHubFolderService;
+    @Resource
+    private RoleRelationWriter roleRelationWriter;
+    @Resource
+    private PermissionSessionRefreshService permissionSessionRefreshService;
 
     public static final Integer DEFAULT_REMAIN_DAY_COUNT = 30;
     public static final String API_TEST = "apiTest";
@@ -781,8 +785,17 @@ public class CommonProjectService {
 
     public void addProjectUser(ProjectAddMemberRequest request, String createUser, String path, String type, String content, String module) {
         List<LogDTO> logDTOList = new ArrayList<>();
-        List<UserRoleRelation> userRoleRelations = new ArrayList<>();
+        checkProjectNotExist(request.getProjectId());
         Project project = projectMapper.selectByPrimaryKey(request.getProjectId());
+        request.setUserIds(request.getUserIds().stream().distinct().toList());
+        request.setUserRoleIds(request.getUserRoleIds().stream().distinct().toList());
+        for (String roleId : request.getUserRoleIds()) {
+            UserRole role = userRoleMapper.selectByPrimaryKey(roleId);
+            if (role == null || !UserRoleType.PROJECT.name().equals(role.getType())
+                    || !(UserRoleScope.GLOBAL.equals(role.getScopeId()) || project.getId().equals(role.getScopeId()))) {
+                throw new MSException(Translator.get("user_role_not_exist"));
+            }
+        }
         Map<String, String> userMap = addUserPre(request.getUserIds(), createUser, path, module, request.getProjectId(), project);
         request.getUserIds().forEach(userId -> {
             request.getUserRoleIds().forEach(userRoleId -> {
@@ -794,7 +807,9 @@ public class CommonProjectService {
                 userRoleRelation.setCreateTime(System.currentTimeMillis());
                 userRoleRelation.setCreateUser(createUser);
                 userRoleRelation.setOrganizationId(project.getOrganizationId());
-                userRoleRelations.add(userRoleRelation);
+                if (!roleRelationWriter.ensurePresent(userRoleRelation)) {
+                    return;
+                }
                 String logProjectId = OperationLogConstants.SYSTEM;
                 if (StringUtils.equals(module, OperationLogModule.SETTING_ORGANIZATION_PROJECT)) {
                     logProjectId = OperationLogConstants.ORGANIZATION;
@@ -803,9 +818,7 @@ public class CommonProjectService {
                 setLog(logDTO, path, HttpMethodConstants.POST.name(), logDTOList);
             });
         });
-        if (CollectionUtils.isNotEmpty(userRoleRelations)) {
-            userRoleRelationMapper.batchInsert(userRoleRelations);
-        }
         operationLogService.batchAdd(logDTOList);
+        permissionSessionRefreshService.refreshUsersAfterCommit(request.getUserIds());
     }
 }

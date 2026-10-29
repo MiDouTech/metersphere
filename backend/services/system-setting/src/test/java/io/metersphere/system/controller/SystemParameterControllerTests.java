@@ -150,7 +150,7 @@ public class SystemParameterControllerTests extends BaseTest {
         hashMap.put("smtp.recipient", "aaa@fit2cloud.com");
         hashMap.put("smtp.ssl", "true");
         hashMap.put("smtp.tsl", "false");
-        this.requestPost(EMAIL_INFO_TEST_CONNECT_URL, hashMap, ERROR_REQUEST_MATCHER);
+        this.requestPost(EMAIL_INFO_TEST_CONNECT_URL, hashMap, businessError("连接失败"));
     }
 
 
@@ -205,7 +205,7 @@ public class SystemParameterControllerTests extends BaseTest {
                 setType("text");
             }});
         }};
-        this.requestPost(UPLOAD_CONFIG_SAVE_URL, systemParameters, status().is5xxServerError());
+        this.requestPost(UPLOAD_CONFIG_SAVE_URL, systemParameters, businessError("文件限制参数错误"));
     }
 
     private MvcResult requestPost(String url, Object param) throws Exception {

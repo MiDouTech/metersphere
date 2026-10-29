@@ -113,7 +113,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         // 同名用户组已存在
         request.setName("default-org-role-2");
         request.setScopeId("default-organization-2");
-        this.requestPost(ORGANIZATION_USER_ROLE_ADD, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_ADD, request, businessError("用户组已存在"));
     }
 
     @Test
@@ -124,7 +124,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setId("default-org-role-id-10");
         request.setName("default-org-role-x");
         request.setScopeId("default-organization-2");
-        this.requestPost(ORGANIZATION_USER_ROLE_UPDATE, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_UPDATE, request, businessError("用户组不存在"));
         // 非组织下用户组异常
         request = new OrganizationUserRoleEditRequest();
         request.setId(InternalUserRole.ADMIN.getValue());
@@ -172,7 +172,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
     @Order(5)
     public void testOrganizationUserRoleDeleteError() throws Exception {
         // 用户组不存在
-        this.requestGet(ORGANIZATION_USER_ROLE_DELETE + "/default-org-role-id-10", status().is5xxServerError());
+        this.requestGet(ORGANIZATION_USER_ROLE_DELETE + "/default-org-role-id-10", businessError("用户组不存在"));
         // 非组织下用户组异常
         this.requestGet(ORGANIZATION_USER_ROLE_DELETE + "/" + InternalUserRole.ADMIN.getValue()).andExpect(jsonPath("$.code").value(NO_ORG_USER_ROLE_PERMISSION.getCode()));
         // 非内置用户组异常
@@ -206,7 +206,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
     @Order(8)
     public void testOrganizationUserRolePermissionSettingError() throws Exception {
         // 用户组不存在
-        this.requestGet(ORGANIZATION_USER_ROLE_PERMISSION_SETTING + "/default-org-role-id-10", status().is5xxServerError());
+        this.requestGet(ORGANIZATION_USER_ROLE_PERMISSION_SETTING + "/default-org-role-id-10", businessError("用户组不存在"));
         // 非组织下用户组异常
         this.requestGet(ORGANIZATION_USER_ROLE_PERMISSION_SETTING + "/" + InternalUserRole.ADMIN.getValue())
                 .andExpect(jsonPath("$.code").value(NO_ORG_USER_ROLE_PERMISSION.getCode()));
@@ -236,7 +236,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         // 用户组不存在
         PermissionSettingUpdateRequest request = getPermissionSettingUpdateRequest();
         request.setUserRoleId("default-org-role-id-10");
-        this.requestPost(ORGANIZATION_USER_ROLE_PERMISSION_UPDATE, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_PERMISSION_UPDATE, request, businessError("用户组不存在"));
         // 非组织下用户组异常
         request.setUserRoleId(InternalUserRole.ADMIN.getValue());
         this.requestPost(ORGANIZATION_USER_ROLE_PERMISSION_UPDATE, request)
@@ -325,7 +325,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setUserIds(List.of("admin-x"));
         request.setUserRoleId("default-org-role-id-3");
         // 用户不存在
-        this.requestPost(ORGANIZATION_USER_ROLE_ADD_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_ADD_MEMBER, request, businessError("用户不存在"));
         request = new OrganizationUserRoleMemberEditRequest();
         request.setOrganizationId("default-organization-2");
         request.setUserIds(List.of("admin"));
@@ -368,7 +368,7 @@ public class OrganizationUserRoleControllerTests extends BaseTest {
         request.setUserIds(List.of("admin-x"));
         request.setUserRoleId("default-org-role-id-3");
         // 用户不存在
-        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_ROLE_REMOVE_MEMBER, request, businessError("用户不存在"));
         request = new OrganizationUserRoleMemberEditRequest();
         request.setOrganizationId("default-organization-2");
         request.setUserIds(List.of("admin"));
