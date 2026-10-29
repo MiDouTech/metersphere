@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('runtime', Path(__file__).with_name('verify-runtime-build.py'))
 runtime = importlib.util.module_from_spec(spec)
@@ -39,6 +40,13 @@ class RuntimeBuildTests(unittest.TestCase):
     def test_inconsistent_report_is_rejected(self):
         self.summary['reportIntegrityErrors'] = ['count mismatch']
         with self.assertRaises(ValueError): self.check()
+
+    def test_tracked_outer_build_changes_cannot_reuse_cached_package(self):
+        with patch.object(runtime.subprocess, 'check_output', return_value='same'):
+            runtime.validate_source_inputs('source')
+        with patch.object(runtime.subprocess, 'check_output', side_effect=['old', 'new']):
+            with self.assertRaisesRegex(ValueError, 'Build input changed'):
+                runtime.validate_source_inputs('source')
 
 
 if __name__ == '__main__': unittest.main()

@@ -192,7 +192,7 @@ jobs:
         id: verified-build
         if: (steps.full-tests.outcome == 'success' || steps.affected-tests.outcome == 'success') && steps.test-results.outcome == 'success'
         env:
-          BUILD_INPUTS_HASH: ${{ hashFiles('pom.xml', 'backend/**/pom.xml', '.mvn/**', 'mvnw') }}
+          BUILD_INPUTS_HASH: ${{ hashFiles('pom.xml', 'backend/**/pom.xml', '!backend/**/target/**', '.mvn/wrapper/maven-wrapper.properties', 'mvnw', 'mvnw.cmd') }}
         run: |
           backend_tree=$(git rev-parse HEAD:backend)
           frontend_tree=$(git rev-parse HEAD:frontend)

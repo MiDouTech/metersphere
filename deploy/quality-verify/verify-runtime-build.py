@@ -9,6 +9,16 @@ MODULES = {'sdk', 'system-setting', 'project-management', 'api-test', 'bug-manag
            'case-management', 'test-plan', 'dashboard', 'agent-integration', 'app'}
 
 
+def validate_source_inputs(source_sha):
+    # backend/frontend trees are checked against the source build record below.
+    # Compare tracked outer build inputs; Maven-generated target POMs are not inputs.
+    for name in ('pom.xml', '.mvn', 'mvnw', 'mvnw.cmd'):
+        old = subprocess.check_output(['git', 'rev-parse', f'{source_sha}:{name}'], text=True).strip()
+        current = subprocess.check_output(['git', 'rev-parse', f'HEAD:{name}'], text=True).strip()
+        if old != current:
+            raise ValueError(f'Build input changed: {name}')
+
+
 def validate(record, summary, source_sha, source_run, backend, frontend, inputs, jar_sha):
     expected = dict(sourceCommit=source_sha, sourceRun=source_run, backendTree=backend,
                     frontendTree=frontend, buildInputsHash=inputs, jarSha256=jar_sha)
@@ -28,6 +38,7 @@ def main():
     for key in ('source-sha', 'source-run', 'inputs-hash'):
         parser.add_argument('--' + key, required=True)
     args = parser.parse_args()
+    validate_source_inputs(args.source_sha)
     tree = lambda name: subprocess.check_output(['git', 'rev-parse', f'HEAD:{name}'], text=True).strip()
     jar = Path('backend/app/target/app-3.x.jar')
     validate(json.loads(Path('.ci-backend-build.json').read_text()),

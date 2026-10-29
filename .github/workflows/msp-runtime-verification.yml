@@ -27,7 +27,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RUN: ${{ inputs.source_run || '40876632979' }}
-          BUILD_INPUTS_HASH: ${{ hashFiles('pom.xml', 'backend/**/pom.xml', '.mvn/**', 'mvnw') }}
         run: |
           set -euo pipefail
           [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
@@ -37,10 +36,17 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/jobs" > "$RUNNER_TEMP/source-jobs.json"
           jq -e '[.jobs[] | select(.name == "backend") | .steps[] | select(.name == "Require complete current or source-verified retained coverage with zero failures, errors or skips" and .conclusion == "success")] | length == 1' "$RUNNER_TEMP/source-jobs.json"
           source_sha=$(jq -r .head_sha "$RUNNER_TEMP/source-run.json")
+          git fetch --no-tags --depth=1 origin "$source_sha"
           echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
           backend_tree=$(git rev-parse HEAD:backend)
           frontend_tree=$(git rev-parse HEAD:frontend)
-          echo "key=msp-verified-app-${RUNNER_OS}-${backend_tree}-${frontend_tree}-${BUILD_INPUTS_HASH}" >> "$GITHUB_OUTPUT"
+          prefix="msp-verified-app-${RUNNER_OS}-${backend_tree}-${frontend_tree}-"
+          gh api --method GET "repos/$GITHUB_REPOSITORY/actions/caches" -f ref="$GITHUB_REF" -f key="$prefix" -f per_page=100 > "$RUNNER_TEMP/package-caches.json"
+          cache_key=$(jq -er --arg prefix "$prefix" '[.actions_caches[].key | select(startswith($prefix))] | if length == 1 then .[0] else error("Exactly one matching verified package cache is required") end' "$RUNNER_TEMP/package-caches.json")
+          inputs_hash=${cache_key#"$prefix"}
+          [[ "$inputs_hash" =~ ^[0-9a-f]{64}$ ]]
+          echo "key=$cache_key" >> "$GITHUB_OUTPUT"
+          echo "inputs=$inputs_hash" >> "$GITHUB_OUTPUT"
           gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --name frontend-static --dir frontend/dist
       - uses: actions/cache/restore@v4
         with:
@@ -54,7 +60,7 @@ jobs:
         env:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
           SOURCE_RUN: ${{ inputs.source_run || '40876632979' }}
-          BUILD_INPUTS_HASH: ${{ hashFiles('pom.xml', 'backend/**/pom.xml', '.mvn/**', 'mvnw') }}
+          BUILD_INPUTS_HASH: ${{ steps.source.outputs.inputs }}
         run: |
           python3 deploy/quality-verify/test_runtime_build.py
           python3 deploy/quality-verify/verify-runtime-build.py --source-sha "$SOURCE_SHA" --source-run "$SOURCE_RUN" --inputs-hash "$BUILD_INPUTS_HASH"
