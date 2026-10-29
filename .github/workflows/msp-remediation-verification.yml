@@ -110,12 +110,12 @@ jobs:
           path: .ci-minio-image.tar
           key: ${{ steps.minio-cache.outputs.cache-primary-key }}
       - id: full-tests
-        if: inputs.verification_scope != 'api-failures'
+        if: inputs.verification_scope != 'api-failures' && !contains(github.event.head_commit.message, '[api-failures]')
         run: chmod +x mvnw && ./mvnw -B -pl backend/app -am -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false package
         env:
           MAVEN_OPTS: -Xmx1536m
       - name: Run previously failing API classes without rerunning upstream suites
-        if: inputs.verification_scope == 'api-failures'
+        if: inputs.verification_scope == 'api-failures' || contains(github.event.head_commit.message, '[api-failures]')
         run: >-
           chmod +x mvnw && ./mvnw -B -pl backend/services/api-test -am
           -Dquality.mysql=true -Dapi.version=1.44 -DskipTests=false
