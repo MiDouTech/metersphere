@@ -57,6 +57,12 @@ public class ProjectUserRoleService extends BaseUserRoleService {
     private ExtProjectUserRoleMapper extProjectUserRoleMapper;
     @Resource
     private RoleRelationWriter roleRelationWriter;
+    @Resource
+    private ProjectUserRoleLogService projectUserRoleLogService;
+    @Resource
+    private io.metersphere.system.log.service.OperationLogService operationLogService;
+    @Resource
+    private io.metersphere.system.service.PermissionSessionRefreshService permissionSessionRefreshService;
 	@Autowired
 	private UserRolePermissionMapper userRolePermissionMapper;
 
@@ -126,6 +132,7 @@ public class ProjectUserRoleService extends BaseUserRoleService {
         if (!org.apache.commons.lang3.StringUtils.equalsAny(role.getScopeId(), request.getProjectId(), UserRoleScope.GLOBAL)) {
             throw new MSException(NO_PROJECT_USER_ROLE_PERMISSION);
         }
+        List<String> insertedUsers = new ArrayList<>();
         request.getUserIds().stream().distinct().sorted().forEach(userId -> {
             UserRoleRelation relation = new UserRoleRelation();
             relation.setId(IDGenerator.nextStr());
@@ -135,8 +142,20 @@ public class ProjectUserRoleService extends BaseUserRoleService {
             relation.setCreateTime(System.currentTimeMillis());
             relation.setCreateUser(createUserId);
             relation.setOrganizationId(project.getOrganizationId());
-            roleRelationWriter.ensurePresent(relation);
+            if (roleRelationWriter.ensurePresent(relation)) insertedUsers.add(userId);
         });
+        if (!insertedUsers.isEmpty()) {
+            ProjectUserRoleMemberEditRequest inserted = new ProjectUserRoleMemberEditRequest();
+            inserted.setProjectId(request.getProjectId());
+            inserted.setUserRoleId(request.getUserRoleId());
+            inserted.setUserIds(insertedUsers);
+            var log = projectUserRoleLogService.editMemberLog(inserted);
+            log.setCreateUser(createUserId);
+            log.setMethod("POST");
+            log.setPath("/user/role/project/add-member");
+            operationLogService.add(log);
+            permissionSessionRefreshService.refreshUsersAfterCommit(insertedUsers);
+        }
     }
 
     public void removeMember(ProjectUserRoleMemberEditRequest request) {

@@ -66,6 +66,8 @@ public class ProjectUserRoleControllerTests extends BaseTest {
     public static final String PROJECT_USER_ROLE_REMOVE_MEMBER = "/user/role/project/remove-member";
     @Resource
     UserRoleRelationMapper userRoleRelationMapper;
+    @Resource
+    org.springframework.jdbc.core.JdbcTemplate replayJdbc;
 
     @Test
     @Order(0)
@@ -174,7 +176,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         request.setId("default-pro-role-id-2");
         request.setName("项目管理员");
         request.setScopeId("default-project-2");
-        this.requestPost(PROJECT_USER_ROLE_UPDATE, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_UPDATE, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_exist")));
     }
 
     @Test
@@ -370,7 +372,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         request.setUserIds(List.of("admin"));
         request.setUserRoleId("default-pro-role-id-x");
         // 用户组不存在
-        this.requestPost(PROJECT_USER_ROLE_ADD_MEMBER, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_ADD_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
     }
 
     @Test
@@ -413,13 +415,13 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         request.setUserIds(List.of("admin"));
         request.setUserRoleId("default-pro-role-id-x");
         // 用户组不存在
-        this.requestPost(PROJECT_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_REMOVE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
         request = new ProjectUserRoleMemberEditRequest();
         request.setProjectId("default-project-2");
         request.setUserRoleId("default-pro-role-id-3");
         request.setUserIds(List.of("admin"));
         // 成员用户组只有一个, 移除失败
-        this.requestPost(PROJECT_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_REMOVE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("project_at_least_one_user_role_require")));
         //移除最后一个管理员移除失败
         UserRoleRelation userRoleRelation = new UserRoleRelation();
         userRoleRelation.setId(IDGenerator.nextStr());
@@ -435,7 +437,7 @@ public class ProjectUserRoleControllerTests extends BaseTest {
         request.setUserRoleId(InternalUserRole.PROJECT_ADMIN.getValue());
         request.setUserIds(List.of("admin"));
         // 成员用户组只有一个, 移除失败
-        this.requestPost(PROJECT_USER_ROLE_REMOVE_MEMBER, request, status().is5xxServerError());
+        this.requestPost(PROJECT_USER_ROLE_REMOVE_MEMBER, request, businessError(io.metersphere.sdk.util.Translator.get("keep_at_least_one_administrator")));
 
     }
 
@@ -452,8 +454,14 @@ public class ProjectUserRoleControllerTests extends BaseTest {
                 .andRoleIdEqualTo("default-pro-role-id-4").andSourceIdEqualTo("default-project-2");
         List<UserRoleRelation> original = userRoleRelationMapper.selectByExample(replay);
         Assertions.assertEquals(1, original.size());
+        Long auditCount = replayJdbc.queryForObject(
+                "SELECT COUNT(*) FROM operation_log WHERE path='/user/role/project/add-member' AND project_id=?",
+                Long.class, request.getProjectId());
         this.requestPost(PROJECT_USER_ROLE_ADD_MEMBER, request, status().isOk());
         Assertions.assertEquals(original, userRoleRelationMapper.selectByExample(replay));
+        Assertions.assertEquals(auditCount, replayJdbc.queryForObject(
+                "SELECT COUNT(*) FROM operation_log WHERE path='/user/role/project/add-member' AND project_id=?",
+                Long.class, request.getProjectId()));
         // 移除用户组, 且存在成员仅有该用户组
         this.requestGet(PROJECT_USER_ROLE_DELETE + "/default-pro-role-id-3", status().isOk());
     }

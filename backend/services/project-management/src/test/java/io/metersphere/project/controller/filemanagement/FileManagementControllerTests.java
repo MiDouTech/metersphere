@@ -380,7 +380,7 @@ public class FileManagementControllerTests extends BaseTest {
         request.setProjectId(project.getId());
         request.setName("ParentIsUUID");
         request.setParentId(IDGenerator.nextStr());
-        this.requestPost(FileManagementRequestUtils.URL_MODULE_ADD, request).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_MODULE_ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("parent.node.not_blank")));
 
         //添加重复的a1节点
         request = new FileModuleCreateRequest();
@@ -452,7 +452,7 @@ public class FileManagementControllerTests extends BaseTest {
         updateRequest = new FileModuleUpdateRequest();
         updateRequest.setId(IDGenerator.nextStr());
         updateRequest.setName(IDGenerator.nextStr());
-        this.requestPost(FileManagementRequestUtils.URL_MODULE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_MODULE_UPDATE, updateRequest).andExpect(businessError(io.metersphere.sdk.util.Translator.get("file_module.not.exist")));
 
         //名称重复   a1-a1改为a1-b1
         updateRequest = new FileModuleUpdateRequest();
@@ -673,7 +673,7 @@ public class FileManagementControllerTests extends BaseTest {
         paramMap = new LinkedMultiValueMap<>();
         paramMap.add("file", file);
         paramMap.add("request", JSON.toJSONString(fileUploadRequest));
-        this.requestMultipart(FileManagementRequestUtils.URL_FILE_UPLOAD, paramMap).andExpect(status().is5xxServerError());
+        this.requestMultipart(FileManagementRequestUtils.URL_FILE_UPLOAD, paramMap).andExpect(businessError(io.metersphere.sdk.util.Translator.get("file.not.jar")));
         fileUploadRequest.setEnable(false);
         //模块不存在
         fileUploadRequest.setModuleId(IDGenerator.nextStr());
@@ -749,10 +749,14 @@ public class FileManagementControllerTests extends BaseTest {
         updateModel.setId(reUploadFileId);
         updateModel.setStorage(StorageType.GIT.name());
         fileMetadataMapper.updateByPrimaryKeySelective(updateModel);
-        this.requestMultipart(FileManagementRequestUtils.URL_FILE_RE_UPLOAD, paramMap).andExpect(status().is5xxServerError());
-        //测试完了改回去
-        updateModel.setStorage(StorageType.MINIO.name());
-        fileMetadataMapper.updateByPrimaryKeySelective(updateModel);
+        try {
+            this.requestMultipart(FileManagementRequestUtils.URL_FILE_RE_UPLOAD, paramMap)
+                    .andExpect(businessError(io.metersphere.sdk.util.Translator.get("file.not.exist")));
+        } finally {
+            // Restore even if the rejection contract regresses; do not poison later downloads/moves.
+            updateModel.setStorage(StorageType.MINIO.name());
+            fileMetadataMapper.updateByPrimaryKeySelective(updateModel);
+        }
 
         //重新上传并修改文件版本
         MvcResult mvcResult = this.requestMultipartWithOkAndReturn(FileManagementRequestUtils.URL_FILE_RE_UPLOAD, paramMap);
@@ -1118,7 +1122,7 @@ public class FileManagementControllerTests extends BaseTest {
         //文件不存在（原图、缩略图两个接口校验）
         mockMvc.perform(getRequestBuilder(String.format(FileManagementRequestUtils.URL_FILE_PREVIEW_COMPRESSED, "admin", IDGenerator.nextNum())))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("file.not.exist")));
         mockMvc.perform(getRequestBuilder(String.format(FileManagementRequestUtils.URL_FILE_PREVIEW_ORIGINAL, "admin", IDGenerator.nextNum())))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().is5xxServerError());
@@ -1241,7 +1245,7 @@ public class FileManagementControllerTests extends BaseTest {
         updateRequest = new FileUpdateRequest();
         updateRequest.setId(picFileId);
         updateRequest.setEnable(true);
-        this.requestPost(FileManagementRequestUtils.URL_FILE_UPDATE, updateRequest).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_FILE_UPDATE, updateRequest).andExpect(businessError(io.metersphere.sdk.util.Translator.get("file.not.jar")));
 
         //模块不存在
         if (MapUtils.isEmpty(FILE_ID_PATH)) {
@@ -1993,7 +1997,7 @@ public class FileManagementControllerTests extends BaseTest {
             request.setDropNodeId(a1b1Node.getId());
             request.setDropPosition(0);
             ResultActions resultActions = this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request);
-            resultActions.andExpect(status().is5xxServerError());
+            resultActions.andExpect(businessError(io.metersphere.sdk.util.Translator.get("node.name.repeat")));
             MvcResult mvcResult = resultActions.andReturn();
             ResultHolder resultHolder = JSON.parseObject(mvcResult.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
             Assertions.assertEquals(resultHolder.getMessage(), Translator.get("node.name.repeat"));
@@ -2285,7 +2289,7 @@ public class FileManagementControllerTests extends BaseTest {
         request.setDragNodeId(IDGenerator.nextStr());
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
-        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(businessError(Translator.get("drag_node.not.exist") + ":" + request.getDragNodeId()));
 
         //drop节点为空
         request = new NodeMoveRequest();
@@ -2299,28 +2303,28 @@ public class FileManagementControllerTests extends BaseTest {
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(IDGenerator.nextStr());
         request.setDropPosition(1);
-        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(businessError(Translator.get("drag_node.not.exist") + ":" + request.getDropNodeId()));
 
         //position为0的时候节点不存在
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(IDGenerator.nextStr());
         request.setDropPosition(0);
-        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(businessError(Translator.get("drag_node.not.exist") + ":" + request.getDropNodeId()));
 
         //dragNode和dropNode一样
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(a1Node.getId());
         request.setDropPosition(1);
-        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(businessError(Translator.get("invalid_parameter") + ": drag node  and drop node"));
 
         //position不是-1 0 1
         request = new NodeMoveRequest();
         request.setDragNodeId(a1Node.getId());
         request.setDropNodeId(a2Node.getId());
         request.setDropPosition(4);
-        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(status().is5xxServerError());
+        this.requestPost(FileManagementRequestUtils.URL_MODULE_MOVE, request).andExpect(businessError(Translator.get("invalid_parameter") + ": dropPosition"));
     }
 
     @Test

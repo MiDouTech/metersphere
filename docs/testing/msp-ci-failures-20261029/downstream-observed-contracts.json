@@ -236,5 +236,125 @@
     "line": 409,
     "messageKey": "user_not_exist",
     "message": "用户不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.EnvironmentControllerTests",
+    "test": "testUpdateError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 913,
+    "messageKey": "api_test_environment_already_exists",
+    "message": "环境名称已存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.EnvironmentGroupControllerTests",
+    "test": "testAddError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 198,
+    "messageKey": "project_not_exist",
+    "message": "项目不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.EnvironmentGroupControllerTests",
+    "test": "testUpdate",
+    "sourceCommit": "3f7d5340ee",
+    "line": 283,
+    "messageKey": "api_test_environment_not_exist",
+    "message": "环境不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "addModuleTestError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 383,
+    "messageKey": "parent.node.not_blank",
+    "message": "父节点不能为空"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "updateModuleTestError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 455,
+    "messageKey": "file_module.not.exist",
+    "message": "文件模块不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "fileUploadTestError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 676,
+    "messageKey": "file.not.jar",
+    "message": "不是jar文件"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "fileReUploadTestSuccess",
+    "sourceCommit": "3f7d5340ee",
+    "line": 752,
+    "messageKey": "file.not.exist",
+    "message": "文件不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "filePreviewImgDownload",
+    "sourceCommit": "3f7d5340ee",
+    "line": 1121,
+    "messageKey": "file.not.exist",
+    "message": "文件不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "fileUpdateError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 1244,
+    "messageKey": "file.not.jar",
+    "message": "不是jar文件"
+  },
+  {
+    "classname": "io.metersphere.project.controller.filemanagement.FileManagementControllerTests",
+    "test": "moveTest",
+    "sourceCommit": "3f7d5340ee",
+    "line": 1996,
+    "messageKey": "node.name.repeat",
+    "message": "该层级已有此模块名称"
+  },
+  {
+    "classname": "io.metersphere.project.controller.ProjectMemberControllerTests",
+    "test": "testRemoveMemberError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 216,
+    "messageKey": "keep_at_least_one_administrator",
+    "message": "至少保留一个管理员"
+  },
+  {
+    "classname": "io.metersphere.project.controller.ProjectMemberControllerTests",
+    "test": "testAddMemberRoleError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 249,
+    "messageKey": "user.not.empty",
+    "message": "用户不能为空"
+  },
+  {
+    "classname": "io.metersphere.project.controller.ProjectUserRoleControllerTests",
+    "test": "testProjectUserRoleUpdateError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 177,
+    "messageKey": "user_role_exist",
+    "message": "用户组已存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.ProjectUserRoleControllerTests",
+    "test": "testProjectUserRoleAddMemberError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 373,
+    "messageKey": "user_role_not_exist",
+    "message": "用户组不存在"
+  },
+  {
+    "classname": "io.metersphere.project.controller.ProjectUserRoleControllerTests",
+    "test": "testProjectUserRoleRemoveMemberError",
+    "sourceCommit": "3f7d5340ee",
+    "line": 416,
+    "messageKey": "user_role_not_exist",
+    "message": "用户组不存在"
   }
 ]

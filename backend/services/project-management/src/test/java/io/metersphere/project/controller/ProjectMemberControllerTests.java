@@ -213,7 +213,7 @@ public class ProjectMemberControllerTests extends BaseTest {
     @Order(12)
     public void testRemoveMemberError() throws Exception {
         this.requestGet(REMOVE_MEMBER + "/default-project-member-x/default-project-member-user-1", businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
-        this.requestGet(REMOVE_MEMBER + "/default-project-member-test-1/admin", status().is5xxServerError());
+        this.requestGet(REMOVE_MEMBER + "/default-project-member-test-1/admin", businessError(io.metersphere.sdk.util.Translator.get("keep_at_least_one_administrator")));
     }
 
     @Test
@@ -246,7 +246,7 @@ public class ProjectMemberControllerTests extends BaseTest {
         this.requestPost(ADD_ROLE, request, businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
         request.setProjectId("default-project-member-test");
         request.setSelectIds(List.of());
-        this.requestPost(ADD_ROLE, request, status().is5xxServerError());
+        this.requestPost(ADD_ROLE, request, businessError(io.metersphere.sdk.util.Translator.get("user.not.empty")));
     }
 
     @Test

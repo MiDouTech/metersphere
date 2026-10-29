@@ -910,7 +910,7 @@ public class EnvironmentControllerTests extends BaseTest {
         request.setName("uploadFile");
         request.setConfig(new EnvironmentConfig());
         paramMap.set("request", JSON.toJSONString(request));
-        requestMultipart(update, paramMap, ERROR_REQUEST_MATCHER);
+        requestMultipart(update, paramMap, businessError(io.metersphere.sdk.util.Translator.get("api_test_environment_already_exists")));
 
     }
 

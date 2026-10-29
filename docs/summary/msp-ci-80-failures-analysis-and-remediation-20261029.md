@@ -348,3 +348,14 @@ testAdd 在“配置重复”分支得到正确业务拒绝后，旧 5xx 断言�
 |权限探针依赖无效外部 SMTP；全局参数不存在依赖前序测试删除|ProjectMemberControllerTests、GlobalParamsControllerTests|邀请权限探针以已注册邮箱触发确定业务拒绝；缺失参数 GET 独立准备缺失状态|权限探针撤权仍 403；不将探针计作邮件投递验证；缺失测试不依赖前序提前退出|
 
 本轮涉及 12 个 Java 修改文件及测试辅助源码有界 javac 通过；新增 4 个 ProjectUserRoleMemberReplayTests 全部通过（同批去重/回放、其他项目、其他类型、项目不存在）。新增的实际接口重放断言和上述下游整改仍待远端 MySQL 复验，未标记完成。本机继续保持无 Docker、无应用启动。前端源码未变，下一轮只在 exact frontend tree hash 与第 6 轮一致并成功取得产物时复用其已验证构建。
+
+
+### 6.7 下游第二次复验及文件下载/移动异常溯源
+
+- CI [40819053573](https://github.com/chenqifen-miduo/metersphere/actions/runs/40819053573)，提交 `3f7d5340ee`：前端按相同树哈希复用已成功验证产物；SDK 11、system-setting 543 均通过，project-management 284 项中 24 failure、0 error。原始 80 条仍全部通过。[逐项与模块统计](../testing/msp-ci-failures-20261029/verification-round8.json)。
+- 实际项目用户组 add-member 重放已成功；新增 4 项服务边界测试也在远端执行通过。项目级六条旧流程写入口不再有 static 连锁空指针；切换项目有效、空参数、替他人切换、无目标权限、匿名场景均通过。
+- 进一步确认项目角色夹具的 organization_id 错填 projectId。按 project.organization_id 修正夹具（default-organization-2），产品仍拒绝组织不一致的关系，未放宽 writer 归属匹配。
+- 文件重传测试先将真实元数据 storage 改成 GIT 以测试拒绝，然后在旧 5xx 断言处中断，未恢复 MINIO。后续下载返回安全 JSON 拒绝而非二进制，批量移动默认筛选 MINIO 也漏掉这一行。已将恢复放进 finally；不得为此放宽二进制下载或全部移动的断言。后续通过情况仍需下一轮真实对象存储集成复验。
+- 新暴露的错误分支继续使用具体业务消息和 requestId 严格断言。对尚未执行到的相邻分支只依据对应服务实现设置明确期望，不能以源码核对替代已执行证据；新增观测保存在 downstream-observed-contracts.json。
+- 相邻项目用户组日志切面仍对回放写 UPDATE 审计。进一步调整为只对 writer 返回真实新增的成员生成一次审计，审计同步加入原事务，提交后仅刷新变更用户权限；回放不记“变更”审计。新增“实际插入才审计/刷新”单元测试，当前共 5 项全部通过；真实接口补审计数量不变断言，待下一轮 CI。
+- 后端本轮增量有界 javac 通过。没有启动本机 Docker/应用，也没有合并失败分支。完整镜像/健康、下游未进入模块及部署后 UI 仍不可标记通过。
