@@ -399,13 +399,13 @@ public class ApiTestCaseControllerTests extends BaseTest {
         this.requestPost(ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_name_exist")));
         // 校验接口是否存在
         request.setApiDefinitionId("111");
-        this.requestPost(ADD, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_definition_not_exist")));
 
         // 校验项目是否存在
         request.setProjectId("111");
         request.setApiDefinitionId(apiDefinitionId);
         request.setName("test123");
-        this.requestPost(ADD, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(ADD, request).andExpect(notFoundError("api.notFound", "项目不存在"));
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.ADD);
         // @@异常参数校验
@@ -881,7 +881,7 @@ public class ApiTestCaseControllerTests extends BaseTest {
         this.requestPost(UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_name_exist")));
         // 校验接口是否存在
         request.setId("111");
-        this.requestPost(UPDATE, request).andExpect(ERROR_REQUEST_MATCHER);
+        this.requestPost(UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_test_case_not_exist")));
 
         // @@校验日志
         checkLog(apiTestCase.getId(), OperationLogType.UPDATE);

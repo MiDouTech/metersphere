@@ -360,7 +360,7 @@ public class ApiReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(GET + "test"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_case_report_not_exist")));
 
 
         // @@校验权限
@@ -498,7 +498,7 @@ public class ApiReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(BASIC + "/share/" + shareId + "/" + "test-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("connection_expired")));
     }
 
     @Test

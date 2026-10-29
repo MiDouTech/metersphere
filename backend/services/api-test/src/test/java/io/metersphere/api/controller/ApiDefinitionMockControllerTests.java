@@ -413,9 +413,10 @@ public class ApiDefinitionMockControllerTests extends BaseTest {
         assertErrorCode(this.requestPost(UPDATE, request), MsHttpResultCode.NOT_FOUND);
 
         // 校验数据是否存在
+        request.setProjectId(DEFAULT_PROJECT_ID);
         request.setId("111");
         request.setName("test123");
-        this.requestPost(UPDATE, request).andExpect(status().is5xxServerError());
+        this.requestPost(UPDATE, request).andExpect(notFoundError("api.notFound", "Mock不存在"));
 
         // @@校验日志
         checkLog(apiDefinitionMock.getId(), OperationLogType.UPDATE, UPDATE);

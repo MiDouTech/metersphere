@@ -1963,14 +1963,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setTargetModuleId(IDGenerator.nextStr());
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setSelectAll(true);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("module.not.exist")));
         //2.反例测试 ->要移动的模块是别的项目下的
         String otherProjectModuleId = this.createModule(500, IDGenerator.nextStr(), ModuleConstants.ROOT_NODE_PARENT_ID);
         request = new ApiScenarioBatchCopyMoveRequest();
         request.setTargetModuleId(otherProjectModuleId);
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setSelectAll(true);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("module.not.exist")));
         //3.反例测试 ->参数校验：项目ID为空 模块ID为空
         request = new ApiScenarioBatchCopyMoveRequest();
         request.setTargetModuleId(otherProjectModuleId);
@@ -2097,14 +2097,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setTargetModuleId(IDGenerator.nextStr());
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setSelectAll(true);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("module.not.exist")));
         //2.反例测试 ->要移动的模块是别的项目下的
         String otherProjectModuleId = this.createModule(500, IDGenerator.nextStr(), ModuleConstants.ROOT_NODE_PARENT_ID);
         request = new ApiScenarioBatchCopyMoveRequest();
         request.setTargetModuleId(otherProjectModuleId);
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setSelectAll(true);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("module.not.exist")));
         //3.反例测试 ->参数校验：项目ID为空 模块ID为空
         request = new ApiScenarioBatchCopyMoveRequest();
         request.setTargetModuleId(otherProjectModuleId);
@@ -2254,14 +2254,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setCron("0 0 0 * * ?");
         this.requestPost(testUrl, request).andExpect(status().isBadRequest());
         request.setScenarioId(IDGenerator.nextStr());
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
 
         //反例：配置错误的cron表达式，测试是否会关闭定时任务
         request = new ApiScenarioScheduleConfigRequest();
         request.setScenarioId(scenarioId);
         request.setEnable(true);
         request.setCron(IDGenerator.nextStr());
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError("Cron 表达式格式不正确"));
 
         //测试删除
         this.requestGetWithOk(deleteUrl, request);

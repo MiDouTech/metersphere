@@ -90,6 +90,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -334,7 +335,10 @@ public class ApiDefinitionControllerTests extends BaseTest {
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(100400))
+                .andExpect(jsonPath("$.messageKey").value("api.validationFailed"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
 
         // @@校验权限
@@ -1723,7 +1727,7 @@ public class ApiDefinitionControllerTests extends BaseTest {
         request.setCoverData(false);
         request.setSwaggerUrl("http://localhost:8080/v2/api-docs");
         paramMap.add("request", JSON.toJSONString(request));
-        this.requestMultipart(IMPORT, paramMap, status().is5xxServerError());
+        this.requestMultipart(IMPORT, paramMap, businessError(io.metersphere.sdk.util.Translator.get("parse_data_error")));
 
         request.setPlatform(ApiImportPlatform.Postman.name());
         request.setCoverModule(true);

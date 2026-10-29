@@ -411,6 +411,17 @@ WHERE NOT (r.organization_id <=> p.organization_id);
 
 前后端边界：现有 API 管理复制页面通过 openCopyApiTab 打开表单，仓库未发现当前前端模块调用 legacy `/api/definition/copy` 的客户端实现；本轮修复的是已存在 REST 接口的 DTO/归属契约，不声称该旧路由导致当前页面复制按钮失败，也不新造前端入口。资源类型查询仍由原场景步骤接口提供。前端源码未变，继续按相同树哈希复用成功构建。
 
+### 6.11 API 剩余 12 项与定向验证门禁
+
+- CI 40831105988 / `8525bb05a3`：SDK 11、系统 546、项目 299 全通过，API 271 项剩 12 failure、0 error；原始 80 项全通过。新增普通成员真实 MinIO 全选移动与撤权测试通过。逐项结果见 `verification-round12.json`。
+- 追踪范围：现有 API 定义/Mock/用例、报告分享、场景目录/定时配置、任务中心入口；沿用原前端和后端路由，不增加页面、数据库迁移或授权。修正测试契约不改变产品行为。
+- API 定义 transfer 的旧用法未提供 JSON 请求体，实际正确返回 400/100400/api.validationFailed；断言同时检查 requestId。Swagger 导入解析失败匹配既有 parse_data_error，不能放宽为任意 4xx。
+- 报告不存在/过期分享、非法场景目标目录、缺失 API/用例均按实际 422/404 及精确业务提示匹配。相邻跨项目目录使用相同服务 guard，仍断言拒绝，不放松归属规则。
+- Mock 的不存在测试在此前项目不存在分支后未恢复 projectId，实际未进入目标资源校验。先恢复真实项目，再严格检查 Mock 404。任务中心组织接口必须匹配组织不存在，项目接口匹配项目不存在。
+- 定时配置缺失资源先被模块校验拒绝；非法 cron 的既有调度器明确返回“Cron 表达式格式不正确”。保留成功创建、配置持久化及删除检查。
+- 相关 8 个 Java 测试/辅助类在 384 MiB 上限下编译通过。真实数据库结果待定向 CI，不能把编译视为集成通过。
+- 自检改为两阶段：workflow_dispatch 可选 `api-failures`，只执行本次失败的 7 个 API 控制器测试类和契约单元；依赖模块仍编译，但不重跑已通过套件。默认 `full` 继续执行完整 reactor，只有 full 测试成功才执行镜像与健康检查。移除每次测试失败后的重复 skipTests 打包诊断。定向成功不能代替最终全量验收。
+
 ## 7. 交付与验证边界
 
 - [本轮累计文件清单](../testing/msp-ci-failures-20261029/changed-files.json) 记录分析基线及代码提交。主要产品文件包括 RoleRelationWriter、ExtUserRoleRelationMapper、OrganizationUserRoleService、CommonProjectService、PermissionControlService、BaseOrganizationParameterService、OrganizationTemplateService、BaseUserRoleService、PermissionControlMapper、SystemProjectController、ProjectController、ProjectUserRoleService，以及前端系统用户组页面、共享用户组组件与 useModal。其余为权限资源/语言资源、定向及控制器集成测试、夹具和 CI 门禁，详见清单。

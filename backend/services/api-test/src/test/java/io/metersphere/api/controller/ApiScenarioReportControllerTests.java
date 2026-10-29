@@ -548,7 +548,7 @@ public class ApiScenarioReportControllerTests extends BaseTest {
 
         mockMvc.perform(getRequestBuilder(BASIC + "/share/" + shareId + "/" + "test-scenario-report-id"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("connection_expired")));
     }
 
     @Test
