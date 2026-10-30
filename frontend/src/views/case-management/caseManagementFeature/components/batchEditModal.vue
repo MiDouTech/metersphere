@@ -20,6 +20,8 @@
             <a-option v-for="item of totalAttrs" :key="item.fieldId" :value="item.fieldId">
               {{ item.fieldName }}
             </a-option>
+            <a-option value="executionResult">{{ t('caseManagement.featureCase.execResult') }}</a-option>
+            <a-option value="executionUser">{{ t('testPlan.featureCase.executor') }}</a-option>
             <a-option key="systemTags" value="systemTags">{{ t('caseManagement.featureCase.tags') }}</a-option>
           </a-select>
         </a-form-item>
@@ -47,8 +49,31 @@
           <div class="text-[12px] leading-[20px] text-[var(--color-text-4)]">{{ t('ms.tagsInput.tagLimitTip') }}</div>
         </a-form-item>
 
+        <a-form-item
+          v-if="form.selectedAttrsId === 'executionResult'"
+          field="executionValue"
+          :label="t('common.batchUpdate')"
+          :rules="[{ required: true, message: t('common.pleaseSelect') }]"
+        >
+          <a-select v-model="form.executionValue">
+            <a-option v-for="item in execOptions" :key="item.key" :value="item.key">
+              {{ item.statusText }}
+            </a-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item
+          v-if="form.selectedAttrsId === 'executionUser'"
+          field="executionValue"
+          :label="t('common.batchUpdate')"
+          :rules="[{ required: true, message: t('common.pleaseSelect') }]"
+        >
+          <a-select v-model="form.executionValue" :options="userOptions" :loading="usersLoading" allow-search />
+        </a-form-item>
         <MsFormCreate
-          v-if="form.selectedAttrsId !== 'systemTags' && selectedTagType !== TagUpdateTypeEnum.CLEAR"
+          v-if="
+            !['systemTags', 'executionResult', 'executionUser'].includes(form.selectedAttrsId) &&
+            selectedTagType !== TagUpdateTypeEnum.CLEAR
+          "
           ref="formCreateRef"
           v-model:api="fApi"
           v-model:form-item="formItem"
@@ -70,14 +95,17 @@
   import type { BatchActionQueryParams } from '@/components/pure/ms-table/type';
   import MsTagsInput from '@/components/pure/ms-tags-input/index.vue';
 
-  import { batchEditAttrs, getCaseDefaultFields } from '@/api/modules/case-management/featureCase';
+  import { batchEditAttrs, batchUpdateExecutor, getCaseDefaultFields } from '@/api/modules/case-management/featureCase';
+  import { GetTestPlanUsers } from '@/api/modules/test-plan/testPlan';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
 
   import type { CustomAttributes } from '@/models/caseManagement/featureCase';
   import { TableQueryParams } from '@/models/common';
+  import { LastExecuteResults } from '@/enums/caseEnum';
   import { TagUpdateTypeEnum } from '@/enums/commonEnum';
 
+  import { executionResultMap } from './utils';
   import Message from '@arco-design/web-vue/es/message';
 
   const isVisible = ref<boolean>(false);
@@ -100,13 +128,38 @@
   const currentProjectId = computed(() => appStore.currentProjectId);
   const initForm = {
     selectedAttrsId: '',
+    executionValue: '',
     append: false,
     tags: [],
   };
   const form = ref({ ...initForm });
 
-  const formRef = ref<FormInstance | null>(null);
   const selectedTagType = ref<TagUpdateTypeEnum>(TagUpdateTypeEnum.UPDATE);
+  const usersLoading = ref(false);
+  const userOptions = ref<{ label: string; value: string }[]>([]);
+  const execOptions = computed(() =>
+    Object.values(executionResultMap).filter((item) => item.key !== LastExecuteResults.PENDING)
+  );
+  watch(
+    () => form.value.selectedAttrsId,
+    async (field) => {
+      form.value.executionValue = '';
+      selectedTagType.value = TagUpdateTypeEnum.UPDATE;
+      if (field !== 'executionUser') return;
+      usersLoading.value = true;
+      userOptions.value = [];
+      try {
+        const users = await GetTestPlanUsers(currentProjectId.value, '');
+        userOptions.value = users.map((user) => ({ label: user.name, value: user.id }));
+      } catch {
+        Message.error(t('common.loadFailedMessage'));
+      } finally {
+        usersLoading.value = false;
+      }
+    }
+  );
+
+  const formRef = ref<FormInstance | null>(null);
 
   const initDefaultForm: FormItem = {
     type: 'SELECT',
@@ -211,7 +264,29 @@
             },
             clear: selectedTagType.value === TagUpdateTypeEnum.CLEAR,
           };
-          await batchEditAttrs(params);
+          if (form.value.selectedAttrsId === 'executionUser') {
+            await batchUpdateExecutor({
+              selectIds: selectedIds || [],
+              selectAll: !!selectAll,
+              excludeIds: excludeIds || [],
+              projectId: currentProjectId.value,
+              moduleIds: props.activeFolder === 'all' ? [] : [props.activeFolder, ...props.offspringIds],
+              condition: props.condition || {},
+              userId: form.value.executionValue,
+            });
+          } else if (form.value.selectedAttrsId === 'executionResult') {
+            await batchEditAttrs({
+              selectIds: selectedIds || [],
+              selectAll: !!selectAll,
+              excludeIds: excludeIds || [],
+              projectId: currentProjectId.value,
+              moduleIds: props.activeFolder === 'all' ? [] : [props.activeFolder, ...props.offspringIds],
+              condition: props.condition || {},
+              lastExecuteResult: form.value.executionValue,
+            });
+          } else {
+            await batchEditAttrs(params);
+          }
           Message.success(t('caseManagement.featureCase.editSuccess'));
           closeHandler();
           emits('success');

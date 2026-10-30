@@ -49,6 +49,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
           pnpm install --no-frozen-lockfile
+          pnpm run test:case-layout-edit
           pnpm run test:selection-toggle
           pnpm run test:weekly-remediation-sfc
           pnpm run test:modal-contract

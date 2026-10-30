@@ -38,20 +38,6 @@
           >
             <template #left>
               <div class="flex min-w-0 max-w-full flex-wrap items-center gap-y-2">
-                <a-button
-                  v-permission="['FUNCTIONAL_CASE:READ+ADD']"
-                  class="mr-[12px]"
-                  type="primary"
-                  @click="caseDetail"
-                >
-                  {{ t('common.newCreate') }}
-                </a-button>
-                <ImportCase
-                  ref="importCaseRef"
-                  :active-folder="props.activeFolder"
-                  @init-modules="emit('initModules')"
-                  @confirm-import="confirmImport"
-                />
                 <ExportHistoryDrawer :project-id="currentProjectId" />
                 <a-button
                   v-if="hasAllPermission(['FUNCTIONAL_CASE:READ', 'PROJECT_TEST_PLAN:READ+ASSOCIATION'])"
@@ -109,6 +95,33 @@
           </MsAdvanceFilter>
           <div class="case-list-overview">
             <div class="case-list-overview-item">
+              <span class="case-list-overview-label">{{ t('caseManagement.featureCase.personalProgress') }}：</span>
+              <div v-if="pageCasePersonalProgress.total" class="case-progress-item">
+                <span>{{ pageCasePersonalProgress.executed }}/{{ pageCasePersonalProgress.total }}</span>
+                <div
+                  class="case-personal-progress"
+                  :aria-label="`${t('caseManagement.featureCase.personalProgress')} ${
+                    pageCasePersonalProgress.executed
+                  }/${pageCasePersonalProgress.total}`"
+                >
+                  <a-tooltip
+                    v-for="segment in buildPersonalProgressSegments(pageCasePersonalProgress)"
+                    :key="segment.key"
+                    :content="segment.tooltip"
+                    position="top"
+                  >
+                    <div
+                      class="case-personal-progress-segment"
+                      :class="segment.className"
+                      :style="{ width: `${segment.rate}%` }"
+                      :aria-label="segment.tooltip"
+                    ></div>
+                  </a-tooltip>
+                </div>
+              </div>
+              <span v-else class="text-[var(--color-text-4)]">-</span>
+            </div>
+            <div class="case-list-overview-item">
               <span class="case-list-overview-label">{{ t('caseManagement.featureCase.testPlanSummary') }}：</span>
               <div v-if="selectedOverviewPlan" class="case-list-overview-content">
                 <div class="case-progress-item">
@@ -158,33 +171,6 @@
               </div>
               <span v-else class="text-[var(--color-text-4)]">-</span>
             </div>
-            <div class="case-list-overview-item">
-              <span class="case-list-overview-label">{{ t('caseManagement.featureCase.personalProgress') }}：</span>
-              <div v-if="pageCasePersonalProgress.total" class="case-progress-item">
-                <span>{{ pageCasePersonalProgress.executed }}/{{ pageCasePersonalProgress.total }}</span>
-                <div
-                  class="case-personal-progress"
-                  :aria-label="`${t('caseManagement.featureCase.personalProgress')} ${
-                    pageCasePersonalProgress.executed
-                  }/${pageCasePersonalProgress.total}`"
-                >
-                  <a-tooltip
-                    v-for="segment in buildPersonalProgressSegments(pageCasePersonalProgress)"
-                    :key="segment.key"
-                    :content="segment.tooltip"
-                    position="top"
-                  >
-                    <div
-                      class="case-personal-progress-segment"
-                      :class="segment.className"
-                      :style="{ width: `${segment.rate}%` }"
-                      :aria-label="segment.tooltip"
-                    ></div>
-                  </a-tooltip>
-                </div>
-              </div>
-              <span v-else class="text-[var(--color-text-4)]">-</span>
-            </div>
           </div>
           <ms-base-table
             v-bind="propsRes"
@@ -201,6 +187,24 @@
             @change="changeHandler"
             @filter-change="handleTableFilterChange"
           >
+            <template #batch-leading>
+              <div class="case-primary-actions">
+                <a-button
+                  v-permission="['FUNCTIONAL_CASE:READ+ADD']"
+                  class="mr-[12px]"
+                  type="primary"
+                  @click="caseDetail"
+                >
+                  {{ t('common.newCreate') }}
+                </a-button>
+                <ImportCase
+                  ref="importCaseRef"
+                  :active-folder="props.activeFolder"
+                  @init-modules="emit('initModules')"
+                  @confirm-import="confirmImport"
+                />
+              </div>
+            </template>
             <template #num="{ record }">
               <div class="flex items-center gap-[8px]">
                 <MsAiTag v-if="record.aiCreate" />
@@ -1184,16 +1188,6 @@
       {
         label: 'common.edit',
         eventTag: 'batchEdit',
-        permission: ['FUNCTIONAL_CASE:READ+UPDATE'],
-      },
-      {
-        label: 'caseManagement.featureCase.batchEditExecResult',
-        eventTag: 'batchEditExecResult',
-        permission: ['FUNCTIONAL_CASE:READ+UPDATE'],
-      },
-      {
-        label: 'caseManagement.featureCase.batchChangeExecutor',
-        eventTag: 'batchChangeExecutor',
         permission: ['FUNCTIONAL_CASE:READ+UPDATE'],
       },
       {
@@ -2813,6 +2807,25 @@
 </script>
 
 <style scoped lang="less">
+  .case-primary-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: 8px;
+  }
+  :deep(.ms-pagination-options) {
+    flex: 0 0 112px;
+    margin-left: 0;
+    min-width: 112px;
+  }
+  :deep(.ms-pagination-options .arco-select) {
+    width: 112px;
+    min-width: 112px;
+  }
+  :deep(.ms-pagination) {
+    flex-wrap: wrap;
+  }
   .page-header {
     @apply flex items-center justify-between;
   }

@@ -24,6 +24,7 @@
         @clear="() => emit('clearSelector')"
         @select-all-pages="toggleAllPages"
       >
+        <template #leading><slot name="batch-leading"></slot></template>
         <template #count>
           <slot name="count"></slot>
         </template>

@@ -8,6 +8,7 @@
     :cancel-text="t('common.cancel')"
     @close="handleCancel"
   >
+    <slot name="modes"></slot>
     <div>
       <!-- Xmind 导入已迁移至「Xmind用例」Tab，执行用例仅保留 Excel -->
       <a-alert class="my-4">
