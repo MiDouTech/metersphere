@@ -20,6 +20,7 @@ public class PersonalOperationGetTool implements AgentMcpToolHandler {
         "metersphere.functional.execution.evidence.import_url","external.image.execution");
     @Resource private JdbcTemplate jdbc;
     @Resource private AgentBusinessAccess access;
+    @Resource private io.metersphere.agent.service.AgentProjectService projects;
     public String name(){return "metersphere.operation.get";}
     public String description(){return "Find this Token's personal execution upload/submit result after a lost response. NOT_FOUND is not proof of non-execution: retry only with the original requestId. Requires current case read permission.";}
     public String requiredScope(){return AgentTokenScope.FUNCTIONAL_READ;}
@@ -27,7 +28,7 @@ public class PersonalOperationGetTool implements AgentMcpToolHandler {
     public Map<String,Object> annotations(){return AgentMcpToolSchemas.annotations(requiredScope(),true,false,true);}
     private String text(Map<String,Object> args,String key){if(!(args.get(key) instanceof String s)||s.isBlank()||s.length()>128)throw new MSException("AGENT_VALIDATION_ERROR");return s;}
     public Object execute(Map<String,Object> args){
-        String project=text(args,"projectId"),id=text(args,"caseId"),key=text(args,"requestId"),tool=text(args,"toolName");
+        String project=projects.resolveProjectId(text(args,"projectId")),id=text(args,"caseId"),key=text(args,"requestId"),tool=text(args,"toolName");
         if(!OPERATIONS.containsKey(tool)||!key.matches("[A-Za-z0-9_.:-]{1,128}"))throw new MSException("AGENT_VALIDATION_ERROR");
         access.caseProject(id,project,"FUNCTIONAL_CASE:READ",false,requiredScope());
         var rows=jdbc.queryForList("SELECT status,response_json FROM agent_idempotency_record WHERE token_id=? AND tool_name IN (?,?) AND (request_id=? OR (identity_version='legacy-ci-v1' AND request_id COLLATE utf8mb4_general_ci=? COLLATE utf8mb4_general_ci))",AgentTokenContext.get().getId(),OPERATIONS.get(tool),tool,key,key);

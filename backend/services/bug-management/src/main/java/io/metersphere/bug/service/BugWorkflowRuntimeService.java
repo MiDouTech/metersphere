@@ -39,6 +39,8 @@ public class BugWorkflowRuntimeService {
     @Resource
     private JdbcTemplate jdbcTemplate;
     @Resource
+    private org.mybatis.spring.SqlSessionTemplate sqlSessionTemplate;
+    @Resource
     private PermissionControlService permissionControlService;
     @Resource
     private BugStatusService bugStatusService;
@@ -208,6 +210,8 @@ public class BugWorkflowRuntimeService {
                 IDGenerator.nextStr(), bugId, bug.getWorkflowId(), bug.getWorkflowVersion(), request.getTransitionId(),
                 bug.getStatus(), request.getTargetStatusId(), SessionUtils.getUserId(), String.join(",", selected.getMatchedRoles()),
                 request.getComment(), override, override ? request.getOverrideReason().trim() : null, now);
+        // JDBC updates bypass MyBatis' local cache in this transaction.
+        sqlSessionTemplate.clearCache();
         return getTransitions(bugId);
     }
 

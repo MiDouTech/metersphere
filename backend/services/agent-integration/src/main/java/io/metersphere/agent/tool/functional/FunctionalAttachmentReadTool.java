@@ -14,6 +14,7 @@ import java.util.*;
 @Component
 public class FunctionalAttachmentReadTool implements AgentMcpToolHandler {
     @Resource private AgentBusinessAccess access;
+    @Resource private io.metersphere.agent.service.AgentProjectService projects;
     @Resource private FunctionalCaseAttachmentService attachments;
     @Resource private JdbcTemplate jdbc;
     public String name(){return "metersphere.functional.attachment.read";}
@@ -23,7 +24,7 @@ public class FunctionalAttachmentReadTool implements AgentMcpToolHandler {
     public Map<String,Object> annotations(){return AgentMcpToolSchemas.annotations(requiredScope(),true,false,true);}
     private String text(Map<String,Object> args,String key){if(!(args.get(key) instanceof String s)||s.isBlank()||s.length()>128)throw new MSException("AGENT_VALIDATION_ERROR");return s;}
     public Object execute(Map<String,Object> args){
-        String project=text(args,"projectId"),id=text(args,"caseId"),file=text(args,"fileId");
+        String project=projects.resolveProjectId(text(args,"projectId")),id=text(args,"caseId"),file=text(args,"fileId");
         access.caseProject(id,project,"FUNCTIONAL_CASE:READ",false,requiredScope());
         byte[] bytes;
         if(args.containsKey("submissionId")) {

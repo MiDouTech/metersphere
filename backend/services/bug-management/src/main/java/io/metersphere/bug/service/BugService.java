@@ -1819,6 +1819,10 @@ public class BugService {
     public List<BugDTO> handleCustomField(List<BugDTO> bugs, String projectId) {
         List<String> ids = bugs.stream().map(BugDTO::getId).toList();
         List<BugCustomFieldDTO> customFields = extBugCustomFieldMapper.getBugAllCustomFields(ids, projectId);
+        Set<String> requestedBugIds=new HashSet<>(ids);
+        if(customFields.stream().anyMatch(field->field==null || StringUtils.isBlank(field.getBugId())
+                || !requestedBugIds.contains(field.getBugId()) || StringUtils.isBlank(field.getId())))
+            throw new MSException("BUG_FIELD_MAPPING_INVALID");
         Map<String, List<BugCustomFieldDTO>> customFieldMap = customFields.stream().collect(Collectors.groupingBy(BugCustomFieldDTO::getBugId));
         // MS处理人会与第三方的值冲突, 分开查询
         List<SelectOption> headerOptions = bugCommonService.getHeaderHandlerOption(projectId);

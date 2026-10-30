@@ -62,6 +62,7 @@ import java.util.Map;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentBugWriteService {
+    @Resource private org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Resource
     private BugService bugService;
     @Resource
@@ -124,7 +125,11 @@ public class AgentBugWriteService {
         String userId = requireUserId();
         BugDetailDTO detail = bugService.get(bugId, userId, "zh_CN");
         assertProjectAllowed(detail.getProjectId());
-        return toDetailDto(detail);
+        AgentBugDTO dto=toDetailDto(detail);
+        Bug current=bugMapper.selectByPrimaryKey(bugId);
+        if(current==null || Boolean.TRUE.equals(current.getDeleted()))throw new MSException("RESOURCE_NOT_FOUND");
+        dto.setUpdateTime(current.getUpdateTime());
+        return dto;
     }
 
     public BugTransitionDTO getTransitions(String projectId, String bugId) {
@@ -406,6 +411,17 @@ public class AgentBugWriteService {
         }
         bugRelateCaseCommonService.unRelate(relationId);
         agentExecLogService.audit("BUG_UNRELATE_CASE", relationId, relationId);
+    }
+
+    public List<Map<String,Object>> relationIds(AgentBugRelateCaseRequest request) {
+        String projectId=resolveAndAssertProject(request.getProjectId());
+        requireBugInProject(projectId,request.getBugId());
+        if(request.getCaseIds()==null || request.getCaseIds().isEmpty() || request.getCaseIds().size()>100)
+            throw new MSException("AGENT_VALIDATION_ERROR");
+        var values=new ArrayList<Object>();values.add(request.getBugId());values.add(request.getCaseType());values.addAll(request.getCaseIds());
+        String marks=String.join(",",java.util.Collections.nCopies(request.getCaseIds().size(),"?"));
+        return jdbc.queryForList("SELECT id AS relationId,case_id AS caseId,bug_id AS bugId,case_type AS caseType "
+                +"FROM bug_relation_case WHERE bug_id=? AND case_type=? AND case_id IN ("+marks+") ORDER BY id",values.toArray());
     }
 
     private void attachTempFiles(String bugId, String projectId, List<String> attachmentIds) {

@@ -8,6 +8,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AgentMcpCreateSchemaTests {
     private final BuiltinAgentMcpToolConfig config = new BuiltinAgentMcpToolConfig();
+    @Test void publishedCreateLimitsMatchServiceValidation(){
+        var single=(Map<?,?>)config.functionalCaseCreateTool(null).inputSchema().get("properties");
+        assertEquals(255,((Map<?,?>)single.get("name")).get("maxLength"));
+        var batch=(Map<?,?>)config.functionalCaseBatchCreateTool(null).inputSchema().get("properties");
+        var cases=(Map<?,?>)batch.get("cases");assertEquals(100,cases.get("maxItems"));assertEquals(1,cases.get("minItems"));
+        var item=(Map<?,?>)((Map<?,?>)cases.get("items")).get("properties");assertEquals(255,((Map<?,?>)item.get("name")).get("maxLength"));
+    }
 
     @Test void nativeCreateSchemasExposeRequiredIdempotencyKey() {
         for (var tool : List.of(config.projectCreateTool(null), config.functionalCaseCreateTool(null))) {

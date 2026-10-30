@@ -24,6 +24,9 @@ public class AgentCaseBatchCreateResponse {
 
     @Data
     public static class FailedCase {
+        private Integer row;
+        private String code;
+        private String traceId;
         private String name;
         private String error;
     }
