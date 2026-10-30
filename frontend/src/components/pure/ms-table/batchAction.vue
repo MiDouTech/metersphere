@@ -3,6 +3,7 @@
     <slot name="count">
       <div class="title one-line-text">{{ t('msTable.batch.selected', { count: props.selectRowCount }) }}</div>
     </slot>
+    <slot name="leading"></slot>
     <template v-for="(element, idx) in baseAction" :key="element.label">
       <a-divider v-if="element.isDivider" class="divider mx-0 my-[6px]" />
       <a-button
