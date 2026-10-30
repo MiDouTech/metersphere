@@ -31,10 +31,18 @@
 
 - `node --max-old-space-size=192 frontend/scripts/verify-weekly-remediation-sfc.mjs`：13组件SFC脚本/模板语法编译通过；不等同完整类型检查。
 - `node --max-old-space-size=192 --test frontend/scripts/test-selection-toggle.mjs frontend/scripts/test-modal-contract.mjs`：11项通过。
-- 目标8组件 ESLint：首次2条新错误已修正；保留既有console/未用变量警告，最终结果待记录。
+- `node --max-old-space-size=192 --test frontend/scripts/test-case-layout-edit.mjs`：5项通过；执行真实组件confirmHandler的隔离单元检查，覆盖执行结果/人保持全页及排除/目录/筛选范围、无残留标签/自定义字段、失败不关闭、原标签路径。此单元使用接口替身，不当作真实后端证据。
+- 目标8组件 ESLint：首次2条新错误已修正；保留既有console/未用变量警告，最终0错误、15条原有警告。
 - `node --max-old-space-size=192 frontend/node_modules/stylelint/bin/stylelint.js .../caseTable.vue .../batchEditModal.vue --fix`：通过。
 - `node --check deploy/quality-verify/core-smoke.mjs`、`git diff --check`：通过。
 
 ## 尚未验证
 
 当前机器空闲物理内存约440MiB，禁止本地启动应用/Docker或高内存全量类型构建。完整 `cd frontend; pnpm run build` 及真实页面核心验收交由已有 GitHub `msp-runtime-verification.yml` 隔离环境；结果未返回前本次状态为部分完成。后端编译、镜像与173条迁移可由该流程严格按后端源身份复用包并新建临时库验收，不将旧版前端结果当新版本通过证据。尚未发布或复验用户测试环境。
+
+
+### 远程验收阻塞
+
+本次实现已提交工作分支 `codex/weekly-remediation-20261028`，未自动合并main/chenqifen。推送后尚未观察到新workflow运行；尝试 `gh workflow run msp-runtime-verification.yml --repo chenqifen-miduo/metersphere --ref codex/weekly-remediation-20261028 -f source_run=40876632979` 返回HTTP403（当前CLI账号没有触发权限）。没有更换身份或绕过权限。
+
+具备权限的账号可执行上述准确命令，运行内含新的前端生产构建与扩充后的真实UI烟测；不需要在本机启动全套服务。本次13组件编译、16项相关单元、目标lint/stylelint和diff通过；完整vue-tsc/生产构建、此次前端搭配后端的容器健康及真实页面/UI取证尚未运行。因此不能标记全量验收完成，也未将上一版2123项或13条核心检查冒用作本次UI通过证据。

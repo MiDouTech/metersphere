@@ -275,7 +275,15 @@
               userId: form.value.executionValue,
             });
           } else if (form.value.selectedAttrsId === 'executionResult') {
-            await batchEditAttrs({ ...params, customField: {}, lastExecuteResult: form.value.executionValue });
+            await batchEditAttrs({
+              selectIds: selectedIds || [],
+              selectAll: !!selectAll,
+              excludeIds: excludeIds || [],
+              projectId: currentProjectId.value,
+              moduleIds: props.activeFolder === 'all' ? [] : [props.activeFolder, ...props.offspringIds],
+              condition: props.condition || {},
+              lastExecuteResult: form.value.executionValue,
+            });
           } else {
             await batchEditAttrs(params);
           }
