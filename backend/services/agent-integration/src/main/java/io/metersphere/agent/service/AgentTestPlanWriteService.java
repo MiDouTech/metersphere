@@ -36,6 +36,7 @@ public class AgentTestPlanWriteService {
     @Resource private AgentOperationExecutor operations;
     @Resource private AgentBusinessAccess access;
     @Resource private jakarta.validation.Validator validator;
+    @Resource private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     public AgentTestPlanDTO create(AgentTestPlanCreateRequest request) {
         if(request==null || !validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
@@ -117,7 +118,8 @@ public class AgentTestPlanWriteService {
         if (plan == null) throw new MSException("RESOURCE_NOT_FOUND");
         access.project(plan.getProjectId(), io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ,
                 false, io.metersphere.agent.constants.AgentTokenScope.PLAN_READ);
-        return toDto(plan, null);
+        Integer count=jdbc.queryForObject("SELECT COUNT(*) FROM test_plan_functional_case WHERE test_plan_id=?",Integer.class,id);
+        return toDto(plan, count==null?0:count);
     }
 
     // Mutation callers have already checked their write permission; no hidden read-scope requirement.

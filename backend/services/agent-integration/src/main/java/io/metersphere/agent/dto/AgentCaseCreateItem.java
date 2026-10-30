@@ -11,6 +11,7 @@ import java.util.List;
 public class AgentCaseCreateItem {
     @Schema(description = "用例名称", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank
+    @jakarta.validation.constraints.Size(min=1,max=255)
     private String name;
 
     @Schema(description = "优先级，如 P0/P1")

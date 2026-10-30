@@ -9,6 +9,9 @@ import static org.mockito.Mockito.*;
 class AgentExternalImageServiceTests {
     @Test void committedReplayReauthorizesAndDoesNotDependOnExpiredSource() {
         var service=new AgentExternalImageService();
+        var projects=mock(AgentProjectService.class);
+        when(projects.resolveProjectId(anyString())).thenAnswer(call->call.getArgument(0));
+        ReflectionTestUtils.setField(service,"projects",projects);
         var access=mock(AgentBusinessAccess.class);
         var operations=mock(AgentOperationExecutor.class);
         var downloader=mock(AgentExternalImageDownloader.class);

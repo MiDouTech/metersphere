@@ -25,6 +25,7 @@ public class AgentCaseBatchCreateRequest {
 
     @Schema(description = "用例列表", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotEmpty
+    @jakarta.validation.constraints.Size(min=1,max=100)
     @Valid
     private List<AgentCaseCreateItem> cases;
 

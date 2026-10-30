@@ -76,7 +76,7 @@ public class FunctionalCaseExportTaskService {
     public RetryParameters prepareRetry(String sourceId, String userId, String requestId) {
         ExportTaskDTO original = get(sourceId, userId);
         if (!Set.of("FAILED", "CANCELLED", "EXPIRED").contains(original.getState()))
-            throw new MSException("只能重试失败、已停止或已过期的导出任务");
+            throw new MSException("EXPORT_TASK_NOT_RETRYABLE");
         if (requestId == null || !requestId.matches("[A-Za-z0-9_.:-]{1,128}"))
             throw new MSException("AGENT_VALIDATION_ERROR");
         String payload = jdbc.queryForObject("SELECT request_payload FROM export_task WHERE id=? AND create_user=? AND type='CASE'",

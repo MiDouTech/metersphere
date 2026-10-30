@@ -95,12 +95,14 @@ public class AgentCaseWriteService {
         batch.setFailFast(true);
         AgentCaseBatchCreateResponse response = batchCreate(batch);
         if (CollectionUtils.isNotEmpty(response.getErrors())) {
-            throw new MSException(response.getErrors().get(0).getError());
+            throw new MSException(response.getErrors().get(0).getCode());
         }
         return response.getCreated().get(0);
     }
 
     public AgentCaseBatchCreateResponse batchCreate(AgentCaseBatchCreateRequest request) {
+        if(request==null || CollectionUtils.isEmpty(request.getCases()) || request.getCases().size()>100
+                || request.getCases().stream().anyMatch(java.util.Objects::isNull)) throw new MSException("AGENT_VALIDATION_ERROR");
         String userId = requireUserId();
         String projectId = agentProjectService.resolveProjectId(request.getProjectId());
         userId = access.project(projectId, "FUNCTIONAL_CASE:READ+ADD", true, io.metersphere.agent.constants.AgentTokenScope.CASE_WRITE);
@@ -111,12 +113,12 @@ public class AgentCaseWriteService {
         }
         String organizationId = project.getOrganizationId();
         access.module(projectId, request.getModuleId(), false);
-        String moduleId = resolveModuleId(projectId, request.getModuleId(), request.getModulePath(), userId);
         String scene = TemplateScene.FUNCTIONAL.name();
         TemplateDTO templateDTO;
         String templateId = request.getTemplateId();
         if (StringUtils.isNotBlank(templateId)) {
             templateDTO = projectTemplateService.getTemplateDTOById(templateId, projectId, scene);
+            AgentCaseInputValidation.template(templateDTO,templateId,projectId);
         } else {
             // 未设置 ProjectApplication 默认模板时，回落到项目内置模板（与 getDefaultTemplateDTO 一致）
             templateDTO = projectTemplateService.getDefaultTemplateDTO(projectId, scene);
@@ -126,9 +128,13 @@ public class AgentCaseWriteService {
             templateId = templateDTO.getId();
         }
 
+        String moduleId = resolveModuleId(projectId, request.getModuleId(), request.getModulePath(), userId);
+
         AgentCaseBatchCreateResponse response = new AgentCaseBatchCreateResponse();
         boolean failFast = Boolean.TRUE.equals(request.getFailFast());
+        int row=0;
         for (AgentCaseCreateItem item : request.getCases()) {
+            row++;
             try {
                 FunctionalCase created = createOne(projectId, organizationId, moduleId, templateId, templateDTO, item, userId);
                 AgentCaseBatchCreateResponse.CreatedCase createdCase = new AgentCaseBatchCreateResponse.CreatedCase();
@@ -140,7 +146,9 @@ public class AgentCaseWriteService {
             } catch (Exception ex) {
                 AgentCaseBatchCreateResponse.FailedCase failed = new AgentCaseBatchCreateResponse.FailedCase();
                 failed.setName(item.getName());
-                failed.setError(safeErrors.toApiError(ex, null).getMessage());
+                var error=safeErrors.toApiError(ex, null);
+                failed.setError(error.getMessage());
+                failed.setRow(row);failed.setCode(error.getCode());failed.setTraceId(error.getTraceId());
                 response.getErrors().add(failed);
                 if (failFast) {
                     break;
@@ -154,6 +162,8 @@ public class AgentCaseWriteService {
 
     private FunctionalCase createOne(String projectId, String organizationId, String moduleId, String templateId,
                                      TemplateDTO templateDTO, AgentCaseCreateItem item, String userId) {
+        AgentCaseInputValidation.name(item.getName());
+        String priority=AgentCaseInputValidation.priority(templateDTO,item.getPriority());
         FunctionalCaseAddRequest addRequest = new FunctionalCaseAddRequest();
         addRequest.setProjectId(projectId);
         addRequest.setModuleId(moduleId);
@@ -164,7 +174,7 @@ public class AgentCaseWriteService {
         addRequest.setTags(item.getTags());
         addRequest.setCaseEditType(FunctionalCaseTypeConstants.CaseEditType.STEP.name());
         addRequest.setSteps(toStepsJson(item.getSteps()));
-        addRequest.setCustomFields(buildPriorityFields(templateDTO, item.getPriority(), userId));
+        addRequest.setCustomFields(buildPriorityFields(templateDTO, priority, userId));
         addRequest.setAiCreate(false);
         return functionalCaseService.addFunctionalCase(addRequest, new ArrayList<>(), userId, organizationId);
     }

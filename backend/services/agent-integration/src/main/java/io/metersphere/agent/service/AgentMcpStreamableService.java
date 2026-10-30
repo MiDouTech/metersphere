@@ -131,6 +131,8 @@ public class AgentMcpStreamableService {
                 "metersphere.functional.module.move",
                 "metersphere.functional.attachment.upload.prepare",
                 "metersphere.functional.attachment.upload.complete",
+                "metersphere.bug.attachment.upload.prepare",
+                "metersphere.bug.attachment.upload.complete",
                 "metersphere.functional.attachment.import_url",
                 "metersphere.bug.attachment.import_url",
                 "metersphere.functional.execution.evidence.import_url",
