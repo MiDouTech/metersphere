@@ -3,12 +3,6 @@
     <a-button type="outline" @click="openImport">{{ t('common.import') }}</a-button>
     <a-button @click="legacyVisible = true">旧版导入记录</a-button>
     <a-button :disabled="!jobId" @click="jobVisible = true">最近导入任务</a-button>
-    <a-radio-group v-model="importMode" type="button" size="small">
-      <a-radio value="excel">{{ t('caseManagement.featureCase.importExcelTab') }}</a-radio>
-      <a-radio value="asset">
-        {{ t('caseManagement.featureCase.importHubTab') }}
-      </a-radio>
-    </a-radio-group>
   </div>
   <!-- Excel 导入 -->
   <ExportExcelModal
@@ -17,14 +11,45 @@
     :confirm-loading="validateLoading"
     @save="validateTemplate"
     @close="showExcelModal = false"
-  />
+  >
+    <template #modes>
+      <a-tabs :active-key="importMode" @change="switchImportMode">
+        <a-tab-pane
+          key="excel"
+          :disabled="validateLoading || assetLoading"
+          :title="t('caseManagement.featureCase.importExcelTab')"
+        />
+        <a-tab-pane
+          key="asset"
+          :disabled="validateLoading || assetLoading"
+          :title="t('caseManagement.featureCase.importHubTab')"
+        />
+      </a-tabs>
+    </template>
+  </ExportExcelModal>
   <LegacyImportHistory v-model:visible="legacyVisible" />
   <ImportJob v-model:visible="jobVisible" :job-id="jobId" @changed="onHubImportSuccess" />
   <ImportFromDefaultModal
     v-model:visible="showHubModal"
     :target-module-id="importTargetModuleId"
     @success="onHubImportSuccess"
-  />
+    @busy="assetLoading = $event"
+  >
+    <template #modes>
+      <a-tabs :active-key="importMode" @change="switchImportMode">
+        <a-tab-pane
+          key="excel"
+          :disabled="validateLoading || assetLoading"
+          :title="t('caseManagement.featureCase.importExcelTab')"
+        />
+        <a-tab-pane
+          key="asset"
+          :disabled="validateLoading || assetLoading"
+          :title="t('caseManagement.featureCase.importHubTab')"
+        />
+      </a-tabs>
+    </template>
+  </ImportFromDefaultModal>
 </template>
 
 <script setup lang="ts">
@@ -60,6 +85,8 @@
   const appStore = useAppStore();
   const { t } = useI18n();
 
+  const validateLoading = ref(false);
+  const assetLoading = ref(false);
   const importMode = ref<'excel' | 'asset'>('excel');
   const showExcelModal = ref<boolean>(false);
   const showHubModal = ref(false);
@@ -71,6 +98,13 @@
     }
     return id;
   });
+
+  function switchImportMode(value: string | number) {
+    if (validateLoading.value || assetLoading.value) return;
+    importMode.value = value === 'asset' ? 'asset' : 'excel';
+    showExcelModal.value = importMode.value === 'excel';
+    showHubModal.value = importMode.value === 'asset';
+  }
 
   function openImport() {
     if (importMode.value === 'asset') {
@@ -93,7 +127,6 @@
 
   const validateType = ref<'Excel' | 'Xmind'>('Excel');
 
-  const validateLoading = ref(false);
   const jobId = ref('');
   const jobVisible = ref(false);
   const legacyVisible = ref(false);

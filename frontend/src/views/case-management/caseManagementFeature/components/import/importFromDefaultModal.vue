@@ -8,6 +8,7 @@
     unmount-on-close
     @cancel="handleCancel"
   >
+    <slot name="modes"></slot>
     <a-alert type="info" class="mb-3"
       >选中的资产用例将复制到当前项目，并保留资产来源血缘；后续修改项目副本不会回写源资产。</a-alert
     >
@@ -66,7 +67,11 @@
   import Message from '@arco-design/web-vue/es/message';
 
   const props = defineProps<{ visible: boolean; targetModuleId?: string }>();
-  const emit = defineEmits<{ (e: 'update:visible', val: boolean): void; (e: 'success'): void }>();
+  const emit = defineEmits<{
+    (e: 'update:visible', val: boolean): void;
+    (e: 'success'): void;
+    (e: 'busy', value: boolean): void;
+  }>();
   const { t } = useI18n();
   const appStore = useAppStore();
   const dialogVisible = computed({ get: () => props.visible, set: (val) => emit('update:visible', val) });
@@ -75,6 +80,7 @@
   const copyAttachments = ref(true);
   const idempotencyKey = ref(crypto.randomUUID());
   const submitting = ref(false);
+  watch(submitting, (value) => emit('busy', value));
   const followupChoice = ref<InstanceType<typeof ImportFollowupChoice>>();
   const resultJobId = ref('');
   const followupResult = ref<{
