@@ -60,6 +60,6 @@ public class BugCaseRelateToolHandler implements AgentMcpToolHandler {
             request.setCaseType(CaseType.FUNCTIONAL_CASE.getKey());
         }
         agentBugWriteService.relateCase(request);
-        return Map.of("ok", true);
+        return Map.of("ok", true,"relations",agentBugWriteService.relationIds(request));
     }
 }

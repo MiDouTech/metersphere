@@ -1,0 +1,470 @@
+[
+  {
+    "name": "mcp__metersphere_test__metersphere_artifact_commit",
+    "description": "Verify and commit a previously uploaded evidence artifact.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_artifact_commit(args: { artifactId: string; executionId: string; leaseId: string; leaseToken: string; requestId: string; taskId: string; traceId?: string; uploadToken: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_artifact_list",
+    "description": "List redacted evidence metadata for a PERSONAL_MCP task.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_artifact_list(args: { taskId: string; }): Promise<CallToolResult<{ result: Array<{ [key: string]: unknown; }>; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_artifact_prepare",
+    "description": "Prepare a bounded evidence upload.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_artifact_prepare(args: { caseId?: string; contentType: string; executionId: string; fileName: string; leaseId: string; leaseToken: string; purpose: string; redacted?: boolean; requestId: string; sha256: string; sizeBytes: number; stepId?: string; taskId: string; traceId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_asset_catalog_search",
+    "description": "Search published test-asset catalog metadata.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_asset_catalog_search(args: { assetTypes: Array<\"CASE\" | \"DOCUMENT\" | \"PLAN\" | \"DATASET\" | \"ENVIRONMENT\" | \"PAGE_OBJECT\" | \"BUSINESS_FLOW\" | \"COMMON_STEP\" | \"API_DEFINITION\" | \"EVIDENCE\" | \"BUG\">; cursor?: string; keyword?: string; limit?: number; projectId: string; status?: \"PUBLISHED\"; updatedAfter?: number; }): Promise<CallToolResult<{ result: { hasMore: boolean; items: Array<{ [key: string]: unknown; }>; nextCursor: string | null; traceId: string; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_asset_get",
+    "description": "Get test-asset metadata or one immutable version.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_asset_get(args: { assetId: string; assetType: string; projectId: string; versionId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_asset_relation_list",
+    "description": "List asset relations.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_asset_relation_list(args: { assetId?: string; assetType?: string; cursor?: string; keyword?: string; limit?: number; projectId: string; relationType?: string; }): Promise<CallToolResult<{ result: Array<{ [key: string]: unknown; }>; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_asset_version_get",
+    "description": "Get one immutable asset version.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_asset_version_get(args: { projectId: string; versionId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_attachment_attach",
+    "description": "Attach uploaded temporary files to a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_attachment_attach(args: { attachmentIds: Array<string>; bugId: string; projectId: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_attachment_delete",
+    "description": "Delete an attachment from a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_attachment_delete(args: { attachmentId: string; confirm: boolean; projectId: string; requestId: string; resourceId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_attachment_import_url",
+    "description": "Import public HTTP/HTTPS PNG/JPEG (max 5 MiB) into persistent internal storage. No authenticated/private source. Attach directly to the target attachment area.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_attachment_import_url(args: { bugId: string; fileName?: string; projectId: string; requestId: string; url: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_attachments_list",
+    "description": "List attachments of a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_attachments_list(args: { bugId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_case_relate",
+    "description": "Relate functional test cases to a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_case_relate(args: { bugId: string; caseIds: Array<string>; caseType?: \"FUNCTIONAL\"; projectId: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_case_unrelate",
+    "description": "Unrelate a functional test case from a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_case_unrelate(args: { confirm: boolean; projectId: string; relationId: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_comment_create",
+    "description": "Create a comment or reply for a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_comment_create(args: { bugId: string; content: string; event?: \"COMMENT\" | \"AT\" | \"REPLY\"; notifier?: string; parentId?: string; replyUser?: string; requestId: string; richTextTmpFileIds?: Array<string>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_comments_list",
+    "description": "List comments of a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_comments_list(args: { bugId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_create",
+    "description": "Create bug\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_create(args: { addCaseIds?: Array<string>; attachmentIds?: Array<string>; caseId?: string; caseType?: string; customFields?: { [key: string]: string; }; description?: string; projectId: string; requestId: string; tags?: Array<string>; templateId?: string; testPlanCaseId?: string; testPlanId?: string; title: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_export",
+    "description": "Export 1..100 explicit bugIds as a ZIP containing XLSX. Returns an expiring authenticated downloadPath, size and SHA256 (max 5 MiB). Requires user export permission and BUG_READ.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_export(args: { bugIds: Array<string>; exportColumns?: Array<{ columnType: \"system\" | \"custom\" | \"other\"; key: string; }>; projectId: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_export_columns",
+    "description": "Read bug export columns; requires current user export permission and BUG_READ.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_export_columns(args: { projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_get",
+    "description": "Get bug detail\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_get(args: { bugId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_history_list",
+    "description": "List change history of a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_history_list(args: { bugId: string; current?: number; pageSize?: number; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_import_commit",
+    "description": "Commit a previewed import using unchanged content and previewHash. Each row has its own transaction and persistent idempotency. Returns SUCCEEDED/PARTIAL/FAILED with row results; retries never duplicate successful rows. Requires BUG_WRITE.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_import_commit(args: { base64?: string; fileName?: string; previewHash: string; projectId: string; requestId: string; rows?: Array<{ customFields?: { [key: string]: string; }; description?: string; handleUser?: string; title: string; }>; templateId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_import_preview",
+    "description": "Validate rows or a base64 XLSX (exclusive). Headers: title, description, handleUser, custom:<fieldId>. No formulas; max 100 rows/5 MiB. Returns previewHash and per-row errors. Requires BUG_WRITE.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_import_preview(args: { base64?: string; fileName?: string; projectId: string; rows?: Array<{ customFields?: { [key: string]: string; }; description?: string; handleUser?: string; title: string; }>; templateId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_relate_case",
+    "description": "Relate functional test cases to a bug.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_relate_case(args: { bugId: string; caseIds: Array<string>; caseType?: \"FUNCTIONAL\"; projectId: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_search",
+    "description": "Search bugs\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_search(args: { current?: number; handleUserIds?: Array<string>; pageSize?: number; projectId: string; query?: string; status?: Array<string>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_template_get",
+    "description": "Get the bug template for a project.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_template_get(args: { projectId: string; templateId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_transition",
+    "description": "Execute an allowed workflow transition using transitionId, targetStatusId and expectedUpdateTime.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_transition(args: { bugId: string; projectId: string; requestId: string; transition: { comment?: string; expectedUpdateTime: number; override?: boolean; overrideReason?: string; targetStatusId: string; transitionId: string; }; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_transitions",
+    "description": "Get the bug's allowed workflow transitions and current concurrency version.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_transitions(args: { bugId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_bug_update",
+    "description": "Update bug\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_bug_update(args: { addCaseIds?: Array<string>; attachmentIds?: Array<string>; bugId: string; customFields?: { [key: string]: string; }; description?: string; expectedUpdateTime?: number; projectId: string; removeRelationIds?: Array<string>; requestId: string; tags?: Array<string>; templateId?: string; title?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_business_flow_get",
+    "description": "Get a published governed business flow in the authorized project.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_business_flow_get(args: { businessFlowId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_case_review_associate_cases",
+    "description": "Associate cases to review\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_case_review_associate_cases(args: { caseIds: Array<string>; projectId: string; requestId: string; reviewId: string; reviewers?: Array<string>; }): Promise<CallToolResult<{ result: { ok: boolean; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_case_review_create",
+    "description": "Create case review\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_case_review_create(args: { caseIds?: Array<string>; description?: string; moduleId?: string; name: string; projectId: string; requestId: string; reviewPassRule?: string; reviewers?: Array<string>; tags?: Array<string>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_case_review_get",
+    "description": "Get case review detail\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_case_review_get(args: { reviewId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_credential_metadata_list",
+    "description": "List credential metadata for an environment profile without secretRef or secret value.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_credential_metadata_list(args: { businessRole?: string; environmentProfileId: string; projectId: string; }): Promise<CallToolResult<{ result: Array<{ [key: string]: unknown; }>; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_dataset_metadata_get",
+    "description": "Get published dataset metadata without secret data values.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_dataset_metadata_get(args: { datasetId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_environment_profile_get",
+    "description": "Get an executable environment profile in the authorized project.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_environment_profile_get(args: { environmentProfileId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_environment_profile_list",
+    "description": "List executable environment profiles.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_environment_profile_list(args: { projectId: string; }): Promise<CallToolResult<{ result: Array<{ [key: string]: unknown; }>; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_cancel",
+    "description": "Cancel an AI execution task.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_cancel(args: { executionTaskId: string; reason?: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_checkpoint_create",
+    "description": "Persist a hashed execution checkpoint and release the active lease.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_checkpoint_create(args: { executionId: string; leaseId: string; leaseToken: string; reason: string; requestId: string; stateSnapshot: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_checkpoint_resume",
+    "description": "Resume a personal task checkpoint with its one-time resumeToken and a fresh passed preflightId.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_checkpoint_resume(args: { checkpointId: string; preflightId: string; requestId: string; resumeToken: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_complete",
+    "description": "Submit the terminal execution outcome.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_complete(args: { leaseId: string; leaseToken: string; reason?: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_create",
+    "description": "Create an AI execution task. Backend revalidates project, plan, cases, and confirmation constraints.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_create(args: { agentType?: string; approvalPolicy?: string; assetRefs?: Array<{ assetId: string; assetType: string; versionId?: string; }>; browserType?: string; caseIds?: Array<string>; confirmed?: boolean; credentialReferenceId?: string; dispatchMode?: string; environmentId?: string; environmentProfileId?: string; executedBy?: string; executionMode?: string; idempotencyKey?: string; loginMode?: string; maxAttempts?: number; modelProfileId?: string; name?: string; objective?: string; policySnapshot?: string; preflightId: string; projectId: string; projectWide?: boolean; prompt?: string; promptTemplateVersionId?: string; providerId?: string; requestId: string; requiredCapabilities?: Array<string>; resolvedFilter?: string; runnerId?: string; selectionMode?: string; source?: string; targetUrl?: string; testPlanId?: string; timeoutAt?: number; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_events",
+    "description": "Read append-only AI execution events.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_events(args: { cursor?: number; executionTaskId: string; limit?: number; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_events_batch",
+    "description": "Append an ordered, idempotent batch of execution events.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_events_batch(args: { events: Array<{ actorId?: string; actorType?: string; artifactIds?: Array<string>; artifactIdsJson?: string; attempt?: number; caseId?: string; contractVersion?: string; createUser?: string; eventId?: string; eventTime?: number; eventType?: string; executionId?: string; id?: string; leaseId?: string; level?: string; message?: string; payload?: string; requestId?: string; sanitizedMetadata?: string; sequence?: number; stepId?: string; taskId?: string; toolName?: string; traceId?: string; }>; leaseId: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_fail",
+    "description": "Submit the terminal execution outcome.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_fail(args: { leaseId: string; leaseToken: string; reason?: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_get",
+    "description": "Get AI execution task detail.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_get(args: { executionTaskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_pause",
+    "description": "Pause a PERSONAL_MCP execution.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_pause(args: { executionTaskId: string; reason?: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_preflight",
+    "description": "Validate and freeze scope, environment, credential and policy before creating a PERSONAL_MCP execution.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_preflight(args: { caseIds?: Array<string>; credentialReferenceId?: string; environmentProfileId: string; projectId: string; requestId: string; requiredCapabilities?: Array<string>; runnerType: string; testPlanId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_resolve",
+    "description": "Resolve project, test plan, and functional case execution scope before creating an AI execution task.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_resolve(args: { caseIds?: Array<string>; caseKeyword?: string; filters?: { excludeRiskActions?: boolean; includeDescendants?: boolean; keyword?: string; lastExecuteResult?: Array<string>; limit?: number; moduleIds?: Array<string>; priority?: Array<string>; reviewStatus?: Array<string>; tagMatch?: string; tags?: Array<string>; }; projectId?: string; query?: string; testPlanId?: string; testPlanName?: string; threshold?: number; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_result_get",
+    "description": "Get the current result and verdict for a PERSONAL_MCP task.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_result_get(args: { taskId: string; }): Promise<CallToolResult<{ result: { status: string; taskId: string; traceId: string; verdict: string; verdictReason: string; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_resume",
+    "description": "Resume an AI execution task after manual login is ready.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_resume(args: { executionTaskId: string; reason?: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_retry",
+    "description": "Retry a terminal PERSONAL_MCP execution using its frozen scope.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_retry(args: { executionTaskId: string; reason?: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_search",
+    "description": "Search personal MCP execution history, including terminal tasks. createdAfter/createdBefore are inclusive epoch milliseconds; current/pageSize provide stable newest-first pagination.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_search(args: { createdAfter?: number; createdBefore?: number; current: number; keyword?: string; pageSize: number; projectId: string; status?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_step_result_get",
+    "description": "Read a persisted step result by requestId after a lost response or expired lease. Requires authorized access to the personal task; never replays a mutation.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_step_result_get(args: { executionId: string; requestId: string; stepId: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_execution_step_submit",
+    "description": "Submit immutable step facts using the frozen contract: v1 uses ordered actual values; v2 requires unique assertionId and typed actual values (DECIMAL/INTEGER as strings). Never submit expected/operator overrides. Reuse requestId and payload for retries; changed payloads conflict.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_execution_step_submit(args: { artifactIds?: Array<string>; assertionResult?: string; attempt?: number; errorCode?: string; errorMessage?: string; executionId: string; finishedAt?: number; inputSnapshot?: string; leaseId: string; leaseToken: string; outputSummary?: string; requestId: string; startedAt?: number; status: string; stepId: string; taskId: string; traceId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_archive_data",
+    "description": "Archive execution facts independently from results: data. TASK uses an ended managed run; SUBMISSION uses an accepted personal submission. Data requires sourceObjectId/reuseConditions/cleanupStatus and current project file-add permission. Sensitive fields are redacted; reported data is not independently verified. Repeat the same archive; never create fake data when none exists.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_archive_data(args: { archiveId: string; projectId: string; records: Array<{ cleanupStatus: string; reuseConditions: string; sourceObjectId: string; values: { [key: string]: unknown; }; }>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_archive_get",
+    "description": "Archive execution facts independently from results: get. TASK uses an ended managed run; SUBMISSION uses an accepted personal submission. Data requires sourceObjectId/reuseConditions/cleanupStatus and current project file-add permission. Sensitive fields are redacted; reported data is not independently verified. Repeat the same archive; never create fake data when none exists.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_archive_get(args: { archiveId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_archive_prepare",
+    "description": "Archive execution facts independently from results: prepare. TASK uses an ended managed run; SUBMISSION uses an accepted personal submission. Data requires sourceObjectId/reuseConditions/cleanupStatus and current project file-add permission. Sensitive fields are redacted; reported data is not independently verified. Repeat the same archive; never create fake data when none exists.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_archive_prepare(args: { projectId: string; sourceId: string; sourceType: \"TASK\" | \"SUBMISSION\"; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_archive_retry",
+    "description": "Archive execution facts independently from results: retry. TASK uses an ended managed run; SUBMISSION uses an accepted personal submission. Data requires sourceObjectId/reuseConditions/cleanupStatus and current project file-add permission. Sensitive fields are redacted; reported data is not independently verified. Repeat the same archive; never create fake data when none exists.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_archive_retry(args: { archiveId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_attachment_attach",
+    "description": "Attach uploaded temporary files to a functional test case.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_attachment_attach(args: { attachmentIds: Array<string>; caseId: string; projectId: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_attachment_delete",
+    "description": "Delete an attachment from a functional test case.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_attachment_delete(args: { attachmentId: string; confirm: boolean; projectId: string; requestId: string; resourceId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_attachment_import_url",
+    "description": "Import public HTTP/HTTPS PNG/JPEG (max 5 MiB) into persistent internal storage. No authenticated/private source. Attach directly to the target attachment area.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_attachment_import_url(args: { caseId: string; fileName?: string; projectId: string; requestId: string; url: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_attachment_read",
+    "description": "Read an authorized published PNG/JPEG attachment as MCP image content, max 5 MiB. Optional submissionId reads retained historical evidence.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_attachment_read(args: { caseId: string; fileId: string; projectId: string; submissionId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_attachment_upload_complete",
+    "description": "Complete a prepared upload with matching base64 bytes. Returns temporary attachmentId; use attachment.attach or comment.create to associate it. Same uploadId and file replay safely.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_attachment_upload_complete(args: { base64: string; contentType: string; fileName: string; uploadId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_attachment_upload_prepare",
+    "description": "Prepare an ordinary case attachment upload, bound to token/project/purpose/file hash. 5 MiB per file, 15 minute expiry. Does not attach it to a case.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_attachment_upload_prepare(args: { contentType: string; fileName: string; projectId: string; purpose: \"CASE_DETAIL\" | \"CASE_COMMENT\"; requestId: string; sha256: string; size: number; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_attachments_list",
+    "description": "List attachments of a functional test case.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_attachments_list(args: { caseId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_case_batch_create",
+    "description": "Batch create functional cases. projectId accepts internal project id, UI project number, or exact project name.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_case_batch_create(args: { cases: Array<{ description?: string; name: string; prerequisite?: string; priority?: string; steps?: Array<{ actualResult?: string; desc?: string; executeResult?: string; expected?: string; id?: string; num?: number; }>; tags?: Array<string>; }>; failFast?: boolean; moduleId?: string; modulePath?: string; projectId: string; requestId: string; templateId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_case_create",
+    "description": "Create functional case. projectId accepts internal project id, UI project number, or exact project name.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_case_create(args: { description?: string; moduleId?: string; modulePath?: string; name: string; prerequisite?: string; priority?: string; projectId: string; requestId: string; steps?: Array<{ actualResult?: string; desc?: string; executeResult?: string; expected?: string; id?: string; num?: number; }>; tags?: Array<string>; templateId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_case_update",
+    "description": "Update a functional test case with a partial patch.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_case_update(args: { caseId: string; expectedUpdateTime: number; patch: { [key: string]: unknown; }; projectId: string; reason?: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_comment_create",
+    "description": "Create a comment or reply. uploadFileIds must contain temporary attachment IDs returned by the Agent upload endpoint, not storage file IDs.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_comment_create(args: { caseId: string; content: string; event?: \"COMMENT\" | \"AT\" | \"REPLY\"; notifier?: string; parentId?: string; projectId: string; replyUser?: string; requestId: string; uploadFileIds?: Array<string>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_comments_list",
+    "description": "Page case comments (default 10, maximum 100). Returns {list,total,current,pageSize}; roots include the first 10 replies and childTotal. Supply parentId to page replies. Deleted comments are tombstones and retain replies.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_comments_list(args: { caseId: string; current?: number; pageSize?: number; parentId?: string; projectId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_execution_contract",
+    "description": "Read case steps, contentHash and policyHash for structure-only direct execution. Agent declares SUCCESS/ERROR; actual text is not compared with expected. Cover every original position; extras and repeats are allowed and retained.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_execution_contract(args: { caseId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_execution_evidence_import_url",
+    "description": "Import public HTTP/HTTPS PNG/JPEG (max 5 MiB) into persistent internal storage. No authenticated/private source. Stage evidence; visible only after the existing submission gate passes.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_execution_evidence_import_url(args: { caseId: string; contentHash?: string; fileName?: string; projectId: string; purpose?: \"BEFORE_STEP\" | \"AFTER_STEP\"; requestId: string; stepNum?: number; url: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_execution_evidence_upload",
+    "description": "Stage a PNG/JPEG evidence file as base64 (max 5 MiB), at case scope; one image covers all steps; hashes/stepNum/purpose optional. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT. Not visible until gate passes.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_execution_evidence_upload(args: { base64: string; caseId: string; contentHash?: string; contentType: \"image/png\" | \"image/jpeg\"; fileName: string; projectId: string; purpose?: \"BEFORE_STEP\" | \"AFTER_STEP\"; requestId: string; stepNum?: number; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_execution_get",
+    "description": "Read an authorized direct execution report with step outcomes, evidence mapping and frozen global policy. Sensitive facts are redacted.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_execution_get(args: { caseId: string; projectId: string; submissionId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_execution_submit",
+    "description": "Validate original-step coverage and evidence structure, then publish Agent-reported results. Extra and repeated positions are retained; any ERROR makes the case ERROR. No expected-text comparison or content reviewer. ACCEPTED/PUBLISHED means structure accepted, not independently verified execution. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_execution_submit(args: { caseId: string; contentHash?: string; evidenceIds?: Array<string>; policyHash?: string; projectId: string; requestId: string; steps: Array<{ actual: string; evidenceIds?: Array<string>; result: \"SUCCESS\" | \"ERROR\"; stepNum: number; }>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_export_download",
+    "description": "Read up to 65536 bytes as base64 at offset, with fresh authorization. Append chunks until eof. Never returns a public file URL.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_export_download(args: { length?: number; offset?: number; projectId: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_export_retry",
+    "description": "Retry your failed, cancelled or expired export using its original filters and fields against CURRENT case content. Creates a new linked task. Reuse requestId after a lost response.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_export_retry(args: { projectId: string; requestId: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_export_start",
+    "description": "Create an idempotent Excel/XMind export. request uses web export fields: selectIds/selectAll, moduleIds, systemFields/customFields/otherFields (id/name), isMerge. Poll status, then download chunks.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_export_start(args: { format: \"xlsx\" | \"xmind\"; projectId: string; request: { customFields?: Array<{ id: string; name?: string; }>; otherFields?: Array<{ id: string; name?: string; }>; systemFields?: Array<{ id: string; name?: string; }>; [key: string]: unknown; }; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_export_status",
+    "description": "Read or stop your own durable export task. Stopping a completed task preserves success.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_export_status(args: { projectId: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_export_stop",
+    "description": "Read or stop your own durable export task. Stopping a completed task preserves success.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_export_stop(args: { projectId: string; requestId: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_get",
+    "description": "Get functional test case detail\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_get(args: { caseId: string; includeSteps?: boolean; testPlanId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_history_list",
+    "description": "List change history of a functional test case.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_history_list(args: { caseId: string; current?: number; pageSize?: number; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_module_create",
+    "description": "Create functional case module. projectId accepts internal project id, UI project number, or exact project name.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_module_create(args: { modulePath?: string; name: string; parentId?: string; projectId: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_module_get",
+    "description": "Read module metadata and updateTime for concurrency control.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_module_get(args: { moduleId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_modules",
+    "description": "List functional case modules by project. projectId accepts internal project id, UI project number, or exact project name.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_modules(args: { projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_overview_get",
+    "description": "Read authorized case overview.get without changing execution results.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_overview_get(args: { caseId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_search",
+    "description": "Search functional test cases. Optional projectId accepts internal project id, UI project number, or exact project name; when omitted it uses Agent Token current/default project.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_search(args: { current?: number; filters?: { excludeRiskActions?: boolean; includeDescendants?: boolean; keyword?: string; lastExecuteResult?: Array<string>; limit?: number; moduleIds?: Array<string>; priority?: Array<string>; reviewStatus?: Array<string>; tagMatch?: string; tags?: Array<string>; }; identityType?: string; includeSteps?: boolean; pageSize?: number; projectId?: string; query?: string; refId?: string; testPlanId?: string; versionId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_snapshot_create",
+    "description": "Freeze a case-library query for complete paged extraction (15 minutes, 10000 cases/50 MiB). Ordinary search remains live. query uses the functional search request fields.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_snapshot_create(args: { query: { [key: string]: unknown; }; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_snapshot_page",
+    "description": "Read frozen case contents. Current authorization and existence are checked; invalid scope requires a new snapshot.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_snapshot_page(args: { current?: number; pageSize?: number; snapshotId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_snapshot_release",
+    "description": "Release your temporary extraction snapshot; does not delete cases.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_snapshot_release(args: { snapshotId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_template_get",
+    "description": "Get the functional case template for a project.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_template_get(args: { projectId: string; templateId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_trash_list",
+    "description": "Versioned case lifecycle: trash.list. Deletion requires a short-lived preview and the owner's explicit decision in confirmationPath; never substitute confirm=true. CURRENT is default; ALL is explicit. Restore never restarts tasks. New delete/restore scopes are not implied by AGENT_ALL.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_trash_list(args: { current?: number; pageSize?: number; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_functional_versions_list",
+    "description": "Read authorized case versions.list without changing execution results.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_functional_versions_list(args: { caseId: string; current?: number; pageSize?: number; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_human_request_create",
+    "description": "Request human approval, input, login or review.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_human_request_create(args: { actionHash?: string; checkpointRequired?: boolean; content?: string; expiresAt?: number; recipientUserIds?: Array<string>; requestId: string; requestType: string; riskLevel?: string; title: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_human_request_get",
+    "description": "Read a human intervention request for a task.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_human_request_get(args: { requestId: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_human_request_list",
+    "description": "List human requests for a PERSONAL_MCP task.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_human_request_list(args: { taskId: string; }): Promise<CallToolResult<{ result: Array<{ [key: string]: unknown; }>; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_human_request_respond",
+    "description": "Respond as the token owner; first valid recipient wins.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_human_request_respond(args: { action: string; expectedVersion: number; humanRequestId: string; requestId: string; response?: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_operation_get",
+    "description": "Find this Token's personal execution upload/submit result after a lost response. NOT_FOUND is not proof of non-execution: retry only with the original requestId. Requires current case read permission.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_operation_get(args: { caseId: string; projectId: string; requestId: string; toolName: \"metersphere.functional.execution.evidence.import_url\" | \"metersphere.functional.execution.submit\" | \"metersphere.functional.execution.evidence.upload\"; }): Promise<CallToolResult<{ result: { [key: string]: unknown; } | unknown[] | string | number | number | boolean | null; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_page_object_get",
+    "description": "Get a published governed page object and its semantic locators in the authorized project.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_page_object_get(args: { pageObjectId: string; projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_project_create",
+    "description": "Create project\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_project_create(args: { allResourcePool?: boolean; description?: string; moduleIds?: Array<string>; name: string; organizationId: string; requestId: string; resourcePoolIds?: Array<string>; userIds: Array<string>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_project_get",
+    "description": "Get project detail\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_project_get(args: { projectId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_project_list",
+    "description": "List projects accessible to the current Agent Token user. Same contract as metersphere.project.search.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_project_list(args: { includeArchived?: boolean; keyword?: string; limit?: number; page?: number; pageSize?: number; }): Promise<CallToolResult<{ result: Array<{ [key: string]: unknown; }>; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_project_members_add",
+    "description": "Add project members\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_project_members_add(args: { projectId: string; requestId: string; userIds: Array<string>; userRoleIds?: Array<string>; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_project_search",
+    "description": "Search projects by internal project id, project name, or project number. Supports page/pageSize/includeArchived; returns items/total/hasMore.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_project_search(args: { includeArchived?: boolean; keyword?: string; limit?: number; page?: number; pageSize?: number; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_task_claim",
+    "description": "Atomically claim a PERSONAL_MCP task and receive an execution lease.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_task_claim(args: { agentType?: string; capabilities?: Array<string>; projectId: string; requestId: string; taskId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_task_get",
+    "description": "Get a PERSONAL_MCP task and its frozen execution context.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_task_get(args: { taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_task_lease_heartbeat",
+    "description": "Renew the current execution lease.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_task_lease_heartbeat(args: { leaseId: string; leaseToken: string; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_task_release",
+    "description": "Release a claimed task and record a safe reason.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_task_release(args: { leaseId: string; leaseToken: string; reason?: string; requestId: string; taskId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_task_search",
+    "description": "Search PERSONAL_MCP tasks visible to the current token.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_task_search(args: { agentType?: string; capabilities?: Array<string>; projectId: string; taskId?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_test_plan_associate_cases",
+    "description": "Associate cases to test plan\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_test_plan_associate_cases(args: { caseIds: Array<string>; collectionId?: string; projectId: string; requestId: string; testPlanId: string; }): Promise<CallToolResult<{ result: { ok: boolean; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_test_plan_cases",
+    "description": "List functional cases in a test plan. Requires projectId and testPlanId.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_test_plan_cases(args: { current?: number; includeSteps?: boolean; pageSize?: number; projectId: string; testPlanId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_test_plan_create",
+    "description": "Create test plan\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_test_plan_create(args: { automaticStatusUpdate?: boolean; caseIds?: Array<string>; description?: string; moduleId?: string; name: string; passThreshold?: number; projectId: string; repeatCase?: boolean; requestId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_test_plan_disassociate_cases",
+    "description": "Remove functional-case associations using testPlanCaseId values, not repository caseIds. At most 100; executing or archived plans are rejected.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_test_plan_disassociate_cases(args: { associationIds: Array<string>; projectId: string; requestId: string; testPlanId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_test_plan_get",
+    "description": "Get test plan detail\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_test_plan_get(args: { testPlanId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_test_plan_search",
+    "description": "Search test plans by projectId, keyword, status, includeArchived, page, and pageSize.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_test_plan_search(args: { includeArchived?: boolean; keyword?: string; page?: number; pageSize?: number; projectId: string; status?: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_test_plan_update",
+    "description": "Patch plan name, description, tags, schedule or execution configuration. Omitted fields are preserved. Requires updateTime from test_plan.get; archived or executing plans are rejected.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_test_plan_update(args: { expectedUpdateTime: number; patch: { automaticStatusUpdate?: boolean; description?: string; name?: string; passThreshold?: number; plannedEndTime?: number; plannedStartTime?: number; repeatCase?: boolean; tags?: Array<string>; }; projectId: string; requestId: string; testPlanId: string; }): Promise<CallToolResult<{ result: { [key: string]: unknown; }; }>>; };\n```"
+  },
+  {
+    "name": "mcp__metersphere_test__metersphere_writeback_status_get",
+    "description": "Get writeback and artifact reconciliation status.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__metersphere_test__metersphere_writeback_status_get(args: { taskId: string; }): Promise<CallToolResult<{ result: { artifactStatus: string; taskId: string; traceId: string; writebackStatus: string; }; }>>; };\n```"
+  }
+]

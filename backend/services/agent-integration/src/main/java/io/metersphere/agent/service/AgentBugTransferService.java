@@ -72,10 +72,18 @@ public class AgentBugTransferService {
             byte[] bytes;
             try { bytes=bugService.export(request).getBody(); }
             catch(MSException business) { throw business; }
-            catch(Exception exception) { throw new IllegalStateException("Bug export failed",exception); }
+            catch(Exception exception) {
+                LOG.error("MCP bug export generation failed projectId={} count={}",project,ids.size(),exception);
+                throw new MSException("BUG_EXPORT_GENERATION_FAILED");
+            }
             if(bytes==null || bytes.length==0) fail("BUG_EXPORT_EMPTY");
             if(bytes.length>MAX_BYTES) fail("BUG_TRANSFER_LIMIT_EXCEEDED");
-            var stored=attachments.upload(new BytesFile("metersphere-bugs.zip","application/zip",bytes),project,"BUG_EXPORT",null);
+            io.metersphere.agent.dto.AgentTempAttachmentUploadResponse stored;
+            try { stored=attachments.upload(new BytesFile("metersphere-bugs.zip","application/zip",bytes),project,"BUG_EXPORT",null); }
+            catch(Exception exception) {
+                LOG.error("MCP bug export storage failed projectId={} count={}",project,ids.size(),exception);
+                throw new MSException("BUG_EXPORT_STORAGE_FAILED");
+            }
             Map<String,Object> result=JSON.convertValue(stored,Map.class);
             result.put("sha256",DigestUtils.sha256Hex(bytes)); result.put("count",ids.size());
             result.put("format","ZIP_XLSX"); return result;

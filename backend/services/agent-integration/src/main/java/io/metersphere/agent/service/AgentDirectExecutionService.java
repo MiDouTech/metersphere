@@ -26,6 +26,7 @@ import java.util.*;
 public class AgentDirectExecutionService {
     @Resource private JdbcTemplate jdbc;
     @Resource private AgentBusinessAccess access;
+    @Resource private AgentProjectService projects;
     @Resource private AgentFunctionalCaseSearchService cases;
     @Resource private io.metersphere.functional.service.FunctionalCaseService definitions;
     @Resource private io.metersphere.agent.mapper.AgentCaseSchemaMapper schemaMapper;
@@ -49,7 +50,8 @@ public class AgentDirectExecutionService {
     }
 
     @Transactional(readOnly=false)
-    public Map<String,Object> contract(Map<String,Object> args) {
+    public Map<String,Object> contract(Map<String,Object> input) {
+        var args=canonicalArguments(input);
         authorize(args,false);
         var source=source(args,false);
         var policy=gate.currentForSubmission();
@@ -59,6 +61,9 @@ public class AgentDirectExecutionService {
                 "instructions","One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution."));
         response.put("writesEnabled",writesEnabled);response.put("evidenceScope","CASE");response.put("minimumEvidenceCount",1);response.put("maximumEvidenceCount",10);
         response.put("stepEvidenceRequired",false);response.put("clientHashesRequired",false);
+        response.put("effectiveEvidencePolicy",Map.of("ruleVersion","case-image-v1","scope","CASE",
+                "minimumEvidenceCount",1,"maximumEvidenceCount",10,"stepEvidenceRequired",false,
+                "requiredRoles",List.of(),"takesPrecedenceOverPolicySnapshot",true));
         response.put("definitionType",Objects.toString(source.getCaseEditType(),"UNKNOWN"));
         response.put("supported","STEP".equalsIgnoreCase(source.getCaseEditType()) && source.getSteps()!=null && !source.getSteps().isEmpty() && source.getSteps().size()<=100 && source.getSteps().stream().allMatch(step->step.getDesc()!=null && !step.getDesc().isBlank() && step.getExpected()!=null && !step.getExpected().isBlank()));
         response.put("limitations",Map.of("originalSteps",100,"submittedSteps",1000,"factsBytes",1048576));
@@ -66,7 +71,8 @@ public class AgentDirectExecutionService {
         return response;
     }
 
-    public Map<String,Object> upload(Map<String,Object> args) {
+    public Map<String,Object> upload(Map<String,Object> input) {
+        var args=canonicalArguments(input);
         var response=operations.execute("functional.execution.evidence.upload",string(args,"requestId"),args,Map.class,
                 () -> authorize(args,true), () -> {
                     assertWritesEnabled();
@@ -92,7 +98,8 @@ public class AgentDirectExecutionService {
         return evidenceState(args,response);
     }
 
-    public Map<String,Object> evidenceState(Map<String,Object> args,Map<String,Object> response) {
+    public Map<String,Object> evidenceState(Map<String,Object> input,Map<String,Object> response) {
+        var args=canonicalArguments(input);
         authorize(args,true);
         var result=new LinkedHashMap<String,Object>(response);
         var files=jdbc.queryForList("SELECT submission_id,expires_at FROM agent_case_evidence WHERE id=? AND token_id=? AND case_id=? AND project_id=?",response.get("evidenceId"),AgentTokenContext.get().getId(),args.get("caseId"),args.get("projectId"));
@@ -100,7 +107,8 @@ public class AgentDirectExecutionService {
         return result;
     }
 
-    public Map<String,Object> report(Map<String,Object> args) {
+    public Map<String,Object> report(Map<String,Object> input) {
+        var args=canonicalArguments(input);
         authorize(args,false);
         var rows=jdbc.queryForList("SELECT id,result,gate_status,review_code,reviewer_version,content_hash,policy_hash,facts,create_time FROM agent_case_submission WHERE id=? AND case_id=? AND project_id=?",
                 string(args,"submissionId"),string(args,"caseId"),string(args,"projectId"));
@@ -128,7 +136,8 @@ public class AgentDirectExecutionService {
         return result;
     }
 
-    public Map<String,Object> submit(Map<String,Object> args) {
+    public Map<String,Object> submit(Map<String,Object> input) {
+        var args=canonicalArguments(input);
         authorize(args,true);
         var replay=operations.completed("functional.execution.submit",string(args,"requestId"),args,Map.class,()->authorize(args,true));
         if(replay.isPresent()) return replay.get();
@@ -216,6 +225,12 @@ public class AgentDirectExecutionService {
             if(number.intValue()<=requiredCount) covered.add(number.intValue());
         }
         if(covered.size()!=requiredCount) fail("QUALITY_FINAL_FACTS_INCOMPLETE");
+    }
+
+    Map<String,Object> canonicalArguments(Map<String,Object> input) {
+        var args=new LinkedHashMap<>(input);
+        args.put("projectId",projects.resolveProjectId(string(input,"projectId")));
+        return args;
     }
 
     private AgentCaseDTO source(Map<String,Object> args) {return source(args,true);}

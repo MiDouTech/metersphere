@@ -1,0 +1,1342 @@
+{
+  "environment": "https://msp.ebcone.net/api/mcp",
+  "date": "2026-10-30",
+  "projectId": "1704667279923322880",
+  "projectName": "MSP需求验收-20261023",
+  "notes": [
+    "仅诊断用例，结构提交成功不代表业务真实执行通过",
+    "Base64图片不放入此JSON，读取原图字节相同已核对"
+  ],
+  "checks": {
+    "mcpAuditCreate": {
+      "projectId": "MSP需求验收-20261023",
+      "requestId": "mcp-audit-20261030-create-basic-01",
+      "name": "MCP-AUDIT-20261030-三步骤单图验收",
+      "priority": "P2",
+      "modulePath": "MCP-AUDIT-20261030",
+      "tags": [
+        "MCP-AUDIT-20261030"
+      ],
+      "description": "仅用于MCP接口协议验收，不代表实际业务测试通过。",
+      "steps": [
+        {
+          "num": 1,
+          "desc": "读取当前验收用例契约",
+          "expected": "返回三条原始步骤"
+        },
+        {
+          "num": 2,
+          "desc": "上传一张用例级截图",
+          "expected": "不要求每步上传截图"
+        },
+        {
+          "num": 3,
+          "desc": "提交三步实际结果及同一用例级证据",
+          "expected": "结构校验接受并保留执行事实"
+        }
+      ]
+    },
+    "mcpAuditCreateResult": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"caseId\":\"1715402550679773188\",\"num\":100120,\"name\":\"MCP-AUDIT-20261030-三步骤单图验收\",\"moduleId\":\"1715402550679773184\"}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1715402550679773188",
+          "num": 100120,
+          "name": "MCP-AUDIT-20261030-三步骤单图验收",
+          "moduleId": "1715402550679773184"
+        }
+      }
+    },
+    "mcpAuditCaseId": "1715402550679773188",
+    "mcpAuditContract": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"instructions\":\"One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.\",\"contentHash\":\"f28635e101f78bf8bf6c79efde046a70331c835ed8d830b3d75cb35282e55646\",\"resultSource\":\"AGENT_REPORTED\",\"comparison\":\"NONE_AGENT_REPORTED\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"case\":{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":null,\"versionId\":\"1704667279923322928\",\"reviewStatus\":null,\"updateTime\":null,\"description\":\"仅用于MCP接口协议验收，不代表实际业务测试通过。\",\"customFields\":[],\"caseId\":\"1715402550679773188\",\"num\":null,\"name\":\"MCP-AUDIT-20261030-三步骤单图验收\",\"modulePath\":null,\"caseEditType\":\"STEP\",\"tags\":null,\"priority\":\"P2\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":null,\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1715402550679773185\",\"num\":1,\"desc\":\"读取当前验收用例契约\",\"expected\":\"返回三条原始步骤\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1715402550679773186\",\"num\":2,\"desc\":\"上传一张用例级截图\",\"expected\":\"不要求每步上传截图\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1715402550679773187\",\"num\":3,\"desc\":\"提交三步实际结果及同一用例级证据\",\"expected\":\"结构校验接受并保留执行事实\",\"actualResult\":null,\"executeResult\":null}]},\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"policy\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"writesEnabled\":true,\"evidenceScope\":\"CASE\",\"minimumEvidenceCount\":1,\"maximumEvidenceCount\":10,\"stepEvidenceRequired\":false,\"clientHashesRequired\":false,\"definitionType\":\"STEP\",\"supported\":true,\"limitations\":{\"originalSteps\":100,\"submittedSteps\":1000,\"factsBytes\":1048576}}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "instructions": "One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.",
+          "contentHash": "f28635e101f78bf8bf6c79efde046a70331c835ed8d830b3d75cb35282e55646",
+          "resultSource": "AGENT_REPORTED",
+          "comparison": "NONE_AGENT_REPORTED",
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "case": {
+            "contentError": null,
+            "contentErrorTraceId": null,
+            "executionRef": null,
+            "executionFacts": null,
+            "projectId": "1704667279923322880",
+            "moduleId": null,
+            "versionId": "1704667279923322928",
+            "reviewStatus": null,
+            "updateTime": null,
+            "description": "仅用于MCP接口协议验收，不代表实际业务测试通过。",
+            "customFields": [],
+            "caseId": "1715402550679773188",
+            "num": null,
+            "name": "MCP-AUDIT-20261030-三步骤单图验收",
+            "modulePath": null,
+            "caseEditType": "STEP",
+            "tags": null,
+            "priority": "P2",
+            "prerequisite": "",
+            "testPlanId": null,
+            "testPlanCaseId": null,
+            "lastExecuteResult": null,
+            "lastExecuteUser": null,
+            "lastExecuteUserName": null,
+            "steps": [
+              {
+                "id": "1715402550679773185",
+                "num": 1,
+                "desc": "读取当前验收用例契约",
+                "expected": "返回三条原始步骤",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1715402550679773186",
+                "num": 2,
+                "desc": "上传一张用例级截图",
+                "expected": "不要求每步上传截图",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1715402550679773187",
+                "num": 3,
+                "desc": "提交三步实际结果及同一用例级证据",
+                "expected": "结构校验接受并保留执行事实",
+                "actualResult": null,
+                "executeResult": null
+              }
+            ]
+          },
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "policy": {
+            "name": "订单复测-证据与冻结断言-20261019",
+            "rules": [
+              {
+                "parameters": {
+                  "allowedMimeTypes": [
+                    "image/png",
+                    "image/jpeg"
+                  ],
+                  "maxArtifactBytes": 5242880,
+                  "requiredRoles": [
+                    "BEFORE_ACTION",
+                    "AFTER_ACTION"
+                  ]
+                },
+                "ruleId": "Q-EVIDENCE-01"
+              },
+              {
+                "parameters": {
+                  "allowedOperators": [
+                    "EQUALS",
+                    "IN_RANGE"
+                  ],
+                  "expectedSource": "FROZEN_CONTRACT"
+                },
+                "ruleId": "Q-ASSERT-01"
+              }
+            ],
+            "schemaVersion": "quality-policy.v1"
+          },
+          "writesEnabled": true,
+          "evidenceScope": "CASE",
+          "minimumEvidenceCount": 1,
+          "maximumEvidenceCount": 10,
+          "stepEvidenceRequired": false,
+          "clientHashesRequired": false,
+          "definitionType": "STEP",
+          "supported": true,
+          "limitations": {
+            "originalSteps": 100,
+            "submittedSteps": 1000,
+            "factsBytes": 1048576
+          }
+        }
+      }
+    },
+    "mcpAuditSubmitArgs": {
+      "projectId": "1704667279923322880",
+      "caseId": "1715402550679773188",
+      "evidenceIds": [
+        "41045098-a391-4c66-bed7-fff1137608c3"
+      ],
+      "steps": [
+        {
+          "stepNum": 1,
+          "actual": "协议诊断：已读取当前三步契约。",
+          "result": "SUCCESS"
+        },
+        {
+          "stepNum": 2,
+          "actual": "协议诊断：已上传一张既有UI验收图片作测试载荷，不作逐步业务证明。",
+          "result": "SUCCESS"
+        },
+        {
+          "stepNum": 3,
+          "actual": "协议诊断：本次调用验证单图覆盖三步的结构提交，不代表业务通过。",
+          "result": "SUCCESS"
+        }
+      ],
+      "requestId": "mcp-audit-20261030-single-image-01"
+    },
+    "mcpAuditSubmit": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"attachmentIds\":[\"41045098-a391-4c66-bed7-fff1137608c3\"],\"caseId\":\"1715402550679773188\",\"result\":\"SUCCESS\",\"resultSource\":\"AGENT_REPORTED\",\"submissionId\":\"f15a2854-cf35-42f1-8c0e-58c49fca4b14\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"gateStatus\":\"ACCEPTED\",\"publishStatus\":\"PUBLISHED\",\"evidenceIds\":[\"41045098-a391-4c66-bed7-fff1137608c3\"],\"evidenceScope\":\"CASE\",\"attachments\":[{\"contentType\":\"image/jpeg\",\"fileId\":\"41045098-a391-4c66-bed7-fff1137608c3\",\"fileName\":\"mcp-protocol-audit.jpg\",\"sha256\":\"bc70c8dc57d7006fbc175047666cb130fad5ca6ff16f8ff79797be4069cb16e4\",\"sizeBytes\":102969,\"submissionId\":\"f15a2854-cf35-42f1-8c0e-58c49fca4b14\",\"associationId\":\"6ade684c-ba81-4abd-aa09-76c7e4cefac0\",\"evidenceId\":\"41045098-a391-4c66-bed7-fff1137608c3\"}]}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "attachmentIds": [
+            "41045098-a391-4c66-bed7-fff1137608c3"
+          ],
+          "caseId": "1715402550679773188",
+          "result": "SUCCESS",
+          "resultSource": "AGENT_REPORTED",
+          "submissionId": "f15a2854-cf35-42f1-8c0e-58c49fca4b14",
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "gateStatus": "ACCEPTED",
+          "publishStatus": "PUBLISHED",
+          "evidenceIds": [
+            "41045098-a391-4c66-bed7-fff1137608c3"
+          ],
+          "evidenceScope": "CASE",
+          "attachments": [
+            {
+              "contentType": "image/jpeg",
+              "fileId": "41045098-a391-4c66-bed7-fff1137608c3",
+              "fileName": "mcp-protocol-audit.jpg",
+              "sha256": "bc70c8dc57d7006fbc175047666cb130fad5ca6ff16f8ff79797be4069cb16e4",
+              "sizeBytes": 102969,
+              "submissionId": "f15a2854-cf35-42f1-8c0e-58c49fca4b14",
+              "associationId": "6ade684c-ba81-4abd-aa09-76c7e4cefac0",
+              "evidenceId": "41045098-a391-4c66-bed7-fff1137608c3"
+            }
+          ]
+        }
+      }
+    },
+    "mcpAuditUpload": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"evidenceScope\":\"CASE\",\"sizeBytes\":102969,\"expiresAt\":1793433700292,\"evidenceId\":\"41045098-a391-4c66-bed7-fff1137608c3\",\"sha256\":\"bc70c8dc57d7006fbc175047666cb130fad5ca6ff16f8ff79797be4069cb16e4\",\"caseId\":\"1715402550679773188\",\"projectId\":\"1704667279923322880\",\"resourceState\":\"STAGED\"}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "evidenceScope": "CASE",
+          "sizeBytes": 102969,
+          "expiresAt": 1793433700292,
+          "evidenceId": "41045098-a391-4c66-bed7-fff1137608c3",
+          "sha256": "bc70c8dc57d7006fbc175047666cb130fad5ca6ff16f8ff79797be4069cb16e4",
+          "caseId": "1715402550679773188",
+          "projectId": "1704667279923322880",
+          "resourceState": "STAGED"
+        }
+      }
+    },
+    "mcpAuditImageRead": {
+      "readError": false,
+      "mimeType": "image/jpeg",
+      "sameBytes": true
+    },
+    "mcpAuditBatchArgs": {
+      "projectId": "MSP需求验收-20261023",
+      "requestId": "mcp-audit-20261030-batch-01",
+      "modulePath": "MCP-AUDIT-20261030",
+      "failFast": false,
+      "cases": [
+        {
+          "name": "MCP-AUDIT-20261030-批量有效",
+          "priority": "P1",
+          "steps": [
+            {
+              "desc": "有效步骤",
+              "expected": "有效预期"
+            }
+          ]
+        },
+        {
+          "name": "",
+          "priority": "P1",
+          "steps": [
+            {
+              "desc": "空名称应该拒绝",
+              "expected": "可定位失败行"
+            }
+          ]
+        }
+      ]
+    },
+    "mcpAuditBatchResult": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"created\":[{\"caseId\":\"1715405986653609985\",\"num\":100124,\"name\":\"MCP-AUDIT-20261030-批量有效\",\"moduleId\":\"1715402550679773184\"},{\"caseId\":\"1715405986653609989\",\"num\":100125,\"name\":\"\",\"moduleId\":\"1715402550679773184\"}],\"errors\":[]}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "created": [
+            {
+              "caseId": "1715405986653609985",
+              "num": 100124,
+              "name": "MCP-AUDIT-20261030-批量有效",
+              "moduleId": "1715402550679773184"
+            },
+            {
+              "caseId": "1715405986653609989",
+              "num": 100125,
+              "name": "",
+              "moduleId": "1715402550679773184"
+            }
+          ],
+          "errors": []
+        }
+      }
+    },
+    "mcpAuditBlank": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"1715402550679773184\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347370455,\"description\":\"\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"Case Priority\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P1\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1715405986653609989\",\"num\":100125,\"name\":\"\",\"modulePath\":\"MCP-AUDIT-20261030\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P1\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1715405986653609988\",\"num\":null,\"desc\":\"空名称应该拒绝\",\"expected\":\"可定位失败行\",\"actualResult\":null,\"executeResult\":null}]}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "contentError": null,
+          "contentErrorTraceId": null,
+          "executionRef": null,
+          "executionFacts": null,
+          "projectId": "1704667279923322880",
+          "moduleId": "1715402550679773184",
+          "versionId": "1704667279923322928",
+          "reviewStatus": "UN_REVIEWED",
+          "updateTime": 1793347370455,
+          "description": "",
+          "customFields": [
+            {
+              "fieldId": "1704667279923322929",
+              "fieldName": "Case Priority",
+              "fieldKey": null,
+              "required": true,
+              "apiFieldId": null,
+              "defaultValue": "P1",
+              "type": "SELECT",
+              "options": [
+                {
+                  "fieldId": "1704667279923322929",
+                  "value": "P0",
+                  "text": "P0",
+                  "internal": true,
+                  "pos": 1
+                },
+                {
+                  "fieldId": "1704667279923322929",
+                  "value": "P1",
+                  "text": "P1",
+                  "internal": true,
+                  "pos": 2
+                },
+                {
+                  "fieldId": "1704667279923322929",
+                  "value": "P2",
+                  "text": "P2",
+                  "internal": true,
+                  "pos": 3
+                },
+                {
+                  "fieldId": "1704667279923322929",
+                  "value": "P3",
+                  "text": "P3",
+                  "internal": true,
+                  "pos": 4
+                }
+              ],
+              "supportSearch": null,
+              "optionMethod": null,
+              "internal": true,
+              "platformOptionJson": null,
+              "platformPlaceHolder": null,
+              "platformSystemField": null,
+              "internalFieldKey": "functional_priority"
+            }
+          ],
+          "caseId": "1715405986653609989",
+          "num": 100125,
+          "name": "",
+          "modulePath": "MCP-AUDIT-20261030",
+          "caseEditType": "STEP",
+          "tags": [],
+          "priority": "P1",
+          "prerequisite": "",
+          "testPlanId": null,
+          "testPlanCaseId": null,
+          "lastExecuteResult": "PENDING",
+          "lastExecuteUser": null,
+          "lastExecuteUserName": null,
+          "steps": [
+            {
+              "id": "1715405986653609988",
+              "num": null,
+              "desc": "空名称应该拒绝",
+              "expected": "可定位失败行",
+              "actualResult": null,
+              "executeResult": null
+            }
+          ]
+        }
+      }
+    },
+    "mcpAuditInvalidTemplateGet": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"root\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347459004,\"description\":\"\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"Case Priority\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P0\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1715407515661967361\",\"num\":100126,\"name\":\"MCP-AUDIT-20261030-无效模板应拒绝\",\"modulePath\":\"Unplanned case\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P0\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1715407515661967360\",\"num\":null,\"desc\":\"诊断\",\"expected\":\"拒绝不存在模板\",\"actualResult\":null,\"executeResult\":null}]}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "contentError": null,
+          "contentErrorTraceId": null,
+          "executionRef": null,
+          "executionFacts": null,
+          "projectId": "1704667279923322880",
+          "moduleId": "root",
+          "versionId": "1704667279923322928",
+          "reviewStatus": "UN_REVIEWED",
+          "updateTime": 1793347459004,
+          "description": "",
+          "customFields": [
+            {
+              "fieldId": "1704667279923322929",
+              "fieldName": "Case Priority",
+              "fieldKey": null,
+              "required": true,
+              "apiFieldId": null,
+              "defaultValue": "P0",
+              "type": "SELECT",
+              "options": [
+                {
+                  "fieldId": "1704667279923322929",
+                  "value": "P0",
+                  "text": "P0",
+                  "internal": true,
+                  "pos": 1
+                },
+                {
+                  "fieldId": "1704667279923322929",
+                  "value": "P1",
+                  "text": "P1",
+                  "internal": true,
+                  "pos": 2
+                },
+                {
+                  "fieldId": "1704667279923322929",
+                  "value": "P2",
+                  "text": "P2",
+                  "internal": true,
+                  "pos": 3
+                },
+                {
+                  "fieldId": "1704667279923322929",
+                  "value": "P3",
+                  "text": "P3",
+                  "internal": true,
+                  "pos": 4
+                }
+              ],
+              "supportSearch": null,
+              "optionMethod": null,
+              "internal": true,
+              "platformOptionJson": null,
+              "platformPlaceHolder": null,
+              "platformSystemField": null,
+              "internalFieldKey": "functional_priority"
+            }
+          ],
+          "caseId": "1715407515661967361",
+          "num": 100126,
+          "name": "MCP-AUDIT-20261030-无效模板应拒绝",
+          "modulePath": "Unplanned case",
+          "caseEditType": "STEP",
+          "tags": [],
+          "priority": "P0",
+          "prerequisite": "",
+          "testPlanId": null,
+          "testPlanCaseId": null,
+          "lastExecuteResult": "PENDING",
+          "lastExecuteUser": null,
+          "lastExecuteUserName": null,
+          "steps": [
+            {
+              "id": "1715407515661967360",
+              "num": null,
+              "desc": "诊断",
+              "expected": "拒绝不存在模板",
+              "actualResult": null,
+              "executeResult": null
+            }
+          ]
+        }
+      }
+    },
+    "mcpAuditSearch": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"projectId\":\"1704667279923322880\",\"current\":1,\"pageSize\":20,\"hasMore\":false,\"matchedBy\":[\"module\"],\"matchedModules\":[\"MCP-AUDIT-20261030\"],\"matchedModuleIds\":[\"1715402550679773184\"],\"total\":3,\"warnings\":[],\"cases\":[{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"1715402550679773184\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347370455,\"description\":\"\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"Case Priority\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P1\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1715405986653609989\",\"num\":100125,\"name\":\"\",\"modulePath\":\"MCP-AUDIT-20261030\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P1\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1715405986653609988\",\"num\":null,\"desc\":\"空名称应该拒绝\",\"expected\":\"可定位失败行\",\"actualResult\":null,\"executeResult\":null}]},{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"1715402550679773184\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347370443,\"description\":\"\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"Case Priority\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P1\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1715405986653609985\",\"num\":100124,\"name\":\"MCP-AUDIT-20261030-批量有效\",\"modulePath\":\"MCP-AUDIT-20261030\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P1\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1715405986653609984\",\"num\":null,\"desc\":\"有效步骤\",\"expected\":\"有效预期\",\"actualResult\":null,\"executeResult\":null}]},{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":{\"type\":\"DIRECT_SUBMISSION\",\"id\":\"f15a2854-cf35-42f1-8c0e-58c49fca4b14\"},\"executionFacts\":{\"schemaVersion\":\"direct-execution.v2\",\"definition\":{\"caseId\":\"1715402550679773188\",\"projectId\":\"1704667279923322880\",\"versionId\":\"1704667279923322928\",\"name\":\"MCP-AUDIT-20261030-三步骤单图验收\",\"caseEditType\":\"STEP\",\"description\":\"仅用于MCP接口协议验收，不代表实际业务测试通过。\",\"prerequisite\":\"\",\"priority\":\"P2\",\"customFields\":[],\"steps\":[{\"position\":1,\"description\":\"读取当前验收用例契约\",\"expected\":\"返回三条原始步骤\"},{\"position\":2,\"description\":\"上传一张用例级截图\",\"expected\":\"不要求每步上传截图\"},{\"position\":3,\"description\":\"提交三步实际结果及同一用例级证据\",\"expected\":\"结构校验接受并保留执行事实\"}]},\"steps\":[{\"stepNum\":1,\"actual\":\"协议诊断：已读取当前三步契约。\",\"result\":\"SUCCESS\"},{\"stepNum\":2,\"actual\":\"协议诊断：已上传一张既有UI验收图片作测试载荷，不作逐步业务证明。\",\"result\":\"SUCCESS\"},{\"stepNum\":3,\"actual\":\"协议诊断：本次调用验证单图覆盖三步的结构提交，不代表业务通过。\",\"result\":\"SUCCESS\"}],\"policySnapshot\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"evidence\":[{\"id\":\"41045098-a391-4c66-bed7-fff1137608c3\",\"file_name\":\"mcp-protocol-audit.jpg\",\"content_type\":\"image/jpeg\",\"size_bytes\":102969,\"sha256\":\"bc70c8dc57d7006fbc175047666cb130fad5ca6ff16f8ff79797be4069cb16e4\",\"evidence_scope\":\"CASE\",\"definition_hash_version\":\"definition-v2\",\"content_hash\":\"f28635e101f78bf8bf6c79efde046a70331c835ed8d830b3d75cb35282e55646\"}],\"evidenceIds\":[\"41045098-a391-4c66-bed7-fff1137608c3\"],\"evidenceScope\":\"CASE\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"resultSource\":\"AGENT_REPORTED\",\"directEvidenceRuleVersion\":\"case-image-v1\"},\"projectId\":\"1704667279923322880\",\"moduleId\":\"1715402550679773184\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347328388,\"description\":\"仅用于MCP接口协议验收，不代表实际业务测试通过。\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"Case Priority\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P2\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1715402550679773188\",\"num\":100120,\"name\":\"MCP-AUDIT-20261030-三步骤单图验收\",\"modulePath\":\"MCP-AUDIT-20261030\",\"caseEditType\":\"STEP\",\"tags\":[\"MCP-AUDIT-20261030\"],\"priority\":\"P2\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"SUCCESS\",\"lastExecuteUser\":\"1559871391069831258\",\"lastExecuteUserName\":\"陈启芬\",\"steps\":[{\"id\":\"1715402550679773185\",\"num\":1,\"desc\":\"读取当前验收用例契约\",\"expected\":\"返回三条原始步骤\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1715402550679773186\",\"num\":2,\"desc\":\"上传一张用例级截图\",\"expected\":\"不要求每步上传截图\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1715402550679773187\",\"num\":3,\"desc\":\"提交三步实际结果及同一用例级证据\",\"expected\":\"结构校验接受并保留执行事实\",\"actualResult\":null,\"executeResult\":null}]}]}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "current": 1,
+          "pageSize": 20,
+          "hasMore": false,
+          "matchedBy": [
+            "module"
+          ],
+          "matchedModules": [
+            "MCP-AUDIT-20261030"
+          ],
+          "matchedModuleIds": [
+            "1715402550679773184"
+          ],
+          "total": 3,
+          "warnings": [],
+          "cases": [
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "1715402550679773184",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347370455,
+              "description": "",
+              "customFields": [
+                {
+                  "fieldId": "1704667279923322929",
+                  "fieldName": "Case Priority",
+                  "fieldKey": null,
+                  "required": true,
+                  "apiFieldId": null,
+                  "defaultValue": "P1",
+                  "type": "SELECT",
+                  "options": [
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P0",
+                      "text": "P0",
+                      "internal": true,
+                      "pos": 1
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P1",
+                      "text": "P1",
+                      "internal": true,
+                      "pos": 2
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P2",
+                      "text": "P2",
+                      "internal": true,
+                      "pos": 3
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P3",
+                      "text": "P3",
+                      "internal": true,
+                      "pos": 4
+                    }
+                  ],
+                  "supportSearch": null,
+                  "optionMethod": null,
+                  "internal": true,
+                  "platformOptionJson": null,
+                  "platformPlaceHolder": null,
+                  "platformSystemField": null,
+                  "internalFieldKey": "functional_priority"
+                }
+              ],
+              "caseId": "1715405986653609989",
+              "num": 100125,
+              "name": "",
+              "modulePath": "MCP-AUDIT-20261030",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P1",
+              "prerequisite": "",
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": [
+                {
+                  "id": "1715405986653609988",
+                  "num": null,
+                  "desc": "空名称应该拒绝",
+                  "expected": "可定位失败行",
+                  "actualResult": null,
+                  "executeResult": null
+                }
+              ]
+            },
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "1715402550679773184",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347370443,
+              "description": "",
+              "customFields": [
+                {
+                  "fieldId": "1704667279923322929",
+                  "fieldName": "Case Priority",
+                  "fieldKey": null,
+                  "required": true,
+                  "apiFieldId": null,
+                  "defaultValue": "P1",
+                  "type": "SELECT",
+                  "options": [
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P0",
+                      "text": "P0",
+                      "internal": true,
+                      "pos": 1
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P1",
+                      "text": "P1",
+                      "internal": true,
+                      "pos": 2
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P2",
+                      "text": "P2",
+                      "internal": true,
+                      "pos": 3
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P3",
+                      "text": "P3",
+                      "internal": true,
+                      "pos": 4
+                    }
+                  ],
+                  "supportSearch": null,
+                  "optionMethod": null,
+                  "internal": true,
+                  "platformOptionJson": null,
+                  "platformPlaceHolder": null,
+                  "platformSystemField": null,
+                  "internalFieldKey": "functional_priority"
+                }
+              ],
+              "caseId": "1715405986653609985",
+              "num": 100124,
+              "name": "MCP-AUDIT-20261030-批量有效",
+              "modulePath": "MCP-AUDIT-20261030",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P1",
+              "prerequisite": "",
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": [
+                {
+                  "id": "1715405986653609984",
+                  "num": null,
+                  "desc": "有效步骤",
+                  "expected": "有效预期",
+                  "actualResult": null,
+                  "executeResult": null
+                }
+              ]
+            },
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": {
+                "type": "DIRECT_SUBMISSION",
+                "id": "f15a2854-cf35-42f1-8c0e-58c49fca4b14"
+              },
+              "executionFacts": {
+                "schemaVersion": "direct-execution.v2",
+                "definition": {
+                  "caseId": "1715402550679773188",
+                  "projectId": "1704667279923322880",
+                  "versionId": "1704667279923322928",
+                  "name": "MCP-AUDIT-20261030-三步骤单图验收",
+                  "caseEditType": "STEP",
+                  "description": "仅用于MCP接口协议验收，不代表实际业务测试通过。",
+                  "prerequisite": "",
+                  "priority": "P2",
+                  "customFields": [],
+                  "steps": [
+                    {
+                      "position": 1,
+                      "description": "读取当前验收用例契约",
+                      "expected": "返回三条原始步骤"
+                    },
+                    {
+                      "position": 2,
+                      "description": "上传一张用例级截图",
+                      "expected": "不要求每步上传截图"
+                    },
+                    {
+                      "position": 3,
+                      "description": "提交三步实际结果及同一用例级证据",
+                      "expected": "结构校验接受并保留执行事实"
+                    }
+                  ]
+                },
+                "steps": [
+                  {
+                    "stepNum": 1,
+                    "actual": "协议诊断：已读取当前三步契约。",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 2,
+                    "actual": "协议诊断：已上传一张既有UI验收图片作测试载荷，不作逐步业务证明。",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 3,
+                    "actual": "协议诊断：本次调用验证单图覆盖三步的结构提交，不代表业务通过。",
+                    "result": "SUCCESS"
+                  }
+                ],
+                "policySnapshot": {
+                  "name": "订单复测-证据与冻结断言-20261019",
+                  "rules": [
+                    {
+                      "parameters": {
+                        "allowedMimeTypes": [
+                          "image/png",
+                          "image/jpeg"
+                        ],
+                        "maxArtifactBytes": 5242880,
+                        "requiredRoles": [
+                          "BEFORE_ACTION",
+                          "AFTER_ACTION"
+                        ]
+                      },
+                      "ruleId": "Q-EVIDENCE-01"
+                    },
+                    {
+                      "parameters": {
+                        "allowedOperators": [
+                          "EQUALS",
+                          "IN_RANGE"
+                        ],
+                        "expectedSource": "FROZEN_CONTRACT"
+                      },
+                      "ruleId": "Q-ASSERT-01"
+                    }
+                  ],
+                  "schemaVersion": "quality-policy.v1"
+                },
+                "evidence": [
+                  {
+                    "id": "41045098-a391-4c66-bed7-fff1137608c3",
+                    "file_name": "mcp-protocol-audit.jpg",
+                    "content_type": "image/jpeg",
+                    "size_bytes": 102969,
+                    "sha256": "bc70c8dc57d7006fbc175047666cb130fad5ca6ff16f8ff79797be4069cb16e4",
+                    "evidence_scope": "CASE",
+                    "definition_hash_version": "definition-v2",
+                    "content_hash": "f28635e101f78bf8bf6c79efde046a70331c835ed8d830b3d75cb35282e55646"
+                  }
+                ],
+                "evidenceIds": [
+                  "41045098-a391-4c66-bed7-fff1137608c3"
+                ],
+                "evidenceScope": "CASE",
+                "validationMode": "STRUCTURE_ONLY_V1",
+                "resultSource": "AGENT_REPORTED",
+                "directEvidenceRuleVersion": "case-image-v1"
+              },
+              "projectId": "1704667279923322880",
+              "moduleId": "1715402550679773184",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347328388,
+              "description": "仅用于MCP接口协议验收，不代表实际业务测试通过。",
+              "customFields": [
+                {
+                  "fieldId": "1704667279923322929",
+                  "fieldName": "Case Priority",
+                  "fieldKey": null,
+                  "required": true,
+                  "apiFieldId": null,
+                  "defaultValue": "P2",
+                  "type": "SELECT",
+                  "options": [
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P0",
+                      "text": "P0",
+                      "internal": true,
+                      "pos": 1
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P1",
+                      "text": "P1",
+                      "internal": true,
+                      "pos": 2
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P2",
+                      "text": "P2",
+                      "internal": true,
+                      "pos": 3
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P3",
+                      "text": "P3",
+                      "internal": true,
+                      "pos": 4
+                    }
+                  ],
+                  "supportSearch": null,
+                  "optionMethod": null,
+                  "internal": true,
+                  "platformOptionJson": null,
+                  "platformPlaceHolder": null,
+                  "platformSystemField": null,
+                  "internalFieldKey": "functional_priority"
+                }
+              ],
+              "caseId": "1715402550679773188",
+              "num": 100120,
+              "name": "MCP-AUDIT-20261030-三步骤单图验收",
+              "modulePath": "MCP-AUDIT-20261030",
+              "caseEditType": "STEP",
+              "tags": [
+                "MCP-AUDIT-20261030"
+              ],
+              "priority": "P2",
+              "prerequisite": "",
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "SUCCESS",
+              "lastExecuteUser": "1559871391069831258",
+              "lastExecuteUserName": "陈启芬",
+              "steps": [
+                {
+                  "id": "1715402550679773185",
+                  "num": 1,
+                  "desc": "读取当前验收用例契约",
+                  "expected": "返回三条原始步骤",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1715402550679773186",
+                  "num": 2,
+                  "desc": "上传一张用例级截图",
+                  "expected": "不要求每步上传截图",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1715402550679773187",
+                  "num": 3,
+                  "desc": "提交三步实际结果及同一用例级证据",
+                  "expected": "结构校验接受并保留执行事实",
+                  "actualResult": null,
+                  "executeResult": null
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "mcpAuditKeywordSearch": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"projectId\":\"1704667279923322880\",\"current\":1,\"pageSize\":20,\"hasMore\":false,\"matchedBy\":[\"keywordFilter\"],\"matchedModules\":[],\"matchedModuleIds\":[],\"total\":7,\"warnings\":[],\"cases\":[{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"root\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347459004,\"description\":null,\"customFields\":null,\"caseId\":\"1715407515661967361\",\"num\":100126,\"name\":\"MCP-AUDIT-20261030-无效模板应拒绝\",\"modulePath\":\"Unplanned case\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P0\",\"prerequisite\":null,\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[]},{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"1715402550679773184\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347556583,\"description\":null,\"customFields\":null,\"caseId\":\"1715405986653609989\",\"num\":100125,\"name\":\"MCP-AUDIT-20261030-空名称负向测试-已标识\",\"modulePath\":\"MCP-AUDIT-20261030\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P1\",\"prerequisite\":null,\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[]},{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"1715402550679773184\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347370443,\"description\":null,\"customFields\":null,\"caseId\":\"1715405986653609985\",\"num\":100124,\"name\":\"MCP-AUDIT-20261030-批量有效\",\"modulePath\":\"MCP-AUDIT-20261030\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P1\",\"prerequisite\":null,\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[]},{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"root\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347556966,\"description\":null,\"customFields\":null,\"caseId\":\"1715405643056226310\",\"num\":100123,\"name\":\"MCP-AUDIT-20261030-非法等级应拒绝\",\"modulePath\":\"Unplanned case\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P2\",\"prerequisite\":null,\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[]},{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"root\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347350075,\"description\":null,\"customFields\":null,\"caseId\":\"1715405643056226305\",\"num\":100122,\"name\":\"MCP-AUDIT-20261030-root创建\",\"modulePath\":\"Unplanned case\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P2\",\"prerequisite\":null,\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[]},{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"root\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347349694,\"description\":null,\"customFields\":null,\"caseId\":\"1715405625876357121\",\"num\":100121,\"name\":\"MCP-AUDIT-20261030-项目编号创建\",\"modulePath\":\"Unplanned case\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P0\",\"prerequisite\":null,\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[]},{\"contentError\":null,\"contentErrorTraceId\":null,\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"1715402550679773184\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793347328388,\"description\":null,\"customFields\":null,\"caseId\":\"1715402550679773188\",\"num\":100120,\"name\":\"MCP-AUDIT-20261030-三步骤单图验收\",\"modulePath\":\"MCP-AUDIT-20261030\",\"caseEditType\":\"STEP\",\"tags\":[\"MCP-AUDIT-20261030\"],\"priority\":\"P2\",\"prerequisite\":null,\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":\"SUCCESS\",\"lastExecuteUser\":\"1559871391069831258\",\"lastExecuteUserName\":\"陈启芬\",\"steps\":[]}]}"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "current": 1,
+          "pageSize": 20,
+          "hasMore": false,
+          "matchedBy": [
+            "keywordFilter"
+          ],
+          "matchedModules": [],
+          "matchedModuleIds": [],
+          "total": 7,
+          "warnings": [],
+          "cases": [
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "root",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347459004,
+              "description": null,
+              "customFields": null,
+              "caseId": "1715407515661967361",
+              "num": 100126,
+              "name": "MCP-AUDIT-20261030-无效模板应拒绝",
+              "modulePath": "Unplanned case",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P0",
+              "prerequisite": null,
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": []
+            },
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "1715402550679773184",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347556583,
+              "description": null,
+              "customFields": null,
+              "caseId": "1715405986653609989",
+              "num": 100125,
+              "name": "MCP-AUDIT-20261030-空名称负向测试-已标识",
+              "modulePath": "MCP-AUDIT-20261030",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P1",
+              "prerequisite": null,
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": []
+            },
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "1715402550679773184",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347370443,
+              "description": null,
+              "customFields": null,
+              "caseId": "1715405986653609985",
+              "num": 100124,
+              "name": "MCP-AUDIT-20261030-批量有效",
+              "modulePath": "MCP-AUDIT-20261030",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P1",
+              "prerequisite": null,
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": []
+            },
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "root",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347556966,
+              "description": null,
+              "customFields": null,
+              "caseId": "1715405643056226310",
+              "num": 100123,
+              "name": "MCP-AUDIT-20261030-非法等级应拒绝",
+              "modulePath": "Unplanned case",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P2",
+              "prerequisite": null,
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": []
+            },
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "root",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347350075,
+              "description": null,
+              "customFields": null,
+              "caseId": "1715405643056226305",
+              "num": 100122,
+              "name": "MCP-AUDIT-20261030-root创建",
+              "modulePath": "Unplanned case",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P2",
+              "prerequisite": null,
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": []
+            },
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "root",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347349694,
+              "description": null,
+              "customFields": null,
+              "caseId": "1715405625876357121",
+              "num": 100121,
+              "name": "MCP-AUDIT-20261030-项目编号创建",
+              "modulePath": "Unplanned case",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P0",
+              "prerequisite": null,
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": []
+            },
+            {
+              "contentError": null,
+              "contentErrorTraceId": null,
+              "executionRef": null,
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "1715402550679773184",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793347328388,
+              "description": null,
+              "customFields": null,
+              "caseId": "1715402550679773188",
+              "num": 100120,
+              "name": "MCP-AUDIT-20261030-三步骤单图验收",
+              "modulePath": "MCP-AUDIT-20261030",
+              "caseEditType": "STEP",
+              "tags": [
+                "MCP-AUDIT-20261030"
+              ],
+              "priority": "P2",
+              "prerequisite": null,
+              "testPlanId": null,
+              "testPlanCaseId": null,
+              "lastExecuteResult": "SUCCESS",
+              "lastExecuteUser": "1559871391069831258",
+              "lastExecuteUserName": "陈启芬",
+              "steps": []
+            }
+          ]
+        }
+      }
+    },
+    "mcpAuditRepeatReads": [
+      {
+        "iteration": 1,
+        "elapsedMs": 361,
+        "isError": false,
+        "stepEvidenceRequired": false
+      },
+      {
+        "iteration": 2,
+        "elapsedMs": 353,
+        "isError": false,
+        "stepEvidenceRequired": false
+      },
+      {
+        "iteration": 3,
+        "elapsedMs": 358,
+        "isError": false,
+        "stepEvidenceRequired": false
+      },
+      {
+        "iteration": 4,
+        "elapsedMs": 357,
+        "isError": false,
+        "stepEvidenceRequired": false
+      },
+      {
+        "iteration": 5,
+        "elapsedMs": 350,
+        "isError": false,
+        "stepEvidenceRequired": false
+      }
+    ],
+    "mcpAuditCleanup-blank": {
+      "args": {
+        "projectId": "1704667279923322880",
+        "caseId": "1715405986653609989",
+        "expectedUpdateTime": 1793347370455,
+        "patch": {
+          "name": "MCP-AUDIT-20261030-空名称负向测试-已标识"
+        },
+        "requestId": "mcp-audit-20261030-clean-blank-01",
+        "reason": "仅整理本轮新建的负向验收数据；原始异常已留证，不修改业务用例"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"caseId\":\"1715405986653609989\",\"name\":\"MCP-AUDIT-20261030-空名称负向测试-已标识\",\"updateTime\":1793347556583,\"moduleId\":\"1715402550679773184\"}"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "caseId": "1715405986653609989",
+            "name": "MCP-AUDIT-20261030-空名称负向测试-已标识",
+            "updateTime": 1793347556583,
+            "moduleId": "1715402550679773184"
+          }
+        }
+      }
+    },
+    "mcpAuditCleanup-priority": {
+      "args": {
+        "projectId": "1704667279923322880",
+        "caseId": "1715405643056226310",
+        "expectedUpdateTime": 1793347350463,
+        "patch": {
+          "priority": "P2"
+        },
+        "requestId": "mcp-audit-20261030-clean-priority-01",
+        "reason": "仅整理本轮新建的负向验收数据；原始异常已留证，不修改业务用例"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"caseId\":\"1715405643056226310\",\"name\":\"MCP-AUDIT-20261030-非法等级应拒绝\",\"updateTime\":1793347556966,\"moduleId\":\"root\"}"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "caseId": "1715405643056226310",
+            "name": "MCP-AUDIT-20261030-非法等级应拒绝",
+            "updateTime": 1793347556966,
+            "moduleId": "root"
+          }
+        }
+      }
+    },
+    "mcpAudit-missingmodule": {
+      "args": {
+        "projectId": "100021",
+        "requestId": "mcp-audit-20261030-missing-module-01",
+        "moduleId": "mcp-audit-nonexistent-module",
+        "name": "MCP-AUDIT-20261030-无效目录应拒绝",
+        "steps": [
+          {
+            "desc": "诊断",
+            "expected": "拒绝不存在目录"
+          }
+        ]
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "tool call error: tool call failed for `metersphere_test/metersphere.functional.case.create`\n\nCaused by:\n    Mcp error: -32001: 资源不存在或当前账号和令牌无权访问，请检查项目授权({\"code\":\"AGENT_RESOURCE_NOT_ACCESSIBLE\",\"traceId\":\"cf2942d0-1296-4a67-b0c6-e8e77118b5f0\"})"
+          }
+        ],
+        "isError": true
+      }
+    },
+    "mcpAudit-missingtemplate": {
+      "args": {
+        "projectId": "100021",
+        "requestId": "mcp-audit-20261030-missing-template-01",
+        "templateId": "mcp-audit-nonexistent-template",
+        "name": "MCP-AUDIT-20261030-无效模板应拒绝",
+        "steps": [
+          {
+            "desc": "诊断",
+            "expected": "拒绝不存在模板"
+          }
+        ]
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"caseId\":\"1715407515661967361\",\"num\":100126,\"name\":\"MCP-AUDIT-20261030-无效模板应拒绝\",\"moduleId\":\"root\"}"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "caseId": "1715407515661967361",
+            "num": 100126,
+            "name": "MCP-AUDIT-20261030-无效模板应拒绝",
+            "moduleId": "root"
+          }
+        }
+      }
+    },
+    "mcp-audit-20261030-create-number-01": {
+      "args": {
+        "projectId": "100021",
+        "requestId": "mcp-audit-20261030-create-number-01",
+        "name": "MCP-AUDIT-20261030-项目编号创建",
+        "steps": [
+          {
+            "desc": "协议验收",
+            "expected": "创建成功"
+          }
+        ]
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"caseId\":\"1715405625876357121\",\"num\":100121,\"name\":\"MCP-AUDIT-20261030-项目编号创建\",\"moduleId\":\"root\"}"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "caseId": "1715405625876357121",
+            "num": 100121,
+            "name": "MCP-AUDIT-20261030-项目编号创建",
+            "moduleId": "root"
+          }
+        }
+      }
+    },
+    "mcp-audit-20261030-create-root-01": {
+      "args": {
+        "projectId": "1704667279923322880",
+        "moduleId": "root",
+        "requestId": "mcp-audit-20261030-create-root-01",
+        "name": "MCP-AUDIT-20261030-root创建",
+        "priority": "P2",
+        "steps": [
+          {
+            "desc": "协议验收",
+            "expected": "创建成功"
+          }
+        ]
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"caseId\":\"1715405643056226305\",\"num\":100122,\"name\":\"MCP-AUDIT-20261030-root创建\",\"moduleId\":\"root\"}"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "caseId": "1715405643056226305",
+            "num": 100122,
+            "name": "MCP-AUDIT-20261030-root创建",
+            "moduleId": "root"
+          }
+        }
+      }
+    },
+    "mcp-audit-20261030-create-badpriority-01": {
+      "args": {
+        "projectId": "MSP需求验收-20261023",
+        "requestId": "mcp-audit-20261030-create-badpriority-01",
+        "name": "MCP-AUDIT-20261030-非法等级应拒绝",
+        "priority": "P9",
+        "steps": [
+          {
+            "desc": "协议验收",
+            "expected": "拒绝非法等级"
+          }
+        ]
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"caseId\":\"1715405643056226310\",\"num\":100123,\"name\":\"MCP-AUDIT-20261030-非法等级应拒绝\",\"moduleId\":\"root\"}"
+          }
+        ],
+        "structuredContent": {
+          "result": {
+            "caseId": "1715405643056226310",
+            "num": 100123,
+            "name": "MCP-AUDIT-20261030-非法等级应拒绝",
+            "moduleId": "root"
+          }
+        }
+      }
+    }
+  }
+}

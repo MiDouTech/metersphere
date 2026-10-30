@@ -8,6 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class AgentSafeErrorMapperTests {
     private final AgentSafeErrorMapper mapper = new AgentSafeErrorMapper();
+    @Test void exportRetryKeepsActionableBusinessError(){
+        var result=mapper.toApiError(new MSException("EXPORT_TASK_NOT_RETRYABLE"),"retry");
+        assertEquals("EXPORT_TASK_NOT_RETRYABLE",result.getCode());
+        org.junit.jupiter.api.Assertions.assertTrue(result.getMessage().contains("只能重试"));
+    }
 
     @Test
     void mapsTypedConflictIndependentlyOfLocalizedMessage() {

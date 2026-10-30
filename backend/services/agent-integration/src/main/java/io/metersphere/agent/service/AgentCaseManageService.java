@@ -70,6 +70,7 @@ public class AgentCaseManageService {
         TemplateDTO templateDTO;
         if (StringUtils.isNotBlank(templateId)) {
             templateDTO = projectTemplateService.getTemplateDTOById(templateId, resolvedProjectId, TemplateScene.FUNCTIONAL.name());
+            AgentCaseInputValidation.template(templateDTO,templateId,resolvedProjectId);
         } else {
             templateDTO = projectTemplateService.getDefaultTemplateDTO(resolvedProjectId, TemplateScene.FUNCTIONAL.name());
         }
@@ -174,6 +175,11 @@ public class AgentCaseManageService {
 
         TemplateDTO templateDTO = projectTemplateService.getTemplateDTOById(
                 existing.getTemplateId(), existing.getProjectId(), TemplateScene.FUNCTIONAL.name());
+        if(patch.containsKey("name")) {
+            if(!(patch.get("name") instanceof String)) throw new MSException("CASE_NAME_INVALID");
+            AgentCaseInputValidation.name((String)patch.get("name"));
+        }
+        if(patch.get("priority")!=null) AgentCaseInputValidation.priority(templateDTO,String.valueOf(patch.get("priority")));
         Map<String, String> customFieldMap = new LinkedHashMap<>();
         if (patch.get("customFields") instanceof Map<?, ?> customMap) {
             customMap.forEach((k, v) -> {
@@ -193,6 +199,8 @@ public class AgentCaseManageService {
             List<CaseCustomFieldDTO> fields = new ArrayList<>();
             for (TemplateCustomFieldDTO field : templateDTO.getCustomFields()) {
                 if (customFieldMap.containsKey(field.getFieldId())) {
+                    if("functional_priority".equalsIgnoreCase(field.getInternalFieldKey()))
+                        AgentCaseInputValidation.priority(templateDTO,customFieldMap.get(field.getFieldId()));
                     CaseCustomFieldDTO dto = new CaseCustomFieldDTO();
                     dto.setFieldId(field.getFieldId());
                     dto.setValue(customFieldMap.get(field.getFieldId()));

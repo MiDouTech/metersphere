@@ -89,6 +89,9 @@ class AgentDirectExecutionTests {
     }
     @Test void contractUsesDefinitionOnlyAndReportsUnsupportedTypesWithoutPublicReadToolDependency() {
         var service=new AgentDirectExecutionService();
+        var projects=org.mockito.Mockito.mock(AgentProjectService.class);
+        org.mockito.Mockito.when(projects.resolveProjectId(org.mockito.ArgumentMatchers.anyString())).thenAnswer(call->call.getArgument(0));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"projects",projects);
         var detail=new io.metersphere.functional.dto.FunctionalCaseDetailDTO();
         detail.setId("c");detail.setProjectId("p");detail.setName("definition");detail.setCaseEditType("STEP");
         detail.setSteps("[{\"num\":1,\"desc\":\"open\",\"result\":\"visible\",\"actualResult\":\"old result\"}]");
@@ -103,6 +106,11 @@ class AgentDirectExecutionTests {
         org.springframework.test.util.ReflectionTestUtils.setField(service,"gate",gate);
         var args=Map.<String,Object>of("projectId","p","caseId","c");
         var first=service.contract(args);assertEquals(true,first.get("supported"));
+        assertEquals(false,((Map<?,?>)first.get("effectiveEvidencePolicy")).get("stepEvidenceRequired"));
+        org.mockito.Mockito.when(projects.resolveProjectId("Project Name")).thenReturn("p");
+        org.mockito.Mockito.when(projects.resolveProjectId("100001")).thenReturn("p");
+        assertEquals(first.get("contentHash"),service.contract(Map.of("projectId","Project Name","caseId","c")).get("contentHash"));
+        assertEquals(first.get("contentHash"),service.contract(Map.of("projectId","100001","caseId","c")).get("contentHash"));
         var frozen=(io.metersphere.agent.dto.AgentCaseDTO)first.get("case");assertNull(frozen.getSteps().getFirst().getActualResult());
         detail.setLastExecuteResult("ERROR");detail.setUpdateTime(999L);detail.setExecutionFacts(Map.of("previous","not a definition"));
         assertEquals(first.get("contentHash"),service.contract(args).get("contentHash"));

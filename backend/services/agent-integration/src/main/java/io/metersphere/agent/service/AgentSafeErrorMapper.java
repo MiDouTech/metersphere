@@ -46,6 +46,12 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "EXPORT_TASK_NOT_RETRYABLE" -> "只能重试失败、已停止或已过期的导出任务";
+            case "CASE_EXPORT_FIELD_VALUE_CONFLICT" -> "用例存在同字段的冲突值，请提供traceId联系管理员核对数据";
+            case "CASE_EXPORT_FIELD_TYPE_UNSUPPORTED" -> "用例字段类型暂不支持导出，请提供traceId联系管理员";
+            case "CASE_NAME_INVALID" -> "用例名称不能为空，且不能超过255个字符";
+            case "CASE_PRIORITY_INVALID" -> "用例等级不在当前模板允许范围内，请读取模板后选择有效等级";
+            case "CASE_TEMPLATE_INVALID" -> "所选用例模板不存在或不适用于当前项目";
             case "IMPORT_FILE_READ_FAILED" -> "读取导入文件失败，请重新选择文件后重试";
             case "IMPORT_FILE_PARSE_FAILED" -> "导入文件无法解析，请检查是否加密或损坏，并使用当前模板保存为Excel文件后重试";
             case "IMPORT_CASE_SHEET_NOT_FOUND" -> "未找到用例工作表，请使用当前模板，并保留第一行的用例名称列；报告和说明工作表不会导入";
@@ -88,7 +94,7 @@ public class AgentSafeErrorMapper {
             case "FEATURE_DISABLED" -> "平台模型功能未启用，请返回使用其他功能";
             case "SCOPE_DENIED", "RBAC_DENIED", "PROJECT_NOT_ALLOWED" -> "当前令牌或账号没有执行此项目操作的权限";
             case "PROJECT_NOT_FOUND" -> "项目不存在或当前账号无权访问";
-            case "IDEMPOTENCY_CONFLICT" -> "相同请求标识的参数已变化，请使用新的请求标识";
+            case "IDEMPOTENCY_CONFLICT" -> "相同请求标识的参数已变化，请先查询原请求结果；重试须使用原标识和原参数，仅新的独立操作使用新标识";
             case "PROJECT_IDENTITY_REQUIRED" -> "请选择项目或提供项目 ID、编号或名称";
             case "PROJECT_IDENTITY_AMBIGUOUS" -> "项目标识存在歧义，请搜索授权项目后使用内部项目 ID";
             case "QUALITY_CLAIM_ACTOR_REVOKED" -> "任务发起人的项目权限已失效，请重新授权后再执行";
@@ -138,6 +144,9 @@ public class AgentSafeErrorMapper {
             case "BUG_TRANSFER_LIMIT_EXCEEDED" -> "单次最多处理100条缺陷，文件不超过5MiB";
             case "BUG_IMPORT_LOCAL_ONLY" -> "当前批量导入仅支持本地缺陷项目";
             case "BUG_EXPORT_EMPTY" -> "没有可导出的缺陷";
+            case "BUG_FIELD_MAPPING_INVALID" -> "缺陷字段关联数据异常，请提供traceId联系管理员核对数据";
+            case "BUG_EXPORT_GENERATION_FAILED" -> "缺陷导出文件生成失败，请提供traceId联系管理员";
+            case "BUG_EXPORT_STORAGE_FAILED" -> "缺陷导出文件保存失败，请提供traceId联系管理员";
             case "BUG_WORKFLOW_NOT_PUBLISHED", "BUG_WORKFLOW_INITIAL_STATUS_INVALID" -> "请管理员发布具有唯一初始状态的缺陷工作流";
             case "MCP_TOOL_FORBIDDEN" -> "当前身份无权调用该 MCP 工具";
             case "TASK_ORIGIN_CHANNEL_MISMATCH" -> "任务来源与执行通道不匹配";

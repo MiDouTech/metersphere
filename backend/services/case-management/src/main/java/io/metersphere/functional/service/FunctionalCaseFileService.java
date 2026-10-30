@@ -820,13 +820,18 @@ public class FunctionalCaseFileService {
     private void buildExportCustomField(List<TemplateCustomFieldDTO> templateCustomFields, List<FunctionalCaseCustomField> functionalCaseCustomFields, FunctionalCaseExcelData data, FunctionalCaseExportRequest request) {
         HashMap<String, AbstractCustomFieldValidator> customFieldValidatorMap = CustomFieldValidatorFactory.getValidatorMap(request.getProjectId());
         Map<String, TemplateCustomFieldDTO> customFieldsMap = templateCustomFields.stream().collect(Collectors.toMap(TemplateCustomFieldDTO::getFieldId, i -> i));
-        Map<String, String> caseFieldvalueMap = functionalCaseCustomFields.stream().collect(Collectors.toMap(FunctionalCaseCustomField::getFieldId, FunctionalCaseCustomField::getValue));
+        Map<String, String> caseFieldvalueMap = exportFieldValues(functionalCaseCustomFields);
         Map<String, Object> map = new HashMap<>();
         customFieldsMap.forEach((k, v) -> {
             if (caseFieldvalueMap.containsKey(k)) {
                 AbstractCustomFieldValidator customFieldValidator = customFieldValidatorMap.get(v.getType());
+                if(StringUtils.isBlank(caseFieldvalueMap.get(k))) {
+                    map.put(v.getFieldName(),"");
+                    return;
+                }
+                if(customFieldValidator==null) throw new MSException("CASE_EXPORT_FIELD_TYPE_UNSUPPORTED");
                 if (customFieldValidator.isKVOption) {
-                    if (!v.getInternal()) {
+                    if (!Boolean.TRUE.equals(v.getInternal())) {
                         // 这里如果填的是选项值，替换成选项ID，保存
                         map.put(v.getFieldName(), customFieldValidator.parse2Value(caseFieldvalueMap.get(k), v));
                     } else {
@@ -839,10 +844,22 @@ public class FunctionalCaseFileService {
         });
         customFieldsMap.forEach((id, field) -> {
             Object value = map.get(field.getFieldName());
-            if (field.getInternal() && value == null) value = map.get(Translator.get("custom_field.functional_priority"));
+            if (Boolean.TRUE.equals(field.getInternal()) && value == null) value = map.get(Translator.get("custom_field.functional_priority"));
             if (value != null) map.put(id, value);
         });
         data.setCustomData(map);
+    }
+
+    static Map<String,String> exportFieldValues(List<FunctionalCaseCustomField> fields) {
+        Map<String,String> values=new LinkedHashMap<>();
+        if(fields==null)return values;
+        for(var field:fields) {
+            // Optional fields are legitimately stored as SQL NULL: export an empty cell.
+            if(field==null || StringUtils.isBlank(field.getFieldId()) || field.getValue()==null)continue;
+            String previous=values.putIfAbsent(field.getFieldId(),field.getValue());
+            if(previous!=null && !previous.equals(field.getValue()))throw new MSException("CASE_EXPORT_FIELD_VALUE_CONFLICT");
+        }
+        return values;
     }
 
     static void applyAssetPriority(List<TemplateCustomFieldDTO> fields,List<String> priorities,FunctionalCaseExcelData data) {
