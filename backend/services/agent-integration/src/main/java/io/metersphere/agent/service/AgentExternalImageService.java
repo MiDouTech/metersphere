@@ -16,6 +16,7 @@ import java.util.*;
 @Service
 public class AgentExternalImageService {
     @Resource private AgentBusinessAccess access;
+    @Resource private AgentProjectService projects;
     @Resource private AgentOperationExecutor operations;
     @Resource private AgentExternalImageDownloader downloader;
     @Resource private AgentTempAttachmentService uploads;
@@ -27,7 +28,9 @@ public class AgentExternalImageService {
 
     @Transactional(propagation=Propagation.NOT_SUPPORTED)
     @SuppressWarnings("unchecked")
-    public Map<String,Object> importImage(String kind,Map<String,Object> args) {
+    public Map<String,Object> importImage(String kind,Map<String,Object> input) {
+        var args=new LinkedHashMap<>(input);
+        args.put("projectId",projects.resolveProjectId(required(input,"projectId")));
         if(!enabled) throw new MSException("EXTERNAL_IMAGE_NOT_AVAILABLE");
         String operation="external.image."+kind;
         String requestId=required(args,"requestId");

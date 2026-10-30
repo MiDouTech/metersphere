@@ -15,6 +15,19 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 
 ## MCP Tools
 
+### 原生接口使用约定（2026-10-30整改）
+
+- 直接执行的projectId与创建/查询统一解析：内部ID、项目编号或精确项目名称；解析后仍检查当前项目和用例权限，重名需用ID消歧。
+- 个人直接执行优先采用contract返回的effectiveEvidencePolicy：CASE级1～10张PNG/JPEG，一张可覆盖全部原步骤。旧policy保留作历史快照，其中逐步角色不覆盖当前有效规则。
+- 本地缺陷附件使用原生bug.attachment.upload.prepare（purpose=BUG_DETAIL/BUG_COMMENT）和bug.attachment.upload.complete，获得临时attachmentId后调用bug.attachment.attach。需要BUG_ATTACHMENT；用例上传通道仍需要CASE_ATTACHMENT，两者不互相替代。
+- 附件删除公开参数resourceId为所属用例/缺陷ID；attachmentId为该资源下附件关联ID或接口明确支持的文件ID，并要求confirm=true。
+- bug.case.relate及bug.relate_case响应增加relations[{relationId,caseId,bugId,caseType}]；解除关联使用relationId，不使用caseId。
+- human_request.create必须提交taskId、leaseId、leaseToken及原有请求字段；execution.events.batch必须提交leaseToken。仅真实有效的个人任务租约可调用，勿记录密钥到日志。
+- HTTP503繁忙时串行或有界并发并作有限退避；查询可重试。写请求只按原requestId和原参数重试。出现IDEMPOTENCY_CONFLICT时先对账查询原请求结果，不能换ID掩盖不确定结果；新的独立业务操作才使用新ID。
+- functional.search.query可能触发目录自动匹配；需要名称关键字过滤时明确使用filters.keyword，并阅读matchedBy和matchedModules。
+
+以上为服务端原生工具契约；旧stdio客户端不保证注册全部原生工具，使用新增接口前应刷新服务器工具清单或升级客户端。
+
 ### 维护与执行历史（需要部署含这些工具的后端）
 
 下列工具通过 `/api/mcp` 转发到原生工具，复用业务权限和幂等校验。
@@ -22,7 +35,7 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 
 | Tool | 主要参数 | Scope |
 | --- | --- | --- |
-| `metersphere.functional.submit.batch` | projectId、results、requestId；可选 failFast、testPlanId、executionTaskId | FUNCTIONAL_SUBMIT |
+| `metersphere.functional.execution.submit` | projectId、caseId、steps、evidenceIds、requestId；单张用例级图片可覆盖全部原步骤 | FUNCTIONAL_SUBMIT + CASE_ATTACHMENT |
 | `metersphere.execution.search` | projectId；可选 keyword、status、createdAfter、createdBefore、current、pageSize | AI_EXECUTION_READ |
 | `metersphere.execution.preflight` | projectId、environmentProfileId、runnerType、requestId；取得恢复所需 preflightId | TASK_CLAIM |
 | `metersphere.execution.checkpoint.resume` | taskId、checkpointId、resumeToken、preflightId、requestId | AI_EXECUTION_RUN |
@@ -32,10 +45,10 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 | `metersphere.test_plan.update` | projectId、testPlanId、expectedUpdateTime、patch、requestId | PLAN_WRITE |
 | `metersphere.test_plan.disassociate_cases` | projectId、testPlanId、associationIds、requestId | PLAN_WRITE |
 
-- 批量回写最多 100 条。身份、项目/计划/用例归属在写入前校验；业务失败逐条返回
-  `errors[{caseId,code,message,traceId}]`。响应包含 total/success/failed/skipped，
-  failFast=true 时未尝试的后续项计入 skipped。成功项独立提交并持久化幂等记录。
-  修正失败项后应以新 requestId 只提交需重试的项；幂等保留期沿用平台配置。
+- 旧 `functional.submit.batch` 直写已停用，不应调用。个人直接执行先读
+  `functional.execution.contract`，覆盖每条原始步骤并提交有效用例图片；
+  以 `effectiveEvidencePolicy` 为本次证据规则，原始 `policy` 是历史策略元数据。
+  不要求每步截图、前后截图或客户端计算Hash；结构接受不证明业务实际执行正确。
 - 历史查询只返回 PERSONAL_MCP / EXTERNAL_MCP_AGENT，包含终态，按创建时间、ID 倒序。
   时间条件为包含边界的 Unix 毫秒；页码从 1 开始，每页 1–100 条。平台托管任务不在此接口中。
 - 断点恢复必须使用原断点恢复令牌及新的 PASSED 预检记录；不是 login-ready，不能跳过快照和状态校验。

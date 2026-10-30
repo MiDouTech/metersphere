@@ -61,7 +61,8 @@ public class AgentGenericMcpWriteService {
             if(count==null||count!=1)throw AgentBusinessAccess.denied();return;
         }
         if(name.startsWith("metersphere.functional.attachment.")) {
-            access.caseProject(text(args,"caseId"),project,PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE,true,AgentTokenScope.CASE_ATTACHMENT);return;
+            String caseId=name.endsWith(".delete")?resourceId(args,"caseId"):text(args,"caseId");
+            access.caseProject(caseId,project,PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE,true,AgentTokenScope.CASE_ATTACHMENT);return;
         }
         if(name.startsWith("metersphere.functional.")) {
             access.project(project,PermissionConstants.FUNCTIONAL_CASE_READ_ADD,true,AgentTokenScope.CASE_WRITE);return;
@@ -72,9 +73,16 @@ public class AgentGenericMcpWriteService {
             var roots=jdbc.queryForList("SELECT b.project_id FROM bug_relation_case r LEFT JOIN bug b ON b.id=r.bug_id WHERE r.id=?",String.class,text(args,"relationId"));
             if(!roots.isEmpty() && (roots.size()!=1||!project.equals(roots.getFirst())))throw AgentBusinessAccess.denied();
         } else {
-            Long count=jdbc.queryForObject("SELECT COUNT(*) FROM bug WHERE id=? AND project_id=? AND deleted=0",Long.class,text(args,"bugId"),project);
+            String bugId=name.equals("metersphere.bug.attachment.delete")?resourceId(args,"bugId"):text(args,"bugId");
+            Long count=jdbc.queryForObject("SELECT COUNT(*) FROM bug WHERE id=? AND project_id=? AND deleted=0",Long.class,bugId,project);
             if(count==null||count!=1)throw AgentBusinessAccess.denied();
         }
+    }
+    // Keep the public payload/hash unchanged so old successful requests still replay.
+    static String resourceId(Map<String,Object> args,String legacyKey){
+        String resource=text(args,"resourceId");
+        if(args.containsKey(legacyKey) && !resource.equals(text(args,legacyKey)))throw new MSException("AGENT_VALIDATION_ERROR");
+        return resource;
     }
     private void authorizeOrganization(String name,Map<String,Object> args){
         var token=access.activeToken(AgentTokenScope.PROJECT_WRITE);

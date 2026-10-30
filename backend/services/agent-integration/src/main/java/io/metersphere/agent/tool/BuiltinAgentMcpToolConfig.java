@@ -458,7 +458,7 @@ public class BuiltinAgentMcpToolConfig {
     public AgentMcpToolHandler executionEventsBatchTool(AgentTaskExecutionApplicationService service) {
         return tool("metersphere.execution.events.batch", "Append an ordered, idempotent batch of execution events.",
                 AgentTokenScope.TASK_EVENT_WRITE, false,
-                dtoSchema(AgentRunnerEventsRequest.class),
+                leasedSchema(AgentRunnerEventsRequest.class, List.of("leaseToken")),
                 args -> {
                     String leaseId = requiredString(args, "leaseId");
                     AgentRunnerEventsRequest request = convert(args, AgentRunnerEventsRequest.class);
@@ -513,7 +513,7 @@ public class BuiltinAgentMcpToolConfig {
     public AgentMcpToolHandler humanRequestCreateTool(AgentTaskExecutionApplicationService service) {
         return tool("metersphere.human_request.create", "Request human approval, input, login or review.",
                 AgentTokenScope.TASK_RESULT_WRITE, false,
-                dtoSchema(AgentHumanCreateRequest.class),
+                leasedSchema(AgentHumanCreateRequest.class, List.of("taskId", "leaseId", "leaseToken")),
                 args -> service.createHumanRequest(requiredString(args, "taskId"), requiredString(args, "leaseId"),
                         requiredString(args, "leaseToken"), convert(args, AgentHumanCreateRequest.class)));
     }
@@ -719,6 +719,14 @@ public class BuiltinAgentMcpToolConfig {
     private static int cursorPage(Map<String,Object> args){String cursor=(String)args.get("cursor");if(StringUtils.isBlank(cursor))return 1;try{int page=Integer.parseInt(cursor);if(page<1)throw new NumberFormatException();return page;}catch(NumberFormatException ex){throw new MSException("INVALID_CURSOR");}}
     private static Map<String,Object> pageResponse(Pager<? extends List<?>> page){boolean more=page.getCurrent()*page.getPageSize()<page.getTotal();Map<String,Object> result=new LinkedHashMap<>();result.put("items",page.getList());result.put("nextCursor",more?String.valueOf(page.getCurrent()+1):null);result.put("hasMore",more);result.put("traceId",UUID.randomUUID().toString());return result;}
 
+    private static Map<String,Object> leasedSchema(Class<?> type, List<String> leaseFields) {
+        Map<String,Object> base=dtoSchema(type);
+        Map<String,Object> properties=new LinkedHashMap<>((Map<String,Object>)base.get("properties"));
+        List<String> required=new java.util.ArrayList<>((List<String>)base.get("required"));
+        for(String field:leaseFields){properties.put(field,stringSchema());required.add(field);}
+        return objectSchema(properties,required.stream().distinct().toList());
+    }
+
     private static Map<String,Object> dtoSchema(Class<?> type) {
         Map<String,Object> properties=new LinkedHashMap<>();
         List<String> required=new java.util.ArrayList<>();
@@ -769,11 +777,11 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     private static String requiredString(Map<String, Object> arguments, String key) {
-        String value = (String) arguments.get(key);
-        if (StringUtils.isBlank(value)) {
-            throw new MSException("Missing required argument: " + key);
+        Object raw = arguments.get(key);
+        if (!(raw instanceof String value) || StringUtils.isBlank(value)) {
+            throw new MSException("AGENT_VALIDATION_ERROR");
         }
-        return value;
+        return (String) raw;
     }
 
     private static List<String> stringList(Map<String, Object> arguments, String key) {

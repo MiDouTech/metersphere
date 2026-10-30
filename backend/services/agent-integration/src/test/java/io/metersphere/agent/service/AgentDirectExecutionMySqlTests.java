@@ -93,6 +93,9 @@ class AgentDirectExecutionMySqlTests {
             doReturn(Map.of("c",detail)).when(definitions).getAgentCaseDetails(List.of("c"),"p",true);
             var search=mock(AgentFunctionalCaseSearchService.class);when(search.getById("c",true,null)).thenReturn(source);
             var service=new AgentDirectExecutionService();
+            var projects=mock(AgentProjectService.class);
+            when(projects.resolveProjectId(anyString())).thenAnswer(call->call.getArgument(0));
+            ReflectionTestUtils.setField(service,"projects",projects);
             ReflectionTestUtils.setField(service,"jdbc",jdbc);
             ReflectionTestUtils.setField(service,"access",mock(AgentBusinessAccess.class));
             ReflectionTestUtils.setField(service,"cases",search);
@@ -214,7 +217,7 @@ class AgentDirectExecutionMySqlTests {
             assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='foreign-archived'",String.class));
             assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE functional_case_id='unrelated-case'",String.class));
             var read=new io.metersphere.agent.tool.functional.FunctionalAttachmentReadTool();
-            ReflectionTestUtils.setField(read,"access",mock(AgentBusinessAccess.class));ReflectionTestUtils.setField(read,"jdbc",jdbc);
+            ReflectionTestUtils.setField(read,"access",mock(AgentBusinessAccess.class));ReflectionTestUtils.setField(read,"jdbc",jdbc);ReflectionTestUtils.setField(read,"projects",projects);
             var attachmentService=new io.metersphere.functional.service.FunctionalCaseAttachmentService();ReflectionTestUtils.setField(attachmentService,"evidenceStore",store);
             ReflectionTestUtils.setField(read,"attachments",attachmentService);
             var readArgs=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c","fileId",one));
@@ -225,7 +228,7 @@ class AgentDirectExecutionMySqlTests {
             assertEquals(AgentDirectExecutionTests.png(),((io.metersphere.agent.tool.AgentMcpImageResult)read.execute(readArgs)).data());
             readArgs.put("projectId","foreign");assertThrows(MSException.class,()->read.execute(readArgs));
             var lookup=new io.metersphere.agent.tool.functional.PersonalOperationGetTool();
-            ReflectionTestUtils.setField(lookup,"access",mock(AgentBusinessAccess.class));ReflectionTestUtils.setField(lookup,"jdbc",jdbc);
+            ReflectionTestUtils.setField(lookup,"access",mock(AgentBusinessAccess.class));ReflectionTestUtils.setField(lookup,"jdbc",jdbc);ReflectionTestUtils.setField(lookup,"projects",projects);
             var lookupArgs=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c","requestId","hundred-single","toolName","metersphere.functional.execution.evidence.upload"));
             assertEquals("CONSUMED",((Map<?,?>)lookup.execute(lookupArgs)).get("resourceState"));
             lookupArgs.put("toolName","metersphere.functional.execution.submit");assertEquals(published.get("submissionId"),((Map<?,?>)lookup.execute(lookupArgs)).get("submissionId"));
