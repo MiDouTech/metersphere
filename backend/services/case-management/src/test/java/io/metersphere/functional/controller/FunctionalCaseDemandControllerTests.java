@@ -246,7 +246,7 @@ public class FunctionalCaseDemandControllerTests extends BaseTest {
         demandDTO.setDemandId("111");
         demandList.add(demandDTO);
         functionalCaseDemandRequest.setDemandList(demandList);
-        this.requestPost(URL_DEMAND_ADD, functionalCaseDemandRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_DEMAND_ADD, functionalCaseDemandRequest).andExpect(businessValidationError());
         FunctionalCaseDemandExample functionalCaseDemandExample = new FunctionalCaseDemandExample();
         functionalCaseDemandExample.createCriteria().andCaseIdEqualTo("DEMAND_TEST_FUNCTIONAL_CASE_ID2");
         List<FunctionalCaseDemand> functionalCaseDemands = functionalCaseDemandMapper.selectByExample(functionalCaseDemandExample);
@@ -324,7 +324,7 @@ public class FunctionalCaseDemandControllerTests extends BaseTest {
         demandDTO.setDemandId("111");
         demandList.add(demandDTO);
         functionalCaseDemandRequest.setDemandList(demandList);
-        this.requestPost(URL_DEMAND_UPDATE, functionalCaseDemandRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_DEMAND_UPDATE, functionalCaseDemandRequest).andExpect(businessValidationError());
         functionalCaseDemandExample = new FunctionalCaseDemandExample();
         functionalCaseDemandExample.createCriteria().andCaseIdEqualTo("DEMAND_TEST_FUNCTIONAL_CASE_ID");
         functionalCaseDemands = functionalCaseDemandMapper.selectByExample(functionalCaseDemandExample);
@@ -340,7 +340,7 @@ public class FunctionalCaseDemandControllerTests extends BaseTest {
         demandDTO.setDemandName("手动执行2");
         demandList.add(demandDTO);
         functionalCaseDemandRequest.setDemandList(demandList);
-        this.requestPost(URL_DEMAND_UPDATE, functionalCaseDemandRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_DEMAND_UPDATE, functionalCaseDemandRequest).andExpect(businessValidationError());
 
         functionalCaseDemandRequest = new FunctionalCaseDemandRequest();
         functionalCaseDemandRequest.setCaseId("DEMAND_TEST_FUNCTIONAL_CASE_ID");
@@ -519,7 +519,7 @@ public class FunctionalCaseDemandControllerTests extends BaseTest {
         demandDTO2.setDemandId("100006");
         demandList.add(demandDTO2);
         functionalCaseDemandRequest.setDemandList(demandList);
-        this.requestPost(URL_DEMAND_ADD, functionalCaseDemandRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_DEMAND_ADD, functionalCaseDemandRequest).andExpect(businessValidationError());
         FunctionalCaseDemandExample functionalCaseDemandExample = new FunctionalCaseDemandExample();
         functionalCaseDemandExample.createCriteria().andCaseIdEqualTo("DEMAND_TEST_FUNCTIONAL_CASE_ID2").andDemandPlatformEqualTo("jira");
         List<FunctionalCaseDemand> functionalCaseDemands = functionalCaseDemandMapper.selectByExample(functionalCaseDemandExample);
@@ -537,7 +537,7 @@ public class FunctionalCaseDemandControllerTests extends BaseTest {
         demandDTO2.setDemandName("手动加入jira2");
         demandList.add(demandDTO2);
         functionalCaseDemandRequest.setDemandList(demandList);
-        this.requestPost(URL_DEMAND_ADD, functionalCaseDemandRequest).andExpect(status().is5xxServerError());
+        this.requestPost(URL_DEMAND_ADD, functionalCaseDemandRequest).andExpect(businessValidationError());
     }
 
     @Test

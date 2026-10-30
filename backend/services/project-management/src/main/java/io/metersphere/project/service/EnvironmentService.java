@@ -309,6 +309,14 @@ public class EnvironmentService extends MoveNodeService {
     }
 
     public Environment update(EnvironmentRequest request, String userId, List<MultipartFile> sslFiles) {
+        Environment current = environmentMapper.selectByPrimaryKey(request.getId());
+        if (current == null) {
+            throw new MSException(Translator.get("api_test_environment_not_exist"));
+        }
+        if (!StringUtils.equals(current.getProjectId(), request.getProjectId())) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FORBIDDEN,
+                    "请求环境不属于当前项目");
+        }
         Environment environment = new Environment();
         environment.setId(request.getId());
         environment.setUpdateUser(userId);

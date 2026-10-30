@@ -464,6 +464,7 @@ public class OrganizationTemplateControllerTests extends BaseTest {
     @Test
     @Order(5)
     public void disableOrganizationTemplate() throws Exception {
+        assertErrorCode(requestGet(DISABLE_ORG_TEMPLATE, "missing-org-" + java.util.UUID.randomUUID(), addTemplate.getScene()), NOT_FOUND);
         // @@请求成功
         this.requestGetWithOk(DISABLE_ORG_TEMPLATE, addTemplate.getScopeId(), addTemplate.getScene());
         String value = organizationParameterService.getValue(addTemplate.getScopeId(),
@@ -475,6 +476,14 @@ public class OrganizationTemplateControllerTests extends BaseTest {
 
         // 提高覆盖率
         this.requestGetWithOk(DISABLE_ORG_TEMPLATE, addTemplate.getScopeId(), addTemplate.getScene());
+
+        this.requestGetWithOk(DISABLE_ORG_TEMPLATE, addTemplate.getScopeId(), addTemplate.getScene());
+        OrganizationParameterExample replayParameter = new OrganizationParameterExample();
+        replayParameter.createCriteria().andOrganizationIdEqualTo(addTemplate.getScopeId())
+                .andParamKeyEqualTo(organizationParameterService.getOrgTemplateEnableKeyByScene(addTemplate.getScene()));
+        Assertions.assertEquals(1, organizationParameterMapper.countByExample(replayParameter));
+        Assertions.assertEquals("false", organizationParameterService.getValue(addTemplate.getScopeId(),
+                organizationParameterService.getOrgTemplateEnableKeyByScene(addTemplate.getScene())));
 
         // @@校验日志
         checkLog(addTemplate.getScene(), OperationLogType.UPDATE);

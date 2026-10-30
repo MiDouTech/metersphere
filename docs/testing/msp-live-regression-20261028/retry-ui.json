@@ -1,0 +1,8 @@
+[
+  {
+    "method": "POST",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/d92aaf90-ffc4-4b20-a1c6-f239673fdc5c/retry",
+    "status": 400,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"请求参数校验失败\",\"details\":{},\"traceId\":\"bcfff809-5291-41a5-9cf3-85ddee80aa5e\"}}"
+  }
+]

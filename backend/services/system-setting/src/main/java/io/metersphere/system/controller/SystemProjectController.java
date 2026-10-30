@@ -166,7 +166,7 @@ public class SystemProjectController {
     @Operation(summary = "系统设置-系统-组织与项目-项目-修改项目名称")
     @RequiresPermissions(PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_READ_UPDATE)
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.renameLog(#request)", msClass = SystemProjectLogService.class)
-    @CheckOwner(resourceId = "#request.projectId", resourceType = "project")
+    @CheckOwner(resourceId = "#request.id", resourceType = "project")
     public void rename(@RequestBody @Validated({Updated.class}) UpdateProjectNameRequest request) {
         systemProjectService.rename(request, SessionUtils.getUserId());
     }

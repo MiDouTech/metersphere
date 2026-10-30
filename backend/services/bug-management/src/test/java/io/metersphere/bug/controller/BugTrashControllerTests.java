@@ -60,36 +60,40 @@ public class BugTrashControllerTests extends BaseTest {
     @Order(1)
     void testRecoverOrDeleteError() throws Exception {
         // 恢复不存在的缺陷
-        this.requestGet(BUG_TRASH_RECOVER + "/trash-bug-not-exist", status().is5xxServerError());
+        this.requestPost(BUG_TRASH_RECOVER + "/trash-bug-not-exist", null).andExpect(businessError(108001, io.metersphere.sdk.util.Translator.get("bug_not_exist")));
         // 恢复非Local缺陷
-        this.requestGet(BUG_TRASH_RECOVER + "/trash-bug-5", status().is5xxServerError());
+        this.requestPost(BUG_TRASH_RECOVER + "/trash-bug-5", null).andExpect(businessError(108002, io.metersphere.sdk.util.Translator.get("not_local_bug_error")));
         // 删除非Local缺陷
-        this.requestGet(BUG_TRASH_DELETE + "/trash-bug-5", status().is5xxServerError());
+        this.requestDelete(BUG_TRASH_DELETE + "/trash-bug-5").andExpect(businessError(108002, io.metersphere.sdk.util.Translator.get("not_local_bug_error")));
     }
 
     @Test
     @Order(1)
     void testRecoverOrDeleteSuccess() throws Exception {
         // 恢复Local缺陷
-        this.requestGetWithOk(BUG_TRASH_RECOVER + "/trash-bug-1");
+        this.requestPostWithOk(BUG_TRASH_RECOVER + "/trash-bug-1", null);
         // 删除Local缺陷
-        this.requestGetWithOk(BUG_TRASH_DELETE + "/trash-bug-2");
+        this.requestDelete(BUG_TRASH_DELETE + "/trash-bug-2").andExpect(status().isOk());
     }
 
     @Test
     @Order(2)
-    void testBatchError() throws Exception {
+    void testBatchEmptySelectionDoesNotMutate() throws Exception {
+        var mapper = io.metersphere.sdk.util.CommonBeanFactory.getBean(io.metersphere.bug.mapper.BugMapper.class);
+        var before = mapper.selectByExample(new io.metersphere.bug.domain.BugExample());
         // 全选, 恢复所有
         BugBatchRequest recoverRequest = new BugBatchRequest();
         recoverRequest.setProjectId("bug-trash-project-not-exist");
         recoverRequest.setSelectAll(true);
         // 批量恢复Local缺陷
-        this.requestPost(BUG_TRASH_BATCH_RECOVER, recoverRequest, status().is5xxServerError());
+        // Existing service semantics: an empty selection is an idempotent no-op.
+        this.requestPost(BUG_TRASH_BATCH_RECOVER, recoverRequest).andExpect(status().isOk());
         // 勾选部分, 恢复部分
         BugBatchRequest recoverRequest1 = new BugBatchRequest();
         recoverRequest1.setSelectAll(false);
         // 批量恢复Local缺陷
-        this.requestPost(BUG_TRASH_BATCH_RECOVER, recoverRequest1, status().is5xxServerError());
+        this.requestPost(BUG_TRASH_BATCH_RECOVER, recoverRequest1).andExpect(status().isBadRequest());
+        Assertions.assertEquals(before, mapper.selectByExample(new io.metersphere.bug.domain.BugExample()));
     }
 
     @Test
@@ -104,6 +108,7 @@ public class BugTrashControllerTests extends BaseTest {
         this.requestPostWithOk(BUG_TRASH_BATCH_RECOVER, recoverRequest);
         // 勾选部分, 恢复部分
         BugBatchRequest deleteRequest = new BugBatchRequest();
+        deleteRequest.setProjectId("bug-trash-project");
         deleteRequest.setSelectAll(false);
         deleteRequest.setSelectIds(List.of("trash-bug-3"));
         // 批量恢复Local缺陷

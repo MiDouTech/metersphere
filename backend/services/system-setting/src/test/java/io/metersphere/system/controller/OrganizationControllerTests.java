@@ -70,9 +70,9 @@ public class OrganizationControllerTests extends BaseTest {
         this.requestPost(ORGANIZATION_USER_INVITE, userInviteRequest);
         //输入错误的组织ID
         userInviteRequest.setOrganizationId(null);
-        this.requestPost(ORGANIZATION_USER_INVITE, userInviteRequest).andExpect(status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_INVITE, userInviteRequest).andExpect(businessError("组织不存在"));
         userInviteRequest.setOrganizationId("not_exist_organization_id_by_somebody_J");
-        this.requestPost(ORGANIZATION_USER_INVITE, userInviteRequest).andExpect(status().is5xxServerError());
+        this.requestPost(ORGANIZATION_USER_INVITE, userInviteRequest).andExpect(businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
 
         // 权限校验
         userInviteRequest.setOrganizationId(DEFAULT_ORGANIZATION_ID);
@@ -84,26 +84,26 @@ public class OrganizationControllerTests extends BaseTest {
     public void addMemberByOrgError() throws Exception {
         //组织ID正确
         // 成员选择为空
-        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Collections.emptyList(), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Collections.emptyList(), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), businessError("用户不能为空"));
         // 成员都不存在
-        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Arrays.asList("sys_default_userX", "sys_default_userY"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Arrays.asList("sys_default_userX", "sys_default_userY"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), businessError(io.metersphere.sdk.util.Translator.get("user.not.exist")));
         // 用户组为空
         addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Arrays.asList("sys_default_user", "sys_default_user2"), Collections.emptyList(), status().isBadRequest());
         // 用户组都不存在
-        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_X", "sys_default_org_role_id_Y"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_X", "sys_default_org_role_id_Y"), businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
         // 用户组有一个不存在
         addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_Y"), status().isOk());
         //成员和用户组都为空
         addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "sys_default_organization_3", Collections.emptyList(), Collections.emptyList(), status().isBadRequest());
         // 组织不存在
         // 成员选择为空
-        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "default-organization-x", Collections.emptyList(), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "default-organization-x", Collections.emptyList(), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
         // 用户组不存在
         addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "default-organization-x", Arrays.asList("sys_default_user", "sys_default_user2"), Collections.emptyList(), status().isBadRequest());
         //成员和用户组都为空
         addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "default-organization-x", Collections.emptyList(), Collections.emptyList(), status().isBadRequest());
         //成员和用户组存在
-        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "default-organization-x", Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, "default-organization-x", Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
         //组织为空
         addOrganizationMemberError(ORGANIZATION_LIST_ADD_MEMBER, null, Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().isBadRequest());
 
@@ -174,17 +174,17 @@ public class OrganizationControllerTests extends BaseTest {
         // 成员为空
         updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", null, Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), status().isBadRequest());
         //成员不存在
-        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_userX", Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), status().is5xxServerError());
+        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_userX", Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), businessError("用户不存在"));
         // 组织ID不存在
-        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_X", "sys_default_user2", Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), status().is5xxServerError());
+        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_X", "sys_default_user2", Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
         // 用户组为空
         updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_user2", Collections.emptyList(), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), status().isBadRequest());
         // 用户组都不存在
-        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_user2", Arrays.asList("sys_default_org_role_id_X", "sys_default_org_role_id_Y"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), status().is5xxServerError());
+        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_user2", Arrays.asList("sys_default_org_role_id_X", "sys_default_org_role_id_Y"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), businessError(io.metersphere.sdk.util.Translator.get("user_role_not_exist")));
         // 项目组都不存在
-        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_user2", Arrays.asList("sys_default_org_role_id_4", "sys_default_org_role_id_2"), Arrays.asList("sys_org_projectId_W", "sys_org_projectId1_Q"), status().is5xxServerError());
+        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_user2", Arrays.asList("sys_default_org_role_id_4", "sys_default_org_role_id_2"), Arrays.asList("sys_org_projectId_W", "sys_org_projectId1_Q"), businessError(io.metersphere.sdk.util.Translator.get("project_not_exist")));
         // 成员不是当前组织的
-        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_user4", Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), status().is5xxServerError());
+        updateOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER, "sys_default_organization_3", "sys_default_user4", Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), Arrays.asList("sys_org_projectId", "sys_org_projectId1"), businessError(io.metersphere.sdk.util.Translator.get("organization_member_not_exist")));
     }
 
 
@@ -208,22 +208,22 @@ public class OrganizationControllerTests extends BaseTest {
     public void updateOrgMemberToRoleError() throws Exception {
         //组织ID正确
         // 成员选择为空
-        addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "sys_default_organization_3", Collections.emptyList(), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "sys_default_organization_3", Collections.emptyList(), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), businessError("用户不能为空"));
         // 成员都不存在
-        addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "sys_default_organization_3", Arrays.asList("sys_default_userX", "sys_default_userY"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "sys_default_organization_3", Arrays.asList("sys_default_userX", "sys_default_userY"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), businessError(io.metersphere.sdk.util.Translator.get("user.not.exist")));
         // 用户组不存在
         addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "sys_default_organization_3", Arrays.asList("sys_default_user", "sys_default_user2"), Collections.emptyList(), status().isBadRequest());
         //成员和用户组都为空
         addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "sys_default_organization_3", Collections.emptyList(), Collections.emptyList(), status().isBadRequest());
         // 组织不存在
         // 成员选择为空
-        addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "default-organization-x", Collections.emptyList(), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "default-organization-x", Collections.emptyList(), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
         // 用户组不存在
         addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "default-organization-x", Arrays.asList("sys_default_user", "sys_default_user2"), Collections.emptyList(), status().isBadRequest());
         //成员和用户组都为空
         addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "default-organization-x", Collections.emptyList(), Collections.emptyList(), status().isBadRequest());
         //成员和用户组存在
-        addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "default-organization-x", Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().is5xxServerError());
+        addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, "default-organization-x", Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
         //组织为空
         addOrganizationMemberError(ORGANIZATION_UPDATE_MEMBER_TO_ROLE, null, Arrays.asList("sys_default_user", "sys_default_user2"), Arrays.asList("sys_default_org_role_id_2", "sys_default_org_role_id_3"), status().isBadRequest());
 
@@ -254,13 +254,13 @@ public class OrganizationControllerTests extends BaseTest {
     @Order(10)
     public void addOrgMemberToProjectError() throws Exception {
         // 成员选择为空
-        addOrUpdateOrganizationProjectMemberError(ORGANIZATION_PROJECT_ADD_MEMBER, "sys_default_organization_3", Collections.emptyList(), Arrays.asList("projectId1", "projectId2"), status().is5xxServerError());
+        addOrUpdateOrganizationProjectMemberError(ORGANIZATION_PROJECT_ADD_MEMBER, "sys_default_organization_3", Collections.emptyList(), Arrays.asList("projectId1", "projectId2"), businessError("用户不能为空"));
         // 项目集合不存在
         addOrUpdateOrganizationProjectMemberError(ORGANIZATION_PROJECT_ADD_MEMBER, "sys_default_organization_3", Arrays.asList("sys_default_user", "sys_default_user2"), Collections.emptyList(), status().isBadRequest());
         //成员和项目集合都为空
         addOrUpdateOrganizationProjectMemberError(ORGANIZATION_PROJECT_ADD_MEMBER, "sys_default_organization_3", Collections.emptyList(), Collections.emptyList(), status().isBadRequest());
         // 成员选择为空
-        addOrUpdateOrganizationProjectMemberError(ORGANIZATION_PROJECT_ADD_MEMBER, "sys_default_organization_X", Collections.emptyList(), Arrays.asList("projectId1", "projectId2"), status().is5xxServerError());
+        addOrUpdateOrganizationProjectMemberError(ORGANIZATION_PROJECT_ADD_MEMBER, "sys_default_organization_X", Collections.emptyList(), Arrays.asList("projectId1", "projectId2"), businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
     }
 
     @Test
@@ -331,7 +331,7 @@ public class OrganizationControllerTests extends BaseTest {
     @Order(14)
     public void removeOrgMemberSuccess() throws Exception {
         this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/sys_default_organization_6/sys_default_user4", status().isOk());
-        this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/sys_default_organization_6/sys_default_user", status().is5xxServerError());
+        this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/sys_default_organization_6/sys_default_user", businessError("至少保留一个管理员"));
     }
 
     @Test
@@ -344,7 +344,7 @@ public class OrganizationControllerTests extends BaseTest {
     @Order(16)
     public void removeOrgMemberError() throws Exception {
         // 项目不存在
-        this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/default-organization-x/admin-x", status().is5xxServerError());
+        this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/default-organization-x/admin-x", businessError("组织不存在"));
     }
 
     @Test
@@ -389,7 +389,7 @@ public class OrganizationControllerTests extends BaseTest {
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError("组织不存在"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
     }
 
@@ -442,7 +442,7 @@ public class OrganizationControllerTests extends BaseTest {
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError("组织不存在"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
     }
 
@@ -490,7 +490,7 @@ public class OrganizationControllerTests extends BaseTest {
                         .header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(businessError("组织不存在"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn();
     }
 

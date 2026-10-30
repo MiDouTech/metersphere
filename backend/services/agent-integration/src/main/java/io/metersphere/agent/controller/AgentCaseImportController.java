@@ -37,6 +37,7 @@ public class AgentCaseImportController {
     public void retryFollowup(@PathVariable String id) { followups.retry(id,SessionUtils.getUserId()); }
 
     @PostMapping("/{id}/commit")
+    @org.springframework.transaction.annotation.Transactional(rollbackFor=Exception.class)
     public Map<String,Object> commit(@PathVariable String id,
             @jakarta.validation.Valid @RequestBody(required=false) ImportFollowupRequest followup) {
         followups.prepare(id,SessionUtils.getUserId(),followup);

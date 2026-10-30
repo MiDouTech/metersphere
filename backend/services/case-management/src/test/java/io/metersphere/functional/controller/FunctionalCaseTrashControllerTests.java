@@ -136,7 +136,7 @@ public class FunctionalCaseTrashControllerTests extends BaseTest {
          mockMvc.perform(MockMvcRequestBuilders.get(URL_CASE_RECOVER + "Trash_TEST_FUNCTIONAL_CASE_ID_del").header(SessionConstants.HEADER_TOKEN, sessionId)
                         .header(SessionConstants.CSRF_TOKEN, csrfToken)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError());
+                .andExpect(businessError(100422, "功能用例不存在"));
     }
 
     @Test

@@ -1,0 +1,39 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"c676a03d-3958-4c08-87d7-7b8572968703\",\"expiresAt\":1793253435564,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"weekly-import.xlsx\",\"state\":\"PRECHECKED\"}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "pageSize": 10,
+        "current": 1,
+        "total": 1,
+        "jobId": "c676a03d-3958-4c08-87d7-7b8572968703",
+        "expiresAt": 1793253435564,
+        "counts": [
+          {
+            "state": "PENDING",
+            "total": 1
+          }
+        ],
+        "items": [
+          {
+            "position": 1,
+            "action": "CREATE",
+            "caseId": null,
+            "state": "PENDING",
+            "message": null
+          }
+        ],
+        "fileName": "weekly-import.xlsx",
+        "state": "PRECHECKED"
+      }
+    }
+  }
+}

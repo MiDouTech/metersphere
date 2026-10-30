@@ -1,0 +1,813 @@
+{
+  "date": "2026-10-29",
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40698030451",
+  "testedCommit": "baa75c80827a126261dad9266a9713e169309dce",
+  "executed": 541,
+  "passed": 461,
+  "failures": 70,
+  "errors": 10,
+  "downstream": "not executed after system-setting failure",
+  "state": "analysis-and-plan-only",
+  "items": [
+    {
+      "id": "E001",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "add",
+      "category": "S04",
+      "observed": "授予旧新增权限，实际接口正向调用仍被 403 拒绝",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/GlobalUserRoleControllerTests.java",
+      "line": 103
+    },
+    {
+      "id": "F001",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "update",
+      "category": "S03",
+      "observed": "仅 id 更新期待 200，实际 422：角色类型创建后不可修改",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/GlobalUserRoleControllerTests.java",
+      "line": 125
+    },
+    {
+      "id": "E002",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "updatePermissionSetting",
+      "category": "S04",
+      "observed": "授予旧编辑权限，实际权限保存正向调用仍被 403 拒绝",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/GlobalUserRoleControllerTests.java",
+      "line": 248
+    },
+    {
+      "id": "F002",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "getPermissionSetting",
+      "category": "S07",
+      "observed": "数据库权限集合未被返回权限树全部覆盖；剩余 ID 待提取",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/GlobalUserRoleControllerTests.java",
+      "line": 287
+    },
+    {
+      "id": "F003",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.GlobalUserRoleControllerTests",
+      "test": "delete",
+      "category": "S09",
+      "observed": "删除内置 admin 被拒绝；期待业务码 100003，实际 100422",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/GlobalUserRoleControllerTests.java",
+      "line": 331
+    },
+    {
+      "id": "F004",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OperationLogControllerTests",
+      "test": "testGetOperationLogParamsError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：开始日期必须小于结束日期",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OperationLogControllerTests.java",
+      "line": 162
+    },
+    {
+      "id": "F005",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgSuccess",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 73
+    },
+    {
+      "id": "F006",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addMemberByOrgError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不能为空",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 87
+    },
+    {
+      "id": "F007",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 177
+    },
+    {
+      "id": "F008",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "updateOrgMemberToRoleError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不能为空",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 211
+    },
+    {
+      "id": "F009",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "addOrgMemberToProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不能为空",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 257
+    },
+    {
+      "id": "F010",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberSuccess",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：至少保留一个管理员",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 334
+    },
+    {
+      "id": "F011",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "removeOrgMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 347
+    },
+    {
+      "id": "F012",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getProjectListByOrgError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 392
+    },
+    {
+      "id": "F013",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getUserRoleListByOrgError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 445
+    },
+    {
+      "id": "F014",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationControllerTests",
+      "test": "getNotExistUserListByOrgError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationControllerTests.java",
+      "line": 493
+    },
+    {
+      "id": "F015",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "category": "S05",
+      "observed": "期待 moduleSetting 为 null；实际为用例/缺陷/计划/接口四个默认模块",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 352
+    },
+    {
+      "id": "F016",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目名称已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 435
+    },
+    {
+      "id": "F017",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 685
+    },
+    {
+      "id": "F018",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 714
+    },
+    {
+      "id": "F019",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 736
+    },
+    {
+      "id": "F020",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMember",
+      "category": "S02",
+      "observed": "期待 200；实际 500，成员角色关系重复插入触发唯一约束",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 747
+    },
+    {
+      "id": "F021",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 782
+    },
+    {
+      "id": "F022",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 888
+    },
+    {
+      "id": "F023",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "enableError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 931
+    },
+    {
+      "id": "F024",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "disableError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 912
+    },
+    {
+      "id": "F025",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetAdminList",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 952
+    },
+    {
+      "id": "F026",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testGetMemberList",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 981
+    },
+    {
+      "id": "F027",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationProjectControllerTests",
+      "test": "testUpdateNameError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目名称已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationProjectControllerTests.java",
+      "line": 1024
+    },
+    {
+      "id": "F028",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "getStatusFlowSetting",
+      "category": "S06",
+      "observed": "相同目标集合的顺序不同：处理中/挂起/已拒绝 vs 处理中/已拒绝/挂起",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationStatusFlowSettingControllerTest.java",
+      "line": 90
+    },
+    {
+      "id": "F029",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "addStatusItem",
+      "category": "S06",
+      "observed": "期待旧写入口 200，实际 422：BUG 工作流已迁移，旧入口禁止写入",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationStatusFlowSettingControllerTest.java",
+      "line": 135
+    },
+    {
+      "id": "E003",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusItem",
+      "category": "S06",
+      "observed": "测试 static 状态项未创建，调用 getId 时空指针；未执行目标接口",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationStatusFlowSettingControllerTest.java",
+      "line": 233
+    },
+    {
+      "id": "E004",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusDefinition",
+      "category": "S06",
+      "observed": "测试 static 状态项未创建，调用 getId 时空指针；未执行目标接口",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationStatusFlowSettingControllerTest.java",
+      "line": 297
+    },
+    {
+      "id": "E005",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "updateStatusFlow",
+      "category": "S06",
+      "observed": "测试 static 状态项未创建，调用 getId 时空指针；未执行目标接口",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationStatusFlowSettingControllerTest.java",
+      "line": 407
+    },
+    {
+      "id": "E006",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "deleteStatusItem",
+      "category": "S06",
+      "observed": "测试 static 状态项未创建，调用 getId 时空指针；未执行目标接口",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationStatusFlowSettingControllerTest.java",
+      "line": 480
+    },
+    {
+      "id": "F030",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationStatusFlowSettingControllerTest",
+      "test": "sortStatusItem",
+      "category": "S06",
+      "observed": "期待旧写入口 200，实际 422：BUG 工作流已迁移，旧入口禁止写入",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationStatusFlowSettingControllerTest.java",
+      "line": 512
+    },
+    {
+      "id": "F031",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户组已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationUserRoleControllerTests.java",
+      "line": 116
+    },
+    {
+      "id": "F032",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleUpdateError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户组不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationUserRoleControllerTests.java",
+      "line": 127
+    },
+    {
+      "id": "F033",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户组不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationUserRoleControllerTests.java",
+      "line": 175
+    },
+    {
+      "id": "F034",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionSettingError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户组不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationUserRoleControllerTests.java",
+      "line": 209
+    },
+    {
+      "id": "F035",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRolePermissionUpdateError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户组不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationUserRoleControllerTests.java",
+      "line": 239
+    },
+    {
+      "id": "F036",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleAddMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationUserRoleControllerTests.java",
+      "line": 328
+    },
+    {
+      "id": "F037",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleRemoveMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationUserRoleControllerTests.java",
+      "line": 371
+    },
+    {
+      "id": "F038",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.OrganizationUserRoleControllerTests",
+      "test": "testOrganizationUserRoleDeleteOnlyMemberSuccess",
+      "category": "S02",
+      "observed": "期待 200；实际 500，成员角色关系重复插入触发唯一约束",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrganizationUserRoleControllerTests.java",
+      "line": 409
+    },
+    {
+      "id": "E007",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "adminTreeWithStats",
+      "category": "S08",
+      "observed": "正向权限探针得到 403：权限用户组织为 100001，目标为 sys_default_organization_3",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrgStructureMemberControllerTests.java",
+      "line": 37
+    },
+    {
+      "id": "E008",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberPage",
+      "category": "S08",
+      "observed": "正向权限探针得到 403：权限用户组织为 100001，目标为 sys_default_organization_3",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrgStructureMemberControllerTests.java",
+      "line": 51
+    },
+    {
+      "id": "E009",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.OrgStructureMemberControllerTests",
+      "test": "memberDetailMasked",
+      "category": "S08",
+      "observed": "正向权限探针得到 403：权限用户组织为 100001，目标为 sys_default_organization_3",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/OrgStructureMemberControllerTests.java",
+      "line": 63
+    },
+    {
+      "id": "F039",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testEdit",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：模型名称 测试模型1 已被系统中其他用户占用，请更换唯一名称后重试",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemAIConfigControllerTests.java",
+      "line": 128
+    },
+    {
+      "id": "F040",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemAIConfigControllerTests",
+      "test": "testDetail",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：模型信息不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemAIConfigControllerTests.java",
+      "line": 163
+    },
+    {
+      "id": "F041",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testUpdateOrganizationError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemOrganizationControllerTests.java",
+      "line": 194
+    },
+    {
+      "id": "F042",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testDeleteOrganization",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：默认组织无法删除",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemOrganizationControllerTests.java",
+      "line": 216
+    },
+    {
+      "id": "F043",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemOrganizationControllerTests.java",
+      "line": 406
+    },
+    {
+      "id": "F044",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemOrganizationControllerTests.java",
+      "line": 437
+    },
+    {
+      "id": "F045",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testRemoveOrganizationMemberSuccess",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：至少保留一个管理员",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemOrganizationControllerTests.java",
+      "line": 428
+    },
+    {
+      "id": "F046",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testAddOrganizationError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织名已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemOrganizationControllerTests.java",
+      "line": 660
+    },
+    {
+      "id": "F047",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemOrganizationControllerTests",
+      "test": "testSwitchOrganizationError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：组织不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemOrganizationControllerTests.java",
+      "line": 691
+    },
+    {
+      "id": "F048",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEmailConnect",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：连接失败",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemParameterControllerTests.java",
+      "line": 153
+    },
+    {
+      "id": "F049",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemParameterControllerTests",
+      "test": "testEditUploadConfigInfoError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：文件限制参数错误",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemParameterControllerTests.java",
+      "line": 208
+    },
+    {
+      "id": "F050",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectSuccess",
+      "category": "S05",
+      "observed": "期待 moduleSetting 为 null；实际为用例/缺陷/计划/接口四个默认模块",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 347
+    },
+    {
+      "id": "F051",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目名称已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 618
+    },
+    {
+      "id": "F052",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目名称已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 827
+    },
+    {
+      "id": "F053",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testDeleteProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 868
+    },
+    {
+      "id": "F054",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRevokeProjectError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 889
+    },
+    {
+      "id": "F055",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testAddProjectMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 924
+    },
+    {
+      "id": "F056",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testRemoveProjectMemberError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：用户不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 1031
+    },
+    {
+      "id": "F057",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "enableError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 1077
+    },
+    {
+      "id": "F058",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "disableError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 1058
+    },
+    {
+      "id": "F059",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.SystemProjectControllerTests",
+      "test": "testUpdateNameError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目名称已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/SystemProjectControllerTests.java",
+      "line": 1143
+    },
+    {
+      "id": "F060",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.TaskCenterScheduleControllerTests",
+      "test": "getPageError",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：项目不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/TaskCenterScheduleControllerTests.java",
+      "line": 167
+    },
+    {
+      "id": "F061",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "getResourcePoolsDetailFiled",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：测试资源池不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/TestResourcePoolControllerTests.java",
+      "line": 379
+    },
+    {
+      "id": "F062",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.TestResourcePoolControllerTests",
+      "test": "updateUiTestResourcePoolFiled",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：资源池名称已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/TestResourcePoolControllerTests.java",
+      "line": 485
+    },
+    {
+      "id": "F063",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalGetId",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：无权操作非本人账户",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/user/PersonalControllerTests.java",
+      "line": 62
+    },
+    {
+      "id": "F064",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdateInfo",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：无权操作非本人账户",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/user/PersonalControllerTests.java",
+      "line": 136
+    },
+    {
+      "id": "F065",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testPersonalUpdatePassword",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：旧密码输入错误，请重新输入",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/user/PersonalControllerTests.java",
+      "line": 247
+    },
+    {
+      "id": "F066",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.user.PersonalControllerTests",
+      "test": "testDetail",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：模型信息不存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/user/PersonalControllerTests.java",
+      "line": 326
+    },
+    {
+      "id": "F067",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testAdd",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：最多能有5个Api key",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/UserApiKeysControllerTests.java",
+      "line": 99
+    },
+    {
+      "id": "E010",
+      "kind": "error",
+      "class": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testList",
+      "category": "S10",
+      "observed": "撤销旧角色权限后本人列表仍可访问，通用探针因此抛异常",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/UserApiKeysControllerTests.java",
+      "line": 158
+    },
+    {
+      "id": "F068",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.UserApiKeysControllerTests",
+      "test": "testDisable",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：当前用户无操作该ApiKey的权限",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/UserApiKeysControllerTests.java",
+      "line": 185
+    },
+    {
+      "id": "F069",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testAdd",
+      "category": "S01",
+      "observed": "期待 5xx；实际 422 / 100422：当前用户本地配置已存在",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/UserLocalConfigControllerTests.java",
+      "line": 69
+    },
+    {
+      "id": "F070",
+      "kind": "failure",
+      "class": "io.metersphere.system.controller.UserLocalConfigControllerTests",
+      "test": "testGet",
+      "category": "S11",
+      "observed": "期待两条配置，实际一条；前置 testAdd 断言失败，第二种配置尚未创建",
+      "source": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/UserLocalConfigControllerTests.java",
+      "line": 141
+    }
+  ]
+}

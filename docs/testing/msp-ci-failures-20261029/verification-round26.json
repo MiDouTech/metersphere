@@ -1,0 +1,100 @@
+{
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40893337833",
+  "codeCommit": "540f8a5e2c63f4706b2fbee0dabb6d3829ace370",
+  "status": "partial",
+  "testEvidence": "verification-round20.json",
+  "health": {
+    "commit": "540f8a5e2c63f4706b2fbee0dabb6d3829ace370",
+    "image": "sha256:0150c85232aa87d2654f1b20300911a313768228b7d062990b28620d79fb17d7",
+    "backendEmbeddedStaticHttpStatus": "200",
+    "readiness": {
+      "status": "UP"
+    },
+    "frontendHttpStatus": "200",
+    "frontendTree": "df82344053b5c5199271586145b87144ecae001f",
+    "frontendDelivery": "separate-production-static"
+  },
+  "coreSmoke": {
+    "commit": "540f8a5e2c63f4706b2fbee0dabb6d3829ace370",
+    "viewport": {
+      "width": 1366,
+      "height": 900
+    },
+    "checks": [
+      {
+        "id": "CORE-LOGIN",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CREATE-IDEMPOTENT",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-PLAN-ONE-SELECTOR-AUTO-WIDTH-ALIGNED",
+        "status": "passed",
+        "shortWidth": 273.703125,
+        "longWidth": 581.6875,
+        "planBounds": {
+          "selector": {
+            "x": 544.515625,
+            "y": 364,
+            "width": 581.6875,
+            "height": 32
+          },
+          "progress": {
+            "x": 1134.203125,
+            "y": 377,
+            "width": 90,
+            "height": 6
+          }
+        },
+        "annotations": {
+          "1": "selector",
+          "2": "progress"
+        }
+      },
+      {
+        "id": "CORE-SELECT-ALL-TOGGLE",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CASE-IMAGE-PUBLISH-REPLAY-DOWNLOAD-PLAN-SYNC",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-PLAN-REENTER-FRESH-STATE-AND-SWITCH",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-SOURCE-DEFECT-PLAN-SYNC",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-BUG-LONG-TAGS-NO-OVERLAP",
+        "status": "passed",
+        "tagBounds": {
+          "x": 1034,
+          "y": 390.5,
+          "width": 318,
+          "height": 266
+        },
+        "dateBounds": {
+          "x": 1034,
+          "y": 342.5,
+          "width": 318,
+          "height": 32
+        },
+        "metaBounds": {
+          "x": 1034,
+          "y": 672.5,
+          "width": 318,
+          "height": 185
+        }
+      }
+    ],
+    "status": "failed",
+    "currentCheckpoint": "personal-token-columns-and-controls",
+    "failedCheckpoint": "personal-token-columns-and-controls"
+  },
+  "failure": "Ambiguous global Administrator text in smoke locator; narrowed to actual sidebar personal menu"
+}

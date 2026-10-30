@@ -176,7 +176,7 @@ public class FunctionalCaseRelationshipEdgeService {
     }
 
     public List<FunctionalCaseRelationshipDTO> getFunctionalCasePage(RelationshipRequest request) {
-        List<FunctionalCaseRelationshipDTO> list = extFunctionalCaseRelationshipEdgeMapper.list(request, request.getSortString());
+        List<FunctionalCaseRelationshipDTO> list = extFunctionalCaseRelationshipEdgeMapper.list(request, request.getSortString("id", "fc"));
         if (CollectionUtils.isEmpty(list)) {
             return new ArrayList<>();
         }

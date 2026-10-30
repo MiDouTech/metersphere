@@ -1,0 +1,51 @@
+[
+  {
+    "method": "POST",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/precheck?requestId=80f24c43-12fc-482e-a0f1-db0db0d003d6",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"4199cf0e-c5eb-4b2b-8cac-db9f870116f7\",\"expiresAt\":1793253457625,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"PRECHECKED\"}}",
+    "time": 1793167056753
+  },
+  {
+    "method": "GET",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/4199cf0e-c5eb-4b2b-8cac-db9f870116f7?current=1&pageSize=10&_t=1793167056753",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"4199cf0e-c5eb-4b2b-8cac-db9f870116f7\",\"expiresAt\":1793253457625,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"PRECHECKED\",\"followup\":{\"state\":\"LEGACY\"}}}",
+    "time": 1793167056877
+  },
+  {
+    "method": "GET",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/4199cf0e-c5eb-4b2b-8cac-db9f870116f7/followup-options?_t=1793167056877",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"projectId\":\"1704667279923322880\",\"canCreate\":true,\"groups\":[{\"id\":\"48b1ccb8-6fa9-4334-a701-85006ac5aa1c\",\"revision\":3,\"planId\":\"1710884880739475461\",\"reviewId\":\"1710884932279083008\",\"planName\":\"ACCEPTANCE-20261027-导入联动计划\",\"reviewName\":\"ACCEPTANCE-20261027-导入联动评审\"}]}}",
+    "time": 1793167056990
+  },
+  {
+    "method": "POST",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/4199cf0e-c5eb-4b2b-8cac-db9f870116f7/stop",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"4199cf0e-c5eb-4b2b-8cac-db9f870116f7\",\"expiresAt\":1793253457625,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"STOPPED\"}}",
+    "time": 1793167077214
+  },
+  {
+    "method": "GET",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/4199cf0e-c5eb-4b2b-8cac-db9f870116f7?current=1&pageSize=10&_t=1793167077214",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"4199cf0e-c5eb-4b2b-8cac-db9f870116f7\",\"expiresAt\":1793253457625,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"STOPPED\",\"followup\":{\"state\":\"LEGACY\"}}}",
+    "time": 1793167077246
+  },
+  {
+    "method": "POST",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/4199cf0e-c5eb-4b2b-8cac-db9f870116f7/retry",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"4199cf0e-c5eb-4b2b-8cac-db9f870116f7\",\"expiresAt\":1793253457625,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"QUEUED\"}}",
+    "time": 1793167101448
+  },
+  {
+    "method": "GET",
+    "url": "https://msp.ebcone.net/api/ai/case-imports/4199cf0e-c5eb-4b2b-8cac-db9f870116f7?current=1&pageSize=10&_t=1793167101449",
+    "status": 200,
+    "body": "{\"code\":100200,\"message\":null,\"messageDetail\":null,\"data\":{\"pageSize\":10,\"current\":1,\"total\":1,\"jobId\":\"4199cf0e-c5eb-4b2b-8cac-db9f870116f7\",\"expiresAt\":1793253457625,\"counts\":[{\"state\":\"PENDING\",\"total\":1}],\"items\":[{\"position\":1,\"action\":\"CREATE\",\"caseId\":null,\"state\":\"PENDING\",\"message\":null}],\"fileName\":\"import-one.xlsx\",\"state\":\"QUEUED\",\"followup\":{\"state\":\"LEGACY\"}}}",
+    "time": 1793167101482
+  }
+]

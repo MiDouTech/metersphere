@@ -214,7 +214,7 @@
 
     <select id="checkCaseByModuleIds" resultType="io.metersphere.functional.domain.FunctionalCase">
         SELECT
-            id, name, module_id, create_user
+            id, name, module_id, create_user, project_id, deleted
         FROM
             functional_case
         WHERE

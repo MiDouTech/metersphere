@@ -191,10 +191,10 @@ public class SystemOrganizationControllerTests extends BaseTest {
         request.setUserIds(List.of("user-id1", "user-id2"));
         // 组织不存在
         request.setId("default-organization-x");
-        this.requestPost(ORGANIZATION_UPDATE, request).andExpect(status().is5xxServerError());
+        this.requestPost(ORGANIZATION_UPDATE, request).andExpect(businessError("组织不存在"));
         // 组织存在, 但是名称重复
         request.setId("default-organization-5");
-        this.requestPost(ORGANIZATION_UPDATE, request).andExpect(status().is5xxServerError());
+        this.requestPost(ORGANIZATION_UPDATE, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("organization_name_already_exists")));
         request.setUserIds(new ArrayList<>());
         this.requestPost(ORGANIZATION_UPDATE, request).andExpect(status().isBadRequest());
     }
@@ -213,7 +213,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
     public void testDeleteOrganization() throws Exception {
         this.requestGetWithOk(ORGANIZATION_DELETE + "/default-organization-5");
         // 删除默认组织
-        this.requestGet(ORGANIZATION_DELETE + "/100001").andExpect(status().is5xxServerError());
+        this.requestGet(ORGANIZATION_DELETE + "/100001").andExpect(businessError("默认组织无法删除"));
     }
 
     @Test
@@ -250,7 +250,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
     @Test
     @Order(11)
     public void testListAllOrganizationError() throws Exception {
-        this.requestGet(ORGANIZATION_LIST_OPTION_ALL, status().isMethodNotAllowed());
+        this.requestGet(ORGANIZATION_LIST_OPTION_ALL).andExpect(status().isMethodNotAllowed());
     }
 
     @Test
@@ -403,19 +403,20 @@ public class SystemOrganizationControllerTests extends BaseTest {
         organizationMemberRequest.setOrganizationId("default-organization-3");
         organizationMemberRequest.setUserIds(Arrays.asList("SccNotExistOne", "SccNotExistTwo"));
         organizationMemberRequest.setUserRoleIds(List.of("default-role-1"));
-        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, businessError("用户不存在"));
         // 成员有一个不存在
         organizationMemberRequest = new OrganizationMemberRequest();
         organizationMemberRequest.setOrganizationId("default-organization-3");
         organizationMemberRequest.setUserIds(Arrays.asList("SccNotExistOne", "default-admin"));
         organizationMemberRequest.setUserRoleIds(List.of("default-role-1"));
-        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest,
+                businessError(io.metersphere.sdk.util.Translator.get("user.not.exist") + ", id: SccNotExistOne"));
         // 组织不存在
         organizationMemberRequest = new OrganizationMemberRequest();
         organizationMemberRequest.setOrganizationId("default-organization-x");
         organizationMemberRequest.setUserIds(Arrays.asList("admin", "default-admin"));
         organizationMemberRequest.setUserRoleIds(List.of("default-role-1"));
-        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_ADD_MEMBER, organizationMemberRequest, businessError(io.metersphere.sdk.util.Translator.get("organization_not_exist")));
     }
 
     @Test
@@ -425,7 +426,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
         // 日志校验
         checkLog("default-organization-3", OperationLogType.DELETE);
 
-        this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/default-organization-5/user-id1", status().is5xxServerError());
+        this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/default-organization-5/user-id1", businessError("至少保留一个管理员"));
         // 权限校验
         requestGetPermissionTest(PermissionConstants.SYSTEM_ORGANIZATION_PROJECT_MEMBER_DELETE, ORGANIZATION_REMOVE_MEMBER + "/default-organization-3/admin");
     }
@@ -434,7 +435,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
     @Order(17)
     public void testRemoveOrganizationMemberError() throws Exception {
         // 组织不存在
-        this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/default-organization-x/admin-x", status().is5xxServerError());
+        this.requestGet(ORGANIZATION_REMOVE_MEMBER + "/default-organization-x/admin-x", businessError("组织不存在"));
     }
 
     @Test
@@ -513,7 +514,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
     @Test
     @Order(22)
     public void testGetDefaultOrganizationError() throws Exception {
-        this.requestPost(ORGANIZATION_DEFAULT, null, status().isMethodNotAllowed());
+        this.requestPost(ORGANIZATION_DEFAULT, null).andExpect(status().isMethodNotAllowed());
     }
 
     @Test
@@ -657,7 +658,7 @@ public class SystemOrganizationControllerTests extends BaseTest {
         OrganizationEditRequest request = new OrganizationEditRequest();
         request.setName("task002-test-org");
         request.setUserIds(List.of("admin"));
-        this.requestPost(ORGANIZATION_ADD, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_ADD, request, businessError("组织名已存在"));
 
         request.setName("task002-test-org-empty");
         request.setUserIds(Collections.emptyList());
@@ -688,11 +689,11 @@ public class SystemOrganizationControllerTests extends BaseTest {
 
         request.setOrganizationId("default-organization-x");
         request.setUserId("admin");
-        this.requestPost(ORGANIZATION_SWITCH, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_SWITCH, request, businessError("组织不存在"));
 
         request.setOrganizationId("default-organization-2");
         request.setUserId("other-user");
-        this.requestPost(ORGANIZATION_SWITCH, request, status().is5xxServerError());
+        this.requestPost(ORGANIZATION_SWITCH, request, businessError(io.metersphere.sdk.util.Translator.get("not_authorized")));
     }
 
     @Test

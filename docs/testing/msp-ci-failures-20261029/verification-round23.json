@@ -1,0 +1,40 @@
+{
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40885756426",
+  "codeCommit": "f7d2280c697379f4f509dd5cc38862fcd1a48bbb",
+  "status": "partial",
+  "testEvidence": "verification-round20.json",
+  "health": {
+    "commit": "f7d2280c697379f4f509dd5cc38862fcd1a48bbb",
+    "image": "sha256:0150c85232aa87d2654f1b20300911a313768228b7d062990b28620d79fb17d7",
+    "frontendHttpStatus": "200",
+    "readiness": {
+      "status": "UP"
+    }
+  },
+  "coreSmoke": {
+    "commit": "f7d2280c697379f4f509dd5cc38862fcd1a48bbb",
+    "viewport": {
+      "width": 1366,
+      "height": 900
+    },
+    "checks": [
+      {
+        "id": "CORE-LOGIN",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CREATE-IDEMPOTENT",
+        "status": "passed"
+      }
+    ],
+    "status": "failed",
+    "currentCheckpoint": "plan-summary-layout",
+    "failedCheckpoint": "plan-summary-layout"
+  },
+  "imageIdentity": {
+    "key": "msp-runtime-image-Linux-a2f3bfecea7da39a632cf98bd1d5741eb86e6dde0ab16c9bf6814ad05bfe5ea5-e5737dbbe1dc0263fd1c0626c8b543c34cafa3b1-36c92e6ed36a5b80fe072a09b841ef9da83b64de-a359b35bc58833668d64baf6cb062f887b19d3b7",
+    "image": "sha256:0150c85232aa87d2654f1b20300911a313768228b7d062990b28620d79fb17d7",
+    "jarSha256": "a2f3bfecea7da39a632cf98bd1d5741eb86e6dde0ab16c9bf6814ad05bfe5ea5"
+  },
+  "failure": "Plan selector and progress must share a horizontal centre"
+}

@@ -74,8 +74,9 @@ class AgentBatchReadTests {
     @Test void fiveHundredDetailsUseThreeBoundedBatchesAndPreservePlanExecutionMetadata() {
         var cases=mock(FunctionalCaseService.class);var service=new AgentFunctionalCaseExportService();
         ReflectionTestUtils.setField(service,"functionalCaseService",cases);
+        ReflectionTestUtils.setField(service,"executionViews",mock(io.metersphere.functional.service.FunctionalExecutionViewService.class));
         ReflectionTestUtils.setField(service,"agentCaseSchemaMapper",new AgentCaseSchemaMapper());
-        when(cases.getAgentCaseDetails(anyList(),eq("p"),eq(true))).thenAnswer(call->{
+        when(cases.getAgentCaseDetailsForSearch(anyList(),eq("p"))).thenAnswer(call->{
             Map<String,io.metersphere.functional.dto.FunctionalCaseDetailDTO> result=new HashMap<>();
             for(String id:call.<List<String>>getArgument(0)) {
                 var d=new io.metersphere.functional.dto.FunctionalCaseDetailDTO();d.setId(id);d.setProjectId("p");d.setSteps("[]");d.setLastExecuteUser("repository");result.put(id,d);
@@ -85,7 +86,7 @@ class AgentBatchReadTests {
         List<AgentCaseDTO> rows=new ArrayList<>();
         for(int i=0;i<500;i++){var row=new AgentCaseDTO();row.setCaseId("c"+i);row.setProjectId("p");row.setTestPlanId("plan");row.setLastExecuteUser("plan-user");rows.add(row);}
         service.enrichWithSteps(rows,new ArrayList<>());
-        verify(cases,times(3)).getAgentCaseDetails(argThat(ids->ids.size()<=200),eq("p"),eq(true));
+        verify(cases,times(3)).getAgentCaseDetailsForSearch(argThat(ids->ids.size()<=200),eq("p"));
         assertTrue(rows.stream().allMatch(row->"plan-user".equals(row.getLastExecuteUser())));
         verify(cases,never()).getFunctionalCaseDetail(anyString(),any(),anyBoolean());
     }

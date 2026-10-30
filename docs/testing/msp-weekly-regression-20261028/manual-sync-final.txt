@@ -1,0 +1,267 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      text "用例"
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=459]
+            svg_root
+        list_item
+          button [ref=460]
+            svg_root
+        list_item
+          button [ref=461]
+            svg_root
+        list_item
+          switch [ref=462]
+            svg_root
+        list_item
+          button [ref=463]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "首页"
+          container
+            svg_root
+            text "项目"
+          container
+            svg_root
+            text "资产"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "系统"
+        svg_root
+      container [ref=464]
+        container [ref=465]
+          container
+            container
+              container [ref=466]
+                text "执行用例"
+              container [ref=467]
+                text "Xmind用例"
+            button [ref=468]
+              svg_root
+              text "刷新"
+          splitter
+          container
+            container
+              textbox [ref=469, loc=css:input[placeholder="请输入模块名称"]]
+                text "请输入模块名称"
+              container
+                container
+                  svg_root
+                  text "全部用例"
+                  text "(1)"
+                container
+                  svg_root
+                  svg_root
+                  svg_root
+              container [ref=470]
+                container
+                  svg_root
+                  text "未规划用例"
+                  text "1"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "MSP需求验收-20261023"
+                    text "0"
+                container
+                  svg_root
+                  container
+                    svg_root
+                    text "ACCEPTANCE-20261027-移动父目录"
+                    text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-导入目录"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-并发去重目录"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-1"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-64"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-65"
+                  text "0"
+                container
+                  svg_root
+                  text "ACCEPTANCE-20261027-requestId-128"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写幂等键"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写独立A"
+                  text "0"
+                container
+                  svg_root
+                  text "REMAINING-20261027-大小写独立B"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-key128"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-并发同键"
+                  text "0"
+                container
+                  svg_root
+                  text "WEEKLY-20261028-key1"
+                  text "0"
+            container
+              svg_root
+              container [ref=471]
+                container
+                  container [ref=472]
+                    text "用例列表"
+                  container [ref=473]
+                    text "用例详情"
+                container
+                  container
+                    container
+                      button [ref=474]
+                        text "新建"
+                      container
+                        button [ref=475]
+                          text "导入"
+                        button [ref=476]
+                          text "旧版导入记录"
+                        button [ref=477]
+                          text "最近导入任务"
+                        container
+                          text "从 Excel 导入"
+                          text "从用例资产导入"
+                      button [ref=478]
+                        text "导出记录"
+                      button [ref=479]
+                        text "同步全部用例数据至测试计划"
+                      text "同步进度：6/6 · 已完成"
+                    container
+                      container
+                        textbox [ref=480, loc=css:input[placeholder="通过 ID/名称/标签搜索"]]
+                          text "WEEKLY-20261028-证据与幂等隔离"
+                        svg_root
+                      container
+                        text "视图"
+                        text "全部数据"
+                        svg_root
+                      button [ref=481]
+                        svg_root
+                        text "筛选"
+                      container
+                        svg_root
+                        svg_root
+                      svg_root
+                  container
+                    container
+                      text "测试计划："
+                      container
+                        container "测试计划"
+                          text "WEEKLY-20261028-导入计划（100006）"
+                          svg_root
+                        container "测试计划: WEEKLY-20261028-导入计划（100006）, 通过率: 0/3, 0%"
+                        text "0%"
+                    container
+                      text "个人执行进度："
+                      text "-"
+                  container
+                    container
+                      text "已选择 0 条"
+                      button [ref=482]
+                        text "导出"
+                      button [ref=483]
+                        text "全选所有页"
+                      button [ref=484]
+                        text "编辑"
+                      button [ref=485]
+                        text "批量修改执行结果"
+                      button [ref=486]
+                        text "批量修改执行人"
+                      button [ref=487]
+                        text "移动到"
+                      button [ref=488]
+                        text "复制到"
+                      button [ref=489]
+                        text "清空"
+                    container
+                      table
+                        table_row
+                          table_cell
+                          table_cell
+                            svg_root
+                          table_cell
+                            text "ID"
+                          table_cell
+                            text "用例名称"
+                          table_cell
+                            container
+                              text "用例等级"
+                              svg_root
+                          table_cell
+                            text "评审结果"
+                          table_cell
+                            text "操作"
+                            svg_root
+                      container [ref=490]
+                        table
+                          table_row
+                            table_cell
+                              svg_root
+                            table_cell
+                            table_cell
+                              text "100026"
+                            table_cell
+                              text "WEEKLY-20261028-证据与幂等隔离"
+                              svg_root
+                            table_cell
+                              text "P3"
+                              svg_root
+                            table_cell
+                              svg_root
+                            table_cell
+                              text "详情"
+                              splitter
+                              text "编辑"
+                              splitter
+                              text "复制"
+                              splitter
+                              svg_root
+                    container
+                      text "共 1 条"
+                      container
+                        text "20 条/页"
+                        svg_root
+                      unordered_list
+                        svg_root
+                        list_item
+                          text "1"
+                        svg_root
+  svg_root

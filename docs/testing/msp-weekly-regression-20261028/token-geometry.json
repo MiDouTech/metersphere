@@ -1,0 +1,169 @@
+{
+  "width": 971,
+  "height": 852,
+  "headers": [
+    {
+      "text": "Token 名称",
+      "rect": {
+        "x": 444,
+        "y": 382.5,
+        "width": 500,
+        "height": 39,
+        "top": 382.5,
+        "right": 944,
+        "bottom": 421.5,
+        "left": 444
+      }
+    },
+    {
+      "text": "可访问项目",
+      "rect": {
+        "x": 944,
+        "y": 382.5,
+        "width": 160,
+        "height": 39,
+        "top": 382.5,
+        "right": 1104,
+        "bottom": 421.5,
+        "left": 944
+      }
+    },
+    {
+      "text": "客户端",
+      "rect": {
+        "x": 1104,
+        "y": 382.5,
+        "width": 120,
+        "height": 39,
+        "top": 382.5,
+        "right": 1224,
+        "bottom": 421.5,
+        "left": 1104
+      }
+    },
+    {
+      "text": "权限范围",
+      "rect": {
+        "x": 1224,
+        "y": 382.5,
+        "width": 180,
+        "height": 39,
+        "top": 382.5,
+        "right": 1404,
+        "bottom": 421.5,
+        "left": 1224
+      }
+    },
+    {
+      "text": "创建时间",
+      "rect": {
+        "x": 1404,
+        "y": 382.5,
+        "width": 170,
+        "height": 39,
+        "top": 382.5,
+        "right": 1574,
+        "bottom": 421.5,
+        "left": 1404
+      }
+    },
+    {
+      "text": "最后使用时间",
+      "rect": {
+        "x": 1574,
+        "y": 382.5,
+        "width": 170,
+        "height": 39,
+        "top": 382.5,
+        "right": 1744,
+        "bottom": 421.5,
+        "left": 1574
+      }
+    },
+    {
+      "text": "调用次数",
+      "rect": {
+        "x": 1744,
+        "y": 382.5,
+        "width": 120,
+        "height": 39,
+        "top": 382.5,
+        "right": 1864,
+        "bottom": 421.5,
+        "left": 1744
+      }
+    },
+    {
+      "text": "启用",
+      "rect": {
+        "x": 921,
+        "y": 382.5,
+        "width": 100,
+        "height": 39,
+        "top": 382.5,
+        "right": 1021,
+        "bottom": 421.5,
+        "left": 921
+      }
+    },
+    {
+      "text": "操作",
+      "rect": {
+        "x": 1021,
+        "y": 382.5,
+        "width": 140,
+        "height": 39,
+        "top": 382.5,
+        "right": 1161,
+        "bottom": 421.5,
+        "left": 1021
+      }
+    }
+  ],
+  "scrolls": [
+    {
+      "class": "one-line-text w-full",
+      "width": 128,
+      "scrollWidth": 148
+    },
+    {
+      "class": "one-line-text w-full",
+      "width": 148,
+      "scrollWidth": 282
+    },
+    {
+      "class": "one-line-text w-full",
+      "width": 128,
+      "scrollWidth": 148
+    },
+    {
+      "class": "one-line-text w-full",
+      "width": 148,
+      "scrollWidth": 453
+    },
+    {
+      "class": "one-line-text w-full",
+      "width": 128,
+      "scrollWidth": 148
+    },
+    {
+      "class": "one-line-text w-full",
+      "width": 148,
+      "scrollWidth": 453
+    },
+    {
+      "class": "one-line-text w-full",
+      "width": 128,
+      "scrollWidth": 148
+    },
+    {
+      "class": "one-line-text w-full",
+      "width": 148,
+      "scrollWidth": 453
+    }
+  ],
+  "resources": [
+    "https://msp.ebcone.net/api/personal/agent-package/manifest?_t=1793166588530",
+    "https://msp.ebcone.net/api/personal/agent-tokens?current=1&pageSize=10&keyword=&viewId=&combineSearch[searchMode]=AND&_t=1793166588581"
+  ]
+}

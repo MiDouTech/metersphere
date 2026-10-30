@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 public interface ExtUserRoleRelationMapper {
+    List<UserRoleRelation> selectNaturalKeyForUpdate(@Param("relation") UserRoleRelation relation);
     List<UserRoleRelation> selectGlobalRoleByUserIdList(@Param("userIds") List<String> userIdList);
 
     List<UserRoleRelation> selectRoleByUserIdList(@Param("userIds") List<String> userIdList);

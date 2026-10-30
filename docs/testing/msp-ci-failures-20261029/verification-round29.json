@@ -1,0 +1,172 @@
+{
+  "run": "https://github.com/chenqifen-miduo/metersphere/actions/runs/40898154538",
+  "codeCommit": "a315b8691c254b32a5bb86806c25e947bc89be52",
+  "status": "passed",
+  "backendEvidence": "verification-round20.json",
+  "backendTests": {
+    "total": 2123,
+    "current": 462,
+    "retained": 1661,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "missingTestcases": 0
+  },
+  "migrations": {
+    "count": 173,
+    "version": "3.7.2.136"
+  },
+  "coreSmoke": {
+    "commit": "a315b8691c254b32a5bb86806c25e947bc89be52",
+    "viewport": {
+      "width": 1366,
+      "height": 900
+    },
+    "checks": [
+      {
+        "id": "CORE-LOGIN",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CREATE-IDEMPOTENT",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-PLAN-ONE-SELECTOR-AUTO-WIDTH-ALIGNED",
+        "status": "passed",
+        "shortWidth": 273.703125,
+        "longWidth": 581.6875,
+        "planBounds": {
+          "selector": {
+            "x": 544.515625,
+            "y": 364,
+            "width": 581.6875,
+            "height": 32
+          },
+          "progress": {
+            "x": 1134.203125,
+            "y": 377,
+            "width": 90,
+            "height": 6
+          }
+        },
+        "annotations": {
+          "1": "selector",
+          "2": "progress"
+        }
+      },
+      {
+        "id": "CORE-SELECT-ALL-TOGGLE",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-CASE-IMAGE-PUBLISH-REPLAY-DOWNLOAD-PLAN-SYNC",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-PLAN-REENTER-FRESH-STATE-AND-SWITCH",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-SOURCE-DEFECT-PLAN-SYNC",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-BUG-LONG-TAGS-NO-OVERLAP",
+        "status": "passed",
+        "tagBounds": {
+          "x": 1034,
+          "y": 390.5,
+          "width": 318,
+          "height": 266
+        },
+        "dateBounds": {
+          "x": 1034,
+          "y": 342.5,
+          "width": 318,
+          "height": 32
+        },
+        "metaBounds": {
+          "x": 1034,
+          "y": 672.5,
+          "width": 318,
+          "height": 185
+        }
+      },
+      {
+        "id": "CORE-PERSONAL-TOKEN-COLUMNS",
+        "status": "passed",
+        "panelBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 1366,
+          "height": 900
+        },
+        "tokenColumnBounds": {
+          "启用": {
+            "x": 1080,
+            "y": 360.5,
+            "width": 100,
+            "height": 39
+          },
+          "操作": {
+            "x": 1180,
+            "y": 360.5,
+            "width": 140,
+            "height": 39
+          }
+        }
+      },
+      {
+        "id": "CORE-PERSONAL-TOKEN-HORIZONTAL-ACCESS",
+        "status": "passed",
+        "clientWidth": 876,
+        "scrollWidth": 1660,
+        "className": "arco-scrollbar-container arco-table-body"
+      },
+      {
+        "id": "CORE-PERSONAL-TOKEN-ENABLE-DISABLE",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-PERSONAL-TOKEN-SETTINGS-DIALOG",
+        "status": "passed"
+      },
+      {
+        "id": "CORE-MCP-REVOKED-TOKEN-DENIED",
+        "status": "passed"
+      }
+    ],
+    "status": "passed",
+    "currentCheckpoint": "token-revocation"
+  },
+  "health": {
+    "commit": "a315b8691c254b32a5bb86806c25e947bc89be52",
+    "image": "sha256:0150c85232aa87d2654f1b20300911a313768228b7d062990b28620d79fb17d7",
+    "backendEmbeddedStaticHttpStatus": "200",
+    "readiness": {
+      "status": "UP"
+    },
+    "frontendHttpStatus": "200",
+    "frontendTree": "df82344053b5c5199271586145b87144ecae001f",
+    "frontendDelivery": "separate-production-static"
+  },
+  "frontendBuild": {
+    "sourceCommit": "ff552bc0f30c76c34a6fd38873c3f209dccebd49",
+    "sourceRun": "40888480458",
+    "frontendTree": "df82344053b5c5199271586145b87144ecae001f"
+  },
+  "backendBuild": {
+    "sourceCommit": "e9bdac6feacd126ace55ffd39f4ffef83b433312",
+    "sourceRun": "40876632979",
+    "backendTree": "e08a48d15874cac41aa4e808a74c32692c780faa",
+    "frontendTree": "8bbc355cba9a664de7d6f932df5b361159365d81",
+    "buildInputsHash": "91ad8d32051e1aa3be2c659c1ab6f184b0a04c3681d329356051c19c09b90557",
+    "jarSha256": "a2f3bfecea7da39a632cf98bd1d5741eb86e6dde0ab16c9bf6814ad05bfe5ea5"
+  },
+  "imageIdentity": {
+    "key": "msp-runtime-image-Linux-a2f3bfecea7da39a632cf98bd1d5741eb86e6dde0ab16c9bf6814ad05bfe5ea5-e5737dbbe1dc0263fd1c0626c8b543c34cafa3b1-36c92e6ed36a5b80fe072a09b841ef9da83b64de-a359b35bc58833668d64baf6cb062f887b19d3b7",
+    "image": "sha256:0150c85232aa87d2654f1b20300911a313768228b7d062990b28620d79fb17d7",
+    "jarSha256": "a2f3bfecea7da39a632cf98bd1d5741eb86e6dde0ab16c9bf6814ad05bfe5ea5"
+  }
+}

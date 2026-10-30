@@ -1,0 +1,13 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "data": {
+      "code": "QUALITY_CASE_EVIDENCE_REQUIRED",
+      "traceId": "a3bc647d-dcaa-4ad4-aaa4-3835315c417e"
+    },
+    "message": "请为本次用例执行补充有效图片证据，一张图片可覆盖所有步骤",
+    "code": -32001
+  }
+}

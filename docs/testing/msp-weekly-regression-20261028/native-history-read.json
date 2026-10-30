@@ -1,0 +1,165 @@
+{
+  "get": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"id\":\"a9744a75-ef3b-4a97-9fce-220d056a684d\",\"result\":\"ERROR\",\"gate_status\":\"ACCEPTED\",\"review_code\":\"STRUCTURE_VALIDATED\",\"reviewer_version\":\"structure-v1\",\"content_hash\":\"1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83\",\"policy_hash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"facts\":{\"schemaVersion\":\"direct-execution.v2\",\"definition\":{\"caseId\":\"1712306377475530754\",\"projectId\":\"1704667279923322880\",\"versionId\":\"1704667279923322928\",\"name\":\"WEEKLY-20261028-证据与幂等隔离\",\"caseEditType\":\"STEP\",\"description\":\"仅协议验收，不代表真实业务执行；本轮隔离数据\",\"prerequisite\":\"\",\"priority\":\"P2\",\"customFields\":[],\"steps\":[{\"position\":1,\"description\":\"协议位置1\",\"expected\":\"结构保留\"},{\"position\":2,\"description\":\"协议位置2\",\"expected\":\"结构保留\"}]},\"steps\":[{\"stepNum\":1,\"actual\":\"仅结构协议测试，不代表真实业务执行\",\"result\":\"SUCCESS\"},{\"stepNum\":2,\"actual\":\"仅结构协议测试，故意声明ERROR以验聚合\",\"result\":\"ERROR\"}],\"policySnapshot\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"evidence\":[{\"id\":\"b4451427-cf4e-4300-9ebf-fd68ae304ed9\",\"file_name\":\"protocol-ui-evidence.png\",\"content_type\":\"image/png\",\"size_bytes\":104112,\"sha256\":\"2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d\",\"evidence_scope\":\"CASE\",\"definition_hash_version\":\"definition-v2\",\"content_hash\":\"1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83\"}],\"evidenceIds\":[\"b4451427-cf4e-4300-9ebf-fd68ae304ed9\"],\"evidenceScope\":\"CASE\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"resultSource\":\"AGENT_REPORTED\",\"directEvidenceRuleVersion\":\"case-image-v1\"},\"create_time\":1793166984243,\"submissionId\":\"a9744a75-ef3b-4a97-9fce-220d056a684d\",\"caseId\":\"1712306377475530754\",\"gateStatus\":\"ACCEPTED\",\"publishStatus\":\"PUBLISHED\",\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"contentHash\":\"1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83\",\"reviewerVersion\":\"structure-v1\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"resultSource\":\"AGENT_REPORTED\",\"evidenceScope\":\"CASE\",\"evidenceIds\":[\"b4451427-cf4e-4300-9ebf-fd68ae304ed9\"],\"issues\":[]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "id": "a9744a75-ef3b-4a97-9fce-220d056a684d",
+          "result": "ERROR",
+          "gate_status": "ACCEPTED",
+          "review_code": "STRUCTURE_VALIDATED",
+          "reviewer_version": "structure-v1",
+          "content_hash": "1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83",
+          "policy_hash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "facts": {
+            "schemaVersion": "direct-execution.v2",
+            "definition": {
+              "caseId": "1712306377475530754",
+              "projectId": "1704667279923322880",
+              "versionId": "1704667279923322928",
+              "name": "WEEKLY-20261028-证据与幂等隔离",
+              "caseEditType": "STEP",
+              "description": "仅协议验收，不代表真实业务执行；本轮隔离数据",
+              "prerequisite": "",
+              "priority": "P2",
+              "customFields": [],
+              "steps": [
+                {
+                  "position": 1,
+                  "description": "协议位置1",
+                  "expected": "结构保留"
+                },
+                {
+                  "position": 2,
+                  "description": "协议位置2",
+                  "expected": "结构保留"
+                }
+              ]
+            },
+            "steps": [
+              {
+                "stepNum": 1,
+                "actual": "仅结构协议测试，不代表真实业务执行",
+                "result": "SUCCESS"
+              },
+              {
+                "stepNum": 2,
+                "actual": "仅结构协议测试，故意声明ERROR以验聚合",
+                "result": "ERROR"
+              }
+            ],
+            "policySnapshot": {
+              "name": "订单复测-证据与冻结断言-20261019",
+              "rules": [
+                {
+                  "parameters": {
+                    "allowedMimeTypes": [
+                      "image/png",
+                      "image/jpeg"
+                    ],
+                    "maxArtifactBytes": 5242880,
+                    "requiredRoles": [
+                      "BEFORE_ACTION",
+                      "AFTER_ACTION"
+                    ]
+                  },
+                  "ruleId": "Q-EVIDENCE-01"
+                },
+                {
+                  "parameters": {
+                    "allowedOperators": [
+                      "EQUALS",
+                      "IN_RANGE"
+                    ],
+                    "expectedSource": "FROZEN_CONTRACT"
+                  },
+                  "ruleId": "Q-ASSERT-01"
+                }
+              ],
+              "schemaVersion": "quality-policy.v1"
+            },
+            "evidence": [
+              {
+                "id": "b4451427-cf4e-4300-9ebf-fd68ae304ed9",
+                "file_name": "protocol-ui-evidence.png",
+                "content_type": "image/png",
+                "size_bytes": 104112,
+                "sha256": "2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d",
+                "evidence_scope": "CASE",
+                "definition_hash_version": "definition-v2",
+                "content_hash": "1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83"
+              }
+            ],
+            "evidenceIds": [
+              "b4451427-cf4e-4300-9ebf-fd68ae304ed9"
+            ],
+            "evidenceScope": "CASE",
+            "validationMode": "STRUCTURE_ONLY_V1",
+            "resultSource": "AGENT_REPORTED",
+            "directEvidenceRuleVersion": "case-image-v1"
+          },
+          "create_time": 1793166984243,
+          "submissionId": "a9744a75-ef3b-4a97-9fce-220d056a684d",
+          "caseId": "1712306377475530754",
+          "gateStatus": "ACCEPTED",
+          "publishStatus": "PUBLISHED",
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "contentHash": "1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83",
+          "reviewerVersion": "structure-v1",
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "resultSource": "AGENT_REPORTED",
+          "evidenceScope": "CASE",
+          "evidenceIds": [
+            "b4451427-cf4e-4300-9ebf-fd68ae304ed9"
+          ],
+          "issues": []
+        }
+      }
+    }
+  },
+  "attachments": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "[{\"id\":\"863a6261-046f-4b00-ba08-a6cd53497f8d\",\"associationId\":\"863a6261-046f-4b00-ba08-a6cd53497f8d\",\"fileId\":\"b4451427-cf4e-4300-9ebf-fd68ae304ed9\",\"fileName\":\"protocol-ui-evidence.png\",\"size\":104112,\"createUser\":\"1559871391069831258\",\"createUserName\":\"陈启芬\",\"createTime\":1793166984243,\"local\":true,\"source\":\"ATTACHMENT\"}]",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": [
+          {
+            "id": "863a6261-046f-4b00-ba08-a6cd53497f8d",
+            "associationId": "863a6261-046f-4b00-ba08-a6cd53497f8d",
+            "fileId": "b4451427-cf4e-4300-9ebf-fd68ae304ed9",
+            "fileName": "protocol-ui-evidence.png",
+            "size": 104112,
+            "createUser": "1559871391069831258",
+            "createUserName": "陈启芬",
+            "createTime": 1793166984243,
+            "local": true,
+            "source": "ATTACHMENT"
+          }
+        ]
+      }
+    }
+  },
+  "imageRead": {
+    "http": 200,
+    "types": [
+      "image",
+      "text"
+    ],
+    "imageBytes": 104112
+  }
+}

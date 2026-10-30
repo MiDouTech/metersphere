@@ -1,0 +1,40 @@
+{
+  "upload": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"projectId\":\"1704667279923322880\",\"caseId\":\"1712306377475530754\",\"sha256\":\"2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d\",\"evidenceId\":\"3d098a77-caad-44a3-b772-0e9686431fd1\",\"expiresAt\":1793255995479,\"sizeBytes\":104112,\"evidenceScope\":\"CASE\",\"resourceState\":\"STAGED\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "caseId": "1712306377475530754",
+          "sha256": "2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d",
+          "evidenceId": "3d098a77-caad-44a3-b772-0e9686431fd1",
+          "expiresAt": 1793255995479,
+          "sizeBytes": 104112,
+          "evidenceScope": "CASE",
+          "resourceState": "STAGED"
+        }
+      }
+    }
+  },
+  "submit": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "QUALITY_FACTS_KEY_NOT_CONFIGURED",
+        "traceId": "986f8086-5fcb-42e2-b994-c0c3d07ecd7c"
+      },
+      "message": "敏感执行事实需要管理员配置加密密钥后再提交",
+      "code": -32001
+    }
+  }
+}

@@ -1,0 +1,386 @@
+[p1 "测试资产云平台" | space "MSP weekly commit regression 20261028"(12): 1 managed, 0 untracked — p1* "测试资产云平台"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      text "用例"
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=867]
+            svg_root
+        list_item
+          button [ref=868]
+            svg_root
+        list_item
+          button [ref=869]
+            svg_root
+        list_item
+          switch [ref=870]
+            svg_root
+        list_item
+          button [ref=871]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "测试计划"
+          container
+            svg_root
+            text "测试用例"
+          container
+            svg_root
+            text "接口测试"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "缺陷管理"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container [ref=872]
+        container [ref=873]
+          container
+            container
+              container [ref=874]
+                text "执行用例"
+              container [ref=875]
+                text "Xmind用例"
+            button [ref=876]
+              svg_root
+              text "刷新"
+          splitter
+          container
+            container
+              textbox [ref=877, loc=css:input[placeholder="请输入模块名称"]]
+                text "原文件完整导入"
+              container
+                container
+                  svg_root
+                  text "全部用例"
+                  text "(1)"
+                container
+                  svg_root
+                  svg_root
+                  svg_root
+              container [ref=878]
+                container
+                  svg_root
+                  text "WEEKLY-20261028-原文件完整导入"
+                  text "0"
+            container [ref=879]
+              container
+                container [ref=880]
+                  text "用例列表"
+                container [ref=881]
+                  text "用例详情"
+              container
+                container
+                  container
+                    button [ref=882]
+                      text "新建"
+                    container
+                      button [ref=883]
+                        text "导入"
+                      button [ref=884]
+                        text "旧版导入记录"
+                      button [ref=885]
+                        text "最近导入任务"
+                      container
+                        text "从 Excel 导入"
+                        text "从用例资产导入"
+                    button [ref=886]
+                      text "导出记录"
+                    button [ref=887]
+                      text "同步全部用例数据至测试计划"
+                    text "同步进度：6/6 · 已完成"
+                  container
+                    container
+                      textbox [ref=888, loc=css:input[placeholder="通过 ID/名称/标签搜索"]]
+                        text "100025"
+                      svg_root
+                    container
+                      text "视图"
+                      text "全部数据"
+                      svg_root
+                    button [ref=889]
+                      svg_root
+                      text "筛选"
+                    container
+                      svg_root
+                      svg_root
+                    svg_root
+                container
+                  container
+                    text "测试计划："
+                    container
+                      container "测试计划"
+                        text "ACCEPTANCE-20261027-导入联动计划（100005）"
+                        svg_root
+                      container "测试计划: ACCEPTANCE-20261027-导入联动计划（100005）, 通过率: 0/12, 0%"
+                      text "0%"
+                  container
+                    text "个人执行进度："
+                    text "-"
+                container
+                  container
+                    text "已选择 0 条"
+                    button [ref=890]
+                      text "导出"
+                    button [ref=891]
+                      text "全选所有页"
+                    button [ref=892]
+                      text "编辑"
+                    button [ref=893]
+                      text "批量修改执行结果"
+                    button [ref=894]
+                      text "批量修改执行人"
+                    button [ref=895]
+                      text "移动到"
+                    button [ref=896]
+                      text "复制到"
+                    button [ref=897]
+                      text "清空"
+                  container
+                    table
+                      table_row
+                        table_cell
+                        table_cell
+                          svg_root
+                        table_cell
+                          text "ID"
+                        table_cell
+                          text "用例名称"
+                        table_cell
+                          container
+                            text "用例等级"
+                            svg_root
+                        table_cell
+                          container
+                            text "评审结果"
+                            svg_root
+                        table_cell
+                          container
+                            text "执行结果"
+                            svg_root
+                        table_cell
+                          text "最后执行时间"
+                        table_cell
+                          container
+                            text "执行人"
+                            svg_root
+                        table_cell
+                          container
+                            text "最后执行人"
+                            svg_root
+                        table_cell
+                          text "所属模块"
+                        table_cell
+                          text "操作"
+                          svg_root
+                    container [ref=898]
+                      table
+                        table_row
+                          table_cell
+                            svg_root
+                          table_cell
+                          table_cell
+                            text "100025"
+                          table_cell
+                            text "拦截页展示扫码时间"
+                            svg_root
+                          table_cell
+                            textbox [ref=899]
+                              text "请选择"
+                            svg_root
+                          table_cell
+                            svg_root
+                            text "未评审"
+                          table_cell
+                            container
+                              svg_root
+                              text "未执行"
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            textbox [ref=900]
+                            svg_root
+                          table_cell
+                            text "-"
+                          table_cell
+                            text "MSP需求验收-20261023"
+                          table_cell
+                            text "详情"
+                            splitter
+                            text "编辑"
+                            splitter
+                            text "复制"
+                            splitter
+                            svg_root
+                  container
+                    text "共 1 条"
+                    container
+                      text "20 条/页"
+                      svg_root
+                    unordered_list
+                      svg_root
+                      list_item
+                        text "1"
+                      svg_root
+  svg_root
+  container
+    container
+      text "导入预检与任务"
+      button "Close" [ref=901, loc=role:button[name="Close"]]
+        svg_root
+    container
+      alert
+        svg_root
+        text "预检已固定文件、模板和覆盖目标。提交后在后台逐条导入；关闭窗口不会停止任务，停止会保留已成功写入的用例。"
+      paragraph
+        text "source-original.xlsx · 全部处理完成 · 共 89 条"
+      text "成功：89"
+      button [ref=907]
+        text "刷新"
+      table
+        table_row
+          table_cell
+            text "条目"
+          table_cell
+            text "处理"
+          table_cell
+            text "状态"
+          table_cell
+            text "说明"
+        table_row
+          table_cell
+            text "1"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "2"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "3"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "4"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "5"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "6"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "7"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "8"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "9"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+        table_row
+          table_cell
+            text "10"
+          table_cell
+            text "新增"
+          table_cell
+            text "成功"
+          table_cell
+      container
+        text "共 89 条"
+        unordered_list
+          svg_root
+          list_item
+            text "1"
+          list_item
+            text "2"
+          list_item
+            text "3"
+          list_item
+            text "4"
+          list_item
+            text "5"
+          list_item
+            text "6"
+          list_item
+            text "7"
+          list_item
+            text "8"
+          list_item
+            text "9"
+          svg_root
+        container
+          text "10 条/页"
+          svg_root

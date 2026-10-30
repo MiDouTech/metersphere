@@ -1,4 +1,4 @@
-# task005 组织架构查询 API 测试数据
+-- task005 组织架构查询 API 测试数据
 
 DELETE FROM department WHERE organization_id = 'sys_default_organization_3';
 DELETE FROM user_role_relation WHERE id LIKE 'org_structure_relation_%';

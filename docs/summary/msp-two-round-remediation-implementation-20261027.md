@@ -135,3 +135,7 @@
 实际执行：`node --max-old-space-size=160 --test frontend/scripts/test-import-job-requests.mjs`，4/4通过；对两处前端文件运行ESLint，0错误、3条测试替身空函数警告；`git diff --check`通过。旧HEAD源文件运行新增语义检查按预期失败，确认回归测试能识别原错误。
 
 本次约560MiB空闲内存，继续跳过本机全量提交钩子。未运行全量vue-tsc/Vite构建、后端/数据库/镜像或浏览器E2E；此修复不改后端和业务交互，完整前端构建由新提交的CI验证。状态：局部修复和回归通过；远端构建结果待确认，原方案的部署验收欠项不变。
+
+## 构建失败复盘
+
+两次错误的代码溯源、验证漏检、10月27日后续发布阻塞及防复发行动见 [两次前端构建失败复盘](msp-build-failure-retrospective-20261028.md)。建议的独立CI与required checks尚未实施，不能视为门禁已经启用。

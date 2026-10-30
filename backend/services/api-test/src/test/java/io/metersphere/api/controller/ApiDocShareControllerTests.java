@@ -91,7 +91,7 @@ public class ApiDocShareControllerTests extends BaseTest {
 		this.download(DEFAULT_PROJECT_ID, "export-id");
 		this.requestGetWithOk(DELETE + docShare.getId());
 		// 不存在的ID
-		this.requestGet(DELETE + "not-exist-id").andExpect(status().is5xxServerError());
+		this.requestGet(DELETE + "not-exist-id").andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_doc_share.not_exist")));
 		this.requestGetWithOk(GET_DETAIL + "doc-share-id");
 		getPluginScript("doc-share-id", DEFAULT_ORGANIZATION_ID);
 	}
@@ -142,7 +142,7 @@ public class ApiDocShareControllerTests extends BaseTest {
 		ApiDocShare docShare2 = JSON.parseObject(JSON.toJSONString(resultHolder2.getData()), ApiDocShare.class);
 		moduleRequest.setShareId(docShare2.getId());
 		this.requestPostWithOk(MODULE_COUNT, moduleRequest);
-		this.requestPost(ADD, request).andExpect(status().is5xxServerError());
+		this.requestPost(ADD, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("api_doc_share.name_duplicate")));
 		ApiDocSharePageRequest pageRequest = new ApiDocSharePageRequest();
 		pageRequest.setProjectId(DEFAULT_PROJECT_ID);
 		pageRequest.setCurrent(1);

@@ -1,0 +1,57 @@
+{
+  "create": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1712306377475530754\",\"num\":100026,\"name\":\"WEEKLY-20261028-证据与幂等隔离\",\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1712306377475530754",
+          "num": 100026,
+          "name": "WEEKLY-20261028-证据与幂等隔离",
+          "moduleId": "root"
+        }
+      }
+    }
+  },
+  "replay": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1712306377475530754\",\"num\":100026,\"name\":\"WEEKLY-20261028-证据与幂等隔离\",\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1712306377475530754",
+          "num": 100026,
+          "name": "WEEKLY-20261028-证据与幂等隔离",
+          "moduleId": "root"
+        }
+      }
+    }
+  },
+  "conflict": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "IDEMPOTENCY_CONFLICT",
+        "traceId": "f1ca442e-9bfc-48cd-8c6d-0c1a30790446"
+      },
+      "message": "相同请求标识的参数已变化，请使用新的请求标识",
+      "code": -32001
+    }
+  }
+}

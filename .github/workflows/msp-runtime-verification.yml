@@ -1,0 +1,211 @@
+name: MSP Verified Package Runtime Acceptance
+on:
+  push:
+    branches: ['codex/weekly-remediation-20261028']
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: 'Run with a successful complete test gate and verified package cache'
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: remediation-runtime-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  frontend:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[runtime-only]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: tree
+        run: echo "value=$(git rev-parse HEAD:frontend)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: frontend-cache
+        with:
+          key: msp-runtime-frontend-v1-${{ runner.os }}-${{ steps.tree.outputs.value }}
+          path: |
+            frontend/dist/
+            .ci-frontend-build.json
+      - uses: pnpm/action-setup@v4
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        with:
+          version: 8.4.0
+      - uses: actions/setup-node@v4
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        with:
+          node-version: 20.8.1
+          cache: pnpm
+          cache-dependency-path: frontend/package.json
+      - name: Verify changed frontend and build production artifact
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        working-directory: frontend
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm run test:selection-toggle
+          pnpm run test:weekly-remediation-sfc
+          pnpm run test:modal-contract
+          pnpm exec stylelint src/views/case-management/caseManagementFeature/components/caseTable.vue
+          pnpm run build
+      - name: Record current frontend identity
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        run: jq -n --arg commit "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" --arg tree "$(git rev-parse HEAD:frontend)" '{sourceCommit:$commit,sourceRun:$run,frontendTree:$tree}' > .ci-frontend-build.json
+      - name: Verify frontend source identity
+        run: |
+          test "$(jq -r .frontendTree .ci-frontend-build.json)" = "$(git rev-parse HEAD:frontend)"
+          test "$(git rev-parse "$(jq -r .sourceCommit .ci-frontend-build.json):frontend")" = "$(git rev-parse HEAD:frontend)"
+      - uses: actions/cache/save@v4
+        if: steps.frontend-cache.outputs.cache-hit != 'true'
+        with:
+          key: msp-runtime-frontend-v1-${{ runner.os }}-${{ steps.tree.outputs.value }}
+          path: |
+            frontend/dist/
+            .ci-frontend-build.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-frontend-static
+          include-hidden-files: true
+          path: |
+            frontend/dist/
+            .ci-frontend-build.json
+          if-no-files-found: error
+          retention-days: 2
+  runtime:
+    needs: frontend
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[runtime-only]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-frontend-static
+          path: .
+      - name: Require successful source test gate and compute exact package identity
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run || '40876632979' }}
+        run: |
+          set -euo pipefail
+          python3 deploy/quality-verify/test_workflow_cache_contract.py
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > "$RUNNER_TEMP/source-run.json"
+          test "$(jq -r .path "$RUNNER_TEMP/source-run.json")" = .github/workflows/msp-remediation-verification.yml
+          test "$(jq -r .status "$RUNNER_TEMP/source-run.json")" = completed
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/jobs" > "$RUNNER_TEMP/source-jobs.json"
+          jq -e '[.jobs[] | select(.name == "backend") | .steps[] | select(.name == "Require complete current or source-verified retained coverage with zero failures, errors or skips" and .conclusion == "success")] | length == 1' "$RUNNER_TEMP/source-jobs.json"
+          source_sha=$(jq -r .head_sha "$RUNNER_TEMP/source-run.json")
+          git fetch --no-tags --depth=1 origin "$source_sha"
+          echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
+          backend_tree=$(git rev-parse HEAD:backend)
+          frontend_tree=$(git rev-parse "$source_sha:frontend")
+          front_source_sha=$(jq -r .sourceCommit .ci-frontend-build.json)
+          [[ "$front_source_sha" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags --depth=1 origin "$front_source_sha"
+          prefix="msp-verified-app-${RUNNER_OS}-${backend_tree}-${frontend_tree}-"
+          gh api --method GET "repos/$GITHUB_REPOSITORY/actions/caches" -f ref="$GITHUB_REF" -f key="$prefix" -f per_page=100 > "$RUNNER_TEMP/package-caches.json"
+          cache_key=$(jq -er --arg prefix "$prefix" '[.actions_caches[].key | select(startswith($prefix))] | if length == 1 then .[0] else error("Exactly one matching verified package cache is required") end' "$RUNNER_TEMP/package-caches.json")
+          inputs_hash=${cache_key#"$prefix"}
+          [[ "$inputs_hash" =~ ^[0-9a-f]{64}$ ]]
+          echo "key=$cache_key" >> "$GITHUB_OUTPUT"
+          echo "inputs=$inputs_hash" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        with:
+          key: ${{ steps.source.outputs.key }}
+          fail-on-cache-miss: true
+          path: |
+            backend/app/target/app-3.x.jar
+            .ci-backend-build.json
+            .ci-test-summary.json
+      - name: Validate package, source and complete test evidence
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_RUN: ${{ inputs.source_run || '40876632979' }}
+          BUILD_INPUTS_HASH: ${{ steps.source.outputs.inputs }}
+        run: |
+          python3 deploy/quality-verify/test_runtime_build.py
+          python3 deploy/quality-verify/verify-runtime-build.py --source-sha "$SOURCE_SHA" --source-run "$SOURCE_RUN" --inputs-hash "$BUILD_INPUTS_HASH"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Compute exact application image identity
+        id: image-identity
+        run: |
+          jar_sha=$(jq -r .jarSha256 .ci-backend-build.json)
+          dockerfile=$(git rev-parse HEAD:Dockerfile.backend)
+          bridge=$(git rev-parse HEAD:wecom-bot-bridge)
+          entry=$(git rev-parse HEAD:deploy/run-with-wecom-bridge.sh)
+          echo "key=msp-runtime-image-${RUNNER_OS}-${jar_sha}-${dockerfile}-${bridge}-${entry}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: image-cache
+        with:
+          key: ${{ steps.image-identity.outputs.key }}
+          path: |
+            .ci-app-image.tar
+            .ci-app-image.json
+      - uses: actions/cache/restore@v4
+        id: minio-cache
+        with:
+          path: .ci-minio-image.tar
+          key: minio-test-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('deploy/quality-verify/Dockerfile.minio-test-source') }}
+      - name: Prepare pinned MinIO dependency
+        run: |
+          if [ -f .ci-minio-image.tar ]; then docker load -i .ci-minio-image.tar; else docker build -t minio/minio:RELEASE.2023-03-13T19-46-17Z -f deploy/quality-verify/Dockerfile.minio-test-source .; fi
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.8.1
+          cache: pnpm
+          cache-dependency-path: frontend/package.json
+      - name: Prepare single browser without rebuilding frontend
+        working-directory: frontend
+        run: |
+          pnpm install --no-frozen-lockfile
+          if ! command -v google-chrome >/dev/null; then pnpm exec playwright install chrome --with-deps; fi
+          if command -v fc-list >/dev/null; then fc-list :lang=zh > "$RUNNER_TEMP/msp-fonts-zh.txt"; else : > "$RUNNER_TEMP/msp-fonts-zh.txt"; fi
+          if [ ! -s "$RUNNER_TEMP/msp-fonts-zh.txt" ]; then sudo apt-get update && sudo apt-get install -y fontconfig fonts-noto-cjk; fi
+      - name: Build image, migrate, start, check health and execute real browser MCP smoke
+        id: runtime-smoke
+        env:
+          QUALITY_IMAGE_CACHE_HIT: ${{ steps.image-cache.outputs.cache-hit }}
+          QUALITY_IMAGE_KEY: ${{ steps.image-identity.outputs.key }}
+        run: |
+          set -o pipefail
+          bash deploy/quality-verify/ci-health.sh 2>&1 | tee .ci-runtime.log
+      - uses: actions/cache/save@v4
+        if: always() && steps.image-cache.outputs.cache-hit != 'true' && hashFiles('.ci-app-image.json') != ''
+        with:
+          key: ${{ steps.image-identity.outputs.key }}
+          path: |
+            .ci-app-image.tar
+            .ci-app-image.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-health-evidence
+          include-hidden-files: true
+          path: |
+            .ci-health.json
+            .ci-readiness.json
+            .ci-phase.json
+            .ci-health-container.log
+            .ci-core-proxy.log
+            .ci-runtime.log
+            .ci-core-smoke/
+            .ci-backend-build.json
+            .ci-frontend-build.json
+            .ci-app-image.json
+            .ci-test-summary.json
+          if-no-files-found: ignore
+          retention-days: 7

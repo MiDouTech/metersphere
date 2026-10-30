@@ -41,6 +41,8 @@ public class ApiScenarioBatchOperationTestService {
 
     @Resource
     private ProjectMapper projectMapper;
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public void removeApiModule(String projectId) {
         String[] projectModule = new String[]{"workstation", "testPlan", "bugManagement", "caseManagement", "uiTest", "loadTest"};
@@ -50,12 +52,14 @@ public class ApiScenarioBatchOperationTestService {
         projectMapper.updateByPrimaryKeySelective(updateProject);
     }
 
-    public void resetProjectModule(String projectId) {
-        String[] projectModule = new String[]{"workstation", "testPlan", "bugManagement", "caseManagement", "apiTest", "uiTest", "loadTest"};
-        Project updateProject = new Project();
-        updateProject.setId(projectId);
-        updateProject.setModuleSetting(JSON.toJSONString(projectModule));
-        projectMapper.updateByPrimaryKeySelective(updateProject);
+    public String getProjectModules(String projectId) {
+        Project project = projectMapper.selectByPrimaryKey(projectId);
+        Assertions.assertNotNull(project, "Missing project fixture");
+        return project.getModuleSetting();
+    }
+
+    public void restoreProjectModules(String projectId, String moduleSettings) {
+        jdbcTemplate.update("UPDATE project SET module_setting=? WHERE id=?", moduleSettings, projectId);
     }
 
     /**

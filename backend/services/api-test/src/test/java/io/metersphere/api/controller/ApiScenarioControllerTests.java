@@ -863,7 +863,7 @@ public class ApiScenarioControllerTests extends BaseTest {
         this.requestPost(TRANSFER, apiTransferRequest).andExpect(status().isOk());
         //文件不存在
         apiTransferRequest.setFileId("111");
-        this.requestPost(TRANSFER, apiTransferRequest).andExpect(status().is5xxServerError());
+        this.requestPost(TRANSFER, apiTransferRequest).andExpect(businessError("file not found!"));
         //文件已经上传
         ApiFileResourceExample apiFileResourceExample = new ApiFileResourceExample();
         apiFileResourceExample.createCriteria().andResourceIdEqualTo(addApiScenario.getId());
@@ -891,7 +891,7 @@ public class ApiScenarioControllerTests extends BaseTest {
         this.requestPost(STEP_TRANSFER, apiTransferRequest).andExpect(status().isOk());
         //文件不存在
         apiTransferRequest.setFileId("111");
-        this.requestPost(STEP_TRANSFER, apiTransferRequest).andExpect(status().is5xxServerError());
+        this.requestPost(STEP_TRANSFER, apiTransferRequest).andExpect(businessError("file not found!"));
     }
 
     @Test
@@ -1352,10 +1352,11 @@ public class ApiScenarioControllerTests extends BaseTest {
         mvcResult = this.requestGetAndReturn(STEP_RESOURCE_INFO, "aaaa", ApiScenarioStepType.API_SCENARIO.name());
         Assertions.assertNull(getResultData(mvcResult, ApiStepResourceInfo.class));
 
-        this.requestGetAndReturn(STEP_RESOURCE_INFO, addApiScenario.getId(), "AAA");
+        this.requestGet(STEP_RESOURCE_INFO, addApiScenario.getId(), "AAA")
+                .andExpect(businessError(io.metersphere.sdk.util.Translator.get("invalid_parameter")));
 
         // @@校验权限
-        requestGetPermissionTest(PermissionConstants.PROJECT_API_SCENARIO_READ, STEP_RESOURCE_INFO, "aa", "bb");
+        requestGetPermissionTestWithOk(PermissionConstants.PROJECT_API_SCENARIO_READ, STEP_RESOURCE_INFO, addApiScenario.getId(), ApiScenarioStepType.API_SCENARIO.name());
     }
 
     private void requestGetStepDetail(List<? extends ApiScenarioStepCommonDTO> steps) throws Exception {
@@ -1675,9 +1676,10 @@ public class ApiScenarioControllerTests extends BaseTest {
         apiScenarioMapper.selectByExample(example).forEach(scenario -> {
             Assertions.assertTrue(CollectionUtils.isEmpty(scenario.getTags()));
         });
-        //标签为空  报错
+        // clear=true 时空标签仍是幂等清空操作
         request.setTags(new LinkedHashSet<>());
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, status().isOk());
+                apiScenarioMapper.selectByExample(example).forEach(row -> Assertions.assertTrue(CollectionUtils.isEmpty(row.getTags())));
         //ids为空的时候
         request.setTags(new LinkedHashSet<>(List.of("tag1")));
         request.setSelectAll(true);
@@ -1704,7 +1706,7 @@ public class ApiScenarioControllerTests extends BaseTest {
         apiScenarios.forEach(apiTestCase -> Assertions.assertEquals(apiTestCase.getPriority(), "P3"));
         //优先级数据为空
         request.setPriority(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //ids为空的时候
         request.setPriority("P3");
         request.setSelectAll(false);
@@ -1723,7 +1725,7 @@ public class ApiScenarioControllerTests extends BaseTest {
         apiScenarios.forEach(apiTestCase -> Assertions.assertEquals(apiTestCase.getStatus(), "Completed"));
         //状态数据为空
         request.setStatus(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //环境
         request.setStatus(null);
         request.setType("Environment");
@@ -1738,10 +1740,10 @@ public class ApiScenarioControllerTests extends BaseTest {
 
         //环境数据为空
         request.setEnvId(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //环境不存在
         request.setEnvId("111");
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //环境组
         request.setGrouped(true);
         request.setGroupId("scenario-environment-group-id");
@@ -1755,13 +1757,13 @@ public class ApiScenarioControllerTests extends BaseTest {
 
         //环境组数据为空
         request.setGroupId(null);
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //环境组不存在
         request.setGroupId("111");
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
         //类型错误
         request.setType("111");
-        this.requestPost(BATCH_EDIT, request, ERROR_REQUEST_MATCHER);
+        this.requestPost(BATCH_EDIT, request, businessValidationError());
 
         //校验权限
         requestPostPermissionTest(PermissionConstants.PROJECT_API_SCENARIO_UPDATE, BATCH_EDIT, request);
@@ -1866,10 +1868,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setSelectAll(true);
 
         //先测试一下没有开启模块时接口能否使用
-        apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
-        //恢复
-        apiScenarioBatchOperationTestService.resetProjectModule(DEFAULT_PROJECT_ID);
+        String originalModules1 = apiScenarioBatchOperationTestService.getProjectModules(DEFAULT_PROJECT_ID);
+        try {
+            apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
+            this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
+            //恢复
+        } finally {
+            apiScenarioBatchOperationTestService.restoreProjectModules(DEFAULT_PROJECT_ID, originalModules1);
+        }
 
         MvcResult result = this.requestPostAndReturn(testUrl, request);
         ResultHolder resultHolder = JSON.parseObject(result.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
@@ -1958,14 +1964,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setTargetModuleId(IDGenerator.nextStr());
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setSelectAll(true);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("module.not.exist")));
         //2.反例测试 ->要移动的模块是别的项目下的
         String otherProjectModuleId = this.createModule(500, IDGenerator.nextStr(), ModuleConstants.ROOT_NODE_PARENT_ID);
         request = new ApiScenarioBatchCopyMoveRequest();
         request.setTargetModuleId(otherProjectModuleId);
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setSelectAll(true);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("module.not.exist")));
         //3.反例测试 ->参数校验：项目ID为空 模块ID为空
         request = new ApiScenarioBatchCopyMoveRequest();
         request.setTargetModuleId(otherProjectModuleId);
@@ -2008,10 +2014,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setSelectAll(true);
 
         //先测试一下没有开启模块时接口能否使用
-        apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
-        //恢复
-        apiScenarioBatchOperationTestService.resetProjectModule(DEFAULT_PROJECT_ID);
+        String originalModules2 = apiScenarioBatchOperationTestService.getProjectModules(DEFAULT_PROJECT_ID);
+        try {
+            apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
+            this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
+            //恢复
+        } finally {
+            apiScenarioBatchOperationTestService.restoreProjectModules(DEFAULT_PROJECT_ID, originalModules2);
+        }
 
         MvcResult result = this.requestPostAndReturn(testUrl, request);
         ResultHolder resultHolder = JSON.parseObject(result.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
@@ -2088,14 +2098,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setTargetModuleId(IDGenerator.nextStr());
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setSelectAll(true);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("module.not.exist")));
         //2.反例测试 ->要移动的模块是别的项目下的
         String otherProjectModuleId = this.createModule(500, IDGenerator.nextStr(), ModuleConstants.ROOT_NODE_PARENT_ID);
         request = new ApiScenarioBatchCopyMoveRequest();
         request.setTargetModuleId(otherProjectModuleId);
         request.setProjectId(DEFAULT_PROJECT_ID);
         request.setSelectAll(true);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("module.not.exist")));
         //3.反例测试 ->参数校验：项目ID为空 模块ID为空
         request = new ApiScenarioBatchCopyMoveRequest();
         request.setTargetModuleId(otherProjectModuleId);
@@ -2130,12 +2140,16 @@ public class ApiScenarioControllerTests extends BaseTest {
         batchRequest.setProjectId(DEFAULT_PROJECT_ID);
         batchRequest.setSelectIds(List.of(BATCH_OPERATION_SCENARIO_ID.getFirst()));
         //先测试一下没有开启模块时接口能否使用
-        apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
-        this.requestPost(batchUrl, batchRequest).andExpect(status().is5xxServerError());
-        this.requestGet(deleteUrl, request).andExpect(status().is5xxServerError());
-        //恢复
-        apiScenarioBatchOperationTestService.resetProjectModule(DEFAULT_PROJECT_ID);
+        String originalModules3 = apiScenarioBatchOperationTestService.getProjectModules(DEFAULT_PROJECT_ID);
+        try {
+            apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
+            this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
+            this.requestPost(batchUrl, batchRequest).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
+            this.requestGet(deleteUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
+            //恢复
+        } finally {
+            apiScenarioBatchOperationTestService.restoreProjectModules(DEFAULT_PROJECT_ID, originalModules3);
+        }
         MvcResult result = this.requestPostAndReturn(testUrl, request);
         ResultHolder resultHolder = JSON.parseObject(result.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
         String scheduleId = resultHolder.getData().toString();
@@ -2241,14 +2255,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setCron("0 0 0 * * ?");
         this.requestPost(testUrl, request).andExpect(status().isBadRequest());
         request.setScenarioId(IDGenerator.nextStr());
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
 
         //反例：配置错误的cron表达式，测试是否会关闭定时任务
         request = new ApiScenarioScheduleConfigRequest();
         request.setScenarioId(scenarioId);
         request.setEnable(true);
         request.setCron(IDGenerator.nextStr());
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
+        this.requestPost(testUrl, request).andExpect(businessError("Cron 表达式格式不正确"));
 
         //测试删除
         this.requestGetWithOk(deleteUrl, request);
@@ -2293,10 +2307,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setSelectAll(true);
 
         //先测试一下没有开启模块时接口能否使用
-        apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
-        //恢复
-        apiScenarioBatchOperationTestService.resetProjectModule(DEFAULT_PROJECT_ID);
+        String originalModules4 = apiScenarioBatchOperationTestService.getProjectModules(DEFAULT_PROJECT_ID);
+        try {
+            apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
+            this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
+            //恢复
+        } finally {
+            apiScenarioBatchOperationTestService.restoreProjectModules(DEFAULT_PROJECT_ID, originalModules4);
+        }
 
         MvcResult result = this.requestPostAndReturn(testUrl, request);
         ResultHolder resultHolder = JSON.parseObject(result.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
@@ -2364,10 +2382,14 @@ public class ApiScenarioControllerTests extends BaseTest {
         request.setSelectAll(true);
 
         //先测试一下没有开启模块时接口能否使用
-        apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
-        //恢复
-        apiScenarioBatchOperationTestService.resetProjectModule(DEFAULT_PROJECT_ID);
+        String originalModules5 = apiScenarioBatchOperationTestService.getProjectModules(DEFAULT_PROJECT_ID);
+        try {
+            apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
+            this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
+            //恢复
+        } finally {
+            apiScenarioBatchOperationTestService.restoreProjectModules(DEFAULT_PROJECT_ID, originalModules5);
+        }
 
         MvcResult result = this.requestPostAndReturn(testUrl, request);
         ResultHolder resultHolder = JSON.parseObject(result.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
@@ -2438,10 +2460,14 @@ public class ApiScenarioControllerTests extends BaseTest {
 
 
         //先测试一下没有开启模块时接口能否使用
-        apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
-        this.requestPost(testUrl, request).andExpect(status().is5xxServerError());
-        //恢复
-        apiScenarioBatchOperationTestService.resetProjectModule(DEFAULT_PROJECT_ID);
+        String originalModules6 = apiScenarioBatchOperationTestService.getProjectModules(DEFAULT_PROJECT_ID);
+        try {
+            apiScenarioBatchOperationTestService.removeApiModule(DEFAULT_PROJECT_ID);
+            this.requestPost(testUrl, request).andExpect(businessError(io.metersphere.sdk.util.Translator.get("project.module_menu.check.error")));
+            //恢复
+        } finally {
+            apiScenarioBatchOperationTestService.restoreProjectModules(DEFAULT_PROJECT_ID, originalModules6);
+        }
         MvcResult result = this.requestPostAndReturn(testUrl, request);
         ResultHolder resultHolder = JSON.parseObject(result.getResponse().getContentAsString(StandardCharsets.UTF_8), ResultHolder.class);
         ApiScenarioBatchOperationResponse resultResponse = JSON.parseObject(JSON.toJSONString(resultHolder.getData()), ApiScenarioBatchOperationResponse.class);

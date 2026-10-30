@@ -1,0 +1,21 @@
+{
+  "http": 200,
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "text": "{\"caseId\":\"1712306377475530754\",\"name\":\"WEEKLY-20261028-自动刷新已更新\",\"updateTime\":1793167683670,\"moduleId\":\"root\"}",
+        "type": "text"
+      }
+    ],
+    "structuredContent": {
+      "result": {
+        "caseId": "1712306377475530754",
+        "name": "WEEKLY-20261028-自动刷新已更新",
+        "updateTime": 1793167683670,
+        "moduleId": "root"
+      }
+    }
+  }
+}

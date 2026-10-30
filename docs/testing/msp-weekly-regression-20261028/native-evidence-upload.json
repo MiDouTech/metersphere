@@ -1,0 +1,160 @@
+{
+  "contract": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"contentHash\":\"1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83\",\"instructions\":\"One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.\",\"policy\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"case\":{\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":null,\"versionId\":\"1704667279923322928\",\"reviewStatus\":null,\"updateTime\":null,\"description\":\"仅协议验收，不代表真实业务执行；本轮隔离数据\",\"customFields\":[],\"caseId\":\"1712306377475530754\",\"num\":null,\"name\":\"WEEKLY-20261028-证据与幂等隔离\",\"modulePath\":null,\"caseEditType\":\"STEP\",\"tags\":null,\"priority\":\"P2\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":null,\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1712306377475530752\",\"num\":1,\"desc\":\"协议位置1\",\"expected\":\"结构保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712306377475530753\",\"num\":2,\"desc\":\"协议位置2\",\"expected\":\"结构保留\",\"actualResult\":null,\"executeResult\":null}]},\"validationMode\":\"STRUCTURE_ONLY_V1\",\"comparison\":\"NONE_AGENT_REPORTED\",\"resultSource\":\"AGENT_REPORTED\",\"writesEnabled\":true,\"evidenceScope\":\"CASE\",\"minimumEvidenceCount\":1,\"maximumEvidenceCount\":10,\"stepEvidenceRequired\":false,\"clientHashesRequired\":false,\"definitionType\":\"STEP\",\"supported\":true,\"limitations\":{\"originalSteps\":100,\"factsBytes\":1048576,\"submittedSteps\":1000}}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "contentHash": "1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83",
+          "instructions": "One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.",
+          "policy": {
+            "name": "订单复测-证据与冻结断言-20261019",
+            "rules": [
+              {
+                "parameters": {
+                  "allowedMimeTypes": [
+                    "image/png",
+                    "image/jpeg"
+                  ],
+                  "maxArtifactBytes": 5242880,
+                  "requiredRoles": [
+                    "BEFORE_ACTION",
+                    "AFTER_ACTION"
+                  ]
+                },
+                "ruleId": "Q-EVIDENCE-01"
+              },
+              {
+                "parameters": {
+                  "allowedOperators": [
+                    "EQUALS",
+                    "IN_RANGE"
+                  ],
+                  "expectedSource": "FROZEN_CONTRACT"
+                },
+                "ruleId": "Q-ASSERT-01"
+              }
+            ],
+            "schemaVersion": "quality-policy.v1"
+          },
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "case": {
+            "executionRef": null,
+            "executionFacts": null,
+            "projectId": "1704667279923322880",
+            "moduleId": null,
+            "versionId": "1704667279923322928",
+            "reviewStatus": null,
+            "updateTime": null,
+            "description": "仅协议验收，不代表真实业务执行；本轮隔离数据",
+            "customFields": [],
+            "caseId": "1712306377475530754",
+            "num": null,
+            "name": "WEEKLY-20261028-证据与幂等隔离",
+            "modulePath": null,
+            "caseEditType": "STEP",
+            "tags": null,
+            "priority": "P2",
+            "prerequisite": "",
+            "testPlanId": null,
+            "testPlanCaseId": null,
+            "lastExecuteResult": null,
+            "lastExecuteUser": null,
+            "lastExecuteUserName": null,
+            "steps": [
+              {
+                "id": "1712306377475530752",
+                "num": 1,
+                "desc": "协议位置1",
+                "expected": "结构保留",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712306377475530753",
+                "num": 2,
+                "desc": "协议位置2",
+                "expected": "结构保留",
+                "actualResult": null,
+                "executeResult": null
+              }
+            ]
+          },
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "comparison": "NONE_AGENT_REPORTED",
+          "resultSource": "AGENT_REPORTED",
+          "writesEnabled": true,
+          "evidenceScope": "CASE",
+          "minimumEvidenceCount": 1,
+          "maximumEvidenceCount": 10,
+          "stepEvidenceRequired": false,
+          "clientHashesRequired": false,
+          "definitionType": "STEP",
+          "supported": true,
+          "limitations": {
+            "originalSteps": 100,
+            "factsBytes": 1048576,
+            "submittedSteps": 1000
+          }
+        }
+      }
+    }
+  },
+  "upload": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"projectId\":\"1704667279923322880\",\"caseId\":\"1712306377475530754\",\"sha256\":\"2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d\",\"evidenceId\":\"b4451427-cf4e-4300-9ebf-fd68ae304ed9\",\"expiresAt\":1793253366738,\"sizeBytes\":104112,\"evidenceScope\":\"CASE\",\"resourceState\":\"STAGED\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "caseId": "1712306377475530754",
+          "sha256": "2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d",
+          "evidenceId": "b4451427-cf4e-4300-9ebf-fd68ae304ed9",
+          "expiresAt": 1793253366738,
+          "sizeBytes": 104112,
+          "evidenceScope": "CASE",
+          "resourceState": "STAGED"
+        }
+      }
+    }
+  },
+  "replay": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"projectId\":\"1704667279923322880\",\"caseId\":\"1712306377475530754\",\"sha256\":\"2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d\",\"evidenceId\":\"b4451427-cf4e-4300-9ebf-fd68ae304ed9\",\"expiresAt\":1793253366738,\"sizeBytes\":104112,\"evidenceScope\":\"CASE\",\"resourceState\":\"STAGED\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "caseId": "1712306377475530754",
+          "sha256": "2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d",
+          "evidenceId": "b4451427-cf4e-4300-9ebf-fd68ae304ed9",
+          "expiresAt": 1793253366738,
+          "sizeBytes": 104112,
+          "evidenceScope": "CASE",
+          "resourceState": "STAGED"
+        }
+      }
+    }
+  }
+}

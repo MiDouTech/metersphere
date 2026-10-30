@@ -376,7 +376,7 @@ class TestResourcePoolControllerTests extends BaseTest {
     @Order(14)
     void getResourcePoolsDetailFiled() throws Exception {
         String id = "1034";
-        getDetail("/test/resource/pool/detail/" + id, ERROR_REQUEST_MATCHER);
+        getDetail("/test/resource/pool/detail/" + id, businessError("测试资源池不存在"));
 
         TestResourcePool testResourcePoolRequest1 = this.addTestResourcePoolSuccess("test_pool_blob_no_node", true, false, true, false, false, true, ResourcePoolTypeEnum.K8S.getName());
         getDetail("/test/resource/pool/detail/" + testResourcePoolRequest1.getId(), status().isOk());
@@ -505,37 +505,37 @@ class TestResourcePoolControllerTests extends BaseTest {
         TestResourcePoolDTO testPool4 = listByKeyWord("test_pool_4");
         TestResourcePoolRequest testResourcePoolRequest = generatorDto(true, false, false, false, false, false, false, false);
         testResourcePoolRequest.setName("test_pool_blob2");
-        this.requestPost(urlType, url, testPool4.getId(), testResourcePoolRequest, status().is5xxServerError());
+        this.requestPost(urlType, url, testPool4.getId(), testResourcePoolRequest, businessError("资源池名称已存在"));
         //资源池类型为空
         testResourcePoolRequest = generatorDto(true, false, true, false, false, false, false, false);
         this.requestPost(urlType, url, id, testResourcePoolRequest, status().isBadRequest());
         //api 类型 资源池节点集合为空
         testResourcePoolRequest = generatorDto(true, false, false, true, false, false, false, false);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("no_nodes_message")));
         //资源池节点不为空，但是内容为空 ip 为空
         testResourcePoolRequest = generatorDto(true, false, false, true, false, true, false, false);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("ip_is_null")));
         //资源池节点不为空，但是内容为空 port 为空
         testResourcePoolRequest = generatorDto(true, false, false, true, false, false, true, false);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("port_is_null")));
         //资源池节点不为空，但是内容为空 最大线程数 为空
         testResourcePoolRequest = generatorDto(true, false, false, true, false, false, false, true);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("concurrent_number_is_null")));
         //性能测试类型 资源池节点集合为空
         testResourcePoolRequest = generatorDto(false, false, false, true, false, false, false, false);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("no_nodes_message")));
         //资源池节点不为空，但是内容为空ip为空
         testResourcePoolRequest = generatorDto(false, false, false, true, false, true, false, false);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("ip_is_null")));
         //资源池节点不为空，但是内容为空 port 为空
         testResourcePoolRequest = generatorDto(false, false, false, true, false, false, true, false);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("port_is_null")));
         //资源池节点不为空，但是内容为空 port 为空
         testResourcePoolRequest = generatorDto(false, false, false, true, false, false, false, false);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("no_nodes_message")));
         //资源池节点不为空，但是内容为空 最大线程数 为空
         testResourcePoolRequest = generatorDto(false, false, false, true, false, false, false, true);
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("concurrent_number_is_null")));
         //应用组织
         testResourcePoolRequest = generatorDto(true, false, false, false, true, false, false, false);
         this.requestPost(urlType, url, id, testResourcePoolRequest, status().isBadRequest());
@@ -543,7 +543,7 @@ class TestResourcePoolControllerTests extends BaseTest {
         testResourcePoolRequest = generatorDto(true, false, false, false, false, false, false, false);
         testResourcePoolRequest.setAllOrg(false);
         testResourcePoolRequest.setTestResourceDTO(JSON.parseObject(configurationWidthOutOrgIds, TestResourceDTO.class));
-        this.requestPost(urlType, url, id, testResourcePoolRequest, ERROR_REQUEST_MATCHER);
+        this.requestPost(urlType, url, id, testResourcePoolRequest, businessError(io.metersphere.sdk.util.Translator.get("resource_pool_application_organization_is_empty")));
     }
 
     public TestResourcePoolDTO listByKeyWord(String keyWord) throws Exception {

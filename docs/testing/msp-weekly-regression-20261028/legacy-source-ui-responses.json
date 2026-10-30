@@ -1,0 +1,14 @@
+[
+  {
+    "url": "https://msp.ebcone.net/api/functional/case/detail/1712038715113627712?_t=1793170364704",
+    "status": 0,
+    "stepsType": "undefined"
+  },
+  {
+    "url": "https://msp.ebcone.net/api/functional/case/detail/1712038715113627712?_t=1793170364723",
+    "status": 500,
+    "code": 100500,
+    "message": "Internal server error",
+    "stepsType": "undefined"
+  }
+]

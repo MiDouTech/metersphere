@@ -425,6 +425,9 @@ public class TestPlanReportService {
             });
         } catch (Exception e) {
             LogUtils.error("Generate report exception: " + e.getMessage());
+            LogUtils.error(e);
+            if (e instanceof MSException business) throw business;
+            throw new MSException("报告生成失败，请稍后重试或联系管理员");
         }
 
         if (manual) {

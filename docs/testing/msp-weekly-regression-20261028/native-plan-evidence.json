@@ -1,0 +1,310 @@
+{
+  "associate": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"ok\":true}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "ok": true
+        }
+      }
+    }
+  },
+  "view": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"projectId\":\"1704667279923322880\",\"current\":1,\"pageSize\":10,\"hasMore\":false,\"matchedBy\":[],\"matchedModules\":[],\"matchedModuleIds\":[],\"total\":2,\"warnings\":[],\"cases\":[{\"executionRef\":{\"id\":\"a9744a75-ef3b-4a97-9fce-220d056a684d\",\"type\":\"DIRECT_SUBMISSION\"},\"executionFacts\":{\"schemaVersion\":\"direct-execution.v2\",\"definition\":{\"caseId\":\"1712306377475530754\",\"projectId\":\"1704667279923322880\",\"versionId\":\"1704667279923322928\",\"name\":\"WEEKLY-20261028-证据与幂等隔离\",\"caseEditType\":\"STEP\",\"description\":\"仅协议验收，不代表真实业务执行；本轮隔离数据\",\"prerequisite\":\"\",\"priority\":\"P2\",\"customFields\":[],\"steps\":[{\"position\":1,\"description\":\"协议位置1\",\"expected\":\"结构保留\"},{\"position\":2,\"description\":\"协议位置2\",\"expected\":\"结构保留\"}]},\"steps\":[{\"stepNum\":1,\"actual\":\"仅结构协议测试，不代表真实业务执行\",\"result\":\"SUCCESS\"},{\"stepNum\":2,\"actual\":\"仅结构协议测试，故意声明ERROR以验聚合\",\"result\":\"ERROR\"}],\"policySnapshot\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"evidence\":[{\"id\":\"b4451427-cf4e-4300-9ebf-fd68ae304ed9\",\"file_name\":\"protocol-ui-evidence.png\",\"content_type\":\"image/png\",\"size_bytes\":104112,\"sha256\":\"2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d\",\"evidence_scope\":\"CASE\",\"definition_hash_version\":\"definition-v2\",\"content_hash\":\"1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83\"}],\"evidenceIds\":[\"b4451427-cf4e-4300-9ebf-fd68ae304ed9\"],\"evidenceScope\":\"CASE\",\"validationMode\":\"STRUCTURE_ONLY_V1\",\"resultSource\":\"AGENT_REPORTED\",\"directEvidenceRuleVersion\":\"case-image-v1\"},\"projectId\":\"1704667279923322880\",\"moduleId\":\"root\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793166949063,\"description\":\"仅协议验收，不代表真实业务执行；本轮隔离数据\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"用例等级\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P2\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1712306377475530754\",\"num\":100026,\"name\":\"WEEKLY-20261028-证据与幂等隔离\",\"modulePath\":\"未规划用例\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P2\",\"prerequisite\":\"\",\"testPlanId\":\"1712308215721533445\",\"testPlanCaseId\":\"1712309899348713472\",\"lastExecuteResult\":\"ERROR\",\"lastExecuteUser\":\"1559871391069831258\",\"lastExecuteUserName\":\"陈启芬\",\"steps\":[{\"id\":\"1712306377475530752\",\"num\":1,\"desc\":\"协议位置1\",\"expected\":\"结构保留\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712306377475530753\",\"num\":2,\"desc\":\"协议位置2\",\"expected\":\"结构保留\",\"actualResult\":null,\"executeResult\":null}]},{\"executionRef\":{\"id\":\"1712308198541664256\",\"type\":\"SOURCE_CASE\"},\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":\"1710884863559606272\",\"versionId\":\"1704667279923322928\",\"reviewStatus\":\"UN_REVIEWED\",\"updateTime\":1793167055407,\"description\":\"仅用于回归\",\"customFields\":[{\"fieldId\":\"1704667279923322929\",\"fieldName\":\"用例等级\",\"fieldKey\":null,\"required\":true,\"apiFieldId\":null,\"defaultValue\":\"P1\",\"type\":\"SELECT\",\"options\":[{\"fieldId\":\"1704667279923322929\",\"value\":\"P0\",\"text\":\"P0\",\"internal\":true,\"pos\":1},{\"fieldId\":\"1704667279923322929\",\"value\":\"P1\",\"text\":\"P1\",\"internal\":true,\"pos\":2},{\"fieldId\":\"1704667279923322929\",\"value\":\"P2\",\"text\":\"P2\",\"internal\":true,\"pos\":3},{\"fieldId\":\"1704667279923322929\",\"value\":\"P3\",\"text\":\"P3\",\"internal\":true,\"pos\":4}],\"supportSearch\":null,\"optionMethod\":null,\"internal\":true,\"platformOptionJson\":null,\"platformPlaceHolder\":null,\"platformSystemField\":null,\"internalFieldKey\":\"functional_priority\"}],\"caseId\":\"1712308198541664256\",\"num\":100027,\"name\":\"ACCEPTANCE-20261027-导入联动A\",\"modulePath\":\"ACCEPTANCE-20261027-导入目录\",\"caseEditType\":\"STEP\",\"tags\":[],\"priority\":\"P1\",\"prerequisite\":\"隔离验收\",\"testPlanId\":\"1712308215721533445\",\"testPlanCaseId\":\"1712308318800748544\",\"lastExecuteResult\":\"PENDING\",\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"a1684c44-bd4f-42b5-b68f-1bf3e8cf2dfe\",\"num\":0,\"desc\":\"[1]检查导入数据\",\"expected\":\"[1]计划及评审关联此用例\",\"actualResult\":null,\"executeResult\":null}]}]}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "projectId": "1704667279923322880",
+          "current": 1,
+          "pageSize": 10,
+          "hasMore": false,
+          "matchedBy": [],
+          "matchedModules": [],
+          "matchedModuleIds": [],
+          "total": 2,
+          "warnings": [],
+          "cases": [
+            {
+              "executionRef": {
+                "id": "a9744a75-ef3b-4a97-9fce-220d056a684d",
+                "type": "DIRECT_SUBMISSION"
+              },
+              "executionFacts": {
+                "schemaVersion": "direct-execution.v2",
+                "definition": {
+                  "caseId": "1712306377475530754",
+                  "projectId": "1704667279923322880",
+                  "versionId": "1704667279923322928",
+                  "name": "WEEKLY-20261028-证据与幂等隔离",
+                  "caseEditType": "STEP",
+                  "description": "仅协议验收，不代表真实业务执行；本轮隔离数据",
+                  "prerequisite": "",
+                  "priority": "P2",
+                  "customFields": [],
+                  "steps": [
+                    {
+                      "position": 1,
+                      "description": "协议位置1",
+                      "expected": "结构保留"
+                    },
+                    {
+                      "position": 2,
+                      "description": "协议位置2",
+                      "expected": "结构保留"
+                    }
+                  ]
+                },
+                "steps": [
+                  {
+                    "stepNum": 1,
+                    "actual": "仅结构协议测试，不代表真实业务执行",
+                    "result": "SUCCESS"
+                  },
+                  {
+                    "stepNum": 2,
+                    "actual": "仅结构协议测试，故意声明ERROR以验聚合",
+                    "result": "ERROR"
+                  }
+                ],
+                "policySnapshot": {
+                  "name": "订单复测-证据与冻结断言-20261019",
+                  "rules": [
+                    {
+                      "parameters": {
+                        "allowedMimeTypes": [
+                          "image/png",
+                          "image/jpeg"
+                        ],
+                        "maxArtifactBytes": 5242880,
+                        "requiredRoles": [
+                          "BEFORE_ACTION",
+                          "AFTER_ACTION"
+                        ]
+                      },
+                      "ruleId": "Q-EVIDENCE-01"
+                    },
+                    {
+                      "parameters": {
+                        "allowedOperators": [
+                          "EQUALS",
+                          "IN_RANGE"
+                        ],
+                        "expectedSource": "FROZEN_CONTRACT"
+                      },
+                      "ruleId": "Q-ASSERT-01"
+                    }
+                  ],
+                  "schemaVersion": "quality-policy.v1"
+                },
+                "evidence": [
+                  {
+                    "id": "b4451427-cf4e-4300-9ebf-fd68ae304ed9",
+                    "file_name": "protocol-ui-evidence.png",
+                    "content_type": "image/png",
+                    "size_bytes": 104112,
+                    "sha256": "2ad320e5ca7d1e852a32a95f85062aeebd22afb6225203d958c559b6a729bd0d",
+                    "evidence_scope": "CASE",
+                    "definition_hash_version": "definition-v2",
+                    "content_hash": "1c41435a141a6415253343c20ce6c8c131c980b3a79450648c23b90e5b225a83"
+                  }
+                ],
+                "evidenceIds": [
+                  "b4451427-cf4e-4300-9ebf-fd68ae304ed9"
+                ],
+                "evidenceScope": "CASE",
+                "validationMode": "STRUCTURE_ONLY_V1",
+                "resultSource": "AGENT_REPORTED",
+                "directEvidenceRuleVersion": "case-image-v1"
+              },
+              "projectId": "1704667279923322880",
+              "moduleId": "root",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793166949063,
+              "description": "仅协议验收，不代表真实业务执行；本轮隔离数据",
+              "customFields": [
+                {
+                  "fieldId": "1704667279923322929",
+                  "fieldName": "用例等级",
+                  "fieldKey": null,
+                  "required": true,
+                  "apiFieldId": null,
+                  "defaultValue": "P2",
+                  "type": "SELECT",
+                  "options": [
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P0",
+                      "text": "P0",
+                      "internal": true,
+                      "pos": 1
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P1",
+                      "text": "P1",
+                      "internal": true,
+                      "pos": 2
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P2",
+                      "text": "P2",
+                      "internal": true,
+                      "pos": 3
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P3",
+                      "text": "P3",
+                      "internal": true,
+                      "pos": 4
+                    }
+                  ],
+                  "supportSearch": null,
+                  "optionMethod": null,
+                  "internal": true,
+                  "platformOptionJson": null,
+                  "platformPlaceHolder": null,
+                  "platformSystemField": null,
+                  "internalFieldKey": "functional_priority"
+                }
+              ],
+              "caseId": "1712306377475530754",
+              "num": 100026,
+              "name": "WEEKLY-20261028-证据与幂等隔离",
+              "modulePath": "未规划用例",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P2",
+              "prerequisite": "",
+              "testPlanId": "1712308215721533445",
+              "testPlanCaseId": "1712309899348713472",
+              "lastExecuteResult": "ERROR",
+              "lastExecuteUser": "1559871391069831258",
+              "lastExecuteUserName": "陈启芬",
+              "steps": [
+                {
+                  "id": "1712306377475530752",
+                  "num": 1,
+                  "desc": "协议位置1",
+                  "expected": "结构保留",
+                  "actualResult": null,
+                  "executeResult": null
+                },
+                {
+                  "id": "1712306377475530753",
+                  "num": 2,
+                  "desc": "协议位置2",
+                  "expected": "结构保留",
+                  "actualResult": null,
+                  "executeResult": null
+                }
+              ]
+            },
+            {
+              "executionRef": {
+                "id": "1712308198541664256",
+                "type": "SOURCE_CASE"
+              },
+              "executionFacts": null,
+              "projectId": "1704667279923322880",
+              "moduleId": "1710884863559606272",
+              "versionId": "1704667279923322928",
+              "reviewStatus": "UN_REVIEWED",
+              "updateTime": 1793167055407,
+              "description": "仅用于回归",
+              "customFields": [
+                {
+                  "fieldId": "1704667279923322929",
+                  "fieldName": "用例等级",
+                  "fieldKey": null,
+                  "required": true,
+                  "apiFieldId": null,
+                  "defaultValue": "P1",
+                  "type": "SELECT",
+                  "options": [
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P0",
+                      "text": "P0",
+                      "internal": true,
+                      "pos": 1
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P1",
+                      "text": "P1",
+                      "internal": true,
+                      "pos": 2
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P2",
+                      "text": "P2",
+                      "internal": true,
+                      "pos": 3
+                    },
+                    {
+                      "fieldId": "1704667279923322929",
+                      "value": "P3",
+                      "text": "P3",
+                      "internal": true,
+                      "pos": 4
+                    }
+                  ],
+                  "supportSearch": null,
+                  "optionMethod": null,
+                  "internal": true,
+                  "platformOptionJson": null,
+                  "platformPlaceHolder": null,
+                  "platformSystemField": null,
+                  "internalFieldKey": "functional_priority"
+                }
+              ],
+              "caseId": "1712308198541664256",
+              "num": 100027,
+              "name": "ACCEPTANCE-20261027-导入联动A",
+              "modulePath": "ACCEPTANCE-20261027-导入目录",
+              "caseEditType": "STEP",
+              "tags": [],
+              "priority": "P1",
+              "prerequisite": "隔离验收",
+              "testPlanId": "1712308215721533445",
+              "testPlanCaseId": "1712308318800748544",
+              "lastExecuteResult": "PENDING",
+              "lastExecuteUser": null,
+              "lastExecuteUserName": null,
+              "steps": [
+                {
+                  "id": "a1684c44-bd4f-42b5-b68f-1bf3e8cf2dfe",
+                  "num": 0,
+                  "desc": "[1]检查导入数据",
+                  "expected": "[1]计划及评审关联此用例",
+                  "actualResult": null,
+                  "executeResult": null
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

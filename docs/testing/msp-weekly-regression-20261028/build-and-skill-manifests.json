@@ -1,0 +1,23 @@
+{
+  "skill": {
+    "status": 200,
+    "body": {
+      "code": 100200,
+      "message": null,
+      "messageDetail": null,
+      "data": {
+        "name": "metersphere-agent-skill",
+        "version": "1.4.0",
+        "fileName": "metersphere-agent-skill-1.4.0.zip",
+        "description": "MeterSphere AI Skill package for remote Streamable HTTP MCP. Platform addresses are embedded; no token is embedded.",
+        "nodeEngine": "not-required",
+        "installHint": "Create a personal Agent Token, then configure your AI client to call the test or production /api/mcp endpoint with Bearer or X-API-Key.",
+        "available": true
+      }
+    }
+  },
+  "build": {
+    "status": 200,
+    "body": "{\n  \"schemaVersion\": 1,\n  \"revision\": \"d6e3bd9c06ca4f61992d0f8fa32f409008741b2a\",\n  \"builtAt\": \"2026-10-28T03:25:57.577Z\",\n  \"indexSha256\": \"36d9a358ac5415c1e9aaf533ac691cfc2168b6a07de7a5bcb5cbf32cd008ad49\",\n  \"assets\": [\n    \"/assets/index-ClLd1kJ2.js\",\n    \"/assets/vue-DNOsAYXs.js\",\n    \"/assets/arco-DvV0wcLN.js\",\n    \"/assets/codeEditor-dtPc1o1E.js\",\n    \"/assets/codeEditor-1KD5iQ87.css\",\n    \"/assets/index-B_x-EJ-Q.css\"\n  ]\n}\n"
+  }
+}

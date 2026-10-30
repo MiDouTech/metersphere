@@ -9,24 +9,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class DatabaseWorkloadMetrics {
-    /** Keep the default scheduler explicit: adding a qualified scheduler must not capture every existing job. */
-    @Bean(name = "taskScheduler")
-    org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler taskScheduler(
-            @org.springframework.beans.factory.annotation.Value("${spring.task.scheduling.pool.size:1}") int size) {
-        var scheduler = new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(size);
-        scheduler.setThreadNamePrefix("scheduled-task-");
-        return scheduler;
-    }
-
-    @Bean(name = "functionalImportEffectsScheduler")
-    org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler functionalImportEffectsScheduler() {
-        var scheduler = new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(1);
-        scheduler.setThreadNamePrefix("import-effects-");
-        return scheduler;
-    }
-
     @Bean
     MeterBinder databaseWorkloadBinder(DatabaseWorkloadFilter filter, io.metersphere.functional.service.FunctionalImportEffectOutbox outbox) {
         return registry -> {

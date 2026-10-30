@@ -1,0 +1,937 @@
+{
+  "tooMany": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "error": {
+      "data": {
+        "code": "QUALITY_FINAL_FACTS_INCOMPLETE",
+        "traceId": "7bc01b0d-18f0-4898-9b11-eab2ca1fc25e"
+      },
+      "message": "执行事实不完整或与申报结果不一致，不能同步正式结果",
+      "code": -32001
+    }
+  },
+  "created": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"caseId\":\"1712340015659393125\",\"num\":100030,\"name\":\"WEEKLY-20261028-101原步骤边界\",\"moduleId\":\"root\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "caseId": "1712340015659393125",
+          "num": 100030,
+          "name": "WEEKLY-20261028-101原步骤边界",
+          "moduleId": "root"
+        }
+      }
+    }
+  },
+  "contract": {
+    "http": 200,
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+      "content": [
+        {
+          "text": "{\"contentHash\":\"2c341580db5354a6e41ed1361489e53ebcfcfe60c1c869f462d01cd0a8f7592d\",\"instructions\":\"One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.\",\"policy\":{\"name\":\"订单复测-证据与冻结断言-20261019\",\"rules\":[{\"parameters\":{\"allowedMimeTypes\":[\"image/png\",\"image/jpeg\"],\"maxArtifactBytes\":5242880,\"requiredRoles\":[\"BEFORE_ACTION\",\"AFTER_ACTION\"]},\"ruleId\":\"Q-EVIDENCE-01\"},{\"parameters\":{\"allowedOperators\":[\"EQUALS\",\"IN_RANGE\"],\"expectedSource\":\"FROZEN_CONTRACT\"},\"ruleId\":\"Q-ASSERT-01\"}],\"schemaVersion\":\"quality-policy.v1\"},\"policyHash\":\"6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53\",\"case\":{\"executionRef\":null,\"executionFacts\":null,\"projectId\":\"1704667279923322880\",\"moduleId\":null,\"versionId\":\"1704667279923322928\",\"reviewStatus\":null,\"updateTime\":null,\"description\":\"\",\"customFields\":[],\"caseId\":\"1712340015659393125\",\"num\":null,\"name\":\"WEEKLY-20261028-101原步骤边界\",\"modulePath\":null,\"caseEditType\":\"STEP\",\"tags\":null,\"priority\":\"P0\",\"prerequisite\":\"\",\"testPlanId\":null,\"testPlanCaseId\":null,\"lastExecuteResult\":null,\"lastExecuteUser\":null,\"lastExecuteUserName\":null,\"steps\":[{\"id\":\"1712340015659393024\",\"num\":1,\"desc\":\"原步骤1\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393025\",\"num\":2,\"desc\":\"原步骤2\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393026\",\"num\":3,\"desc\":\"原步骤3\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393027\",\"num\":4,\"desc\":\"原步骤4\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393028\",\"num\":5,\"desc\":\"原步骤5\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393029\",\"num\":6,\"desc\":\"原步骤6\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393030\",\"num\":7,\"desc\":\"原步骤7\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393031\",\"num\":8,\"desc\":\"原步骤8\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393032\",\"num\":9,\"desc\":\"原步骤9\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393033\",\"num\":10,\"desc\":\"原步骤10\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393034\",\"num\":11,\"desc\":\"原步骤11\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393035\",\"num\":12,\"desc\":\"原步骤12\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393036\",\"num\":13,\"desc\":\"原步骤13\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393037\",\"num\":14,\"desc\":\"原步骤14\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393038\",\"num\":15,\"desc\":\"原步骤15\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393039\",\"num\":16,\"desc\":\"原步骤16\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393040\",\"num\":17,\"desc\":\"原步骤17\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393041\",\"num\":18,\"desc\":\"原步骤18\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393042\",\"num\":19,\"desc\":\"原步骤19\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393043\",\"num\":20,\"desc\":\"原步骤20\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393044\",\"num\":21,\"desc\":\"原步骤21\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393045\",\"num\":22,\"desc\":\"原步骤22\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393046\",\"num\":23,\"desc\":\"原步骤23\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393047\",\"num\":24,\"desc\":\"原步骤24\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393048\",\"num\":25,\"desc\":\"原步骤25\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393049\",\"num\":26,\"desc\":\"原步骤26\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393050\",\"num\":27,\"desc\":\"原步骤27\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393051\",\"num\":28,\"desc\":\"原步骤28\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393052\",\"num\":29,\"desc\":\"原步骤29\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393053\",\"num\":30,\"desc\":\"原步骤30\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393054\",\"num\":31,\"desc\":\"原步骤31\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393055\",\"num\":32,\"desc\":\"原步骤32\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393056\",\"num\":33,\"desc\":\"原步骤33\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393057\",\"num\":34,\"desc\":\"原步骤34\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393058\",\"num\":35,\"desc\":\"原步骤35\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393059\",\"num\":36,\"desc\":\"原步骤36\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393060\",\"num\":37,\"desc\":\"原步骤37\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393061\",\"num\":38,\"desc\":\"原步骤38\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393062\",\"num\":39,\"desc\":\"原步骤39\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393063\",\"num\":40,\"desc\":\"原步骤40\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393064\",\"num\":41,\"desc\":\"原步骤41\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393065\",\"num\":42,\"desc\":\"原步骤42\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393066\",\"num\":43,\"desc\":\"原步骤43\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393067\",\"num\":44,\"desc\":\"原步骤44\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393068\",\"num\":45,\"desc\":\"原步骤45\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393069\",\"num\":46,\"desc\":\"原步骤46\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393070\",\"num\":47,\"desc\":\"原步骤47\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393071\",\"num\":48,\"desc\":\"原步骤48\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393072\",\"num\":49,\"desc\":\"原步骤49\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393073\",\"num\":50,\"desc\":\"原步骤50\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393074\",\"num\":51,\"desc\":\"原步骤51\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393075\",\"num\":52,\"desc\":\"原步骤52\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393076\",\"num\":53,\"desc\":\"原步骤53\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393077\",\"num\":54,\"desc\":\"原步骤54\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393078\",\"num\":55,\"desc\":\"原步骤55\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393079\",\"num\":56,\"desc\":\"原步骤56\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393080\",\"num\":57,\"desc\":\"原步骤57\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393081\",\"num\":58,\"desc\":\"原步骤58\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393082\",\"num\":59,\"desc\":\"原步骤59\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393083\",\"num\":60,\"desc\":\"原步骤60\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393084\",\"num\":61,\"desc\":\"原步骤61\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393085\",\"num\":62,\"desc\":\"原步骤62\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393086\",\"num\":63,\"desc\":\"原步骤63\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393087\",\"num\":64,\"desc\":\"原步骤64\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393088\",\"num\":65,\"desc\":\"原步骤65\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393089\",\"num\":66,\"desc\":\"原步骤66\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393090\",\"num\":67,\"desc\":\"原步骤67\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393091\",\"num\":68,\"desc\":\"原步骤68\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393092\",\"num\":69,\"desc\":\"原步骤69\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393093\",\"num\":70,\"desc\":\"原步骤70\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393094\",\"num\":71,\"desc\":\"原步骤71\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393095\",\"num\":72,\"desc\":\"原步骤72\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393096\",\"num\":73,\"desc\":\"原步骤73\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393097\",\"num\":74,\"desc\":\"原步骤74\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393098\",\"num\":75,\"desc\":\"原步骤75\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393099\",\"num\":76,\"desc\":\"原步骤76\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393100\",\"num\":77,\"desc\":\"原步骤77\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393101\",\"num\":78,\"desc\":\"原步骤78\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393102\",\"num\":79,\"desc\":\"原步骤79\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393103\",\"num\":80,\"desc\":\"原步骤80\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393104\",\"num\":81,\"desc\":\"原步骤81\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393105\",\"num\":82,\"desc\":\"原步骤82\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393106\",\"num\":83,\"desc\":\"原步骤83\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393107\",\"num\":84,\"desc\":\"原步骤84\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393108\",\"num\":85,\"desc\":\"原步骤85\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393109\",\"num\":86,\"desc\":\"原步骤86\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393110\",\"num\":87,\"desc\":\"原步骤87\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393111\",\"num\":88,\"desc\":\"原步骤88\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393112\",\"num\":89,\"desc\":\"原步骤89\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393113\",\"num\":90,\"desc\":\"原步骤90\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393114\",\"num\":91,\"desc\":\"原步骤91\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393115\",\"num\":92,\"desc\":\"原步骤92\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393116\",\"num\":93,\"desc\":\"原步骤93\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393117\",\"num\":94,\"desc\":\"原步骤94\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393118\",\"num\":95,\"desc\":\"原步骤95\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393119\",\"num\":96,\"desc\":\"原步骤96\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393120\",\"num\":97,\"desc\":\"原步骤97\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393121\",\"num\":98,\"desc\":\"原步骤98\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393122\",\"num\":99,\"desc\":\"原步骤99\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393123\",\"num\":100,\"desc\":\"原步骤100\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null},{\"id\":\"1712340015659393124\",\"num\":101,\"desc\":\"原步骤101\",\"expected\":\"仅测试能力声明\",\"actualResult\":null,\"executeResult\":null}]},\"validationMode\":\"STRUCTURE_ONLY_V1\",\"comparison\":\"NONE_AGENT_REPORTED\",\"resultSource\":\"AGENT_REPORTED\",\"writesEnabled\":true,\"evidenceScope\":\"CASE\",\"minimumEvidenceCount\":1,\"maximumEvidenceCount\":10,\"stepEvidenceRequired\":false,\"clientHashesRequired\":false,\"definitionType\":\"STEP\",\"supported\":false,\"limitations\":{\"originalSteps\":100,\"factsBytes\":1048576,\"submittedSteps\":1000},\"unsupportedReason\":\"当前个人执行仅支持包含完整操作和预期的1至100步结构化用例\"}",
+          "type": "text"
+        }
+      ],
+      "structuredContent": {
+        "result": {
+          "contentHash": "2c341580db5354a6e41ed1361489e53ebcfcfe60c1c869f462d01cd0a8f7592d",
+          "instructions": "One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution.",
+          "policy": {
+            "name": "订单复测-证据与冻结断言-20261019",
+            "rules": [
+              {
+                "parameters": {
+                  "allowedMimeTypes": [
+                    "image/png",
+                    "image/jpeg"
+                  ],
+                  "maxArtifactBytes": 5242880,
+                  "requiredRoles": [
+                    "BEFORE_ACTION",
+                    "AFTER_ACTION"
+                  ]
+                },
+                "ruleId": "Q-EVIDENCE-01"
+              },
+              {
+                "parameters": {
+                  "allowedOperators": [
+                    "EQUALS",
+                    "IN_RANGE"
+                  ],
+                  "expectedSource": "FROZEN_CONTRACT"
+                },
+                "ruleId": "Q-ASSERT-01"
+              }
+            ],
+            "schemaVersion": "quality-policy.v1"
+          },
+          "policyHash": "6b7a0b44773bcd9b3e6156512b24436733e307a9b18a17cc0518c8d050250a53",
+          "case": {
+            "executionRef": null,
+            "executionFacts": null,
+            "projectId": "1704667279923322880",
+            "moduleId": null,
+            "versionId": "1704667279923322928",
+            "reviewStatus": null,
+            "updateTime": null,
+            "description": "",
+            "customFields": [],
+            "caseId": "1712340015659393125",
+            "num": null,
+            "name": "WEEKLY-20261028-101原步骤边界",
+            "modulePath": null,
+            "caseEditType": "STEP",
+            "tags": null,
+            "priority": "P0",
+            "prerequisite": "",
+            "testPlanId": null,
+            "testPlanCaseId": null,
+            "lastExecuteResult": null,
+            "lastExecuteUser": null,
+            "lastExecuteUserName": null,
+            "steps": [
+              {
+                "id": "1712340015659393024",
+                "num": 1,
+                "desc": "原步骤1",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393025",
+                "num": 2,
+                "desc": "原步骤2",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393026",
+                "num": 3,
+                "desc": "原步骤3",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393027",
+                "num": 4,
+                "desc": "原步骤4",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393028",
+                "num": 5,
+                "desc": "原步骤5",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393029",
+                "num": 6,
+                "desc": "原步骤6",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393030",
+                "num": 7,
+                "desc": "原步骤7",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393031",
+                "num": 8,
+                "desc": "原步骤8",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393032",
+                "num": 9,
+                "desc": "原步骤9",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393033",
+                "num": 10,
+                "desc": "原步骤10",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393034",
+                "num": 11,
+                "desc": "原步骤11",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393035",
+                "num": 12,
+                "desc": "原步骤12",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393036",
+                "num": 13,
+                "desc": "原步骤13",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393037",
+                "num": 14,
+                "desc": "原步骤14",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393038",
+                "num": 15,
+                "desc": "原步骤15",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393039",
+                "num": 16,
+                "desc": "原步骤16",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393040",
+                "num": 17,
+                "desc": "原步骤17",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393041",
+                "num": 18,
+                "desc": "原步骤18",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393042",
+                "num": 19,
+                "desc": "原步骤19",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393043",
+                "num": 20,
+                "desc": "原步骤20",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393044",
+                "num": 21,
+                "desc": "原步骤21",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393045",
+                "num": 22,
+                "desc": "原步骤22",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393046",
+                "num": 23,
+                "desc": "原步骤23",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393047",
+                "num": 24,
+                "desc": "原步骤24",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393048",
+                "num": 25,
+                "desc": "原步骤25",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393049",
+                "num": 26,
+                "desc": "原步骤26",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393050",
+                "num": 27,
+                "desc": "原步骤27",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393051",
+                "num": 28,
+                "desc": "原步骤28",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393052",
+                "num": 29,
+                "desc": "原步骤29",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393053",
+                "num": 30,
+                "desc": "原步骤30",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393054",
+                "num": 31,
+                "desc": "原步骤31",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393055",
+                "num": 32,
+                "desc": "原步骤32",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393056",
+                "num": 33,
+                "desc": "原步骤33",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393057",
+                "num": 34,
+                "desc": "原步骤34",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393058",
+                "num": 35,
+                "desc": "原步骤35",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393059",
+                "num": 36,
+                "desc": "原步骤36",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393060",
+                "num": 37,
+                "desc": "原步骤37",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393061",
+                "num": 38,
+                "desc": "原步骤38",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393062",
+                "num": 39,
+                "desc": "原步骤39",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393063",
+                "num": 40,
+                "desc": "原步骤40",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393064",
+                "num": 41,
+                "desc": "原步骤41",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393065",
+                "num": 42,
+                "desc": "原步骤42",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393066",
+                "num": 43,
+                "desc": "原步骤43",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393067",
+                "num": 44,
+                "desc": "原步骤44",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393068",
+                "num": 45,
+                "desc": "原步骤45",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393069",
+                "num": 46,
+                "desc": "原步骤46",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393070",
+                "num": 47,
+                "desc": "原步骤47",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393071",
+                "num": 48,
+                "desc": "原步骤48",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393072",
+                "num": 49,
+                "desc": "原步骤49",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393073",
+                "num": 50,
+                "desc": "原步骤50",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393074",
+                "num": 51,
+                "desc": "原步骤51",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393075",
+                "num": 52,
+                "desc": "原步骤52",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393076",
+                "num": 53,
+                "desc": "原步骤53",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393077",
+                "num": 54,
+                "desc": "原步骤54",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393078",
+                "num": 55,
+                "desc": "原步骤55",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393079",
+                "num": 56,
+                "desc": "原步骤56",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393080",
+                "num": 57,
+                "desc": "原步骤57",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393081",
+                "num": 58,
+                "desc": "原步骤58",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393082",
+                "num": 59,
+                "desc": "原步骤59",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393083",
+                "num": 60,
+                "desc": "原步骤60",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393084",
+                "num": 61,
+                "desc": "原步骤61",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393085",
+                "num": 62,
+                "desc": "原步骤62",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393086",
+                "num": 63,
+                "desc": "原步骤63",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393087",
+                "num": 64,
+                "desc": "原步骤64",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393088",
+                "num": 65,
+                "desc": "原步骤65",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393089",
+                "num": 66,
+                "desc": "原步骤66",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393090",
+                "num": 67,
+                "desc": "原步骤67",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393091",
+                "num": 68,
+                "desc": "原步骤68",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393092",
+                "num": 69,
+                "desc": "原步骤69",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393093",
+                "num": 70,
+                "desc": "原步骤70",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393094",
+                "num": 71,
+                "desc": "原步骤71",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393095",
+                "num": 72,
+                "desc": "原步骤72",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393096",
+                "num": 73,
+                "desc": "原步骤73",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393097",
+                "num": 74,
+                "desc": "原步骤74",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393098",
+                "num": 75,
+                "desc": "原步骤75",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393099",
+                "num": 76,
+                "desc": "原步骤76",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393100",
+                "num": 77,
+                "desc": "原步骤77",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393101",
+                "num": 78,
+                "desc": "原步骤78",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393102",
+                "num": 79,
+                "desc": "原步骤79",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393103",
+                "num": 80,
+                "desc": "原步骤80",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393104",
+                "num": 81,
+                "desc": "原步骤81",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393105",
+                "num": 82,
+                "desc": "原步骤82",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393106",
+                "num": 83,
+                "desc": "原步骤83",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393107",
+                "num": 84,
+                "desc": "原步骤84",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393108",
+                "num": 85,
+                "desc": "原步骤85",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393109",
+                "num": 86,
+                "desc": "原步骤86",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393110",
+                "num": 87,
+                "desc": "原步骤87",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393111",
+                "num": 88,
+                "desc": "原步骤88",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393112",
+                "num": 89,
+                "desc": "原步骤89",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393113",
+                "num": 90,
+                "desc": "原步骤90",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393114",
+                "num": 91,
+                "desc": "原步骤91",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393115",
+                "num": 92,
+                "desc": "原步骤92",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393116",
+                "num": 93,
+                "desc": "原步骤93",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393117",
+                "num": 94,
+                "desc": "原步骤94",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393118",
+                "num": 95,
+                "desc": "原步骤95",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393119",
+                "num": 96,
+                "desc": "原步骤96",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393120",
+                "num": 97,
+                "desc": "原步骤97",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393121",
+                "num": 98,
+                "desc": "原步骤98",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393122",
+                "num": 99,
+                "desc": "原步骤99",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393123",
+                "num": 100,
+                "desc": "原步骤100",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              },
+              {
+                "id": "1712340015659393124",
+                "num": 101,
+                "desc": "原步骤101",
+                "expected": "仅测试能力声明",
+                "actualResult": null,
+                "executeResult": null
+              }
+            ]
+          },
+          "validationMode": "STRUCTURE_ONLY_V1",
+          "comparison": "NONE_AGENT_REPORTED",
+          "resultSource": "AGENT_REPORTED",
+          "writesEnabled": true,
+          "evidenceScope": "CASE",
+          "minimumEvidenceCount": 1,
+          "maximumEvidenceCount": 10,
+          "stepEvidenceRequired": false,
+          "clientHashesRequired": false,
+          "definitionType": "STEP",
+          "supported": false,
+          "limitations": {
+            "originalSteps": 100,
+            "factsBytes": 1048576,
+            "submittedSteps": 1000
+          },
+          "unsupportedReason": "当前个人执行仅支持包含完整操作和预期的1至100步结构化用例"
+        }
+      }
+    }
+  }
+}

@@ -86,7 +86,7 @@
                 >
                   <div v-if="element.type === systemType" class="icon-button">
                     <MsIcon
-                      v-permission="props.updatePermission"
+                      v-permission="props.memberPermission ?? props.updatePermission"
                       type="icon-icon_add_outlined"
                       size="16"
                       @click="handleAddMember"
@@ -366,6 +366,7 @@
   import AddUserModal from './addUserModal.vue';
   import CreateUserGroupPopup from './createOrUpdateUserGroup.vue';
 
+  import { deleteUserGroup as deleteProjectUserGroup } from '@/api/modules/project-management/usergroup';
   import {
     deleteOrgUserGroup,
     deleteUserGroup,
@@ -392,6 +393,7 @@
   const props = defineProps<{
     addPermission: string[];
     updatePermission: string[];
+    memberPermission?: string[];
     isGlobalDisable: boolean;
   }>();
 
@@ -456,7 +458,7 @@
       label: 'system.userGroup.delete',
       danger: true,
       eventTag: 'delete',
-      permission: ['SYSTEM_USER_ROLE:READ+DELETE'],
+      permission: ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'],
     },
   ];
   const orgMoreAction: ActionsItem[] = [
@@ -473,7 +475,10 @@
       label: 'system.userGroup.delete',
       danger: true,
       eventTag: 'delete',
-      permission: ['ORGANIZATION_USER_ROLE:READ+DELETE'],
+      permission:
+        systemType === AuthScopeEnum.SYSTEM
+          ? ['SYSTEM_PERMISSION_CONTROL:READ+DELETE']
+          : ['ORGANIZATION_USER_ROLE:READ+DELETE'],
     },
   ];
   const projectMoreAction: ActionsItem[] = [
@@ -490,7 +495,8 @@
       label: 'system.userGroup.delete',
       danger: true,
       eventTag: 'delete',
-      permission: ['PROJECT_GROUP:READ+DELETE'],
+      permission:
+        systemType === AuthScopeEnum.SYSTEM ? ['SYSTEM_PERMISSION_CONTROL:READ+DELETE'] : ['PROJECT_GROUP:READ+DELETE'],
     },
   ];
 
@@ -572,20 +578,18 @@
           status: 'danger',
         },
         onBeforeOk: async () => {
-          try {
-            if (systemType === AuthScopeEnum.SYSTEM) {
-              await deleteUserGroup(id);
-            }
-            if (systemType === AuthScopeEnum.ORGANIZATION) {
-              await deleteOrgUserGroup(id);
-            }
-            // TODO 项目用户组删除用户组
-            Message.success(t('system.user.deleteUserSuccess'));
-            initData();
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.log(error);
+          if (systemType === AuthScopeEnum.SYSTEM) {
+            await deleteUserGroup(id);
+          } else if (systemType === AuthScopeEnum.ORGANIZATION) {
+            await deleteOrgUserGroup(id);
+          } else if (systemType === AuthScopeEnum.PROJECT) {
+            await deleteProjectUserGroup(id);
+          } else {
+            Message.error('暂时无法操作，请刷新页面后重试');
+            throw new Error('User group scope is unavailable');
           }
+          Message.success(t('system.user.deleteUserSuccess'));
+          initData();
         },
         hideCancel: false,
       });
@@ -644,13 +648,21 @@
   };
 
   const isSystemShowAll = computed(() => {
-    return hasAnyPermission([...props.updatePermission, 'SYSTEM_USER_ROLE:READ+DELETE']);
+    return hasAnyPermission([...props.updatePermission, 'SYSTEM_PERMISSION_CONTROL:READ+DELETE']);
   });
   const isOrdShowAll = computed(() => {
-    return hasAnyPermission([...props.updatePermission, 'ORGANIZATION_USER_ROLE:READ+DELETE']);
+    return hasAnyPermission([
+      ...props.updatePermission,
+      systemType === AuthScopeEnum.SYSTEM
+        ? 'SYSTEM_PERMISSION_CONTROL:READ+DELETE'
+        : 'ORGANIZATION_USER_ROLE:READ+DELETE',
+    ]);
   });
   const isProjectShowAll = computed(() => {
-    return hasAnyPermission([...props.updatePermission, 'PROJECT_GROUP:READ+DELETE']);
+    return hasAnyPermission([
+      ...props.updatePermission,
+      systemType === AuthScopeEnum.SYSTEM ? 'SYSTEM_PERMISSION_CONTROL:READ+DELETE' : 'PROJECT_GROUP:READ+DELETE',
+    ]);
   });
 </script>
 

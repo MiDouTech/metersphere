@@ -5,6 +5,7 @@ import io.metersphere.system.utils.MybatisInterceptorConfig;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.cache.CacheKey;
+import org.apache.ibatis.binding.MapperMethod;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -33,21 +34,19 @@ public class MybatisInterceptor implements Interceptor {
         String methodName = invocation.getMethod().getName();
         Object parameter = invocation.getArgs()[1];
         if (parameter != null && methodName.equals("update")) {
-            invocation.getArgs()[1] = process(parameter);
+            invocation.getArgs()[1] = process(parameter, new IdentityHashMap<>());
         }
         Object returnValue = invocation.proceed();
         Object result = returnValue;
-        if (returnValue instanceof ArrayList<?>) {
+        if (returnValue instanceof List<?> rows) {
             List<Object> list = new ArrayList<>();
             boolean isDecrypted = false;
-            for (Object val : (ArrayList<?>) returnValue) {
+            for (Object val : rows) {
                 Object a = undo(val);
                 if (a != val) {
                     isDecrypted = true;
-                    list.add(a);
-                } else {
-                    break;
                 }
+                list.add(a);
             }
             if (isDecrypted) {
                 result = list;
@@ -98,21 +97,29 @@ public class MybatisInterceptor implements Interceptor {
         return result;
     }
 
-    private Object process(Object obj) throws Throwable {
-        if (obj instanceof Map) {
-            Map paramMap = (Map) obj;
-            for (Object key : paramMap.keySet()) {
-                if (paramMap.get(key) != null) {
-                    paramMap.put(key, process(paramMap.get(key)));
-                }
+    private Object process(Object obj, IdentityHashMap<Object, Object> processed) throws Throwable {
+        if (obj == null) {
+            return null;
+        }
+        if (processed.containsKey(obj)) {
+            return processed.get(obj);
+        }
+        if (obj instanceof Map<?, ?> paramMap) {
+            // MyBatis named aliases often point at the same DTO. Never replace caller values
+            // with stored bytes, or a subsequent write can compress the stored bytes again.
+            Map copy = obj instanceof MapperMethod.ParamMap<?> ? new MapperMethod.ParamMap<>() : new LinkedHashMap<>();
+            processed.put(obj, copy);
+            for (Map.Entry<?, ?> entry : paramMap.entrySet()) {
+                copy.put(entry.getKey(), process(entry.getValue(), processed));
             }
-            return paramMap;
+            return copy;
         }
         Map<String, Map<String, MybatisInterceptorConfig>> localInterceptorConfigMap = getConfig(obj);
         if (MapUtils.isEmpty(localInterceptorConfigMap)) {
             return obj;
         }
         Object newObject = obj.getClass().getDeclaredConstructor().newInstance();
+        processed.put(obj, newObject);
         BeanUtils.copyBean(newObject, obj);
         for (String attrName : localInterceptorConfigMap.keySet()) {
             if (MapUtils.isEmpty(localInterceptorConfigMap.get(attrName))) {

@@ -200,13 +200,10 @@ public class OrganizationTemplateService extends BaseTemplateService {
      * @param scene
      */
     public void disableOrganizationTemplate(String orgId, String scene) {
-        if (StringUtils.isBlank(baseOrganizationParameterService.getValue(orgId, scene))) {
-            OrganizationParameter organizationParameter = new OrganizationParameter();
-            organizationParameter.setOrganizationId(orgId);
-            organizationParameter.setParamKey(baseOrganizationParameterService.getOrgTemplateEnableKeyByScene(scene));
-            organizationParameter.setParamValue(BooleanUtils.toStringTrueFalse(false));
-            baseOrganizationParameterService.add(organizationParameter);
-        }
+        OrganizationService.checkResourceExist(orgId);
+        String key = baseOrganizationParameterService.getOrgTemplateEnableKeyByScene(scene);
+        if (StringUtils.isBlank(key)) throw new io.metersphere.sdk.exception.MSException("不支持的模板场景");
+        baseOrganizationParameterService.setValue(orgId, key, BooleanUtils.toStringTrueFalse(false));
     }
 
     /**

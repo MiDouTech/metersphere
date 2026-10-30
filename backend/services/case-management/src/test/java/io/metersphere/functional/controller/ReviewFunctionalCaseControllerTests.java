@@ -305,7 +305,7 @@ public class ReviewFunctionalCaseControllerTests extends BaseTest {
         reviewFunctionalCaseRequest.setStatus(FunctionalCaseReviewStatus.UN_PASS.toString());
         reviewFunctionalCaseRequest.setNotifier("default-project-member-user-gyq-2");
         reviewFunctionalCaseRequest.setReviewPassRule(CaseReviewPassRule.SINGLE.toString());
-        this.requestPost(SAVE_REVIEW, reviewFunctionalCaseRequest).andExpect(status().is5xxServerError());
+        this.requestPost(SAVE_REVIEW, reviewFunctionalCaseRequest).andExpect(businessValidationError());
 
     }
 
@@ -392,7 +392,7 @@ public class ReviewFunctionalCaseControllerTests extends BaseTest {
     public void downTemp() throws Exception {
         MockMultipartFile file = getMockMultipartFile();
         String fileId = doUploadTempFile(file);
-        Assertions.assertTrue(org.testcontainers.shaded.org.apache.commons.lang3.StringUtils.isNotBlank(fileId));
+        Assertions.assertTrue(org.apache.commons.lang3.StringUtils.isNotBlank(fileId));
         MvcResult compressedResult = this.downloadTempFile(String.format(DOWNLOAD_FILE, "project-review-case-test", fileId, false));
         Assertions.assertTrue(compressedResult.getResponse().getContentAsByteArray().length > 0);
         compressedResult = this.downloadTempFile(String.format(DOWNLOAD_FILE, "project-review-case-test", fileId, true));
@@ -496,7 +496,7 @@ public class ReviewFunctionalCaseControllerTests extends BaseTest {
     }
 
     private void doUploadTempFileFalse(MockMultipartFile file) throws Exception {
-        this.requestUploadFile(UPLOAD_TEMP, file).andExpect(status().is5xxServerError());
+        this.requestUploadFile(UPLOAD_TEMP, file).andExpect(businessError("文件名称不能为空"));
     }
 
     private static MockMultipartFile getNoNameMockMultipartFile() {

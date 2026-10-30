@@ -1,0 +1,38 @@
+{
+  "status": "partial",
+  "backendFocusedCompile": "19 current sources/tests passed against existing dependency classpath; not Maven packaging",
+  "backendTests": {
+    "passed": 24,
+    "skippedMySQL": 0,
+    "failed": 0,
+    "mysqlTests": 2
+  },
+  "frontendLogicTestsPassed": 6,
+  "sfcSyntaxAndTemplatePassed": 8,
+  "lint": "0 errors; existing app/test 12 warnings plus SFC checker console warning 1",
+  "stylelint": "passed for 8 changed SFCs",
+  "nodeBuild": "passed",
+  "nodeFocusedTestsPassed": 13,
+  "nodeStdioContractTestsPassed": 1,
+  "nodePackage": {
+    "version": "0.8.2",
+    "filesAtCheck": 62,
+    "packedBytesAtCheckBeforeReadmeUpdate": 40852,
+    "published": false
+  },
+  "uiEvidence": "isolated real production components with synthetic fixtures; not deployed E2E",
+  "legacyDetail": "live HTTP 500 reproduced; precise root cause awaits server logs",
+  "notRun": [
+    "full vue-tsc",
+    "frontend production build",
+    "Maven full build/integration",
+    "full historical database upgrade",
+    "Docker build/start/health",
+    "deployed E2E",
+    "full role/retention matrices"
+  ],
+  "servicesStarted": false,
+  "productionWrites": false,
+  "committedOrPushed": false,
+  "browserCleanup": "task 13 not found at cleanup; no replacement space created"
+}
