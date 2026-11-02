@@ -1455,7 +1455,9 @@
     },
     selectable: true,
     showSetting: true,
-    heightUsed: 268,
+    // Let the page scroll on small screens instead of shrinking the body to a few rows.
+    heightUsed: 0,
+    scroll: { x: 1400 },
     draggable: { type: 'handle' },
     paginationSize: 'mini',
     draggableCondition: true,

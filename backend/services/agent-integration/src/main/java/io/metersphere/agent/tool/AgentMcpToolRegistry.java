@@ -25,14 +25,26 @@ public class AgentMcpToolRegistry {
             }
         }
         // 兼容别名：方案名 search_projects → 正式名 metersphere.project.search
-        aliases.put("search_projects", "metersphere.project.search");
+        if (handlers.containsKey("metersphere.project.search")) {
+            registerAlias("search_projects", "metersphere.project.search");
+        }
     }
 
     public void register(AgentMcpToolHandler handler) {
         if (handler == null || StringUtils.isBlank(handler.name())) {
             return;
         }
-        handlers.put(handler.name(), handler);
+        if (aliases.containsKey(handler.name()) || handlers.putIfAbsent(handler.name(), handler) != null) {
+            throw new IllegalStateException("Duplicate MCP tool name: " + handler.name());
+        }
+    }
+
+    public void registerAlias(String alias, String canonical) {
+        if (StringUtils.isAnyBlank(alias, canonical) || handlers.containsKey(alias)
+                || aliases.containsKey(alias) || !handlers.containsKey(canonical)) {
+            throw new IllegalStateException("Invalid or conflicting MCP alias: " + alias);
+        }
+        aliases.put(alias, canonical);
     }
 
     public Optional<AgentMcpToolHandler> find(String name) {
@@ -51,7 +63,7 @@ public class AgentMcpToolRegistry {
     }
 
     public Collection<AgentMcpToolHandler> all() {
-        return handlers.values();
+        return java.util.Collections.unmodifiableCollection(handlers.values());
     }
 
     public List<String> names() {

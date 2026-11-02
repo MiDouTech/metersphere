@@ -349,17 +349,6 @@
           </MsFileList>
         </div>
       </a-form>
-      <aside class="case-detail-review-summary">
-        <div class="mb-3 font-medium">用例概览</div>
-        <dl>
-          <dt>用例名称</dt><dd>{{ detailForm.name || '-' }}</dd> <dt>ID</dt
-          ><dd>{{ detailForm.num || detailForm.id || '-' }}</dd> <dt>标签</dt
-          ><dd
-            ><a-tag v-for="tag in detailForm.tags || []" :key="tag">{{ tag }}</a-tag
-            ><span v-if="!detailForm.tags?.length">-</span></dd
-          >
-        </dl>
-      </aside>
     </div>
     <!-- 测试计划等只读场景：仅展示附件列表 -->
     <div v-if="props.isTestPlan" class="w-[90%]">
@@ -1599,39 +1588,10 @@
 <style scoped lang="less">
   .case-detail-review-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 240px;
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
   .case-detail-review-grid > form {
     min-width: 0;
-  }
-  .case-detail-review-summary {
-    align-self: start;
-    padding: 16px;
-    background: var(--color-fill-1);
-    border: 1px solid var(--color-border-2);
-    border-radius: 6px;
-  }
-  .case-detail-review-summary dt {
-    margin-top: 12px;
-    color: var(--color-text-3);
-  }
-  .case-detail-review-summary dd {
-    margin: 6px 0 0;
-    overflow-wrap: anywhere;
-  }
-  .case-detail-review-summary :deep(.arco-tag) {
-    max-width: 100%;
-    height: auto;
-    margin: 0 4px 4px 0;
-    white-space: normal;
-  }
-  @media (max-width: 1100px) {
-    .case-detail-review-grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .case-detail-review-summary {
-      order: -1;
-    }
   }
 </style>

@@ -8,6 +8,29 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class AgentSafeErrorMapperTests {
     private final AgentSafeErrorMapper mapper = new AgentSafeErrorMapper();
+    @Test void usesRequestTraceAndSafeRecoveryMetadata() {
+        org.slf4j.MDC.put("traceId", "request-trace");
+        try {
+            var limited = mapper.toApiError(new MSException("AGENT_RATE_LIMITED"), null);
+            assertEquals("request-trace", limited.getTraceId());
+            assertEquals("RETRY_ORIGINAL_REQUEST", limited.getDetails().get("nextAction"));
+            assertEquals(true, limited.getDetails().get("retryable"));
+            var unknown = mapper.toApiError(new RuntimeException("password=hidden"), null);
+            assertEquals(false, unknown.getDetails().get("retryable"));
+            assertEquals("CONTACT_ADMIN", unknown.getDetails().get("nextAction"));
+            assertFalse(unknown.toString().contains("hidden"));
+            assertEquals("explicit", mapper.toApiError(new MSException("VERSION_CONFLICT"), "explicit").getTraceId());
+        } finally {
+            org.slf4j.MDC.remove("traceId");
+        }
+    }
+
+    @Test void conflictRequiresComparisonInsteadOfAutomaticRetry() {
+        var result = mapper.toApiError(new MSException("VERSION_CONFLICT"), "conflict");
+        assertEquals(false, result.getDetails().get("retryable"));
+        assertEquals("REFRESH_AND_COMPARE", result.getDetails().get("nextAction"));
+    }
+
     @Test void exportRetryKeepsActionableBusinessError(){
         var result=mapper.toApiError(new MSException("EXPORT_TASK_NOT_RETRYABLE"),"retry");
         assertEquals("EXPORT_TASK_NOT_RETRYABLE",result.getCode());
