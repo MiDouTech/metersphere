@@ -80,11 +80,11 @@ public class AgentMcpStreamableService {
         } catch (MSException ex) {
             var safe = safeErrorMapper.toApiError(ex, null);
             LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
-            return safeError(id, -32001, safe.getMessage(), safe.getCode(), safe.getTraceId());
+            return safeError(id, -32001, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         } catch (Exception ex) {
             var safe = safeErrorMapper.toApiError(ex, null);
             LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
-            return safeError(id, -32603, safe.getMessage(), safe.getCode(), safe.getTraceId());
+            return safeError(id, -32603, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         }
     }
 
@@ -176,7 +176,7 @@ public class AgentMcpStreamableService {
         }
         AgentToken token = AgentTokenContext.get();
         if (token != null && !agentTokenRateLimiter.tryAcquireTool(token.getId(), name)) {
-            throw new MSException("Agent MCP tool requests are too frequent. Please retry later.");
+            throw new MSException("AGENT_RATE_LIMITED");
         }
         Object rawKey=arguments.get("requestId");
         if(rawKey!=null && (!(rawKey instanceof String) || !((String)rawKey).matches("[A-Za-z0-9_.:-]{1,128}")))throw new MSException("AGENT_VALIDATION_ERROR");
@@ -296,11 +296,21 @@ public class AgentMcpStreamableService {
         return response;
     }
 
-    private Map<String, Object> safeError(Object id, int rpcCode, String message, String code, String traceId) {
+    private Map<String, Object> recoveryDetails(io.metersphere.agent.dto.AgentApiErrorDTO safe) {
+        Map<String, Object> details = new LinkedHashMap<>(safe.getDetails());
+        if ("AGENT_RATE_LIMITED".equals(safe.getCode())) {
+            details.put("retryAfterMs", agentTokenRateLimiter.suggestedToolRetryAfterMs());
+            details.put("retryAfterBasis", "CONFIGURED_WINDOW_UPPER_BOUND");
+        }
+        return details;
+    }
+
+    private Map<String, Object> safeError(Object id, int rpcCode, String message, String code, String traceId,
+                                          Map<String, Object> details) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("jsonrpc", "2.0"); response.put("id", id);
         response.put("error", Map.of("code", rpcCode, "message", message,
-                "data", Map.of("code", code, "traceId", traceId)));
+                "data", Map.of("code", code, "traceId", traceId, "details", details)));
         return response;
     }
 }
