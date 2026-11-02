@@ -16,10 +16,13 @@ export default function useUser() {
    */
   const logout = async (logoutTo?: string, noRedirect?: boolean, silenceToast = false) => {
     try {
+      if (!silenceToast) sessionStorage.setItem('msp_explicit_logout', '1');
       const userStore = useUserStore();
+      let serverLogoutSucceeded = true;
       try {
         await userStore.logout(silenceToast);
       } catch {
+        serverLogoutSucceeded = false;
         // logout() always clears local credentials, including when the expired server session rejects it.
       }
       const appStore = useAppStore();
@@ -27,9 +30,16 @@ export default function useUser() {
       // 清空顶部菜单
       appStore.setTopMenus([]);
       if (!silenceToast) {
-        Message.success({ content: t('message.logoutSuccess'), duration: HTTP_MESSAGE_DURATION });
+        if (serverLogoutSucceeded) {
+          Message.success({ content: t('message.logoutSuccess'), duration: HTTP_MESSAGE_DURATION });
+        } else {
+          Message.warning({
+            content: '本机登录信息已清除，服务端退出未确认，请稍后重试。',
+            duration: HTTP_MESSAGE_DURATION,
+          });
+        }
       }
-      router.push({
+      await router.replace({
         name: logoutTo && typeof logoutTo === 'string' ? logoutTo : 'login',
         query: noRedirect
           ? {}

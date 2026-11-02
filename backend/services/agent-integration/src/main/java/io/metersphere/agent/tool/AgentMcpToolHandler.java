@@ -16,7 +16,7 @@ public interface AgentMcpToolHandler {
     default Map<String, Object> outputSchema() {
         Map<String,Object> result=Map.of("oneOf",java.util.List.of(
                 Map.of("type","object"),Map.of("type","array"),Map.of("type","string"),
-                Map.of("type","number"),Map.of("type","integer"),Map.of("type","boolean"),Map.of("type","null")));
+                Map.of("type","number"),Map.of("type","boolean"),Map.of("type","null")));
         return Map.of("type", "object", "properties", Map.of("result", result),
                 "required", java.util.List.of("result"), "additionalProperties", false);
     }
