@@ -204,6 +204,16 @@ public class AgentTempAttachmentService {
         else throw AgentBusinessAccess.denied();
     }
 
+    public java.util.Map<String, Object> requireBugExportDownload(String projectId, String fileId) {
+        requireDownload(projectId, fileId);
+        var token = AgentTokenContext.get();
+        String project = agentProjectService.resolveProjectId(projectId);
+        var rows = jdbc.queryForList("SELECT file_name,content_type,size FROM agent_temp_attachment WHERE file_id=? AND project_id=? AND token_id=? AND user_id=? AND purpose='BUG_EXPORT' AND linked=0 AND expires_at>?",
+                fileId, project, token.getId(), token.getUserId(), System.currentTimeMillis());
+        if (rows.size() != 1) throw AgentBusinessAccess.denied();
+        return rows.getFirst();
+    }
+
     @Scheduled(fixedDelay = 60 * 60 * 1000L)
     public void cleanupExpired() {
         List<AgentTempAttachment> expired = agentTempAttachmentMapper.selectExpiredUnlinked(System.currentTimeMillis(), 200);

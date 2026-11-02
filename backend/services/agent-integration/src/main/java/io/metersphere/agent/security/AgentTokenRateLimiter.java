@@ -94,6 +94,11 @@ public class AgentTokenRateLimiter {
         return allow(ipWindows, tokenId + ":" + ip, clock.getAsLong(), tokenLimit);
     }
 
+    /** Conservative upper bound, not an exact Redis quota reset timestamp. */
+    public long suggestedToolRetryAfterMs() {
+        return windowMs;
+    }
+
     public boolean tryAcquireTool(String tokenId, String toolName) {
         if (StringUtils.isAnyBlank(tokenId, toolName)) {
             return true;

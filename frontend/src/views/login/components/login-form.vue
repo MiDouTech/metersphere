@@ -1,6 +1,10 @@
 <template>
+  <div v-if="explicitLogout && !props.isPreview && !isAdminLogin" class="login-form" style="height: 100vh">
+    <p class="mb-6">已退出当前平台登录</p>
+    <a-button type="primary" :loading="miduoRedirecting" @click="resumeMiduoLogin">重新登录</a-button>
+  </div>
   <div
-    v-if="(preheat || miduoRedirecting || miduoPending) && !props.isPreview"
+    v-else-if="(preheat || miduoRedirecting || miduoPending) && !props.isPreview"
     class="login-form"
     :style="props.isPreview ? 'height: inherit' : 'height: 100vh'"
   >
@@ -168,6 +172,8 @@
   /** /login：默认跳米多；/login/admin：账密登录（仅手动输入地址进入） */
   const isAdminLogin = computed(() => route.name === 'loginAdmin');
   const miduoRedirecting = ref(false);
+  const explicitLogout = ref(sessionStorage.getItem('msp_explicit_logout') === '1');
+
   /** SSO 不可用时保持加载态，不暴露管理员入口 */
   const miduoPending = ref(false);
   const localLoginEnabled = ref(true);
@@ -348,6 +354,17 @@
     }
   }
 
+  async function resumeMiduoLogin() {
+    miduoRedirecting.value = true;
+    const redirected = await tryRedirectMiduoBridge();
+    if (redirected) {
+      sessionStorage.removeItem('msp_explicit_logout');
+      return;
+    }
+    miduoRedirecting.value = false;
+    Message.error('暂时无法连接登录服务，请稍后重试。');
+  }
+
   async function refreshLocalLoginConfig() {
     try {
       const status = await getMiduoSsoStatus();
@@ -446,6 +463,10 @@
     }
     // 默认登录页：已登录则等待全局 checkIsLogin；未登录则自动跳转米多登录桥
     if (!isAdminLogin.value) {
+      if (explicitLogout.value) {
+        preheat.value = false;
+        return;
+      }
       try {
         const loggedIn = await isLogin();
         if (loggedIn) {

@@ -11,6 +11,29 @@ import java.util.UUID;
 @Component
 public class AgentSafeErrorMapper {
     public AgentApiErrorDTO toApiError(Throwable error, String suppliedTraceId) {
+        String requestTrace = StringUtils.defaultIfBlank(suppliedTraceId, org.slf4j.MDC.get("traceId"));
+        AgentApiErrorDTO result = mapError(error, requestTrace);
+        result.setDetails(recoveryDetails(result.getCode()));
+        return result;
+    }
+
+    private Map<String, Object> recoveryDetails(String code) {
+        String action = switch (code) {
+            case "AGENT_RATE_LIMITED", "IMPORT_RATE_LIMIT", "EXTERNAL_IMAGE_RATE_LIMIT" -> "RETRY_ORIGINAL_REQUEST";
+            case "VERSION_CONFLICT", "AGENT_REVIEW_STATE_CONFLICT", "ENVIRONMENT_PROFILE_VERSION_CONFLICT" -> "REFRESH_AND_COMPARE";
+            case "SCOPE_DENIED", "RBAC_DENIED", "PROJECT_NOT_ALLOWED", "PERMISSION_DENIED",
+                    "AGENT_PERMISSION_DENIED", "MCP_TOOL_FORBIDDEN", "AGENT_RESOURCE_NOT_ACCESSIBLE" -> "CHECK_PERMISSION";
+            case "REQUEST_IN_PROGRESS", "IDEMPOTENCY_CONFLICT", "IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED" -> "QUERY_OPERATION";
+            case "CHECKPOINT_LEASE_INVALID_OR_EXPIRED", "QUALITY_ATTEMPT_INVALID" -> "QUERY_TASK_STATE";
+            case "AGENT_VALIDATION_ERROR", "VALIDATION_ERROR", "CASE_NAME_INVALID", "CASE_PRIORITY_INVALID",
+                    "CASE_TEMPLATE_INVALID", "IDEMPOTENCY_KEY_REQUIRED" -> "FIX_INPUT";
+            default -> "CONTACT_ADMIN";
+        };
+        // Rate-limit recovery is safe here because admission rejects before invoking the tool.
+        return Map.of("retryable", "RETRY_ORIGINAL_REQUEST".equals(action), "nextAction", action);
+    }
+
+    private AgentApiErrorDTO mapError(Throwable error, String suppliedTraceId) {
         String traceId = StringUtils.defaultIfBlank(suppliedTraceId, UUID.randomUUID().toString());
         if (error instanceof io.metersphere.sdk.exception.ModuleNameConflictException)
             return new AgentApiErrorDTO("MODULE_NAME_CONFLICT", "同一父目录下已存在同名目录，请修改名称", Map.of(), traceId);
@@ -46,6 +69,9 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "BUG_EXPORT_DOWNLOAD_FAILED" -> "导出文件读取失败，请保留原fileId和offset，提供traceId联系管理员";
+            case "BUG_EXPORT_FILE_CHANGED" -> "导出文件内容与元数据不一致，请停止拼接并提供traceId联系管理员";
+            case "AGENT_RATE_LIMITED" -> "请求较多，请等待建议时间后使用原请求标识和原参数重试";
             case "EXPORT_TASK_NOT_RETRYABLE" -> "只能重试失败、已停止或已过期的导出任务";
             case "CASE_EXPORT_FIELD_VALUE_CONFLICT" -> "用例存在同字段的冲突值，请提供traceId联系管理员核对数据";
             case "CASE_EXPORT_FIELD_TYPE_UNSUPPORTED" -> "用例字段类型暂不支持导出，请提供traceId联系管理员";
