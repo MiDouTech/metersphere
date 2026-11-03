@@ -1,0 +1,185 @@
+{
+  "collectedAt": "2026-11-03T00:58:18.627Z",
+  "method": "Page XHR lifecycle observer; no headers, cookies or tokens collected",
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/functional/case/detail/1712127724015026193",
+      "start": 64894.800000190735,
+      "end": 64897.10000038147,
+      "status": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/detail/1712127724015026193",
+      "start": 64897.800000190735,
+      "end": 65051.800000190735,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/module/tree/1712127019640389632",
+      "start": 65047.900000572205,
+      "end": 65172.20000076294,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/1712127724015026193/overview",
+      "start": 65048.800000190735,
+      "end": 65177.10000038147,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/comment/page/1712127724015026193",
+      "start": 65925.9000005722,
+      "end": 65997.60000038147,
+      "status": 0
+    },
+    {
+      "method": "POST",
+      "path": "/api/attachment/check-update",
+      "start": 65870,
+      "end": 65998.20000076294,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/comment/page/1712127724015026193",
+      "start": 65997.60000038147,
+      "end": 66102,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/attachment/preview",
+      "start": 65997.10000038147,
+      "end": 66165,
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/functional/case/page",
+      "start": 100503.20000076294,
+      "end": 100577.30000019073,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "event": "abort-called",
+      "path": "/api/functional/case/detail/1712127724015026193",
+      "time": 101710.20000076294,
+      "stack": [
+        "    at XMLHttpRequest.abort (<anonymous>:2:214)",
+        "    at Array.d (https://msp.ebcone.cn/assets/index-1lImrUmT.js:4:7851)",
+        "    at https://msp.ebcone.cn/assets/index-1lImrUmT.js:7:2295"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/detail/1712127724015026193",
+      "start": 101707.80000019073,
+      "end": 101710.70000076294,
+      "status": 0
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/detail/1712127724015026193",
+      "start": 101711.4000005722,
+      "end": 101769.20000076294,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/module/tree/1712127019640389632",
+      "start": 101766.30000019073,
+      "end": 102226.70000076294,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/1712127724015026193/overview",
+      "start": 101766.80000019073,
+      "end": 102238.20000076294,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "event": "abort-called",
+      "path": "/api/functional/case/comment/page/1712127724015026193",
+      "time": 102332.10000038147,
+      "stack": [
+        "    at XMLHttpRequest.abort (<anonymous>:2:214)",
+        "    at Array.d (https://msp.ebcone.cn/assets/index-1lImrUmT.js:4:7851)",
+        "    at https://msp.ebcone.cn/assets/index-1lImrUmT.js:7:2295"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/comment/page/1712127724015026193",
+      "start": 102284.10000038147,
+      "end": 102332.10000038147,
+      "status": 0
+    },
+    {
+      "method": "POST",
+      "path": "/api/attachment/check-update",
+      "start": 102152,
+      "end": 102333.10000038147,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/functional/case/comment/page/1712127724015026193",
+      "start": 102332.30000019073,
+      "end": 102418.10000038147,
+      "status": 200,
+      "code": 100200,
+      "message": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/attachment/preview",
+      "start": 102331.80000019073,
+      "end": 102448.20000076294,
+      "status": 200
+    }
+  ],
+  "alerts": [
+    {
+      "text": "筛选模式，模块过滤仅可在当前过滤器中操作",
+      "time": 89588.60000038147
+    },
+    {
+      "text": "上传前请先按 Excel 模板中的格式编辑内容 下载 Excel 模板",
+      "time": 89588.60000038147
+    },
+    {
+      "text": "仅展示当前账号在当前项目的旧版同步接口记录。中断任务的提交结果需核对，不要直接重复导入。",
+      "time": 89588.60000038147
+    },
+    {
+      "text": "请求出错，请稍候重试",
+      "time": 101714.30000019073
+    }
+  ]
+}

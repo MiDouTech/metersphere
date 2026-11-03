@@ -1,6 +1,6 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
-  <div class="caseDetailWrapper ml-1 !break-words break-all">
+  <div class="caseDetailWrapper ml-1">
     <MsExecutionFacts :facts="detailForm.executionFacts" />
     <div class="case-detail-review-grid">
       <a-form ref="caseFormRef" class="rounded-[4px]" :model="detailForm" layout="vertical">
@@ -12,7 +12,7 @@
           :label="t('system.orgTemplate.precondition')"
           asterisk-position="end"
         >
-          <span class="absolute right-[6px] top-0 inline-flex items-center gap-2">
+          <span class="case-content-actions">
             <MsAutoSaveStatus
               v-if="isEditPreposition"
               :status="autoSaveStatus"
@@ -45,7 +45,7 @@
             <span class="case-inline-label">{{ t('system.orgTemplate.precondition') }}：</span>
             <div
               v-dompurify-html="detailForm?.prerequisite || '-'"
-              class="case-inline-value case-prerequisite-value markdown-body list-item-css !break-words break-all"
+              class="case-inline-value case-prerequisite-value markdown-body list-item-css"
             ></div>
           </div>
         </a-form-item>
@@ -1217,7 +1217,7 @@
       .map((fileInfo: any) => {
         return convertToFile(fileInfo);
       });
-    await initInlineCommentList();
+    // The comment component owns its initial caseId load; attachment loading must not reload it.
   }
 
   const imageUrl = ref('');
@@ -1481,6 +1481,19 @@
 </script>
 
 <style scoped lang="less">
+  .case-content-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 8px;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .caseDetailWrapper {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
   :deep(.arco-form-item-label) {
     font-weight: bold !important;
   }

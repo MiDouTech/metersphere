@@ -1,0 +1,56 @@
+{
+  "type": "actual component with synthetic data; not business E2E",
+  "results": [
+    {
+      "containerWidth": 1100,
+      "tableWidth": 1330,
+      "textareas": [
+        {
+          "width": 289.8125,
+          "height": 52,
+          "wordBreak": "normal"
+        },
+        {
+          "width": 289.8125,
+          "height": 30,
+          "wordBreak": "normal"
+        }
+      ],
+      "scrollable": true
+    },
+    {
+      "containerWidth": 900,
+      "tableWidth": 1330,
+      "textareas": [
+        {
+          "width": 289.8125,
+          "height": 52,
+          "wordBreak": "normal"
+        },
+        {
+          "width": 289.8125,
+          "height": 30,
+          "wordBreak": "normal"
+        }
+      ],
+      "scrollable": true
+    },
+    {
+      "containerWidth": 720,
+      "tableWidth": 1330,
+      "textareas": [
+        {
+          "width": 289.8125,
+          "height": 52,
+          "wordBreak": "normal"
+        },
+        {
+          "width": 289.8125,
+          "height": 30,
+          "wordBreak": "normal"
+        }
+      ],
+      "scrollable": true
+    }
+  ]
+}

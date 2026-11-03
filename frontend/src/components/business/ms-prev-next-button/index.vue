@@ -50,6 +50,7 @@
     pagination: MsPaginationI; // 分页器对象
     pageChange: (page: number) => Promise<void>; // 分页变更函数
     getDetailFunc: (id: string) => Promise<any>; // 获取详情的请求函数
+    navigationOnly?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -102,6 +103,7 @@
   }
 
   async function initDetail(id?: string) {
+    if (props.navigationOnly) return;
     try {
       innerLoading.value = true;
       emit('loadingDetail');
@@ -140,6 +142,7 @@
           // eslint-disable-next-line no-console
           console.log(error);
           innerLoading.value = false;
+          return;
         }
       } else {
         // 当前查看的不是当前页的第一条数据，则直接查看上一条数据
@@ -165,6 +168,7 @@
           // eslint-disable-next-line no-console
           console.log(error);
           innerLoading.value = false;
+          return;
         }
       } else {
         // 当前查看的不是当前页的最后一条数据，则直接查看下一条数据

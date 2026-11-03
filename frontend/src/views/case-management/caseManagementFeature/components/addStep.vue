@@ -1,5 +1,12 @@
 <template>
-  <MsBaseTable v-bind="propsRes" ref="tableRef" :hoverable="false" v-on="propsEvent" @change="changeHandler">
+  <MsBaseTable
+    v-bind="propsRes"
+    ref="tableRef"
+    class="case-step-table"
+    :hoverable="false"
+    v-on="propsEvent"
+    @change="changeHandler"
+  >
     <template #index="{ rowIndex }">
       <div class="circle text-[12px] font-medium"> {{ rowIndex + 1 }}</div>
     </template>
@@ -304,7 +311,7 @@
           slotName: 'actualResult',
           showDrag: true,
           showInTable: true,
-          width: 180,
+          width: 220,
         },
         {
           title: 'system.orgTemplate.stepExecutionResult',
@@ -339,12 +346,14 @@
       title: 'system.orgTemplate.useCaseStep',
       slotName: 'caseStep',
       dataIndex: 'step',
+      width: 280,
       showDrag: true,
       showInTable: true,
     },
     {
       title: 'system.orgTemplate.expectedResult',
       dataIndex: 'expected',
+      width: 280,
       slotName: 'expectedResult',
       showDrag: true,
       showInTable: true,
@@ -389,7 +398,11 @@
 
   const tableProps = ref<Partial<MsTableProps<StepList>>>({
     columns: templateFieldColumns.value,
-    scroll: { x: '100%', y: props.isScrollY ? props.scrollY ?? 400 : '' },
+    heightUsed: 0,
+    scroll: {
+      x: templateFieldColumns.value.reduce((total, column) => total + Number(column.width || 0), 60),
+      y: props.isScrollY ? props.scrollY ?? 400 : undefined,
+    },
     selectable: false,
     noDisable: true,
     showSetting: false,
@@ -633,5 +646,27 @@
   }
   :deep(.arco-textarea-wrapper.arco-textarea-disabled) {
     background: transparent;
+  }
+</style>
+
+<style scoped lang="less">
+  .case-step-table :deep(.arco-table-td-content > div) {
+    width: 100%;
+    min-width: 0;
+  }
+  .case-step-table :deep(.arco-textarea-wrapper) {
+    width: 100%;
+    min-width: 0;
+  }
+  .case-step-table :deep(textarea) {
+    width: 100%;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+  .case-step-table :deep(.arco-table-td-content) {
+    min-width: 0;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
   }
 </style>
