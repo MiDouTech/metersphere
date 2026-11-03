@@ -175,7 +175,7 @@
           <ms-base-table
             v-bind="propsRes"
             ref="tableRef"
-            class="msp-polished-table mt-[8px]"
+            class="msp-polished-table case-list-compact mt-[8px]"
             batch-action-placement="top"
             always-show-selected-count
             filter-icon-align-left
@@ -2900,8 +2900,8 @@
     display: flex;
     overflow-x: auto;
     margin-top: 8px;
-    padding: 12px 16px;
-    min-height: 56px;
+    padding: 6px 12px;
+    min-height: 40px;
     border: 1px solid var(--color-border-2);
     border-radius: 8px;
     color: var(--color-text-2);
@@ -3021,5 +3021,20 @@
     &.is-unexecuted {
       background: rgb(var(--primary-4));
     }
+  }
+</style>
+
+<style scoped lang="less">
+  .case-list-compact :deep(.arco-table-td) {
+    height: 36px;
+  }
+  .case-list-compact :deep(.arco-table-cell) {
+    padding: 2px 12px;
+  }
+  .case-list-compact :deep(.arco-table-th) {
+    height: 36px;
+  }
+  .case-list-compact :deep(.ms-table-batch-toolbar) {
+    padding: 6px 12px;
   }
 </style>
