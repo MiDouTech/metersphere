@@ -238,3 +238,18 @@ x-cds-signals:
     - "2026-07-15 二次接入：set -eu + frontend cd /repo/frontend"
     - "2026-07-15 Redisson：改用 printf 生成合法 YAML（勿 sed 剥全部缩进）"
     - "2026-07-15 JMeter：启动前复制 resources/jmeter 到 local-runtime/jmeter"
+
+# Optional mode only; the project default and infrastructure remain unchanged.
+x-cds-deploy-modes:
+  app:
+    express:
+      label: CI prebuilt preview
+      prebuilt: true
+      image: ghcr.io/chenqifen-miduo/metersphere-cds-backend:sha-${CDS_COMMIT_SHA}
+      command: /deployments/run-with-wecom-bridge.sh
+  frontend:
+    express:
+      label: CI prebuilt preview
+      prebuilt: true
+      image: ghcr.io/chenqifen-miduo/metersphere-cds-frontend:sha-${CDS_COMMIT_SHA}
+      command: nginx -g 'daemon off;'

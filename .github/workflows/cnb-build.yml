@@ -11,12 +11,21 @@ on:
     branches:
       - v3.x
       - main
+      - agent/msp-12-cds-preflight
 
 permissions:
   contents: read
 
 jobs:
+  cds-preview:
+    if: github.ref_name == 'agent/msp-12-cds-preflight'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/cds-prebuilt.yml
+
   prepare:
+    if: github.ref_name != 'agent/msp-12-cds-preflight'
     name: Prepare Config And Version
     runs-on: ubuntu-latest
     outputs:
