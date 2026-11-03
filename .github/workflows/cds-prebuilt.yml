@@ -1,8 +1,7 @@
 name: CDS Prebuilt Preview
 
 on:
-  push:
-    branches: ['agent/msp-12-cds-preflight']
+  workflow_call:
   workflow_dispatch:
 
 permissions:
