@@ -9,6 +9,8 @@ import java.util.List;
 @Data
 public class CaseReviewDTO extends CaseReview {
 
+    private String testPlanName;
+
     @Schema(description = "评审人")
     private List<CaseReviewUserDTO> reviewers;
 

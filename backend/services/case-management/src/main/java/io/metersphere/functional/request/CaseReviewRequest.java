@@ -24,6 +24,10 @@ public class CaseReviewRequest implements Serializable {
     @NotBlank(message = "{case_review.project_id.not_blank}")
     private String projectId;
 
+    @Schema(description = "关联测试计划ID；空字符串解除关联，省略则保留原关联")
+    @jakarta.validation.constraints.Size(max = 50)
+    private String testPlanId;
+
     @Schema(description = "评审名称", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{case_review.name.not_blank}")
     private String name;

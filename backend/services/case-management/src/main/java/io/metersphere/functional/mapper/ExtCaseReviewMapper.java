@@ -19,6 +19,9 @@ import java.util.Set;
  */
 public interface ExtCaseReviewMapper {
 
+    void setTestPlan(@Param("id") String id, @Param("testPlanId") String testPlanId);
+
+
     List<CaseReview> checkCaseByModuleIds(@Param("moduleIds") List<String> deleteIds);
 
     Long getPos(@Param("projectId") String projectId);

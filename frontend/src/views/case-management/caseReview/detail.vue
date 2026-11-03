@@ -68,6 +68,9 @@
       </MsTableMoreAction>
     </template>
     <template #subHeader>
+      <div v-if="reviewDetail.testPlanId" class="mt-[8px] text-[var(--color-text-2)]">
+        {{ t('caseManagement.caseReview.testPlan') }}: {{ reviewDetail.testPlanName || reviewDetail.testPlanId }}
+      </div>
       <div class="mt-[16px] w-[476px]">
         <div class="mb-[4px] flex items-center gap-[24px]">
           <div class="text-[var(--color-text-4)]">

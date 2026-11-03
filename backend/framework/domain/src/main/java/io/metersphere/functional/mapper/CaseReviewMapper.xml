@@ -5,6 +5,7 @@
     <id column="id" jdbcType="VARCHAR" property="id" />
     <result column="num" jdbcType="BIGINT" property="num" />
     <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="test_plan_id" jdbcType="VARCHAR" property="testPlanId" />
     <result column="module_id" jdbcType="VARCHAR" property="moduleId" />
     <result column="project_id" jdbcType="VARCHAR" property="projectId" />
     <result column="status" jdbcType="VARCHAR" property="status" />
@@ -118,7 +119,7 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, num, `name`, module_id, project_id, `status`, review_pass_rule, pos, start_time, 
+    id, num, `name`, test_plan_id, module_id, project_id, `status`, review_pass_rule, pos, start_time,
     end_time, case_count, pass_rate, tags, description, create_time, create_user, update_time, 
     update_user
   </sql>

@@ -30,6 +30,9 @@ public class CaseReview implements Serializable {
     @Size(min = 1, max = 50, message = "{case_review.module_id.length_range}", groups = {Created.class, Updated.class})
     private String moduleId;
 
+    @Schema(description = "关联测试计划ID")
+    private String testPlanId;
+
     @Schema(description = "项目ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{case_review.project_id.not_blank}", groups = {Created.class})
     @Size(min = 1, max = 50, message = "{case_review.project_id.length_range}", groups = {Created.class, Updated.class})

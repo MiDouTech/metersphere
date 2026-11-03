@@ -1,4 +1,6 @@
 export default {
+  'caseManagement.caseReview.testPlan': 'Associated test plan',
+  'caseManagement.caseReview.testPlanPlaceholder': 'Select a test plan in this project',
   'caseManagement.caseReview.create': 'Create review',
   'caseManagement.caseReview.waitMyReview': 'I reviewed',
   'caseManagement.caseReview.myCreate': 'I created',

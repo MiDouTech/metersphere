@@ -81,6 +81,25 @@ public class CaseReviewService {
     private BaseCaseProvider provider;
     @Resource
     private UserLoginService userLoginService;
+    @Resource
+    private io.metersphere.plan.mapper.TestPlanMapper testPlanMapper;
+
+    void setTestPlan(CaseReviewRequest request, CaseReview review) {
+        if (request.getTestPlanId() == null) {
+            return; // Older clients do not send the association field.
+        }
+        String planId = StringUtils.trimToNull(request.getTestPlanId());
+        if (planId != null) {
+            var plan = testPlanMapper.selectByPrimaryKey(planId);
+            if (plan == null || !Objects.equals(review.getProjectId(), plan.getProjectId())
+                    || !"TEST_PLAN".equals(plan.getType())) {
+                throw new MSException(Translator.get("case_review.test_plan.invalid"));
+            }
+        }
+        extCaseReviewMapper.setTestPlan(review.getId(), planId);
+        review.setTestPlanId(planId);
+    }
+
 
 
     private static final String CASE_MODULE_COUNT_ALL = "all";
@@ -288,7 +307,10 @@ public class CaseReviewService {
      */
     public void editCaseReview(CaseReviewRequest request, String userId) {
         String reviewId = request.getId();
-        checkCaseReview(reviewId);
+        CaseReview existing = checkCaseReview(reviewId);
+        if (!Objects.equals(existing.getProjectId(), request.getProjectId())) {
+            throw new MSException(Translator.get("case_review.test_plan.invalid"));
+        }
         CaseReview caseReview = new CaseReview();
         caseReview.setId(reviewId);
         caseReview.setProjectId(request.getProjectId());
@@ -303,6 +325,7 @@ public class CaseReviewService {
         checkAndSetStartAndEndTime(request, caseReview);
         caseReview.setUpdateTime(System.currentTimeMillis());
         caseReview.setUpdateUser(userId);
+        setTestPlan(request, caseReview);
         caseReviewMapper.updateByPrimaryKeySelective(caseReview);
         //删除用例评审和评审人的关系
         CaseReviewUserExample caseReviewUserExample = new CaseReviewUserExample();
@@ -384,6 +407,7 @@ public class CaseReviewService {
         caseReview.setCreateUser(userId);
         caseReview.setUpdateUser(userId);
         caseReviewMapper.insert(caseReview);
+        setTestPlan(request, caseReview);
         return caseReview;
     }
 
@@ -574,6 +598,12 @@ public class CaseReviewService {
         CaseReview caseReview = checkCaseReview(id);
         CaseReviewDTO caseReviewDTO = new CaseReviewDTO();
         BeanUtils.copyBean(caseReviewDTO, caseReview);
+        if (StringUtils.isNotBlank(caseReview.getTestPlanId())) {
+            var plan = testPlanMapper.selectByPrimaryKey(caseReview.getTestPlanId());
+            if (plan != null && Objects.equals(plan.getProjectId(), caseReview.getProjectId())) {
+                caseReviewDTO.setTestPlanName(plan.getName());
+            }
+        }
         Boolean isFollow = checkFollow(id, userId);
         caseReviewDTO.setFollowFlag(isFollow);
         Map<String, List<CaseReviewFunctionalCase>> reviewCaseMap = getReviewCaseMap(List.of(id));

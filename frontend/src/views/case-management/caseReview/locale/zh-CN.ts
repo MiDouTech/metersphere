@@ -1,4 +1,6 @@
 export default {
+  'caseManagement.caseReview.testPlan': '关联测试计划',
+  'caseManagement.caseReview.testPlanPlaceholder': '请选择当前项目的测试计划',
   'caseManagement.caseReview.create': '创建评审',
   'caseManagement.caseReview.waitMyReview': '我评审的',
   'caseManagement.caseReview.myCreate': '我创建的',

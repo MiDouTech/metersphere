@@ -410,6 +410,12 @@
       width: 200,
     },
     {
+      title: 'caseManagement.caseReview.testPlan',
+      dataIndex: 'testPlanName',
+      showTooltip: true,
+      width: 200,
+    },
+    {
       title: 'caseManagement.caseReview.caseCount',
       dataIndex: 'caseCount',
       showDrag: true,

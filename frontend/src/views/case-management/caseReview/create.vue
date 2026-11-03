@@ -21,6 +21,15 @@
           :max-length="255"
         />
       </a-form-item>
+      <a-form-item field="testPlanId" :label="t('caseManagement.caseReview.testPlan')">
+        <a-select
+          v-model:model-value="reviewForm.testPlanId"
+          :options="testPlanOptions"
+          :placeholder="t('caseManagement.caseReview.testPlanPlaceholder')"
+          allow-search
+          allow-clear
+        />
+      </a-form-item>
       <a-form-item field="desc" :label="t('common.desc')">
         <a-textarea
           v-model:modelValue="reviewForm.desc"
@@ -227,6 +236,7 @@
     getReviewModules,
     getReviewUsers,
   } from '@/api/modules/case-management/caseReview';
+  import { getTestPlanListWithoutPage } from '@/api/modules/test-plan/testPlan';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
   import { filterTreeNode } from '@/utils';
@@ -246,6 +256,7 @@
   const reviewFormRef = ref<FormInstance>();
   const reviewForm = ref({
     name: '',
+    testPlanId: '',
     desc: '',
     folderId: (route.query.moduleId as string) || 'root',
     type: 'SINGLE' as ReviewPassRule,
@@ -254,6 +265,7 @@
     cycle: [] as number[],
     caseCount: 0,
   });
+  const testPlanOptions = ref<SelectOptionData[]>([]);
   const moduleOptions = ref<SelectOptionData[]>([]);
   const moduleLoading = ref(false);
 
@@ -346,6 +358,7 @@
               copyId: route.query.copyId as string,
               projectId: appStore.currentProjectId,
               name,
+              testPlanId: reviewForm.value.testPlanId || '',
               moduleId: folderId,
               reviewPassRule: type, // 评审通过规则
               startTime: cycle ? cycle[0] : null,
@@ -358,6 +371,7 @@
             res = await addReview({
               projectId: appStore.currentProjectId,
               name,
+              testPlanId: reviewForm.value.testPlanId || '',
               moduleId: folderId,
               reviewPassRule: type, // 评审通过规则
               startTime: cycle ? cycle[0] : null,
@@ -402,6 +416,7 @@
             id: route.query.id as string,
             projectId: appStore.currentProjectId,
             name,
+            testPlanId: reviewForm.value.testPlanId || '',
             moduleId: folderId,
             reviewPassRule: type, // 评审通过规则
             startTime: cycle ? cycle[0] : null,
@@ -431,6 +446,7 @@
       const res = await getReviewDetail((route.query.copyId as string) || (route.query.id as string) || '');
       reviewForm.value = {
         name: res.name,
+        testPlanId: res.testPlanId || '',
         desc: res.description,
         folderId: res.moduleId,
         type: res.reviewPassRule,
@@ -447,6 +463,15 @@
     }
   }
   onBeforeMount(() => {
+    getTestPlanListWithoutPage(appStore.currentProjectId)
+      .then((plans) => {
+        testPlanOptions.value = plans
+          .filter((plan) => plan.type === 'TEST_PLAN')
+          .map((plan) => ({ label: `${plan.num} · ${plan.name}`, value: plan.id }));
+      })
+      .catch(() => {
+        /* The request layer displays loading errors. */
+      });
     initModules();
     initReviewers();
     if (isEdit.value || isCopy.value) {

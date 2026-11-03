@@ -43,6 +43,7 @@ export interface BaseAssociateCaseRequest {
 }
 // 评审
 export interface Review {
+  testPlanId?: string;
   projectId: string;
   name: string;
   moduleId: string;
@@ -155,6 +156,8 @@ export interface ReviewDetailReviewersItem {
 }
 // 评审列表项
 export interface ReviewItem {
+  testPlanName?: string;
+  testPlanId?: string;
   id: string;
   num: number;
   name: string;

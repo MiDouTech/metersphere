@@ -6,6 +6,10 @@
         <result column="tags" jdbcType="VARCHAR" property="tags" typeHandler="io.metersphere.handler.ListTypeHandler" />
     </resultMap>
 
+    <update id="setTestPlan">
+        UPDATE case_review SET test_plan_id = #{testPlanId,jdbcType=VARCHAR} WHERE id = #{id}
+    </update>
+
     <select id="checkCaseByModuleIds" resultType="io.metersphere.functional.domain.CaseReview">
         SELECT
             id, name, module_id, create_user
@@ -33,14 +37,15 @@
     <select id="list" resultMap="BaseResultMapDTO">
         SELECT
         case_review.id, case_review.num, case_review.name,
-        case_review.module_id, case_review.project_id, case_review.status,
+        case_review.module_id, case_review.project_id, case_review.test_plan_id, case_review.status,
         case_review.review_pass_rule, case_review.pos, case_review.start_time, case_review.end_time,
         case_review.case_count, case_review.pass_rate, case_review.tags,
         case_review.description, case_review.create_time, case_review.create_user,
         case_review.update_time, case_review.update_user,
-        case_review_module.name as moduleName
+        test_plan.name as testPlanName, case_review_module.name as moduleName
         FROM
         case_review left join case_review_module on  case_review.module_id = case_review_module.id
+        left join test_plan on test_plan.id = case_review.test_plan_id and test_plan.project_id = case_review.project_id
         where case_review.project_id = #{request.projectId}
         <include refid="queryWhereCondition"/>
     </select>
