@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   images:
+    if: github.repository == 'chenqifen-miduo/metersphere'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
