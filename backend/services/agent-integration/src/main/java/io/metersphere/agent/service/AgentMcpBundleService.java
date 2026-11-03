@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class AgentMcpBundleService {
     private static final String PACKAGE_NAME = "metersphere-agent-skill";
-    private static final String VERSION = "1.4.1";
+    private static final String VERSION = "1.4.2";
     @jakarta.annotation.Resource private io.metersphere.agent.tool.AgentMcpToolRegistry registry;
     private static final String FILE_NAME = PACKAGE_NAME + "-" + VERSION + ".zip";
     private static final String TEST_BASE_URL = "https://msp.ebcone.net";
@@ -89,6 +89,10 @@ public class AgentMcpBundleService {
 
     private String skillMd() {
         return """
+                ---
+                name: metersphere-agent
+                description: Search and maintain MeterSphere cases, plans, reviews and bugs, and submit personal execution evidence through remote MCP.
+                ---
                 # MeterSphere Agent
 
                 Use this skill when the user asks you to search, create, update, or submit MeterSphere test cases, test execution results, test plans, reviews, or bugs through the MeterSphere remote MCP endpoint.
@@ -125,7 +129,7 @@ public class AgentMcpBundleService {
         return """
                 # MeterSphere Agent Skill Package
 
-                1. In MeterSphere, open System Settings > Agent Integration.
+                1. In MeterSphere, open Personal Center > Agent Configuration.
                 2. Create a personal Agent Token. The plaintext token is displayed only once.
                 3. Configure your AI client with one of the built-in remote MCP endpoints:
                    - Test: `https://msp.ebcone.net/api/mcp`
@@ -146,7 +150,7 @@ public class AgentMcpBundleService {
                         "test", TEST_BASE_URL,
                         "production", PROD_BASE_URL
                 ),
-                "capabilityContractVersion", "1.4.0",
+                "capabilityContractVersion", "1.4.2",
                 "capabilityDigest", DigestUtils.sha256Hex(toolsMd()),
                 "tokenEmbedded", false
         ));
@@ -213,7 +217,12 @@ public class AgentMcpBundleService {
                 - Use module.get to read updateTime before module.update/move. Moving to parentId=NONE means project root. CASE_MODULE_WRITE_V2 is an explicit grant; AGENT_ALL and FUNCTIONAL_ALL do not include it.
                 - Never infer that deletion/import/export is available from this guide. Only invoke capabilities exposed by live tools/list. Running-case deletion must wait for the user's documented decision when that capability becomes available.
                 - Review create/associate require requestId; read the review after a response loss. Review decisions and Excel import are not promised unless the live tools/list exposes them.
-                - For bug creation, include reproduction steps, expected result, actual result, severity, and related case ID when known.
+                - For bug creation, inspect the current template and required fields; use published workflow initial status rather than inventing one. Include reproduction, expected and actual results when supported by the template.
+                - Case creation: use a nonblank name of at most 255 characters and a priority allowed by the current template. Batch creation may partially succeed: inspect every row and retry identical requests with their original keys.
+                - Upload preparation/completion is purpose-specific: use bug.attachment.upload.prepare/complete for bug detail or comment attachments, and functional.attachment.upload.prepare/complete for case attachments. An upload intent is not an execution evidence ID.
+                - Bug association write results include relation IDs; preserve these for disassociation rather than substituting library case IDs.
+                - If live tools/list exposes metersphere.bug.export.download, read the export fileId in chunks (length default 32768, maximum 65536), advancing nextOffset until eof. Assemble binary data in the client transport, verify sizeBytes and sha256, then ZIP CRC and Excel content. Each chunk requires current ownership, export permission and unexpired BUG_EXPORT purpose. Do not place entire ZIP base64 in model context. This repository implementation still requires runtime verification; older deployments may not expose it.
+                - Export retry is only for failed, stopped or expired jobs, never successful jobs. Optional NULL custom fields must not be interpreted as invalid execution data.
                 """;
     }
 
@@ -224,7 +233,12 @@ public class AgentMcpBundleService {
                 - 401: token missing, expired, disabled, or malformed on POST.
                 - GET /api/mcp returns 405 (no SSE); clients must use POST Streamable HTTP.
                 - 403: token scope, user RBAC, or project allow-list does not permit the operation.
-                - 429: token rate limit exceeded.
+                - 429 or error.data.code=AGENT_RATE_LIMITED: token rate limit exceeded. Inspect error.data.details.retryAfterMs and nextAction when present. CONFIGURED_WINDOW_UPPER_BOUND is a conservative suggestion, not an exact reset time.
+                - HTTP 503 with Retry-After: admission is busy. Use bounded backoff and jitter; keep write requestId and payload unchanged. Start with client concurrency 2.
+                - Preserve traceId for diagnosis; never treat requestId, taskId and traceId as interchangeable.
+                - VERSION_CONFLICT: reread and compare before changing fields. Unknown failures are not proof that a write did not happen.
+                - operation.get currently covers the personal execution operations exposed by its live schema; do not assume generic create/query recovery has been implemented.
+                - Server capabilities, review search/update/disassociation and generic operation-query extensions in implementation plans are not guaranteed live tools. Use tools/list as the authority.
                 - Do not paste tokens into prompts; configure them as environment variables or client secrets.
                 """;
     }
