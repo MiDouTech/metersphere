@@ -23,19 +23,19 @@
           :page-change="props.pageChange"
           :pagination="props.pagination"
           :get-detail-func="props.getDetailFunc"
+          navigation-only
           :detail-id="props.detailId"
           :detail-index="props.detailIndex"
           :table-data="props.tableData"
-          @loading-detail="setDetailLoading"
-          @loaded="handleDetailLoaded"
-          @failed="handleDetailFailure"
           @change="handleNavChange"
         />
         <slot name="titleRight" :loading="loading" :detail="detail"></slot>
       </div>
     </div>
     <div class="min-h-0 flex-1 overflow-auto">
-      <a-alert v-if="loadError" type="error" class="m-4">{{ loadError }}</a-alert>
+      <a-alert v-if="loadError" type="error" class="m-4"
+        >{{ loadError }}<a-button type="text" @click="initDetail()">重试</a-button></a-alert
+      >
       <slot v-else :loading="loading" :detail="detail"></slot>
     </div>
     <div v-if="$slots.footer" class="shrink-0 border-t border-[var(--color-text-n8)] px-4 py-3">
@@ -75,31 +75,32 @@
             :page-change="props.pageChange"
             :pagination="props.pagination"
             :get-detail-func="props.getDetailFunc"
+            navigation-only
             :detail-id="props.detailId"
             :detail-index="props.detailIndex"
             :table-data="props.tableData"
-            @loading-detail="setDetailLoading"
-            @loaded="handleDetailLoaded"
-            @failed="handleDetailFailure"
             @change="handleNavChange"
           />
           <slot name="titleRight" :loading="loading" :detail="detail"></slot>
         </div>
       </div>
     </template>
-    <a-alert v-if="loadError" type="error" class="m-4">{{ loadError }}</a-alert>
+    <a-alert v-if="loadError" type="error" class="m-4"
+      >{{ loadError }}<a-button type="text" @click="initDetail()">重试</a-button></a-alert
+    >
     <slot v-else :loading="loading" :detail="detail"></slot>
   </MsDrawer>
 </template>
 
 <script setup lang="ts">
-  import { nextTick, onMounted, ref, watch } from 'vue';
+  import { onBeforeUnmount, ref, watch } from 'vue';
 
   import MsDrawer from '@/components/pure/ms-drawer/index.vue';
   import type { MsPaginationI } from '@/components/pure/ms-table/type';
   import MsPrevNextButton from '@/components/business/ms-prev-next-button/index.vue';
 
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
+  import { createLatestDetailLoader } from '@/utils/latestDetail';
 
   const props = withDefaults(
     defineProps<{
@@ -114,6 +115,7 @@
       showFullScreen?: boolean;
       pageChange?: (page: number) => Promise<void>;
       getDetailFunc: (id: string) => Promise<any>;
+      getDetailWithSignal?: (id: string, signal: AbortSignal) => Promise<any>;
       /** 同页嵌入（Tab 详情），不渲染抽屉 */
       embed?: boolean;
     }>(),
@@ -130,7 +132,7 @@
   const loading = ref(false);
   const detail = ref<any>({});
   const loadError = ref('');
-  let loadingDetail = false;
+  const currentTargetId = ref(props.detailId);
 
   watch(
     () => props.visible,
@@ -157,46 +159,34 @@
     emit('loaded', val);
   }
 
-  function handleNavChange(payload: { id: string; index: number }) {
-    emit('change', payload);
-  }
-
-  function setDetailLoading() {
-    loadError.value = '';
-    emit('loadingDetail');
-  }
-
   function handleDetailFailure(error: unknown) {
     detail.value = {};
     loadError.value = formatAppErrorMessage(ensureAppError(error, '详情加载失败，请关闭后重试'));
   }
 
-  async function loadDetailDirect(id?: string) {
-    const targetId = id || props.detailId;
-    if (!targetId || !props.getDetailFunc || loadingDetail) {
-      return;
-    }
-    loadingDetail = true;
-    loading.value = true;
-    loadError.value = '';
-    emit('loadingDetail');
-    try {
-      const res = await props.getDetailFunc(targetId);
-      handleDetailLoaded(res);
-    } catch (error) {
-      handleDetailFailure(error);
-    } finally {
+  const detailLoader = createLatestDetailLoader({
+    fetch: (id, signal) => props.getDetailWithSignal?.(id, signal) ?? props.getDetailFunc(id),
+    start: () => {
+      loading.value = true;
+      loadError.value = '';
+      detail.value = {};
+      emit('loadingDetail');
+    },
+    success: handleDetailLoaded,
+    failure: handleDetailFailure,
+    finish: () => {
       loading.value = false;
-      loadingDetail = false;
-    }
-  }
+    },
+  });
 
   function initDetail(id?: string) {
-    if (prevNextButtonRef.value) {
-      prevNextButtonRef.value.initDetail(id);
-    } else {
-      loadDetailDirect(id);
-    }
+    if (!innerVisible.value) return;
+    if (id) currentTargetId.value = id;
+    return detailLoader.load(currentTargetId.value);
+  }
+  function handleNavChange(payload: { id: string; index: number }) {
+    emit('change', payload);
+    initDetail(payload.id);
   }
 
   function openPrevDetail() {
@@ -207,33 +197,15 @@
     prevNextButtonRef.value?.openNextDetail();
   }
 
-  async function tryLoadDetail() {
-    if (!innerVisible.value || !props.detailId) {
-      return;
-    }
-    await nextTick();
-    if (props.tableData && props.pagination && props.pageChange && prevNextButtonRef.value) {
-      initDetail();
-    } else if (props.tableData && props.pagination && props.pageChange) {
-      // PrevNext 尚未挂载完成时直接拉详情
-      await loadDetailDirect();
-    } else {
-      emit('getDetail');
-    }
-  }
-
   watch(
     [() => innerVisible.value, () => props.detailId],
-    () => {
-      tryLoadDetail();
+    ([visible, id]) => {
+      if (visible) initDetail(id);
+      else detailLoader.invalidate();
     },
     { immediate: true }
   );
-
-  onMounted(() => {
-    tryLoadDetail();
-  });
-
+  onBeforeUnmount(detailLoader.invalidate);
   defineExpose({
     initDetail,
     openPrevDetail,

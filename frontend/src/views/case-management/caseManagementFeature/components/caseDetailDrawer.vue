@@ -10,6 +10,7 @@
     :detail-id="props.detailId"
     :detail-index="props.detailIndex"
     :get-detail-func="getCaseDetail"
+    :get-detail-with-signal="getCaseDetail"
     :pagination="!isEditTitle ? props.pagination : undefined"
     :table-data="props.tableData"
     :page-change="props.pageChange"

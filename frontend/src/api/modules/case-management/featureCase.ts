@@ -367,8 +367,8 @@ export function updateCaseRequest(data: Record<string, any>) {
   return MSR.uploadFile({ url: UpdateCaseUrl }, data, '', true);
 }
 // 用例详情
-export function getCaseDetail(id: string) {
-  return MSR.get({ url: `${DetailCaseUrl}/${id}` });
+export function getCaseDetail(id: string, signal?: AbortSignal) {
+  return MSR.get({ url: `${DetailCaseUrl}/${id}`, signal });
 }
 
 export function getPersonalProgress(projectId: string) {

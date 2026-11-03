@@ -6,6 +6,7 @@ import { AppError, formatAppErrorMessage, localizeAppError, normalizeAppError } 
 import { getToken } from '@/utils/auth';
 import { showHttpErrorMessage } from '@/utils/httpMessage';
 import { isString } from '@/utils/is';
+import { isRequestCanceled } from '@/utils/latestDetail';
 
 import type CommonResponse from '@/models/common';
 import { ContentTypeEnum, RequestEnum } from '@/enums/httpEnum';
@@ -148,6 +149,7 @@ const transform: AxiosTransform = {
    */
   responseInterceptorsCatch: async (error: any) => {
     const { t } = useI18n();
+    if (isRequestCanceled(error)) return Promise.reject(error);
     const { response, code, message, config } = error || {};
     // Download failures may arrive as JSON in a Blob. Decode before classifying credentials.
     if (response?.data instanceof Blob && response.data.size <= 1024 * 1024) {

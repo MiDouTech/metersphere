@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-03",
+  "type": "actual Vue detail drawer component with deferred synthetic fetches; not real backend E2E",
+  "checks": {
+    "mountRequests": 1,
+    "repeatedInFlightRefreshAddsRequests": false,
+    "nextDetailRequests": 1,
+    "refreshUsesCurrentNavigatedId": true,
+    "alertCount": 0
+  },
+  "fetchSequence": ["A", "B", "B"],
+  "passed": true
+}
