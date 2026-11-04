@@ -59,6 +59,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class CaseReviewFunctionalCaseService {
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewPersistence planReviewPersistence;
 
 
     @Resource
@@ -230,11 +232,15 @@ public class CaseReviewFunctionalCaseService {
      * @param request request
      */
     public void disassociate(BaseReviewCaseBatchRequest request, String userId) {
+        planReviewPersistence.requireIndependentReview(request.getReviewId());
         List<String> ids = doSelectIds(request);
         if (CollectionUtils.isNotEmpty(ids)) {
             CaseReviewFunctionalCaseExample example = new CaseReviewFunctionalCaseExample();
             example.createCriteria().andIdIn(ids);
             List<CaseReviewFunctionalCase> caseReviewFunctionalCases = caseReviewFunctionalCaseMapper.selectByExample(example);
+            if (caseReviewFunctionalCases.stream().anyMatch(item -> !request.getReviewId().equals(item.getReviewId()))) {
+                throw new MSException("所选成员不属于当前评审");
+            }
             List<String> caseIds = caseReviewFunctionalCases.stream().map(CaseReviewFunctionalCase::getCaseId).distinct().toList();
             caseReviewFunctionalCaseMapper.deleteByExample(example);
             Map<String, Object> param = new HashMap<>();
@@ -278,6 +284,7 @@ public class CaseReviewFunctionalCaseService {
      * @param reviewId 评审id
      */
     public void addCaseReviewFunctionalCase(String caseId, String userId, String reviewId) {
+        planReviewPersistence.requireIndependentReview(reviewId);
         CaseReviewFunctionalCase reviewFunctionalCase = new CaseReviewFunctionalCase();
         reviewFunctionalCase.setId(IDGenerator.nextStr());
         reviewFunctionalCase.setCaseId(caseId);
@@ -419,6 +426,10 @@ public class CaseReviewFunctionalCaseService {
             return;
         }
         List<String> caseIds = caseReviewFunctionalCaseList.stream().map(CaseReviewFunctionalCase::getCaseId).toList();
+        if (caseReviewFunctionalCaseList.stream().anyMatch(item -> !reviewId.equals(item.getReviewId()))) {
+            throw new MSException("所选成员不属于当前评审");
+        }
+        planReviewPersistence.opinionChanging(reviewId, request.getExpectedMembershipEpochs(), caseIds);
         CaseReviewHistoryExample caseReviewHistoryExample = new CaseReviewHistoryExample();
         caseReviewHistoryExample.createCriteria().andCaseIdIn(caseIds).andReviewIdEqualTo(reviewId).andDeletedEqualTo(false).andAbandonedEqualTo(false);
         List<CaseReviewHistory> caseReviewHistories = caseReviewHistoryMapper.selectByExample(caseReviewHistoryExample);
@@ -507,6 +518,7 @@ public class CaseReviewFunctionalCaseService {
     public String mindReview(MindReviewFunctionalCaseRequest request, String userId) {
         String reviewId = request.getReviewId();
         String caseId = request.getCaseId();
+        planReviewPersistence.opinionChanging(reviewId, request.getExpectedMembershipEpochs(), List.of(caseId));
         CaseReview caseReview = caseReviewMapper.selectByPrimaryKey(reviewId);
         //检查权限
         if (!permissionCheckService.userHasSourcePermission(userId, caseReview.getProjectId(), PermissionConstants.CASE_REVIEW_READ_UPDATE, UserRoleType.PROJECT.name()) && StringUtils.equalsIgnoreCase(request.getStatus(), FunctionalCaseReviewStatus.RE_REVIEWED.toString())) {

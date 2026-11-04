@@ -201,16 +201,27 @@ public class TestPlanController {
         return new TestPlanSingleOperationResponse(testPlanService.copy(id, SessionUtils.getUserId()));
     }
 
+    @PostMapping("/copy")
+    @Operation(summary = "确认关联评审设置后复制计划或计划组")
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_READ_ADD)
+    @CheckOwner(resourceId = "#request.getId()", resourceType = "test_plan")
+    public io.metersphere.plan.dto.response.PlanReviewCopyOutcome copy(@Validated @RequestBody PlanReviewCopyRequest request) {
+        return testPlanService.copyDetailed(request, SessionUtils.getUserId());
+    }
+    public record CopyScopeRequest(String projectId,java.util.List<String> ids) { }
+    @PostMapping("/copy-scope")
+    @RequiresPermissions(PermissionConstants.TEST_PLAN_READ)
+    @CheckOwner(resourceId="#request.projectId()",resourceType="project")
+    public Map<String,Object> copyScope(@RequestBody CopyScopeRequest request){return testPlanService.copyScope(request.projectId(),request.ids(),SessionUtils.getUserId());}
+
     @PostMapping("/batch-copy")
     @Operation(summary = "测试计划-批量复制测试计划")
     @RequiresPermissions(PermissionConstants.TEST_PLAN_READ_ADD)
     @CheckOwner(resourceId = "#request.getProjectId()", resourceType = "project")
-    public TestPlanOperationResponse batchCopy(@Validated @RequestBody TestPlanBatchRequest request) {
+    public io.metersphere.plan.dto.response.PlanReviewCopyOutcome batchCopy(@Validated @RequestBody TestPlanBatchRequest request) {
         testPlanManagementService.checkModuleIsOpen(request.getProjectId(), TestPlanResourceConfig.CHECK_TYPE_PROJECT, Collections.singletonList(TestPlanResourceConfig.CONFIG_TEST_PLAN));
         testPlanService.filterArchivedIds(request);
-        return new TestPlanOperationResponse(
-                testPlanService.batchCopy(request, SessionUtils.getUserId(), "/test-plan/batch-copy", HttpMethodConstants.POST.name())
-        );
+        return testPlanService.batchCopyDetailed(request,SessionUtils.getUserId());
     }
 
     @PostMapping("/batch-move")

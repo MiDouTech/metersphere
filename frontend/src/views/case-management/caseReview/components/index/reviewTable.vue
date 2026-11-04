@@ -57,6 +57,9 @@
           </a-tooltip>
         </div>
       </template>
+      <template #planReviewRelation="{ record }"
+        ><PlanReviewListCell side="review" :value="record.planReviewRelation"
+      /></template>
       <template #name="{ record }">
         <a-button type="text" class="max-w-full px-0" @click.stop="openDetail(record.id)">
           <span class="one-line-text">{{ record.name }}</span>
@@ -181,6 +184,7 @@
   import MsTableMoreAction from '@/components/pure/ms-table-more-action/index.vue';
   import type { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
+  import PlanReviewListCell from '@/components/business/plan-review/listCell.vue';
   import passRateLine from '../passRateLine.vue';
   import deleteReviewModal from './deleteReviewModal.vue';
   import ModuleTree from './moduleTree.vue';
@@ -414,6 +418,14 @@
       dataIndex: 'caseCount',
       showDrag: true,
       width: 100,
+    },
+    {
+      title: '关联测试计划',
+      dataIndex: 'planReviewRelation',
+      slotName: 'planReviewRelation',
+      width: 240,
+      showInTable: true,
+      showDrag: true,
     },
     {
       title: 'caseManagement.caseReview.status',

@@ -96,9 +96,11 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 | `create_functional_module` | CASE_WRITE | 创建模块 |
 | `create_functional_case` | CASE_WRITE | 单条创建 |
 | `batch_create_functional_cases` | CASE_WRITE | 批量导入 Agent 生成用例 |
-| `create_test_plan` | PLAN_WRITE | 创建测试计划（可带 caseIds） |
+| `create_test_plan` | PLAN_WRITE、REVIEW_WRITE | 创建真实计划及其关联评审，必填显式reviewSettings，可带caseIds；仍逐项校验当前业务权限 |
 | `associate_test_plan_cases` | PLAN_WRITE | 关联用例到计划 |
 | `create_case_review` | REVIEW_WRITE | 创建评审 |
+| `preview_linked_case_review` | PLAN_READ、PLAN_WRITE、REVIEW_WRITE | 为已有未关联计划预览新评审，不创建业务对象；不接收独立caseIds |
+| `confirm_linked_case_review` | PLAN_READ、PLAN_WRITE、REVIEW_WRITE | 使用原requestId、previewId并显式acknowledged=true确认；服务端重验当前权限、服务授权及预览版本 |
 | `associate_case_review_cases` | REVIEW_WRITE | 关联用例到评审 |
 | `search_bugs` | BUG_READ | 检索缺陷（关键词/状态/处理人） |
 | `get_bug` | BUG_READ | 缺陷详情（含 customFields） |

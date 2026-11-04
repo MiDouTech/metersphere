@@ -198,6 +198,8 @@ export function getTestPlanList(data: TableQueryParams) {
 
 /** 从默认项目导入测试计划 */
 export function importPlanFromDefaultProject(data: {
+  requestKey: string;
+  reviewSettings: import('@/api/modules/plan-review').PlanReviewSettings;
   sourcePlanId: string;
   targetProjectId: string;
   conflictStrategy: string;
@@ -253,8 +255,13 @@ export function archivedPlan(id: string | undefined) {
 }
 // 批量复制测试计划
 export function batchCopyPlan(data: TableQueryParams) {
-  return MSR.post({ url: batchCopyPlanUrl, data });
+  return MSR.post<import('@/api/modules/plan-review').PlanReviewCopyOutcome>({ url: batchCopyPlanUrl, data });
 }
+export const getPlanCopyScope = (projectId: string, ids: string[]) =>
+  MSR.post<{ realPlanCount: number; groupCount: number; settingsRequired: boolean }>({
+    url: '/test-plan/copy-scope',
+    data: { projectId, ids },
+  });
 // 批量移动测试计划
 export function batchMovePlan(data: TableQueryParams) {
   return MSR.post({ url: batchMovePlanUrl, data });
@@ -482,8 +489,14 @@ export function getPlanScenarioAssociatedList(data: TableQueryParams) {
   return MSR.post<CommonList<ApiCaseDetail>>({ url: TestPlanScenarioAssociatedPageUrl, data });
 }
 // 测试计划-复制测试计划&测试计划组
-export function testPlanAndGroupCopy(id: string) {
-  return MSR.get({ url: `${TestPlanAndGroupCopyUrl}/${id}` });
+export function testPlanAndGroupCopy(
+  id: string,
+  settings: { requestKey: string; reviewSettings?: import('@/api/modules/plan-review').PlanReviewSettings }
+) {
+  return MSR.post<import('@/api/modules/plan-review').PlanReviewCopyOutcome>({
+    url: TestPlanAndGroupCopyUrl,
+    data: { id, ...settings },
+  });
 }
 // 测试计划-测试计划组下拉列表
 export function getPlanGroupOptions(projectId: string) {

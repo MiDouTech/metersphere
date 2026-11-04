@@ -39,6 +39,17 @@ public class AgentCaseReviewController {
         agentCaseReviewWriteService.associate(request);
     }
 
+    @PostMapping("/linked/preview")
+    public java.util.Map<String,Object> previewLinked(@RequestBody io.metersphere.agent.dto.AgentLinkedReviewPreviewRequest request) {
+        AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE);
+        return agentCaseReviewWriteService.previewLinked(request);
+    }
+    @PostMapping("/linked/confirm")
+    public java.util.Map<String,Object> confirmLinked(@RequestBody io.metersphere.agent.dto.AgentLinkedReviewConfirmRequest request) {
+        AgentScopeAssert.assertScope(AgentTokenScope.REVIEW_WRITE);
+        return agentCaseReviewWriteService.confirmLinked(request);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "获取评审")
     public AgentCaseReviewDTO get(@PathVariable String id) {

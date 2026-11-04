@@ -162,6 +162,8 @@ export interface SortItem {
 }
 
 export interface BatchActionParams {
+  disabled?: boolean;
+  disabledReason?: string;
   label?: string;
   eventTag?: string;
   isDivider?: boolean;

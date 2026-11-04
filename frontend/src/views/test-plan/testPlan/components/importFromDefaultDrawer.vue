@@ -24,6 +24,12 @@
         />
       </a-form-item>
     </a-form>
+    <PlanReviewSettingsForm
+      v-if="dialogVisible"
+      ref="reviewSettingsRef"
+      :project-id="appStore.currentProjectId"
+      :plan-name="planOptions.find((option) => option.value === form.sourcePlanId)?.label || '导入计划'"
+    />
     <template #footer>
       <div class="flex justify-end gap-2">
         <a-button @click="handleCancel">{{ t('common.cancel') }}</a-button>
@@ -37,6 +43,8 @@
 
 <script setup lang="ts">
   import { computed, ref, watch } from 'vue';
+
+  import PlanReviewSettingsForm from '@/components/business/plan-review/settingsForm.vue';
 
   import { getDefaultHubProjectId } from '@/api/modules/case-management/defaultHub';
   import { getDefaultHubJob } from '@/api/modules/case-management/featureCase';
@@ -61,6 +69,11 @@
   });
 
   const form = ref({ sourcePlanId: '', conflictStrategy: 'SKIP' });
+  const reviewSettingsRef = ref<InstanceType<typeof PlanReviewSettingsForm>>();
+  const requestKey = ref(crypto.randomUUID());
+  watch(dialogVisible, (visible) => {
+    if (visible) requestKey.value = crypto.randomUUID();
+  });
   const planOptions = ref<{ label: string; value: string }[]>([]);
   const loading = ref(false);
   const submitting = ref(false);
@@ -142,12 +155,16 @@
 
   async function handleImport() {
     if (!form.value.sourcePlanId) return;
+    const reviewSettings = await reviewSettingsRef.value?.validate();
+    if (!reviewSettings) return;
     try {
       submitting.value = true;
       const result = await importPlanFromDefaultProject({
         sourcePlanId: form.value.sourcePlanId,
         targetProjectId: appStore.currentProjectId,
         conflictStrategy: form.value.conflictStrategy,
+        requestKey: requestKey.value,
+        reviewSettings,
       });
       const ok = await pollJob(result.jobId);
       if (ok) {

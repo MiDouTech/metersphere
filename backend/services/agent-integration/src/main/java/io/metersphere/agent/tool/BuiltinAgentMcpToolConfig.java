@@ -620,6 +620,17 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     @Bean
+    public AgentMcpToolHandler caseReviewLinkedPreviewTool(AgentCaseReviewWriteService service) {
+        return tool("metersphere.case_review.linked.preview","Preview creation of a review for an existing unpaired plan. Creates no business objects. Keep requestId for confirmation.",AgentTokenScope.REVIEW_WRITE,false,
+                dtoSchema(io.metersphere.agent.dto.AgentLinkedReviewPreviewRequest.class),args->service.previewLinked(convert(args,io.metersphere.agent.dto.AgentLinkedReviewPreviewRequest.class)));
+    }
+    @Bean
+    public AgentMcpToolHandler caseReviewLinkedConfirmTool(AgentCaseReviewWriteService service) {
+        return tool("metersphere.case_review.linked.confirm","Confirm the original preview and create the linked review idempotently. Requires current plan and review permissions and project service grant.",AgentTokenScope.REVIEW_WRITE,false,
+                dtoSchema(io.metersphere.agent.dto.AgentLinkedReviewConfirmRequest.class),args->service.confirmLinked(convert(args,io.metersphere.agent.dto.AgentLinkedReviewConfirmRequest.class)));
+    }
+
+    @Bean
     public AgentMcpToolHandler caseReviewAssociateTool(AgentCaseReviewWriteService service) {
         return tool("metersphere.case_review.associate_cases", "Associate cases to review", AgentTokenScope.REVIEW_WRITE, false,
                 dtoSchema(AgentCaseReviewAssociateRequest.class),
@@ -758,6 +769,12 @@ public class BuiltinAgentMcpToolConfig {
                     parameterized.getActualTypeArguments()[1] == Object.class ? true : fieldSchema(parameterized.getActualTypeArguments()[1]));
         }
         if(type instanceof Class<?> clazz){
+            if(clazz==io.metersphere.functional.planreview.PlanReviewSettings.class)return objectSchema(Map.of(
+                    "name",Map.of("type","string","minLength",1,"maxLength",255),
+                    "moduleId",Map.of("type","string","minLength",1,"maxLength",50),
+                    "reviewers",Map.of("type","array","minItems",1,"uniqueItems",true,"items",Map.of("type","string","minLength",1,"maxLength",50)),
+                    "reviewPassRule",Map.of("type","string","enum",List.of("SINGLE","MULTIPLE")),
+                    "followPlanName",Map.of("type","boolean")),List.of("name","moduleId","reviewers","reviewPassRule"));
             if(clazz==String.class||clazz==Character.class||clazz==char.class)return stringSchema();
             if(clazz==Boolean.class||clazz==boolean.class)return Map.of("type","boolean");
             if(Number.class.isAssignableFrom(clazz)||clazz.isPrimitive())return Map.of("type",(clazz==Float.class||clazz==Double.class||clazz==float.class||clazz==double.class)?"number":"integer");

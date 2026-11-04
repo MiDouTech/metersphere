@@ -8,6 +8,8 @@ import java.util.List;
 
 @Data
 public class MindReviewFunctionalCaseRequest{
+    @Schema(description = "提交意见时读取到的当前成员轮次，关联评审必传")
+    private java.util.Map<String, Long> expectedMembershipEpochs;
 
     @Schema(description = "评审id", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{case_review_user.review_id.not_blank}")

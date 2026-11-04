@@ -15,7 +15,8 @@
         }"
         type="outline"
         :size="props.size"
-        :disabled="actionsDisabled"
+        :disabled="actionsDisabled || element.disabled"
+        :title="element.disabledReason"
         @click="handleSelect(element)"
         >{{ t(element.label as string) }}</a-button
       >
@@ -35,7 +36,8 @@
           }"
           type="outline"
           :size="props.size"
-          :disabled="actionsDisabled"
+          :disabled="actionsDisabled || element.disabled"
+          :title="element.disabledReason"
           >{{ t(element.label as string) }}</a-button
         >
         <template #content>
@@ -43,7 +45,8 @@
             <a-divider v-if="item.isDivider" margin="4px" />
             <a-doption
               v-else-if="canUse(item)"
-              :disabled="actionsDisabled"
+              :disabled="actionsDisabled || element.disabled || item.disabled"
+              :title="item.disabledReason || element.disabledReason"
               :value="item"
               :class="{ delete: item.danger }"
             >
@@ -74,7 +77,8 @@
             <a-divider v-if="element.isDivider" margin="4px" />
             <a-doption
               v-else-if="canUse(element)"
-              :disabled="actionsDisabled"
+              :disabled="actionsDisabled || element.disabled"
+              :title="element.disabledReason"
               :value="element"
               :class="{ delete: element.danger }"
             >
@@ -127,7 +131,14 @@
     hasAllPermission(item.permission as string[]) && hasAnyPermission(item.anyPermission as string[]);
 
   const handleSelect = (item: string | number | Record<string, any> | undefined | BatchActionParams) => {
-    if (actionsDisabled.value || !item || typeof item !== 'object' || !canUse(item as BatchActionParams)) return;
+    if (
+      actionsDisabled.value ||
+      !item ||
+      typeof item !== 'object' ||
+      item.disabled ||
+      !canUse(item as BatchActionParams)
+    )
+      return;
     emit('batchAction', item as BatchActionParams);
   };
 

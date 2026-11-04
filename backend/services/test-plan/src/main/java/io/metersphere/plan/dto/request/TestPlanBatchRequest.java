@@ -10,6 +10,9 @@ import lombok.Data;
  */
 @Data
 public class TestPlanBatchRequest extends TestPlanBatchProcessRequest {
+    @jakarta.validation.constraints.Size(max = 128)
+    private String requestKey;
+    private io.metersphere.functional.planreview.PlanReviewSettings reviewSettings;
 
     @Schema(description = "目标ID", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{test_plan.target_id.not_blank}")

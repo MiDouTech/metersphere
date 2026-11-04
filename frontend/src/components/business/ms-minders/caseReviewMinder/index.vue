@@ -163,6 +163,7 @@
     moduleId: string;
     viewStatusFlag: boolean; // 我的评审结果
     reviewProgress: string;
+    membershipLocked?: boolean;
     reviewPassRule: ReviewPassRule; // 评审规则
     moduleTree: ModuleTreeNode[];
     tableSorter: Record<string, any>;
@@ -505,8 +506,10 @@
       {
         value: 'disassociate',
         label: t('caseManagement.caseReview.disassociateCase'),
+        disabled: props.membershipLocked,
         permission: ['CASE_REVIEW:READ+RELEVANCE'],
         onClick: () => {
+          if (props.membershipLocked) return;
           emit('operation', 'disassociate', node);
         },
       },

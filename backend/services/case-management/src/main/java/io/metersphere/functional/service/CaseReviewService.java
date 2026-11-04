@@ -48,6 +48,10 @@ import java.util.stream.Stream;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class CaseReviewService {
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewLinkReader planReviewLinks;
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewPersistence planReviewPersistence;
 
     public static final int POS_STEP = 5000;
 
@@ -97,6 +101,7 @@ public class CaseReviewService {
             return new ArrayList<>();
         }
         List<String> reviewIds = list.stream().map(CaseReview::getId).toList();
+        var links=planReviewLinks.read(false,request.getProjectId(),reviewIds,io.metersphere.system.utils.SessionUtils.getUserId());
         Map<String, List<CaseReviewFunctionalCase>> reviewCaseMap = getReviewCaseMap(reviewIds);
         List<CaseReviewUserDTO> reviewUsers = getReviewUsers(reviewIds);
         Set<String> userIds = extractUserIds(list);
@@ -106,6 +111,7 @@ public class CaseReviewService {
             buildCaseReviewDTO(caseReviewDTO, reviewCaseMap, reviewUserMap);
             caseReviewDTO.setCreateUserName(userMap.get(caseReviewDTO.getCreateUser()));
             caseReviewDTO.setUpdateUserName(userMap.get(caseReviewDTO.getUpdateUser()));
+            caseReviewDTO.setPlanReviewRelation(links.get(caseReviewDTO.getId()));
         }
 
         return list;
@@ -217,6 +223,11 @@ public class CaseReviewService {
      */
     public CaseReview addCaseReview(CaseReviewRequest request, String userId) {
         String caseReviewId = IDGenerator.nextStr();
+        return addReservedCaseReview(request, userId, caseReviewId);
+    }
+
+    /** Internal durable creation journal supplies a reserved server-generated ID. */
+    public CaseReview addReservedCaseReview(CaseReviewRequest request, String userId, String caseReviewId) {
         BaseAssociateCaseRequest baseAssociateCaseRequest = request.getBaseAssociateCaseRequest();
         List<String> caseIds = doSelectIds(baseAssociateCaseRequest, baseAssociateCaseRequest.getProjectId());
         CaseReview caseReview = addCaseReview(request, userId, caseReviewId, caseIds);
@@ -288,6 +299,7 @@ public class CaseReviewService {
      */
     public void editCaseReview(CaseReviewRequest request, String userId) {
         String reviewId = request.getId();
+        planReviewPersistence.reviewEditing(reviewId);
         checkCaseReview(reviewId);
         CaseReview caseReview = new CaseReview();
         caseReview.setId(reviewId);
@@ -501,6 +513,7 @@ public class CaseReviewService {
      */
     public void associateCase(CaseReviewAssociateRequest request, String userId) {
         String caseReviewId = request.getReviewId();
+        planReviewPersistence.requireIndependentReview(caseReviewId);
         checkCaseReview(caseReviewId);
         BaseAssociateCaseRequest baseAssociateCaseRequest = request.getBaseAssociateCaseRequest();
         List<String> caseIds = doSelectIds(baseAssociateCaseRequest, baseAssociateCaseRequest.getProjectId());
@@ -621,6 +634,7 @@ public class CaseReviewService {
     }
 
     public void disassociate(String reviewId, String caseId, String userId) {
+        planReviewPersistence.requireIndependentReview(reviewId);
         checkCase(caseId);
         //1.刪除评审与功能用例关联关系
         CaseReviewFunctionalCaseExample caseReviewFunctionalCaseExample = new CaseReviewFunctionalCaseExample();

@@ -8,6 +8,8 @@ import java.util.List;
 
 @Data
 public class CaseReviewDTO extends CaseReview {
+    @Schema(description="关联测试计划；缺对侧读权仅返回受限标识")
+    private java.util.Map<String,Object> planReviewRelation;
 
     @Schema(description = "评审人")
     private List<CaseReviewUserDTO> reviewers;

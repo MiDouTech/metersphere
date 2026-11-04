@@ -77,6 +77,17 @@
         ]
       },
       {
+        "id": "PLAN_REVIEW",
+        "name": "计划与评审关联管理",
+        "permissions": [
+          { "id": "PLAN_REVIEW:GRANT_MANAGE", "name": "管理项目成员同步服务授权" },
+          { "id": "PLAN_REVIEW:RESTORE", "name": "恢复本侧完成或归档状态" },
+          { "id": "PLAN_REVIEW:NOTICE_RECOVER", "name": "恢复未送达通知（不恢复成员同步）" },
+          { "id": "PLAN_REVIEW:MIGRATE", "name": "执行已批准的历史关系迁移" },
+          { "id": "PLAN_REVIEW:TAKEOVER_APPROVE", "name": "批准待完成操作接管" }
+        ]
+      },
+      {
         "id": "CASE_REVIEW",
         "name": "permission.case_review.name",
         "permissions": [
