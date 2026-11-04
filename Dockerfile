@@ -1,11 +1,11 @@
-FROM node:22-alpine AS wecom-bridge
+FROM docker.io/gzmidoo/node:22-alpine AS wecom-bridge
 
 WORKDIR /opt/wecom-bot-bridge
 COPY wecom-bot-bridge/package.json wecom-bot-bridge/package-lock.json ./
 RUN npm ci --omit=dev
 COPY wecom-bot-bridge/src ./src
 
-FROM registry.fit2cloud.com/metersphere/alpine-openjdk21-jre
+FROM docker.io/gzmidoo/metersphere:alpine-openjdk21-jre
 
 LABEL maintainer="FIT2CLOUD <support@fit2cloud.com>"
 

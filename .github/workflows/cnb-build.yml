@@ -3,6 +3,11 @@ name: Build And Store Artifacts In CNB
 on:
   workflow_dispatch:
     inputs:
+      publish_test:
+        description: 是否发布到测试环境；选择否时 CNB 更新提交会添加 [skip ci]
+        required: true
+        default: true
+        type: boolean
       version:
         description: "制品版本号，留空则使用日期+短SHA"
         required: false
@@ -10,22 +15,12 @@ on:
   push:
     branches:
       - v3.x
-      - main
-      - agent/msp-12-cds-preflight
 
 permissions:
   contents: read
 
 jobs:
-  cds-preview:
-    if: github.ref_name == 'agent/msp-12-cds-preflight'
-    permissions:
-      contents: read
-      packages: write
-    uses: ./.github/workflows/cds-prebuilt.yml
-
   prepare:
-    if: github.ref_name != 'agent/msp-12-cds-preflight'
     name: Prepare Config And Version
     runs-on: ubuntu-latest
     outputs:
@@ -83,7 +78,7 @@ jobs:
           if [ -n "${{ inputs.version }}" ]; then
             VERSION="${{ inputs.version }}"
           else
-            VERSION="$(date +%Y%m%d)-${GITHUB_SHA::8}"
+            VERSION="$(TZ=Asia/Shanghai date +%Y%m%d)-${GITHUB_SHA::8}"
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "VERSION=${VERSION}"
@@ -227,6 +222,8 @@ jobs:
       - name: Build and store backend image in CNB registry
         uses: docker/build-push-action@v6
         with:
+          provenance: false
+          sbom: false
           context: ${{ needs.prepare.outputs.backend_context }}
           file: ${{ needs.prepare.outputs.backend_dockerfile }}
           push: true
@@ -394,6 +391,6 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: update build metadata ${VERSION} [skip ci]"
+          git commit -m "chore: update build metadata ${VERSION}${{ github.event_name == 'workflow_dispatch' && inputs.publish_test == false && ' [skip ci]' || '' }}"
           git -c "http.https://cnb.cool/.extraheader=AUTHORIZATION: basic ${basic}" \
             push origin "HEAD:${default_branch}"
