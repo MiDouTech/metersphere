@@ -12,6 +12,11 @@
     <name>agent-integration</name>
     <dependencies>
         <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.22.2</version>
+        </dependency>
+        <dependency>
             <groupId>io.metersphere</groupId>
             <artifactId>metersphere-sdk</artifactId>
             <version>${revision}</version>

@@ -203,6 +203,21 @@ public class FileManagementService {
         return fileService.download(fileRequest);
     }
 
+    /** Server-owned request for bounded original-image reads; does not authorize library browsing. */
+    public FileRequest imageReadRequest(FileMetadata metadata) {
+        String storage = StringUtils.upperCase(metadata.getStorage());
+        if (!java.util.Set.of("MINIO", "GIT", "LOCAL").contains(StringUtils.defaultString(storage)))
+            throw new MSException("BUG_IMAGE_RESOURCE_UNAVAILABLE");
+        FileRequest request = new FileRequest(DefaultRepositoryDir.getFileManagementDir(metadata.getProjectId()),
+                storage, metadata.getId());
+        if (StorageType.GIT.name().equals(storage)) {
+            request.setGitFileRequest(getFileModuleRepositoryDTO(metadata.getModuleId()), getFileMetadataRepositoryDTO(metadata.getId()));
+            request.setFileName(metadata.getPath());
+        }
+        return request;
+    }
+
+
     public FileMetadataRepositoryDTO getFileMetadataRepositoryDTO(String fileMetadataId) {
         FileMetadataRepository fileMetadataRepository = fileMetadataRepositoryMapper.selectByPrimaryKey(fileMetadataId);
         FileMetadataRepositoryDTO metadataRepositoryDTO = new FileMetadataRepositoryDTO();

@@ -18,6 +18,9 @@ public class AgentSafeErrorMapper {
     }
 
     private Map<String, Object> recoveryDetails(String code) {
+        if (code.equals("BUG_IMAGE_INDEX_STORAGE_UNAVAILABLE")) return Map.of("retryable", true, "nextAction", "REFRESH_BUG");
+        if (code.startsWith("BUG_IMAGE_")) return Map.of("retryable", code.equals("BUG_IMAGE_STORAGE_UNAVAILABLE"),
+                "nextAction", code.equals("BUG_IMAGE_STORAGE_UNAVAILABLE") ? "RETRY_IMAGE" : code.equals("BUG_IMAGE_REFERENCE_EXPIRED") ? "REFRESH_BUG" : "FIX_INPUT");
         String action = switch (code) {
             case "AGENT_RATE_LIMITED", "IMPORT_RATE_LIMIT", "EXTERNAL_IMAGE_RATE_LIMIT" -> "RETRY_ORIGINAL_REQUEST";
             case "VERSION_CONFLICT", "AGENT_REVIEW_STATE_CONFLICT", "ENVIRONMENT_PROFILE_VERSION_CONFLICT" -> "REFRESH_AND_COMPARE";
@@ -69,6 +72,19 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "BUG_IMAGE_INDEX_STORAGE_UNAVAILABLE" -> "索引生成时未能绑定图片版本，请刷新缺陷详情后使用新引用读取";
+            case "BUG_IMAGE_REFERENCE_EXPIRED" -> "图片引用已失效，请重新获取缺陷详情";
+            case "BUG_IMAGE_STORAGE_UNAVAILABLE" -> "图片存储暂不可用，请显式重试此图片";
+            case "BUG_IMAGE_RESOURCE_UNAVAILABLE" -> "图片不存在或当前来源不可用";
+            case "BUG_IMAGE_UNSAVED_IMAGE" -> "图片尚未保存，请保存缺陷后刷新详情";
+            case "BUG_IMAGE_EXTERNAL_IMAGE" -> "外部图片不支持通过本工具读取";
+            case "BUG_IMAGE_UNSUPPORTED_FORMAT" -> "仅支持可解码的单帧PNG或JPEG图片";
+            case "BUG_IMAGE_EMPTY_FILE" -> "图片内容为空";
+            case "BUG_IMAGE_SIZE_LIMIT" -> "图片超过5,242,880字节";
+            case "BUG_IMAGE_PIXEL_LIMIT" -> "图片超过20,000,000像素";
+            case "BUG_IMAGE_CORRUPT_IMAGE" -> "图片损坏或无法完整解码";
+            case "BUG_IMAGE_INVALID_ARGUMENT" -> "请提供projectId、bugId和详情返回的imageRef";
+            case "BUG_IMAGE_UNSUPPORTED" -> "当前服务器未启用缺陷图片读取，文字详情仍可读取";
             case "BUG_EXPORT_DOWNLOAD_FAILED" -> "导出文件读取失败，请保留原fileId和offset，提供traceId联系管理员";
             case "BUG_EXPORT_FILE_CHANGED" -> "导出文件内容与元数据不一致，请停止拼接并提供traceId联系管理员";
             case "AGENT_RATE_LIMITED" -> "请求较多，请等待建议时间后使用原请求标识和原参数重试";

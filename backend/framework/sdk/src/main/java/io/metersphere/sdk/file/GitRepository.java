@@ -55,7 +55,7 @@ public class GitRepository implements FileRepository {
         GitFileRequest gitFileInfo = request.getGitFileRequest();
         GitRepositoryUtil repositoryUtils = new GitRepositoryUtil(
                 gitFileInfo.getUrl(), gitFileInfo.getUserName(), gitFileInfo.getToken());
-        return repositoryUtils.getFileStream(gitFileInfo.getUrl(), gitFileInfo.getCommitId());
+        return repositoryUtils.getFileStream(request.getFileName(), gitFileInfo.getCommitId());
     }
 
     // 缓冲区大小
