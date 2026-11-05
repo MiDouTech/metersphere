@@ -41,6 +41,41 @@ class PlanReviewApplicationTests {
 
     private <T> T run(Supplier<T> action) { return tx.execute(s -> action.get()); }
     private String preview() { return (String) run(() -> service.preview("plan", "review", "PAIR_EXISTING", "actor")).get("previewId"); }
+    @Test void editableCandidatesIncludeBothStatesOnBothSidesAndSearchBeforePagination() {
+        jdbc.update("INSERT INTO test_plan(id,project_id,type,status,num,name) VALUES('prepared','project','TEST_PLAN','PREPARED',100007,'prepared-plan'),('foreign-plan','other','TEST_PLAN','UNDERWAY',100008,'foreign'),('group','project','GROUP','UNDERWAY',100009,'group'),('completed','project','TEST_PLAN','COMPLETED',100010,'completed')");
+        jdbc.update("UPDATE test_plan SET num=100006,name='underway-plan' WHERE id='plan'");
+        jdbc.update("INSERT INTO case_review(id,project_id,status,num,name) VALUES('prepared-review','project','PREPARED',100003,'prepared-review'),('locked-review','project','COMPLETED',100004,'completed')");
+        for (String side : List.of("plan", "review")) {
+            String id = side.equals("plan") ? "plan" : "review";
+            var result = run(() -> service.candidates(side, id, "", 1, 20, "actor"));
+            assertEquals(2L, ((Number) result.get("total")).longValue());
+            var items = (List<Map<String,Object>>) result.get("items");
+            assertEquals(Set.of("PREPARED", "UNDERWAY"), items.stream().map(row -> (String) row.get("status")).collect(java.util.stream.Collectors.toSet()));
+        }
+        for (String keyword : List.of("100006", "underway-plan")) {
+            var result = run(() -> service.candidates("review", "review", keyword, 1, 1, "actor"));
+            assertEquals(1L, ((Number) result.get("total")).longValue());
+            assertEquals("plan", ((Map<?,?>) ((List<?>) result.get("items")).getFirst()).get("id"));
+        }
+        assertEquals(0L, ((Number) run(() -> service.candidates("review", "review", "no-match", 1, 20, "actor")).get("total")).longValue());
+        assertThrows(PlanReviewFailure.class, () -> run(() -> service.candidates("review", "review", "", 1, 20, "reader")));
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_relation", Integer.class));
+    }
+    @Test void legacyOwnershipIsVisibleWithoutExposingCounterpartAndStillExcludedFromCandidates() {
+        jdbc.update("INSERT INTO functional_import_followup_group(id,project_id,plan_id,review_id) VALUES('old','project','plan','review')");
+        var summary = run(() -> service.summary("plan", "plan", "reader"));
+        assertEquals(Map.of("relationStatus", "NONE", "restricted", false, "legacyBlocked", true), summary);
+        var reader = new PlanReviewLinkReader(jdbc, new PlanReviewAuthorization(jdbc), new PlanReviewPlanStateResolver(List.of()));
+        assertEquals(summary, run(() -> reader.read(true, "project", List.of("plan"), "reader")).get("plan"));
+        assertEquals(0L, ((Number) run(() -> service.candidates("review", "review", "", 1, 20, "actor")).get("total")).longValue());
+        assertEquals(0L, ((Number) run(() -> service.candidates("plan", "plan", "", 1, 20, "actor")).get("total")).longValue());
+        assertEquals("LEGACY_ADOPTION_REQUIRED", assertThrows(PlanReviewFailure.class, () -> preview()).code());
+        jdbc.update("DELETE FROM functional_import_followup_group");
+        jdbc.update("INSERT INTO functional_import_followup(job_id,project_id,plan_id,review_id,policy,state) VALUES('old-job','project','plan','review','APPEND_EXISTING','SUCCEEDED')");
+        assertEquals(true, run(() -> service.summary("plan", "plan", "reader")).get("legacyBlocked"));
+        jdbc.update("UPDATE functional_import_followup SET state='MIGRATED_V2'");
+        assertEquals(false, run(() -> service.summary("plan", "plan", "reader")).get("legacyBlocked"));
+    }
     @Test void legacyOwnershipBlocksNewPairAndLateLegacyOwnershipInvalidatesAnExistingPreview(){
         String preview=preview();
         jdbc.update("INSERT INTO functional_import_followup_group(id,project_id,plan_id,review_id) VALUES('old','project','plan','review')");

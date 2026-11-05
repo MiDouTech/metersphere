@@ -2,6 +2,7 @@ import MSR from '@/api/http/index';
 
 export type RelationSide = 'plan' | 'review';
 export interface RelationSummary {
+  legacyBlocked?: boolean;
   relationStatus: 'NONE' | 'ACTIVE' | 'RESTRICTED';
   restricted: boolean;
   relationId?: string;
@@ -21,6 +22,7 @@ export interface RelationSummary {
   scopeMessage?: string;
 }
 export interface RelationListSummary {
+  legacyBlocked?: boolean;
   relationStatus: 'NONE' | 'ACTIVE' | 'RESTRICTED' | 'INVALID';
   restricted: boolean;
   target?: { id: string; num: number; name: string; status: string };

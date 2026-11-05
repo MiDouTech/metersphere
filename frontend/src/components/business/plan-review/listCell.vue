@@ -2,6 +2,7 @@
   <span v-if="group">—</span>
   <span v-else-if="!value">关联信息待核实</span>
   <span v-else-if="value.restricted">无权查看关联对象</span>
+  <span v-else-if="value.legacyBlocked">历史关联待交接</span>
   <span v-else-if="value.relationStatus === 'NONE'">未关联</span>
   <span v-else-if="!value.target">关联对象已失效</span>
   <div v-else class="min-w-0">

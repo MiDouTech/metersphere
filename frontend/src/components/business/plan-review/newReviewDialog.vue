@@ -14,12 +14,15 @@
     <template v-if="!preview">
       <a-input-search v-model="keyword" placeholder="搜索同项目未关联且可编辑的真实计划" @search="search(1)" />
       <a-alert v-if="failed" type="error">候选加载失败，请重试；不会按无候选处理。</a-alert>
-      <a-table :data="candidates" row-key="id" :loading="busy" :pagination="false">
+      <a-table :data="candidates" row-key="id" :loading="busy" :pagination="false" @row-click="selectCandidate">
         <template #columns>
           <a-table-column title="选择" :width="60"
             ><template #cell="{ record }"
-              ><a-radio :model-value="record.id === selected" @change="selected = record.id" /></template
-          ></a-table-column>
+              ><a-radio v-model="selected" :value="record.id" :disabled="busy || failed" uninject-group-context
+                ><span class="sr-only">选择 {{ record.num }} {{ record.name }}</span></a-radio
+              ></template
+            ></a-table-column
+          >
           <a-table-column title="编号" data-index="num" :width="90" /><a-table-column
             title="计划名称"
             data-index="name"
@@ -78,6 +81,8 @@
   } from '@/api/modules/plan-review';
   import useAppStore from '@/store/modules/app';
 
+  import type { TableData } from '@arco-design/web-vue';
+
   const appStore = useAppStore();
   const visible = ref(false);
   const busy = ref(false);
@@ -87,6 +92,10 @@
   const candidates = ref<RelationCandidate[]>([]);
   const total = ref(0);
   const candidatePage = ref(1);
+  function selectCandidate(record: TableData) {
+    const candidate = candidates.value.find((item) => item.id === record.id);
+    if (!busy.value && !failed.value && candidate) selected.value = candidate.id;
+  }
   const preview = ref<RelationPreview & { operationId: string }>();
   const acknowledged = ref(false);
   const items = ref<RelationDifferenceItem[]>([]);

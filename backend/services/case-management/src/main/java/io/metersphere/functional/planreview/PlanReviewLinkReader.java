@@ -27,7 +27,8 @@ public class PlanReviewLinkReader {
             var arguments=new ArrayList<Object>();arguments.add(project);arguments.addAll(batch);
             Long ownCount=jdbc.queryForObject("SELECT COUNT(*) FROM "+(planSide?"test_plan":"case_review")+" WHERE project_id=? AND id IN ("+placeholders+")",Long.class,arguments.toArray());
             if(ownCount==null||ownCount!=batch.size())throw inaccessible();
-            for(String id:batch)result.put(id,Map.of("relationStatus","NONE","restricted",false));
+            var legacyBlocked=PlanReviewLegacyOwnership.blockedIds(jdbc,planSide,batch);
+            for(String id:batch)result.put(id,Map.of("relationStatus","NONE","restricted",false,"legacyBlocked",legacyBlocked.contains(id)));
             String owner=planSide?"active_plan_id":"active_review_id";
             var rows=jdbc.queryForList("SELECT * FROM plan_review_relation WHERE project_id=? AND "+owner+" IN ("+placeholders+") AND state='ACTIVE'",arguments.toArray());
             if(!opposite){for(var row:rows)result.put((String)row.get(owner),Map.of("relationStatus","RESTRICTED","restricted",true));continue;}
