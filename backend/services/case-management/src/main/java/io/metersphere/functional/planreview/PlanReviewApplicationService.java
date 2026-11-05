@@ -59,7 +59,8 @@ public class PlanReviewApplicationService {
         authorization.requireRead(actor, project, planSide);
         var rows = jdbc.queryForList("SELECT * FROM plan_review_relation WHERE "
                 + (planSide ? "active_plan_id" : "active_review_id") + "=? AND project_id=?", id, project);
-        if (rows.isEmpty()) return Map.of("relationStatus", "NONE", "restricted", false);
+        if (rows.isEmpty()) return Map.of("relationStatus", "NONE", "restricted", false,
+                "legacyBlocked", !PlanReviewLegacyOwnership.blockedIds(jdbc, planSide, List.of(id)).isEmpty());
         var access = authorization.current(actor, project, false);
         if (!access.permissions().contains(planSide ? PlanReviewPolicy.Permission.REVIEW_READ : PlanReviewPolicy.Permission.PLAN_READ)) {
             return Map.of("relationStatus", "RESTRICTED", "restricted", true);
@@ -162,7 +163,7 @@ public class PlanReviewApplicationService {
                 + "=o.id AND op.state IN ('PENDING','BLOCKED_PERMISSION','RETRYABLE_FAILURE'))"
                 + " AND NOT EXISTS(SELECT 1 FROM functional_import_followup_group lg WHERE CAST(lg."+(planSide?"review_id":"plan_id")+" AS BINARY(50))=CAST(o.id AS BINARY(50)))"
                 + " AND NOT EXISTS(SELECT 1 FROM functional_import_followup lf WHERE lf.policy<>'IMPORT_ONLY' AND lf.state<>'MIGRATED_V2' AND CAST(lf."+(planSide?"review_id":"plan_id")+" AS BINARY(50))=CAST(o.id AS BINARY(50)))"
-                + " AND (o.name LIKE ? ESCAPE '!' OR CAST(o.num AS CHAR) LIKE ? ESCAPE '!')";
+                + " AND (o.name LIKE ? ESCAPE '!' OR CAST(o.num AS CHAR(32)) LIKE ? ESCAPE '!')";
         String query = "%" + keyword.strip().replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
         if (!planSide) {
             var all = jdbc.queryForList("SELECT o.* FROM test_plan o WHERE " + where + " ORDER BY o.update_time DESC,o.id", project, query, query)

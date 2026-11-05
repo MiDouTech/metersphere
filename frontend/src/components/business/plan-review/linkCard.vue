@@ -8,6 +8,12 @@
           <a-button size="small" @click="load">重试</a-button>
         </template>
         <template v-else-if="summary?.restricted">无权查看关联对象</template>
+        <template v-else-if="summary?.legacyBlocked">
+          <span>历史关联待交接</span>
+          <span class="text-xs text-[var(--color-text-3)]"
+            >请由有权人员在测试计划列表的“历史关联迁移”中核查原记录，完成受控交接后再操作。</span
+          >
+        </template>
         <template v-else-if="summary?.target">
           <a-tooltip :content="summary.target.name">
             <a-link class="max-w-[300px] truncate" @click="openTarget"
@@ -88,20 +94,43 @@
       :title="title"
       :width="760"
       :ok-loading="busy"
-      :ok-button-props="{ disabled: !selectedId || candidatesLoading }"
+      :ok-button-props="{ disabled: !selectedId || candidatesLoading || candidatesError }"
       ok-text="下一步：预览差异"
       @before-ok="() => beginPreview(false)"
     >
-      <a-input-search v-model="keyword" placeholder="搜索名称或编号" :max-length="255" @search="search" />
+      <a-input-search
+        v-model="keyword"
+        placeholder="搜索名称或编号"
+        :max-length="255"
+        allow-clear
+        @search="searchFirstPage"
+      />
+      <a-alert class="mt-2"
+        >可选择待开始或进行中的未占用对象。历史关联或导入任务尚未交接的对象不会列入，请先在“历史关联迁移”核查。</a-alert
+      >
       <a-alert v-if="candidatesError" type="error" class="my-2"
         >候选加载失败，请重试；不会按未关联处理。<a-button size="mini" @click="search">重试</a-button></a-alert
       >
-      <a-table :data="candidates" :loading="candidatesLoading" :pagination="false" row-key="id" class="mt-3">
+      <a-table
+        :data="candidates"
+        :loading="candidatesLoading"
+        :pagination="false"
+        row-key="id"
+        class="mt-3"
+        @row-click="selectCandidate"
+      >
         <template #columns>
           <a-table-column title="选择" :width="60"
             ><template #cell="{ record }"
-              ><a-radio :model-value="selectedId === record.id" @change="selectedId = record.id" /></template
-          ></a-table-column>
+              ><a-radio
+                v-model="selectedId"
+                :value="record.id"
+                :disabled="candidatesLoading || candidatesError"
+                uninject-group-context
+                ><span class="sr-only">选择 {{ record.num }} {{ record.name }}</span></a-radio
+              ></template
+            ></a-table-column
+          >
           <a-table-column title="编号" data-index="num" :width="90" />
           <a-table-column title="名称" data-index="name" ellipsis tooltip />
           <a-table-column title="状态" data-index="status" :width="110" />
@@ -298,6 +327,8 @@
 
   import { TestPlanRouteEnum } from '@/enums/routeEnum';
 
+  import type { TableData } from '@arco-design/web-vue';
+
   const props = defineProps<{ side: RelationSide; objectId: string; objectStatus?: string }>();
   const emit = defineEmits<{ (e: 'change', summary: RelationSummary): void; (e: 'refresh'): void }>();
   const router = useRouter();
@@ -375,6 +406,21 @@
   const candidatePage = ref(1);
   const candidateTotal = ref(0);
   let candidateSequence = 0;
+  let candidateSearchTimer: number | undefined;
+  let previewRequestSequence = 0;
+  let previewBusyOwner: number | undefined;
+  function invalidatePreviewRequest() {
+    previewRequestSequence++;
+    if (previewBusyOwner !== undefined) {
+      previewBusyOwner = undefined;
+      busy.value = false;
+    }
+  }
+  watch(selectedId, invalidatePreviewRequest, { flush: 'sync' });
+  function selectCandidate(record: TableData) {
+    const candidate = candidates.value.find((item) => item.id === record.id);
+    if (!candidatesLoading.value && !candidatesError.value && candidate) selectedId.value = candidate.id;
+  }
   async function search() {
     const current = ++candidateSequence;
     candidatesLoading.value = true;
@@ -402,10 +448,42 @@
       if (current === candidateSequence) candidatesLoading.value = false;
     }
   }
+  function searchFirstPage() {
+    window.clearTimeout(candidateSearchTimer);
+    candidatePage.value = 1;
+    return search();
+  }
+  watch(
+    keyword,
+    () => {
+      invalidatePreviewRequest();
+      window.clearTimeout(candidateSearchTimer);
+      candidateSequence++;
+      selectedId.value = '';
+      candidates.value = [];
+      candidateTotal.value = 0;
+      if (!selectVisible.value) return;
+      candidatesLoading.value = true;
+      candidateSearchTimer = window.setTimeout(searchFirstPage, 250);
+    },
+    { flush: 'sync' }
+  );
+  watch(
+    selectVisible,
+    (visible) => {
+      invalidatePreviewRequest();
+      if (!visible) {
+        window.clearTimeout(candidateSearchTimer);
+        candidateSequence++;
+        selectedId.value = '';
+        candidatesLoading.value = false;
+      }
+    },
+    { flush: 'sync' }
+  );
   function choose() {
     selectVisible.value = true;
-    candidatePage.value = 1;
-    search();
+    searchFirstPage();
   }
   function changeCandidatePage(page: number) {
     candidatePage.value = page;
@@ -451,6 +529,8 @@
     now.value = Date.now();
   }, 1000);
   onBeforeUnmount(() => {
+    invalidatePreviewRequest();
+    window.clearTimeout(candidateSearchTimer);
     window.clearInterval(timer);
     sequence++;
     candidateSequence++;
@@ -468,8 +548,18 @@
     differencePage.value = 1;
   });
   async function beginPreview(reconfirm: boolean) {
+    if (
+      busy.value ||
+      (!reconfirm &&
+        (candidatesLoading.value ||
+          candidatesError.value ||
+          !candidates.value.some((item) => item.id === selectedId.value)))
+    )
+      return false;
     const other = reconfirm ? summary.value?.target?.id : selectedId.value;
     if (!other) return false;
+    const request = ++previewRequestSequence;
+    previewBusyOwner = request;
     busy.value = true;
     const current = sequence;
     try {
@@ -478,7 +568,7 @@
         reviewId: props.side === 'review' ? props.objectId : other,
         purpose: reconfirm ? 'RECONFIRM' : 'PAIR_EXISTING',
       });
-      if (current !== sequence) return false;
+      if (current !== sequence || request !== previewRequestSequence) return false;
       preview.value = value;
       acknowledged.value = false;
       reconfirming.value = reconfirm;
@@ -490,7 +580,10 @@
     } catch {
       return false;
     } finally {
-      busy.value = false;
+      if (previewBusyOwner === request) {
+        previewBusyOwner = undefined;
+        busy.value = false;
+      }
     }
   }
   async function confirm() {
@@ -720,6 +813,7 @@
   watch(
     () => [props.side, props.objectId, appStore.currentProjectId],
     () => {
+      invalidatePreviewRequest();
       selectVisible.value = false;
       previewVisible.value = false;
       preview.value = undefined;
