@@ -1,0 +1,6 @@
+FROM nginx:1.24.0
+COPY frontend/dist/ /app/
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
+# The preview network owns this hostname; never send preview traffic to production.
+RUN sed -i 's|http://172.16.200.18:8081/|http://app:8081/|g; s/listen 5100/listen 5173/g' /etc/nginx/nginx.conf
+EXPOSE 5173

@@ -32,6 +32,15 @@ import java.util.stream.Collectors;
  */
 @Service
 public class TestPlanStatisticsService {
+    private final ThreadLocal<Boolean> completionSnapshotProbe=new ThreadLocal<>();
+    public List<TestPlanStatisticsResponse> calculateRateForCompletionSnapshot(List<String> ids){
+        Boolean previous=completionSnapshotProbe.get(); completionSnapshotProbe.set(true);
+        try{return calculateRate(ids);}finally{if(previous==null)completionSnapshotProbe.remove();else completionSnapshotProbe.set(previous);}
+    }
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewCompletionGuard planReviewCompletion;
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewFrozenReader planReviewFrozen;
 
 	@Resource
 	private TestPlanMapper testPlanMapper;
@@ -138,6 +147,7 @@ public class TestPlanStatisticsService {
 		groupTestPlanMap.forEach((rootPlan, children) -> {
 			TestPlanStatisticsResponse rootResponse = this.genTestPlanStatisticsResponse(rootPlan, planConfigMap, planFunctionalCaseMap, planApiCaseMap, planApiScenarioMap, scheduleMap);
 			rootResponse.setStatus(rootPlan.getStatus());
+            applyFrozenStatistics(rootPlan,rootResponse);
 
 			List<TestPlanStatisticsResponse> childrenResponse = new ArrayList<>();
 			if (!CollectionUtils.isEmpty(children)) {
@@ -149,8 +159,10 @@ public class TestPlanStatisticsService {
 						hasNotPassedChild.set(true);
 					}
 					childResponse.setStatus(child.getStatus());
+                    applyFrozenStatistics(child,childResponse);
 					
 					childResponse.calculateStatus();
+                    guardCompletion(child,childResponse);
 					childStatus.add(childResponse.getStatus());
 					//添加到rootResponse中
 					rootResponse.calculateAllNumber(childResponse);
@@ -170,6 +182,7 @@ public class TestPlanStatisticsService {
 				rootResponse.calculatePassRate();
 				rootResponse.calculateExecuteRate();
 				rootResponse.calculateStatus();
+                guardCompletion(rootPlan,rootResponse);
 				rootResponse.calculateTestPlanIsPass();
 			}
 			returnResponse.add(rootResponse);
@@ -177,6 +190,26 @@ public class TestPlanStatisticsService {
 		});
 		return returnResponse;
 	}
+
+    private void guardCompletion(TestPlan plan,TestPlanStatisticsResponse statistics){
+        if(TestPlanConstants.TEST_PLAN_TYPE_PLAN.equals(plan.getType()) && TestPlanConstants.TEST_PLAN_STATUS_NOT_ARCHIVED.equals(plan.getStatus()) && planReviewCompletion.reopenUnchanged(plan.getId())){
+            statistics.setStatus(TestPlanConstants.TEST_PLAN_SHOW_STATUS_UNDERWAY);return;
+        }
+        if(TestPlanConstants.TEST_PLAN_TYPE_PLAN.equals(plan.getType()) && TestPlanConstants.TEST_PLAN_STATUS_NOT_ARCHIVED.equals(plan.getStatus())
+                && TestPlanConstants.TEST_PLAN_SHOW_STATUS_COMPLETED.equals(statistics.getStatus())){
+            boolean ready=planReviewCompletion.permit(plan.getId());
+            boolean snapshotPending=ready && !Boolean.TRUE.equals(completionSnapshotProbe.get()) && (planReviewCompletion.linked(plan.getId())||planReviewCompletion.reopened(plan.getId()));
+            if(!ready || snapshotPending){statistics.setStatus(TestPlanConstants.TEST_PLAN_SHOW_STATUS_UNDERWAY);statistics.setCompletionBlockedByReview(!ready);statistics.setCompletionSnapshotPending(snapshotPending);}
+        }
+    }
+
+    private void applyFrozenStatistics(TestPlan plan,TestPlanStatisticsResponse statistics){
+        if(!TestPlanConstants.TEST_PLAN_TYPE_PLAN.equals(plan.getType()) || !("COMPLETED".equals(plan.getStatus())||"ARCHIVED".equals(plan.getStatus())))return;
+        var frozen=planReviewFrozen.statistics(plan.getId());
+        var wrapper=org.springframework.beans.PropertyAccessorFactory.forBeanPropertyAccess(statistics);
+        for(var field:frozen.entrySet())if(wrapper.isWritableProperty(field.getKey()))wrapper.setPropertyValue(field.getKey(),field.getValue());
+        statistics.setStatus(plan.getStatus());
+    }
 
 	public Map<String, Long> countApiScenarioExecResultMap(List<TestPlanApiScenario> apiScenarios) {
 		return CollectionUtils.isEmpty(apiScenarios) ? new HashMap<>(16) : apiScenarios.stream().collect(

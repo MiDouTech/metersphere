@@ -61,6 +61,12 @@ import java.util.stream.Collectors;
 @Transactional(rollbackFor = Exception.class)
 public class TestPlanService extends TestPlanBaseUtilsService {
     @Resource
+    private PlanReviewCreationJournal planReviewCreationJournal;
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewApplicationService planReviewRelations;
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewLifecycleService planReviewLifecycle;
+    @Resource
     private TestPlanMapper testPlanMapper;
     @Resource
     private ExtTestPlanMapper extTestPlanMapper;
@@ -168,13 +174,73 @@ public class TestPlanService extends TestPlanBaseUtilsService {
      * 创建测试计划
      */
     public TestPlan add(TestPlanCreateRequest testPlanCreateRequest, String operator, String requestUrl, String requestMethod) {
-        TestPlan testPlan = savePlanDTO(testPlanCreateRequest, operator);
+        if(testPlanCreateRequest.getRequestKey()!=null&&testPlanCreateRequest.getRequestKey().startsWith("import:"))throw new io.metersphere.functional.planreview.PlanReviewFailure("RESERVED_REQUEST_NAMESPACE",400,"Import creation uses its dedicated reserved entry");
+        boolean group = TestPlanConstants.TEST_PLAN_TYPE_GROUP.equals(testPlanCreateRequest.getType());
+        if (!group && !TestPlanConstants.TEST_PLAN_TYPE_PLAN.equals(testPlanCreateRequest.getType())) {
+            throw new io.metersphere.functional.planreview.PlanReviewFailure("INVALID_PLAN_TYPE", 400, "测试计划类型无效");
+        }
+        PlanReviewCreationJournal.Reservation reservation = group ? null : planReviewCreationJournal.prepare(
+                testPlanCreateRequest.getProjectId(), operator, "PLAN_SERVICE", "CREATE_PAIR", testPlanCreateRequest.getRequestKey(),
+                JSON.toJSONString(testPlanCreateRequest), testPlanCreateRequest.getReviewSettings(), 0);
+        return addReserved(testPlanCreateRequest,reservation,operator,requestUrl,requestMethod);
+    }
+
+    private TestPlan addReserved(TestPlanCreateRequest testPlanCreateRequest,PlanReviewCreationJournal.Reservation reservation,String operator,String requestUrl,String requestMethod){
+        if (reservation != null && planReviewCreationJournal.lockAndExists(reservation, testPlanCreateRequest.getProjectId(), operator)) {
+            return planReviewCreationJournal.readReservedPlan(reservation.planId());
+        }
+        TestPlan testPlan = savePlanDTO(testPlanCreateRequest, operator, reservation == null ? IDGenerator.nextStr() : reservation.planId());
         //自动生成测试规划
         this.initDefaultPlanCollection(testPlan.getId(), operator);
+
+        if (reservation != null) planReviewCreationJournal.complete(reservation, testPlan.getProjectId(), testPlan.getName(), operator, testPlanCreateRequest.getReviewSettings());
 
         testPlanLogService.saveAddLog(testPlan, operator, requestUrl, requestMethod);
         triggerHubPlanSync(testPlan.getProjectId(), testPlan.getId(), operator);
         return testPlan;
+    }
+
+    /** Import scheduling reserves before taking any business/project locks. */
+    @Transactional(propagation=Propagation.NEVER)
+    public void reserveCreation(TestPlanCreateRequest request,String actor){
+        if(!TestPlanConstants.TEST_PLAN_TYPE_PLAN.equals(request.getType()))throw new IllegalArgumentException("Only real plans may be reserved");
+        planReviewCreationJournal.prepare(request.getProjectId(),actor,"PLAN_SERVICE","CREATE_PAIR",request.getRequestKey(),JSON.toJSONString(request),request.getReviewSettings(),0);
+    }
+
+    @Transactional(propagation=Propagation.MANDATORY,rollbackFor=Exception.class)
+    public TestPlan addFromReservation(TestPlanCreateRequest request,String actor,String url,String method){
+        var reservation=planReviewCreationJournal.existingReservation(request.getProjectId(),actor,request.getRequestKey(),JSON.toJSONString(request));
+        planReviewCreationJournal.validate(request.getProjectId(),actor,request.getReviewSettings(),0);
+        return addReserved(request,reservation,actor,url,method);
+    }
+
+    @Transactional(propagation=Propagation.MANDATORY,rollbackFor=Exception.class)
+    public void completeLegacyImportReview(TestPlanCreateRequest request,String actor){planReviewCreationJournal.completeLegacyImportReview(request,actor);}
+
+    /** Called only by the journal recovery adapter with its already locked reservation. */
+    public void resumeReservedCreation(Map<String,Object> operation,String actor){
+        String project=(String)operation.get("project_id"),type=(String)operation.get("operation_type");
+        var reservation=new PlanReviewCreationJournal.Reservation((String)operation.get("id"),(String)operation.get("plan_id"),(String)operation.get("review_id"),(String)operation.get("state"));
+        if("CREATE_PAIR".equals(type)){
+            var request=JSON.parseObject((String)operation.get("request_json"),TestPlanCreateRequest.class);
+            if(!project.equals(request.getProjectId()) || !TestPlanConstants.TEST_PLAN_TYPE_PLAN.equals(request.getType()))throw new io.metersphere.functional.planreview.PlanReviewFailure("RESERVATION_CONFLICT",409,"Stored creation does not match reservation");
+            planReviewCreationJournal.validate(project,actor,request.getReviewSettings(),0);
+            addReserved(request,reservation,actor,"/plan-review/operations/resume","POST");
+        }else if("COPY_PAIR".equals(type)||"COPY_GROUP".equals(type)){
+            var payload=JSON.parseObject((String)operation.get("request_json"),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});
+            String source=(String)payload.get("sourceId"),destination=(String)payload.get("destination");
+            var original=planReviewCreationJournal.readReservedPlan(source);
+            if(!project.equals(original.getProjectId()) || !("COPY_GROUP".equals(type)?"GROUP":"TEST_PLAN").equals(original.getType()))throw new io.metersphere.functional.planreview.PlanReviewFailure("RESERVATION_CONFLICT",409,"Stored copy source does not match reservation");
+            var settings=JSON.parseObject(JSON.toJSONString(payload.get("reviewSettings")),io.metersphere.functional.planreview.PlanReviewSettings.class);
+            if(!"COPY_GROUP".equals(type))planReviewCreationJournal.validate(project,actor,settings,planReviewCreationJournal.effectiveMembers(source,project));
+            String target,typeOfTarget;
+            if(destination.startsWith("SINGLE:")){target="COPY_GROUP".equals(type)?original.getModuleId():original.getGroupId();typeOfTarget="COPY_GROUP".equals(type)?"MODULE":TestPlanConstants.TEST_PLAN_TYPE_GROUP;}
+            else{int separator=destination.indexOf(':');if(separator<1)throw new IllegalStateException("Invalid stored destination");typeOfTarget=destination.substring(0,separator);target=destination.substring(separator+1);}
+            try(var context=planReviewCreationJournal.copyContext(Map.of(source,reservation),settings)){
+                Long position=payload.get("copyPosition") instanceof Number number?number.longValue():null;
+                testPlanBatchOperationService.copyReservedItem(project,source,target,typeOfTarget,actor,"COPY_GROUP".equals(type),position);
+            }
+        }else throw new IllegalStateException("Unsupported native recovery operation");
     }
 
     private void triggerHubPlanSync(String projectId, String planId, String operator) {
@@ -200,9 +266,8 @@ public class TestPlanService extends TestPlanBaseUtilsService {
      * @param createOrCopyRequest
      * @param operator
      */
-    private TestPlan savePlanDTO(TestPlanCreateRequest createOrCopyRequest, String operator) {
-        //检查模块的合法性
-        checkModule(createOrCopyRequest.getModuleId());
+    private TestPlan savePlanDTO(TestPlanCreateRequest createOrCopyRequest, String operator, String reservedId) {
+        String currentModule=planReviewCreationJournal.requirePlanDestination(createOrCopyRequest.getProjectId(),createOrCopyRequest.getGroupId(),createOrCopyRequest.getModuleId(),createOrCopyRequest.getType(),operator);
         if (StringUtils.equalsIgnoreCase(createOrCopyRequest.getType(), TestPlanConstants.TEST_PLAN_TYPE_GROUP)
                 && !StringUtils.equalsIgnoreCase(createOrCopyRequest.getGroupId(), TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID)) {
             throw new MSException(Translator.get("test_plan.group.error"));
@@ -211,15 +276,11 @@ public class TestPlanService extends TestPlanBaseUtilsService {
         TestPlan createTestPlan = new TestPlan();
         BeanUtils.copyBean(createTestPlan, createOrCopyRequest);
         createTestPlan.setTags(ServiceUtils.parseTags(createTestPlan.getTags()));
-        if (!StringUtils.equals(createTestPlan.getGroupId(), TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID)) {
-            TestPlan groupPlan = testPlanGroupService.validateGroupCapacity(createTestPlan.getGroupId(), 1);
-            // 判断测试计划组是否存在
-            createTestPlan.setModuleId(groupPlan.getModuleId());
-        }
+        createTestPlan.setModuleId(currentModule);
 
         initTestPlanPos(createTestPlan);
 
-        createTestPlan.setId(IDGenerator.nextStr());
+        createTestPlan.setId(reservedId);
         long operateTime = System.currentTimeMillis();
         createTestPlan.setNum(NumGenerator.nextNum(createOrCopyRequest.getProjectId(), ApplicationNumScope.TEST_PLAN));
         createTestPlan.setCreateUser(operator);
@@ -262,6 +323,7 @@ public class TestPlanService extends TestPlanBaseUtilsService {
         if (StringUtils.equals(testPlan.getType(), TestPlanConstants.TEST_PLAN_TYPE_GROUP)) {
             this.deleteGroupByList(Collections.singletonList(testPlan.getId()));
         } else {
+            planReviewRelations.deletingObject(true, id, testPlan.getProjectId());
             triggerHubPlanDelete(id);
             testPlanMapper.deleteByPrimaryKey(id);
             //级联删除
@@ -277,6 +339,10 @@ public class TestPlanService extends TestPlanBaseUtilsService {
             TestPlanReportService testPlanReportService = CommonBeanFactory.getBean(TestPlanReportService.class);
 
             BatchProcessUtils.consumerByString(testPlanIds, (deleteIds) -> {
+                for (String deleteId : deleteIds.stream().sorted().toList()) {
+                    TestPlan source = testPlanMapper.selectByPrimaryKey(deleteId);
+                    if (source != null) planReviewRelations.deletingObject(true, deleteId, source.getProjectId());
+                }
                 TestPlanExample testPlanExample = new TestPlanExample();
                 testPlanExample.createCriteria().andIdIn(deleteIds);
                 testPlanMapper.deleteByExample(testPlanExample);
@@ -305,6 +371,9 @@ public class TestPlanService extends TestPlanBaseUtilsService {
                 List<TestPlan> deleteGroupPlans = testPlanMapper.selectByExample(testPlanExample);
                 List<String> deleteGroupPlanIds = deleteGroupPlans.stream().map(TestPlan::getId).toList();
                 List<String> allDeleteIds = ListUtils.union(deleteGroupIds, deleteGroupPlanIds);
+                for (TestPlan source : deleteGroupPlans.stream().sorted(Comparator.comparing(TestPlan::getId)).toList()) {
+                    planReviewRelations.deletingObject(true, source.getId(), source.getProjectId());
+                }
                 if (CollectionUtils.isNotEmpty(allDeleteIds)) {
                     // 级联删除子计划关联的资源(计划组不存在关联的资源,但是存在报告)
                     this.cascadeDeleteTestPlanIds(allDeleteIds, testPlanReportService);
@@ -487,6 +556,7 @@ public class TestPlanService extends TestPlanBaseUtilsService {
         } else if (this.isTestPlanCompleted(id) && StringUtils.equalsIgnoreCase(testPlan.getGroupId(), TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID)) {
             //测试计划
             testPlan.setStatus(TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED);
+            planReviewLifecycle.archiveHealthyPlan(testPlan.getId(),userId);
             testPlan.setUpdateUser(userId);
             testPlan.setUpdateTime(System.currentTimeMillis());
             testPlanMapper.updateByPrimaryKeySelective(testPlan);
@@ -513,6 +583,7 @@ public class TestPlanService extends TestPlanBaseUtilsService {
         } else if (StringUtils.equalsIgnoreCase(testPlan.getGroupId(), TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID)) {
             //测试计划
             testPlan.setStatus(TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED);
+            planReviewLifecycle.archiveHealthyPlan(testPlan.getId(),userId);
             testPlan.setUpdateUser(userId);
             testPlan.setUpdateTime(System.currentTimeMillis());
             testPlanMapper.updateByPrimaryKeySelective(testPlan);
@@ -570,6 +641,7 @@ public class TestPlanService extends TestPlanBaseUtilsService {
         }
         List<String> ids = testPlanList.stream().map(TestPlan::getId).collect(Collectors.toList());
         ids.add(id);
+        for(TestPlan child:testPlanList)planReviewLifecycle.archiveHealthyPlan(child.getId(),userId);
         extTestPlanMapper.batchUpdateStatus(TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED, userId, System.currentTimeMillis(), ids);
     }
 
@@ -577,15 +649,29 @@ public class TestPlanService extends TestPlanBaseUtilsService {
      * 复制测试计划
      */
     public String copy(String testPlanId, String userId) {
-        TestPlan testPlan = testPlanMapper.selectByPrimaryKey(testPlanId);
-        TestPlan copyPlan = null;
-        if (StringUtils.equalsIgnoreCase(testPlan.getType(), TestPlanConstants.TEST_PLAN_TYPE_GROUP)) {
-            copyPlan = testPlanBatchOperationService.copyPlanGroup(testPlan, testPlan.getModuleId(), ModuleConstants.NODE_TYPE_DEFAULT, System.currentTimeMillis(), userId);
-        } else {
-            copyPlan = testPlanBatchOperationService.copyPlan(testPlan, testPlan.getGroupId(), TestPlanConstants.TEST_PLAN_TYPE_GROUP, System.currentTimeMillis(), userId);
-        }
-        testPlanLogService.copyLog(copyPlan, userId);
-        return copyPlan.getId();
+        throw new io.metersphere.functional.planreview.PlanReviewFailure("REVIEW_SETTINGS_REQUIRED", 400, "请通过复制设置确认关联评审；旧入口不再直接创建计划");
+    }
+
+    @Resource @Lazy private PlanReviewCopyCoordinator copyCoordinator;
+    @Transactional(readOnly=true)
+    public Map<String,Object> copyScope(String project,List<String> ids,String actor){
+        if(ids==null||ids.isEmpty()||ids.size()>1000)throw new io.metersphere.functional.planreview.PlanReviewFailure("INVALID_SCOPE",400,"请选择有效复制范围");
+        var query=new TestPlanExample();query.createCriteria().andIdIn(ids);
+        var sources=testPlanMapper.selectByExample(query);
+        return copyCoordinator.scope(project,sources,ids,actor);
+    }
+
+    @Transactional(propagation=Propagation.NOT_SUPPORTED)
+    public String copy(PlanReviewCopyRequest request,String actor){
+        var outcome=copyDetailed(request,actor);
+        if(outcome.failedCount()>0)throw new io.metersphere.functional.planreview.PlanReviewFailure("COPY_PARTIAL",409,"Some copy items remain unfinished; query the original request");
+        return outcome.operationId();
+    }
+    @Transactional(propagation=Propagation.NOT_SUPPORTED)
+    public io.metersphere.plan.dto.response.PlanReviewCopyOutcome copyDetailed(PlanReviewCopyRequest request,String actor){
+        var source=testPlanMapper.selectByPrimaryKey(request.getId());
+        if(source==null)throw new io.metersphere.functional.planreview.PlanReviewFailure("RESOURCE_NOT_ACCESSIBLE",404,"Copy source inaccessible");
+        return copyCoordinator.execute(source.getProjectId(),List.of(source),null,null,request.getRequestKey(),request.getReviewSettings(),actor,true);
     }
 
     /**
@@ -691,28 +777,17 @@ public class TestPlanService extends TestPlanBaseUtilsService {
      * @param url     请求URL
      * @param method  请求方法
      */
-    public long batchCopy(TestPlanBatchRequest request, String userId, String url, String method) {
-        // 目前计划的批量操作不支持全选所有页
-        List<String> copyIds = request.getSelectIds();
-        long copyCount = 0;
+    @Transactional(propagation=Propagation.NOT_SUPPORTED)
+    public long batchCopy(TestPlanBatchRequest request,String actor,String url,String method){return batchCopyDetailed(request,actor).operationCount();}
 
-        if (CollectionUtils.isNotEmpty(copyIds)) {
-            TestPlanExample example = new TestPlanExample();
-            example.createCriteria().andIdIn(copyIds);
-            List<TestPlan> originalTestPlanList = testPlanMapper.selectByExample(example);
-
-            //批量复制时，不允许存在测试计划组下的测试计划。
-            originalTestPlanList = originalTestPlanList.stream().filter(item -> StringUtils.equalsIgnoreCase(item.getGroupId(), TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID))
-                    .collect(Collectors.toList());
-            //日志
-            if (CollectionUtils.isNotEmpty(originalTestPlanList)) {
-                List<TestPlan> copyPlanList = testPlanBatchOperationService.batchCopy(originalTestPlanList, request.getTargetId(), request.getMoveType(), userId);
-                copyCount = copyPlanList.size();
-                testPlanLogService.saveBatchLog(copyPlanList, userId, url, method, OperationLogType.ADD.name());
-            }
-
-        }
-        return copyCount;
+    @Transactional(propagation=Propagation.NOT_SUPPORTED)
+    public io.metersphere.plan.dto.response.PlanReviewCopyOutcome batchCopyDetailed(TestPlanBatchRequest request,String actor){
+        if(request.getSelectIds()==null||request.getSelectIds().isEmpty())return new io.metersphere.plan.dto.response.PlanReviewCopyOutcome(null,null,0,0,0,List.of());
+        var query=new TestPlanExample();query.createCriteria().andIdIn(request.getSelectIds());
+        var sources=testPlanMapper.selectByExample(query);
+        if(sources.size()!=new HashSet<>(request.getSelectIds()).size()||sources.stream().anyMatch(source->!request.getProjectId().equals(source.getProjectId())))throw new io.metersphere.functional.planreview.PlanReviewFailure("RESOURCE_NOT_ACCESSIBLE",404,"Copy source inaccessible");
+        sources=sources.stream().filter(source->TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID.equals(source.getGroupId())).toList();
+        return copyCoordinator.execute(request.getProjectId(),sources,request.getTargetId(),request.getMoveType(),request.getRequestKey(),request.getReviewSettings(),actor,false);
     }
 
     /**

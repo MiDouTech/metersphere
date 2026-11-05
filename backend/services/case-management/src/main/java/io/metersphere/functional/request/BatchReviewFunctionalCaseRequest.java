@@ -8,6 +8,8 @@ import java.util.List;
 
 @Data
 public class BatchReviewFunctionalCaseRequest extends BaseReviewCaseBatchRequest{
+    @Schema(description = "提交意见时读取到的当前成员轮次，关联评审必传")
+    private java.util.Map<String, Long> expectedMembershipEpochs;
 
     @Schema(description = "评审规则:单人评审(SINGLE)/多人评审(MULTIPLE)")
     @NotBlank(message = "{case_review.review_pass_rule.not_blank}")

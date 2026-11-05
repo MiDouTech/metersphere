@@ -134,6 +134,13 @@
         </template>
       </MsMoreSettingCollapse>
     </a-form>
+    <PlanReviewSettingsForm
+      v-if="!props.planId?.length"
+      ref="reviewSettingsRef"
+      :key="requestKey"
+      :project-id="appStore.currentProjectId"
+      :plan-name="form.name"
+    />
   </MsDrawer>
 </template>
 
@@ -147,6 +154,7 @@
   import MsDrawer from '@/components/pure/ms-drawer/index.vue';
   import MsMoreSettingCollapse from '@/components/pure/ms-more-setting-collapse/index.vue';
   import MsTagsInput from '@/components/pure/ms-tags-input/index.vue';
+  import PlanReviewSettingsForm from '@/components/business/plan-review/settingsForm.vue';
 
   import {
     addTestPlan,
@@ -211,6 +219,8 @@
     baseAssociateCaseRequest: { selectIds: [], selectAll: false, condition: {} },
   };
   const form = ref<AddTestPlanParams>(cloneDeep(initForm));
+  const reviewSettingsRef = ref<InstanceType<typeof PlanReviewSettingsForm>>();
+  const requestKey = ref(crypto.randomUUID());
 
   const tempRange = ref<(Date | string | number)[]>(['00:00:00', '00:00:00']);
 
@@ -309,6 +319,8 @@
   function handleDrawerConfirm(isContinue: boolean) {
     formRef.value?.validate(async (errors: undefined | Record<string, ValidatedError>) => {
       if (!errors) {
+        const reviewSettings = props.planId?.length ? undefined : await reviewSettingsRef.value?.validate();
+        if (!props.planId?.length && !reviewSettings) return;
         drawerLoading.value = true;
         let res = null;
         try {
@@ -318,6 +330,8 @@
             plannedStartTime: form.value.cycle ? form.value.cycle[0] : undefined,
             plannedEndTime: form.value.cycle ? form.value.cycle[1] : undefined,
             projectId: appStore.currentProjectId,
+            requestKey: requestKey.value,
+            reviewSettings,
           };
           if (!params.isGroup && params.groupId) {
             delete params.groupId;
@@ -333,6 +347,7 @@
         } catch (error) {
           const fields = applyServerFieldErrors(error);
           if (fields) formRef.value?.setFields(fields);
+          return;
         } finally {
           drawerLoading.value = false;
         }
@@ -344,6 +359,7 @@
           handleCancel();
         } else {
           form.value = { ...cloneDeep(initForm), moduleId: form.value.moduleId };
+          requestKey.value = crypto.randomUUID();
         }
       }
     });

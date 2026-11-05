@@ -28,6 +28,8 @@ import {
   associateTestPlanCasesTool,
   createCaseReviewTool,
   createTestPlanTool,
+  previewLinkedCaseReviewTool,
+  confirmLinkedCaseReviewTool,
 } from "./tools/planReview.js";
 import {
   cancelExecutionTaskTool,
@@ -79,6 +81,8 @@ const tools: ToolDef[] = [
   resumeExecutionTaskTool,
   createCaseReviewTool,
   associateCaseReviewCasesTool,
+  previewLinkedCaseReviewTool,
+  confirmLinkedCaseReviewTool,
   getCaseReviewTool,
   searchBugsTool,
   getBugTool,

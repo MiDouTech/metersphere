@@ -34,6 +34,8 @@
         v-permission="['CASE_REVIEW:READ+UPDATE']"
         type="button"
         status="default"
+        :disabled="relationSummary?.relationStatus !== 'NONE'"
+        title="有关联时请到测试计划维护成员；关联信息加载失败时请先重试"
         @click="associateDrawerVisible = true"
       >
         <MsIcon type="icon-icon_link-record_outlined" class="mr-[8px]" />
@@ -68,6 +70,14 @@
       </MsTableMoreAction>
     </template>
     <template #subHeader>
+      <PlanReviewLinkCard
+        v-if="reviewId"
+        side="review"
+        :object-id="reviewId"
+        :object-status="reviewDetail.status"
+        @change="relationSummary = $event"
+        @refresh="initDetail"
+      />
       <div class="mt-[16px] w-[476px]">
         <div class="mb-[4px] flex items-center gap-[24px]">
           <div class="text-[var(--color-text-4)]">
@@ -122,8 +132,9 @@
           :offspring-ids="offspringIds"
           :modules-count="modulesCount"
           :review-progress="reviewProgress"
+          :membership-locked="relationSummary?.relationStatus !== 'NONE'"
           @refresh="initDetail()"
-          @link="associateDrawerVisible = true"
+          @link="relationSummary?.relationStatus === 'NONE' && (associateDrawerVisible = true)"
           @select-parent-node="selectParentNode"
           @handle-adv-search="handleAdvSearch"
         ></CaseTable>
@@ -154,6 +165,7 @@
   import MsTableMoreAction from '@/components/pure/ms-table-more-action/index.vue';
   import { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
+  import PlanReviewLinkCard from '@/components/business/plan-review/linkCard.vue';
   import AssociateDrawer from './components/create/associateDrawer.vue';
   import CaseTable from './components/detail/caseTable.vue';
   import CaseTree from './components/detail/caseTree.vue';
@@ -161,6 +173,7 @@
   import passRateLine from './components/passRateLine.vue';
 
   import { associateReviewCase, followReview, getReviewDetail } from '@/api/modules/case-management/caseReview';
+  import type { RelationSummary } from '@/api/modules/plan-review';
   import { reviewDefaultDetail } from '@/config/caseManagement';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
@@ -186,6 +199,7 @@
     ...reviewDefaultDetail,
   });
   const reviewId = ref(route.query.id as string);
+  const relationSummary = ref<RelationSummary>();
   const passRateLineRef = ref<InstanceType<typeof passRateLine>>();
   const reviewProgress = computed(() => passRateLineRef.value?.progress ?? '');
 

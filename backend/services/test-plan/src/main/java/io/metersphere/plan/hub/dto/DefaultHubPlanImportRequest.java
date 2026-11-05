@@ -7,6 +7,9 @@ import lombok.Data;
 
 @Data
 public class DefaultHubPlanImportRequest {
+    @NotBlank @jakarta.validation.constraints.Size(max = 128)
+    private String requestKey;
+    private io.metersphere.functional.planreview.PlanReviewSettings reviewSettings;
     @NotBlank
     @Schema(description = "枢纽源计划ID")
     private String sourcePlanId;

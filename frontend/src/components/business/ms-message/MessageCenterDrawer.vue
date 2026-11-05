@@ -408,6 +408,7 @@
 
   // 点击名称跳转
   function handleNameClick(item: MessageHistoryItem) {
+    if (item.operation === 'PLAN_REVIEW_NOTICE') return;
     const routeQuery: Record<string, any> = {
       pId: item.projectId,
       id: item.resourceId,

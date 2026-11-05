@@ -16,6 +16,13 @@ import java.util.List;
 
 @Data
 public class TestPlanCreateRequest {
+    @Schema(description = "创建请求标识；同一请求重试须保留原值")
+    @Size(max = 128)
+    private String requestKey;
+
+    @Schema(description = "真实测试计划必填；计划组不创建评审")
+    private io.metersphere.functional.planreview.PlanReviewSettings reviewSettings;
+
     @Schema(description = "测试计划所属项目", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "{test_plan.project_id.not_blank}")
     @Size(min = 1, max = 50, message = "{test_plan.project_id.length_range}")

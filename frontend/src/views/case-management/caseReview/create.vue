@@ -118,7 +118,13 @@
           class="w-[436px]"
         />
       </a-form-item>
-      <a-form-item v-if="!isEdit">
+      <a-form-item v-if="!isEdit && !isCopy" label="关联测试计划">
+        <a-checkbox v-model="linkExistingPlan" @change="clearSelectedCases">选择已有计划并预览（可选）</a-checkbox>
+        <a-alert v-if="linkExistingPlan" class="mt-2"
+          >保存时先选择计划并确认范围；评审成员由计划维护，不再独立选择用例。</a-alert
+        >
+      </a-form-item>
+      <a-form-item v-if="!isEdit && !linkExistingPlan">
         <template #label>
           <div class="flex items-center">
             <div>{{ t('caseManagement.caseReview.pickCases') }}</div>
@@ -202,6 +208,7 @@
     :has-not-associated-ids="selectedAssociateCasesParams.selectIds"
     @success="writeAssociateCases"
   />
+  <NewReviewDialog ref="newReviewDialog" />
 </template>
 
 <script setup lang="ts">
@@ -217,6 +224,7 @@
   import MsCard from '@/components/pure/ms-card/index.vue';
   import MsTagsInput from '@/components/pure/ms-tags-input/index.vue';
   import MsSelect from '@/components/business/ms-select';
+  import NewReviewDialog from '@/components/business/plan-review/newReviewDialog.vue';
   import AssociateDrawer from './components/create/associateDrawer.vue';
 
   import {
@@ -243,6 +251,8 @@
 
   const isEdit = ref(!!route.query.id);
   const isCopy = ref(!!route.query.copyId);
+  const linkExistingPlan = ref(false);
+  const newReviewDialog = ref<InstanceType<typeof NewReviewDialog>>();
   const reviewFormRef = ref<FormInstance>();
   const reviewForm = ref({
     name: '',
@@ -339,6 +349,31 @@
         try {
           saveLoading.value = true;
           const { name, folderId, type, cycle, tags, desc, reviewers } = reviewForm.value;
+          if (linkExistingPlan.value && !isCopy.value) {
+            const project = appStore.currentProjectId;
+            newReviewDialog.value?.open(
+              {
+                projectId: project,
+                name,
+                moduleId: folderId,
+                reviewPassRule: type,
+                startTime: cycle?.[0] ?? null,
+                endTime: cycle?.[1] ?? null,
+                tags: [...tags],
+                description: desc,
+                reviewers: [...reviewers],
+              },
+              (id) => {
+                if (project !== appStore.currentProjectId) return;
+                Message.success('评审已创建并关联，成员同步状态请以详情为准');
+                router.replace({
+                  name: isGoReview ? TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL : TestPlanRouteEnum.TEST_PLAN_REVIEW,
+                  query: isGoReview ? { id } : undefined,
+                });
+              }
+            );
+            return;
+          }
           let res: Record<string, any> = {};
           if (isCopy.value) {
             // 复制评审场景

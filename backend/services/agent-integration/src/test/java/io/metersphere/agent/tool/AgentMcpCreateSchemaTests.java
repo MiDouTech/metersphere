@@ -15,6 +15,21 @@ class AgentMcpCreateSchemaTests {
         var cases=(Map<?,?>)batch.get("cases");assertEquals(100,cases.get("maxItems"));assertEquals(1,cases.get("minItems"));
         var item=(Map<?,?>)((Map<?,?>)cases.get("items")).get("properties");assertEquals(255,((Map<?,?>)item.get("name")).get("maxLength"));
     }
+    @Test void planCreationAdvertisesRequiredExplicitReviewSettings(){
+        var schema=config.testPlanCreateTool(null).inputSchema();
+        assertTrue(((List<?>)schema.get("required")).contains("reviewSettings"));
+        var settings=(Map<?,?>)((Map<?,?>)schema.get("properties")).get("reviewSettings");
+        assertEquals(false,settings.get("additionalProperties"));
+        assertTrue(((List<?>)settings.get("required")).containsAll(List.of("name","moduleId","reviewers","reviewPassRule")));
+        var properties=(Map<?,?>)settings.get("properties");assertEquals(255,((Map<?,?>)properties.get("name")).get("maxLength"));
+        assertEquals(true,((Map<?,?>)properties.get("reviewers")).get("uniqueItems"));
+    }
+    @Test void linkedReviewPreviewAndConfirmationRemainDistinctTools(){
+        var preview=config.caseReviewLinkedPreviewTool(null);var confirm=config.caseReviewLinkedConfirmTool(null);
+        assertNotEquals(preview.name(),confirm.name());
+        assertTrue(((List<?>)preview.inputSchema().get("required")).containsAll(List.of("planId","requestId")));
+        assertTrue(((List<?>)confirm.inputSchema().get("required")).containsAll(List.of("previewId","projectId","requestId")));
+    }
 
     @Test void nativeCreateSchemasExposeRequiredIdempotencyKey() {
         for (var tool : List.of(config.projectCreateTool(null), config.functionalCaseCreateTool(null))) {

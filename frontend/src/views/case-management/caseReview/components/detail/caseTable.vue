@@ -156,7 +156,13 @@
             type="error"
             @confirm="(val, done) => handleDisassociateReviewCase(record, done)"
           >
-            <MsButton v-permission="['CASE_REVIEW:READ+RELEVANCE']" type="text" class="!mr-0">
+            <MsButton
+              v-permission="['CASE_REVIEW:READ+RELEVANCE']"
+              type="text"
+              class="!mr-0"
+              :disabled="props.membershipLocked"
+              title="有关联时请到测试计划维护用例"
+            >
               {{ t('caseManagement.caseReview.disassociate') }}
             </MsButton>
           </MsPopconfirm>
@@ -164,7 +170,13 @@
         <template v-if="keyword.trim() === ''" #empty>
           <div class="flex w-full items-center justify-center p-[8px] text-[var(--color-text-4)]">
             {{ t('caseManagement.caseReview.tableNoData') }}
-            <MsButton v-permission="['FUNCTIONAL_CASE:READ+ADD']" class="ml-[8px]" @click="emit('link')">
+            <MsButton
+              v-permission="['FUNCTIONAL_CASE:READ+ADD']"
+              class="ml-[8px]"
+              :disabled="props.membershipLocked"
+              title="有关联时请到测试计划维护用例"
+              @click="emit('link')"
+            >
               {{ t('caseManagement.featureCase.linkCase') }}
             </MsButton>
           </div>
@@ -179,6 +191,7 @@
         :view-status-flag="onlyMineStatus"
         :module-tree="moduleTree"
         :review-progress="props.reviewProgress"
+        :membership-locked="props.membershipLocked"
         :review-pass-rule="props.reviewPassRule"
         :table-sorter="tableSorter"
         @operation="handleMinderOperation"
@@ -369,6 +382,7 @@
     getCaseDefaultFields,
     getCustomFieldsTable,
   } from '@/api/modules/case-management/featureCase';
+  import { getReviewOpinionEpochs } from '@/api/modules/plan-review';
   import { PreviewEditorImageUrl } from '@/api/requrls/case-management/featureCase';
   import { reviewResultMap } from '@/config/caseManagement';
   import { useI18n } from '@/hooks/useI18n';
@@ -401,6 +415,7 @@
     reviewPassRule: ReviewPassRule; // 评审规则
     offspringIds: string[]; // 当前选中节点的所有子节点id
     reviewProgress: string; // 评审进度
+    membershipLocked?: boolean;
   }>();
   const emit = defineEmits(['refresh', 'link', 'selectParentNode', 'handleAdvSearch']);
 
@@ -567,7 +582,7 @@
       };
     }
   );
-  const batchActions = {
+  const batchActions = computed(() => ({
     baseAction: [
       {
         label: 'caseManagement.caseReview.review',
@@ -582,6 +597,8 @@
       {
         label: 'caseManagement.caseReview.disassociate',
         eventTag: 'disassociate',
+        disabled: props.membershipLocked,
+        disabledReason: '请到关联测试计划维护用例',
         permission: ['CASE_REVIEW:READ+RELEVANCE'],
       },
       {
@@ -590,7 +607,7 @@
         permission: ['CASE_REVIEW:READ+UPDATE'],
       },
     ],
-  };
+  }));
 
   const tableSorter = ref<Record<string, string>>({});
   function handleSorterChange(sorter: { [key: string]: string }) {
@@ -638,9 +655,7 @@
     loadList();
     getModuleCount();
   }
-  const isActivated = computed(() =>
-    cacheStore.cacheViews.includes(TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL)
-  );
+  const isActivated = computed(() => cacheStore.cacheViews.includes(TestPlanRouteEnum.TEST_PLAN_REVIEW_DETAIL));
   const reviewerTitlePopupVisible = ref(true);
 
   function loadReviewCase() {
@@ -726,6 +741,7 @@
   const dialogFormRef = ref<FormInstance>();
   const dialogShowType = ref<'review' | 'changeReviewer' | 'reReview'>('review'); // 弹窗类型，review: 批量评审，changeReviewer: 批量更换评审人，reReview: 批量重新评审
   const dialogLoading = ref(false);
+  const expectedMembershipEpochs = ref<Record<string, number>>({});
   const dialogTitle = computed(() => {
     switch (dialogShowType.value) {
       case 'review':
@@ -753,6 +769,10 @@
    * @param done 关闭弹窗
    */
   async function handleDisassociateReviewCase(record: ReviewCaseItem, done?: () => void) {
+    if (props.membershipLocked) {
+      Message.warning('请到关联测试计划维护用例');
+      return;
+    }
     try {
       disassociateLoading.value = true;
       await disassociateReviewCase(route.query.id as string, record.caseId);
@@ -879,6 +899,7 @@
       dialogLoading.value = true;
       await batchReview({
         reviewId: route.query.id as string,
+        expectedMembershipEpochs: expectedMembershipEpochs.value,
         reviewPassRule: props.reviewPassRule,
         status: 'RE_REVIEWED',
         content: dialogForm.value.reason,
@@ -958,6 +979,7 @@
           dialogLoading.value = true;
           await batchReview({
             reviewId: route.query.id as string,
+            expectedMembershipEpochs: expectedMembershipEpochs.value,
             reviewPassRule: props.reviewPassRule,
             status: dialogForm.value.result as StartReviewStatus,
             content: dialogForm.value.reason,
@@ -1123,7 +1145,23 @@
     searchCase();
   };
 
-  function handleOperation(type?: string) {
+  async function handleOperation(type?: string) {
+    if (props.membershipLocked && type === 'disassociate') {
+      Message.warning('请到关联测试计划维护用例');
+      return;
+    }
+    if (type === 'review' || type === 'reReview') {
+      const current = route.query.id as string;
+      dialogLoading.value = true;
+      try {
+        expectedMembershipEpochs.value = await getReviewOpinionEpochs(current);
+      } catch {
+        return;
+      } finally {
+        dialogLoading.value = false;
+      }
+      if (current !== route.query.id) return;
+    }
     switch (type) {
       case 'review':
         dialogVisible.value = true;

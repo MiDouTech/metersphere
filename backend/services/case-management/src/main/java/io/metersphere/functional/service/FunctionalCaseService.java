@@ -1037,6 +1037,7 @@ public class FunctionalCaseService {
 
 
     private void doDelete(List<String> ids, String userId) {
+        var affectedPlans = planReviewPersistence.beforeCaseMutation(ids);
         ids.forEach(id -> {
             FunctionalCase functionalCase = new FunctionalCase();
             functionalCase.setDeleted(true);
@@ -1046,7 +1047,11 @@ public class FunctionalCaseService {
             functionalCase.setUpdateTime(System.currentTimeMillis());
             functionalCaseMapper.updateByPrimaryKeySelective(functionalCase);
         });
+        planReviewPersistence.afterCaseMutation(affectedPlans);
     }
+
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewPersistence planReviewPersistence;
 
 
     /**

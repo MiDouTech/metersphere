@@ -59,6 +59,8 @@ export interface AssociateCaseRequestParams {
 export type AssociateCaseRequestType = Pick<AssociateCaseRequest, 'functionalSelectIds' | 'testPlanId'>;
 
 export interface AddTestPlanParams {
+  requestKey?: string;
+  reviewSettings?: import('@/api/modules/plan-review').PlanReviewSettings;
   id?: string;
   name: string;
   groupId?: string;
@@ -116,6 +118,7 @@ export interface TestPlanWithoutPageItem {
 
 // 计划分页
 export interface TestPlanItem {
+  planReviewRelation?: import('@/api/modules/plan-review').RelationListSummary;
   id: string;
   projectId: string;
   num: number;

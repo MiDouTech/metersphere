@@ -54,6 +54,13 @@
         </MsTableMoreAction>
       </template>
       <template #subHeader>
+        <PlanReviewLinkCard
+          v-if="planId && detail.type === 'TEST_PLAN'"
+          side="plan"
+          :object-id="planId"
+          :object-status="detail.status"
+          @refresh="initDetail"
+        />
         <div class="mt-[16px] w-[476px]">
           <div class="mb-[8px] flex items-center gap-[24px] text-[12px]">
             <div class="text-[var(--color-text-4)]">
@@ -140,6 +147,7 @@
     :record="activeRecord"
     @success="okHandler"
   />
+  <PlanReviewCopyDialog ref="copyDialogRef" />
 </template>
 
 <script setup lang="ts">
@@ -155,6 +163,8 @@
   import MsTableMoreAction from '@/components/pure/ms-table-more-action/index.vue';
   import { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
+  import PlanReviewCopyDialog from '@/components/business/plan-review/copyDialog.vue';
+  import PlanReviewLinkCard from '@/components/business/plan-review/linkCard.vue';
   import ActionModal from '../components/actionModal.vue';
   import StatusProgress from '../components/statusProgress.vue';
   import ApiCase from './apiCase/index.vue';
@@ -525,11 +535,17 @@
 
   // 复制
   const copyLoading = ref<boolean>(false);
+  const copyDialogRef = ref<InstanceType<typeof PlanReviewCopyDialog>>();
   async function copyHandler() {
     if (loading.value || detail.value.id !== planId.value) return;
-    copyLoading.value = true;
-    try {
-      const res = await testPlanAndGroupCopy(route.query.id as string);
+    const source = planId.value;
+    const project = appStore.currentProjectId;
+    copyDialogRef.value?.open(project, detail.value.name, async (settings) => {
+      if (project !== appStore.currentProjectId || source !== planId.value)
+        throw new Error('复制上下文已变化，请重新打开');
+      const res = await testPlanAndGroupCopy(source, settings);
+      if (project !== appStore.currentProjectId || source !== planId.value) return res;
+      if (res.failedCount > 0 || !res.operationId) return res;
       Message.success(t('common.copySuccess'));
       await router.push({
         name: TestPlanRouteEnum.TEST_PLAN_INDEX_DETAIL,
@@ -538,12 +554,8 @@
         },
       });
       initPlanTree();
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    } finally {
-      copyLoading.value = false;
-    }
+      return res;
+    });
   }
 
   watch(

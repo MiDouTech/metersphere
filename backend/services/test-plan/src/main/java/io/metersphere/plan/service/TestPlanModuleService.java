@@ -34,6 +34,7 @@ import java.util.Map;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class TestPlanModuleService extends ModuleTreeService {
+    @Resource private io.metersphere.functional.planreview.PlanReviewPersistence planReviewPersistence;
     @Resource
     private TestPlanModuleMapper testPlanModuleMapper;
     @Resource
@@ -141,6 +142,7 @@ public class TestPlanModuleService extends ModuleTreeService {
         if (CollectionUtils.isEmpty(deleteIds)) {
             return;
         }
+        planReviewPersistence.lockModules("test_plan_module",projectId,deleteIds);
         extTestPlanModuleMapper.deleteByIds(deleteIds);
         List<String> planDeleteIds = extTestPlanModuleMapper.selectPlanIdsByModuleIds(deleteIds);
         if (CollectionUtils.isNotEmpty(planDeleteIds)) {

@@ -348,6 +348,7 @@ export class MeterSphereClient {
   }
 
   createTestPlan(payload: {
+    reviewSettings: {name: string; moduleId: string; reviewers: string[]; reviewPassRule: "SINGLE" | "MULTIPLE"; followPlanName?: boolean};
     requestId: string;
     projectId?: string;
     name: string;
@@ -485,6 +486,16 @@ export class MeterSphereClient {
       ...payload,
       projectId: payload.projectId ?? this.config.projectId,
     });
+  }
+
+  previewLinkedCaseReview(payload: {
+    requestId: string; projectId?: string; planId: string; name: string; moduleId: string;
+    reviewers: string[]; reviewPassRule: "SINGLE" | "MULTIPLE"; description?: string; tags?: string[];
+  }) {
+    return this.request("POST", "/api/agent/v1/case-review/linked/preview", {...payload,projectId:payload.projectId ?? this.config.projectId});
+  }
+  confirmLinkedCaseReview(payload: {projectId?: string;previewId: string;requestId: string;acknowledged: true}) {
+    return this.request("POST", "/api/agent/v1/case-review/linked/confirm", {...payload,projectId:payload.projectId ?? this.config.projectId});
   }
 
   associateCaseReviewCases(payload: {

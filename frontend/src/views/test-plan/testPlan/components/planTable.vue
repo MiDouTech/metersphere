@@ -24,6 +24,12 @@
       </a-radio-group>
     </template>
     <template #right>
+      <a-button
+        v-if="hasAnyPermission(['PLAN_REVIEW:MIGRATE', 'PLAN_REVIEW:TAKEOVER_APPROVE'])"
+        type="text"
+        @click="legacyMigrationRef?.open()"
+        >历史关联迁移</a-button
+      >
       <slot name="moduleRefresh"></slot>
     </template>
   </MsAdvanceFilter>
@@ -90,6 +96,9 @@
         </template>
       </a-dropdown>
     </template> -->
+    <template #planReviewRelation="{ record }"
+      ><PlanReviewListCell side="plan" :value="record.planReviewRelation" :group="record.type === 'GROUP'"
+    /></template>
     <template #name="{ record }">
       <a-button
         v-if="record.type === testPlanTypeEnum.TEST_PLAN"
@@ -342,6 +351,8 @@
     </template>
     <executeHistoryTable v-if="executionHistoryDrawerVisible" :plan-id="activeRecord?.id" is-group />
   </MsDrawer>
+  <PlanReviewCopyDialog ref="copyDialogRef" />
+  <PlanReviewLegacyMigrationPanel ref="legacyMigrationRef" />
 </template>
 
 <script setup lang="ts">
@@ -368,6 +379,9 @@
   import MsTag from '@/components/pure/ms-tag/ms-tag.vue';
   import MsRichMessage from '@/components/business/ms-rich-message/index.vue';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
+  import PlanReviewCopyDialog from '@/components/business/plan-review/copyDialog.vue';
+  import PlanReviewLegacyMigrationPanel from '@/components/business/plan-review/legacyMigrationPanel.vue';
+  import PlanReviewListCell from '@/components/business/plan-review/listCell.vue';
   import executeHistoryTable from '../detail/executeHistory/index.vue';
   import ActionModal from './actionModal.vue';
   import BatchEditModal from './batchEditModal.vue';
@@ -391,6 +405,7 @@
     dragPlanOnGroup,
     executePlanOrGroup,
     executeSinglePlan,
+    getPlanCopyScope,
     getPlanPassRate,
     getTestPlanDetail,
     getTestPlanList,
@@ -497,6 +512,14 @@
       },
       showDrag: false,
       columnSelectorDisabled: true,
+    },
+    {
+      title: '关联评审计划',
+      dataIndex: 'planReviewRelation',
+      slotName: 'planReviewRelation',
+      width: 240,
+      showInTable: true,
+      showDrag: true,
     },
     {
       title: 'common.status',
@@ -1227,6 +1250,8 @@
    * 批量复制或者移动
    */
   const modeType = ref<'move' | 'copy'>('move');
+  const copyDialogRef = ref<InstanceType<typeof PlanReviewCopyDialog>>();
+  const legacyMigrationRef = ref<InstanceType<typeof PlanReviewLegacyMigrationPanel>>();
   const showBatchModal = ref<boolean>(false);
   const selectNodeKeys = ref<(string | number)[]>([]);
   const okLoading = ref<boolean>(false);
@@ -1255,12 +1280,30 @@
         moveType: moveForm.moveType,
       };
       if (modeType.value === 'copy') {
-        await batchCopyPlan(params);
-        Message.success(t('common.batchCopySuccess'));
-      } else {
-        await batchMovePlan(params);
-        Message.success(t('common.batchMoveSuccess'));
+        const project = appStore.currentProjectId;
+        const scope = await getPlanCopyScope(project, (params.selectIds || []).map(String));
+        if (project !== appStore.currentProjectId) return;
+        copyDialogRef.value?.open(
+          project,
+          '复制计划',
+          async (settings) => {
+            const result = await batchCopyPlan({ ...params, ...settings });
+            if (project === appStore.currentProjectId) {
+              if (result.failedCount === 0) {
+                Message.success('复制对象已创建，评审同步状态见关联记录');
+                showBatchModal.value = false;
+              }
+              fetchData();
+            }
+            return result;
+          },
+          scope.settingsRequired
+        );
+        return;
       }
+      await batchMovePlan(params);
+      Message.success(t('common.batchMoveSuccess'));
+
       showBatchModal.value = false;
       fetchData();
     } catch (error) {
@@ -1556,14 +1599,22 @@
   }
 
   async function copyTestPlanOrGroup(id: string) {
-    try {
-      await testPlanAndGroupCopy(id);
-      Message.success(t('common.copySuccess'));
-      fetchData();
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    }
+    const project = appStore.currentProjectId;
+    const scope = await getPlanCopyScope(project, [id]);
+    if (project !== appStore.currentProjectId) return;
+    copyDialogRef.value?.open(
+      project,
+      '复制计划',
+      async (settings) => {
+        const result = await testPlanAndGroupCopy(id, settings);
+        if (project === appStore.currentProjectId) {
+          if (result.failedCount === 0) Message.success('复制对象已创建，评审同步状态见关联记录');
+          fetchData();
+        }
+        return result;
+      },
+      scope.settingsRequired
+    );
   }
 
   async function handleDeleteScheduled(record: TestPlanItem) {
