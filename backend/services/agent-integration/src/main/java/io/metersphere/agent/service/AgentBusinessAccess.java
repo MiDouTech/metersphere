@@ -69,6 +69,27 @@ public class AgentBusinessAccess {
         return count!=null && count>0;
     }
 
+    /**
+     * Hold the actual authorization dependencies until the file transaction commits.
+     * Ordinary UPDATE/DELETE in role/user administration must acquire these same row locks,
+     * so no separate cooperative flag in a revocation endpoint is required.
+     * Order: token (caller), user, relations, roles (sorted), file permissions, project (caller).
+     * Use READ_COMMITTED/current locking reads before the subsequent authorization query.
+     */
+    public void lockProjectFileAuthorization(String userId, String projectId) {
+        jdbc.queryForList("SELECT id FROM user WHERE id=? FOR UPDATE", userId);
+        var roles = jdbc.queryForList("SELECT role_id FROM user_role_relation WHERE user_id=? AND source_id IN ('system',?) ORDER BY role_id,source_id FOR UPDATE", String.class, userId, projectId)
+                .stream().distinct().sorted().toList();
+        for (String role : roles) {
+            jdbc.queryForList("SELECT id FROM user_role WHERE id=? FOR UPDATE", role);
+        }
+        for (String role : roles) {
+            jdbc.queryForList("SELECT permission_id FROM user_role_permission WHERE role_id=? AND permission_id IN "
+                    + "('PROJECT_FILE_MANAGEMENT:READ','PROJECT_FILE_MANAGEMENT:READ+ADD','PROJECT_FILE_MANAGEMENT:READ+UPDATE','PROJECT_FILE_MANAGEMENT:READ+DOWNLOAD') "
+                    + "ORDER BY permission_id FOR UPDATE", role);
+        }
+    }
+
     public String caseProject(String caseId,String selectedProject,String permission,boolean write,String... scopes) {
         var projects=jdbc.queryForList("SELECT project_id FROM functional_case WHERE id=? AND deleted=0",String.class,caseId);
         if(projects.size()!=1 || (StringUtils.isNotBlank(selectedProject) && !selectedProject.equals(projects.getFirst())))throw denied();

@@ -98,6 +98,11 @@
                       }}
                     </div>
                   </a-tooltip>
+                  <a-typography-text
+                    v-if="['sha256', 'systemVersion'].includes(item.key || '') && item.value"
+                    :copyable="{ text: String(item.value) }"
+                    class="ml-[8px]"
+                  />
                   <template v-if="item.key === 'name'">
                     <popConfirm
                       v-if="hasAnyPermission(['PROJECT_FILE_MANAGEMENT:READ+UPDATE'])"
@@ -566,6 +571,24 @@
         label: t('project.fileManagement.originName'),
         value: detail.originalName,
         key: 'originalName',
+      },
+      {
+        label: t('project.fileManagement.fileVersion'),
+        value: detail.fileVersion,
+        key: 'systemVersion',
+      },
+      {
+        label: 'SHA256',
+        value: detail.sha256,
+        key: 'sha256',
+      },
+      {
+        label: t('project.fileManagement.sourceLabel'),
+        value: detail.sourceLabel,
+      },
+      {
+        label: t('project.fileManagement.sourceOperation'),
+        value: detail.sourceOperationId,
       },
       {
         label: t('project.fileManagement.desc'),

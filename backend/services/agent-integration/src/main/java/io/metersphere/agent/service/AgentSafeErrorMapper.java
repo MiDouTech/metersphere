@@ -12,14 +12,26 @@ import java.util.UUID;
 public class AgentSafeErrorMapper {
     public AgentApiErrorDTO toApiError(Throwable error, String suppliedTraceId) {
         String requestTrace = StringUtils.defaultIfBlank(suppliedTraceId, org.slf4j.MDC.get("traceId"));
+        if (error instanceof ProjectFileException file && file.traceId() != null) requestTrace = file.traceId();
         AgentApiErrorDTO result = mapError(error, requestTrace);
-        result.setDetails(recoveryDetails(result.getCode()));
+        var details = new java.util.LinkedHashMap<String, Object>(result.getDetails());
+        details.putAll(recoveryDetails(result.getCode()));
+        if (error instanceof ProjectFileException file) {
+            details.putAll(file.details());
+            details.put("fieldPath", file.fieldPath());
+            details.put("stage", "PROJECT_FILE");
+        }
+        result.setDetails(details);
         return result;
     }
 
     private Map<String, Object> recoveryDetails(String code) {
         String action = switch (code) {
-            case "AGENT_RATE_LIMITED", "IMPORT_RATE_LIMIT", "EXTERNAL_IMAGE_RATE_LIMIT" -> "RETRY_ORIGINAL_REQUEST";
+            case "AGENT_RATE_LIMITED", "IMPORT_RATE_LIMIT", "EXTERNAL_IMAGE_RATE_LIMIT", "UPLOAD_RATE_LIMIT" -> "RETRY_ORIGINAL_REQUEST";
+            case "FILE_NAME_CONFLICT", "TARGET_CONFLICT" -> "REFRESH_AND_COMPARE";
+            case "UPLOAD_INCOMPLETE" -> "QUERY_RECEIVED_RANGES";
+            case "UPLOAD_EXPIRED", "UPLOAD_STATE_CONFLICT" -> "QUERY_ORIGINAL_REQUEST";
+            case "HASH_MISMATCH", "UNSUPPORTED_FORMAT", "SIZE_LIMIT", "UPLOAD_CHUNK_CONFLICT" -> "FIX_INPUT";
             case "VERSION_CONFLICT", "AGENT_REVIEW_STATE_CONFLICT", "ENVIRONMENT_PROFILE_VERSION_CONFLICT" -> "REFRESH_AND_COMPARE";
             case "SCOPE_DENIED", "RBAC_DENIED", "PROJECT_NOT_ALLOWED", "PERMISSION_DENIED",
                     "AGENT_PERMISSION_DENIED", "MCP_TOOL_FORBIDDEN", "AGENT_RESOURCE_NOT_ACCESSIBLE" -> "CHECK_PERMISSION";
@@ -178,6 +190,19 @@ public class AgentSafeErrorMapper {
             case "TASK_ORIGIN_CHANNEL_MISMATCH" -> "任务来源与执行通道不匹配";
             case "PERMISSION_DENIED" -> "没有执行此操作的权限";
             case "VALIDATION_ERROR" -> "请求参数校验失败";
+            case "FILE_NAME_CONFLICT" -> "同名文件已存在，请明确选择新版本或另存名称，不会覆盖原件";
+            case "TARGET_CONFLICT" -> "文件版本已变化，请读取最新精确版本后重新确认";
+            case "UPLOAD_INCOMPLETE" -> "上传缺块，请查询原请求的已收区间并补齐";
+            case "UPLOAD_CHUNK_CONFLICT" -> "该区间已接收不同内容或与已有块重叠，请核对原请求";
+            case "HASH_MISMATCH" -> "文件或分块哈希不一致，请停止使用并核对原请求及精确文件版本";
+            case "UNSUPPORTED_FORMAT" -> "文件后缀与内容不匹配，或容器包含不支持的宏、外部链接、嵌入对象";
+            case "SIZE_LIMIT" -> "文件或分块超过服务器返回的精确字节上限";
+            case "UPLOAD_EXPIRED" -> "上传窗口已过期，请先查询原请求结果，再创建新的上传请求";
+            case "UPLOAD_STATE_CONFLICT" -> "上传已取消或状态不可写，请查询原请求结果";
+            case "UPLOAD_RATE_LIMIT" -> "当前项目待处理上传已达上限，请先完成或取消已有上传";
+            case "FILE_LIMIT_UNAVAILABLE" -> "服务器文件上限配置不可用，请联系管理员核实";
+            case "FILE_STORAGE_FAILED" -> "原件存储暂时失败，请使用原请求查询或重试";
+            case "RESOURCE_GONE" -> "原操作已完成，但当前文件版本已不存在，不会自动补建";
             case "RESOURCE_NOT_FOUND", "RESOURCE_PROJECT_MISMATCH" -> "资源不存在或不属于指定项目";
             case "VERSION_CONFLICT" -> "数据已被更新，请重新查询后重试";
             case "TEST_PLAN_ARCHIVED" -> "测试计划已归档，不能修改或回写";
