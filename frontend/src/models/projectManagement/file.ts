@@ -27,6 +27,9 @@ export interface FileItem {
   branch?: string; // 分支
   filePath?: string; // 文件路径
   fileVersion?: string; // 文件版本
+  sha256?: string;
+  sourceLabel?: string;
+  sourceOperationId?: string;
   storage?: FileStorageType; // 存储方式
 }
 // 文件详情

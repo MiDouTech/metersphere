@@ -45,6 +45,8 @@ public class FileManagementService {
     private FileMetadataLogService fileMetadataLogService;
     @Resource
     private ExtFileMetadataMapper extFileMetadataMapper;
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     public void checkModule(String moduleId, String nodeTypeDefault) {
         if (!StringUtils.equals(moduleId, ModuleConstants.DEFAULT_NODE_ID)) {
@@ -71,6 +73,7 @@ public class FileManagementService {
     }
 
     public void delete(FileBatchProcessRequest request, String operator) {
+        jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", request.getProjectId());
         List<FileMetadata> deleteList = this.getDeleteList(request);
         List<String> deleteIds = deleteList.stream().map(FileMetadata::getId).toList();
         if (CollectionUtils.isNotEmpty(deleteIds)) {

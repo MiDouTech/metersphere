@@ -79,6 +79,8 @@ public class FileMetadataService {
     private FileService fileService;
     @Resource
     private io.metersphere.project.mapper.ProjectMapper projectMapper;
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
 
     @Value("${metersphere.file.batch-download-max:600MB}")
@@ -94,6 +96,7 @@ public class FileMetadataService {
         FileMetadata fileMetadata = extFileMetadataMapper.getById(id);
         FileMetadataRepository repositoryMap = fileMetadataRepositoryMapper.selectByPrimaryKey(id);
         FileInformationResponse dto = new FileInformationResponse(fileMetadata, repositoryMap);
+        initOriginal(dto);
         initModuleName(dto);
         return dto;
     }
@@ -105,10 +108,21 @@ public class FileMetadataService {
         List<FileMetadata> fileMetadataList = extFileMetadataMapper.selectByKeywordAndFileType(pageDTO);
         fileMetadataList.forEach(fileMetadata -> {
             FileInformationResponse fileInformationResponse = new FileInformationResponse(fileMetadata, null);
+            initOriginal(fileInformationResponse);
             returnList.add(fileInformationResponse);
         });
         this.initModuleName(returnList);
         return returnList;
+    }
+
+    private void initOriginal(FileInformationResponse dto) {
+        var originals = jdbc.queryForList("SELECT sha256,source_label,operation_id FROM project_file_original WHERE version_id=?", dto.getId());
+        if (!originals.isEmpty()) {
+            var original = originals.getFirst();
+            dto.setSha256((String) original.get("sha256"));
+            dto.setSourceLabel((String) original.get("source_label"));
+            dto.setSourceOperationId((String) original.get("operation_id"));
+        }
     }
 
     private void initModuleName(List<FileInformationResponse> returnList) {
@@ -185,6 +199,7 @@ public class FileMetadataService {
     }
 
     public String upload(FileUploadRequest request, String operator, MultipartFile uploadFile) throws Exception {
+        jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", request.getProjectId());
         //检查模块的合法性
         fileManagementService.checkModule(request.getModuleId(), ModuleConstants.NODE_TYPE_DEFAULT, request.getProjectId());
 
@@ -221,6 +236,7 @@ public class FileMetadataService {
 
     /** Stable internal object identity for durable archive retries; never taken from an upload request. */
     public String transferFileWithId(String reservedId,String fileName,String originFileName,String projectId,String moduleId,String operator,byte[] fileBytes) {
+        jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", projectId);
         if(reservedId!=null&&!reservedId.matches("arc-[a-f0-9-]{36}"))throw new MSException("归档文件标识无效");
         if(reservedId!=null) {
             var existing=fileMetadataMapper.selectByPrimaryKey(reservedId);
@@ -420,6 +436,11 @@ public class FileMetadataService {
         FileMetadata oldFile = fileMetadataMapper.selectByPrimaryKey(request.getFileId());
         if (oldFile == null) {
             throw new MSException(Translator.get("old.file.not.exist"));
+        }
+        jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", oldFile.getProjectId());
+        var current = jdbc.queryForList("SELECT id FROM file_metadata WHERE id=? AND latest=1 FOR UPDATE", request.getFileId());
+        if (current.size() != 1) {
+            throw new MSException("TARGET_CONFLICT");
         }
         //非minio类型文件不允许重新上传
         if (!StringUtils.equals(oldFile.getStorage(), StorageType.MINIO.name())) {
