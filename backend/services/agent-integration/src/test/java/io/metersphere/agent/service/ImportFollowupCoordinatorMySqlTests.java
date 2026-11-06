@@ -72,12 +72,24 @@ class ImportFollowupCoordinatorMySqlTests {
  @Test void unrelatedLegacyImportOnlyCompletesWithoutCreatingAnyNewObjectsOrOperations(){
   file();jdbc.update("UPDATE functional_import_job SET state='COMPLETED'");
   jdbc.update("INSERT INTO functional_import_followup(job_id,project_id,user_id,policy,request_json,group_id,state,create_time,update_time) VALUES('file','project','user','IMPORT_ONLY','{}','legacy-group','PENDING',1,1)");
+  assertEquals(Map.of("state","PENDING","policy","IMPORT_ONLY","legacy",true),coordinator.status("file","user"));
   coordinator.drain();coordinator.drain();
-  assertEquals("SUCCEEDED",coordinator.status("file","user").get("state"));
+  assertEquals(Map.of("state","SUCCEEDED","policy","IMPORT_ONLY","legacy",true),coordinator.status("file","user"));
+  for(String table:List.of("test_plan","case_review","plan_review_relation"))
+   assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Integer.class));
   assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_operation",Integer.class));
   assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_import_followup",Integer.class));
   verifyNoInteractions(plans,reviews,planCases);
   assertThrows(io.metersphere.functional.planreview.PlanReviewFailure.class,()->coordinator.retry("file","user"));
+ }
+ @Test void currentImportOnlyStatusExplicitlySkipsWithoutCreatingObjects(){
+  file();var request=new ImportFollowupRequest();request.setPolicy("IMPORT_ONLY");
+  coordinator.prepare("file","user",request);
+  var result=coordinator.status("file","user");
+  assertEquals("SKIPPED",result.get("state"));assertEquals("IMPORT_ONLY",result.get("policy"));
+  for(String table:List.of("test_plan","case_review","plan_review_relation","plan_review_operation"))
+   assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Integer.class));
+  verifyNoInteractions(plans,reviews,planCases);
  }
  @Test void legacyPairedJobIsClearlyBlockedInsteadOfReplayedAsANewOperation(){
   file();jdbc.update("UPDATE functional_import_job SET state='COMPLETED'");
@@ -88,7 +100,19 @@ class ImportFollowupCoordinatorMySqlTests {
   assertEquals("PENDING",jdbc.queryForObject("SELECT state FROM functional_import_followup",String.class));
   assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_operation",Integer.class));verifyNoInteractions(plans,reviews,planCases);
  }
- @Test void noSuccessfulItemsNeverCreatesEmptyPlanOrReview(){file();coordinator.prepare("file","user",decision());jdbc.update("UPDATE functional_import_job SET state='COMPLETED'");process("file");assertEquals("SUCCEEDED",coordinator.status("file","user").get("state"));verifyNoInteractions(plans,reviews,planCases);}
+ @Test void noSuccessfulItemsNeverCreatesEmptyPlanOrReview(){file();coordinator.prepare("file","user",decision());jdbc.update("UPDATE functional_import_job SET state='COMPLETED'");process("file");var result=coordinator.status("file","user");assertEquals("SUCCEEDED",result.get("state"));assertEquals("SKIPPED_ZERO_SUCCESS",result.get("stage"));assertEquals("CREATE_NEW_PAIR",result.get("policy"));assertNull(result.get("planId"));assertNull(result.get("reviewId"));verifyNoInteractions(plans,reviews,planCases);}
+ @Test void stageFeedbackPreservesCurrentReadPermissionFiltering(){
+  file();coordinator.prepare("file","user",decision());
+  jdbc.update("INSERT INTO functional_import_item(job_id,position,action,state,target_id) VALUES('file',1,'CREATE','SUCCESS','success')");
+  jdbc.update("UPDATE functional_import_job SET state='COMPLETED'");process("file");
+  var access=(AgentBusinessAccess)ReflectionTestUtils.getField(coordinator,"access");
+  when(access.userHasPermission(eq("user"),eq("project"),eq(io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ))).thenReturn(false);
+  when(access.userHasPermission(eq("user"),eq("project"),eq(io.metersphere.sdk.constants.PermissionConstants.CASE_REVIEW_READ))).thenReturn(false);
+  var result=coordinator.status("file","user");
+  assertEquals("SOURCE_APPENDING",result.get("stage"));
+  for(String field:List.of("planId","planName","reviewId","reviewName"))assertFalse(result.containsKey(field));
+  assertFalse(result.containsKey("operation_id"));assertFalse(result.containsKey("request_json"));
+ }
  @Test void replayUsesOnlyCommittedSuccessIdsAndDoesNotRecreateTargets(){
   file();var request=decision();coordinator.prepare("file","user",request);coordinator.prepare("file","user",request);
   jdbc.update("INSERT INTO functional_import_item(job_id,position,action,state,target_id) VALUES('file',1,'CREATE','SUCCESS','success'),('file',2,'CREATE','FAILED',NULL),('file',3,'SKIP','SKIPPED','skipped')");jdbc.update("UPDATE functional_import_job SET state='COMPLETED'");
@@ -98,6 +122,7 @@ class ImportFollowupCoordinatorMySqlTests {
   verify(planCases,times(1)).associateCases(argThat(r->r.getSelectIds().equals(List.of("success"))),any());
   verify(reviews,never()).associateCase(any(),anyString());
   assertEquals("SUCCEEDED",coordinator.status("file","user").get("state"));
+  assertEquals("CREATE_NEW_PAIR",coordinator.status("file","user").get("policy"));
  }
  @Test void assetAdapterUsesRealAssetImportResults(){
   jdbc.update("INSERT INTO default_hub_sync_job VALUES ('asset','project','user','IMPORT_CASE','PENDING')");coordinator.prepare("asset","user",decision());
@@ -115,7 +140,12 @@ class ImportFollowupCoordinatorMySqlTests {
   var request=new ImportFollowupRequest();request.setPolicy("APPEND_EXISTING");request.setTargetGroupId("group");request.setExpectedGroupRevision(1L);
   assertDoesNotThrow(()->coordinator.prepare("file","user",request));
   assertEquals("existing-review",jdbc.queryForObject("SELECT review_id FROM plan_review_import_followup WHERE job_id='file'",String.class));
-  verifyNoInteractions(plans,reviews,planCases);
+  jdbc.update("UPDATE functional_import_job SET state='COMPLETED'");
+  jdbc.update("INSERT INTO functional_import_item(job_id,position,action,state,target_id) VALUES('file',1,'CREATE','SUCCESS','success')");
+  for(int i=0;i<5;i++)process("file");
+  assertEquals("SUCCEEDED",coordinator.status("file","user").get("state"));
+  assertEquals("APPEND_EXISTING",coordinator.status("file","user").get("policy"));
+  verifyNoInteractions(plans,reviews);
  }
  @Test void creationReservationRunsOutsideTheFollowupBusinessTransaction(){
   file();coordinator.prepare("file","user",decision());
