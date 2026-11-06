@@ -111,6 +111,8 @@ public class AgentMcpStreamableService {
     }
 
     private static boolean bypassesGenericIdempotency(String name) {
+        if (java.util.Set.of("metersphere.project.file.upload.prepare", "metersphere.project.file.upload.chunk",
+                "metersphere.project.file.upload.complete", "metersphere.project.file.upload.cancel").contains(name)) return true;
         return java.util.Set.of(
                 "metersphere.functional.export.start",
                 "metersphere.functional.export.stop",

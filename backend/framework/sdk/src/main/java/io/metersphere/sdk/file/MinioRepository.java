@@ -20,6 +20,10 @@ import java.util.Map;
 
 @Component
 public class MinioRepository implements FileRepository {
+    private static final String OBJECT_GENERATION = "ms-object-generation";
+    private static Map<String,String> newGeneration(String object) {
+        return ObjectGenerationScope.managed(object)?Map.of(OBJECT_GENERATION,java.util.UUID.randomUUID().toString()):Map.of();
+    }
 
     private MinioClient client;
     // 缓冲区大小
@@ -88,6 +92,7 @@ public class MinioRepository implements FileRepository {
         client.putObject(PutObjectArgs.builder()
                 .bucket(bucket)
                 .object(filePath)
+                .userMetadata(newGeneration(filePath))
                 .stream(file.getInputStream(), file.getSize(), -1) // 文件内容
                 .build());
         return filePath;
@@ -100,6 +105,7 @@ public class MinioRepository implements FileRepository {
             client.putObject(PutObjectArgs.builder()
                     .bucket(bucket)
                     .object(filePath)
+                    .userMetadata(newGeneration(filePath))
                     .stream(inputStream, bytes.length, -1)
                     .build());
         }
@@ -112,6 +118,7 @@ public class MinioRepository implements FileRepository {
         client.putObject(PutObjectArgs.builder()
                 .bucket(bucket)
                 .object(filePath)
+                .userMetadata(newGeneration(filePath))
                 .stream(inputStream, -1, 5242880) // 文件内容
                 .build());
         return filePath;
@@ -140,14 +147,23 @@ public class MinioRepository implements FileRepository {
     public void copyFile(FileCopyRequest request) throws Exception {
         String sourcePath = StringUtils.join(request.getCopyFolder(), "/", request.getCopyfileName());
         String targetPath = getPath(request);
-        client.copyObject(CopyObjectArgs.builder()
+        var copy=CopyObjectArgs.builder()
                 .bucket(bucket)
                 .object(targetPath)
                 .source(CopySource.builder()
                         .bucket(bucket)
                         .object(sourcePath)
-                        .build())
-                .build());
+                        .build());
+        if(ObjectGenerationScope.managed(targetPath)) {
+            var sourceMetadata=client.statObject(StatObjectArgs.builder().bucket(bucket).object(sourcePath).build());
+            Map<String,String> userMetadata=new java.util.HashMap<>(sourceMetadata.userMetadata());userMetadata.putAll(newGeneration(targetPath));
+            Map<String,String> headers=new java.util.HashMap<>();
+            for(String header:List.of("Content-Type","Cache-Control","Content-Disposition","Content-Encoding","Content-Language","Expires")) {
+                String value=sourceMetadata.headers().get(header);if(value!=null)headers.put(header,value);
+            }
+            copy.metadataDirective(Directive.REPLACE).userMetadata(userMetadata).headers(headers);
+        }
+        client.copyObject(copy.build());
     }
 
     private void removeObject(String bucketName, String objectName) throws Exception {
@@ -226,5 +242,11 @@ public class MinioRepository implements FileRepository {
                 .bucket(bucket) // 存储桶
                 .object(fileName) // 文件名
                 .build()).size();
+    }
+
+    /** Object identity for read-before/read-after consistency checks; never exposed to callers. */
+    public String objectRevision(FileRequest request) throws Exception {
+        var stat = client.statObject(StatObjectArgs.builder().bucket(bucket).object(getPath(request)).build());
+        return stat.userMetadata().getOrDefault(OBJECT_GENERATION,"LEGACY")+":"+stat.versionId() + ":" + stat.etag() + ":" + stat.lastModified() + ":" + stat.size();
     }
 }
