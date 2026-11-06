@@ -1,5 +1,5 @@
 <template>
-  <a-modal v-model:visible="visible" title="原操作受控接管" :footer="false" :width="820">
+  <a-modal v-model:visible="visible" unmount-on-close title="原操作受控接管" :footer="false" :width="820">
     <a-alert type="warning"
       >接管不恢复已结束的关联，也不自动追平成员。须负责人明确批准，再由新执行者确认；每一步重新检查当前权限。</a-alert
     >
@@ -81,7 +81,12 @@
   import { getProjectOptions } from '@/api/modules/project-management/projectMember';
   import { hasAnyPermission } from '@/utils/permission';
 
-  const props = defineProps<{ projectId: string }>();
+  const props = defineProps<{
+    beforeAction?: () => Promise<boolean>;
+    projectId: string;
+    relationId?: string;
+    generation?: string;
+  }>();
   const emit = defineEmits<{ (e: 'change'): void }>();
   const visible = ref(false);
   const busy = ref(false);
@@ -99,7 +104,36 @@
     operation.value = managedOperations.value.find((item) => item.operationId === id);
     newActor.value = '';
   }
+  let alive = true;
+  function invalidate() {
+    context++;
+    busy.value = false;
+    visible.value = false;
+    items.value = [];
+    operation.value = undefined;
+    keys.clear();
+    users.value = [];
+    managedOperations.value = [];
+    newActor.value = '';
+    error.value = false;
+  }
+  async function validateAccess() {
+    const owner = context;
+    try {
+      const allowed = !props.beforeAction || (await props.beforeAction());
+      if (!allowed) {
+        invalidate();
+        return false;
+      }
+      return alive && owner === context;
+    } catch {
+      invalidate();
+      return false;
+    }
+  }
   async function refresh() {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return;
     const current = ++context;
     const project = props.projectId;
     busy.value = true;
@@ -107,7 +141,18 @@
     try {
       const records = await getOperationTakeovers(project);
       if (current !== context) return;
-      items.value = records.items;
+      if (props.relationId) {
+        const operations = props.relationId
+          ? await getPlanReviewOperations(project, true, { relationId: props.relationId, generation: props.generation })
+          : await getPlanReviewOperations(project, true);
+        if (current !== context) return;
+        const ids = new Set(
+          operations.items
+            .filter((item) => item.relationId === props.relationId && item.generation === props.generation)
+            .map((item) => item.operationId)
+        );
+        items.value = records.items.filter((item) => ids.has(item.operationId));
+      } else items.value = records.items;
     } catch {
       if (current === context) error.value = true;
     } finally {
@@ -115,6 +160,8 @@
     }
   }
   async function action(work: () => Promise<unknown>) {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return;
     if (busy.value) return;
     const current = context;
     busy.value = true;
@@ -178,25 +225,27 @@
     }
     if (!value && current === context && hasAnyPermission(['PLAN_REVIEW:TAKEOVER_APPROVE'])) {
       try {
-        const result = await getPlanReviewOperations(project, true);
-        if (current === context) managedOperations.value = result.items.filter((item) => item.canRequestTakeover);
+        const result = props.relationId
+          ? await getPlanReviewOperations(project, true, { relationId: props.relationId, generation: props.generation })
+          : await getPlanReviewOperations(project, true);
+        if (current === context)
+          managedOperations.value = result.items.filter(
+            (item) =>
+              item.canRequestTakeover &&
+              (!props.relationId || (item.relationId === props.relationId && item.generation === props.generation))
+          );
       } catch {
         if (current === context) error.value = true;
       }
     }
   }
-  function invalidate() {
-    context++;
-    busy.value = false;
-    visible.value = false;
-    items.value = [];
-    operation.value = undefined;
-    keys.clear();
-  }
-  watch(() => props.projectId, invalidate);
+  watch(() => [props.projectId, props.relationId, props.generation], invalidate);
   watch(visible, (value) => {
     if (!value) invalidate();
   });
-  onBeforeUnmount(invalidate);
-  defineExpose({ open });
+  onBeforeUnmount(() => {
+    alive = false;
+    invalidate();
+  });
+  defineExpose({ open, invalidate });
 </script>

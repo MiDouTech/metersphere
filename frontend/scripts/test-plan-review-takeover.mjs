@@ -1,9 +1,11 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { webcrypto } from 'node:crypto';
-import test from 'node:test';
-import ts from 'typescript';
 import { ref } from 'vue';
+
+import ts from 'typescript';
+
+import assert from 'node:assert/strict';
+import { webcrypto } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
 
 const source = readFileSync(
   new URL('../src/components/business/plan-review/takeoverPanel.vue', import.meta.url),
@@ -19,11 +21,11 @@ function deferred() {
   return { promise, resolve };
 }
 function harness(overrides = {}, manager = false) {
-  const props = { projectId: 'project-a' },
-    calls = [],
-    events = [],
-    watchers = [],
-    unmounts = [];
+  const props = { projectId: 'project-a', beforeAction: overrides.beforeAction };
+  const calls = [];
+  const events = [];
+  const watchers = [];
+  const unmounts = [];
   const defaults = {
     records: async () => ({ items: [] }),
     users: async () => [
@@ -87,8 +89,24 @@ function harness(overrides = {}, manager = false) {
     },
   };
 }
+const tick = () => new Promise((resolve) => setImmediate(resolve));
 const operation = { operationId: 'operation', revision: 0, stage: 'VALIDATED', state: 'PENDING' };
 const approval = { previewId: 'preview', operationId: 'operation', revision: 0, newActor: 'new' };
+test('guard rejection discards pending takeover records and approval actions', async () => {
+  let allowed = true;
+  const pending = deferred();
+  const h = harness({ beforeAction: async () => allowed, records: () => pending.promise });
+  const opening = h.api.open(operation);
+  await tick();
+  allowed = false;
+  await h.api.refresh();
+  pending.resolve({ items: [approval] });
+  await opening;
+  assert.equal(h.api.visible.value, false);
+  assert.deepEqual(h.api.items.value, []);
+  await h.api.approve(approval);
+  assert.equal(h.calls.filter((call) => call.kind === 'approve').length, 0);
+});
 
 test('opening a takeover panel never approves or changes executing identity', async () => {
   const h = harness();
@@ -103,8 +121,8 @@ test('opening a takeover panel never approves or changes executing identity', as
   assert.equal(h.calls.filter((call) => ['approve', 'confirm'].includes(call.kind)).length, 0);
 });
 test('project switching invalidates a pending record response before member lookup', async () => {
-  const pending = deferred(),
-    h = harness({ records: () => pending.promise });
+  const pending = deferred();
+  const h = harness({ records: () => pending.promise });
   const opening = h.api.open(operation);
   h.switchProject();
   pending.resolve({ items: [approval] });
@@ -140,8 +158,8 @@ test('approval requires an explicit action and records acknowledgment', async ()
   assert.equal(request.previewId, 'preview');
 });
 test('unmount during approval suppresses stale refresh and parent notifications', async () => {
-  const pending = deferred(),
-    h = harness({ approve: () => pending.promise });
+  const pending = deferred();
+  const h = harness({ approve: () => pending.promise });
   await h.api.open();
   const approving = h.api.approve(approval);
   h.unmount();

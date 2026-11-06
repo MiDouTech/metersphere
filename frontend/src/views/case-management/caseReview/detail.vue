@@ -165,7 +165,7 @@
   import MsTableMoreAction from '@/components/pure/ms-table-more-action/index.vue';
   import { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
-  import PlanReviewLinkCard from '@/components/business/plan-review/linkCard.vue';
+  import PlanReviewLinkCard from '@/components/business/plan-review/readOnlyCard.vue';
   import AssociateDrawer from './components/create/associateDrawer.vue';
   import CaseTable from './components/detail/caseTable.vue';
   import CaseTree from './components/detail/caseTree.vue';

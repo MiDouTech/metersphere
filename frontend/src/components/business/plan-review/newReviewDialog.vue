@@ -1,6 +1,7 @@
 <template>
   <a-modal
     v-model:visible="visible"
+    unmount-on-close
     title="选择已有测试计划并确认评审范围"
     :width="800"
     :ok-loading="busy"
@@ -83,6 +84,7 @@
 
   import type { TableData } from '@arco-design/web-vue';
 
+  const props = defineProps<{ beforeAction?: () => Promise<boolean> }>();
   const appStore = useAppStore();
   const visible = ref(false);
   const busy = ref(false);
@@ -107,7 +109,43 @@
   let created: ((id: string) => void) | undefined;
   let recoveryId: string | undefined;
   const recoverySettings = ref<LinkedReviewRecoveryPreview['settingsSummary']>();
+  let alive = true;
+  function invalidate() {
+    context++;
+    visible.value = false;
+    busy.value = false;
+    failed.value = false;
+    candidates.value = [];
+    total.value = 0;
+    selected.value = '';
+    keyword.value = '';
+    preview.value = undefined;
+    acknowledged.value = false;
+    items.value = [];
+    itemsReady.value = false;
+    recoveryId = undefined;
+    recoverySettings.value = undefined;
+    key = '';
+    draft = {};
+    created = undefined;
+  }
+  async function validateAccess() {
+    const owner = context;
+    try {
+      const allowed = !props.beforeAction || (await props.beforeAction());
+      if (!allowed) {
+        invalidate();
+        return false;
+      }
+      return alive && owner === context;
+    } catch {
+      invalidate();
+      return false;
+    }
+  }
   async function search(page: number) {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return;
     const current = ++context;
     busy.value = true;
     failed.value = false;
@@ -126,6 +164,8 @@
     }
   }
   async function loadItems(page: number) {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return;
     if (!preview.value) return;
     itemsReady.value = false;
     const current = ++context;
@@ -149,6 +189,8 @@
     }
   }
   async function refreshPreview() {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return;
     const current = ++context;
     busy.value = true;
     failed.value = false;
@@ -172,6 +214,8 @@
     }
   }
   async function submit() {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return false;
     if (busy.value || draft.projectId !== appStore.currentProjectId) return false;
     if (!preview.value) {
       if (!selected.value) return false;
@@ -230,30 +274,13 @@
     visible.value = true;
     loadItems(1);
   }
-  watch(
-    () => appStore.currentProjectId,
-    () => {
-      context++;
-      visible.value = false;
-      created = undefined;
-      preview.value = undefined;
-      recoveryId = undefined;
-      recoverySettings.value = undefined;
-      busy.value = false;
-    }
-  );
+  watch(() => appStore.currentProjectId, invalidate);
   watch(visible, (value) => {
-    if (!value) {
-      context++;
-      created = undefined;
-      busy.value = false;
-      recoveryId = undefined;
-      recoverySettings.value = undefined;
-    }
+    if (!value) invalidate();
   });
   onBeforeUnmount(() => {
-    context++;
-    created = undefined;
+    alive = false;
+    invalidate();
   });
-  defineExpose({ open, openRecovery });
+  defineExpose({ open, openRecovery, invalidate });
 </script>

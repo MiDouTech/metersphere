@@ -26,7 +26,7 @@ function deferred() {
   return { promise, resolve };
 }
 function harness(overrides = {}) {
-  const props = { projectId: 'project-a' };
+  const props = { projectId: 'project-a', beforeAction: overrides.beforeAction };
   const calls = [];
   const watchers = [];
   const unmounts = [];
@@ -79,6 +79,30 @@ function harness(overrides = {}) {
     },
   };
 }
+test('guard rejection clears a loaded notice and pending approval without parent destruction', async () => {
+  let allowed = true;
+  const pending = deferred();
+  const h = harness({ beforeAction: async () => allowed, preview: () => pending.promise });
+  h.api.open('plan', 'plan');
+  await tick();
+  const previewing = h.api.preview('fault');
+  await tick();
+  allowed = false;
+  await h.api.refresh();
+  pending.resolve({ previewId: 'old-approval', eligibleCount: 987654, expiresAt: Date.now() + 600000 });
+  await previewing;
+  await tick();
+  assert.equal(h.api.visible.value, false);
+  assert.deepEqual(h.api.items.value, []);
+  assert.equal(h.api.approval.value, undefined);
+  await h.api.confirm();
+  assert.equal(h.calls.filter((call) => call.kind === 'confirm').length, 0);
+  allowed = true;
+  h.api.open('plan', 'plan');
+  await tick();
+  assert.equal(h.calls.filter((call) => call.kind === 'list').length, 2);
+  assert.equal(h.api.approval.value, undefined);
+});
 test('opening or previewing never confirms notice recovery', async () => {
   const h = harness();
   h.api.open('plan', 'plan');

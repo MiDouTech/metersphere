@@ -1,7 +1,11 @@
 import MSR from '@/api/http/index';
 
+// A denied relation operation stays in its current dialog; authentication and server authorization remain unchanged.
+const relationRequestOptions = { handleForbiddenLocally: true };
+
 export type RelationSide = 'plan' | 'review';
 export interface RelationSummary {
+  canPair?: boolean;
   legacyBlocked?: boolean;
   relationStatus: 'NONE' | 'ACTIVE' | 'RESTRICTED';
   restricted: boolean;
@@ -41,11 +45,15 @@ export interface RelationFrozenFrame {
   appliedVersion?: number;
 }
 export const getPlanReviewFrozen = (side: RelationSide, id: string, page: number) =>
-  MSR.get<RelationFrozenFrame>({
-    url: `/plan-review/frozen/${side}/${encodeURIComponent(id)}`,
-    params: { page, size: 20 },
-  });
+  MSR.get<RelationFrozenFrame>(
+    {
+      url: `/plan-review/frozen/${side}/${encodeURIComponent(id)}`,
+      params: { page, size: 20 },
+    },
+    relationRequestOptions
+  );
 export interface RelationPreview {
+  sourceVersion?: number;
   previewId: string;
   generation: string;
   expiresAt: number;
@@ -116,67 +124,120 @@ export interface OperationTakeover {
   blockedReason?: string;
 }
 export const getOperationTakeovers = (projectId: string) =>
-  MSR.get<{ items: OperationTakeover[] }>({ url: '/plan-review/operations/takeovers', params: { projectId } });
+  MSR.get<{ items: OperationTakeover[] }>(
+    { url: '/plan-review/operations/takeovers', params: { projectId } },
+    relationRequestOptions
+  );
 export const previewOperationTakeover = (
   id: string,
   data: { projectId: string; expectedRevision: number; newActor: string }
-) => MSR.post({ url: `/plan-review/operations/${encodeURIComponent(id)}/takeover-preview`, data });
+) =>
+  MSR.post({ url: `/plan-review/operations/${encodeURIComponent(id)}/takeover-preview`, data }, relationRequestOptions);
 export const approveOperationTakeover = (data: { projectId: string; previewId: string; acknowledged: boolean }) =>
-  MSR.post({ url: '/plan-review/operations/takeover-approve', data });
+  MSR.post({ url: '/plan-review/operations/takeover-approve', data }, relationRequestOptions);
 export const confirmOperationTakeover = (data: {
   projectId: string;
   approvalId: string;
   expectedRevision: number;
   requestKey: string;
-}) => MSR.post({ url: '/plan-review/operations/takeover', data });
+}) => MSR.post({ url: '/plan-review/operations/takeover', data }, relationRequestOptions);
 export const getNewReviewPlanCandidates = (projectId: string, keyword: string, page: number) =>
-  MSR.get<{ items: RelationCandidate[]; total: number }>({
-    url: '/plan-review/new-review/candidates',
-    params: { projectId, keyword, page, size: 20 },
-  });
+  MSR.get<{ items: RelationCandidate[]; total: number }>(
+    {
+      url: '/plan-review/new-review/candidates',
+      params: { projectId, keyword, page, size: 20 },
+    },
+    relationRequestOptions
+  );
 export const previewNewLinkedReview = (data: { planId: string; requestKey: string; draft: Record<string, unknown> }) =>
-  MSR.post<RelationPreview & { operationId: string }>({ url: '/plan-review/new-review/preview', data });
+  MSR.post<RelationPreview & { operationId: string }>(
+    { url: '/plan-review/new-review/preview', data },
+    relationRequestOptions
+  );
 export const recoverNewLinkedReviewPreview = (projectId: string, operationId: string) =>
-  MSR.post<LinkedReviewRecoveryPreview>({
-    url: '/plan-review/new-review/recover-preview',
-    data: { projectId, operationId },
-  });
+  MSR.post<LinkedReviewRecoveryPreview>(
+    {
+      url: '/plan-review/new-review/recover-preview',
+      data: { projectId, operationId },
+    },
+    relationRequestOptions
+  );
 export const confirmNewLinkedReview = (data: { previewId: string; requestKey: string; acknowledged: boolean }) =>
-  MSR.post<RelationOperation>({ url: '/plan-review/new-review/confirm', data });
+  MSR.post<RelationOperation>({ url: '/plan-review/new-review/confirm', data }, relationRequestOptions);
 export const getPlanReview = (side: RelationSide, id: string) =>
-  MSR.get<RelationSummary>({ url: `/plan-review/${side}/${encodeURIComponent(id)}` });
+  MSR.get<RelationSummary>({ url: `/plan-review/${side}/${encodeURIComponent(id)}` }, relationRequestOptions);
+export const findPlanReviewConfirmation = (projectId: string, requestKey: string) =>
+  MSR.get<{ items: RelationOperation[] }>(
+    {
+      url: '/plan-review/operations',
+      params: {
+        projectId,
+        sourceKind: 'WEB',
+        operationType: 'CONFIRM',
+        requestKey,
+        page: 1,
+        size: 1,
+      },
+    },
+    relationRequestOptions
+  );
 export const getPlanReviewCandidates = (data: {
   side: RelationSide;
   id: string;
   keyword: string;
   page: number;
   size: number;
-}) => MSR.post<{ items: RelationCandidate[]; total: number }>({ url: '/plan-review/candidates', data });
+}) =>
+  MSR.post<{ items: RelationCandidate[]; total: number }>(
+    { url: '/plan-review/candidates', data },
+    relationRequestOptions
+  );
 export const previewPlanReview = (data: { planId: string; reviewId: string; purpose: string }) =>
-  MSR.post<RelationPreview>({ url: '/plan-review/preview', data });
+  MSR.post<RelationPreview>({ url: '/plan-review/preview', data }, relationRequestOptions);
 export const confirmPlanReview = (data: { previewId: string; requestKey: string; acknowledged: boolean }) =>
-  MSR.post<RelationOperation>({ url: '/plan-review/confirm', data });
+  MSR.post<RelationOperation>({ url: '/plan-review/confirm', data }, relationRequestOptions);
 export const unlinkPlanReview = (data: { relationId: string; expectedGeneration: string; requestKey: string }) =>
-  MSR.post({ url: '/plan-review/unlink', data });
+  MSR.post({ url: '/plan-review/unlink', data }, relationRequestOptions);
 export const getReviewOpinionEpochs = (id: string) =>
-  MSR.get<Record<string, number>>({ url: `/plan-review/opinion-epochs/${encodeURIComponent(id)}` });
+  MSR.get<Record<string, number>>(
+    { url: `/plan-review/opinion-epochs/${encodeURIComponent(id)}` },
+    relationRequestOptions
+  );
 export const getPlanReviewGrant = (projectId: string) =>
-  MSR.get<{ revision: number; enabled: boolean }>({ url: '/plan-review/grant', params: { projectId } });
+  MSR.get<{ revision: number; enabled: boolean }>(
+    { url: '/plan-review/grant', params: { projectId } },
+    relationRequestOptions
+  );
 export const setPlanReviewGrant = (data: { projectId: string; expectedRevision: number; enabled: boolean }) =>
-  MSR.post<{ revision: number; enabled: boolean }>({ url: '/plan-review/grant', data });
-export const getPlanReviewOperations = (projectId: string, allProject = false) =>
-  MSR.get<{ items: RelationOperation[] }>({
-    url: '/plan-review/operations',
-    params: { projectId, page: 1, size: 20, allProject },
-  });
+  MSR.post<{ revision: number; enabled: boolean }>({ url: '/plan-review/grant', data }, relationRequestOptions);
+export const getPlanReviewOperations = (
+  projectId: string,
+  allProject?: boolean,
+  relation?: { relationId?: string; generation?: string }
+) =>
+  MSR.get<{ items: RelationOperation[] }>(
+    {
+      url: '/plan-review/operations',
+      params: { projectId, page: 1, size: 20, allProject, ...relation },
+    },
+    relationRequestOptions
+  );
 export const resumePlanReviewOperation = (
   id: string,
   data: { projectId: string; expectedRevision: number; requestKey: string }
-) => MSR.post<RelationOperation>({ url: `/plan-review/operations/${encodeURIComponent(id)}/resume`, data });
+) =>
+  MSR.post<RelationOperation>(
+    { url: `/plan-review/operations/${encodeURIComponent(id)}/resume`, data },
+    relationRequestOptions
+  );
 export const terminatePlanReviewOperation = (
   id: string,
   data: { projectId: string; expectedRevision: number; requestKey: string }
-) => MSR.post<RelationOperation>({ url: `/plan-review/operations/${encodeURIComponent(id)}/terminate`, data });
+) =>
+  MSR.post<RelationOperation>(
+    { url: `/plan-review/operations/${encodeURIComponent(id)}/terminate`, data },
+    relationRequestOptions
+  );
 export interface RelationDifferenceItem {
   id: string;
   num?: number;
@@ -184,10 +245,13 @@ export interface RelationDifferenceItem {
   reentered: boolean;
 }
 export const getPlanReviewPreviewItems = (id: string, kind: string, page: number) =>
-  MSR.get<{ items: RelationDifferenceItem[]; total: number }>({
-    url: `/plan-review/preview/${encodeURIComponent(id)}/items`,
-    params: { kind, page, size: 20 },
-  });
+  MSR.get<{ items: RelationDifferenceItem[]; total: number }>(
+    {
+      url: `/plan-review/preview/${encodeURIComponent(id)}/items`,
+      params: { kind, page, size: 20 },
+    },
+    relationRequestOptions
+  );
 export interface RelationHistoryItem {
   caseId: string;
   epoch: number;
@@ -198,10 +262,13 @@ export interface RelationHistoryItem {
   history_snapshot: unknown;
 }
 export const getPlanReviewHistory = (id: string, page: number) =>
-  MSR.get<{ items: RelationHistoryItem[]; total: number }>({
-    url: `/plan-review/history/${encodeURIComponent(id)}`,
-    params: { page, size: 20 },
-  });
+  MSR.get<{ items: RelationHistoryItem[]; total: number }>(
+    {
+      url: `/plan-review/history/${encodeURIComponent(id)}`,
+      params: { page, size: 20 },
+    },
+    relationRequestOptions
+  );
 export interface RelationLifecyclePreview {
   previewId: string;
   action: string;
@@ -212,9 +279,9 @@ export interface RelationLifecyclePreview {
   message: string;
 }
 export const previewPlanReviewLifecycle = (data: { side: RelationSide; id: string; action: string }) =>
-  MSR.post<RelationLifecyclePreview>({ url: '/plan-review/lifecycle/preview', data });
+  MSR.post<RelationLifecyclePreview>({ url: '/plan-review/lifecycle/preview', data }, relationRequestOptions);
 export const confirmPlanReviewLifecycle = (data: { previewId: string; acknowledged: boolean }) =>
-  MSR.post({ url: '/plan-review/lifecycle/confirm', data });
+  MSR.post({ url: '/plan-review/lifecycle/confirm', data }, relationRequestOptions);
 export interface PlanReviewSettings {
   name: string;
   moduleId: string;
@@ -243,14 +310,38 @@ export interface PlanReviewFault {
   deliveries: PlanReviewNoticeDelivery[];
 }
 export const getPlanReviewNotices = (projectId: string, side: RelationSide, objectId: string) =>
-  MSR.get<{ items: PlanReviewFault[]; canRecover: boolean }>({
-    url: '/plan-review/notices/object',
-    params: { projectId, side, objectId },
-  });
+  MSR.get<{ items: PlanReviewFault[]; canRecover: boolean }>(
+    {
+      url: '/plan-review/notices/object',
+      params: { projectId, side, objectId },
+    },
+    relationRequestOptions
+  );
 export const previewPlanReviewNoticeRetry = (projectId: string, faultId: string) =>
-  MSR.post<{ previewId: string; eligibleCount: number; ineligibleCount: number; expiresAt: number }>({
-    url: '/plan-review/notices/preview',
-    data: { projectId, faultId },
-  });
+  MSR.post<{ previewId: string; eligibleCount: number; ineligibleCount: number; expiresAt: number }>(
+    {
+      url: '/plan-review/notices/preview',
+      data: { projectId, faultId },
+    },
+    relationRequestOptions
+  );
 export const confirmPlanReviewNoticeRetry = (projectId: string, previewId: string) =>
-  MSR.post({ url: '/plan-review/notices/confirm', data: { projectId, previewId, acknowledged: true } });
+  MSR.post(
+    { url: '/plan-review/notices/confirm', data: { projectId, previewId, acknowledged: true } },
+    relationRequestOptions
+  );
+
+export const getPlanReviewReadOnlyDifference = (
+  side: RelationSide,
+  id: string,
+  generation: string,
+  kind: string,
+  page: number
+) =>
+  MSR.get<{ readonly: boolean; generation: string; items: RelationDifferenceItem[]; total: number }>(
+    {
+      url: `/plan-review/difference/${side}/${encodeURIComponent(id)}`,
+      params: { generation, kind, page, size: 20 },
+    },
+    relationRequestOptions
+  );

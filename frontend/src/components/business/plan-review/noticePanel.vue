@@ -1,5 +1,12 @@
 <template>
-  <a-modal v-model:visible="visible" title="关联通知记录" :width="820" :footer="false" :on-before-cancel="() => !busy">
+  <a-modal
+    v-model:visible="visible"
+    unmount-on-close
+    title="关联通知记录"
+    :width="820"
+    :footer="false"
+    :on-before-cancel="() => !busy"
+  >
     <a-alert>收件箱可读不代表用户已阅读。通知补投不会恢复成员同步；成员恢复须单独预览确认。</a-alert>
     <a-alert v-if="error" type="error" class="my-3">通知记录或操作未确认成功，请刷新查询；不会显示为已送达。</a-alert>
     <a-button class="my-3" :disabled="busy" @click="refresh">刷新</a-button>
@@ -43,7 +50,7 @@
     previewPlanReviewNoticeRetry,
   } from '@/api/modules/plan-review';
 
-  const props = defineProps<{ projectId: string }>();
+  const props = defineProps<{ beforeAction?: () => Promise<boolean>; projectId: string }>();
   const visible = ref(false);
   const busy = ref(false);
   const error = ref(false);
@@ -71,7 +78,34 @@
         READABLE: '收件箱已可读',
       } as Record<string, string>
     )[value] || '状态待核实');
+  let alive = true;
+  function invalidate() {
+    context++;
+    visible.value = false;
+    busy.value = false;
+    relation = '';
+    canRecover.value = false;
+    error.value = false;
+    items.value = [];
+    approval.value = undefined;
+  }
+  async function validateAccess() {
+    const owner = context;
+    try {
+      const allowed = !props.beforeAction || (await props.beforeAction());
+      if (!allowed) {
+        invalidate();
+        return false;
+      }
+      return alive && owner === context;
+    } catch {
+      invalidate();
+      return false;
+    }
+  }
   async function refresh() {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return;
     if (busy.value || !relation) return;
     const current = context;
     busy.value = true;
@@ -99,6 +133,8 @@
     refresh();
   }
   async function preview(id: string) {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return;
     if (busy.value || !canRecover.value) return;
     const current = context;
     busy.value = true;
@@ -114,6 +150,8 @@
     }
   }
   async function confirm() {
+    const guardContext = context;
+    if (!(await validateAccess()) || guardContext !== context || !alive) return;
     if (busy.value || !approval.value) return;
     if (approval.value.expiresAt <= Date.now()) {
       approval.value = undefined;
@@ -135,18 +173,13 @@
     }
     if (current === context) await refresh();
   }
-  function invalidate() {
-    context++;
-    visible.value = false;
-    busy.value = false;
-    relation = '';
-    items.value = [];
-    approval.value = undefined;
-  }
   watch(() => props.projectId, invalidate);
   watch(visible, (value) => {
     if (!value) invalidate();
   });
-  onBeforeUnmount(invalidate);
-  defineExpose({ open });
+  onBeforeUnmount(() => {
+    alive = false;
+    invalidate();
+  });
+  defineExpose({ open, invalidate });
 </script>

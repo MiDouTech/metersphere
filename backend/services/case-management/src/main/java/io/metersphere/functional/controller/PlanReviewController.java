@@ -47,6 +47,13 @@ public class PlanReviewController {
     public PlanReviewController(PlanReviewApplicationService service) { this.service = service; }
 
     public record CandidateRequest(String side, String id, String keyword, int page, int size) { }
+    @GetMapping("/difference/{side}/{id}")
+    @org.springframework.transaction.annotation.Transactional
+    public Map<String,Object> readOnlyDifference(@PathVariable String side, @PathVariable String id,
+            @RequestParam String generation, @RequestParam String kind,
+            @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="20") int size) {
+        return service.readOnlyDifference(side,id,generation,kind,page,size,SessionUtils.getUserId());
+    }
     public record PreviewRequest(String planId, String reviewId, String purpose) { }
     public record ConfirmRequest(String previewId, String requestKey, boolean acknowledged) { }
     public record UnlinkRequest(String relationId, String expectedGeneration, String requestKey) { }
@@ -144,8 +151,8 @@ public class PlanReviewController {
 
     @GetMapping("/operations")
     public Map<String, Object> operations(@RequestParam String projectId, @RequestParam(required = false) String id,
-            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size,@RequestParam(defaultValue="false") boolean allProject,@RequestParam(required=false) String sourceKind,@RequestParam(required=false) String operationType,@RequestParam(required=false) String requestKey) {
-        return service.operations(projectId, id, SessionUtils.getUserId(), page, size,allProject,sourceKind,operationType,requestKey);
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size,@RequestParam(defaultValue="false") boolean allProject,@RequestParam(required=false) String sourceKind,@RequestParam(required=false) String operationType,@RequestParam(required=false) String requestKey,@RequestParam(required=false) String relationId,@RequestParam(required=false) String generation) {
+        return service.operations(projectId, id, SessionUtils.getUserId(), page, size,allProject,sourceKind,operationType,requestKey,relationId,generation);
     }
 
     @GetMapping("/operations/{id}")

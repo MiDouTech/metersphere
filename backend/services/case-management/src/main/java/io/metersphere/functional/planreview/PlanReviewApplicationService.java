@@ -59,8 +59,14 @@ public class PlanReviewApplicationService {
         authorization.requireRead(actor, project, planSide);
         var rows = jdbc.queryForList("SELECT * FROM plan_review_relation WHERE "
                 + (planSide ? "active_plan_id" : "active_review_id") + "=? AND project_id=?", id, project);
-        if (rows.isEmpty()) return Map.of("relationStatus", "NONE", "restricted", false,
-                "legacyBlocked", !PlanReviewLegacyOwnership.blockedIds(jdbc, planSide, List.of(id)).isEmpty());
+        if (rows.isEmpty()) {
+            boolean legacy = !PlanReviewLegacyOwnership.blockedIds(jdbc, planSide, List.of(id)).isEmpty();
+            if (legacy) return Map.of("relationStatus", "NONE", "restricted", false, "legacyBlocked", true);
+            return Map.of("relationStatus", "NONE", "restricted", false, "legacyBlocked", legacy,
+                    "canPair", !legacy && state(object).editable()
+                            && (!planSide || "TEST_PLAN".equals(object.get("type")))
+                            && PlanReviewPolicy.allowed(PlanReviewPolicy.Action.PAIR, authorization.current(actor, project, false)));
+        }
         var access = authorization.current(actor, project, false);
         if (!access.permissions().contains(planSide ? PlanReviewPolicy.Permission.REVIEW_READ : PlanReviewPolicy.Permission.PLAN_READ)) {
             return Map.of("relationStatus", "RESTRICTED", "restricted", true);
@@ -76,7 +82,8 @@ public class PlanReviewApplicationService {
         result.put("sync", syncSummary(relation, plan, review, access.serviceGrant()));
         result.put("memberEpochs", persistence.currentEpochs(text(relation, "review_id")));
         result.put("canUnlink", PlanReviewPolicy.allowed(PlanReviewPolicy.Action.UNLINK, access) && editable(plan, review));
-        result.put("canReconfirm", PlanReviewPolicy.allowed(PlanReviewPolicy.Action.RETRY_SYNC, access) && editable(plan, review));
+        result.put("canReconfirm", PlanReviewPolicy.allowed(PlanReviewPolicy.Action.RETRY_SYNC, access)
+                && editable(plan, review) && manualRecoveryAllowed(relation));
         result.put("scopeMessage", "仅同步有效功能用例；接口用例和场景不在本次评审范围");
         return result;
     }
@@ -191,8 +198,9 @@ public class PlanReviewApplicationService {
         if (first && !occupied.isEmpty()) throw fail("RELATION_OCCUPIED", 409, "对象已关联，请先解除原关系");
         if (!first && (occupied.size() != 1 || !planId.equals(occupied.getFirst().get("plan_id"))
                 || !reviewId.equals(occupied.getFirst().get("review_id")))) throw fail("RELATION_CHANGED", 409, "关联已变化，请刷新");
-        var source = persistence.sourceChanged(planId);
         var relation = first ? null : currentRelation(text(occupied.getFirst(), "id"));
+        if (!first) requireManualRecovery(relation);
+        var source = persistence.sourceChanged(planId);
         var difference = difference(reviewId, source, first);
         String generation = first ? uuid() : text(relation, "generation");
         long opinion = first ? 0 : number(relation, "opinion_revision");
@@ -338,12 +346,13 @@ public class PlanReviewApplicationService {
         if (preview.get("consumed_by") != null) throw fail("PREVIEW_CONSUMED", 409, "该预览已确认，请查询原操作");
         if (now() >= number(preview, "expires_at")) throw fail("PREVIEW_EXPIRED", 410, "预览已过期，请重新预览");
         requireEditable(context.plan, context.review);
-        var source = persistence.sourceChanged(planId);
         var active = occupied(planId, reviewId, project);
         Map<String, Object> current = active.isEmpty() ? null : active.getFirst();
         if (first && !active.isEmpty() || !first && (active.size() != 1 || !Objects.equals(preview.get("generation"), current.get("generation")))) {
             throw fail("RELATION_CHANGED", 409, "关系已变化，请重新预览");
         }
+        if (!first) requireManualRecovery(current);
+        var source = persistence.sourceChanged(planId);
         if (source.version() != number(preview, "source_version")
                 || number(context.grant, "revision") != number(preview, "grant_revision")
                 || number(context.plan, "update_time") != number(preview, "plan_revision")
@@ -379,6 +388,55 @@ public class PlanReviewApplicationService {
                 planId, reviewId, relationId, generation, now(), now());
         audit(project, relationId, generation, operation, "CONFIRM", actor, source.version(), 0, 0, "PENDING", null);
         return Map.of("operationId", operation, "relationId", relationId, "generation", generation, "stage", "TARGET_PENDING", "syncState", "PENDING");
+    }
+
+    /** Read-only progress must never allocate a preview, approve work or reset a retry budget. */
+    public Map<String, Object> readOnlyDifference(String side, String id, String generation, String kind, int page, int size, String actor) {
+        page(page, size);
+        if (!Set.of("added", "removed", "retained").contains(kind)) throw fail("INVALID_FIELD", 400, "差异分类无效");
+        var summary = summary(side, id, actor);
+        if (Boolean.TRUE.equals(summary.get("restricted"))) throw fail("PERMISSION_REQUIRED", 403, "无权查看关联差异");
+        if (generation == null || !generation.equals(summary.get("generation"))) throw fail("RELATION_CHANGED", 409, "关联已变化，请重新选择");
+        var relation = jdbc.queryForMap("SELECT * FROM plan_review_relation WHERE id=?", summary.get("relationId"));
+        String plan = text(relation, "plan_id"), review = text(relation, "review_id");
+        // Same project -> plan -> review -> relation lock order, without INSERT IGNORE on a read path.
+        jdbc.queryForList("SELECT project_id FROM plan_review_grant WHERE project_id=? FOR UPDATE", relation.get("project_id"));
+        jdbc.queryForList("SELECT id FROM test_plan WHERE id=? FOR UPDATE", plan);
+        jdbc.queryForList("SELECT id FROM case_review WHERE id=? FOR UPDATE", review);
+        relation = currentRelation(text(relation, "id"));
+        if (!"ACTIVE".equals(relation.get("state")) || !generation.equals(relation.get("generation"))) throw fail("RELATION_CHANGED", 409, "关联已变化，请重新选择");
+        authorization.requireRead(actor, text(relation, "project_id"), true);
+        authorization.requireRead(actor, text(relation, "project_id"), false);
+        var epochs = new HashMap<String, Long>();
+        var present = new HashSet<String>();
+        for (var row : jdbc.queryForList("SELECT case_id,epoch,present FROM plan_review_source_member WHERE plan_id=?", plan)) {
+            String member = text(row, "case_id"); epochs.put(member, number(row, "epoch"));
+            if (truth(row.get("present"))) present.add(member);
+        }
+        var effective = jdbc.queryForList("SELECT m.functional_case_id FROM test_plan_functional_case m JOIN functional_case c ON CAST(c.id AS BINARY(50))=CAST(m.functional_case_id AS BINARY(50)) WHERE m.test_plan_id=? AND c.project_id=? AND c.deleted=0", String.class, plan, relation.get("project_id"));
+        var source = new PlanReviewSourceMembership(number(relation, "source_version"), present, epochs).changed(number(relation, "source_version"), effective);
+        var delta = difference(review, source, false);
+        var ids = new TreeSet<>(switch (kind) { case "added" -> delta.added(); case "removed" -> delta.removed(); default -> delta.retained(); });
+        if (!"retained".equals(kind)) ids.addAll(delta.reentered());
+        var ordered = ids.stream().toList();
+        int from = (int) Math.min((page - 1L) * size, ordered.size());
+        var items = new ArrayList<Map<String, Object>>();
+        for (String member : ordered.subList(from, Math.min(from + size, ordered.size()))) {
+            var cases = jdbc.queryForList("SELECT id,num,name FROM functional_case WHERE id=? AND project_id=?", member, relation.get("project_id"));
+            var item = cases.isEmpty() ? new LinkedHashMap<String, Object>(Map.of("id", member, "name", "已移除用例")) : new LinkedHashMap<>(cases.getFirst());
+            item.put("reentered", delta.reentered().contains(member)); items.add(item);
+        }
+        return Map.of("readonly", true, "generation", generation, "items", items, "total", ids.size());
+    }
+
+    private static boolean manualRecoveryAllowed(Map<String, Object> relation) {
+        return "ACTIVE".equals(relation.get("state"))
+                && Set.of("FAILED_MANUAL", "RECONFIRM_REQUIRED").contains(text(relation, "sync_state"));
+    }
+
+    private static void requireManualRecovery(Map<String, Object> relation) {
+        if (!manualRecoveryAllowed(relation))
+            throw fail("MANUAL_RECOVERY_NOT_APPLICABLE", 409, "当前同步状态不允许人工恢复，请查看进度；自动预算保持不变");
     }
 
     public Map<String, Object> previewItems(String previewId, String kind, int page, int size, String actor) {
@@ -565,15 +623,25 @@ public class PlanReviewApplicationService {
     }
     public Map<String,Object> operations(String project,String id,String actor,int page,int size,boolean allProject){return operations(project,id,actor,page,size,allProject,null,null,null);}
     public Map<String,Object> operations(String project,String id,String actor,int page,int size,boolean allProject,String sourceKind,String operationType,String requestKey){
+        return operations(project,id,actor,page,size,allProject,sourceKind,operationType,requestKey,null,null);
+    }
+    public Map<String,Object> operations(String project,String id,String actor,int page,int size,boolean allProject,String sourceKind,String operationType,String requestKey,String relationId,String generation){
         page(page, size);
+        if (relationId != null) {
+            authorization.requireRead(actor, project, true); authorization.requireRead(actor, project, false);
+            if (generation == null || jdbc.queryForList("SELECT id FROM plan_review_relation WHERE id=? AND project_id=? AND generation=? AND state='ACTIVE'",String.class,relationId,project,generation).size()!=1)
+                throw fail("RELATION_CHANGED",409,"管理上下文已失效，请重新选择");
+        }
         var currentAccess=authorization.current(actor, project, false);
         if(allProject && !currentAccess.hasAll(Set.of(PlanReviewPolicy.Permission.TAKEOVER_APPROVE,PlanReviewPolicy.Permission.PLAN_READ)))throw fail("PERMISSION_REQUIRED",403,"Project takeover approval permission required");
-        String where = " project_id=?"+(allProject?"":" AND (executing_actor=? OR original_actor=?)") + (id == null ? "" : " AND id=?");
-        List<Object> parameters = new ArrayList<>();parameters.add(project);if(!allProject){parameters.add(actor);parameters.add(actor);} if (id != null) parameters.add(id);
+        boolean relationScope = relationId != null;
+        String where = " project_id=?"+(allProject||relationScope?"":" AND (executing_actor=? OR original_actor=?)") + (id == null ? "" : " AND id=?");
+        List<Object> parameters = new ArrayList<>();parameters.add(project);if(!allProject&&!relationScope){parameters.add(actor);parameters.add(actor);} if (id != null) parameters.add(id);
         if(allProject&&!currentAccess.permissions().contains(PlanReviewPolicy.Permission.REVIEW_READ))where+=" AND operation_type='COPY_GROUP'";
         if(sourceKind!=null){if(sourceKind.length()>32)throw fail("INVALID_FIELD",400,"Invalid source kind");where+=" AND source_kind=?";parameters.add(sourceKind);}
         if(operationType!=null){if(operationType.length()>32)throw fail("INVALID_FIELD",400,"Invalid operation type");where+=" AND operation_type=?";parameters.add(operationType);}
         if(requestKey!=null){key(requestKey);where+=" AND request_key=?";parameters.add(requestKey);}
+        if(relationId!=null){where+=" AND relation_id=? AND generation=?";parameters.add(relationId);parameters.add(generation);}
         Long count = jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_operation WHERE " + where, Long.class, parameters.toArray());
         parameters.add(size); parameters.add((page - 1L) * size);
         var rows = jdbc.queryForList("SELECT * FROM plan_review_operation WHERE " + where + " ORDER BY create_time DESC,id LIMIT ? OFFSET ?", parameters.toArray());

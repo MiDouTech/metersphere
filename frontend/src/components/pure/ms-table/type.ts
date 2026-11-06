@@ -42,6 +42,7 @@ export interface MsTableColumnFilterConfig {
 
 export interface MsTableRowSelectionDisabledConfig {
   disabledChildren?: boolean; // 是否禁用子节点选择
+  showChildCheckboxes?: boolean; // 显示独立子行选择；不改变原父行/全选的批量范围及联动规则
   parentKey?: string; // 父节点Key
   checkStrictly?: boolean; // 父子节点选择是否关联，关联存在半选状态，不关联不存在，选择父即父，选择子即子
   disabledKey?: string; // 是否禁用选择
