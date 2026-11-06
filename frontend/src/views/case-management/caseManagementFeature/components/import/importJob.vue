@@ -83,11 +83,11 @@
         >
       </div>
       <a-alert
-        v-if="job.followup && !['LEGACY', 'SKIPPED'].includes(job.followup.state)"
+        v-if="job.followup && job.followup.state !== 'LEGACY'"
         class="mb-3"
         :type="job.followup.state === 'FAILED' ? 'warning' : 'info'"
       >
-        计划/评审关联：{{ followupLabels[job.followup.state] || job.followup.state }}
+        计划/评审关联：{{ followupLabel }}
         <div v-if="job.followup.message">{{ job.followup.message }}</div>
         <a-button v-if="job.followup.planId" type="text" @click="openTarget(false)">{{
           job.followup.planName || '查看测试计划'
@@ -95,7 +95,12 @@
         <a-button v-if="job.followup.reviewId" type="text" @click="openTarget(true)">{{
           job.followup.reviewName || '查看评审'
         }}</a-button>
-        <a-button v-if="job.followup.state === 'FAILED'" :disabled="saving" @click="retryFollowup">只重试关联</a-button>
+        <a-button
+          v-if="job.followup.state === 'FAILED'"
+          :disabled="saving || loading || queryFailed"
+          @click="retryFollowup"
+          >重试未完成步骤</a-button
+        >
       </a-alert>
       <a-space class="my-3" wrap>
         <span v-for="count in job.counts" :key="count.state"
@@ -108,6 +113,8 @@
           type="primary"
           :loading="saving"
           :disabled="
+            loading ||
+            queryFailed ||
             !policy ||
             (policy === 'CREATE_NEW_PAIR' && !reviewers.length) ||
             (policy === 'APPEND_EXISTING' && !targetGroup)
@@ -119,10 +126,15 @@
           v-if="['PRECHECKED', 'QUEUED', 'RUNNING'].includes(job.state)"
           status="danger"
           :loading="saving"
+          :disabled="loading || queryFailed"
           @click="action('stop')"
           >停止导入</a-button
         >
-        <a-button v-if="['STOPPED', 'PARTIAL', 'FAILED'].includes(job.state)" :loading="saving" @click="action('retry')"
+        <a-button
+          v-if="['STOPPED', 'PARTIAL', 'FAILED'].includes(job.state)"
+          :loading="saving"
+          :disabled="loading || queryFailed"
+          @click="action('retry')"
           >重试未成功条目</a-button
         >
         <a-button :loading="loading" :disabled="saving" @click="load">刷新</a-button>
@@ -150,7 +162,7 @@
 </template>
 
 <script setup lang="ts">
-  import { onBeforeUnmount, ref, watch } from 'vue';
+  import { computed, onBeforeUnmount, ref, watch } from 'vue';
   import { useRouter } from 'vue-router';
 
   import MSR from '@/api/http';
@@ -171,6 +183,9 @@
     items: { position: number; action: string; state: string; message?: string }[];
     followup?: {
       state: string;
+      policy?: string;
+      legacy?: boolean;
+      stage?: string;
       message?: string;
       planId?: string;
       reviewId?: string;
@@ -191,13 +206,35 @@
   const reviewerOptions = ref<{ label: string; value: string }[]>([]);
   const reviewPassRule = ref('SINGLE');
   const router = useRouter();
-  const followupLabels: Record<string, string> = {
-    PENDING: '等待或正在关联',
-    SUCCEEDED: '已完成',
-    FAILED: '部分关联未完成',
-  };
-
   const job = ref<Job>();
+  const followupLabel = computed(() => {
+    const followup = job.value?.followup;
+    if (!followup) return '';
+    if (followup.state === 'SKIPPED') return '仅导入，未创建或关联计划';
+    if (followup.stage === 'SKIPPED_ZERO_SUCCESS') return '无成功导入用例，未创建计划';
+    if (followup.state === 'TERMINATED') return '原操作已终止或关联已变更，不会自动续建';
+    // Older servers omit policy only for legacy IMPORT_ONLY results.
+    const importOnly = followup.policy === 'IMPORT_ONLY' || (followup.legacy && !followup.policy);
+    if (importOnly && ['PENDING', 'SUCCEEDED'].includes(followup.state)) {
+      return followup.state === 'PENDING' ? '仅导入，等待处理完成' : '仅导入，未创建或关联计划';
+    }
+    if (followup.state === 'SUCCEEDED') {
+      if (followup.policy === 'CREATE_NEW_PAIR') return '已创建并关联';
+      return followup.policy === 'APPEND_EXISTING' ? '已完成关联' : '结果暂未确认，请刷新';
+    }
+    if (followup.state === 'PENDING') {
+      if (['PRECHECKED', 'QUEUED', 'RUNNING'].includes(job.value?.state || '')) return '等待导入完成';
+      if (followup.stage === 'TARGET_PENDING') return '关系已建立，正在同步用例';
+      return followup.policy === 'CREATE_NEW_PAIR' ? '正在创建并关联' : '正在关联';
+    }
+    if (followup.state === 'FAILED') {
+      if (followup.stage === 'TARGET_PENDING') return '用例已导入，计划关系已建立，评审用例同步未完成';
+      if (followup.planId && followup.reviewId) return '用例已导入，计划已创建，关联后处理未完成';
+      if (followup.planId) return '用例已导入，测试计划已创建，后续步骤未完成';
+      return '用例已导入，计划创建或关联未完成';
+    }
+    return followup.state === 'LEGACY_ADOPTION_REQUIRED' ? '原任务需核对，成功结果保留' : '结果暂未确认，请刷新';
+  });
   function openTarget(review: boolean) {
     const id = review ? job.value?.followup?.reviewId : job.value?.followup?.planId;
     if (id)
@@ -214,6 +251,7 @@
   const loading = ref(false);
   const saving = ref(false);
   const error = ref('');
+  const queryFailed = ref(false);
   const labels: Record<string, string> = {
     PRECHECKED: '等待提交',
     QUEUED: '排队中',
@@ -300,6 +338,7 @@
         });
         if (request !== sequence || context !== generation) return;
         job.value = result;
+        queryFailed.value = false;
         if (result.state === 'PRECHECKED') await loadOptions(id, context);
         if (request !== sequence || context !== generation) return;
         if (previous && previous !== result.state && ['COMPLETED', 'PARTIAL', 'STOPPED'].includes(result.state))
@@ -311,8 +350,10 @@
         )
           timer = setTimeout(load, 3000);
       } catch (failure) {
-        if (request === sequence && context === generation)
+        if (request === sequence && context === generation) {
+          queryFailed.value = true;
           error.value = formatAppErrorMessage(ensureAppError(failure, '无法查询导入状态，请重试'));
+        }
       } finally {
         if (request === sequence && context === generation) loading.value = false;
         if (pendingLoad?.key === key) pendingLoad = undefined;
@@ -323,9 +364,9 @@
   }
   watch(policy, () => loadReviewers(generation));
   async function action(value: string) {
-    if (saving.value) return;
+    if (saving.value || loading.value || queryFailed.value) return;
     const id = props.jobId;
-    const captured = sequence;
+    const context = generation;
     saving.value = true;
     clearTimer();
     try {
@@ -347,24 +388,42 @@
               }
             : undefined,
       });
-      if (captured === sequence) await load();
+      if (context === generation) await load();
     } catch (failure) {
-      if (captured === sequence)
-        error.value = formatAppErrorMessage(ensureAppError(failure, '导入操作失败，请刷新重试'));
+      if (context === generation) {
+        await load();
+        if (
+          context === generation &&
+          (queryFailed.value ||
+            !['COMPLETED', 'SUCCEEDED'].includes(job.value?.followup?.state || job.value?.state || ''))
+        )
+          error.value = `操作结果暂未确认，请先核对刷新后的原任务。${formatAppErrorMessage(
+            ensureAppError(failure, '请刷新查询')
+          )}`;
+      }
     } finally {
-      saving.value = false;
+      if (context === generation) saving.value = false;
     }
   }
   async function retryFollowup() {
-    if (saving.value) return;
+    if (saving.value || loading.value || queryFailed.value || job.value?.followup?.state !== 'FAILED') return;
+    const id = props.jobId;
+    const context = generation;
     saving.value = true;
+    clearTimer();
     try {
-      await MSR.post({ url: `/ai/case-imports/${encodeURIComponent(props.jobId)}/followup/retry` });
-      await load();
+      await MSR.post({ url: `/ai/case-imports/${encodeURIComponent(id)}/followup/retry` });
+      if (context === generation) await load();
     } catch (failure) {
-      error.value = formatAppErrorMessage(ensureAppError(failure, '关联重试失败'));
+      if (context === generation) {
+        await load();
+        if (context === generation && (queryFailed.value || job.value?.followup?.state !== 'SUCCEEDED'))
+          error.value = `操作结果暂未确认，请先核对刷新后的原任务。${formatAppErrorMessage(
+            ensureAppError(failure, '请刷新查询')
+          )}`;
+      }
     } finally {
-      saving.value = false;
+      if (context === generation) saving.value = false;
     }
   }
   watch([() => paging.value.pagination.current, () => paging.value.pagination.pageSize], () => {
@@ -375,6 +434,9 @@
     () => {
       ++generation;
       ++sequence;
+      saving.value = false;
+      loading.value = false;
+      queryFailed.value = false;
       optionsPromise = undefined;
       pendingLoad = undefined;
       reviewersLoaded = false;
