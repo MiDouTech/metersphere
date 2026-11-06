@@ -100,7 +100,8 @@
                   </a-tooltip>
                   <a-typography-text
                     v-if="['sha256', 'systemVersion'].includes(item.key || '') && item.value"
-                    :copyable="{ text: String(item.value) }"
+                    copyable
+                    :copy-text="String(item.value)"
                     class="ml-[8px]"
                   />
                   <template v-if="item.key === 'name'">
@@ -574,21 +575,21 @@
       },
       {
         label: t('project.fileManagement.fileVersion'),
-        value: detail.fileVersion,
+        value: detail.fileVersion ?? '',
         key: 'systemVersion',
       },
       {
         label: 'SHA256',
-        value: detail.sha256,
+        value: detail.sha256 ?? '',
         key: 'sha256',
       },
       {
         label: t('project.fileManagement.sourceLabel'),
-        value: detail.sourceLabel,
+        value: detail.sourceLabel ?? '',
       },
       {
         label: t('project.fileManagement.sourceOperation'),
-        value: detail.sourceOperationId,
+        value: detail.sourceOperationId ?? '',
       },
       {
         label: t('project.fileManagement.desc'),
