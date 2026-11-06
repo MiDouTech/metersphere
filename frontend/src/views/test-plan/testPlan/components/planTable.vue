@@ -41,7 +41,7 @@
     always-show-selected-count
     :not-show-table-filter="isAdvancedSearchMode"
     :action-config="testPlanBatchActions"
-    :selectable="hasOperationPermission && showType !== testPlanTypeEnum.ALL && !isArchived"
+    :selectable="hasOperationPermission || hasAnyPermission(['PROJECT_TEST_PLAN:READ'])"
     filter-icon-align-left
     :expanded-keys="expandedKeys"
     :first-column-width="32"
@@ -50,6 +50,30 @@
     @filter-change="filterChange"
     @drag-change="handleDragChange"
   >
+    <template #batch-leading>
+      <PlanReviewListToolbar
+        side="plan"
+        :rows="propsRes.data"
+        :selected-ids="Array.from(propsRes.selectedKeys)"
+        :expanded-ids="expandedKeys"
+        :project="appStore.currentProjectId"
+        :loading="propsRes.loading"
+        :context="
+          JSON.stringify([
+            keyword,
+            viewId,
+            propsRes.filter,
+            advanceFilter,
+            propsRes.msPagination?.current,
+            propsRes.msPagination?.pageSize,
+            showType,
+            props.activeFolder,
+          ])
+        "
+        :reload="refreshPreserveState"
+        @clear="resetSelector()"
+      />
+    </template>
     <!-- TODO: 快捷创建暂时不上 -->
     <!-- <template v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+ADD'])" #quickCreate>
       <a-form
@@ -97,8 +121,9 @@
       </a-dropdown>
     </template> -->
     <template #planReviewRelation="{ record }"
-      ><PlanReviewListCell side="plan" :value="record.planReviewRelation" :group="record.type === 'GROUP'"
-    /></template>
+      ><span :data-relation-result="`plan-${record.id}`" tabindex="-1"
+        ><PlanReviewListCell side="plan" :value="record.planReviewRelation" :group="record.type === 'GROUP'" /></span
+    ></template>
     <template #name="{ record }">
       <a-button
         v-if="record.type === testPlanTypeEnum.TEST_PLAN"
@@ -382,6 +407,7 @@
   import PlanReviewCopyDialog from '@/components/business/plan-review/copyDialog.vue';
   import PlanReviewLegacyMigrationPanel from '@/components/business/plan-review/legacyMigrationPanel.vue';
   import PlanReviewListCell from '@/components/business/plan-review/listCell.vue';
+  import PlanReviewListToolbar from '@/components/business/plan-review/listToolbar.vue';
   import executeHistoryTable from '../detail/executeHistory/index.vue';
   import ActionModal from './actionModal.vue';
   import BatchEditModal from './batchEditModal.vue';
@@ -883,13 +909,14 @@
     draggableCondition: true,
     rowSelectionDisabledConfig: {
       disabledChildren: true,
+      showChildCheckboxes: true,
       parentKey: 'parent',
     },
   });
 
   function getTags(record: TestPlanItem) {
     if (record.children && record.children.length) {
-      record.children = record.children.map((child: TestPlanItem) => ({ ...getTags(child), disabled: true }));
+      record.children = record.children.map((child: TestPlanItem) => getTags(child));
     }
     return {
       ...record,
@@ -922,8 +949,6 @@
     },
     updatePlanName
   );
-
-  const isArchived = computed(() => viewId.value === 'archived');
 
   const batchParams = ref<BatchActionQueryParams>({
     selectedIds: [],
@@ -967,7 +992,7 @@
   async function loadPlanList() {
     const params = await initTableParams();
     setLoadListParams({ ...params, viewId: viewId.value, combineSearch: advanceFilter });
-    loadList();
+    await loadList();
   }
 
   // 获取父组件模块数量

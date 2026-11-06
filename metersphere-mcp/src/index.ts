@@ -42,6 +42,7 @@ import {
   searchTestPlansTool,
 } from "./tools/testPlanExecution.js";
 import { createBugTool, getBugTool, getExecLogTool, relateBugCaseTool, searchBugsTool, updateBugTool } from "./tools/bugWrite.js";
+import { readBugImageTool } from "./tools/bugImages.js";
 
 type ToolDef = {
   name: string;
@@ -86,6 +87,7 @@ const tools: ToolDef[] = [
   getCaseReviewTool,
   searchBugsTool,
   getBugTool,
+  readBugImageTool,
   createBugTool,
   updateBugTool,
   relateBugCaseTool,

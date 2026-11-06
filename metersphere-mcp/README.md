@@ -248,3 +248,8 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 ### 部分正文读取失败
 
 原生接口与Node透传的用例检索结果可能包含`contentError`。`CASE_BODY_INVALID`表示历史正文异常；`CASE_CONTENT_READ_LIMIT`表示错误隔离达到读取预算，请缩小范围重试。该行的`steps`为null/缺省，并在顶层warnings中包含`错误码:caseId`；不能把它当作零步骤可执行用例。正常行仍返回正文，单条get仍明确失败。权限、对象消失和数据库异常不会被当作正文错误吞掉。
+# 缺陷图片读取（0.8.3）
+
+`get_bug` 保留文字并透传正文 `images` 与真实附件 `attachmentImages` 索引。使用 `read_bug_image`，显式传入 `projectId`、`bugId` 和索引中的 `imageRef`，按需读取单图；返回原生 MCP image content 和原始字节 metadata。需要明确 `BUG_READ`、当前项目缺陷读取权限及 Token 项目授权。旧服务器缺能力时明确提示不支持，不下载 URL、不自动重试。
+
+完整使用及回退说明见 [`mcp-bug-images.md`](../docs/task/metersphere_agent/mcp-bug-images.md)。新能力须经部署联测，不以本包构建通过代替实际环境或宿主验收。

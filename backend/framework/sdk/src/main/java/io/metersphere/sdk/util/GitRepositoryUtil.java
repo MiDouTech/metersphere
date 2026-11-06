@@ -61,10 +61,18 @@ public class GitRepositoryUtil {
 
     public InputStream getFileStream(String filePath, String commitId) throws Exception {
         InMemoryRepository repo = this.getGitRepositoryInMemory(repositoryUrl, userName, token);
-        ObjectId fileCommitObjectId = repo.resolve(commitId);
-        ObjectId objectId = this.getTreeWork(repo, fileCommitObjectId, filePath).getObjectId(0);
-        ObjectLoader loader = repo.open(objectId);
-        return loader.openStream();
+        try (TreeWalk walk = this.getTreeWork(repo, repo.resolve(commitId), filePath)) {
+            if (!walk.next()) throw new java.io.FileNotFoundException("Managed image unavailable");
+            InputStream stream = repo.open(walk.getObjectId(0)).openStream();
+            return new java.io.FilterInputStream(stream) {
+                @Override public void close() throws java.io.IOException {
+                    try { super.close(); } finally { closeConnection(repo); }
+                }
+            };
+        } catch (Exception failure) {
+            closeConnection(repo);
+            throw failure;
+        }
     }
 
     public Map<String, byte[]> getFiles(List<RepositoryQuery> RepositoryQueryList) throws Exception {
@@ -148,7 +156,8 @@ public class GitRepositoryUtil {
 
     private InMemoryRepository getGitRepositoryInMemory(String repositoryUrl, String userName, String token) throws Exception {
         DfsRepositoryDescription repoDesc = new DfsRepositoryDescription();
-        InMemoryRepository repo = new InMemoryRepository(repoDesc);
+        InMemoryRepository repo = new InMemoryRepository.Builder().setRepositoryDescription(repoDesc)
+                .setFS(org.eclipse.jgit.util.FS.DETECTED).build();
         CredentialsProvider credentialsProvider = new UsernamePasswordCredentialsProvider(userName, token);
         git = new Git(repo);
         String REF_SPACE = "+refs/heads/*:refs/heads/*";

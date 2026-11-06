@@ -102,7 +102,7 @@ function harness(overrides = {}, side = 'plan') {
   const calls = [];
   const app = Vue.reactive({ currentProjectId: 'project' });
   const api = {
-    getPlanReview: async () => ({ relationStatus: 'NONE', restricted: false }),
+    getPlanReview: async () => ({ relationStatus: 'NONE', restricted: false, canPair: true }),
     getPlanReviewCandidates: async () => ({ items: records, total: records.length }),
     previewPlanReview: async () => ({
       previewId: 'preview',
@@ -160,6 +160,104 @@ async function open(h, title = '关联评审计划') {
   await settle();
   assert.equal(h.calls.filter((call) => call.kind === 'getPlanReviewCandidates').length, 1);
 }
+function linkedSummary(state = 'WAITING_RETRY', generation = 'own-g') {
+  return {
+    relationStatus: 'ACTIVE',
+    restricted: false,
+    relationId: 'own-relation',
+    generation,
+    target: { id: 'other', num: 100004, name: 'Own counterpart', status: 'UNDERWAY' },
+    sync: { state, sourceVersion: 18, appliedVersion: 17, blockers: [], attempts: 2 },
+    canReconfirm: true,
+    canUnlink: true,
+  };
+}
+['plan', 'review'].forEach((side) => {
+  ['SYNCED', 'PENDING', 'APPLYING', 'DELAYED', 'WAITING_RETRY', 'ENDED'].forEach((state) => {
+    test(`${side}: ${state} cannot open an artificial recovery round`, async () => {
+      const h = harness({ getPlanReview: async () => linkedSummary(state) }, side);
+      await settle();
+      assert.equal(button('重新预览并确认同步').disabled, true);
+      assert.equal(button('解除关联').disabled, false);
+      assert.equal(h.calls.filter((call) => call.kind === 'previewPlanReview').length, 0);
+    });
+  });
+  test(`${side}: unassociated row management has no previous generation or records`, async () => {
+    const h = harness({}, side);
+    await settle();
+    click(button('关联管理'));
+    await settle();
+    assert.match(document.body.textContent, /未关联，暂无当前关系记录/);
+    ['进度 / 只读差异', '操作记录', '通知记录', '接管审批'].forEach((label) =>
+      assert.equal(button(label).disabled, true)
+    );
+    assert.doesNotMatch(document.body.textContent, /own-g|Own counterpart/);
+    assert.equal(h.calls.filter((call) => call.kind === 'getPlanReviewOperations').length, 0);
+  });
+  test(`${side}: management filters operations to this row's own relation and generation`, async () => {
+    const h = harness(
+      {
+        getPlanReview: async () => linkedSummary(),
+        getPlanReviewOperations: async () => ({
+          items: [
+            { operationId: 'own-operation', relationId: 'own-relation', generation: 'own-g', stage: 'TARGET_PENDING' },
+            { operationId: 'foreign-operation', relationId: 'foreign', generation: 'old-g', stage: 'TARGET_PENDING' },
+          ],
+        }),
+      },
+      side
+    );
+    await settle();
+    click(button('关联管理'));
+    await settle();
+    click(button('操作记录'));
+    await settle();
+    assert.match(document.body.textContent, /own-operation/);
+    assert.doesNotMatch(document.body.textContent, /foreign-operation|old-g/);
+    assert.deepEqual(h.calls.find((call) => call.kind === 'getPlanReviewOperations').args, [
+      'project',
+      false,
+      { relationId: 'own-relation', generation: 'own-g' },
+    ]);
+  });
+  test(`${side}: a generation change refuses the old management child without querying records`, async () => {
+    let summary = linkedSummary();
+    const h = harness({ getPlanReview: async () => summary }, side);
+    await settle();
+    click(button('关联管理'));
+    await settle();
+    summary = linkedSummary('WAITING_RETRY', 'replacement-g');
+    click(button('操作记录'));
+    await settle();
+    assert.equal(h.calls.filter((call) => call.kind === 'getPlanReviewOperations').length, 0);
+    assert.ok(h.wrapper.emitted('refresh')?.length);
+  });
+  test(`${side}: waiting progress opens read-only differences without a preview or confirmation`, async () => {
+    const h = harness(
+      {
+        getPlanReview: async () => linkedSummary(),
+        getPlanReviewReadOnlyDifference: async () => ({
+          readonly: true,
+          generation: 'own-g',
+          items: [{ id: 'a', name: 'Read only case' }],
+          total: 1,
+        }),
+      },
+      side
+    );
+    await settle();
+    click(button('关联管理'));
+    await settle();
+    click(button('进度 / 只读差异'));
+    await settle();
+    assert.match(document.body.textContent, /Read only case/);
+    assert.equal(h.calls.filter((call) => ['previewPlanReview', 'confirmPlanReview'].includes(call.kind)).length, 0);
+    const readOnlyDialog = [...document.querySelectorAll('.arco-modal')].find((node) =>
+      node.textContent.includes('当前差异（只读')
+    );
+    assert.equal(readOnlyDialog.querySelectorAll('input[type=checkbox]').length, 0);
+  });
+});
 test('actual Arco radio and row name select exactly one candidate; preview and cancel never confirm', async () => {
   const h = harness();
   await open(h);
@@ -188,6 +286,59 @@ test('actual Arco radio and row name select exactly one candidate; preview and c
     h.calls.some((call) => call.kind === 'confirmPlanReview'),
     false
   );
+});
+test('denied preview retains the candidate dialog with a safe explanation and no confirmation', async () => {
+  const h = harness({
+    previewPlanReview: async () => {
+      throw new Error('403');
+    },
+  });
+  await open(h);
+  click(document.querySelector('.arco-modal input[type=radio]'));
+  await settle();
+  click(button('下一步：预览差异'));
+  await settle();
+  assert.match(document.body.textContent, /预览未成功/);
+  assert.equal(h.calls.filter((call) => call.kind === 'confirmPlanReview').length, 0);
+  assert.ok(button('取消'));
+});
+test('an accepted confirmation with a lost response resolves the original key without another write', async () => {
+  let accepted = false;
+  let restricted = false;
+  const h = harness({
+    getPlanReview: async () => {
+      if (restricted) return { relationStatus: 'RESTRICTED', restricted: true };
+      if (accepted) return linkedSummary('PENDING');
+      return { relationStatus: 'NONE', restricted: false, canPair: true };
+    },
+    confirmPlanReview: async () => {
+      accepted = true;
+      throw new Error('lost response');
+    },
+    findPlanReviewConfirmation: async () => ({
+      items: [
+        { operationId: 'original', planId: 'plan', reviewId: 'r1', relationId: 'own-relation', generation: 'own-g' },
+      ],
+    }),
+  });
+  await open(h);
+  click(document.querySelector('.arco-modal input[type=radio]'));
+  await settle();
+  click(button('下一步：预览差异'));
+  await settle();
+  click([...document.querySelectorAll('.arco-checkbox')].find((node) => node.textContent.includes('已知晓')));
+  await settle();
+  click(button('确认关联并同步'));
+  await settle();
+  assert.equal(h.calls.filter((call) => call.kind === 'confirmPlanReview').length, 1);
+  const originalKey = h.calls.find((call) => call.kind === 'confirmPlanReview').args[0].requestKey;
+  assert.equal(h.calls.find((call) => call.kind === 'findPlanReviewConfirmation').args[1], originalKey);
+  assert.ok(h.wrapper.emitted('refresh')?.some(([reason]) => reason === 'paired'));
+  restricted = true;
+  click(button('刷新'));
+  await settle();
+  assert.match(document.body.textContent, /无权查看关联对象/);
+  assert.doesNotMatch(document.body.textContent, /First review|Own counterpart|own-g/);
 });
 test('review-side row selection previews the selected plan without confirming a relationship', async () => {
   const h = harness({}, 'review');

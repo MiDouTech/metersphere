@@ -37,6 +37,29 @@
       v-on="propsEvent"
       @batch-action="handleTableBatch"
     >
+      <template #batch-leading>
+        <PlanReviewListToolbar
+          side="review"
+          :rows="propsRes.data"
+          :selected-ids="Array.from(propsRes.selectedKeys)"
+          :project="appStore.currentProjectId"
+          :loading="propsRes.loading"
+          :context="
+            JSON.stringify([
+              keyword,
+              viewId,
+              propsRes.filter,
+              advanceFilter,
+              propsRes.msPagination?.current,
+              propsRes.msPagination?.pageSize,
+              innerShowType,
+              props.activeFolder,
+            ])
+          "
+          :reload="loadList"
+          @clear="resetSelector()"
+        />
+      </template>
       <template #[FilterSlotNameEnum.CASE_MANAGEMENT_REVIEW_STATUS]="{ filterContent }">
         <a-tag
           :color="reviewStatusMap[filterContent.value as ReviewStatus].color"
@@ -58,8 +81,9 @@
         </div>
       </template>
       <template #planReviewRelation="{ record }"
-        ><PlanReviewListCell side="review" :value="record.planReviewRelation"
-      /></template>
+        ><span :data-relation-result="`review-${record.id}`" tabindex="-1"
+          ><PlanReviewListCell side="review" :value="record.planReviewRelation" /></span
+      ></template>
       <template #name="{ record }">
         <a-button type="text" class="max-w-full px-0" @click.stop="openDetail(record.id)">
           <span class="one-line-text">{{ record.name }}</span>
@@ -185,6 +209,7 @@
   import type { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
   import PlanReviewListCell from '@/components/business/plan-review/listCell.vue';
+  import PlanReviewListToolbar from '@/components/business/plan-review/listToolbar.vue';
   import passRateLine from '../passRateLine.vue';
   import deleteReviewModal from './deleteReviewModal.vue';
   import ModuleTree from './moduleTree.vue';
@@ -536,7 +561,7 @@
       tableKey: TableKeyEnum.CASE_MANAGEMENT_REVIEW,
       showSetting: true,
       selectable: true,
-      showSelectAll: true,
+      showSelectorAll: false,
       heightUsed: 232,
       paginationSize: 'mini',
     },
@@ -572,6 +597,7 @@
 
   const tableQueryParams = ref<any>();
   async function searchReview() {
+    resetSelector();
     let moduleIds: string[] = [];
     if (props.activeFolder && props.activeFolder !== 'all' && !isAdvancedSearchMode.value) {
       moduleIds = [props.activeFolder];

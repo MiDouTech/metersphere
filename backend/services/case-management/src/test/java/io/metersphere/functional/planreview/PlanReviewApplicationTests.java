@@ -86,13 +86,96 @@ class PlanReviewApplicationTests {
         assertEquals(0L,((Number)run(()->service.newReviewCandidates("project","",1,20,"actor")).get("total")).longValue());
     }
     private Map<String, Object> pair() { String preview = preview(); return run(() -> service.confirm(preview, "pair-key", true, "actor")); }
+    @Test void manualRecoveryRejectsAutomaticStatesWithoutChangingBudgetOrMembers() {
+        pair();
+        for (String state : List.of("SYNCED", "PENDING", "APPLYING", "DELAYED", "WAITING_RETRY", "ENDED")) {
+            jdbc.update("UPDATE plan_review_relation SET sync_state=?,attempts=2,next_retry_at=9999999999999", state);
+            var before = jdbc.queryForMap("SELECT * FROM plan_review_relation");
+            int operations = jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_operation", Integer.class);
+            for (String side : List.of("plan", "review"))
+                assertEquals(false, run(() -> service.summary(side, side, "actor")).get("canReconfirm"));
+            assertEquals("MANUAL_RECOVERY_NOT_APPLICABLE", assertThrows(PlanReviewFailure.class,
+                    () -> run(() -> service.preview("plan", "review", "RECONFIRM", "actor"))).code());
+            assertEquals(before, jdbc.queryForMap("SELECT * FROM plan_review_relation"));
+            assertEquals(operations, jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_operation", Integer.class));
+        }
+    }
+    @Test void oldRecoveryApprovalCannotStartANewRoundAfterStateChanges() {
+        pair();
+        jdbc.update("UPDATE plan_review_relation SET sync_state='FAILED_MANUAL'");
+        String preview = (String) run(() -> service.preview("plan", "review", "RECONFIRM", "actor")).get("previewId");
+        jdbc.update("UPDATE plan_review_relation SET sync_state='WAITING_RETRY',attempts=2,next_retry_at=9999999999999");
+        var before = jdbc.queryForMap("SELECT * FROM plan_review_relation");
+        assertEquals("MANUAL_RECOVERY_NOT_APPLICABLE", assertThrows(PlanReviewFailure.class,
+                () -> run(() -> service.confirm(preview, "old-recovery", true, "actor"))).code());
+        assertEquals(before, jdbc.queryForMap("SELECT * FROM plan_review_relation"));
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_operation", Integer.class));
+        assertNull(jdbc.queryForObject("SELECT consumed_by FROM plan_review_preview WHERE id=?", String.class, preview));
+    }
+    @Test void eligibleRecoveryContinuesSameGenerationAndRepeatedKeyDoesNotResetRound() {
+        var pair = pair();
+        for (String state : List.of("FAILED_MANUAL", "RECONFIRM_REQUIRED")) {
+            jdbc.update("UPDATE plan_review_relation SET sync_state=?", state);
+            assertEquals(true, run(() -> service.summary("review", "review", "actor")).get("canReconfirm"));
+            String preview = (String) run(() -> service.preview("plan", "review", "RECONFIRM", "actor")).get("previewId");
+            var result = run(() -> service.confirm(preview, state, true, "actor"));
+            assertEquals(pair.get("generation"), result.get("generation"));
+            var before = jdbc.queryForMap("SELECT * FROM plan_review_relation");
+            run(() -> service.confirm(preview, state, true, "actor"));
+            assertEquals(before, jdbc.queryForMap("SELECT * FROM plan_review_relation"));
+        }
+    }
+    @Test void readOnlyProgressIsBoundToOwnGenerationAndNeverCreatesWork() {
+        jdbc.update("INSERT INTO test_plan_functional_case VALUES('m','plan','a')");
+        var pair = pair();
+        String generation = (String) pair.get("generation");
+        var before = jdbc.queryForMap("SELECT * FROM plan_review_relation");
+        int previews = jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_preview", Integer.class);
+        for (String side : List.of("plan", "review")) {
+            var result = run(() -> service.readOnlyDifference(side, side, generation, "added", 1, 20, "actor"));
+            assertEquals(true, result.get("readonly")); assertEquals(1, result.get("total"));
+            assertEquals("a", ((Map<?, ?>)((List<?>)result.get("items")).getFirst()).get("id"));
+        }
+        assertEquals(before, jdbc.queryForMap("SELECT * FROM plan_review_relation"));
+        assertEquals(previews, jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_preview", Integer.class));
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_operation", Integer.class));
+        assertEquals("RELATION_CHANGED", assertThrows(PlanReviewFailure.class,
+                () -> run(() -> service.readOnlyDifference("plan", "plan", "old-g", "added", 1, 20, "actor"))).code());
+        assertEquals("PERMISSION_REQUIRED", assertThrows(PlanReviewFailure.class,
+                () -> run(() -> service.readOnlyDifference("plan", "plan", generation, "added", 1, 20, "reader"))).code());
+    }
+    @Test void rowOperationScopeIsFilteredBeforePaginationAndRejectsAnOldGeneration() {
+        var pair = pair();
+        for (int i = 0; i < 25; i++)
+            jdbc.update("INSERT INTO plan_review_operation(id,project_id,source_kind,operation_type,request_key,payload_hash,request_json,original_actor,executing_actor,relation_id,generation,stage,state,create_time,update_time) VALUES(?,'project','WEB','CONFIRM',?,'hash','{}','actor','actor','foreign-relation','foreign-g','TARGET_PENDING','PENDING',9999999999999,1)", "foreign-" + i, "foreign-key-" + i);
+        String relation = (String) pair.get("relationId"), generation = (String) pair.get("generation");
+        var result = run(() -> service.operations("project", null, "actor", 1, 20, false, null, null, null, relation, generation));
+        assertEquals(1L, result.get("total"));
+        assertEquals(pair.get("operationId"), ((Map<?, ?>)((List<?>)result.get("items")).getFirst()).get("operationId"));
+        assertEquals("RELATION_CHANGED", assertThrows(PlanReviewFailure.class,
+                () -> run(() -> service.operations("project", null, "actor", 1, 20, false, null, null, null, relation, "old-g"))).code());
+        assertThrows(PlanReviewFailure.class,
+                () -> run(() -> service.operations("project", null, "reader", 1, 20, false, null, null, null, relation, generation)));
+        jdbc.update("INSERT INTO user_role_permission VALUES('reader','CASE_REVIEW:READ')");
+        assertEquals(1L, run(() -> service.operations("project", null, "reader", 1, 20, false, null, null, null, relation, generation)).get("total"));
+    }
     private void sync(Map<String, Object> pair) { tx.executeWithoutResult(s -> service.synchronize((String) pair.get("relationId"), (String) pair.get("generation"))); }
     private Set<String> current() { return new java.util.HashSet<>(jdbc.queryForList("SELECT case_id FROM case_review_functional_case WHERE review_id='review'", String.class)); }
     @Test void schedulerCanCommitSeveralBoundedBatchesWithoutAddingOneSecondPerHundredMembers(){
         var cases=new java.util.ArrayList<Object[]>();var members=new java.util.ArrayList<Object[]>();
         for(int i=0;i<1001;i++){cases.add(new Object[]{"capacity-"+i,"project",false});members.add(new Object[]{"capacity-member-"+i,"plan","capacity-"+i});}
         jdbc.batchUpdate("INSERT INTO functional_case(id,project_id,deleted) VALUES(?,?,?)",cases);jdbc.batchUpdate("INSERT INTO test_plan_functional_case VALUES(?,?,?)",members);
-        var relation=pair();service.drain();
+        var relation=pair();
+        long started = System.nanoTime();
+        service.drain();
+        // One scheduler turn has an eight-second fairness budget, not the thirty-second product SLA.
+        // Prove it commits multiple batches per turn, then allow further bounded turns within the SLA.
+        assertTrue(jdbc.queryForObject("SELECT applied_batches FROM plan_review_relation",Long.class) > 1);
+        for (int turn = 0; turn < 3 && !"SYNCED".equals(jdbc.queryForObject("SELECT sync_state FROM plan_review_relation",String.class)); turn++) {
+            if (System.nanoTime() - started >= java.time.Duration.ofSeconds(30).toNanos()) break;
+            service.drain();
+        }
+        assertTrue(System.nanoTime() - started < java.time.Duration.ofSeconds(30).toNanos(), "1001-member development sample exceeded 30 seconds; not a production capacity proof");
         assertEquals("SYNCED",jdbc.queryForObject("SELECT sync_state FROM plan_review_relation WHERE id=?",String.class,relation.get("relationId")));
         assertEquals(1001,current().size());assertEquals(11L,jdbc.queryForObject("SELECT applied_batches FROM plan_review_relation",Long.class));assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_member_history",Integer.class));
         assertEquals(11,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_audit WHERE action='SYNC_BATCH'",Integer.class));

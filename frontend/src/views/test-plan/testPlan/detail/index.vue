@@ -109,6 +109,7 @@
     has-breadcrumb
     no-content-padding
     :auto-height="activeTab === 'plan'"
+    :min-width="activeTab === 'plan' ? 0 : 1000"
   >
     <Plan
       v-if="activeTab === 'plan'"
@@ -164,7 +165,7 @@
   import { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
   import PlanReviewCopyDialog from '@/components/business/plan-review/copyDialog.vue';
-  import PlanReviewLinkCard from '@/components/business/plan-review/linkCard.vue';
+  import PlanReviewLinkCard from '@/components/business/plan-review/readOnlyCard.vue';
   import ActionModal from '../components/actionModal.vue';
   import StatusProgress from '../components/statusProgress.vue';
   import ApiCase from './apiCase/index.vue';

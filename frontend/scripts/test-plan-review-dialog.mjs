@@ -1,9 +1,11 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { webcrypto } from 'node:crypto';
-import test from 'node:test';
-import ts from 'typescript';
 import { ref } from 'vue';
+
+import ts from 'typescript';
+
+import assert from 'node:assert/strict';
+import { webcrypto } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
 
 // Execute the component's actual setup/functions, following the existing modal-contract harness.
 // This exercises request and asynchronous boundaries; it is not browser acceptance.
@@ -22,10 +24,10 @@ function deferred() {
   return { promise, resolve };
 }
 function harness(overrides = {}) {
-  const store = { currentProjectId: 'project-a' },
-    watchers = [],
-    unmounts = [],
-    calls = [];
+  const store = { currentProjectId: 'project-a' };
+  const watchers = [];
+  const unmounts = [];
+  const calls = [];
   const defaults = {
     candidates: async () => ({ items: [{ id: 'plan-a' }], total: 1 }),
     preview: async () => ({
@@ -46,6 +48,7 @@ function harness(overrides = {}) {
     };
   const create = new Function(
     'ref',
+    'defineProps',
     'watch',
     'onBeforeUnmount',
     'useAppStore',
@@ -56,10 +59,11 @@ function harness(overrides = {}) {
     'recoverNewLinkedReviewPreview',
     'defineExpose',
     'crypto',
-    `${code};return {open,openRecovery,refreshPreview,submit,search,loadItems,visible,busy,failed,selected,preview,acknowledged,candidates,itemsReady};`
+    `${code};return {open,openRecovery,refreshPreview,submit,search,loadItems,visible,busy,failed,selected,preview,acknowledged,candidates,items,itemsReady};`
   );
   const api = create(
     ref,
+    () => ({ beforeAction: overrides.beforeAction }),
     (getter, callback) => watchers.push({ getter, callback }),
     (callback) => unmounts.push(callback),
     () => store,
@@ -102,9 +106,23 @@ function recoveryPreview() {
     settingsSummary: { name: 'Original review', reviewPassRule: 'SINGLE', reviewerCount: 1 },
   };
 }
+test('guard rejection clears recovery preview, member items and acknowledgment before any write', async () => {
+  let allowed = true;
+  const h = harness({ beforeAction: async () => allowed });
+  h.api.openRecovery(recoveryPreview(), () => {});
+  await tick();
+  h.api.acknowledged.value = true;
+  allowed = false;
+  assert.equal(await h.api.submit(), false);
+  assert.equal(h.api.visible.value, false);
+  assert.equal(h.api.preview.value, undefined);
+  assert.equal(h.api.acknowledged.value, false);
+  assert.deepEqual(h.api.items.value, []);
+  assert.equal(h.calls.filter((call) => call.kind === 'confirm').length, 0);
+});
 test('recovery opens the original preview and waits for explicit confirmation with its original key', async () => {
-  const h = harness(),
-    created = [];
+  const h = harness();
+  const created = [];
   h.api.openRecovery(recoveryPreview(), (id) => created.push(id));
   await tick();
   assert.equal(
@@ -130,8 +148,8 @@ test('refreshing recovery calls the original-operation endpoint instead of creat
 });
 
 test('preview alone never creates; explicit confirmation preserves the original request key', async () => {
-  const h = harness(),
-    created = [];
+  const h = harness();
+  const created = [];
   await ready(h, (id) => created.push(id));
   assert.equal(h.calls.filter((call) => call.kind === 'confirm').length, 0);
   assert.equal(await h.api.submit(), true);
@@ -170,8 +188,8 @@ test('failed difference loading blocks confirmation even if a checkbox is manual
 });
 
 test('switching project invalidates an in-flight candidate response', async () => {
-  const pending = deferred(),
-    h = harness({ candidates: () => pending.promise });
+  const pending = deferred();
+  const h = harness({ candidates: () => pending.promise });
   h.api.open({ projectId: 'project-a' }, () => {});
   h.switchProject();
   pending.resolve({ items: [{ id: 'old-project-plan' }], total: 1 });
@@ -182,9 +200,9 @@ test('switching project invalidates an in-flight candidate response', async () =
 });
 
 test('unmount during confirmation never navigates using a stale callback', async () => {
-  const pending = deferred(),
-    created = [],
-    h = harness({ confirm: () => pending.promise });
+  const pending = deferred();
+  const created = [];
+  const h = harness({ confirm: () => pending.promise });
   await ready(h, (id) => created.push(id));
   const submitting = h.api.submit();
   h.unmount();
