@@ -1,4 +1,3 @@
-import { ref } from 'vue';
 import { isNavigationFailure } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
 
@@ -11,13 +10,15 @@ import router from '@/router';
 import { useUserStore } from '@/store';
 import useAppStore from '@/store/modules/app';
 import { getProjectEntryRouteName } from '@/utils/permission';
+import { beginProjectSwitchNavigation } from '@/utils/projectSwitchNavigation';
 
 import type { LoginRes } from '@/models/user';
+
+export { projectSwitchPending } from '@/utils/projectSwitchNavigation';
 
 const { t } = useI18n();
 const userStore = useUserStore();
 const appStore = useAppStore();
-export const projectSwitchPending = ref(false);
 
 const PROJECT_SWITCH_ROUTE = 'projectSwitchPending';
 
@@ -38,8 +39,8 @@ export async function enterOrganization(organizationId: string) {
 }
 
 export async function enterProject(projectId: string, organizationId?: string) {
-  if (projectSwitchPending.value) return false;
-  projectSwitchPending.value = true;
+  const navigation = beginProjectSwitchNavigation();
+  if (!navigation) return false;
   const previous = {
     route: router.currentRoute.value.fullPath,
     projectId: appStore.currentProjectId,
@@ -48,11 +49,12 @@ export async function enterProject(projectId: string, organizationId?: string) {
   };
   let leftPage = false;
   let sessionMayHaveChanged = false;
+  let requiresReauthentication = false;
   try {
     appStore.showLoading();
     // Run the real leave guards BEFORE changing session, permissions or project.
     // This route has no business components or target-project query parameters.
-    const leaveFailure = await router.replace({ name: PROJECT_SWITCH_ROUTE });
+    const leaveFailure = await navigation.replace(router, { name: PROJECT_SWITCH_ROUTE });
     if (isNavigationFailure(leaveFailure) || router.currentRoute.value.name !== PROJECT_SWITCH_ROUTE) return false;
     leftPage = true;
     // 切换组织
@@ -90,8 +92,8 @@ export async function enterProject(projectId: string, organizationId?: string) {
         ? configuredRedirect
         : { name: destination }
     );
-    const navigationFailure = await router.replace({
-      name: destination,
+    const navigationFailure = await navigation.replace(router, {
+      path: expectedRoute.path,
       query: {
         orgId: appStore.currentOrgId,
         pId: projectId,
@@ -133,7 +135,7 @@ export async function enterProject(projectId: string, organizationId?: string) {
       appStore.setCurrentProjectId(previous.projectId);
       appStore.setCurrentMenuConfig(previous.modules);
       if (leftPage) {
-        const restoreFailure = await router.replace(previous.route);
+        const restoreFailure = await navigation.replace(router, previous.route);
         if (isNavigationFailure(restoreFailure) || router.currentRoute.value.fullPath !== previous.route) {
           throw new Error('Previous route was not restored');
         }
@@ -141,6 +143,7 @@ export async function enterProject(projectId: string, organizationId?: string) {
       Message.error('进入项目失败，已保留原项目，请重试');
     } catch (restoreError) {
       // Do not let any business page operate with an uncertain server/client session.
+      requiresReauthentication = true;
       userStore.logoutCallBack();
       appStore.setCurrentProjectId('');
       appStore.setCurrentOrgId('');
@@ -151,7 +154,8 @@ export async function enterProject(projectId: string, organizationId?: string) {
     return false;
   } finally {
     appStore.hideLoading();
-    projectSwitchPending.value = false;
+    // Keep the barrier until the new document is loaded if recovery was not verified.
+    if (!requiresReauthentication) navigation.complete();
   }
 }
 

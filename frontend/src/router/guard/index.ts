@@ -2,6 +2,7 @@ import { AxiosCanceler } from '@/api/http/axiosCancel';
 import { MENU_LEVEL, type PathMapRoute } from '@/config/pathMap';
 import usePathMap from '@/hooks/usePathMap';
 import useAppStore from '@/store/modules/app';
+import { consumeProjectSwitchNavigation } from '@/utils/projectSwitchNavigation';
 import { setRouteEmitter } from '@/utils/route-listener';
 
 import setupPermissionGuard from './permission';
@@ -12,6 +13,11 @@ function setupPageGuard(router: Router) {
   const axiosCanceler = new AxiosCanceler();
   const { getRouteLevelByKey } = usePathMap();
   router.beforeEach((to, from, next) => {
+    // Denied navigation must not cancel a switch/recovery request or rewrite its context.
+    if (!consumeProjectSwitchNavigation(to)) {
+      next(false);
+      return;
+    }
     // 监听路由变化
     setRouteEmitter(to);
     // 取消上个路由未完成的请求（不包含设置了ignoreCancelToken的请求）

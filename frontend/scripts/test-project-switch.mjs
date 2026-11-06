@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 import ts from 'typescript';
 
 import { JSDOM } from 'jsdom';
@@ -12,12 +14,19 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http:
 ['window', 'document', 'Element', 'HTMLElement', 'SVGElement', 'history', 'location'].forEach((key) => {
   globalThis[key] = dom.window[key];
 });
-const { createApp, h, nextTick, ref } = await import('vue');
+const { createApp, h, nextTick, ref, readonly } = await import('vue');
 const { createRouter, createMemoryHistory, onBeforeRouteLeave, RouterView, isNavigationFailure } = await import(
   'vue-router'
 );
 const source = readFileSync(new URL('../src/views/setting/utils.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+const compileSource = (path) =>
+  ts.transpileModule(readFileSync(new URL(`../src/${path}`, import.meta.url), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS },
+  }).outputText;
+const navigationCode = compileSource('utils/projectSwitchNavigation.ts');
+const pageGuardCode = compileSource('router/guard/index.ts');
+const cancelerCode = compileSource('api/http/axiosCancel.ts');
 const planDetail = readFileSync(new URL('../src/views/test-plan/testPlan/detail/index.vue', import.meta.url), 'utf8');
 const planAst = ts.createSourceFile(
   'plan-detail.ts',
@@ -38,6 +47,60 @@ async function fixture(options = {}) {
   const events = [];
   const errors = [];
   const redirects = [];
+  const pageEffects = [];
+  const cancelledRequests = [];
+  const httpStarted = [];
+  const navigationContext = { exports: {}, require: () => ({ ref, readonly }) };
+  vm.runInNewContext(navigationCode, navigationContext);
+  const navigation = navigationContext.exports;
+  const cancelerContext = {
+    exports: {},
+    require: (name) => {
+      if (name === 'axios') return { default: axios };
+      if (name === '@/utils/is') return { isFunction: (value) => typeof value === 'function' };
+      throw new Error(name);
+    },
+  };
+  vm.runInNewContext(cancelerCode, cancelerContext);
+  const canceler = new cancelerContext.exports.AxiosCanceler();
+  const client = axios.create();
+  client.interceptors.request.use((config) => {
+    canceler.addPending(config);
+    return config;
+  });
+  client.interceptors.response.use((response) => {
+    canceler.removePending(response.config);
+    return response;
+  });
+  async function controlledRequest(url, barrier, data) {
+    if (!options.realAxios) {
+      if (barrier) await barrier;
+      return data;
+    }
+    const response = await client.request({
+      url,
+      method: 'get',
+      adapter: (config) =>
+        new Promise((resolve, reject) => {
+          httpStarted.push(url);
+          let settled = false;
+          config.cancelToken.promise.then((reason) => {
+            if (!settled) {
+              settled = true;
+              cancelledRequests.push(url);
+              reject(reason);
+            }
+          });
+          Promise.resolve(barrier).then(() => {
+            if (!settled) {
+              settled = true;
+              resolve({ data, status: 200, statusText: 'OK', config, headers: {} });
+            }
+          });
+        }),
+    });
+    return response.data;
+  }
   const appStore = {
     currentOrgId: 'org-A',
     currentProjectId: 'project-A',
@@ -110,6 +173,26 @@ async function fixture(options = {}) {
     ],
   });
   router.onError(() => undefined);
+  const guardContext = {
+    exports: {},
+    require(name) {
+      if (name === '@/api/http/axiosCancel') return cancelerContext.exports;
+      if (name === '@/utils/projectSwitchNavigation') return navigation;
+      if (name === '@/store/modules/app') return { default: () => appStore };
+      if (name === '@/utils/route-listener') return { setRouteEmitter: (to) => pageEffects.push(to.fullPath) };
+      if (name === '@/config/pathMap') return { MENU_LEVEL: ['SYSTEM', 'ORGANIZATION', 'PROJECT'] };
+      if (name === '@/hooks/usePathMap')
+        return {
+          default: () => ({
+            getRouteLevelByKey: (routeName) => (routeName === 'projectSwitchPending' ? null : 'PROJECT'),
+          }),
+        };
+      if (name === './permission' || name === './userLoginInfo') return { default: () => undefined };
+      throw new Error(name);
+    },
+  };
+  vm.runInNewContext(pageGuardCode, guardContext);
+  guardContext.exports.default(router); // Actual setupPageGuard, including actual shared AxiosCanceler.
   let initialized = false;
   router.beforeEach((to) => {
     if (!initialized) return true;
@@ -119,6 +202,25 @@ async function fixture(options = {}) {
     if (to.name === 'editor' && options.failRouteRestore) return false;
     return true;
   });
+  router.beforeResolve(async (to) => {
+    if (initialized && to.name === 'caseManagementCase' && options.targetNavigationBarrier) {
+      events.push('target-navigation-wait');
+      await options.targetNavigationBarrier;
+    }
+  });
+  if (options.seedHistory) {
+    await router.push('/home?orgId=org-A&pId=project-A');
+    await router.push('/editor?orgId=org-A&pId=project-A');
+    await router.push('/cases?orgId=org-A&pId=project-A');
+    const returned = new Promise((resolve) => {
+      const remove = router.afterEach(() => {
+        remove();
+        resolve();
+      });
+    });
+    router.back();
+    await returned;
+  }
   await router.push('/editor?orgId=org-A&pId=project-A');
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -141,15 +243,22 @@ async function fixture(options = {}) {
       if (projectId === 'project-A' && options.failSessionRestore) throw new Error('restore unavailable');
       server.projectId = projectId;
       if (projectId !== 'project-A' && options.failSwitchResponse) throw new Error('response lost after server commit');
-      return session();
+      return controlledRequest(
+        `/project/switch/${projectId}`,
+        projectId === 'project-A' ? options.restoreBarrier : options.switchBarrier,
+        session()
+      );
     },
     async getProjectInfo() {
       events.push('configuration');
       targetAttempts += 1;
       if (options.failConfiguration || (options.failConfigurationOnce && targetAttempts === 1))
         throw new Error('config timeout');
-      if (options.configurationBarrier) await options.configurationBarrier;
-      return options.malformedConfiguration ? {} : { moduleIds: options.modules || ['caseManagement'] };
+      return controlledRequest(
+        '/project/get/project-B',
+        options.configurationBarrier,
+        options.malformedConfiguration ? {} : { moduleIds: options.modules || ['caseManagement'] }
+      );
     },
   };
   const context = {
@@ -157,7 +266,7 @@ async function fixture(options = {}) {
     console: { log: () => undefined },
     window: { location: { origin: 'http://localhost', pathname: '/', replace: (url) => redirects.push(url) } },
     require(name) {
-      if (name === 'vue') return { ref };
+      if (name === '@/utils/projectSwitchNavigation') return navigation;
       if (name === 'vue-router') return { isNavigationFailure };
       if (name === '@arco-design/web-vue') return { Message: { error: (message) => errors.push(message) } };
       if (name.includes('ms-button')) return {};
@@ -192,6 +301,12 @@ async function fixture(options = {}) {
     events,
     errors,
     redirects,
+    navigation,
+    pageEffects,
+    cancelledRequests,
+    httpStarted,
+    cancelRequests: () => canceler.removeAllPending(),
+    controlledRequest,
     assertOriginal() {
       assert.equal(router.currentRoute.value.fullPath, originalRoute);
       assert.equal(appStore.currentProjectId, 'project-A');
@@ -323,6 +438,169 @@ test('a second project switch cannot overlap the in-flight server transaction', 
     assert.equal(f.events.includes('switch:project-C'), false);
   } finally {
     release();
+    f.dispose();
+  }
+});
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+function until(condition, deadline = Date.now() + 3000) {
+  if (condition()) return Promise.resolve();
+  assert.ok(Date.now() < deadline, 'controlled transaction did not reach its expected phase');
+  return new Promise((resolve) => {
+    setTimeout(resolve, 1);
+  }).then(() => until(condition, deadline));
+}
+
+async function assertBlockedNavigation(f, action) {
+  const contextBefore = JSON.stringify({
+    project: f.appStore.currentProjectId,
+    org: f.appStore.currentOrgId,
+    modules: f.appStore.currentMenuConfig,
+    permissions: f.user.permissions,
+    server: f.server,
+  });
+  const effectsBefore = f.pageEffects.length;
+  const cancellationsBefore = f.cancelledRequests.length;
+  const finished = new Promise((resolve) => {
+    const remove = f.router.afterEach((to, from, failure) => {
+      remove();
+      resolve(failure);
+    });
+  });
+  action();
+  assert.equal(isNavigationFailure(await finished), true);
+  await nextTick();
+  assert.equal(f.router.currentRoute.value.name, 'projectSwitchPending');
+  assert.equal(f.router.options.history.location, '/project-switch');
+  assert.equal(document.body.textContent, 'pending', 'no business DOM may remount during isolation');
+  assert.equal(f.pageEffects.length, effectsBefore, 'blocked navigation must not emit route effects');
+  assert.equal(f.cancelledRequests.length, cancellationsBefore, 'blocked navigation must not cancel pending HTTP');
+  assert.equal(
+    JSON.stringify({
+      project: f.appStore.currentProjectId,
+      org: f.appStore.currentOrgId,
+      modules: f.appStore.currentMenuConfig,
+      permissions: f.user.permissions,
+      server: f.server,
+    }),
+    contextBefore,
+    'setupPageGuard must not apply the attempted URL context'
+  );
+}
+
+async function attackNavigation(f) {
+  await assertBlockedNavigation(f, () => f.router.back());
+  // Unlike browser replaceState, Vue Router's memory-history replace truncates forward
+  // entries. Seed a real forward entry via its public history API before router.forward().
+  f.router.options.history.push('/cases?orgId=org-A&pId=project-A');
+  f.router.options.history.go(-1, false);
+  await assertBlockedNavigation(f, () => f.router.forward());
+  await assertBlockedNavigation(f, () => f.router.push('/editor?orgId=org-C&pId=project-C'));
+  await assertBlockedNavigation(f, () => f.router.replace('/cases?orgId=org-A&pId=project-A'));
+}
+
+['switch', 'configuration', 'recovery', 'target-navigation'].forEach((phase) => {
+  test(`real setupPageGuard and Axios isolate back/forward/push/replace during ${phase} waiting`, async () => {
+    const barrier = deferred();
+    const options = { seedHistory: true, realAxios: true };
+    if (phase === 'switch') options.switchBarrier = barrier.promise;
+    if (phase === 'configuration') options.configurationBarrier = barrier.promise;
+    if (phase === 'recovery') {
+      options.failConfiguration = true;
+      options.restoreBarrier = barrier.promise;
+    }
+    if (phase === 'target-navigation') options.targetNavigationBarrier = barrier.promise;
+    const f = await fixture(options);
+    const background = deferred();
+    let unrelated;
+    try {
+      const switching = f.module.enterProject('project-B', 'org-B');
+      await until(() => {
+        if (phase === 'switch') return f.httpStarted.includes('/project/switch/project-B');
+        if (phase === 'configuration') return f.httpStarted.includes('/project/get/project-B');
+        if (phase === 'recovery') return f.httpStarted.includes('/project/switch/project-A');
+        return f.events.includes('target-navigation-wait');
+      });
+      unrelated = f.controlledRequest('/background', background.promise, {}).catch((error) => {
+        assert.equal(axios.isCancel(error), true);
+        return 'cancelled';
+      });
+      await until(() => f.httpStarted.includes('/background'));
+      await attackNavigation(f);
+      if (phase === 'target-navigation') {
+        // Even a second navigation to the exact authorized target cannot reuse its consumed permit.
+        await assertBlockedNavigation(f, () => f.router.push('/cases?orgId=org-B&pId=project-B'));
+      }
+      barrier.resolve();
+      const result = await switching;
+      if (phase === 'recovery' || phase === 'target-navigation') {
+        assert.equal(result, false);
+        f.assertOriginal();
+      } else {
+        assert.equal(result, true);
+        assert.equal(f.router.currentRoute.value.name, 'caseManagementCase');
+        assert.equal(f.router.currentRoute.value.query.pId, 'project-B');
+        assert.equal(f.appStore.currentProjectId, f.server.projectId);
+        assert.deepEqual(Array.from(f.user.permissions), ['project-B:READ']);
+      }
+      assert.equal(
+        await unrelated,
+        'cancelled',
+        'authorized final/restore navigation still performs normal Axios cancellation'
+      );
+      assert.equal(f.module.projectSwitchPending.value, false);
+    } finally {
+      barrier.resolve();
+      background.resolve();
+      if (unrelated) await unrelated;
+      f.dispose();
+    }
+  });
+});
+
+test('real Axios cancellation enters recovery; history navigation cannot cancel or outrun the restoring session request', async () => {
+  const configuration = deferred();
+  const recovery = deferred();
+  const f = await fixture({
+    seedHistory: true,
+    realAxios: true,
+    configurationBarrier: configuration.promise,
+    restoreBarrier: recovery.promise,
+  });
+  try {
+    const switching = f.module.enterProject('project-B', 'org-B');
+    await until(() => f.httpStarted.includes('/project/get/project-B'));
+    f.cancelRequests();
+    await until(() => f.httpStarted.includes('/project/switch/project-A'));
+    assert.equal(f.cancelledRequests.includes('/project/get/project-B'), true);
+    await attackNavigation(f);
+    recovery.resolve();
+    assert.equal(await switching, false);
+    f.assertOriginal();
+    assert.equal(f.module.projectSwitchPending.value, false);
+  } finally {
+    configuration.resolve();
+    recovery.resolve();
+    f.dispose();
+  }
+});
+
+test('unverified recovery keeps navigation isolated after clearing local authentication and authorizes a full login reload', async () => {
+  const f = await fixture({ seedHistory: true, realAxios: true, failConfiguration: true, failSessionRestore: true });
+  try {
+    assert.equal(await f.module.enterProject('project-B', 'org-B'), false);
+    assert.equal(f.module.projectSwitchPending.value, true);
+    assert.equal(f.user.loggedOut, true);
+    assert.deepEqual(f.redirects, ['http://localhost/#/login']);
+    await attackNavigation(f);
+  } finally {
     f.dispose();
   }
 });

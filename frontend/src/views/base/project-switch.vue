@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-  import { projectSwitchPending } from '@/views/setting/utils';
+  import { projectSwitchPending } from '@/utils/projectSwitchNavigation';
 
   function loginAgain() {
     window.location.replace(`${window.location.origin}${window.location.pathname}#/login`);
