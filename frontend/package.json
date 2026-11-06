@@ -19,7 +19,7 @@
     "test:platform-configuration": "node --max-old-space-size=128 --test ./scripts/test-platform-configuration.mjs",
     "test:image-clipboard": "node --test ./scripts/test-image-clipboard.mjs",
     "test:list-refresh": "node --test ./scripts/test-list-refresh.mjs",
-    "test:project-refresh": "node --test ./scripts/test-project-refresh.mjs",
+    "test:project-refresh": "node --test ./scripts/test-project-refresh.mjs ./scripts/test-project-switch.mjs",
     "test:case-layout-edit": "node --max-old-space-size=192 --test ./scripts/test-case-layout-edit.mjs",
     "test:detail-loading": "node --test ./scripts/test-latest-detail.mjs",
     "test:selection-toggle": "node --max-old-space-size=192 --test ./scripts/test-selection-toggle.mjs",

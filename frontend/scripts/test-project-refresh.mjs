@@ -32,8 +32,13 @@ function permissions({
   visible = true,
   parentVisible = true,
   admin = false,
+  emptyModules = false,
 } = {}) {
-  const app = { currentMenuConfig: enabled ? ['caseManagement'] : ['bugManagement'], currentProjectId: 'B' };
+  const modules = enabled ? ['caseManagement'] : ['bugManagement'];
+  const app = {
+    currentMenuConfig: emptyModules ? [] : modules,
+    currentProjectId: 'B',
+  };
   const user = {
     isAdmin: admin,
     currentRole: {
@@ -84,6 +89,7 @@ Object.entries({
   'hidden case page': { visible: false },
   'hidden parent route': { parentVisible: false },
   'disabled module for administrator': { enabled: false, admin: true },
+  'empty or unknown module configuration': { emptyModules: true },
 }).forEach(([name, settings]) => {
   test(`project entry preserves the existing safe fallback for ${name}`, () => {
     const permission = permissions(settings);
@@ -149,100 +155,4 @@ test('plan initial load preserves a direct-link group filter', () => {
   });
   beforeMount();
   assert.deepEqual(requested, { type: 'GROUP', keyword: 'group-2' });
-});
-
-test('project switch applies target permissions and waits for navigation; failure does not navigate', async () => {
-  let fail = false;
-  let navigationCompleted = false;
-  let navigations = 0;
-  let permissionUser;
-  const app = {
-    currentOrgId: 'org-A',
-    currentProjectId: 'project-A',
-    showLoading() {
-      return undefined;
-    },
-    hideLoading() {
-      return undefined;
-    },
-    setCurrentProjectId(id) {
-      this.currentProjectId = id;
-    },
-    setCurrentOrgId(id) {
-      this.currentOrgId = id;
-    },
-    setCurrentMenuConfig(ids) {
-      this.currentMenuConfig = ids;
-    },
-  };
-  const user = {
-    id: 'user',
-    setInfo(value) {
-      permissionUser = value;
-    },
-    async checkIsLogin() {
-      return undefined;
-    },
-  };
-  const switched = { lastOrganizationId: 'org-A', lastProjectId: 'project-B' };
-  const source = read('views/setting/utils.ts');
-  const module = execute(source, {
-    console: {
-      log() {
-        return undefined;
-      },
-    },
-    require: (name) => {
-      if (name === '@arco-design/web-vue')
-        return {
-          Message: {
-            error() {
-              return undefined;
-            },
-          },
-        };
-      if (name.includes('ms-button')) return {};
-      if (name === '@/api/modules/project-management/project')
-        return {
-          async switchProject() {
-            if (fail) throw new Error('denied');
-            return switched;
-          },
-          async getProjectInfo() {
-            return { moduleIds: ['caseManagement'] };
-          },
-        };
-      if (name === '@/api/modules/system') return {};
-      if (name === '@/hooks/useI18n') return { useI18n: () => ({ t: (key) => key }) };
-      if (name === '@/store') return { useUserStore: () => user };
-      if (name === '@/store/modules/app') return { default: () => app };
-      if (name === '@/utils/permission')
-        return {
-          getProjectEntryRouteName() {
-            assert.equal(permissionUser, switched);
-            assert.equal(app.currentProjectId, 'project-B');
-            return routeNames.CASE_MANAGEMENT_CASE;
-          },
-        };
-      if (name === '@/router')
-        return {
-          default: {
-            getRoutes: () => routes,
-            async replace(to) {
-              navigations += 1;
-              assert.equal(to.query.pId, 'project-B');
-              await Promise.resolve();
-              navigationCompleted = true;
-            },
-          },
-        };
-      throw new Error(name);
-    },
-  });
-  assert.equal(await module.enterProject('project-B'), true);
-  assert.equal(navigationCompleted, true);
-  fail = true;
-  assert.equal(await module.enterProject('project-C'), false);
-  assert.equal(navigations, 1);
-  assert.equal(app.currentProjectId, 'project-B');
 });

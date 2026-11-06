@@ -327,8 +327,7 @@ export function routerNameHasPermission(routerName: string, routerList: RouteRec
 export function getProjectEntryRouteName(routerList: RouteRecordNormalized[]) {
   const appStore = useAppStore();
   const parent = routerList.find((item) => item.name === CaseManagementRouteEnum.CASE_MANAGEMENT);
-  const moduleEnabled =
-    !appStore.currentMenuConfig.length || appStore.currentMenuConfig.includes(CaseManagementRouteEnum.CASE_MANAGEMENT);
+  const moduleEnabled = appStore.currentMenuConfig.includes(CaseManagementRouteEnum.CASE_MANAGEMENT);
   if (
     moduleEnabled &&
     parent &&
