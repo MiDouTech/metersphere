@@ -8,7 +8,7 @@ import { useI18n } from '@/hooks/useI18n';
 import router from '@/router';
 import { useUserStore } from '@/store';
 import useAppStore from '@/store/modules/app';
-import { getFirstRouteNameByPermission } from '@/utils/permission';
+import { getProjectEntryRouteName } from '@/utils/permission';
 
 import type { LoginRes } from '@/models/user';
 
@@ -67,8 +67,8 @@ export async function enterProject(projectId: string, organizationId?: string) {
       console.log(e);
     }
     // 跳转到项目页面
-    router.replace({
-      name: getFirstRouteNameByPermission(router.getRoutes()),
+    await router.replace({
+      name: getProjectEntryRouteName(router.getRoutes()),
       query: {
         orgId: appStore.currentOrgId,
         pId: projectId,

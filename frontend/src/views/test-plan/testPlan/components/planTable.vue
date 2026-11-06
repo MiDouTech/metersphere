@@ -444,7 +444,6 @@
   import useListRefresh from '@/hooks/useListRefresh';
   import useModal from '@/hooks/useModal';
   import { useAppStore, useTableStore } from '@/store';
-  import useCacheStore from '@/store/modules/cache/cache';
   import useGlobalStore from '@/store/modules/global';
   import { characterLimit, getGenerateId } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
@@ -464,7 +463,7 @@
   import { FilterType, ViewTypeEnum } from '@/enums/advancedFilterEnum';
   import { LastExecuteResults } from '@/enums/caseEnum';
   import { GlobalEventNameEnum } from '@/enums/commonEnum';
-  import { RouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
   import { ColumnEditTypeEnum, TableKeyEnum } from '@/enums/tableEnum';
   import { FilterSlotNameEnum } from '@/enums/tableFilterEnum';
   import { TaskCenterEnum } from '@/enums/taskCenter';
@@ -474,7 +473,6 @@
   import { planStatusOptions } from '../config';
   import { getModules } from '@/views/case-management/caseManagementFeature/components/utils';
 
-  const cacheStore = useCacheStore();
   const tableStore = useTableStore();
   const appStore = useAppStore();
   const globalStore = useGlobalStore();
@@ -1819,30 +1817,28 @@
   //   createType.value = value as keyof typeof testPlanTypeEnum;
   // }
 
-  const isActivated = computed(() => cacheStore.cacheViews.includes(RouteEnum.TEST_PLAN_INDEX));
   const viewName = ref('');
 
   onBeforeMount(() => {
-    if (!isActivated.value) {
-      if (route.query.groupId) {
-        showType.value = testPlanTypeEnum.GROUP;
-        keyword.value = route.query.groupId as string;
-      } else if (route.query.showType) {
-        showType.value = route.query.showType as testPlanTypeEnum;
-      }
-      if (route.query.view) {
-        setAdvanceFilter({ conditions: [], searchMode: 'AND' }, route.query.view as string);
-        viewName.value = route.query.view as string;
-      }
-      if (route.query.home) {
-        if (route.query.home === WorkNavValueEnum.TEST_PLAN_ARCHIVED) {
-          viewId.value = 'archived';
-        } else {
-          propsRes.value.filter = { ...NAV_NAVIGATION[route.query.home as WorkNavValueEnum] };
-        }
-      }
-      fetchData();
+    if (route.query.groupId) {
+      showType.value = testPlanTypeEnum.GROUP;
+      keyword.value = route.query.groupId as string;
+    } else if (route.query.showType) {
+      showType.value = route.query.showType as testPlanTypeEnum;
     }
+    if (route.query.view) {
+      setAdvanceFilter({ conditions: [], searchMode: 'AND' }, route.query.view as string);
+      viewName.value = route.query.view as string;
+    }
+    if (route.query.home) {
+      if (route.query.home === WorkNavValueEnum.TEST_PLAN_ARCHIVED) {
+        viewId.value = 'archived';
+      } else {
+        propsRes.value.filter = { ...NAV_NAVIGATION[route.query.home as WorkNavValueEnum] };
+      }
+    }
+    // A cache registration does not mean this component instance has loaded its list.
+    if (appStore.currentProjectId) fetchData();
   });
 
   useListRefresh(refreshPreserveState, () => !!appStore.currentProjectId);

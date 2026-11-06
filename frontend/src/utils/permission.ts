@@ -5,6 +5,8 @@ import appRoutes from '@/router/routes/index';
 import { useAppStore, useUserStore } from '@/store';
 import { SystemScopeType, UiPermissionSet, UserRole, UserRoleRelation } from '@/store/modules/user/types';
 
+import { CaseManagementRouteEnum } from '@/enums/routeEnum';
+
 export function hasPermission(permission: string, typeList: string[]) {
   const userStore = useUserStore();
   if (userStore.isAdmin) {
@@ -319,6 +321,23 @@ export function routerNameHasPermission(routerName: string, routerList: RouteRec
   return currentRoute
     ? hasRouteResourceVisible(currentRoute) && hasAnyPermission(currentRoute.meta?.roles || [])
     : false;
+}
+
+/** Prefer functional cases when entering a project, without bypassing module or route permissions. */
+export function getProjectEntryRouteName(routerList: RouteRecordNormalized[]) {
+  const appStore = useAppStore();
+  const parent = routerList.find((item) => item.name === CaseManagementRouteEnum.CASE_MANAGEMENT);
+  const moduleEnabled =
+    !appStore.currentMenuConfig.length || appStore.currentMenuConfig.includes(CaseManagementRouteEnum.CASE_MANAGEMENT);
+  if (
+    moduleEnabled &&
+    parent &&
+    hasRouteResourceVisible(parent) &&
+    routerNameHasPermission(CaseManagementRouteEnum.CASE_MANAGEMENT_CASE, routerList)
+  ) {
+    return CaseManagementRouteEnum.CASE_MANAGEMENT_CASE;
+  }
+  return getFirstRouteNameByPermission(routerList);
 }
 
 export function findRouteByName(name: string) {
