@@ -73,6 +73,7 @@
               value: val,
             })"
           :object-value="true"
+          @update:model-value="updateReceiverDraft(record, $event)"
           @remove="changeMessageReceivers(false, record, dataIndex as string)"
           @popup-visible-change="changeMessageReceivers($event, record, dataIndex as string)"
         />
@@ -83,13 +84,30 @@
           theme="outline"
         />
         <span v-else></span>
+        <div v-if="receiverDrafts.has(record.key)" role="alert" class="text-[var(--color-danger-6)]">
+          接收人保存失败，当前为未保存草稿。
+          <a-button
+            type="text"
+            :disabled="record.loading || initializing || readError || propsRes.loading"
+            @click="changeMessageReceivers(false, record, receiverDrafts.get(record.key)!.dataIndex)"
+            >重试</a-button
+          >
+          <a-button type="text" :disabled="record.loading" @click="cancelReceiverDraft(record)">取消编辑</a-button>
+        </div>
       </template>
       <template #robot="{ record, dataIndex }">
         <div v-if="!record.children && record.projectRobotConfigMap?.[dataIndex as string]" class="flex items-center">
           <a-switch
             v-model:model-value="record.projectRobotConfigMap[dataIndex as string].enable"
             v-permission="['PROJECT_MESSAGE:READ+UPDATE', 'PROJECT_MESSAGE:READ']"
-            :disabled="robotEnable || initializing || readError || propsRes.loading || record.loading"
+            :disabled="
+              robotEnable ||
+              initializing ||
+              readError ||
+              propsRes.loading ||
+              record.loading ||
+              receiverDrafts.has(record.key)
+            "
             :before-change="(val) => handleChangeIntercept(!!val, record, dataIndex as string)"
             size="small"
             type="line"
@@ -121,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onBeforeMount, ref, watch } from 'vue';
+  import { computed, onBeforeMount, reactive, ref, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
 
@@ -156,6 +174,10 @@
 
   const readError = ref(false);
   const initializing = ref(true);
+  const receiverDrafts = reactive(
+    new Map<string, { receivers: Receiver[]; persisted: Receiver[]; dataIndex: string }>()
+  );
+  const copyReceivers = (receivers: Receiver[]) => receivers.map((receiver) => ({ ...receiver }));
   const robotFilters = ref<string[]>([]);
   const robotOptions = ref<(SelectOptionData & RobotItem)[]>([]);
   const robotEnable = ref<boolean>(!hasAnyPermission(['PROJECT_MESSAGE:READ+UPDATE']));
@@ -291,13 +313,17 @@
               }
             });
           }
+          const key = `${(item as unknown as MessageItem).type}-${child.taskType}-${grandson.event}`;
+          const draft = receiverDrafts.get(key);
           children.push({
-            key: `${(item as unknown as MessageItem).type}-${child.taskType}-${grandson.event}`,
+            key,
             functionName: (item as unknown as MessageItem).name,
             taskType: child.taskType,
             name: child.taskTypeName,
             rowspan: child.messageTaskDetailDTOList.length || 1,
             ...grandson,
+            persistedReceivers: copyReceivers(grandson.receivers),
+            receivers: copyReceivers(draft?.receivers || grandson.receivers),
           });
         }
       }
@@ -388,6 +414,7 @@
   onBeforeMount(initialize);
 
   function editRobot(record: TableMessageChildrenItem, dataIndex: string) {
+    if (receiverDrafts.has(record.key)) return Message.warning('请先重试保存或取消接收人草稿');
     if (record.receivers?.length === 0) {
       Message.warning(t('project.messageManagement.unsetReceiversTip'));
       return;
@@ -412,7 +439,14 @@
    * @param dataIndex 操作的机器人列
    */
   async function handleChangeIntercept(val: boolean, record: TableMessageChildrenItem, dataIndex: string) {
-    if (record.loading || initializing.value || readError.value || propsRes.value.loading) return false;
+    if (
+      record.loading ||
+      initializing.value ||
+      readError.value ||
+      propsRes.value.loading ||
+      receiverDrafts.has(record.key)
+    )
+      return false;
     if (record.receivers.length === 0) {
       Message.warning(t('project.messageManagement.unsetReceiverTip'));
       return false;
@@ -442,32 +476,48 @@
     }
   }
 
+  function updateReceiverDraft(record: TableMessageChildrenItem, receivers: Receiver[]) {
+    const draft = receiverDrafts.get(record.key);
+    if (draft) draft.receivers = copyReceivers(receivers);
+  }
+
+  function cancelReceiverDraft(record: TableMessageChildrenItem) {
+    const draft = receiverDrafts.get(record.key);
+    if (!draft || record.loading) return;
+    record.receivers = copyReceivers(draft.persisted);
+    receiverDrafts.delete(record.key);
+  }
+
   async function changeMessageReceivers(val: boolean, record: TableMessageChildrenItem, dataIndex: string) {
-    if (record.loading || initializing.value || readError.value || propsRes.value.loading) return false;
-    if (!val) {
-      if (record.receivers.length === 0) {
-        Message.warning(t('project.messageManagement.receiverNotNull'));
-        return false;
-      }
-      try {
-        record.loading = true;
-        await saveMessageConfig({
-          ...record.projectRobotConfigMap?.[dataIndex],
-          projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
-          taskType: record.taskType,
-          event: record.event,
-          receiverIds: record.receivers.map((e: Receiver) => (e.id !== undefined ? e.id : e)),
-        });
-        Message.success(t('project.messageManagement.saveReceiverSuccess'));
-        await loadList();
-      } catch (error: any) {
-        // eslint-disable-next-line no-console
-        console.log(error);
-        loadList();
-      } finally {
-        record.loading = false;
-      }
+    if (record.loading || initializing.value || readError.value || propsRes.value.loading || val) return false;
+    if (record.receivers.length === 0) {
+      Message.warning(t('project.messageManagement.receiverNotNull'));
+      return false;
     }
+    const receivers = copyReceivers(record.receivers);
+    const persisted = copyReceivers(receiverDrafts.get(record.key)?.persisted || record.persistedReceivers);
+    record.loading = true;
+    try {
+      await saveMessageConfig({
+        ...record.projectRobotConfigMap?.[dataIndex],
+        projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
+        taskType: record.taskType,
+        event: record.event,
+        receiverIds: receivers.map((receiver) => receiver.id),
+      });
+    } catch {
+      receiverDrafts.set(record.key, { receivers, persisted, dataIndex });
+      // Preserve the editable draft; a successful list GET must not overwrite it.
+      Message.error('接收人保存失败，已保留草稿，请重试或取消编辑');
+      return false;
+    } finally {
+      record.loading = false;
+    }
+    receiverDrafts.delete(record.key);
+    record.persistedReceivers = copyReceivers(receivers);
+    Message.success(t('project.messageManagement.saveReceiverSuccess'));
+    await loadList();
+    return true;
   }
 </script>
 

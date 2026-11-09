@@ -59,7 +59,10 @@
             }}</a-button>
             <a-button
               v-permission="['SYSTEM_CONFIG_WECOM_BOT:UPDATE']"
-              :disabled="!config.enabled"
+              :disabled="
+                loading || loadError || !canUpdate || !config.enabled || pending.has(`test-user:${testUserId}`)
+              "
+              :loading="pending.has(`test-user:${testUserId}`)"
               @click="sendUserTest"
               >{{ t('system.wecomBot.testUser') }}</a-button
             >
@@ -111,7 +114,14 @@
                   }}</a-button
                   ><a-button
                     type="text"
-                    :disabled="loading || loadError || !canUpdate || !asBool(record.active)"
+                    :disabled="
+                      loading ||
+                      loadError ||
+                      !canUpdate ||
+                      !asBool(record.active) ||
+                      pending.has(`test-group:${record.id}`)
+                    "
+                    :loading="pending.has(`test-group:${record.id}`)"
                     @click="sendGroupTest(record)"
                     >{{ t('system.wecomBot.testSend') }}</a-button
                   ></a-space
@@ -870,9 +880,13 @@
     });
   }
   async function sendUserTest() {
-    if (!testUserId.value) return Message.warning(t('system.wecomBot.selectTestRecipient'));
-    await testWecomUser(testUserId.value, t('system.wecomBot.testMessage'));
-    Message.success(t('system.wecomBot.queued'));
+    if (loading.value || loadError.value || !canUpdate.value || !config.value.enabled) return;
+    const userId = testUserId.value;
+    if (!userId) return Message.warning(t('system.wecomBot.selectTestRecipient'));
+    await runPending(`test-user:${userId}`, async () => {
+      await testWecomUser(userId, t('system.wecomBot.testMessage'));
+      Message.success(t('system.wecomBot.queued'));
+    });
   }
   async function toggleBot(value: string | number | boolean) {
     await runPending('bot', async () => {
@@ -894,8 +908,11 @@
     });
   }
   async function sendGroupTest(chat: WecomChat) {
-    await testWecomGroup(chat.id, t('system.wecomBot.testMessage'));
-    Message.success(t('system.wecomBot.queued'));
+    if (loading.value || loadError.value || !canUpdate.value || !asBool(chat.active)) return;
+    await runPending(`test-group:${chat.id}`, async () => {
+      await testWecomGroup(chat.id, t('system.wecomBot.testMessage'));
+      Message.success(t('system.wecomBot.queued'));
+    });
   }
   async function loadTemplateVariables() {
     templateVariables.value = await getWecomTemplateVariables(ruleForm.notificationType);
