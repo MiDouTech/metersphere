@@ -17,9 +17,11 @@
         v-if="job.state === 'PRECHECKED' && followupOptions"
         class="mb-4 rounded border border-solid border-[var(--color-border-2)] p-4"
       >
-        <template v-if="followupOptions.groups.length && !policy">
-          <p>检测到再次导入测试用例，是否更新已有测试计划和评审计划？</p>
-          <a-space v-if="!declinedUpdate"
+        <template v-if="!policy">
+          <p v-if="followupOptions.groups.length && !declinedUpdate"
+            >检测到再次导入测试用例，是否更新已有测试计划和评审计划？</p
+          >
+          <a-space v-if="followupOptions.groups.length && !declinedUpdate"
             ><a-button @click="policy = 'APPEND_EXISTING'">是，更新已有</a-button
             ><a-button @click="declinedUpdate = true">否</a-button></a-space
           >
@@ -32,7 +34,16 @@
             ></template
           >
         </template>
-        <a-alert v-if="!followupOptions.canCreate" type="warning" class="mb-2"
+        <a-alert v-if="followupOptions.serviceGranted === false" type="warning" class="mb-2"
+          >当前项目尚未启用计划与评审同步服务授权，请由有权管理员在关联管理中启用；可先选择仅导入。</a-alert
+        >
+        <a-alert
+          v-if="
+            followupOptions.canCreatePermission === false ||
+            (!followupOptions.canCreate && followupOptions.serviceGranted === undefined)
+          "
+          type="warning"
+          class="mb-2"
           >当前账号缺少创建或关联权限；可选择仅导入，已有任务结果不会因此回滚。</a-alert
         >
         <a-select
@@ -196,6 +207,8 @@
   interface FollowupOptions {
     projectId: string;
     canCreate: boolean;
+    canCreatePermission?: boolean;
+    serviceGranted?: boolean;
     groups: { id: string; revision: number; planName: string; reviewName: string }[];
   }
   const followupOptions = ref<FollowupOptions>();

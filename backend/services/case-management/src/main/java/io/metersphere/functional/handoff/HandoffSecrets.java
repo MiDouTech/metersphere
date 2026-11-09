@@ -15,7 +15,11 @@ public class HandoffSecrets {
     private SecretKeySpec key() {
         try { byte[] bytes=Base64.getDecoder().decode(key);if(bytes.length==32)return new SecretKeySpec(bytes,"AES"); }
         catch(IllegalArgumentException ignored){ }
-        throw new IllegalStateException("尚未配置Webhook秘密加密密钥");
+        throw new HandoffSecretUnavailable();
+    }
+    public boolean configured() {
+        try { key(); return true; }
+        catch (HandoffSecretUnavailable missing) { return false; }
     }
     public String seal(String project,String field,String value) { return crypt(project,field,value,true); }
     public String open(String project,String field,String value) { return crypt(project,field,value,false); }
@@ -25,6 +29,6 @@ public class HandoffSecrets {
             return encrypt?AesGcmCodec.seal(key(),aad,value.getBytes(StandardCharsets.UTF_8))
                     :new String(AesGcmCodec.open(key(),aad,value),StandardCharsets.UTF_8);
         } catch(IllegalStateException missing){throw missing;}
-        catch(Exception invalid){throw new IllegalStateException("Webhook秘密暂不可用");}
+        catch(Exception invalid){throw new HandoffSecretUnavailable();}
     }
 }

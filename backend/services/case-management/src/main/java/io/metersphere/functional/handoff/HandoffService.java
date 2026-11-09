@@ -47,9 +47,10 @@ public class HandoffService {
     }
     public Map<String,Object> config(String project,String actor){auth.require(actor,project,"CONFIG_MANAGE",false);return safeConfig(store.lock(project));}
     Map<String,Object> safeConfig(Map<String,Object> c){
-        return Map.of("revision",number(c,"revision"),"enabled",truth(c.get("enabled")),"external_grant",truth(c.get("external_grant")),
-                "configured",c.get("url_secret")!=null,"urlRevision",number(c,"url_revision"),"authMode",text(c,"auth_mode"),
-                "tokenConfigured",c.get("token_secret")!=null,"environment",environment,"productVersion","v1.7");
+        return Map.ofEntries(Map.entry("revision",number(c,"revision")),Map.entry("enabled",truth(c.get("enabled"))),Map.entry("external_grant",truth(c.get("external_grant"))),
+                Map.entry("configured",c.get("url_secret")!=null),Map.entry("urlRevision",number(c,"url_revision")),Map.entry("authMode",text(c,"auth_mode")),
+                Map.entry("tokenConfigured",c.get("token_secret")!=null),Map.entry("environment",environment),Map.entry("productVersion","v1.7"),
+                Map.entry("encryptionConfigured",secrets.configured()),Map.entry("sourceConfigured",!environment.isBlank()&&!sourceBaseUrl.isBlank()));
     }
     public Map<String,Object> saveConfig(String project,long revision,HandoffConfiguration input,String actor){
         auth.require(actor,project,"CONFIG_MANAGE",false);var c=store.lock(project);expected(c,revision);

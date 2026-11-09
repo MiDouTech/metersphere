@@ -12,6 +12,17 @@ import java.util.Base64;
 import static org.junit.jupiter.api.Assertions.*;
 
 class HandoffSecretCompatibilityTests {
+    @Test void missingKeyReportsDeploymentFailureInsteadOfStateConflict() {
+        var secrets=new HandoffSecrets("");
+        assertFalse(secrets.configured());
+        var failure=assertThrows(HandoffSecretUnavailable.class,()->secrets.seal("project","url","private-url"));
+        var response=new io.metersphere.functional.controller.HandoffExceptionHandler().secretUnavailable(failure);
+        assertEquals(503,response.getStatusCode().value());
+        assertEquals("HANDOFF_ENCRYPTION_UNAVAILABLE",response.getBody().get("code"));
+        assertFalse(response.getBody().toString().contains("private-url"));
+        assertFalse(new HandoffSecrets("invalid").configured());
+        assertTrue(new HandoffSecrets(Base64.getEncoder().encodeToString(new byte[32])).configured());
+    }
     static String legacy(byte[] key, byte[] aad, String value) throws Exception {
         byte[] iv=new byte[12]; Arrays.fill(iv,(byte)7);
         Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");

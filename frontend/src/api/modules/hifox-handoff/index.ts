@@ -16,6 +16,8 @@ export interface ConfigView {
   tokenConfigured: boolean;
   environment: string;
   productVersion: string;
+  encryptionConfigured?: boolean;
+  sourceConfigured?: boolean;
 }
 export interface Inspection {
   timeEvidence: { reference: string; revision: string; occurredAt?: string };

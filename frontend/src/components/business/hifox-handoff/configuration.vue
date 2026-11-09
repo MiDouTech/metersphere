@@ -6,6 +6,13 @@
     <a-spin :loading="loading">
       <a-alert v-if="error" type="error">配置读取失败或无配置权限 <a-button @click="load">重试</a-button></a-alert>
       <template v-else-if="view">
+        <a-alert v-if="view.encryptionConfigured === false" type="warning"
+          >Webhook加密配置缺失或不可用，请联系部署管理员核对持久化加密密钥后保存。</a-alert
+        >
+        <a-alert v-if="view.sourceConfigured === false" type="warning"
+          >尚未配置MSP来源环境或HTTPS来源基地址，配置完成后才能启用推送。</a-alert
+        >
+        <a-alert v-if="actionError" type="error">{{ actionError }}</a-alert>
         <p>源环境：{{ view.environment }}；项目：{{ projectId }}；{{ view.enabled ? '已启用' : '已关闭' }}</p>
         <p>{{ view.configured ? `接收地址已配置（版本 ${view.urlRevision}）` : '尚未配置接收地址' }}</p>
         <a-form :model="draft" layout="vertical" @submit.prevent>
@@ -70,6 +77,7 @@
     saveConfiguration,
   } from '@/api/modules/hifox-handoff';
   import createLatestRequest from '@/utils/latestRequest';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
 
   const props = defineProps<{ projectId: string }>();
   const empty = (): Configuration => ({ url: '', authMode: 'NONE', token: '', clearToken: false });
@@ -78,6 +86,7 @@
   const loading = ref(false);
   const busy = ref(false);
   const error = ref(false);
+  const actionError = ref('');
   const visible = ref(false);
   const acknowledged = ref(false);
   const externalGrant = ref(false);
@@ -88,6 +97,7 @@
     const project = props.projectId;
     loading.value = true;
     error.value = false;
+    actionError.value = '';
     view.value = undefined;
     visible.value = false;
     draft.value = empty();
@@ -106,6 +116,7 @@
   async function run(action: () => Promise<unknown>) {
     if (busy.value) return;
     busy.value = true;
+    actionError.value = '';
     const seq = request.current();
     try {
       await action();
@@ -113,8 +124,11 @@
         busy.value = false;
         await load();
       }
-    } catch {
-      if (request.isCurrent(seq)) Message.error('操作失败，请核对权限、配置或重新预览');
+    } catch (failure) {
+      if (request.isCurrent(seq)) {
+        actionError.value = formatAppErrorMessage(ensureAppError(failure, '操作失败，请核对权限、配置或重新预览'));
+        Message.error(actionError.value);
+      }
     } finally {
       if (request.isCurrent(seq)) busy.value = false;
     }
