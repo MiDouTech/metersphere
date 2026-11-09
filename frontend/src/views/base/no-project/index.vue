@@ -25,25 +25,22 @@
 
 <script lang="ts" setup>
   import { onBeforeMount, Ref, ref } from 'vue';
-  import { useRouter } from 'vue-router';
 
   import NoPermissionLayoutVue from '@/layout/no-permission-layout.vue';
 
-  import { getProjectList, switchProject } from '@/api/modules/project-management/project';
+  import { getProjectList } from '@/api/modules/project-management/project';
   import { useI18n } from '@/hooks/useI18n';
-  import { useAppStore, useUserStore } from '@/store';
-  import { getFirstRouteNameByPermission } from '@/utils/permission';
+  import { useAppStore } from '@/store';
 
   import { SelectValue } from '@/models/projectManagement/menuManagement';
   import type { ProjectListItem } from '@/models/setting/project';
+
+  import { enterProject } from '@/views/setting/utils';
 
   const appStore = useAppStore();
 
   const projectList: Ref<ProjectListItem[]> = ref([]);
 
-  const userStore = useUserStore();
-
-  const router = useRouter();
   const { t } = useI18n();
 
   async function initProjects() {
@@ -61,26 +58,7 @@
   }
 
   async function selectProject(value: SelectValue) {
-    appStore.setCurrentProjectId(value as string);
-    try {
-      await switchProject({
-        projectId: value as string,
-        userId: userStore.id || '',
-      });
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    } finally {
-      await userStore.checkIsLogin(true);
-      appStore.hideLoading();
-      router.replace({
-        name: getFirstRouteNameByPermission(router.getRoutes()),
-        query: {
-          orgId: appStore.currentOrgId,
-          pId: value as string,
-        },
-      });
-    }
+    await enterProject(value as string);
   }
 
   onBeforeMount(() => {

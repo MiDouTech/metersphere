@@ -21,7 +21,7 @@
       <li v-if="showProjectSelect">
         <a-tooltip :content="currentProjectName">
           <a-select
-            v-model:model-value="appStore.currentProjectId"
+            :model-value="appStore.currentProjectId"
             class="project-switch-select min-w-[200px] max-w-[420px] focus-within:!bg-[var(--color-text-n8)] hover:!bg-[var(--color-text-n8)]"
             :style="{ width: projectSelectWidth }"
             :bordered="false"
@@ -206,7 +206,7 @@
 
 <script lang="ts" setup>
   import { computed, ref, watch } from 'vue';
-  import { useRoute, useRouter } from 'vue-router';
+  import { useRoute } from 'vue-router';
   import { useClipboard } from '@vueuse/core';
   import { Message } from '@arco-design/web-vue';
 
@@ -215,7 +215,6 @@
   import AddProjectModal from '@/views/setting/organization/project/components/addProjectModal.vue';
 
   import { getMessageUnReadCount } from '@/api/modules/message';
-  import { getProjectInfo, switchProject } from '@/api/modules/project-management/project';
   import { getOrgOptions } from '@/api/modules/system';
   import { updateLanguage } from '@/api/modules/user';
   import { useI18n } from '@/hooks/useI18n';
@@ -225,11 +224,12 @@
   import useGlobalStore from '@/store/modules/global';
   import useAIStore from '@/store/modules/setting/ai';
   import useUserStore from '@/store/modules/user';
-  import { getFirstRouteNameByPermission, hasAnyPermission } from '@/utils/permission';
+  import { hasAnyPermission } from '@/utils/permission';
   import { setDarkTheme, watchStyle, watchTheme } from '@/utils/theme';
 
   import { GlobalEventNameEnum } from '@/enums/commonEnum';
 
+  import { enterProject } from '@/views/setting/utils';
   import { IconInfoCircle } from '@arco-design/web-vue/es/icon';
   import type { LocaleType } from '#/global';
 
@@ -251,7 +251,6 @@
   const globalStore = useGlobalStore();
   const aiStore = useAIStore();
   const route = useRoute();
-  const router = useRouter();
   const { t } = useI18n();
   const unReadCount = ref<number>(0);
 
@@ -315,44 +314,7 @@
   async function selectProject(
     value: string | number | boolean | Record<string, any> | (string | number | boolean | Record<string, any>)[]
   ) {
-    try {
-      appStore.showLoading();
-      const projectId = value as string;
-      const switchedUser = await switchProject({
-        projectId,
-        userId: userStore.id || '',
-      });
-      if (switchedUser) {
-        userStore.setInfo(switchedUser);
-        if (switchedUser.lastOrganizationId) {
-          appStore.setCurrentOrgId(switchedUser.lastOrganizationId);
-        }
-      }
-      appStore.setCurrentProjectId(projectId);
-      await userStore.checkIsLogin(true);
-      appStore.setCurrentProjectId(projectId);
-      try {
-        const project = await getProjectInfo(projectId);
-        if (project) {
-          appStore.setCurrentMenuConfig(project.moduleIds || []);
-        }
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.log(e);
-      }
-      router.replace({
-        name: getFirstRouteNameByPermission(router.getRoutes()),
-        query: {
-          orgId: appStore.currentOrgId,
-          pId: projectId,
-        },
-      });
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    } finally {
-      appStore.hideLoading();
-    }
+    await enterProject(value as string);
   }
 
   const { copy, isSupported } = useClipboard({ legacy: true });
