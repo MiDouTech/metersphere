@@ -34,7 +34,8 @@ class TestReportNotificationListenerTests {
 
         when(botService.isEnabled()).thenReturn(true);
         when(jdbc.queryForObject(anyString(), eq(Long.class), any())).thenReturn(1L);
-        when(jdbc.queryForList(anyString(), eq("project-1"))).thenReturn(List.of(rule));
+        when(jdbc.queryForList("SELECT * FROM wecom_notification_rule WHERE enabled=1 AND notification_type='TEST_REPORT_GENERATED' AND trigger_type='EVENT' AND scope_type='SYSTEM'"))
+                .thenReturn(List.of(rule));
         when(jdbc.queryForList("SELECT name FROM test_plan WHERE id=?", String.class, "plan-1"))
                 .thenReturn(List.of("plan"));
         when(jdbc.queryForList("SELECT name FROM project WHERE id=?", String.class, "project-1"))

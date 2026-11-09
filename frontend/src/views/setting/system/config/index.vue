@@ -1,5 +1,6 @@
 <template>
-  <MsTabCard v-model:active-tab="activeTab" :title="t('system.config.parameterConfig')" :tab-list="tabList" />
+  <MsTabCard v-model:active-tab="activeTab" :title="t('system.config.parameterConfig')" :tab-list="visibleTabList" />
+  <messageNotification v-if="activeTab === 'messageNotification'" />
   <baseConfig v-if="activeTab === 'baseConfig'" v-show="activeTab === 'baseConfig'" />
   <qrCodeConfig v-if="activeTab === 'qrCodeConfig'" v-show="activeTab === 'qrCodeConfig'" />
   <pageConfig v-if="isInitPageConfig" v-show="activeTab === 'pageConfig'" />
@@ -21,6 +22,7 @@
   import { hasAnyPermission, hasTabVisible } from '@/utils/permission';
 
   // 异步组件加载
+  const messageNotification = defineAsyncComponent(() => import('./components/messageNotification.vue'));
   const baseConfig = defineAsyncComponent(() => import('./components/baseConfig.vue'));
   const pageConfig = defineAsyncComponent(() => import('./components/pageConfig.vue'));
   const modelConfigCard = defineAsyncComponent(() => import('./components/modelConfigCard.vue'));
@@ -53,7 +55,7 @@
     {
       key: 'qrCodeConfig',
       title: t('system.config.qrCodeConfig'),
-      permission: ['SYSTEM_PARAMETER_SETTING_QRCODE:READ', 'SYSTEM_CONFIG_WECOM_BOT:READ'],
+      permission: ['SYSTEM_PARAMETER_SETTING_QRCODE:READ'],
     },
     {
       key: 'authConfig',
@@ -66,7 +68,16 @@
       title: t('system.config.memoryCleanup'),
       permission: ['SYSTEM_PARAMETER_SETTING_MEMORY_CLEAN:READ'],
     },
+    {
+      key: 'messageNotification',
+      title: '消息通知',
+      permission: ['SYSTEM_CONFIG_WECOM_BOT:READ', 'SYSTEM_NOTIFICATION_RULE:READ', 'SYSTEM_NOTIFICATION_LOG:READ'],
+    },
   ]);
+
+  const visibleTabList = computed(() =>
+    tabList.value.filter((item) => item.key !== 'messageNotification' || hasAnyPermission(item.permission, ['SYSTEM']))
+  );
 
   watch(
     () => activeTab.value,
@@ -92,14 +103,14 @@
   async function getXpackTab() {
     await licenseStore.getValidateLicense();
     if (!licenseStore.hasLicense()) {
-      const excludes = ['baseConfig', 'memoryCleanup', 'modelConfig', 'qrCodeConfig'];
+      const excludes = ['baseConfig', 'memoryCleanup', 'modelConfig', 'qrCodeConfig', 'messageNotification'];
       tabList.value = tabList.value.filter((item: any) => excludes.includes(item.key));
     }
   }
 
   onBeforeMount(() => {
     getXpackTab();
-    const visibleTabs = tabList.value.filter(
+    const visibleTabs = visibleTabList.value.filter(
       (item: any) => hasAnyPermission(item.permission) && hasTabVisible(item.resourceCode, ['SYSTEM'])
     );
     const requestedTab = route.query.tab as string;

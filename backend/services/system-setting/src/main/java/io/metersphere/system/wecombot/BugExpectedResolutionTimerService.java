@@ -45,7 +45,7 @@ public class BugExpectedResolutionTimerService {
             jdbc.update("UPDATE wecom_notification_timer SET status='CANCELLED',update_time=? WHERE resource_type='BUG' AND resource_id=? AND status IN ('WAITING','PROCESSING')", now, bugId);
             return;
         }
-        List<Map<String, Object>> rules = jdbc.queryForList("SELECT id,trigger_config FROM wecom_notification_rule r WHERE enabled=1 AND notification_type='BUG_EXPECTED_RESOLUTION_DUE' AND trigger_type='DEADLINE' AND NOT EXISTS(SELECT 1 FROM wecom_notification_schedule s WHERE s.rule_id=r.id AND s.enabled=1) AND (scope_type='SYSTEM' OR (scope_type='PROJECT' AND scope_id=?))",
+        List<Map<String, Object>> rules = jdbc.queryForList("SELECT id,trigger_config FROM wecom_notification_rule r WHERE enabled=1 AND notification_type='BUG_EXPECTED_RESOLUTION_DUE' AND trigger_type='DEADLINE' AND NOT EXISTS(SELECT 1 FROM wecom_notification_schedule s WHERE s.rule_id=r.id AND s.enabled=1) AND scope_type='SYSTEM' AND ? IS NOT NULL",
                 bug.get("project_id"));
         Set<String> activeRules = new HashSet<>();
         for (Map<String, Object> rule : rules) {
@@ -82,7 +82,7 @@ public class BugExpectedResolutionTimerService {
     private void fire(Map<String, Object> timer, long now) {
         String timerId = String.valueOf(timer.get("id"));
         if (jdbc.update("UPDATE wecom_notification_timer SET status='PROCESSING',lease_until=?,update_time=? WHERE id=? AND status='WAITING'", now + 60_000L, now, timerId) == 0) return;
-        List<Map<String, Object>> rows = jdbc.queryForList("SELECT b.id AS bug_id,b.num,b.title,b.status,b.handle_user,b.create_user AS bug_create_user,b.expected_resolve_time,b.project_id,b.deleted,b.update_time AS bug_update_time,COALESCE(si.name,b.status) bug_status_name,r.* FROM bug b JOIN wecom_notification_rule r ON r.id=? JOIN project p ON p.id=b.project_id AND p.enable=1 AND p.deleted=0 LEFT JOIN status_item si ON si.id=b.status AND si.enabled=1 WHERE b.id=? AND r.enabled=1",
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT b.id AS bug_id,b.num,b.title,b.status,b.handle_user,b.create_user AS bug_create_user,b.expected_resolve_time,b.project_id,b.deleted,b.update_time AS bug_update_time,COALESCE(si.name,b.status) bug_status_name,r.* FROM bug b JOIN wecom_notification_rule r ON r.id=? JOIN project p ON p.id=b.project_id AND p.enable=1 AND p.deleted=0 LEFT JOIN status_item si ON si.id=b.status AND si.enabled=1 WHERE b.id=? AND r.enabled=1 AND r.scope_type='SYSTEM'",
                 timer.get("rule_id"), timer.get("resource_id"));
         if (rows.isEmpty() || activeDeadline(rows.getFirst()) == null || stopped(rows.getFirst())) {
             complete(timerId, "CANCELLED", null, now);

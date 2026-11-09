@@ -28,6 +28,13 @@ import org.quartz.CronExpression;
 
 @Service
 public class WecomBotService {
+    /** Historical PROJECT rules remain readable but cannot produce new work. */
+    static void requirePlatformRule(Map<String, Object> rule) {
+        if (!"SYSTEM".equals(String.valueOf(rule.get("scope_type")))) {
+            throw new MSException("历史项目规则只读留存，不支持修改、复制或产生新通知；请新建平台规则");
+        }
+    }
+
     public static final Set<String> TYPES = Set.of("BUG_EXPECTED_RESOLUTION_DUE", "TEST_REPORT_GENERATED", "CUSTOM_CRON");
     public static final Set<String> TRIGGERS = Set.of("DEADLINE", "EVENT", "CRON");
     private static final Set<String> TEMPLATE_VARIABLES = Set.of(
@@ -122,7 +129,7 @@ public class WecomBotService {
                 LogUtils.warn("WeCom Bot was disabled in MeterSphere while Bridge was unavailable");
             }
         } else {
-            jdbc.queryForList("SELECT id FROM wecom_notification_rule WHERE enabled=1 AND trigger_type='DEADLINE'", String.class)
+            jdbc.queryForList("SELECT id FROM wecom_notification_rule WHERE enabled=1 AND scope_type='SYSTEM' AND trigger_type='DEADLINE'", String.class)
                     .forEach(this::refreshDeadlineResources);
         }
         return status();
@@ -243,6 +250,9 @@ public class WecomBotService {
 
     @Transactional
     public String createRule(WecomBotModels.RuleRequest request, String userId) {
+        if (!"SYSTEM".equals(request.scopeType()) || StringUtils.isNotBlank(request.scopeId())) {
+            throw new MSException("通知规则范围必须为平台，不能携带项目范围");
+        }
         validateRule(request, userId);
         Map<String, Object> config = requiredConfig();
         long now = System.currentTimeMillis();
@@ -262,8 +272,12 @@ public class WecomBotService {
 
     @Transactional
     public void updateRule(String id, WecomBotModels.RuleRequest request, String userId) {
+        if (!"SYSTEM".equals(request.scopeType()) || StringUtils.isNotBlank(request.scopeId())) {
+            throw new MSException("通知规则范围必须为平台，不能携带项目范围");
+        }
         validateRule(request, userId);
         Map<String, Object> previous = rule(id);
+        requirePlatformRule(previous);
         Map<String, Object> recipients = recipientsForRule(request);
         Long startAt = usesRulePeriod(request.notificationType()) ? request.startAt() : null;
         Long endAt = usesRulePeriod(request.notificationType()) ? request.endAt() : null;
@@ -279,6 +293,7 @@ public class WecomBotService {
 
     @Transactional
     public void deleteRule(String id) {
+        requirePlatformRule(rule(id));
         Set<String> removedScheduleIds = schedules(id).stream().map(schedule -> str(schedule, "id")).collect(java.util.stream.Collectors.toSet());
         jdbc.update("DELETE FROM wecom_notification_schedule WHERE rule_id=?", id);
         jdbc.update("UPDATE wecom_notification_timer SET status='CANCELLED',update_time=? WHERE rule_id=?", System.currentTimeMillis(), id);
@@ -290,6 +305,7 @@ public class WecomBotService {
     @Transactional
     public void enableRule(String id, boolean enabled, String userId) {
         Map<String, Object> row = rule(id);
+        requirePlatformRule(row);
         if (enabled) requireBotEnabled();
         Map<String, Object> recipients = parseMap(str(row, "recipient_spec"));
         if ("BUG_EXPECTED_RESOLUTION_DUE".equals(str(row, "notification_type"))
@@ -323,6 +339,7 @@ public class WecomBotService {
     public List<String> runOnce(String id, String userId, String scheduleId) {
         requireBotEnabled();
         Map<String, Object> row = rule(id);
+        requirePlatformRule(row);
         String notificationType = str(row, "notification_type");
         if ("TEST_REPORT_GENERATED".equals(notificationType)) {
             throw new MSException("Test report notifications can only be triggered by a generated report event");
@@ -343,6 +360,7 @@ public class WecomBotService {
 
     public List<String> runScheduleOnce(String scheduleId, String userId) {
         Map<String, Object> schedule = requiredSchedule(scheduleId);
+        requirePlatformRule(rule(str(schedule, "rule_id")));
         long now = System.currentTimeMillis();
         String executionId = beginScheduleExecution(schedule, "MANUAL", userId, now, 1);
         try {
@@ -357,7 +375,7 @@ public class WecomBotService {
 
     public void executeSchedule(String scheduleId, long scheduledFireTime) {
         Map<String, Object> schedule = one("SELECT s.*,r.enabled rule_enabled,r.notification_type,r.name rule_name FROM wecom_notification_schedule s JOIN wecom_notification_rule r ON r.id=s.rule_id WHERE s.id=?", scheduleId);
-        if (schedule == null) return;
+        if (schedule == null || !"SYSTEM".equals(str(rule(str(schedule, "rule_id")), "scope_type"))) return;
         String executionId = beginScheduleExecution(schedule, "SCHEDULE", null, scheduledFireTime, 4);
         if (executionId == null) return;
         if (!isEnabled() || !bool(schedule, "enabled") || !bool(schedule, "rule_enabled")) {
@@ -522,6 +540,7 @@ public class WecomBotService {
     public String enqueue(String ruleId, String eventType, String eventId, String triggerKey, String targetType,
                           String targetId, String content, String resourceType, String resourceId,
                           String triggerMode, String triggerUserId, String scheduleId) {
+        if (StringUtils.isNotBlank(ruleId)) requirePlatformRule(rule(ruleId));
         if (StringUtils.isBlank(content) || content.getBytes(StandardCharsets.UTF_8).length > 20_480) {
             throw new MSException("Message content must be between 1 and 20480 bytes");
         }
@@ -996,6 +1015,7 @@ public class WecomBotService {
 
     private void refreshDeadlineResources(String ruleId) {
         Map<String, Object> rule = rule(ruleId);
+        requirePlatformRule(rule);
         List<Map<String, Object>> bugs = "PROJECT".equals(str(rule, "scope_type"))
                 ? jdbc.queryForList("SELECT id,update_time FROM bug WHERE project_id=? AND expected_resolve_time IS NOT NULL AND deleted=0", str(rule, "scope_id"))
                 : jdbc.queryForList("SELECT id,update_time FROM bug WHERE expected_resolve_time IS NOT NULL AND deleted=0");
@@ -1055,6 +1075,7 @@ public class WecomBotService {
     @Transactional
     public String createSchedule(String ruleId, WecomBotModels.ScheduleRequest request, String userId) {
         Map<String, Object> rule = rule(ruleId);
+        requirePlatformRule(rule);
         validateSchedules(str(rule, "notification_type"), List.of(request), ruleId, null);
         long now = System.currentTimeMillis();
         String id = IDGenerator.nextStr();
@@ -1069,6 +1090,7 @@ public class WecomBotService {
     public void updateSchedule(String id, WecomBotModels.ScheduleRequest request, String userId) {
         Map<String, Object> previous = requiredSchedule(id);
         Map<String, Object> rule = rule(str(previous, "rule_id"));
+        requirePlatformRule(rule);
         validateSchedules(str(rule, "notification_type"), List.of(request), str(previous, "rule_id"), id);
         requireUpdated(jdbc.update("UPDATE wecom_notification_schedule SET cycle_type=?,weekdays=?,execution_time=?,timezone=?,enabled=?,next_fire_time=NULL,update_time=?,update_user=? WHERE id=?",
                 request.cycleType(), weekdays(request), request.executionTime(), request.timezone(),
@@ -1079,6 +1101,7 @@ public class WecomBotService {
     @Transactional
     public void deleteSchedule(String id) {
         Map<String, Object> schedule = requiredSchedule(id);
+        requirePlatformRule(rule(str(schedule, "rule_id")));
         requireUpdated(jdbc.update("DELETE FROM wecom_notification_schedule WHERE id=?", id));
         requestScheduleReconcile(str(schedule, "rule_id"), Set.of(id), false);
     }
@@ -1086,6 +1109,7 @@ public class WecomBotService {
     @Transactional
     public void enableSchedule(String id, boolean enabled, String userId) {
         Map<String, Object> schedule = requiredSchedule(id);
+        requirePlatformRule(rule(str(schedule, "rule_id")));
         if (enabled) validateSchedules(str(rule(str(schedule, "rule_id")), "notification_type"),
                 List.of(toScheduleRequest(schedule, true)), str(schedule, "rule_id"), id);
         requireUpdated(jdbc.update("UPDATE wecom_notification_schedule SET enabled=?,next_fire_time=NULL,update_time=?,update_user=? WHERE id=?",

@@ -40,13 +40,16 @@ export default function usePermission() {
         // 一级菜单: 创建项目时 被勾选的模块
         return topLevelMenuHasPermission(route);
       }
+      const scopes = ['settingSystem', 'settingSystemParameter'].includes(String(route.name))
+        ? ['SYSTEM']
+        : ['PROJECT', 'ORGANIZATION', 'SYSTEM'];
       return (
         route.meta?.requiresAuth === false ||
         !route.meta?.roles ||
         route.meta?.roles?.includes('*') ||
-        (hasPageVisible(route.meta?.resourceCode) &&
-          hasRouteVisible(route.name) &&
-          hasAnyPermission(route.meta?.roles || []))
+        (hasPageVisible(route.meta?.resourceCode, scopes) &&
+          hasRouteVisible(route.name, scopes) &&
+          hasAnyPermission(route.meta?.roles || [], scopes))
       );
     },
     // You can add any rules you want

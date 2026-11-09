@@ -10,7 +10,7 @@ final class HandoffWorkerTestSources {
         var auth=new PlanReviewAuthorization(fixture.jdbc);var states=new PlanReviewPlanStateResolver(List.of());var locks=new PlanReviewPersistence(fixture.jdbc);var store=new HandoffStore(fixture.jdbc,locks);
         fixture.service=new HandoffService(store,new HandoffSourceReader(fixture.jdbc,states,auth,new PlanReviewFrozenReader(fixture.jdbc)),new HandoffAuthorization(fixture.jdbc,auth),locks,transport,new HandoffSecrets(Base64.getEncoder().encodeToString(new byte[32])),"isolated-test");fixture.service.setSourceBaseUrl("https://msp.example.test");
         fixture.worker=new HandoffWorker(store,fixture.service,fixture.tx.getTransactionManager());fixture.worker.setEnabled(true);
-        fixture.save(receiver,"NONE","");fixture.run(()->fixture.service.grant("project",fixture.revision(),true,"actor"));
+        fixture.save(receiver,"NONE","");fixture.run(()->fixture.service.grant(HandoffPersistenceTests.PLATFORM,fixture.revision(),true,"actor"));
         var app=new PlanReviewApplicationService(fixture.jdbc,locks,auth,fixture.tx.getTransactionManager(),states);
         var projects=new LinkedHashSet<String>();projects.add("project");
         for(int n=2;n<=count;n++){
@@ -18,8 +18,6 @@ final class HandoffWorkerTestSources {
             if(projects.add(project)){
                 fixture.jdbc.update("INSERT INTO project(id,enable,deleted,name) VALUES(?,true,false,?)",project,project);
                 fixture.run(()->app.grant(project,0L,true,"actor"));
-                fixture.run(()->fixture.service.saveConfig(project,0,new HandoffConfiguration(receiver,"NONE","",false),"actor"));
-                fixture.run(()->fixture.service.grant(project,1,true,"actor"));
             }
             String a=separateProjects?plan+"a":"a",b=separateProjects?plan+"b":"b";
             if(separateProjects)fixture.jdbc.update("INSERT INTO functional_case(id,project_id,deleted) VALUES(?,?,false),(?,?,false)",a,project,b,project);
@@ -29,7 +27,7 @@ final class HandoffWorkerTestSources {
             var preview=fixture.run(()->app.preview(plan,review,"PAIR_EXISTING","actor"));var pair=fixture.run(()->app.confirm((String)preview.get("previewId"),"pair"+plan,true,"actor"));
             fixture.tx.executeWithoutResult(s->app.synchronize((String)pair.get("relationId"),(String)pair.get("generation")));
         }
-        for(String project:projects){var preview=fixture.run(()->fixture.service.preview(project,"","ENABLE",false,"actor"));fixture.run(()->fixture.service.confirm(project,(String)preview.get("previewId"),true,"actor"));}
+        fixture.enable();
         fixture.jdbc.update("UPDATE case_review_functional_case SET status='PASS'");
         for(int n=1;n<=count;n++){
             String suffix=n==1?"":Integer.toString(n),review="review"+suffix,plan="plan"+suffix,project=separateProjects&&n>1?"project"+n:"project";

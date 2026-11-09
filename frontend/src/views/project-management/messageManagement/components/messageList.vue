@@ -32,6 +32,7 @@
         </template>
       </MsSelect>
     </template>
+    <a-alert v-if="readError" type="error">读取失败，请重试 <a-button @click="initialize">重试</a-button></a-alert>
     <ms-base-table
       ref="tableRef"
       v-bind="propsRes"
@@ -51,6 +52,7 @@
           v-if="!record.children && hasAnyPermission(['PROJECT_MESSAGE:READ+ADD'])"
           v-model:model-value="record.receivers"
           v-model:loading="record.loading"
+          :disabled="initializing || readError || propsRes.loading || record.loading || receiverPending.has(record.key)"
           class="w-full"
           mode="remote"
           :options="defaultReceivers"
@@ -62,7 +64,7 @@
           label-key="name"
           :multiple="true"
           :placeholder="t('project.messageManagement.receiverPlaceholder')"
-          :remote-extra-params="{ projectId: appStore.currentProjectId }"
+          :remote-extra-params="{ projectId: '__MSP_PLATFORM_NOTIFICATIONS__' }"
           :remote-func="getMessageUserList"
           :remote-fields-map="{ label: 'name', value: 'id', id: 'id' }"
           :not-auto-init-search="true"
@@ -71,6 +73,7 @@
               value: val,
             })"
           :object-value="true"
+          @update:model-value="updateReceiverDraft(record, $event)"
           @remove="changeMessageReceivers(false, record, dataIndex as string)"
           @popup-visible-change="changeMessageReceivers($event, record, dataIndex as string)"
         />
@@ -81,13 +84,37 @@
           theme="outline"
         />
         <span v-else></span>
+        <div v-if="receiverDrafts.has(record.key)" role="alert" class="text-[var(--color-danger-6)]">
+          接收人保存失败，当前为未保存草稿。
+          <a-button
+            type="text"
+            :disabled="
+              record.loading || initializing || readError || propsRes.loading || receiverPending.has(record.key)
+            "
+            @click="changeMessageReceivers(false, record, receiverDrafts.get(record.key)!.dataIndex)"
+            >重试</a-button
+          >
+          <a-button
+            type="text"
+            :disabled="record.loading || receiverPending.has(record.key)"
+            @click="cancelReceiverDraft(record)"
+            >取消编辑</a-button
+          >
+        </div>
       </template>
       <template #robot="{ record, dataIndex }">
         <div v-if="!record.children && record.projectRobotConfigMap?.[dataIndex as string]" class="flex items-center">
           <a-switch
             v-model:model-value="record.projectRobotConfigMap[dataIndex as string].enable"
             v-permission="['PROJECT_MESSAGE:READ+UPDATE', 'PROJECT_MESSAGE:READ']"
-            :disabled="robotEnable"
+            :disabled="
+              robotEnable ||
+              initializing ||
+              readError ||
+              propsRes.loading ||
+              record.loading ||
+              receiverDrafts.has(record.key)
+            "
             :before-change="(val) => handleChangeIntercept(!!val, record, dataIndex as string)"
             size="small"
             type="line"
@@ -119,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onBeforeMount, ref, watch } from 'vue';
+  import { computed, onBeforeMount, reactive, ref, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
 
@@ -140,11 +167,9 @@
     saveMessageConfig,
   } from '@/api/modules/project-management/messageManagement';
   import { useI18n } from '@/hooks/useI18n';
-  import useAppStore from '@/store/modules/app';
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { MessageItem, ProjectRobotConfig, Receiver, RobotItem } from '@/models/projectManagement/message';
-  import { ProjectManagementRouteEnum } from '@/enums/routeEnum';
 
   import type { SelectOptionData, TableColumnData, TableData } from '@arco-design/web-vue';
   import type { TableOperationColumn } from '@arco-design/web-vue/es/table/interface';
@@ -152,9 +177,15 @@
   const emit = defineEmits(['createRobot']);
 
   const router = useRouter();
-  const appStore = useAppStore();
   const { t } = useI18n();
 
+  const readError = ref(false);
+  const initializing = ref(true);
+  const receiverPending = reactive(new Set<string>());
+  const receiverDrafts = reactive(
+    new Map<string, { receivers: Receiver[]; persisted: Receiver[]; dataIndex: string }>()
+  );
+  const copyReceivers = (receivers: Receiver[]) => receivers.map((receiver) => ({ ...receiver }));
   const robotFilters = ref<string[]>([]);
   const robotOptions = ref<(SelectOptionData & RobotItem)[]>([]);
   const robotEnable = ref<boolean>(!hasAnyPermission(['PROJECT_MESSAGE:READ+UPDATE']));
@@ -229,6 +260,8 @@
     [key: string]: any;
   }
 
+  const receiverRows = reactive(new Map<string, TableMessageChildrenItem>());
+
   interface TableMessageItem {
     name: string;
     type: string;
@@ -236,7 +269,16 @@
   }
 
   const { propsRes, propsEvent, loadList, setLoadListParams } = useTable(
-    getMessageList,
+    async (params) => {
+      try {
+        const result = await getMessageList(params);
+        readError.value = false;
+        return result;
+      } catch (error) {
+        readError.value = true;
+        throw error;
+      }
+    },
     {
       columns: columns.value as MsTableColumn,
       scroll: { x: 'auto' },
@@ -281,14 +323,21 @@
               }
             });
           }
-          children.push({
-            key: `${(item as unknown as MessageItem).type}-${child.taskType}-${grandson.event}`,
+          const key = `${(item as unknown as MessageItem).type}-${child.taskType}-${grandson.event}`;
+          const draft = receiverDrafts.get(key);
+          const row = {
+            key,
             functionName: (item as unknown as MessageItem).name,
             taskType: child.taskType,
             name: child.taskTypeName,
             rowspan: child.messageTaskDetailDTOList.length || 1,
             ...grandson,
-          });
+            persistedReceivers: copyReceivers(grandson.receivers),
+            receivers: copyReceivers(draft?.receivers || grandson.receivers),
+            loading: receiverPending.has(key),
+          };
+          receiverRows.set(key, row);
+          children.push(row);
         }
       }
       return {
@@ -324,7 +373,7 @@
   const defaultReceivers = ref<SelectOptionData[]>([]);
 
   async function initReceivers() {
-    const res = await getMessageUserList({ projectId: appStore.currentProjectId, keyword: '' });
+    const res = await getMessageUserList({ projectId: '__MSP_PLATFORM_NOTIFICATIONS__', keyword: '' });
     defaultReceivers.value = res.map((e) => ({
       label: e.name,
       ...e,
@@ -352,7 +401,7 @@
   }
 
   async function initRobotList() {
-    const res = await getRobotList(appStore.currentProjectId);
+    const res = await getRobotList('__MSP_PLATFORM_NOTIFICATIONS__');
     robotOptions.value = res
       .filter((e) => e.enable)
       .map((e) => ({
@@ -362,21 +411,33 @@
       }));
   }
 
-  onBeforeMount(async () => {
-    initReceivers();
-    await initRobotList();
-    setLoadListParams({ projectId: appStore.currentProjectId });
-    loadList();
-  });
+  async function initialize() {
+    initializing.value = true;
+    readError.value = false;
+    try {
+      await Promise.all([initReceivers(), initRobotList()]);
+      setLoadListParams({ projectId: '__MSP_PLATFORM_NOTIFICATIONS__' });
+      await loadList();
+    } catch {
+      readError.value = true;
+    } finally {
+      initializing.value = false;
+    }
+  }
+  onBeforeMount(initialize);
 
   function editRobot(record: TableMessageChildrenItem, dataIndex: string) {
+    if (receiverDrafts.has(record.key)) return Message.warning('请先重试保存或取消接收人草稿');
     if (record.receivers?.length === 0) {
       Message.warning(t('project.messageManagement.unsetReceiversTip'));
       return;
     }
     router.push({
-      name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_MESSAGE_MANAGEMENT_EDIT,
+      name: 'settingSystemParameter',
       query: {
+        tab: 'messageNotification',
+        notificationSection: 'messages',
+        notificationTemplate: 'true',
         id: record.projectRobotConfigMap?.[dataIndex].robotId,
         taskType: record.taskType,
         event: record.event,
@@ -391,14 +452,23 @@
    * @param dataIndex 操作的机器人列
    */
   async function handleChangeIntercept(val: boolean, record: TableMessageChildrenItem, dataIndex: string) {
+    if (
+      record.loading ||
+      initializing.value ||
+      readError.value ||
+      propsRes.value.loading ||
+      receiverDrafts.has(record.key)
+    )
+      return false;
     if (record.receivers.length === 0) {
       Message.warning(t('project.messageManagement.unsetReceiverTip'));
       return false;
     }
+    record.loading = true;
     try {
       await saveMessageConfig({
         ...record.projectRobotConfigMap?.[dataIndex],
-        projectId: appStore.currentProjectId,
+        projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
         taskType: record.taskType,
         event: record.event,
         receiverIds: record.receivers.map((e: Receiver) => (e.id !== undefined ? e.id : e)),
@@ -414,32 +484,77 @@
       // eslint-disable-next-line no-console
       console.log(error);
       return false;
+    } finally {
+      record.loading = false;
     }
   }
 
+  function updateReceiverDraft(record: TableMessageChildrenItem, receivers: Receiver[]) {
+    const draft = receiverDrafts.get(record.key);
+    if (draft) draft.receivers = copyReceivers(receivers);
+  }
+
+  function cancelReceiverDraft(record: TableMessageChildrenItem) {
+    const draft = receiverDrafts.get(record.key);
+    if (!draft || record.loading || receiverPending.has(record.key)) return;
+    record.receivers = copyReceivers(draft.persisted);
+    const current = receiverRows.get(record.key);
+    if (current) current.receivers = copyReceivers(draft.persisted);
+    receiverDrafts.delete(record.key);
+  }
+
   async function changeMessageReceivers(val: boolean, record: TableMessageChildrenItem, dataIndex: string) {
-    if (!val) {
-      if (record.receivers.length === 0) {
-        Message.warning(t('project.messageManagement.receiverNotNull'));
-        return false;
-      }
+    const { key } = record;
+    if (
+      receiverPending.has(key) ||
+      record.loading ||
+      initializing.value ||
+      readError.value ||
+      propsRes.value.loading ||
+      val
+    )
+      return false;
+    if (record.receivers.length === 0) {
+      Message.warning(t('project.messageManagement.receiverNotNull'));
+      return false;
+    }
+    const receivers = copyReceivers(record.receivers);
+    const persisted = copyReceivers(receiverDrafts.get(key)?.persisted || record.persistedReceivers);
+    receiverPending.add(key);
+    record.loading = true;
+    try {
       try {
-        record.loading = true;
         await saveMessageConfig({
           ...record.projectRobotConfigMap?.[dataIndex],
-          projectId: appStore.currentProjectId,
+          projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
           taskType: record.taskType,
           event: record.event,
-          receiverIds: record.receivers.map((e: Receiver) => (e.id !== undefined ? e.id : e)),
+          receiverIds: receivers.map((receiver) => receiver.id),
         });
-        Message.success(t('project.messageManagement.saveReceiverSuccess'));
-      } catch (error: any) {
-        // eslint-disable-next-line no-console
-        console.log(error);
-        loadList();
-      } finally {
-        record.loading = false;
+      } catch {
+        receiverDrafts.set(key, { receivers, persisted, dataIndex });
+        const current = receiverRows.get(key);
+        if (current) current.receivers = copyReceivers(receivers);
+        Message.error('接收人保存失败，已保留草稿，请重试或取消编辑');
+        return false;
       }
+      receiverDrafts.delete(key);
+      record.persistedReceivers = copyReceivers(receivers);
+      const current = receiverRows.get(key);
+      if (current) {
+        current.persistedReceivers = copyReceivers(receivers);
+        current.receivers = copyReceivers(receivers);
+      }
+      Message.success(t('project.messageManagement.saveReceiverSuccess'));
+      await loadList();
+      return true;
+    } finally {
+      // GET can replace record while the request is pending. Release by business key
+      // and restore the current row, not only the stale callback's row reference.
+      receiverPending.delete(key);
+      record.loading = false;
+      const current = receiverRows.get(key);
+      if (current) current.loading = false;
     }
   }
 </script>

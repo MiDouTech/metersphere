@@ -1,5 +1,6 @@
 <template>
   <div>
+    <a-alert v-if="listError" type="error">读取失败，请重试 <a-button @click="initRobotList">重试</a-button></a-alert>
     <!-- special-height的119: 上面卡片高度103 +上面卡片高度mb的16 -->
     <MsCard :min-width="1060" :special-height="119" simple>
       <a-alert v-if="!getIsVisited()" :show-icon="false" class="mb-[16px]" closable @close="addVisited">
@@ -8,7 +9,13 @@
           <span class="text-[14px]">{{ t('project.messageManagement.notRemind') }}</span>
         </template>
       </a-alert>
-      <a-button v-permission="['PROJECT_MESSAGE:READ+ADD']" type="primary" class="mb-[16px]" @click="handleCreateClick">
+      <a-button
+        v-permission="['PROJECT_MESSAGE:READ+ADD']"
+        type="primary"
+        class="mb-[16px]"
+        :disabled="listLoading || listError"
+        @click="handleCreateClick"
+      >
         {{ t('project.messageManagement.createBot') }}
       </a-button>
       <div
@@ -94,7 +101,7 @@
                 size="small"
                 class="ml-auto"
                 type="line"
-                :disabled="!hasAnyPermission(['PROJECT_MESSAGE:READ+UPDATE'])"
+                :disabled="listLoading || listError || !hasAnyPermission(['PROJECT_MESSAGE:READ+UPDATE'])"
                 @change="handleEnableIntercept(robot)"
               />
             </div>
@@ -320,7 +327,6 @@
   import { useI18n } from '@/hooks/useI18n';
   import useModal from '@/hooks/useModal';
   import useVisit from '@/hooks/useVisit';
-  import useAppStore from '@/store/modules/app';
   import { characterLimit } from '@/utils';
   import { translateTextToPX } from '@/utils/css';
   import { hasAnyPermission } from '@/utils/permission';
@@ -338,9 +344,10 @@
   }>();
 
   const { t } = useI18n();
-  const appStore = useAppStore();
   const { openModal } = useModal();
 
+  const listLoading = ref(true);
+  const listError = ref(false);
   const botList = ref<RobotItem[]>([]);
 
   const IconMap: Record<ProjectRobotPlatform, string> = {
@@ -361,8 +368,16 @@
   });
 
   async function initRobotList() {
-    const res = await getRobotList(appStore.currentProjectId);
-    botList.value = res as RobotItem[];
+    listLoading.value = true;
+    listError.value = false;
+    try {
+      const res = await getRobotList('__MSP_PLATFORM_NOTIFICATIONS__');
+      botList.value = res as RobotItem[];
+    } catch {
+      listError.value = true;
+    } finally {
+      listLoading.value = false;
+    }
     nextTick(() => {
       if (robotListRef.value) {
         setContainer(robotListRef.value);
@@ -388,7 +403,7 @@
   const drawerLoading = ref(false);
   const defaultRobot = {
     id: '',
-    projectId: appStore.currentProjectId,
+    projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
     name: '',
     platform: 'WE_COM',
     enable: true,
@@ -480,7 +495,7 @@
     openModal({
       type: 'error',
       title: t('project.messageManagement.deleteTitle', { name: characterLimit(robot.name) }),
-      content: t('project.messageManagement.deleteContent'),
+      content: '该平台机器人及关联消息配置将删除，对所有项目生效。',
       okText: t('common.confirmDelete'),
       cancelText: t('common.cancel'),
       okButtonProps: {
@@ -506,6 +521,7 @@
    * @param isContinue 是否继续添加
    */
   async function saveRobot(isContinue: boolean) {
+    if (drawerLoading.value || listLoading.value || listError.value) return;
     try {
       drawerLoading.value = true;
       const params = { ...robotForm.value };

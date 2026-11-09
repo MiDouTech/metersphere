@@ -132,7 +132,7 @@ public class HandoffWorker implements DisposableBean {
     /** InnoDB INSERT IGNORE may take a shared duplicate-key lock. Acquire X first to avoid concurrent lock upgrades. */
     private Map<String,Object> lockProject(String project){
         store.jdbc.update("INSERT INTO plan_review_grant(project_id,update_time) VALUES(?,?) ON DUPLICATE KEY UPDATE project_id=project_id",project,System.currentTimeMillis());
-        return store.lock(project);
+        return Map.of();
     }
     /** Persistent completion snapshots are replayable even when the immediate capture hook failed. */
     private void replay(){
@@ -152,7 +152,7 @@ public class HandoffWorker implements DisposableBean {
     public void dispatch(String project,String key){
         if(!enabled||closing)return;
         var call=tx.execute(status->{
-            var c=lockProject(project);var d=store.delivery(project,key);long now=System.currentTimeMillis();
+            lockProject(project);var d=store.delivery(project,key);var c=d.isEmpty()?Map.<String,Object>of():store.deliveryConfig(d);long now=System.currentTimeMillis();
             if(!enabled||closing)return null;
             if(d.isEmpty()||!Set.of("READY","RETRY").contains(text(d,"state"))||number(d,"next_at")>now||number(d,"attempts_used")>=4)return null;
             if(!key.equals(service.key(project,text(d,"plan_id")))){stop(key,"PAUSED","SOURCE_ENVIRONMENT_CHANGED");return null;}
@@ -169,8 +169,8 @@ public class HandoffWorker implements DisposableBean {
                 if(d.get("payload_json")==null){payload=service.payload(project,d,f);String json=new String(payload,StandardCharsets.UTF_8);
                     store.jdbc.update("UPDATE hifox_http_delivery SET payload_json=?,payload_hash=?,url_revision=? WHERE business_key=?",json,HandoffPolicy.hash(json),number(c,"url_revision"),key);
                 }else payload=text(d,"payload_json").getBytes(StandardCharsets.UTF_8);
-                String url=service.secrets.open(project,"url",text(c,"url_secret"));
-                String token="BEARER".equals(c.get("auth_mode"))?service.secrets.open(project,"token",text(c,"token_secret")):null;
+                String url=service.secrets.open(store.configurationScope(d),"url",text(c,"url_secret"));
+                String token="BEARER".equals(c.get("auth_mode"))?service.secrets.open(store.configurationScope(d),"token",text(c,"token_secret")):null;
                 if(!enabled||closing)return null;
                 now=System.currentTimeMillis();
                 String id=UUID.randomUUID().toString();long sequence=number(d,"attempts_used")+1;
@@ -207,7 +207,7 @@ public class HandoffWorker implements DisposableBean {
             store.jdbc.update("UPDATE hifox_http_delivery SET state='SUCCESS',http_status=?,reason=NULL,had_unknown=CASE WHEN ? THEN 1 ELSE had_unknown END,revision=revision+1,update_time=? WHERE business_key=?",result.status(),result.unknown(),now,key);return;
         }
         if(!id.equals(d.get("active_attempt"))||"SUCCESS".equals(d.get("state")))return;
-        var c=lockProject(project);String state,reason=result.error();
+        var c=store.deliveryConfig(d);String state,reason=result.error();
         if(truth(d.get("source_changed"))){state="SOURCE_CHANGED";reason="SOURCE_CHANGED";}
         else if(number(d,"url_revision")!=number(c,"url_revision")){state="URL_CHANGED";reason="URL_CHANGED";}
         else if(!truth(c.get("enabled"))||!truth(c.get("external_grant"))||Set.of("DISABLED","PG_REVOKED","SOURCE_ACCESS_UNAVAILABLE").contains(text(d,"reason"))){state="PAUSED";reason=!truth(c.get("enabled"))?"DISABLED":"PG_REVOKED";}

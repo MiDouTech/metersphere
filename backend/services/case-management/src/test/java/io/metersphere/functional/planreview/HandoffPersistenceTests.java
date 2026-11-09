@@ -13,14 +13,15 @@ import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.*;
 
 class HandoffPersistenceTests {
+    static final String PLATFORM=io.metersphere.system.service.PlatformNotificationScope.ID;
     JdbcTemplate jdbc;TransactionTemplate tx;HandoffService service;HandoffWorker worker;
     PlanReviewLifecycleService lifecycle;FakeTarget target;
     static class FakeTarget implements HandoffWebhookTarget {
-        AtomicInteger calls=new AtomicInteger();List<byte[]> payloads=new java.util.concurrent.CopyOnWriteArrayList<>();List<String> tokens=new java.util.concurrent.CopyOnWriteArrayList<>();
+        AtomicInteger calls=new AtomicInteger();List<byte[]> payloads=new java.util.concurrent.CopyOnWriteArrayList<>();List<String> tokens=new java.util.concurrent.CopyOnWriteArrayList<>();List<String> urls=new java.util.concurrent.CopyOnWriteArrayList<>();
         HandoffHttpTransport.Result result=new HandoffHttpTransport.Result(204,null,false,false,0);
         Runnable during=()->{};
         public void validate(String url){HandoffHttpTransport.syntax(url);}
-        public HandoffHttpTransport.Result post(String url,String token,byte[] payload){calls.incrementAndGet();payloads.add(payload.clone());tokens.add(token);during.run();return result;}
+        public HandoffHttpTransport.Result post(String url,String token,byte[] payload){calls.incrementAndGet();payloads.add(payload.clone());tokens.add(token);urls.add(url);during.run();return result;}
     }
     @BeforeEach void setup()throws Exception{
         var db=PlanReviewTestDatabase.create();jdbc=db.jdbc();tx=db.tx();
@@ -32,6 +33,7 @@ class HandoffPersistenceTests {
         httpSchema=httpSchema.replaceAll("(?m)^--.*$","");
         if(System.getProperty("plan.review.mysql.config")==null)httpSchema=httpSchema.replace(" COLLATE utf8mb4_bin","").replace(" ENGINE=InnoDB DEFAULT CHARSET=utf8mb4","");
         for(String statement:httpSchema.split(";"))if(!statement.isBlank())jdbc.execute(statement);
+        jdbc.execute("ALTER TABLE hifox_http_delivery ADD COLUMN config_scope VARCHAR(50) NULL");
         jdbc.execute("CREATE TABLE user(id VARCHAR(50),enable BOOLEAN,deleted BOOLEAN)");jdbc.execute("CREATE TABLE project(id VARCHAR(50),enable BOOLEAN,deleted BOOLEAN,name VARCHAR(255))");
         jdbc.execute("CREATE TABLE user_role(id VARCHAR(50),type VARCHAR(32),enabled BOOLEAN)");jdbc.execute("CREATE TABLE user_role_relation(user_id VARCHAR(50),role_id VARCHAR(50),source_id VARCHAR(50))");jdbc.execute("CREATE TABLE user_role_permission(role_id VARCHAR(50),permission_id VARCHAR(100))");
         jdbc.update("INSERT INTO user VALUES('actor',true,false)");jdbc.update("INSERT INTO project VALUES('project',true,false,'Test project')");jdbc.update("INSERT INTO user_role VALUES('admin','SYSTEM',true)");jdbc.update("INSERT INTO user_role_relation VALUES('actor','admin','system')");
@@ -47,15 +49,15 @@ class HandoffPersistenceTests {
         service=new HandoffService(store,new HandoffSourceReader(jdbc,states,authorization,new PlanReviewFrozenReader(jdbc)),auth,db.store(),target,new HandoffSecrets(Base64.getEncoder().encodeToString(new byte[32])),"isolated-test");
         service.setSourceBaseUrl("https://msp.example.test");
         worker=new HandoffWorker(store,service,db.manager());worker.setEnabled(true);
-        run(()->service.saveConfig("project",0,new HandoffConfiguration("https://receiver.example.test/hook?secret=example","NONE","",false),"actor"));
-        run(()->service.grant("project",1,true,"actor"));
+        run(()->service.saveConfig(PLATFORM,0,new HandoffConfiguration("https://receiver.example.test/hook?secret=example","NONE","",false),"actor"));
+        run(()->service.grant(PLATFORM,1,true,"actor"));
     }
     <T>T run(Supplier<T> work){return tx.execute(s->work.get());}
     @AfterEach void closeOwnedInMemoryDatabase(){
         if(worker!=null)worker.destroy();
         if(jdbc!=null&&System.getProperty("plan.review.mysql.config")==null)jdbc.execute("SHUTDOWN");
     }
-    void enable(){var p=run(()->service.preview("project","","ENABLE",false,"actor"));run(()->service.confirm("project",(String)p.get("previewId"),true,"actor"));}
+    void enable(){var p=run(()->service.preview(PLATFORM,"","ENABLE",false,"actor"));run(()->service.confirm(PLATFORM,(String)p.get("previewId"),true,"actor"));}
     void complete(){jdbc.update("UPDATE case_review_functional_case SET status='PASS'");var p=run(()->lifecycle.preview("review","review","COMPLETE","actor"));run(()->lifecycle.confirm((String)p.get("previewId"),true,"actor"));tx.executeWithoutResult(s->service.capture("project","plan",true));}
     long count(String table){return jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Long.class);}
 
@@ -100,17 +102,52 @@ class HandoffPersistenceTests {
     void tickWorker(){worker.maintain();worker.tick();awaitIdle(worker);}
     void awaitIdle(HandoffWorker target){long end=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(8);while(target.statistics().pending()>0&&System.nanoTime()<end){try{Thread.sleep(10);}catch(InterruptedException e){throw new RuntimeException(e);}}assertEquals(0,target.statistics().pending());}
     void due(){jdbc.update("UPDATE hifox_http_delivery SET next_at=0");}
-    long revision(){return jdbc.queryForObject("SELECT revision FROM hifox_http_config",Long.class);}
-    Map<String,Object> preview(String action){return run(()->service.preview("project",action.equals("ENABLE")?"":"plan",action,false,"actor"));}
-    Map<String,Object> confirm(Map<String,Object> p){return run(()->service.confirm("project",(String)p.get("previewId"),true,"actor"));}
-    void save(String url,String mode,String token){run(()->service.saveConfig("project",revision(),new HandoffConfiguration(url,mode,token,true),"actor"));}
+    long revision(){return jdbc.queryForObject("SELECT revision FROM hifox_http_config WHERE project_id=?",Long.class,PLATFORM);}
+    Map<String,Object> preview(String action){return run(()->service.preview(action.equals("ENABLE")?PLATFORM:"project",action.equals("ENABLE")?"":"plan",action,false,"actor"));}
+    Map<String,Object> confirm(Map<String,Object> p){return run(()->service.confirm("ENABLE".equals(p.get("action"))?PLATFORM:"project",(String)p.get("previewId"),true,"actor"));}
+    void save(String url,String mode,String token){run(()->service.saveConfig(PLATFORM,revision(),new HandoffConfiguration(url,mode,token,true),"actor"));}
+    @Test void platformReplacementCannotRetargetAnExistingProjectDelivery() {
+        enable();complete();
+        String oldUrl="https://legacy.example.test/old";
+        var secrets=new HandoffSecrets(Base64.getEncoder().encodeToString(new byte[32]));
+        jdbc.update("INSERT INTO hifox_http_config(project_id,enabled,external_grant,url_secret,url_revision,update_time) VALUES('project',1,1,?,1,?)",
+                secrets.seal("project","url",oldUrl),System.currentTimeMillis());
+        jdbc.update("UPDATE hifox_http_delivery SET config_scope=NULL");
+        save("https://platform.example.test/new","NONE","");
+        dispatch();
+        assertEquals(List.of(oldUrl),target.urls);
+        assertEquals("SUCCESS",state());
+        assertNull(jdbc.queryForObject("SELECT config_scope FROM hifox_http_delivery",String.class));
+        assertThrows(io.metersphere.sdk.exception.MSException.class,()->run(()->service.saveConfig("project",0,new HandoffConfiguration("https://other.example.test","NONE","",false),"actor")));
+    }
+    @Test void newDeliveryUsesPlatformCiphertextAndKeepsBusinessSource() {
+        enable();complete();dispatch();
+        assertEquals(PLATFORM,jdbc.queryForObject("SELECT config_scope FROM hifox_http_delivery",String.class));
+        assertEquals("project",jdbc.queryForObject("SELECT project_id FROM hifox_http_delivery",String.class));
+        assertEquals("project",jdbc.queryForObject("SELECT project_id FROM hifox_http_fact",String.class));
+        assertEquals(List.of("https://receiver.example.test/hook?secret=example"),target.urls);
+    }
+    @Test void systemNotificationPermissionDoesNotInheritProjectAdministratorBypass() {
+        var scope=new io.metersphere.system.service.PlatformNotificationScope(jdbc);
+        String read="SYSTEM_CONFIG_WECOM_BOT:READ",write="SYSTEM_CONFIG_WECOM_BOT:UPDATE";
+        jdbc.update("INSERT INTO user VALUES('project-admin',1,0)");
+        jdbc.update("INSERT INTO user_role VALUES('project_admin','PROJECT',1),('notification-reader','SYSTEM',1)");
+        jdbc.update("INSERT INTO user_role_relation VALUES('project-admin','project_admin','project')");
+        assertThrows(org.apache.shiro.authz.UnauthorizedException.class,()->scope.requireSystemPermissions("project-admin",new String[]{read},true));
+        jdbc.update("INSERT INTO user_role_relation VALUES('project-admin','notification-reader','system')");
+        jdbc.update("INSERT INTO user_role_permission VALUES('notification-reader',?)",read);
+        scope.requireSystemPermissions("project-admin",new String[]{read},true);
+        assertThrows(org.apache.shiro.authz.UnauthorizedException.class,()->scope.requireSystemPermissions("project-admin",new String[]{write},true));
+        jdbc.update("UPDATE user SET enable=0 WHERE id='project-admin'");
+        assertThrows(org.apache.shiro.authz.UnauthorizedException.class,()->scope.requireSystemPermissions("project-admin",new String[]{read},true));
+    }
     @ParameterizedTest @ValueSource(ints={200,202,204,299}) void all2xxStopWithoutRemoteBusinessProof(int code){
         enable();complete();target.result=new HandoffHttpTransport.Result(code,null,false,false,0);dispatch();tickWorker();
         assertEquals("SUCCESS",state());assertEquals(1,target.calls.get());assertEquals(code,jdbc.queryForObject("SELECT http_status FROM hifox_http_delivery",Integer.class));assertEquals(0,count("hifox_handoff_notice"));
     }
     @Test void secretConfigurationIsEncryptedAndNeverReadBack(){
         save("https://receiver.example.test/hook?secret=example","BEARER","test-token");
-        String wire=service.config("project","actor").toString();assertFalse(wire.contains("test-token"));assertFalse(wire.contains("secret=example"));
+        String wire=service.config(PLATFORM,"actor").toString();assertFalse(wire.contains("test-token"));assertFalse(wire.contains("secret=example"));
         assertFalse(jdbc.queryForObject("SELECT url_secret FROM hifox_http_config",String.class).contains("https"));assertFalse(jdbc.queryForObject("SELECT token_secret FROM hifox_http_config",String.class).contains("test-token"));assertEquals(0,target.calls.get());
     }
     @Test void fixedPayloadAndPlanUniqueness(){enable();complete();dispatch();tx.executeWithoutResult(s->service.capture("project","plan",true));tickWorker();assertEquals(1,target.calls.get());assertEquals(1,count("hifox_http_delivery"));String body=new String(target.payloads.getFirst(),java.nio.charset.StandardCharsets.UTF_8);assertTrue(body.contains("functional_test_plan.review_passed"));assertTrue(body.contains("occurred_at"));assertTrue(body.contains("Test project"));assertFalse(body.contains("receiver.example"));assertFalse(body.contains("owner"));assertFalse(body.contains("credential"));}
@@ -125,8 +162,8 @@ class HandoffPersistenceTests {
     @Test void noEarlyRetryAndRetryAfterWins(){enable();complete();long later=System.currentTimeMillis()+120000;target.result=new HandoffHttpTransport.Result(429,"HTTP_429",true,false,later);dispatch();assertTrue(jdbc.queryForObject("SELECT next_at FROM hifox_http_delivery",Long.class)>=later);dispatch();assertEquals(1,target.calls.get());}
     @Test void tokenRotationKeepsFrozenBytesAndBudget(){enable();complete();target.result=new HandoffHttpTransport.Result(401,"HTTP_401",false,false,0);dispatch();save("","BEARER","new-token");confirm(preview("RESUME"));target.result=new HandoffHttpTransport.Result(204,null,false,false,0);dispatch();assertEquals(2,target.calls.get());assertArrayEquals(target.payloads.get(0),target.payloads.get(1));assertEquals("new-token",target.tokens.get(1));}
     @Test void urlReplacementStopsOldAttemptsAndDoesNotRetarget(){enable();complete();target.result=new HandoffHttpTransport.Result(null,"TIMEOUT",true,true,0);dispatch();save("https://other.example.test/hook","NONE","");due();dispatch();assertEquals("URL_CHANGED",state());assertEquals(1,target.calls.get());assertThrows(PlanReviewFailure.class,()->preview("RESUME"));}
-    @Test void revokeAndReenableNeverUnlockPausedRecord(){enable();complete();run(()->service.grant("project",revision(),false,"actor"));dispatch();assertEquals(0,target.calls.get());run(()->service.grant("project",revision(),true,"actor"));dispatch();assertEquals(0,target.calls.get());confirm(preview("RESUME"));dispatch();assertEquals(1,target.calls.get());}
-    @Test void disableInFlightPreservesResultAndStopsNext(){enable();complete();target.result=new HandoffHttpTransport.Result(null,"TIMEOUT",true,true,0);target.during=()->run(()->service.disable("project",revision(),"actor"));dispatch();assertEquals("PAUSED",state());due();dispatch();assertEquals(1,target.calls.get());}
+    @Test void revokeAndReenableNeverUnlockPausedRecord(){enable();complete();run(()->service.grant(PLATFORM,revision(),false,"actor"));dispatch();assertEquals(0,target.calls.get());run(()->service.grant(PLATFORM,revision(),true,"actor"));dispatch();assertEquals(0,target.calls.get());confirm(preview("RESUME"));dispatch();assertEquals(1,target.calls.get());}
+    @Test void disableInFlightPreservesResultAndStopsNext(){enable();complete();target.result=new HandoffHttpTransport.Result(null,"TIMEOUT",true,true,0);target.during=()->run(()->service.disable(PLATFORM,revision(),"actor"));dispatch();assertEquals("PAUSED",state());due();dispatch();assertEquals(1,target.calls.get());}
     @Test void interruptedReservationConsumesOnceAndUsesRemainingBudget(){enable();complete();target.result=new HandoffHttpTransport.Result(null,"TIMEOUT",true,true,0);dispatch();jdbc.update("UPDATE hifox_http_delivery SET state='IN_FLIGHT',next_at=0");jdbc.update("UPDATE hifox_http_attempt SET ended_at=NULL");worker.recover();assertEquals(1,jdbc.queryForObject("SELECT attempts_used FROM hifox_http_delivery",Integer.class));assertEquals("RETRY",state());due();dispatch();assertEquals(2,target.calls.get());}
     @Test void historicalPassIsManualAndConfirmationIsIdempotent(){complete();enable();tickWorker();assertEquals(0,target.calls.get());var p=preview("PUSH");assertEquals(confirm(p),confirm(p));assertEquals(1,count("hifox_http_delivery"));dispatch();assertEquals(1,target.calls.get());}
     @Test void missingOriginalTimeCannotPreviewConfirmOrPost(){complete();enable();jdbc.update("UPDATE plan_review_frozen_snapshot SET create_time=0");assertEquals("ORIGINAL_TIME_UNVERIFIED",assertThrows(PlanReviewFailure.class,()->preview("PUSH")).code());assertEquals(0,target.calls.get());assertEquals(0,count("hifox_http_delivery"));}
@@ -136,7 +173,11 @@ class HandoffPersistenceTests {
     @Test void sourceChangeAfterPossibleSendStopsRetriesAndPreservesBody(){enable();complete();target.result=new HandoffHttpTransport.Result(null,"TIMEOUT",true,true,0);dispatch();String payload=jdbc.queryForObject("SELECT payload_json FROM hifox_http_delivery",String.class);jdbc.update("UPDATE case_review_functional_case SET status='UN_REVIEW'");tx.executeWithoutResult(s->service.capture("project","plan",true));due();dispatch();assertEquals("SOURCE_CHANGED",state());assertEquals(payload,jdbc.queryForObject("SELECT payload_json FROM hifox_http_delivery",String.class));assertEquals(1,target.calls.get());}
     @Test void cmOnlyCanEnableWithoutSourceDisclosure(){
         jdbc.update("INSERT INTO user VALUES('cm',true,false)");jdbc.update("INSERT INTO user_role VALUES('config','PROJECT',true)");jdbc.update("INSERT INTO user_role_relation VALUES('cm','config','project')");jdbc.update("INSERT INTO user_role_permission VALUES('config','HIFOX_HANDOFF:CONFIG_MANAGE')");
-        complete();var p=run(()->service.preview("project","","ENABLE",false,"cm"));String wire=p.toString();assertFalse(wire.contains("visibleCount"));assertFalse(wire.contains("planId"));run(()->service.confirm("project",(String)p.get("previewId"),true,"cm"));assertTrue(jdbc.queryForObject("SELECT enabled FROM hifox_http_config",Boolean.class));assertEquals(0,target.calls.get());
+        complete();
+        assertThrows(org.apache.shiro.authz.UnauthorizedException.class,
+                () -> run(() -> service.preview(PLATFORM,"","ENABLE",false,"cm")));
+        assertFalse(jdbc.queryForObject("SELECT enabled FROM hifox_http_config",Boolean.class));
+        assertEquals(0,target.calls.get());
     }
     @Test void permissionChangeInvalidatesEnablePreview(){var p=preview("ENABLE");jdbc.update("INSERT INTO user_role_permission VALUES('admin','CASE_REVIEW:READ')");assertThrows(PlanReviewFailure.class,()->confirm(p));assertFalse(jdbc.queryForObject("SELECT enabled FROM hifox_http_config",Boolean.class));}
     @Test void inventoryChangeInvalidatesEnablePreview(){var p=preview("ENABLE");complete();assertThrows(PlanReviewFailure.class,()->confirm(p));assertFalse(jdbc.queryForObject("SELECT enabled FROM hifox_http_config",Boolean.class));}
@@ -148,7 +189,7 @@ class HandoffPersistenceTests {
         assertEquals(0,count("hifox_http_delivery"));long original=jdbc.queryForObject("SELECT create_time FROM plan_review_frozen_snapshot WHERE object_side='review' ORDER BY create_time DESC LIMIT 1",Long.class);
         tickWorker();assertEquals(1,target.calls.get());assertTrue(new String(target.payloads.getFirst(),java.nio.charset.StandardCharsets.UTF_8).contains(java.time.Instant.ofEpochMilli(original).toString()));
     }
-    @Test void closedIntervalPassStaysHistoricalOnReenable(){enable();run(()->service.disable("project",revision(),"actor"));complete();enable();tickWorker();assertEquals(0,target.calls.get());confirm(preview("PUSH"));dispatch();assertEquals(1,target.calls.get());}
+    @Test void closedIntervalPassStaysHistoricalOnReenable(){enable();run(()->service.disable(PLATFORM,revision(),"actor"));complete();enable();tickWorker();assertEquals(0,target.calls.get());confirm(preview("PUSH"));dispatch();assertEquals(1,target.calls.get());}
     @Test void sourceObserverCapturesWithoutCallingRemote(){enable();complete();var factory=new org.springframework.aop.aspectj.annotation.AspectJProxyFactory(new PlanReviewPersistence(jdbc));factory.addAspect(new HandoffSourceObserver(jdbc,service));PlanReviewPersistence observed=factory.getProxy();tx.executeWithoutResult(s->{observed.lockSource("plan");jdbc.update("UPDATE case_review_functional_case SET status='UN_PASS' WHERE case_id='a'");});assertFalse(jdbc.queryForObject("SELECT eligible FROM hifox_http_fact",Boolean.class));assertEquals(0,target.calls.get());}
     @org.springframework.context.annotation.Configuration
     @org.springframework.context.annotation.EnableAspectJAutoProxy(proxyTargetClass=true)
@@ -167,7 +208,7 @@ class HandoffPersistenceTests {
 
     @Test void noTokenAndSecretClearRequireExplicitConfirmation(){
         assertThrows(PlanReviewFailure.class,()->save("","BEARER",""));save("","BEARER","test-token");
-        assertThrows(PlanReviewFailure.class,()->run(()->service.saveConfig("project",revision(),new HandoffConfiguration("","NONE","",false),"actor")));
+        assertThrows(PlanReviewFailure.class,()->run(()->service.saveConfig(PLATFORM,revision(),new HandoffConfiguration("","NONE","",false),"actor")));
         save("","NONE","");assertNull(jdbc.queryForObject("SELECT token_secret FROM hifox_http_config",String.class));assertEquals(0,target.calls.get());
     }
     @Test void sourceLabelsStayJsonDataAndNoIdentifierIsInvented(){
@@ -207,18 +248,18 @@ class HandoffPersistenceTests {
         var audits=(List<?>)delivery.get("audits");assertEquals(3,audits.size());assertTrue(audits.stream().allMatch(a->((HandoffInspection.Audit)a).actor().equals("actor")));
         jdbc.update("INSERT INTO hifox_handoff_audit VALUES('other-project','other',NULL,'private-other','PRIVATE',1,1)");jdbc.update("INSERT INTO hifox_handoff_audit VALUES('other-plan','project','other-key','private-plan','PRIVATE',1,1)");
         var wire=io.metersphere.sdk.util.JSON.toJSONString(run(()->service.summary("project","plan","actor")));assertFalse(wire.contains("private-other"));assertFalse(wire.contains("private-plan"));assertFalse(wire.contains("receiver.example"));assertFalse(wire.contains("secret=example"));
-        jdbc.update("DELETE FROM hifox_handoff_audit WHERE project_id='project'");assertTrue(((List<?>)((Map<?,?>)run(()->service.summary("project","plan","actor")).get("delivery")).get("audits")).isEmpty());
+        jdbc.update("DELETE FROM hifox_handoff_audit WHERE project_id IN (?,?)","project",PLATFORM);assertTrue(((List<?>)((Map<?,?>)run(()->service.summary("project","plan","actor")).get("delivery")).get("audits")).isEmpty());
     }
     @Test void resumePreviewDisplaysFrozenEventVersionsAndAllUnresolvedPauseCauses(){
         enable();complete();target.result=new HandoffHttpTransport.Result(500,"HTTP_500",true,false,0);dispatch();
-        run(()->service.grant("project",revision(),false,"actor"));run(()->service.disable("project",revision(),"actor"));
-        run(()->service.grant("project",revision(),true,"actor"));enable();
+        run(()->service.grant(PLATFORM,revision(),false,"actor"));run(()->service.disable(PLATFORM,revision(),"actor"));
+        run(()->service.grant(PLATFORM,revision(),true,"actor"));enable();
         var preview=preview("RESUME");var inspection=(HandoffInspection)((Map<?,?>)preview.get("payload")).get("inspection");
         assertTrue(inspection.pauseReasons().containsAll(List.of("DISABLED","PG_REVOKED")));assertNotNull(inspection.frozenEventId());assertEquals(2,inspection.functionalCount());assertFalse(inspection.sourceVersion().revision().isBlank());
         var first=confirm(preview);assertEquals(first,confirm(preview));assertEquals(1,jdbc.queryForObject("SELECT attempts_used FROM hifox_http_delivery",Integer.class));
         var audits=(List<?>)((Map<?,?>)run(()->service.summary("project","plan","actor")).get("delivery")).get("audits");assertTrue(audits.stream().anyMatch(a->((HandoffInspection.Audit)a).action().equals("RESUME")));
         assertTrue(((HandoffInspection)((Map<?,?>)run(()->service.summary("project","plan","actor")).get("delivery")).get("inspection")).pauseReasons().isEmpty());
-        dispatch();run(()->service.grant("project",revision(),false,"actor"));run(()->service.grant("project",revision(),true,"actor"));confirm(preview("RESUME"));
+        dispatch();run(()->service.grant(PLATFORM,revision(),false,"actor"));run(()->service.grant(PLATFORM,revision(),true,"actor"));confirm(preview("RESUME"));
         var again=(List<?>)((Map<?,?>)run(()->service.summary("project","plan","actor")).get("delivery")).get("audits");assertEquals(2L,again.stream().filter(a->((HandoffInspection.Audit)a).action().equals("RESUME")).count());
     }
     @Test void firstManualPushShowsUnfrozenEventAndSingleReadCannotGetInspection(){
