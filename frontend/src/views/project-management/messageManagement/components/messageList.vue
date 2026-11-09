@@ -52,7 +52,7 @@
           v-if="!record.children && hasAnyPermission(['PROJECT_MESSAGE:READ+ADD'])"
           v-model:model-value="record.receivers"
           v-model:loading="record.loading"
-          :disabled="initializing || readError || propsRes.loading || record.loading"
+          :disabled="initializing || readError || propsRes.loading || record.loading || receiverPending.has(record.key)"
           class="w-full"
           mode="remote"
           :options="defaultReceivers"
@@ -88,11 +88,18 @@
           接收人保存失败，当前为未保存草稿。
           <a-button
             type="text"
-            :disabled="record.loading || initializing || readError || propsRes.loading"
+            :disabled="
+              record.loading || initializing || readError || propsRes.loading || receiverPending.has(record.key)
+            "
             @click="changeMessageReceivers(false, record, receiverDrafts.get(record.key)!.dataIndex)"
             >重试</a-button
           >
-          <a-button type="text" :disabled="record.loading" @click="cancelReceiverDraft(record)">取消编辑</a-button>
+          <a-button
+            type="text"
+            :disabled="record.loading || receiverPending.has(record.key)"
+            @click="cancelReceiverDraft(record)"
+            >取消编辑</a-button
+          >
         </div>
       </template>
       <template #robot="{ record, dataIndex }">
@@ -174,6 +181,7 @@
 
   const readError = ref(false);
   const initializing = ref(true);
+  const receiverPending = reactive(new Set<string>());
   const receiverDrafts = reactive(
     new Map<string, { receivers: Receiver[]; persisted: Receiver[]; dataIndex: string }>()
   );
@@ -252,6 +260,8 @@
     [key: string]: any;
   }
 
+  const receiverRows = reactive(new Map<string, TableMessageChildrenItem>());
+
   interface TableMessageItem {
     name: string;
     type: string;
@@ -315,7 +325,7 @@
           }
           const key = `${(item as unknown as MessageItem).type}-${child.taskType}-${grandson.event}`;
           const draft = receiverDrafts.get(key);
-          children.push({
+          const row = {
             key,
             functionName: (item as unknown as MessageItem).name,
             taskType: child.taskType,
@@ -324,7 +334,10 @@
             ...grandson,
             persistedReceivers: copyReceivers(grandson.receivers),
             receivers: copyReceivers(draft?.receivers || grandson.receivers),
-          });
+            loading: receiverPending.has(key),
+          };
+          receiverRows.set(key, row);
+          children.push(row);
         }
       }
       return {
@@ -483,41 +496,66 @@
 
   function cancelReceiverDraft(record: TableMessageChildrenItem) {
     const draft = receiverDrafts.get(record.key);
-    if (!draft || record.loading) return;
+    if (!draft || record.loading || receiverPending.has(record.key)) return;
     record.receivers = copyReceivers(draft.persisted);
+    const current = receiverRows.get(record.key);
+    if (current) current.receivers = copyReceivers(draft.persisted);
     receiverDrafts.delete(record.key);
   }
 
   async function changeMessageReceivers(val: boolean, record: TableMessageChildrenItem, dataIndex: string) {
-    if (record.loading || initializing.value || readError.value || propsRes.value.loading || val) return false;
+    const { key } = record;
+    if (
+      receiverPending.has(key) ||
+      record.loading ||
+      initializing.value ||
+      readError.value ||
+      propsRes.value.loading ||
+      val
+    )
+      return false;
     if (record.receivers.length === 0) {
       Message.warning(t('project.messageManagement.receiverNotNull'));
       return false;
     }
     const receivers = copyReceivers(record.receivers);
-    const persisted = copyReceivers(receiverDrafts.get(record.key)?.persisted || record.persistedReceivers);
+    const persisted = copyReceivers(receiverDrafts.get(key)?.persisted || record.persistedReceivers);
+    receiverPending.add(key);
     record.loading = true;
     try {
-      await saveMessageConfig({
-        ...record.projectRobotConfigMap?.[dataIndex],
-        projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
-        taskType: record.taskType,
-        event: record.event,
-        receiverIds: receivers.map((receiver) => receiver.id),
-      });
-    } catch {
-      receiverDrafts.set(record.key, { receivers, persisted, dataIndex });
-      // Preserve the editable draft; a successful list GET must not overwrite it.
-      Message.error('接收人保存失败，已保留草稿，请重试或取消编辑');
-      return false;
+      try {
+        await saveMessageConfig({
+          ...record.projectRobotConfigMap?.[dataIndex],
+          projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
+          taskType: record.taskType,
+          event: record.event,
+          receiverIds: receivers.map((receiver) => receiver.id),
+        });
+      } catch {
+        receiverDrafts.set(key, { receivers, persisted, dataIndex });
+        const current = receiverRows.get(key);
+        if (current) current.receivers = copyReceivers(receivers);
+        Message.error('接收人保存失败，已保留草稿，请重试或取消编辑');
+        return false;
+      }
+      receiverDrafts.delete(key);
+      record.persistedReceivers = copyReceivers(receivers);
+      const current = receiverRows.get(key);
+      if (current) {
+        current.persistedReceivers = copyReceivers(receivers);
+        current.receivers = copyReceivers(receivers);
+      }
+      Message.success(t('project.messageManagement.saveReceiverSuccess'));
+      await loadList();
+      return true;
     } finally {
+      // GET can replace record while the request is pending. Release by business key
+      // and restore the current row, not only the stale callback's row reference.
+      receiverPending.delete(key);
       record.loading = false;
+      const current = receiverRows.get(key);
+      if (current) current.loading = false;
     }
-    receiverDrafts.delete(record.key);
-    record.persistedReceivers = copyReceivers(receivers);
-    Message.success(t('project.messageManagement.saveReceiverSuccess'));
-    await loadList();
-    return true;
   }
 </script>
 

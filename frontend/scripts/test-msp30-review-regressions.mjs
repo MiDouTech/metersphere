@@ -126,22 +126,23 @@ for (const state of ['loading','loadError','disabled','permission']) {
 
 const listPath='views/project-management/messageManagement/components/messageList.vue';
 function receiverFixture() {
-  let persisted=[{id:'A',name:'Alice'}],fail=true,reloads=0,saves=0,rows=[];
+  let persisted=[{id:'A',name:'Alice'}],fail=true,reloads=0,saves=0,rows=[],heldSave;
+  const persistedOther=[{id:'other',name:'Other'}];
   const errors=[],successes=[];let table;
-  const api=scriptHarness(listPath,'initialize,changeMessageReceivers,cancelReceiverDraft,updateReceiverDraft,receiverDrafts,handleChangeIntercept,editRobot',{
+  const api=scriptHarness(listPath,'initialize,changeMessageReceivers,cancelReceiverDraft,updateReceiverDraft,receiverDrafts,receiverPending,handleChangeIntercept,editRobot',{
     ref: Vue.ref, reactive: Vue.reactive, computed: Vue.computed,defineEmits:()=>()=>{},useRouter:()=>({push(){throw new Error('Cannot edit template with unsaved receiver draft');}}),
     useI18n:()=>({t:x=>x}),hasAnyPermission:()=>true,watch(){},onBeforeMount(){},
     Message:{warning(){},success(m){successes.push(m);},error(m){errors.push(m);}},
     getMessageUserList:async()=>[],getRobotList:async()=>[],
-    getMessageList:async()=>[{type:'module',name:'module',messageTaskTypeDTOList:[{taskType:'BUG_TASK',taskTypeName:'Bug',messageTaskDetailDTOList:[{event:'UPDATE',receivers:persisted.map(x=>({...x})),projectRobotConfigMap:{site:{robotId:'site',enable:true}}}]}]}],
-    saveMessageConfig:async(input)=>{saves++;if(fail)throw new Error('isolated save failure');persisted=input.receiverIds.map(id=>({id,name:id}));},
+    getMessageList:async()=>[{type:'module',name:'module',messageTaskTypeDTOList:[{taskType:'BUG_TASK',taskTypeName:'Bug',messageTaskDetailDTOList:[{event:'UPDATE',receivers:persisted.map(x=>({...x})),projectRobotConfigMap:{site:{robotId:'site',enable:true}}},{event:'DELETE',receivers:persistedOther.map(x=>({...x})),projectRobotConfigMap:{site:{robotId:'site',enable:true}}}]}]}],
+    saveMessageConfig:async(input)=>{saves++;if(input.event==='DELETE')return;if(heldSave){const gate=heldSave;heldSave=undefined;await gate.promise;}else if(fail)throw new Error('isolated save failure');persisted=input.receiverIds.map(id=>({id,name:id}));},
     useTable(fetch,options,transform) {
       table={propsRes:Vue.ref({loading:false}),propsEvent:{},setLoadListParams(){},async loadList(){reloads++;rows=(await fetch({})).map(transform);}};
       return table;
     },
   });
-  return {api,get row(){return rows[0].children[0];},get persisted(){return persisted;},get reloads(){return reloads;},get saves(){return saves;},errors,successes,
-    allowSave(){fail=false;},reload(){return table.loadList();}};
+  return {api,get row(){return rows[0].children[0];},get otherRow(){return rows[0].children[1];},get persisted(){return persisted;},get reloads(){return reloads;},get saves(){return saves;},errors,successes,
+    allowSave(){fail=false;},holdNextSave(){heldSave=deferred();return heldSave;},reload(){return table.loadList();}};
 }
 test('CR-03 failed A-to-B edit stays visible across GET; retry saves B then reads persisted B', async () => {
   const f=receiverFixture();await f.api.initialize();let row=f.row;row.receivers=[{id:'B',name:'Bob'}];
@@ -197,3 +198,47 @@ test('CR-03 editing a failed draft again keeps the newest selection across unrel
   assert.equal(f.row.receivers[0].id,'C');assert.equal(f.persisted[0].id,'A');
   f.api.cancelReceiverDraft(f.row);assert.equal(f.row.receivers[0].id,'A');
 });
+
+for (const outcome of ['success','failure']) {
+  test('CR-04 failed draft retry survives other-row GET and releases current row after '+outcome,async()=>{
+    const f=receiverFixture();await f.api.initialize();f.row.receivers=[{id:'B',name:'Bob'}];
+    await f.api.changeMessageReceivers(false,f.row,'receiver');assert.equal(f.saves,1);
+    const gate=f.holdNextSave();const stale=f.row;
+    const retry=f.api.changeMessageReceivers(false,stale,'receiver');assert.equal(stale.loading,true);
+    assert.equal(f.api.receiverPending.has(stale.key),true);
+    // An independent business row saves successfully and triggers the actual list transformation.
+    assert.equal(await f.api.changeMessageReceivers(false,f.otherRow,'receiver'),true);
+    const refreshed=f.row;assert.notEqual(refreshed,stale);assert.equal(refreshed.loading,true);
+    // MsSelect owns a loading v-model too: the stable operation guard must survive a local reset.
+    refreshed.loading=false;
+    assert.equal(await f.api.changeMessageReceivers(false,refreshed,'receiver'),false);
+    const calls=f.saves;f.api.cancelReceiverDraft(refreshed);f.api.cancelReceiverDraft(stale);
+    assert.equal(f.saves,calls);assert.equal(calls,3); // initial failure, ONE retry, independent row
+    assert.equal(f.api.receiverDrafts.has(refreshed.key),true);assert.equal(refreshed.receivers[0].id,'B');
+    if(outcome==='success')gate.resolve();else gate.reject(new Error('isolated retry failure'));
+    assert.equal(await retry,outcome==='success');assert.equal(f.api.receiverPending.size,0);
+    assert.equal(stale.loading,false);assert.equal(f.row.loading,false);
+    assert.equal(f.row.receivers[0].id,'B');
+    if(outcome==='success') {
+      assert.equal(f.persisted[0].id,'B');assert.equal(f.api.receiverDrafts.size,0);
+      assert.equal(f.row.persistedReceivers[0].id,'B');
+    } else {
+      assert.equal(f.persisted[0].id,'A');assert.equal(f.api.receiverDrafts.size,1);
+      // The old callback must unlock the newly mounted row so another retry is now allowed.
+      f.allowSave();assert.equal(await f.api.changeMessageReceivers(false,f.row,'receiver'),true);
+      assert.equal(f.persisted[0].id,'B');assert.equal(f.api.receiverPending.size,0);
+    }
+  });
+  test('CR-04 initial save callback restores rebuilt row on '+outcome,async()=>{
+    const f=receiverFixture();await f.api.initialize();const stale=f.row;stale.receivers=[{id:'B',name:'Bob'}];
+    const gate=f.holdNextSave();const save=f.api.changeMessageReceivers(false,stale,'receiver');
+    await f.reload();assert.equal(f.row.loading,true);assert.notEqual(f.row,stale);
+    assert.equal(await f.api.changeMessageReceivers(false,f.row,'receiver'),false);assert.equal(f.saves,1);
+    if(outcome==='success')gate.resolve();else gate.reject(new Error('isolated initial save failure'));
+    assert.equal(await save,outcome==='success');assert.equal(f.row.loading,false);assert.equal(stale.loading,false);
+    assert.equal(f.row.receivers[0].id,'B');assert.equal(f.api.receiverPending.size,0);
+    if(outcome==='failure') {
+      f.api.cancelReceiverDraft(f.row);assert.equal(f.row.receivers[0].id,'A');assert.equal(f.persisted[0].id,'A');
+    } else assert.equal(f.persisted[0].id,'B');
+  });
+}

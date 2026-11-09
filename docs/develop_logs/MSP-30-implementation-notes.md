@@ -1,3 +1,32 @@
+# MSP-30 CR-MSP30-04修订说明 v0.4
+
+日期：2026-11-09；作者：测试开发-埼玉 c92997d2-06f5-4822-9791-4845858c6b29。
+开发文档-草稿，待质量-左殇0538c5c8-3cb8-4047-a0c6-73d2b1d63eb0对新SHA独立复审。
+沿用完整产品v1.4及原批准，不重开B01；无合并/发布/部署/切换/任务完成。
+
+输入R1.1：https://app.hifox.com/miduo/docs/72f9ebb1-eec9-43a5-96f7-da94dc5e70e9 。
+被审旧SHA 771a0ea592a3a1055446d2953fb38985bf01d471；前三项主场景关闭，但新增P2 CR-MSP30-04需修改。
+报告及证据包已读，原文件SHA256分别为8B06F16680FDE7065DC2A8CB4F7849EF0113F6988DDD30CFC522663BDC31675F、
+63D4A408704410F4EF609C572D1DB7A061456974F2CED99B9A57EE365262E3A7，与来件一致。
+
+修订：接收人保存使用稳定行key的reactive pending集合；函数、选择/重试/取消按钮一致依据该状态。
+列表转换将pending恢复到新行，记录当前key的最新行引用。请求及成功回读完成后才finally释放；
+旧回调同时恢复当前行及旧行loading，保存结果/草稿同步当前行，取消也更新当前行。
+不新增服务端锁、版本、队列或全局幂等；其他业务行仍可独立保存/回读。
+
+FR05；AC07，以及AC05/06失败恢复。实际TC位于test-msp30-review-regressions.mjs：
+- CR-04 failed draft retry survives other-row GET and releases current row after success/failure（2例）：
+  甲→乙失败→延迟重试→另一业务行成功保存触发真实行转换→再重试零新增、取消无效；
+  新行loading保留；额外清本地loading也不能绕过稳定pending；成功/失败结束后新旧行均解锁，失败可再次重试。
+- CR-04 initial save callback restores rebuilt row on success/failure（2例）：首次保存进行中GET重建，
+  不增加请求；旧回调同步当前行最新选择，失败后可取消回甲，成功回读乙。
+
+本轮仅1个前端生产组件及回归脚本/本记录变化。最终62项=原58项+新增4项，不把复审重复25项算作新增场景。
+完整类型检查退出0，检查期间生产组件哈希不变；该组件ESLint退出0，0错误/1项既有警告；差异检查通过。精确新SHA及日志见文档库v0.4。
+后端未改、未重跑Maven。实际浏览器/API、MySQL、部署SHA/worker、真实队列、离线投递、回退及CI仍未验证。
+
+## 历史v0.3（原结论及限制保留）
+
 # MSP-30 代码初审修订答复 v0.3
 
 日期：2026-11-09；作者：测试开发-埼玉 c92997d2-06f5-4822-9791-4845858c6b29。
