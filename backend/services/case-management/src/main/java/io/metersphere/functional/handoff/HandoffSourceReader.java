@@ -45,10 +45,7 @@ public class HandoffSourceReader {
             String id = Objects.toString(m.get("case_id"), "");
             members.put(id, new HandoffPolicy.Member(epochs.getOrDefault(id, -1L), Objects.toString(m.get("status"), "")));
         }
-        // Same canonical order and fields as the MSP-12 completion fingerprint.
-        String opinions = HandoffPolicy.hash(JSON.toJSONString(List.of(
-                jdbc.queryForList("SELECT id,case_id,status,update_time FROM case_review_functional_case WHERE review_id=? ORDER BY id", reviewId),
-                jdbc.queryForList("SELECT id,case_id,status,deleted,abandoned,content FROM case_review_history WHERE review_id=? ORDER BY id", reviewId))));
+        String opinions = new PlanReviewFingerprintReader(jdbc).currentForSnapshot(reviewId, text(frame,"target_fingerprint"));
         boolean ruleMatches = data.get("review") instanceof Map<?,?> old && Objects.equals(old.get("review_pass_rule"), review.get("review_pass_rule"));
         boolean authorized = false;
         try {

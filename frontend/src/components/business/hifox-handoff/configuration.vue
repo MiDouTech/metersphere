@@ -69,6 +69,7 @@
     risk,
     saveConfiguration,
   } from '@/api/modules/hifox-handoff';
+  import createLatestRequest from '@/utils/latestRequest';
 
   const props = defineProps<{ projectId: string }>();
   const empty = (): Configuration => ({ url: '', authMode: 'NONE', token: '', clearToken: false });
@@ -81,9 +82,9 @@
   const acknowledged = ref(false);
   const externalGrant = ref(false);
   const preview = ref<PreviewView>();
-  let sequence = 0;
+  const request = createLatestRequest();
   async function load() {
-    const seq = ++sequence;
+    const seq = request.begin();
     const project = props.projectId;
     loading.value = true;
     error.value = false;
@@ -92,30 +93,30 @@
     draft.value = empty();
     try {
       const result = await getConfiguration(project);
-      if (seq !== sequence) return;
+      if (!request.isCurrent(seq)) return;
       view.value = result;
       draft.value.authMode = result.authMode;
       externalGrant.value = result.external_grant;
     } catch {
-      if (seq === sequence) error.value = true;
+      if (request.isCurrent(seq)) error.value = true;
     } finally {
-      if (seq === sequence) loading.value = false;
+      if (request.isCurrent(seq)) loading.value = false;
     }
   }
   async function run(action: () => Promise<unknown>) {
     if (busy.value) return;
     busy.value = true;
-    const seq = sequence;
+    const seq = request.current();
     try {
       await action();
-      if (seq === sequence) {
+      if (request.isCurrent(seq)) {
         busy.value = false;
         await load();
       }
     } catch {
-      if (seq === sequence) Message.error('操作失败，请核对权限、配置或重新预览');
+      if (request.isCurrent(seq)) Message.error('操作失败，请核对权限、配置或重新预览');
     } finally {
-      if (seq === sequence) busy.value = false;
+      if (request.isCurrent(seq)) busy.value = false;
     }
   }
   function save() {
@@ -137,36 +138,36 @@
   }
   async function enable() {
     if (busy.value) return;
-    const seq = sequence;
+    const seq = request.current();
     busy.value = true;
     try {
       const result = await previewAction(props.projectId, '', 'ENABLE');
-      if (seq !== sequence) return;
+      if (!request.isCurrent(seq)) return;
       preview.value = result;
       acknowledged.value = false;
       visible.value = true;
     } catch {
-      if (seq === sequence) Message.error('启用预览失败，请重试');
+      if (request.isCurrent(seq)) Message.error('启用预览失败，请重试');
     } finally {
-      if (seq === sequence) busy.value = false;
+      if (request.isCurrent(seq)) busy.value = false;
     }
   }
   async function confirmEnable() {
     if (!acknowledged.value || !preview.value || busy.value || preview.value.expiresAt <= Date.now()) return false;
-    const seq = sequence;
+    const seq = request.current();
     busy.value = true;
     try {
       await confirmAction(props.projectId, preview.value.previewId);
-      if (seq === sequence) {
+      if (request.isCurrent(seq)) {
         busy.value = false;
         await load();
       }
       return true;
     } catch {
-      if (seq === sequence) Message.error('确认失败，预览可能变化或过期，请重新预览');
+      if (request.isCurrent(seq)) Message.error('确认失败，预览可能变化或过期，请重新预览');
       return false;
     } finally {
-      if (seq === sequence) busy.value = false;
+      if (request.isCurrent(seq)) busy.value = false;
     }
   }
   watch(
@@ -178,7 +179,7 @@
     { immediate: true }
   );
   onBeforeUnmount(() => {
-    sequence += 1;
+    request.invalidate();
     draft.value = empty();
   });
 </script>

@@ -82,6 +82,7 @@ sources += sorted(p for p in (module / "test/java/io/metersphere/functional/plan
                   if (args.jdbc or p.name == "PlanReviewRulesTests.java"))
 if args.jdbc:
     sources.append(ROOT / "backend/framework/sdk/src/main/java/io/metersphere/sdk/util/JSON.java")
+    sources.append(ROOT / "backend/framework/sdk/src/main/java/io/metersphere/sdk/util/AesGcmCodec.java")
 classpath = os.pathsep.join(map(str, [JAR, *dependencies]))
 subprocess.run(["javac", "-encoding", "UTF-8", "--release", "21", "-cp", classpath,
                 "-d", str(classes), *map(str, sources)], check=True)
@@ -91,6 +92,7 @@ subprocess.run(["java", "-Dplan.review.repo.root=" + str(ROOT),
                 *(["--select-method",args.select_method] if args.select_method else [
                 "--select-class", "io.metersphere.functional.handoff.HandoffRulesTests",
                 "--select-class", "io.metersphere.functional.handoff.HandoffHttpTransportTests",
+                "--select-class", "io.metersphere.functional.handoff.HandoffSecretCompatibilityTests",
                 *(["--select-class", "io.metersphere.functional.planreview.HandoffPersistenceTests", "--select-class", "io.metersphere.functional.planreview.HandoffExecutorTests"] if args.jdbc else []),
                 *(["--select-class", "io.metersphere.functional.planreview.PlanReviewPersistenceTests"] if args.jdbc and args.regression else []),
                 *(["--select-class", "io.metersphere.functional.planreview.PlanReviewApplicationTests"] if args.jdbc and args.regression else []),

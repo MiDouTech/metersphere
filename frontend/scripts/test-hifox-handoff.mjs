@@ -8,6 +8,9 @@ import test from 'node:test';
 import { compileFunction } from 'node:vm';
 import { parse, compileScript, compileTemplate } from 'vue/compiler-sfc';
 
+const gateSource = ts.transpileModule(readFileSync(new URL('../src/utils/latestRequest.ts', import.meta.url),'utf8').replace('export default function','function'), {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+const createLatestRequest = compileFunction(gateSource+';return createLatestRequest;',[])();
+
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => {resolve=done;}); return {promise,resolve}; }
 function source(name) { return readFileSync(new URL(`../src/components/business/hifox-handoff/${name}.vue`,import.meta.url),'utf8'); }
@@ -18,8 +21,8 @@ function harness(name, overrides={}) {
   let script=source(name).match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1].replace(/^\s*import[\s\S]*?;/gm,'');
   script=ts.transpileModule(script,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
   const exposed={card:'load,prepare,confirm,view,preview,acknowledged,visible,busy,error,canSend',configuration:'load,save,enable,confirmEnable,draft,view,preview,acknowledged,visible,busy,error',records:'load,search,rows,keyword,state,sourceChanged,createdRange,page,total,error,selected'}[name];
-  const fn=compileFunction(`const states = {NONE:'尚无投递记录',READY:'待推送'};`+script+`;return {${exposed}}`,['ref','computed','watch','onBeforeUnmount','defineProps','useAppStore','Message',...apiNames]);
-  const api=fn(ref,computed,(_getter,callback,options)=>{watchers.push(callback);if(options?.immediate)callback();},cb=>unmounts.push(cb),()=>props,()=>app,{success(){},error(){}},...apiNames.map(key=>async(...args)=>{calls.push({name:key,args});return (overrides[key]||defaults[key])(...args);}));
+  const fn=compileFunction(`const states = {NONE:'尚无投递记录',READY:'待推送'};`+script+`;return {${exposed}}`,['createLatestRequest','ref','computed','watch','onBeforeUnmount','defineProps','useAppStore','Message',...apiNames]);
+  const api=fn(createLatestRequest,ref,computed,(_getter,callback,options)=>{watchers.push(callback);if(options?.immediate)callback();},cb=>unmounts.push(cb),()=>props,()=>app,{success(){},error(){}},...apiNames.map(key=>async(...args)=>{calls.push({name:key,args});return (overrides[key]||defaults[key])(...args);}));
   return {api,calls,props,app,switchProject(){props.projectId='b';app.currentProjectId='b';watchers[0]();},unmount(){unmounts.forEach(fn=>fn());}};
 }
 for(const name of ['card','configuration','records','details','listCell','inspection'])test(`SFC ${name} script and template compile`,()=>{const {descriptor,errors}=parse(source(name));assert.deepEqual(errors,[]);compileScript(descriptor,{id:name});assert.deepEqual(compileTemplate({source:descriptor.template.content,filename:name+'.vue',id:name,compilerOptions:{expressionPlugins:['typescript']}}).errors,[]);});

@@ -1,7 +1,7 @@
 package io.metersphere.system.notice.utils;
 
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
+
+import io.metersphere.sdk.util.JSON;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -11,7 +11,6 @@ import java.util.Map;
 public class DingClient {
 
     public static void send(String webhook, String context, List<String>mobileList) {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
         Map<String, Object> mp = new LinkedHashMap<>();
         Map<String, Object> js = new HashMap<>();
         Map<String, Object> at = new HashMap<>();
@@ -21,7 +20,7 @@ public class DingClient {
         mp.put("msgtype", "text");
         mp.put("text", js);
         mp.put("at", at);
-        ClientPost.executeClient(webhook, httpClient, mp);
+        ClientPost.executeJson(webhook, JSON.toJSONString(mp));
     }
 
 }
