@@ -417,7 +417,7 @@
     } catch (failure) {
       if (context === generation) {
         await load();
-        if (context === generation && (queryFailed.value || job.value?.followup?.state !== 'SUCCEEDED'))
+        if (context === generation && (queryFailed.value || !['SUCCEEDED'].includes(job.value?.followup?.state || '')))
           error.value = `操作结果暂未确认，请先核对刷新后的原任务。${formatAppErrorMessage(
             ensureAppError(failure, '请刷新查询')
           )}`;
