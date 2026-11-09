@@ -158,12 +158,13 @@ public class ImportFollowupCoordinator {
     public Map<String,Object> status(String id,String user) { return status(id,user,"WEB"); }
     public Map<String,Object> status(String id,String user,String token) {
         var job=owned(id,user,token);
-        var rows=jdbc.queryForList("SELECT f.state,f.error_message message,f.plan_id planId,f.review_id reviewId,p.name planName,r.name reviewName "
-                + "FROM plan_review_import_followup f LEFT JOIN test_plan p ON BINARY p.id=BINARY f.plan_id LEFT JOIN case_review r ON BINARY r.id=BINARY f.review_id WHERE f.job_id=?",id);
+        var rows=jdbc.queryForList("SELECT f.state,f.policy,o.stage,f.error_message message,f.plan_id planId,f.review_id reviewId,p.name planName,r.name reviewName "
+                + "FROM plan_review_import_followup f LEFT JOIN plan_review_operation o ON BINARY o.id=BINARY f.operation_id AND BINARY o.project_id=BINARY f.project_id "
+                + "LEFT JOIN test_plan p ON BINARY p.id=BINARY f.plan_id LEFT JOIN case_review r ON BINARY r.id=BINARY f.review_id WHERE f.job_id=?",id);
         if(rows.isEmpty()){
             var legacy=jdbc.queryForList("SELECT policy,state FROM functional_import_followup WHERE job_id=? AND project_id=? AND user_id=?",id,job.get("project_id"),user);
             if(legacy.isEmpty())return Map.of("state","LEGACY");
-            if("IMPORT_ONLY".equals(legacy.getFirst().get("policy")))return Map.of("state",legacy.getFirst().get("state"),"legacy",true);
+            if("IMPORT_ONLY".equals(legacy.getFirst().get("policy")))return Map.of("state",legacy.getFirst().get("state"),"policy","IMPORT_ONLY","legacy",true);
             return Map.of("state","LEGACY_ADOPTION_REQUIRED","message","原关联后处理任务需受控迁移核对；原成功结果保留，不会另建对象","legacy",true);
         }
         var result=new LinkedHashMap<>(rows.getFirst());String project=(String)job.get("project_id");
