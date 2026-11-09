@@ -12,14 +12,20 @@ import sys
 import time
 import uuid
 
+if hasattr(sys.stdout,'reconfigure'):
+    sys.stdout.reconfigure(errors='backslashreplace')
+
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--mysqld',type=pathlib.Path,default=pathlib.Path(r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe'))
 parser.add_argument('--native-tests',action='store_true',help='Also run the existing import coordinator development tests with Maven')
 parser.add_argument('--native-only',action='store_true',help='Run native development tests without repeating the separately recorded core suite')
+parser.add_argument('--handoff',action='store_true',help='Run MSP-15 handoff tests against the isolated database')
 parser.add_argument('--native-test-filter',default='NotificationIsolationTests,AgentMcpCreateSchemaTests,ImportFollowupCoordinatorMySqlTests,PlanReviewCopyCoordinatorMySqlTests,PlanReviewNoticeChannelMySqlTests,PlanReviewHubOperationMySqlTests,PlanReviewLegacyImportMySqlTests,PlanReviewEntryBoundaryMySqlTests')
 parser.add_argument('--port',type=int,default=13326)
+parser.add_argument('--handoff-method',help='Focus a single JUnit method in the isolated handoff suite')
 args=parser.parse_args()
+if args.handoff_method and (not args.handoff or not __import__('re').fullmatch(r'[A-Za-z0-9_.]+#[A-Za-z0-9_]+',args.handoff_method)):parser.error('Focused handoff method requires --handoff and a qualified class#method')
 if args.native_only:args.native_tests=True
 if not __import__('re').fullmatch(r'[A-Za-z0-9_,]+',args.native_test_filter):parser.error('Native filter must contain test class names separated by commas')
 binary=args.mysqld.resolve(strict=True)
@@ -56,7 +62,7 @@ with (run/'server-console.log').open('wb') as log:
         result=subprocess.CompletedProcess([],0)
         if not args.native_only:
             with (run/'suite.log').open('wb') as suite:
-                result=subprocess.run([sys.executable,str(ROOT/'scripts/test-plan-review-rules.py'),'--mysql-config',str(connection)],stdout=suite,stderr=subprocess.STDOUT,cwd=ROOT,creationflags=flags)
+                result=subprocess.run([sys.executable,str(ROOT/'scripts'/('test-hifox-handoff.py' if args.handoff else 'test-plan-review-rules.py')),'--mysql-config',str(connection),*(['--select-method',args.handoff_method] if args.handoff_method else [])],stdout=suite,stderr=subprocess.STDOUT,cwd=ROOT,creationflags=flags)
             output=(run/'suite.log').read_text(encoding='utf-8',errors='replace')
             print('\n'.join(output.splitlines()[-22:]),flush=True)
             print('Isolated SQL suite log: '+str(run/'suite.log'),flush=True)

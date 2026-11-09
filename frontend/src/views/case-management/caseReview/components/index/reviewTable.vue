@@ -84,6 +84,7 @@
         ><span :data-relation-result="`review-${record.id}`" tabindex="-1"
           ><PlanReviewListCell side="review" :value="record.planReviewRelation" /></span
       ></template>
+      <template #hifoxHandoff="{ record }"><HandoffListCell :value="record.planReviewRelation?.handoff" /></template>
       <template #name="{ record }">
         <a-button type="text" class="max-w-full px-0" @click.stop="openDetail(record.id)">
           <span class="one-line-text">{{ record.name }}</span>
@@ -210,6 +211,7 @@
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
   import PlanReviewListCell from '@/components/business/plan-review/listCell.vue';
   import PlanReviewListToolbar from '@/components/business/plan-review/listToolbar.vue';
+  import HandoffListCell from '@/components/business/hifox-handoff/listCell.vue';
   import passRateLine from '../passRateLine.vue';
   import deleteReviewModal from './deleteReviewModal.vue';
   import ModuleTree from './moduleTree.vue';
@@ -443,6 +445,14 @@
       dataIndex: 'caseCount',
       showDrag: true,
       width: 100,
+    },
+    {
+      title: 'HiFox交接',
+      dataIndex: 'hifoxHandoff',
+      slotName: 'hifoxHandoff',
+      width: 200,
+      showInTable: true,
+      showDrag: true,
     },
     {
       title: '关联测试计划',

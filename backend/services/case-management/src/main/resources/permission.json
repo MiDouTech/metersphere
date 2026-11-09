@@ -77,6 +77,20 @@
         ]
       },
       {
+        "id": "HIFOX_HANDOFF",
+        "name": "Webhook测试计划推送",
+        "permissions": [
+          {
+            "id": "HIFOX_HANDOFF:CONFIG_MANAGE",
+            "name": "管理项目推送配置与授权"
+          },
+          {
+            "id": "HIFOX_HANDOFF:PLAN_MANAGE",
+            "name": "单条补推与恢复剩余重试"
+          }
+        ]
+      },
+      {
         "id": "PLAN_REVIEW",
         "name": "计划与评审关联管理",
         "permissions": [
