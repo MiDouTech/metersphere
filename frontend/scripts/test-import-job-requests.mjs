@@ -164,6 +164,102 @@ test('a lost retry response queries the original job and never reimports or repe
   }
 });
 
+[false, true].forEach((queryFails) => {
+  test(`a lost retry response with ${
+    queryFails ? 'failed query' : 'FAILED followup'
+  } keeps a safe warning`, async () => {
+    let writes = 0;
+    const app = mount(
+      async () => {
+        if (writes && queryFails) throw new Error('query unavailable');
+        return { jobId: 'job-1', state: 'COMPLETED', total: 1, items: [], counts: [], followup: { state: 'FAILED' } };
+      },
+      undefined,
+      async () => {
+        writes++;
+        throw new Error('response lost');
+      }
+    );
+    try {
+      await flush();
+      await app.state.retryFollowup();
+      assert.equal(writes, 1);
+      assert.equal(app.state.job.value.followup.state, 'FAILED');
+      assert.match(app.state.error.value, /操作结果暂未确认/);
+      assert.equal(app.state.queryFailed.value, queryFails);
+      assert.equal(app.state.saving.value, false);
+      if (queryFails) {
+        await app.state.retryFollowup();
+        await app.state.action('retry');
+        assert.equal(writes, 1);
+      }
+    } finally {
+      app.stop();
+    }
+  });
+});
+
+[false, true].forEach((closeBeforeSwitch) => {
+  test(`a retry recovery query after ${
+    closeBeforeSwitch ? 'project close/reopen' : 'job switch'
+  } cannot pollute the new job`, async () => {
+    let writes = 0;
+    let resolveRecovery;
+    const app = mount(
+      async ({ url }) => {
+        if (writes && url.includes('job-1'))
+          return new Promise((resolve) => {
+            resolveRecovery = resolve;
+          });
+        return {
+          jobId: url.includes('job-2') ? 'job-2' : 'job-1',
+          state: 'COMPLETED',
+          total: 1,
+          items: [],
+          counts: [],
+          followup: { state: 'FAILED' },
+        };
+      },
+      undefined,
+      async () => {
+        writes++;
+        throw new Error('response lost');
+      }
+    );
+    try {
+      await flush();
+      const retry = app.state.retryFollowup();
+      await flush();
+      assert.equal(typeof resolveRecovery, 'function');
+      if (closeBeforeSwitch) {
+        app.props.visible = false;
+        await flush();
+        assert.equal(app.state.job.value, undefined);
+      }
+      app.props.jobId = 'job-2';
+      app.props.visible = true;
+      await flush();
+      resolveRecovery({
+        jobId: 'job-1',
+        state: 'COMPLETED',
+        total: 999,
+        items: [],
+        counts: [],
+        followup: { state: 'SUCCEEDED' },
+      });
+      await retry;
+      assert.equal(app.state.job.value.jobId, 'job-2');
+      assert.equal(app.state.job.value.total, 1);
+      assert.equal(app.state.job.value.followup.state, 'FAILED');
+      assert.equal(app.state.error.value, '');
+      assert.equal(app.state.queryFailed.value, false);
+      assert.equal(app.state.saving.value, false);
+    } finally {
+      app.stop();
+    }
+  });
+});
+
 test('an old retry failure cannot alter a newly opened job', async () => {
   let rejectOld;
   const app = mount(
