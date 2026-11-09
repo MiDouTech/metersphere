@@ -37,10 +37,10 @@ class HandoffExecutorTests {
         try{
             assertTrue(t.worker.enqueue("project",key("plan")));await(()->t.target.calls.get()==1);assertTrue(t.worker.enqueue("project",key("plan2")));
             switch(change){
-                case "PG" -> t.run(()->t.service.grant("project",t.revision(),false,"actor"));
+                case "PG" -> t.run(()->t.service.grant(HandoffPersistenceTests.PLATFORM,t.revision(),false,"actor"));
                 case "URL" -> t.save("https://new-receiver.example.test/hook","NONE","");
                 case "SOURCE" -> {t.jdbc.update("UPDATE case_review_functional_case SET status='UN_PASS' WHERE review_id='review2'");t.tx.executeWithoutResult(s->t.service.capture("project","plan2",true));}
-                case "DISABLED" -> t.run(()->t.service.disable("project",t.revision(),"actor"));
+                case "DISABLED" -> t.run(()->t.service.disable(HandoffPersistenceTests.PLATFORM,t.revision(),"actor"));
                 default -> throw new IllegalArgumentException();
             }
             assertEquals(0,used("plan2"));assertNull(t.jdbc.queryForObject("SELECT payload_json FROM hifox_http_delivery WHERE plan_id='plan2'",String.class));

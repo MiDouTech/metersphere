@@ -49,6 +49,8 @@ public class BugSyncNoticeService {
     private ProjectApplicationService projectApplicationService;
     @Resource
     private ProjectRobotMapper projectRobotMapper;
+    @Resource
+    private io.metersphere.system.mapper.ExtSystemProjectMapper sourceMembers;
 
     @Async
     public void sendNotice(int total, String currentUser, String language, String triggerMode, String projectId) {
@@ -116,7 +118,7 @@ public class BugSyncNoticeService {
         try {
             ProjectRobotExample example = new ProjectRobotExample();
             example.createCriteria()
-                    .andProjectIdEqualTo(bug.getProjectId())
+                    .andProjectIdEqualTo(io.metersphere.system.service.PlatformNotificationScope.ID)
                     .andPlatformEqualTo(NoticeConstants.Type.WE_COM)
                     .andEnableEqualTo(true);
             List<ProjectRobot> robots = projectRobotMapper.selectByExample(example);
@@ -127,9 +129,8 @@ public class BugSyncNoticeService {
             if (CollectionUtils.isEmpty(handleUserIds)) {
                 return;
             }
-            UserExample userExample = new UserExample();
-            userExample.createCriteria().andIdIn(handleUserIds);
-            List<User> handlers = userMapper.selectByExample(userExample);
+            List<User> handlers = sourceMembers.getEnableProjectMemberByUserId(bug.getProjectId(),handleUserIds);
+            if (CollectionUtils.isEmpty(handlers)) return;
             List<String> wecomUserIds = handlers.stream()
                     .map(User::getWecomUserid)
                     .filter(StringUtils::isNotBlank)

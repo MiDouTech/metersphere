@@ -24,6 +24,24 @@ class WecomBotServiceTests {
     private NotificationTriggerProviderRegistry providers;
     private WecomBotService service;
 
+    @Test
+    void historicalProjectRuleRejectsMutationsAndNewEnqueueWithoutTouchingStorage() {
+        when(jdbc.queryForList("SELECT * FROM wecom_notification_rule WHERE id=?", "old-rule"))
+                .thenReturn(List.of(Map.of("id","old-rule","scope_type","PROJECT","enabled",true)));
+        when(jdbc.queryForList("SELECT * FROM wecom_notification_schedule WHERE id=?", "old-plan"))
+                .thenReturn(List.of(Map.of("id","old-plan","rule_id","old-rule")));
+        List<Runnable> actions=List.of(
+                () -> service.deleteRule("old-rule"),
+                () -> service.enableRule("old-rule",false,"user"),
+                () -> service.enableRule("old-rule",true,"user"),
+                () -> service.deleteSchedule("old-plan"),
+                () -> service.enableSchedule("old-plan",false,"user"),
+                () -> service.runScheduleOnce("old-plan","user"),
+                () -> service.enqueue("old-rule","EVENT","event","key","CHAT","group","body",null,null));
+        actions.forEach(action -> assertThrows(MSException.class,action::run));
+        verify(jdbc,never()).update(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.any(Object[].class));
+    }
+
     @BeforeEach
     void setUp() {
         jdbc = mock(JdbcTemplate.class);

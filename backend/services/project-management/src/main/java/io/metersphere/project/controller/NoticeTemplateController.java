@@ -14,16 +14,19 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "项目管理-消息设置-模版设置")
 @RestController
-@RequestMapping("notice/template/")
+@org.apache.shiro.authz.annotation.RequiresAuthentication
+@RequestMapping("platform/notice/template/")
 public class NoticeTemplateController {
+    @Resource
+    private io.metersphere.system.service.PlatformNotificationScope platformScope;
     @Resource
     private NoticeTemplateService noticeTemplateService;
 
     @GetMapping("get/fields/{projectId}")
     @Operation(summary = "项目管理-消息设置-模版设置-获取消息模版字段")
-    @RequiresPermissions(PermissionConstants.PROJECT_MESSAGE_READ)
     public MessageTemplateResultDTO getTemplateFields(@PathVariable String projectId, @Schema(description = "消息配置功能类型")
     @RequestParam(value = "taskType") String taskType) {
+        platformScope.requireScope(projectId);
         return noticeTemplateService.getTemplateFields(projectId, taskType);
     }
 

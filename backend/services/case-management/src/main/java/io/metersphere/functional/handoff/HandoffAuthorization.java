@@ -14,6 +14,10 @@ public class HandoffAuthorization {
         source.requireRead(actor,project,true); source.requireRead(actor,project,false);
     }
     public void require(String actor,String project,String permission,boolean dualRead) {
+        if ("CONFIG_MANAGE".equals(permission) && !dualRead) {
+            new io.metersphere.system.service.PlatformNotificationScope(jdbc).requireScope(project, actor);
+            return;
+        }
         jdbc.update("INSERT IGNORE INTO plan_review_grant(project_id,update_time) VALUES(?,?)",project,System.currentTimeMillis());
         jdbc.queryForList("SELECT project_id FROM plan_review_grant WHERE project_id=? FOR UPDATE",project);
         validateAccount(actor,project);

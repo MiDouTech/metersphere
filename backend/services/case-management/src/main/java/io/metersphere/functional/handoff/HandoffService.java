@@ -13,6 +13,8 @@ import static io.metersphere.functional.handoff.HandoffAuthorization.fail;
 @Service
 @Transactional(rollbackFor=Exception.class)
 public class HandoffService {
+    static final String PLATFORM = io.metersphere.system.service.PlatformNotificationScope.ID;
+
     final HandoffStore store;
     final HandoffSourceReader sources;
     final HandoffAuthorization auth;
@@ -73,7 +75,7 @@ public class HandoffService {
         boolean changed=!Objects.equals(old,url);long urlRevision=number(c,"url_revision")+(changed?1:0);
         store.jdbc.update("UPDATE hifox_http_config SET url_secret=?,token_secret=?,auth_mode=?,url_revision=?,external_grant=CASE WHEN ? THEN 0 ELSE external_grant END,credential_revision=credential_revision+1,revision=revision+1,update_time=? WHERE project_id=?",
                 secrets.seal(project,"url",url),token==null?null:secrets.seal(project,"token",token),input.authMode(),urlRevision,changed,System.currentTimeMillis(),project);
-        if(changed)store.jdbc.update("UPDATE hifox_http_delivery SET state=CASE WHEN state IN ('SUCCESS','IN_FLIGHT') THEN state ELSE 'URL_CHANGED' END,reason='URL_CHANGED',revision=revision+1 WHERE project_id=? AND attempts_used>0",project);
+        if(changed)store.jdbc.update("UPDATE hifox_http_delivery SET state=CASE WHEN state IN ('SUCCESS','IN_FLIGHT') THEN state ELSE 'URL_CHANGED' END,reason='URL_CHANGED',revision=revision+1 WHERE config_scope=? AND attempts_used>0",project);
         store.audit(project,null,actor,"HTTP_CONFIG_SAVED",revision+1);return safeConfig(store.lock(project));
     }
     public Map<String,Object> grant(String project,long revision,boolean external,String actor){
@@ -89,9 +91,9 @@ public class HandoffService {
         pause(project,"DISABLED",actor);store.audit(project,null,actor,"DISABLED",revision+1);return safeConfig(store.lock(project));
     }
     private void pause(String project,String reason,String actor){
-        var affected=store.jdbc.queryForList("SELECT business_key,revision FROM hifox_http_delivery WHERE project_id=? AND state IN ('READY','RETRY','IN_FLIGHT','PAUSED')",project);
+        var affected=store.jdbc.queryForList("SELECT business_key,revision FROM hifox_http_delivery WHERE config_scope=? AND state IN ('READY','RETRY','IN_FLIGHT','PAUSED')",project);
         for(var d:affected)store.audit(project,text(d,"business_key"),actor,"PAUSE_"+reason,number(d,"revision")+1);
-        store.jdbc.update("UPDATE hifox_http_delivery SET state=CASE WHEN state='IN_FLIGHT' THEN state ELSE 'PAUSED' END,reason=?,revision=revision+1 WHERE project_id=? AND state IN ('READY','RETRY','IN_FLIGHT','PAUSED')",reason,project);
+        store.jdbc.update("UPDATE hifox_http_delivery SET state=CASE WHEN state='IN_FLIGHT' THEN state ELSE 'PAUSED' END,reason=?,revision=revision+1 WHERE config_scope=? AND state IN ('READY','RETRY','IN_FLIGHT','PAUSED')",reason,project);
     }
     /** Source transaction hook. Only real committed completion snapshots provide occurred_at. */
     @Transactional(noRollbackFor=Exception.class)
@@ -103,7 +105,7 @@ public class HandoffService {
     @Transactional(noRollbackFor=Exception.class)
     void captureCore(String project,String plan,boolean mutation){
         if(environment.isBlank())return;
-        var c=store.lock(project);sourceLocks.lockSource(plan);
+        sourceLocks.lockProject(project);var c=store.lock(PLATFORM);sourceLocks.lockSource(plan);
         var s=sources.read(project,plan);boolean eligible=HandoffPolicy.evaluate(s.snapshot()).eligible();String key=key(project,plan);
         var rows=store.jdbc.queryForList("SELECT * FROM hifox_http_fact WHERE business_key=? FOR UPDATE",key);var before=rows.isEmpty()?Map.<String,Object>of():rows.getFirst();
         if(!s.snapshot().sourceAuthorized()&&!before.isEmpty()){
@@ -116,10 +118,10 @@ public class HandoffService {
         }
         Long passed=eligible&&s.frozenAt()>0?s.frozenAt():null;
         String evidence=passed==null?null:HandoffPolicy.hash(json(List.of(passed,s.snapshot().generation(),s.snapshot().sourceVersion(),s.snapshot().frozenVersion(),s.snapshot().frozen(),s.snapshot().opinionFingerprint(),s.snapshotId(),s.ruleRevision())));
-        boolean[] membership=membership(project,s.snapshotId());boolean known=membership[0];boolean automatic=membership[1];
+        boolean[] membership=membership(PLATFORM,s.snapshotId());boolean known=membership[0];boolean automatic=membership[1];
         if(Objects.equals(before.get("snapshot_hash"),s.fingerprint())&&Objects.equals(before.get("time_revision"),evidence)
                 &&truth(before.get("interval_known"))==known&&truth(before.get("automatic"))==automatic&&Objects.equals(before.get("snapshot_json"),json(s)))return;
-        long seq=store.next(project);
+        long seq=store.next(PLATFORM);
         long revision=number(before,"revision")+1;
         store.jdbc.update("INSERT INTO hifox_http_fact(business_key,project_id,plan_id,revision,event_sequence,eligible,passed_at,time_revision,interval_known,automatic,snapshot_hash,snapshot_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE revision=VALUES(revision),event_sequence=VALUES(event_sequence),eligible=VALUES(eligible),passed_at=VALUES(passed_at),time_revision=VALUES(time_revision),interval_known=VALUES(interval_known),automatic=VALUES(automatic),snapshot_hash=VALUES(snapshot_hash),snapshot_json=VALUES(snapshot_json)",
                 key,project,plan,revision,seq,eligible,passed,evidence,known,automatic,s.fingerprint(),json(s));
@@ -135,16 +137,19 @@ public class HandoffService {
     }
     @Transactional(noRollbackFor=Exception.class)
     public void sourceDeleted(String project,String plan){
-        if(environment.isBlank())return;store.lock(project);
+        if(environment.isBlank())return;sourceLocks.lockProject(project);store.lock(PLATFORM);
         store.jdbc.update("UPDATE hifox_http_fact SET eligible=0,passed_at=NULL,time_revision=NULL,revision=revision+1 WHERE business_key=?",key(project,plan));
         store.jdbc.update("UPDATE hifox_http_delivery SET source_changed=1,state=CASE WHEN state IN ('SUCCESS','IN_FLIGHT') THEN state ELSE 'SOURCE_CHANGED' END,reason='SOURCE_CHANGED',revision=revision+1 WHERE business_key=?",key(project,plan));
     }
     void candidate(String project,HandoffSourceReader.Source s,long revision,String evidence,String kind){
         long now=System.currentTimeMillis();
-        store.jdbc.update("INSERT IGNORE INTO hifox_http_delivery(business_key,project_id,plan_id,event_id,state,candidate_kind,snapshot_json,fact_revision,time_revision,create_time,update_time) VALUES(?,?,?,?,'READY',?,?,?,?,?,?)",
-                key(project,s.plan()),project,s.plan(),UUID.randomUUID().toString(),kind,json(s),revision,evidence,now,now);
+        store.jdbc.update("INSERT IGNORE INTO hifox_http_delivery(business_key,project_id,plan_id,event_id,state,candidate_kind,snapshot_json,fact_revision,time_revision,create_time,update_time,config_scope) VALUES(?,?,?,?,'READY',?,?,?,?,?,?,?)",
+                key(project,s.plan()),project,s.plan(),UUID.randomUUID().toString(),kind,json(s),revision,evidence,now,now,PLATFORM);
     }
-    private List<String> snapshotIds(String project){return store.jdbc.queryForList("SELECT id FROM plan_review_frozen_snapshot WHERE project_id=? AND object_side='review' ORDER BY id",String.class,project);}
+    private List<String> snapshotIds(String project){
+        if (PLATFORM.equals(project)) return store.jdbc.queryForList("SELECT id FROM plan_review_frozen_snapshot WHERE object_side='review' ORDER BY id",String.class);
+        return store.jdbc.queryForList("SELECT id FROM plan_review_frozen_snapshot WHERE project_id=? AND object_side='review' ORDER BY id",String.class,project);
+    }
     /** Snapshot rows are immutable and written under the same project mutex as enable/disable. */
     private boolean[] membership(String project,String snapshot){
         if(snapshot==null||snapshot.isBlank())return new boolean[]{false,false};
@@ -177,12 +182,13 @@ public class HandoffService {
     boolean readable(String actor,String project){try{auth.read(actor,project);return true;}catch(PlanReviewFailure denied){return false;}}
     String stamp(String project,String plan,String action,String actor){
         Object facts;
-        if("ENABLE".equals(action)){try{facts=List.of(inventory(project),snapshotIds(project));}catch(RuntimeException unavailable){throw fail("INVENTORY_UNAVAILABLE",503,"历史盘点暂不可用，请重试");}}
+        if("ENABLE".equals(action)){try{facts=snapshotIds(PLATFORM);}catch(RuntimeException unavailable){throw fail("INVENTORY_UNAVAILABLE",503,"历史盘点暂不可用，请重试");}}
         else{var f=fact(project,plan);var d=store.delivery(project,key(project,plan));facts=List.of(f,d,store.legacyRows(project,plan));}
-        var c=store.lock(project);return HandoffPolicy.hash(json(List.of(c,permissionRevision(project,actor),facts)));
+        var d="ENABLE".equals(action)?Map.<String,Object>of():store.delivery(project,key(project,plan));
+        var c=d.isEmpty()?store.lock(PLATFORM):store.deliveryConfig(d);return HandoffPolicy.hash(json(List.of(c,permissionRevision(project,actor),facts)));
     }
     void sendAllowed(String project,String plan,String action,String actor){
-        auth.require(actor,project,"PLAN_MANAGE",true);var c=store.lock(project);requirePG(c);ready(c);
+        auth.require(actor,project,"PLAN_MANAGE",true);var existing=store.delivery(project,key(project,plan));var c=existing.isEmpty()?store.lock(PLATFORM):store.deliveryConfig(existing);requirePG(c);ready(c);
         var f=fact(project,plan);requireTime(f);
         if(!HandoffPolicy.evaluate(sources.read(project,plan).snapshot()).eligible())throw fail("SOURCE_NOT_ELIGIBLE",409,"当前来源不合格或待核实");
         if(!truth(f.get("eligible")))throw fail("SOURCE_NOT_ELIGIBLE",409,"当前来源不合格或待核实");
@@ -200,17 +206,23 @@ public class HandoffService {
             if(truth(c.get("enabled")))throw fail("ALREADY_ENABLED",409,"已启用");
         }else sendAllowed(project,plan,action,actor);
         String hash=stamp(project,plan,action,actor),id=UUID.randomUUID().toString();long expiry=System.currentTimeMillis()+600_000;
-        var view=new LinkedHashMap<String,Object>();view.put("scope","仅功能测试，排除API/场景");view.put("configuration",safeConfig(store.lock(project)));
+        var previewDelivery="ENABLE".equals(action)?Map.<String,Object>of():store.delivery(project,key(project,plan));
+        var previewConfig=previewDelivery.isEmpty()?store.lock(PLATFORM):store.deliveryConfig(previewDelivery);
+        var view=new LinkedHashMap<String,Object>();view.put("scope","仅功能测试，排除API/场景");view.put("configuration",safeConfig(previewConfig));
         if("ENABLE".equals(action)){
-            if(readable(actor,project)){
-                var visible=inventory(project).stream().filter(f->truth(f.get("eligible"))).map(f->{var s=decode(f.get("snapshot_json"),HandoffSourceReader.Source.class);return Map.of("planId",s.plan(),"planName",s.planName(),"reviewId",s.review(),"functionalCount",s.snapshot().source().size());}).toList();
-                view.put("visible",visible);view.put("visibleCount",visible.size());
+            view.put("visibilityMessage","启用范围为整个平台；业务记录仍按来源项目权限访问，历史不自动补发。");
+            var visible=new ArrayList<Map<String,Object>>();
+            for(var planRow:store.jdbc.queryForList("SELECT id,project_id FROM test_plan WHERE type='TEST_PLAN' ORDER BY project_id,id")) {
+                String origin=text(planRow,"project_id");
+                if(!readable(actor,origin)) continue;
+                var source=sources.read(origin,text(planRow,"id"));
+                if(HandoffPolicy.evaluate(source.snapshot()).eligible()) visible.add(Map.of("projectId",origin,"planId",source.plan(),"planName",source.planName(),"reviewId",source.review(),"functionalCount",source.snapshot().source().size()));
             }
-            view.put("visibilityMessage","历史明细按来源读取权限展示；当前无可展示明细不表示历史记录为空。可见数量非项目历史总量。");
+            view.put("visible",visible);view.put("visibleCount",visible.size());
         }else{
             var f=fact(project,plan);var d=store.delivery(project,key(project,plan));
             var source=decode(f.get("snapshot_json"),HandoffSourceReader.Source.class);
-            view.put("inspection",inspection(source,text(f,"time_revision"),d,store.lock(project)));
+            view.put("inspection",inspection(source,text(f,"time_revision"),d,previewConfig));
             view.put("occurredAt",Instant.ofEpochMilli(number(f,"passed_at")).toString());view.put("timeRevision",f.get("time_revision"));view.put("interval",interval(f));view.put("attemptsUsed",number(d,"attempts_used"));view.put("remaining",4-number(d,"attempts_used"));
         }
         store.jdbc.update("INSERT INTO hifox_handoff_preview(id,project_id,business_key,actor,action,revision_hash,payload_json,expires_at) VALUES(?,?,?,?,?,?,?,?)",id,project,"ENABLE".equals(action)?null:key(project,plan),actor,action,hash,json(Map.of("plan",plan)),expiry);
@@ -225,7 +237,8 @@ public class HandoffService {
         if("ENABLE".equals(action))auth.require(actor,project,"CONFIG_MANAGE",false);else auth.require(actor,project,"PLAN_MANAGE",true);
         if(p.get("consumed_at")!=null)return decode(p.get("result_json"),Map.class);
         if(number(p,"expires_at")<System.currentTimeMillis()||!Objects.equals(p.get("revision_hash"),stamp(project,plan,action,actor)))throw stale();
-        var c=store.lock(project);String operation=UUID.randomUUID().toString();
+        var existing="ENABLE".equals(action)?Map.<String,Object>of():store.delivery(project,key(project,plan));
+        var c=existing.isEmpty()?store.lock(PLATFORM):store.deliveryConfig(existing);String operation=UUID.randomUUID().toString();
         if("ENABLE".equals(action)){
             ready(c);if(truth(c.get("enabled")))throw stale();
             store.jdbc.update("INSERT INTO hifox_http_interval(id,project_id,active_project_id,start_sequence,baseline_json) VALUES(?,?,?,?,?)",UUID.randomUUID().toString(),project,project,number(c,"event_sequence"),json(snapshotIds(project)));
@@ -266,7 +279,7 @@ public class HandoffService {
         var reasons=new TreeSet<String>();String reason=text(delivery,"reason");
         if(!reason.isBlank())reasons.add(reason);
         if(!delivery.isEmpty()&&!"SUCCESS".equals(delivery.get("state"))&&!reason.isBlank()){
-            var actions=store.jdbc.queryForList("SELECT action FROM hifox_handoff_audit WHERE project_id=? AND business_key=? AND action LIKE 'PAUSE!_%' ESCAPE '!' AND revision>COALESCE((SELECT MAX(revision) FROM hifox_handoff_audit WHERE project_id=? AND business_key=? AND action IN ('RESUME','PUSH','MIGRATE_UNSENT')),0)",String.class,source.project(),delivery.get("business_key"),source.project(),delivery.get("business_key"));
+            var actions=store.jdbc.queryForList("SELECT action FROM hifox_handoff_audit WHERE project_id IN (?,?) AND business_key=? AND action LIKE 'PAUSE!_%' ESCAPE '!' AND revision>COALESCE((SELECT MAX(revision) FROM hifox_handoff_audit WHERE project_id IN (?,?) AND business_key=? AND action IN ('RESUME','PUSH','MIGRATE_UNSENT')),0)",String.class,source.project(),store.configurationScope(delivery),delivery.get("business_key"),source.project(),store.configurationScope(delivery),delivery.get("business_key"));
             for(String action:actions)if(action.startsWith("PAUSE_"))reasons.add(action.substring(6));
         }
         if(!truth(config.get("enabled")))reasons.add("DISABLED");
@@ -278,16 +291,16 @@ public class HandoffService {
     Map<String,Object> safeDelivery(Map<String,Object> d){
         var result=new LinkedHashMap<String,Object>();
         for(String field:List.of("business_key","event_id","operation_id","state","reason","attempts_used","http_status","next_at","had_unknown","source_changed","payload_hash","url_revision","revision","create_time","update_time"))result.put(field,d.get(field));
-        var s=decode(d.get("snapshot_json"),HandoffSourceReader.Source.class);result.put("source",Map.of("planId",s.plan(),"planName",s.planName(),"reviewId",s.review(),"reviewName",s.reviewName()));
-        result.put("inspection",inspection(s,text(d,"time_revision"),d,store.lock(text(d,"project_id"))));
-        result.put("audits",store.jdbc.queryForList("SELECT id,actor,action,revision,create_time,business_key FROM hifox_handoff_audit WHERE project_id=? AND (business_key=? OR business_key IS NULL OR business_key='') ORDER BY create_time,id",d.get("project_id"),d.get("business_key")).stream()
+        var s=decode(d.get("snapshot_json"),HandoffSourceReader.Source.class);result.put("source",Map.of("projectId",s.project(),"planId",s.plan(),"planName",s.planName(),"reviewId",s.review(),"reviewName",s.reviewName()));
+        result.put("inspection",inspection(s,text(d,"time_revision"),d,store.deliveryConfig(d)));
+        result.put("audits",store.jdbc.queryForList("SELECT id,actor,action,revision,create_time,business_key FROM hifox_handoff_audit WHERE project_id IN (?,?) AND (business_key=? OR business_key IS NULL OR business_key='') ORDER BY create_time,id",d.get("project_id"),store.configurationScope(d),d.get("business_key")).stream()
                 .map(a->new HandoffInspection.Audit(text(a,"id"),text(a,"actor"),text(a,"action"),number(a,"revision"),number(a,"create_time"),text(a,"business_key").isBlank()?"PROJECT":"DELIVERY")).toList());
         result.put("attempts",store.jdbc.queryForList("SELECT sequence_no,started_at,ended_at,http_status,error_code,result_unknown,credential_revision FROM hifox_http_attempt WHERE business_key=? ORDER BY sequence_no",d.get("business_key")));
         if(d.get("payload_json")!=null)result.put("message",decode(d.get("payload_json"),Map.class));
         result.put("risk",risk());return result;
     }
     public Map<String,Object> summary(String project,String plan,String actor){
-        auth.read(actor,project);var c=store.lock(project);var f=fact(project,plan);var s=sources.read(project,plan);var d=store.delivery(project,key(project,plan));
+        auth.read(actor,project);var f=fact(project,plan);var s=sources.read(project,plan);var d=store.delivery(project,key(project,plan));var c=d.isEmpty()?store.lock(PLATFORM):store.deliveryConfig(d);
         var result=new LinkedHashMap<String,Object>();result.put("eligibility",HandoffPolicy.evaluate(s.snapshot()));result.put("enabled",truth(c.get("enabled")));result.put("canManage",auth.can(actor,project,"PLAN_MANAGE"));
         result.put("timeState",f.get("passed_at")==null?"原通过时间待核实":interval(f));result.put("delivery",d.isEmpty()?Map.of():safeDelivery(d));
         result.put("legacy",store.legacy(project,plan));result.put("legacyCanMigrate",store.legacy(project,plan)&&store.provenLegacyUnsent(project,plan));result.put("risk",risk());return result;
@@ -301,11 +314,19 @@ public class HandoffService {
     public Map<String,Object> list(String project,int page,int size,String keyword,String state,String actor){return list(project,page,size,keyword,state,null,null,null,actor);}
     /** Time filter is inclusive delivery create_time (epoch milliseconds), independent of source_changed. */
     public Map<String,Object> list(String project,int page,int size,String keyword,String state,Boolean sourceChanged,Long from,Long to,String actor){
-        auth.require(actor,project,"CONFIG_MANAGE",true);
+        if (PLATFORM.equals(project)) auth.require(actor,project,"CONFIG_MANAGE",false);
+        else auth.require(actor,project,"CONFIG_MANAGE",true);
         if(page<1||size<1||size>100||keyword==null||keyword.length()>255)throw fail("INVALID_PAGE",400,"分页筛选无效");
         if(state!=null&&!Set.of("READY","RETRY","SUCCESS","IN_FLIGHT","PAUSED","FAILED","UNKNOWN_STOPPED","SOURCE_CHANGED","URL_CHANGED","CANCELLED").contains(state))throw fail("INVALID_STATE",400,"状态筛选无效");
         if(from!=null&&from<0||to!=null&&to<0||from!=null&&to!=null&&from>to)throw fail("INVALID_TIME_RANGE",400,"记录创建时间范围无效");
         String where="project_id=?";var args=new ArrayList<Object>();args.add(project);
+        if (PLATFORM.equals(project)) {
+            var projects=store.jdbc.queryForList("SELECT id FROM project WHERE enable=1 AND deleted=0 ORDER BY id",String.class)
+                    .stream().filter(id -> readable(actor,id)).toList();
+            if (projects.isEmpty()) return Map.of("total",0,"items",List.of());
+            where="project_id IN ("+String.join(",",Collections.nCopies(projects.size(),"?"))+")";
+            args.clear();args.addAll(projects);
+        }
         if(!keyword.isBlank()){where+=" AND (plan_id LIKE ? OR snapshot_json LIKE ?)";String match="%"+keyword.replace("!","!!").replace("%","!%").replace("_","!_")+"%";where=where.replace("LIKE ?","LIKE ? ESCAPE '!'");args.add(match);args.add(match);}
         if(state!=null){where+=" AND state=?";args.add(state);}
         if(sourceChanged!=null){where+=" AND source_changed=?";args.add(sourceChanged);}

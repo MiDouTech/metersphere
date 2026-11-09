@@ -15,6 +15,7 @@ public class WecomNotificationCronExecutor {
     public void execute(String ruleId, long scheduledFireTime) {
         if (!service.isEnabled()) return;
         Map<String, Object> rule = service.rule(ruleId);
+        if (!"SYSTEM".equals(rule.get("scope_type"))) return;
         Object enabled = rule.get("enabled");
         if (!(Boolean.TRUE.equals(enabled) || enabled instanceof Number n && n.intValue() == 1)) return;
         Long start = rule.get("start_at") instanceof Number n ? n.longValue() : null;

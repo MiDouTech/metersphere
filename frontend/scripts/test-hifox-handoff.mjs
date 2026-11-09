@@ -11,6 +11,11 @@ import { parse, compileScript, compileTemplate } from 'vue/compiler-sfc';
 const gateSource = ts.transpileModule(readFileSync(new URL('../src/utils/latestRequest.ts', import.meta.url),'utf8').replace('export default function','function'), {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 const createLatestRequest = compileFunction(gateSource+';return createLatestRequest;',[])();
 
+const appErrors = {};
+compileFunction(ts.transpileModule(readFileSync(new URL('../src/utils/appError.ts', import.meta.url), 'utf8'),
+ {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText, ['exports'])(appErrors);
+const {ensureAppError,formatAppErrorMessage} = appErrors;
+
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => {resolve=done;}); return {promise,resolve}; }
 function source(name) { return readFileSync(new URL(`../src/components/business/hifox-handoff/${name}.vue`,import.meta.url),'utf8'); }
@@ -21,8 +26,8 @@ function harness(name, overrides={}) {
   let script=source(name).match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1].replace(/^\s*import[\s\S]*?;/gm,'');
   script=ts.transpileModule(script,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
   const exposed={card:'load,prepare,confirm,view,preview,acknowledged,visible,busy,error,canSend',configuration:'load,save,enable,confirmEnable,draft,view,preview,acknowledged,visible,busy,error',records:'load,search,rows,keyword,state,sourceChanged,createdRange,page,total,error,selected'}[name];
-  const fn=compileFunction(`const states = {NONE:'尚无投递记录',READY:'待推送'};`+script+`;return {${exposed}}`,['createLatestRequest','ref','computed','watch','onBeforeUnmount','defineProps','useAppStore','Message',...apiNames]);
-  const api=fn(createLatestRequest,ref,computed,(_getter,callback,options)=>{watchers.push(callback);if(options?.immediate)callback();},cb=>unmounts.push(cb),()=>props,()=>app,{success(){},error(){}},...apiNames.map(key=>async(...args)=>{calls.push({name:key,args});return (overrides[key]||defaults[key])(...args);}));
+  const fn=compileFunction(`const states = {NONE:'尚无投递记录',READY:'待推送'};`+script+`;return {${exposed}}`,['createLatestRequest','ref','computed','watch','onBeforeUnmount','defineProps','useAppStore','Message','ensureAppError','formatAppErrorMessage',...apiNames]);
+  const api=fn(createLatestRequest,ref,computed,(_getter,callback,options)=>{watchers.push(callback);if(options?.immediate)callback();},cb=>unmounts.push(cb),()=>props,()=>app,{success(){},error(){}},ensureAppError,formatAppErrorMessage,...apiNames.map(key=>async(...args)=>{calls.push({name:key,args});return (overrides[key]||defaults[key])(...args);}));
   return {api,calls,props,app,switchProject(){props.projectId='b';app.currentProjectId='b';watchers[0]();},unmount(){unmounts.forEach(fn=>fn());}};
 }
 for(const name of ['card','configuration','records','details','listCell','inspection'])test(`SFC ${name} script and template compile`,()=>{const {descriptor,errors}=parse(source(name));assert.deepEqual(errors,[]);compileScript(descriptor,{id:name});assert.deepEqual(compileTemplate({source:descriptor.template.content,filename:name+'.vue',id:name,compilerOptions:{expressionPlugins:['typescript']}}).errors,[]);});
@@ -36,6 +41,21 @@ test('lost confirmation response reuses same preview',async()=>{let n=0;const h=
 test('unmount invalidates pending preview',async()=>{const d=deferred();const h=harness('card',{previewAction:()=>d.promise});await tick();const running=h.api.prepare();h.unmount();d.resolve({previewId:'late',payload:{}});await running;assert.equal(h.api.visible.value,false);});
 test('configuration failure preserves secret inputs; success clears them',async()=>{let fail=true;const h=harness('configuration',{saveConfiguration:async()=>{if(fail)throw Error('failed');}});await tick();h.api.draft.value.url='https://receiver.example.test/?private=sample';h.api.draft.value.token='sample-token';await h.api.save();assert.equal(h.api.draft.value.token,'sample-token');fail=false;await h.api.save();assert.equal(h.api.draft.value.token,'');assert.equal(h.api.draft.value.url,'');assert.equal(h.api.busy.value,false);});
 test('configuration never populates saved URL or token',async()=>{const h=harness('configuration');await tick();assert.equal(h.api.draft.value.url,'');assert.equal(h.api.draft.value.token,'');assert.equal(h.calls.filter(c=>c.name==='confirmAction').length,0);});
+test('platform configuration ignores outer project changes for every read and save',async()=>{
+ const h=harness('configuration');await tick();h.props.projectId='untrusted-project';h.app.currentProjectId='B';
+ h.api.draft.value.url='https://receiver.example.test/platform';await h.api.save();
+ assert.ok(h.calls.some(call=>call.name==='saveConfiguration'));
+ for(const call of h.calls.filter(call=>['getConfiguration','saveConfiguration'].includes(call.name)))assert.equal(call.args[0],'__MSP_PLATFORM_NOTIFICATIONS__');
+});
+test('a failed initial configuration read cannot save an empty draft',async()=>{
+ const h=harness('configuration',{getConfiguration:async()=>{throw Error('unavailable');}});await tick();
+ await h.api.save();assert.equal(h.api.error.value,true);assert.equal(h.calls.filter(call=>call.name==='saveConfiguration').length,0);
+});
+test('duplicate platform saves share one in-progress operation',async()=>{
+ const d=deferred();const h=harness('configuration',{saveConfiguration:()=>d.promise});await tick();
+ const first=h.api.save();const second=h.api.save();await tick();assert.equal(h.calls.filter(call=>call.name==='saveConfiguration').length,1);
+ d.resolve({});await Promise.all([first,second]);assert.equal(h.api.busy.value,false);
+});
 test('only CM preview contains no invented historical count',async()=>{const h=harness('configuration',{previewAction:async()=>({previewId:'p',expiresAt:Date.now()+10000,payload:{scope:'FUNCTIONAL'}})});await tick();await h.api.enable();assert.equal(h.api.preview.value.payload.visibleCount,undefined);assert.equal(h.api.acknowledged.value,false);assert.equal(await h.api.confirmEnable(),false);});
 test('records ignore old project responses',async()=>{const d=deferred();const h=harness('records',{getRecords:project=>project==='a'?d.promise:Promise.resolve({items:[{business_key:'b'}],total:1})});h.switchProject();await tick();d.resolve({items:[{business_key:'private-a'}],total:100});await tick();assert.equal(h.api.rows.value[0].business_key,'b');assert.equal(h.api.total.value,1);});
 test('record load failure preserves filters and is not empty success',async()=>{const h=harness('records',{getRecords:async()=>{throw Error('failed');}});await tick();h.api.keyword.value='plan';h.api.state.value='FAILED';await h.api.load();assert.equal(h.api.error.value,true);assert.equal(h.api.keyword.value,'plan');assert.equal(h.api.state.value,'FAILED');});

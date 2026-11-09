@@ -55,13 +55,14 @@ public class MessageDetailService {
         MessageTaskExample example = new MessageTaskExample();
         example.createCriteria()
                 .andTaskTypeEqualTo(type)
-                .andProjectIdEqualTo(projectId).andEnableEqualTo(true);
+                .andProjectIdEqualTo(PlatformNotificationScope.ID).andTestIdEqualTo("NONE").andEnableEqualTo(true);
         example.setOrderByClause("create_time asc");
         List<MessageTask> messageTaskLists = messageTaskMapper.selectByExample(example);
         if (CollectionUtils.isEmpty(messageTaskLists)) {
             return new ArrayList<>();
         }
         getMessageDetails(messageDetails, messageTaskLists);
+        messageDetails.forEach(detail -> detail.setProjectId(projectId));
         return messageDetails.stream()
                 .sorted(Comparator.comparing(MessageDetail::getCreateTime, Comparator.nullsLast(Long::compareTo)).reversed())
                 .distinct()

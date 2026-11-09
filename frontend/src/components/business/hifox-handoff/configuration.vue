@@ -13,7 +13,7 @@
           >尚未配置MSP来源环境或HTTPS来源基地址，配置完成后才能启用推送。</a-alert
         >
         <a-alert v-if="actionError" type="error">{{ actionError }}</a-alert>
-        <p>源环境：{{ view.environment }}；项目：{{ projectId }}；{{ view.enabled ? '已启用' : '已关闭' }}</p>
+        <p>源环境：{{ view.environment }}；作用域：整个平台；{{ view.enabled ? '已启用' : '已关闭' }}</p>
         <p>{{ view.configured ? `接收地址已配置（版本 ${view.urlRevision}）` : '尚未配置接收地址' }}</p>
         <a-form :model="draft" layout="vertical" @submit.prevent>
           <a-form-item :label="view.configured ? '替换接收地址（留空保留）' : 'HTTPS接收地址'">
@@ -34,11 +34,11 @@
         <div class="my-4 flex flex-wrap gap-2">
           <a-button :disabled="busy" @click="save">保存配置</a-button>
           <a-button :disabled="busy || view.enabled || !view.configured" @click="enable">启用预览</a-button>
-          <a-popconfirm content="停止新出站，在途请求无法撤回；既有暂停需有权者确认恢复。" @ok="disable"
+          <a-popconfirm content="停止平台新出站，在途请求无法撤回；既有暂停需有权者确认恢复。" @ok="disable"
             ><a-button :disabled="busy || !view.enabled">关闭推送</a-button></a-popconfirm
           >
         </div>
-        <a-checkbox v-model="externalGrant">允许当前环境和项目向已配置接收地址出站</a-checkbox>
+        <a-checkbox v-model="externalGrant">允许当前平台向已配置接收地址出站</a-checkbox>
         <a-button :disabled="busy" @click="grant">保存出站授权</a-button>
         <a-divider />
         <Records :project-id="projectId" />
@@ -76,10 +76,11 @@
     risk,
     saveConfiguration,
   } from '@/api/modules/hifox-handoff';
-  import createLatestRequest from '@/utils/latestRequest';
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
+  import createLatestRequest from '@/utils/latestRequest';
 
-  const props = defineProps<{ projectId: string }>();
+  const props = { projectId: '__MSP_PLATFORM_NOTIFICATIONS__' };
+  const { projectId } = props;
   const empty = (): Configuration => ({ url: '', authMode: 'NONE', token: '', clearToken: false });
   const draft = ref<Configuration>(empty());
   const view = ref<ConfigView>();
@@ -114,7 +115,7 @@
     }
   }
   async function run(action: () => Promise<unknown>) {
-    if (busy.value) return;
+    if (busy.value || loading.value || error.value || !view.value) return;
     busy.value = true;
     actionError.value = '';
     const seq = request.current();
@@ -134,24 +135,27 @@
     }
   }
   function save() {
+    if (busy.value || loading.value || error.value || !view.value) return;
     const project = props.projectId;
     const { revision } = view.value!;
     const input = { ...draft.value };
     return run(() => saveConfiguration(project, revision, input));
   }
   function grant() {
+    if (busy.value || loading.value || error.value || !view.value) return;
     const project = props.projectId;
     const { revision } = view.value!;
     const { value } = externalGrant;
     return run(() => grantConfiguration(project, revision, value));
   }
   function disable() {
+    if (busy.value || loading.value || error.value || !view.value) return;
     const project = props.projectId;
     const { revision } = view.value!;
     return run(() => disableConfiguration(project, revision));
   }
   async function enable() {
-    if (busy.value) return;
+    if (busy.value || loading.value || error.value || !view.value) return;
     const seq = request.current();
     busy.value = true;
     try {

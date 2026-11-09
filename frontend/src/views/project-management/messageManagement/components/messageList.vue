@@ -32,6 +32,7 @@
         </template>
       </MsSelect>
     </template>
+    <a-alert v-if="readError" type="error">读取失败，请重试 <a-button @click="initialize">重试</a-button></a-alert>
     <ms-base-table
       ref="tableRef"
       v-bind="propsRes"
@@ -51,6 +52,7 @@
           v-if="!record.children && hasAnyPermission(['PROJECT_MESSAGE:READ+ADD'])"
           v-model:model-value="record.receivers"
           v-model:loading="record.loading"
+          :disabled="initializing || readError || propsRes.loading || record.loading"
           class="w-full"
           mode="remote"
           :options="defaultReceivers"
@@ -62,7 +64,7 @@
           label-key="name"
           :multiple="true"
           :placeholder="t('project.messageManagement.receiverPlaceholder')"
-          :remote-extra-params="{ projectId: appStore.currentProjectId }"
+          :remote-extra-params="{ projectId: '__MSP_PLATFORM_NOTIFICATIONS__' }"
           :remote-func="getMessageUserList"
           :remote-fields-map="{ label: 'name', value: 'id', id: 'id' }"
           :not-auto-init-search="true"
@@ -87,7 +89,7 @@
           <a-switch
             v-model:model-value="record.projectRobotConfigMap[dataIndex as string].enable"
             v-permission="['PROJECT_MESSAGE:READ+UPDATE', 'PROJECT_MESSAGE:READ']"
-            :disabled="robotEnable"
+            :disabled="robotEnable || initializing || readError || propsRes.loading || record.loading"
             :before-change="(val) => handleChangeIntercept(!!val, record, dataIndex as string)"
             size="small"
             type="line"
@@ -140,11 +142,9 @@
     saveMessageConfig,
   } from '@/api/modules/project-management/messageManagement';
   import { useI18n } from '@/hooks/useI18n';
-  import useAppStore from '@/store/modules/app';
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { MessageItem, ProjectRobotConfig, Receiver, RobotItem } from '@/models/projectManagement/message';
-  import { ProjectManagementRouteEnum } from '@/enums/routeEnum';
 
   import type { SelectOptionData, TableColumnData, TableData } from '@arco-design/web-vue';
   import type { TableOperationColumn } from '@arco-design/web-vue/es/table/interface';
@@ -152,9 +152,10 @@
   const emit = defineEmits(['createRobot']);
 
   const router = useRouter();
-  const appStore = useAppStore();
   const { t } = useI18n();
 
+  const readError = ref(false);
+  const initializing = ref(true);
   const robotFilters = ref<string[]>([]);
   const robotOptions = ref<(SelectOptionData & RobotItem)[]>([]);
   const robotEnable = ref<boolean>(!hasAnyPermission(['PROJECT_MESSAGE:READ+UPDATE']));
@@ -236,7 +237,16 @@
   }
 
   const { propsRes, propsEvent, loadList, setLoadListParams } = useTable(
-    getMessageList,
+    async (params) => {
+      try {
+        const result = await getMessageList(params);
+        readError.value = false;
+        return result;
+      } catch (error) {
+        readError.value = true;
+        throw error;
+      }
+    },
     {
       columns: columns.value as MsTableColumn,
       scroll: { x: 'auto' },
@@ -324,7 +334,7 @@
   const defaultReceivers = ref<SelectOptionData[]>([]);
 
   async function initReceivers() {
-    const res = await getMessageUserList({ projectId: appStore.currentProjectId, keyword: '' });
+    const res = await getMessageUserList({ projectId: '__MSP_PLATFORM_NOTIFICATIONS__', keyword: '' });
     defaultReceivers.value = res.map((e) => ({
       label: e.name,
       ...e,
@@ -352,7 +362,7 @@
   }
 
   async function initRobotList() {
-    const res = await getRobotList(appStore.currentProjectId);
+    const res = await getRobotList('__MSP_PLATFORM_NOTIFICATIONS__');
     robotOptions.value = res
       .filter((e) => e.enable)
       .map((e) => ({
@@ -362,12 +372,20 @@
       }));
   }
 
-  onBeforeMount(async () => {
-    initReceivers();
-    await initRobotList();
-    setLoadListParams({ projectId: appStore.currentProjectId });
-    loadList();
-  });
+  async function initialize() {
+    initializing.value = true;
+    readError.value = false;
+    try {
+      await Promise.all([initReceivers(), initRobotList()]);
+      setLoadListParams({ projectId: '__MSP_PLATFORM_NOTIFICATIONS__' });
+      await loadList();
+    } catch {
+      readError.value = true;
+    } finally {
+      initializing.value = false;
+    }
+  }
+  onBeforeMount(initialize);
 
   function editRobot(record: TableMessageChildrenItem, dataIndex: string) {
     if (record.receivers?.length === 0) {
@@ -375,8 +393,11 @@
       return;
     }
     router.push({
-      name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_MESSAGE_MANAGEMENT_EDIT,
+      name: 'settingSystemParameter',
       query: {
+        tab: 'messageNotification',
+        notificationSection: 'messages',
+        notificationTemplate: 'true',
         id: record.projectRobotConfigMap?.[dataIndex].robotId,
         taskType: record.taskType,
         event: record.event,
@@ -391,14 +412,16 @@
    * @param dataIndex 操作的机器人列
    */
   async function handleChangeIntercept(val: boolean, record: TableMessageChildrenItem, dataIndex: string) {
+    if (record.loading || initializing.value || readError.value || propsRes.value.loading) return false;
     if (record.receivers.length === 0) {
       Message.warning(t('project.messageManagement.unsetReceiverTip'));
       return false;
     }
+    record.loading = true;
     try {
       await saveMessageConfig({
         ...record.projectRobotConfigMap?.[dataIndex],
-        projectId: appStore.currentProjectId,
+        projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
         taskType: record.taskType,
         event: record.event,
         receiverIds: record.receivers.map((e: Receiver) => (e.id !== undefined ? e.id : e)),
@@ -414,10 +437,13 @@
       // eslint-disable-next-line no-console
       console.log(error);
       return false;
+    } finally {
+      record.loading = false;
     }
   }
 
   async function changeMessageReceivers(val: boolean, record: TableMessageChildrenItem, dataIndex: string) {
+    if (record.loading || initializing.value || readError.value || propsRes.value.loading) return false;
     if (!val) {
       if (record.receivers.length === 0) {
         Message.warning(t('project.messageManagement.receiverNotNull'));
@@ -427,12 +453,13 @@
         record.loading = true;
         await saveMessageConfig({
           ...record.projectRobotConfigMap?.[dataIndex],
-          projectId: appStore.currentProjectId,
+          projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
           taskType: record.taskType,
           event: record.event,
           receiverIds: record.receivers.map((e: Receiver) => (e.id !== undefined ? e.id : e)),
         });
         Message.success(t('project.messageManagement.saveReceiverSuccess'));
+        await loadList();
       } catch (error: any) {
         // eslint-disable-next-line no-console
         console.log(error);
