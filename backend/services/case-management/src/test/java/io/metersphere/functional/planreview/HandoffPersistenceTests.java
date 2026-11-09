@@ -60,6 +60,41 @@ class HandoffPersistenceTests {
     long count(String table){return jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Long.class);}
 
     String key(){return jdbc.queryForObject("SELECT business_key FROM hifox_http_delivery",String.class);}
+    @Test void statisticsCompletionAndExistingSnapshotUseTheSameOpinionFingerprint(){
+        enable();
+        jdbc.update("UPDATE case_review_functional_case SET id=CASE case_id WHEN 'a' THEN 'z-member' ELSE 'a-member' END,status='PASS'");
+        jdbc.update("INSERT INTO case_review_history(id,review_id,case_id,status,content) VALUES('opinion','review','a','PASS',?)", "中文意见🙂".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var states=new PlanReviewPlanStateResolver(List.of());var locks=new PlanReviewPersistence(jdbc);
+        var app=new PlanReviewApplicationService(jdbc,locks,new PlanReviewAuthorization(jdbc),tx.getTransactionManager(),states);
+        run(()->app.refreshOpinionStatistics("review"));
+        // Preserve and validate the actual frozen bytes produced by the statistics path.
+        byte[] before=jdbc.queryForObject("SELECT snapshot FROM plan_review_frozen_snapshot WHERE object_side='review'",byte[].class);
+        run(()->{service.capture("project","plan",true);return null;});
+        assertEquals(1,count("hifox_http_delivery"),"unchanged passed review must be eligible after statistics completion");
+        assertArrayEquals(before,jdbc.queryForObject("SELECT snapshot FROM plan_review_frozen_snapshot WHERE object_side='review'",byte[].class));
+        jdbc.update("UPDATE case_review_history SET content=? WHERE id='opinion'", "改动意见".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        dispatch();assertEquals(0,target.calls.get());
+    }
+    @ParameterizedTest @ValueSource(strings={"content","deleted","abandoned","status"})
+    void legacyApplicationSnapshotsRemainReadableButOpinionMutationsAreRejected(String field){
+        enable();complete();
+        jdbc.update("UPDATE case_review_functional_case SET id=CASE case_id WHEN 'a' THEN 'z-member' ELSE 'a-member' END");
+        jdbc.update("INSERT INTO case_review_history(id,review_id,case_id,status,content) VALUES('opinion','review','a','PASS',?)",new byte[]{0,1,-1,32});
+        String legacy=HandoffPolicy.hash(io.metersphere.sdk.util.JSON.toJSONString(List.of(
+                jdbc.queryForList("SELECT id,case_id,status,update_time FROM case_review_functional_case WHERE review_id=? ORDER BY case_id", "review"),
+                jdbc.queryForList("SELECT id,case_id,status,deleted,abandoned,content body FROM case_review_history WHERE review_id=? ORDER BY id", "review"))));
+        jdbc.update("UPDATE plan_review_frozen_snapshot SET target_fingerprint=? WHERE object_side='review'",legacy);
+        var reader=new HandoffSourceReader(jdbc,new PlanReviewPlanStateResolver(List.of()),new PlanReviewAuthorization(jdbc),new PlanReviewFrozenReader(jdbc));
+        assertTrue(HandoffPolicy.evaluate(run(()->reader.read("project","plan")).snapshot()).eligible());
+        switch(field){
+            case "content" -> jdbc.update("UPDATE case_review_history SET content=?",new byte[]{1,2,3});
+            case "deleted" -> jdbc.update("UPDATE case_review_history SET deleted=1");
+            case "abandoned" -> jdbc.update("UPDATE case_review_history SET abandoned=1");
+            case "status" -> jdbc.update("UPDATE case_review_history SET status='FAIL'");
+        }
+        assertEquals("OPINIONS_CHANGED",HandoffPolicy.evaluate(run(()->reader.read("project","plan")).snapshot()).reason());
+        assertEquals(legacy,jdbc.queryForObject("SELECT target_fingerprint FROM plan_review_frozen_snapshot WHERE object_side='review'",String.class));
+    }
     String state(){return jdbc.queryForObject("SELECT state FROM hifox_http_delivery",String.class);}
     void dispatch(){worker.dispatch("project",key());}
     void tickWorker(){worker.maintain();worker.tick();awaitIdle(worker);}

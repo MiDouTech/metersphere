@@ -140,7 +140,9 @@ public class PlanReviewApplicationService {
             var counts = statusCounts(jdbc.queryForList("SELECT status FROM case_review_functional_case WHERE review_id=? FOR UPDATE",String.class,reviewId));
             long total = number(counts, "total"), pending = number(counts, "pending"), finished = number(counts, "finished");
             String status = pending == total ? "PREPARED" : finished == total ? "COMPLETED" : "UNDERWAY";
-            if ("COMPLETED".equals(status)) persistence.freeze(current, "review", reviewId, status, fingerprint(reviewId), "plan-review-statistics",planStates.statisticsSnapshot(text(current,"plan_id")));
+            if ("COMPLETED".equals(status)) persistence.freeze(current, "review", reviewId, status,
+                    new PlanReviewFingerprintReader(jdbc).read(reviewId, PlanReviewFingerprintReader.ReadMode.LOCKED, PlanReviewFingerprintReader.Format.COMPLETION_V1),
+                    "plan-review-statistics",planStates.statisticsSnapshot(text(current,"plan_id")));
             jdbc.update("UPDATE case_review SET status=? WHERE id=?", status, reviewId);
         }
         return true;
@@ -849,9 +851,8 @@ public class PlanReviewApplicationService {
     }
 
     private String fingerprint(String review) {
-        var members = jdbc.queryForList("SELECT id,case_id,status,update_time FROM case_review_functional_case WHERE review_id=? ORDER BY case_id FOR UPDATE", review);
-        var opinions = jdbc.queryForList("SELECT id,case_id,status,deleted,abandoned,content body FROM case_review_history WHERE review_id=? ORDER BY id FOR UPDATE", review);
-        return hash(JSON.toJSONString(List.of(members, opinions)));
+        // Existing preview/approval hashes retain their historical format until consumed or expired.
+        return new PlanReviewFingerprintReader(jdbc).read(review, PlanReviewFingerprintReader.ReadMode.LOCKED, PlanReviewFingerprintReader.Format.APPLICATION_V1);
     }
 
     private record Context(Map<String, Object> plan, Map<String, Object> review, Map<String, Object> grant) { }

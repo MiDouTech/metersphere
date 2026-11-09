@@ -11,6 +11,11 @@ import java.util.Map;
 @RestControllerAdvice(assignableTypes=HandoffController.class)
 public class HandoffExceptionHandler {
     @NoResultHolder
+    @ExceptionHandler(io.metersphere.functional.handoff.HandoffSecretUnavailable.class)
+    public ResponseEntity<Map<String,Object>> secretUnavailable(io.metersphere.functional.handoff.HandoffSecretUnavailable error){
+        return ResponseEntity.status(503).body(Map.of("code","HANDOFF_ENCRYPTION_UNAVAILABLE","message",error.getMessage(),"retryable",false));
+    }
+    @NoResultHolder
     @ExceptionHandler({IllegalArgumentException.class,org.springframework.http.converter.HttpMessageNotReadableException.class})
     public ResponseEntity<Map<String,Object>> invalid(Exception ignored){return ResponseEntity.badRequest().body(Map.of("code","INVALID_HANDOFF_INPUT","message","交接配置或请求参数无效，请核对输入","retryable",false));}
     @NoResultHolder

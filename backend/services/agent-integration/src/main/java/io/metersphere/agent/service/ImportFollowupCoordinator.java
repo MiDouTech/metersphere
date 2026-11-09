@@ -76,8 +76,12 @@ public class ImportFollowupCoordinator {
                     try { return Boolean.TRUE.equals(((Map<?, ?>) relations.summary("plan", (String)group.get("planId"),user).get("sync")).get("editable")); }
                     catch (io.metersphere.functional.planreview.PlanReviewFailure denied) { return false; }
                 }).toList();
-        boolean allowed=io.metersphere.functional.planreview.PlanReviewPolicy.allowedCreatePair(relationAuthorization.current(user,project,true),1);
-        return Map.of("projectId",project,"groups",(access.userHasPermission(user,project,PermissionConstants.TEST_PLAN_READ) && access.userHasPermission(user,project,PermissionConstants.CASE_REVIEW_READ)) ? groups : List.of(),"canCreate",allowed);
+        var current=relationAuthorization.current(user,project,true);
+        boolean allowed=io.metersphere.functional.planreview.PlanReviewPolicy.allowedCreatePair(current,1);
+        boolean permitted=io.metersphere.functional.planreview.PlanReviewPolicy.allowedCreatePair(
+                new io.metersphere.functional.planreview.PlanReviewPolicy.Access(current.permissions(),true),1);
+        return Map.of("projectId",project,"groups",(access.userHasPermission(user,project,PermissionConstants.TEST_PLAN_READ) && access.userHasPermission(user,project,PermissionConstants.CASE_REVIEW_READ)) ? groups : List.of(),"canCreate",allowed,
+                "canCreatePermission",permitted,"serviceGranted",current.serviceGrant());
     }
 
     public void prepare(String id,String user,ImportFollowupRequest request) { prepare(id,user,request,"WEB"); }

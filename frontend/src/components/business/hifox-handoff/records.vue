@@ -63,6 +63,7 @@
 
   import type { Delivery } from '@/api/modules/hifox-handoff';
   import { getRecords, states } from '@/api/modules/hifox-handoff';
+  import createLatestRequest from '@/utils/latestRequest';
 
   const filterStates = Object.fromEntries(Object.entries(states).filter(([key]) => key !== 'NONE'));
   const props = defineProps<{ projectId: string }>();
@@ -76,9 +77,9 @@
   const total = ref(0);
   const loading = ref(false);
   const error = ref(false);
-  let sequence = 0;
+  const request = createLatestRequest();
   async function load() {
-    const seq = ++sequence;
+    const seq = request.begin();
     loading.value = true;
     error.value = false;
     rows.value = [];
@@ -93,13 +94,13 @@
         createdRange.value?.[0],
         createdRange.value?.[1]
       );
-      if (seq !== sequence) return;
+      if (!request.isCurrent(seq)) return;
       rows.value = result.items;
       total.value = result.total;
     } catch {
-      if (seq === sequence) error.value = true;
+      if (request.isCurrent(seq)) error.value = true;
     } finally {
-      if (seq === sequence) loading.value = false;
+      if (request.isCurrent(seq)) loading.value = false;
     }
   }
   function search() {
@@ -120,6 +121,6 @@
     { immediate: true }
   );
   onBeforeUnmount(() => {
-    sequence += 1;
+    request.invalidate();
   });
 </script>

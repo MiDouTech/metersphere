@@ -6,6 +6,13 @@
     <a-spin :loading="loading">
       <a-alert v-if="error" type="error">配置读取失败或无配置权限 <a-button @click="load">重试</a-button></a-alert>
       <template v-else-if="view">
+        <a-alert v-if="view.encryptionConfigured === false" type="warning"
+          >Webhook加密配置缺失或不可用，请联系部署管理员核对持久化加密密钥后保存。</a-alert
+        >
+        <a-alert v-if="view.sourceConfigured === false" type="warning"
+          >尚未配置MSP来源环境或HTTPS来源基地址，配置完成后才能启用推送。</a-alert
+        >
+        <a-alert v-if="actionError" type="error">{{ actionError }}</a-alert>
         <p>源环境：{{ view.environment }}；项目：{{ projectId }}；{{ view.enabled ? '已启用' : '已关闭' }}</p>
         <p>{{ view.configured ? `接收地址已配置（版本 ${view.urlRevision}）` : '尚未配置接收地址' }}</p>
         <a-form :model="draft" layout="vertical" @submit.prevent>
@@ -69,6 +76,8 @@
     risk,
     saveConfiguration,
   } from '@/api/modules/hifox-handoff';
+  import createLatestRequest from '@/utils/latestRequest';
+  import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
 
   const props = defineProps<{ projectId: string }>();
   const empty = (): Configuration => ({ url: '', authMode: 'NONE', token: '', clearToken: false });
@@ -77,45 +86,51 @@
   const loading = ref(false);
   const busy = ref(false);
   const error = ref(false);
+  const actionError = ref('');
   const visible = ref(false);
   const acknowledged = ref(false);
   const externalGrant = ref(false);
   const preview = ref<PreviewView>();
-  let sequence = 0;
+  const request = createLatestRequest();
   async function load() {
-    const seq = ++sequence;
+    const seq = request.begin();
     const project = props.projectId;
     loading.value = true;
     error.value = false;
+    actionError.value = '';
     view.value = undefined;
     visible.value = false;
     draft.value = empty();
     try {
       const result = await getConfiguration(project);
-      if (seq !== sequence) return;
+      if (!request.isCurrent(seq)) return;
       view.value = result;
       draft.value.authMode = result.authMode;
       externalGrant.value = result.external_grant;
     } catch {
-      if (seq === sequence) error.value = true;
+      if (request.isCurrent(seq)) error.value = true;
     } finally {
-      if (seq === sequence) loading.value = false;
+      if (request.isCurrent(seq)) loading.value = false;
     }
   }
   async function run(action: () => Promise<unknown>) {
     if (busy.value) return;
     busy.value = true;
-    const seq = sequence;
+    actionError.value = '';
+    const seq = request.current();
     try {
       await action();
-      if (seq === sequence) {
+      if (request.isCurrent(seq)) {
         busy.value = false;
         await load();
       }
-    } catch {
-      if (seq === sequence) Message.error('操作失败，请核对权限、配置或重新预览');
+    } catch (failure) {
+      if (request.isCurrent(seq)) {
+        actionError.value = formatAppErrorMessage(ensureAppError(failure, '操作失败，请核对权限、配置或重新预览'));
+        Message.error(actionError.value);
+      }
     } finally {
-      if (seq === sequence) busy.value = false;
+      if (request.isCurrent(seq)) busy.value = false;
     }
   }
   function save() {
@@ -137,36 +152,36 @@
   }
   async function enable() {
     if (busy.value) return;
-    const seq = sequence;
+    const seq = request.current();
     busy.value = true;
     try {
       const result = await previewAction(props.projectId, '', 'ENABLE');
-      if (seq !== sequence) return;
+      if (!request.isCurrent(seq)) return;
       preview.value = result;
       acknowledged.value = false;
       visible.value = true;
     } catch {
-      if (seq === sequence) Message.error('启用预览失败，请重试');
+      if (request.isCurrent(seq)) Message.error('启用预览失败，请重试');
     } finally {
-      if (seq === sequence) busy.value = false;
+      if (request.isCurrent(seq)) busy.value = false;
     }
   }
   async function confirmEnable() {
     if (!acknowledged.value || !preview.value || busy.value || preview.value.expiresAt <= Date.now()) return false;
-    const seq = sequence;
+    const seq = request.current();
     busy.value = true;
     try {
       await confirmAction(props.projectId, preview.value.previewId);
-      if (seq === sequence) {
+      if (request.isCurrent(seq)) {
         busy.value = false;
         await load();
       }
       return true;
     } catch {
-      if (seq === sequence) Message.error('确认失败，预览可能变化或过期，请重新预览');
+      if (request.isCurrent(seq)) Message.error('确认失败，预览可能变化或过期，请重新预览');
       return false;
     } finally {
-      if (seq === sequence) busy.value = false;
+      if (request.isCurrent(seq)) busy.value = false;
     }
   }
   watch(
@@ -178,7 +193,7 @@
     { immediate: true }
   );
   onBeforeUnmount(() => {
-    sequence += 1;
+    request.invalidate();
     draft.value = empty();
   });
 </script>

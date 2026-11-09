@@ -149,10 +149,7 @@ public class PlanReviewLifecycleService {
     private String fingerprint(Context context) {
         if(context.plan && context.relation==null)return completion.executionRevision((String)context.object.get("id"));
         String review=context.relation==null?(String)context.object.get("id"):(String)context.relation.get("review_id");
-        try { return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(JSON.toJSONString(List.of(
-                jdbc.queryForList("SELECT id,case_id,status,update_time FROM case_review_functional_case WHERE review_id=? ORDER BY id FOR UPDATE",review),
-                jdbc.queryForList("SELECT id,case_id,status,deleted,abandoned,content FROM case_review_history WHERE review_id=? ORDER BY id FOR UPDATE",review))).getBytes(java.nio.charset.StandardCharsets.UTF_8))); }
-        catch(java.security.NoSuchAlgorithmException impossible){throw new IllegalStateException(impossible);}
+        return new PlanReviewFingerprintReader(jdbc).read(review, PlanReviewFingerprintReader.ReadMode.LOCKED, PlanReviewFingerprintReader.Format.COMPLETION_V1);
     }
     private void validateState(Context context,String action){
         var state=PlanReviewPolicy.State.parse((String)context.object.get("status"));

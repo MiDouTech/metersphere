@@ -16,6 +16,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Loopback test-only resolver and trust store; production address policy and default trust are unchanged. */
 class HandoffHttpTransportTests {
+    @Test void stoppedTransportRejectsNewWorkWithoutAffectingAnotherInstance() {
+        var stopped=new HandoffHttpTransport();stopped.destroy();
+        assertEquals("TRANSPORT_STOPPED",stopped.post("https://receiver.example.test",null,new byte[0]).error());
+        assertThrows(IllegalArgumentException.class,()->stopped.validate("https://receiver.example.test"));
+        var other=new HandoffHttpTransport(){protected InetAddress[] lookup(String host){return new InetAddress[0];}};
+        try { assertEquals("UNSAFE_ADDRESS",other.post("https://receiver.example.test",null,new byte[0]).error()); }
+        finally {other.destroy();}
+    }
     static SSLContext context;
     @BeforeAll static void certificate()throws Exception {
         Path directory=Path.of(System.getProperty("plan.review.repo.root"),".build","http-tls-test");Files.createDirectories(directory);

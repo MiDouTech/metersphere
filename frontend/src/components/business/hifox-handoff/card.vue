@@ -46,6 +46,7 @@
   import type { Delivery, PreviewView, Summary } from '@/api/modules/hifox-handoff';
   import { confirmAction, getSummary, previewAction, risk } from '@/api/modules/hifox-handoff';
   import { useAppStore } from '@/store';
+  import createLatestRequest from '@/utils/latestRequest';
 
   const props = defineProps<{ side: string; objectId: string }>();
   const app = useAppStore();
@@ -56,7 +57,7 @@
   const error = ref(false);
   const visible = ref(false);
   const acknowledged = ref(false);
-  let sequence = 0;
+  const request = createLatestRequest();
   const canSend = computed(
     () =>
       props.side === 'plan' &&
@@ -75,55 +76,55 @@
     return view.value?.delivery?.business_key ? '恢复剩余重试' : '推送当前通过计划';
   });
   async function load() {
-    const seq = ++sequence;
+    const seq = request.begin();
     loading.value = true;
     error.value = false;
     view.value = undefined;
     visible.value = false;
     try {
       const result = await getSummary(app.currentProjectId, props.side, props.objectId);
-      if (seq === sequence) view.value = result;
+      if (request.isCurrent(seq)) view.value = result;
     } catch {
-      if (seq === sequence) error.value = true;
+      if (request.isCurrent(seq)) error.value = true;
     } finally {
-      if (seq === sequence) loading.value = false;
+      if (request.isCurrent(seq)) loading.value = false;
     }
   }
   async function prepare() {
     if (!canSend.value || busy.value) return;
     busy.value = true;
-    const seq = sequence;
+    const seq = request.current();
     try {
       let action = view.value?.delivery?.business_key ? 'RESUME' : 'PUSH';
       if (view.value?.legacy) action = 'MIGRATE_UNSENT';
       const result = await previewAction(app.currentProjectId, props.objectId, action);
-      if (seq !== sequence) return;
+      if (!request.isCurrent(seq)) return;
       preview.value = result;
       acknowledged.value = false;
       visible.value = true;
     } catch {
-      if (seq === sequence) Message.error('预览失败，请核对当前资格及权限');
+      if (request.isCurrent(seq)) Message.error('预览失败，请核对当前资格及权限');
     } finally {
-      if (seq === sequence) busy.value = false;
+      if (request.isCurrent(seq)) busy.value = false;
     }
   }
   async function confirm() {
     if (!acknowledged.value || busy.value || !preview.value || preview.value.expiresAt <= Date.now()) return false;
     busy.value = true;
-    const seq = sequence;
+    const seq = request.current();
     try {
       await confirmAction(app.currentProjectId, preview.value.previewId);
-      if (seq === sequence) {
+      if (request.isCurrent(seq)) {
         Message.success('已加入异步投递队列');
         busy.value = false;
         await load();
       }
       return true;
     } catch {
-      if (seq === sequence) Message.error('确认失败，请刷新并重新预览');
+      if (request.isCurrent(seq)) Message.error('确认失败，请刷新并重新预览');
       return false;
     } finally {
-      if (seq === sequence) busy.value = false;
+      if (request.isCurrent(seq)) busy.value = false;
     }
   }
   watch(
@@ -135,6 +136,6 @@
     { immediate: true }
   );
   onBeforeUnmount(() => {
-    sequence += 1;
+    request.invalidate();
   });
 </script>

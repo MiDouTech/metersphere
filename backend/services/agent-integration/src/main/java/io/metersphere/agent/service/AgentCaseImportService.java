@@ -147,8 +147,11 @@ public class AgentCaseImportService {
                 if(Set.of("PRECHECKED","QUEUED","RUNNING").contains(state))jdbc.update("UPDATE functional_import_job SET stopped_from=state,state='STOPPED',update_time=? WHERE id=?",System.currentTimeMillis(),id);
             } else if("commit".equals(action)) {
                 if("PRECHECKED".equals(state)) {
-                    if("WEB".equals(token) && jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_followup WHERE job_id=?",Long.class,id)==0)
-                        throw new MSException("请先确认测试计划和评审关联方式再提交");
+                    if("WEB".equals(token)
+                            && jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_import_followup WHERE job_id=?",Long.class,id)==0
+                            && jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_followup WHERE job_id=?",Long.class,id)==0)
+                        throw new io.metersphere.functional.planreview.PlanReviewFailure(
+                                "IMPORT_FOLLOWUP_REQUIRED",409,"请先确认测试计划和评审关联方式再提交；可选择仅导入");
                     long now=System.currentTimeMillis();
                     jdbc.update("UPDATE functional_import_item SET state='PENDING',message=NULL WHERE job_id=? AND state='FAILED'",id);
                     jdbc.update("UPDATE functional_import_job SET committed_at=?,stopped_from=NULL,state='QUEUED',update_time=? WHERE id=?",now,now,id);

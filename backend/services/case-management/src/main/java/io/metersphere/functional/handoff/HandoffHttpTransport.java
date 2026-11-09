@@ -13,10 +13,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /** One pinned TLS connection, one POST, no redirects, proxies or transparent retries. */
 @Component
-public class HandoffHttpTransport implements HandoffWebhookTarget {
+public class HandoffHttpTransport implements HandoffWebhookTarget, org.springframework.beans.factory.DisposableBean {
     public record Result(Integer status, String error, boolean retryable, boolean unknown, long retryAfter) { }
     public record Address(URI uri, InetAddress address) { }
-    private static final ExecutorService IO = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService io = Executors.newVirtualThreadPerTaskExecutor();
     protected long requestLimitMillis() { return 30_000; }
 
     public static URI syntax(String input) {
@@ -54,7 +54,9 @@ public class HandoffHttpTransport implements HandoffWebhookTarget {
     }
     public void validate(String input) {
         URI uri = syntax(input);
-        Future<Address> future = IO.submit(() -> resolve(uri));
+        Future<Address> future;
+        try { future = io.submit(() -> resolve(uri)); }
+        catch (RejectedExecutionException stopped) { throw new IllegalArgumentException("Webhook传输已停止"); }
         try { future.get(requestLimitMillis(), TimeUnit.MILLISECONDS); }
         catch (Exception invalid) { throw new IllegalArgumentException("接收地址安全校验失败，请检查公网DNS及地址"); }
         finally { future.cancel(true); }
@@ -62,10 +64,13 @@ public class HandoffHttpTransport implements HandoffWebhookTarget {
     public Result post(String input, String token, byte[] body) {
         AtomicReference<Socket> socket = new AtomicReference<>();
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(requestLimitMillis());
-        Future<Result> call = IO.submit(() -> exchange(syntax(input), token, body, socket, deadline));
+        Future<Result> call;
+        try { call = io.submit(() -> exchange(syntax(input), token, body, socket, deadline)); }
+        catch (RejectedExecutionException stopped) { return new Result(null,"TRANSPORT_STOPPED",false,false,0); }
         try { return call.get(requestLimitMillis(), TimeUnit.MILLISECONDS); }
         catch (TimeoutException timeout) { return new Result(null,"TIMEOUT",true,true,0); }
         catch (InterruptedException stopped) { Thread.currentThread().interrupt(); return new Result(null,"INTERRUPTED",true,true,0); }
+        catch (CancellationException stopped) { return new Result(null,"INTERRUPTED",true,true,0); }
         catch (ExecutionException failed) {
             Throwable cause = failed.getCause();
             if (cause instanceof SecurityException || cause instanceof IllegalArgumentException)
@@ -79,6 +84,8 @@ public class HandoffHttpTransport implements HandoffWebhookTarget {
             close(socket.getAndSet(null));
         }
     }
+    /** Per-bean lifetime; stopping one context must not stop another context's transport. */
+    @Override public void destroy() { io.shutdownNow(); }
     protected SSLSocketFactory sslFactory() { return (SSLSocketFactory) SSLSocketFactory.getDefault(); }
     private Result exchange(URI uri,String token,byte[] body,AtomicReference<Socket> active,long deadline) throws Exception {
         Address target = resolve(uri); // Every attempt resolves and validates ALL answers before pinning one.
