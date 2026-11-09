@@ -18,6 +18,16 @@ const ProjectManagement: AppRouteRecordRaw = {
   },
   children: [
     {
+      path: 'hifoxHandoff',
+      name: 'HIFOX_HANDOFF_CONFIG',
+      component: () => import('@/views/project-management/hifoxHandoff/index.vue'),
+      meta: {
+        locale: 'menu.projectManagement.hifoxHandoff',
+        roles: ['HIFOX_HANDOFF:CONFIG_MANAGE'],
+        isTopMenu: true,
+      },
+    },
+    {
       path: 'projects',
       name: ProjectManagementRouteEnum.PROJECT_MANAGEMENT_PROJECTS,
       component: () => import('@/views/project-management/projectList/index.vue'),

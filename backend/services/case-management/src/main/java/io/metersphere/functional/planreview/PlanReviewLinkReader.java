@@ -12,6 +12,9 @@ public class PlanReviewLinkReader {
     private final JdbcTemplate jdbc;
     private final PlanReviewAuthorization authorization;
     private final PlanReviewPlanStateResolver states;
+    private io.metersphere.functional.handoff.HandoffListReader handoff;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setHandoff(io.metersphere.functional.handoff.HandoffListReader handoff){this.handoff=handoff;}
     public PlanReviewLinkReader(JdbcTemplate jdbc,PlanReviewAuthorization authorization,PlanReviewPlanStateResolver states){this.jdbc=jdbc;this.authorization=authorization;this.states=states;}
 
     public Map<String,Map<String,Object>> read(boolean planSide,String project,Collection<String> ids,String actor){
@@ -44,6 +47,7 @@ public class PlanReviewLinkReader {
                 result.put((String)row.get(owner),view);
             }
         }
+        if(handoff!=null)handoff.decorate(planSide,project,ordered,result,actor);
         return result;
     }
     private static PlanReviewFailure inaccessible(){return new PlanReviewFailure("RESOURCE_NOT_ACCESSIBLE",404,"对象不可访问");}

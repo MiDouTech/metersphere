@@ -26,6 +26,7 @@ export interface RelationSummary {
   scopeMessage?: string;
 }
 export interface RelationListSummary {
+  handoff?: HandoffListSummary;
   legacyBlocked?: boolean;
   relationStatus: 'NONE' | 'ACTIVE' | 'RESTRICTED' | 'INVALID';
   restricted: boolean;
@@ -34,6 +35,7 @@ export interface RelationListSummary {
   sourceVersion?: number;
   appliedVersion?: number;
 }
+export interface HandoffListSummary { restricted: boolean; state: string; sourceChanged: boolean }
 export interface RelationFrozenFrame {
   available: boolean;
   frozenAt?: number;

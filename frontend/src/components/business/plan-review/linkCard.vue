@@ -393,6 +393,7 @@
       >
       <a-pagination v-model:current="historyPage" :total="historyTotal" :page-size="20" @change="loadHistory" />
     </a-modal>
+    <HandoffCard :side="side" :object-id="objectId" />
     <NoticePanel
       v-if="summary && !summary.restricted"
       :key="childContext"
@@ -427,6 +428,7 @@
   import NewReviewDialog from './newReviewDialog.vue';
   import NoticePanel from './noticePanel.vue';
   import TakeoverPanel from './takeoverPanel.vue';
+  import HandoffCard from '@/components/business/hifox-handoff/card.vue';
 
   import type {
     RelationCandidate,

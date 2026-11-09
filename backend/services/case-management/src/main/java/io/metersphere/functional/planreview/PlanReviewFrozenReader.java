@@ -12,7 +12,7 @@ public class PlanReviewFrozenReader {
     private final JdbcTemplate jdbc;
     public PlanReviewFrozenReader(JdbcTemplate jdbc){this.jdbc=jdbc;}
     public Map<String,Object> frame(String side,String id){
-        var rows=jdbc.queryForList("SELECT object_state,source_version,applied_version,create_time,snapshot FROM plan_review_frozen_snapshot WHERE object_side=? AND object_id=? ORDER BY create_time DESC,id DESC LIMIT 1",side,id);
+        var rows=jdbc.queryForList("SELECT id,object_state,relation_id,generation,target_fingerprint,source_version,applied_version,create_time,snapshot FROM plan_review_frozen_snapshot WHERE object_side=? AND object_id=? ORDER BY create_time DESC,id DESC LIMIT 1",side,id);
         if(rows.isEmpty())return Map.of();
         var row=new LinkedHashMap<>(rows.getFirst()); Object bytes=row.remove("snapshot");
         if(bytes instanceof java.sql.Blob blob){try{bytes=blob.getBytes(1,Math.toIntExact(blob.length()));}catch(java.sql.SQLException error){throw new PlanReviewFailure("SNAPSHOT_READ_FAILED",503,"冻结快照暂不可读取");}}
