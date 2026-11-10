@@ -37,13 +37,14 @@ export default function useListRefresh(
       )
     );
   });
-  const run = async () => {
+  const execute = async (activation = false) => {
     try {
-      await gate.run();
+      await gate.run(activation);
     } catch {
       // The list and HTTP layer own error presentation; the next activation may retry.
     }
   };
+  const run = () => execute();
   onMounted(() => {
     active = true;
     document.addEventListener('visibilitychange', run);
@@ -53,7 +54,7 @@ export default function useListRefresh(
   });
   onActivated(() => {
     active = true;
-    if (mounted) run();
+    if (mounted) execute(true);
     mounted = true;
   });
   onDeactivated(() => {
