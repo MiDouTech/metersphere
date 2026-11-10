@@ -27,6 +27,9 @@ public class HandoffWorker implements DisposableBean {
     private final AtomicBoolean polling=new AtomicBoolean(),maintaining=new AtomicBoolean();
     private final AtomicLong saturated=new AtomicLong(),rejected=new AtomicLong(),failures=new AtomicLong(),maintenanceFailures=new AtomicLong();
     private final AtomicReference<Failure> lastFailure=new AtomicReference<>(new Failure("NONE","NONE",0));
+    private final AtomicLong preparationFailures=new AtomicLong();
+    private final AtomicReference<PreparationFailure> lastPreparationFailure=new AtomicReference<>();
+    private final Map<PreparationStage,AtomicLong> stageFailures=new EnumMap<>(PreparationStage.class);
     private final JdbcTemplate pollingJdbc;
     private ThreadPoolExecutor network;
     private Semaphore admission;
@@ -36,7 +39,16 @@ public class HandoffWorker implements DisposableBean {
     public HandoffWorker(HandoffStore store,HandoffService service,PlatformTransactionManager manager){
         this.store=store;this.service=service;this.tx=new TransactionTemplate(manager);this.tx.setTimeout(5);
         this.pollingJdbc=new JdbcTemplate(Objects.requireNonNull(store.jdbc.getDataSource()));this.pollingJdbc.setQueryTimeout(2);
+        for(var stage:PreparationStage.values())stageFailures.put(stage,new AtomicLong());
         configureExecution(4,4);
+    }
+    /** Bind to the application's existing registry; no new endpoint, remote collector or event-ID metric tags. */
+    @Autowired(required=false)
+    public void monitor(io.micrometer.core.instrument.MeterRegistry registry){
+        io.micrometer.core.instrument.FunctionCounter.builder("metersphere.handoff.preparation.failures",preparationFailures,AtomicLong::doubleValue).register(registry);
+        io.micrometer.core.instrument.FunctionCounter.builder("metersphere.handoff.worker.failures",failures,AtomicLong::doubleValue).register(registry);
+        io.micrometer.core.instrument.FunctionCounter.builder("metersphere.handoff.maintenance.failures",maintenanceFailures,AtomicLong::doubleValue).register(registry);
+        for(var stage:PreparationStage.values())io.micrometer.core.instrument.FunctionCounter.builder("metersphere.handoff.stage.failures",stageFailures.get(stage),AtomicLong::doubleValue).tag("stage",stage.name()).register(registry);
     }
     @Value("${metersphere.hifox-handoff.http-worker-enabled:false}")
     public void setEnabled(boolean value){enabled=value;}
@@ -101,14 +113,24 @@ public class HandoffWorker implements DisposableBean {
         public void run(){try{if(!closing&&enabled)dispatch(project,key);}catch(RuntimeException unavailable){failures.incrementAndGet();deferred("EXECUTION_DEFERRED",unavailable);}finally{release();}}
         void release(){if(released.compareAndSet(false,true)){pending.remove(key);reservation.release();}}
     }
-    public record Statistics(int concurrency,int active,int queued,int pending,long saturated,long rejected,long failures,long maintenanceFailures,Failure lastFailure,boolean accepting){ }
-    public Statistics statistics(){synchronized(lifecycle){return new Statistics(parallelism,network.getActiveCount(),network.getQueue().size(),pending.size(),saturated.get(),rejected.get(),failures.get(),maintenanceFailures.get(),lastFailure.get(),enabled&&!closing);}}
+    public record Statistics(int concurrency,int active,int queued,int pending,long saturated,long rejected,long failures,long maintenanceFailures,Failure lastFailure,boolean accepting,long preparationFailures,PreparationFailure lastPreparationFailure){ }
+    public Statistics statistics(){synchronized(lifecycle){return new Statistics(parallelism,network.getActiveCount(),network.getQueue().size(),pending.size(),saturated.get(),rejected.get(),failures.get(),maintenanceFailures.get(),lastFailure.get(),enabled&&!closing,preparationFailures.get(),lastPreparationFailure.get());}}
     public record Failure(String category,String sqlState,int vendorCode){ }
+    public enum PreparationStage { CONFIGURATION, SOURCE_CAPTURE, TIME_EVIDENCE, LEGACY_CHECK, PAYLOAD_BUILD, PAYLOAD_SAVE, URL_DECRYPT, TOKEN_DECRYPT, ATTEMPT_INSERT, ATTEMPT_RESERVE }
+    public record PreparationFailure(String stage,String eventId,String businessKey,String category,String exceptionType,String sqlState,int vendorCode,long occurredAt){ }
     private void deferred(String operation,RuntimeException error){
-        String category=error instanceof org.springframework.dao.CannotAcquireLockException?"DB_LOCK":error instanceof org.springframework.dao.QueryTimeoutException||error instanceof org.springframework.transaction.TransactionTimedOutException?"DB_TIMEOUT":error instanceof org.springframework.dao.DataAccessException?"DB_STATE":"LOCAL_STATE";
-        String state="NONE";int vendor=0;Throwable cause=error;
-        for(int depth=0;cause!=null&&depth<10;depth++,cause=cause.getCause())if(cause instanceof java.sql.SQLException sql){state=sql.getSQLState()!=null&&sql.getSQLState().matches("[A-Z0-9]{5}")?sql.getSQLState():"NONE";vendor=sql.getErrorCode();break;}
-        lastFailure.set(new Failure(category,state,vendor));safeWarning(operation);
+        var diagnostic=HandoffDiagnostic.from(error);
+        lastFailure.set(new Failure(diagnostic.category(),diagnostic.sqlState(),diagnostic.vendorCode()));
+        safeWarning(operation);
+        try{org.slf4j.LoggerFactory.getLogger(getClass()).warn("Webhook worker operation={}; category={}; exceptionType={}; sqlState={}; vendorCode={}",operation,diagnostic.category(),diagnostic.exceptionType(),diagnostic.sqlState(),diagnostic.vendorCode());}catch(RuntimeException loggingUnavailable){/* Diagnostics must not replace the original failure. */}
+    }
+    private void preparationFailed(PreparationStage stage,Map<String,Object> delivery,String key,Map<String,Object> config,RuntimeException error){
+        var diagnostic=HandoffDiagnostic.from(error);
+        var failure=new PreparationFailure(stage.name(),HandoffDiagnostic.event(text(delivery,"event_id")),HandoffDiagnostic.key(key),diagnostic.category(),diagnostic.exceptionType(),diagnostic.sqlState(),diagnostic.vendorCode(),System.currentTimeMillis());
+        failures.incrementAndGet();preparationFailures.incrementAndGet();stageFailures.get(stage).incrementAndGet();lastPreparationFailure.set(failure);
+        lastFailure.set(new Failure(diagnostic.category(),diagnostic.sqlState(),diagnostic.vendorCode()));
+        // Log only value-checked identifiers, enum stage/classification and numeric revisions. Never log the Throwable.
+        try{org.slf4j.LoggerFactory.getLogger(getClass()).warn("Webhook preparation failed event={}; businessKey={}; stage={}; category={}; exceptionType={}; sqlState={}; vendorCode={}; urlRevision={}; credentialRevision={}; time={}",failure.eventId(),failure.businessKey(),failure.stage(),failure.category(),failure.exceptionType(),failure.sqlState(),failure.vendorCode(),number(config,"url_revision"),number(config,"credential_revision"),failure.occurredAt());}catch(RuntimeException loggingUnavailable){/* Failure state and retry policy remain authoritative. */}
     }
     private void safeWarning(String category){org.slf4j.LoggerFactory.getLogger(getClass()).warn("Webhook worker category={}; pending={}; rejected={}",category,pending.size(),rejected.get());}
     /** Separate bounded maintenance loop; it cannot occupy the polling or common scheduling pool. */
@@ -157,27 +179,35 @@ public class HandoffWorker implements DisposableBean {
             if(d.isEmpty()||!Set.of("READY","RETRY").contains(text(d,"state"))||number(d,"next_at")>now||number(d,"attempts_used")>=4)return null;
             if(!key.equals(service.key(project,text(d,"plan_id")))){stop(key,"PAUSED","SOURCE_ENVIRONMENT_CHANGED");return null;}
             if(!truth(c.get("enabled"))||!truth(c.get("external_grant"))){stop(key,"PAUSED",!truth(c.get("enabled"))?"DISABLED":"PG_REVOKED");return null;}
+            PreparationStage stage=PreparationStage.CONFIGURATION;
             try{
-                service.ready(c);service.capture(project,text(d,"plan_id"));d=store.delivery(project,key);
+                service.ready(c);stage=PreparationStage.SOURCE_CAPTURE;service.capture(project,text(d,"plan_id"));d=store.delivery(project,key);
                 if(!Set.of("READY","RETRY").contains(text(d,"state")))return null;
+                stage=PreparationStage.TIME_EVIDENCE;
                 var f=store.jdbc.queryForMap("SELECT * FROM hifox_http_fact WHERE business_key=?",key);
                 service.requireTime(f);
                 if(!truth(f.get("eligible"))||truth(d.get("source_changed"))||!Objects.equals(f.get("time_revision"),d.get("time_revision"))){stop(key,"SOURCE_CHANGED","SOURCE_CHANGED");return null;}
+                stage=PreparationStage.LEGACY_CHECK;
                 if(store.legacy(project,text(d,"plan_id"))){stop(key,"FAILED","LEGACY_READ_ONLY");return null;}
                 if(number(d,"attempts_used")>0&&number(d,"url_revision")!=number(c,"url_revision")){stop(key,"URL_CHANGED","URL_CHANGED");return null;}
                 byte[] payload;
-                if(d.get("payload_json")==null){payload=service.payload(project,d,f);String json=new String(payload,StandardCharsets.UTF_8);
+                if(d.get("payload_json")==null){stage=PreparationStage.PAYLOAD_BUILD;payload=service.payload(project,d,f);String json=new String(payload,StandardCharsets.UTF_8);
+                    stage=PreparationStage.PAYLOAD_SAVE;
                     store.jdbc.update("UPDATE hifox_http_delivery SET payload_json=?,payload_hash=?,url_revision=? WHERE business_key=?",json,HandoffPolicy.hash(json),number(c,"url_revision"),key);
                 }else payload=text(d,"payload_json").getBytes(StandardCharsets.UTF_8);
+                stage=PreparationStage.URL_DECRYPT;
                 String url=service.secrets.open(store.configurationScope(d),"url",text(c,"url_secret"));
+                stage=PreparationStage.TOKEN_DECRYPT;
                 String token="BEARER".equals(c.get("auth_mode"))?service.secrets.open(store.configurationScope(d),"token",text(c,"token_secret")):null;
                 if(!enabled||closing)return null;
                 now=System.currentTimeMillis();
                 String id=UUID.randomUUID().toString();long sequence=number(d,"attempts_used")+1;
+                stage=PreparationStage.ATTEMPT_INSERT;
                 store.jdbc.update("INSERT INTO hifox_http_attempt(attempt_id,business_key,sequence_no,started_at,credential_revision) VALUES(?,?,?,?,?)",id,key,sequence,now,number(c,"credential_revision"));
+                stage=PreparationStage.ATTEMPT_RESERVE;
                 store.jdbc.update("UPDATE hifox_http_delivery SET state='IN_FLIGHT',attempts_used=?,active_attempt=?,next_at=?,reason=NULL,revision=revision+1,update_time=? WHERE business_key=?",sequence,id,now+35_000,now,key);
                 return new Call(id,url,token,payload);
-            }catch(RuntimeException unavailable){stop(key,"FAILED",unavailable instanceof io.metersphere.functional.planreview.PlanReviewFailure f?f.code():"CONFIG_OR_SOURCE_UNAVAILABLE");return null;}
+            }catch(RuntimeException unavailable){preparationFailed(stage,d,key,c,unavailable);stop(key,"FAILED",unavailable instanceof io.metersphere.functional.planreview.PlanReviewFailure f?f.code():"CONFIG_OR_SOURCE_UNAVAILABLE");return null;}
         });
         if(call==null)return;
         // Reservation is the audited start boundary. Revocation after it cannot retract an already started attempt.

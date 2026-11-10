@@ -14,6 +14,10 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.metersphere</groupId>
             <artifactId>metersphere-sdk</artifactId>
             <version>${revision}</version>
