@@ -81,7 +81,7 @@ public class ImportFollowupCoordinator {
         boolean permitted=io.metersphere.functional.planreview.PlanReviewPolicy.allowedCreatePair(
                 new io.metersphere.functional.planreview.PlanReviewPolicy.Access(current.permissions(),true),1);
         return Map.of("projectId",project,"groups",(access.userHasPermission(user,project,PermissionConstants.TEST_PLAN_READ) && access.userHasPermission(user,project,PermissionConstants.CASE_REVIEW_READ)) ? groups : List.of(),"canCreate",allowed,
-                "canCreatePermission",permitted,"serviceGranted",current.serviceGrant());
+                "canCreatePermission",permitted,"serviceGranted",true);
     }
 
     public void prepare(String id,String user,ImportFollowupRequest request) { prepare(id,user,request,"WEB"); }
@@ -142,7 +142,7 @@ public class ImportFollowupCoordinator {
         if(!Set.of("CREATE_NEW_PAIR","APPEND_EXISTING").contains(Objects.toString(policy,"")))throw new MSException("导入关联策略无效");
         if ("CREATE_NEW_PAIR".equals(policy) ? !io.metersphere.functional.planreview.PlanReviewPolicy.allowedCreatePair(current,1)
                 : !io.metersphere.functional.planreview.PlanReviewPolicy.allowed(io.metersphere.functional.planreview.PlanReviewPolicy.Action.APPEND,current)) {
-            throw new MSException("当前账号缺少关联操作权限，或同步服务未授权，可选择仅导入");
+            throw new MSException("当前账号缺少关联操作权限，可选择仅导入");
         }
         if("CREATE_NEW_PAIR".equals(policy)) access.reviewers(project,reviewers);
     }
@@ -212,7 +212,7 @@ public class ImportFollowupCoordinator {
         var observed=observedRows.isEmpty()?null:observedRows.getFirst();
         try { prepareImportReservation(id); tx.executeWithoutResult(status->process(id)); }
         catch(Exception failure) {
-            org.slf4j.LoggerFactory.getLogger(getClass()).warn("Import association paused job={} errorType={}",id,failure.getClass().getSimpleName());
+            io.metersphere.functional.planreview.PlanReviewSyncDiagnostics.importFailure(observed==null?null:Objects.toString(observed.get("project_id"),null),observed==null?null:Objects.toString(observed.get("id"),null),id,failure);
             if(observed==null){jdbc.update("UPDATE plan_review_import_followup SET state='FAILED',error_message='Original operation unavailable' WHERE job_id=? AND operation_id IS NULL AND state='PENDING'",id);return;}
             tx.executeWithoutResult(status->{
                 jdbc.queryForList("SELECT project_id FROM plan_review_grant WHERE project_id=? FOR UPDATE",observed.get("project_id"));

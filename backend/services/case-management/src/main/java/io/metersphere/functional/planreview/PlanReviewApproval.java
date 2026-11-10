@@ -20,7 +20,7 @@ public record PlanReviewApproval(PlanReviewPolicy.Revision approved, Status stat
         return new PlanReviewApproval(current, Status.APPLYING, 0);
     }
 
-    /** External source/member-opinion/grant changes pause incomplete approval; retain generation. */
+    /** External source/member-opinion changes pause incomplete approval; retain generation. */
     public PlanReviewApproval observe(PlanReviewPolicy.Revision current) {
         if (status != Status.APPLYING || approved.equals(current)) return this;
         if (!sameRelation(current)) return ended();
@@ -39,7 +39,6 @@ public record PlanReviewApproval(PlanReviewPolicy.Revision approved, Status stat
                                             PlanReviewPolicy.Revision after, boolean converged) {
         if (!mayCommit(before) || !sameRelation(after)
                 || after.sourceVersion() != before.sourceVersion()
-                || after.grantRevision() != before.grantRevision()
                 || after.targetRevision() < before.targetRevision()) {
             throw new IllegalStateException("批准已变化，禁止提交旧批次");
         }

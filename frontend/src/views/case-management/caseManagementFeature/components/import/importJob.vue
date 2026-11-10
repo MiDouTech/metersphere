@@ -34,14 +34,8 @@
             ></template
           >
         </template>
-        <a-alert v-if="followupOptions.serviceGranted === false" type="warning" class="mb-2"
-          >当前项目尚未启用计划与评审同步服务授权，请由有权管理员在关联管理中启用；可先选择仅导入。</a-alert
-        >
         <a-alert
-          v-if="
-            followupOptions.canCreatePermission === false ||
-            (!followupOptions.canCreate && followupOptions.serviceGranted === undefined)
-          "
+          v-if="!followupOptions.canCreate"
           type="warning"
           class="mb-2"
           >当前账号缺少创建或关联权限；可选择仅导入，已有任务结果不会因此回滚。</a-alert

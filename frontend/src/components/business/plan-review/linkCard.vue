@@ -43,7 +43,7 @@
             ref="pairButton"
             size="small"
             :disabled="busy || !canPair || !summary.canPair"
-            title="需要双方读取与更新权限；确认时还需项目服务授权"
+            title="需要双方读取与更新权限；按当前对象状态确认"
             @click="choose"
             >{{ title }}</a-button
           >
@@ -85,7 +85,6 @@
       <p v-else>当前关系代次：{{ summary.generation }}；{{ syncLabel }}。{{ summary.sync?.safeError }}</p>
       <div class="mt-3 flex flex-wrap gap-2">
         <a-button :disabled="busy || !summary?.generation" @click="showReadOnlyDifference">进度 / 只读差异</a-button>
-        <a-button v-if="canManageGrant" size="small" :disabled="busy" @click="showGrant">同步服务授权</a-button>
         <a-button size="small" :disabled="busy || !summary?.generation" @click="showOperations">操作记录</a-button>
         <a-button size="small" :disabled="busy || !summary?.generation" @click="openTakeovers">接管审批</a-button>
         <a-button size="small" :disabled="busy || !summary?.generation" @click="openNotices">通知记录</a-button>
@@ -270,18 +269,6 @@
       >
     </a-modal>
     <a-modal
-      v-model:visible="grantVisible"
-      title="项目成员同步服务授权"
-      :ok-loading="busy"
-      @close="returnFocus"
-      @before-ok="saveGrant"
-    >
-      <a-alert type="warning"
-        >这是项目级授权。撤销将停止目标成员写入；恢复授权后仍需有权人员重新预览确认，不会自动追平。</a-alert
-      >
-      <a-switch v-model="grantEnabled" class="mt-4" checked-text="启用" unchecked-text="停用" />
-    </a-modal>
-    <a-modal
       v-model:visible="operationsVisible"
       title="当前用户操作记录"
       :footer="false"
@@ -446,7 +433,6 @@
     getPlanReview,
     getPlanReviewCandidates,
     getPlanReviewFrozen,
-    getPlanReviewGrant,
     getPlanReviewHistory,
     getPlanReviewOperations,
     getPlanReviewPreviewItems,
@@ -454,7 +440,6 @@
     previewPlanReview,
     previewPlanReviewLifecycle,
     resumePlanReviewOperation,
-    setPlanReviewGrant,
     terminatePlanReviewOperation,
     unlinkPlanReview,
   } from '@/api/modules/plan-review';
@@ -501,7 +486,6 @@
       hasAnyPermission(['CASE_REVIEW:READ']) &&
       hasAnyPermission(['CASE_REVIEW:READ+UPDATE'])
   );
-  const canManageGrant = computed(() => hasAnyPermission(['PLAN_REVIEW:GRANT_MANAGE']));
   const canUpdate = computed(() =>
     hasAnyPermission([props.side === 'plan' ? 'PROJECT_TEST_PLAN:READ+UPDATE' : 'CASE_REVIEW:READ+UPDATE'])
   );
@@ -509,7 +493,6 @@
   const selectVisible = ref(false);
   const previewVisible = ref(false);
   const operationsVisible = ref(false);
-  const grantVisible = ref(false);
   const historyVisible = ref(false);
   const lifecycleVisible = ref(false);
   const frozenVisible = ref(false);
@@ -549,9 +532,9 @@
     if (summary.value?.restricted) return '无权查看关联对象，不能进行关联操作';
     if (summary.value?.legacyBlocked) return '历史关联待交接，不可重复新增；请从关联管理查看指引';
     if (summary.value?.target)
-      return '已有有效关系，不能重复关联。人工恢复仅适用于耗尽或待重新确认，且需双方可编辑、双读、计划更新、评审成员关联和有效服务授权；解除独立校验双方更新权限，不要求服务授权。';
+      return '已有有效关系，不能重复关联。人工恢复仅适用于耗尽或待重新确认，且需双方可编辑、双读、计划更新、评审成员关联；解除需双方更新权限。';
     if (!canPair.value || !summary.value?.canPair)
-      return '建立关联需要真实可编辑未占用对象、双读双更新及有效服务授权；请核实状态和权限';
+      return '建立关联需要真实可编辑未占用对象、双读双更新；请核实状态和权限';
     return '';
   });
   async function returnFocus() {
@@ -564,7 +547,6 @@
       selectVisible.value ||
       previewVisible.value ||
       operationsVisible.value ||
-      grantVisible.value ||
       historyVisible.value ||
       lifecycleVisible.value ||
       frozenVisible.value
@@ -1027,48 +1009,6 @@
     managementVisible.value = false;
     if (await validateContext()) takeoverRef.value?.open();
   }
-  const grantEnabled = ref(false);
-  const grantRevision = ref(0);
-  const grantProject = ref('');
-  async function showGrant() {
-    managementVisible.value = false;
-    if (!(await validateContext(false))) return;
-    const current = sequence;
-    busy.value = true;
-    try {
-      const project = appStore.currentProjectId;
-      const result = await getPlanReviewGrant(project);
-      if (current !== sequence) return;
-      grantRevision.value = result.revision;
-      grantProject.value = project;
-      grantEnabled.value = result.enabled;
-      grantVisible.value = true;
-    } catch {
-      actionError.value = '授权信息读取失败，请核实当前项目管理权限后重试；没有修改授权。';
-    } finally {
-      busy.value = false;
-    }
-  }
-  async function saveGrant() {
-    if (!(await validateContext(false))) return false;
-    if (!grantProject.value || grantProject.value !== appStore.currentProjectId) return false;
-    const current = sequence;
-    busy.value = true;
-    try {
-      await setPlanReviewGrant({
-        projectId: grantProject.value,
-        expectedRevision: grantRevision.value,
-        enabled: grantEnabled.value,
-      });
-      if (current !== sequence) return false;
-      await load();
-      return true;
-    } catch {
-      return false;
-    } finally {
-      busy.value = false;
-    }
-  }
   const operationsError = ref(false);
   const operationActionError = ref('');
   const operationRequests = new Map<string, { projectId: string; expectedRevision: number; requestKey: string }>();
@@ -1258,7 +1198,6 @@
       managementVisible.value = false;
       readOnlyVisible.value = false;
       operationsVisible.value = false;
-      grantVisible.value = false;
       historyVisible.value = false;
       lifecycleVisible.value = false;
       frozenVisible.value = false;
@@ -1273,8 +1212,6 @@
       previewVisible.value = false;
       preview.value = undefined;
       operationsVisible.value = false;
-      grantVisible.value = false;
-      grantProject.value = '';
       historyVisible.value = false;
       lifecycleVisible.value = false;
       frozenVisible.value = false;

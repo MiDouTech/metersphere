@@ -66,11 +66,7 @@ public final class PlanReviewPolicy {
     }
 
     public static boolean allowed(Action action, Access access) {
-        boolean needsGrant = switch (action) {
-            case PAIR, CREATE_PAIR, CREATE_LINKED_REVIEW, APPEND, RETRY_SYNC -> true;
-            default -> false;
-        };
-        return access.hasAll(required(action)) && (!needsGrant || access.serviceGrant());
+        return access.hasAll(required(action));
     }
 
     public static boolean allowedCreatePair(Access access, int initialMemberCount) {
@@ -85,7 +81,7 @@ public final class PlanReviewPolicy {
     }
 
     public static boolean canSynchronize(State plan, State review, boolean active, boolean grant) {
-        return active && grant && plan.editable() && review.editable();
+        return active && plan.editable() && review.editable();
     }
 
     /** First restore changes only one side; no member or grant approval is implied. */
@@ -107,6 +103,8 @@ public final class PlanReviewPolicy {
             if (sourceVersion < 0 || targetRevision < 0 || grantRevision < 0) {
                 throw new IllegalArgumentException("版本不能为负数");
             }
+            // Retain the wire/storage field for older previews; it no longer gates work.
+            grantRevision = 0;
         }
     }
 

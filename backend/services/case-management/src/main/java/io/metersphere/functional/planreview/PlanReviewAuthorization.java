@@ -39,14 +39,14 @@ public class PlanReviewAuthorization {
             throw new PlanReviewFailure("RESOURCE_NOT_ACCESSIBLE", 404, "项目或对象不可访问");
         }
         boolean locking=write && org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive();
-        Boolean enabled;
         if(locking){
             // Canonical order: project service grant, then current account/project/role records.
-            enabled=jdbc.queryForList("SELECT enabled FROM plan_review_grant WHERE project_id=? FOR UPDATE",Boolean.class,project).stream().findFirst().orElse(false);
+            // Keep the existing project mutex order, without interpreting a grant flag.
+            jdbc.queryForList("SELECT project_id FROM plan_review_grant WHERE project_id=? FOR UPDATE",String.class,project);
             if(sharedLock==null)sharedLock=jdbc.execute((org.springframework.jdbc.core.ConnectionCallback<String>)connection->connection.getMetaData().getDatabaseProductName().equalsIgnoreCase("MySQL")?" FOR SHARE":" FOR UPDATE");
             if(jdbc.queryForList("SELECT id FROM user WHERE id=? AND enable=1 AND deleted=0"+sharedLock,String.class,actor).size()!=1
                     || jdbc.queryForList("SELECT id FROM project WHERE id=? AND deleted=0 AND enable=1"+sharedLock,String.class,project).size()!=1)throw new PlanReviewFailure("RESOURCE_NOT_ACCESSIBLE",404,"项目或对象不可访问");
-        }else enabled=jdbc.queryForList("SELECT enabled FROM plan_review_grant WHERE project_id=?",Boolean.class,project).stream().findFirst().orElse(false);
+        }
         var resources = jdbc.queryForList("""
                 SELECT CASE WHEN rel.source_id='system' AND role.type='SYSTEM' AND role.id='admin'
                   THEN '*' ELSE perm.permission_id END resource_id
@@ -59,12 +59,12 @@ public class PlanReviewAuthorization {
         boolean admin = resources.contains("*");
         for (var entry : RESOURCES.entrySet()) if (admin || resources.contains(entry.getValue())) granted.add(entry.getKey());
         if (granted.isEmpty()) throw new PlanReviewFailure("RESOURCE_NOT_ACCESSIBLE", 404, "项目或对象不可访问");
-        return new PlanReviewPolicy.Access(granted, Boolean.TRUE.equals(enabled));
+        return new PlanReviewPolicy.Access(granted, true);
     }
 
     public void require(PlanReviewPolicy.Action action, String actor, String project) {
         if (!PlanReviewPolicy.allowed(action, current(actor, project, true))) {
-            throw new PlanReviewFailure("PERMISSION_REQUIRED", 403, "当前账号缺少本操作权限或项目服务授权未启用");
+            throw new PlanReviewFailure("PERMISSION_REQUIRED", 403, "当前账号缺少本操作权限");
         }
     }
 
