@@ -51,9 +51,14 @@ artifact(URL, JAR)
 dependencies = []
 if args.jdbc:
     coordinates = [("org/springframework", "spring-" + name, "6.2.12")
-                   for name in ("jdbc", "tx", "beans", "core", "jcl", "context", "aop", "expression")]
+                   for name in ("jdbc", "tx", "beans", "core", "jcl", "context", "aop", "expression", "web")]
     coordinates.append(("com/h2database", "h2", "2.3.232"))
     coordinates.append(("org/slf4j", "slf4j-api", "2.0.17"))
+    coordinates += [("ch/qos/logback", "logback-" + name, "1.5.20") for name in ("classic", "core")]
+    coordinates += [("org/apache/shiro", "shiro-" + name, "2.0.2") for name in ("core", "lang")]
+    coordinates.append(("org/apache/commons", "commons-lang3", "3.17.0"))
+    coordinates.append(("jakarta/annotation", "jakarta.annotation-api", "2.1.1"))
+    coordinates.append(("io/micrometer", "micrometer-core", "1.15.5"))
     coordinates += [("io/micrometer", "micrometer-"+name, "1.15.5") for name in ("observation","commons")]
     if args.mysql_config:
         coordinates.append(("com/mysql", "mysql-connector-j", "9.4.0"))
@@ -83,16 +88,34 @@ sources += sorted(p for p in (module / "test/java/io/metersphere/functional/plan
 if args.jdbc:
     sources.append(ROOT / "backend/framework/sdk/src/main/java/io/metersphere/sdk/util/JSON.java")
     sources.append(ROOT / "backend/framework/sdk/src/main/java/io/metersphere/sdk/util/AesGcmCodec.java")
+    # Explicit-actor JDBC fixtures do not have an HTTP session. Fail closed if any test accidentally uses one.
+    session_stub = BUILD / "stubs/io/metersphere/system/utils/SessionUtils.java"
+    session_stub.parent.mkdir(parents=True, exist_ok=True)
+    session_stub.write_text('package io.metersphere.system.utils; public final class SessionUtils { public static String getUserId(){ throw new UnsupportedOperationException("No HTTP session in JDBC harness"); } }', encoding="utf-8")
+    sources.append(session_stub)
+    sources += [ROOT / path for path in (
+        "backend/services/system-setting/src/main/java/io/metersphere/system/service/PlatformNotificationScope.java",
+        "backend/services/system-setting/src/main/java/io/metersphere/system/controller/handler/annotation/NoResultHolder.java",
+        "backend/framework/sdk/src/main/java/io/metersphere/sdk/exception/MSException.java",
+        "backend/framework/sdk/src/main/java/io/metersphere/sdk/exception/IResultCode.java",
+        "backend/framework/sdk/src/main/java/io/metersphere/sdk/util/Translator.java",
+        "backend/services/case-management/src/main/java/io/metersphere/functional/controller/HandoffController.java",
+        "backend/services/case-management/src/main/java/io/metersphere/functional/controller/HandoffExceptionHandler.java",
+    )]
 classpath = os.pathsep.join(map(str, [JAR, *dependencies]))
+# Avoid Logback's default DEBUG SQL logging (including H2 SHUTDOWN warning inspection).
+logback = BUILD / "logback-handoff-tests.xml"
+logback.write_text('<configuration><appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender"><encoder><pattern>%level %logger - %msg%n</pattern></encoder></appender><root level="WARN"><appender-ref ref="CONSOLE"/></root></configuration>', encoding="utf-8")
 subprocess.run(["javac", "-encoding", "UTF-8", "--release", "21", "-cp", classpath,
                 "-d", str(classes), *map(str, sources)], check=True)
-subprocess.run(["java", "-Dplan.review.repo.root=" + str(ROOT),
+subprocess.run(["java", "-Dlogback.configurationFile=" + str(logback), "-Dplan.review.repo.root=" + str(ROOT),
                 *(["-Dplan.review.mysql.config="+str(args.mysql_config)] if args.mysql_config else []), "-jar", str(JAR), "execute",
                 "--class-path", os.pathsep.join(map(str, [classes, *dependencies])),
                 *(["--select-method",args.select_method] if args.select_method else [
                 "--select-class", "io.metersphere.functional.handoff.HandoffRulesTests",
                 "--select-class", "io.metersphere.functional.handoff.HandoffHttpTransportTests",
                 "--select-class", "io.metersphere.functional.handoff.HandoffSecretCompatibilityTests",
+                "--select-class", "io.metersphere.functional.planreview.HandoffObservabilityTests",
                 *(["--select-class", "io.metersphere.functional.planreview.HandoffPersistenceTests", "--select-class", "io.metersphere.functional.planreview.HandoffExecutorTests"] if args.jdbc else []),
                 *(["--select-class", "io.metersphere.functional.planreview.PlanReviewPersistenceTests"] if args.jdbc and args.regression else []),
                 *(["--select-class", "io.metersphere.functional.planreview.PlanReviewApplicationTests"] if args.jdbc and args.regression else []),
