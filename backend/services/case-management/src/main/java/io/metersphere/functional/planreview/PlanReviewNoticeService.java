@@ -11,6 +11,9 @@ import java.util.*;
 /** Durable fault cohorts, separately budgeted outbox and explicit notification-only recovery. */
 @Service
 public class PlanReviewNoticeService {
+    private final PlanReviewSyncDiagnostics diagnostics=new PlanReviewSyncDiagnostics();
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void monitor(io.micrometer.core.instrument.MeterRegistry registry){diagnostics.monitorDelay(registry);}
     private final JdbcTemplate jdbc;
     private final PlanReviewAuthorization authorization;
     private final PlanReviewNoticeChannel channel;
@@ -44,24 +47,23 @@ public class PlanReviewNoticeService {
     void collect(String project,String id,String generation){
         var relation=relation(project,id,generation);
         if(!"ACTIVE".equals(relation.get("state"))){jdbc.update("UPDATE plan_review_fault SET ended_at=COALESCE(ended_at,?),active_reason=NULL WHERE relation_id=? AND generation=? AND recovered_at IS NULL",now(),id,generation);return;}
-        boolean grant=jdbc.queryForList("SELECT enabled FROM plan_review_grant WHERE project_id=?",Boolean.class,project).stream().findFirst().orElse(false);
         var plans=jdbc.queryForList("SELECT p.* FROM test_plan p JOIN project pr ON pr.id=p.project_id AND pr.enable=1 AND pr.deleted=0 WHERE p.id=? AND p.project_id=? FOR UPDATE",relation.get("plan_id"),project);
         boolean editable=plans.size()==1&&PlanReviewPolicy.State.parse((String)states.resolve(plans.getFirst()).get("status")).editable()
                 &&jdbc.queryForObject("SELECT COUNT(*) FROM case_review WHERE id=? AND project_id=? AND status IN ('PREPARED','UNDERWAY')",Integer.class,relation.get("review_id"),project)==1;
         var reasons=new TreeSet<String>();
-        if(!grant)reasons.add("GRANT_REVOKED");
         if("FAILED_MANUAL".equals(relation.get("sync_state")))reasons.add("RETRY_EXHAUSTED");
-        if(grant&&editable&&number(relation,"source_version")>number(relation,"applied_version")&&now()-number(relation,"source_changed_at")>30000)reasons.add("DELAYED");
+        if(editable&&number(relation,"source_version")>number(relation,"applied_version")&&now()-number(relation,"source_changed_at")>30000)reasons.add("DELAYED");
         for(String reason:reasons){
             if(jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_fault WHERE relation_id=? AND generation=? AND active_reason=?",Integer.class,id,generation,reason)>0)continue;
             long round=number(relation,"fault_round")+1;relation.put("fault_round",round);
             jdbc.update("UPDATE plan_review_relation SET fault_round=? WHERE id=? AND generation=?",round,id,generation);
             String fault=uuid();long detected=now();
             jdbc.update("INSERT INTO plan_review_fault(id,project_id,relation_id,generation,reason,fault_round,active_reason,detected_at) VALUES(?,?,?,?,?,?,?,?)",fault,project,id,generation,reason,round,reason,detected);
+            if("DELAYED".equals(reason))diagnostics.delayed(project,id,generation,number(relation,"source_version"));
             for(String recipient:channel.recipients(relation,reason))intent(project,id,generation,round,reason,recipient,"FAULT",detected,null);
         }
-        // A restored channel/grant alone is insufficient: the latest approved business set must be applied.
-        if(grant&&"SYNCED".equals(relation.get("sync_state"))&&number(relation,"source_version")==number(relation,"applied_version")&&!truth(relation.get("approval_pending"))){
+        // A restored channel alone is insufficient: the latest approved business set must be applied.
+        if("SYNCED".equals(relation.get("sync_state"))&&number(relation,"source_version")==number(relation,"applied_version")&&!truth(relation.get("approval_pending"))){
             for(var fault:jdbc.queryForList("SELECT * FROM plan_review_fault WHERE relation_id=? AND generation=? AND active_reason IS NOT NULL FOR UPDATE",id,generation)){
                 long recovered=now();
                 jdbc.update("UPDATE plan_review_fault SET recovered_at=?,active_reason=NULL WHERE id=?",recovered,fault.get("id"));

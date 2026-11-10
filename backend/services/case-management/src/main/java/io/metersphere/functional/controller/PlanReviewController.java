@@ -140,7 +140,6 @@ public class PlanReviewController {
 
     @PostMapping("/grant")
     public Map<String, Object> grant(@RequestBody GrantRequest request) {
-        if (request.enabled() == null) throw new PlanReviewFailure("INVALID_FIELD", 400, "请明确授权状态");
         return service.grant(request.projectId(), request.expectedRevision(), request.enabled(), SessionUtils.getUserId());
     }
 

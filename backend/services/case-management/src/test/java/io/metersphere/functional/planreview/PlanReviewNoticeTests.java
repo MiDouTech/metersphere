@@ -102,12 +102,12 @@ class PlanReviewNoticeTests {
         assertEquals("ENDED",jdbc.queryForObject("SELECT sync_state FROM plan_review_relation",String.class));
         assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM case_review_functional_case",Integer.class));
     }
-    @Test void grantRestorationAloneDoesNotEmitBusinessRecovery(){
+    @Test void disabledLegacyGrantDoesNotCreateAGrantFaultAndDelayStillRecovers(){
         jdbc.update("UPDATE plan_review_grant SET enabled=false");collect();
-        assertEquals("GRANT_REVOKED",jdbc.queryForObject("SELECT reason FROM plan_review_fault",String.class));
+        assertEquals("DELAYED",jdbc.queryForObject("SELECT reason FROM plan_review_fault",String.class));
         jdbc.update("UPDATE plan_review_grant SET enabled=true");collect();
         assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_notice WHERE type='RECOVERY'",Integer.class));
-        recovered();assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_notice WHERE type='RECOVERY' AND reason='GRANT_REVOKED'",Integer.class));
+        recovered();assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_notice WHERE type='RECOVERY' AND reason='DELAYED'",Integer.class));
     }
     @Test void disabledProjectPausesWithoutCreatingAnEditableDelayFault(){
         jdbc.update("UPDATE project SET enable=false");collect();

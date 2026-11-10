@@ -57,9 +57,9 @@ class PlanReviewLegacyMigrationTests {
         assertEquals("MIGRATION_SNAPSHOT_STALE",assertThrows(PlanReviewFailure.class,()->run(()->migration.backup("project",change(preview),"actor"))).code());
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM functional_import_followup_group",Integer.class));
     }
-    @Test void serviceGrantWithdrawalAndReapprovalCannotReuseTheOldMigrationSnapshot(){
+    @Test void obsoleteGrantEndpointsDoNotInvalidateAMigrationSnapshot(){
         var preview=preview("first");run(()->app.grant("project",1L,false,"actor"));run(()->app.grant("project",2L,true,"actor"));
-        assertEquals("MIGRATION_SNAPSHOT_STALE",assertThrows(PlanReviewFailure.class,()->run(()->migration.backup("project",change(preview),"actor"))).code());
+        assertDoesNotThrow(()->run(()->migration.backup("project",change(preview),"actor")));
         assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_relation",Integer.class));
     }
     @Test void anAlreadyEndedUnifiedGenerationIsNotRecreatedByChoosingItsOldLegacyEdge(){

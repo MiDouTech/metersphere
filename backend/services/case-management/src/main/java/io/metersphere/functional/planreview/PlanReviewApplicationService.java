@@ -18,6 +18,9 @@ import java.util.*;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class PlanReviewApplicationService {
+    private final PlanReviewSyncDiagnostics diagnostics=new PlanReviewSyncDiagnostics();
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void monitor(io.micrometer.core.instrument.MeterRegistry registry){diagnostics.monitor(registry);}
     private final JdbcTemplate jdbc;
     private final PlanReviewPersistence persistence;
     private final PlanReviewAuthorization authorization;
@@ -79,7 +82,7 @@ public class PlanReviewApplicationService {
         result.put("relationStatus", "ACTIVE"); result.put("restricted", false);
         result.put("relationId", relation.get("id")); result.put("generation", relation.get("generation"));
         result.put("target", selected(target, "id", "num", "name", "status"));
-        result.put("sync", syncSummary(relation, plan, review, access.serviceGrant()));
+        result.put("sync", syncSummary(relation, plan, review));
         result.put("memberEpochs", persistence.currentEpochs(text(relation, "review_id")));
         result.put("canUnlink", PlanReviewPolicy.allowed(PlanReviewPolicy.Action.UNLINK, access) && editable(plan, review));
         result.put("canReconfirm", PlanReviewPolicy.allowed(PlanReviewPolicy.Action.RETRY_SYNC, access)
@@ -213,7 +216,7 @@ public class PlanReviewApplicationService {
                 opinion_revision,grant_revision,plan_revision,review_revision,target_fingerprint,difference_hash,
                 issued_at,expires_at,actor) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """, id, project, purpose, planId, reviewId, generation, source.version(), opinion,
-                number(context.grant, "revision"), number(context.plan, "update_time"), number(context.review, "update_time"),
+                0L, number(context.plan, "update_time"), number(context.review, "update_time"),
                 fingerprint, hash(JSON.toJSONString(difference)), now, now + PlanReviewPolicy.PREVIEW_TTL.toMillis(), actor);
         return Map.of("previewId", id, "purpose", purpose, "generation", generation, "sourceVersion", source.version(),
                 "expiresAt", now + PlanReviewPolicy.PREVIEW_TTL.toMillis(), "difference", difference,
@@ -253,7 +256,7 @@ public class PlanReviewApplicationService {
             operation=text(old,"id"); review=text(old,"review_id"); generation=text(old,"generation");
         }
         var source=persistence.sourceChanged(plan); String preview=uuid(); var currentPlan=object(true,plan);
-        long grant=jdbc.queryForObject("SELECT revision FROM plan_review_grant WHERE project_id=?",Long.class,project);
+        long grant=0L;
         jdbc.update("INSERT INTO plan_review_preview(id,project_id,purpose,plan_id,review_id,generation,source_version,opinion_revision,grant_revision,plan_revision,review_revision,target_fingerprint,difference_hash,issued_at,expires_at,actor) VALUES(?,?,'CREATE_LINKED_REVIEW',?,?,?,?,0,?,?,0,?,?,?,?,?)",
                 preview,project,plan,review,generation,source.version(),grant,number(currentPlan,"update_time"),payloadHash,operation,now(),now()+600_000,actor);
         return Map.of("previewId",preview,"operationId",operation,"generation",generation,"sourceVersion",source.version(),"expiresAt",now()+600_000,
@@ -301,8 +304,8 @@ public class PlanReviewApplicationService {
         if(!"VALIDATED".equals(operation.get("stage")))throw fail("OPERATION_TERMINATED",409,"创建操作不可继续");
         if(now()>=number(preview,"expires_at"))throw fail("PREVIEW_EXPIRED",410,"预览已过期，请重新预览");
         var currentPlan=object(true,plan); var source=persistence.sourceChanged(plan);
-        long grant=jdbc.queryForObject("SELECT revision FROM plan_review_grant WHERE project_id=?",Long.class,project);
-        if(!state(currentPlan).editable()||number(currentPlan,"update_time")!=number(preview,"plan_revision")||source.version()!=number(preview,"source_version")||grant!=number(preview,"grant_revision"))throw fail("PREVIEW_STALE",409,"计划或授权已变化，请重新预览");
+        long grant=0L;
+        if(!state(currentPlan).editable()||number(currentPlan,"update_time")!=number(preview,"plan_revision")||source.version()!=number(preview,"source_version"))throw fail("PREVIEW_STALE",409,"计划已变化，请重新预览");
         if(!jdbc.queryForList("SELECT id FROM plan_review_relation WHERE active_plan_id=?",plan).isEmpty())throw fail("RELATION_OCCUPIED",409,"测试计划已被关联");
         var draft=JSON.parseObject(text(operation,"request_json"),new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){}); validateReviewDraft(project,draft);
         if(reviewWriters.size()!=1)throw fail("CREATION_UNAVAILABLE",503,"评审创建服务暂不可用");
@@ -356,7 +359,6 @@ public class PlanReviewApplicationService {
         if (!first) requireManualRecovery(current);
         var source = persistence.sourceChanged(planId);
         if (source.version() != number(preview, "source_version")
-                || number(context.grant, "revision") != number(preview, "grant_revision")
                 || number(context.plan, "update_time") != number(preview, "plan_revision")
                 || number(context.review, "update_time") != number(preview, "review_revision")
                 || !fingerprint(reviewId).equals(preview.get("target_fingerprint"))
@@ -380,7 +382,7 @@ public class PlanReviewApplicationService {
                 approved_grant_revision=?,approved_target_fingerprint=?,approval_pending=1,approval_id=?,
                 sync_state='PENDING',attempts=0,retry_round=retry_round+1,next_retry_at=?,safe_error=NULL,update_time=?
                 WHERE id=? AND generation=? AND state='ACTIVE'
-                """, source.version(), number(context.grant, "revision"), fingerprint(reviewId), operation, now(), now(), relationId, generation);
+                """, source.version(), 0L, fingerprint(reviewId), operation, now(), now(), relationId, generation);
         jdbc.update("UPDATE plan_review_preview SET consumed_by=? WHERE id=? AND consumed_by IS NULL", operation, previewId);
         jdbc.update("""
                 INSERT INTO plan_review_operation(id,project_id,source_kind,operation_type,request_key,payload_hash,
@@ -456,7 +458,6 @@ public class PlanReviewApplicationService {
         var source = persistence.sourceChanged(plan);
         var delta = difference(review, source, first);
         if (source.version() != number(preview, "source_version")
-                || number(context.grant, "revision") != number(preview, "grant_revision")
                 || !fingerprint(review).equals(preview.get("target_fingerprint"))
                 || !hash(JSON.toJSONString(delta)).equals(preview.get("difference_hash"))) {
             throw fail("PREVIEW_STALE", 409, "成员或意见已变化，请重新预览");
@@ -478,9 +479,9 @@ public class PlanReviewApplicationService {
         String project=text(preview,"project_id"),plan=text(preview,"plan_id");
         authorization.require(PlanReviewPolicy.Action.CREATE_LINKED_REVIEW,actor,project); persistence.lockSource(plan);
         var source=persistence.sourceChanged(plan); var object=object(true,plan);
-        long grant=jdbc.queryForObject("SELECT revision FROM plan_review_grant WHERE project_id=?",Long.class,project);
+        long grant=0L;
         if(now()>=number(preview,"expires_at"))throw fail("PREVIEW_EXPIRED",410,"预览已过期，请重新预览");
-        if(!state(object).editable()||source.version()!=number(preview,"source_version")||grant!=number(preview,"grant_revision")||number(object,"update_time")!=number(preview,"plan_revision"))throw fail("PREVIEW_STALE",409,"计划或授权已变化，请重新预览");
+        if(!state(object).editable()||source.version()!=number(preview,"source_version")||number(object,"update_time")!=number(preview,"plan_revision"))throw fail("PREVIEW_STALE",409,"计划已变化，请重新预览");
         var ids="added".equals(kind)?source.present().stream().sorted().toList():List.<String>of();
         int from=(int)Math.min((page-1L)*size,ids.size()); var items=new ArrayList<Map<String,Object>>();
         for(String id:ids.subList(from,Math.min(from+size,ids.size()))){
@@ -601,23 +602,10 @@ public class PlanReviewApplicationService {
         return Map.of("relationStatus", "ENDED", "generation", generation);
     }
 
+    /** Compatibility for older clients: synchronization is available without a project grant. */
     public Map<String, Object> grant(String project, Long expectedRevision, Boolean enabled, String actor) {
-        var access = authorization.current(actor, project, enabled != null);
-        if (!access.permissions().contains(PlanReviewPolicy.Permission.GRANT_MANAGE)) throw fail("PERMISSION_REQUIRED", 403, "缺少项目服务授权管理权限");
-        jdbc.update("INSERT IGNORE INTO plan_review_grant(project_id,update_time) VALUES(?,?)", project, now());
-        var current = jdbc.queryForMap("SELECT * FROM plan_review_grant WHERE project_id=? FOR UPDATE", project);
-        if (enabled != null) {
-            if (expectedRevision == null || expectedRevision != number(current, "revision")) throw fail("GRANT_STALE", 409, "授权已变化，请刷新");
-            jdbc.update("UPDATE plan_review_grant SET enabled=?,revision=revision+1,approved_by=?,update_time=? WHERE project_id=?", enabled, actor, now(), project);
-            jdbc.update("UPDATE plan_review_relation SET sync_state='RECONFIRM_REQUIRED',next_retry_at=NULL,update_time=? WHERE project_id=? AND state='ACTIVE'", now(), project);
-            audit(project, null, null, null, enabled ? "GRANT_RESTORED" : "GRANT_REVOKED", actor, 0, 0, 0, "SUCCEEDED", null);
-            current = jdbc.queryForMap("SELECT * FROM plan_review_grant WHERE project_id=?", project);
-        }
-        var result = new LinkedHashMap<String, Object>();
-        result.put("projectId", current.get("project_id")); result.put("revision", current.get("revision"));
-        result.put("enabled", truth(current.get("enabled"))); result.put("updatedAt", current.get("update_time"));
-        if (current.get("approved_by") != null) result.put("approvedBy", current.get("approved_by"));
-        return result;
+        authorization.current(actor, project, false);
+        return Map.of("projectId", project, "revision", 0L, "enabled", true, "required", false);
     }
 
     public Map<String, Object> operations(String project, String id, String actor, int page, int size) {
@@ -684,11 +672,12 @@ public class PlanReviewApplicationService {
         // Commit each bounded batch separately, without imposing another one-second delay per 100 members.
         // The time/batch bound leaves scheduler capacity for other jobs; every commit rechecks the fences.
         long deadline=System.nanoTime()+java.time.Duration.ofSeconds(8).toNanos();
-        for(int batch=0;batch<32&&System.nanoTime()<deadline;batch++)if(!drainBatch())break;
+        try{for(int batch=0;batch<32&&System.nanoTime()<deadline;batch++)if(!drainBatch())break;}
+        catch(Exception unavailable){diagnostics.observedFailure(PlanReviewSyncDiagnostics.FailureStage.POLL,null,null,null,0,0,unavailable);}
     }
     private boolean drainBatch(){
         var due = jdbc.queryForList("""
-                SELECT id,generation,attempts,retry_round,applied_batches FROM plan_review_relation WHERE state='ACTIVE' AND protocol_version=2
+                SELECT id,project_id,generation,source_version,attempts,retry_round,applied_batches FROM plan_review_relation WHERE state='ACTIVE' AND protocol_version=2
                 AND sync_state IN ('PENDING','WAITING_RETRY','DELAYED') AND (next_retry_at IS NULL OR next_retry_at<=?)
                 ORDER BY update_time,id LIMIT 1
                 """, now());
@@ -696,11 +685,11 @@ public class PlanReviewApplicationService {
         String id = text(due.getFirst(), "id"), generation = text(due.getFirst(), "generation");
         try {
             tx.executeWithoutResult(status -> synchronize(id, generation));
-            var completed=jdbc.queryForList("SELECT applied_batches FROM plan_review_relation WHERE id=? AND generation=?",Long.class,id,generation);
-            return completed.size()==1&&completed.getFirst()>number(due.getFirst(),"applied_batches");
         }
         catch (Exception failure) {
-            tx.executeWithoutResult(status -> {
+            var observed=due.getFirst();
+            diagnostics.observedFailure(PlanReviewSyncDiagnostics.FailureStage.TARGET_SYNC,text(observed,"project_id"),id,generation,number(observed,"source_version"),(int)number(observed,"attempts"),failure);
+            try{tx.executeWithoutResult(status -> {
                 var rows = jdbc.queryForList("SELECT * FROM plan_review_relation WHERE id=? AND generation=? AND state='ACTIVE' FOR UPDATE", id, generation);
                 if (rows.isEmpty()) return;
                 var row = rows.getFirst();
@@ -715,7 +704,18 @@ public class PlanReviewApplicationService {
                         completed, next, exhausted ? "FAILED_MANUAL" : "WAITING_RETRY", "成员同步未完成，请查看操作记录；源提交已保留", now(), id, generation);
                 audit(text(row, "project_id"), id, generation, null, "SYNC_FAILED", "plan-review-sync", number(row, "source_version"), 0, 0,
                         exhausted ? "FAILED_MANUAL" : "WAITING_RETRY", "TARGET_WRITE_FAILED");
-            });
+                diagnostics.failed(text(row,"project_id"),id,generation,number(row,"source_version"),completed,exhausted,failure);
+            });}catch(Exception persistenceFailure){
+                diagnostics.observedFailure(PlanReviewSyncDiagnostics.FailureStage.FAILURE_PERSIST,text(observed,"project_id"),id,generation,number(observed,"source_version"),(int)number(observed,"attempts"),persistenceFailure);
+            }
+            return false;
+        }
+        try{
+            var completed=jdbc.queryForList("SELECT applied_batches FROM plan_review_relation WHERE id=? AND generation=?",Long.class,id,generation);
+            return completed.size()==1&&completed.getFirst()>number(due.getFirst(),"applied_batches");
+        }catch(Exception unavailable){
+            var observed=due.getFirst();
+            diagnostics.observedFailure(PlanReviewSyncDiagnostics.FailureStage.PROGRESS_READ,text(observed,"project_id"),id,generation,number(observed,"source_version"),(int)number(observed,"attempts"),unavailable);
             return false;
         }
     }
@@ -728,7 +728,7 @@ public class PlanReviewApplicationService {
         var source = persistence.sourceChanged(text(initial, "plan_id"));
         var current = currentRelation(id);
         if (!generation.equals(current.get("generation")) || !"ACTIVE".equals(current.get("state"))) return;
-        if (!editable(context.plan, context.review) || !truth(context.grant.get("enabled"))) {
+        if (!editable(context.plan, context.review)) {
             jdbc.update("UPDATE plan_review_relation SET next_retry_at=NULL,update_time=? WHERE id=?", now(), id);
             return;
         }
@@ -737,7 +737,6 @@ public class PlanReviewApplicationService {
         String reviewId = text(current, "review_id");
         if (truth(current.get("approval_pending")) && (source.version() != number(current, "approved_source_version")
                 || number(current, "opinion_revision") != number(current, "approved_opinion_revision")
-                || number(context.grant, "revision") != number(current, "approved_grant_revision")
                 || !fingerprint(reviewId).equals(current.get("approved_target_fingerprint")))) {
             jdbc.update("UPDATE plan_review_relation SET sync_state='RECONFIRM_REQUIRED',next_retry_at=NULL,update_time=? WHERE id=?", now(), id);
             return;
@@ -765,6 +764,7 @@ public class PlanReviewApplicationService {
         if (converged) jdbc.update("UPDATE plan_review_operation SET stage='COMPLETED',state='COMPLETED',revision=revision+1,update_time=? WHERE relation_id=? AND generation=? AND stage='TARGET_PENDING' AND state='PENDING'", now(), id, generation);
         audit(text(current, "project_id"), id, generation, text(current, "approval_id"), "SYNC_BATCH", "plan-review-sync", source.version(), added, removed,
                 converged ? "SYNCED" : "PENDING", null);
+        if(converged)diagnostics.completed(text(current,"project_id"),id,generation,source.version());
     }
 
     private void initializeTarget(String review, PlanReviewSourceMembership source) {
@@ -855,19 +855,19 @@ public class PlanReviewApplicationService {
         return new PlanReviewFingerprintReader(jdbc).read(review, PlanReviewFingerprintReader.ReadMode.LOCKED, PlanReviewFingerprintReader.Format.APPLICATION_V1);
     }
 
-    private record Context(Map<String, Object> plan, Map<String, Object> review, Map<String, Object> grant) { }
+    private record Context(Map<String, Object> plan, Map<String, Object> review) { }
 
     private Context lockPair(String planId, String reviewId) {
         var plan = object(true, planId); var review = object(false, reviewId);
         if (!Objects.equals(plan.get("project_id"), review.get("project_id"))) throw fail("RESOURCE_NOT_ACCESSIBLE", 404, "对象不可访问");
         String project = text(plan, "project_id");
         jdbc.update("INSERT IGNORE INTO plan_review_grant(project_id,update_time) VALUES(?,?)", project, now());
-        var grant = jdbc.queryForMap("SELECT * FROM plan_review_grant WHERE project_id=? FOR UPDATE", project);
+        jdbc.queryForList("SELECT project_id FROM plan_review_grant WHERE project_id=? FOR UPDATE", project);
         plan = jdbc.queryForMap("SELECT * FROM test_plan WHERE id=? AND type='TEST_PLAN' FOR UPDATE", planId);
         plan = planStates.resolve(plan);
         review = jdbc.queryForMap("SELECT * FROM case_review WHERE id=? FOR UPDATE", reviewId);
         occupied(planId, reviewId, project);
-        return new Context(plan, review, grant);
+        return new Context(plan, review);
     }
 
     private List<Map<String, Object>> occupied(String plan, String review, String project) {
@@ -894,12 +894,11 @@ public class PlanReviewApplicationService {
         return plan ? planStates.resolve(rows.getFirst()) : rows.getFirst();
     }
 
-    private Map<String, Object> syncSummary(Map<String, Object> relation, Map<String, Object> plan, Map<String, Object> review, boolean grant) {
+    private Map<String, Object> syncSummary(Map<String, Object> relation, Map<String, Object> plan, Map<String, Object> review) {
         List<String> blockers = new ArrayList<>();
         if (state(plan) == PlanReviewPolicy.State.UNKNOWN || state(review) == PlanReviewPolicy.State.UNKNOWN) blockers.add("UNKNOWN_STATE");
         if (!state(plan).editable()) blockers.add("PLAN_LOCKED");
         if (!state(review).editable()) blockers.add("REVIEW_LOCKED");
-        if (!grant) blockers.add("GRANT_REVOKED");
         if ("RECONFIRM_REQUIRED".equals(relation.get("sync_state"))) blockers.add("RECONFIRM_REQUIRED");
         if ("FAILED_MANUAL".equals(relation.get("sync_state"))) blockers.add("RETRY_EXHAUSTED");
         var result = new LinkedHashMap<String, Object>();
@@ -909,7 +908,7 @@ public class PlanReviewApplicationService {
         if (relation.get("next_retry_at") != null) result.put("nextRetryAt", relation.get("next_retry_at"));
         if (relation.get("safe_error") != null) result.put("safeError", relation.get("safe_error"));
         if (!"SYNCED".equals(relation.get("sync_state")) && now() - number(relation, "source_changed_at") > 30_000) result.put("delayed", true);
-        result.put("editable", editable(plan, review) && grant);
+        result.put("editable", editable(plan, review));
         result.put("blockers", blockers); return result;
     }
 

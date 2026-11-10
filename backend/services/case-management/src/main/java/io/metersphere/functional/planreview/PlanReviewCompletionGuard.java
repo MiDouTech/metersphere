@@ -33,10 +33,9 @@ public class PlanReviewCompletionGuard {
         return calculated;
     }
     public boolean permit(String plan){
-        var rows=jdbc.queryForList("SELECT r.*,g.enabled grant_enabled FROM plan_review_relation r LEFT JOIN plan_review_grant g ON g.project_id=r.project_id WHERE r.active_plan_id=? AND r.state='ACTIVE'",plan);
+        var rows=jdbc.queryForList("SELECT r.* FROM plan_review_relation r WHERE r.active_plan_id=? AND r.state='ACTIVE'",plan);
         if(rows.isEmpty())return true;
         var row=rows.getFirst();
-        if(!Boolean.TRUE.equals(row.get("grant_enabled")) && !(row.get("grant_enabled") instanceof Number n && n.intValue()!=0) && !(row.get("grant_enabled") instanceof byte[] b && b.length>0 && b[0]!=0))return false;
         if(!"SYNCED".equals(row.get("sync_state")) || !Objects.equals(row.get("source_version"),row.get("applied_version")))return false;
         var clocks=jdbc.queryForList("SELECT version FROM plan_review_source_clock WHERE plan_id=?",Long.class,plan);
         if(clocks.size()!=1 || ((Number)row.get("applied_version")).longValue()!=clocks.getFirst())return false;

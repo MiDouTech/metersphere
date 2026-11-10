@@ -50,7 +50,7 @@ public class HandoffSourceReader {
         boolean authorized = false;
         try {
             var access = authorization.current(text(relation, "original_actor"), project, false);
-            authorized = access.serviceGrant() && access.permissions().containsAll(Set.of(PlanReviewPolicy.Permission.PLAN_READ, PlanReviewPolicy.Permission.REVIEW_READ));
+            authorized = access.permissions().containsAll(Set.of(PlanReviewPolicy.Permission.PLAN_READ, PlanReviewPolicy.Permission.REVIEW_READ));
         } catch (PlanReviewFailure unavailable) { /* No fallback identity. */ }
         var snapshot = new HandoffPolicy.Snapshot(text(p,"status"), text(review,"status"), relations.size()==1 && reviews.size()==1,
                 authorized, text(relation,"generation"), text(frame,"generation"), number(relation,"source_version"),

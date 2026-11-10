@@ -21,11 +21,11 @@ class ImportFollowupOptionsTests {
         ReflectionTestUtils.setField(coordinator,"relationAuthorization",auth);
         return coordinator.optionsForProject("project","user");
     }
-    @Test void administratorPermissionsAreNotReportedMissingWhenOnlyServiceGrantIsOff(){
+    @Test void disabledLegacyServiceGrantDoesNotBlockCreation(){
         var result=options(EnumSet.allOf(PlanReviewPolicy.Permission.class),false);
-        assertEquals(true,result.get("canCreatePermission"));assertEquals(false,result.get("serviceGranted"));assertEquals(false,result.get("canCreate"));
+        assertEquals(true,result.get("canCreatePermission"));assertEquals(true,result.get("serviceGranted"));assertEquals(true,result.get("canCreate"));
     }
-    @Test void creationStillRequiresBothPermissionsAndServiceGrant(){
+    @Test void creationStillUsesExistingObjectPermissions(){
         assertEquals(true,options(EnumSet.allOf(PlanReviewPolicy.Permission.class),true).get("canCreate"));
         var missing=options(EnumSet.of(PlanReviewPolicy.Permission.IMPORT),true);
         assertEquals(false,missing.get("canCreatePermission"));assertEquals(false,missing.get("canCreate"));

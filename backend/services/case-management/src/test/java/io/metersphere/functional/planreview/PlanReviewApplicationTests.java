@@ -41,6 +41,21 @@ class PlanReviewApplicationTests {
 
     private <T> T run(Supplier<T> action) { return tx.execute(s -> action.get()); }
     private String preview() { return (String) run(() -> service.preview("plan", "review", "PAIR_EXISTING", "actor")).get("previewId"); }
+    @Test void normalProjectMemberCanPairWithoutGrantPermissionOrGrantRecord(){
+        jdbc.update("INSERT INTO user_role_permission VALUES('reader','PROJECT_TEST_PLAN:READ+UPDATE'),('reader','CASE_REVIEW:READ'),('reader','CASE_REVIEW:READ+UPDATE')");
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM plan_review_grant",Integer.class));
+        var p=run(()->service.preview("plan","review","PAIR_EXISTING","reader"));
+        var pair=run(()->service.confirm((String)p.get("previewId"),"reader-pair",true,"reader"));sync(pair);
+        assertEquals("SYNCED",jdbc.queryForObject("SELECT sync_state FROM plan_review_relation",String.class));
+        assertEquals(false,jdbc.queryForObject("SELECT enabled FROM plan_review_grant",Boolean.class));
+        assertTrue(new PlanReviewCompletionGuard(jdbc).permit("plan"));
+    }
+    @Test void legacyGrantEndpointsDoNotModifyRowsOrInvalidateAnExistingPreview(){
+        var p=preview();var before=jdbc.queryForMap("SELECT * FROM plan_review_grant WHERE project_id='project'");
+        assertEquals(true,run(()->service.grant("project",null,false,"reader")).get("enabled"));
+        assertEquals(before,jdbc.queryForMap("SELECT * FROM plan_review_grant WHERE project_id='project'"));
+        assertDoesNotThrow(()->run(()->service.confirm(p,"still-valid",true,"actor")));
+    }
     @Test void editableCandidatesIncludeBothStatesOnBothSidesAndSearchBeforePagination() {
         jdbc.update("INSERT INTO test_plan(id,project_id,type,status,num,name) VALUES('prepared','project','TEST_PLAN','PREPARED',100007,'prepared-plan'),('foreign-plan','other','TEST_PLAN','UNDERWAY',100008,'foreign'),('group','project','GROUP','UNDERWAY',100009,'group'),('completed','project','TEST_PLAN','COMPLETED',100010,'completed')");
         jdbc.update("UPDATE test_plan SET num=100006,name='underway-plan' WHERE id='plan'");
@@ -475,9 +490,14 @@ class PlanReviewApplicationTests {
     }
 
     @Test
-    void mysqlRepeatableReadCannotUseAServiceGrantRevokedAfterItsSnapshot() throws Exception {
-        org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("plan.review.mysql.config")!=null);
-        staleSnapshotMustReject("SELECT enabled FROM plan_review_grant WHERE project_id='project'",()->run(()->service.grant("project",1L,false,"actor")),"PERMISSION_REQUIRED");
+    void legacyGrantRevisionChangesDoNotInvalidatePreviewOrApprovedSync() {
+        jdbc.update("INSERT INTO test_plan_functional_case VALUES('legacy-grant-source','plan','a')");
+        var p=preview();
+        jdbc.update("UPDATE plan_review_grant SET enabled=false,revision=revision+1 WHERE project_id='project'");
+        var paired=run(()->service.confirm(p,"legacy-grant-change",true,"actor"));
+        jdbc.update("UPDATE plan_review_grant SET revision=revision+1 WHERE project_id='project'");
+        sync(paired);assertEquals(Set.of("a"),current());
+        assertEquals("SYNCED",jdbc.queryForObject("SELECT sync_state FROM plan_review_relation",String.class));
     }
 
     @Test
@@ -657,7 +677,7 @@ class PlanReviewApplicationTests {
     }
 
     @Test
-    void revokedGrantOrFrozenReviewPreventsTargetWritesAndSourceCommitRemains() {
+    void disabledLegacyGrantDoesNotBlockSyncButFrozenReviewStillDoes() {
         var paired = pair(); sync(paired);
         run(() -> service.grant("project", 1L, false, "actor"));
         tx.executeWithoutResult(s -> {
@@ -665,10 +685,13 @@ class PlanReviewApplicationTests {
             store.sourceChanged("plan");
         });
         sync(paired);
-        assertTrue(current().isEmpty());
+        assertEquals(Set.of("a"),current());
         assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM test_plan_functional_case", Integer.class));
         run(() -> service.grant("project", 2L, true, "actor"));
         sync(paired);
-        assertTrue(current().isEmpty()); // grant restoration alone is not a new approval
+        assertEquals(Set.of("a"),current());
+        jdbc.update("UPDATE case_review SET status='COMPLETED' WHERE id='review'");
+        tx.executeWithoutResult(s->{jdbc.update("INSERT INTO test_plan_functional_case VALUES('m2','plan','b')");store.sourceChanged("plan");});
+        sync(paired);assertEquals(Set.of("a"),current());
     }
 }

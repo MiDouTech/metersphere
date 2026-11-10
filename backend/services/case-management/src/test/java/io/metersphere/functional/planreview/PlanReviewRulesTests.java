@@ -112,12 +112,12 @@ class PlanReviewRulesTests {
     }
 
     @Test
-    void grantRevocationStopsTargetButStillAllowsAuthorizedSourceAndExplicitUnlink() {
+    void obsoleteGrantDoesNotGateAuthorizedActions() {
         var permissions = EnumSet.allOf(Permission.class);
         var revoked = new Access(permissions, false);
-        assertFalse(allowed(Action.PAIR, revoked));
-        assertFalse(allowed(Action.RETRY_SYNC, revoked));
-        assertFalse(allowed(Action.APPEND, revoked));
+        assertTrue(allowed(Action.PAIR, revoked));
+        assertTrue(allowed(Action.RETRY_SYNC, revoked));
+        assertTrue(allowed(Action.APPEND, revoked));
         assertTrue(canWriteSource(revoked, State.UNDERWAY));
         assertTrue(allowed(Action.UNLINK, revoked));
         assertTrue(allowed(Action.RETRY_NOTICE, revoked));
@@ -130,7 +130,7 @@ class PlanReviewRulesTests {
                     && Set.of(State.PREPARED, State.UNDERWAY).contains(review);
             assertEquals(expected, canSynchronize(plan, review, true, true), plan + " / " + review);
             assertFalse(canSynchronize(plan, review, false, true));
-            assertFalse(canSynchronize(plan, review, true, false));
+            assertEquals(expected,canSynchronize(plan, review, true, false));
         }
     }
 
@@ -162,9 +162,9 @@ class PlanReviewRulesTests {
                 new Revision("p", "plan", "other", "g1", 5, 9, 3),
                 new Revision("p", "plan", "review", "g2", 5, 9, 3),
                 new Revision("p", "plan", "review", "g1", 6, 9, 3),
-                new Revision("p", "plan", "review", "g1", 5, 10, 3),
-                new Revision("p", "plan", "review", "g1", 5, 9, 4));
+                new Revision("p", "plan", "review", "g1", 5, 10, 3));
         for (Revision current : changed) assertFalse(preview.valid(current, NOW));
+        assertTrue(preview.valid(new Revision("p","plan","review","g1",5,9,4),NOW));
     }
 
     @Test
@@ -271,14 +271,13 @@ class PlanReviewRulesTests {
     }
 
     @Test
-    void sourceOrGrantCannotChangeInsideAnApprovedBatch() {
+    void sourceChangesStillInvalidateABatchButObsoleteGrantChangesDoNot() {
         var initial = revision(1, 1);
         var approval = PlanReviewApproval.begin(initial);
         assertThrows(IllegalStateException.class,
                 () -> approval.committedBatch(initial, revision(2, 2), false));
         var grantChanged = new Revision("project", "plan", "review", "g1", 1, 2, 2);
-        assertThrows(IllegalStateException.class,
-                () -> approval.committedBatch(initial, grantChanged, false));
+        assertDoesNotThrow(() -> approval.committedBatch(initial, grantChanged, false));
     }
 
     @Test
