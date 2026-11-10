@@ -12,7 +12,7 @@ class HandoffObservabilityTests {
     ch.qos.logback.classic.Logger logger;
     ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> logs;
     @BeforeEach void setup()throws Exception{
-        t=new HandoffPersistenceTests();t.setup();
+        t=new HandoffPersistenceTests();t.setup();t.useTransactionalServiceProxy();
         logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(HandoffWorker.class);
         logs=new ch.qos.logback.core.read.ListAppender<>();logs.start();logger.addAppender(logs);
     }

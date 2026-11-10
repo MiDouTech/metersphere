@@ -62,6 +62,31 @@ class HandoffPersistenceTests {
     long count(String table){return jdbc.queryForObject("SELECT COUNT(*) FROM "+table,Long.class);}
 
     String key(){return jdbc.queryForObject("SELECT business_key FROM hifox_http_delivery",String.class);}
+    @ParameterizedTest @ValueSource(strings={"NONE","BEARER"})
+    void transactionalServiceProxyDecryptsAndPostsWithoutHoldingTransaction(String mode){
+        if("BEARER".equals(mode))save("https://receiver.example.test/hook?secret=example",mode,"test-token");
+        useTransactionalServiceProxy();
+        target.during=()->{
+            assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
+            assertEquals("IN_FLIGHT",state());
+            assertEquals(1,count("hifox_http_attempt"));
+        };
+        enable();complete();dispatch();
+        assertEquals("SUCCESS",state());assertEquals(1,target.calls.get());
+        assertEquals("https://receiver.example.test/hook?secret=example",target.urls.get(0));
+        assertEquals("BEARER".equals(mode)?"test-token":null,target.tokens.get(0));
+        assertEquals(1,jdbc.queryForObject("SELECT attempts_used FROM hifox_http_delivery",Integer.class));
+    }
+    void useTransactionalServiceProxy(){
+        var factory=new org.springframework.aop.framework.ProxyFactory(service);
+        factory.setProxyTargetClass(true);
+        factory.addAdvice(new org.springframework.transaction.interceptor.TransactionInterceptor(
+                tx.getTransactionManager(),new org.springframework.transaction.annotation.AnnotationTransactionAttributeSource()));
+        service=(HandoffService)factory.getProxy();
+        worker.destroy();
+        var locks=new PlanReviewPersistence(jdbc);
+        worker=new HandoffWorker(new HandoffStore(jdbc,locks),service,tx.getTransactionManager());worker.setEnabled(true);
+    }
     @Test void statisticsCompletionAndExistingSnapshotUseTheSameOpinionFingerprint(){
         enable();
         jdbc.update("UPDATE case_review_functional_case SET id=CASE case_id WHEN 'a' THEN 'z-member' ELSE 'a-member' END,status='PASS'");

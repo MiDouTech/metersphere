@@ -61,15 +61,21 @@ export class MSAxios {
     }, undefined);
 
     // 响应拦截器
-    this.axiosInstance.interceptors.response.use((res: AxiosResponse<any>) => {
-      if (res) {
-        axiosCanceler.removePending(res.config);
+    this.axiosInstance.interceptors.response.use(
+      (res: AxiosResponse<any>) => {
+        if (res) {
+          axiosCanceler.completePending(res.config);
+        }
+        if (responseInterceptors && isFunction(responseInterceptors)) {
+          res = responseInterceptors(res);
+        }
+        return res;
+      },
+      (error: AxiosError) => {
+        if (error?.config) axiosCanceler.completePending(error.config);
+        return Promise.reject(error);
       }
-      if (responseInterceptors && isFunction(responseInterceptors)) {
-        res = responseInterceptors(res);
-      }
-      return res;
-    }, undefined);
+    );
 
     // 响应错误处理
     if (responseInterceptorsCatch && isFunction(responseInterceptorsCatch)) {

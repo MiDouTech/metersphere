@@ -196,9 +196,9 @@ public class HandoffWorker implements DisposableBean {
                     store.jdbc.update("UPDATE hifox_http_delivery SET payload_json=?,payload_hash=?,url_revision=? WHERE business_key=?",json,HandoffPolicy.hash(json),number(c,"url_revision"),key);
                 }else payload=text(d,"payload_json").getBytes(StandardCharsets.UTF_8);
                 stage=PreparationStage.URL_DECRYPT;
-                String url=service.secrets.open(store.configurationScope(d),"url",text(c,"url_secret"));
+                String url=service.openSecret(store.configurationScope(d),"url",text(c,"url_secret"));
                 stage=PreparationStage.TOKEN_DECRYPT;
-                String token="BEARER".equals(c.get("auth_mode"))?service.secrets.open(store.configurationScope(d),"token",text(c,"token_secret")):null;
+                String token="BEARER".equals(c.get("auth_mode"))?service.openSecret(store.configurationScope(d),"token",text(c,"token_secret")):null;
                 if(!enabled||closing)return null;
                 now=System.currentTimeMillis();
                 String id=UUID.randomUUID().toString();long sequence=number(d,"attempts_used")+1;
@@ -212,7 +212,7 @@ public class HandoffWorker implements DisposableBean {
         if(call==null)return;
         // Reservation is the audited start boundary. Revocation after it cannot retract an already started attempt.
         HandoffHttpTransport.Result result;
-        try{result=service.target.post(call.url(),call.token(),call.payload());}
+        try{result=service.postWebhook(call.url(),call.token(),call.payload());}
         catch(RuntimeException unavailable){result=new HandoffHttpTransport.Result(null,"NETWORK_ERROR",true,true,0);}
         var outcome=result;
         tx.executeWithoutResult(status->{lockProject(project);var d=store.delivery(project,key);finishLocked(project,d,call.id(),outcome);});

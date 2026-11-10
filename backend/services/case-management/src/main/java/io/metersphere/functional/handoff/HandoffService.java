@@ -35,6 +35,12 @@ public class HandoffService {
         if(uri.getRawQuery()!=null||!(uri.getPath().isEmpty()||"/".equals(uri.getPath())))throw new IllegalArgumentException("来源基地址须为HTTPS站点根地址");
         sourceBaseUrl=value.replaceAll("/+$","");
     }
+    // Collaborators must be reached through methods: a class-based transaction proxy
+    // does not carry the target instance's constructor-initialized fields.
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    public String openSecret(String scope,String field,String value){return secrets.open(scope,field,value);}
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    public HandoffHttpTransport.Result postWebhook(String url,String token,byte[] payload){return target.post(url,token,payload);}
     String key(String project,String plan){
         if(environment.isBlank())throw fail("ENVIRONMENT_NOT_CONFIGURED",503,"尚未配置源环境");
         return HandoffPolicy.businessKey(environment,project,plan);
