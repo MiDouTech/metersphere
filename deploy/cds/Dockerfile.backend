@@ -1,0 +1,11 @@
+FROM metersphere-cds-base
+
+# Reuse the existing runtime; only the preview configuration differs.
+COPY deploy/cds/metersphere.properties /opt/metersphere/conf/metersphere.properties
+COPY deploy/cds/redisson.yml /opt/metersphere/conf/redisson.yml
+COPY deploy/cds/entrypoint.sh /deployments/cds-preview.sh
+RUN sed -i 's/\r$//' /deployments/cds-preview.sh && chmod 755 /deployments/cds-preview.sh
+ENV SPRING_PROFILES_ACTIVE=local
+ENV MS_CONFIG_DIR=/opt/metersphere/conf
+ENV MS_REDISSON_CONFIG=file:/opt/metersphere/conf/redisson.yml
+ENTRYPOINT ["/deployments/cds-preview.sh"]

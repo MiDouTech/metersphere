@@ -38,10 +38,11 @@ Token Scope 要求：
 
 | 能力 | 所需 Scope |
 |------|------------|
-| 检索 / 详情 | `BUG_READ` 或 `BUG_WRITE` 或 `AGENT_ALL` |
+| 检索 / 历史文字读取 | `BUG_READ` 或 `BUG_WRITE` 或 `AGENT_ALL` |
+| 含图片索引的详情 / 单图读取 | 明确包含 `BUG_READ`，同时具有当前项目 `PROJECT_BUG_READ`，且 Token 项目范围允许 |
 | 创建 / 更新 / 关联用例 | `BUG_WRITE` 或 `AGENT_ALL` |
 
-说明：`BUG_WRITE` **隐含** `BUG_READ`。
+说明：历史接口的 `BUG_WRITE` 隐含读取不授予新增图片索引/读图能力。启用图片索引后，详情请求缺少上述读取授权时整体安全拒绝；写操作自身返回的旧详情字段不附带索引。
 
 ---
 

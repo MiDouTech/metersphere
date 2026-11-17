@@ -1,4 +1,6 @@
 export default {
+  'project.fileManagement.sourceLabel': '原件标签',
+  'project.fileManagement.sourceOperation': '来源操作',
   'project.fileManagement.myFile': '我的文件',
   'project.fileManagement.allFile': '全部文件',
   'project.fileManagement.defaultFile': '默认文件',

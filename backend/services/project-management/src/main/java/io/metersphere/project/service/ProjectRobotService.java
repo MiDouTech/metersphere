@@ -26,6 +26,8 @@ import java.util.stream.Stream;
 @Service
 @Transactional
 public class ProjectRobotService {
+    @Resource
+    private io.metersphere.system.service.PlatformNotificationScope platformScope;
 
     @Resource
     private ProjectRobotMapper robotMapper;
@@ -40,6 +42,7 @@ public class ProjectRobotService {
     private UserMapper userMapper;
 
     public ProjectRobot add(ProjectRobot projectRobot) {
+        platformScope.requireScope(projectRobot.getProjectId());
         projectRobot.setId(IDGenerator.nextStr());
         projectRobot.setEnable(projectRobot.getEnable());
         checkDingTalkAndSet(projectRobot);
@@ -48,6 +51,12 @@ public class ProjectRobotService {
     }
 
     private static void checkDingTalkAndSet(ProjectRobot projectRobot) {
+        if (!Set.of("WE_COM", "DING_TALK", "LARK", "CUSTOM").contains(StringUtils.defaultString(projectRobot.getPlatform()))
+                || StringUtils.isBlank(projectRobot.getName()) || projectRobot.getName().length() > 255
+                || StringUtils.isBlank(projectRobot.getWebhook()) || projectRobot.getWebhook().length() > 255
+                || StringUtils.length(projectRobot.getAppKey()) > 255 || StringUtils.length(projectRobot.getAppSecret()) > 255) {
+            throw new MSException("机器人名称、Webhook及凭据不符合原字段要求（最多255字符）");
+        }
         if (StringUtils.equals(projectRobot.getPlatform(), NoticeConstants.Type.DING_TALK)) {
             if (StringUtils.isBlank(projectRobot.getType())) {
                 throw new MSException(Translator.get("ding_type_is_null"));
@@ -64,7 +73,11 @@ public class ProjectRobotService {
     }
 
     public void update(ProjectRobot projectRobot) {
-        checkRobotExist(projectRobot.getId());
+        platformScope.requireScope(projectRobot.getProjectId());
+        ProjectRobot previous = checkRobotExist(projectRobot.getId());
+        if (Set.of(NoticeConstants.Type.IN_SITE, NoticeConstants.Type.MAIL).contains(previous.getPlatform())) {
+            throw new MSException("默认机器人仅支持原启停操作");
+        }
         checkDingTalkAndSet(projectRobot);
         robotMapper.updateByPrimaryKeySelective(projectRobot);
     }
@@ -74,11 +87,15 @@ public class ProjectRobotService {
         if (projectRobotInDB == null) {
             throw new MSException(Translator.get("robot_is_null"));
         }
+        platformScope.requireScope(projectRobotInDB.getProjectId());
         return projectRobotInDB;
     }
 
     public void delete(String id) {
-        checkRobotExist(id);
+        ProjectRobot robot = checkRobotExist(id);
+        if (Set.of(NoticeConstants.Type.IN_SITE, NoticeConstants.Type.MAIL).contains(robot.getPlatform())) {
+            throw new MSException("默认站内信和邮件机器人不能删除");
+        }
         MessageTaskExample messageTaskExample = new MessageTaskExample();
         messageTaskExample.createCriteria().andProjectRobotIdEqualTo(id);
         List<MessageTask> messageTasks = messageTaskMapper.selectByExample(messageTaskExample);
@@ -103,6 +120,7 @@ public class ProjectRobotService {
     }
 
     public List<ProjectRobot> getList(String projectId) {
+        platformScope.requireScope(projectId);
         ProjectRobotExample projectExample = new ProjectRobotExample();
         ProjectRobotExample.Criteria criteria = projectExample.createCriteria();
         criteria.andProjectIdEqualTo(projectId);

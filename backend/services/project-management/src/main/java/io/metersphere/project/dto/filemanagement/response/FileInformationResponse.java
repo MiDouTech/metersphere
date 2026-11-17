@@ -66,6 +66,9 @@ public class FileInformationResponse {
 
     @Schema(description = "文件版本")
     private String fileVersion;
+    private String sha256;
+    private String sourceLabel;
+    private String sourceOperationId;
 
     @Schema(description = "文件路径")
     private String filePath;

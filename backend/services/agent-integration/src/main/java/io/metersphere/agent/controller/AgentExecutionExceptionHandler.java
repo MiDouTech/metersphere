@@ -23,6 +23,10 @@ import java.util.UUID;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(basePackages = "io.metersphere.agent.controller")
 public class AgentExecutionExceptionHandler {
+    @ExceptionHandler(io.metersphere.functional.planreview.PlanReviewFailure.class)
+    public ResponseEntity<AgentApiErrorDTO> planReview(io.metersphere.functional.planreview.PlanReviewFailure error, HttpServletRequest request) {
+        return ResponseEntity.status(error.httpStatus()).body(new AgentApiErrorDTO(error.code(), error.getMessage(), java.util.Map.of(), traceId(request)));
+    }
     private static final Logger LOGGER = LoggerFactory.getLogger(AgentExecutionExceptionHandler.class);
     private final AgentSafeErrorMapper mapper;
 

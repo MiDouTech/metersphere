@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class DeleteCaseReviewService {
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewApplicationService planReviewRelations;
 
     @Resource
     private CaseReviewMapper caseReviewMapper;
@@ -34,6 +36,7 @@ public class DeleteCaseReviewService {
     private CaseReviewCaseProvider caseReviewCaseProvider;
 
     public void deleteCaseReviewResource(List<String> ids, String projectId) {
+        for (String id : ids.stream().distinct().sorted().toList()) planReviewRelations.deletingObject(false, id, projectId);
         // TODO 删除各种关联关系？ 1.关联用例(功能/接口/场景/ui/性能)？ 2.评审和评审人 3. 归档的用例 4. 关注人 5.评审历史 6. 操作记录
         // 1.刪除评审与功能用例关联关系
         CaseReviewFunctionalCaseExample caseReviewFunctionalCaseExample = new CaseReviewFunctionalCaseExample();

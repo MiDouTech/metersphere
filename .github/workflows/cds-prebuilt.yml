@@ -1,0 +1,62 @@
+name: CDS Prebuilt Preview
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: cds-prebuilt-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  images:
+    if: github.repository == 'chenqifen-miduo/metersphere'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.8.1'
+      - name: Build application artifacts
+        run: |
+          set -euo pipefail
+          chmod +x mvnw
+          ./mvnw -B package -DskipTests -DskipAntRunForJenkins=true -pl '!frontend'
+          mkdir -p backend/app/target/dependency
+          APP_JAR=$(find backend/app/target -maxdepth 1 -name 'app-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | head -n 1)
+          test -n "$APP_JAR"
+          (cd backend/app/target/dependency && jar -xf "../$(basename "$APP_JAR")")
+          corepack enable
+          corepack prepare pnpm@8.4.0 --activate
+          cd frontend
+          pnpm install --no-frozen-lockfile
+          pnpm run build
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build preview images
+        env:
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          IMAGE_ROOT="ghcr.io/${REPOSITORY,,}-cds"
+          docker build -f Dockerfile.backend --build-arg MS_VERSION="$COMMIT_SHA" -t metersphere-cds-base .
+          docker build -f deploy/cds/Dockerfile.backend -t "$IMAGE_ROOT-backend:sha-$COMMIT_SHA" .
+          docker build -f deploy/cds/Dockerfile.frontend -t "$IMAGE_ROOT-frontend:sha-$COMMIT_SHA" .
+          docker run --rm --add-host app:127.0.0.1 --entrypoint nginx "$IMAGE_ROOT-frontend:sha-$COMMIT_SHA" -t
+          docker push "$IMAGE_ROOT-backend:sha-$COMMIT_SHA"
+          docker push "$IMAGE_ROOT-frontend:sha-$COMMIT_SHA"
+          printf 'Backend: `%s`\nFrontend: `%s`\n' "$IMAGE_ROOT-backend:sha-$COMMIT_SHA" "$IMAGE_ROOT-frontend:sha-$COMMIT_SHA" >> "$GITHUB_STEP_SUMMARY"

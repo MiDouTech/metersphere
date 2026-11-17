@@ -25,6 +25,35 @@ import java.util.List;
 
 @Service
 public class AgentCaseReviewWriteService {
+    @Resource private io.metersphere.functional.planreview.PlanReviewApplicationService linkedReviews;
+    @Resource private org.springframework.jdbc.core.JdbcTemplate linkedReviewJdbc;
+
+    private String linkedReviewAccess(String project) {
+        String actor=access.project(project,"CASE_REVIEW:READ+ADD",true,io.metersphere.agent.constants.AgentTokenScope.REVIEW_WRITE);
+        access.project(project,"CASE_REVIEW:READ",false,io.metersphere.agent.constants.AgentTokenScope.REVIEW_WRITE);
+        access.project(project,"PROJECT_TEST_PLAN:READ",false,io.metersphere.agent.constants.AgentTokenScope.PLAN_READ);
+        access.project(project,"PROJECT_TEST_PLAN:READ+UPDATE",true,io.metersphere.agent.constants.AgentTokenScope.PLAN_WRITE);
+        return actor;
+    }
+
+    public java.util.Map<String,Object> previewLinked(io.metersphere.agent.dto.AgentLinkedReviewPreviewRequest request) {
+        if(request==null || !validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+        String actor=linkedReviewAccess(request.getProjectId());
+        if(CollectionUtils.isNotEmpty(request.getCaseIds()))throw new MSException("AGENT_VALIDATION_ERROR");
+        var draft=new java.util.LinkedHashMap<String,Object>();
+        draft.put("projectId",request.getProjectId());draft.put("name",request.getName());draft.put("moduleId",StringUtils.defaultIfBlank(request.getModuleId(),"root"));
+        draft.put("reviewPassRule",StringUtils.defaultIfBlank(request.getReviewPassRule(),PASS_RULE_SINGLE));draft.put("reviewers",request.getReviewers());
+        draft.put("description",request.getDescription());draft.put("tags",request.getTags());
+        return linkedReviews.previewNewReview(request.getPlanId(),request.getRequestId(),draft,"AGENT",actor);
+    }
+
+    public java.util.Map<String,Object> confirmLinked(io.metersphere.agent.dto.AgentLinkedReviewConfirmRequest request) {
+        if(request==null || !validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+        String actor=linkedReviewAccess(request.getProjectId());
+        Long count=linkedReviewJdbc.queryForObject("SELECT COUNT(*) FROM plan_review_preview WHERE id=? AND project_id=? AND actor=? AND purpose='CREATE_LINKED_REVIEW'",Long.class,request.getPreviewId(),request.getProjectId(),actor);
+        if(count==null || count!=1)throw AgentBusinessAccess.denied();
+        return linkedReviews.confirmNewReview(request.getPreviewId(),request.getRequestId(),request.isAcknowledged(),actor);
+    }
     @Resource private AgentBusinessAccess access;
     @Resource private AgentOperationExecutor operations;
     @Resource private jakarta.validation.Validator validator;

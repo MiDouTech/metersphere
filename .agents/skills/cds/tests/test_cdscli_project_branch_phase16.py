@@ -1,0 +1,1046 @@
+"""Phase 16 — cdscli project / branch / onboard CRUD 单测
+
+覆盖新增 4+1 个子命令的 happy path + 错误场景。所有测试都用 monkeypatch 替换
+`_call` / `urlopen`,不打真 HTTP,跑得快、与 CDS 状态无关。
+
+新命令清单(SSOT: cdscli.py 的 _build_parser):
+  - project create --name X --git-url URL [--slug] [--description]
+  - project clone <id>            (SSE 流式)
+  - project delete <id>           (级联清理)
+  - branch create --project P --branch B   (--project flag 抹平 API field "projectId")
+  - onboard <git-url>              (create + clone + envMeta 提示)
+  - env set: 兼容 KEY=VALUE 与 --key/--value
+"""
+import io
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+CLI_DIR = ROOT / "cli"
+sys.path.insert(0, str(CLI_DIR))
+
+import cdscli  # noqa: E402
+
+
+# ── shared fixtures ──────────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+def reset_globals(monkeypatch):
+    """每个 case 起跑前重置全局 + 注入最小环境。"""
+    monkeypatch.setenv("CDS_HOST", "cds.test.example")
+    monkeypatch.setenv("AI_ACCESS_KEY", "test-key-not-real")
+    monkeypatch.delenv("CDS_PROJECT_ID", raising=False)
+    monkeypatch.delenv("CDS_PROJECT_KEY", raising=False)
+    cdscli._TRACE_ID = "testtrace"
+    cdscli._HUMAN = False
+    yield
+
+
+def call_main(argv: list[str]) -> tuple[int, str]:
+    """跑 cdscli.main(argv),capture stdout + 退出码。"""
+    buf = io.StringIO()
+    code = 0
+    real_stdout = sys.stdout
+    sys.stdout = buf
+    try:
+        cdscli.main(argv)
+    except SystemExit as e:
+        code = e.code if isinstance(e.code, int) else 1
+    finally:
+        sys.stdout = real_stdout
+    return code, buf.getvalue()
+
+
+def parse_ok(out: str) -> dict:
+    """解析 cdscli 默认 JSON 输出,断言 ok=True。"""
+    payload = json.loads(out.strip().split("\n")[-1])
+    assert payload.get("ok") is True, f"expected ok=true, got {payload}"
+    return payload
+
+
+# ── project create ───────────────────────────────────────────────────
+
+
+def test_project_create_minimal(monkeypatch):
+    """--name 必填,git-url/slug/description 可选。验证 URL + body 正确。"""
+    captured: dict = {}
+
+    def fake_call(method, path, body=None, timeout=15, quiet=False):
+        captured["method"] = method
+        captured["path"] = path
+        captured["body"] = body
+        return {"project": {"id": "proj-abc", "slug": "demo", "name": "Demo"}}
+
+    monkeypatch.setattr(cdscli, "_call", fake_call)
+    code, out = call_main(["project", "create", "--name", "Demo"])
+    assert code == 0, out
+    assert captured["method"] == "POST"
+    assert captured["path"] == "/api/projects"
+    assert captured["body"] == {"name": "Demo"}
+    payload = parse_ok(out)
+    assert payload["data"]["project"]["id"] == "proj-abc"
+
+
+def test_project_create_with_all_fields(monkeypatch):
+    """--git-url + --slug + --description 应被原样传到 body。"""
+    captured: dict = {}
+    monkeypatch.setattr(cdscli, "_call",
+                        lambda m, p, body=None, timeout=15, quiet=False:
+                        captured.update(method=m, path=p, body=body) or
+                        {"project": {"id": "p-1", "slug": "alpha"}})
+    code, _ = call_main([
+        "project", "create",
+        "--name", "Alpha App",
+        "--git-url", "https://github.com/x/alpha.git",
+        "--slug", "alpha",
+        "--description", "the alpha app",
+    ])
+    assert code == 0
+    assert captured["body"] == {
+        "name": "Alpha App",
+        "gitRepoUrl": "https://github.com/x/alpha.git",
+        "slug": "alpha",
+        "description": "the alpha app",
+    }
+
+
+def test_project_create_empty_name_dies(monkeypatch):
+    """--name 留空(空白)应 die,不发请求。"""
+    called = {"n": 0}
+
+    def fake_call(*a, **kw):
+        called["n"] += 1
+        return {}
+
+    monkeypatch.setattr(cdscli, "_call", fake_call)
+    code, out = call_main(["project", "create", "--name", "   "])
+    assert code == 1, f"expected code=1, got {code}: {out}"
+    assert called["n"] == 0, "不应该发起 HTTP 请求"
+    payload = json.loads(out.strip().split("\n")[-1])
+    assert payload["ok"] is False
+    assert "--name" in payload["error"]
+
+
+# ── preview identity helpers ─────────────────────────────────────────
+
+
+def test_generic_workspace_uses_directory_slug_for_local_fallback(monkeypatch):
+    """generic checkout 不能无条件把本地 fallback 改成 repo slug。
+
+    服务端未持久化 collision-checked alias 时,安全身份仍可能是 workspace。
+    """
+    monkeypatch.setattr(cdscli, "_git_origin_slug", lambda: "prd-agent")
+
+    assert cdscli._project_slug_hint("/tmp/workspace") == "workspace"
+    assert cdscli._project_slug_hints("/tmp/workspace") == ["workspace"]
+    assert cdscli._fallback_project_slug("/tmp/workspace") == "workspace"
+
+
+def test_preview_branch_match_rejects_unverified_repo_alias(monkeypatch):
+    """generic checkout 只接受 directory slug,不隐式接受 repo alias。"""
+    branch = "cursor/frontend-agent-1685"
+    candidates = ["workspace"]
+
+    workspace_row = {
+        "id": "workspace-cursor-frontend-agent-1685",
+        "projectSlug": "workspace",
+        "branch": branch,
+        "previewSlug": "frontend-agent-1685-cursor-workspace",
+    }
+    alias_row = {
+        "id": "prd-agent-cursor-frontend-agent-1685",
+        "projectSlug": "prd-agent",
+        "branch": branch,
+        "previewSlug": "frontend-agent-1685-cursor-prd-agent",
+    }
+    other_row = {
+        "id": "app-cursor-frontend-agent-1685",
+        "projectSlug": "app",
+        "branch": branch,
+        "previewSlug": "frontend-agent-1685-cursor-app",
+    }
+
+    assert cdscli._match_branches_for_project(
+        [workspace_row], branch, candidates, already_scoped=False) == [workspace_row]
+    assert cdscli._match_branches_for_project(
+        [alias_row], branch, candidates, already_scoped=False) == []
+    assert cdscli._match_branches_for_project(
+        [other_row], branch, candidates, already_scoped=False) == []
+
+
+def test_ambiguous_project_matches_die_instead_of_picking_first(monkeypatch):
+    """同一 git branch 同时命中多个候选时不能取第一条。"""
+    branch = "cursor/frontend-agent-1685"
+    matches = [
+        {
+            "id": "workspace-cursor-frontend-agent-1685",
+            "projectSlug": "workspace",
+            "branch": branch,
+            "previewSlug": "frontend-agent-1685-cursor-workspace",
+        },
+        {
+            "id": "prd-agent-cursor-frontend-agent-1685",
+            "projectSlug": "prd-agent",
+            "branch": branch,
+            "previewSlug": "frontend-agent-1685-cursor-prd-agent",
+        },
+    ]
+    buf = io.StringIO()
+    real_stdout = sys.stdout
+    sys.stdout = buf
+    try:
+        with pytest.raises(SystemExit) as exc:
+            cdscli._die_if_ambiguous_project_matches(
+                matches, branch, ["workspace", "prd-agent"])
+    finally:
+        sys.stdout = real_stdout
+
+    assert exc.value.code == 2
+    out = buf.getvalue()
+    payload = json.loads(out.strip().split("\n")[-1])
+    assert payload["ok"] is False
+    assert "同时匹配" in payload["error"]
+    assert payload["projectHints"] == ["workspace", "prd-agent"]
+
+
+def test_cds_only_branch_prefers_self_host_project(tmp_path, monkeypatch):
+    """同仓库 CDS 专属分支应优先匹配 self-host 项目，而不是业务项目。"""
+    cds_dir = tmp_path / "cds"
+    cds_dir.mkdir()
+    (cds_dir / "cds-compose.selfhost.yml").write_text(
+        "x-cds-project:\n  name: cds-self\nservices: {}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_git_changed_paths_since_default_branch",
+        lambda _root: [
+            "cds/web/src/pages/BranchListPage.tsx",
+            "cds/src/services/preview-instance-seed.ts",
+            "changelogs/2026-07-23_cds-self-preview.md",
+        ],
+    )
+
+    assert cdscli._branch_lookup_project_slug_hints(str(tmp_path)) == ["cds-self"]
+
+
+def test_mixed_branch_keeps_regular_project_routing(tmp_path, monkeypatch):
+    """CDS 与业务模块混改时不得把整个分支误路由到 self-host 项目。"""
+    cds_dir = tmp_path / "cds"
+    cds_dir.mkdir()
+    (cds_dir / "cds-compose.selfhost.yml").write_text(
+        "x-cds-project:\n  name: cds-self\nservices: {}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_git_changed_paths_since_default_branch",
+        lambda _root: [
+            "cds/web/src/pages/BranchListPage.tsx",
+            "prd-admin/src/App.tsx",
+        ],
+    )
+    monkeypatch.setattr(cdscli, "_git_origin_slug", lambda: "prd-agent")
+
+    assert cdscli._branch_lookup_project_slug_hints(str(tmp_path)) == [
+        cdscli._slugify_for_preview(tmp_path.name),
+    ]
+
+
+def test_preview_url_revalidates_cds_self_even_with_project_scoped_credentials(tmp_path, monkeypatch):
+    """业务项目凭据不能让 CDS-only 分支返回业务项目的同名预览。"""
+    cds_dir = tmp_path / "cds"
+    cds_dir.mkdir()
+    (cds_dir / "cds-compose.selfhost.yml").write_text(
+        "x-cds-project:\n  name: cds-self\nservices: {}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_git_changed_paths_since_default_branch",
+        lambda _root: ["cds/src/server.ts"],
+    )
+    monkeypatch.setenv("CDS_PROJECT_ID", "prd-agent-project-id")
+    monkeypatch.setenv("CDS_PROJECT_KEY", "cdsp_business-project")
+    monkeypatch.setitem(cdscli._EXPLICIT_CREDENTIAL_ENV, "AI_ACCESS_KEY", "")
+    monkeypatch.setattr(
+        cdscli.subprocess,
+        "check_output",
+        lambda args, **kwargs: (
+            "codex/cds-fix\n" if args[-1] == "--show-current" else f"{tmp_path}\n"
+        ),
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_call_safe",
+        lambda method, path, timeout=10: {
+            "branches": [{
+                "id": "prd-agent-codex-cds-fix",
+                "projectId": "prd-agent-project-id",
+                "projectSlug": "prd-agent",
+                "branch": "codex/cds-fix",
+                "previewUrl": "https://wrong-business.example",
+            }],
+        },
+    )
+
+    code, out = call_main(["preview-url"])
+
+    assert code == 2
+    assert "CDS Self" in out
+    assert "wrong-business.example" not in out
+
+
+def test_preview_url_accepts_verified_cds_self_scope(tmp_path, monkeypatch):
+    cds_dir = tmp_path / "cds"
+    cds_dir.mkdir()
+    (cds_dir / "cds-compose.selfhost.yml").write_text(
+        "x-cds-project:\n  name: cds-self\nservices: {}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_git_changed_paths_since_default_branch",
+        lambda _root: ["cds/src/server.ts"],
+    )
+    monkeypatch.setenv("CDS_PROJECT_ID", "opaque-self-project-id")
+    monkeypatch.setenv("CDS_PROJECT_KEY", "cdsp_self-project")
+    monkeypatch.setitem(cdscli._EXPLICIT_CREDENTIAL_ENV, "AI_ACCESS_KEY", "")
+    monkeypatch.setattr(
+        cdscli.subprocess,
+        "check_output",
+        lambda args, **kwargs: (
+            "codex/cds-fix\n" if args[-1] == "--show-current" else f"{tmp_path}\n"
+        ),
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_call_safe",
+        lambda method, path, timeout=10: {
+            "branches": [{
+                "id": "cds-self-codex-cds-fix",
+                "projectId": "opaque-self-project-id",
+                "projectSlug": "cds-self",
+                "branch": "codex/cds-fix",
+                "previewUrl": "https://verified-self.example",
+            }],
+        },
+    )
+
+    code, out = call_main(["preview-url"])
+
+    assert code == 0, out
+    payload = parse_ok(out)
+    assert payload["data"]["url"] == "https://verified-self.example/"
+
+
+def test_preview_url_uses_explicit_global_key_to_resolve_cds_self(tmp_path, monkeypatch):
+    cds_dir = tmp_path / "cds"
+    cds_dir.mkdir()
+    (cds_dir / "cds-compose.selfhost.yml").write_text(
+        "x-cds-project:\n  name: cds-self\nservices: {}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_git_changed_paths_since_default_branch",
+        lambda _root: ["cds/src/server.ts"],
+    )
+    monkeypatch.setenv("CDS_PROJECT_ID", "prd-agent-project-id")
+    monkeypatch.setenv("CDS_PROJECT_KEY", "cdsp_business-project")
+    monkeypatch.setitem(cdscli._EXPLICIT_CREDENTIAL_ENV, "AI_ACCESS_KEY", "cdsg_global-key")
+    monkeypatch.setattr(
+        cdscli.subprocess,
+        "check_output",
+        lambda args, **kwargs: (
+            "codex/cds-fix\n" if args[-1] == "--show-current" else f"{tmp_path}\n"
+        ),
+    )
+    captured: dict = {}
+
+    def fake_call_safe(method, path, timeout=10, auth_key_override=""):
+        captured.update(path=path, auth_key_override=auth_key_override)
+        return {
+            "branches": [{
+                "id": "cds-self-codex-cds-fix",
+                "projectSlug": "cds-self",
+                "branch": "codex/cds-fix",
+                "previewUrl": "https://resolved-self.example",
+            }],
+        }
+
+    monkeypatch.setattr(cdscli, "_call_safe", fake_call_safe)
+
+    code, out = call_main(["preview-url"])
+
+    assert code == 0, out
+    assert captured == {
+        "path": "/api/branches",
+        "auth_key_override": "cdsg_global-key",
+    }
+    payload = parse_ok(out)
+    assert payload["data"]["url"] == "https://resolved-self.example/"
+
+
+def test_preview_urls_use_api_values_and_preserve_multiple_entries():
+    """preview-url 只消费 API 页面地址，主入口优先并过滤探活 URL。"""
+    branch = {
+        "previewSlug": "must-not-be-used-to-build-a-host",
+        "previewUrl": "https://primary.example/",
+        "previewUrls": [
+            "https://secondary.example",
+            "https://primary.example",
+            "https://gateway.example/gw/healthz",
+            "javascript:alert(1)",
+            None,
+        ],
+    }
+
+    assert cdscli._preview_urls_from_branch(branch) == [
+        "https://primary.example/",
+        "https://secondary.example/",
+    ]
+
+
+def test_preview_entries_are_named_web_pages_and_override_legacy_health_urls():
+    branch = {
+        "previewUrl": "https://legacy.example/healthz",
+        "previewUrls": ["https://legacy.example/healthz"],
+        "previewEntries": [
+            {"name": "管理端", "url": "https://main.example/", "primary": True},
+            {"name": "帮助中心", "url": "https://help.example/guide", "primary": False},
+        ],
+    }
+
+    assert cdscli._preview_urls_from_branch(branch) == [
+        "https://main.example/",
+        "https://help.example/guide",
+    ]
+
+
+def test_preview_url_command_returns_all_api_entries(monkeypatch):
+    """CDS 返回两个入口时，JSON 同时保留主入口与全量列表。"""
+    monkeypatch.setenv("CDS_PROJECT_ID", "proj-a")
+    monkeypatch.setenv("CDS_PROJECT_KEY", "project-key-not-real")
+    monkeypatch.setattr(
+        cdscli.subprocess,
+        "check_output",
+        lambda args, **kwargs: (
+            "feat/actual-preview\n"
+            if args[-1] == "--show-current"
+            else "/tmp/prd-agent\n"
+        ),
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_call_safe",
+        lambda method, path, timeout=10: {
+            "branches": [{
+                "id": "proj-a-feat-actual-preview",
+                "projectId": "proj-a",
+                "branch": "feat/actual-preview",
+                "previewSlug": "ignored-for-url",
+                "previewUrl": "https://primary.example",
+                "previewUrls": [
+                    "https://primary.example",
+                    "https://secondary.example",
+                ],
+            }],
+        },
+    )
+
+    code, out = call_main(["preview-url"])
+    assert code == 0, out
+    payload = parse_ok(out)
+    assert payload["data"]["source"] == "cds-api"
+    assert payload["data"]["url"] == "https://primary.example/"
+    assert payload["data"]["urls"] == [
+        "https://primary.example/",
+        "https://secondary.example/",
+    ]
+
+    human_code, human_out = call_main(["--human", "preview-url"])
+    assert human_code == 0, human_out
+    assert human_out.strip().splitlines() == [
+        "https://primary.example/",
+        "https://secondary.example/",
+    ]
+
+
+def test_preview_url_command_refuses_local_fallback(monkeypatch):
+    """API 失败时不得由 previewSlug / repo 名猜一个 URL。"""
+    monkeypatch.setenv("CDS_PROJECT_ID", "proj-a")
+    monkeypatch.setenv("CDS_PROJECT_KEY", "project-key-not-real")
+    monkeypatch.setattr(
+        cdscli.subprocess,
+        "check_output",
+        lambda args, **kwargs: (
+            "feat/actual-preview\n"
+            if args[-1] == "--show-current"
+            else "/tmp/prd-agent\n"
+        ),
+    )
+    monkeypatch.setattr(
+        cdscli,
+        "_call_safe",
+        lambda method, path, timeout=10: {
+            "__error__": True,
+            "status": 503,
+            "body": {"message": "unavailable"},
+        },
+    )
+
+    code, out = call_main(["preview-url"])
+    assert code == 3
+    payload = json.loads(out.strip().split("\n")[-1])
+    assert payload["ok"] is False
+    assert "拒绝本地推算" in payload["error"]
+    assert "miduo.org" not in out
+
+
+class _FakeHttpResponse:
+    def __init__(self, body: bytes = b'{"version":3}',
+                 content_type: str = "application/json"):
+        self.status = 200
+        self._body = body
+        self.headers = {"Content-Type": content_type}
+
+    def read(self, size: int = -1):
+        return self._body if size < 0 else self._body[:size]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+def test_smoke_uses_api_primary_preview_url(monkeypatch):
+    """smoke 只探测 CDS 返回的主入口，不用 slug 或 host 重建。"""
+    monkeypatch.setenv("CDS_PROJECT_KEY", "project-key-not-real")
+    monkeypatch.setattr(
+        cdscli,
+        "_call_safe",
+        lambda method, path, timeout=30: {
+            "branches": [{
+                "id": "proj-a-feat-actual-preview",
+                "previewSlug": "must-not-be-used",
+                "previewUrl": "https://primary.example",
+                "previewUrls": [
+                    "https://primary.example",
+                    "https://secondary.example",
+                ],
+            }],
+        },
+    )
+    requested: list[str] = []
+
+    def fake_urlopen(req, timeout=10):
+        requested.append(req.full_url)
+        return _FakeHttpResponse()
+
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen", fake_urlopen)
+    code, out = call_main(["smoke", "proj-a-feat-actual-preview"])
+
+    assert code == 0, out
+    payload = parse_ok(out)
+    assert payload["data"]["preview"] == "https://primary.example"
+    assert requested
+    assert all(url.startswith("https://primary.example/") for url in requested)
+    assert all("must-not-be-used" not in url for url in requested)
+    assert all("secondary.example" not in url for url in requested)
+
+
+def test_smoke_rejects_api_html_200(monkeypatch):
+    """L2 API 路径返回 SPA HTML 时，即使 HTTP 200 也必须判失败。"""
+    monkeypatch.setenv("CDS_PROJECT_KEY", "project-key-not-real")
+    monkeypatch.setattr(
+        cdscli,
+        "_call_safe",
+        lambda method, path, timeout=30: {
+            "branches": [{
+                "id": "proj-a-html-fallback",
+                "previewUrl": "https://html-fallback.example",
+            }],
+        },
+    )
+
+    monkeypatch.setattr(
+        cdscli.urllib.request,
+        "urlopen",
+        lambda req, timeout=10: _FakeHttpResponse(
+            b"<!doctype html><title>LLM Gateway</title>",
+            "text/html; charset=utf-8",
+        ),
+    )
+
+    code, out = call_main(["smoke", "proj-a-html-fallback"])
+
+    assert code == 2, out
+    payload = json.loads(out.strip().split("\n")[-1])
+    l2_probes = [
+        probe for probe in payload["data"]["probes"]
+        if probe["layer"].startswith("L2")
+    ]
+    assert l2_probes
+    assert all(probe["pass"] is False for probe in l2_probes)
+    assert all(probe["contentType"] == "text/html; charset=utf-8"
+               for probe in l2_probes)
+    assert all(probe["error"] == "expected_application_json"
+               for probe in l2_probes)
+
+
+def test_smoke_accepts_any_valid_l2_candidate(monkeypatch):
+    """L2 候选是替代关系；保留失败探测，但任一合法端点即可通过。"""
+    monkeypatch.setenv("CDS_PROJECT_KEY", "project-key-not-real")
+    monkeypatch.delenv("AI_ACCESS_KEY", raising=False)
+    monkeypatch.setattr(
+        cdscli,
+        "_call_safe",
+        lambda method, path, timeout=30: {
+            "branches": [{
+                "id": "proj-a-health-fallback",
+                "previewUrl": "https://health-fallback.example",
+            }],
+        },
+    )
+
+    def fake_urlopen(req, timeout=10):
+        if req.full_url.endswith("/api/health"):
+            return _FakeHttpResponse(b'{"status":"ok"}', "application/json")
+        return _FakeHttpResponse(
+            b"<!doctype html><title>SPA fallback</title>",
+            "text/html; charset=utf-8",
+        )
+
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen", fake_urlopen)
+
+    code, out = call_main(["smoke", "proj-a-health-fallback"])
+
+    assert code == 3, out  # L2 通过不能把未提供应用凭据的 L3 算成通过
+    payload = json.loads(out.strip().split("\n")[-1])
+    assert payload["ok"] is False
+    assert payload["data"]["coverageComplete"] is False
+    assert payload["data"]["passed"] == "2/2"
+    assert payload["data"]["layers"] == [
+        {"layer": "L1", "pass": True},
+        {"layer": "L2", "pass": True},
+        {"layer": "L3", "pass": False, "skipped": True, "reason": "未提供被测应用的 AI key（设 MAP_AI_ACCESS_KEY）"},
+    ]
+    l2_probes = [
+        probe for probe in payload["data"]["probes"]
+        if probe["layer"].startswith("L2")
+    ]
+    assert [probe["pass"] for probe in l2_probes] == [False, False, True]
+    assert [probe["error"] for probe in l2_probes[:2]] == [
+        "expected_application_json",
+        "expected_application_json",
+    ]
+
+
+def test_smoke_rejects_version_check_without_numeric_version(monkeypatch):
+    """L2 version-check 必须满足最小 JSON schema，不能只看 JSON 类型。"""
+    monkeypatch.setenv("CDS_PROJECT_KEY", "project-key-not-real")
+    monkeypatch.setattr(
+        cdscli,
+        "_call_safe",
+        lambda method, path, timeout=30: {
+            "branches": [{
+                "id": "proj-a-invalid-schema",
+                "previewUrl": "https://invalid-schema.example",
+            }],
+        },
+    )
+
+    def fake_urlopen(req, timeout=10):
+        return _FakeHttpResponse(b'{"state":"up"}', "application/json")
+
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen", fake_urlopen)
+
+    code, out = call_main(["smoke", "proj-a-invalid-schema"])
+
+    assert code == 2, out
+    payload = json.loads(out.strip().split("\n")[-1])
+    version_probe = next(
+        probe for probe in payload["data"]["probes"]
+        if probe["layer"] == "L2/api/shortcuts/version-check"
+    )
+    assert version_probe["pass"] is False
+    assert version_probe["contentType"] == "application/json"
+    assert version_probe["error"] == "invalid_json_schema"
+    assert all(
+        probe["error"] == "invalid_json_schema"
+        for probe in payload["data"]["probes"]
+        if probe["layer"].startswith("L2")
+    )
+
+
+# ── project clone (SSE) ──────────────────────────────────────────────
+
+
+class _FakeSSEResponse:
+    """模拟 urllib SSE response,iter 返回 bytes 行。"""
+    def __init__(self, lines: list[str]):
+        # urlopen returned object iterates over byte lines
+        self._lines = [(line + "\n").encode("utf-8") for line in lines]
+
+    def __iter__(self):
+        return iter(self._lines)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def test_project_clone_streams_done(monkeypatch):
+    """clone 收到 done 事件应正常退出 ok=true,events 全捕获。"""
+    sse_lines = [
+        "event: progress",
+        'data: {"phase":"clone","percent":10}',
+        "",
+        "event: detect",
+        'data: {"step":"detect-stack","stack":"nodejs"}',
+        "",
+        "event: done",
+        'data: {"projectId":"proj-1"}',
+        "",
+    ]
+
+    def fake_urlopen(req, timeout=300):
+        # 校验 URL + method + auth header
+        assert req.method == "POST"
+        assert "/api/projects/proj-1/clone" in req.full_url
+        assert req.headers.get("X-ai-access-key")  # case-insensitive in urllib
+        return _FakeSSEResponse(sse_lines)
+
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen", fake_urlopen)
+    code, out = call_main(["project", "clone", "proj-1"])
+    assert code == 0, out
+    payload = parse_ok(out)
+    assert payload["data"]["finalEvent"] == "done"
+    assert payload["data"]["success"] is True
+    # 至少看到 progress / detect / done 三条
+    events = payload["data"]["events"]
+    seen_events = {e.get("_event") for e in events}
+    assert {"progress", "detect", "done"}.issubset(seen_events)
+
+
+def test_project_clone_streams_error_event(monkeypatch):
+    """收到 error 事件应 ok=true 但 finalEvent=error & success=false。"""
+    sse_lines = [
+        "event: progress",
+        'data: {"phase":"clone"}',
+        "",
+        "event: error",
+        'data: {"message":"git clone failed: authentication required"}',
+        "",
+    ]
+
+    def fake_urlopen(req, timeout=300):
+        return _FakeSSEResponse(sse_lines)
+
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen", fake_urlopen)
+    code, out = call_main(["project", "clone", "proj-2"])
+    # 注意:即使收到 error,流也是正常读完的,我们 ok() 出来,success=false
+    assert code == 0, out
+    payload = parse_ok(out)
+    assert payload["data"]["finalEvent"] == "error"
+    assert payload["data"]["success"] is False
+
+
+# ── project delete ──────────────────────────────────────────────────
+
+
+def test_project_delete_with_cascade(monkeypatch):
+    """DELETE 调用 + cascade 字段透传给用户。"""
+    captured: dict = {}
+
+    def fake_call(method, path, body=None, timeout=15, quiet=False):
+        captured["method"] = method
+        captured["path"] = path
+        return {"cascade": {"branches": 3, "buildProfiles": 2,
+                             "infraServices": 1, "routingRules": 4}}
+
+    monkeypatch.setattr(cdscli, "_call", fake_call)
+    code, out = call_main(["project", "delete", "proj-x"])
+    assert code == 0
+    assert captured["method"] == "DELETE"
+    assert captured["path"] == "/api/projects/proj-x"
+    payload = parse_ok(out)
+    assert payload["data"]["cascade"]["branches"] == 3
+    assert payload["data"]["projectId"] == "proj-x"
+
+
+# ── branch create (F7 friction:--project → projectId 抹平) ──────────
+
+
+def test_branch_create_payload_uses_projectId_field(monkeypatch):
+    """关键:CLI 用 --project,但 API body 必须是 projectId(F7)。"""
+    captured: dict = {}
+
+    def fake_call(method, path, body=None, timeout=15, quiet=False):
+        captured.update(method=method, path=path, body=body)
+        return {"id": "br-9", "projectId": "proj-1", "branch": "feat/x",
+                "status": "pending", "services": {}}
+
+    monkeypatch.setattr(cdscli, "_call", fake_call)
+    code, out = call_main([
+        "branch", "create", "--project", "proj-1", "--branch", "feat/x",
+    ])
+    assert code == 0, out
+    assert captured["method"] == "POST"
+    assert captured["path"] == "/api/branches"
+    # F7:body 字段名必须是 projectId,不是 project
+    assert "projectId" in captured["body"]
+    assert "project" not in captured["body"]
+    assert captured["body"] == {"projectId": "proj-1", "branch": "feat/x"}
+
+
+def test_branch_create_reads_env_project_id(monkeypatch):
+    """缺 --project 时回落到 CDS_PROJECT_ID 环境变量。"""
+    monkeypatch.setenv("CDS_PROJECT_ID", "proj-from-env")
+    captured: dict = {}
+    monkeypatch.setattr(cdscli, "_call",
+                        lambda m, p, body=None, timeout=15, quiet=False:
+                        captured.update(method=m, path=p, body=body) or
+                        {"id": "br-y"})
+    code, _ = call_main(["branch", "create", "--branch", "fix/typo"])
+    assert code == 0
+    assert captured["body"]["projectId"] == "proj-from-env"
+
+
+def test_branch_create_missing_project_dies(monkeypatch, tmp_path):
+    """都没给(无 --project + 无 env)→ 立即 die,不打 HTTP。"""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CDS_PROJECT_ID", raising=False)
+    called = {"n": 0}
+    monkeypatch.setattr(cdscli, "_call",
+                        lambda *a, **kw: called.update(n=called["n"] + 1) or {})
+    code, out = call_main(["branch", "create", "--branch", "xx"])
+    assert code == 1
+    assert called["n"] == 0
+    payload = json.loads(out.strip().split("\n")[-1])
+    assert payload["ok"] is False
+    assert "CDS_PROJECT_ID" in payload["error"]
+
+
+# ── env set: KEY=VALUE 兼容 + --key/--value 新形式 ────────────────────
+
+
+def test_env_set_classic_form(monkeypatch):
+    """KEY=VALUE 位置参数应继续工作(向后兼容)。"""
+    captured: dict = {}
+    monkeypatch.setattr(cdscli, "_call",
+                        lambda m, p, body=None, timeout=15, quiet=False:
+                        captured.update(method=m, path=p, body=body) or
+                        {"value": "v1"})
+    code, _ = call_main(["env", "set", "FOO=bar", "--scope", "proj-1"])
+    assert code == 0
+    assert captured["method"] == "PUT"
+    assert "/api/env/FOO" in captured["path"]
+    assert "scope=proj-1" in captured["path"]
+    assert captured["body"] == {"value": "bar"}
+
+
+def test_env_set_kv_with_explicit_flags(monkeypatch):
+    """--key + --value 应当与 KEY=VALUE 等价。"""
+    captured: dict = {}
+    monkeypatch.setattr(cdscli, "_call",
+                        lambda m, p, body=None, timeout=15, quiet=False:
+                        captured.update(method=m, path=p, body=body) or {})
+    # value 含 = 是 motivating 案例(JSON / base64)
+    code, _ = call_main([
+        "env", "set",
+        "--key", "DATABASE_URL",
+        "--value", "postgres://u:p=q@h:5432/db?sslmode=require",
+    ])
+    assert code == 0
+    assert captured["body"]["value"] == \
+        "postgres://u:p=q@h:5432/db?sslmode=require"
+
+
+def test_env_set_no_input_dies(monkeypatch):
+    """空 invocation 应报错而不是 silently set。"""
+    monkeypatch.setattr(cdscli, "_call",
+                        lambda *a, **kw: pytest.fail("不应被调用"))
+    code, _ = call_main(["env", "set"])
+    assert code == 1
+
+
+# ── onboard 一键命令 ─────────────────────────────────────────────────
+
+
+def test_onboard_creates_then_clones(monkeypatch):
+    """onboard 应先 POST /api/projects,然后 SSE clone,最后 GET /:id。"""
+    call_log: list[tuple] = []
+
+    def fake_call(method, path, body=None, timeout=15, quiet=False):
+        call_log.append((method, path, body))
+        if method == "GET" and path == "/api/config":
+            return {"reposBase": "/tmp/cds-repos"}
+        if method == "POST" and path == "/api/projects":
+            return {"project": {"id": "proj-onb", "slug": "alpha"}}
+        if method == "GET" and path.startswith("/api/projects/"):
+            return {"id": "proj-onb",
+                    "envMeta": {
+                        "OAUTH_CLIENT_SECRET": {"kind": "required"},
+                        "CDS_JWT_SECRET": {"kind": "auto"},
+                    }}
+        return {}
+
+    monkeypatch.setattr(cdscli, "_call", fake_call)
+
+    sse_lines = [
+        "event: progress",
+        'data: {"phase":"clone","percent":50}',
+        "",
+        "event: done",
+        'data: {"ok":true}',
+        "",
+    ]
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen",
+                        lambda req, timeout=300: _FakeSSEResponse(sse_lines))
+
+    code, out = call_main([
+        "onboard", "https://github.com/acme/alpha.git",
+    ])
+    assert code == 0, out
+    # 调用链:POST projects → GET projects/:id
+    paths = [(m, p) for m, p, _b in call_log]
+    assert ("POST", "/api/projects") in paths
+    assert any(m == "GET" and "/api/projects/proj-onb" in p
+               for m, p in paths), paths
+    payload = parse_ok(out)
+    assert payload["data"]["projectId"] == "proj-onb"
+    assert "OAUTH_CLIENT_SECRET" in payload["data"]["requiredEnvKeys"]
+    assert "CDS_JWT_SECRET" not in payload["data"]["requiredEnvKeys"]
+
+
+def test_onboard_slug_inferred_from_url(monkeypatch):
+    """没传 --slug 时,从 URL 末段去 .git 推断。"""
+    captured: dict = {}
+
+    def fake_call(method, path, body=None, timeout=15, quiet=False):
+        if method == "GET" and path == "/api/config":
+            return {"reposBase": "/tmp/cds-repos"}
+        if method == "POST" and path == "/api/projects":
+            captured.update(body=body)
+            return {"project": {"id": "proj-z"}}
+        return {}
+
+    monkeypatch.setattr(cdscli, "_call", fake_call)
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen",
+                        lambda r, timeout=300: _FakeSSEResponse([
+                            "event: done", 'data: {}', ""
+                        ]))
+    code, _ = call_main([
+        "onboard", "git@github.com:acme/My_Cool-App.git",
+    ])
+    assert code == 0
+    body = captured["body"]
+    # slugify 大小写 + 下划线 → '-':my-cool-app
+    assert body["slug"] == "my-cool-app"
+    assert body["gitRepoUrl"] == "git@github.com:acme/My_Cool-App.git"
+
+
+# ── parser-level guard:确保 --help 全部子命令都注册了 ───────────────
+
+
+def test_parser_registers_all_new_subcommands():
+    parser = cdscli._build_parser()
+    project_subs: list[str] = []
+    branch_subs: list[str] = []
+    top_subs: list[str] = []
+    for action in parser._actions:
+        if isinstance(action, cdscli.argparse._SubParsersAction):
+            top_subs.extend(action.choices.keys())
+            for name, sp in action.choices.items():
+                for sa in sp._actions:
+                    if isinstance(sa, cdscli.argparse._SubParsersAction):
+                        if name == "project":
+                            project_subs.extend(sa.choices.keys())
+                        elif name == "branch":
+                            branch_subs.extend(sa.choices.keys())
+    assert "create" in project_subs and "clone" in project_subs \
+        and "delete" in project_subs, project_subs
+    assert "create" in branch_subs, branch_subs
+    assert "onboard" in top_subs, top_subs
+
+
+# ── PR #522 Codex review fix ─────────────────────────────────────────
+
+
+def test_project_clone_url_error_before_done_exits_nonzero(monkeypatch):
+    """Codex review (PR #522): URLError 在收到 done 之前发生,clone 必须 die,
+    不能把 stream-closed 当成功 exit 0。
+
+    场景:flaky network 已经 emit 了 1 条 progress event,然后 urlopen 抛
+    URLError。修复前 final_event = "stream-closed" 通过 ("error","fail") 检查,
+    onboard 误报成功;修复后 final_event 不在 ("done","complete") 必定 die。
+    """
+    monkeypatch.setattr(cdscli, "_call",
+                        lambda m, p, body=None, timeout=15, quiet=False:
+                            {"project": {"id": "p1", "slug": "alpha"}})
+
+    class _FlakyResponse:
+        """先 emit 一条完整 progress event(event:+data:),然后抛 URLError。
+        这样 events 已有内容(走非空 events 分支),但没收到 done/complete →
+        触发 PR #522 修复的"流被中断"die 路径。
+        """
+        def __init__(self):
+            self._step = 0
+        def __iter__(self):
+            return self
+        def __next__(self):
+            self._step += 1
+            if self._step == 1:
+                return b'event: progress\n'
+            if self._step == 2:
+                return b'data: {"phase":"clone","percent":50}\n'
+            if self._step == 3:
+                return b'\n'  # 事件结束分隔
+            raise cdscli.urllib.error.URLError("connection reset")
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen",
+                        lambda req, timeout=300: _FlakyResponse())
+
+    code, out = call_main(["project", "clone", "p1"])
+    assert code == 2, f"expected exit 2, got {code}; out={out}"
+    # die() outputs JSON to stdout: {"ok":false,"error":"...","trace":"..."}
+    import json as _json
+    payload = _json.loads(out.strip().split("\n")[-1])
+    assert payload["ok"] is False
+    err = payload.get("error", "")
+    assert "流被中断" in err or "未正常完成" in err, \
+        f"error message should mention 流被中断/未正常完成: {err!r}"
+
+
+def test_project_clone_done_event_succeeds(monkeypatch):
+    """Codex review (PR #522) 反向验证:正常收到 done 事件 → exit 0。"""
+    monkeypatch.setattr(cdscli, "_call",
+                        lambda m, p, body=None, timeout=15, quiet=False:
+                            {"project": {"id": "p1", "slug": "alpha"}})
+    sse_lines = [
+        "event: progress",
+        'data: {"phase":"clone","percent":50}',
+        "",
+        "event: done",
+        'data: {"ok":true}',
+        "",
+    ]
+    monkeypatch.setattr(cdscli.urllib.request, "urlopen",
+                        lambda req, timeout=300: _FakeSSEResponse(sse_lines))
+    code, out = call_main(["project", "clone", "p1"])
+    assert code == 0, out
+
+
+if __name__ == "__main__":
+    sys.exit(pytest.main([__file__, "-x", "-v"]))

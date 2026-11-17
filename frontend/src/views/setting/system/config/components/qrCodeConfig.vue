@@ -125,14 +125,6 @@
       <lark-modal v-model:visible="showLarkModal" @success="loadList()" />
       <lark-suite-modal v-model:visible="showLarkSuiteModal" @success="loadList()" />
     </a-tab-pane>
-    <a-tab-pane
-      v-if="hasAnyPermission(['SYSTEM_CONFIG_WECOM_BOT:READ'])"
-      key="wecomBot"
-      :title="t('system.config.wecomBotConfig')"
-      data-resource-code="SYSTEM_CONFIG_WECOM_BOT_TAB"
-    >
-      <wecom-bot-config />
-    </a-tab-pane>
   </a-tabs>
 </template>
 
@@ -144,7 +136,6 @@
   import DingTalkModal from '@/views/setting/system/config/components/dingTalkModal.vue';
   import LarkModal from '@/views/setting/system/config/components/larkModal.vue';
   import LarkSuiteModal from '@/views/setting/system/config/components/larkSuiteModal.vue';
-  import WecomBotConfig from '@/views/setting/system/config/components/wecomBotConfig.vue';
   import WeComModal from '@/views/setting/system/config/components/weComModal.vue';
 
   import {
@@ -181,7 +172,7 @@
 
   const { t } = useI18n();
   const licenseStore = useLicenseStore();
-  const notificationTab = ref(licenseStore.hasLicense() ? 'integrations' : 'wecomBot');
+  const notificationTab = ref('integrations');
 
   const filterList = ref<PlatformConfigList>([
     {

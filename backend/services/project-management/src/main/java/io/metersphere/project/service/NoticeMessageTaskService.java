@@ -44,6 +44,21 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class NoticeMessageTaskService {
+    @Resource
+    private io.metersphere.system.service.PlatformNotificationScope platformScope;
+
+    private List<User> platformUsers() {
+        UserExample example = new UserExample();
+        example.createCriteria().andEnableEqualTo(true).andDeletedEqualTo(false);
+        return userMapper.selectByExample(example);
+    }
+
+    private ProjectRobot platformRobot(String id) {
+        ProjectRobot robot = projectRobotMapper.selectByPrimaryKey(id);
+        if (robot == null) throw new MSException(Translator.get("robot_is_null"));
+        platformScope.requireScope(robot.getProjectId());
+        return robot;
+    }
 
     @Resource
     private UserMapper userMapper;
@@ -72,11 +87,19 @@ public class NoticeMessageTaskService {
 
     public ResultHolder saveMessageTask(MessageTaskRequest messageTaskRequest, String userId) {
         String projectId = messageTaskRequest.getProjectId();
+        platformScope.requireScope(projectId);
+        if (StringUtils.isNotBlank(messageTaskRequest.getRobotId())) platformRobot(messageTaskRequest.getRobotId());
+        if (CollectionUtils.isEmpty(messageTaskRequest.getReceiverIds())) throw new MSException("请至少选择一个接收人");
+        if (StringUtils.length(messageTaskRequest.getSubject()) > 1000 || StringUtils.length(messageTaskRequest.getTemplate()) > 1000) {
+            throw new MSException("标题和正文最多1000字符");
+        }
+        if (messageTaskRequest.getTestId() != null && !"NONE".equals(messageTaskRequest.getTestId())) throw new MSException("平台消息规则不能绑定具体测试");
+        Map<String, List<String>> stringListMap = checkUserExistProject(messageTaskRequest.getReceiverIds(), projectId);
+        if (CollectionUtils.isNotEmpty(stringListMap.get(NO_USER_NAMES))) throw new MSException("接收人不存在或已停用，请重新选择");
         SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
         MessageTaskMapper mapper = sqlSession.getMapper(MessageTaskMapper.class);
         MessageTaskBlobMapper blobMapper = sqlSession.getMapper(MessageTaskBlobMapper.class);
         //检查用户是否存在
-        Map<String, List<String>> stringListMap = checkUserExistProject(messageTaskRequest.getReceiverIds(), projectId);
         List<String> existUserIds = stringListMap.get(USER_IDS);
         //检查设置的通知是否存在，如果存在则更新
         List<MessageTask> messageTasks = updateMessageTasks(messageTaskRequest, userId, mapper, blobMapper, existUserIds);
@@ -135,7 +158,7 @@ public class NoticeMessageTaskService {
             List<ProjectRobot> projectRobots = projectRobotMapper.selectByExample(projectRobotExample);
             return projectRobots.getFirst();
         } else {
-            return projectRobotMapper.selectByPrimaryKey(robotId);
+            return platformRobot(robotId);
         }
     }
 
@@ -168,7 +191,7 @@ public class NoticeMessageTaskService {
         }
         List<String> messageTaskIds = messageTasks.stream().map(MessageTask::getId).toList();
         MessageTaskBlobExample messageTaskBlobExample = new MessageTaskBlobExample();
-        messageTaskBlobExample.createCriteria().andIdIn(messageTaskIds);
+        messageTaskBlobExample.createCriteria().andIdIn(messageTaskIds.isEmpty() ? List.of("__none__") : messageTaskIds);
         List<MessageTaskBlob> messageTaskBlobs = messageTaskBlobMapper.selectByExample(messageTaskBlobExample);
         List<String>messageTaskEqualsRobotIDs = new ArrayList<>();
         for (MessageTask messageTask : messageTasks) {
@@ -246,10 +269,7 @@ public class NoticeMessageTaskService {
         }
         List<String> userIds = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(normalUserIds)) {
-            UserRoleRelationExample userRoleRelationExample = new UserRoleRelationExample();
-            userRoleRelationExample.createCriteria().andUserIdIn(normalUserIds).andSourceIdEqualTo(projectId);
-            List<UserRoleRelation> userRoleRelations = userRoleRelationMapper.selectByExample(userRoleRelationExample);
-            userIds = new ArrayList<>(userRoleRelations.stream().map(UserRoleRelation::getUserId).distinct().toList());
+            userIds = new ArrayList<>(platformUsers().stream().map(User::getId).filter(normalUserIds::contains).distinct().toList());
         }
         if (receiverIds.contains(NoticeConstants.RelatedUser.CREATE_USER)) {
             userIds.add(NoticeConstants.RelatedUser.CREATE_USER);
@@ -289,6 +309,7 @@ public class NoticeMessageTaskService {
      * @return Map<String, String>
      */
     public Map<String, List<CustomField>> getCustomFielddMap(String projectId) {
+        if (io.metersphere.system.service.PlatformNotificationScope.ID.equals(projectId)) return Map.of();
         List<String> sceneList = new ArrayList<>();
         sceneList.add(TemplateScene.API.toString());
         sceneList.add(TemplateScene.TEST_PLAN.toString());
@@ -308,6 +329,7 @@ public class NoticeMessageTaskService {
      * @return List<MessageTaskDTO>
      */
     public List<MessageTaskDTO> getMessageList(String projectId) throws IOException {
+        platformScope.requireScope(projectId);
         //获取返回数据结构
         StringBuilder jsonStr = new StringBuilder();
         try {
@@ -329,12 +351,9 @@ public class NoticeMessageTaskService {
         MessageTaskExample messageTaskExample = new MessageTaskExample();
         messageTaskExample.createCriteria().andProjectIdEqualTo(projectId);
         List<MessageTask> messageTasks = messageTaskMapper.selectByExample(messageTaskExample);
-        if (CollectionUtils.isEmpty(messageTasks)) {
-            return messageTaskDTOList;
-        }
         List<String> messageTaskIds = messageTasks.stream().map(MessageTask::getId).toList();
         MessageTaskBlobExample messageTaskBlobExample = new MessageTaskBlobExample();
-        messageTaskBlobExample.createCriteria().andIdIn(messageTaskIds);
+        messageTaskBlobExample.createCriteria().andIdIn(messageTaskIds.isEmpty() ? List.of("__none__") : messageTaskIds);
         List<MessageTaskBlob> messageTaskBlobs = messageTaskBlobMapper.selectByExampleWithBLOBs(messageTaskBlobExample);
         List<String> robotIds = new ArrayList<>();
         List<String> userIds = new ArrayList<>();
@@ -343,10 +362,10 @@ public class NoticeMessageTaskService {
             userIds.addAll(t.getReceivers());
         });
         ProjectRobotExample projectRobotExample = new ProjectRobotExample();
-        projectRobotExample.createCriteria().andIdIn(robotIds);
+        projectRobotExample.createCriteria().andIdIn(robotIds.isEmpty() ? List.of("__none__") : robotIds);
         List<ProjectRobot> projectRobots = projectRobotMapper.selectByExample(projectRobotExample);
         Map<String, ProjectRobot> robotMap = projectRobots.stream().collect(Collectors.toMap(ProjectRobot::getId, item -> item));
-        List<User> users = extSystemProjectMapper.getProjectMemberByUserId(projectId, userIds);
+        List<User> users = platformUsers();
         Map<String, String> userNameMap = users.stream().collect(Collectors.toMap(User::getId, User::getName));
         Map<String, String> defaultRelatedUserMap = MessageTemplateUtils.getDefaultRelatedUserMap();
         userNameMap.putAll(defaultRelatedUserMap);
@@ -366,9 +385,7 @@ public class NoticeMessageTaskService {
             messageTaskDTO.setName(moduleMap.get(messageTaskDTO.getType()));
             for (MessageTaskTypeDTO messageTaskTypeDTO : messageTaskDTO.getMessageTaskTypeDTOList()) {
                 List<MessageTask> messageTaskTypeList = messageMap.get(messageTaskTypeDTO.getTaskType());
-                if (CollectionUtils.isEmpty(messageTaskTypeList)) {
-                    continue;
-                }
+                if (messageTaskTypeList == null) messageTaskTypeList = List.of();
                 Map<String, List<MessageTask>> messageEventMap = messageTaskTypeList.stream().collect(Collectors.groupingBy(MessageTask::getEvent));
                 messageTaskTypeDTO.setTaskTypeName(taskTypeMap.get(messageTaskTypeDTO.getTaskType()));
                 List<String> eventList = List.of(NoticeConstants.Event.CREATE, NoticeConstants.Event.UPDATE, NoticeConstants.Event.DELETE);
@@ -471,7 +488,10 @@ public class NoticeMessageTaskService {
     }
 
     public List<OptionDTO> getUserList(String projectId, String keyword) {
-        List<OptionDTO> projectUserSelectList = extProjectUserRoleMapper.getProjectUserSelectList(projectId, keyword);
+        platformScope.requireScope(projectId);
+        List<OptionDTO> projectUserSelectList = platformUsers().stream()
+                .filter(u -> StringUtils.isBlank(keyword) || StringUtils.containsIgnoreCase(u.getName(), keyword))
+                .map(u -> { OptionDTO dto = new OptionDTO(); dto.setId(u.getId()); dto.setName(u.getName()); return dto; }).toList();
         ArrayList<OptionDTO> collect = projectUserSelectList.stream().collect(Collectors.collectingAndThen(Collectors.toCollection(() -> new TreeSet<>(Comparator.comparing(OptionDTO::getId))), ArrayList::new));
         Map<String, String> defaultRelatedUserMap = MessageTemplateUtils.getDefaultRelatedUserMap();
         defaultRelatedUserMap.forEach((k, v) -> {
@@ -485,13 +505,14 @@ public class NoticeMessageTaskService {
 
 
     public MessageTemplateConfigDTO getTemplateDetail(String projectId, String taskType, String event, String robotId) {
+        platformScope.requireScope(projectId);
         MessageTaskExample messageTaskExample = new MessageTaskExample();
         messageTaskExample.createCriteria().andProjectIdEqualTo(projectId).andTaskTypeEqualTo(taskType).andEventEqualTo(event);
         List<MessageTask> messageTasks = messageTaskMapper.selectByExample(messageTaskExample);
         Map<String, String> defaultTemplateMap = MessageTemplateUtils.getDefaultTemplateMap();
         Map<String, String> defaultTemplateSubjectMap = MessageTemplateUtils.getDefaultTemplateSubjectMap();
         Map<String, List<CustomField>> customFielddMap = getCustomFielddMap(projectId);
-        ProjectRobot projectRobot = projectRobotMapper.selectByPrimaryKey(robotId);
+        ProjectRobot projectRobot = platformRobot(robotId);
         MessageTask messageTask;
         if (projectRobot == null) {
             throw new MSException(Translator.get("robot_is_null"));

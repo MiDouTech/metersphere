@@ -1,7 +1,16 @@
 import { z } from "zod";
 import type { MeterSphereClient } from "../client.js";
 
+export const planReviewSettingsSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  moduleId: z.string().trim().min(1).max(50),
+  reviewers: z.array(z.string().trim().min(1).max(50)).min(1).refine(values => new Set(values).size === values.length, "Reviewers must be unique"),
+  reviewPassRule: z.enum(["SINGLE", "MULTIPLE"]),
+  followPlanName: z.boolean().optional(),
+}).strict();
+
 export const createTestPlanInputSchema = {
+  reviewSettings: planReviewSettingsSchema,
   requestId: z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/),
   projectId: z.string().optional(),
   name: z.string(),
@@ -15,7 +24,7 @@ export const createTestPlanInputSchema = {
 
 export const createTestPlanTool = {
   name: "create_test_plan",
-  description: "Create a test plan and optionally associate functional cases.",
+  description: "Create a test plan with its own linked review. Explicit current-project review settings are required; keep the same requestId after response loss.",
   inputSchema: createTestPlanInputSchema,
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
     const result = await client.createTestPlan(args as Parameters<MeterSphereClient["createTestPlan"]>[0]);
@@ -91,5 +100,37 @@ export const getCaseReviewTool = {
   inputSchema: { reviewId: z.string().min(1) },
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => ({
     content: [{ type: "text" as const, text: JSON.stringify(await client.getCaseReview(String(args.reviewId))) }],
+  }),
+};
+
+export const previewLinkedCaseReviewTool = {
+  name: "preview_linked_case_review",
+  description: "Preview a review for an existing unpaired plan. Creates no plan/review/relation. The plan is the only membership source; keep requestId and previewId for explicit confirmation.",
+  inputSchema: {
+    requestId: createCaseReviewInputSchema.requestId,
+    projectId: z.string().optional(),
+    planId: z.string().min(1).max(50),
+    name: z.string().trim().min(1).max(255),
+    moduleId: z.string().min(1).max(50),
+    reviewers: z.array(z.string().min(1).max(50)).min(1),
+    reviewPassRule: z.enum(["SINGLE", "MULTIPLE"]),
+    description: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  },
+  handler: async (client: MeterSphereClient, args: Record<string, unknown>) => ({
+    content: [{type: "text" as const,text: JSON.stringify(await client.previewLinkedCaseReview(args as Parameters<MeterSphereClient["previewLinkedCaseReview"]>[0]))}],
+  }),
+};
+export const confirmLinkedCaseReviewTool = {
+  name: "confirm_linked_case_review",
+  description: "Explicitly confirm the exact linked-review preview using its original requestId. Never regenerate identity after timeout. Expired/stale previews must be requested again.",
+  inputSchema: {
+    projectId: z.string().optional(),
+    previewId: z.string().min(1).max(50),
+    requestId: createCaseReviewInputSchema.requestId,
+    acknowledged: z.literal(true),
+  },
+  handler: async (client: MeterSphereClient, args: Record<string, unknown>) => ({
+    content: [{type:"text" as const,text:JSON.stringify(await client.confirmLinkedCaseReview(args as Parameters<MeterSphereClient["confirmLinkedCaseReview"]>[0]))}],
   }),
 };

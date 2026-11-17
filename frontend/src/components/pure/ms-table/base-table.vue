@@ -960,6 +960,7 @@
   };
 
   function isDisabledChildren(record: TableData) {
+    if ((attrs.rowSelectionDisabledConfig as MsTableRowSelectionDisabledConfig)?.showChildCheckboxes) return false;
     if (!(attrs.rowSelectionDisabledConfig as MsTableRowSelectionDisabledConfig)?.disabledChildren) {
       return false;
     }

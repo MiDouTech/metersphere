@@ -34,6 +34,8 @@ import java.util.*;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class TestPlanBatchOperationService extends TestPlanBaseUtilsService {
+    @Resource
+    private PlanReviewCreationJournal creationJournal;
 
     @Resource
     private ExtTestPlanMapper extTestPlanMapper;
@@ -125,6 +127,36 @@ public class TestPlanBatchOperationService extends TestPlanBaseUtilsService {
     }
 
 
+    @Resource private io.metersphere.functional.planreview.PlanReviewAuthorization copyAuthorization;
+    @Resource private TestPlanLogService copyLogs;
+    @Resource private org.springframework.jdbc.core.JdbcTemplate copyJdbc;
+
+    /** One source/shell, one real business transaction; callers must not wrap the whole batch. */
+    public TestPlan copyReservedItem(String project,String sourceId,String targetId,String targetType,String actor,boolean groupShell,Long position){
+        copyAuthorization.current(actor,project,true);
+        var reservation=creationJournal.copyReservation(sourceId);
+        if(creationJournal.lockAndExists(reservation,project,actor))return creationJournal.readReservedPlan(reservation.planId());
+        var source=creationJournal.readReservedPlan(sourceId);
+        if(!project.equals(source.getProjectId()))throw new io.metersphere.functional.planreview.PlanReviewFailure("RESOURCE_NOT_ACCESSIBLE",404,"复制来源不可访问");
+        if(!Set.of("NOT_ARCHIVED","PREPARED","UNDERWAY","COMPLETED").contains(source.getStatus()))throw new io.metersphere.functional.planreview.PlanReviewFailure("OBJECT_LOCKED",409,"复制来源已归档或状态待核实");
+        if(!(groupShell?"GROUP":"TEST_PLAN").equals(source.getType()))throw new io.metersphere.functional.planreview.PlanReviewFailure("INVALID_PLAN_TYPE",409,"复制来源类型已变化，不能混用计划组和真实计划");
+        if(!groupShell&&!copyJdbc.queryForList("SELECT m.functional_case_id FROM test_plan_functional_case m JOIN functional_case c ON CAST(c.id AS BINARY(50))=CAST(m.functional_case_id AS BINARY(50)) WHERE m.test_plan_id=? AND c.project_id<>? LIMIT 1 FOR UPDATE",String.class,sourceId,project).isEmpty())throw new io.metersphere.functional.planreview.PlanReviewFailure("COPY_SOURCE_SCOPE_INVALID",409,"来源存在跨项目用例引用，已停止本项复制");
+        String module=targetId;
+        if("GROUP".equals(targetType)){
+            if(TestPlanConstants.TEST_PLAN_DEFAULT_GROUP_ID.equals(targetId))module=source.getModuleId();
+            else{
+                var groups=copyJdbc.queryForList("SELECT project_id,type,status,module_id FROM test_plan WHERE id=? FOR UPDATE",targetId);
+                if(groups.size()!=1||!project.equals(groups.getFirst().get("project_id"))||!"GROUP".equals(groups.getFirst().get("type"))||!Set.of("NOT_ARCHIVED","PREPARED","UNDERWAY","COMPLETED").contains(groups.getFirst().get("status")))throw new io.metersphere.functional.planreview.PlanReviewFailure("TARGET_GROUP_UNAVAILABLE",409,"原目标组已删除、归档或不可访问，不会自动改投");
+                module=(String)groups.getFirst().get("module_id");
+            }
+        }else if(!"MODULE".equals(targetType))throw new io.metersphere.functional.planreview.PlanReviewFailure("INVALID_TARGET",400,"复制目标类型无效");
+        if(!ModuleConstants.DEFAULT_NODE_ID.equals(module)&&copyJdbc.queryForList("SELECT id FROM test_plan_module WHERE id=? AND project_id=? FOR UPDATE",String.class,module,project).size()!=1)throw new io.metersphere.functional.planreview.PlanReviewFailure("DIRECTORY_UNAVAILABLE",409,"原目标目录已失效，不会自动使用其他目录");
+        var result=groupShell?copyGroupShell(source,targetId,targetType,System.currentTimeMillis(),actor):copyPlan(source,targetId,targetType,System.currentTimeMillis(),actor);
+        if(!groupShell&&position!=null){var order=new TestPlan();order.setId(result.getId());order.setPos(position);testPlanMapper.updateByPrimaryKeySelective(order);result.setPos(position);}
+        copyLogs.copyLog(result,actor);
+        return result;
+    }
+
     public List<TestPlan> batchCopy(List<TestPlan> originalPlanList, String targetId, String targetType, String userId) {
         List<TestPlan> copyPlanResult = new ArrayList<>();
         long operatorTime = System.currentTimeMillis();
@@ -159,6 +191,8 @@ public class TestPlanBatchOperationService extends TestPlanBaseUtilsService {
      * @return 复制的数量
      */
     public TestPlan copyPlan(TestPlan originalTestPlan, String targetId, String targetType, long operatorTime, String operator) {
+        var reservation = creationJournal.copyReservation(originalTestPlan.getId());
+        if (creationJournal.lockAndExists(reservation, originalTestPlan.getProjectId(), operator)) return creationJournal.readReservedPlan(reservation.planId());
         //已归档的无法操作
         if (StringUtils.equalsIgnoreCase(originalTestPlan.getStatus(), TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED)) {
             throw new MSException(Translator.get("test_plan.error"));
@@ -185,7 +219,7 @@ public class TestPlanBatchOperationService extends TestPlanBaseUtilsService {
 
         TestPlan testPlan = new TestPlan();
         BeanUtils.copyBean(testPlan, originalTestPlan);
-        testPlan.setId(IDGenerator.nextStr());
+        testPlan.setId(reservation.planId());
         testPlan.setNum(NumGenerator.nextNum(testPlan.getProjectId(), ApplicationNumScope.TEST_PLAN));
         testPlan.setName(this.getCopyName(originalTestPlan.getName(), originalTestPlan.getNum(), testPlan.getNum()));
         testPlan.setCreateUser(operator);
@@ -256,10 +290,20 @@ public class TestPlanBatchOperationService extends TestPlanBaseUtilsService {
         // 复制计划-定时任务信息
         copySchedule(originalTestPlan.getId(), testPlan.getId(), operator);
 
+        creationJournal.complete(reservation, testPlan.getProjectId(), testPlan.getName(), operator, creationJournal.copySettings());
+
         return testPlan;
     }
 
     public TestPlan copyPlanGroup(TestPlan originalGroup, String targetId, String targetType, long operatorTime, String operator) {
+        return copyGroup(originalGroup,targetId,targetType,operatorTime,operator,true);
+    }
+    public TestPlan copyGroupShell(TestPlan originalGroup,String targetId,String targetType,long operatorTime,String operator){
+        return copyGroup(originalGroup,targetId,targetType,operatorTime,operator,false);
+    }
+    private TestPlan copyGroup(TestPlan originalGroup,String targetId,String targetType,long operatorTime,String operator,boolean copyChildren){
+        var reservation = creationJournal.copyReservation(originalGroup.getId());
+        if (creationJournal.lockAndExists(reservation, originalGroup.getProjectId(), operator)) return creationJournal.readReservedPlan(reservation.planId());
         //测试计划组复制的时候，只支持targetType为module的操作. 已归档的无法操作
         if (StringUtils.equalsIgnoreCase(targetType, TestPlanConstants.TEST_PLAN_TYPE_GROUP)
                 || StringUtils.equalsIgnoreCase(originalGroup.getStatus(), TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED)) {
@@ -276,7 +320,7 @@ public class TestPlanBatchOperationService extends TestPlanBaseUtilsService {
 
         TestPlan testPlanGroup = new TestPlan();
         BeanUtils.copyBean(testPlanGroup, originalGroup);
-        testPlanGroup.setId(IDGenerator.nextStr());
+        testPlanGroup.setId(reservation.planId());
         testPlanGroup.setNum(NumGenerator.nextNum(testPlanGroup.getProjectId(), ApplicationNumScope.TEST_PLAN));
         testPlanGroup.setName(this.getCopyName(originalGroup.getName(), originalGroup.getNum(), testPlanGroup.getNum()));
         testPlanGroup.setCreateUser(operator);
@@ -299,12 +343,13 @@ public class TestPlanBatchOperationService extends TestPlanBaseUtilsService {
             testPlanConfigMapper.insertSelective(newTestPlanConfig);
         }
 
-        for (TestPlan child : childList) {
+        if(copyChildren)for (TestPlan child : childList) {
             copyPlan(child, testPlanGroup.getId(), TestPlanConstants.TEST_PLAN_TYPE_GROUP, operatorTime, operator);
         }
 
         // 复制计划组-定时任务信息
         copySchedule(originalGroup.getId(), testPlanGroup.getId(), operator);
+        creationJournal.complete(reservation, testPlanGroup.getProjectId(), testPlanGroup.getName(), operator, creationJournal.copySettings());
         return testPlanGroup;
     }
 

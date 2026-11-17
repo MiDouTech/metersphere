@@ -27,8 +27,7 @@ public class TestReportNotificationListener {
         if (!botService.isEnabled()) return;
         Long activeProject = jdbc.queryForObject("SELECT COUNT(*) FROM project WHERE id=? AND enable=1 AND deleted=0", Long.class, event.projectId());
         if (activeProject == null || activeProject == 0) return;
-        List<Map<String, Object>> rules = jdbc.queryForList("SELECT * FROM wecom_notification_rule WHERE enabled=1 AND notification_type='TEST_REPORT_GENERATED' AND trigger_type='EVENT' AND (scope_type='SYSTEM' OR (scope_type='PROJECT' AND scope_id=?))",
-                event.projectId());
+        List<Map<String, Object>> rules = jdbc.queryForList("SELECT * FROM wecom_notification_rule WHERE enabled=1 AND notification_type='TEST_REPORT_GENERATED' AND trigger_type='EVENT' AND scope_type='SYSTEM'");
         for (Map<String, Object> rule : rules) {
             @SuppressWarnings("unchecked")
             Map<String, Object> trigger = JSON.parseObject(String.valueOf(rule.get("trigger_config")), Map.class);

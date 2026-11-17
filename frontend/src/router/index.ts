@@ -49,6 +49,12 @@ const router = createRouter({
     },
     ...appRoutes,
     {
+      path: '/project-switch',
+      name: 'projectSwitchPending',
+      component: () => import('@/views/base/project-switch.vue'),
+      meta: { hideInMenu: true, requiresAuth: true },
+    },
+    {
       path: '/feature-disabled',
       name: 'featureDisabled',
       component: () => import('@/views/base/feature-disabled.vue'),

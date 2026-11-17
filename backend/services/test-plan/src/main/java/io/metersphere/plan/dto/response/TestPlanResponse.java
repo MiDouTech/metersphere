@@ -7,9 +7,11 @@ import java.util.List;
 
 @Data
 public class TestPlanResponse extends TestPlanStatisticsResponse {
+    @Schema(description="关联评审；缺对侧读权仅返回受限标识")
+    private java.util.Map<String,Object> planReviewRelation;
     @Schema(description = "父Id")
     private String parent;
-    
+
     @Schema(description = "项目ID")
     private String projectId;
     @Schema(description = "测试计划编号")
@@ -48,7 +50,7 @@ public class TestPlanResponse extends TestPlanStatisticsResponse {
 
     @Schema(description = "实际结束时间")
     private Long actualEndTime;
-    
+
     @Schema(description = "测试计划组Id")
     private String groupId;
 

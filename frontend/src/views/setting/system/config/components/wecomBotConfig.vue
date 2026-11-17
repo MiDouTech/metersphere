@@ -1,7 +1,8 @@
 <template>
   <MsCard simple auto-height :loading="loading">
-    <a-tabs v-model:active-key="activeKey" @change="loadActiveTab">
-      <a-tab-pane key="config" :title="t('system.wecomBot.configTab')">
+    <a-alert v-if="loadError" type="error">读取失败，请重试 <a-button @click="loadActiveTab">重试</a-button></a-alert>
+    <a-tabs v-show="!loadError" v-model:active-key="activeKey" @change="loadActiveTab">
+      <a-tab-pane v-if="canReadConfig" key="config" :title="t('system.wecomBot.configTab')">
         <a-alert class="mb-4">{{ t('system.wecomBot.secretTip') }}</a-alert>
         <a-form :model="configForm" layout="vertical" class="max-w-[720px]">
           <a-form-item :label="t('system.wecomBot.name')" required><a-input v-model="configForm.name" /></a-form-item>
@@ -58,11 +59,19 @@
             }}</a-button>
             <a-button
               v-permission="['SYSTEM_CONFIG_WECOM_BOT:UPDATE']"
-              :disabled="!config.enabled"
+              :disabled="
+                loading || loadError || !canUpdate || !config.enabled || pending.has(`test-user:${testUserId}`)
+              "
+              :loading="pending.has(`test-user:${testUserId}`)"
               @click="sendUserTest"
               >{{ t('system.wecomBot.testUser') }}</a-button
             >
-            <a-switch v-if="config.id" :model-value="config.enabled" :disabled="!canUpdate" @change="toggleBot" />
+            <a-switch
+              v-if="config.id"
+              :model-value="config.enabled"
+              :disabled="loading || loadError || pending.has('bot') || !canUpdate"
+              @change="toggleBot"
+            />
             <span v-if="config.id">{{
               config.enabled ? t('system.wecomBot.enabled') : t('system.wecomBot.disabled')
             }}</span>
@@ -70,12 +79,14 @@
         </a-form>
       </a-tab-pane>
 
-      <a-tab-pane key="chats" :title="t('system.wecomBot.chatsTab')">
+      <a-tab-pane v-if="canReadConfig" key="chats" :title="t('system.wecomBot.chatsTab')">
         <a-alert class="mb-4">{{ t('system.wecomBot.groupTip') }}</a-alert>
         <a-table :data="chats" row-key="id" :pagination="false">
           <template #columns>
             <a-table-column :title="t('system.wecomBot.groupName')">
-              <template #cell="{ record }"><a-input v-model="record.display_name" :disabled="!canUpdate" /></template>
+              <template #cell="{ record }"
+                ><a-input v-model="record.display_name" :disabled="loading || loadError || !canUpdate"
+              /></template>
             </a-table-column>
             <a-table-column title="chatid" :width="150"
               ><template #cell="{ record }">{{ maskId(record.chat_id) }}</template></a-table-column
@@ -92,18 +103,25 @@
               ><template #cell="{ record }"
                 ><a-switch
                   :model-value="asBool(record.active)"
-                  :disabled="!canUpdate"
+                  :disabled="loading || loadError || !canUpdate"
                   @change="(value) => toggleChat(record, value)" /></template
             ></a-table-column>
             <a-table-column :title="t('common.operation')" :width="180">
               <template #cell="{ record }">
                 <a-space
-                  ><a-button type="text" :disabled="!canUpdate" @click="saveChatName(record)">{{
+                  ><a-button type="text" :disabled="loading || loadError || !canUpdate" @click="saveChatName(record)">{{
                     t('system.wecomBot.saveRemark')
                   }}</a-button
                   ><a-button
                     type="text"
-                    :disabled="!canUpdate || !asBool(record.active)"
+                    :disabled="
+                      loading ||
+                      loadError ||
+                      !canUpdate ||
+                      !asBool(record.active) ||
+                      pending.has(`test-group:${record.id}`)
+                    "
+                    :loading="pending.has(`test-group:${record.id}`)"
                     @click="sendGroupTest(record)"
                     >{{ t('system.wecomBot.testSend') }}</a-button
                   ></a-space
@@ -129,7 +147,8 @@
           <template #columns>
             <a-table-column :title="t('system.wecomBot.name')" :width="220">
               <template #cell="{ record }">
-                <div>{{ record.name }}</div>
+                <div>{{ record.name }}</div
+                ><a-tag v-if="record.scope_type === 'PROJECT'">历史项目规则，只读留存；不再产生新通知</a-tag>
                 <a-tooltip v-if="record.config_status === 'NEEDS_ATTENTION'" :content="record.config_warning">
                   <a-tag color="orange">{{ t('system.wecomBot.needsAttention') }}</a-tag>
                 </a-tooltip>
@@ -149,18 +168,43 @@
               ><template #cell="{ record }"
                 ><a-switch
                   :model-value="asBool(record.enabled)"
-                  :disabled="!canUpdateRules || record.config_status === 'NEEDS_ATTENTION'"
+                  :disabled="
+                    pending.has(`rule:${record.id}`) ||
+                    loading ||
+                    loadError ||
+                    record.scope_type === 'PROJECT' ||
+                    !canUpdateRules ||
+                    record.config_status === 'NEEDS_ATTENTION'
+                  "
                   @change="(value) => toggleRule(record, value)" /></template
             ></a-table-column>
             <a-table-column :title="t('common.operation')" fixed="right" :width="240">
               <template #cell="{ record }"
                 ><a-space
-                  ><a-button type="text" :disabled="!canUpdateRules" @click="openRule(record)">{{
-                    t('common.edit')
-                  }}</a-button
-                  ><a-button type="text" :disabled="!canUpdateRules" @click="copyRule(record)">{{
-                    t('common.copy')
-                  }}</a-button
+                  ><a-button v-if="record.scope_type === 'PROJECT'" type="text" @click="openRule(record, true)"
+                    >查看</a-button
+                  ><a-button
+                    type="text"
+                    :disabled="
+                      pending.has(`rule:${record.id}`) ||
+                      loading ||
+                      loadError ||
+                      !canUpdateRules ||
+                      record.scope_type === 'PROJECT'
+                    "
+                    @click="openRule(record)"
+                    >{{ t('common.edit') }}</a-button
+                  ><a-button
+                    type="text"
+                    :disabled="
+                      pending.has(`rule:${record.id}`) ||
+                      loading ||
+                      loadError ||
+                      !canUpdateRules ||
+                      record.scope_type === 'PROJECT'
+                    "
+                    @click="copyRule(record)"
+                    >{{ t('common.copy') }}</a-button
                   ><a-button type="text" @click="previewRule(record)">{{ t('system.wecomBot.preview') }}</a-button
                   ><a-button v-if="canReadLogs" type="text" @click="openScheduleExecutions(record)">{{
                     t('system.wecomBot.executionRecords')
@@ -169,13 +213,30 @@
                     v-if="record.notification_type !== 'TEST_REPORT_GENERATED'"
                     :content="t('system.wecomBot.runOnceConfirm')"
                     @ok="runRule(record)"
-                    ><a-button type="text" :disabled="!canUpdateRules">{{
-                      t('system.wecomBot.runOnce')
-                    }}</a-button></a-popconfirm
+                    ><a-button
+                      type="text"
+                      :disabled="
+                        pending.has(`rule:${record.id}`) ||
+                        loading ||
+                        loadError ||
+                        !canUpdateRules ||
+                        record.scope_type === 'PROJECT'
+                      "
+                      >{{ t('system.wecomBot.runOnce') }}</a-button
+                    ></a-popconfirm
                   ><a-popconfirm :content="t('system.wecomBot.deleteConfirm')" @ok="removeRule(record)"
-                    ><a-button type="text" status="danger" :disabled="!canDeleteRules">{{
-                      t('common.delete')
-                    }}</a-button></a-popconfirm
+                    ><a-button
+                      type="text"
+                      status="danger"
+                      :disabled="
+                        pending.has(`rule:${record.id}`) ||
+                        loading ||
+                        loadError ||
+                        !canDeleteRules ||
+                        record.scope_type === 'PROJECT'
+                      "
+                      >{{ t('common.delete') }}</a-button
+                    ></a-popconfirm
                   ></a-space
                 ></template
               >
@@ -281,11 +342,12 @@
     v-model:visible="ruleVisible"
     :title="editingRuleId ? t('system.wecomBot.editRule') : t('system.wecomBot.newRule')"
     :ok-loading="savingRule"
+    :ok-button-props="{ disabled: historicalView }"
     width="760px"
     :mask-closable="false"
     @before-ok="saveRule"
   >
-    <a-form :model="ruleForm" layout="vertical">
+    <a-form :model="ruleForm" layout="vertical" :disabled="historicalView">
       <a-alert
         v-if="editingRuleWarning"
         class="mb-4"
@@ -305,9 +367,9 @@
           ></a-grid-item
         ><a-grid-item
           ><a-form-item :label="t('system.wecomBot.scope')"
-            ><a-select v-model="ruleForm.scopeType" @change="changeScope"
+            ><a-select v-model="ruleForm.scopeType" disabled
               ><a-option value="SYSTEM">{{ t('system.wecomBot.system') }}</a-option
-              ><a-option value="PROJECT">{{ t('system.wecomBot.project') }}</a-option></a-select
+              ><a-option v-if="historicalView" value="PROJECT">历史项目规则（只读）</a-option></a-select
             ></a-form-item
           ></a-grid-item
         ></a-grid
@@ -594,9 +656,25 @@
 
   const appStore = useAppStore();
   const { t } = useI18n();
-  const activeKey = ref('config');
-  const loading = ref(false);
+  let initialTab = 'logs';
+  if (hasAnyPermission(['SYSTEM_CONFIG_WECOM_BOT:READ'], ['SYSTEM'])) initialTab = 'config';
+  else if (hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:READ'], ['SYSTEM'])) initialTab = 'rules';
+  const activeKey = ref(initialTab);
+  const loadError = ref(false);
+  const canReadConfig = computed(() => hasAnyPermission(['SYSTEM_CONFIG_WECOM_BOT:READ'], ['SYSTEM']));
+  const loading = ref(true);
   const saving = ref(false);
+  const historicalView = ref(false);
+  const pending = reactive(new Set<string>());
+  async function runPending(key: string, action: () => Promise<unknown>) {
+    if (loading.value || loadError.value || pending.has(key)) return;
+    pending.add(key);
+    try {
+      await action();
+    } finally {
+      pending.delete(key);
+    }
+  }
   const config = ref<WecomBotConfig>({
     name: '',
     botId: '',
@@ -641,12 +719,12 @@
   const terminalStatuses = ref<string[]>([]);
   const reportGenerationModes = ref<string[]>(['MANUAL', 'AUTO']);
   const DEFAULT_CRON = '0 0 9 * * ?';
-  const canUpdate = computed(() => hasAnyPermission(['SYSTEM_CONFIG_WECOM_BOT:UPDATE']));
-  const canReadRules = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:READ']));
-  const canUpdateRules = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:UPDATE']));
-  const canDeleteRules = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:DELETE']));
-  const canReadLogs = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_LOG:READ']));
-  const canRetry = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_LOG:RETRY']));
+  const canUpdate = computed(() => hasAnyPermission(['SYSTEM_CONFIG_WECOM_BOT:UPDATE'], ['SYSTEM']));
+  const canReadRules = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:READ'], ['SYSTEM']));
+  const canUpdateRules = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:UPDATE'], ['SYSTEM']));
+  const canDeleteRules = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_RULE:DELETE'], ['SYSTEM']));
+  const canReadLogs = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_LOG:READ'], ['SYSTEM']));
+  const canRetry = computed(() => hasAnyPermission(['SYSTEM_NOTIFICATION_LOG:RETRY'], ['SYSTEM']));
   const logPagination = computed(() => ({
     current: logPage.value,
     pageSize: 20,
@@ -767,17 +845,22 @@
   }
   async function loadActiveTab() {
     loading.value = true;
+    loadError.value = false;
     try {
       if (activeKey.value === 'config') await loadConfig();
       else if (activeKey.value === 'chats') await loadChats();
-      else if (activeKey.value === 'rules') await Promise.all([loadRules(), loadChats()]);
+      else if (activeKey.value === 'rules')
+        await Promise.all([loadRules(), ...(canReadConfig.value ? [loadChats()] : [])]);
       else if (canReadRules.value) await Promise.all([loadLogs(), loadRules()]);
       else await loadLogs();
+    } catch {
+      loadError.value = true;
     } finally {
       loading.value = false;
     }
   }
   async function saveConfig() {
+    if (saving.value || loading.value || loadError.value) return;
     if (!configForm.name || !configForm.botId) return Message.warning(t('system.wecomBot.required'));
     if (configForm.secret && configForm.secretRef) return Message.warning(t('system.wecomBot.secretExclusive'));
     saving.value = true;
@@ -790,30 +873,46 @@
     }
   }
   async function testConnection() {
-    await testWecomBotConnection();
-    Message.success(t('system.wecomBot.testSuccess'));
-    await loadConfig();
+    await runPending('connection', async () => {
+      await testWecomBotConnection();
+      Message.success(t('system.wecomBot.testSuccess'));
+      await loadConfig();
+    });
   }
   async function sendUserTest() {
-    if (!testUserId.value) return Message.warning(t('system.wecomBot.selectTestRecipient'));
-    await testWecomUser(testUserId.value, t('system.wecomBot.testMessage'));
-    Message.success(t('system.wecomBot.queued'));
+    if (loading.value || loadError.value || !canUpdate.value || !config.value.enabled) return;
+    const userId = testUserId.value;
+    if (!userId) return Message.warning(t('system.wecomBot.selectTestRecipient'));
+    await runPending(`test-user:${userId}`, async () => {
+      await testWecomUser(userId, t('system.wecomBot.testMessage'));
+      Message.success(t('system.wecomBot.queued'));
+    });
   }
   async function toggleBot(value: string | number | boolean) {
-    await setWecomBotEnabled(Boolean(value));
-    await loadConfig();
+    await runPending('bot', async () => {
+      await setWecomBotEnabled(Boolean(value));
+      await loadConfig();
+    });
   }
   async function saveChatName(chat: WecomChat) {
-    await renameWecomChat(chat.id, chat.display_name || '');
-    Message.success(t('common.saveSuccess'));
+    await runPending(`chat:${chat.id}`, async () => {
+      await renameWecomChat(chat.id, chat.display_name || '');
+      Message.success(t('common.saveSuccess'));
+      await loadChats();
+    });
   }
   async function toggleChat(chat: WecomChat, value: string | number | boolean) {
-    await setWecomChatEnabled(chat.id, Boolean(value));
-    await loadChats();
+    await runPending(`chat:${chat.id}`, async () => {
+      await setWecomChatEnabled(chat.id, Boolean(value));
+      await loadChats();
+    });
   }
   async function sendGroupTest(chat: WecomChat) {
-    await testWecomGroup(chat.id, t('system.wecomBot.testMessage'));
-    Message.success(t('system.wecomBot.queued'));
+    if (loading.value || loadError.value || !canUpdate.value || !asBool(chat.active)) return;
+    await runPending(`test-group:${chat.id}`, async () => {
+      await testWecomGroup(chat.id, t('system.wecomBot.testMessage'));
+      Message.success(t('system.wecomBot.queued'));
+    });
   }
   async function loadTemplateVariables() {
     templateVariables.value = await getWecomTemplateVariables(ruleForm.notificationType);
@@ -850,15 +949,9 @@
       getWecomRecipientPositions(projectId),
     ]);
   }
-  async function changeScope() {
-    ruleForm.scopeId = undefined;
-    ruleForm.recipientSpec.userIds = [];
-    ruleForm.recipientSpec.positionIds = [];
-    ruleForm.recipientSpec.roleIds = [];
-    ruleForm.recipientSpec.projectAllMembers = false;
-    await loadRecipientUsers();
-  }
-  function openRule(record?: Record<string, any>) {
+  function openRule(record?: Record<string, any>, readOnly = false) {
+    if (record?.scope_type === 'PROJECT' && !readOnly) return;
+    historicalView.value = record?.scope_type === 'PROJECT';
     Object.assign(ruleForm, defaultRule());
     editingRuleId.value = record?.id || '';
     editingRuleWarning.value = record?.config_status === 'NEEDS_ATTENTION' ? record.config_warning || '' : '';
@@ -915,11 +1008,16 @@
     Promise.all([loadRecipientUsers(), loadTemplateVariables()]);
   }
   function copyRule(record: Record<string, any>) {
+    if (record.scope_type === 'PROJECT') return;
     openRule(record);
     editingRuleId.value = '';
     ruleForm.name = `${record.name} - ${t('common.copy')}`;
   }
   async function saveRule(done: (closed: boolean) => void) {
+    if (historicalView.value || savingRule.value || loading.value || loadError.value) {
+      done(false);
+      return;
+    }
     if (!ruleForm.name || !ruleForm.template || (ruleForm.scopeType === 'PROJECT' && !ruleForm.scopeId)) {
       showRuleValidation(t('system.wecomBot.required'));
       done(false);
@@ -1116,17 +1214,21 @@
     });
   }
   async function toggleRule(record: Record<string, any>, value: string | number | boolean) {
-    await setWecomRuleEnabled(record.id, Boolean(value));
-    await loadRules();
+    await runPending(`rule:${record.id}`, async () => {
+      await setWecomRuleEnabled(record.id, Boolean(value));
+      await loadRules();
+    });
   }
   async function previewRule(record: Record<string, any>) {
     const content = await previewWecomRule(record.id);
     Message.info({ content: content || t('system.wecomBot.emptyPreview'), duration: 6000 });
   }
   async function runRule(record: Record<string, any>) {
-    const ids = await runWecomRule(record.id);
-    if (!ids.length) return Message.warning(t('system.wecomBot.noRecipient'));
-    Message.success(t('system.wecomBot.queued'));
+    await runPending(`rule:${record.id}`, async () => {
+      const ids = await runWecomRule(record.id);
+      if (!ids.length) return Message.warning(t('system.wecomBot.noRecipient'));
+      Message.success(t('system.wecomBot.queued'));
+    });
   }
   async function openLogDetail(record: Record<string, any>) {
     logDetail.value = await getWecomMessage(record.id);
@@ -1137,8 +1239,10 @@
     scheduleExecutionVisible.value = true;
   }
   async function removeRule(record: Record<string, any>) {
-    await deleteWecomRule(record.id);
-    await loadRules();
+    await runPending(`rule:${record.id}`, async () => {
+      await deleteWecomRule(record.id);
+      await loadRules();
+    });
   }
   async function retryMessage(record: Record<string, any>) {
     await retryWecomMessage(record.id);
@@ -1151,7 +1255,6 @@
   }
 
   onMounted(async () => {
-    if (!appStore.projectList.length) await appStore.initProjectList();
     await loadActiveTab();
   });
 </script>

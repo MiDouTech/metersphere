@@ -46,7 +46,11 @@ public class AgentTestPlanWriteService {
         request.setModuleId(StringUtils.defaultIfBlank(request.getModuleId(),ModuleConstants.DEFAULT_NODE_ID));
         if(request.getCaseIds()==null)request.setCaseIds(java.util.List.of());
         return operations.execute("test_plan.create",request.getRequestId(),request,AgentTestPlanDTO.class,
-                ()->authorize(request.getProjectId(),null,io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ_ADD),()->createOnce(request));
+                ()->{
+                    authorize(request.getProjectId(),null,io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ_ADD);
+                    access.project(request.getProjectId(), "CASE_REVIEW:READ+ADD", true, io.metersphere.agent.constants.AgentTokenScope.REVIEW_WRITE);
+                    if (!request.getCaseIds().isEmpty()) authorize(request.getProjectId(), null, io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ_ASSOCIATION);
+                },()->createOnce(request));
     }
     private void authorize(String project,String plan,String permission) {
         access.project(project,permission,true,io.metersphere.agent.constants.AgentTokenScope.PLAN_WRITE);
@@ -65,6 +69,8 @@ public class AgentTestPlanWriteService {
         SessionUser user = requireSessionUser();
 
         TestPlanCreateRequest createRequest = new TestPlanCreateRequest();
+        createRequest.setRequestKey(request.getRequestId());
+        createRequest.setReviewSettings(request.getReviewSettings());
         createRequest.setProjectId(request.getProjectId());
         createRequest.setName(request.getName());
         createRequest.setDescription(request.getDescription());

@@ -286,12 +286,13 @@ export function downloadCaseAssetAttachment(catalogId: string, caseId: string, f
     { isTransformResponse: false }
   );
 }
-export function importCaseAssetFile(catalogId: string, file: File, type: 'excel' | 'xmind', cover: boolean) {
-  return MSR.uploadFile<{ jobId: string; status: string }>(
+export async function importCaseAssetFile(catalogId: string, file: File, type: 'excel' | 'xmind', cover: boolean) {
+  const response = await MSR.uploadFile<{ data: { jobId: string; status: string } }>(
     { url: `/case-asset/case/import/${type}/${catalogId}` },
     { request: { projectId: 'CASE_ASSET', moduleId: 'CASE_ASSET', cover, count: '0' }, fileList: [file] },
     ''
   );
+  return response.data;
 }
 export interface CaseAssetFileImportJob {
   id: string;

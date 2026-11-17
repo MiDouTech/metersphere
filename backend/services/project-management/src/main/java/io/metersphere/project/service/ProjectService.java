@@ -1,5 +1,7 @@
 package io.metersphere.project.service;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import io.metersphere.project.constants.ProjectMenuConstants;
 import io.metersphere.project.domain.*;
 import io.metersphere.project.dto.ProjectRequest;
@@ -35,6 +37,8 @@ import io.metersphere.system.service.CommonProjectService;
 import io.metersphere.system.service.UserLoginService;
 import io.metersphere.system.utils.ServiceUtils;
 import io.metersphere.system.utils.SessionUtils;
+import io.metersphere.system.utils.PageUtils;
+import io.metersphere.system.utils.Pager;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -112,21 +116,29 @@ public class ProjectService {
                 .orElse(allProject);
     }
 
-    public List<ProjectDTO> pageUserProject(ProjectPageRequest request, String userId) {
-        List<ProjectDTO> projects = commonProjectService.buildUserInfo(
-                extProjectMapper.pageUserProject(request, userId, canViewAllProjects(userId)));
-        projects.forEach(project -> project.setCanAddMember(SessionUtils.hasPermission(
-                null, project.getId(), PermissionConstants.PROJECT_USER_ADD)));
-        return projects;
+    public Pager<List<ProjectDTO>> pageUserProject(ProjectPageRequest request, String userId) {
+        // Permission checks execute SQL too. Only the target list query may consume pagination.
+        boolean viewAll = canViewAllProjects(userId);
+        try (Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize())) {
+            List<ProjectDTO> projects = commonProjectService.buildUserInfo(
+                    extProjectMapper.pageUserProject(request, userId, viewAll));
+            projects.forEach(project -> project.setCanAddMember(SessionUtils.hasPermission(
+                    null, project.getId(), PermissionConstants.PROJECT_USER_ADD)));
+            return PageUtils.setPageInfo(page, projects);
+        }
     }
 
     /**
      * Returns only projects that are both accessible to the current user and grant functional-case read.
      * The intersection is evaluated in SQL so PageHelper totals and pages cannot include unauthorized projects.
      */
-    public List<ProjectDTO> pageCaseAssetProject(ProjectPageRequest request, String userId) {
-        return commonProjectService.buildUserInfo(extProjectMapper.pageCaseAssetProject(
-                request, userId, isSystemAdmin(userId), PermissionConstants.FUNCTIONAL_CASE_READ));
+    public Pager<List<ProjectDTO>> pageCaseAssetProject(ProjectPageRequest request, String userId) {
+        boolean systemAdmin = isSystemAdmin(userId);
+        try (Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize())) {
+            List<ProjectDTO> projects = commonProjectService.buildUserInfo(extProjectMapper.pageCaseAssetProject(
+                    request, userId, systemAdmin, PermissionConstants.FUNCTIONAL_CASE_READ));
+            return PageUtils.setPageInfo(page, projects);
+        }
     }
 
     private boolean canViewAllProjects(String userId) {

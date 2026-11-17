@@ -1,0 +1,12 @@
+{
+  "format": "agent-skills",
+  "version": "0.17.0",
+  "skills": [
+    "cds",
+    "cds-project-scan",
+    "cds-deploy-pipeline",
+    "cds-release",
+    "preview-url"
+  ],
+  "generatedAt": "2026-11-03T07:09:24.456Z"
+}

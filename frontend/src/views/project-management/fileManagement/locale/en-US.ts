@@ -1,4 +1,6 @@
 export default {
+  'project.fileManagement.sourceLabel': 'Original label',
+  'project.fileManagement.sourceOperation': 'Source operation',
   'project.fileManagement.myFile': 'My files',
   'project.fileManagement.allFile': 'All files',
   'project.fileManagement.defaultFile': 'Default files',

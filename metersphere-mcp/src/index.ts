@@ -28,6 +28,8 @@ import {
   associateTestPlanCasesTool,
   createCaseReviewTool,
   createTestPlanTool,
+  previewLinkedCaseReviewTool,
+  confirmLinkedCaseReviewTool,
 } from "./tools/planReview.js";
 import {
   cancelExecutionTaskTool,
@@ -40,6 +42,7 @@ import {
   searchTestPlansTool,
 } from "./tools/testPlanExecution.js";
 import { createBugTool, getBugTool, getExecLogTool, relateBugCaseTool, searchBugsTool, updateBugTool } from "./tools/bugWrite.js";
+import { readBugImageTool } from "./tools/bugImages.js";
 
 type ToolDef = {
   name: string;
@@ -79,9 +82,12 @@ const tools: ToolDef[] = [
   resumeExecutionTaskTool,
   createCaseReviewTool,
   associateCaseReviewCasesTool,
+  previewLinkedCaseReviewTool,
+  confirmLinkedCaseReviewTool,
   getCaseReviewTool,
   searchBugsTool,
   getBugTool,
+  readBugImageTool,
   createBugTool,
   updateBugTool,
   relateBugCaseTool,

@@ -43,6 +43,7 @@ import java.util.Map;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class CaseReviewModuleService extends ModuleTreeService {
+    @Resource private io.metersphere.functional.planreview.PlanReviewPersistence planReviewPersistence;
     @Resource
     private CaseReviewModuleMapper caseReviewModuleMapper;
     @Resource
@@ -128,6 +129,7 @@ public class CaseReviewModuleService extends ModuleTreeService {
         if (CollectionUtils.isEmpty(deleteIds)) {
             return caseReviews;
         }
+        planReviewPersistence.lockModules("case_review_module",projectId,deleteIds);
         CaseReviewModuleExample caseReviewModuleExample = new CaseReviewModuleExample();
         caseReviewModuleExample.createCriteria().andIdIn(deleteIds);
         caseReviewModuleMapper.deleteByExample(caseReviewModuleExample);

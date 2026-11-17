@@ -41,6 +41,7 @@
   import ReviewForm from './reviewFormRichText.vue';
 
   import { batchReview, minderReviewCase } from '@/api/modules/case-management/caseReview';
+  import { getReviewOpinionEpochs } from '@/api/modules/plan-review';
   import { useI18n } from '@/hooks/useI18n';
   import useAppStore from '@/store/modules/app';
 
@@ -73,11 +74,31 @@
 
   const modalVisible = ref(false);
   const submitLoading = ref(false);
+  const epochLoading = ref(false);
+  const expectedMembershipEpochs = ref<Record<string, number>>({});
+  let epochSequence = 0;
+  watch(
+    () => [props.reviewId, props.selectNode.data?.caseId, props.selectNode.data?.id],
+    async () => {
+      const sequence = ++epochSequence;
+      epochLoading.value = true;
+      try {
+        const value = await getReviewOpinionEpochs(props.reviewId);
+        if (sequence === epochSequence) expectedMembershipEpochs.value = value;
+      } catch {
+        if (sequence === epochSequence) expectedMembershipEpochs.value = {};
+      } finally {
+        if (sequence === epochSequence) epochLoading.value = false;
+      }
+    },
+    { immediate: true }
+  );
   const submitForm = computed(() => (modalVisible.value ? dialogForm.value : form.value));
   const submitDisabled = computed(
     () =>
-      submitForm.value.status !== StartReviewStatus.PASS &&
-      (submitForm.value.content === '' || submitForm.value.content.trim() === '<p style=""></p>')
+      epochLoading.value ||
+      (submitForm.value.status !== StartReviewStatus.PASS &&
+        (submitForm.value.content === '' || submitForm.value.content.trim() === '<p style=""></p>'))
   );
 
   // 双击富文本内容打开弹窗
@@ -113,6 +134,7 @@
       const params = {
         userId: props.userId,
         reviewId: props.reviewId,
+        expectedMembershipEpochs: expectedMembershipEpochs.value,
         ...submitForm.value,
         notifier: submitForm.value.notifiers?.join(';') ?? '',
       };

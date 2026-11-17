@@ -79,7 +79,7 @@ public class MessageTaskLogService {
 
         dto.setPath("/project/robot/add");
         dto.setMethod(HttpMethodConstants.POST.name());
-        dto.setOriginalValue(JSON.toJSONBytes(projectRobotDTO));
+        dto.setOriginalValue(JSON.toJSONBytes(Map.of("id", StringUtils.defaultString(projectRobotDTO.getId()), "name", projectRobotDTO.getName(), "platform", projectRobotDTO.getPlatform())));
         return dto;
     }
 
@@ -93,11 +93,11 @@ public class MessageTaskLogService {
                     projectRobot.getCreateUser(),
                     OperationLogType.UPDATE.name(),
                     OperationLogModule.PROJECT_MANAGEMENT_MESSAGE_MANAGEMENT_ROBOT,
-                    projectRobotDTO.getName()+"webhook:"+projectRobot.getWebhook()+ "——>" +"webhook:"+ projectRobotDTO.getWebhook() );
+                    projectRobotDTO.getName() );
 
             dto.setPath("/project/robot/update");
             dto.setMethod(HttpMethodConstants.POST.name());
-            dto.setOriginalValue(JSON.toJSONBytes(projectRobot));
+            dto.setOriginalValue(JSON.toJSONBytes(Map.of("id", projectRobot.getId(), "name", projectRobot.getName(), "platform", projectRobot.getPlatform())));
             return dto;
         }
         return null;
@@ -118,7 +118,7 @@ public class MessageTaskLogService {
 
             dto.setPath("/project/robot/delete");
             dto.setMethod(HttpMethodConstants.GET.name());
-            dto.setOriginalValue(JSON.toJSONBytes(projectRobot));
+            dto.setOriginalValue(JSON.toJSONBytes(Map.of("id", projectRobot.getId(), "name", projectRobot.getName(), "platform", projectRobot.getPlatform())));
             return dto;
         }
         return null;

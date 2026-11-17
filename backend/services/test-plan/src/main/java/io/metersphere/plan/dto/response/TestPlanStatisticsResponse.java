@@ -16,6 +16,10 @@ import org.apache.commons.lang3.StringUtils;
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class TestPlanStatisticsResponse {
+    @Schema(description="执行结果已保存，但关联评审成员尚未追平，暂不进入完成状态")
+    private boolean completionBlockedByReview;
+    @Schema(description="关联范围已追平，完成快照尚未持久化")
+    private boolean completionSnapshotPending;
 
 	@Schema(description = "测试计划ID")
 	private String id;
@@ -76,7 +80,7 @@ public class TestPlanStatisticsResponse {
 	 * 已完成：执行进度100%
 	 */
 	public void calculateStatus() {
-		if (!StringUtils.equalsIgnoreCase(this.status, TestPlanConstants.TEST_PLAN_STATUS_ARCHIVED)) {
+		if (StringUtils.equalsIgnoreCase(this.status, TestPlanConstants.TEST_PLAN_STATUS_NOT_ARCHIVED)) {
 			if (this.successCount == 0 && errorCount == 0 && fakeErrorCount == 0 && blockCount == 0) {
 				this.status = TestPlanConstants.TEST_PLAN_SHOW_STATUS_PREPARED;
 			} else if (this.pendingCount == 0) {

@@ -4,7 +4,7 @@ import { isFunction } from '@/utils/is';
 
 import type { AxiosRequestConfig, Canceler } from 'axios';
 
-let pendingMap = new Map<string, Canceler>();
+const pendingMap = new Map<string, { cancel: Canceler; token: AxiosRequestConfig['cancelToken'] }>();
 
 export const getPendingUrl = (config: AxiosRequestConfig) => [config.method, config.url].join('&');
 
@@ -16,21 +16,26 @@ export class AxiosCanceler {
   addPending(config: AxiosRequestConfig) {
     this.removePending(config);
     const url = getPendingUrl(config);
-    config.cancelToken =
-      config.cancelToken ||
-      new axios.CancelToken((cancel) => {
-        if (!pendingMap.has(url)) {
-          // 非重复请求，存入pending中
-          pendingMap.set(url, cancel);
-        }
+    if (!config.cancelToken) {
+      let cancelRequest!: Canceler;
+      config.cancelToken = new axios.CancelToken((cancel) => {
+        cancelRequest = cancel;
       });
+      pendingMap.set(url, { cancel: cancelRequest, token: config.cancelToken });
+    }
+  }
+
+  /** A completed older request must never cancel a newer request to the same URL. */
+  completePending(config: AxiosRequestConfig) {
+    const url = getPendingUrl(config);
+    if (pendingMap.get(url)?.token === config.cancelToken) pendingMap.delete(url);
   }
 
   /**
    * @description: 清理全部pending中的请求
    */
   removeAllPending() {
-    pendingMap.forEach((cancel) => {
+    pendingMap.forEach(({ cancel }) => {
       if (cancel && isFunction(cancel)) {
         cancel();
       }
@@ -47,7 +52,7 @@ export class AxiosCanceler {
 
     if (pendingMap.has(url)) {
       // 根据标识找到pending中对应的请求并取消
-      const cancel = pendingMap.get(url);
+      const cancel = pendingMap.get(url)?.cancel;
       if (cancel && isFunction(cancel)) {
         cancel(url);
       }
@@ -59,6 +64,6 @@ export class AxiosCanceler {
    * @description: 重置pending列表
    */
   static reset(): void {
-    pendingMap = new Map<string, Canceler>();
+    pendingMap.clear();
   }
 }

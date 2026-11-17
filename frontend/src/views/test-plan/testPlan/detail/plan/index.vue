@@ -303,6 +303,11 @@
 </script>
 
 <style lang="less" scoped>
+  .plan-document {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
   .document-section {
     margin-bottom: 8px;
   }

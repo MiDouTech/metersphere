@@ -23,8 +23,12 @@ public class LocalFileRepository implements FileRepository {
         MsFileUtils.validateFileName(request.getFolder(), request.getFileName());
         createFileDir(request);
         File file = new File(getFilePath(request));
-        FileUtils.copyInputStreamToFile(multipartFile.getInputStream(), file);
-        return file.getPath();
+        try {
+            return LocalObjectGeneration.mutate(file.toPath(),()->{
+                FileUtils.copyInputStreamToFile(multipartFile.getInputStream(), file);return file.getPath();
+            });
+        } catch(IOException failure){throw failure;}
+        catch(Exception failure){throw new IOException("Managed local write failed",failure);}
     }
 
     private void createFileDir(FileRequest request) {
@@ -38,27 +42,31 @@ public class LocalFileRepository implements FileRepository {
     @Override
     public String saveFile(byte[] bytes, FileRequest request) throws IOException {
         File file = new File(getFilePath(request));
-        try (OutputStream ops = new FileOutputStream(file)) {
-            ops.write(bytes);
-            return file.getPath();
-        }
+        try {
+            return LocalObjectGeneration.mutate(file.toPath(),()->{
+                try(OutputStream ops=new FileOutputStream(file)){ops.write(bytes);return file.getPath();}
+            });
+        } catch(IOException failure){throw failure;}
+        catch(Exception failure){throw new IOException("Managed local write failed",failure);}
     }
 
     @Override
     public String saveFile(InputStream inputStream, FileRequest request) throws Exception {
         File file = new File(getFilePath(request));
-        FileUtils.copyInputStreamToFile(inputStream, file);
-        return file.getPath();
+        return LocalObjectGeneration.mutate(file.toPath(),()->{
+            FileUtils.copyInputStreamToFile(inputStream, file);return file.getPath();
+        });
     }
 
     @Override
     public void delete(FileRequest request) throws Exception {
         String path = StringUtils.join(getFilePath(request));
         File file = new File(path);
-        FileUtil.deleteContents(file);
-        if (file.exists() && !file.delete()) {
-            throw new RuntimeException("Failed to delete file: " + path);
-        }
+        LocalObjectGeneration.mutate(file.toPath(),()->{
+            FileUtil.deleteContents(file);
+            if(file.exists()&&!file.delete())throw new IOException("Managed local delete failed");
+            return null;
+        });
     }
 
     @Override
@@ -97,6 +105,14 @@ public class LocalFileRepository implements FileRepository {
     public long getFileSize(FileRequest request) throws Exception {
         File file = new File(getFilePath(request));
         return file.length();
+    }
+
+    /** Storage identity, never a caller-visible filesystem path. */
+    public String objectRevision(FileRequest request) throws IOException {
+        var path=new File(getFilePath(request)).toPath();String generation=LocalObjectGeneration.current(path);
+        var attributes = Files.readAttributes(path, java.nio.file.attribute.BasicFileAttributes.class);
+        if(!generation.equals(LocalObjectGeneration.current(path)))throw new IOException("Managed local object changed during stat");
+        return generation+":"+attributes.fileKey() + ":" + attributes.creationTime() + ":" + attributes.lastModifiedTime() + ":" + attributes.size();
     }
 
     private String getFilePath(FileRequest request) {

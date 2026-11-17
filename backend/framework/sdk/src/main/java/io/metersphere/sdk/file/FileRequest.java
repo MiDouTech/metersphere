@@ -30,6 +30,11 @@ public class FileRequest {
         this.storage = storage;
         this.fileName = fileName;
     }
+
+    /** Immutable Git content identity, excluding repository credentials. */
+    public String getGitRevision() {
+        return gitFileRequest == null ? "" : gitFileRequest.getCommitId() + ":" + fileName;
+    }
 }
 
 @Data

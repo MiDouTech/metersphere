@@ -45,6 +45,8 @@ public class FileManagementService {
     private FileMetadataLogService fileMetadataLogService;
     @Resource
     private ExtFileMetadataMapper extFileMetadataMapper;
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     public void checkModule(String moduleId, String nodeTypeDefault) {
         if (!StringUtils.equals(moduleId, ModuleConstants.DEFAULT_NODE_ID)) {
@@ -71,6 +73,7 @@ public class FileManagementService {
     }
 
     public void delete(FileBatchProcessRequest request, String operator) {
+        jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", request.getProjectId());
         List<FileMetadata> deleteList = this.getDeleteList(request);
         List<String> deleteIds = deleteList.stream().map(FileMetadata::getId).toList();
         if (CollectionUtils.isNotEmpty(deleteIds)) {
@@ -202,6 +205,21 @@ public class FileManagementService {
 
         return fileService.download(fileRequest);
     }
+
+    /** Server-owned request for bounded original-image reads; does not authorize library browsing. */
+    public FileRequest imageReadRequest(FileMetadata metadata) {
+        String storage = StringUtils.upperCase(metadata.getStorage());
+        if (!java.util.Set.of("MINIO", "GIT", "LOCAL").contains(StringUtils.defaultString(storage)))
+            throw new MSException("BUG_IMAGE_RESOURCE_UNAVAILABLE");
+        FileRequest request = new FileRequest(DefaultRepositoryDir.getFileManagementDir(metadata.getProjectId()),
+                storage, metadata.getId());
+        if (StorageType.GIT.name().equals(storage)) {
+            request.setGitFileRequest(getFileModuleRepositoryDTO(metadata.getModuleId()), getFileMetadataRepositoryDTO(metadata.getId()));
+            request.setFileName(metadata.getPath());
+        }
+        return request;
+    }
+
 
     public FileMetadataRepositoryDTO getFileMetadataRepositoryDTO(String fileMetadataId) {
         FileMetadataRepository fileMetadataRepository = fileMetadataRepositoryMapper.selectByPrimaryKey(fileMetadataId);

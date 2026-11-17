@@ -23,8 +23,11 @@ import java.util.List;
 
 @Tag(name = "项目管理-消息管理-机器人")
 @RestController
-@RequestMapping("/project/robot/")
+@org.apache.shiro.authz.annotation.RequiresAuthentication
+@RequestMapping("/platform/notification/robot/")
 public class ProjectRobotController {
+    @Resource
+    private io.metersphere.system.service.PlatformNotificationScope platformScope;
 
     @Resource
     private ProjectRobotService projectRobotService;
@@ -32,14 +35,13 @@ public class ProjectRobotController {
 
     @GetMapping("/list/{projectId}")
     @Operation(summary = "项目管理-消息管理-获取机器人列表")
-    @RequiresPermissions(PermissionConstants.PROJECT_MESSAGE_READ)
     public List<ProjectRobot> listResourcePools(@PathVariable(value = "projectId") String projectId) {
+        platformScope.requireAdmin();
         return projectRobotService.getList(projectId);
     }
 
     @PostMapping("add")
     @Operation(summary = "项目管理-消息管理-新增机器人")
-    @RequiresPermissions(PermissionConstants.PROJECT_MESSAGE_READ_ADD)
     @Log(type = OperationLogType.ADD, expression = "#msClass.addRobotLog(#projectRobotDTO)", msClass = MessageTaskLogService.class)
     public ProjectRobot add(@Validated({Created.class}) @RequestBody ProjectRobotDTO projectRobotDTO) {
         ProjectRobot projectRobot = new ProjectRobot();
@@ -53,7 +55,6 @@ public class ProjectRobotController {
 
     @PostMapping("update")
     @Operation(summary = "项目管理-消息管理-更新机器人")
-    @RequiresPermissions(PermissionConstants.PROJECT_MESSAGE_READ_UPDATE)
     @Log(type = OperationLogType.UPDATE, expression = "#msClass.updateRobotLog(#projectRobotDTO)", msClass = MessageTaskLogService.class)
     public void update(@Validated({Updated.class}) @RequestBody ProjectRobotDTO projectRobotDTO) {
         ProjectRobot projectRobot = new ProjectRobot();
@@ -67,23 +68,23 @@ public class ProjectRobotController {
 
     @GetMapping("get/{id}")
     @Operation(summary = "项目管理-消息管理-获取机器人详情")
-    @RequiresPermissions(PermissionConstants.PROJECT_MESSAGE_READ)
     public ProjectRobotDTO getDetail(@PathVariable(value = "id") String id) {
+        platformScope.requireAdmin();
         return projectRobotService.getDetail(id);
     }
 
     @GetMapping("delete/{id}")
     @Operation(summary = "项目管理-消息管理-删除机器人")
-    @RequiresPermissions(PermissionConstants.PROJECT_MESSAGE_READ_DELETE)
     @Log(type = OperationLogType.DELETE, expression = "#msClass.delRobotLog(#id)", msClass = MessageTaskLogService.class)
     public void delete(@PathVariable(value = "id") String id) {
+        platformScope.requireAdmin();
         projectRobotService.delete(id);
     }
 
     @GetMapping("enable/{id}")
     @Operation(summary = "项目管理-消息管理-启禁用机器人")
-    @RequiresPermissions(PermissionConstants.PROJECT_MESSAGE_READ_UPDATE)
     public void enable(@PathVariable(value = "id") String id) {
+        platformScope.requireAdmin();
         projectRobotService.enable(id, SessionUtils.getUserId(), System.currentTimeMillis());
     }
 

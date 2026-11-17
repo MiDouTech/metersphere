@@ -94,6 +94,7 @@ public class NoticeTemplateService {
      * @param scene                    对应场景
      */
     private void addCustomFiled(List<MessageTemplateFieldDTO> messageTemplateFieldDTOS, String projectId, String scene) {
+        if (io.metersphere.system.service.PlatformNotificationScope.ID.equals(projectId)) return;
         CustomFieldExample example = new CustomFieldExample();
         example.createCriteria().andScopeIdEqualTo(projectId).andSceneEqualTo(scene);
         List<CustomField> customFields = customFieldMapper.selectByExample(example);

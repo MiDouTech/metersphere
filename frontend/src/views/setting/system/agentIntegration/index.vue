@@ -418,6 +418,16 @@
 
   const scopeOptions = [
     {
+      value: 'PROJECT_FILE_READ;PROJECT_FILE_DOWNLOAD',
+      label: '项目原件读取（需明确授权）',
+      desc: '查询文件、精确版本及逐块下载；仍需项目文件读取和下载权限。旧全能力 Token 不自动取得权限。',
+    },
+    {
+      value: 'PROJECT_FILE_READ;PROJECT_FILE_WRITE;PROJECT_FILE_DOWNLOAD',
+      label: '项目原件上传与读取（需明确授权）',
+      desc: '分块保存 Excel/XMind 原件及显式新版本；上传不导入用例，仍需项目文件新增或更新权限。',
+    },
+    {
       value: 'PROJECT_READ;FUNCTIONAL_READ;FUNCTIONAL_SUBMIT;CASE_ATTACHMENT',
       label: '个人 Agent 测试闭环',
       desc: '读取用例、上传证据，经步骤覆盖及附件结构校验后保存声明结果，无需任务、租约或模型核验。',

@@ -1,4 +1,5 @@
 <template>
+  <a-alert v-if="loadError" type="error">读取失败，请重试 <a-button @click="reload">重试</a-button></a-alert>
   <MsCard
     :title="t('project.messageManagement.editMessage')"
     :sub-title="`(${messageDetail?.robotName}-${messageDetail?.taskTypeName}-${messageDetail?.eventName})`"
@@ -146,16 +147,12 @@
   import useContainerShadow from '@/hooks/useContainerShadow';
   import { useI18n } from '@/hooks/useI18n';
   import useLocale from '@/locale/useLocale';
-  import useAppStore from '@/store/modules/app';
-  import useUserStore from '@/store/modules/user';
   import { sleep } from '@/utils';
 
   import type { Field, MessageTemplateDetail } from '@/models/projectManagement/message';
 
   const route = useRoute();
   const router = useRouter();
-  const appStore = useAppStore();
-  const userStore = useUserStore();
   const { t } = useI18n();
   const { currentLocale } = useLocale();
 
@@ -166,15 +163,23 @@
   });
 
   function back() {
-    router.back();
+    router.push({
+      name: 'settingSystemParameter',
+      query: { tab: 'messageNotification', notificationSection: 'messages' },
+    });
   }
 
+  const loadError = ref(false);
   const messageDetail = ref<MessageTemplateDetail | null>();
   const subject = ref('');
   const template = ref('');
   const saveLoading = ref(false);
+  const fieldLoading = ref(false);
+  const detailLoading = ref(false);
 
   async function save() {
+    if (saveLoading.value || detailLoading.value || fieldLoading.value || !messageDetail.value || loadError.value)
+      return;
     try {
       saveLoading.value = true;
       await saveMessageConfig({
@@ -185,15 +190,15 @@
         useDefaultTemplate: template.value === messageDetail.value?.defaultTemplate,
         taskType: route.query.taskType as string,
         event: route.query.event as string,
-        projectId: appStore.currentProjectId,
-        receiverIds: messageDetail.value?.receiverIds || [userStore.id || ''],
+        projectId: '__MSP_PLATFORM_NOTIFICATIONS__',
+        receiverIds: messageDetail.value?.receiverIds || [],
       });
       Message.success(t('project.messageManagement.saveSuccess'));
       await sleep(300);
       back();
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.log(error);
+      Message.error('保存失败，请重试；输入已保留');
     } finally {
       saveLoading.value = false;
     }
@@ -209,7 +214,7 @@
       return;
     }
     if (focusTarget.value === 'subject') {
-      if (`\${${field.id}}`.length + subject.value.length > 64) {
+      if (`\${${field.id}}`.length + subject.value.length > 1000) {
         // 插入的变量超出限制长度，提示
         Message.warning(t('project.messageManagement.titleMax'));
         return;
@@ -219,7 +224,7 @@
       const selectionStart = subjectInput?.selectionStart;
       subject.value = `${subject.value.slice(0, selectionStart)}\${${field.id}}${subject.value.slice(selectionStart)}`;
     } else {
-      if (`\${${field.id}}`.length + template.value.length > 500) {
+      if (`\${${field.id}}`.length + template.value.length > 1000) {
         // 插入的变量超出限制长度，提示
         Message.warning(t('project.messageManagement.contentMax'));
         return;
@@ -240,12 +245,12 @@
       value: 'all',
     },
   ]);
-  const fieldLoading = ref(false);
+
   // 初始化字段列表 TODO:接口错误重试
   async function initFields() {
     try {
       fieldLoading.value = true;
-      const res = await getMessageFields(appStore.currentProjectId, route.query.taskType as string);
+      const res = await getMessageFields('__MSP_PLATFORM_NOTIFICATIONS__', route.query.taskType as string);
       fields.value = res.fieldList;
       fieldTypeOptions.value = fieldTypeOptions.value.concat(
         res.fieldSourceList.map((item) => ({
@@ -261,7 +266,7 @@
       });
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.log(error);
+      loadError.value = true;
     } finally {
       fieldLoading.value = false;
     }
@@ -275,18 +280,22 @@
     });
   });
 
-  const detailLoading = ref(false);
   async function initMessageDetail() {
     try {
       detailLoading.value = true;
       const { taskType, event, id } = route.query;
-      const res = await getMessageDetail(appStore.currentProjectId, taskType as string, event as string, id as string);
+      const res = await getMessageDetail(
+        '__MSP_PLATFORM_NOTIFICATIONS__',
+        taskType as string,
+        event as string,
+        id as string
+      );
       subject.value = res.subject;
       template.value = res.template;
       messageDetail.value = res;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.log(error);
+      loadError.value = true;
     } finally {
       detailLoading.value = false;
     }
@@ -299,10 +308,11 @@
     });
   }
 
-  onBeforeMount(() => {
-    initMessageDetail();
-    initFields();
-  });
+  async function reload() {
+    loadError.value = false;
+    await Promise.all([initMessageDetail(), initFields()]);
+  }
+  onBeforeMount(reload);
 
   function reset() {
     subject.value = messageDetail.value?.defaultSubject || '';

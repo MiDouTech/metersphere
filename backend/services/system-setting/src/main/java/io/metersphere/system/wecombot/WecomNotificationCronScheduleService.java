@@ -58,14 +58,15 @@ public class WecomNotificationCronScheduleService {
             remove(request.ruleId());
             return;
         }
-        List<Map<String, Object>> rules = jdbc.queryForList("SELECT id,trigger_type,cron,timezone,enabled FROM wecom_notification_rule WHERE id=?", request.ruleId());
+        List<Map<String, Object>> rules = jdbc.queryForList("SELECT id,trigger_type,cron,timezone,enabled,scope_type FROM wecom_notification_rule WHERE id=?", request.ruleId());
         if (rules.isEmpty()) {
             remove(request.ruleId());
             return;
         }
         Map<String, Object> rule = rules.getFirst();
-        boolean enabled = Boolean.TRUE.equals(rule.get("enabled"))
-                || rule.get("enabled") instanceof Number number && number.intValue() == 1;
+        boolean platform = "SYSTEM".equals(rule.get("scope_type"));
+        boolean enabled = platform && (Boolean.TRUE.equals(rule.get("enabled"))
+                || rule.get("enabled") instanceof Number number && number.intValue() == 1);
         if (enabled && "CRON".equals(String.valueOf(rule.get("trigger_type")))) {
             schedule(request.ruleId(), String.valueOf(rule.get("cron")), String.valueOf(rule.get("timezone")));
         } else {
@@ -142,9 +143,9 @@ public class WecomNotificationCronScheduleService {
     @EventListener(ApplicationReadyEvent.class)
     public void restore() {
         if (scheduleManager == null) return;
-        List<Map<String, Object>> rules = jdbc.queryForList("SELECT id,cron,timezone FROM wecom_notification_rule WHERE enabled=1 AND trigger_type='CRON'");
+        List<Map<String, Object>> rules = jdbc.queryForList("SELECT id,cron,timezone FROM wecom_notification_rule WHERE enabled=1 AND scope_type='SYSTEM' AND trigger_type='CRON'");
         rules.forEach(rule -> safelyRestore(() -> schedule(String.valueOf(rule.get("id")), String.valueOf(rule.get("cron")), String.valueOf(rule.get("timezone")))));
-        List<Map<String, Object>> plans = jdbc.queryForList("SELECT s.id,s.cycle_type,s.weekdays,s.execution_time,s.timezone FROM wecom_notification_schedule s JOIN wecom_notification_rule r ON r.id=s.rule_id WHERE s.enabled=1 AND r.enabled=1");
+        List<Map<String, Object>> plans = jdbc.queryForList("SELECT s.id,s.cycle_type,s.weekdays,s.execution_time,s.timezone FROM wecom_notification_schedule s JOIN wecom_notification_rule r ON r.id=s.rule_id WHERE s.enabled=1 AND r.enabled=1 AND r.scope_type='SYSTEM'");
         plans.forEach(plan -> safelyRestore(() -> schedulePlan(String.valueOf(plan.get("id")), cronFor(plan), String.valueOf(plan.get("timezone")))));
     }
 

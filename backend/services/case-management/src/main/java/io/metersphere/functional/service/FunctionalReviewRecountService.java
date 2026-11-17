@@ -10,6 +10,8 @@ import java.math.RoundingMode;
 /** Current-state recomputation survives delivery failure and never replays counter deltas. */
 @Service
 public class FunctionalReviewRecountService {
+ @jakarta.annotation.Resource private io.metersphere.functional.planreview.PlanReviewApplicationService planReviewApplication;
+ @jakarta.annotation.Resource private io.metersphere.functional.planreview.PlanReviewPersistence planReviewPersistence;
  private final JdbcTemplate jdbc;private final TransactionTemplate tx;
  public FunctionalReviewRecountService(JdbcTemplate jdbc,PlatformTransactionManager manager){this.jdbc=jdbc;tx=new TransactionTemplate(manager);tx.setTimeout(20);}
  public void enqueueForCases(List<String> ids) {
@@ -23,8 +25,16 @@ public class FunctionalReviewRecountService {
  public void drain(){
   String[] selected={null};
   try{tx.executeWithoutResult(status->{
-   var due=jdbc.queryForList("SELECT review_id FROM functional_review_recount WHERE state='PENDING' AND next_retry_at<=? ORDER BY next_retry_at LIMIT 1 FOR UPDATE SKIP LOCKED",String.class,System.currentTimeMillis());
+   var due=jdbc.queryForList("SELECT review_id FROM functional_review_recount WHERE state='PENDING' AND next_retry_at<=? ORDER BY next_retry_at LIMIT 1",String.class,System.currentTimeMillis());
    if(due.isEmpty())return;String id=due.getFirst();selected[0]=id;
+   if(!jdbc.queryForList("SELECT id FROM case_review WHERE id=?",String.class,id).isEmpty())planReviewPersistence.lockReview(id);
+   var pendingRows=jdbc.queryForList("SELECT state,next_retry_at FROM functional_review_recount WHERE review_id=? FOR UPDATE",id);
+   if(pendingRows.isEmpty() || !"PENDING".equals(pendingRows.getFirst().get("state")) || ((Number)pendingRows.getFirst().get("next_retry_at")).longValue()>System.currentTimeMillis())return;
+   if(jdbc.queryForList("SELECT id FROM case_review WHERE id=?",String.class,id).isEmpty()){jdbc.update("UPDATE functional_review_recount SET state='SUCCESS',update_time=? WHERE review_id=?",System.currentTimeMillis(),id);return;}
+   if(planReviewApplication.refreshOpinionStatistics(id)){
+    jdbc.update("UPDATE functional_review_recount SET state='SUCCESS',update_time=? WHERE review_id=?",System.currentTimeMillis(),id);
+    return;
+   }
    var review=jdbc.queryForList("SELECT status FROM case_review WHERE id=? FOR UPDATE",String.class,id);
    if(!review.isEmpty()){
     var counts=jdbc.queryForList("SELECT r.status,COUNT(*) total FROM case_review_functional_case r JOIN functional_case f ON f.id=r.case_id AND f.deleted=0 WHERE r.review_id=? GROUP BY r.status",id);

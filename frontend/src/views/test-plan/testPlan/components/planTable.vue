@@ -24,6 +24,12 @@
       </a-radio-group>
     </template>
     <template #right>
+      <a-button
+        v-if="hasAnyPermission(['PLAN_REVIEW:MIGRATE', 'PLAN_REVIEW:TAKEOVER_APPROVE'])"
+        type="text"
+        @click="legacyMigrationRef?.open()"
+        >历史关联迁移</a-button
+      >
       <slot name="moduleRefresh"></slot>
     </template>
   </MsAdvanceFilter>
@@ -35,7 +41,7 @@
     always-show-selected-count
     :not-show-table-filter="isAdvancedSearchMode"
     :action-config="testPlanBatchActions"
-    :selectable="hasOperationPermission && showType !== testPlanTypeEnum.ALL && !isArchived"
+    :selectable="hasOperationPermission || hasAnyPermission(['PROJECT_TEST_PLAN:READ'])"
     filter-icon-align-left
     :expanded-keys="expandedKeys"
     :first-column-width="32"
@@ -44,6 +50,30 @@
     @filter-change="filterChange"
     @drag-change="handleDragChange"
   >
+    <template #batch-leading>
+      <PlanReviewListToolbar
+        side="plan"
+        :rows="propsRes.data"
+        :selected-ids="Array.from(propsRes.selectedKeys)"
+        :expanded-ids="expandedKeys"
+        :project="appStore.currentProjectId"
+        :loading="propsRes.loading"
+        :context="
+          JSON.stringify([
+            keyword,
+            viewId,
+            propsRes.filter,
+            advanceFilter,
+            propsRes.msPagination?.current,
+            propsRes.msPagination?.pageSize,
+            showType,
+            props.activeFolder,
+          ])
+        "
+        :reload="refreshPreserveState"
+        @clear="resetSelector()"
+      />
+    </template>
     <!-- TODO: 快捷创建暂时不上 -->
     <!-- <template v-if="hasAnyPermission(['PROJECT_TEST_PLAN:READ+ADD'])" #quickCreate>
       <a-form
@@ -90,6 +120,13 @@
         </template>
       </a-dropdown>
     </template> -->
+    <template #planReviewRelation="{ record }"
+      ><span :data-relation-result="`plan-${record.id}`" tabindex="-1"
+        ><PlanReviewListCell side="plan" :value="record.planReviewRelation" :group="record.type === 'GROUP'" /></span
+    ></template>
+    <template #hifoxHandoff="{ record }"
+      ><HandoffListCell :value="record.planReviewRelation?.handoff" :group="record.type === 'GROUP'"
+    /></template>
     <template #name="{ record }">
       <a-button
         v-if="record.type === testPlanTypeEnum.TEST_PLAN"
@@ -342,6 +379,8 @@
     </template>
     <executeHistoryTable v-if="executionHistoryDrawerVisible" :plan-id="activeRecord?.id" is-group />
   </MsDrawer>
+  <PlanReviewCopyDialog ref="copyDialogRef" />
+  <PlanReviewLegacyMigrationPanel ref="legacyMigrationRef" />
 </template>
 
 <script setup lang="ts">
@@ -366,8 +405,13 @@
   import MsTableMoreAction from '@/components/pure/ms-table-more-action/index.vue';
   import { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsTag from '@/components/pure/ms-tag/ms-tag.vue';
+  import HandoffListCell from '@/components/business/hifox-handoff/listCell.vue';
   import MsRichMessage from '@/components/business/ms-rich-message/index.vue';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
+  import PlanReviewCopyDialog from '@/components/business/plan-review/copyDialog.vue';
+  import PlanReviewLegacyMigrationPanel from '@/components/business/plan-review/legacyMigrationPanel.vue';
+  import PlanReviewListCell from '@/components/business/plan-review/listCell.vue';
+  import PlanReviewListToolbar from '@/components/business/plan-review/listToolbar.vue';
   import executeHistoryTable from '../detail/executeHistory/index.vue';
   import ActionModal from './actionModal.vue';
   import BatchEditModal from './batchEditModal.vue';
@@ -391,6 +435,7 @@
     dragPlanOnGroup,
     executePlanOrGroup,
     executeSinglePlan,
+    getPlanCopyScope,
     getPlanPassRate,
     getTestPlanDetail,
     getTestPlanList,
@@ -403,7 +448,6 @@
   import useListRefresh from '@/hooks/useListRefresh';
   import useModal from '@/hooks/useModal';
   import { useAppStore, useTableStore } from '@/store';
-  import useCacheStore from '@/store/modules/cache/cache';
   import useGlobalStore from '@/store/modules/global';
   import { characterLimit, getGenerateId } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
@@ -423,7 +467,7 @@
   import { FilterType, ViewTypeEnum } from '@/enums/advancedFilterEnum';
   import { LastExecuteResults } from '@/enums/caseEnum';
   import { GlobalEventNameEnum } from '@/enums/commonEnum';
-  import { RouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
   import { ColumnEditTypeEnum, TableKeyEnum } from '@/enums/tableEnum';
   import { FilterSlotNameEnum } from '@/enums/tableFilterEnum';
   import { TaskCenterEnum } from '@/enums/taskCenter';
@@ -433,7 +477,6 @@
   import { planStatusOptions } from '../config';
   import { getModules } from '@/views/case-management/caseManagementFeature/components/utils';
 
-  const cacheStore = useCacheStore();
   const tableStore = useTableStore();
   const appStore = useAppStore();
   const globalStore = useGlobalStore();
@@ -497,6 +540,22 @@
       },
       showDrag: false,
       columnSelectorDisabled: true,
+    },
+    {
+      title: 'HiFox交接',
+      dataIndex: 'hifoxHandoff',
+      slotName: 'hifoxHandoff',
+      width: 200,
+      showInTable: true,
+      showDrag: true,
+    },
+    {
+      title: '关联评审计划',
+      dataIndex: 'planReviewRelation',
+      slotName: 'planReviewRelation',
+      width: 240,
+      showInTable: true,
+      showDrag: true,
     },
     {
       title: 'common.status',
@@ -860,13 +919,14 @@
     draggableCondition: true,
     rowSelectionDisabledConfig: {
       disabledChildren: true,
+      showChildCheckboxes: true,
       parentKey: 'parent',
     },
   });
 
   function getTags(record: TestPlanItem) {
     if (record.children && record.children.length) {
-      record.children = record.children.map((child: TestPlanItem) => ({ ...getTags(child), disabled: true }));
+      record.children = record.children.map((child: TestPlanItem) => getTags(child));
     }
     return {
       ...record,
@@ -899,8 +959,6 @@
     },
     updatePlanName
   );
-
-  const isArchived = computed(() => viewId.value === 'archived');
 
   const batchParams = ref<BatchActionQueryParams>({
     selectedIds: [],
@@ -944,7 +1002,7 @@
   async function loadPlanList() {
     const params = await initTableParams();
     setLoadListParams({ ...params, viewId: viewId.value, combineSearch: advanceFilter });
-    loadList();
+    await loadList();
   }
 
   // 获取父组件模块数量
@@ -1227,6 +1285,8 @@
    * 批量复制或者移动
    */
   const modeType = ref<'move' | 'copy'>('move');
+  const copyDialogRef = ref<InstanceType<typeof PlanReviewCopyDialog>>();
+  const legacyMigrationRef = ref<InstanceType<typeof PlanReviewLegacyMigrationPanel>>();
   const showBatchModal = ref<boolean>(false);
   const selectNodeKeys = ref<(string | number)[]>([]);
   const okLoading = ref<boolean>(false);
@@ -1255,12 +1315,30 @@
         moveType: moveForm.moveType,
       };
       if (modeType.value === 'copy') {
-        await batchCopyPlan(params);
-        Message.success(t('common.batchCopySuccess'));
-      } else {
-        await batchMovePlan(params);
-        Message.success(t('common.batchMoveSuccess'));
+        const project = appStore.currentProjectId;
+        const scope = await getPlanCopyScope(project, (params.selectIds || []).map(String));
+        if (project !== appStore.currentProjectId) return;
+        copyDialogRef.value?.open(
+          project,
+          '复制计划',
+          async (settings) => {
+            const result = await batchCopyPlan({ ...params, ...settings });
+            if (project === appStore.currentProjectId) {
+              if (result.failedCount === 0) {
+                Message.success('复制对象已创建，评审同步状态见关联记录');
+                showBatchModal.value = false;
+              }
+              fetchData();
+            }
+            return result;
+          },
+          scope.settingsRequired
+        );
+        return;
       }
+      await batchMovePlan(params);
+      Message.success(t('common.batchMoveSuccess'));
+
       showBatchModal.value = false;
       fetchData();
     } catch (error) {
@@ -1556,14 +1634,22 @@
   }
 
   async function copyTestPlanOrGroup(id: string) {
-    try {
-      await testPlanAndGroupCopy(id);
-      Message.success(t('common.copySuccess'));
-      fetchData();
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    }
+    const project = appStore.currentProjectId;
+    const scope = await getPlanCopyScope(project, [id]);
+    if (project !== appStore.currentProjectId) return;
+    copyDialogRef.value?.open(
+      project,
+      '复制计划',
+      async (settings) => {
+        const result = await testPlanAndGroupCopy(id, settings);
+        if (project === appStore.currentProjectId) {
+          if (result.failedCount === 0) Message.success('复制对象已创建，评审同步状态见关联记录');
+          fetchData();
+        }
+        return result;
+      },
+      scope.settingsRequired
+    );
   }
 
   async function handleDeleteScheduled(record: TestPlanItem) {
@@ -1743,30 +1829,28 @@
   //   createType.value = value as keyof typeof testPlanTypeEnum;
   // }
 
-  const isActivated = computed(() => cacheStore.cacheViews.includes(RouteEnum.TEST_PLAN_INDEX));
   const viewName = ref('');
 
   onBeforeMount(() => {
-    if (!isActivated.value) {
-      if (route.query.groupId) {
-        showType.value = testPlanTypeEnum.GROUP;
-        keyword.value = route.query.groupId as string;
-      } else if (route.query.showType) {
-        showType.value = route.query.showType as testPlanTypeEnum;
-      }
-      if (route.query.view) {
-        setAdvanceFilter({ conditions: [], searchMode: 'AND' }, route.query.view as string);
-        viewName.value = route.query.view as string;
-      }
-      if (route.query.home) {
-        if (route.query.home === WorkNavValueEnum.TEST_PLAN_ARCHIVED) {
-          viewId.value = 'archived';
-        } else {
-          propsRes.value.filter = { ...NAV_NAVIGATION[route.query.home as WorkNavValueEnum] };
-        }
-      }
-      fetchData();
+    if (route.query.groupId) {
+      showType.value = testPlanTypeEnum.GROUP;
+      keyword.value = route.query.groupId as string;
+    } else if (route.query.showType) {
+      showType.value = route.query.showType as testPlanTypeEnum;
     }
+    if (route.query.view) {
+      setAdvanceFilter({ conditions: [], searchMode: 'AND' }, route.query.view as string);
+      viewName.value = route.query.view as string;
+    }
+    if (route.query.home) {
+      if (route.query.home === WorkNavValueEnum.TEST_PLAN_ARCHIVED) {
+        viewId.value = 'archived';
+      } else {
+        propsRes.value.filter = { ...NAV_NAVIGATION[route.query.home as WorkNavValueEnum] };
+      }
+    }
+    // A cache registration does not mean this component instance has loaded its list.
+    if (appStore.currentProjectId) fetchData();
   });
 
   useListRefresh(refreshPreserveState, () => !!appStore.currentProjectId);

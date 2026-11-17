@@ -1,0 +1,463 @@
+---
+name: cds
+metadata:
+  version: 0.17.0
+description: CDS (Cloud Dev Space) core skill — provides cross-Agent, project-scoped onboarding without copying keys or modifying shell profiles, hosts the canonical cdscli Python CLI, manages CDS authentication and project access, owns CDS service self-update, exposes managed deployment runs and versions, requires the companion preview-url skill to read actual preview URLs from CDS, and dispatches scanning or deployment work to the matching CDS skill. Activates for CDS onboarding, connect, authentication, deployment status, versions, rollback, self-update, preview URLs, or the bare word CDS when intent is unclear.
+---
+
+# CDS — 核心技能：安全接入 / cdscli / 托管交付 / self-update / 分诊器
+
+> **版本**：v0.17.0 | **状态**：已落地 | **触发**：`/cds`、`/cds-auth`、"接入 CDS"、"CDS 授权"、"部署记录"、"版本回滚"、"cds 自更新"、"预览地址"
+
+> **冷热分离**：
+> - 接入新项目、生成 compose、上传 YAML → **`cds-project-scan`**（冷路径）
+> - 部署 / 调试 / 看日志 / 冒烟 → **`cds-deploy-pipeline`**（热路径）
+> - 认证、env、Key、CDS 服务自更新、SSOT 公式 → **本技能**
+
+## 分诊器（用户只说"cds"或意图模糊时）
+
+用户说"帮我看看 cds" / "搞下 cds" / 单独 `/cds` 时，**不要立即跑命令**，先反问一句区分意图：
+
+```
+CDS 这边您想做什么？
+  (1) 新项目接入 / 生成 compose / 上传配置  → 我去走「冷路径」（cds-project-scan）
+  (2) 部署 / 看日志 / deploy 失败排查      → 我去走「热路径」（cds-deploy-pipeline）
+  (3) 配认证 / 改 env / 项目 Key 管理       → 留在这里处理
+  (4) 更新 CDS 服务本体（改了 cds/ 代码）   → 留在这里处理
+```
+
+明确触发词（含"扫描" / "部署" / "认证"）就直接派发，**不要再问**。
+
+## 本技能处理 / 不处理
+
+| 处理 | 不处理（去对应技能） |
+|---|---|
+| 页面批准式安全接入（不复制密钥） | 项目扫描 / compose 生成（`cds-project-scan`） |
+| 项目级凭据加载与旧环境变量兼容 | 推送代码 / 部署到分支（`cds-deploy-pipeline`） |
+| 部署运行记录、失败诊断、版本与回滚 | 看容器日志（`cds-deploy-pipeline`） |
+| env 变量 get/set（`_global` / `<projectId>` scope） | 冒烟测试（`cds-deploy-pipeline`） |
+| `cdscli self update` 切分支 + 重启 CDS | |
+| 预览 URL 真实入口查询（必须调用 `preview-url`） | |
+| cdscli 命令总览 / 安装位置 / init 向导 | |
+
+## cdscli — 唯一 CLI 入口（其他两个技能也走它）
+
+```bash
+CLI="python3 $(git rev-parse --show-toplevel)/.claude/skills/cds/cli/cdscli.py"
+
+# 安全接入：默认页面批准，密钥不进入对话或 stdout，不写 shell profile
+$CLI connect --host https://cds.example --project <id> --agent Codex
+$CLI connect --host https://cds.example --new-project --agent Codex
+$CLI init                                # 交互式安全向导
+$CLI init --legacy-env                   # 仅兼容旧用户：写 ~/.cdsrc
+$CLI auth inspect --strict               # 脱敏检查凭据来源；冲突时停止
+$CLI auth check                          # 校验当前项目凭据
+
+# 托管交付真相：运行过程与可复用版本
+$CLI deployment-run list --project <id>
+$CLI deployment-run show <runId>
+$CLI deployment-run diagnose <runId>
+$CLI deployment-version list --project <id>
+$CLI deployment-version deploy <versionId>
+
+# Env 管理
+$CLI env get --scope _global
+$CLI env get --scope <projectId> --metadata-only  # Agent 默认只读键名和元数据
+$CLI env set DB_PASS=s3cret --scope <projectId>
+
+# 构建配置：就绪超时(探活) / 部署模式 —— AI 用 key 直接设，不依赖 dashboard
+# （这些以前被误以为是 dashboard 专属、API key 设不了，其实和 branch deploy 同一套鉴权）
+$CLI profile list --project <id>                 # 列出 profile + 当前部署模式 + 就绪超时 + prebuiltModes（极速版判据）
+$CLI profile deploy-mode <profileId> dev         # 切 profile 激活部署模式（--reset 恢复默认）
+$CLI profile readiness <profileId> --timeout 1200  # 设就绪探测超时秒数（GET-合并-PUT 保留其它字段）
+$CLI profile readiness <profileId> --no-http     # 后台 worker：跳过 HTTP 探测只做 TCP（--http 撤销）
+$CLI branch set-mode <branchId> <profileId> dev  # 单分支部署模式覆盖（如把某预览分支 web 改 dev）
+# Agent 分支一律走极速版（CI 预构建）：只从 profile list 的 prebuiltModes 里选模式（本仓库叫 express），
+# 用 branch set-mode 只写当前分支覆盖，不用 profile deploy-mode 改项目级默认；不在 CDS 宿主跑源码编译。
+# 生效判据是 branch status 的 deployRuntime.prebuilt 为 true；prebuiltModes 为空时如实报告缺口，不得切源码模式顶替。
+# 项目开了「Agent 只允许极速版部署」门禁时，非极速版的 deploy / set-mode / profile deploy-mode 会被 409 agent_prebuilt_only 拒绝，按响应里的可切模式改正后重试。
+# 注：就绪超时是「每服务/每 profile」级（无系统全局默认值），无标签时运行时默认 180s。
+#     改完都需要重新部署生效（$CLI branch deploy <id>）。
+
+# Key 管理
+$CLI global-key list                     # 全局 bootstrap key
+$CLI global-key create --label "for claude onboarding"
+$CLI key list --project <id>             # 项目级 cdsp_* key（只读列出）
+# 注：cdscli 无 key create。项目 Key 由用户在项目页「授权 Agent」按钮签发，
+#     明文只展示一次（见下方「认证」节）。CLI 不签发，避免密钥经 stdout 泄漏。
+
+# 任务调度：一句口令生成/测试/创建任务（自然语言解析为 schedule + actions）
+$CLI schedule parse "每天 02:00 调用 POST /api/statistics/sync" --project <id>
+$CLI schedule test "手动 执行命令 echo ok" --project <id>
+$CLI schedule create "每天 03:30 curl -X POST https://old.example/sync" --project <id> --test
+$CLI schedule list --project <id>
+$CLI schedule run <scheduledJobId>
+# 支持调度口令：每天 02:00 / 每隔 10 分钟 / 手动
+# 支持动作口令：curl ... / 调用 POST https://... / 执行命令 ...
+
+# CDS 服务自更新（仅改 cds/ 代码时）
+$CLI self branches                       # 看 CDS 自身能切到哪些分支
+$CLI self status                         # 看当前版本、提交和运行状态
+$CLI self update --branch <branch>       # 切 + pull + 重启 CDS 进程
+
+# 验收报告 / 视觉取证（CDS 自托管 HTML/Markdown，登录态门控，可按项目/文件夹归类）
+$CLI report-folder create --name "2026-06 验收"        # 建文件夹（可 --project）
+$CLI report create --title "CDS · X · 验收报告" --html-file r.html --folder <fid> [--project <id>]
+$CLI report list --folder <fid>                        # 列出（可 --project / --folder）
+$CLI report deeplink <reportId>                        # 打印 /reports?folder=&report= 直达深链
+$CLI report-folder list [--project <id>]
+# 视觉取证全流程（穿 agent 代理的浏览器取证 + 组装 HTML 入库）见 reference/acceptance-reports.md +
+# cli/acceptance/（proxyroute.mjs / cds-harness.mjs / build_report_html.py / driver.template.mjs）
+```
+
+完整命令族 → `$CLI --help`，分技能用法 → `cds-project-scan` / `cds-deploy-pipeline` 各自的 SKILL.md。
+
+## 加一条功能监控（用户说「帮我增加 XX 的监控」时）
+
+存活监控问「通不通」，**功能监控问「返回的东西对不对」**：发一次真业务请求，
+在响应上跑多条判据。「生图接口通、返回的却是 512×512」只有它抓得住。
+
+标准动作是**先试跑、通过了才登记**——`monitor add` 内建这一步，跑不通直接拒绝并
+回判据结果。加进来就红的监控会很快让人把整块面板静音，比没有监控更糟。
+
+```bash
+python3 <当前项目技能根>/cds/cli/cdscli.py monitor add \
+  --name "视觉创作 · 生图尺寸" \
+  --url "https://<本项目分支的预览地址>/api/image/gen" \
+  --body '{"prompt":"{{randomPrompt}}","size":"1024x1024"}' \
+  --assert status:eq:succeeded \
+  --assert image.width:eq:1024 \
+  --assert image.height:eq:1024 \
+  --assert elapsedMs:lt:30000 \
+  --artifact-path image.url \
+  --interval 21600 --timeout-ms 45000
+```
+
+接到这类需求时该自己查、不要反问用户的几件事：
+
+- **端点与默认参数**去代码里读（出图默认尺寸、成功态字段名），据此写判据；
+- **地址只能是本项目分支的预览入口**，服务端会反查校验，填别处一律 403；
+- **提示词用 `{{randomPrompt}}`**：固定提示词会被上游缓存，跑一万次也证明不了
+  这条链路今天还活着；
+- **`--artifact-path` 尽量配上**：配了详情页才有产物画廊，判据红了才说得清
+  是模型抽风还是判据写错；
+- **超时给足**：生成类接口用默认值会把自己卡成假故障。
+
+判据是 `path:op:value`（op ∈ eq/ne/lt/lte/gt/gte/exists/absent），期望值里带冒号
+不会被截断（`16:9` 是完整的）。刻意不做表达式——自由文本判据一开口，下一轮就会被
+要求加同义词和嵌套。
+
+配置通知身份：`cdscli monitor identity` 查看，`cdscli monitor identity --file <私有JSON文件>` 更新（管理员）。身份配置只存运行状态，真实名称、地址与凭据不得提交仓库。
+
+更新现有通知的独立故障入口：`cdscli monitor incident-page --file <私有JSON文件>`。文件包含 channelId 与 incidentPageUrl，保留原接收者和事件订阅；实际地址不写入命令行或仓库。
+
+查通知发送记录：`cdscli monitor notifications --hours 24`（也支持 1 / 168 小时，仅管理员）。按目标、通道、事件类型、小时统计，演练单列；`truncated=true` 时是部分统计。成功表示推送服务已接受，不能当作手机已展示；旧版未留记录的历史不可回填。
+
+看历史证据：`cdscli monitor observations <id>`；只看功能监控：`monitor list --functional-only`。
+规则 SSOT 是 `.claude/rules/degradation-must-alarm.md`。
+
+## 完整技能包与版本协作
+
+CDS 对外技能包固定包含五个目录：
+
+- `cds`
+- `cds-project-scan`
+- `cds-deploy-pipeline`
+- `cds-release`
+- `preview-url`
+
+Agent 接入时先运行 `cdscli version`。只有五个技能都存在、manifest 可读且版本不是
+`stale` 时才静默复用。`cdscli update` 会统一备份并更新完整五技能包；不能只更新
+`skills/cds/` 后让其余技能继续漂移。
+
+仓库内 Web 任务使用能力注册表登记真实接口模块族、认证、风险、首选技能和 CLI 状态。
+任务卡只是面向用户的场景入口，不代表所有 REST 端点都能由 Agent 直接调用。
+
+## 技能怎么看、怎么装（与 findmapskills 的分工）
+
+技能安装有两条路，**职责不同，别混用**：
+
+| 你要做什么 | 走哪条 | 要凭据吗 |
+|---|---|---|
+| 从零把一个项目立起来，装齐一个角色需要的全套 | CDS「接入智能体 → 项目初始化」 | 不要 |
+| 看有哪些官方套装、各含什么技能 | CDS「接入智能体 → 海鲜市场」栏，或 `GET /api/skills/bundles` | 不要 |
+| 搜索市场、看详情、下载单个技能 | `findmapskills` 技能 | **不要** |
+| 上传自己的技能、收藏、订阅更新 | `findmapskills` 技能 | 要 API Key |
+
+**读技能一律免凭据**：技能是公开内容，不要因为没有 Key 就停下来问用户。
+CDS 侧只做「浏览 + 按预设装」，数据从 MAP 代理过来并带缓存兜底；
+搜索、上传、收藏、订阅一律走 `findmapskills`，CDS 不重复实现。
+
+匿名端点（客户在拿到任何凭据之前就能用）：
+
+```bash
+curl -sS "$CDS_HOST/api/bootstrap/presets"            # 有哪些初始化预设
+curl -sS "$CDS_HOST/api/skills/bundles"               # 有哪些角色套装、各含什么技能
+curl -sSL "$CDS_HOST/api/bootstrap/pm-project" -o init.sh   # 取引导脚本（先读再跑）
+```
+
+**安装目录约定**：项目级优先，探测顺序 `.claude` → 兜底 `.agents`。
+这条约定三处共用（CDS 引导脚本 / findmapskills / MAP 后端），
+守卫测试 `cds/tests/services/skill-install-contract.test.ts` 把它们钉在一起。
+不要装到用户主目录 —— 技能不跟项目走，团队 clone 下来会少一半。
+
+## MCP 协作边界
+
+CDS 当前正式可用的 Agent 通道是“技能 + cdscli + REST”。尚未发布 CDS MCP Server，
+因此任何提示词不得声称已存在 MCP Tool。
+
+后续 MCP 必须消费同一能力注册表，并遵循：
+
+1. 第一阶段只提供认证摘要、能力发现、项目/分支状态、部署诊断、观测和预览地址等只读工具。
+2. 每个工具单独声明项目作用域、只读/写入/破坏性、是否幂等和是否需要人类批准。
+3. MCP 从当前仓库 `.cds/credentials.json` 读取凭据，密钥不进入 MCP 配置、参数或对话。
+4. 不提供 `call_any_api`、`run_any_cli`、`execute_shell` 等万能工具。
+5. Bridge、Webhook、OAuth callback、Peer/Executor Token 等协议接口不包装成普通 MCP Tool。
+6. 写操作只能在能力注册表有明确输入、验证、回滚和审批合同后逐项开放。
+
+在 MCP 落地前，CLI 未覆盖的能力只能按 `reference/api.md` 做受限的只读检查；不得编造
+CLI 命令，也不得因为 REST 接口存在就绕过 human-only、protocol-only 或 internal-only 边界。
+
+## Agent 使用任务调度口令的标准流程
+
+当用户说「给 CDS 加一个定时任务」「每天拉一次数据」「先测试一下这个任务」「把这段 curl 定时跑」时，Agent 必须优先走 `cdscli schedule`，不要手写 curl 调 `/api/scheduled-jobs`。
+
+### 决策流程
+
+1. **先确定项目作用域**：
+   - 用户提供 `CDS_PROJECT_ID` / `--project` / 项目名能唯一对应项目时，传 `--project <id>`。
+   - 当前环境已有 `CDS_PROJECT_ID` 时可省略 `--project`。
+   - 项目不明确时先 `project list`，仍不明确再问用户；不要创建无项目任务。
+2. **先解析口令**：
+   ```bash
+   $CLI schedule parse "每天 02:00 调用 POST /api/statistics/sync" --project <id>
+   ```
+   用解析结果确认 `schedule.type`、`timeOfDay/intervalMinutes`、`actions` 是否符合用户话术。
+3. **涉及真实外部调用或命令时，先测试**：
+   ```bash
+   $CLI schedule test "手动 执行命令 echo ok" --project <id>
+   ```
+   `test` 只调用 `/api/scheduled-jobs/check-target`，不创建任务。失败时把失败日志总结给用户，不要继续 create。
+4. **创建时默认带 `--test`**：
+   ```bash
+   $CLI schedule create "每天 03:30 curl -X POST https://old.example/sync" --project <id> --test
+   ```
+   只有用户明确说「先创建，之后再测」时才允许不带 `--test`。
+5. **创建后交付 task id 和验收命令**：
+   - 返回 `job.id`。
+   - 告知可用 `$CLI schedule run <jobId>` 手动触发一次。
+   - 告知可用 `$CLI schedule list --project <id>` 查看。
+
+### 口令格式
+
+调度部分支持：
+- `每天 02:00` / `每日 2点` / `daily 02:00`
+- `每隔 10 分钟` / `每 2 小时`
+- `手动` / `只手动`
+
+动作部分支持：
+- `curl -X POST -H 'Content-Type: application/json' -d '{"a":1}' https://example.com/sync`
+- `调用 POST /api/statistics/sync`
+- `执行命令 node scripts/sync.js`
+
+多个动作可用「然后 / 接着 / 再执行」连接，例如：
+
+```bash
+$CLI schedule create "每天 02:00 curl -X POST https://old.example/pull 然后 执行命令 node clean.js" --project <id> --test
+```
+
+### 失败处理
+
+- `未识别调度口令`：让用户补充「每天/每隔/手动」之一。
+- `未识别执行动作`：让用户提供 `curl`、HTTP URL 或命令脚本。
+- `任务动作检测未通过`：不要创建任务；总结 `checks[].result.log/error`，让用户修正 URL、鉴权、命令或服务状态。
+- `project_mismatch`：说明当前项目 key 不属于目标项目，让用户在目标项目页重新授权 Agent。
+
+### 安全边界
+
+- 命令动作由 CDS 服务端放进 Docker sandbox 执行，Agent 不要在本地代跑危险命令来“帮用户测试”。
+- 含密钥的 curl 可以交给 `schedule test/create`，但最终回复不要复述完整密钥值。
+- 用户只说「定时跑这个」但没有调度时间时，不要猜默认每天；先要求补齐调度。
+
+## 认证：页面批准优先
+
+### 已有项目
+
+在目标 git 仓库目录运行：
+
+```bash
+$CLI connect --host https://cds.example --project <projectId> --agent <当前 Agent 名称>
+```
+
+CLI 免密发起申请，用户在 CDS 右下角批准一次。项目 Key 只由 CLI 接收并写入当前项目
+`.cds/credentials.json`，文件权限为 `0600`，同时加入本地 git exclude。密钥禁止出现在对话、
+stdout、命令参数、shell profile 或系统环境变量持久配置中。
+
+### 首次创建项目
+
+```bash
+$CLI connect --host https://cds.example --new-project --agent <当前 Agent 名称>
+```
+
+Agent 自动读取当前 origin 并申报名称和仓库；服务端将一次性 create-only 授权绑定该目标。更改名称或仓库、并发重放及无目标旧申请会被拦截。批准后得到一次性 create-only 授权。`project create` / `onboard` 创建项目成功时，CDS 自动
+吊销该授权并返回新项目专属 Key；CLI 静默保存并切换，不打印明文。
+
+### 旧版兼容
+
+已有 `CDS_HOST`、`CDS_PROJECT_KEY`、`AI_ACCESS_KEY` 的进程仍可直接使用。只有用户明确要求
+旧流程时才能运行 `cdscli init --legacy-env` 写 `~/.cdsrc`，不得把它作为默认接入方式。
+
+完整认证决策树（含错误码处理） → [reference/auth.md](reference/auth.md)
+
+### 硬性禁令
+
+1. **禁止 `X-Cds-Internal: 1`**：能认证但 Activity 无 AI 标记，违反可观测性。
+2. **禁止索要密钥**：默认接入不得让用户把长期 Key 粘进对话或终端命令。
+3. **禁止环境侵入**：不得修改 `.bashrc`、`.zshrc`、全局 PATH 或用户主目录技能目录，除非用户明确选择全局安装。
+4. **AI 操作必须可见**：所有 AI 请求会出现在 CDS Dashboard 的活动记录中。
+
+## 预览 URL 必须来自 CDS 实际状态
+
+项目安装 CDS 技能包或通过 CDS 右上角快速接入后，必须同时安装并可发现 `preview-url` 技能。缺少该技能视为 CDS 接入未完成。
+
+需要预览地址时，必须调用 `preview-url`，由它执行：
+
+```bash
+python3 <当前项目技能根>/cds/cli/cdscli.py --human preview-url
+```
+
+当前项目技能根必须按宿主实际安装位置解析，不得假定一定是 `.claude/skills`。`cdscli` 只信任 `/api/branches` 返回的 `previewUrl` / `previewUrls`，不使用分支名、项目名、`previewSlug` 或 `CDS_HOST` 推算 URL。
+
+一个 CDS 实例可能在同一个公开 `previewDomain` 下发布多个真实入口，包括主应用、模型网关控制台和其他声明了 `cds.subdomain` 的独立服务。入口数由实际发布的逻辑服务决定，不等于 `rootDomains` 数量。`rootDomains` 可能包含隐藏、备用或内部域名，API 与 Agent 都不得向用户暴露。命令返回多行时必须全部列出公开入口，不得自行挑选或补写。API 不可用、分支未部署或缺少地址字段时应明确失败，不得退化为本地公式。
+
+这里的“入口”只指用户可操作的 Web 页面，不含 readiness/liveness/health API。路由是否发布由 `cds.subdomain` 决定，是否进入用户入口清单及其名称、落点由 `cds.web-entry-name` / `cds.web-entry-path` 决定；两者禁止混用。`preview-url` 优先消费后端返回的 `previewEntries`，旧响应中混入的健康检查 URL 必须过滤。用户要改入口时，Agent 应维护项目根 `cds-compose.yml`，不要求用户在 Dashboard、分支覆盖和 nginx 配置之间寻找入口设置。
+
+`cds/src/services/preview-slug.ts:computePreviewSlug` 仍是 CDS 后端内部 slug 计算 SSOT，但它不是 Agent 生成公网 URL 的授权。
+
+## env 变量 scope 规则
+
+| scope | 含义 | 注入位置 |
+|---|---|---|
+| `_global` | 全局变量（所有项目所有分支） | 所有容器 |
+| `<projectId>` | 项目级（该项目所有分支） | 该项目容器 |
+| `_all` | 仅查询用，不能写 | — |
+
+```bash
+$CLI env get --scope <projectId>         # 看项目级
+$CLI env set MAP_AI_USER=ai-bot --scope <projectId>
+```
+
+`cds-compose.yml` 的 `x-cds-env` 段 = 项目级 scope 的声明源。修改后需要重新 deploy 才生效。
+
+## Agent 操作者身份（渐进兼容）
+
+新版 cdscli 会为每次进程生成随机 `agentSessionId`，并在 Codex 环境可用时附带
+`threadId` / `turnId`。服务端为变更请求生成 `requestId` / `operationId`，将这些
+字段关联到操作事件、发布记录和 CDS 自更新历史。self update/restart 的 CLI 结果
+会直接返回这些关联 ID，复盘时不再依赖临时浏览器响应头。
+
+第一阶段只采集和关联，不参与鉴权：旧版技能没有身份头时仍可使用，并标记为
+`identityVersion=0`、`confidence=legacy`；新版声明标记为 `identityVersion=1`、
+`confidence=declared`。`declared` 只表示格式有效，不代表身份已由服务端验证。
+不得因为缺少身份头拒绝旧客户端，也不得把调用方声明提升成可信身份。
+
+## CDS 服务自更新（改了 cds/ 目录的代码）
+
+触发条件（AI 自动判断）：`git diff --name-only HEAD~1 HEAD | grep ^cds/` 非空。
+
+```bash
+$CLI self restart                        # 只重启当前精确 SHA，不拉代码、不切分支
+$CLI self update --branch <branch>       # 切 + pull + 重启 CDS 进程
+# 重启约 10s，CLI 内部已轮询 /api/config 等恢复
+```
+
+用户只说“重启 CDS”时必须使用 `self restart`。只有明确要求把 CDS 更新到某个
+分支或提交时才使用 `self update`，禁止再把普通重启隐式升级为代码发布。
+
+共享 CDS 会保留当前运行提交。旧技能在“同 SHA”与“目标包含当前提交”的快进更新
+中无需新增参数，仍可直接使用。若目标分支不包含当前提交，服务端会在 checkout
+之前拒绝，避免一个 Agent 的分支整体覆盖另一个 Agent 已上线的修复。
+
+正式发布必须先合入当前线上完整提交并验证。仅填写 release 和原因不能证明已有修正被保留，普通自更新仍拒绝非继承发布。确需回滚时显式锁定当前提交并说明原因：
+
+```bash
+$CLI self update --branch <branch> \
+  --transition-intent rollback \
+  --expected-from-sha <当前 self-status headSha> \
+  --reason "说明为什么目标分支可以替代当前控制面版本"
+```
+
+人工强制更新仍是既有逃生通道；Agent 不得为绕过继承检查自动改用强制更新。
+`--transition-intent` 保留 `release` / `rollback` 兼容取值，但 release 不解除普通发布的继承要求。不得把它作为日常兼容参数；
+`expected-from-sha` 是乐观锁，生产版本已变化时请求必须失败并重新审计。
+
+自更新、强制同步与仅重启都会先等待其他项目的部署、发布和分支写操作结束（默认 5 分钟）。等待超时取消本次更新与重启，并释放部署入口；原项目继续运行，不自动补发或强制重启。请求 `drainTimeoutMs` / `restartDrainTimeoutMs` 可缩短等待，0 表示忙时立即取消，不能绕过保护。取消发生在切换代码和前端产物之前，历史记录为“已中止”；等其他操作结束后重新执行原命令。
+
+注意：self-update 期间 CDS API 短暂不可用（~10s），CDS 内部 state.json 迁移逻辑会自动跑。
+
+## 维护者通道（仅 inernoro/prd_agent 仓库所有者）
+
+> 改 `cli/cdscli.py` / 改 reference / bump VERSION / push —— 你就是技能源头，直接编辑 `.claude/skills/cds/` 即可。**没有发布流程**。
+
+触发词（严格）：`/cds-sync` / `/cds-sync-skill` / "帮我同步 cds 技能" / `cdscli sync-from-cds`。
+
+完整维护者工作流（drift 扫描 → plan-first → 改三文件 → 自检 → changelog）→ [reference/maintainer.md](reference/maintainer.md)
+
+## 反馈缺口给上游 CDS 团队
+
+发现 cdscli / CDS 服务端 bug 或能力缺口（issue #544 / #550 / #551 / #552 类）→ 走 `/audit`（`auto-fix-issues` 技能）协议，**不要**在 CDS skill 内部塞反馈逻辑。
+
+## 参考索引（按需加载）
+
+| 文件 | 何时读 |
+|---|---|
+| [reference/api.md](reference/api.md) | 直接调 CDS REST API（CLI 未覆盖场景）— 被 `cds-project-scan` / `cds-deploy-pipeline` 共享引用 |
+| [reference/auth.md](reference/auth.md) | 401 / 403 / 双层认证决策树 |
+| [reference/scan.md](reference/scan.md) | 扫描规则、compose YAML 契约（`cds-project-scan` 详读） |
+| [reference/smoke.md](reference/smoke.md) | 分层冒烟策略（`cds-deploy-pipeline` 详读） |
+| [reference/diagnose.md](reference/diagnose.md) | 容器日志 → 根因决策树（`cds-deploy-pipeline` 详读） |
+| [reference/drop-in.md](reference/drop-in.md) | 新项目接入完整步骤 + 常见问题 |
+| [reference/acceptance-reports.md](reference/acceptance-reports.md) | 视觉取证 → CDS 自托管验收报告 → 项目/文件夹归类 → 直达深链（含穿 agent 代理的浏览器取证解法） |
+| [reference/maintainer.md](reference/maintainer.md) | 仅 CDS 仓库所有者读 |
+
+## 跨技能依赖
+
+```
+       cds (core / dispatcher)
+        │
+        │ hosts: cli/cdscli.py + reference/*.md
+        ▼
+   ┌────┴────┐
+   │         │
+cds-project-scan   cds-deploy-pipeline
+ (冷：接入)         (热：调试)
+```
+
+两个子技能都从 `../cds/cli/cdscli.py` 引用 CLI，**不维护各自的拷贝**。
+
+## 部署项目的资产存储（prd-agent 图片/报告，2026-06-22）
+
+prd-agent 的图片/验收报告走后端 `IAssetStorage`，由**项目环境变量** `ASSETS_PROVIDER` 选择后端（在「项目环境变量」里配，不是 CDS 全局变量）：
+
+- 未配任何云凭据（典型 CDS 预览）→ 后端自动 **auto 回退 local**，图片存到容器内 `ASSETS_LOCAL_DIR`（默认 `{ContentRoot}/data/assets`），**无需任何配置即可正常传图**（修复"无云凭据实例传图直接失败"）。
+- 生产/需云端持久 → 配 `ASSETS_PROVIDER=cloudflareR2` + `R2_ACCOUNT_ID/R2_ACCESS_KEY_ID/R2_SECRET_ACCESS_KEY/R2_BUCKET`（R2 后端已内置，S3 兼容），或 `tencentCos` + `TENCENT_COS_*`。
+- local 是占位/兜底，容器重建即丢；要持久化预览图片可挂卷到 `ASSETS_LOCAL_DIR` 或直接配 R2。
+
+详见 `.claude/skills/create-visual-test-to-kb/SKILL.md`「报告图片与资产存储」。
+
+### 凭据恢复
+
+重新运行原 connect 口令即可。CLI 保存无密钥的项目定位信息，丢失 credentials.json 时仍连接原项目，不重复创建。有效凭据直接复用；已有有效身份和授权可补发丢失凭据；失效或撤销的项目凭据需要在原审批入口重新批准一次。网络故障不触发新建或覆盖凭据。整个流程不要求新人查项目编号、复制密钥或修改终端配置。
+
+同一目标的原口令会恢复原项目；明确指定不同项目名称、slug 或仓库的新建任务仍申请新目标，不得默默复用旧项目。旧连接的定位信息由 CLI 从已授权项目自动补齐，不要求新人填写。
+
+账号或主体停用、原项目整体授权被收回时，同一命令只读等待管理员在现有「用户管理」或「项目授权」页面恢复原权限，恢复后自动继续。等待期间不创建匿名申请、不补发凭据、不改写本地文件。管理员恢复账号不复活已明确撤销的密钥；这种密钥仍沿原项目批准更新。已知用户身份失效时不能降级匿名。等待超时保留原连接，恢复后重跑原命令，无需新人查编号或复制密钥。
+
+
+## 首次账号与整份身份恢复
+
+普通账号沿现有用户管理开通，由管理员授予原项目。已有仓库首次接入且没有本地身份时，connect自动把设备申请放到用户管理；管理员核对原账号与原项目后批准，用户身份及项目凭据自动0600落地，新人不复制密钥。
+
+用户身份与整个.cds连接同时丢失时，Agent在原仓库执行 `connect --host <原CDS主机> --recover`，自动读取origin；不能改用new-project猜建副本。仍有有效用户身份则自动从其授权项目查找唯一仓库；停用或撤权等待原权限恢复，已知失效身份不降匿名。多个匹配项目由管理员明确选择。网络/保存中断保留私有恢复票据，原命令继续同一申请，不反复批准；全部文件保存后确认领取。
+
+设备恢复签发的用户身份仅可发现和补回此次原项目，不能建项目、不能借原账号其他授权扩范围。管理员在用户管理核对历史匿名凭据的确切项目、凭据ID与原账号后确认归属；不按Agent名推断，不批量迁移。已撤销和已有归属不可认领，认领保留原范围并立即受账号/项目撤权约束。原授权对话框支持搜索和定位原项目，仅过滤展示，不自动恢复勾选。

@@ -1,0 +1,3 @@
+import { reactive } from 'vue';
+const app = reactive({ currentProjectId: 'project' });
+export default () => app;

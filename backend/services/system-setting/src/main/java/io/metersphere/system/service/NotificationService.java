@@ -46,10 +46,10 @@ public class NotificationService {
         Notification record = new Notification();
         record.setStatus(NotificationConstants.Status.READ.name());
         NotificationExample example = new NotificationExample();
+        NotificationExample.Criteria criteria = example.createCriteria().andReceiverEqualTo(userId);
         if (StringUtils.isNotBlank(resourceType)) {
-            example.createCriteria().andResourceTypeLike("%" + resourceType + "%");
+            criteria.andResourceTypeLike("%" + resourceType + "%");
         }
-        example.createCriteria().andReceiverEqualTo(userId);
         return notificationMapper.updateByExampleSelective(record, example);
     }
 
@@ -74,9 +74,7 @@ public class NotificationService {
         if (StringUtils.isNotBlank(notificationRequest.getResourceType())) {
             notificationRequest.setResourceType("%" + notificationRequest.getResourceType() + "%");
         }
-        if (StringUtils.isBlank(notificationRequest.getReceiver())) {
-            notificationRequest.setReceiver(userId);
-        }
+        notificationRequest.setReceiver(userId);
     }
 
     private static void buildSourceCount(List<NotificationDTO> notifications, List<OptionDTO> optionDTOS) {

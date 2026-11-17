@@ -96,9 +96,11 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 | `create_functional_module` | CASE_WRITE | 创建模块 |
 | `create_functional_case` | CASE_WRITE | 单条创建 |
 | `batch_create_functional_cases` | CASE_WRITE | 批量导入 Agent 生成用例 |
-| `create_test_plan` | PLAN_WRITE | 创建测试计划（可带 caseIds） |
+| `create_test_plan` | PLAN_WRITE、REVIEW_WRITE | 创建真实计划及其关联评审，必填显式reviewSettings，可带caseIds；仍逐项校验当前业务权限 |
 | `associate_test_plan_cases` | PLAN_WRITE | 关联用例到计划 |
 | `create_case_review` | REVIEW_WRITE | 创建评审 |
+| `preview_linked_case_review` | PLAN_READ、PLAN_WRITE、REVIEW_WRITE | 为已有未关联计划预览新评审，不创建业务对象；不接收独立caseIds |
+| `confirm_linked_case_review` | PLAN_READ、PLAN_WRITE、REVIEW_WRITE | 使用原requestId、previewId并显式acknowledged=true确认；服务端重验当前权限、服务授权及预览版本 |
 | `associate_case_review_cases` | REVIEW_WRITE | 关联用例到评审 |
 | `search_bugs` | BUG_READ | 检索缺陷（关键词/状态/处理人） |
 | `get_bug` | BUG_READ | 缺陷详情（含 customFields） |
@@ -257,3 +259,8 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 网络中断后使用 metersphere.operation.get，传原 toolName/requestId/projectId/caseId。NOT_FOUND 表示 UNKNOWN，不能据此换 requestId 重复写入。原请求重试必须保留相同参数；字段纠正属于新请求。REQUEST_IN_PROGRESS 的 retryAfterMs 为建议轮询间隔，不是预计完成时间。
 
 后端 agent.mcp.observation.slow-threshold-ms 默认 1000；超过阈值记录工具总耗时，阶段超过 1000ms 记录警告。临时启用 io.metersphere.agent.service.AgentMcpTiming 的 DEBUG 可查看阶段时间。日志不包含参数或图片。SQL 总时间不能直接解释成锁等待，数据库等待需要独立采样。
+# 缺陷图片读取（0.8.3）
+
+`get_bug` 保留文字并透传正文 `images` 与真实附件 `attachmentImages` 索引。使用 `read_bug_image`，显式传入 `projectId`、`bugId` 和索引中的 `imageRef`，按需读取单图；返回原生 MCP image content 和原始字节 metadata。需要明确 `BUG_READ`、当前项目缺陷读取权限及 Token 项目授权。旧服务器缺能力时明确提示不支持，不下载 URL、不自动重试。
+
+完整使用及回退说明见 [`mcp-bug-images.md`](../docs/task/metersphere_agent/mcp-bug-images.md)。新能力须经部署联测，不以本包构建通过代替实际环境或宿主验收。

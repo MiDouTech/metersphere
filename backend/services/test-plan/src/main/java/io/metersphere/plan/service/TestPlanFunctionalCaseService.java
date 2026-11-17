@@ -71,6 +71,10 @@ import java.util.stream.Stream;
 @Transactional(rollbackFor = Exception.class)
 public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     @Resource
+    private io.metersphere.functional.planreview.PlanReviewPersistence planReviewPersistence;
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewApplicationService planReviewApplication;
+    @Resource
     private TestPlanFunctionalCaseMapper testPlanFunctionalCaseMapper;
     @Resource
     private ExtTestPlanFunctionalCaseMapper extTestPlanFunctionalCaseMapper;
@@ -271,6 +275,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
     @Override
     public long copyResource(String originalTestPlanId, String newTestPlanId, Map<String, String> oldCollectionIdToNewCollectionId, String operator, long operatorTime) {
+        planReviewPersistence.sourceChanged(newTestPlanId);
         List<TestPlanFunctionalCase> copyList = new ArrayList<>();
         String defaultCollectionId = extTestPlanCollectionMapper.selectDefaultCollectionId(newTestPlanId, CaseType.SCENARIO_CASE.getKey());
         extTestPlanFunctionalCaseMapper.selectByTestPlanIdAndNotDeleted(originalTestPlanId).forEach(originalCase -> {
@@ -291,6 +296,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         copyList.forEach(item -> batchInsertMapper.insert(item));
         sqlSession.flushStatements();
         SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+        planReviewPersistence.sourceChanged(newTestPlanId,operator);
         return copyList.size();
     }
 
@@ -343,10 +349,13 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
 
     public void deleteTestPlanResource(@Validated TestPlanResourceAssociationParam associationParam) {
+        planReviewApplication.requireSourceMemberSelection(associationParam.getTestPlanId(),associationParam.getProjectId(),associationParam.getResourceIdList(),null,associationParam.getOperator());
+        planReviewPersistence.sourceChanged(associationParam.getTestPlanId());
         TestPlanFunctionalCaseExample testPlanFunctionalCaseExample = new TestPlanFunctionalCaseExample();
-        testPlanFunctionalCaseExample.createCriteria().andIdIn(associationParam.getResourceIdList());
-        testPlanFunctionalCaseMapper.deleteByExample(testPlanFunctionalCaseExample);
+        testPlanFunctionalCaseExample.createCriteria().andTestPlanIdEqualTo(associationParam.getTestPlanId()).andIdIn(associationParam.getResourceIdList());
+        if(testPlanFunctionalCaseMapper.deleteByExample(testPlanFunctionalCaseExample)!=associationParam.getResourceIdList().size())throw new io.metersphere.functional.planreview.PlanReviewFailure("MEMBER_SCOPE_CHANGED",409,"成员选择已变化，删除未提交");
         extTestPlanCaseExecuteHistoryMapper.updateDeleted(associationParam.getResourceIdList(), true);
+        planReviewPersistence.sourceMutated(associationParam.getTestPlanId());
     }
 
     public TestPlanOperationResponse sortNode(ResourceSortRequest request, LogInsertModule logInsertModule) {
@@ -591,7 +600,10 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
     }
 
     public TestPlanAssociationResponse disassociate(BasePlanCaseBatchRequest request, LogInsertModule logInsertModule) {
+        String project=planReviewApplication.requireSourceMemberSelection(request.getTestPlanId(),request.getProjectId(),List.of(),request.getCollectionId(),logInsertModule.getOperator());
+        request.setProjectId(project);
         List<String> selectIds = doSelectIds(request);
+        planReviewApplication.requireSourceMemberSelection(request.getTestPlanId(),project,selectIds,request.getCollectionId(),logInsertModule.getOperator());
         return super.disassociate(
                 TestPlanResourceConstants.RESOURCE_FUNCTIONAL_CASE,
                 request,
@@ -965,6 +977,8 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
 
     @Override
     public void associateCollection(String planId, Map<String, List<BaseCollectionAssociateRequest>> collectionAssociates, SessionUser user) {
+        planReviewApplication.requireSourceEditable(planId);
+        planReviewPersistence.sourceChanged(planId);
         List<TestPlanFunctionalCase> testPlanFunctionalCaseList = new ArrayList<>();
         List<BaseCollectionAssociateRequest> functionalList = collectionAssociates.get(AssociateCaseType.FUNCTIONAL);
         if (CollectionUtils.isNotEmpty(functionalList)) {
@@ -975,6 +989,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         if (CollectionUtils.isNotEmpty(testPlanFunctionalCaseList)) {
             testPlanFunctionalCaseMapper.batchInsert(testPlanFunctionalCaseList);
         }
+        planReviewPersistence.sourceChanged(planId,user.getId());
     }
 
     /**
@@ -985,6 +1000,9 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
         if (testPlan == null) {
             throw new MSException(Translator.get("test_plan_not_exist"));
         }
+        if (!testPlan.getProjectId().equals(request.getProjectId())) throw new MSException("测试计划不属于当前项目");
+        planReviewApplication.requireSourceEditable(testPlan.getId());
+        planReviewPersistence.sourceChanged(testPlan.getId());
         String collectionId = request.getCollectionId();
         if (StringUtils.isBlank(collectionId)) {
             collectionId = extTestPlanCollectionMapper.selectDefaultCollectionId(request.getTestPlanId(), CaseType.FUNCTIONAL_CASE.getKey());
@@ -1038,6 +1056,7 @@ public class TestPlanFunctionalCaseService extends TestPlanResourceService {
             testPlanResourceLogService.saveAssociateLog(testPlan,
                     new ResourceLogInsertModule(TestPlanResourceConstants.RESOURCE_FUNCTIONAL_CASE, logInsertModule));
         }
+        planReviewPersistence.sourceChanged(testPlan.getId(),user.getId());
     }
 
     /**

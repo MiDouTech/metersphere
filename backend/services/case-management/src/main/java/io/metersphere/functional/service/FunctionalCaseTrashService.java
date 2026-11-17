@@ -66,9 +66,11 @@ public class FunctionalCaseTrashService {
     /** Caller validates the explicit version set and destination before entering this shared recovery path. */
     public void recoverVersions(List<String> ids, String userId) {
         if (ids == null || ids.isEmpty()) return;
+        var affectedPlans = planReviewPersistence.beforeCaseMutation(ids);
         //检查自定义字段是否还存在，不存在，删除关联关系（与恢复流程没关系可异步执行）
         delCustomFields(ids);
         extFunctionalCaseMapper.recoverCase(ids, userId, System.currentTimeMillis());
+        planReviewPersistence.afterCaseMutation(affectedPlans);
         for(String id:ids) {
             FunctionalCase source=functionalCaseMapper.selectByPrimaryKey(id);
             if(source!=null)importEffects.enqueue(source.getProjectId(),userId,List.of(id),List.of(),"UPDATE");
@@ -86,6 +88,9 @@ public class FunctionalCaseTrashService {
     public void delCustomFields(List<String> ids) {
         doDeleteCustomFields(ids);
     }
+
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewPersistence planReviewPersistence;
 
     private void doDeleteCustomFields(List<String> ids) {
         FunctionalCaseCustomFieldExample functionalCaseCustomFieldExample = new FunctionalCaseCustomFieldExample();

@@ -14,7 +14,6 @@ import io.metersphere.system.dto.user.UserExtendDTO;
 import io.metersphere.system.log.annotation.Log;
 import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.security.CheckOwner;
-import io.metersphere.system.utils.PageUtils;
 import io.metersphere.system.utils.Pager;
 import io.metersphere.system.utils.SessionUtils;
 import io.metersphere.validation.groups.Updated;
@@ -28,8 +27,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
 
 @RestController
 @Tag(name = "项目管理")
@@ -56,15 +53,13 @@ public class ProjectController {
     @PostMapping("/page")
     @Operation(summary = "项目管理-当前用户可访问项目分页列表")
     public Pager<List<ProjectDTO>> pageUserProject(@Validated @RequestBody ProjectPageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, projectService.pageUserProject(request, SessionUtils.getUserId()));
+        return projectService.pageUserProject(request, SessionUtils.getUserId());
     }
 
     @PostMapping("/case-asset/page")
     @Operation(summary = "测试资产-具备用例读取权限的可访问项目分页列表")
     public Pager<List<ProjectDTO>> pageCaseAssetProject(@Validated @RequestBody ProjectPageRequest request) {
-        Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize());
-        return PageUtils.setPageInfo(page, projectService.pageCaseAssetProject(request, SessionUtils.getUserId()));
+        return projectService.pageCaseAssetProject(request, SessionUtils.getUserId());
     }
 
     @GetMapping("/list/options/{organizationId}/{module}")

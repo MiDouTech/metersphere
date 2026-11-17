@@ -82,6 +82,33 @@ export function loadConfig(): MsConfig {
 export class MeterSphereClient {
   constructor(private readonly config: MsConfig) {}
 
+  async readBugImage(args: Record<string, unknown>) {
+    // A dedicated read path preserves the server's image bytes and structured failure details.
+    // Generic write-recovery hints must never cause an image retry or a URL download.
+    const fail = (code: string, message: string) => ({ isError: true,
+      content: [{ type: "text" as const, text: JSON.stringify({ code, message, retryable: false }) }] });
+    try {
+      const response = await this.request<{
+        result?: { content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>; isError?: boolean };
+        error?: { code?: number; message?: string; data?: { code?: string; message?: string; traceId?: string; retryable?: boolean; details?: { retryable?: boolean } } };
+      }>("POST", "/api/mcp", { jsonrpc: "2.0", id: crypto.randomUUID(), method: "tools/call",
+        params: { name: "metersphere.bug.image.read", arguments: args } });
+      if (response.error) {
+        const error = response.error.data;
+        if (error?.code === "MCP_TOOL_NOT_FOUND" || response.error.code === -32601) return fail("BUG_IMAGE_UNSUPPORTED", "当前服务器不支持缺陷图片读取，仍可使用get_bug读取文字详情");
+        // The native endpoint supplies safe messages, retryability, and trace IDs.
+        return { isError: true, content: [{ type: "text" as const, text: JSON.stringify(error ? { ...error, message: response.error.message } : {
+          code: "BUG_IMAGE_RESOURCE_UNAVAILABLE", message: "图片读取失败", retryable: false,
+        }) }] };
+      }
+      return response.result ?? fail("BUG_IMAGE_RESOURCE_UNAVAILABLE", "图片响应不完整，请刷新缺陷详情");
+    } catch (error) {
+      if (error instanceof MsApiError && error.status === 404) return fail("BUG_IMAGE_UNSUPPORTED", "当前服务器不支持缺陷图片读取，文字详情仍可读取");
+      return fail(error instanceof MsApiError ? error.code : "MCP_TRANSPORT_ERROR",
+        error instanceof MsApiError ? error.message : "图片请求未完成，请检查连接后显式重试");
+    }
+  }
+
   async callNativeTool(name: string, args: Record<string, unknown>): Promise<{
     content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }>;
     isError?: boolean;
@@ -359,6 +386,7 @@ export class MeterSphereClient {
   }
 
   createTestPlan(payload: {
+    reviewSettings: {name: string; moduleId: string; reviewers: string[]; reviewPassRule: "SINGLE" | "MULTIPLE"; followPlanName?: boolean};
     requestId: string;
     projectId?: string;
     name: string;
@@ -496,6 +524,16 @@ export class MeterSphereClient {
       ...payload,
       projectId: payload.projectId ?? this.config.projectId,
     });
+  }
+
+  previewLinkedCaseReview(payload: {
+    requestId: string; projectId?: string; planId: string; name: string; moduleId: string;
+    reviewers: string[]; reviewPassRule: "SINGLE" | "MULTIPLE"; description?: string; tags?: string[];
+  }) {
+    return this.request("POST", "/api/agent/v1/case-review/linked/preview", {...payload,projectId:payload.projectId ?? this.config.projectId});
+  }
+  confirmLinkedCaseReview(payload: {projectId?: string;previewId: string;requestId: string;acknowledged: true}) {
+    return this.request("POST", "/api/agent/v1/case-review/linked/confirm", {...payload,projectId:payload.projectId ?? this.config.projectId});
   }
 
   associateCaseReviewCases(payload: {

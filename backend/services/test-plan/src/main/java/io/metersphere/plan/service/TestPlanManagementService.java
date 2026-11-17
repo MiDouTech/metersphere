@@ -45,6 +45,10 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class TestPlanManagementService {
+    @jakarta.annotation.Resource
+    private io.metersphere.functional.planreview.PlanReviewLinkReader planReviewLinks;
+    @jakarta.annotation.Resource
+    private io.metersphere.functional.planreview.PlanReviewCompletionGuard planReviewCompletion;
     @Resource
     private ExtTestPlanMapper extTestPlanMapper;
     @Resource
@@ -92,6 +96,7 @@ public class TestPlanManagementService {
     public void filterTestPlanIdWithStatus(Map<String, List<String>> testPlanExecMap, List<String> completedTestPlanIds, List<String> preparedTestPlanIds, List<String> underwayTestPlanIds) {
         testPlanExecMap.forEach((planId, resultList) -> {
             String result = testPlanBaseUtilsService.calculateTestPlanStatus(resultList);
+            result=planReviewCompletion.visibleStatus(planId,result);
             if (StringUtils.equals(result, TestPlanConstants.TEST_PLAN_SHOW_STATUS_COMPLETED)) {
                 completedTestPlanIds.add(planId);
             } else if (StringUtils.equals(result, TestPlanConstants.TEST_PLAN_SHOW_STATUS_UNDERWAY)) {
@@ -278,6 +283,7 @@ public class TestPlanManagementService {
             for (String testPlanId : testPlanIdList) {
                 List<String> executeResultList = testPlanExecResult.containsKey(testPlanId) ? testPlanExecResult.get(testPlanId) : new ArrayList<>();
                 String result = testPlanBaseUtilsService.calculateTestPlanStatus(executeResultList);
+                result=planReviewCompletion.visibleStatus(testPlanId,result);
                 testPlanStatus.add(result);
                 if (StringUtils.equalsIgnoreCase(dataType, TestPlanConstants.TEST_PLAN_TYPE_PLAN) && isRootTestPlan) {
                     if (StringUtils.equals(result, TestPlanConstants.TEST_PLAN_SHOW_STATUS_COMPLETED)) {
@@ -420,6 +426,10 @@ public class TestPlanManagementService {
         }
 
         handChildren(testPlanResponses, includeChildTestPlanId);
+        var visible=new ArrayList<TestPlanResponse>();
+        for(var root:testPlanResponses){visible.add(root);if(root.getChildren()!=null)visible.addAll(root.getChildren());}
+        var links=planReviewLinks.read(true,request.getProjectId(),visible.stream().map(TestPlanResponse::getId).toList(),io.metersphere.system.utils.SessionUtils.getUserId());
+        visible.forEach(item->item.setPlanReviewRelation(links.get(item.getId())));
         return testPlanResponses;
     }
 

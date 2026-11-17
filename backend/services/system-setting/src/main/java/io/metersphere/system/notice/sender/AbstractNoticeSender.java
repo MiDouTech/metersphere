@@ -203,7 +203,13 @@ public abstract class AbstractNoticeSender implements NoticeSender {
         // 去重复
         List<String> userIds = toUsers.stream().map(Receiver::getUserId).toList();
         LogUtils.info("userIds: ", JSON.toJSONString(userIds));
-        List<User> users = getUsers(userIds, messageDetail.getProjectId(), false);
+        // Mention/reply recipients must still be active source members.
+        boolean relatedEvent = (NoticeConstants.TaskType.BUG_TASK.equals(messageDetail.getTaskType())
+                && List.of(NoticeConstants.Event.AT, NoticeConstants.Event.REPLY).contains(event))
+                || (NoticeConstants.TaskType.FUNCTIONAL_CASE_TASK.equals(messageDetail.getTaskType())
+                && List.of(NoticeConstants.Event.AT, NoticeConstants.Event.REPLY,
+                NoticeConstants.Event.REVIEW_AT, NoticeConstants.Event.EXECUTE_AT).contains(event));
+        List<User> users = getUsers(userIds, messageDetail.getProjectId(), relatedEvent);
         List<String> realUserIds = users.stream().map(User::getId).distinct().toList();
         return toUsers.stream().filter(t -> realUserIds.contains(t.getUserId())).distinct().toList();
     }

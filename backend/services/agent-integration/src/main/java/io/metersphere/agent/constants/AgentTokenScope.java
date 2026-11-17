@@ -5,6 +5,9 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class AgentTokenScope {
+    public static final String PROJECT_FILE_READ = "PROJECT_FILE_READ";
+    public static final String PROJECT_FILE_WRITE = "PROJECT_FILE_WRITE";
+    public static final String PROJECT_FILE_DOWNLOAD = "PROJECT_FILE_DOWNLOAD";
     public static final String CASE_IMPORT_V2 = "CASE_IMPORT_V2";
     public static final String CASE_MODULE_WRITE_V2 = "CASE_MODULE_WRITE_V2";
     public static final String CASE_COMMENT_EDIT_V2 = "CASE_COMMENT_EDIT_V2";
@@ -51,6 +54,9 @@ public class AgentTokenScope {
 
     static {
         Set<String> scopes = new LinkedHashSet<>();
+        scopes.add(PROJECT_FILE_READ);
+        scopes.add(PROJECT_FILE_WRITE);
+        scopes.add(PROJECT_FILE_DOWNLOAD);
         scopes.add(CASE_IMPORT_V2);
         scopes.add(CASE_MODULE_WRITE_V2);
         scopes.add(CASE_COMMENT_EDIT_V2);

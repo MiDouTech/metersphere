@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CaseReviewCaseProvider implements BaseCaseProvider {
+    @Resource
+    private io.metersphere.functional.planreview.PlanReviewApplicationService planReviewApplication;
     @Resource private io.metersphere.functional.service.FunctionalReviewRecountService reviewRecount;
 
     @Resource
@@ -408,6 +410,15 @@ public class CaseReviewCaseProvider implements BaseCaseProvider {
      * @param userId    操作人
      */
     private void updateCaseReview(String reviewId, int caseCount, Map<String, Integer> mapCount, String userId) {
+        CaseReview previous = caseReviewMapper.selectByPrimaryKey(reviewId);
+        if (planReviewApplication.refreshOpinionStatistics(reviewId)) {
+            CaseReview current = caseReviewMapper.selectByPrimaryKey(reviewId);
+            if (previous != null && current != null && !CaseReviewStatus.COMPLETED.name().equals(previous.getStatus())
+                    && CaseReviewStatus.COMPLETED.name().equals(current.getStatus())) {
+                reviewSendNoticeService.sendNotice(new ArrayList<>(), userId, reviewId, NoticeConstants.TaskType.CASE_REVIEW_TASK, NoticeConstants.Event.REVIEW_COMPLETED);
+            }
+            return;
+        }
         CaseReview caseReview = new CaseReview();
         caseReview.setId(reviewId);
         //更新用例数量

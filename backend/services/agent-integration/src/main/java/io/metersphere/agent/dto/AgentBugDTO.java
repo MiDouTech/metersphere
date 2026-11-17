@@ -21,6 +21,11 @@ public class AgentBugDTO {
     private Long createTime;
     private Long updateTime;
     private String description;
+    private List<Map<String, Object>> images;
+    private Boolean imagesComplete;
+    private List<Map<String, Object>> attachmentImages;
+    private Boolean attachmentImagesComplete;
+    private List<String> imageWarnings;
     private String templateId;
     private List<String> tags;
     private String caseId;

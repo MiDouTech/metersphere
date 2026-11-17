@@ -73,6 +73,7 @@ export default {
     'menu.projectManagement.fileManagement': '文件管理',
     'menu.projectManagement.messageManagement': '消息管理',
     'menu.projectManagement.commonScript': '公共脚本',
+    'menu.projectManagement.hifoxHandoff': 'Webhook测试计划推送',
     'menu.projectManagement.fakeError': '误报库',
     'menu.projectManagement.messageManagementEdit': '更新模板',
     'menu.projectManagement.environmentManagement': '环境管理',

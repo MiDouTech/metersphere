@@ -12,6 +12,7 @@ public class ImportFollowupRequest {
     private Long expectedGroupRevision;
     @Size(max=255) private String planName;
     @Size(max=255) private String reviewName;
+    @Size(max=50) private String reviewModuleId = "root";
     @Size(max=100) private List<String> reviewers;
     private String reviewPassRule = "SINGLE";
 }

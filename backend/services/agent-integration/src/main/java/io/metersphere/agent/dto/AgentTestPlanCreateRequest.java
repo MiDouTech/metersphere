@@ -8,6 +8,9 @@ import java.util.List;
 
 @Data
 public class AgentTestPlanCreateRequest {
+    @jakarta.validation.constraints.NotNull
+    @Schema(description = "关联评审设置，真实新计划必填", requiredMode = Schema.RequiredMode.REQUIRED)
+    private io.metersphere.functional.planreview.PlanReviewSettings reviewSettings;
     @NotBlank
     @jakarta.validation.constraints.Pattern(regexp="[A-Za-z0-9_.:-]{1,128}")
     @jakarta.validation.constraints.Size(min=1,max=128)

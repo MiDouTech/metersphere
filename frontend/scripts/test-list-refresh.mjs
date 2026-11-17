@@ -84,6 +84,88 @@ test('unmounted lists never refresh again', async () => {
   assert.equal(calls, 0);
 });
 
+test('returning within one second recovers the cancelled list instead of keeping it empty', async () => {
+  let calls = 0;
+  let time = 0;
+  let rows = ['plan'];
+  const gate = createGate(
+    async () => {
+      calls += 1;
+      if (calls === 1) {
+        // useTable clears its rows when the router cancels the pending load.
+        rows = [];
+        throw new Error('cancelled on route leave');
+      }
+      rows = ['plan'];
+    },
+    () => true,
+    () => time
+  );
+  await assert.rejects(gate.run(), /cancelled/);
+  time = 300;
+  await gate.run(true);
+  assert.deepEqual(rows, ['plan']);
+  assert.equal(calls, 2);
+  await gate.run();
+  assert.equal(calls, 2, 'focus still coalesces with the activation');
+});
+
+test('activation while cancellation is settling replays once without concurrent loads', async () => {
+  let reject;
+  let calls = 0;
+  let busy = 0;
+  let maximum = 0;
+  const gate = createGate(
+    async () => {
+      calls += 1;
+      maximum = Math.max(maximum, ++busy);
+      try {
+        if (calls === 1)
+          await new Promise((resolve, fail) => {
+            reject = fail;
+          });
+      } finally {
+        busy -= 1;
+      }
+    },
+    () => true,
+    () => 0
+  );
+  const first = gate.run();
+  const activation = gate.run(true);
+  const duplicate = gate.run(true);
+  reject(new Error('cancelled'));
+  await assert.rejects(first, /cancelled/);
+  await Promise.all([activation, duplicate]);
+  assert.equal(calls, 2);
+  assert.equal(maximum, 1);
+});
+
+['hidden', 'disposed'].forEach((reason) => {
+  test(`pending activation does not load after becoming ${reason}`, async () => {
+    let release;
+    let calls = 0;
+    let ready = true;
+    const gate = createGate(
+      async () => {
+        calls += 1;
+        await new Promise((resolve) => {
+          release = resolve;
+        });
+      },
+      () => ready,
+      () => 0
+    );
+    const first = gate.run();
+    const activation = gate.run(true);
+    if (reason === 'hidden') ready = false;
+    else gate.dispose();
+    release();
+    await Promise.all([first, activation]);
+    assert.equal(calls, 1);
+  });
+});
+
 test('browser lifecycle pauses offline, hidden and editing lists and removes every listener', async () => {
   const lifecycle = {};
   const listeners = new Map();

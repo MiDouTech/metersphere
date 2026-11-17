@@ -62,6 +62,7 @@ import java.util.Map;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentBugWriteService {
+    @Resource private AgentBugImageService bugImages;
     @Resource private org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Resource
     private BugService bugService;
@@ -122,6 +123,12 @@ public class AgentBugWriteService {
     }
 
     public AgentBugDTO get(String bugId) {
+        AgentBugDTO dto = getDetail(bugId);
+        bugImages.addIndex(dto);
+        return dto;
+    }
+
+    private AgentBugDTO getDetail(String bugId) {
         String userId = requireUserId();
         BugDetailDTO detail = bugService.get(bugId, userId, "zh_CN");
         assertProjectAllowed(detail.getProjectId());
@@ -388,7 +395,7 @@ public class AgentBugWriteService {
             }
         }
         agentExecLogService.audit("BUG_UPDATE", bug.getId(), JSON.toJSONString(request));
-        return get(bug.getId());
+        return getDetail(bug.getId());
     }
 
     public void relateCase(AgentBugRelateCaseRequest request) {
