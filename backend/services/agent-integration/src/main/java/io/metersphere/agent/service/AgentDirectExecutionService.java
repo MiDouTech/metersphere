@@ -52,7 +52,7 @@ public class AgentDirectExecutionService {
         var candidate=new LinkedHashMap<>(instance);candidate.put("verification","ACCEPTED");governedPersonal(session,candidate,data,false);
     }
     private Map<String,Object> governedPersonal(Map<String,Object> session,Map<String,Object> instance,Map<String,Object> data,boolean publish) {
-        if(publish)assertWritesEnabled();
+        if(publish){assertWritesEnabled();AgentProtocolKnowledgeSafety.requireSafe(jdbc,session,data);}
         String project=(String)session.get("project_id"),caseId=(String)instance.get("case_id"),owner=(String)session.get("owner_id");
         protocolAccess.requireSourceWrite(owner,project,(String)session.get("organization_id"),(String)session.get("environment_id"));
         jdbc.queryForList("SELECT id FROM functional_case WHERE id=? AND project_id=? FOR UPDATE",caseId,project);

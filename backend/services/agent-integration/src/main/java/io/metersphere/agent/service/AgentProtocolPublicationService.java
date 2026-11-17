@@ -23,29 +23,35 @@ public class AgentProtocolPublicationService {
         var session=jdbc.queryForMap("SELECT * FROM msp_protocol_session WHERE id=?",sid);var actor=access.actor((String)session.get("organization_id"),false);access.project(actor,(String)session.get("project_id"),false);access.capability(actor,(String)session.get("environment_id"),"RESULT_REVIEW",true);if("TASK".equals(session.get("source_type")))access.task(actor,(String)session.get("project_id"),(String)session.get("source_id"),false);
         String scope=hash(List.of(actor.organization(),actor.user(),actor.agent(),"result.sync",sid,iid)),fingerprint=requestHash(args);
         var receipt=store.transaction(()->{jdbc.update("INSERT INTO msp_protocol_operation(scope_key,request_key,operation_id,request_hash,status,metered,create_time) VALUES (?,?,?,?,'SYNC_PENDING',false,?) ON DUPLICATE KEY UPDATE scope_key=scope_key",scope,key,uuid(),fingerprint,System.currentTimeMillis());var row=jdbc.queryForMap("SELECT * FROM msp_protocol_operation WHERE scope_key=? AND request_key=? FOR UPDATE",scope,key);require(fingerprint.equals(row.get("request_hash")),"IDEMPOTENCY_CONFLICT");return row;});
-        if("SUCCEEDED".equals(receipt.get("status"))){var response=store.data(Map.of("payload",receipt.get("response")));response.put("replayed",true);response.put("permissionToAct",false);return response;}
-        require(number(args,"expectedResultVersion")==((Number)locklessInstance(sid,iid).get("result_version")).longValue(),"VERSION_CONFLICT");var result=sync(sid,iid);var response=new LinkedHashMap<>(result);response.put("operationId",receipt.get("operation_id"));response.put("permissionToAct",false);
-        store.transaction(()->{jdbc.update("UPDATE msp_protocol_operation SET status='SUCCEEDED',response=? WHERE scope_key=? AND request_key=?",store.payload(response),scope,key);return null;});return response;
+        return store.transaction(()->{
+            var currentReceipt=jdbc.queryForMap("SELECT * FROM msp_protocol_operation WHERE scope_key=? AND request_key=? FOR UPDATE",scope,key);
+            access.actor((String)session.get("organization_id"),false);access.project(actor,(String)session.get("project_id"),false);access.capability(actor,(String)session.get("environment_id"),"RESULT_REVIEW",true);if("TASK".equals(session.get("source_type")))access.task(actor,(String)session.get("project_id"),(String)session.get("source_id"),false);
+            if("SUCCEEDED".equals(currentReceipt.get("status"))){var response=store.data(Map.of("payload",currentReceipt.get("response")));if(!"FAILED".equals(response.get("syncStatus"))){response.put("replayed",true);response.put("permissionToAct",false);return response;}}
+            require(number(args,"expectedResultVersion")==((Number)locklessInstance(sid,iid).get("result_version")).longValue(),"VERSION_CONFLICT");
+            var response=new LinkedHashMap<>(sync(sid,iid));response.put("operationId",receipt.get("operation_id"));response.put("permissionToAct",false);
+            boolean completed=Set.of("SYNCED","NOT_APPLICABLE").contains(response.get("syncStatus"));
+            jdbc.update("UPDATE msp_protocol_operation SET status=?,response=? WHERE scope_key=? AND request_key=?",completed?"SUCCEEDED":"SYNC_PENDING",store.payload(response),scope,key);return response;
+        });
     }
     public Map<String,Object> sync(String sessionId,String instanceId) {
         var rows=jdbc.queryForList("SELECT * FROM msp_protocol_session WHERE id=?",sessionId);require(rows.size()==1,"AGENT_RESOURCE_NOT_ACCESSIBLE");var session=rows.getFirst();
         var actor=access.actor((String)session.get("organization_id"),false);access.project(actor,(String)session.get("project_id"),false);access.capability(actor,(String)session.get("environment_id"),"RESULT_REVIEW",true);
         var existing=locklessInstance(sessionId,instanceId);if(jdbc.queryForObject("SELECT COUNT(*) FROM msp_protocol_publication WHERE instance_id=? AND result_version=?",Long.class,instanceId,existing.get("result_version"))>0)return Map.of("syncStatus","SYNCED","alreadyPublished",true,"disputed",Boolean.TRUE.equals(store.data(existing).get("disputed")));
         try {
-            if("PERSONAL".equals(session.get("source_type")))return store.transaction(()->{
-                var current=lockInstance(sessionId,instanceId);var data=store.data(current);recheckReviewer(session,data);require(!Boolean.TRUE.equals(data.get("disputed")),"PROTOCOL_CORRECTION_REQUIRED");
+            if("PERSONAL".equals(session.get("source_type")))return store.isolated(()->{
+                AgentProtocolKnowledgeSafety.requireSafe(jdbc,session,store.data(locklessInstance(sessionId,instanceId)));var current=lockInstance(sessionId,instanceId);require(current.get("result_version").equals(existing.get("result_version")),"VERSION_CONFLICT");var data=store.data(current);recheckReviewer(session,data,instanceId);AgentProtocolKnowledgeSafety.requireSafe(jdbc,session,data);require(!Boolean.TRUE.equals(data.get("disputed")),"PROTOCOL_CORRECTION_REQUIRED");
                 if(!Set.of("PASS","FAIL").contains(current.get("result")))return Map.of("syncStatus","NOT_APPLICABLE");
-                var result=direct.publishGovernedPersonal(session,current,data);data.putAll(result);jdbc.update("UPDATE msp_protocol_instance SET payload=? WHERE id=?",store.payload(data),instanceId);lifecycle.reconcile(sessionId);return result;
+                var result=direct.publishGovernedPersonal(session,current,data);data.putAll(result);data.remove("syncError");jdbc.update("UPDATE msp_protocol_instance SET payload=? WHERE id=?",store.payload(data),instanceId);lifecycle.reconcile(sessionId);return result;
             });
             var classification=locklessInstance(sessionId,instanceId);require("ACCEPTED".equals(classification.get("verification")),"PROTOCOL_RESULT_NOT_ACCEPTED");if(!Set.of("PASS","FAIL").contains(classification.get("result")))return Map.of("syncStatus","NOT_APPLICABLE");
-            recordTaskFacts(session,instanceId);
-            var current=locklessInstance(sessionId,instanceId);var task=mapper.selectTaskById((String)session.get("source_id"));
+            recordTaskFacts(session,instanceId,((Number)existing.get("result_version")).longValue());
+            var current=locklessInstance(sessionId,instanceId);require(current.get("result_version").equals(existing.get("result_version")),"VERSION_CONFLICT");var task=mapper.selectTaskById((String)session.get("source_id"));
             var executionCase=mapper.selectCasesByTaskId(task.getId()).stream().filter(c->c.getId().equals(current.get("source_case_id"))).findFirst().orElseThrow(AgentBusinessAccess::denied);
             var steps=mapper.selectStepsByTaskId(task.getId()).stream().filter(step->step.getExecutionCaseId().equals(executionCase.getId())).toList();
             writeback.writebackGoverned(task,executionCase,steps,instanceId,((Number)current.get("result_version")).longValue());
-            return store.transaction(()->{var row=lockInstance(sessionId,instanceId);require(row.get("result_version").equals(current.get("result_version")),"VERSION_CONFLICT");var data=store.data(row);data.put("syncStatus","SYNCED");jdbc.update("UPDATE msp_protocol_instance SET payload=? WHERE id=?",store.payload(data),instanceId);jdbc.update("INSERT INTO msp_protocol_publication(instance_id,result_version,source_id,create_time) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE source_id=source_id",instanceId,row.get("result_version"),row.get("source_case_id"),System.currentTimeMillis());lifecycle.reconcile(sessionId);return Map.of("syncStatus","SYNCED");});
+            return store.isolated(()->{var row=lockInstance(sessionId,instanceId);require(row.get("result_version").equals(current.get("result_version")),"VERSION_CONFLICT");var data=store.data(row);data.put("syncStatus","SYNCED");data.remove("syncError");jdbc.update("UPDATE msp_protocol_instance SET payload=? WHERE id=?",store.payload(data),instanceId);jdbc.update("INSERT INTO msp_protocol_publication(instance_id,result_version,source_id,create_time) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE source_id=source_id",instanceId,row.get("result_version"),row.get("source_case_id"),System.currentTimeMillis());lifecycle.reconcile(sessionId);return Map.of("syncStatus","SYNCED");});
         } catch(RuntimeException failure) {
-            store.transaction(()->{var current=lockInstance(sessionId,instanceId);var data=store.data(current);data.put("syncStatus","FAILED");data.put("syncError","PROTOCOL_FORMAL_SYNC_FAILED");jdbc.update("UPDATE msp_protocol_instance SET payload=? WHERE id=?",store.payload(data),instanceId);return null;});
+            store.isolated(()->{var rowsNow=jdbc.queryForList("SELECT * FROM msp_protocol_instance WHERE id=? AND session_id=? FOR UPDATE",instanceId,sessionId);if(rowsNow.size()!=1||!existing.get("result_version").equals(rowsNow.getFirst().get("result_version"))||!"ACCEPTED".equals(rowsNow.getFirst().get("verification")))return null;var current=rowsNow.getFirst();var data=store.data(current);data.put("syncStatus","FAILED");data.put("syncError","PROTOCOL_FORMAL_SYNC_FAILED");jdbc.update("UPDATE msp_protocol_instance SET payload=? WHERE id=?",store.payload(data),instanceId);return null;});
             AgentProtocolDiagnostics.warn(org.slf4j.LoggerFactory.getLogger(getClass()),"FORMAL_WRITE","PROTOCOL_FORMAL_SYNC_FAILED",instanceId,failure);
             return Map.of("syncStatus","FAILED","code","PROTOCOL_FORMAL_SYNC_FAILED");
         }
@@ -56,12 +62,12 @@ public class AgentProtocolPublicationService {
     }
     private Map<String,Object> locklessInstance(String session,String instance){var rows=jdbc.queryForList("SELECT * FROM msp_protocol_instance WHERE id=? AND session_id=?",instance,session);require(rows.size()==1,"AGENT_RESOURCE_NOT_ACCESSIBLE");return rows.getFirst();}
     private Map<String,Object> lockInstance(String session,String instance){var rows=jdbc.queryForList("SELECT * FROM msp_protocol_instance WHERE id=? AND session_id=? FOR UPDATE",instance,session);require(rows.size()==1&&"ACCEPTED".equals(rows.getFirst().get("verification")),"PROTOCOL_RESULT_NOT_ACCEPTED");return rows.getFirst();}
-    private void recheckReviewer(Map<String,Object> session,Map<String,Object> data) {access.requireAcceptedReviewer(session,data);}
-    private void recordTaskFacts(Map<String,Object>s,String iid) {
-        store.transaction(()->{recordTaskFactsBody(s,iid,true,null);return null;});
+    private void recheckReviewer(Map<String,Object> session,Map<String,Object> data,String instance) {AgentProtocolEvidenceService.refreshHistoricalContributors(jdbc,store,session,data,instance);access.requireAcceptedReviewer(session,data);}
+    private void recordTaskFacts(Map<String,Object>s,String iid,long version) {
+        store.isolated(()->{AgentProtocolKnowledgeSafety.requireSafe(jdbc,s,store.data(locklessInstance((String)s.get("id"),iid)));var current=lockInstance((String)s.get("id"),iid);require(((Number)current.get("result_version")).longValue()==version,"VERSION_CONFLICT");recordTaskFactsBody(s,iid,true,null);return null;});
     }
     private void recordTaskFactsBody(Map<String,Object>s,String iid,boolean accepted,Map<String,Object> candidateData) {
-            var i=accepted?lockInstance((String)s.get("id"),iid):locklessInstance((String)s.get("id"),iid);var data=candidateData==null?store.data(i):candidateData;if(accepted)recheckReviewer(s,data);require(!accepted||!Boolean.TRUE.equals(data.get("disputed")),"PROTOCOL_CORRECTION_REQUIRED");
+            var i=accepted?lockInstance((String)s.get("id"),iid):locklessInstance((String)s.get("id"),iid);var data=candidateData==null?store.data(i):candidateData;if(accepted){recheckReviewer(s,data,iid);AgentProtocolKnowledgeSafety.requireSafe(jdbc,s,data);}require(!accepted||!Boolean.TRUE.equals(data.get("disputed")),"PROTOCOL_CORRECTION_REQUIRED");
             require(Set.of("PASS","FAIL").contains(i.get("result")),"PROTOCOL_FORMAL_RESULT_UNSUPPORTED");
             access.requireTaskSourceWrite((String)s.get("owner_id"),(String)s.get("project_id"),(String)s.get("organization_id"),(String)s.get("environment_id"));
             jdbc.queryForList("SELECT id FROM ai_execution_task WHERE id=? AND current_execution_id=? FOR UPDATE",s.get("source_id"),s.get("source_execution_id"));

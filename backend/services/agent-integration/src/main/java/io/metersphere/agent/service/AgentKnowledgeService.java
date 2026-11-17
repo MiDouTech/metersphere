@@ -203,7 +203,7 @@ public class AgentKnowledgeService {
                 jdbc.update("UPDATE msp_knowledge SET state=?,safety_generation=safety_generation+?,version=version+1,update_time=? WHERE id=?",state,"revoke".equals(action)?1:0,System.currentTimeMillis(),id);
                 if("revoke".equals(action)) {
                     jdbc.update("UPDATE msp_knowledge_version SET state='REVOKED' WHERE knowledge_id=?",id);
-                    jdbc.update("UPDATE msp_protocol_instance SET phase='PAUSED',version=version+1 WHERE id IN (SELECT instance_id FROM msp_knowledge_usage WHERE knowledge_id=?) AND phase NOT IN ('ENDED','VERIFYING')",id);
+                    AgentProtocolKnowledgeSafety.revoke(jdbc,store,org,id,ctx.operationId(),ctx.actor().user());
                 }
             } else if("restore".equals(action)) {
                 var version=jdbc.queryForMap("SELECT * FROM msp_knowledge_version WHERE knowledge_id=? AND version=?",id,number(args,"version"));

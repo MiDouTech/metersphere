@@ -18,12 +18,15 @@ public class AgentProtocolStore {
     final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     private final TransactionTemplate nested;
+    private final TransactionTemplate isolated;
     private final AgentFactCipher cipher;
     public AgentProtocolStore(JdbcTemplate jdbc,PlatformTransactionManager manager,AgentFactCipher cipher) {
         this.jdbc=jdbc;this.cipher=cipher;transaction=new TransactionTemplate(manager);
         transaction.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);transaction.setTimeout(30);
+        isolated=new TransactionTemplate(manager);isolated.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);isolated.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);isolated.setTimeout(30);
         nested=new TransactionTemplate(manager);nested.setPropagationBehavior(TransactionDefinition.PROPAGATION_NESTED);
     }
+    public <T> T isolated(java.util.function.Supplier<T> action){return isolated.execute(status->action.get());}
     public interface Authorization { AgentProtocolAccess.Actor check(boolean lock); }
     public record WriteContext(AgentProtocolAccess.Actor actor,String operationId) {}
     private record Outcome(Map<String,Object> response,String error) {}

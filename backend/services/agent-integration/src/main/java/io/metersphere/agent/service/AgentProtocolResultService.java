@@ -11,6 +11,7 @@ public class AgentProtocolResultService {
     private static final Set<String> RESULTS=Set.of("PASS","FAIL","BLOCKED","EXECUTION_ERROR","NOT_RUN");
     private final JdbcTemplate jdbc;private final AgentProtocolStore store;private final AgentProtocolAccess access;
     private final AgentProtocolEvidenceService evidence;
+    private java.time.Clock verificationClock=java.time.Clock.systemUTC();
     @jakarta.annotation.Resource private AgentProtocolPublicationService publication;
     public AgentProtocolResultService(JdbcTemplate jdbc,AgentProtocolStore store,AgentProtocolAccess access,AgentProtocolEvidenceService evidence){this.jdbc=jdbc;this.store=store;this.access=access;this.evidence=evidence;}
     void snapshot(Map<String,Object> instance,Map<String,Object> data,String operation){if(instance.get("result")==null)return;var state=new LinkedHashMap<>(instance);state.remove("payload");jdbc.update("INSERT INTO msp_protocol_result_revision(instance_id,result_version,submission_revision,result,verification,operation_id,payload,create_time) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE instance_id=instance_id",instance.get("id"),instance.get("result_version"),instance.get("revision"),instance.get("result"),instance.get("verification"),operation,store.payload(Map.of("instance",state,"data",data)),System.currentTimeMillis());}
@@ -67,13 +68,15 @@ public class AgentProtocolResultService {
         }
         data.put("evidencePersons",new ArrayList<>(contributors));data.put("evidenceIdentities",contributorIdentities);data.put("submittedAssertions",new ArrayList<>(facts.values()));data.put("reason",args.getOrDefault("reason",""));data.put("outputs",object(args.getOrDefault("outputs",data.getOrDefault("outputs",Map.of()))));
         i.put("result",result);i.put("revision",((Number)i.get("revision")).longValue()+1);i.put("result_version",((Number)i.get("result_version")).longValue()+1);
-        i.put("verification",missing.isEmpty()?"PENDING":"NEEDS_EVIDENCE");i.put("phase","VERIFYING");i.put("channel","CLOSED");data.put("missingAssertions",missing);data.put("syncStatus","NOT_ACCEPTED");data.put("pendingSince",System.currentTimeMillis());
+        i.put("verification",missing.isEmpty()?"PENDING":"NEEDS_EVIDENCE");i.put("phase","VERIFYING");i.put("channel","CLOSED");data.put("missingAssertions",missing);data.put("syncStatus","NOT_ACCEPTED");if(missing.isEmpty())data.put("pendingSince",verificationClock.millis());else data.remove("pendingSince");
+        AgentProtocolEvidenceService.refreshHistoricalContributors(jdbc,store,s,data,(String)i.get("id"));
         return Map.of("acceptedSubmission",true,"formalResultAccepted",false,"missingAssertions",missing);
     }
-    private void independent(Map<String,Object>s,Map<String,Object>data,AgentProtocolAccess.Actor actor) {
+    private void independent(Map<String,Object>s,Map<String,Object>data,AgentProtocolAccess.Actor actor,String instance) {
         require(actor.person()!=null,"PROTOCOL_INDEPENDENCE_UNVERIFIABLE");
         access.capability(actor,(String)s.get("environment_id"),"RESULT_REVIEW",true);access.capability(actor,(String)s.get("environment_id"),"VERIFY_EXTERNAL",true);
         access.capability(actor,(String)s.get("environment_id"),"EVIDENCE_READ",true);
+        AgentProtocolEvidenceService.refreshHistoricalContributors(jdbc,store,s,data,instance);
         var identities=object(data.getOrDefault("executorIdentities",Map.of()));identities.putAll(object(object(data.getOrDefault("cleanup",Map.of())).getOrDefault("executors",Map.of())));identities.putAll(object(data.getOrDefault("evidenceIdentities",Map.of())));
         var contract=object(data.get("contract"));identities.put(text(contract,"authorUserId"),text(contract,"authorPerson"));
         for(var identity:new TreeMap<>(identities).entrySet()){var people=jdbc.queryForList("SELECT person_ref FROM msp_protocol_identity WHERE organization_id=? AND user_id=? FOR UPDATE",String.class,s.get("organization_id"),identity.getKey());require(people.size()==1&&Objects.equals(people.getFirst(),identity.getValue()),"PROTOCOL_INDEPENDENCE_UNVERIFIABLE");}
@@ -82,7 +85,7 @@ public class AgentProtocolResultService {
         if(data.containsKey("originalAccepted"))require(!actor.person().equals(object(data.get("originalAccepted")).get("reviewerPerson")),"PROTOCOL_REVIEW_CONFLICT");
     }
     private Map<String,Object> verify(Map<String,Object>args,Map<String,Object>s,Map<String,Object>i,Map<String,Object>data,AgentProtocolAccess.Actor actor) {
-        fields(args,"sessionId","caseExecutionId","expectedResultVersion","submissionRevision","verificationAttemptId","assertions","reason","outputsReview","classificationReview");independent(s,data,actor);
+        fields(args,"sessionId","caseExecutionId","expectedResultVersion","submissionRevision","verificationAttemptId","assertions","reason","outputsReview","classificationReview");independent(s,data,actor,(String)i.get("id"));
         var incomingReview=objects(args.get("assertions"));String attempt=id(args,"verificationAttemptId");var attempts=object(data.getOrDefault("verificationAttempts",Map.of()));String decisionHash=hash(Map.of("assertions",incomingReview,"outputsReview",args.getOrDefault("outputsReview",Map.of()),"classificationReview",args.getOrDefault("classificationReview",Map.of())));
         if(number(args,"submissionRevision")!=((Number)i.get("revision")).longValue())return Map.of("auditOnly",true,"staleRevision",true);
         if(attempts.containsKey(attempt)) {
@@ -151,13 +154,13 @@ public class AgentProtocolResultService {
         i.put("phase","ENDED");i.put("channel","CLOSED");data.put("closedUnacceptedReason",args.get("reason"));return Map.of("accepted",false,"unknownRetained",AgentGovernedExecutionService.unresolved(data));
     }
     private Map<String,Object> correct(Map<String,Object>args,Map<String,Object>s,Map<String,Object>i,Map<String,Object>data,AgentProtocolAccess.Actor actor) {
-        fields(args,"sessionId","caseExecutionId","expectedResultVersion","reason","result");independent(s,data,actor);text(args,"reason");require(!actor.person().equals(data.get("reviewerPerson")),"PROTOCOL_REVIEW_CONFLICT");
+        fields(args,"sessionId","caseExecutionId","expectedResultVersion","reason","result");independent(s,data,actor,(String)i.get("id"));text(args,"reason");require(!actor.person().equals(data.get("reviewerPerson")),"PROTOCOL_REVIEW_CONFLICT");
         require("ACCEPTED".equals(i.get("verification")),"PROTOCOL_RESULT_STATE_CONFLICT");
         data.put("originalAccepted",Map.of("result",i.get("result"),"resultVersion",i.get("result_version"),"reviewerPerson",data.get("reviewerPerson"),"assertions",data.get("reviewedAssertions"),"syncStatus",data.getOrDefault("syncStatus","UNKNOWN")));
         if(args.containsKey("result")){require(RESULTS.contains(args.get("result")),"AGENT_VALIDATION_ERROR");i.put("result",args.get("result"));}
         i.put("revision",((Number)i.get("revision")).longValue()+1);i.put("result_version",((Number)i.get("result_version")).longValue()+1);i.put("verification","PENDING");i.put("phase","VERIFYING");
         data.put("disputed",true);data.put("correctionReason",args.get("reason"));data.put("syncStatus","NOT_ACCEPTED");data.put("verificationAttempts",new LinkedHashMap<>());
-        data.put("pendingSince",System.currentTimeMillis());
+        data.put("pendingSince",verificationClock.millis());
         invalidateConsumers((String)s.get("id"),(String)i.get("id"));return Map.of("correctionRequested",true,"originalPreserved",true);
     }
     void invalidateConsumers(String session,String producer) {

@@ -16,7 +16,7 @@ public class AgentProtocolTaskLifecycleService {
     }
     List<String> blockers(String session){var result=new ArrayList<String>();for(var row:jdbc.queryForList("SELECT * FROM msp_protocol_instance WHERE session_id=? ORDER BY id FOR UPDATE",session)){
         var data=store.data(row);boolean sync="ACCEPTED".equals(row.get("verification"))&&Set.of("PASS","FAIL").contains(row.get("result"))&&!"SYNCED".equals(data.get("syncStatus"));
-        if(!"ENDED".equals(row.get("phase"))||AgentGovernedExecutionService.unresolved(data)||sync||Boolean.TRUE.equals(data.get("disputed")))result.add((String)row.get("id"));
+        if(!"ENDED".equals(row.get("phase"))||AgentGovernedExecutionService.unresolved(data)||sync||Boolean.TRUE.equals(data.get("disputed"))||"ACCEPTED".equals(row.get("verification"))&&(Boolean.TRUE.equals(data.get("needsRevalidation"))||Boolean.TRUE.equals(data.get("upstreamDisputed"))))result.add((String)row.get("id"));
     }return result;}
     void reconcile(String sessionId){store.transaction(()->{
         var rows=jdbc.queryForList("SELECT * FROM msp_protocol_session WHERE id=? FOR UPDATE",sessionId);if(rows.size()!=1)return null;var session=rows.getFirst();
