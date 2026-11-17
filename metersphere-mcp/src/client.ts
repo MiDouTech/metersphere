@@ -18,6 +18,7 @@ export class MsApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly traceId?: string;
+  readonly details: Record<string, unknown>;
   constructor(status: number, body: string) {
     let value: Record<string, unknown> = {};
     try { const parsed = JSON.parse(body); if (parsed && typeof parsed === "object") value = parsed; } catch { /* opaque server failure */ }
@@ -32,6 +33,8 @@ export class MsApiError extends Error {
       EVIDENCE_EXPIRED:"图片暂存已过期，请重新上传",ATTACHMENT_EXPIRED:"附件已过期，请重新上传",
       VERSION_CONFLICT:"用例内容已变化，请重新查询并执行",IDEMPOTENCY_CONFLICT:"相同请求标识对应的参数不同，请先核对原操作",
       QUALITY_EVIDENCE_REQUIRED:"请上传至少一张本次用例执行图片",QUALITY_EVIDENCE_INVALID:"图片无效、过期或不属于当前用例，请核对后重新上传",
+      CASE_PATCH_FIELD_UNSUPPORTED:"部分字段不能通过用例编辑接口修改，请查看允许字段和建议工具",
+      CASE_PATCH_TYPE_INVALID:"用例修改字段类型或内容不正确，请按字段契约修正",
       REQUEST_IN_PROGRESS:"请求仍在处理中，请稍后使用原 requestId 查询或重试",
       IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED:"历史请求需要核对，请先查询原资源，不要重复创建",
       AGENT_FACTS_INVALID:"历史执行事实暂时无法读取，请提供 traceId 排查",
@@ -42,6 +45,14 @@ export class MsApiError extends Error {
     super(message);
     this.status = status; this.code = code;
     this.traceId = typeof value.traceId === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(value.traceId) ? value.traceId : undefined;
+    const raw = value.details && typeof value.details === "object" && !Array.isArray(value.details) ? value.details as Record<string,unknown> : {};
+    this.details = {};
+    for (const key of ["retryable", "nextAction", "retryAfterMs", "field", "recommendedTool", "allowedFields"]) {
+      const item=raw[key];
+      if (typeof item === "boolean" || typeof item === "number" && Number.isFinite(item)
+          || typeof item === "string" && /^[A-Za-z0-9_.]{1,128}$/.test(item)
+          || Array.isArray(item) && item.length<=20 && item.every(v=>typeof v === "string" && /^[A-Za-z0-9_.]{1,128}$/.test(v))) this.details[key]=item;
+    }
     this.name = "MsApiError";
   }
 }
@@ -113,7 +124,7 @@ export class MeterSphereClient {
         const safe = new MsApiError(400, JSON.stringify(response.error.data ?? {}));
         return { isError: true, content: [{ type: "text", text: JSON.stringify({
           code: response.error.code, message: safe.message,
-          data: { code: safe.code, ...(safe.traceId ? { traceId: safe.traceId } : {}) },
+          data: { code: safe.code, details: safe.details, ...(safe.traceId ? { traceId: safe.traceId } : {}) },
         }) }] };
       }
       if (!response.result || !Array.isArray(response.result.content)) {
@@ -125,7 +136,7 @@ export class MeterSphereClient {
         code: error instanceof MsApiError ? error.code : "MCP_TRANSPORT_ERROR",
         message: error instanceof MsApiError ? error.message : "请求结果未知，请使用原 requestId 查询或重试",
         ...(error instanceof MsApiError && error.traceId ? {traceId:error.traceId} : {}),
-        ...(error instanceof MsApiError ? { status: error.status } : {}),
+        ...(error instanceof MsApiError ? { status: error.status, details: error.details } : {}),
       }) }] };
     }
   }

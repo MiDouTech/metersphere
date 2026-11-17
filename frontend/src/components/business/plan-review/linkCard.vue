@@ -412,10 +412,10 @@
   import { useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
 
+  import HandoffCard from '@/components/business/hifox-handoff/card.vue';
   import NewReviewDialog from './newReviewDialog.vue';
   import NoticePanel from './noticePanel.vue';
   import TakeoverPanel from './takeoverPanel.vue';
-  import HandoffCard from '@/components/business/hifox-handoff/card.vue';
 
   import type {
     RelationCandidate,
@@ -1235,9 +1235,9 @@
   .plan-review-link {
     margin-top: 12px;
     padding: 12px;
-    border: 1px solid var(--color-border-2);
-    border-radius: 4px;
     min-width: 0;
     max-width: 100%;
+    border: 1px solid var(--color-border-2);
+    border-radius: 4px;
   }
 </style>

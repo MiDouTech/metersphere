@@ -208,10 +208,10 @@
   import useTable from '@/components/pure/ms-table/useTable';
   import MsTableMoreAction from '@/components/pure/ms-table-more-action/index.vue';
   import type { ActionsItem } from '@/components/pure/ms-table-more-action/types';
+  import HandoffListCell from '@/components/business/hifox-handoff/listCell.vue';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
   import PlanReviewListCell from '@/components/business/plan-review/listCell.vue';
   import PlanReviewListToolbar from '@/components/business/plan-review/listToolbar.vue';
-  import HandoffListCell from '@/components/business/hifox-handoff/listCell.vue';
   import passRateLine from '../passRateLine.vue';
   import deleteReviewModal from './deleteReviewModal.vue';
   import ModuleTree from './moduleTree.vue';

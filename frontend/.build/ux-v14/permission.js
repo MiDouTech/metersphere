@@ -1,1 +1,1 @@
-export const hasAnyPermission=()=>true;
+export const hasAnyPermission = () => true;

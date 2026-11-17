@@ -25,6 +25,11 @@ export interface RelationSummary {
   canReconfirm?: boolean;
   scopeMessage?: string;
 }
+export interface HandoffListSummary {
+  restricted: boolean;
+  state: string;
+  sourceChanged: boolean;
+}
 export interface RelationListSummary {
   handoff?: HandoffListSummary;
   legacyBlocked?: boolean;
@@ -35,7 +40,6 @@ export interface RelationListSummary {
   sourceVersion?: number;
   appliedVersion?: number;
 }
-export interface HandoffListSummary { restricted: boolean; state: string; sourceChanged: boolean }
 export interface RelationFrozenFrame {
   available: boolean;
   frozenAt?: number;

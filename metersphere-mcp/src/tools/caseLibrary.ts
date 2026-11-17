@@ -136,9 +136,9 @@ export const caseLibraryTools = [
   }),
   tool("metersphere.functional.attachment.read","Read a published PNG/JPEG as MCP image content (max 5 MiB), including retained submission evidence.",{...resource,fileId:id,submissionId:id.optional()}),
   tool("metersphere.functional.attachments.list", "Read case attachment metadata. Execution artifacts are a separate resource.", resource),
-  tool("metersphere.functional.case.update", "Update selected case fields using the current updateTime. Does not set execution results.", {
+  tool("metersphere.functional.case.update", "Update selected case fields using the current updateTime. For results use execution.contract → evidence.upload → execution.submit. After response loss query operation.get with the original requestId.", {
     ...resource, expectedUpdateTime: version, requestId, reason: z.string().max(2000).optional(),
-    patch: z.object({ name: z.string().min(1).max(255).optional(), moduleId: id.optional(), prerequisite: z.string().optional(), description: z.string().optional(), tags: z.array(z.string()).max(100).optional(), steps: z.array(z.record(z.unknown())).optional(), customFields: z.record(z.unknown()).optional(), priority: z.string().optional() }).strict().refine(value => Object.keys(value).length > 0, "patch must not be empty"),
+    patch: z.object({ name: z.string().min(1).max(255).optional(), moduleId: z.string().nullable().optional(), prerequisite: z.string().nullable().optional(), description: z.string().nullable().optional(), tags: z.array(z.string()).nullable().optional(), steps: z.array(z.object({id:z.string().nullable().optional(),num:z.number().int().nullable().optional(),desc:z.string().nullable().optional(),expected:z.string().nullable().optional(),actualResult:z.string().nullable().optional(),executeResult:z.string().nullable().optional()}).strict()).nullable().optional(), customFields: z.record(z.unknown()).nullable().optional(), priority: z.string().nullable().optional() }).strict().refine(value => Object.keys(value).length > 0, "patch must not be empty"),
   }),
   tool("metersphere.functional.comment.create", "Create a comment/reply. uploadFileIds are temporary attachment IDs, not storage file IDs.", {
     ...resource, content: z.string().min(1).max(20000), requestId,

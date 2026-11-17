@@ -124,7 +124,9 @@
       ><span :data-relation-result="`plan-${record.id}`" tabindex="-1"
         ><PlanReviewListCell side="plan" :value="record.planReviewRelation" :group="record.type === 'GROUP'" /></span
     ></template>
-    <template #hifoxHandoff="{ record }"><HandoffListCell :value="record.planReviewRelation?.handoff" :group="record.type === 'GROUP'" /></template>
+    <template #hifoxHandoff="{ record }"
+      ><HandoffListCell :value="record.planReviewRelation?.handoff" :group="record.type === 'GROUP'"
+    /></template>
     <template #name="{ record }">
       <a-button
         v-if="record.type === testPlanTypeEnum.TEST_PLAN"
@@ -403,13 +405,13 @@
   import MsTableMoreAction from '@/components/pure/ms-table-more-action/index.vue';
   import { ActionsItem } from '@/components/pure/ms-table-more-action/types';
   import MsTag from '@/components/pure/ms-tag/ms-tag.vue';
+  import HandoffListCell from '@/components/business/hifox-handoff/listCell.vue';
   import MsRichMessage from '@/components/business/ms-rich-message/index.vue';
   import MsStatusTag from '@/components/business/ms-status-tag/index.vue';
   import PlanReviewCopyDialog from '@/components/business/plan-review/copyDialog.vue';
   import PlanReviewLegacyMigrationPanel from '@/components/business/plan-review/legacyMigrationPanel.vue';
   import PlanReviewListCell from '@/components/business/plan-review/listCell.vue';
   import PlanReviewListToolbar from '@/components/business/plan-review/listToolbar.vue';
-  import HandoffListCell from '@/components/business/hifox-handoff/listCell.vue';
   import executeHistoryTable from '../detail/executeHistory/index.vue';
   import ActionModal from './actionModal.vue';
   import BatchEditModal from './batchEditModal.vue';

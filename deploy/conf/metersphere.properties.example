@@ -25,3 +25,7 @@ jmeter.home=/opt/jmeter
 run.mode=standalone
 logger.level=INFO
 logger.sql.level=info
+
+# MCP calls exceeding this duration emit a warning with traceId/tool/outcome (no arguments).
+agent.mcp.observation.slow-threshold-ms=1000
+# Per-stage details: enable DEBUG for io.metersphere.agent.service.AgentMcpTiming temporarily.

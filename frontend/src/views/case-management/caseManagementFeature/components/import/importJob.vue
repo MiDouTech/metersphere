@@ -34,10 +34,7 @@
             ></template
           >
         </template>
-        <a-alert
-          v-if="!followupOptions.canCreate"
-          type="warning"
-          class="mb-2"
+        <a-alert v-if="!followupOptions.canCreate" type="warning" class="mb-2"
           >当前账号缺少创建或关联权限；可选择仅导入，已有任务结果不会因此回滚。</a-alert
         >
         <a-select

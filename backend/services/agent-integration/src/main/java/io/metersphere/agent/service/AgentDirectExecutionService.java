@@ -59,6 +59,11 @@ public class AgentDirectExecutionService {
                 "policy",parse(policy.rulesJson()),"comparison","NONE_AGENT_REPORTED",
                 "validationMode",VALIDATION_MODE,"resultSource","AGENT_REPORTED",
                 "instructions","One case image is sufficient; contentHash, policyHash, stepNum/purpose binding are optional. Cover every original step by its 1-based position at least once. Extra and repeated steps are retained and allowed. Report observed actual and SUCCESS or ERROR; text is not compared with expected. Any ERROR, including repeats or extras, makes the case ERROR. Evidence rules still apply. No task, lease or content reviewer required; structure acceptance does not prove execution."));
+        response.put("workflow", List.of(
+                Map.of("tool", "metersphere.functional.execution.evidence.upload", "output", "evidenceId"),
+                Map.of("tool", "metersphere.functional.execution.submit", "output", "submissionId"),
+                Map.of("tool", "metersphere.functional.execution.get", "input", "submissionId")));
+        response.put("recovery", Map.of("tool", "metersphere.operation.get", "reuseOriginalRequestId", true, "notFoundMeans", "UNKNOWN"));
         response.put("writesEnabled",writesEnabled);response.put("evidenceScope","CASE");response.put("minimumEvidenceCount",1);response.put("maximumEvidenceCount",10);
         response.put("stepEvidenceRequired",false);response.put("clientHashesRequired",false);
         response.put("effectiveEvidencePolicy",Map.of("ruleVersion","case-image-v1","scope","CASE",
@@ -73,27 +78,32 @@ public class AgentDirectExecutionService {
 
     public Map<String,Object> upload(Map<String,Object> input) {
         var args=canonicalArguments(input);
+        authorize(args,true);
+        var replay=operations.completed("functional.execution.evidence.upload",string(args,"requestId"),args,Map.class,()->authorize(args,true));
+        if(replay.isPresent()) return evidenceState(args,replay.get());
+        assertWritesEnabled();
+        byte[] preparedBytes=AgentMcpTiming.measure("image_decode", () -> decodeImage(string(args,"base64"),string(args,"contentType")));
+        String preparedHash=DigestUtils.sha256Hex(preparedBytes);
         var response=operations.execute("functional.execution.evidence.upload",string(args,"requestId"),args,Map.class,
                 () -> authorize(args,true), () -> {
                     assertWritesEnabled();
-                    var source=source(args);
+                    var source=AgentMcpTiming.measure("source_read", () -> source(args));
                     if(MAPPER.valueToTree(definition(source)).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length>1048576)fail("STEP_FACTS_LIMIT_EXCEEDED");
                     String name=string(args,"fileName"), type=string(args,"contentType");
                     if(name.length()>200 || name.contains("/") || name.contains("\\") || name.chars().anyMatch(c->c<32 || c=='"')) fail("QUALITY_CASE_EVIDENCE_INVALID");
-                    byte[] bytes=decodeImage(string(args,"base64"),type);
+                    byte[] bytes=preparedBytes;
                     String suffix="image/png".equals(type)?".png":".jpg";
                     if(!(name.toLowerCase(Locale.ROOT).endsWith(suffix) || "image/jpeg".equals(type) && name.toLowerCase(Locale.ROOT).endsWith(".jpeg"))) fail("QUALITY_CASE_EVIDENCE_INVALID");
                     var token=AgentTokenContext.get();
                     // Serialize a token's pending upload quota, including concurrent requests.
-                    jdbc.queryForList("SELECT id FROM agent_token WHERE id=? FOR UPDATE",token.getId());
-                    Long pending=jdbc.queryForObject("SELECT COALESCE(SUM(size_bytes),0) FROM agent_case_evidence WHERE token_id=? AND submission_id IS NULL AND expires_at>?",Long.class,token.getId(),System.currentTimeMillis());
-                    if(pending!=null && pending+bytes.length>50L*1024*1024) fail("STEP_FACTS_LIMIT_EXCEEDED");
-                    Long physical=jdbc.queryForObject("SELECT COALESCE(SUM(size_bytes),0) FROM agent_case_evidence WHERE token_id=? AND submission_id IS NULL",Long.class,token.getId());
-                    if(physical!=null && physical+bytes.length>100L*1024*1024) fail("STEP_FACTS_LIMIT_EXCEEDED");
+                    AgentMcpTiming.measure("upload_quota_lock", () -> jdbc.queryForList("SELECT id FROM agent_token WHERE id=? FOR UPDATE",token.getId()));
+                    var quota=AgentMcpTiming.measure("upload_quota_sum", () -> jdbc.queryForMap("SELECT COALESCE(SUM(CASE WHEN expires_at>? THEN size_bytes ELSE 0 END),0) AS active_bytes, COALESCE(SUM(size_bytes),0) AS physical_bytes FROM agent_case_evidence WHERE token_id=? AND submission_id IS NULL",System.currentTimeMillis(),token.getId()));
+                    if(((Number)quota.get("active_bytes")).longValue()+bytes.length>50L*1024*1024
+                            || ((Number)quota.get("physical_bytes")).longValue()+bytes.length>100L*1024*1024) fail("STEP_FACTS_LIMIT_EXCEEDED");
                     String id=UUID.randomUUID().toString(); long now=System.currentTimeMillis();
                     jdbc.update("INSERT INTO agent_case_evidence(id,token_id,user_id,project_id,case_id,content_hash,step_num,purpose,file_name,content_type,size_bytes,sha256,payload,create_time,expires_at,evidence_scope,definition_hash_version,definition_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                            id,token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),hash(source),null,null,name,type,bytes.length,DigestUtils.sha256Hex(bytes),bytes,now,now+86400000L,"CASE","definition-v2",cipher.protect(MAPPER.valueToTree(definition(source)).toString()));
-                    return Map.of("evidenceId",id,"sha256",DigestUtils.sha256Hex(bytes),"sizeBytes",bytes.length,"expiresAt",now+86400000L,"evidenceScope","CASE","caseId",args.get("caseId"),"projectId",args.get("projectId"));
+                            id,token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),hash(source),null,null,name,type,bytes.length,preparedHash,bytes,now,now+86400000L,"CASE","definition-v2",cipher.protect(MAPPER.valueToTree(definition(source)).toString()));
+                    return Map.of("evidenceId",id,"sha256",preparedHash,"sizeBytes",bytes.length,"expiresAt",now+86400000L,"evidenceScope","CASE","caseId",args.get("caseId"),"projectId",args.get("projectId"));
                 });
         return evidenceState(args,response);
     }
@@ -146,7 +156,8 @@ public class AgentDirectExecutionService {
                     assertWritesEnabled();
                     // Same case row as normal editing; no stale source may be published.
                     jdbc.queryForList("SELECT id FROM functional_case WHERE id=? FOR UPDATE",args.get("caseId"));
-                    var source=source(args);
+                    var source=AgentMcpTiming.measure("source_read", () -> source(args));
+                    String sourceHash=hash(source);
 
                     JsonNode steps=MAPPER.valueToTree(args.get("steps"));
                     requireStepCoverage(steps,source.getSteps().size());
@@ -154,14 +165,15 @@ public class AgentDirectExecutionService {
                     Set<String> evidenceIds=collectEvidence(args,steps);
                     List<Map<String,Object>> evidence=new ArrayList<>(); boolean failed=false;
                     long totalBytes=0;
-                    for(String evidenceId:new TreeSet<>(evidenceIds)) {
-                        var rows=jdbc.queryForList("SELECT id,file_name,content_type,size_bytes,sha256,evidence_scope,definition_hash_version,content_hash FROM agent_case_evidence WHERE id=? AND token_id=? AND user_id=? AND project_id=? AND case_id=? AND submission_id IS NULL AND expires_at>? FOR UPDATE",
-                                evidenceId,token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),now);
-                        if(rows.size()!=1) fail("QUALITY_CASE_EVIDENCE_INVALID");
-                        var file=rows.getFirst();
+                    var orderedIds=new ArrayList<>(new TreeSet<>(evidenceIds));
+                    var parameters=new ArrayList<Object>(orderedIds);
+                    parameters.addAll(List.of(token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),now));
+                    var evidenceRows=AgentMcpTiming.measure("evidence_lock_read", () -> jdbc.queryForList("SELECT id,file_name,content_type,size_bytes,sha256,evidence_scope,definition_hash_version,content_hash FROM agent_case_evidence WHERE id IN ("+String.join(",",Collections.nCopies(orderedIds.size(),"?"))+") AND token_id=? AND user_id=? AND project_id=? AND case_id=? AND submission_id IS NULL AND expires_at>? ORDER BY id FOR UPDATE",parameters.toArray()));
+                    if(evidenceRows.size()!=orderedIds.size()) fail("QUALITY_CASE_EVIDENCE_INVALID");
+                    for(var file:evidenceRows) {
                         String algorithm=Objects.toString(file.get("definition_hash_version"),"legacy-dto-v1");
                         if("definition-v2".equals(algorithm)) {
-                            if(!hash(source).equals(file.get("content_hash"))) fail("VERSION_CONFLICT");
+                            if(!sourceHash.equals(file.get("content_hash"))) fail("VERSION_CONFLICT");
                         } else if("legacy-dto-v1".equals(algorithm)) {
                             var legacy=cases.getById(string(args,"caseId"),true,null);
                             legacy.getSteps().forEach(step->{step.setActualResult(null);step.setExecuteResult(null);});
@@ -194,20 +206,24 @@ public class AgentDirectExecutionService {
                     if(encodedFacts.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>1024*1024)
                         fail("STEP_FACTS_LIMIT_EXCEEDED");
                     jdbc.update("INSERT INTO agent_case_submission(id,token_id,user_id,project_id,case_id,content_hash,policy_hash,facts,result,create_time,gate_status,review_code,reviewer_version,definition_hash_version,facts_schema_version) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                            id,token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),hash(source),policy.contentHash(),cipher.protect(encodedFacts),result,now,"ACCEPTED","STRUCTURE_VALIDATED","structure-v1","definition-v2","direct-execution.v2");
-                    for (String evidenceId:evidenceIds) {
-                        jdbc.update("INSERT INTO agent_case_submission_evidence(submission_id,evidence_id,retain_until) VALUES (?,?,?)",
-                                id,evidenceId,now+30L*86400000);
-                    }
+                            id,token.getId(),token.getUserId(),args.get("projectId"),args.get("caseId"),sourceHash,policy.contentHash(),cipher.protect(encodedFacts),result,now,"ACCEPTED","STRUCTURE_VALIDATED","structure-v1","definition-v2","direct-execution.v2");
+                    jdbc.batchUpdate("INSERT INTO agent_case_submission_evidence(submission_id,evidence_id,retain_until) VALUES (?,?,?)",
+                            orderedIds.stream().map(evidenceId -> new Object[]{id,evidenceId,now+30L*86400000}).toList());
                     var publishedAttachments=new ArrayList<Map<String,Object>>();
+                    var attachmentRows=new ArrayList<Object[]>();
+                    var consumedRows=new ArrayList<Object[]>();
                     for(var file:evidence) {
                         String association=UUID.randomUUID().toString();
                         publishedAttachments.add(Map.of("evidenceId",file.get("id"),"fileId",file.get("id"),"associationId",association,"fileName",file.get("file_name"),"contentType",file.get("content_type"),"sizeBytes",file.get("size_bytes"),"sha256",file.get("sha256"),"submissionId",id));
-                        jdbc.update("UPDATE agent_case_evidence SET submission_id=? WHERE id=?",id,file.get("id"));
-                        jdbc.update("INSERT INTO functional_case_attachment(id,case_id,file_id,file_name,size,local,create_user,create_time,file_source) VALUES (?,?,?,?,?,1,?,?, 'ATTACHMENT')",
-                                association,args.get("caseId"),file.get("id"),file.get("file_name"),file.get("size_bytes"),token.getUserId(),now);
+                        consumedRows.add(new Object[]{id,file.get("id")});
+                        attachmentRows.add(new Object[]{association,args.get("caseId"),file.get("id"),file.get("file_name"),file.get("size_bytes"),token.getUserId(),now});
                     }
-                    definitions.publishPersonalExecution(string(args,"projectId"),string(args,"caseId"),id,result,token.getUserId(),now);
+                    jdbc.batchUpdate("UPDATE agent_case_evidence SET submission_id=? WHERE id=?",consumedRows);
+                    jdbc.batchUpdate("INSERT INTO functional_case_attachment(id,case_id,file_id,file_name,size,local,create_user,create_time,file_source) VALUES (?,?,?,?,?,1,?,?, 'ATTACHMENT')",attachmentRows);
+                    AgentMcpTiming.measure("publish_case_and_plans", () -> {
+                        definitions.publishPersonalExecution(string(args,"projectId"),string(args,"caseId"),id,result,token.getUserId(),now);
+                        return null;
+                    });
                     var response=new LinkedHashMap<String,Object>(Map.of("submissionId",id,"caseId",args.get("caseId"),"result",result,"gateStatus","ACCEPTED","publishStatus","PUBLISHED","attachmentIds",evidenceIds,"policyHash",policy.contentHash(),"validationMode",VALIDATION_MODE,"resultSource","AGENT_REPORTED"));
                     response.put("evidenceIds",evidenceIds);response.put("evidenceScope","CASE");response.put("attachments",publishedAttachments);return response;
                 });
