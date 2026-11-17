@@ -246,3 +246,14 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 ### 部分正文读取失败
 
 原生接口与Node透传的用例检索结果可能包含`contentError`。`CASE_BODY_INVALID`表示历史正文异常；`CASE_CONTENT_READ_LIMIT`表示错误隔离达到读取预算，请缩小范围重试。该行的`steps`为null/缺省，并在顶层warnings中包含`错误码:caseId`；不能把它当作零步骤可执行用例。正常行仍返回正文，单条get仍明确失败。权限、对象消失和数据库异常不会被当作正文错误吞掉。
+
+
+### 编辑与执行结果恢复（2026-11-16）
+
+`metersphere.functional.case.update` 仅编辑定义，patch 明确列出 name/moduleId/prerequisite/description/tags/steps/customFields/priority；未知字段及错误类型返回 CASE_PATCH_FIELD_UNSUPPORTED / CASE_PATCH_TYPE_INVALID，并包含安全字段提示、nextAction 和 traceId。steps 中的历史 actualResult/executeResult 仅为兼容接受，不能替代正式执行提交。
+
+执行流程：execution.contract → execution.evidence.upload → execution.submit → execution.get。一张用例级图片可覆盖全部原始步骤；优先阅读 effectiveEvidencePolicy。提交成功保留原有全关联未归档计划同步语义。
+
+网络中断后使用 metersphere.operation.get，传原 toolName/requestId/projectId/caseId。NOT_FOUND 表示 UNKNOWN，不能据此换 requestId 重复写入。原请求重试必须保留相同参数；字段纠正属于新请求。REQUEST_IN_PROGRESS 的 retryAfterMs 为建议轮询间隔，不是预计完成时间。
+
+后端 agent.mcp.observation.slow-threshold-ms 默认 1000；超过阈值记录工具总耗时，阶段超过 1000ms 记录警告。临时启用 io.metersphere.agent.service.AgentMcpTiming 的 DEBUG 可查看阶段时间。日志不包含参数或图片。SQL 总时间不能直接解释成锁等待，数据库等待需要独立采样。

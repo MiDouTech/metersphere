@@ -13,7 +13,10 @@ public class AgentSafeErrorMapper {
     public AgentApiErrorDTO toApiError(Throwable error, String suppliedTraceId) {
         String requestTrace = StringUtils.defaultIfBlank(suppliedTraceId, org.slf4j.MDC.get("traceId"));
         AgentApiErrorDTO result = mapError(error, requestTrace);
-        result.setDetails(recoveryDetails(result.getCode()));
+        var details = new java.util.LinkedHashMap<String,Object>(result.getDetails());
+        details.putAll(recoveryDetails(result.getCode()));
+        if ("REQUEST_IN_PROGRESS".equals(result.getCode())) details.put("retryAfterMs", 1000);
+        result.setDetails(details);
         return result;
     }
 
@@ -25,7 +28,7 @@ public class AgentSafeErrorMapper {
                     "AGENT_PERMISSION_DENIED", "MCP_TOOL_FORBIDDEN", "AGENT_RESOURCE_NOT_ACCESSIBLE" -> "CHECK_PERMISSION";
             case "REQUEST_IN_PROGRESS", "IDEMPOTENCY_CONFLICT", "IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED" -> "QUERY_OPERATION";
             case "CHECKPOINT_LEASE_INVALID_OR_EXPIRED", "QUALITY_ATTEMPT_INVALID" -> "QUERY_TASK_STATE";
-            case "AGENT_VALIDATION_ERROR", "VALIDATION_ERROR", "CASE_NAME_INVALID", "CASE_PRIORITY_INVALID",
+            case "CASE_PATCH_FIELD_UNSUPPORTED", "CASE_PATCH_TYPE_INVALID", "AGENT_VALIDATION_ERROR", "VALIDATION_ERROR", "CASE_NAME_INVALID", "CASE_PRIORITY_INVALID",
                     "CASE_TEMPLATE_INVALID", "IDEMPOTENCY_KEY_REQUIRED" -> "FIX_INPUT";
             default -> "CONTACT_ADMIN";
         };
@@ -35,6 +38,8 @@ public class AgentSafeErrorMapper {
 
     private AgentApiErrorDTO mapError(Throwable error, String suppliedTraceId) {
         String traceId = StringUtils.defaultIfBlank(suppliedTraceId, UUID.randomUUID().toString());
+        if (error instanceof AgentFieldValidationException fields)
+            return new AgentApiErrorDTO(fields.code(), safeMessage(fields.code()), fields.details(), traceId);
         if (error instanceof io.metersphere.sdk.exception.ModuleNameConflictException)
             return new AgentApiErrorDTO("MODULE_NAME_CONFLICT", "同一父目录下已存在同名目录，请修改名称", Map.of(), traceId);
         if (error instanceof MSException business
@@ -69,6 +74,8 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "CASE_PATCH_FIELD_UNSUPPORTED" -> "部分字段不能通过用例编辑接口修改，请查看允许字段和建议工具";
+            case "CASE_PATCH_TYPE_INVALID" -> "用例修改字段类型或内容不正确，请按字段契约修正";
             case "BUG_EXPORT_DOWNLOAD_FAILED" -> "导出文件读取失败，请保留原fileId和offset，提供traceId联系管理员";
             case "BUG_EXPORT_FILE_CHANGED" -> "导出文件内容与元数据不一致，请停止拼接并提供traceId联系管理员";
             case "AGENT_RATE_LIMITED" -> "请求较多，请等待建议时间后使用原请求标识和原参数重试";

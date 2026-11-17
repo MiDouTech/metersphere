@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-16",
+  "status": "partial",
+  "deployed": false,
+  "backendFocused": {
+    "tests": 24,
+    "failures": 0
+  },
+  "backendPackage": {
+    "tests": 40,
+    "failures": 0,
+    "artifact": "backend/app/target/app-3.x.jar"
+  },
+  "node": {
+    "tests": 34,
+    "failures": 0,
+    "command": "npm.cmd --prefix metersphere-mcp test"
+  },
+  "frontendBuild": {
+    "exitCode": 0,
+    "command": "npm.cmd --prefix frontend run build",
+    "includesFullTypeCheck": true
+  },
+  "frontendFocusedLint": {
+    "exitCode": 0,
+    "warnings": 1,
+    "errors": 0
+  },
+  "composeConfig": {
+    "exitCode": 0
+  },
+  "diffCheck": {
+    "exitCode": 0
+  },
+  "notVerified": [
+    "real MySQL transactions and concurrency",
+    "Docker build/start/health",
+    "UI end-to-end smoke",
+    "performance baseline comparison"
+  ],
+  "notImplemented": [
+    "dedicated quota table",
+    "binary upload protocol",
+    "explicit plan context",
+    "asynchronous plan propagation"
+  ]
+}

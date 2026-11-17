@@ -62,7 +62,19 @@ public class AgentMcpStreamableService {
         throw new MSException("Unsupported MCP notification: " + method);
     }
 
+    @org.springframework.beans.factory.annotation.Value("${agent.mcp.observation.slow-threshold-ms:1000}")
+    private long slowThresholdMs=1000;
+
     public Map<String, Object> handle(Map<String, Object> request, String idempotencyKey) {
+        long started=System.nanoTime();
+        String previousTrace=org.slf4j.MDC.get("traceId");
+        if (org.apache.commons.lang3.StringUtils.isBlank(previousTrace))
+            org.slf4j.MDC.put("traceId",java.util.UUID.randomUUID().toString());
+        String outcome="SUCCESS";
+        String observedTool="UNKNOWN";
+        Object rawParams=request.get("params");
+        if(rawParams instanceof Map<?,?> params && params.get("name") instanceof String name
+                && name.matches("metersphere[.][a-zA-Z0-9_.]{1,100}")) observedTool=name;
         Object id = request.get("id");
         String method = StringUtils.defaultString((String) request.get("method"));
         try {
@@ -78,13 +90,23 @@ public class AgentMcpStreamableService {
                 default -> error(id, -32601, "Unsupported MCP method: " + method, null);
             };
         } catch (MSException ex) {
+            outcome="ERROR";
             var safe = safeErrorMapper.toApiError(ex, null);
             LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32001, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         } catch (Exception ex) {
+            outcome="ERROR";
             var safe = safeErrorMapper.toApiError(ex, null);
             LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32603, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
+        } finally {
+            long elapsedMs=(System.nanoTime()-started)/1_000_000;
+            if("tools/call".equals(method)) {
+                if(elapsedMs>=slowThresholdMs) LOG.warn("MCP timing traceId={} tool={} outcome={} durationMs={}",org.slf4j.MDC.get("traceId"),observedTool,outcome,elapsedMs);
+                else LOG.debug("MCP timing traceId={} tool={} outcome={} durationMs={}",org.slf4j.MDC.get("traceId"),observedTool,outcome,elapsedMs);
+            }
+            if(previousTrace==null) org.slf4j.MDC.remove("traceId");
+            else org.slf4j.MDC.put("traceId",previousTrace);
         }
     }
 

@@ -22,7 +22,7 @@ public class FunctionalCaseUpdateToolHandler implements AgentMcpToolHandler {
 
     @Override
     public String description() {
-        return "Update a functional test case with a partial patch.";
+        return "Edit case definition fields only: name, moduleId, prerequisite, description, tags, steps, customFields, priority. For execution results use execution.contract, evidence.upload, execution.submit; after response loss query metersphere.operation.get with the original requestId.";
     }
 
     @Override
@@ -37,7 +37,7 @@ public class FunctionalCaseUpdateToolHandler implements AgentMcpToolHandler {
                         "projectId", AgentMcpToolSchemas.string(1, 128),
                         "caseId", AgentMcpToolSchemas.string(1, 128),
                         "expectedUpdateTime", AgentMcpToolSchemas.number(),
-                        "patch", AgentMcpToolSchemas.objectAny(),
+                        "patch", io.metersphere.agent.service.FunctionalCasePatchContract.schema(),
                         "requestId", AgentMcpToolSchemas.string(1, 128),
                         "reason", AgentMcpToolSchemas.string(1, 2000)
                 ),

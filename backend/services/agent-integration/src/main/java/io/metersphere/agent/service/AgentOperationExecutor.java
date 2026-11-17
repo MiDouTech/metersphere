@@ -51,7 +51,7 @@ public class AgentOperationExecutor {
         String hash=hash(arguments);
         String storedKey=storedKey(token.getId(),operation,requestId);
         try {
-            return transaction.execute(status->{
+            return AgentMcpTiming.measure("write_transaction", () -> transaction.execute(status->{
                 authorize.run();
                 // Older dispatchers used the public tool name; do not let renaming repeat those writes.
                 var legacyRows=new ArrayList<Map<String,Object>>();
@@ -82,11 +82,11 @@ public class AgentOperationExecutor {
                     if(!"SUCCEEDED".equals(row.get("status")))throw new MSException("RUNNING".equals(row.get("status"))?"REQUEST_IN_PROGRESS":"IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED");
                     authorize.run();return read((String)row.get("response_json"),resultType);
                 }
-                T result=action.get();String encoded=write(result);
+                T result=AgentMcpTiming.measure("write_business", action);String encoded=write(result);
                 if(encoded.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>1048576)throw new MSException("AGENT_RESULT_LIMIT_EXCEEDED");
                 jdbc.update("UPDATE agent_idempotency_record SET response_json=?,status='SUCCEEDED',completed_time=? WHERE id=?",encoded,System.currentTimeMillis(),id);
                 return result;
-            });
+            }));
         } catch(org.springframework.dao.PessimisticLockingFailureException | org.springframework.transaction.TransactionTimedOutException busy) {
             throw new MSException("REQUEST_IN_PROGRESS");
         }

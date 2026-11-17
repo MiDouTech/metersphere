@@ -99,6 +99,7 @@ public class AgentCaseManageService {
 
     @SuppressWarnings("unchecked")
     public Object update(Map<String, Object> arguments) {
+        FunctionalCasePatchContract.validate(arguments.get("patch"));
         return operations.execute("functional.case.update", (String) arguments.get("requestId"), arguments, Map.class,
                 () -> access.caseProject(requiredString(arguments,"caseId"), requiredString(arguments,"projectId"),
                         "FUNCTIONAL_CASE:READ+UPDATE", true, io.metersphere.agent.constants.AgentTokenScope.CASE_UPDATE),

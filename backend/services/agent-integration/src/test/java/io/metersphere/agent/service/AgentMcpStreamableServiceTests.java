@@ -10,6 +10,24 @@ import java.util.Map;
 
 class AgentMcpStreamableServiceTests {
     @Test
+    void correlationIsReturnedOnFailureAndThreadContextIsRestored() {
+        String old=org.slf4j.MDC.get("traceId");
+        try {
+            org.slf4j.MDC.remove("traceId");
+            var failed=service.handle(Map.of("id",1,"method","tools/call","params",
+                    Map.of("name","metersphere.execution.trigger.fire","arguments",Map.of())));
+            var data=(Map<?,?>)((Map<?,?>)failed.get("error")).get("data");
+            Assertions.assertNotNull(data.get("traceId"));
+            Assertions.assertNull(org.slf4j.MDC.get("traceId"));
+            org.slf4j.MDC.put("traceId","outer-trace");
+            service.handle(Map.of("id",2,"method","ping"));
+            Assertions.assertEquals("outer-trace",org.slf4j.MDC.get("traceId"));
+        } finally {
+            if(old==null)org.slf4j.MDC.remove("traceId");else org.slf4j.MDC.put("traceId",old);
+        }
+    }
+
+    @Test
     void genericWriteDiscoveryContainsUsableIdempotencyKeyWithoutChangingStateProtocols() {
         var registry=org.mockito.Mockito.mock(io.metersphere.agent.tool.AgentMcpToolRegistry.class);
         var handler=org.mockito.Mockito.mock(io.metersphere.agent.tool.AgentMcpToolHandler.class);
