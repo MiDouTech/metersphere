@@ -16,6 +16,11 @@ public class AgentFactCipher {
     @Value("${agent.execution.facts-key:}") private String encodedKey="";
     public String protect(String value){
         if(value==null || !sensitive(value))return value;
+        return protectAll(value);
+    }
+    /** New governed facts are always encrypted; legacy callers retain their existing conditional behavior. */
+    public String protectAll(String value){
+        if(value==null)return null;
         try {
             byte[] iv=new byte[12];new SecureRandom().nextBytes(iv);Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE,key(),new GCMParameterSpec(128,iv));

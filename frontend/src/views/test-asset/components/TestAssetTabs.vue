@@ -16,6 +16,11 @@
   const route = useRoute();
   const router = useRouter();
   const tabs = computed(() => [
+    { key: 'knowledge', title: '业务知识' },
+    { key: 'governed-execution', title: '受控执行' },
+    ...(hasAnyPermission(['ORGANIZATION_USER_ROLE:READ', 'SYSTEM_USER_ROLE:READ'])
+      ? [{ key: 'protocol-administration', title: '执行授权' }]
+      : []),
     ...(hasAnyPermission(['FUNCTIONAL_CASE_AI:READ']) ? [{ key: 'documents', title: '业务文档' }] : []),
     ...(hasAnyPermission(['CASE_ASSET:READ']) ? [{ key: 'cases', title: '用例资产' }] : []),
     ...(hasAnyPermission(['PROJECT_FILE_MANAGEMENT:READ']) ? [{ key: 'datasets', title: '测试数据' }] : []),

@@ -1,3 +1,4 @@
+import useAppStore from '@/store/modules/app';
 import { hasAnyPermission, hasPageVisible, hasRouteVisible } from '@/utils/permission';
 
 import { TestAssetRouteEnum } from '@/enums/routeEnum';
@@ -37,7 +38,7 @@ function resolveDefaultTestAssetPath() {
     hasRouteVisible('testAssetDatasets')
   )
     return '/test-assets/datasets';
-  return '/no-resource';
+  return useAppStore().currentOrgId ? '/test-assets/knowledge' : '/no-resource';
 }
 
 const TestAsset: AppRouteRecordRaw = {
@@ -54,6 +55,29 @@ const TestAsset: AppRouteRecordRaw = {
     roles: readRoles,
   },
   children: [
+    {
+      path: 'governed-execution',
+      name: 'governedExecution',
+      component: () => import('@/views/execution/governed-session.vue'),
+      meta: { locale: '受控执行', contextScope: 'ORGANIZATION', roles: [], isTopMenu: true },
+    },
+    {
+      path: 'protocol-administration',
+      name: 'protocolAdministration',
+      component: () => import('@/views/execution/protocol-administration.vue'),
+      meta: {
+        locale: '受控执行授权',
+        contextScope: 'ORGANIZATION',
+        roles: ['ORGANIZATION_USER_ROLE:READ', 'SYSTEM_USER_ROLE:READ'],
+        isTopMenu: true,
+      },
+    },
+    {
+      path: 'knowledge',
+      name: 'testAssetKnowledge',
+      component: () => import('@/views/test-asset/knowledge/index.vue'),
+      meta: { locale: '业务知识', contextScope: 'ORGANIZATION', roles: [], isTopMenu: true },
+    },
     {
       path: 'documents',
       name: TestAssetRouteEnum.TEST_ASSET_DOCUMENTS,

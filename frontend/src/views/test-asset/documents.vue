@@ -126,6 +126,8 @@
             <template #cell="{ record }">
               <a-space>
                 <a-link @click="openDetail(record)">详情</a-link>
+                <a-link :disabled="!record.assetVersionId" @click="readDocument(record)">阅读内容</a-link>
+                <a-link :disabled="!record.assetVersionId" @click="extractKnowledge(record)">提取知识</a-link>
                 <a-link v-permission="['FUNCTIONAL_CASE_AI:READ']" @click="downloadDocument(record)">下载</a-link>
                 <a-link
                   v-if="record.parseStatus === 'FAILED'"
@@ -148,6 +150,22 @@
       </a-table>
     </MsCard>
 
+    <a-modal
+      v-model:visible="contentVisible"
+      :title="contentDocument?.originalName || '来源文档'"
+      :width="960"
+      :footer="false"
+    >
+      <a-spin :loading="contentLoading" class="block"
+        ><a-alert v-if="contentParseFailed" type="warning" class="mb-3"
+          >内容无法结构化解析，原内容和下载入口保留。</a-alert
+        ><ContentReader :value="contentValue" /><a-space class="mt-4"
+          ><a-button v-if="contentDocument" @click="downloadDocument(contentDocument)">下载原件</a-button
+          ><a-button :loading="hashLoading" @click="verifyOriginal">核对原件完整性</a-button
+          ><span>{{ originalIntegrity }}</span></a-space
+        ></a-spin
+      >
+    </a-modal>
     <a-drawer v-model:visible="detailVisible" title="业务文档详情" :width="560" unmount-on-close>
       <a-spin :loading="detailLoading" class="block">
         <a-descriptions v-if="detail" :column="1" bordered>
@@ -200,6 +218,7 @@
   import dayjs from 'dayjs';
 
   import TestAssetPage from './components/TestAssetPage.vue';
+  import ContentReader from './knowledge/ContentReader.vue';
 
   import type {
     TestAssetCategory,
@@ -221,6 +240,7 @@
     retryAiSourceDocument,
     uploadAiSourceDocument,
   } from '@/api/modules/case-management/caseGenerate';
+  import { previewSource } from '@/api/modules/governed-execution';
   import useAppStore from '@/store/modules/app';
   import { downloadByteFile } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
@@ -237,6 +257,77 @@
   const detailLoading = ref(false);
   const detail = ref<AiSourceDocument>();
   const detailMetadata = ref<TestAssetMetadata>();
+  const contentVisible = ref(false);
+  const contentLoading = ref(false);
+  const contentValue = ref<unknown>();
+  const contentDocument = ref<TestAssetDocument>();
+  const contentParseFailed = ref(false);
+  const hashLoading = ref(false);
+  const originalIntegrity = ref('未核对原件；快照哈希不代表原件哈希');
+  async function readDocument(document: TestAssetDocument) {
+    if (!document.assetVersionId) return;
+    const org = appStore.currentOrgId;
+    const project = appStore.currentProjectId;
+    contentVisible.value = true;
+    contentLoading.value = true;
+    contentDocument.value = document;
+    contentValue.value = undefined;
+    originalIntegrity.value = '未核对原件；快照哈希不代表原件哈希';
+    try {
+      const result = await previewSource(document.projectId, document.id, document.assetVersionId);
+      if (
+        org !== appStore.currentOrgId ||
+        project !== appStore.currentProjectId ||
+        contentDocument.value?.id !== document.id
+      )
+        return;
+      contentValue.value = result.content;
+      contentParseFailed.value = result.parseStatus !== 'PARSED';
+    } catch {
+      contentValue.value = undefined;
+      contentVisible.value = false;
+    } finally {
+      contentLoading.value = false;
+    }
+  }
+  function extractKnowledge(document: TestAssetDocument) {
+    router.push({
+      path: '/test-assets/knowledge',
+      query: { sourceProject: document.projectId, sourceAsset: document.id, sourceVersion: document.assetVersionId },
+    });
+  }
+  async function verifyOriginal() {
+    const document = contentDocument.value;
+    if (!document) return;
+    if (!document.sha256) {
+      originalIntegrity.value = '缺少原件哈希，未验证';
+      return;
+    }
+    if (!crypto.subtle) {
+      originalIntegrity.value = '当前连接不支持安全哈希核验，请通过安全连接访问；原件尚未验证';
+      return;
+    }
+    const org = appStore.currentOrgId;
+    const project = appStore.currentProjectId;
+    hashLoading.value = true;
+    try {
+      const bytes = await downloadAiSourceDocument({ projectId: document.projectId, id: document.id });
+      const digest = await crypto.subtle.digest('SHA-256', await new Blob([bytes]).arrayBuffer());
+      if (
+        org !== appStore.currentOrgId ||
+        project !== appStore.currentProjectId ||
+        contentDocument.value?.id !== document.id
+      )
+        return;
+      const actual = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+      originalIntegrity.value =
+        actual.toLowerCase() === document.sha256.toLowerCase()
+          ? '本次读取的原件哈希一致'
+          : '原件哈希不一致，请停止使用并联系管理员';
+    } finally {
+      hashLoading.value = false;
+    }
+  }
   const categories = ref<TestAssetCategory[]>([]);
   const documents = ref<TestAssetDocument[]>([]);
   const selectedDocumentIds = ref<string[]>([]);
@@ -404,6 +495,9 @@
   watch(
     () => appStore.currentProjectId,
     () => {
+      contentVisible.value = false;
+      contentValue.value = undefined;
+      contentDocument.value = undefined;
       query.current = 1;
       load();
     }

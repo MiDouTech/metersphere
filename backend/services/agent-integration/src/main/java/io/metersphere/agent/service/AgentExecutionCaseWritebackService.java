@@ -39,13 +39,30 @@ public class AgentExecutionCaseWritebackService {
     private FunctionalCaseMapper functionalCaseMapper;
     @Resource
     private FunctionalCaseService functionalCaseService;
+    @Resource private org.springframework.jdbc.core.JdbcTemplate protocolJdbc;
+    @Resource private AgentProtocolStore protocolStore;
+    @Resource private AgentProtocolAccess protocolAccess;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void writeback(AgentExecutionTaskDTO task, AgentExecutionCaseDTO executionCase,
                           List<AgentExecutionStepDTO> steps) {
+        finalization.requireLegacyWriteback(task.getId());
+        writebackVersion(task,executionCase,steps,"v1");
+    }
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public void writebackGoverned(AgentExecutionTaskDTO task,AgentExecutionCaseDTO executionCase,List<AgentExecutionStepDTO> steps,String instanceId,long resultVersion) {
+        var accepted=protocolJdbc.queryForList("SELECT i.payload,s.organization_id,s.environment_id,s.owner_id,s.project_id FROM msp_protocol_instance i JOIN msp_protocol_session s ON s.id=i.session_id WHERE i.id=? AND i.result_version=? AND i.verification='ACCEPTED' AND i.source_case_id=? AND s.source_id=? AND s.source_execution_id=? FOR UPDATE",instanceId,resultVersion,executionCase.getId(),task.getId(),task.getCurrentExecutionId());
+        if(accepted.size()!=1)throw new MSException("PROTOCOL_RESULT_NOT_ACCEPTED");
+        var context=accepted.getFirst();var facts=protocolStore.data(context);
+        protocolAccess.requireAcceptedReviewer(context,facts);
+        if(Boolean.TRUE.equals(facts.get("disputed")))throw new MSException("PROTOCOL_CORRECTION_REQUIRED");
+        protocolAccess.requireTaskSourceWrite((String)context.get("owner_id"),(String)context.get("project_id"),(String)context.get("organization_id"),(String)context.get("environment_id"));
+        writebackVersion(task,executionCase,steps,"governed-"+org.apache.commons.codec.digest.DigestUtils.sha256Hex(instanceId+":"+resultVersion).substring(0,16));
+    }
+    private void writebackVersion(AgentExecutionTaskDTO task,AgentExecutionCaseDTO executionCase,List<AgentExecutionStepDTO> steps,String suffix) {
         finalization.beginSync(task,executionCase);
         String idempotencyKey = "ai-webui:" + task.getId() + ":" + task.getCurrentExecutionId() + ":" + executionCase.getCaseId()
-                + ":attempt-" + (executionCase.getRetryCount() == null ? 0 : executionCase.getRetryCount()) + ":v1";
+                + ":attempt-" + (executionCase.getRetryCount() == null ? 0 : executionCase.getRetryCount()) + ":"+suffix;
         String result = toPlatformResult(executionCase.getStatus());
         if (executionMapper.countWritebackIdempotency(task.getId(), executionCase.getCaseId(), idempotencyKey) > 0) {
             executionMapper.updateCaseWritebackStatus(task.getId(), executionCase.getCaseId(),

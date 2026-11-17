@@ -29,6 +29,17 @@ function setupPageGuard(router: Router) {
     if (urlOrgId) {
       appStore.setCurrentOrgId(urlOrgId as string);
     }
+    if (to.meta.contextScope === 'ORGANIZATION') {
+      if (urlOrgId === undefined || urlProjectId !== undefined) {
+        const organizationQuery = { ...to.query };
+        delete organizationQuery.pId;
+        to.query = { ...organizationQuery, orgId: urlOrgId || appStore.currentOrgId };
+        next(to);
+        return;
+      }
+      next();
+      return;
+    }
     if (urlProjectId) {
       appStore.setCurrentProjectId(urlProjectId as string);
     }

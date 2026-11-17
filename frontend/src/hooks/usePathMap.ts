@@ -64,6 +64,8 @@ export default function usePathMap() {
    * @returns MENU_LEVEL
    */
   const getRouteLevelByKey = (name: PathMapRoute) => {
+    if (router.getRoutes().find((record) => record.name === name)?.meta.contextScope === 'ORGANIZATION')
+      return MENU_LEVEL[1];
     const pathNode = findNodeByKey<PathMapItem>(pathMap, name, 'route');
     if (pathNode) {
       return pathNode.level;
