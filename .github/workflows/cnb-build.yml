@@ -110,7 +110,10 @@ jobs:
           VITE_WECOM_OAUTH_URL: ${{ secrets.VITE_WECOM_OAUTH_URL }}
         shell: bash
         run: |
+          bash scripts/check-build-memory.sh
+          sha256sum pnpm-lock.yaml
           ${{ needs.prepare.outputs.frontend_install_command }}
+          sha256sum pnpm-lock.yaml
           node --max-old-space-size=192 --test scripts/test-selection-toggle.mjs
           node --max-old-space-size=192 scripts/verify-weekly-remediation-sfc.mjs
           ${{ needs.prepare.outputs.frontend_build_command }}

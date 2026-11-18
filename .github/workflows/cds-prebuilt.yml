@@ -41,6 +41,7 @@ jobs:
           corepack enable
           corepack prepare pnpm@8.4.0 --activate
           cd frontend
+          bash scripts/check-build-memory.sh
           pnpm install --no-frozen-lockfile
           pnpm run build
       - uses: docker/login-action@v3
