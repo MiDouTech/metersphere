@@ -28,6 +28,8 @@ jobs:
         with:
           node-version: '20.8.1'
       - name: Build application artifacts
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           set -euo pipefail
           chmod +x mvnw
@@ -39,8 +41,12 @@ jobs:
           corepack enable
           corepack prepare pnpm@8.4.0 --activate
           cd frontend
+          bash scripts/check-build-memory.sh
           pnpm install --no-frozen-lockfile
           pnpm run build
+          node scripts/write-build-manifest.mjs
+          test -s dist/build-manifest.json
+          node scripts/verify-build-manifest.mjs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io

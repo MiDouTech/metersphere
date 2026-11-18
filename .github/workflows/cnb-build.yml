@@ -106,14 +106,19 @@ jobs:
       - name: Build frontend
         working-directory: ${{ needs.prepare.outputs.frontend_context }}
         env:
+          NODE_OPTIONS: --max-old-space-size=6144
           VITE_WECOM_OAUTH_URL: ${{ secrets.VITE_WECOM_OAUTH_URL }}
         shell: bash
         run: |
+          bash scripts/check-build-memory.sh
+          if [ -f pnpm-lock.yaml ]; then sha256sum pnpm-lock.yaml; else echo 'No lockfile in checkout; dependency resolution is not frozen'; fi
           ${{ needs.prepare.outputs.frontend_install_command }}
+          sha256sum pnpm-lock.yaml
           node --max-old-space-size=192 --test scripts/test-selection-toggle.mjs
           node --max-old-space-size=192 scripts/verify-weekly-remediation-sfc.mjs
           ${{ needs.prepare.outputs.frontend_build_command }}
           node scripts/write-build-manifest.mjs
+          node scripts/verify-build-manifest.mjs
 
       - name: Package frontend zip
         shell: bash

@@ -1,0 +1,41 @@
+name: Frontend Verification
+
+on:
+  pull_request:
+    branches: [main, chenqifen, v3.x]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.8.1
+      - run: bash scripts/check-build-memory.sh
+      - run: |
+          if [ -f pnpm-lock.yaml ]; then sha256sum pnpm-lock.yaml; else echo 'No lockfile in checkout; dependency resolution is not frozen'; fi
+          pnpm install --no-frozen-lockfile
+          sha256sum pnpm-lock.yaml
+      - run: pnpm run build
+      - run: node scripts/write-build-manifest.mjs
+      - run: node scripts/verify-build-manifest.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-build-manifest
+          path: frontend/dist/build-manifest.json
+          if-no-files-found: error
