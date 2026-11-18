@@ -106,6 +106,7 @@ jobs:
       - name: Build frontend
         working-directory: ${{ needs.prepare.outputs.frontend_context }}
         env:
+          NODE_OPTIONS: --max-old-space-size=6144
           VITE_WECOM_OAUTH_URL: ${{ secrets.VITE_WECOM_OAUTH_URL }}
         shell: bash
         run: |

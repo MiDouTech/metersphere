@@ -28,6 +28,8 @@ jobs:
         with:
           node-version: '20.8.1'
       - name: Build application artifacts
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           set -euo pipefail
           chmod +x mvnw
