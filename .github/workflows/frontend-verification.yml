@@ -31,9 +31,10 @@ jobs:
           pnpm install --no-frozen-lockfile
           sha256sum pnpm-lock.yaml
       - run: pnpm run build
+      - run: node scripts/write-build-manifest.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: frontend-build-manifest
           path: frontend/dist/build-manifest.json
-          if-no-files-found: ignore
+          if-no-files-found: error
