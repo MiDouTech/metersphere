@@ -46,6 +46,7 @@ jobs:
           pnpm run build
           node scripts/write-build-manifest.mjs
           test -s dist/build-manifest.json
+          node scripts/verify-build-manifest.mjs
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
