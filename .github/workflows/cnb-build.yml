@@ -111,7 +111,7 @@ jobs:
         shell: bash
         run: |
           bash scripts/check-build-memory.sh
-          sha256sum pnpm-lock.yaml
+          if [ -f pnpm-lock.yaml ]; then sha256sum pnpm-lock.yaml; else echo 'No lockfile in checkout; dependency resolution is not frozen'; fi
           ${{ needs.prepare.outputs.frontend_install_command }}
           sha256sum pnpm-lock.yaml
           node --max-old-space-size=192 --test scripts/test-selection-toggle.mjs

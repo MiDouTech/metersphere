@@ -26,7 +26,10 @@ jobs:
         with:
           node-version: 20.8.1
       - run: bash scripts/check-build-memory.sh
-      - run: sha256sum pnpm-lock.yaml && pnpm install --no-frozen-lockfile && sha256sum pnpm-lock.yaml
+      - run: |
+          if [ -f pnpm-lock.yaml ]; then sha256sum pnpm-lock.yaml; else echo 'No lockfile in checkout; dependency resolution is not frozen'; fi
+          pnpm install --no-frozen-lockfile
+          sha256sum pnpm-lock.yaml
       - run: pnpm run build
       - uses: actions/upload-artifact@v4
         if: always()
