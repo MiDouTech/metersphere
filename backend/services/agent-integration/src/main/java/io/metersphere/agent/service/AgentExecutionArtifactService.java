@@ -66,6 +66,7 @@ public class AgentExecutionArtifactService {
     private FunctionalCaseMapper functionalCaseMapper;
     @Resource
     private AgentEvidenceRedactionService redactionService;
+    @Resource private AgentProtocolEvidenceService protocolEvidence;
     @Value("${agent.execution.artifact-max-bytes:5242880}")
     private long artifactMaxBytes = 5L * 1024L * 1024L;
     @Value("${agent.execution.artifact-retention-ms:2592000000}")
@@ -364,16 +365,18 @@ public class AgentExecutionArtifactService {
     }
 
     @Scheduled(initialDelay = 60_000L, fixedDelay = 3_600_000L)
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public void cleanupExpiredArtifacts() {
         for (AgentExecutionArtifactDTO artifact : executionMapper.selectExpiredArtifacts(System.currentTimeMillis(), 200)) {
             try {
+                if(!protocolEvidence.claimTaskDeletion(artifact.getId(),System.currentTimeMillis()))continue;
                 FileRequest request = new FileRequest();
                 request.setFolder(artifact.getStorageFolder() + "/" + artifact.getFileId());
                 request.setFileName(artifact.getFileName());
                 FileCenter.getDefaultRepository().delete(request);
                 executionMapper.markArtifactDeleted(artifact.getId(), "DELETED");
             } catch (Exception ex) {
-                LogUtils.error("AI execution artifact cleanup failed, artifactId={}", artifact.getId(), ex);
+                org.slf4j.LoggerFactory.getLogger(getClass()).warn("Artifact cleanup stage=DELETE code=ARTIFACT_CLEANUP_FAILED artifactId={} rootType={}",artifact.getId(),ex.getClass().getSimpleName());
             }
         }
     }

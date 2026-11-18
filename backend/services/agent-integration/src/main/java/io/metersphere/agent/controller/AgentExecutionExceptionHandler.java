@@ -75,7 +75,11 @@ public class AgentExecutionExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<AgentApiErrorDTO> unknown(Exception error, HttpServletRequest request) {
         String traceId = traceId(request);
-        LOGGER.error("AI execution internal error, traceId={}", traceId, error);
+        if(request.getRequestURI().contains("governed-execution")||request.getRequestURI().contains("test-knowledge")||request.getRequestURI().contains("execution-sessions")) {
+            String state="UNKNOWN";int vendor=0;
+            for(Throwable cause=error;cause!=null;cause=cause.getCause())if(cause instanceof java.sql.SQLException sql){if(sql.getSQLState()!=null&&sql.getSQLState().matches("[A-Za-z0-9]{5}"))state=sql.getSQLState();vendor=sql.getErrorCode();break;}
+            LOGGER.error("Protocol internal error traceId={} stage=HTTP code=PROTOCOL_INTERNAL_ERROR rootType={} sqlState={} vendorCode={}",traceId,error.getClass().getSimpleName(),state,vendor);
+        } else LOGGER.error("AI execution internal error, traceId={}", traceId, error);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapper.toApiError(error, traceId));
     }
 

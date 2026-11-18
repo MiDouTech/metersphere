@@ -92,12 +92,14 @@ public class AgentMcpStreamableService {
         } catch (MSException ex) {
             outcome="ERROR";
             var safe = safeErrorMapper.toApiError(ex, null);
-            LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
+            if(isGovernedProtocol(observedTool))LOG.warn("MCP protocol failed traceId={} code={} rootType={}",safe.getTraceId(),safe.getCode(),ex.getClass().getSimpleName());
+            else LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32001, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         } catch (Exception ex) {
             outcome="ERROR";
             var safe = safeErrorMapper.toApiError(ex, null);
-            LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
+            if(isGovernedProtocol(observedTool))LOG.warn("MCP protocol failed traceId={} code={} rootType={}",safe.getTraceId(),safe.getCode(),ex.getClass().getSimpleName());
+            else LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32603, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         } finally {
             long elapsedMs=(System.nanoTime()-started)/1_000_000;
@@ -133,6 +135,7 @@ public class AgentMcpStreamableService {
     }
 
     private static boolean bypassesGenericIdempotency(String name) {
+        if(isGovernedProtocol(name))return true;
         if (java.util.Set.of("metersphere.project.file.upload.prepare", "metersphere.project.file.upload.chunk",
                 "metersphere.project.file.upload.complete", "metersphere.project.file.upload.cancel").contains(name)) return true;
         return java.util.Set.of(
@@ -202,6 +205,14 @@ public class AgentMcpStreamableService {
         if (token != null && !agentTokenRateLimiter.tryAcquireTool(token.getId(), name)) {
             throw new MSException("AGENT_RATE_LIMITED");
         }
+        if(isGovernedProtocol(name)) {
+            var original=new LinkedHashMap<>(arguments);
+            if(idempotencyKey!=null) {
+                if(original.containsKey("idempotencyKey")&&!idempotencyKey.equals(original.get("idempotencyKey")))throw new MSException("IDEMPOTENCY_CONFLICT");
+                original.put("idempotencyKey",idempotencyKey);
+            }
+            return callToolInternal(name,original);
+        }
         Object rawKey=arguments.get("requestId");
         if(rawKey!=null && (!(rawKey instanceof String) || !((String)rawKey).matches("[A-Za-z0-9_.:-]{1,128}")))throw new MSException("AGENT_VALIDATION_ERROR");
         String argumentKey=(String)rawKey;
@@ -244,6 +255,9 @@ public class AgentMcpStreamableService {
             return response;
         }
         return callToolInternal(name, arguments);
+    }
+    private static boolean isGovernedProtocol(String name) {
+        return name.startsWith("metersphere.functional.execution.session.")||name.startsWith("metersphere.functional.knowledge.");
     }
 
     private Map<String, Object> callToolInternal(String name, Map<String, Object> arguments) {

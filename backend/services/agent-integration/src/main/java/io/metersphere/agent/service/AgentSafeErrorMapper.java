@@ -27,6 +27,10 @@ public class AgentSafeErrorMapper {
     }
 
     private Map<String, Object> recoveryDetails(String code) {
+        if(code.startsWith("PROTOCOL_")){
+            String action=code.contains("UNKNOWN")||code.contains("TERMINAL_PROOF")?"QUERY_ORIGINAL_ACTION":code.contains("LEASE")||code.contains("PREFLIGHT")?"READ_CHECKPOINT":code.contains("EVIDENCE")?"ADD_EVIDENCE":code.contains("CORRECTION")?"REQUEST_INDEPENDENT_CORRECTION":code.contains("CONFIGURATION")||code.contains("POLICY")||code.contains("GOVERNANCE")?"CONTACT_ADMIN":code.contains("BUDGET")?"REQUEST_GOVERNANCE":code.contains("TYPE")||code.contains("FIELD")||code.contains("VARIABLE")?"FIX_INPUT":"READ_CHECKPOINT";
+            return Map.of("retryable",false,"nextAction",action);
+        }
         if (code.equals("BUG_IMAGE_INDEX_STORAGE_UNAVAILABLE")) return Map.of("retryable", true, "nextAction", "REFRESH_BUG");
         if (code.startsWith("BUG_IMAGE_")) return Map.of("retryable", code.equals("BUG_IMAGE_STORAGE_UNAVAILABLE"),
                 "nextAction", code.equals("BUG_IMAGE_STORAGE_UNAVAILABLE") ? "RETRY_IMAGE" : code.equals("BUG_IMAGE_REFERENCE_EXPIRED") ? "REFRESH_BUG" : "FIX_INPUT");
@@ -87,6 +91,17 @@ public class AgentSafeErrorMapper {
 
     private String safeMessage(String code) {
         return switch (code) {
+            case "PROTOCOL_ACTION_UNKNOWN", "PROTOCOL_OPERATION_UNKNOWN" -> "业务结果尚不明确，请查询原对象并补充证据，不要重新执行该动作";
+            case "PROTOCOL_LEASE_INVALID", "PROTOCOL_LEASE_OCCUPIED" -> "当前实例租约已失效或被占用，请读取检查点并重新校验";
+            case "PROTOCOL_PREFLIGHT_REQUIRED", "PROTOCOL_PREFLIGHT_EVIDENCE_REQUIRED" -> "继续前须核实当前账号、环境、授权及前置条件，并提供证据";
+            case "PROTOCOL_CONFIGURATION_INCOMPLETE", "PROTOCOL_POLICY_NOT_ACTIVATED" -> "新协议尚未具备完整批准配置，已阻止新执行，请联系管理员补齐";
+            case "PROTOCOL_CALL_BUDGET_EXHAUSTED", "PROTOCOL_RECOVERY_BUDGET_EXHAUSTED" -> "执行预算已用尽或收紧，新的执行许可暂停；查询、补证和治理仍可使用";
+            case "PROTOCOL_REVIEW_CONFLICT", "PROTOCOL_INDEPENDENCE_UNVERIFIABLE" -> "无法确认复核者的独立自然人资格，请由无利益冲突且已授权的人员处理";
+            case "PROTOCOL_RESULT_NOT_ACCEPTED" -> "结果尚未独立接受，不能正式写回或供依赖使用";
+            case "PROTOCOL_KNOWLEDGE_UNAVAILABLE", "PROTOCOL_UPSTREAM_DISPUTED" -> "所依赖的知识或上游结果不可继续使用，请暂停并完成治理";
+            case "PROTOCOL_SUBSTITUTION_UNPROVEN", "PROTOCOL_NEW_INSTANCE_REQUIRED" -> "替代方案的兼容性尚未证明；请补充独立确认，边界变化须使用新合约与新实例";
+            case "PROTOCOL_FORMAL_SYNC_FAILED" -> "独立核实记录已保留，正式同步失败；请仅重试同步，不要重做业务动作";
+            case "PROTOCOL_TYPE_INVALID", "PROTOCOL_VARIABLE_UNDECLARED", "PROTOCOL_OUTPUT_INCOMPLETE" -> "变量或输出不符合已声明类型，请核对合约及生产实例，不要隐式转换";
             case "CASE_PATCH_FIELD_UNSUPPORTED" -> "部分字段不能通过用例编辑接口修改，请查看允许字段和建议工具";
             case "CASE_PATCH_TYPE_INVALID" -> "用例修改字段类型或内容不正确，请按字段契约修正";
             case "BUG_IMAGE_INDEX_STORAGE_UNAVAILABLE" -> "索引生成时未能绑定图片版本，请刷新缺陷详情后使用新引用读取";

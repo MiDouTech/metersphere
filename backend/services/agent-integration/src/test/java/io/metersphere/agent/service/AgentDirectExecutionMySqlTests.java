@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 @EnabledIfSystemProperty(named="quality.mysql",matches="true")
 class AgentDirectExecutionMySqlTests {
     @Test void realTransactionsGatePublishDownloadRollbackAndReplay() throws Exception {
-        var ds=new SingleConnectionDataSource("jdbc:mysql://127.0.0.1:13326/quality_verify?useSSL=false&allowPublicKeyRetrieval=true","root","quality-test-only",true);
+        var ds=new SingleConnectionDataSource("jdbc:mysql://127.0.0.1:13326/quality_verify?useSSL=false&allowPublicKeyRetrieval=true","root",System.getenv().getOrDefault("PROTOCOL_MYSQL_PASSWORD","quality-test-only"),true);
         String schema="quality_direct_"+UUID.randomUUID().toString().replace("-","");
         try {
             var jdbc=new JdbcTemplate(ds);
@@ -86,6 +86,10 @@ class AgentDirectExecutionMySqlTests {
             jdbc.execute("CREATE TEMPORARY TABLE case_review_functional_case(review_id VARCHAR(64),case_id VARCHAR(64))");
             jdbc.update("INSERT INTO case_review_functional_case VALUES ('review','c')");
             var manager=new DataSourceTransactionManager(ds);
+            jdbc.execute("CREATE TEMPORARY TABLE ai_execution_step_result(id VARCHAR(64) PRIMARY KEY,lease_id VARCHAR(50))");
+            new org.springframework.jdbc.datasource.init.ResourceDatabasePopulator(new org.springframework.core.io.ClassPathResource("migration/3.7.2/ddl/V3.7.2_148__governed_execution_protocol.sql")).execute(ds);
+            var protocolCipher=new AgentFactCipher();byte[] encryptionKey=new byte[32];new java.security.SecureRandom().nextBytes(encryptionKey);ReflectionTestUtils.setField(protocolCipher,"encodedKey",Base64.getEncoder().encodeToString(encryptionKey));
+            var protocolStore=new AgentProtocolStore(jdbc,manager,protocolCipher);var protocolEvidence=new AgentProtocolEvidenceService(jdbc,protocolStore);
             var recount=new io.metersphere.functional.service.FunctionalReviewRecountService(jdbc,manager);
             var effects=new io.metersphere.functional.service.FunctionalImportEffectOutbox(jdbc,manager,null,definitions,null,null);
             ReflectionTestUtils.setField(effects,"reviewRecount",recount);
@@ -104,6 +108,7 @@ class AgentDirectExecutionMySqlTests {
             ReflectionTestUtils.setField(service,"operations",new AgentOperationExecutor(jdbc,new DataSourceTransactionManager(ds)));
             ReflectionTestUtils.setField(service,"gate",new GlobalQualityGate(jdbc,null,new QualityPolicyValidator()));
             ReflectionTestUtils.setField(service,"cipher",new AgentFactCipher());
+            ReflectionTestUtils.setField(service,"protocolEvidence",protocolEvidence);
             var base=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c"));
             var contract=service.contract(base);base.put("contentHash",contract.get("contentHash"));
             var upload=new LinkedHashMap<>(base);upload.putAll(Map.of("stepNum",1,"purpose","BEFORE_STEP","fileName","screen.png","contentType","image/png","base64",AgentDirectExecutionTests.png(),"requestId","before"));
@@ -254,6 +259,24 @@ class AgentDirectExecutionMySqlTests {
             jdbc.update("UPDATE agent_case_current_execution SET submission_id='' WHERE case_id='c'");
             assertTrue(provider.current(detail).isEmpty());
             assertTrue(provider.current(asset).isEmpty());
+            // New protocol retains pending facts without touching the old pointer or any linked plan.
+            detail.setSteps("[{\"num\":1,\"desc\":\"open\",\"result\":\"visible\"}]");
+            var newUpload=new LinkedHashMap<String,Object>(Map.of("projectId","p","caseId","c","requestId","governed-image","fileName","governed.png","contentType","image/png","base64",AgentDirectExecutionTests.png()));
+            String governedImage=(String)service.upload(newUpload).get("evidenceId");jdbc.update("UPDATE agent_case_evidence SET protocol_instance_id='governed-instance' WHERE id=?",governedImage);
+            new org.springframework.transaction.support.TransactionTemplate(manager).execute(status->{protocolEvidence.hold("p","c",null,"governed-instance",List.of(Map.of("kind","PERSONAL","id",governedImage)),"RESULT");return null;});
+            var protocolAccess=mock(AgentProtocolAccess.class);ReflectionTestUtils.setField(service,"protocolAccess",protocolAccess);ReflectionTestUtils.setField(service,"cipher",protocolCipher);
+            when(((AgentBusinessAccess)ReflectionTestUtils.getField(service,"access")).userHasPermission("u","p","FUNCTIONAL_CASE:READ+UPDATE")).thenReturn(true);
+            var protocolSession=Map.<String,Object>of("project_id","p","owner_id","u","organization_id","org","environment_id","test","agent_ref","registered-agent");
+            var protocolInstance=new LinkedHashMap<String,Object>(Map.of("id","governed-instance","case_id","c","result_version",1,"revision",1,"result","PASS","verification","PENDING"));
+            var protocolFacts=new LinkedHashMap<String,Object>(Map.of("legacy",service.protocolSource("p","c"),"contract",Map.of("steps",List.of(Map.of("id","S1","sourcePosition",1))),"steps",List.of(Map.of("stepId","S1","observation","actually visible","outcome","SATISFIED")),"submittedAssertions",List.of(Map.of("assertionId","A1","evidence",List.of(Map.of("kind","PERSONAL","id",governedImage)))),"reviewedAssertions",List.of(Map.of("assertionId","A1","fact","SATISFIED"))));
+            long beforeCount=jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Long.class);String beforeResult=jdbc.queryForObject("SELECT last_execute_result FROM functional_case WHERE id='c'",String.class);
+            assertThrows(MSException.class,()->service.publishGovernedPersonal(protocolSession,protocolInstance,protocolFacts));service.validateGovernedPersonal(protocolSession,protocolInstance,protocolFacts);
+            assertEquals(beforeCount,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Long.class));assertEquals(beforeResult,jdbc.queryForObject("SELECT last_execute_result FROM functional_case WHERE id='c'",String.class));assertEquals("",jdbc.queryForObject("SELECT submission_id FROM agent_case_current_execution WHERE case_id='c'",String.class));
+            protocolInstance.put("verification","ACCEPTED");var transaction=new org.springframework.transaction.support.TransactionTemplate(manager);jdbc.execute("CREATE TEMPORARY TABLE msp_knowledge(id VARCHAR(64),organization_id VARCHAR(64),state VARCHAR(32))");jdbc.execute("CREATE TEMPORARY TABLE msp_knowledge_version(knowledge_id VARCHAR(64),version BIGINT,state VARCHAR(32))");jdbc.update("INSERT INTO msp_knowledge VALUES ('method','org','REVOKED')");jdbc.update("INSERT INTO msp_knowledge_version VALUES ('method',1,'REVOKED')");protocolFacts.put("knowledge",List.of(Map.of("knowledgeId","method","version",1)));assertEquals("PROTOCOL_KNOWLEDGE_UNAVAILABLE",assertThrows(MSException.class,()->transaction.execute(status->service.publishGovernedPersonal(protocolSession,protocolInstance,protocolFacts))).getMessage());assertEquals(beforeCount,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Long.class));jdbc.update("UPDATE msp_knowledge SET state='PUBLISHED'");jdbc.update("UPDATE msp_knowledge_version SET state='PUBLISHED'");
+            jdbc.execute("ALTER TABLE agent_case_current_execution ADD CONSTRAINT test_governed_failure CHECK (submission_id='' )");assertThrows(org.springframework.dao.DataAccessException.class,()->transaction.execute(status->service.publishGovernedPersonal(protocolSession,protocolInstance,protocolFacts)));assertEquals(beforeCount,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Long.class));assertEquals("",jdbc.queryForObject("SELECT submission_id FROM agent_case_current_execution WHERE case_id='c'",String.class));
+            jdbc.execute("ALTER TABLE agent_case_current_execution DROP CHECK test_governed_failure");var governed=transaction.execute(status->service.publishGovernedPersonal(protocolSession,protocolInstance,protocolFacts));assertEquals("SYNCED",governed.get("syncStatus"));
+            assertEquals(governed,transaction.execute(status->service.publishGovernedPersonal(protocolSession,protocolInstance,protocolFacts)));assertEquals(beforeCount+1,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Long.class));assertEquals(governed.get("submissionId"),jdbc.queryForObject("SELECT submission_id FROM agent_case_current_execution WHERE case_id='c'",String.class));jdbc.update("UPDATE msp_knowledge SET state='REVOKED'");jdbc.update("UPDATE msp_knowledge_version SET state='REVOKED'");assertThrows(MSException.class,()->transaction.execute(status->service.publishGovernedPersonal(protocolSession,protocolInstance,protocolFacts)));assertEquals(beforeCount+1,jdbc.queryForObject("SELECT COUNT(*) FROM agent_case_submission",Long.class));
+            assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='active'",String.class));assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='foreign-active' AND functional_case_id='c'",String.class));assertEquals("SUCCESS",jdbc.queryForObject("SELECT last_exec_result FROM test_plan_functional_case WHERE test_plan_id='archived'",String.class));
         } finally {
             AgentTokenContext.clear();
             try {new JdbcTemplate(ds).execute("DROP DATABASE IF EXISTS `"+schema+"`");}

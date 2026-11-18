@@ -9,7 +9,12 @@
       <a-tab-pane key="schedule" title="定时任务" />
     </a-tabs>
     <Schedule v-if="route.query.view === 'schedule' && !route.params.id" schedule-only />
-    <AutomationExecution v-else />
+    <AutomationExecution v-else /><a-button
+      v-if="route.params.id"
+      class="m-4"
+      @click="router.push({ path: '/test-assets/governed-execution', query: { taskId: String(route.params.id) } })"
+      >本任务的受控上下文、授权与独立复核</a-button
+    >
     <a-collapse
       v-if="!route.params.id && route.query.view !== 'schedule' && route.query.creating !== '1' && canEvaluate"
       v-model:active-key="expanded"

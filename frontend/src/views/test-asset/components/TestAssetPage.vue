@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4">
+  <div class="p-4" :data-context-scope="route.meta.contextScope || 'PROJECT'">
     <div
       v-if="hasPageVisible('TEST_ASSET_VERSIONS_PAGE') && route.path !== '/test-assets/versions'"
       class="mb-3 flex justify-end"

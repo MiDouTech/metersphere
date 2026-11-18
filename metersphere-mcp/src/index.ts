@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import { bugTransferTools } from "./tools/bugTransfer.js";
 import { caseLibraryTools } from "./tools/caseLibrary.js";
 import { managedExecutionTools } from "./tools/managedExecution.js";
+import { governedExecutionTools } from "./tools/governedExecution.js";
+import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { nativeBatchSubmitTool, executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
@@ -55,6 +57,7 @@ type ToolDef = {
 };
 
 const tools: ToolDef[] = [
+  ...governedExecutionTools,
   ...managedExecutionTools,
   ...caseLibraryTools,
   ...caseExportTools,
@@ -104,7 +107,7 @@ async function main() {
   });
 
   for (const tool of tools) {
-    server.tool(tool.name, tool.description, tool.inputSchema, async (args) => {
+    const handle = async (args: Record<string, unknown>) => {
       try {
         return await tool.handler(client, args as Record<string, unknown>);
       } catch (error) {
@@ -113,7 +116,7 @@ async function main() {
             isError: true,
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: JSON.stringify(
                   {
                     error: error.message,
@@ -131,10 +134,13 @@ async function main() {
         const message = "请求失败，请检查连接或参数后重试；不要直接重复执行已提交的业务操作";
         return {
           isError: true,
-          content: [{ type: "text", text: JSON.stringify({ error: message }, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify({ error: message }, null, 2) }],
         };
       }
-    });
+    };
+    if (tool.name.startsWith('metersphere.functional.execution.session.') || tool.name.startsWith('metersphere.functional.knowledge.')) {
+      server.registerTool(tool.name, { description: tool.description, inputSchema: z.object(tool.inputSchema as z.ZodRawShape).strict() }, handle);
+    } else server.tool(tool.name, tool.description, tool.inputSchema, handle);
   }
 
   const transport = new StdioServerTransport();

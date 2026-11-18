@@ -141,6 +141,22 @@
     </template>
     <template #default="{ loading }">
       <div ref="wrapperRef" class="bg-[var(--color-text-fff)]">
+        <div v-if="detailInfo.id" class="p-4"
+          ><a-button @click="structuredVisible = !structuredVisible">结构化执行契约（独立版本）</a-button
+          ><a-button
+            @click="
+              router.push({
+                path: '/test-assets/governed-execution',
+                query: { caseId: detailInfo.id, sourceProject: currentProjectId },
+              })
+            "
+            >受控执行与独立复核</a-button
+          ><StructuredContractEditor
+            v-if="structuredVisible"
+            :key="detailInfo.id"
+            :project-id="currentProjectId"
+            :case-id="detailInfo.id"
+        /></div>
         <div class="case-overview border-b border-[var(--color-text-n8)] px-4 py-2 text-[13px]">
           <div class="case-overview-row">
             <span class="overview-label">{{ t('caseManagement.featureCase.reviewSummary') }}：</span>
@@ -313,6 +329,7 @@
   import MsDetailDrawer from '@/components/business/ms-detail-drawer/index.vue';
   import BasicInfo from './tabContent/basicInfo.vue';
   import SettingDrawer from './tabContent/settingDrawer.vue';
+  import StructuredContractEditor from '@/views/execution/components/StructuredContractEditor.vue';
 
   import {
     deleteCaseRequest,
@@ -425,6 +442,7 @@
   const appStore = useAppStore();
 
   const currentProjectId = computed(() => appStore.currentProjectId);
+  const structuredVisible = ref(false);
 
   const showDrawerVisible = ref<boolean>(!!props.visible);
 

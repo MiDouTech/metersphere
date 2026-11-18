@@ -17,6 +17,11 @@ import org.springframework.stereotype.Component;
 public class AgentMcpToolRegistry {
     private final Map<String, AgentMcpToolHandler> handlers = new LinkedHashMap<>();
     private final Map<String, String> aliases = new LinkedHashMap<>();
+    @org.springframework.beans.factory.annotation.Autowired
+    public AgentMcpToolRegistry(List<AgentMcpToolHandler> toolHandlers,List<AgentMcpToolContributor> contributors) {
+        this(toolHandlers);
+        for(var contributor:contributors)for(var handler:contributor.tools())register(handler);
+    }
 
     public AgentMcpToolRegistry(List<AgentMcpToolHandler> toolHandlers) {
         if (toolHandlers != null) {

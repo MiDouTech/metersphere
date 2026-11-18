@@ -343,7 +343,7 @@
 
     <select id="selectExpiredArtifacts" resultMap="artifactMap">
         SELECT * FROM ai_execution_artifact
-        WHERE status = 'AVAILABLE'
+        WHERE status IN ('AVAILABLE','PROTOCOL_DELETE_PENDING')
           AND retention_until IS NOT NULL
           AND retention_until &lt;= #{now}
         ORDER BY retention_until ASC

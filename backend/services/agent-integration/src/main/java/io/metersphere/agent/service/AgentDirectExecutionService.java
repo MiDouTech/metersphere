@@ -33,9 +33,77 @@ public class AgentDirectExecutionService {
     @Resource private AgentOperationExecutor operations;
     @Resource private GlobalQualityGate gate;
     @Resource private AgentFactCipher cipher;
+    @Resource private AgentProtocolEvidenceService protocolEvidence;
+    @Resource private AgentProtocolAccess protocolAccess;
     @org.springframework.beans.factory.annotation.Value("${agent.personal-execution.writes-enabled:true}")
     private boolean writesEnabled=true;
     public void assertWritesEnabled(){if(!writesEnabled)throw new MSException("PERSONAL_EXECUTION_WRITE_DISABLED");}
+    Map<String,Object> protocolDefinition(String project,String caseId){return definition(source(Map.of("projectId",project,"caseId",caseId)));}
+    Map<String,Object> protocolSource(String project,String caseId) {
+        var value=source(Map.of("projectId",project,"caseId",caseId));var binding=gate.currentForSubmission();
+        return Map.of("definition",definition(value),"definitionHash",hash(value),"policyHash",binding.contentHash(),"policy",parse(binding.rulesJson()));
+    }
+
+    /** Only the server-accepted protocol record can reach this adapter. No client result flag is trusted. */
+    Map<String,Object> publishGovernedPersonal(Map<String,Object> session,Map<String,Object> instance,Map<String,Object> data) {
+        return governedPersonal(session,instance,data,true);
+    }
+    void validateGovernedPersonal(Map<String,Object> session,Map<String,Object> instance,Map<String,Object> data) {
+        var candidate=new LinkedHashMap<>(instance);candidate.put("verification","ACCEPTED");governedPersonal(session,candidate,data,false);
+    }
+    private Map<String,Object> governedPersonal(Map<String,Object> session,Map<String,Object> instance,Map<String,Object> data,boolean publish) {
+        if(publish){assertWritesEnabled();AgentProtocolKnowledgeSafety.requireSafe(jdbc,session,data);}
+        String project=(String)session.get("project_id"),caseId=(String)instance.get("case_id"),owner=(String)session.get("owner_id");
+        protocolAccess.requireSourceWrite(owner,project,(String)session.get("organization_id"),(String)session.get("environment_id"));
+        jdbc.queryForList("SELECT id FROM functional_case WHERE id=? AND project_id=? FOR UPDATE",caseId,project);
+        if(!"ACCEPTED".equals(instance.get("verification"))||publish&&Boolean.TRUE.equals(data.get("disputed")))fail("PROTOCOL_RESULT_NOT_ACCEPTED");
+        var args=Map.<String,Object>of("projectId",project,"caseId",caseId);var current=source(args);var legacy=AgentProtocolData.object(data.get("legacy"));
+        if(!hash(current).equals(legacy.get("definitionHash")))fail("VERSION_CONFLICT");
+        if(!access.userHasPermission(owner,project,"FUNCTIONAL_CASE:READ+UPDATE"))throw AgentBusinessAccess.denied();
+        var existing=jdbc.queryForList("SELECT source_id FROM msp_protocol_publication WHERE instance_id=? AND result_version=?",String.class,instance.get("id"),instance.get("result_version"));
+        if(!existing.isEmpty())return Map.of("submissionId",existing.getFirst(),"syncStatus","SYNCED");
+        var references=new TreeSet<String>();
+        for(var assertion:AgentProtocolData.objects(data.get("submittedAssertions")))for(var ref:AgentProtocolData.objects(assertion.get("evidence"))) {
+            if(!"PERSONAL".equals(ref.get("kind")))fail("QUALITY_CASE_EVIDENCE_INVALID");references.add((String)ref.get("id"));
+        }
+        if(references.isEmpty())fail("QUALITY_CASE_EVIDENCE_REQUIRED");if(references.size()>10)fail("QUALITY_CASE_EVIDENCE_INVALID");
+        var files=new ArrayList<Map<String,Object>>();var artifacts=new ArrayList<AgentExecutionArtifactDTO>();
+        for(String evidenceId:references) {
+            var rows=jdbc.queryForList("SELECT e.id,e.token_id,e.user_id,e.protocol_instance_id,e.file_name,e.content_type,e.size_bytes,e.sha256,e.content_hash,e.payload FROM agent_case_evidence e WHERE e.id=? AND e.project_id=? AND e.case_id=? FOR UPDATE",evidenceId,project,caseId);
+            if(rows.size()!=1)fail("QUALITY_CASE_EVIDENCE_INVALID");var file=rows.getFirst();
+            if(!legacy.get("definitionHash").equals(file.get("content_hash"))||file.get("payload")==null)fail("QUALITY_CASE_EVIDENCE_INVALID");
+            byte[] image=(byte[])file.get("payload");if(!DigestUtils.sha256Hex(image).equals(file.get("sha256")))fail("QUALITY_CASE_EVIDENCE_INVALID");decodeImage(Base64.getEncoder().encodeToString(image),(String)file.get("content_type"));
+            if(file.get("protocol_instance_id")!=null) {if(!instance.get("id").equals(file.get("protocol_instance_id")))fail("QUALITY_CASE_EVIDENCE_INVALID");}
+            else if(!owner.equals(file.get("user_id"))||jdbc.queryForObject("SELECT COUNT(*) FROM msp_protocol_subject WHERE token_id=? AND user_id=? AND agent_ref=? AND organization_id=?",Long.class,file.get("token_id"),owner,session.get("agent_ref"),session.get("organization_id"))!=1)fail("QUALITY_CASE_EVIDENCE_INVALID");
+            if(jdbc.queryForObject("SELECT COUNT(*) FROM msp_protocol_evidence_hold WHERE kind='PERSONAL' AND evidence_id=? AND owner_id=?",Long.class,evidenceId,instance.get("id"))!=1)fail("QUALITY_CASE_EVIDENCE_INVALID");
+            var artifact=new AgentExecutionArtifactDTO();artifact.setContentType((String)file.get("content_type"));artifact.setSizeBytes(((Number)file.get("size_bytes")).longValue());artifacts.add(artifact);files.add(file);
+        }
+        gate.verifyDirectCaseEvidence(artifacts);var policy=gate.currentForSubmission();
+        var declared=AgentProtocolData.objects(AgentProtocolData.object(data.get("contract")).get("steps"));
+        var submitted=new ArrayList<Map<String,Object>>();
+        for(var step:AgentProtocolData.effectiveSteps(data)) {
+            var declaration=declared.stream().filter(d->step.get("stepId").equals(d.get("id"))).findFirst().orElseThrow(AgentBusinessAccess::denied);
+            int position=((Number)declaration.getOrDefault("sourcePosition",declared.indexOf(declaration)+1)).intValue();
+            if(!Set.of("SATISFIED","VIOLATED").contains(step.get("outcome")))fail("QUALITY_FINAL_FACTS_INCOMPLETE");
+            submitted.add(Map.of("stepNum",position,"actual",step.get("observation"),"result","SATISFIED".equals(step.get("outcome"))?"SUCCESS":"ERROR"));
+        }
+        requireStepCoverage(MAPPER.valueToTree(submitted),current.getSteps().size());
+        boolean anyFailed=submitted.stream().anyMatch(step->"ERROR".equals(step.get("result")));
+        if("PASS".equals(instance.get("result"))&&anyFailed||"FAIL".equals(instance.get("result"))&&!anyFailed)fail("QUALITY_FAILURE_FACTS_MISMATCH");
+        if(!publish)return Map.of("legacyGatePassed",true);
+        String result="PASS".equals(instance.get("result"))?"SUCCESS":"ERROR",submission=UUID.randomUUID().toString();long now=System.currentTimeMillis();
+        var facts=new LinkedHashMap<String,Object>();facts.put("schemaVersion","governed-execution.v1");facts.put("definition",definition(current));facts.put("steps",submitted);facts.put("policySnapshot",parse(policy.rulesJson()));facts.put("evidenceIds",references);facts.put("evidenceScope","CASE");facts.put("validationMode","INDEPENDENT_ASSERTION_V1");facts.put("resultSource","INDEPENDENT_HUMAN");facts.put("protocolInstanceId",instance.get("id"));facts.put("verificationRevision",instance.get("revision"));facts.put("reviewedAssertions",data.get("reviewedAssertions"));
+        jdbc.update("INSERT INTO agent_case_submission(id,token_id,user_id,project_id,case_id,content_hash,policy_hash,facts,result,create_time,gate_status,review_code,reviewer_version,definition_hash_version,facts_schema_version) VALUES (?,?,?,?,?,?,?,?,?,?,'ACCEPTED','INDEPENDENT_ASSERTIONS','independent-v1','definition-v2','governed-execution.v1')",submission,files.getFirst().get("token_id"),owner,project,caseId,hash(current),policy.contentHash(),cipher.protectAll(JSON.toJSONString(facts)),result,now);
+        for(var file:files) {
+            // New governed holds, not an invented TTL, protect this immutable reference.
+            jdbc.update("INSERT INTO agent_case_submission_evidence(submission_id,evidence_id,retain_until) VALUES (?,?,?)",submission,file.get("id"),now);
+            jdbc.update("UPDATE agent_case_evidence SET submission_id=COALESCE(submission_id,?) WHERE id=?",submission,file.get("id"));
+            jdbc.update("INSERT INTO functional_case_attachment(id,case_id,file_id,file_name,size,local,create_user,create_time,file_source) VALUES (?,?,?,?,?,1,?,?,'ATTACHMENT')",UUID.randomUUID().toString(),caseId,file.get("id"),file.get("file_name"),file.get("size_bytes"),owner,now);
+        }
+        definitions.publishPersonalExecution(project,caseId,submission,result,owner,now);
+        jdbc.update("INSERT INTO msp_protocol_publication(instance_id,result_version,source_id,create_time) VALUES (?,?,?,?)",instance.get("id"),instance.get("result_version"),submission,now);
+        return Map.of("submissionId",submission,"syncStatus","SYNCED");
+    }
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final int MAX_FILE = 5 * 1024 * 1024;
     static final int MAX_SUBMITTED_STEPS = 1000;
@@ -331,7 +399,7 @@ public class AgentDirectExecutionService {
     @Scheduled(fixedDelay=3600000)
     public void expirePendingEvidence() {
         long now=System.currentTimeMillis();
-        jdbc.update("DELETE FROM agent_case_evidence WHERE submission_id IS NULL AND expires_at<? AND NOT EXISTS (SELECT 1 FROM agent_case_submission_evidence r WHERE r.evidence_id=agent_case_evidence.id AND r.retain_until>?) LIMIT 1000",now,now);
+        protocolEvidence.cleanupPersonal(now);
     }
     private static String string(Map<String,Object> args,String key) {
         if(!(args.get(key) instanceof String value) || value.isBlank()) throw new MSException("AGENT_VALIDATION_ERROR");

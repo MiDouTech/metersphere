@@ -56,6 +56,9 @@ public final class AgentTokenScopeParser {
             return false;
         }
         String required = requiredScope.trim().toUpperCase(Locale.ROOT);
+        if (Set.of(AgentTokenScope.SESSION_READ_V1,AgentTokenScope.SESSION_EXECUTE_V1,
+                AgentTokenScope.KNOWLEDGE_READ_V1,AgentTokenScope.KNOWLEDGE_EDIT_V1).contains(required))
+            return owned.contains(required);
         // Versioned grants require explicit consent; legacy wildcard scopes never acquire them.
         if (AgentTokenScope.PROJECT_FILE_READ.equals(required)
                 || AgentTokenScope.PROJECT_FILE_WRITE.equals(required)
