@@ -502,6 +502,7 @@ export interface AiExecutionTask {
 }
 
 export interface AiExecutionTaskSearchRequest {
+  testPlanId?: string;
   projectId: string;
   keyword?: string;
   status?: string;
@@ -1360,6 +1361,26 @@ export function downloadAiExecutionArtifact(taskId: string, artifactId: string) 
     { url: AiExecutionArtifactDownloadUrl(taskId, artifactId), responseType: 'blob' },
     { isTransformResponse: false }
   );
+}
+
+export function referenceTestAssetDocument(
+  caseId: string,
+  data: { projectId: string; documentId: string; documentVersionId: string }
+) {
+  return MSR.post<void>({
+    url: `/test-assets/cases/${encodeURIComponent(caseId)}/document-references`,
+    data,
+  });
+}
+
+export function reviseTestAssetDocument(
+  assetId: string,
+  data: { projectId: string; expectedVersionId: string; markdown: string }
+) {
+  return MSR.post<TestAssetVersion>({
+    url: `/test-assets/documents/${encodeURIComponent(assetId)}/revisions`,
+    data,
+  });
 }
 
 export function pageTestAssetVersions(params: {

@@ -80,5 +80,6 @@ public class AgentExecutionTaskDTO {
     private String createUser;
     private String updateUser;
     private Integer version;
+    private List<String> accountedPlanCaseIds;
     private List<AgentExecutionCaseDTO> cases = new ArrayList<>();
 }

@@ -440,16 +440,33 @@ export class MeterSphereClient {
     current?: number;
     pageSize?: number;
     includeSteps?: boolean;
+    includeContractVersion?: boolean;
   }) {
     const query = new URLSearchParams();
     query.set("projectId", payload.projectId ?? this.config.projectId);
     if (payload.current) query.set("current", String(payload.current));
     if (payload.pageSize) query.set("pageSize", String(payload.pageSize));
     if (payload.includeSteps !== undefined) query.set("includeSteps", String(payload.includeSteps));
+    if (payload.includeContractVersion) query.set("includeContractVersion", "true");
     return this.request(
       "GET",
       `/api/agent/v1/test-plan/${encodeURIComponent(payload.testPlanId)}/cases?${query.toString()}`
     );
+  }
+
+  readPlanExecutionContract(payload: {
+    projectId?: string;
+    testPlanId: string;
+    testPlanCaseId: string;
+    contractVersion: number;
+  }) {
+    const query = new URLSearchParams({
+      projectId: payload.projectId ?? this.config.projectId,
+      contractVersion: String(payload.contractVersion),
+    });
+    const plan = encodeURIComponent(payload.testPlanId);
+    const relation = encodeURIComponent(payload.testPlanCaseId);
+    return this.request("GET", `/api/agent/v1/test-plan/${plan}/cases/${relation}/execution-contract?${query}`);
   }
 
   resolveExecutionScope(payload: Record<string, unknown>) {
@@ -464,6 +481,9 @@ export class MeterSphereClient {
     testPlanId?: string;
     caseIds?: string[];
     source?: string;
+    preflightId: string;
+    environmentProfileId: string;
+    credentialReferenceId?: string;
     environmentId?: string;
     targetUrl?: string;
     browserType?: string;
@@ -474,7 +494,7 @@ export class MeterSphereClient {
     idempotencyKey?: string;
     confirmed?: boolean;
   }) {
-    return this.request("POST", "/api/ai/execution/task", {
+    return this.callNativeTool("metersphere.execution.create", {
       ...payload,
       projectId: payload.projectId ?? this.config.projectId,
       testPlanId: payload.testPlanId ?? this.config.testPlanId,
@@ -482,31 +502,19 @@ export class MeterSphereClient {
   }
 
   getExecutionTask(executionTaskId: string) {
-    return this.request("GET", `/api/ai/execution/task/${encodeURIComponent(executionTaskId)}`);
+    return this.callNativeTool("metersphere.execution.get", { executionTaskId });
   }
 
-  getExecutionEvents(payload: {
-    executionTaskId: string;
-    cursor?: number;
-    limit?: number;
-  }) {
-    const query = new URLSearchParams();
-    if (payload.cursor !== undefined) query.set("cursor", String(payload.cursor));
-    if (payload.limit !== undefined) query.set("limit", String(payload.limit));
-    const suffix = query.toString() ? `?${query.toString()}` : "";
-    return this.request("GET", `/api/ai/execution/task/${encodeURIComponent(payload.executionTaskId)}/events${suffix}`);
+  getExecutionEvents(payload: { executionTaskId: string; cursor?: number; limit?: number }) {
+    return this.callNativeTool("metersphere.execution.events", payload);
   }
 
   cancelExecutionTask(payload: { executionTaskId: string; reason?: string }) {
-    return this.request("POST", `/api/ai/execution/task/${encodeURIComponent(payload.executionTaskId)}/cancel`, {
-      reason: payload.reason,
-    });
+    return this.callNativeTool("metersphere.execution.cancel", payload);
   }
 
   resumeExecutionTask(payload: { executionTaskId: string; reason?: string }) {
-    return this.request("POST", `/api/ai/execution/task/${encodeURIComponent(payload.executionTaskId)}/login-ready`, {
-      reason: payload.reason,
-    });
+    return this.callNativeTool("metersphere.execution.resume", payload);
   }
 
   createCaseReview(payload: {

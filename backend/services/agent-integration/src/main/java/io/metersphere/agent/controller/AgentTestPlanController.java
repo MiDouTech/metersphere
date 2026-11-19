@@ -13,6 +13,8 @@ import io.metersphere.agent.service.AgentTestPlanWriteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import java.util.Map;
+import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,17 +60,26 @@ public class AgentTestPlanController {
         return agentTestPlanQueryService.search(request);
     }
 
+    @GetMapping("/{id}/cases/{relationId}/execution-contract")
+    @Operation(summary = "读取指定计划用例版本的已发布执行契约")
+    public Map<String, Object> executionContract(@PathVariable String id, @PathVariable String relationId,
+                                                 @RequestParam String projectId, @RequestParam Long contractVersion) {
+        AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
+        return agentTestPlanQueryService.readExecutionContract(projectId, id, relationId, contractVersion);
+    }
+
     @GetMapping("/{id}/cases")
     @Operation(summary = "获取测试计划下的功能用例")
     public AgentCaseSearchResponse cases(@PathVariable String id,
                                          String projectId,
                                          Integer current,
                                          Integer pageSize,
-                                         Boolean includeSteps) {
+                                         Boolean includeSteps,
+                                         Boolean includeContractVersion) {
         AgentScopeAssert.assertScope(AgentTokenScope.FUNCTIONAL_READ);
         return agentTestPlanQueryService.cases(projectId, id,
                 current == null ? 1 : current,
                 pageSize == null ? 50 : pageSize,
-                includeSteps == null || includeSteps);
+                includeSteps == null || includeSteps, Boolean.TRUE.equals(includeContractVersion));
     }
 }

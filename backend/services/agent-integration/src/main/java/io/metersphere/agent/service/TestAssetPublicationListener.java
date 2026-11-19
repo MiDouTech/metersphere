@@ -17,6 +17,9 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -35,14 +38,27 @@ public class TestAssetPublicationListener {
     @Resource
     private TestAssetGovernanceService governanceService;
 
+    @Resource
+    private JdbcTemplate jdbcTemplate;
+
     @EventListener
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public void onDocumentPublished(TestAssetDocumentPublishedEvent event) {
         AiSourceDocument document = event.document();
         if (document == null || StringUtils.isAnyBlank(document.getProjectId(), document.getId())) {
             return;
         }
-        versionService.publish(document.getProjectId(), "DOCUMENT", document.getId(), document.getSha256(),
-                StringUtils.defaultIfBlank(event.contentSnapshot(), JSON.toJSONString(document)), document.getCreateUser());
+        var source = jdbcTemplate.queryForList("""
+                SELECT id FROM ai_source_document WHERE id = ? AND project_id = ? AND deleted = 0 FOR UPDATE
+                """, document.getId(), document.getProjectId());
+        if (source.size() != 1) {
+            return;
+        }
+        var latest = testAssetMapper.selectLatestPublished(document.getProjectId(), "DOCUMENT", document.getId());
+        if (latest == null || !StringUtils.startsWith(latest.getSourceVersion(), "online:")) {
+            versionService.publish(document.getProjectId(), "DOCUMENT", document.getId(), document.getSha256(),
+                    StringUtils.defaultIfBlank(event.contentSnapshot(), JSON.toJSONString(document)), document.getCreateUser());
+        }
         governanceService.recordTrustedSource(document.getProjectId(), "DOCUMENT", document.getId(), "IMPORT",
                 "SOURCE_DOCUMENT", document.getId(), "USER", document.getCreateUser());
     }

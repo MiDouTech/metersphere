@@ -1,27 +1,26 @@
 <template>
-  <TestAssetPage>
-    <TestAssetTabs />
-    <a-space class="mb-4"
-      ><a-input-search v-model="keyword" placeholder="搜索业务知识标题" @search="load" /><a-button
-        :loading="loading"
-        @click="load"
-        >刷新</a-button
-      ><a-button v-if="capabilities.includes('KNOWLEDGE_EDIT')" type="primary" @click="create"
-        >新建知识</a-button
-      ></a-space
-    >
-    <a-space class="mb-3"
-      ><a-select v-model="filters.type" allow-clear placeholder="知识类型"
-        ><a-option v-for="item in types" :key="item.value" :value="item.value">{{ item.label }}</a-option></a-select
-      ><a-input v-model="filters.scope" placeholder="适用范围" /><a-input
-        v-model="filters.system"
-        placeholder="系统"
-      /><a-input v-model="filters.module" placeholder="模块" /><a-button
-        v-if="capabilities.includes('KNOWLEDGE_EDIT')"
-        @click="migrationVisible = !migrationVisible"
-        >存量候选迁移</a-button
-      ></a-space
-    ><a-card v-if="migrationVisible" title="受控批量迁移（只形成候选）"
+  <TestAssetPage :show-version-link="false">
+    <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-xl font-medium">业务知识</h1>
+      <TestAssetTabs />
+    </header>
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded bg-[var(--color-bg-2)] p-3">
+      <div class="flex min-w-0 flex-wrap items-center gap-2">
+        <a-input-search v-model="keyword" class="w-56 max-w-full" placeholder="搜索业务知识标题" @search="search" />
+        <a-select v-model="filters.type" class="w-40 max-w-full" allow-clear placeholder="知识类型">
+          <a-option v-for="item in types" :key="item.value" :value="item.value">{{ item.label }}</a-option>
+        </a-select>
+        <a-input v-model="filters.scope" class="w-36 max-w-full" placeholder="适用范围" @press-enter="search" />
+        <a-input v-model="filters.system" class="w-36 max-w-full" placeholder="系统" @press-enter="search" />
+        <a-input v-model="filters.module" class="w-36 max-w-full" placeholder="模块" @press-enter="search" />
+        <a-button :loading="loading" @click="search">查询</a-button>
+      </div>
+      <div v-if="capabilities.includes('KNOWLEDGE_EDIT')" class="flex flex-wrap items-center gap-2">
+        <a-button @click="migrationVisible = !migrationVisible">存量候选迁移</a-button>
+        <a-button type="primary" @click="create">新建知识</a-button>
+      </div>
+    </div>
+    <a-card v-if="migrationVisible" title="受控批量迁移（只形成候选）"
       ><a-input v-model="migration.batchId" placeholder="本次唯一批次标识" /><a-input
         v-model="migration.environmentId"
         placeholder="已授权测试环境" /><a-select v-model="sourceProject" placeholder="来源项目"
@@ -361,6 +360,11 @@
       await load();
     }
   }
+  function search() {
+    page.value = 1;
+    load();
+  }
+
   function changePage(value: number) {
     page.value = value;
     load();

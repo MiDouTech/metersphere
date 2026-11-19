@@ -9,6 +9,14 @@
           >
         </div>
         <div class="flex gap-2">
+          <a-button
+            v-permission="['FUNCTIONAL_CASE_AI:UPLOAD']"
+            type="primary"
+            :disabled="!appStore.currentProjectId || creatingDocument"
+            @click="openCreateDocument"
+          >
+            在线新建
+          </a-button>
           <input ref="fileInput" class="hidden" type="file" :accept="acceptedTypes" @change="handleFileChange" />
           <a-button v-permission="['FUNCTIONAL_CASE_AI:UPLOAD']" :loading="uploading" @click="fileInput?.click()"
             >上传文档</a-button
@@ -127,6 +135,13 @@
               <a-space>
                 <a-link @click="openDetail(record)">详情</a-link>
                 <a-link :disabled="!record.assetVersionId" @click="readDocument(record)">阅读内容</a-link>
+                <a-link
+                  v-if="record.assetVersionId && /\.md$/i.test(record.originalName)"
+                  v-permission="['FUNCTIONAL_CASE_AI:UPLOAD']"
+                  :disabled="creatingDocument || loadingDraft"
+                  @click="openRevision(record)"
+                  >编辑正文</a-link
+                >
                 <a-link :disabled="!record.assetVersionId" @click="extractKnowledge(record)">提取知识</a-link>
                 <a-link v-permission="['FUNCTIONAL_CASE_AI:READ']" @click="downloadDocument(record)">下载</a-link>
                 <a-link
@@ -208,6 +223,31 @@
       </a-form>
       <a-alert>逐项校验资产权限；部分失败会单独提示。</a-alert>
     </a-modal>
+    <a-modal
+      v-model:visible="createDocumentVisible"
+      :title="revisionDocument ? '编辑 Markdown 正文' : '在线新建 Markdown 文档'"
+      :ok-text="revisionDocument ? '发布新版本' : '创建文档'"
+      :ok-button-props="{ disabled: loadingDraft || Boolean(draftLoadError) }"
+      :ok-loading="creatingDocument"
+      :cancel-button-props="{ disabled: creatingDocument }"
+      :mask-closable="false"
+      :closable="!creatingDocument"
+      :esc-to-close="!creatingDocument"
+      @before-ok="createDocument"
+    >
+      <a-alert v-if="draftLoadError" type="error">{{ draftLoadError }}</a-alert>
+      <a-spin :loading="loadingDraft" class="block">
+        <a-form :model="documentDraft" layout="vertical">
+          <a-form-item field="title" label="文档标题" required>
+            <a-input v-model="documentDraft.title" :max-length="120" :readonly="Boolean(revisionDocument)" />
+          </a-form-item>
+          <a-form-item field="body" label="Markdown 正文" required>
+            <a-textarea v-model="documentDraft.body" :auto-size="{ minRows: 8, maxRows: 16 }" />
+          </a-form-item>
+          <a-alert v-if="createDocumentError" type="error" role="alert">{{ createDocumentError }}</a-alert>
+        </a-form>
+      </a-spin>
+    </a-modal>
   </TestAssetPage>
 </template>
 
@@ -232,6 +272,7 @@
     getTestAssetMetadata,
     listTestAssetCategories,
     pageTestAssetDocuments,
+    reviseTestAssetDocument,
   } from '@/api/modules/ai-execution';
   import {
     deleteAiSourceDocument,
@@ -253,6 +294,14 @@
   const fileInput = ref<HTMLInputElement>();
   const loading = ref(false);
   const uploading = ref(false);
+  const createDocumentVisible = ref(false);
+  const creatingDocument = ref(false);
+  const createDocumentError = ref('');
+  const documentDraft = reactive({ title: '', body: '' });
+  const revisionDocument = ref<TestAssetDocument>();
+  const loadingDraft = ref(false);
+  const draftLoadError = ref('');
+  let draftRequest = 0;
   const detailVisible = ref(false);
   const detailLoading = ref(false);
   const detail = ref<AiSourceDocument>();
@@ -478,6 +527,88 @@
       },
     });
   }
+  function openCreateDocument() {
+    revisionDocument.value = undefined;
+    documentDraft.title = '';
+    documentDraft.body = '';
+    createDocumentError.value = '';
+    draftLoadError.value = '';
+    createDocumentVisible.value = true;
+  }
+
+  async function openRevision(document: TestAssetDocument) {
+    if (!document.assetVersionId) return;
+    const project = appStore.currentProjectId;
+    const generation = ++draftRequest;
+    revisionDocument.value = document;
+    documentDraft.title = document.originalName.replace(/\.md$/i, '');
+    documentDraft.body = '';
+    createDocumentError.value = '';
+    draftLoadError.value = '';
+    loadingDraft.value = true;
+    createDocumentVisible.value = true;
+    try {
+      const result = await previewSource(project, document.id, document.assetVersionId);
+      const snapshot = result.content as { bodyMarkdown?: unknown } | undefined;
+      const original =
+        typeof snapshot?.bodyMarkdown === 'string'
+          ? snapshot.bodyMarkdown
+          : await new Blob([await downloadAiSourceDocument({ projectId: project, id: document.id })]).text();
+      if (generation === draftRequest && project === appStore.currentProjectId && createDocumentVisible.value) {
+        documentDraft.body = original;
+      }
+    } catch {
+      if (generation === draftRequest) draftLoadError.value = '无法打开当前正文，请检查权限或网络后重试。';
+    } finally {
+      if (generation === draftRequest) loadingDraft.value = false;
+    }
+  }
+
+  async function createDocument() {
+    if (creatingDocument.value || loadingDraft.value || draftLoadError.value) return false;
+    const projectId = appStore.currentProjectId;
+    const title = documentDraft.title.trim().replace(/\.md$/i, '').trim();
+    createDocumentError.value = '';
+    if (!projectId || !title || /[\\/:*?"<>|]/.test(title) || !documentDraft.body.trim()) {
+      createDocumentError.value = '请填写有效的文档标题与正文。标题不能包含文件名保留字符。';
+      return false;
+    }
+    const revision = revisionDocument.value;
+    if (revision && documentDraft.body.length > 200_000) {
+      createDocumentError.value = '在线正文最多支持 200,000 个字符。';
+      return false;
+    }
+    creatingDocument.value = true;
+    try {
+      if (revision?.assetVersionId) {
+        await reviseTestAssetDocument(revision.id, {
+          projectId,
+          expectedVersionId: revision.assetVersionId,
+          markdown: documentDraft.body,
+        });
+      } else {
+        const file = new File([documentDraft.body], `${title}.md`, { type: 'text/markdown' });
+        await uploadAiSourceDocument({ request: { projectId }, file });
+      }
+      if (projectId === appStore.currentProjectId) {
+        documentDraft.title = '';
+        documentDraft.body = '';
+        Message.success(revision ? '正文新版本已发布' : '文档已创建，平台正在异步解析');
+        load().catch(() => Message.warning('文档已创建，列表暂未刷新'));
+      }
+      return true;
+    } catch {
+      if (projectId === appStore.currentProjectId) {
+        createDocumentError.value = revision
+          ? '发布失败，正文仍在。请检查权限、网络或版本是否已变化。'
+          : '创建文档失败，正文仍在，请检查权限或网络后重试。';
+      }
+      return false;
+    } finally {
+      creatingDocument.value = false;
+    }
+  }
+
   async function handleFileChange(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -492,9 +623,19 @@
       uploading.value = false;
     }
   }
+  watch(createDocumentVisible, (visible) => {
+    if (!visible) {
+      draftRequest++;
+      loadingDraft.value = false;
+    }
+  });
   watch(
     () => appStore.currentProjectId,
     () => {
+      createDocumentVisible.value = false;
+      createDocumentError.value = '';
+      documentDraft.title = '';
+      documentDraft.body = '';
       contentVisible.value = false;
       contentValue.value = undefined;
       contentDocument.value = undefined;

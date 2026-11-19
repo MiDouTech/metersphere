@@ -53,6 +53,22 @@ public class AgentKnowledgeService {
         for(var use:jdbc.queryForList("SELECT u.instance_id,u.knowledge_version,u.step_id,u.state,s.project_id,s.owner_id,s.environment_id FROM msp_knowledge_usage u JOIN msp_protocol_instance i ON i.id=u.instance_id JOIN msp_protocol_session s ON s.id=i.session_id WHERE u.knowledge_id=? AND s.organization_id=?",id,org)){
             try{access.project(actor,(String)use.get("project_id"),false);if(actor.user().equals(use.get("owner_id")))usage.add(Map.of("instanceId",use.get("instance_id"),"version",use.get("knowledge_version"),"stepId",use.get("step_id"),"state",use.get("state")));}catch(MSException denied){/* Do not expose inaccessible execution identifiers. */}
         }
+        for (var use : jdbc.queryForList("""
+                SELECT u.knowledge_version, r.task_id, r.execution_id, r.step_id, r.id AS step_result_id, t.project_id
+                FROM ai_execution_knowledge_usage u
+                JOIN ai_execution_step_result r ON r.id = u.step_result_id
+                JOIN ai_execution_task t ON t.id = r.task_id
+                WHERE u.knowledge_id = ? AND t.organization_id = ? AND t.create_user = ?
+                ORDER BY r.create_time DESC
+                """, id, org, actor.user())) {
+            try {
+                access.project(actor, (String) use.get("project_id"), false);
+                use.remove("project_id");
+                usage.add(use);
+            } catch (MSException denied) {
+                if (!"AGENT_RESOURCE_NOT_ACCESSIBLE".equals(denied.getMessage())) throw denied;
+            }
+        }
         return Map.of("versions",versions,"usage",usage);
     }
     public Map<String,Object> fixed(String org,String id,long version,AgentProtocolAccess.Actor actor,boolean newAdoption) {
@@ -83,7 +99,10 @@ public class AgentKnowledgeService {
         var result=new LinkedHashMap<>(content);result.put("id",row.get("id"));result.put("version",current);
         result.put("expectedKnowledgeVersion",row.get("version"));result.put("state",row.get("state"));result.put("safetyGeneration",row.get("safety_generation"));
         if(version==null&&"PUBLISHED".equals(row.get("state"))&&row.get("published_version")!=null&&current>((Number)row.get("published_version")).longValue())result.put("state","DRAFT");
-        result.put("adoptionCount",jdbc.queryForObject("SELECT COUNT(*) FROM msp_knowledge_usage WHERE knowledge_id=? AND state='OUTCOME_RECORDED'",Long.class,row.get("id")));result.put("updateTime",row.get("update_time"));
+        result.put("adoptionCount",jdbc.queryForObject("""
+                SELECT (SELECT COUNT(*) FROM msp_knowledge_usage WHERE knowledge_id=? AND state='OUTCOME_RECORDED')
+                     + (SELECT COUNT(*) FROM ai_execution_knowledge_usage WHERE knowledge_id=?)
+                """,Long.class,row.get("id"),row.get("id")));result.put("updateTime",row.get("update_time"));
         result.put("lastVerifiedAt",jdbc.queryForObject("SELECT MAX(last_verified_at) FROM msp_knowledge_version WHERE knowledge_id=?",Long.class,row.get("id")));
         var safeSources=new ArrayList<Map<String,Object>>();
         for(var source:objects(content.getOrDefault("sources",List.of()))) {

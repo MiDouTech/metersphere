@@ -122,7 +122,8 @@ public interface TestAssetMapper {
                         @Param("includeDescendants") boolean includeDescendants);
 
     List<TestAssetContextDocumentDTO> selectDocumentContextForCases(@Param("projectId") String projectId,
-                                                                    @Param("caseAssetIds") List<String> caseAssetIds);
+                                                                    @Param("caseAssetIds") List<String> caseAssetIds,
+                                                                        @Param("includeReferences") boolean includeReferences);
 
     void insertVersion(TestAssetVersionDTO version);
 

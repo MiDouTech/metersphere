@@ -64,3 +64,82 @@ test("real stdio process discovers maintenance tools without a backend call", as
       "metersphere.test_plan.update", "metersphere.test_plan.disassociate_cases", "metersphere.test_plan.get", "metersphere.bug.transitions", "metersphere.bug.transition"]) assert.ok(names.has(name), name);
   } finally { await client.close(); }
 });
+
+test("plan cases requests published contract versions only when requested", async t => {
+  const queries = [];
+  const server = http.createServer((req, res) => {
+    const url = new URL(req.url, "http://localhost");
+    queries.push(url);
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ code: 100200, data: { cases: [] } }));
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const client = new MeterSphereClient({
+    baseUrl: "http://127.0.0.1:" + server.address().port,
+    agentToken: "test-token",
+    projectId: "project",
+  });
+  await client.getTestPlanCases({ testPlanId: "plan" });
+  await client.getTestPlanCases({ testPlanId: "plan", includeContractVersion: true });
+  assert.equal(queries[0].pathname, "/api/agent/v1/test-plan/plan/cases");
+  assert.equal(queries[0].searchParams.has("includeContractVersion"), false);
+  assert.equal(queries[1].searchParams.get("includeContractVersion"), "true");
+});
+
+test("plan contract tool reads the exact plan relation and version", async t => {
+  const { readPlanExecutionContractTool } = await import("../dist/tools/testPlanExecution.js");
+  let request;
+  const server = http.createServer((req, res) => {
+    request = new URL(req.url, "http://localhost");
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ code: 100200, data: { contractVersion: 2, contract: { goal: "verify state" } } }));
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const client = new MeterSphereClient({
+    baseUrl: "http://127.0.0.1:" + server.address().port,
+    agentToken: "test-token",
+    projectId: "project",
+  });
+  const schema = z.object(readPlanExecutionContractTool.inputSchema);
+  const args = { testPlanId: "plan", testPlanCaseId: "relation", contractVersion: 2 };
+  assert.equal(schema.safeParse({ ...args, contractVersion: 0 }).success, false);
+  const response = await readPlanExecutionContractTool.handler(client, schema.parse(args));
+  assert.equal(request.pathname, "/api/agent/v1/test-plan/plan/cases/relation/execution-contract");
+  assert.equal(request.searchParams.get("projectId"), "project");
+  assert.equal(request.searchParams.get("contractVersion"), "2");
+  assert.deepEqual(JSON.parse(response.content[0].text).contract, { goal: "verify state" });
+});
+
+test("personal execution creation forwards a passed preflight to native MCP", async t => {
+  const { createExecutionTaskTool } = await import("../dist/tools/testPlanExecution.js");
+  let received;
+  const server = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    received = { path: req.url, body: JSON.parse(Buffer.concat(chunks).toString()) };
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({
+      jsonrpc: "2.0",
+      id: received.body.id,
+      result: { content: [{ type: "text", text: '{"taskId":"task"}' }] },
+    }));
+  });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const client = new MeterSphereClient({
+    baseUrl: "http://127.0.0.1:" + server.address().port,
+    agentToken: "test-token",
+    projectId: "project",
+    testPlanId: "plan",
+  });
+  const schema = z.object(createExecutionTaskTool.inputSchema);
+  assert.equal(schema.safeParse({ environmentProfileId: "env" }).success, false);
+  const args = schema.parse({ preflightId: "preflight", environmentProfileId: "env", credentialReferenceId: "credential-ref", idempotencyKey: "request" });
+  const result = await createExecutionTaskTool.handler(client, args);
+  assert.equal(received.path, "/api/mcp");
+  assert.equal(received.body.params.name, "metersphere.execution.create");
+  assert.deepEqual(received.body.params.arguments, { ...args, projectId: "project", testPlanId: "plan" });
+  assert.deepEqual(JSON.parse(result.content[0].text), { taskId: "task" });
+});
