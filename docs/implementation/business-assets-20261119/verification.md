@@ -53,3 +53,5 @@ R4 精确代码差异审查已通过。用户随后明确要求提交代码并�
 R4 整体代码审查通过；精确差异及 195 个文件清单见 review-r4-manifest.json、review-r4.diff 和 review-record.md。逐文件哈希复核无审后代码变化。应用 JAR 检查确认新服务存在、被移除受控类不存在、156 迁移及最新前端已入包；证据见 package-verification.json。完整列表既包含本次新增/修改，也明确记录被删除文件，不将历史文档迁移和用户既有 AGENTS.md 修改混作新功能。
 
 交付指示更新：用户明确要求“提交代码，并提pr”，因此继续代码提交及 PR；运行验证缺口保留在 PR 中。上游 PR 不由 Agent 合并，部署及正式验收仍待用户通知。
+
+提交钩子验证：type:check、stylelint、prettier、eslint 全部通过。钩子格式化三处文件后已通过 R5 独立增量复审；5 项前端专项再通过。最终业务代码绑定 review-r5-manifest.json / review-r5.diff，代码提交为 6eb020315b6750b9add9012cfe77f153ee5a5df4；仅格式化，不新增业务变化，未无理由重跑完整生产构建。

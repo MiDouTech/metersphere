@@ -16,3 +16,9 @@
 代码审查通过不等同于容器启动、真实权限请求、真实 AI 执行器联调或正式部署验收通过。
 
 最终绑定：R4 patch SHA256 `68138dad332661b226842f270da1b8925764938fbf778bd0a4dbccfab99eb284`；source manifest SHA256 `a339ba2363f204093d166a364486f5f0434c04c7ff7a0dde56c6d2e2984a5315`。主 Agent 复核 195 个文件哈希未发生审后变更。独立审查 Agent 实际执行了前端 5 项专项测试和 patch 哈希校验；其后端及容器运行证据由主 Agent 单独提供，不冒充独立运行。
+
+## R5：提交钩子格式化复审
+
+用户明确要求提交并提 PR 后，正常提交钩子重新执行前端 type:check、stylelint、prettier、eslint，全部通过；自动格式化路由对象换行及两处页面 CSS 属性顺序。独立审查核对 hook-formatting.diff，确认无行为变化，R5 整体代码审查通过。其余业务代码与 R4 一致。前端专项 5 项再次通过。
+
+代码提交：`6eb020315b6750b9add9012cfe77f153ee5a5df4`。最终 R5 patch SHA256：`054f06a6da791189f9a975108f4bb990ac749113017517497e19ee3494b495de`；source manifest SHA256：`397738c23fccd9603622c4dd2dcfb58e578dba75cc86dab732edd63ef9f16995`。完整差异及逐文件哈希见 review-r5.diff / review-r5-manifest.json。后续提交仅补充这些审查证据文档，不修改业务代码，不重复运行已通过的业务检查。运行验收缺口仍见 verification.md。
