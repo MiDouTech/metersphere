@@ -58,7 +58,10 @@ public class AgentStructuredContractService {
         List<String> issues=new ArrayList<>();for(String key:List.of("goal","preconditions","steps","assertions","environmentId","riskBoundary"))if(!value.containsKey(key)||value.get(key)==null||value.get(key).toString().isBlank())issues.add("MISSING_"+key.toUpperCase(Locale.ROOT));
         Set<String> stepIds=new HashSet<>(),assertionIds=new HashSet<>(),dataKeys=new HashSet<>(),aliases=new HashSet<>();Set<Long> positions=new HashSet<>();
         for(var step:objects(value.getOrDefault("steps",List.of()))) {
-            fields(step,"id","sourcePosition","action","expectedObservation","inputBindings");require(stepIds.add(id(step,"id")),"PROTOCOL_CONTRACT_INVALID");require(number(step,"sourcePosition")>0&&positions.add(number(step,"sourcePosition")),"PROTOCOL_CONTRACT_INVALID");
+            fields(step,"id","sourcePosition","action","expectedObservation","inputBindings","writeRecovery");
+            if(step.containsKey("writeRecovery"))
+                require("SIGNED_TERMINAL_NO_EFFECT_ONCE".equals(step.get("writeRecovery")),"PROTOCOL_CONTRACT_INVALID");
+            require(stepIds.add(id(step,"id")),"PROTOCOL_CONTRACT_INVALID");require(number(step,"sourcePosition")>0&&positions.add(number(step,"sourcePosition")),"PROTOCOL_CONTRACT_INVALID");
             if(!(step.get("action") instanceof String action)||action.isBlank()||!(step.get("expectedObservation") instanceof String expected)||expected.isBlank())issues.add("STEP_INCOMPLETE");
         }
         for(var assertion:objects(value.getOrDefault("assertions",List.of()))) {

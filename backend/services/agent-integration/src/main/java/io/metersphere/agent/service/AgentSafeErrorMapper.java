@@ -93,6 +93,7 @@ public class AgentSafeErrorMapper {
         return switch (code) {
             case "PROTOCOL_ACTION_UNKNOWN", "PROTOCOL_OPERATION_UNKNOWN" -> "业务结果尚不明确，请查询原对象并补充证据，不要重新执行该动作";
             case "PROTOCOL_LEASE_INVALID", "PROTOCOL_LEASE_OCCUPIED" -> "当前实例租约已失效或被占用，请读取检查点并重新校验";
+            case "PROTOCOL_ENVIRONMENT_MISMATCH" -> "执行契约与任务环境不一致，请核对目标环境后重新发起任务";
             case "PROTOCOL_PREFLIGHT_REQUIRED", "PROTOCOL_PREFLIGHT_EVIDENCE_REQUIRED" -> "继续前须核实当前账号、环境、授权及前置条件，并提供证据";
             case "PROTOCOL_CONFIGURATION_INCOMPLETE", "PROTOCOL_POLICY_NOT_ACTIVATED" -> "新协议尚未具备完整批准配置，已阻止新执行，请联系管理员补齐";
             case "PROTOCOL_CALL_BUDGET_EXHAUSTED", "PROTOCOL_RECOVERY_BUDGET_EXHAUSTED" -> "执行预算已用尽或收紧，新的执行许可暂停；查询、补证和治理仍可使用";
@@ -160,6 +161,8 @@ public class AgentSafeErrorMapper {
             case "ENVIRONMENT_ASSET_BINDING_REQUIRED" -> "受管任务需要已发布的环境资产，请在测试平台配置中绑定；个人直连不受影响";
             case "ENVIRONMENT_ASSET_UNAVAILABLE" -> "环境资产未发布、不属于当前项目或无权读取，请重新选择已发布环境";
             case "ENVIRONMENT_ASSET_BINDING_CONFLICT" -> "环境资产引用与平台配置不一致，请重新选择环境并预检";
+            case "STRUCTURED_CONTRACT_STEP_MISMATCH" -> "结构化契约的步骤或必填断言与任务步骤不匹配，请更新契约后重新发起";
+            case "STRUCTURED_CONTRACT_REVIEW_REQUIRED" -> "此契约包含明确要求独立复核的断言，请使用对应的复核执行流程";
             case "PREFLIGHT_ENVIRONMENT_CHANGED" -> "平台配置在预检后已变化，请重新预检，原任务尚未创建";
             case "ASSET_REFERENCE_INVALID" -> "资产引用不能为空，请重新选择资产";
             case "ENVIRONMENT_CREDENTIAL_SCOPE_IMMUTABLE" -> "不能更换已有配置的凭据范围，请新建平台配置";
@@ -204,6 +207,12 @@ public class AgentSafeErrorMapper {
             case "QUALITY_EVIDENCE_REQUIRED", "QUALITY_EVIDENCE_INVALID" -> "执行证据不符合平台门禁要求，请补充本步骤的有效证据";
             case "QUALITY_ASSERTION_INVALID", "QUALITY_ASSERTION_FAILED", "QUALITY_RULE_UNSUPPORTED" -> "断言未通过平台门禁，请核对冻结预期和实际结果";
             case "QUALITY_ATTEMPT_INVALID" -> "提交的执行轮次与当前租约不一致";
+            case "PREFLIGHT_HANDOFF_SCOPE_INVALID" -> "找不到与当前项目和计划匹配的已交接评审范围";
+            case "PREFLIGHT_PLAN_SCOPE_CHANGED" -> "测试计划用例范围已变更，请重新确认并运行预检";
+            case "STEP_KNOWLEDGE_REFERENCE_INVALID" -> "采用的知识版本必须在当前用例的冻结契约内";
+            case "WRITE_RECOVERY_PROOF_INVALID" -> "本次业务查询未提供有效的终态凭据";
+            case "WRITE_RECOVERY_WAITING_RECEIPT_INVALID" -> "当前步骤的待核实记录已变化，请重新查询步骤状态";
+            case "WRITE_RECOVERY_NOT_ALLOWED" -> "当前步骤未启用写入恢复或已不在待核实状态";
             case "QUALITY_POLICY_LEGACY_WRITE_FORBIDDEN" -> "项目策略已停止维护，请进入系统设置中的平台质量门禁";
             case "QUALITY_POLICY_PROJECT_FORBIDDEN" -> "无权访问该项目的质量策略，请确认当前项目";
             case "QUALITY_POLICY_PROJECT_DISABLED" -> "项目已停用，质量策略仅可查看，不能修改或发布";

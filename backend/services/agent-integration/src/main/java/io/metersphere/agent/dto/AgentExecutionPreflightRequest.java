@@ -11,7 +11,8 @@ import java.util.Map;
 public class AgentExecutionPreflightRequest {
     @NotBlank private String projectId;
     private String testPlanId;
-    @Size(max = 100) private List<String> caseIds;
+    @Size(max = 50) private String handoffEventId;
+    @Size(max = 200) private List<String> caseIds;
     private Map<String, Object> caseFilter;
     @Size(max = 100) private List<String> expandedCaseIds;
     private Map<String, String> expansionReasons;

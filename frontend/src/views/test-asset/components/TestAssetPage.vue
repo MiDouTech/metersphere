@@ -1,7 +1,7 @@
 <template>
   <div class="p-4" :data-context-scope="route.meta.contextScope || 'PROJECT'">
     <div
-      v-if="hasPageVisible('TEST_ASSET_VERSIONS_PAGE') && route.path !== '/test-assets/versions'"
+      v-if="showVersionLink && hasPageVisible('TEST_ASSET_VERSIONS_PAGE') && route.path !== '/test-assets/versions'"
       class="mb-3 flex justify-end"
     >
       <a-link @click="router.push('/test-assets/versions')">按版本检索资产与引用</a-link>
@@ -14,6 +14,8 @@
   import { useRoute, useRouter } from 'vue-router';
 
   import { hasPageVisible } from '@/utils/permission';
+
+  defineProps({ showVersionLink: { type: Boolean, default: true } });
 
   const route = useRoute();
   const router = useRouter();

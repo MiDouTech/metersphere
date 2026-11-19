@@ -466,6 +466,7 @@
 
     <sql id="taskSearchWhere">
         WHERE project_id = #{projectId}
+        <if test="testPlanId != null">AND test_plan_id = #{testPlanId}</if>
         <if test="keyword != null and keyword != ''">
             AND (LOWER(name) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '!'
                  OR LOWER(objective) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '!'

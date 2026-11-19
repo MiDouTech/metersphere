@@ -119,6 +119,15 @@ public class AgentMcpStreamableService {
         result.put("protocolVersion", requested);
         result.put("capabilities", Map.of("tools", Map.of("listChanged", false)));
         result.put("serverInfo", Map.of("name", "metersphere-agent", "version", "1.0.0"));
+        result.put("instructions", """
+                For personal browser plan execution, use metersphere.execution.preflight, metersphere.execution.create,
+                and metersphere.task.claim. Use metersphere.execution.batch.next before choosing a case and follow the
+                frozen steps with metersphere.execution.step.decide. Submit observed facts and committed evidence through
+                metersphere.execution.step.submit_and_advance. Persist waits with metersphere.execution.step.defer,
+                then continue remaining cases. Query business state when a browser write's effect is unknown and
+                resume only the upload when evidence fails. Call metersphere.execution.batch.finish after the batch
+                requests finalization.
+                """);
         return result;
     }
 
@@ -228,7 +237,9 @@ public class AgentMcpStreamableService {
         // credentials or replay an expired capability through the generic response cache.
         if (java.util.Set.of("metersphere.task.claim", "metersphere.task.lease.heartbeat",
                 "metersphere.task.release", "metersphere.execution.events.batch",
-                "metersphere.execution.step.submit", "metersphere.execution.complete",
+                "metersphere.execution.step.submit", "metersphere.execution.step.write_retry.claim", "metersphere.execution.complete",
+                "metersphere.execution.step.decide", "metersphere.execution.step.submit_and_advance",
+                "metersphere.execution.step.defer", "metersphere.execution.batch.finish",
                 "metersphere.execution.fail", "metersphere.execution.checkpoint.create",
                 "metersphere.human_request.create", "metersphere.artifact.prepare",
                 "metersphere.artifact.commit").contains(name)) {

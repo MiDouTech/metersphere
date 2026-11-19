@@ -1,6 +1,9 @@
 <template>
   <div class="p-4">
     <a-page-header title="受控执行与独立复核" subtitle="提交、复核和正式同步分别记录；待复核不表示通过" />
+    <div v-if="canOpenProtocolAdministration" class="mb-4">
+      <RouterLink :to="{ name: 'protocolAdministration' }">受控会话授权设置</RouterLink>
+    </div>
     <a-alert class="mb-4">发生未知外部结果时，先查询原业务对象并补充证据。页面不会重放外部业务动作。</a-alert>
     <a-space class="mb-4"
       ><a-button :loading="loading" @click="loadList">刷新实例</a-button
@@ -401,9 +404,15 @@
     uploadProtocolEvidence,
   } from '@/api/modules/governed-execution';
   import useAppStore from '@/store/modules/app';
+  import { hasAnyPermission, hasRouteVisible } from '@/utils/permission';
   import { useProtocolMemoryClear } from '@/utils/protocol-memory';
 
   const route = useRoute();
+  const canOpenProtocolAdministration = computed(
+    () =>
+      hasAnyPermission(['ORGANIZATION_USER_ROLE:READ', 'SYSTEM_USER_ROLE:READ']) &&
+      hasRouteVisible('protocolAdministration')
+  );
   const app = useAppStore();
   const loading = ref(false);
   const saving = ref(false);

@@ -187,7 +187,17 @@ public class AgentTaskClaimService {
     }
 
     public void complete(String leaseId, String leaseToken, AgentRunnerLeaseCompleteRequest request) {
-        assertLeaseOwner(leaseId);
+        if (request != null && (request.getTaskId() != null || request.getExecutionId() != null)) {
+            if (StringUtils.isAnyBlank(request.getTaskId(), request.getExecutionId())) {
+                throw new MSException("AGENT_VALIDATION_ERROR");
+            }
+            AgentRunnerLeaseDTO lease = requireOwnedTaskLease(request.getTaskId(), leaseId);
+            if (!StringUtils.equals(request.getExecutionId(), lease.getExecutionId())) {
+                throw new MSException("AGENT_TASK_LEASE_TASK_MISMATCH");
+            }
+        } else {
+            assertLeaseOwner(leaseId);
+        }
         runnerService.completeLease(bearer(leaseToken), leaseId, request);
     }
 

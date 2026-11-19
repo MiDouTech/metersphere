@@ -3,6 +3,7 @@ package io.metersphere.agent.service;
 import io.metersphere.agent.dto.TestAssetDocumentDTO;
 import io.metersphere.agent.dto.TestAssetRelationDTO;
 import io.metersphere.agent.dto.TestAssetVersionDTO;
+import io.metersphere.agent.dto.TestAssetCaseDocumentReferenceRequest;
 import io.metersphere.agent.dto.TestAssetContextDocumentDTO;
 import io.metersphere.agent.dto.TestAssetCatalogItemDTO;
 import io.metersphere.agent.dto.TestAssetContextDTO;
@@ -19,6 +20,7 @@ import jakarta.annotation.Resource;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.SecurityUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -48,6 +50,11 @@ public class TestAssetCatalogService {
     private AgentProjectService agentProjectService;
     @Resource
     private TestAssetVersionService versionService;
+    @Resource
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    @Resource
+    private AgentBusinessAccess businessAccess;
+
 
     private static final Map<String, List<String>> ASSET_PERMISSIONS = Map.ofEntries(
             Map.entry("DOCUMENT", List.of(PermissionConstants.FUNCTIONAL_CASE_AI_READ)),
@@ -112,6 +119,78 @@ public class TestAssetCatalogService {
         }
         attachLatestPublishedVersion(item);
         return item;
+    }
+
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
+    public void referenceDocument(String caseId, TestAssetCaseDocumentReferenceRequest request) {
+        String project = agentProjectService.resolveProjectId(request.projectId());
+        String actor = SessionUtils.getUserId();
+        if (StringUtils.isBlank(actor)
+                || !businessAccess.userHasPermission(actor, project, PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE)
+                || !businessAccess.userHasPermission(actor, project, PermissionConstants.FUNCTIONAL_CASE_AI_READ)) {
+            throw AgentBusinessAccess.denied();
+        }
+        var cases = jdbcTemplate.queryForList("""
+                SELECT ref_id FROM functional_case
+                WHERE id = ? AND project_id = ? AND deleted = 0 FOR UPDATE
+                """, caseId, project);
+        if (cases.size() != 1) {
+            throw AgentBusinessAccess.denied();
+        }
+        String stableId = StringUtils.defaultIfBlank((String) cases.getFirst().get("ref_id"), caseId);
+        detail(project, "DOCUMENT", request.documentId());
+        var version = versionService.getPublished(request.documentVersionId(), project, "DOCUMENT", request.documentId());
+        Long existing = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM test_asset_relation
+                WHERE project_id = ? AND relation_type = 'REFERENCES'
+                  AND source_asset_type = 'DOCUMENT' AND source_asset_id = ? AND source_version_id = ?
+                  AND target_asset_type = 'CASE' AND target_asset_id = ?
+                """, Long.class, project, request.documentId(), version.getId(), stableId);
+        if (Long.valueOf(0).equals(existing)) {
+            versionService.relate(project, "REFERENCES", "DOCUMENT", request.documentId(), version.getId(),
+                    "CASE", stableId, null, null, actor);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
+    public TestAssetVersionDTO reviseDocument(String projectId, String assetId, String expectedVersionId, String markdown) {
+        String project = agentProjectService.resolveProjectId(projectId);
+        assertPermission("DOCUMENT");
+        String actor = SessionUtils.getUserId();
+        if (StringUtils.isBlank(actor) || StringUtils.isBlank(markdown) || markdown.length() > 200_000) {
+            throw new MSException("AGENT_VALIDATION_ERROR");
+        }
+        if (!businessAccess.userHasPermission(actor, project, PermissionConstants.FUNCTIONAL_CASE_AI_UPLOAD)) {
+            throw AgentBusinessAccess.denied();
+        }
+        var locked = jdbcTemplate.queryForList("""
+                SELECT original_name FROM ai_source_document
+                WHERE id = ? AND project_id = ? AND deleted = 0 AND parse_status = 'PARSED'
+                FOR UPDATE
+                """, assetId, project);
+        if (locked.size() != 1
+                || !StringUtils.endsWithIgnoreCase((String) locked.getFirst().get("original_name"), ".md")) {
+            throw new MSException("ASSET_NOT_FOUND");
+        }
+        TestAssetVersionDTO latest = versionService.latestPublished(project, "DOCUMENT", assetId);
+        if (!latest.getId().equals(expectedVersionId)) {
+            throw new MSException("VERSION_CONFLICT");
+        }
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        var decoded = JSON.parseObject(latest.getContentSnapshot());
+        if (decoded instanceof Map<?, ?> previous) {
+            if (markdown.equals(previous.get("bodyMarkdown"))) {
+                return latest;
+            }
+            if (previous.get("document") != null) {
+                snapshot.put("document", previous.get("document"));
+            }
+        }
+        snapshot.put("parentVersionId", latest.getId());
+        snapshot.put("bodyMarkdown", markdown);
+        snapshot.put("parserType", "MARKDOWN");
+        return versionService.publish(project, "DOCUMENT", assetId, "online:" + latest.getId(),
+                JSON.toJSONString(snapshot), actor);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -281,7 +360,10 @@ public class TestAssetCatalogService {
         if (caseAssetIds == null || caseAssetIds.isEmpty()) {
             return List.of();
         }
-        return mapper.selectDocumentContextForCases(projectId, caseAssetIds.stream().distinct().toList());
+        String actor = StringUtils.defaultIfBlank(AgentExecutionActorContext.get(), SessionUtils.getUserId());
+        boolean includeReferences = StringUtils.isNotBlank(actor)
+                && businessAccess.userHasPermission(actor, projectId, PermissionConstants.FUNCTIONAL_CASE_AI_READ);
+        return mapper.selectDocumentContextForCases(projectId, caseAssetIds.stream().distinct().toList(), includeReferences);
     }
 
     private int normalizePage(Integer current) {

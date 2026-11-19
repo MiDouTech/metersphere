@@ -546,7 +546,8 @@
         LEFT JOIN ai_source_document d
           ON d.id = v.asset_id AND d.project_id = v.project_id
         WHERE r.project_id = #{projectId}
-          AND r.relation_type = 'DERIVED_FROM'
+          AND (r.relation_type = 'DERIVED_FROM'
+          <if test="includeReferences">OR (r.relation_type = 'REFERENCES' AND d.deleted = 0)</if>)
           AND r.source_asset_type = 'DOCUMENT'
           AND r.target_asset_type = 'CASE'
           AND r.target_asset_id IN

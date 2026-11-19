@@ -81,6 +81,7 @@ public interface AgentExecutionMapper {
                                                           @Param("limit") int limit);
 
     long countTasks(@Param("projectId") String projectId,
+                    @Param("testPlanId") String testPlanId,
                     @Param("keyword") String keyword,
                     @Param("likeKeyword") String likeKeyword,
                     @Param("status") String status,
@@ -90,6 +91,7 @@ public interface AgentExecutionMapper {
                     @Param("executionMode") String executionMode);
 
     List<AgentExecutionTaskDTO> searchTasks(@Param("projectId") String projectId,
+                                            @Param("testPlanId") String testPlanId,
                                             @Param("keyword") String keyword,
                                             @Param("likeKeyword") String likeKeyword,
                                             @Param("status") String status,

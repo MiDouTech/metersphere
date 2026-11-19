@@ -3,6 +3,8 @@ import { caseExportTools } from "./tools/caseExport.js";
 import { readFileSync } from "node:fs";
 import { bugTransferTools } from "./tools/bugTransfer.js";
 import { caseLibraryTools } from "./tools/caseLibrary.js";
+import { executionBatchFinishTool, executionBatchNextTool } from "./tools/executionBatchNext.js";
+import { deferExecutionStepTool, executionDecideTool, submitAndAdvanceTool } from "./tools/executionDecide.js";
 import { managedExecutionTools } from "./tools/managedExecution.js";
 import { governedExecutionTools } from "./tools/governedExecution.js";
 import { z } from "zod";
@@ -39,6 +41,7 @@ import {
   getExecutionEventsTool,
   getExecutionTaskTool,
   listTestPlanCasesTool,
+  readPlanExecutionContractTool,
   resolveExecutionScopeTool,
   resumeExecutionTaskTool,
   searchTestPlansTool,
@@ -59,6 +62,11 @@ type ToolDef = {
 const tools: ToolDef[] = [
   ...governedExecutionTools,
   ...managedExecutionTools,
+  executionDecideTool,
+  deferExecutionStepTool,
+  executionBatchNextTool,
+  executionBatchFinishTool,
+  submitAndAdvanceTool,
   ...caseLibraryTools,
   ...caseExportTools,
   ...bugTransferTools,
@@ -77,6 +85,7 @@ const tools: ToolDef[] = [
   associateTestPlanCasesTool,
   searchTestPlansTool,
   listTestPlanCasesTool,
+  readPlanExecutionContractTool,
   resolveExecutionScopeTool,
   createExecutionTaskTool,
   getExecutionTaskTool,
@@ -104,6 +113,15 @@ async function main() {
   const server = new McpServer({
     name: "metersphere-mcp",
     version: JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version,
+  }, {
+    instructions: [
+      "For a personal browser plan, use metersphere.execution.preflight, metersphere.execution.create, and metersphere.task.claim with the ordinary project MCP identity.",
+      "Read metersphere.execution.batch.next before choosing a case. Follow the frozen step and submit browser observations and committed evidence with metersphere.execution.step.submit_and_advance.",
+      "For missing data, call metersphere.execution.step.decide with DATA_MISSING and use the returned preparation method.",
+      "If a browser write's effect is unknown, persist the wait and query business state before any further write.",
+      "After an evidence upload failure, resume the upload without repeating the business action.",
+      "After a per-case wait or persisted assertion failure, use metersphere.execution.batch.next for the remaining cases. Finish only when it requests finalization.",
+    ].join("\n"),
   });
 
   for (const tool of tools) {

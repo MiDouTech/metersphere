@@ -30,7 +30,7 @@ class AgentProtocolTransactionTests {
         jdbc=new JdbcTemplate(ds);var cipher=new AgentFactCipher();byte[] key=new byte[32];new java.security.SecureRandom().nextBytes(key);ReflectionTestUtils.setField(cipher,"encodedKey",Base64.getEncoder().encodeToString(key));
         store=new AgentProtocolStore(jdbc,new DataSourceTransactionManager(ds),cipher);evidence=new AgentProtocolEvidenceService(jdbc,store);
         jdbc.execute("CREATE TABLE agent_case_evidence(id VARCHAR(64) PRIMARY KEY,token_id VARCHAR(64),project_id VARCHAR(64),case_id VARCHAR(64),submission_id VARCHAR(64),expires_at BIGINT,sha256 VARCHAR(64),content_type VARCHAR(64),size_bytes BIGINT,payload BLOB)");
-        jdbc.execute("CREATE TABLE ai_execution_step_result(id VARCHAR(64) PRIMARY KEY,lease_id VARCHAR(50))");
+        jdbc.execute("CREATE TABLE ai_execution_step_result(id VARCHAR(64) PRIMARY KEY,lease_id VARCHAR(50), task_id VARCHAR(64), execution_id VARCHAR(64), step_id VARCHAR(64), create_time BIGINT)");
         jdbc.execute("CREATE TABLE agent_case_submission(id VARCHAR(64) PRIMARY KEY,token_id VARCHAR(64) NOT NULL)");
         try(var input=getClass().getResourceAsStream("/migration/3.7.2/ddl/V3.7.2_148__governed_execution_protocol.sql")) {
             assertNotNull(input);String script=new String(input.readAllBytes(),StandardCharsets.UTF_8);
@@ -42,10 +42,11 @@ class AgentProtocolTransactionTests {
             new org.springframework.jdbc.datasource.init.ResourceDatabasePopulator(new org.springframework.core.io.ByteArrayResource(script.getBytes(StandardCharsets.UTF_8))).execute(ds);
         }
         jdbc.execute("CREATE TABLE effects(id VARCHAR(64) PRIMARY KEY)");jdbc.execute("CREATE TABLE meter(id INT PRIMARY KEY,used INT)");jdbc.update("INSERT INTO meter VALUES (1,0)");
-        jdbc.execute("CREATE TABLE ai_execution_task(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64))");
+        jdbc.execute("CREATE TABLE ai_execution_task(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64), organization_id VARCHAR(64), create_user VARCHAR(64))");
         jdbc.execute("CREATE TABLE ai_execution_artifact(id VARCHAR(64) PRIMARY KEY,task_id VARCHAR(64),status VARCHAR(32),retention_until BIGINT,sha256 VARCHAR(64),content_type VARCHAR(64),size_bytes BIGINT,execution_case_id VARCHAR(64))");
         jdbc.execute("CREATE TABLE ai_execution_case(id VARCHAR(64) PRIMARY KEY,task_id VARCHAR(64),case_id VARCHAR(64))");jdbc.update("INSERT INTO ai_execution_case VALUES ('source-case','task','case')");
-        jdbc.update("INSERT INTO ai_execution_task VALUES ('task','project')");jdbc.update("INSERT INTO ai_execution_artifact VALUES ('image','task','AVAILABLE',1,'hash','image/png',128,'source-case')");
+        jdbc.update("INSERT INTO ai_execution_task(id,project_id) VALUES ('task','project')");jdbc.update("INSERT INTO ai_execution_artifact VALUES ('image','task','AVAILABLE',1,'hash','image/png',128,'source-case')");
+        jdbc.execute("CREATE TABLE ai_execution_knowledge_usage(step_result_id VARCHAR(64), knowledge_id VARCHAR(64), knowledge_version BIGINT)");
         jdbc.execute("CREATE TABLE agent_case_submission_evidence(submission_id VARCHAR(64),evidence_id VARCHAR(64),retain_until BIGINT)");
         jdbc.update("INSERT INTO agent_case_evidence(id,project_id,case_id,expires_at,sha256,content_type,size_bytes,payload) VALUES ('personal','project','case',1,'hash','image/png',1,?)",new byte[]{1});
     }

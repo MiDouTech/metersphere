@@ -151,7 +151,15 @@
               })
             "
             >受控执行与独立复核</a-button
-          ><StructuredContractEditor
+          ><a-button
+            v-permission.all="['FUNCTIONAL_CASE:READ+UPDATE', 'FUNCTIONAL_CASE_AI:READ']"
+            @click="documentReferenceVisible = true"
+            >引用文档版本</a-button
+          ><CaseDocumentReferenceDialog
+            v-if="documentReferenceVisible"
+            v-model:visible="documentReferenceVisible"
+            :project-id="currentProjectId"
+            :case-id="detailInfo.id" /><StructuredContractEditor
             v-if="structuredVisible"
             :key="detailInfo.id"
             :project-id="currentProjectId"
@@ -327,6 +335,7 @@
   import caseLevel from '@/components/business/ms-case-associate/caseLevel.vue';
   import type { CaseLevel } from '@/components/business/ms-case-associate/types';
   import MsDetailDrawer from '@/components/business/ms-detail-drawer/index.vue';
+  import CaseDocumentReferenceDialog from './caseDocumentReferenceDialog.vue';
   import BasicInfo from './tabContent/basicInfo.vue';
   import SettingDrawer from './tabContent/settingDrawer.vue';
   import StructuredContractEditor from '@/views/execution/components/StructuredContractEditor.vue';
@@ -443,6 +452,7 @@
 
   const currentProjectId = computed(() => appStore.currentProjectId);
   const structuredVisible = ref(false);
+  const documentReferenceVisible = ref(false);
 
   const showDrawerVisible = ref<boolean>(!!props.visible);
 

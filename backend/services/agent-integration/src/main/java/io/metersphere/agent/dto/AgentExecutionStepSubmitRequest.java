@@ -21,6 +21,8 @@ public class AgentExecutionStepSubmitRequest {
     private String errorCode;
     private String errorMessage;
     private List<String> artifactIds;
+    private String testPlanCaseId;
+    private List<String> usedKnowledgeRefs;
     @NotBlank private String requestId;
     private String traceId;
     private Long startedAt;

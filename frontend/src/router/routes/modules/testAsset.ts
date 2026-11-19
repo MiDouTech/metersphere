@@ -69,7 +69,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: '受控执行授权',
         contextScope: 'ORGANIZATION',
         roles: ['ORGANIZATION_USER_ROLE:READ', 'SYSTEM_USER_ROLE:READ'],
-        isTopMenu: true,
+        hideInMenu: true,
       },
     },
     {

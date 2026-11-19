@@ -28,11 +28,21 @@
           })
         "
         >受控执行与独立复核</a-button
+      ><a-button
+        v-permission.all="['FUNCTIONAL_CASE:READ+UPDATE', 'FUNCTIONAL_CASE_AI:READ']"
+        @click="documentReferenceVisible = true"
+        >引用文档版本</a-button
       ><StructuredContractEditor
         v-if="structuredVisible"
         :project-id="String(route.query.pId || caseDetail?.projectId || appStore.currentProjectId)"
         :case-id="String(route.query.id)"
     /></div>
+    <CaseDocumentReferenceDialog
+      v-if="documentReferenceVisible"
+      v-model:visible="documentReferenceVisible"
+      :project-id="String(route.query.pId || caseDetail?.projectId || appStore.currentProjectId)"
+      :case-id="String(route.query.id)"
+    />
     <template #footerRight>
       <div class="flex justify-end gap-[16px]">
         <a-button :disabled="loading" type="secondary" @click="cancelHandler">
@@ -57,6 +67,7 @@
   import { useRoute, useRouter } from 'vue-router';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
+  import CaseDocumentReferenceDialog from './caseDocumentReferenceDialog.vue';
   import CaseTemplateDetail from './caseTemplateDetail.vue';
   import StructuredContractEditor from '@/views/execution/components/StructuredContractEditor.vue';
 
@@ -80,6 +91,7 @@
   const route = useRoute();
   const appStore = useAppStore();
   const structuredVisible = ref(false);
+  const documentReferenceVisible = ref(false);
   const router = useRouter();
 
   setIsSave(false);

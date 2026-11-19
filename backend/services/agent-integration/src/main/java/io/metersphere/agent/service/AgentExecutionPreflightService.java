@@ -59,10 +59,19 @@ public class AgentExecutionPreflightService {
         List<String> added=unique(request.getExpandedCaseIds());
         try {
             validateScope(projectId,request,original,added);
+            if (StringUtils.isNotBlank(request.getHandoffEventId())) {
+                if (!AgentTaskOrigin.PERSONAL_MCP.equals(origin) || !added.isEmpty())
+                    throw new MSException("PREFLIGHT_HANDOFF_SCOPE_INVALID");
+                assertHandoffScope(projectId, request.getTestPlanId(), request.getHandoffEventId(), original);
+            }
             pass(checks,"SCOPE","Execution scope is valid",Map.of("original",original.size(),"added",added.size()),now);
         } catch (MSException ex) {
             blockedReason=AgentBlockedReason.BLOCKED_SCOPE.name(); blockedDetail=safe(ex);
-            block(checks,"SCOPE",blockedDetail,now);
+            if (ex instanceof HandoffScopeChanged change) {
+                checks.add(new AgentPreflightCheckDTO("SCOPE", "BLOCKED", blockedDetail, change.details, now));
+            } else {
+                block(checks,"SCOPE",blockedDetail,now);
+            }
         }
         AgentEnvironmentProfileDTO environment=null;
         try {
@@ -135,20 +144,35 @@ public class AgentExecutionPreflightService {
         List<String> resolved=new ArrayList<>(original);resolved.addAll(added);
         List<AgentCaseExecutabilityDTO> executability=List.of();
         List<Map<String,Object>> executableAssets=List.of();
+        Map<String, String> caseExecutionIssues = new LinkedHashMap<>();
+        boolean personalPlan = caseLimit(origin, request.getTestPlanId()) == PERSONAL_PLAN_CASE_LIMIT;
         if(environment!=null&&blockedReason==null){
             try{
                 AgentCaseExecutabilityRequest executableRequest=new AgentCaseExecutabilityRequest();executableRequest.setProjectId(projectId);
                 executableRequest.setEnvironmentProfileId(environment.getId());executableRequest.setCaseIds(resolved);
                 executability=caseExecutabilityService.batchCheck(executableRequest);
                 List<AgentCaseExecutabilityDTO> notReady=executability.stream().filter(v->!"READY".equals(v.getAutomationReadiness())).toList();
-                if(!notReady.isEmpty())throw new MSException("CASE_AI_EXECUTABILITY_NOT_READY: "+notReady.stream().map(AgentCaseExecutabilityDTO::getCaseId).toList());
-                if(credentialSnapshot!=null){
-                    String actualRole=credentialSnapshot.getBusinessRole();
-                    if(executability.stream().map(AgentCaseExecutabilityDTO::getCredentialRole).filter(StringUtils::isNotBlank).anyMatch(role->!StringUtils.equals(role,actualRole)))
-                        throw new MSException("CASE_CREDENTIAL_ROLE_MISMATCH");
+                if (!notReady.isEmpty() && !personalPlan)
+                    throw new MSException("CASE_AI_EXECUTABILITY_NOT_READY: "+notReady.stream().map(AgentCaseExecutabilityDTO::getCaseId).toList());
+                if (personalPlan) {
+                    for (var item : notReady) {
+                        if (!List.of("CASE_VERSION_NOT_PUBLISHED").equals(item.getMissingItems()))
+                            caseExecutionIssues.put(item.getCaseId(), "CASE_AI_EXECUTABILITY_NOT_READY");
+                    }
                 }
-                executableAssets=freezeExecutableAssets(projectId,executability);
-                pass(checks,"CASE_EXECUTABILITY","All cases are READY for the selected environment and credential role",Map.of("count",executability.size()),now);
+                if (credentialSnapshot != null) {
+                    String actualRole = credentialSnapshot.getBusinessRole();
+                    for (var item : executability) {
+                        if (StringUtils.isNotBlank(item.getCredentialRole()) && !StringUtils.equals(item.getCredentialRole(), actualRole)) {
+                            if (!personalPlan) throw new MSException("CASE_CREDENTIAL_ROLE_MISMATCH");
+                            caseExecutionIssues.put(item.getCaseId(), "CASE_CREDENTIAL_ROLE_MISMATCH");
+                        }
+                    }
+                }
+                var eligible = executability.stream().filter(item -> !caseExecutionIssues.containsKey(item.getCaseId())).toList();
+                executableAssets=freezeExecutableAssets(projectId,eligible);
+                pass(checks,"CASE_EXECUTABILITY","Execution readiness was checked for the selected scope",
+                        Map.of("count",executability.size(),"caseIssues",caseExecutionIssues),now);
             }catch(MSException ex){blockedReason=AgentBlockedReason.BLOCKED_SCOPE.name();blockedDetail=safe(ex);checks.add(new AgentPreflightCheckDTO("CASE_EXECUTABILITY","BLOCKED",blockedDetail,Map.of("cases",executability),now));}
         }
         List<Map<String,Object>> caseAssets=List.of();
@@ -156,7 +180,10 @@ public class AgentExecutionPreflightService {
         List<TestAssetContextDTO> additionalAssets=List.of();
         if(blockedReason==null){
             try{
-                caseAssets=freezeCaseAssets(projectId,resolved,executability);
+                var versionedScope = personalPlan ? executability.stream()
+                        .filter(item -> item.getCaseVersionId() != null && !caseExecutionIssues.containsKey(item.getCaseId()))
+                        .map(AgentCaseExecutabilityDTO::getCaseId).toList() : resolved;
+                caseAssets=freezeCaseAssets(projectId,versionedScope,executability);
                 documentAssets=freezeRelatedDocuments(projectId,caseAssets);
                 pass(checks,"PUBLISHED_ASSETS","Case, document and executable assets are frozen from published immutable versions",Map.of("caseCount",caseAssets.size(),"documentCount",documentAssets.size()),now);
             }catch(MSException ex){
@@ -189,9 +216,18 @@ public class AgentExecutionPreflightService {
         snapshot.put("schemaVersion","v1");snapshot.put("projectId",projectId);snapshot.put("taskOrigin",origin);
         snapshot.put("originalCaseIds",original);snapshot.put("addedCaseIds",added);snapshot.put("expansionReasons",safeReasons(request.getExpansionReasons(),added));
         snapshot.put("caseAssets",caseAssets);
+        if (StringUtils.isNotBlank(request.getHandoffEventId())) snapshot.put("handoffEventId", request.getHandoffEventId());
         snapshot.put("documentAssets",documentAssets);
         snapshot.put("additionalAssets",additionalAssets);
         snapshot.put("caseExecutability",executability);
+        if (personalPlan) {
+            snapshot.put("caseExecutionIssues", caseExecutionIssues);
+            snapshot.put("legacyCaseIds", executability.stream()
+                    .filter(item -> !caseExecutionIssues.containsKey(item.getCaseId())
+                            && item.getCaseVersionId() == null
+                            && List.of("CASE_VERSION_NOT_PUBLISHED").equals(item.getMissingItems()))
+                    .map(AgentCaseExecutabilityDTO::getCaseId).toList());
+        }
         snapshot.put("executableAssets",executableAssets);
         if(environment!=null)snapshot.put("environment",JSON.parseObject(environmentService.freezeSnapshot(environment),Map.class));
         if(credentialSnapshot!=null)snapshot.put("credential",Map.of(
@@ -243,6 +279,9 @@ public class AgentExecutionPreflightService {
                 || !unique(request.getCaseIds()).equals(unique(create.getCaseIds()))) {
             throw new MSException("PREFLIGHT_REQUEST_MISMATCH");
         }
+        if (StringUtils.isNotBlank(request.getHandoffEventId())) {
+            assertHandoffScope(projectId, request.getTestPlanId(), request.getHandoffEventId(), dto.getResolvedCaseIds());
+        }
         // The preflight request is the authoritative contract.  Never retain mutable
         // policy or capability values supplied again by the create caller.
         create.setRequiredCapabilities(unique(request.getRequiredCapabilities()));
@@ -261,6 +300,15 @@ public class AgentExecutionPreflightService {
         @SuppressWarnings("unchecked") List<Map<String,Object>> assets=(List<Map<String,Object>>)snapshot.get("additionalAssets");
         if(assets==null)return List.of();
         return assets.stream().map(asset->{TestAssetRefDTO ref=new TestAssetRefDTO();ref.setAssetType(String.valueOf(asset.get("assetType")));ref.setAssetId(String.valueOf(asset.get("assetId")));ref.setVersionId(String.valueOf(asset.get("versionId")));return ref;}).toList();
+    }
+
+    record PersonalPlanScope(Map<String, Object> issues, List<String> legacyCaseIds) {}
+
+    PersonalPlanScope frozenPersonalPlanScope(String preflightId) {
+        Map<String, Object> row = jdbcTemplate.queryForMap("SELECT snapshot_json FROM ai_execution_preflight WHERE id=?", preflightId);
+        Map<String, Object> snapshot = JSON.parseObject((String) row.get("snapshot_json"), Map.class);
+        return new PersonalPlanScope(AgentProtocolData.object(snapshot.getOrDefault("caseExecutionIssues", Map.of())),
+                AgentProtocolData.strings(snapshot.getOrDefault("legacyCaseIds", List.of())));
     }
 
     public TestAssetVersionDTO frozenCaseVersion(String preflightId,String caseRowId,String stableAssetId){
@@ -320,6 +368,57 @@ public class AgentExecutionPreflightService {
         if(changed!=1)throw new MSException("PREFLIGHT_INVALID_EXPIRED_OR_ALREADY_USED");return dto;
     }
 
+    static final int PERSONAL_PLAN_CASE_LIMIT = 200;
+
+    void assertHandoffScope(String projectId, String planId, String eventId, List<String> selected) {
+        if (StringUtils.isBlank(planId) || eventId.length() > 50) throw new MSException("PREFLIGHT_HANDOFF_SCOPE_INVALID");
+        testPlanService.cases(projectId, planId, 1, 1, false);
+        var rows = jdbcTemplate.queryForList("""
+                SELECT d.snapshot_json, d.source_changed, r.generation
+                FROM hifox_http_delivery d
+                JOIN plan_review_relation r ON r.active_plan_id=d.plan_id AND r.project_id=d.project_id
+                WHERE d.project_id=? AND d.plan_id=? AND d.event_id=? AND d.state='SUCCESS'
+                    AND r.state='ACTIVE'
+                """, projectId, planId, eventId);
+        if (rows.size() != 1) throw new MSException("PREFLIGHT_HANDOFF_SCOPE_INVALID");
+        var delivery = rows.getFirst();
+        var source = JSON.parseObject((String) delivery.get("snapshot_json"),
+                io.metersphere.functional.handoff.HandoffSourceReader.Source.class);
+        if (source == null || source.snapshot() == null || source.snapshot().source().isEmpty())
+            throw new MSException("PREFLIGHT_HANDOFF_SCOPE_INVALID");
+        var approved = source.snapshot().source().keySet();
+        var current = new HashSet<>(jdbcTemplate.queryForList("""
+                SELECT functional_case_id FROM test_plan_functional_case WHERE test_plan_id=?
+                """, String.class, planId));
+        boolean changed = Boolean.TRUE.equals(delivery.get("source_changed"))
+                || delivery.get("source_changed") instanceof Number value && value.intValue() != 0
+                || !Objects.equals(source.snapshot().generation(), delivery.get("generation"));
+        var selection = new HashSet<>(selected);
+        if (changed || !approved.equals(current) || !approved.equals(selection)) {
+            throw new HandoffScopeChanged(Map.of(
+                    "addedToPlan", difference(current, approved), "removedFromPlan", difference(approved, current),
+                    "outsideReviewedScope", difference(selection, approved), "missingFromSelection", difference(approved, selection)));
+        }
+    }
+
+    private List<String> difference(Set<String> left, Set<String> right) {
+        return left.stream().filter(id -> !right.contains(id)).sorted().limit(PERSONAL_PLAN_CASE_LIMIT).toList();
+    }
+
+    private static final class HandoffScopeChanged extends MSException {
+        private final Map<String, Object> details;
+
+        private HandoffScopeChanged(Map<String, Object> details) {
+            super("PREFLIGHT_PLAN_SCOPE_CHANGED");
+            this.details = details;
+        }
+    }
+
+    static int caseLimit(String origin, String planId) {
+        return AgentTaskOrigin.PERSONAL_MCP.equalsIgnoreCase(origin) && StringUtils.isNotBlank(planId)
+                ? PERSONAL_PLAN_CASE_LIMIT : 100;
+    }
+
     private List<String> resolveOriginalScope(AgentExecutionPreflightRequest r,String projectId){
         List<String> ids=unique(r.getCaseIds());
         if(!ids.isEmpty())return ids;
@@ -338,7 +437,7 @@ public class AgentExecutionPreflightService {
         Set<String> overlap=new HashSet<>(original);overlap.retainAll(added);if(!overlap.isEmpty())throw new MSException("SCOPE_EXPANSION_DUPLICATE");
         if(!added.isEmpty()&&((double)added.size()/original.size())>0.15d)throw new MSException("SCOPE_EXPANSION_LIMIT_EXCEEDED");
         if(original.isEmpty()&&!added.isEmpty())throw new MSException("SCOPE_EXPANSION_WITHOUT_BASE");
-        List<String> all=new ArrayList<>(original);all.addAll(added);if(all.size()>100)throw new MSException("EXECUTION_SCOPE_TOO_LARGE");
+        List<String> all=new ArrayList<>(original);all.addAll(added);if(all.size()>caseLimit(r.getTaskOrigin(),r.getTestPlanId()))throw new MSException("EXECUTION_SCOPE_TOO_LARGE");
         String placeholders=String.join(",",Collections.nCopies(all.size(),"?"));List<Object> args=new ArrayList<>();args.add(projectId);args.addAll(all);
         Integer count=jdbcTemplate.queryForObject("SELECT COUNT(1) FROM functional_case WHERE project_id=? AND deleted=0 AND id IN ("+placeholders+")",Integer.class,args.toArray());
         if(count==null||count!=all.size())throw new MSException("SCOPE_CASE_PROJECT_MISMATCH");

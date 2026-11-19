@@ -8,6 +8,7 @@ import ts from 'typescript';
 const src = resolve(import.meta.dirname, '../src');
 const grants = new Set();
 const hidden = new Set();
+let currentOrgId;
 function load(file) {
   const filename = resolve(src, file);
   const output = ts.transpileModule(readFileSync(filename, 'utf8'), {
@@ -20,6 +21,7 @@ function load(file) {
       hasPageVisible: (code) => !hidden.has(code),
       hasRouteVisible: (name) => !hidden.has(name),
     };
+    if (name === '@/store/modules/app') return { default: () => ({ currentOrgId }) };
     if (name.endsWith('/base')) return { DEFAULT_LAYOUT: {} };
     const target = name.startsWith('@/') ? resolve(src, name.slice(2)) : resolve(dirname(filename), name);
     return load(`${target}.ts`);
@@ -67,26 +69,26 @@ test('legacy evaluation routes reach real statistics with supported filters', ()
   assert.equal(target.query.view, 'evaluation');
   assert.equal(target.query.executorType, 'AGENT');
 });
-test('there is one business task primary menu and no approval placeholder', () => {
-  assert.equal(execution.children.filter((route) => route.meta?.isTopMenu).length, 1);
-  assert.equal(execution.children.some((route) => /approv/.test(route.path)), false);
+test('execution uses one business task route and hides the detail route from menus', () => {
+  const top = execution.children.filter((route) => route.meta?.isTopMenu);
+  assert.deepEqual(plain(top.map(route => route.path)), ['platforms', 'tasks', 'quality-policy']);
+  assert.equal(execution.children.find(route => route.path === 'tasks/:id').meta.hideInMenu, true);
+  assert.equal(execution.children.some(route => /approv/.test(route.path)), false);
   assert.equal(legacy.meta.hideInMenu, true);
 });
-test('moving configuration retains admin boundaries and specific permissions', () => {
-  for (const group of settings) {
-    for (const route of group.children) {
-      if (['agentAccess', 'ExecutionQualityPolicy'].includes(route.name)) continue;
-      assert.equal(route.meta.adminOnly, true, String(route.name));
-      assert.ok(route.meta.roles.length, String(route.name));
-    }
-  }
-  const personal = settings.find((route) => route.path === 'personal-access').children[0];
+test('retired settings routes stay hidden and use the current protected destinations', () => {
+  assert.ok(settings.every(route => route.meta.hideInMenu));
+  const personal = settings.find(route => route.path === 'personal-access/access');
   assert.deepEqual(plain(personal.meta.roles), ['SYSTEM_PERSONAL_AI_AGENT:READ']);
   assert.equal(personal.meta.resourceCode, 'AGENT_INTEGRATION_PAGE');
+  const quality = settings.find(route => route.path === 'execution-settings/quality-policy');
+  assert.equal(quality.redirect, '/execution/quality-policy');
+  assert.deepEqual(plain(execution.children.find(route => route.path === 'quality-policy').meta.roles),
+    ['SYSTEM_QUALITY:READ']);
 });
 test('asset default chooses an authorized primary page and respects custom UI denial', () => {
   const asset = load('router/routes/modules/testAsset.ts').default;
-  grants.clear(); hidden.clear();
+  grants.clear(); hidden.clear(); currentOrgId = undefined;
   assert.equal(asset.redirect(), '/no-resource');
   grants.add('CASE_ASSET:READ');
   assert.equal(asset.redirect(), '/test-assets/cases/project');
@@ -94,7 +96,20 @@ test('asset default chooses an authorized primary page and respects custom UI de
   assert.equal(asset.redirect(), '/no-resource');
   grants.add('PROJECT_FILE_MANAGEMENT:READ');
   assert.equal(asset.redirect(), '/test-assets/datasets');
-  assert.equal(asset.children.filter((route) => route.meta?.isTopMenu).length, 3);
+  grants.clear();
+  currentOrgId = 'org';
+  assert.equal(asset.redirect(), '/test-assets/knowledge');
+});
+test('legacy authorization is reachable without duplicating the normal asset navigation', () => {
+  const asset = load('router/routes/modules/testAsset.ts').default;
+  const administration = asset.children.find(route => route.path === 'protocol-administration');
+  assert.equal(administration.meta.hideInMenu, true);
+  assert.equal(administration.meta.isTopMenu, undefined);
+  assert.deepEqual(plain(administration.meta.roles), ['ORGANIZATION_USER_ROLE:READ', 'SYSTEM_USER_ROLE:READ']);
+  const links = readFileSync(resolve(src, 'views/test-asset/components/TestAssetTabs.vue'), 'utf8');
+  for (const key of ['knowledge', 'documents', 'cases', 'datasets', 'governed-execution', 'protocol-administration']) {
+    assert.equal(links.includes(`key: '${key}'`), false);
+  }
 });
 test('historical asset URLs retain their page implementation, never redirect to latest source data', () => {
   const asset = load('router/routes/modules/testAsset.ts').default;
