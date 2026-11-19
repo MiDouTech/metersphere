@@ -29,20 +29,6 @@ public class TestAssetController {
     @Resource
     private TestAssetGovernanceService governanceService;
 
-    @PostMapping("/cases/{caseId}/document-references")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE)
-    public void referenceDocument(@PathVariable String caseId,
-                                  @Valid @RequestBody TestAssetCaseDocumentReferenceRequest request) {
-        service.referenceDocument(caseId, request);
-    }
-
-    @PostMapping("/documents/{assetId}/revisions")
-    @RequiresPermissions(PermissionConstants.FUNCTIONAL_CASE_AI_UPLOAD)
-    public TestAssetVersionDTO reviseDocument(@PathVariable String assetId,
-                                                @Valid @RequestBody TestAssetDocumentRevisionRequest request) {
-        return service.reviseDocument(request.projectId(), assetId, request.expectedVersionId(), request.markdown());
-    }
-
     @GetMapping("/categories/tree")
     public List<TestAssetCategoryDTO> categoryTree(@RequestParam(required = false) String keyword) {
         return governanceService.tree(keyword);
@@ -137,13 +123,13 @@ public class TestAssetController {
     }
 
     @PostMapping("/catalog/{assetType}/{assetId}/publish")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_VERSION_MANAGE)
     public TestAssetCatalogItemDTO publish(@RequestParam String projectId,@PathVariable String assetType,@PathVariable String assetId){
         return service.publishAsset(projectId,assetType,assetId);
     }
 
     @PostMapping("/versions/{versionId}/deprecate")
-    @RequiresPermissions(PermissionConstants.AI_EXECUTION_RUN)
+    @RequiresPermissions(PermissionConstants.TEST_ASSET_VERSION_MANAGE)
     public TestAssetVersionDTO deprecate(@RequestParam String projectId,@RequestParam String assetType,
                                          @RequestParam String assetId,@PathVariable String versionId){
         return service.deprecateVersion(projectId,versionId,assetType,assetId);

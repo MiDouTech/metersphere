@@ -4,7 +4,7 @@
 
 - 巡检日期：2026-07-31
 - 巡检范围：
-  - `docs/summary/MeterSphere-Agent-MCP测试用例与缺陷管理扩展方案-2026-07-31.md`
+  - `docs/product_md/history/summary/MeterSphere-Agent-MCP测试用例与缺陷管理扩展方案-2026-07-31.md`
   - `docs/task/agent_mcp_case_bug_extension_20260731`
   - 当前已提交代码
 - 结论级别：严重

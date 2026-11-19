@@ -91,15 +91,13 @@ public class AgentMcpStreamableService {
             };
         } catch (MSException ex) {
             outcome="ERROR";
-            var safe = safeErrorMapper.toApiError(ex, null);
-            if(isGovernedProtocol(observedTool))LOG.warn("MCP protocol failed traceId={} code={} rootType={}",safe.getTraceId(),safe.getCode(),ex.getClass().getSimpleName());
-            else LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
+            var safe = safeErrorMapper.toApiError(ex, java.util.UUID.randomUUID().toString());
+            io.metersphere.agent.security.AgentSafeDiagnostics.failure(LOG,"MCP_OPERATION_FAILED","TOOL_CALL",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32001, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         } catch (Exception ex) {
             outcome="ERROR";
-            var safe = safeErrorMapper.toApiError(ex, null);
-            if(isGovernedProtocol(observedTool))LOG.warn("MCP protocol failed traceId={} code={} rootType={}",safe.getTraceId(),safe.getCode(),ex.getClass().getSimpleName());
-            else LOG.warn("MCP operation failed traceId={} code={}",safe.getTraceId(),safe.getCode(),ex);
+            var safe = safeErrorMapper.toApiError(ex, java.util.UUID.randomUUID().toString());
+            io.metersphere.agent.security.AgentSafeDiagnostics.failure(LOG,"MCP_OPERATION_FAILED","TOOL_CALL",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32603, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         } finally {
             long elapsedMs=(System.nanoTime()-started)/1_000_000;
@@ -119,15 +117,6 @@ public class AgentMcpStreamableService {
         result.put("protocolVersion", requested);
         result.put("capabilities", Map.of("tools", Map.of("listChanged", false)));
         result.put("serverInfo", Map.of("name", "metersphere-agent", "version", "1.0.0"));
-        result.put("instructions", """
-                For personal browser plan execution, use metersphere.execution.preflight, metersphere.execution.create,
-                and metersphere.task.claim. Use metersphere.execution.batch.next before choosing a case and follow the
-                frozen steps with metersphere.execution.step.decide. Submit observed facts and committed evidence through
-                metersphere.execution.step.submit_and_advance. Persist waits with metersphere.execution.step.defer,
-                then continue remaining cases. Query business state when a browser write's effect is unknown and
-                resume only the upload when evidence fails. Call metersphere.execution.batch.finish after the batch
-                requests finalization.
-                """);
         return result;
     }
 
@@ -144,7 +133,8 @@ public class AgentMcpStreamableService {
     }
 
     private static boolean bypassesGenericIdempotency(String name) {
-        if(isGovernedProtocol(name))return true;
+        if (java.util.Set.of("metersphere.case_review.linked.preview", "metersphere.case_review.linked.confirm").contains(name)) return true;
+        if(name.startsWith("metersphere.business_asset.")||name.startsWith("metersphere.executor."))return true;
         if (java.util.Set.of("metersphere.project.file.upload.prepare", "metersphere.project.file.upload.chunk",
                 "metersphere.project.file.upload.complete", "metersphere.project.file.upload.cancel").contains(name)) return true;
         return java.util.Set.of(
@@ -214,20 +204,12 @@ public class AgentMcpStreamableService {
         if (token != null && !agentTokenRateLimiter.tryAcquireTool(token.getId(), name)) {
             throw new MSException("AGENT_RATE_LIMITED");
         }
-        if(isGovernedProtocol(name)) {
-            var original=new LinkedHashMap<>(arguments);
-            if(idempotencyKey!=null) {
-                if(original.containsKey("idempotencyKey")&&!idempotencyKey.equals(original.get("idempotencyKey")))throw new MSException("IDEMPOTENCY_CONFLICT");
-                original.put("idempotencyKey",idempotencyKey);
-            }
-            return callToolInternal(name,original);
-        }
         Object rawKey=arguments.get("requestId");
         if(rawKey!=null && (!(rawKey instanceof String) || !((String)rawKey).matches("[A-Za-z0-9_.:-]{1,128}")))throw new MSException("AGENT_VALIDATION_ERROR");
         String argumentKey=(String)rawKey;
         if(StringUtils.isNotBlank(idempotencyKey) && StringUtils.isNotBlank(argumentKey) && !idempotencyKey.equals(argumentKey))throw new MSException("IDEMPOTENCY_CONFLICT");
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, argumentKey);
-        if(StringUtils.isNotBlank(effectiveIdempotencyKey)) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
+        if(StringUtils.isNotBlank(effectiveIdempotencyKey)&&!name.startsWith("metersphere.business_asset.")&&!name.startsWith("metersphere.executor.")) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
         // These protocols reauthorize their resource on every call. Upload/job/preview/run IDs
         // govern transitions and replay in their own transactions; a generic response cache
         // would bypass current ownership, expiry and state checks. Snapshot/preview creation
@@ -237,9 +219,7 @@ public class AgentMcpStreamableService {
         // credentials or replay an expired capability through the generic response cache.
         if (java.util.Set.of("metersphere.task.claim", "metersphere.task.lease.heartbeat",
                 "metersphere.task.release", "metersphere.execution.events.batch",
-                "metersphere.execution.step.submit", "metersphere.execution.step.write_retry.claim", "metersphere.execution.complete",
-                "metersphere.execution.step.decide", "metersphere.execution.step.submit_and_advance",
-                "metersphere.execution.step.defer", "metersphere.execution.batch.finish",
+                "metersphere.execution.step.submit", "metersphere.execution.complete",
                 "metersphere.execution.fail", "metersphere.execution.checkpoint.create",
                 "metersphere.human_request.create", "metersphere.artifact.prepare",
                 "metersphere.artifact.commit").contains(name)) {
@@ -266,9 +246,6 @@ public class AgentMcpStreamableService {
             return response;
         }
         return callToolInternal(name, arguments);
-    }
-    private static boolean isGovernedProtocol(String name) {
-        return name.startsWith("metersphere.functional.execution.session.")||name.startsWith("metersphere.functional.knowledge.");
     }
 
     private Map<String, Object> callToolInternal(String name, Map<String, Object> arguments) {

@@ -1,6 +1,6 @@
 # 权限流程与用例资产统一改造任务总览
 
-> 方案基线：[MeterSphere-权限流程与用例资产统一改造方案](../../summary/MeterSphere-权限流程与用例资产统一改造方案-2026-08-14.md)  
+> 方案基线：[MeterSphere-权限流程与用例资产统一改造方案](../../product_md/history/summary/MeterSphere-权限流程与用例资产统一改造方案-2026-08-14.md)  
 > 状态：已确认，可排期  
 > 任务范围：task001—task015
 

@@ -1,6 +1,6 @@
 # MSP SQL 稳定性优化实施记录（2026-10-23）
 
-对应方案：[完整优化方案](msp-sql-stability-optimization-plan-20261023.md)。本次实施对象为当前本地源码，未部署生产、未执行生产 DDL、未扫描或下载生产慢日志。
+对应方案：[完整优化方案](../product_md/history/summary/msp-sql-stability-optimization-plan-20261023.md)。本次实施对象为当前本地源码，未部署生产、未执行生产 DDL、未扫描或下载生产慢日志。
 
 ## 1. 结论和范围
 

@@ -15,6 +15,14 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 
 ## MCP Tools
 
+### 业务资产与执行器接入（0.10.0）
+
+显式授权 `BUSINESS_ASSET_READ;BUSINESS_ASSET_WRITE`，旧 `AGENT_ALL` 不自动扩权。先调用 `metersphere.executor.connect`，按照返回的 `assetProtocol` JSON 读取固定业务理解版本；探索或执行后，用 `metersphere.business_asset.upload` 上传完整文档、操作分支、依据和本次变化。同模块或关联流程更新同一文档，携带 `baseVersion` 和原会话来源；冲突保留为待合并版本。
+
+执行过程中通过 `metersphere.executor.event` 上报观察，定期读取 `metersphere.executor.commands` 并响应纠正。业务变化需要替换本次上下文时，显式调用 `metersphere.executor.context.refresh`，填写原版本和原因；该操作留痕并通知执行器。新通道不依赖冻结动作或旧 Runner 租约。
+
+公共配置实际值只由具有 `SHARED_CONFIGURATION_RESOLVE` 和项目解析权限的执行器通过会话绑定接口按需读取。不要将密码写入文档、普通事件或日志。
+
 ### 原生接口使用约定（2026-10-30整改）
 
 - 直接执行的projectId与创建/查询统一解析：内部ID、项目编号或精确项目名称；解析后仍检查当前项目和用例权限，重名需用ID消歧。
@@ -172,7 +180,7 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 
 - [缺陷 MCP 使用文档（AI 自配置）](../docs/task/metersphere_agent/mcp-bug-api-usage.md)
 - [Cursor 接入指南](../docs/task/metersphere_agent/cursor-onboarding.md)
-- [扩展方案](../docs/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)
+- [扩展方案](../docs/product_md/history/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)
 
 
 ### 全局质量门禁升级兼容性

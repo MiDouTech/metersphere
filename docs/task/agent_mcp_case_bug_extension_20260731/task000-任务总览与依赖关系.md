@@ -1,6 +1,6 @@
 # task000 - Agent MCP 测试用例与缺陷管理扩展任务总览
 
-> 来源方案：`docs/summary/MeterSphere-Agent-MCP测试用例与缺陷管理扩展方案-2026-07-31.md`
+> 来源方案：`docs/product_md/history/summary/MeterSphere-Agent-MCP测试用例与缺陷管理扩展方案-2026-07-31.md`
 > 任务目录：`docs/task/agent_mcp_case_bug_extension_20260731`
 > 状态：待排期 / 可按 task 独立流转
 

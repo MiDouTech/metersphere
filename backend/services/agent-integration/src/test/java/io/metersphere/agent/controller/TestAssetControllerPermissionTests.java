@@ -8,6 +8,12 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Method;
 
 class TestAssetControllerPermissionTests {
+    @Test void assetVersionGovernanceDoesNotRequireExecutionPermission()throws Exception {
+        for(Method method:TestAssetController.class.getDeclaredMethods())if(java.util.Set.of("publish","deprecate").contains(method.getName())) {
+            var permission=method.getAnnotation(RequiresPermissions.class);
+            Assertions.assertArrayEquals(new String[]{PermissionConstants.TEST_ASSET_VERSION_MANAGE},permission.value());
+        }
+    }
 
     @Test
     void businessDocumentEndpointShouldRequireAiDocumentReadPermission() throws Exception {

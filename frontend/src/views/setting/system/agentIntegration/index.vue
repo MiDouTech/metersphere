@@ -418,6 +418,22 @@
 
   const scopeOptions = [
     {
+      value: 'BUSINESS_ASSET_READ;BUSINESS_ASSET_WRITE',
+      label: '业务理解沉淀与执行器接入',
+      desc: '读取业务资产、上传业务理解、上报执行过程及响应纠正；仍校验项目权限。',
+    },
+    { value: 'SHARED_CONFIGURATION_READ', label: '公共配置读取', desc: '只读取配置元数据及普通值，密码保持脱敏。' },
+    {
+      value: 'SHARED_CONFIGURATION_READ;SHARED_CONFIGURATION_WRITE',
+      label: '公共配置维护',
+      desc: '维护配置及原始配置文档，不自动取得执行器凭据解析权限。',
+    },
+    {
+      value: 'SHARED_CONFIGURATION_RESOLVE',
+      label: '执行器读取配置实际值（敏感授权）',
+      desc: '仅允许本人已连接且运行中的执行器读取该会话固定版本，必须同时具备项目配置解析权限。',
+    },
+    {
       value: 'PROJECT_FILE_READ;PROJECT_FILE_DOWNLOAD',
       label: '项目原件读取（需明确授权）',
       desc: '查询文件、精确版本及逐块下载；仍需项目文件读取和下载权限。旧全能力 Token 不自动取得权限。',

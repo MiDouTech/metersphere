@@ -8,7 +8,7 @@
 
 将【生成用例】从“一次性选择模型并生成结构化草稿”的页面，改造为支持模型选择、后端持久化会话、连续聊天、SSE 流式响应、受控工具调用、草稿编辑校验和人工确认保存的用例生成 Agent。
 
-需求基线：`docs/task/ai_case_agent_20260806/AI用例生成Agent改造方案.md`。
+需求基线：`docs/product_md/history/task/ai_case_agent_20260806/AI用例生成Agent改造方案.md`。
 
 ## 交付原则
 

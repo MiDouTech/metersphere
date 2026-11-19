@@ -128,7 +128,7 @@
                   @click="openSourceGovernance(record)"
                   >治理来源</a-link
                 >
-                <a-link v-permission="['AI_EXECUTION:RUN']" @click="publishAsset(record)">发布执行版本</a-link>
+                <a-link v-permission="['TEST_ASSET_VERSION:MANAGE']" @click="publishAsset(record)">发布资产版本</a-link>
                 <a-link
                   v-permission="['AI_EXECUTION:RUN']"
                   :disabled="!record.assetVersionId"

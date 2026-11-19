@@ -9,9 +9,9 @@
 
 | 来源 | 原编号 | 归并编号 | 分类与处理 |
 | --- | --- | --- | --- |
-| [需求与缺陷原文](../requirements-and-defects-2026-10-22.md) | D02、D03、D04 | DEF-01～DEF-03 | 用户报告的功能缺陷；待复现及根因确认 |
+| [需求与缺陷原文](../product_md/history/requirements-and-defects-2026-10-22.md) | D02、D03、D04 | DEF-01～DEF-03 | 用户报告的功能缺陷；待复现及根因确认 |
 | [生产异常原文](msp-incident-remediation-20261021.md) | R01～R11 | INC-R01～INC-R11 | 全部纳入生产故障修复、诊断与稳定性整改；保留确定缺陷、待验证及运维整改的区别 |
-| [外部图片原文](../mcp-external-image-attachment-requirements-2026-10-22.md) | 全文 | 无缺陷项 | 已归入[需求实现汇总](requirements-consolidated-2026-10-22.md) |
+| [外部图片原文](../product_md/history/mcp-external-image-attachment-requirements-2026-10-22.md) | 全文 | 无缺陷项 | 已归入[需求实现汇总](../product_md/history/summary/requirements-consolidated-2026-10-22.md) |
 
 原生产文档中既有整改措施保留为初步方向，不代表已经形成详细设计或已经实施。不得把待验证的性能问题改写为已确认根因。
 

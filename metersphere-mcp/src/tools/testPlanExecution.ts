@@ -27,25 +27,9 @@ export const listTestPlanCasesTool = {
     current: z.number().int().min(1).optional(),
     pageSize: z.number().int().min(1).max(100).optional(),
     includeSteps: z.boolean().optional(),
-    includeContractVersion: z.boolean().optional(),
   },
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
     const result = await client.getTestPlanCases(args as Parameters<MeterSphereClient["getTestPlanCases"]>[0]);
-    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
-  },
-};
-
-export const readPlanExecutionContractTool = {
-  name: "metersphere.test_plan.execution_contract",
-  description: "Read the published contract referenced by a test plan case returned by metersphere.test_plan.cases.",
-  inputSchema: {
-    projectId: z.string().min(1).optional(),
-    testPlanId: z.string().min(1),
-    testPlanCaseId: z.string().min(1),
-    contractVersion: z.number().int().positive().safe(),
-  },
-  handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
-    const result = await client.readPlanExecutionContract(args as Parameters<MeterSphereClient["readPlanExecutionContract"]>[0]);
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 };
@@ -71,7 +55,7 @@ export const resolveExecutionScopeTool = {
 export const createExecutionTaskTool = {
   name: "metersphere.execution.create",
   description:
-    "Create a personal MCP execution task after metersphere.execution.preflight. The backend verifies the frozen scope and environment.",
+    "Create a MeterSphere AI execution task. Backend revalidates project, test plan, case IDs, permissions, and confirmation constraints.",
   inputSchema: {
     projectId: z.string().optional(),
     testPlanId: z.string().optional(),
@@ -79,7 +63,7 @@ export const createExecutionTaskTool = {
     source: z.string().optional(),
     preflightId: z.string().min(1),
     environmentProfileId: z.string().min(1),
-    credentialReferenceId: z.string().min(1).optional(),
+    credentialReferenceId: z.string().optional(),
     environmentId: z.string().optional(),
     targetUrl: z.string().optional(),
     browserType: z.string().optional(),
@@ -91,7 +75,8 @@ export const createExecutionTaskTool = {
     confirmed: z.boolean().optional(),
   },
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
-    return client.createExecutionTask(args as Parameters<MeterSphereClient["createExecutionTask"]>[0]);
+    const result = await client.createExecutionTask(args as Parameters<MeterSphereClient["createExecutionTask"]>[0]);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 };
 
@@ -102,7 +87,8 @@ export const getExecutionTaskTool = {
     executionTaskId: z.string(),
   },
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
-    return client.getExecutionTask(args.executionTaskId as string);
+    const result = await client.getExecutionTask(args.executionTaskId as string);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 };
 
@@ -115,7 +101,8 @@ export const getExecutionEventsTool = {
     limit: z.number().int().min(1).max(500).optional(),
   },
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
-    return client.getExecutionEvents(args as Parameters<MeterSphereClient["getExecutionEvents"]>[0]);
+    const result = await client.getExecutionEvents(args as Parameters<MeterSphereClient["getExecutionEvents"]>[0]);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 };
 
@@ -127,7 +114,8 @@ export const cancelExecutionTaskTool = {
     reason: z.string().optional(),
   },
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
-    return client.cancelExecutionTask(args as Parameters<MeterSphereClient["cancelExecutionTask"]>[0]);
+    const result = await client.cancelExecutionTask(args as Parameters<MeterSphereClient["cancelExecutionTask"]>[0]);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 };
 
@@ -139,6 +127,7 @@ export const resumeExecutionTaskTool = {
     reason: z.string().optional(),
   },
   handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
-    return client.resumeExecutionTask(args as Parameters<MeterSphereClient["resumeExecutionTask"]>[0]);
+    const result = await client.resumeExecutionTask(args as Parameters<MeterSphereClient["resumeExecutionTask"]>[0]);
+    return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 };

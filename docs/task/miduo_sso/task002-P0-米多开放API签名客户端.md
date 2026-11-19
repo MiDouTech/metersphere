@@ -4,7 +4,7 @@
 > **预估工期**：1 天  
 > **前置依赖**：[task001](task001-P0-接入确认单与配置项.md)  
 > **阻塞任务**：task003、task004、task007  
-> **关联方案**：[接入方案](../../summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §5
+> **关联方案**：[接入方案](../../product_md/history/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §5
 
 ---
 

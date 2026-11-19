@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream;
 @Service
 public class AgentMcpBundleService {
     private static final String PACKAGE_NAME = "metersphere-agent-skill";
-    private static final String VERSION = "1.4.2";
+    private static final String VERSION = "1.5.0";
     @jakarta.annotation.Resource private io.metersphere.agent.tool.AgentMcpToolRegistry registry;
     private static final String FILE_NAME = PACKAGE_NAME + "-" + VERSION + ".zip";
     private static final String TEST_BASE_URL = "https://msp.ebcone.net";
@@ -62,6 +62,7 @@ public class AgentMcpBundleService {
         files.put("metersphere-agent/references/platforms.md", platformsMd());
         files.put("metersphere-agent/references/permissions.md", permissionsMd());
         files.put("metersphere-agent/references/workflows.md", workflowsMd());
+        files.put("metersphere-agent/references/business-assets.json", businessAssetProtocol());
         files.put("metersphere-agent/references/troubleshooting.md", troubleshootingMd());
         files.put("metersphere-agent/examples/codex.config.example.toml", codexExample());
         files.put("metersphere-agent/examples/codex.test.config.example.toml", codexExample(TEST_BASE_URL));
@@ -111,6 +112,11 @@ public class AgentMcpBundleService {
 
                 Only ask the user for a base URL when they are using a non-standard private deployment.
                 Transport: Streamable HTTP
+
+                Business understanding: explicitly grant BUSINESS_ASSET_READ and BUSINESS_ASSET_WRITE.
+                Connect with metersphere.executor.connect and follow its assetProtocol JSON. Read pinned versions with executor.context.get before exploring.
+                After exploration or execution, upload reusable understanding with business_asset.upload. Same module or related flow uses one document; operations are branches. Update the existing asset with baseVersion, preserve evidence references, distinguish observed facts, inference and unresolved questions. Never upload credentials into business documents.
+                Report progress/deviations with executor.event; poll executor.commands and respond APPLIED/FAILED. Explicit context replacement uses executor.context.refresh with reason and expectedVersionId. No frozen action plan or legacy Runner lease is required.
 
                 Search results with contentError must not be executed. CASE_BODY_INVALID means damaged historical content; CASE_CONTENT_READ_LIMIT means narrow the query and retry. Such rows have no usable steps; inspect top-level warnings instead of assuming zero steps.
                 Personal case execution (no task or lease): grant FUNCTIONAL_READ, FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.
@@ -195,7 +201,7 @@ public class AgentMcpBundleService {
                 - Project allow-list
                 - Server-side tool policy
 
-                `AGENT_ALL` grants all Agent scopes but never bypasses the bound user's RBAC or project restrictions.
+                `AGENT_ALL` covers legacy scopes and never bypasses user RBAC or project restrictions. New BUSINESS_ASSET_READ/WRITE and SHARED_CONFIGURATION_READ/WRITE/RESOLVE scopes require explicit grants; do not assume a legacy wildcard includes them.
                 `PROJECT_READ` is required for project search/list/get. During migration, `FUNCTIONAL_READ` / `FUNCTIONAL_ALL` temporarily also grant `PROJECT_READ`.
                 Empty scopes are denied. Scope matching is exact set membership (no substring match).
                 """;
@@ -204,6 +210,10 @@ public class AgentMcpBundleService {
     private String workflowsMd() {
         return """
                 # Workflows
+
+                - Business understanding: executor.connect -> executor.context.get -> explore/execute -> executor.evidence -> business_asset.upload. Use source returned by connect. Same module or related flow stays in one document with operation branches. Keep the previous version and submit full updated content with baseVersion. CONFLICT means content was retained for deliberate merge, never silently overwrite it.
+                - Monitor/correct: report executor.event observations, poll executor.commands, respond with executor.respond. If a business change requires new context during execution, use executor.context.refresh explicitly with a reason; it records the replacement and notifies the executor.
+                - Shared configuration: list metadata and references from the platform. An authorized executor resolves actual values through the session-bound configuration endpoint. Never paste passwords into understanding documents, screenshots, prompts, ordinary events or logs.
 
                 - Search cases before creating duplicates.
                 - When the user provides a project name or the numeric ID shown in the MeterSphere project list, call `metersphere.project.search` first (alias `search_projects` is accepted). Use `metersphere.project.list` to enumerate accessible projects. Pass `page`/`pageSize` for pagination; response contains `items`, `total`, `hasMore`. The numeric UI ID maps to `project.num`; if multiple projects share the same number, return all matches and ask the user to choose.
@@ -319,5 +329,15 @@ public class AgentMcpBundleService {
             }
         });
         return builder.toString();
+    }
+    private String businessAssetProtocol() {
+        return JSON.toJSONString(Map.ofEntries(
+            Map.entry("schemaVersion","1.0"),Map.entry("connectTool","metersphere.executor.connect"),
+            Map.entry("readTool","metersphere.executor.context.get"),Map.entry("uploadTool","metersphere.business_asset.upload"),
+            Map.entry("source","Use assetProtocol.source from the authenticated connection response"),
+            Map.entry("grouping","One document per module or related business flow; different operations are branches"),
+            Map.entry("versioning","Read current version, submit baseVersion, retain conflicts and all historical versions"),
+            Map.entry("sections",java.util.List.of("业务范围","业务目标","前置条件","操作分支","关联流程","业务规则","理解依据","待确认内容","本次变化")),
+            Map.entry("secrets","Use shared configuration references; never upload credential values")));
     }
 }

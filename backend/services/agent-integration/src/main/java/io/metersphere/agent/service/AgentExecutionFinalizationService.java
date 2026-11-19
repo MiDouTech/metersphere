@@ -24,8 +24,6 @@ public class AgentExecutionFinalizationService {
 
     public void requireMutable(String taskId,String executionId){
         lockCurrent(taskId,executionId);
-        if(jdbc.queryForObject("SELECT COUNT(*) FROM msp_protocol_session WHERE source_type='TASK' AND source_id=? AND source_execution_id=?",Long.class,taskId,executionId)>0)
-            throw new MSException("PROTOCOL_SOURCE_OWNED");
         String status=jdbc.queryForObject("SELECT status FROM ai_execution_attempt WHERE id=? AND task_id=? FOR UPDATE",String.class,executionId,taskId);
         if(!List.of("CLAIMED","RUNNING").contains(status))throw new MSException("EXECUTION_FACTS_FINALIZED_CONFLICT");
     }
@@ -35,7 +33,6 @@ public class AgentExecutionFinalizationService {
     }
     @Transactional(propagation=Propagation.REQUIRES_NEW,rollbackFor=Exception.class)
     public List<FrozenCase> prepare(String taskId){
-        requireLegacyWriteback(taskId);
         var locked=jdbc.queryForList("SELECT current_execution_id FROM ai_execution_task WHERE id=? FOR UPDATE",String.class,taskId);
         if(locked.size()!=1)throw new MSException("QUALITY_ATTEMPT_INVALID");
         AgentExecutionTaskDTO task=mapper.selectTaskById(taskId);
@@ -127,8 +124,7 @@ public class AgentExecutionFinalizationService {
                        AND BINARY t.current_execution_id=BINARY s.execution_id
                      WHERE s.status IN ('PENDING','FAILED') AND s.attempt_count<20 AND s.next_retry_at<=?
                      ORDER BY t.id LIMIT 20)
-                ) candidates WHERE NOT EXISTS (SELECT 1 FROM msp_protocol_session p JOIN ai_execution_task current_task ON BINARY current_task.id=BINARY p.source_id WHERE p.source_type='TASK' AND BINARY p.source_id=BINARY candidates.id AND BINARY p.source_execution_id=BINARY current_task.current_execution_id) ORDER BY id LIMIT 20
+                ) candidates ORDER BY id LIMIT 20
                 """,String.class,System.currentTimeMillis());
     }
-    public void requireLegacyWriteback(String taskId){if(jdbc.queryForObject("SELECT COUNT(*) FROM msp_protocol_session p JOIN ai_execution_task t ON BINARY t.id=BINARY p.source_id AND BINARY t.current_execution_id=BINARY p.source_execution_id WHERE p.source_type='TASK' AND p.source_id=? AND t.id=?",Long.class,taskId,taskId)>0)throw new MSException("PROTOCOL_SOURCE_OWNED");}
 }

@@ -15,7 +15,10 @@ class AgentMcpWriteRoutingTests {
         for(var bean:scanner.findCandidateComponents("io.metersphere.agent.tool")) {
             Class<?> type=Class.forName(bean.getBeanClassName());
             if(AgentMcpToolHandler.class.isAssignableFrom(type)) {
-                inspect((AgentMcpToolHandler)type.getDeclaredConstructor().newInstance(),writers);
+                var constructor=Arrays.stream(type.getDeclaredConstructors()).min(Comparator.comparingInt(java.lang.reflect.Constructor::getParameterCount)).orElseThrow();
+                constructor.setAccessible(true);
+                Object[] dependencies=Arrays.stream(constructor.getParameterTypes()).map(org.mockito.Mockito::mock).toArray();
+                inspect((AgentMcpToolHandler)constructor.newInstance(dependencies),writers);
             } else if(type.isAnnotationPresent(org.springframework.context.annotation.Configuration.class)) {
                 Object config=type.getDeclaredConstructor().newInstance();
                 for(var method:type.getDeclaredMethods())if(method.isAnnotationPresent(org.springframework.context.annotation.Bean.class)&&AgentMcpToolHandler.class.isAssignableFrom(method.getReturnType())) {

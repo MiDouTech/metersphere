@@ -1,4 +1,3 @@
-import useAppStore from '@/store/modules/app';
 import { hasAnyPermission, hasPageVisible, hasRouteVisible } from '@/utils/permission';
 
 import { TestAssetRouteEnum } from '@/enums/routeEnum';
@@ -7,6 +6,8 @@ import { DEFAULT_LAYOUT } from '../base';
 import type { AppRouteRecordRaw } from '../types';
 
 const readRoles = [
+  'BUSINESS_ASSET:READ',
+  'SHARED_CONFIGURATION:READ',
   'CASE_ASSET:READ',
   'FUNCTIONAL_CASE:READ',
   'FUNCTIONAL_CASE_AI:READ',
@@ -20,11 +21,11 @@ const readRoles = [
 
 function resolveDefaultTestAssetPath() {
   if (
-    hasAnyPermission(['FUNCTIONAL_CASE_AI:READ']) &&
+    hasAnyPermission(['BUSINESS_ASSET:READ']) &&
     hasPageVisible('TEST_ASSET_DOCUMENTS_PAGE') &&
     hasRouteVisible('testAssetDocuments')
   )
-    return '/test-assets/documents';
+    return '/test-assets/business';
   if (
     hasAnyPermission(['CASE_ASSET:READ']) &&
     hasPageVisible('TEST_ASSET_CASES_PAGE') &&
@@ -38,7 +39,13 @@ function resolveDefaultTestAssetPath() {
     hasRouteVisible('testAssetDatasets')
   )
     return '/test-assets/datasets';
-  return useAppStore().currentOrgId ? '/test-assets/knowledge' : '/no-resource';
+  if (
+    hasAnyPermission(['SHARED_CONFIGURATION:READ']) &&
+    hasPageVisible('TEST_ASSET_SHARED_CONFIGURATION_PAGE') &&
+    hasRouteVisible('testAssetSharedConfiguration')
+  )
+    return '/test-assets/configuration';
+  return '/no-resource';
 }
 
 const TestAsset: AppRouteRecordRaw = {
@@ -56,35 +63,13 @@ const TestAsset: AppRouteRecordRaw = {
   },
   children: [
     {
-      path: 'governed-execution',
-      name: 'governedExecution',
-      component: () => import('@/views/execution/governed-session.vue'),
-      meta: { locale: '受控执行', contextScope: 'ORGANIZATION', roles: [], isTopMenu: true },
-    },
-    {
-      path: 'protocol-administration',
-      name: 'protocolAdministration',
-      component: () => import('@/views/execution/protocol-administration.vue'),
-      meta: {
-        locale: '受控执行授权',
-        contextScope: 'ORGANIZATION',
-        roles: ['ORGANIZATION_USER_ROLE:READ', 'SYSTEM_USER_ROLE:READ'],
-        hideInMenu: true,
-      },
-    },
-    {
-      path: 'knowledge',
-      name: 'testAssetKnowledge',
-      component: () => import('@/views/test-asset/knowledge/index.vue'),
-      meta: { locale: '业务知识', contextScope: 'ORGANIZATION', roles: [], isTopMenu: true },
-    },
-    {
-      path: 'documents',
+      path: 'business',
+      alias: ['documents', 'knowledge'],
       name: TestAssetRouteEnum.TEST_ASSET_DOCUMENTS,
-      component: () => import('@/views/test-asset/documents.vue'),
+      component: () => import('@/views/test-asset/business-assets.vue'),
       meta: {
         locale: 'menu.testAsset.documents',
-        roles: ['FUNCTIONAL_CASE_AI:READ'],
+        roles: ['BUSINESS_ASSET:READ'],
         resourceCode: 'TEST_ASSET_DOCUMENTS_PAGE',
         isTopMenu: true,
         keepModuleAlive: true,
@@ -128,6 +113,17 @@ const TestAsset: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'configuration',
+      name: 'testAssetSharedConfiguration',
+      component: () => import('@/views/test-asset/shared-configuration.vue'),
+      meta: {
+        locale: 'menu.testAsset.configuration',
+        roles: ['SHARED_CONFIGURATION:READ'],
+        resourceCode: 'TEST_ASSET_SHARED_CONFIGURATION_PAGE',
+        isTopMenu: true,
+      },
+    },
+    {
       path: 'versions',
       name: TestAssetRouteEnum.TEST_ASSET_VERSIONS,
       component: () => import('@/views/test-asset/versions.vue'),
@@ -135,6 +131,7 @@ const TestAsset: AppRouteRecordRaw = {
         locale: 'menu.testAsset.versions',
         roles: readRoles,
         resourceCode: 'TEST_ASSET_VERSIONS_PAGE',
+        isTopMenu: true,
         hideInMenu: true,
         keepModuleAlive: true,
       },

@@ -16,10 +16,10 @@
           @search="search"
         />
         <a-select v-model="query.relationType" class="w-[170px]" allow-clear placeholder="关系类型" @change="search">
-          <a-option value="DERIVED_FROM">来源于</a-option><a-option value="REFERENCES">引用文档版本</a-option
-          ><a-option value="USES">使用</a-option><a-option value="EXECUTES">执行</a-option
-          ><a-option value="COVERS">覆盖</a-option><a-option value="PRODUCES">产出</a-option
-          ><a-option value="REPORTS">报告缺陷</a-option><a-option value="REPLACES">替代</a-option>
+          <a-option value="DERIVED_FROM">来源于</a-option><a-option value="USES">使用</a-option
+          ><a-option value="EXECUTES">执行</a-option><a-option value="COVERS">覆盖</a-option
+          ><a-option value="PRODUCES">产出</a-option><a-option value="REPORTS">报告缺陷</a-option
+          ><a-option value="REPLACES">替代</a-option>
         </a-select>
         <a-select v-model="query.assetType" class="w-[150px]" allow-clear placeholder="端点类型" @change="search"
           ><a-option value="DOCUMENT">文档</a-option><a-option value="CASE">用例</a-option

@@ -89,7 +89,7 @@
 | SDK PermissionConstants.java；AgentExecutionExceptionHandler.java；AgentSafeErrorMapper.java；frontend/src/config/permissionLocale.ts | 权限常量、400/403/409 等安全错误处理和操作名称 |
 | backend/services/agent-integration/src/test/java/io/metersphere/agent/quality/*Tests.java | 19 项新增测试，含 5 项真实 MySQL 事务/并发测试 |
 | backend/app/pom.xml；deploy/quality-verify.compose.yml；deploy/quality-verify/；scripts/verify-quality-environment.ps1；scripts/quality-browser-proxy.mjs | 补齐 Actuator 依赖（端点默认仍关闭），独立容器/卷/回环端口，迁移及健康验证、真实 API 浏览器代理 |
-| docs/msp-consolidated-transformation-plan.md；本文 | 开工状态、需求追踪及验收记录 |
+| docs/product_md/history/msp-consolidated-transformation-plan.md；本文 | 开工状态、需求追踪及验收记录 |
 
 ### 已执行命令及结果
 

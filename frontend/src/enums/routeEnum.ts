@@ -102,6 +102,7 @@ export enum AgentRouteEnum {
 export enum TestAssetRouteEnum {
   TEST_ASSET = 'testAsset',
   TEST_ASSET_DOCUMENTS = 'testAssetDocuments',
+  TEST_ASSET_SHARED_CONFIGURATION = 'testAssetSharedConfiguration',
   TEST_ASSET_VERSIONS = 'testAssetVersions',
   TEST_ASSET_RELATIONS = 'testAssetRelations',
   TEST_ASSET_CASES = 'testAssetCases',

@@ -4,7 +4,7 @@
 > **预估工期**：1 天  
 > **前置依赖**：[task006](task006-P0-前端Callback页与白名单.md)、[task007](task007-P1-refresh策略与登录桥.md)、[task008](task008-P1-安全加固与status门禁.md)  
 > **阻塞任务**：无  
-> **关联方案**：[接入方案](../../summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §9
+> **关联方案**：[接入方案](../../product_md/history/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §9
 
 ---
 

@@ -4,8 +4,8 @@
 
 本文把以下两份已确认方案转换为可直接进入研发排期的字段、函数、文件位置和验收项级任务：
 
-- `docs/task/ai_agent_test_execution_solution_20260825/AI-Agent测试执行完整改造方案.md`
-- `docs/task/platform_model_api_scheduled_execution_20260826/平台大模型API定时测试执行需求与改造方案.md`
+- `docs/product_md/history/task/ai_agent_test_execution_solution_20260825/AI-Agent测试执行完整改造方案.md`
+- `docs/product_md/history/task/platform_model_api_scheduled_execution_20260826/平台大模型API定时测试执行需求与改造方案.md`
 
 本文是研发任务清单，不代表功能已经实现。任务状态以仓库静态检查为准：已有基础标记为“改造”，没有真实链路标记为“新增”。
 

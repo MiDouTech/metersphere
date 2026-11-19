@@ -5,10 +5,11 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class AgentTokenScope {
-    public static final String SESSION_READ_V1 = "SESSION_READ_V1";
-    public static final String SESSION_EXECUTE_V1 = "SESSION_EXECUTE_V1";
-    public static final String KNOWLEDGE_READ_V1 = "KNOWLEDGE_READ_V1";
-    public static final String KNOWLEDGE_EDIT_V1 = "KNOWLEDGE_EDIT_V1";
+    public static final String BUSINESS_ASSET_READ = "BUSINESS_ASSET_READ";
+    public static final String BUSINESS_ASSET_WRITE = "BUSINESS_ASSET_WRITE";
+    public static final String SHARED_CONFIGURATION_READ = "SHARED_CONFIGURATION_READ";
+    public static final String SHARED_CONFIGURATION_WRITE = "SHARED_CONFIGURATION_WRITE";
+    public static final String SHARED_CONFIGURATION_RESOLVE = "SHARED_CONFIGURATION_RESOLVE";
     public static final String PROJECT_FILE_READ = "PROJECT_FILE_READ";
     public static final String PROJECT_FILE_WRITE = "PROJECT_FILE_WRITE";
     public static final String PROJECT_FILE_DOWNLOAD = "PROJECT_FILE_DOWNLOAD";
@@ -58,7 +59,11 @@ public class AgentTokenScope {
 
     static {
         Set<String> scopes = new LinkedHashSet<>();
-        scopes.addAll(Set.of(SESSION_READ_V1,SESSION_EXECUTE_V1,KNOWLEDGE_READ_V1,KNOWLEDGE_EDIT_V1));
+        scopes.add(BUSINESS_ASSET_READ);
+        scopes.add(BUSINESS_ASSET_WRITE);
+        scopes.add(SHARED_CONFIGURATION_READ);
+        scopes.add(SHARED_CONFIGURATION_WRITE);
+        scopes.add(SHARED_CONFIGURATION_RESOLVE);
         scopes.add(PROJECT_FILE_READ);
         scopes.add(PROJECT_FILE_WRITE);
         scopes.add(PROJECT_FILE_DOWNLOAD);

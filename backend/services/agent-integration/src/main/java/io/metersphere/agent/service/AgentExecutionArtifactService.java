@@ -15,7 +15,6 @@ import io.metersphere.functional.mapper.FunctionalCaseMapper;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.sdk.file.FileCenter;
 import io.metersphere.sdk.file.FileRequest;
-import io.metersphere.sdk.util.LogUtils;
 import io.metersphere.sdk.util.JSON;
 import io.metersphere.system.service.CommonFileService;
 import io.metersphere.system.uid.IDGenerator;
@@ -46,6 +45,7 @@ import java.util.Set;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentExecutionArtifactService {
+    @Resource private org.springframework.jdbc.core.JdbcTemplate historicalEvidenceJdbc;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final Set<String> PURPOSES = Set.of(
             "BEFORE_STEP", "AFTER_STEP", "FAILURE", "HEALING_BEFORE", "HEALING_AFTER");
@@ -66,7 +66,6 @@ public class AgentExecutionArtifactService {
     private FunctionalCaseMapper functionalCaseMapper;
     @Resource
     private AgentEvidenceRedactionService redactionService;
-    @Resource private AgentProtocolEvidenceService protocolEvidence;
     @Value("${agent.execution.artifact-max-bytes:5242880}")
     private long artifactMaxBytes = 5L * 1024L * 1024L;
     @Value("${agent.execution.artifact-retention-ms:2592000000}")
@@ -365,18 +364,17 @@ public class AgentExecutionArtifactService {
     }
 
     @Scheduled(initialDelay = 60_000L, fixedDelay = 3_600_000L)
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public void cleanupExpiredArtifacts() {
         for (AgentExecutionArtifactDTO artifact : executionMapper.selectExpiredArtifacts(System.currentTimeMillis(), 200)) {
             try {
-                if(!protocolEvidence.claimTaskDeletion(artifact.getId(),System.currentTimeMillis()))continue;
+                if (historicalEvidenceJdbc.queryForObject("SELECT COUNT(*) FROM historical_evidence_retention WHERE kind='TASK' AND evidence_id=?", Long.class, artifact.getId()) > 0) continue;
                 FileRequest request = new FileRequest();
                 request.setFolder(artifact.getStorageFolder() + "/" + artifact.getFileId());
                 request.setFileName(artifact.getFileName());
                 FileCenter.getDefaultRepository().delete(request);
                 executionMapper.markArtifactDeleted(artifact.getId(), "DELETED");
             } catch (Exception ex) {
-                org.slf4j.LoggerFactory.getLogger(getClass()).warn("Artifact cleanup stage=DELETE code=ARTIFACT_CLEANUP_FAILED artifactId={} rootType={}",artifact.getId(),ex.getClass().getSimpleName());
+                io.metersphere.agent.security.AgentSafeDiagnostics.failure(org.slf4j.LoggerFactory.getLogger(getClass()), "ARTIFACT_CLEANUP_FAILED", "CLEANUP", artifact.getId(), "ARTIFACT_CLEANUP_FAILED", ex);
             }
         }
     }

@@ -1,6 +1,6 @@
 # task000 - Agent 自动化执行改造任务总览
 
-> 来源方案：`docs/summary/MeterSphere_Agent自动化执行改造方案.md`  
+> 来源方案：`docs/product_md/history/summary/MeterSphere_Agent自动化执行改造方案.md`  
 > 任务目录：`docs/task/agent_automation_execution_20260805`  
 > 当前状态：P0 主体已落地；2026-08-06 补齐权限树/确认弹窗/状态机 WAITING_LOGIN·WRITING_BACK·SUCCESS 对账/工作台 resolve·pause；task010–012 未实现；task013 未完成真实验收  
 > 拆分日期：2026-08-05  

@@ -1,7 +1,7 @@
 # task000 - 模块状态保持与测试用例详情聚合任务总览
 
-> 来源方案：`docs/summary/MeterSphere-模块状态保持与测试用例详情聚合-改造方案-2026-07-30.md`
-> 补充参考：`docs/summary/MeterSphere-缺陷管理详情与列表体验-优化方案-2026-07-30.md`
+> 来源方案：`docs/product_md/history/summary/MeterSphere-模块状态保持与测试用例详情聚合-改造方案-2026-07-30.md`
+> 补充参考：`docs/product_md/history/summary/MeterSphere-缺陷管理详情与列表体验-优化方案-2026-07-30.md`
 > 任务目录：`docs/task/module_state_case_detail_aggregation_20260730`
 > 状态：待排期 / 可按 task 独立流转
 

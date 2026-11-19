@@ -42,7 +42,7 @@ docker rm -f msp-case-ui-verify-20261103
 - 同目录caseTable.vue：列表紧凑样式和进度区高度。
 - 同目录tabContent/tabDetail.vue：编辑操作布局、正文换行、移除评论重复刷新。
 - frontend/scripts/test-latest-detail.mjs、frontend/package.json：可重复执行的行为测试命令。
-- docs/summary/msp-case-detail-layout-remediation-plan-20261102.md：方案实施状态链接。
+- docs/product_md/history/summary/msp-case-detail-layout-remediation-plan-20261102.md：方案实施状态链接。
 - 本目录：实施报告与脱敏组件证据。
 
 工作区另有agent-integration和docs/artifacts改动，不属于本次工作，未回退或覆盖。

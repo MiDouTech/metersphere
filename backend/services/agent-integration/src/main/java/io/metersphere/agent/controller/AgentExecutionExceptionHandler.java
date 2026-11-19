@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.UUID;
 
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 @RestControllerAdvice(basePackages = "io.metersphere.agent.controller")
 public class AgentExecutionExceptionHandler {
     @ExceptionHandler(io.metersphere.functional.planreview.PlanReviewFailure.class)
@@ -75,11 +75,7 @@ public class AgentExecutionExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<AgentApiErrorDTO> unknown(Exception error, HttpServletRequest request) {
         String traceId = traceId(request);
-        if(request.getRequestURI().contains("governed-execution")||request.getRequestURI().contains("test-knowledge")||request.getRequestURI().contains("execution-sessions")) {
-            String state="UNKNOWN";int vendor=0;
-            for(Throwable cause=error;cause!=null;cause=cause.getCause())if(cause instanceof java.sql.SQLException sql){if(sql.getSQLState()!=null&&sql.getSQLState().matches("[A-Za-z0-9]{5}"))state=sql.getSQLState();vendor=sql.getErrorCode();break;}
-            LOGGER.error("Protocol internal error traceId={} stage=HTTP code=PROTOCOL_INTERNAL_ERROR rootType={} sqlState={} vendorCode={}",traceId,error.getClass().getSimpleName(),state,vendor);
-        } else LOGGER.error("AI execution internal error, traceId={}", traceId, error);
+        io.metersphere.agent.security.AgentSafeDiagnostics.failure(LOGGER, "EXECUTION_REQUEST_FAILED", "REQUEST", traceId, "INTERNAL_ERROR", error);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mapper.toApiError(error, traceId));
     }
 
@@ -94,7 +90,9 @@ public class AgentExecutionExceptionHandler {
     }
 
     private String traceId(HttpServletRequest request) {
-        return StringUtils.defaultIfBlank((String)request.getAttribute("agentTraceId"),StringUtils.defaultIfBlank(request.getHeader("X-Trace-Id"), UUID.randomUUID().toString()));
+        Object previous=request.getAttribute("agentTraceId");
+        if(previous instanceof String value && value.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))return value;
+        String value=UUID.randomUUID().toString();request.setAttribute("agentTraceId",value);return value;
     }
 
     private String safeCode(MSException error) {

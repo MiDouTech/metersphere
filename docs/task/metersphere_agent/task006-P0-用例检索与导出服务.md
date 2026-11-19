@@ -4,7 +4,7 @@
 > **预估工期**：1.5 天  
 > **前置依赖**：[task005](task005-P0-检索条件解析器.md)、[task004](task004-P0-DTO与Schema适配层.md)  
 > **阻塞任务**：task008、task010  
-> **关联方案**：[改造方案](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §4.2.1、§4.2.2、§4.2.3
+> **关联方案**：[改造方案](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §4.2.1、§4.2.2、§4.2.3
 
 ---
 

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>metersphere_prod 测试用例执行人维度统计图</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <style>
+    :root { --bg:#f4f6f8; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --accent:#1f4e79; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:linear-gradient(180deg,#eef3f8 0%,var(--bg) 220px); color:var(--ink); }
+    .wrap { max-width:1280px; margin:0 auto; padding:28px 20px 48px; }
+    h1 { margin:0 0 8px; font-size:26px; color:var(--accent); }
+    .meta { color:var(--muted); font-size:13px; line-height:1.7; margin-bottom:12px; }
+    .banner { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:10px; padding:10px 14px; margin-bottom:16px; font-size:13px; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+    .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .kpi .label { font-size:12px; color:var(--muted); }
+    .kpi .value { margin-top:6px; font-size:24px; font-weight:700; color:var(--accent); }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 12px 8px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .card.full { grid-column:1 / -1; }
+    .card h2 { margin:4px 8px 8px; font-size:15px; font-weight:600; color:#334155; }
+    .chart { width:100%; height:380px; }
+    .chart.tall { height:520px; }
+    .foot { margin-top:18px; color:var(--muted); font-size:12px; }
+    @media (max-width:900px) { .grid { grid-template-columns:1fr; } .chart{height:340px;} .chart.tall{height:420px;} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>metersphere_prod 测试用例执行人维度统计图</h1>
+    <div class="meta" id="meta"></div>
+    <div class="banner" id="banner"></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="grid">
+      <div class="card"><h2>全库执行状态分布（饼图）</h2><div id="c1" class="chart"></div></div>
+      <div class="card"><h2>通过用例 Top 项目分布（饼图）</h2><div id="c2" class="chart"></div></div>
+      <div class="card full"><h2>按最后执行人 · 状态堆叠柱形图</h2><div id="c3" class="chart tall"></div></div>
+      <div class="card"><h2>按最后执行人 · 用例量占比（饼图）</h2><div id="c4" class="chart"></div></div>
+      <div class="card"><h2>按指派执行人 · 用例量占比（饼图）</h2><div id="c5" class="chart"></div></div>
+      <div class="card full"><h2>按指派执行人 · 状态堆叠柱形图</h2><div id="c6" class="chart tall"></div></div>
+      <div class="card full"><h2>按项目 · 状态堆叠柱形图（按用例数降序）</h2><div id="c7" class="chart tall"></div></div>
+    </div>
+    <div class="foot">图表库：ECharts 5 · 已剔除默认项目与测试一体化项目</div>
+  </div>
+  <script>
+    const DATA = {"generatedAt": "2026-09-20 11:58:50", "source": "metersphere_prod@10.0.1.144", "scope": "functional_case AND deleted=0 AND latest=1", "excluded": "已剔除：100001 米多公司默认项目、100011 测试项目-测试一体化；已对齐执行人；已出具报告项目 ERROR/BLOCKED→SUCCESS", "excludedDetail": "100001:米多公司默认项目 | 100011:测试项目-测试一体化", "beforeExclude": 6415, "kpis": {"total": 2960, "success": 2293, "pending": 368, "error": 21, "blocked": 111, "skipped": 167, "successRate": 77.47}, "statusPie": [{"name": "通过 SUCCESS", "value": 2293}, {"name": "未执行 PENDING", "value": 368}, {"name": "跳过 SKIP", "value": 167}, {"name": "阻塞 BLOCKED", "value": 111}, {"name": "失败 ERROR", "value": 21}], "lastExecutorNames": ["陈启芬", "黄裕", "蒋沅均", "林泽曼", "林志雄", "周香", "胡如萍", "(未执行/无执行人)", "王泽旗", "赖凯锋", "陈嘉颖"], "lastExecutorBar": {"total": [925, 484, 394, 319, 254, 219, 172, 165, 11, 10, 7], "success": [883, 460, 246, 199, 234, 143, 100, 0, 11, 10, 7], "error": [2, 2, 1, 15, 0, 0, 1, 0, 0, 0, 0], "blocked": [14, 0, 3, 68, 3, 0, 23, 0, 0, 0, 0], "skipped": [26, 7, 5, 12, 17, 76, 24, 0, 0, 0, 0], "unexecuted": [0, 15, 139, 25, 0, 0, 24, 165, 0, 0, 0]}, "lastExecutorPie": [{"name": "陈启芬", "value": 925}, {"name": "黄裕", "value": 484}, {"name": "蒋沅均", "value": 394}, {"name": "林泽曼", "value": 319}, {"name": "林志雄", "value": 254}, {"name": "周香", "value": 219}, {"name": "胡如萍", "value": 172}, {"name": "(未执行/无执行人)", "value": 165}, {"name": "王泽旗", "value": 11}, {"name": "赖凯锋", "value": 10}, {"name": "陈嘉颖", "value": 7}], "assigneeNames": ["陈启芬", "黄裕", "蒋沅均", "林泽曼", "林志雄", "周香", "胡如萍", "(未指派)", "王泽旗", "赖凯锋", "陈嘉颖"], "assigneeBar": {"total": [925, 484, 394, 319, 254, 219, 172, 165, 11, 10, 7], "success": [883, 460, 246, 199, 234, 143, 100, 0, 11, 10, 7], "error": [2, 2, 1, 15, 0, 0, 1, 0, 0, 0, 0], "blocked": [14, 0, 3, 68, 3, 0, 23, 0, 0, 0, 0], "skipped": [26, 7, 5, 12, 17, 76, 24, 0, 0, 0, 0], "unexecuted": [0, 15, 139, 25, 0, 0, 24, 165, 0, 0, 0]}, "assigneePie": [{"name": "陈启芬", "value": 925}, {"name": "黄裕", "value": 484}, {"name": "蒋沅均", "value": 394}, {"name": "林泽曼", "value": 319}, {"name": "林志雄", "value": 254}, {"name": "周香", "value": 219}, {"name": "胡如萍", "value": 172}, {"name": "(未指派)", "value": 165}, {"name": "王泽旗", "value": 11}, {"name": "赖凯锋", "value": 10}, {"name": "陈嘉颖", "value": 7}], "projectBar": {"labels": ["100008 品牌商后台基础T6.18.0（…", "100016 米多星球：财务-红包资金管理", "100021 米多星球：运营-资金管理", "100026 互动营销T3.45.0（拜耳组…", "100018 米多星球T3.14.0 (企业…", "100014 DCRM-高级搜索索引同步", "100013 品牌商后台基础（新增刷脸实名认…", "100022 智能营销T3.1.16（拜耳通…", "100024 互动营销T3.46.0（新增参…", "100012 品牌商后台基础T6.18.2_…", "100025 互动营销T3.45.1（加企微…", "100023 互动营销T[3.44.7]（会…", "100015 智能营销T3.1.13（扫码活…", "100010 米多星球T3.2.0(资金管理…", "100020 互动营销T3.44.5 （渠道…", "100027 品牌商后台基础T6.18.6（…", "100030 会员小程序T2.6.10（千区…", "100004 品牌商后台基础T6.17.9（…", "100007 米多星球T3.13.6（资金管…", "100003 智能营销T3.1.14（扫码模…", "100005 防窜物流T3.3.4（防窜物流…", "100029 品牌商后台基础（业务员新增销售…", "100028 智能营销T3.1.17（拜耳活…", "100019 防窜物流T3.3.5（门店扫动…", "100017 互动营销T3.44.6（团购有…", "100009 互动营销T3.44.3（渠道返…"], "full": ["100008 品牌商后台基础T6.18.0（BDE营销系统接入第三方标识中台）", "100016 米多星球：财务-红包资金管理", "100021 米多星球：运营-资金管理", "100026 互动营销T3.45.0（拜耳组合有礼）", "100018 米多星球T3.14.0 (企业主体)", "100014 DCRM-高级搜索索引同步", "100013 品牌商后台基础（新增刷脸实名认证模块）", "100022 智能营销T3.1.16（拜耳通码进场瓶身领奖方案）", "100024 互动营销T3.46.0（新增参会有礼）", "100012 品牌商后台基础T6.18.2_用户管理支持批量发红包", "100025 互动营销T3.45.1（加企微有礼 · 扫码二重礼）", "100023 互动营销T[3.44.7]（会员小程序接入内容营销）", "100015 智能营销T3.1.13（扫码活动支持双扫码模板（H5/小程序））", "100010 米多星球T3.2.0(资金管理)-支出金额核对", "100020 互动营销T3.44.5 （渠道返利门店增加参与机会奖项-含宴席/团购）", "100027 品牌商后台基础T6.18.6（验真匹配支持高德POI）", "100030 会员小程序T2.6.10（千区千面方案）AI文档", "100004 品牌商后台基础T6.17.9（红包充值：新增营销推广服务费及相关优化）", "100007 米多星球T3.13.6（资金管理-红包充值）", "100003 智能营销T3.1.14（扫码模板新增商品信息组件）", "100005 防窜物流T3.3.4（防窜物流6月常规优化）", "100029 品牌商后台基础（业务员新增销售区域关联字段）", "100028 智能营销T3.1.17（拜耳活动区域管理与窜货白名单）", "100019 防窜物流T3.3.5（门店扫动销码窜货判断支持销售区域类型）", "100017 互动营销T3.44.6（团购有礼活动报名支持自动审核）", "100009 互动营销T3.44.3（渠道返利累计有效次数按方案隔离）"], "total": [489, 428, 294, 172, 135, 132, 132, 129, 123, 123, 112, 90, 72, 71, 70, 67, 49, 46, 45, 44, 40, 35, 20, 19, 16, 7], "success": [412, 428, 63, 163, 135, 132, 39, 120, 120, 118, 54, 85, 60, 35, 70, 67, 0, 0, 28, 44, 40, 35, 3, 19, 16, 7], "error": [0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0], "blocked": [0, 0, 71, 0, 0, 0, 0, 0, 0, 0, 26, 0, 0, 14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "skipped": [77, 0, 7, 6, 0, 0, 0, 9, 3, 5, 31, 5, 3, 4, 0, 0, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0], "unexecuted": [0, 0, 137, 3, 0, 0, 93, 0, 0, 0, 0, 0, 9, 16, 0, 0, 49, 46, 0, 0, 0, 0, 15, 0, 0, 0]}, "projectSuccessPie": [{"name": "100016 米多星球：财务-红包资金管理", "value": 428}, {"name": "100008 品牌商后台基础T6.18.…", "value": 412}, {"name": "100026 互动营销T3.45.0（拜…", "value": 163}, {"name": "100018 米多星球T3.14.0 (…", "value": 135}, {"name": "100014 DCRM-高级搜索索引同步", "value": 132}, {"name": "100022 智能营销T3.1.16（拜…", "value": 120}, {"name": "100024 互动营销T3.46.0（新…", "value": 120}, {"name": "100012 品牌商后台基础T6.18.…", "value": 118}, {"name": "100023 互动营销T[3.44.7]…", "value": 85}, {"name": "100020 互动营销T3.44.5 （…", "value": 70}]};
+    const statusColors = {
+      '未执行 PENDING':'#94a3b8','未执行 UN_EXECUTED':'#94a3b8','通过 SUCCESS':'#16a34a',
+      '失败 ERROR':'#dc2626','阻塞 BLOCKED':'#d97706','跳过 SKIP':'#6366f1','跳过 SKIPPED':'#6366f1','误报 FAKE_ERROR':'#db2777'
+    };
+    const stackColors = { success:'#16a34a', error:'#dc2626', blocked:'#d97706', skipped:'#6366f1', unexecuted:'#94a3b8' };
+    document.getElementById('meta').innerHTML =
+      `生成时间：${DATA.generatedAt}<br/>数据源：${DATA.source}<br/>范围：${DATA.scope}`;
+    document.getElementById('banner').innerHTML =
+      `${DATA.excluded}<br/>剔除前 ${DATA.beforeExclude} → 剔除后 ${DATA.kpis.total}　｜　${DATA.excludedDetail}`;
+    const k = DATA.kpis;
+    const kpiItems = [['活跃用例',k.total],['通过',k.success],['未执行',k.pending],['失败',k.error],['阻塞',k.blocked],['跳过',k.skipped],['通过率%',k.successRate]];
+    document.getElementById('kpis').innerHTML = kpiItems.map(([label,value]) =>
+      `<div class="kpi"><div class="label">${label}</div><div class="value">${value}</div></div>`).join('');
+    function pieOption(title, data, colorMap) {
+      return {
+        tooltip:{trigger:'item', formatter:'{b}<br/>数量: {c}（{d}%）'},
+        legend:{type:'scroll', bottom:0},
+        series:[{
+          name:title, type:'pie', radius:['38%','68%'], center:['50%','46%'],
+          itemStyle:{borderRadius:6, borderColor:'#fff', borderWidth:2},
+          label:{formatter:'{b}\\n{d}%'},
+          data:data.map(d => ({...d, itemStyle: colorMap && colorMap[d.name] ? {color:colorMap[d.name]} : undefined}))
+        }]
+      };
+    }
+    function stackBarOption(categories, seriesMap, horizontal) {
+      const series = [
+        {key:'success', name:'通过'},{key:'error', name:'失败'},{key:'blocked', name:'阻塞'},
+        {key:'skipped', name:'跳过'},{key:'unexecuted', name:'未执行'}
+      ].map(s => ({
+        name:s.name, type:'bar', stack:'total', emphasis:{focus:'series'},
+        itemStyle:{color:stackColors[s.key]}, data:seriesMap[s.key]
+      }));
+      const catAxis = { type:'category', data:categories, axisLabel:{interval:0, rotate: horizontal?0:30, fontSize:11} };
+      const valAxis = { type:'value', name:'用例数' };
+      return {
+        tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+        legend:{top:0},
+        grid:{left: horizontal?120:40, right:20, top:40, bottom: horizontal?30:90, containLabel:!horizontal},
+        xAxis: horizontal?valAxis:catAxis,
+        yAxis: horizontal?catAxis:valAxis,
+        dataZoom: categories.length>12 ? [{type:'inside'},{type:'slider', height:18, bottom:8}] : undefined,
+        series
+      };
+    }
+    const c1 = echarts.init(document.getElementById('c1'));
+    c1.setOption(pieOption('执行状态', DATA.statusPie, statusColors));
+    const c2 = echarts.init(document.getElementById('c2'));
+    c2.setOption(pieOption('通过用例 Top 项目', DATA.projectSuccessPie));
+    const c3 = echarts.init(document.getElementById('c3'));
+    c3.setOption(stackBarOption(DATA.lastExecutorNames, DATA.lastExecutorBar, true));
+    const c4 = echarts.init(document.getElementById('c4'));
+    c4.setOption(pieOption('最后执行人', DATA.lastExecutorPie));
+    const c5 = echarts.init(document.getElementById('c5'));
+    c5.setOption(pieOption('指派执行人', DATA.assigneePie));
+    const c6 = echarts.init(document.getElementById('c6'));
+    c6.setOption(stackBarOption(DATA.assigneeNames, DATA.assigneeBar, true));
+    const c7 = echarts.init(document.getElementById('c7'));
+    const projOpt = stackBarOption(DATA.projectBar.labels, DATA.projectBar, false);
+    projOpt.tooltip.formatter = function(params){
+      const full = DATA.projectBar.full[params[0].dataIndex];
+      let html = `<div style="margin-bottom:4px;font-weight:600">${full}</div>`;
+      params.forEach(p => { html += `${p.marker}${p.seriesName}: <b>${p.value}</b><br/>`; });
+      return html;
+    };
+    c7.setOption(projOpt);
+    window.addEventListener('resize', () => [c1,c2,c3,c4,c5,c6,c7].forEach(c => c.resize()));
+  </script>
+</body>
+</html>

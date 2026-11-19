@@ -4,7 +4,7 @@
 > **预估工期**：1 天  
 > **前置依赖**：[task003](task003-P0-state-callback与用户匹配.md)、[task005](task005-P0-Shiro扩展与CDS路由.md)  
 > **阻塞任务**：task009  
-> **关联方案**：[接入方案](../../summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §6.1–6.2
+> **关联方案**：[接入方案](../../product_md/history/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §6.1–6.2
 
 ---
 

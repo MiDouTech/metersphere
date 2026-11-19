@@ -12,8 +12,8 @@
 | [真实组件样式说明](msp-real-frontend-style-review-20261023.md) | 样式来源和边界；最终采用优化样式 |
 | [详细修复与资产批量方案](msp-remediation-assets-batch-ui-review-plan-20261023.md) | 14项回归问题、资产批量/导出、接口/数据/验收详细设计 |
 | [实际回归报告](msp-full-regression-20261023.md) | 55检查点、14问题、2口径问题及现场证据；不等于全部需求验收 |
-| [此前LIVE修复方案](msp-live-issues-detailed-remediation-plan-20261023.md) | 前期刷新/同步等背景，后续差异以本文及最新回归为准 |
-| [22日需求汇总](requirements-consolidated-2026-10-22.md) | 外部图片、入口与同步等原始需求基线 |
+| [此前LIVE修复方案](../product_md/history/summary/msp-live-issues-detailed-remediation-plan-20261023.md) | 前期刷新/同步等背景，后续差异以本文及最新回归为准 |
+| [22日需求汇总](../product_md/history/summary/requirements-consolidated-2026-10-22.md) | 外部图片、入口与同步等原始需求基线 |
 | [22日缺陷汇总](defect-remediation-consolidated-2026-10-22.md) | 原缺陷修复范围，继续保留未验收项 |
 | [事故整改](msp-incident-remediation-20261021.md) | 调度、导入、恢复等可靠性约束 |
 

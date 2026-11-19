@@ -33,6 +33,8 @@ export const pathMap: PathMapItem[] = [
     locale: 'menu.testAsset',
     route: RouteEnum.TEST_ASSET,
     permission: [
+      'BUSINESS_ASSET:READ',
+      'SHARED_CONFIGURATION:READ',
       'CASE_ASSET:READ',
       'FUNCTIONAL_CASE:READ',
       'FUNCTIONAL_CASE_AI:READ',
@@ -49,7 +51,7 @@ export const pathMap: PathMapItem[] = [
         key: 'TEST_ASSET_DOCUMENTS',
         locale: 'menu.testAsset.documents',
         route: RouteEnum.TEST_ASSET_DOCUMENTS,
-        permission: ['FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
+        permission: ['BUSINESS_ASSET:READ'],
         level: MENU_LEVEL[2],
       },
       {
@@ -74,10 +76,23 @@ export const pathMap: PathMapItem[] = [
         level: MENU_LEVEL[2],
       },
       {
+        key: 'TEST_ASSET_SHARED_CONFIGURATION',
+        locale: 'menu.testAsset.configuration',
+        route: RouteEnum.TEST_ASSET_SHARED_CONFIGURATION,
+        permission: ['SHARED_CONFIGURATION:READ'],
+        level: MENU_LEVEL[2],
+      },
+      {
         key: 'TEST_ASSET_VERSIONS',
         locale: 'menu.testAsset.versions',
         route: RouteEnum.TEST_ASSET_VERSIONS,
-        permission: ['CASE_ASSET:READ', 'FUNCTIONAL_CASE:READ', 'FUNCTIONAL_CASE_AI:READ'],
+        permission: [
+          'BUSINESS_ASSET:READ',
+          'SHARED_CONFIGURATION:READ',
+          'CASE_ASSET:READ',
+          'FUNCTIONAL_CASE:READ',
+          'FUNCTIONAL_CASE_AI:READ',
+        ],
         level: MENU_LEVEL[2],
       },
       {

@@ -163,7 +163,7 @@ npm start
 
 - [缺陷 MCP 使用文档（AI 自配置 + 插件化评估）](./mcp-bug-api-usage.md)
 - [metersphere-mcp README](../../metersphere-mcp/README.md)
-- [对话闭环扩展方案](../../summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)
+- [对话闭环扩展方案](../../product_md/history/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)
 - [curl 联调示例](./curl-examples.md)
-- [改造方案 v2.0](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md)
+- [改造方案 v2.0](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md)
 - [工作流规则](../../../.cursor/rules/metersphere-agent.mdc)

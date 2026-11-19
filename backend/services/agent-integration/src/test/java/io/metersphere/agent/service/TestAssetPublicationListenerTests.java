@@ -32,36 +32,18 @@ class TestAssetPublicationListenerTests {
     private AiSourceDocumentMapper documentMapper;
     @Mock
     private TestAssetGovernanceService governanceService;
-    @Mock
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     @InjectMocks
     private TestAssetPublicationListener listener;
 
     @Test
     void documentEventShouldPublishImmutableVersion() {
         AiSourceDocument document = document("project-1", "document-1");
-        when(jdbcTemplate.queryForList(anyString(), eq("document-1"), eq("project-1")))
-                .thenReturn(java.util.List.of(java.util.Map.of("id", "document-1")));
 
         listener.onDocumentPublished(new TestAssetDocumentPublishedEvent(document, "snapshot"));
 
         verify(versionService).publish("project-1", "DOCUMENT", "document-1", "sha-1", "snapshot", "user-1");
         verify(governanceService).recordTrustedSource("project-1", "DOCUMENT", "document-1", "IMPORT",
                 "SOURCE_DOCUMENT", "document-1", "USER", "user-1");
-    }
-
-    @Test
-    void asynchronousParseCannotSupersedeAnOnlineRevision() {
-        AiSourceDocument document = document("project-1", "document-1");
-        when(jdbcTemplate.queryForList(anyString(), eq("document-1"), eq("project-1")))
-                .thenReturn(java.util.List.of(java.util.Map.of("id", "document-1")));
-        var online = new TestAssetVersionDTO();
-        online.setSourceVersion("online:v1");
-        when(testAssetMapper.selectLatestPublished("project-1", "DOCUMENT", "document-1")).thenReturn(online);
-
-        listener.onDocumentPublished(new TestAssetDocumentPublishedEvent(document, "parser output"));
-
-        verify(versionService, never()).publish(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test

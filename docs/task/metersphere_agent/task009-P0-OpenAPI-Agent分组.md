@@ -4,7 +4,7 @@
 > **预估工期**：0.5 天  
 > **前置依赖**：[task008](task008-P0-REST-Controller四层接口.md)  
 > **阻塞任务**：task010、task011  
-> **关联方案**：[改造方案](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §6
+> **关联方案**：[改造方案](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §6
 
 ---
 

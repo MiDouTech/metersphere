@@ -3,11 +3,8 @@ import { caseExportTools } from "./tools/caseExport.js";
 import { readFileSync } from "node:fs";
 import { bugTransferTools } from "./tools/bugTransfer.js";
 import { caseLibraryTools } from "./tools/caseLibrary.js";
-import { executionBatchFinishTool, executionBatchNextTool } from "./tools/executionBatchNext.js";
-import { deferExecutionStepTool, executionDecideTool, submitAndAdvanceTool } from "./tools/executionDecide.js";
 import { managedExecutionTools } from "./tools/managedExecution.js";
-import { governedExecutionTools } from "./tools/governedExecution.js";
-import { z } from "zod";
+import { businessAssetTools } from "./tools/businessAssets.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { nativeBatchSubmitTool, executionHistoryTool, executionPreflightTool, checkpointResumeTool, bugTransitionsTool,
@@ -41,7 +38,6 @@ import {
   getExecutionEventsTool,
   getExecutionTaskTool,
   listTestPlanCasesTool,
-  readPlanExecutionContractTool,
   resolveExecutionScopeTool,
   resumeExecutionTaskTool,
   searchTestPlansTool,
@@ -60,13 +56,8 @@ type ToolDef = {
 };
 
 const tools: ToolDef[] = [
-  ...governedExecutionTools,
+  ...businessAssetTools,
   ...managedExecutionTools,
-  executionDecideTool,
-  deferExecutionStepTool,
-  executionBatchNextTool,
-  executionBatchFinishTool,
-  submitAndAdvanceTool,
   ...caseLibraryTools,
   ...caseExportTools,
   ...bugTransferTools,
@@ -85,7 +76,6 @@ const tools: ToolDef[] = [
   associateTestPlanCasesTool,
   searchTestPlansTool,
   listTestPlanCasesTool,
-  readPlanExecutionContractTool,
   resolveExecutionScopeTool,
   createExecutionTaskTool,
   getExecutionTaskTool,
@@ -113,19 +103,10 @@ async function main() {
   const server = new McpServer({
     name: "metersphere-mcp",
     version: JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version,
-  }, {
-    instructions: [
-      "For a personal browser plan, use metersphere.execution.preflight, metersphere.execution.create, and metersphere.task.claim with the ordinary project MCP identity.",
-      "Read metersphere.execution.batch.next before choosing a case. Follow the frozen step and submit browser observations and committed evidence with metersphere.execution.step.submit_and_advance.",
-      "For missing data, call metersphere.execution.step.decide with DATA_MISSING and use the returned preparation method.",
-      "If a browser write's effect is unknown, persist the wait and query business state before any further write.",
-      "After an evidence upload failure, resume the upload without repeating the business action.",
-      "After a per-case wait or persisted assertion failure, use metersphere.execution.batch.next for the remaining cases. Finish only when it requests finalization.",
-    ].join("\n"),
   });
 
   for (const tool of tools) {
-    const handle = async (args: Record<string, unknown>) => {
+    server.tool(tool.name, tool.description, tool.inputSchema, async (args) => {
       try {
         return await tool.handler(client, args as Record<string, unknown>);
       } catch (error) {
@@ -134,7 +115,7 @@ async function main() {
             isError: true,
             content: [
               {
-                type: "text" as const,
+                type: "text",
                 text: JSON.stringify(
                   {
                     error: error.message,
@@ -152,13 +133,10 @@ async function main() {
         const message = "请求失败，请检查连接或参数后重试；不要直接重复执行已提交的业务操作";
         return {
           isError: true,
-          content: [{ type: "text" as const, text: JSON.stringify({ error: message }, null, 2) }],
+          content: [{ type: "text", text: JSON.stringify({ error: message }, null, 2) }],
         };
       }
-    };
-    if (tool.name.startsWith('metersphere.functional.execution.session.') || tool.name.startsWith('metersphere.functional.knowledge.')) {
-      server.registerTool(tool.name, { description: tool.description, inputSchema: z.object(tool.inputSchema as z.ZodRawShape).strict() }, handle);
-    } else server.tool(tool.name, tool.description, tool.inputSchema, handle);
+    });
   }
 
   const transport = new StdioServerTransport();

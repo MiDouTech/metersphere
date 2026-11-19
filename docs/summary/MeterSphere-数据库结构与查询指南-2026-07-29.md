@@ -3852,8 +3852,8 @@ SELECT version, description, success FROM metersphere_version ORDER BY installed
 | Flyway 排障 | `docs/summary/MeterSphere-Flyway迁移故障-排障与防再发-2026-07-24.md` |
 | 组织架构 | `docs/summary/community-unlock-and-org-structure.md` |
 | Agent 数据模型 | `docs/task/metersphere_agent/task002-P0-数据模型与Flyway迁移.md` |
-| 自动保存 | `docs/summary/MeterSphere-编辑自动保存与撤销-优化方案-2026-07-24.md` |
-| 默认项目 | `docs/summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md` |
+| 自动保存 | `docs/product_md/history/summary/MeterSphere-编辑自动保存与撤销-优化方案-2026-07-24.md` |
+| 默认项目 | `docs/product_md/history/summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md` |
 
 ## 8. 再生方式
 

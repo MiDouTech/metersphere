@@ -1,0 +1,133 @@
+{
+  "round": "R4",
+  "command": "./mvnw.cmd -pl backend/app -am -Dtest=AgentExecutionExceptionHandlerTests,AgentHistoricalCompatibilityTests,AgentMcpBundleServiceTests,AgentMcpStartupTests,AgentMcpStreamableServiceTests,AgentMcpToolContractTests,AgentMcpWriteRoutingTests,AgentTokenScopeParserTests,BusinessAssetMcpTests,BusinessAssetServiceTests,BusinessGovernanceExceptionHandlerTests,ExternalExecutorServiceTests,PermissionManifestCoverageTests,SharedConfigurationServiceTests,TestAssetControllerPermissionTests -Dsurefire.failIfNoSpecifiedTests=false package -q",
+  "exitCode": 0,
+  "totals": {
+    "tests": 68,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "suite": "io.metersphere.app.PermissionManifestCoverageTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "2624fc6b29b780a9c0e5d8d09522ef4418f77dd98356f9011273cb4452520e44"
+    },
+    {
+      "suite": "io.metersphere.agent.controller.AgentExecutionExceptionHandlerTests",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "648fb5370771af5fd498393713859d532d7ea08455857c0e121a874c895b361b"
+    },
+    {
+      "suite": "io.metersphere.agent.controller.BusinessGovernanceExceptionHandlerTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "4bd37bab628509282bd3f25bdabca459a415ed2d6f28d55944a12e76f24f0506"
+    },
+    {
+      "suite": "io.metersphere.agent.controller.TestAssetControllerPermissionTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "29e064e2ce35bd19463519525591acea424a6109748d5f1a584720008361887d"
+    },
+    {
+      "suite": "io.metersphere.agent.security.AgentTokenScopeParserTests",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "ef8b36ea9ac10661a829dcdbe1a984d7a3eb657dc0ee7200928ccd10e8197faf"
+    },
+    {
+      "suite": "io.metersphere.agent.service.AgentHistoricalCompatibilityTests",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "0afe39f39f52b69d4ee7ca1c112303f0f9cc7f7ccf6aff908079658de4b87d23"
+    },
+    {
+      "suite": "io.metersphere.agent.service.AgentMcpBundleServiceTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "0a511b435acc9cecf286d06f9fe1cf65469acf8236f78f77981200fa8134cd15"
+    },
+    {
+      "suite": "io.metersphere.agent.service.AgentMcpStartupTests",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "1fbc74a4892f234e30a6f2d6198de02465ba9656814eb8e4c02f8346355a0b4f"
+    },
+    {
+      "suite": "io.metersphere.agent.service.AgentMcpStreamableServiceTests",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "938149cdfa47a2852d7ce2e3e6a1362b4689c30fc53b688b72bc2ad0ad9b47ea"
+    },
+    {
+      "suite": "io.metersphere.agent.service.AgentMcpWriteRoutingTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "f0926b89d3266498ad9d831da87795bb81cd3a22faaeb71f4748eef8b6a26fbd"
+    },
+    {
+      "suite": "io.metersphere.agent.service.BusinessAssetMcpTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "ac2cd477f935b83d6968dc059d3f148173886b601ce9c2e97802559b86dfa291"
+    },
+    {
+      "suite": "io.metersphere.agent.service.BusinessAssetServiceTests",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "05b7528454635b0c331cb3103ab504c8497f8603a620a728b1eab8cb98afb58f"
+    },
+    {
+      "suite": "io.metersphere.agent.service.ExternalExecutorServiceTests",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "5fe9ac3206dc4f38758da99312352103937c2676577695a9a8c83823a9d96ad8"
+    },
+    {
+      "suite": "io.metersphere.agent.service.SharedConfigurationServiceTests",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "7c747481041e47ed35c9d300740f82a9696e0d51476e3a72a725e8ecb88db2f5"
+    },
+    {
+      "suite": "io.metersphere.agent.tool.AgentMcpToolContractTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "f79eb09a6aebf67b5ccac817ab45d4b87a5458912908077d7f2397490714392c"
+    }
+  ]
+}

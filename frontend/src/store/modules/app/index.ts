@@ -16,7 +16,6 @@ import { useI18n } from '@/hooks/useI18n';
 import useUser from '@/hooks/useUser';
 import router from '@/router';
 import { featureRouteMap, NO_PROJECT_ROUTE_NAME } from '@/router/constants';
-import { clearProtocolMemory } from '@/utils/protocol-memory';
 import { watchStyle, watchTheme } from '@/utils/theme';
 
 import type { EnvironmentItem } from '@/models/projectManagement/environmental';
@@ -284,7 +283,6 @@ const useAppStore = defineStore('app', {
      * 设置当前组织 ID
      */
     setCurrentOrgId(id: string) {
-      if (this.currentOrgId !== id) clearProtocolMemory();
       this.currentOrgId = id;
     },
     /**

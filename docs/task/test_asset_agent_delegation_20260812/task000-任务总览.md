@@ -1,6 +1,6 @@
 # task000 - 测试资产管理与 Agent 任务委派改造任务总览
 
-> 来源方案：`docs/summary/MeterSphere-测试资产管理与Agent任务委派-平台改造方案-2026-08-12.md`  
+> 来源方案：`docs/product_md/history/summary/MeterSphere-测试资产管理与Agent任务委派-平台改造方案-2026-08-12.md`  
 > 任务目录：`docs/task/test_asset_agent_delegation_20260812`  
 > 拆分日期：2026-08-12  
 > 当前状态：核心代码改造已落地并通过编译、定向单测与前端构建；完整 P0/P1/P2 方案仍处于部分完成，详见 `implementation-status-20260812.md`

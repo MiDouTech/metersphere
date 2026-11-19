@@ -24,11 +24,10 @@ class AgentQualityFinalizationMySqlTests {
     private final String schema="quality_fix_"+UUID.randomUUID().toString().replace("-","");
     private JdbcTemplate admin,jdbc;private DriverManagerDataSource ds;private DataSourceTransactionManager transactions;
     @BeforeEach void database() throws Exception {
-        admin=new JdbcTemplate(new DriverManagerDataSource("jdbc:mysql://127.0.0.1:13326/?useSSL=false&allowPublicKeyRetrieval=true","root",System.getenv().getOrDefault("PROTOCOL_MYSQL_PASSWORD","quality-test-only")));
+        admin=new JdbcTemplate(new DriverManagerDataSource("jdbc:mysql://127.0.0.1:13326/?useSSL=false&allowPublicKeyRetrieval=true","root","quality-test-only"));
         admin.execute("CREATE DATABASE "+schema+" CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
-        ds=new DriverManagerDataSource("jdbc:mysql://127.0.0.1:13326/"+schema+"?useSSL=false&allowPublicKeyRetrieval=true","root",System.getenv().getOrDefault("PROTOCOL_MYSQL_PASSWORD","quality-test-only"));jdbc=new JdbcTemplate(ds);transactions=new DataSourceTransactionManager(ds);
+        ds=new DriverManagerDataSource("jdbc:mysql://127.0.0.1:13326/"+schema+"?useSSL=false&allowPublicKeyRetrieval=true","root","quality-test-only");jdbc=new JdbcTemplate(ds);transactions=new DataSourceTransactionManager(ds);
         jdbc.execute("CREATE TABLE ai_execution_task(id VARCHAR(64) PRIMARY KEY,project_id VARCHAR(64),current_execution_id VARCHAR(64),status VARCHAR(32)) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-        jdbc.execute("CREATE TABLE msp_protocol_session(source_type VARCHAR(16),source_id VARCHAR(64),source_execution_id VARCHAR(64))");
         jdbc.execute("CREATE TABLE ai_execution_attempt(id VARCHAR(64) PRIMARY KEY,task_id VARCHAR(64),status VARCHAR(32),update_time BIGINT,version INT)");
         jdbc.execute("CREATE TABLE ai_execution_case(id VARCHAR(64),task_id VARCHAR(64),case_id VARCHAR(64))");
         jdbc.execute("CREATE TABLE ai_execution_step_result(id VARCHAR(64) PRIMARY KEY)");

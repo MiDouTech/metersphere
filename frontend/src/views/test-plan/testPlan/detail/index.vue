@@ -21,13 +21,6 @@
         </a-tooltip>
       </template>
       <template #headerRight>
-        <a-link
-          v-if="planId && detail.type === 'TEST_PLAN' && canViewAiExecution"
-          @click="
-            router.push({ path: '/execution/tasks', query: { testPlanId: planId, pId: appStore.currentProjectId } })
-          "
-          >AI 执行记录</a-link
-        >
         <MsButton v-if="isEnableEdit" type="button" status="default" @click="editorCopyHandler(false)">
           <MsIcon type="icon-icon_edit_outlined" class="mr-[8px]" />
           {{ t('common.edit') }}
@@ -202,11 +195,11 @@
   import useUserStore from '@/store/modules/user';
   import { characterLimit } from '@/utils';
   import { ensureAppError, formatAppErrorMessage } from '@/utils/appError';
-  import { hasAnyPermission, hasPageVisible, hasRouteVisible } from '@/utils/permission';
+  import { hasAnyPermission } from '@/utils/permission';
 
   import { ModuleTreeNode } from '@/models/common';
   import type { PassRateCountDetail, TestPlanDetail, TestPlanItem } from '@/models/testPlan/testPlan';
-  import { CaseManagementRouteEnum, TestPlanRouteEnum } from '@/enums/routeEnum';
+  import { TestPlanRouteEnum } from '@/enums/routeEnum';
   import { testPlanTypeEnum } from '@/enums/testPlanEnum';
 
   defineOptions({
@@ -221,12 +214,6 @@
 
   const route = useRoute();
   const router = useRouter();
-  const canViewAiExecution = computed(
-    () =>
-      hasAnyPermission(['AI_EXECUTION:READ']) &&
-      hasPageVisible('FUNCTIONAL_CASE_AUTOMATION_EXECUTION_TAB') &&
-      hasRouteVisible(CaseManagementRouteEnum.CASE_MANAGEMENT_AUTOMATION_EXECUTION)
-  );
   const minderStore = useMinderStore();
 
   const loading = ref(false);

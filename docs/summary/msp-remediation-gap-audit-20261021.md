@@ -2,7 +2,7 @@
 
 日期：2026-10-21。源码基线：`19037ddb30a982cad64c9dd506c8a8eda5c279b1`。
 
-依据：[完整整改方案](msp-remediation-complete-plan-20261020.md)（第 11 节优先）、[平台优化方案](../../doc/platform-optimization-implementation-plan-2026-10-21.md)、[原 AC01–AC28](../metersphere-mcp-case-library-improvement-plan-2026-10-20.md)。用户截图作为页面现象证据，不用于推断线上部署 commit。
+依据：[完整整改方案](msp-remediation-complete-plan-20261020.md)（第 11 节优先）、[平台优化方案](../implementation/platform-optimization-20261021/platform-optimization-implementation-plan-2026-10-21.md)、[原 AC01–AC28](../metersphere-mcp-case-library-improvement-plan-2026-10-20.md)。用户截图作为页面现象证据，不用于推断线上部署 commit。
 
 结论：整体部分完成。上次完成的是代码提交与分支合并，不能作为整份方案完成或线上部署完成的证明。本次只进行源码、截图与既有实施记录复核；未修改业务实现，未执行线上交互或重新运行应用测试。
 

@@ -8,6 +8,4 @@ public class AgentRunnerLeaseCompleteRequest {
     @NotBlank
     private String outcome;
     private String reason;
-    private String taskId;
-    private String executionId;
 }

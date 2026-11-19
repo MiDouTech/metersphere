@@ -3,7 +3,7 @@
 > **文档类型**：任务索引 / 里程碑规划  
 > **适用项目**：MeterSphere 默认项目与跨项目导入（枢纽模型）  
 > **编写日期**：2026-07-24  
-> **关联方案**：[MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md](../../summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md)（**v0.4.1 已人工确认决策**）  
+> **关联方案**：[MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md](../../product_md/history/summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md)（**v0.4.1 已人工确认决策**）  
 > **标注**：【AI生成】已按已审方案拆解；实施前须完成 task001 权限白名单签字
 
 ---
@@ -127,7 +127,7 @@ flowchart LR
 
 | 类型 | 路径 |
 |------|------|
-| 方案 | `docs/summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md` |
+| 方案 | `docs/product_md/history/summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md` |
 | 默认组织校验 | `OrganizationService#checkOrgDefault` |
 | 建项目 | `CommonProjectService#add` / `addProjectModal.vue` |
 | 用例模块 | `FunctionalCaseModule` / `FunctionalCaseModuleService#deleteModule` |

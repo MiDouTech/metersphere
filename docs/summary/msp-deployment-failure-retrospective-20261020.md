@@ -15,7 +15,7 @@
 | 2026-08-06、08-13 | Git 提交 `6e6abe7462`、`7ecad51da1` | 多次修复 Flyway 版本冲突；08-13 修复重命名两个迁移 |
 | 2026-08-14 | `06a3269ddb` | 修复项目服务循环依赖 |
 | 2026-08-28 | `ec32eae32c` | 迁移恢复脚本改为使用实际配置的历史表；说明恢复流程也存在配置假设 |
-| 2026-09-01、09-02 | `f65949067a`、`033f4a7676`；`doc/docker-startup-agent-cycle-fix-conclusion.md` | Agent 服务依赖环导致 Spring 上下文失败、Java 退出、容器反复重启 |
+| 2026-09-01、09-02 | `f65949067a`、`033f4a7676`；`docs/troubleshooting/docker-startup-agent-cycle-fix-conclusion.md` | Agent 服务依赖环导致 Spring 上下文失败、Java 退出、容器反复重启 |
 | 2026-09-11 | `89f0d2f0c8`；`docs/task/agent_mcp_impl_check_fix_20260803/container-startup-fix-20260911.md` | 现场 RestartCount=95；同名 Bean 注入类型冲突、MyBatis 共享 SQL 片段解析失败 |
 | 既有运维记录 | `docs/summary/wecom-ai-bot-readonly-conf-remediation.md` | 启动脚本尝试向只读 conf 挂载写密钥，进程退出；不是迁移问题 |
 | 2026-10-20 | 本轮隔离容器日志和数据库字段检查 | 任务回写重试两表排序规则不一致，持续报 SQL 1267；容器仍 healthy，不能据此认定生产 502 原因 |

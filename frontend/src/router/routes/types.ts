@@ -10,7 +10,6 @@ export type Component<T = any> =
   | (() => Promise<T>);
 
 export interface RouteMeta {
-  contextScope?: 'ORGANIZATION' | 'PROJECT';
   requiresLlm?: boolean;
   roles?: string[]; // 角色数组
   adminOnly?: boolean; // 是否仅系统管理员可访问

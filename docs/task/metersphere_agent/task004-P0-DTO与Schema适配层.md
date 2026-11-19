@@ -4,7 +4,7 @@
 > **预估工期**：1 天  
 > **前置依赖**：[task001](task001-P0-agent-integration模块脚手架.md)  
 > **阻塞任务**：task005、task006、task007  
-> **关联方案**：[改造方案](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §4.4、附录 B
+> **关联方案**：[改造方案](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §4.4、附录 B
 
 ---
 
