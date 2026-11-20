@@ -63,6 +63,13 @@ const TestAsset: AppRouteRecordRaw = {
   },
   children: [
     {
+      path: 'governed-execution',
+      alias: ['protocol-administration'],
+      redirect: resolveDefaultTestAssetPath,
+      component: null,
+      meta: { hideInMenu: true },
+    },
+    {
       path: 'business',
       alias: ['documents', 'knowledge'],
       name: TestAssetRouteEnum.TEST_ASSET_DOCUMENTS,
