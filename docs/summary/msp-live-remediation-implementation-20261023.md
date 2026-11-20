@@ -1,6 +1,6 @@
 # 2026-10-23 实测问题修复实施记录
 
-依据：[详细方案](msp-live-issues-detailed-remediation-plan-20261023.md)。状态：实施中，部分完成，不代表已发布。
+依据：[详细方案](../product_md/history/summary/msp-live-issues-detailed-remediation-plan-20261023.md)。状态：实施中，部分完成，不代表已发布。
 
 ## 需求追踪
 

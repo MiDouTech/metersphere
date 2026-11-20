@@ -343,7 +343,7 @@
 
     <select id="selectExpiredArtifacts" resultMap="artifactMap">
         SELECT * FROM ai_execution_artifact
-        WHERE status IN ('AVAILABLE','PROTOCOL_DELETE_PENDING')
+        WHERE status = 'AVAILABLE'
           AND retention_until IS NOT NULL
           AND retention_until &lt;= #{now}
         ORDER BY retention_until ASC
@@ -466,7 +466,6 @@
 
     <sql id="taskSearchWhere">
         WHERE project_id = #{projectId}
-        <if test="testPlanId != null">AND test_plan_id = #{testPlanId}</if>
         <if test="keyword != null and keyword != ''">
             AND (LOWER(name) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '!'
                  OR LOWER(objective) LIKE CONCAT('%', #{likeKeyword}, '%') ESCAPE '!'

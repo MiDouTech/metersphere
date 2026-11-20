@@ -3,7 +3,7 @@
 ## 1. 文档信息
 
 - 检查与修复日期：2026-08-17
-- 需求基线：`docs/develop_logs/buglist/MeterSphere-缺陷流程-Agent集成-用例资产与异常修复改造方案-2026-08-17.md`
+- 需求基线：`docs/product_md/history/develop_logs/buglist/MeterSphere-缺陷流程-Agent集成-用例资产与异常修复改造方案-2026-08-17.md`
 - 检查范围：需求偏差、前后端闭环、数据持久化、权限入口、Flyway、容器启动风险
 - 结论：代码审计发现的可在仓库内闭环问题已修复；真实数据库迁移、容器启动和历史 `100500 requestId` 根因复验仍需在部署环境执行。
 

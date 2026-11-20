@@ -58,9 +58,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -316,17 +313,6 @@ public class AgentExecutionService {
         if (StringUtils.isBlank(request.getPreflightId())) {
             throw new MSException("PREFLIGHT_REQUIRED");
         }
-        if (StringUtils.isNotBlank(request.getIdempotencyKey())) {
-            AgentExecutionTaskDTO existing = agentExecutionMapper.selectTaskByIdempotency(projectId, userId, request.getIdempotencyKey());
-            if (existing != null) {
-                if (!expectedOrigin.equals(existing.getTaskOrigin())
-                        || !StringUtils.equals(request.getPreflightId(), existing.getPreflightId())) {
-                    throw new MSException("PREFLIGHT_REQUEST_MISMATCH");
-                }
-                return get(existing.getId());
-            }
-        }
-
         AgentExecutionPreflightDTO preflight = preflightService.validateForCreate(
                 request.getPreflightId(), projectId, userId, expectedOrigin, request);
         request.setCaseIds(preflight.getResolvedCaseIds());
@@ -359,6 +345,13 @@ public class AgentExecutionService {
                 throw new MSException("agentType 格式无效");
             }
         }
+        if (StringUtils.isNotBlank(request.getIdempotencyKey())) {
+            AgentExecutionTaskDTO existing = agentExecutionMapper.selectTaskByIdempotency(projectId, userId, request.getIdempotencyKey());
+            if (existing != null) {
+                return hydrate(existing);
+            }
+        }
+
         String targetUrl = validateTargetUrl(request.getTargetUrl());
 
         String testPlanId = StringUtils.trimToNull(request.getTestPlanId());
@@ -370,17 +363,8 @@ public class AgentExecutionService {
         if (CollectionUtils.isEmpty(cases)) {
             throw new MSException("未解析到可执行功能用例，任务未创建");
         }
-        int caseLimit = AgentExecutionPreflightService.caseLimit(expectedOrigin, testPlanId);
-        if (cases.size() > caseLimit) {
-            throw new MSException("单个 AI Web UI 执行任务最多允许 " + caseLimit + " 条用例");
-        }
-        boolean personalPlan = personalMcp && StringUtils.isNotBlank(testPlanId);
-        var planScope = personalPlan ? preflightService.frozenPersonalPlanScope(request.getPreflightId())
-                : new AgentExecutionPreflightService.PersonalPlanScope(Map.of(), List.of());
-        var caseIssues = planScope.issues();
-        if (personalPlan && !new HashSet<>(request.getCaseIds()).equals(
-                cases.stream().map(AgentExecutionCaseDTO::getCaseId).collect(Collectors.toSet()))) {
-            throw new MSException("PREFLIGHT_PLAN_SCOPE_CHANGED");
+        if (cases.size() > 100) {
+            throw new MSException("单个 AI Web UI 执行任务最多允许 100 条用例");
         }
         // Serialize task creation with confirmed deletion of the same version rows.
         for (String caseId : cases.stream().map(AgentExecutionCaseDTO::getCaseId).sorted().toList()) {
@@ -389,7 +373,7 @@ public class AgentExecutionService {
         }
         List<String> highRiskSignals = detectHighRiskSignals(cases.stream().map(AgentExecutionCaseDTO::getCaseName).toList());
         List<String> confirmReasons = new ArrayList<>();
-        if (!personalPlan && cases.size() > DEFAULT_CONFIRM_THRESHOLD) {
+        if (cases.size() > DEFAULT_CONFIRM_THRESHOLD) {
             confirmReasons.add("执行范围超过 " + DEFAULT_CONFIRM_THRESHOLD + " 条");
         }
         if (!highRiskSignals.isEmpty()) {
@@ -521,23 +505,10 @@ public class AgentExecutionService {
             item.setVersion(0);
             item.setCreateTime(now);
             item.setUpdateTime(now);
-            if (caseIssues.containsKey(item.getCaseId())) {
-                holdPersonalPlanCase(item, (String) caseIssues.get(item.getCaseId()));
-                agentExecutionMapper.insertCase(item);
-                continue;
-            }
-            TestAssetVersionDTO assetVersion = planScope.legacyCaseIds().contains(item.getCaseId()) ? null
-                    : preflightService.frozenCaseVersion(request.getPreflightId(), item.getCaseId(), stableCaseId);
-            List<AgentExecutionStepDTO> stepSnapshots = assetVersion == null
-                    ? executionSnapshotService.prepareSnapshot(item, now)
-                    : executionSnapshotService.prepareSnapshot(item, assetVersion, now);
-            if (personalPlan && (stepSnapshots.isEmpty() || stepSnapshots.stream().anyMatch(step ->
-                    AgentExecutionStatus.CASE_NEEDS_REVIEW.equals(step.getStatus()) || "HIGH".equalsIgnoreCase(step.getRiskLevel())))) {
-                holdPersonalPlanCase(item, "EXECUTION_CONTRACT_STEP_NOT_PLANNED");
-                agentExecutionMapper.insertCase(item);
-                continue;
-            }
-            if (assetVersion != null) item.setAssetVersionId(assetVersion.getId());
+            TestAssetVersionDTO assetVersion = preflightService.frozenCaseVersion(request.getPreflightId(),
+                    item.getCaseId(), stableCaseId);
+            List<AgentExecutionStepDTO> stepSnapshots = executionSnapshotService.prepareSnapshot(item, assetVersion, now);
+            item.setAssetVersionId(assetVersion.getId());
             if (stepSnapshots.stream().anyMatch(step -> AgentExecutionStatus.CASE_NEEDS_REVIEW.equals(step.getStatus()))) {
                 stepSnapshots.stream().filter(step -> AgentExecutionStatus.CASE_NEEDS_REVIEW.equals(step.getStatus()))
                         .forEach(step -> step.setStatus(AgentExecutionStatus.STEP_SKIPPED_REVIEW_REQUIRED));
@@ -559,7 +530,7 @@ public class AgentExecutionService {
                     .forEach(reviewRequiredSteps::add);
             agentExecutionMapper.insertCase(item);
             stepSnapshots.forEach(agentExecutionMapper::insertStep);
-            if (assetVersion != null) testAssetVersionService.relate(projectId, "EXECUTES", "TASK", task.getId(), null,
+            testAssetVersionService.relate(projectId, "EXECUTES", "TASK", task.getId(), null,
                     "CASE", stableCaseId, assetVersion.getId(),
                     JSON.toJSONString(Map.of("executionCaseId", item.getId(), "caseVersionRowId", item.getCaseId(),
                             "position", item.getPos())), userId);
@@ -657,7 +628,6 @@ public class AgentExecutionService {
     public AgentExecutionTaskSearchResponse searchTasks(AgentExecutionTaskSearchRequest request) {
         AgentExecutionTaskSearchRequest actual = request == null ? new AgentExecutionTaskSearchRequest() : request;
         String projectId = agentProjectService.resolveProjectId(actual.getProjectId());
-        String testPlanId = StringUtils.trimToNull(actual.getTestPlanId());
         int current = Math.max(actual.getCurrent() == null ? 1 : actual.getCurrent(), 1);
         int pageSize = Math.min(Math.max(actual.getPageSize() == null ? 20 : actual.getPageSize(), 1), 100);
         String keyword = StringUtils.trimToEmpty(actual.getKeyword());
@@ -669,10 +639,10 @@ public class AgentExecutionService {
         AgentExecutionTaskSearchResponse response = new AgentExecutionTaskSearchResponse();
         response.setCurrent(current);
         response.setPageSize(pageSize);
-        response.setTotal(agentExecutionMapper.countTasks(projectId, testPlanId, keyword,
+        response.setTotal(agentExecutionMapper.countTasks(projectId, keyword,
                 AgentProjectService.escapeLike(keyword.toLowerCase(Locale.ROOT)), status, verdict,
                 taskOrigin, executorChannel, mode));
-        response.setItems(agentExecutionMapper.searchTasks(projectId, testPlanId, keyword,
+        response.setItems(agentExecutionMapper.searchTasks(projectId, keyword,
                 AgentProjectService.escapeLike(keyword.toLowerCase(Locale.ROOT)), status, verdict,
                 taskOrigin, executorChannel, mode,
                 (current - 1) * pageSize, pageSize));
@@ -1177,52 +1147,20 @@ public class AgentExecutionService {
         contract.put("credentialRole", credentialRole);
         contract.put("runnerRequirements", StringUtils.isBlank(task.getRequiredCapabilities())?List.of():JSON.parseArray(task.getRequiredCapabilities(),String.class));
         Map<String,List<AgentExecutionStepDTO>> byCase=steps.stream().collect(Collectors.groupingBy(AgentExecutionStepDTO::getExecutionCaseId,LinkedHashMap::new,Collectors.toList()));
-        Map<String, Long> structuredVersions = AgentTaskOrigin.PERSONAL_MCP.equals(task.getTaskOrigin())
-                && StringUtils.isNotBlank(task.getTestPlanId())
-                ? agentTestPlanQueryService.executionContractVersions(task.getProjectId(), cases) : Map.of();
         List<Map<String,Object>> contractCases=new ArrayList<>();
         for(AgentExecutionCaseDTO item:cases){
             Map<String,Object> contractCase=new LinkedHashMap<>();contractCase.put("caseId",item.getCaseId());
             contractCase.put("assetVersionId",item.getAssetVersionId());contractCase.put("name",StringUtils.defaultIfBlank(item.getCaseName(),item.getCaseId()));
-            var runtimeSteps = byCase.getOrDefault(item.getId(), List.of());
-            Map<String, List<Map<String, Object>>> authoredAssertions = Map.of();
-            String structuredIssue = null;
-            Long structuredVersion = structuredVersions.get(item.getCaseId());
-            if (structuredVersion != null && StringUtils.isNotBlank(item.getTestPlanCaseId())) {
-                contractCase.put("testPlanCaseId", item.getTestPlanCaseId());
-                contractCase.put("structuredContractVersion", structuredVersion);
-                contractCase.put("structuredContractSourceVersion", item.getCaseVersion());
-                try {
-                    var published = agentTestPlanQueryService.publishedContractForSnapshot(
-                            task.getProjectId(), item.getCaseId(), item.getCaseVersion(), structuredVersion);
-                    authoredAssertions = compilePersonalAssertions(published, runtimeSteps, task.getEnvironmentId(),
-                            "v2".equals(contract.get("contractVersion")));
-                } catch (MSException failure) {
-                    String code = failure.getMessage();
-                    if (!Set.of("PROTOCOL_ENVIRONMENT_MISMATCH", "STRUCTURED_CONTRACT_STEP_MISMATCH",
-                            "STRUCTURED_CONTRACT_REVIEW_REQUIRED", "QUALITY_ASSERTION_INVALID",
-                            "PROTOCOL_CONTRACT_UNAVAILABLE").contains(code)) {
-                        throw failure;
-                    }
-                    structuredIssue = code;
-                    contractCase.put("structuredContractIssue", code);
-                }
-            }
             List<Map<String,Object>> contractSteps=new ArrayList<>();
-            for(AgentExecutionStepDTO step:runtimeSteps){
+            for(AgentExecutionStepDTO step:byCase.getOrDefault(item.getId(),List.of())){
                 if(StringUtils.isAnyBlank(step.getActionJson(),step.getAssertionJson())){
                     if(AgentExecutorChannel.MODEL_API_RUNNER.equals(task.getExecutorChannel()))throw new MSException("EXECUTION_CONTRACT_STEP_NOT_PLANNED");
-                    if (structuredIssue == null && StringUtils.isBlank(step.getExpected()) && !authoredAssertions.containsKey(step.getId()))
-                        throw new MSException("EXECUTION_CONTRACT_STEP_NOT_PLANNED");
+                    if(StringUtils.isBlank(step.getExpected())) throw new MSException("EXECUTION_CONTRACT_STEP_NOT_PLANNED");
                     step.setActionJson(JSON.toJSONString(Map.of("instruction",StringUtils.defaultString(step.getInstruction()))));
-                    if (structuredIssue == null && !authoredAssertions.containsKey(step.getId())) {
-                        step.setAssertionJson(JSON.toJSONString(List.of(Map.of("operator","EQUALS","expected",step.getExpected()))));
-                    }
+                    step.setAssertionJson(JSON.toJSONString(List.of(Map.of("operator","EQUALS","expected",step.getExpected()))));
                 }
                 Map<String,Object> value=new LinkedHashMap<>();value.put("stepId",step.getId());
-                value.put("action", JSON.parseObject(step.getActionJson()));
-                List<?> rules = structuredIssue != null ? List.of() : authoredAssertions.get(step.getId());
-                value.put("assertions", rules == null ? JSON.parseArray(step.getAssertionJson()) : rules);
+                value.put("action",JSON.parseObject(step.getActionJson()));value.put("assertions",JSON.parseArray(step.getAssertionJson()));
                 value.put("onFailure",AgentExecutionStatus.STEP_SKIPPED_REVIEW_REQUIRED.equals(step.getStatus())?"NEEDS_REVIEW":"STOP_CASE");
                 value.put("evidencePolicy","ON_FAILURE");contractSteps.add(value);
             }
@@ -1231,57 +1169,6 @@ public class AgentExecutionService {
         contract.put("cases",contractCases);contract.put("generatedAt",System.currentTimeMillis());
         if(AgentExecutorChannel.MODEL_API_RUNNER.equals(task.getExecutorChannel()))executionContractValidator.validateContract(contract);
         return JSON.toJSONString(contract);
-    }
-
-    private void holdPersonalPlanCase(AgentExecutionCaseDTO item, String code) {
-        item.setStatus(AgentExecutionStatus.STEP_SKIPPED_REVIEW_REQUIRED);
-        item.setFailureCategory(code);
-        item.setErrorMessage("本用例缺少可安全执行的前置条件，请核对用例和测试环境");
-        item.setWritebackStatus("SKIPPED");
-    }
-
-    private Map<String, List<Map<String, Object>>> compilePersonalAssertions(
-            Map<String, Object> published, List<AgentExecutionStepDTO> runtimeSteps, String environmentId, boolean typed) {
-        if (StringUtils.isBlank(environmentId) || !environmentId.equals(published.get("environmentId"))) {
-            throw new MSException("PROTOCOL_ENVIRONMENT_MISMATCH");
-        }
-        var ordered = runtimeSteps.stream().sorted(Comparator.comparing(AgentExecutionStepDTO::getPos)
-                .thenComparing(AgentExecutionStepDTO::getId)).toList();
-        var authoredSteps = AgentProtocolData.objects(published.getOrDefault("steps", List.of()));
-        Map<String, String> runtimeIds = new HashMap<>();
-        Set<Long> positions = new HashSet<>();
-        for (var step : authoredSteps) {
-            long position = AgentProtocolData.number(step, "sourcePosition");
-            if (position < 1 || position > ordered.size() || !positions.add(position)) {
-                throw new MSException("STRUCTURED_CONTRACT_STEP_MISMATCH");
-            }
-            runtimeIds.put(AgentProtocolData.id(step, "id"), ordered.get((int) position - 1).getId());
-        }
-        Map<String, List<Map<String, Object>>> compiled = new LinkedHashMap<>();
-        for (var assertion : AgentProtocolData.objects(published.getOrDefault("assertions", List.of()))) {
-            if (!Boolean.TRUE.equals(assertion.get("required"))) continue;
-            if ("INDEPENDENT_HUMAN".equals(assertion.get("verificationMethod"))) {
-                throw new MSException("STRUCTURED_CONTRACT_REVIEW_REQUIRED");
-            }
-            String runtimeId = runtimeIds.get(AgentProtocolData.id(assertion, "stepId"));
-            Object expected = assertion.get("expected");
-            if (runtimeId == null || expected == null || (typed && !(expected instanceof String || expected instanceof Boolean))) {
-                throw new MSException("QUALITY_ASSERTION_INVALID");
-            }
-            Map<String, Object> rule = new LinkedHashMap<>();
-            rule.put("operator", "EQUALS");
-            rule.put("expected", typed ? expected.toString() : expected);
-            if (typed) {
-                rule.put("assertionId", AgentProtocolData.id(assertion, "id"));
-                rule.put("contractVersion", "v2");
-                rule.put("valueType", expected instanceof Boolean ? "BOOLEAN" : "STRING");
-            }
-            compiled.computeIfAbsent(runtimeId, ignored -> new ArrayList<>()).add(rule);
-        }
-        if (ordered.isEmpty() || positions.size() != ordered.size() || compiled.size() != ordered.size()) {
-            throw new MSException("STRUCTURED_CONTRACT_STEP_MISMATCH");
-        }
-        return compiled;
     }
 
     private String hashText(String value) {

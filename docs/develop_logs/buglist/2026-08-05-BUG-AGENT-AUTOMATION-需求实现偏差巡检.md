@@ -4,7 +4,7 @@
 
 对照以下文档与当前代码，记录实现偏差。本文不是完成证明。凡未完成、未验证、部分实现内容均按偏差或风险记录，后续修复前不得标记为已完成。
 
-- 需求方案：`docs/summary/MeterSphere_Agent自动化执行改造方案.md`
+- 需求方案：`docs/product_md/history/summary/MeterSphere_Agent自动化执行改造方案.md`
 - 任务目录：`docs/task/agent_automation_execution_20260805/`
 
 ## 巡检范围

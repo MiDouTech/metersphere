@@ -1,6 +1,6 @@
 # MSP 整合实施方案 · 仓库复核修订版
 
-后续验收修订：[2026-10-27 两轮测试汇总与详细修复方案](msp-two-round-test-remediation-plan-20261027.md)。该文集中维护D01～D13、E01、P01的影响范围、修改范围、实施与验收；本文件原需求基线继续保留。
+后续验收修订：[2026-10-27 两轮测试汇总与详细修复方案](../product_md/history/summary/msp-two-round-test-remediation-plan-20261027.md)。该文集中维护D01～D13、E01、P01的影响范围、修改范围、实施与验收；本文件原需求基线继续保留。
 
 日期：2026-10-23。基准：本地HEAD `104fb6be2645bb47dc27e515254803398ce458ad`及当前工作区。**状态：源码复核与方案修订完成；业务功能待实施、待验证。** 本轮没有重新访问测试环境，源码证据不替代现网验收。
 
@@ -23,7 +23,7 @@
 
 用户已确定：采用[最后一版Demo](../demo/msp-real-frontend-style-review-20261023.html)优化样式；原按钮常驻、功能保留；目录移动；导出右侧全选所有页且旧箭头保留；计划/评审名称导航；导入后创建/更新计划与评审；源删后两者更新；项目同名资产目录与持续同步；资产置顶。
 
-前期14问题继续依据[现场回归报告](msp-full-regression-20261023.md)及[详细修复方案](msp-remediation-assets-batch-ui-review-plan-20261023.md)。[22日需求](requirements-consolidated-2026-10-22.md)、[缺陷](defect-remediation-consolidated-2026-10-22.md)、[事故整改](msp-incident-remediation-20261021.md)、[SQL稳定性](msp-sql-stability-optimization-plan-20261023.md)继续保留。已通过项按后续影响面复验，不重复无关构建。
+前期14问题继续依据[现场回归报告](msp-full-regression-20261023.md)及[详细修复方案](msp-remediation-assets-batch-ui-review-plan-20261023.md)。[22日需求](../product_md/history/summary/requirements-consolidated-2026-10-22.md)、[缺陷](defect-remediation-consolidated-2026-10-22.md)、[事故整改](msp-incident-remediation-20261021.md)、[SQL稳定性](../product_md/history/summary/msp-sql-stability-optimization-plan-20261023.md)继续保留。已通过项按后续影响面复验，不重复无关构建。
 
 Demo虽加载真实Vue/Arco库，但没有挂载原业务SFC、Ms组件、权限、路由和API。6条示例的全选不是跨页验收，模拟导入不是正式编排。本轮不修改原型来冒充后端闭环。
 

@@ -22,6 +22,7 @@ import java.util.*;
 /** Independent, retryable derived assets. Never changes an execution's business verdict. */
 @Service
 public class AgentExecutionArchiveService {
+    @Resource private io.metersphere.agent.security.AgentFactCipher factCipher;
     @Resource private JdbcTemplate jdbc;
     @Resource private AgentBusinessAccess access;
     @Resource private FileMetadataService files;
@@ -29,7 +30,6 @@ public class AgentExecutionArchiveService {
     @Resource private TestAssetVersionService versions;
     @Resource private TestAssetGovernanceService governance;
     @Resource private PlatformTransactionManager transactions;
-    @Resource private io.metersphere.agent.security.AgentFactCipher factCipher;
     private static final Set<String> TERMINAL=Set.of("SUCCESS","PARTIAL_SUCCESS","FAILED","CANCELED","EXPIRED");
     private static final ObjectMapper MAPPER=new ObjectMapper();
 
@@ -90,7 +90,7 @@ public class AgentExecutionArchiveService {
         for(String id:ids)try {
             new TransactionTemplate(transactions).executeWithoutResult(status->publish(id));
         }catch(Exception failure){
-            org.slf4j.LoggerFactory.getLogger(getClass()).warn("Execution archive stage=PUBLISH code=ARCHIVE_FAILED archiveId={} rootType={}",id,failure.getClass().getSimpleName());
+            io.metersphere.agent.security.AgentSafeDiagnostics.failure(org.slf4j.LoggerFactory.getLogger(getClass()), "ARCHIVE_PUBLISH_FAILED", "PUBLISH", id, "ARCHIVE_PUBLISH_FAILED", failure);
             jdbc.update("UPDATE agent_execution_archive SET attempts=attempts+1,state=IF(attempts>=5,'FAILED','PENDING'),next_attempt=?,update_time=? WHERE id=? AND state='PENDING'",System.currentTimeMillis()+60000,System.currentTimeMillis(),id);
         }
     }
@@ -110,7 +110,7 @@ public class AgentExecutionArchiveService {
                 String payload=sanitize(JSON.toJSONString(context));long now=System.currentTimeMillis();
                 jdbc.update("INSERT INTO agent_execution_archive(id,source_type,source_id,run_id,project_id,user_id,request_hash,payload,next_attempt,create_time,update_time) VALUES (?,?,?,?,?,?,?,?,?,?,?)",UUID.randomUUID().toString(),type,id,run,context.get("projectId"),candidate.get("owner"),DigestUtils.sha256Hex(payload),payload,now,now,now);
             });
-        }catch(Exception failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("Execution archive stage=DISCOVER code=ARCHIVE_FAILED sourceId={} rootType={}",candidate.get("id"),failure.getClass().getSimpleName());}
+        }catch(Exception failure){io.metersphere.agent.security.AgentSafeDiagnostics.failure(org.slf4j.LoggerFactory.getLogger(getClass()), "ARCHIVE_DISCOVERY_FAILED", "DISCOVER", String.valueOf(candidate.get("id")), "ARCHIVE_DISCOVERY_FAILED", failure);}
     }
     void publish(String id) {
         var rows=jdbc.queryForList("SELECT * FROM agent_execution_archive WHERE id=? AND state='PENDING' FOR UPDATE SKIP LOCKED",id);
@@ -164,11 +164,11 @@ public class AgentExecutionArchiveService {
             var rows=jdbc.queryForList("SELECT id,project_id,case_id,content_hash,policy_hash,facts,result,gate_status,create_time FROM agent_case_submission WHERE id=?"+(lock?" FOR UPDATE":""),id);
             if(rows.size()!=1||!"ACCEPTED".equals(rows.getFirst().get("gate_status")))throw new MSException("请选择已提交的个人执行记录");
             var submission=rows.getFirst();
-            try {String stored=(String)submission.get("facts");submission.put("facts",MAPPER.readTree(io.metersphere.agent.security.AgentFactCipher.protectedValue(stored)?factCipher.reveal(stored):stored)); }
-            catch(Exception failure) { throw new MSException("来源执行事实格式无效，无法归档"); }
+            try { submission.put("facts",MAPPER.readTree(factCipher.reveal((String)submission.get("facts")))); }
+            catch(Exception failure) { io.metersphere.agent.security.AgentSafeDiagnostics.failure(org.slf4j.LoggerFactory.getLogger(getClass()), "ARCHIVE_FACTS_READ_FAILED", "READ_FACTS", id, "ARCHIVE_FACTS_READ_FAILED", failure); throw new MSException("来源执行事实格式无效，无法归档"); }
             result.put("projectId",submission.get("project_id"));result.put("runId",id);result.put("facts",List.of(submission));
-            var facts=(JsonNode)submission.get("facts");boolean governed="governed-execution.v1".equals(facts.path("schemaVersion").asText());
-            result.put("resultSource",governed?"INDEPENDENT_HUMAN":"AGENT_REPORTED");result.put("validationMode",governed?"INDEPENDENT_ASSERTION_V1":"STRUCTURE_ONLY_V1");
+            JsonNode historicalFacts=(JsonNode)submission.get("facts");
+            result.put("resultSource",historicalFacts.path("resultSource").asText("AGENT_REPORTED"));result.put("validationMode",historicalFacts.path("validationMode").asText("STRUCTURE_ONLY_V1"));
         } else throw new MSException("归档来源类型无效");
         return result;
     }

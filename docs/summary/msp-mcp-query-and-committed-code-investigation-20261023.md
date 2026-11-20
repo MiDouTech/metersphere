@@ -2,7 +2,7 @@
 
 日期：2026-10-23。范围：MCP `metersphere.test_plan.cases`内部错误，以及前轮“源码有修复、线上仍为旧行为”涉及的提交内容。**本轮为只读核查与方案编写，未修复业务代码、未重新部署。**
 
-关联文档：[详细修复方案](msp-live-issues-detailed-remediation-plan-20261023.md)、[现场实测报告](msp-live-requirement-audit-20261023.md)。
+关联文档：[详细修复方案](../product_md/history/summary/msp-live-issues-detailed-remediation-plan-20261023.md)、[现场实测报告](msp-live-requirement-audit-20261023.md)。
 
 ## 1. 结论
 

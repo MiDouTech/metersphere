@@ -4,7 +4,7 @@
 > **预估工期**：2 天  
 > **前置依赖**：[task001](task001-P0-接入确认单与配置项.md)、[task002](task002-P0-米多开放API签名客户端.md)、[community_rebuild task007–008](../community_rebuild/task007-P2-组织架构同步引擎.md)  
 > **阻塞任务**：task004、task006、task007、task008  
-> **关联方案**：[接入方案](../../summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §3、§6.2–6.3
+> **关联方案**：[接入方案](../../product_md/history/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §3、§6.2–6.3
 
 ---
 

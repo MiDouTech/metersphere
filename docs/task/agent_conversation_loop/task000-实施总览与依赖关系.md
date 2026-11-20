@@ -3,7 +3,7 @@
 > **文档类型**：任务索引 / 里程碑规划  
 > **适用项目**：MeterSphere Agent 对话闭环（写路径扩展）  
 > **编写日期**：2026-07-23  
-> **关联方案**：[MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md](../../summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)（已人工审核）  
+> **关联方案**：[MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md](../../product_md/history/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md)（已人工审核）  
 > **前置基线**：`docs/task/metersphere_agent`（读/回写 MVP + MCP 读路径）  
 > **标注**：【AI生成】已按已审方案拆解；一期代码多数已合入，任务以核对、联调验收与二期排期为主
 
@@ -136,8 +136,8 @@ flowchart LR
 
 | 文档 | 说明 |
 |------|------|
-| [扩展方案](../../summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md) | 已审权威方案 |
-| [改造方案 v2.0](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) | 读/回写基线 |
+| [扩展方案](../../product_md/history/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md) | 已审权威方案 |
+| [改造方案 v2.0](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) | 读/回写基线 |
 | [cursor-onboarding](../metersphere_agent/cursor-onboarding.md) | 接入指南 |
 | [curl-examples](../metersphere_agent/curl-examples.md) | 联调示例 |
 | [metersphere-mcp README](../../../metersphere-mcp/README.md) | MCP 说明 |

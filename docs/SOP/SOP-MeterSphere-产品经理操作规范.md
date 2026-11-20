@@ -653,7 +653,7 @@ PM 发现问题
 | 全系统测试策略 | `docs/task/destination/MeterSphere-全系统-测试策略-2026-07-04.md` | 测试范围与验收标准 |
 | 缺陷清单 | `docs/MeterSphere-全系统-缺陷清单-2026-07-04.md` | 已知问题跟踪 |
 | 社区版改造方案 | `docs/summary/community-unlock-and-org-structure.md` | 自研扩展背景 |
-| Agent 改造方案 | `docs/task/destination/MeterSphere-Agent集成-改造方案-2026-07-07.md` | Agent 技术方案 |
+| Agent 改造方案 | `docs/product_md/history/task/destination/MeterSphere-Agent集成-改造方案-2026-07-07.md` | Agent 技术方案 |
 | Cursor 接入指南 | `metersphere-mcp/docs/cursor-onboarding.md` | MCP 配置 |
 
 ### 附录 D：版本记录

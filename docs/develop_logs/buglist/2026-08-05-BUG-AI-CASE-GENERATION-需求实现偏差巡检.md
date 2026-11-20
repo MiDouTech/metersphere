@@ -8,7 +8,7 @@
 
 ## 巡检范围
 
-- 需求文档：`docs/summary/MeterSphere_AI生成用例改造方案.md`
+- 需求文档：`docs/product_md/history/summary/MeterSphere_AI生成用例改造方案.md`
 - 任务目录：`docs/task/ai_case_generation_20260805/`
 - 前端实现：
   - `frontend/src/router/routes/modules/caseManagement.ts`

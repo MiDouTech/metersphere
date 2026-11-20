@@ -15,34 +15,6 @@
       :case-id="(route.query.id as string || '')"
       :default-case-info="caseDetail"
     />
-    <div v-if="route.query.id" class="mt-4"
-      ><a-button @click="structuredVisible = !structuredVisible">结构化执行契约（独立版本）</a-button
-      ><a-button
-        @click="
-          router.push({
-            path: '/test-assets/governed-execution',
-            query: {
-              caseId: String(route.query.id),
-              sourceProject: String(route.query.pId || caseDetail?.projectId || appStore.currentProjectId),
-            },
-          })
-        "
-        >受控执行与独立复核</a-button
-      ><a-button
-        v-permission.all="['FUNCTIONAL_CASE:READ+UPDATE', 'FUNCTIONAL_CASE_AI:READ']"
-        @click="documentReferenceVisible = true"
-        >引用文档版本</a-button
-      ><StructuredContractEditor
-        v-if="structuredVisible"
-        :project-id="String(route.query.pId || caseDetail?.projectId || appStore.currentProjectId)"
-        :case-id="String(route.query.id)"
-    /></div>
-    <CaseDocumentReferenceDialog
-      v-if="documentReferenceVisible"
-      v-model:visible="documentReferenceVisible"
-      :project-id="String(route.query.pId || caseDetail?.projectId || appStore.currentProjectId)"
-      :case-id="String(route.query.id)"
-    />
     <template #footerRight>
       <div class="flex justify-end gap-[16px]">
         <a-button :disabled="loading" type="secondary" @click="cancelHandler">
@@ -67,16 +39,13 @@
   import { useRoute, useRouter } from 'vue-router';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
-  import CaseDocumentReferenceDialog from './caseDocumentReferenceDialog.vue';
   import CaseTemplateDetail from './caseTemplateDetail.vue';
-  import StructuredContractEditor from '@/views/execution/components/StructuredContractEditor.vue';
 
   import { createCaseRequest, updateCaseRequest } from '@/api/modules/case-management/featureCase';
   import { useI18n } from '@/hooks/useI18n';
   import useLeaveUnSaveTip from '@/hooks/useLeaveUnSaveTip';
   import useShortcutSave from '@/hooks/useShortcutSave';
   import useVisit from '@/hooks/useVisit';
-  import useAppStore from '@/store/modules/app';
   import useFeatureCaseStore from '@/store/modules/case/featureCase';
   import { scrollIntoView } from '@/utils/dom';
 
@@ -89,9 +58,6 @@
   const { setIsSave } = useLeaveUnSaveTip();
   const { t } = useI18n();
   const route = useRoute();
-  const appStore = useAppStore();
-  const structuredVisible = ref(false);
-  const documentReferenceVisible = ref(false);
   const router = useRouter();
 
   setIsSave(false);

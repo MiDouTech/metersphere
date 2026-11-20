@@ -4,7 +4,7 @@
 > **预估工期**：1 天  
 > **前置依赖**：[task011](task011-P1-metersphere-mcp服务.md)  
 > **阻塞任务**：无  
-> **关联方案**：[改造方案](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §7.3、§7.4、§14
+> **关联方案**：[改造方案](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §7.3、§7.4、§14
 
 ---
 

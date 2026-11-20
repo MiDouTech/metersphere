@@ -1,6 +1,6 @@
 # task000 - 权限控制改造任务总览
 
-> 来源方案：`docs/summary/Metersphere_permission-control-refactor-plan.md`
+> 来源方案：`docs/product_md/history/summary/Metersphere_permission-control-refactor-plan.md`
 > 任务目录：`docs/task/permission_control_refactor_20260808`
 > 拆分日期：2026-08-08
 > 当前状态：未开始

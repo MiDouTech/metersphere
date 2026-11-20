@@ -28,7 +28,7 @@ export const executionPreflightTool = {
   name: "metersphere.execution.preflight",
   description: "Run the environment and capability preflight required before checkpoint resume.",
   inputSchema: { projectId: id, environmentProfileId: id, runnerType: id, requestId: id,
-    caseIds: z.array(id).max(200).optional(), testPlanId: id.optional(), handoffEventId: z.string().min(1).max(50).optional(), credentialReferenceId: id.optional(),
+    caseIds: z.array(id).max(100).optional(), testPlanId: id.optional(), credentialReferenceId: id.optional(),
     requiredCapabilities: z.array(z.string()).max(32).optional() },
   handler: forward("metersphere.execution.preflight"),
 };

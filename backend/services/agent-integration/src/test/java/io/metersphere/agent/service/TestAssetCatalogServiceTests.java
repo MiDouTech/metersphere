@@ -1,7 +1,6 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.dto.TestAssetDocumentDTO;
-import io.metersphere.agent.dto.TestAssetCaseDocumentReferenceRequest;
 import io.metersphere.agent.dto.TestAssetCatalogItemDTO;
 import io.metersphere.agent.dto.TestAssetContextDTO;
 import io.metersphere.agent.dto.TestAssetRefDTO;
@@ -46,10 +45,6 @@ class TestAssetCatalogServiceTests {
     private AgentProjectService agentProjectService;
     @Mock
     private TestAssetVersionService versionService;
-    @Mock
-    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
-    @Mock
-    private AgentBusinessAccess businessAccess;
     @Mock
     private Subject subject;
     @Mock
@@ -361,84 +356,13 @@ class TestAssetCatalogServiceTests {
     void documentContextShouldDeduplicateStableCaseIds() {
         TestAssetContextDocumentDTO document = new TestAssetContextDocumentDTO();
         document.setDocumentId("document-1");
-        when(mapper.selectDocumentContextForCases("project-1", List.of("case-1", "case-2"), false))
+        when(mapper.selectDocumentContextForCases("project-1", List.of("case-1", "case-2")))
                 .thenReturn(List.of(document));
 
         List<TestAssetContextDocumentDTO> result = service.documentContextForCases(
                 "project-1", List.of("case-1", "case-1", "case-2"));
 
         Assertions.assertEquals("document-1", result.getFirst().getDocumentId());
-        verify(mapper).selectDocumentContextForCases("project-1", List.of("case-1", "case-2"), false);
-    }
-    @Test
-    void revisionPinsParentAndRejectsStaleEditors() {
-        when(agentProjectService.resolveProjectId("project")).thenReturn("project");
-        when(subject.isPermitted(PermissionConstants.FUNCTIONAL_CASE_AI_READ)).thenReturn(true);
-        when(subject.getSession()).thenReturn(session);
-        var actor = org.mockito.Mockito.mock(io.metersphere.system.dto.sdk.SessionUser.class);
-        when(actor.getId()).thenReturn("editor");
-        when(session.getAttribute(io.metersphere.sdk.constants.SessionConstants.ATTR_USER)).thenReturn(actor);
-        when(businessAccess.userHasPermission("editor", "project", PermissionConstants.FUNCTIONAL_CASE_AI_UPLOAD))
-                .thenReturn(true);
-        when(jdbcTemplate.queryForList(anyString(), eq("asset"), eq("project")))
-                .thenReturn(List.of(Map.of("original_name", "requirements.md")));
-        var current = new TestAssetVersionDTO();
-        current.setId("v2");
-        current.setContentSnapshot("{\"bodyMarkdown\":\"old\"}");
-        when(versionService.latestPublished("project", "DOCUMENT", "asset")).thenReturn(current);
-        Assertions.assertEquals("VERSION_CONFLICT", Assertions.assertThrows(MSException.class,
-                () -> service.reviseDocument("project", "asset", "v1", "new")).getMessage());
-        Assertions.assertSame(current, service.reviseDocument("project", "asset", "v2", "old"));
-        var next = new TestAssetVersionDTO();
-        when(versionService.publish(eq("project"), eq("DOCUMENT"), eq("asset"), eq("online:v2"),
-                anyString(), eq("editor"))).thenReturn(next);
-        Assertions.assertSame(next, service.reviseDocument("project", "asset", "v2", "new"));
-        var snapshot = ArgumentCaptor.forClass(String.class);
-        verify(versionService).publish(eq("project"), eq("DOCUMENT"), eq("asset"), eq("online:v2"),
-                snapshot.capture(), eq("editor"));
-        Assertions.assertEquals(Map.of("parentVersionId", "v2", "bodyMarkdown", "new", "parserType", "MARKDOWN"),
-                io.metersphere.sdk.util.JSON.parseObject(snapshot.getValue()));
-    }
-    @Test
-    void documentReferenceUsesStableCaseIdentityAndDoesNotDuplicate() {
-        when(agentProjectService.resolveProjectId("project")).thenReturn("project");
-        when(subject.isPermitted(PermissionConstants.FUNCTIONAL_CASE_AI_READ)).thenReturn(true);
-        when(subject.getSession()).thenReturn(session);
-        var actor = org.mockito.Mockito.mock(io.metersphere.system.dto.sdk.SessionUser.class);
-        when(actor.getId()).thenReturn("editor");
-        when(session.getAttribute(io.metersphere.sdk.constants.SessionConstants.ATTR_USER)).thenReturn(actor);
-        when(businessAccess.userHasPermission("editor", "project", PermissionConstants.FUNCTIONAL_CASE_READ_UPDATE))
-                .thenReturn(true);
-        when(businessAccess.userHasPermission("editor", "project", PermissionConstants.FUNCTIONAL_CASE_AI_READ))
-                .thenReturn(true);
-        when(jdbcTemplate.queryForList(anyString(), eq("case-version"), eq("project")))
-                .thenReturn(List.of(Map.of("ref_id", "stable-case")));
-        when(mapper.selectCatalogItem("project", "DOCUMENT", "document")).thenReturn(new TestAssetCatalogItemDTO());
-        var version = new TestAssetVersionDTO();
-        version.setId("doc-v2");
-        when(versionService.getPublished("doc-v2", "project", "DOCUMENT", "document")).thenReturn(version);
-        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), eq("project"), eq("document"),
-                eq("doc-v2"), eq("stable-case"))).thenReturn(0L, 1L);
-        var request = new TestAssetCaseDocumentReferenceRequest("project", "document", "doc-v2");
-
-        service.referenceDocument("case-version", request);
-        service.referenceDocument("case-version", request);
-
-        verify(versionService).relate("project", "REFERENCES", "DOCUMENT", "document", "doc-v2",
-                "CASE", "stable-case", null, null, "editor");
-    }
-    @Test
-    void executionContextIncludesManualReferencesOnlyWithDocumentReadPermission() {
-        AgentExecutionActorContext.bind("executor");
-        try {
-            when(businessAccess.userHasPermission("executor", "project", PermissionConstants.FUNCTIONAL_CASE_AI_READ))
-                    .thenReturn(false, true);
-            service.documentContextForCases("project", List.of("stable-case"));
-            service.documentContextForCases("project", List.of("stable-case"));
-            verify(mapper).selectDocumentContextForCases("project", List.of("stable-case"), false);
-            verify(mapper).selectDocumentContextForCases("project", List.of("stable-case"), true);
-        } finally {
-            AgentExecutionActorContext.clear();
-        }
+        verify(mapper).selectDocumentContextForCases("project-1", List.of("case-1", "case-2"));
     }
 }

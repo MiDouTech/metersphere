@@ -3,7 +3,7 @@
 > **文档类型**：任务索引 / 里程碑规划  
 > **适用项目**：MeterSphere V3 自研 — 米多星球第三方 SSO  
 > **编写日期**：2026-07-16  
-> **关联方案**：[MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md](../../summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) v1.1  
+> **关联方案**：[MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md](../../product_md/history/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) v1.1  
 > **前置能力**：[community_rebuild task007–008](../community_rebuild/task007-P2-组织架构同步引擎.md)（企微同步，用户 `wecom_userid` 就绪）
 
 ---

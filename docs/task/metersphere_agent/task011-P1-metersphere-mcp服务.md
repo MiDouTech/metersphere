@@ -4,7 +4,7 @@
 > **预估工期**：2 天  
 > **前置依赖**：[task010](task010-P0-集成测试与MVP验收.md)  
 > **阻塞任务**：task012  
-> **关联方案**：[改造方案](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §7
+> **关联方案**：[改造方案](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §7
 
 ---
 

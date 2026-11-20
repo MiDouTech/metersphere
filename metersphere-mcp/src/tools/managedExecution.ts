@@ -7,14 +7,10 @@ const context={taskId:id,executionId:id,...lease};
 const tool=(name:string,description:string,inputSchema:z.ZodRawShape)=>({name,description,inputSchema,
   handler:(client:MeterSphereClient,args:Record<string,unknown>)=>client.callNativeTool(name,args)});
 export const managedExecutionTools=[
-  tool("metersphere.execution.data_preparation.get","Read the authorized preparation method pinned to a personal task data key.",{taskId:id,testPlanCaseId:id,dataKey:id}),
-  tool("metersphere.execution.contract.get","Read the structured contract pinned to a personal plan task.",{taskId:id,testPlanCaseId:id}),
   tool("metersphere.task.search","Find authorized server-created personal tasks.",{projectId:id,taskId:id.optional(),agentType:id.optional(),capabilities:z.array(id).max(100).optional()}),
   tool("metersphere.task.claim","Claim one task. After a lost response query task state first; do not blindly claim again.",{projectId:id,taskId:id,agentType:id.optional(),capabilities:z.array(id).max(100).optional()}),
   tool("metersphere.task.lease.heartbeat","Renew a currently authorized lease.",lease),
   tool("metersphere.task.release","Release the current lease with a reason.",{taskId:id,...lease,reason:z.string().max(4000).optional()}),
-  tool("metersphere.execution.checkpoint.create","Save a checkpoint and release the active personal execution lease.",{
-    ...context,requestId:key,reason:z.string().min(1).max(4000),stateSnapshot:z.string().min(1).max(2_000_000)}),
   tool("metersphere.execution.step.submit","Submit actual step facts under the frozen assertion contract. Only the server evaluates the verdict. Reuse requestId unchanged.",{
     ...context,stepId:id,requestId:key,status:id,attempt:z.number().int().positive().optional(),
     inputSnapshot:z.string().optional(),outputSummary:z.string().optional(),assertionResult:z.string().optional(),

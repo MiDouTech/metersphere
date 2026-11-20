@@ -113,7 +113,7 @@ python scripts/test-quality-policy-migration-report.py
 - `deploy/quality-verify/README.md`
 - `deploy/quality-verify/global-rbac-fixture.sql`
 - `docs/quality-policy-global-implementation.md`
-- `docs/quality-policy-permission-fix-plan.md`
+- `docs/product_md/history/quality-policy-permission-fix-plan.md`
 - `frontend/e2e/quality-policy.spec.ts`
 - `frontend/scripts/test-global-quality-permissions.mjs`
 - `frontend/src/api/http/index.ts`

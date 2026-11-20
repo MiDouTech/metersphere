@@ -1,0 +1,749 @@
+{
+  "date": "2026-11-19",
+  "files": [
+    {
+      "from": "doc/case-export-root-cause-investigation-2026-10-21.md",
+      "to": "docs/troubleshooting/case-export-root-cause-investigation-2026-10-21.md",
+      "originalSha256": "c6b88192ac0e92fc340e1877331dcd048e57455d57dccf6c3a14f9305816913a",
+      "finalSha256": "729b59265b539a8547283b2720019c45ff18f952a57b05d98c5f8a3a0eb27a21"
+    },
+    {
+      "from": "doc/docker-startup-agent-cycle-fix-conclusion.md",
+      "to": "docs/troubleshooting/docker-startup-agent-cycle-fix-conclusion.md",
+      "originalSha256": "6f14696450be25d925a716ef5c485080978bb5efb503004e18c3648d8e366da3",
+      "finalSha256": "6f14696450be25d925a716ef5c485080978bb5efb503004e18c3648d8e366da3"
+    },
+    {
+      "from": "doc/metersphere_prod-失败阻塞改通过备份-20260920_115631.tsv",
+      "to": "docs/operations/production-data-20260920/metersphere_prod-失败阻塞改通过备份-20260920_115631.tsv",
+      "originalSha256": "708a0be1fef1c6b2c6f005d2948337a29221013c4bfd9ab44f9f451aafc8344b",
+      "finalSha256": "708a0be1fef1c6b2c6f005d2948337a29221013c4bfd9ab44f9f451aafc8344b"
+    },
+    {
+      "from": "doc/metersphere_prod-执行人与最后执行人不一致-2026-09-20.md",
+      "to": "docs/operations/production-data-20260920/metersphere_prod-执行人与最后执行人不一致-2026-09-20.md",
+      "originalSha256": "4a96cf6597a10fe02f82706130cde359b404342ca929f60944c0986b98f1f91d",
+      "finalSha256": "4a96cf6597a10fe02f82706130cde359b404342ca929f60944c0986b98f1f91d"
+    },
+    {
+      "from": "doc/metersphere_prod-执行人与最后执行人不一致-2026-09-20.xlsx",
+      "to": "docs/operations/production-data-20260920/metersphere_prod-执行人与最后执行人不一致-2026-09-20.xlsx",
+      "originalSha256": "ae59fe39018f23648bb4105de814fa6ea3f8a71ebe76f086d2b2a43e034d9c64",
+      "finalSha256": "ae59fe39018f23648bb4105de814fa6ea3f8a71ebe76f086d2b2a43e034d9c64"
+    },
+    {
+      "from": "doc/metersphere_prod-执行人修正备份-20260920_115335.tsv",
+      "to": "docs/operations/production-data-20260920/metersphere_prod-执行人修正备份-20260920_115335.tsv",
+      "originalSha256": "f54ba77674d67a1b5dc05378dc4cb7dbbe3e04fb071d960b0ec8effe270764bd",
+      "finalSha256": "f54ba77674d67a1b5dc05378dc4cb7dbbe3e04fb071d960b0ec8effe270764bd"
+    },
+    {
+      "from": "doc/metersphere_prod-测试用例执行人维度统计-2026-09-20.md",
+      "to": "docs/operations/production-data-20260920/metersphere_prod-测试用例执行人维度统计-2026-09-20.md",
+      "originalSha256": "b385eb24accd3b942b61f80b36d7cb8d633c7b4cdac51b186712b5fb4728a873",
+      "finalSha256": "b385eb24accd3b942b61f80b36d7cb8d633c7b4cdac51b186712b5fb4728a873"
+    },
+    {
+      "from": "doc/metersphere_prod-测试用例执行人维度统计-2026-09-20.xlsx",
+      "to": "docs/operations/production-data-20260920/metersphere_prod-测试用例执行人维度统计-2026-09-20.xlsx",
+      "originalSha256": "d13861eb7b16d7e8344c296749759fb345a2c334903d47ff74947f546a1e6355",
+      "finalSha256": "d13861eb7b16d7e8344c296749759fb345a2c334903d47ff74947f546a1e6355"
+    },
+    {
+      "from": "doc/metersphere_prod-测试用例执行人维度统计图-2026-09-20.html",
+      "to": "docs/operations/production-data-20260920/metersphere_prod-测试用例执行人维度统计图-2026-09-20.html",
+      "originalSha256": "ee6af92df67a972ae1b9084b9d6c1b58a2304a202783cc1d3ca4a49605d72f64",
+      "finalSha256": "ee6af92df67a972ae1b9084b9d6c1b58a2304a202783cc1d3ca4a49605d72f64"
+    },
+    {
+      "from": "doc/platform-optimization-implementation-plan-2026-10-21.md",
+      "to": "docs/implementation/platform-optimization-20261021/platform-optimization-implementation-plan-2026-10-21.md",
+      "originalSha256": "a944cbfff1e38fa9877b8004719af3be13d1d4a9d325772e726e0ec14e4c809e",
+      "finalSha256": "04e10fa4a84ad7dfd459855a30ef43988a6622d69a463511eb142bdf625ef38a"
+    },
+    {
+      "from": "doc/platform-optimization-scope-inventory-2026-10-21.md",
+      "to": "docs/implementation/platform-optimization-20261021/platform-optimization-scope-inventory-2026-10-21.md",
+      "originalSha256": "b01caff27d8fa795acf0b0c24c7193827f9cac60cb19896b93b280cfc9311af9",
+      "finalSha256": "b01caff27d8fa795acf0b0c24c7193827f9cac60cb19896b93b280cfc9311af9"
+    },
+    {
+      "from": "doc/platform-optimization-system-evidence-2026-10-21.md",
+      "to": "docs/implementation/platform-optimization-20261021/platform-optimization-system-evidence-2026-10-21.md",
+      "originalSha256": "2041c8d15941636bf05e62541d446b48054bacace7494f2849221ad68aa4a3e8",
+      "finalSha256": "e15f86f76c7714c227eec335268d5fcc098666be9e5e0d085eb305acd81c03c8"
+    },
+    {
+      "from": "doc/report.2026-06-15至07-06.md",
+      "to": "docs/weekly_report/report.2026-06-15至07-06.md",
+      "originalSha256": "971726d8dafc3d507db9f8938e986252dcbce8fbae84711842b84e53af2b6cd3",
+      "finalSha256": "a32fc88550d1b1adc5430aed097c328d04725305ceac75d6b78cef976d7370f2"
+    },
+    {
+      "from": "doc/report.2026-07-11至07-26.md",
+      "to": "docs/weekly_report/report.2026-07-11至07-26.md",
+      "originalSha256": "a8e0c6111a23b1f45dac2d3e8df1783a1c885d3c0d02e85ac8b655b3632e8104",
+      "finalSha256": "e6664a828567577e2def1dede47ab6154172cfb1e2dfd191612cb6c0f91a8493"
+    },
+    {
+      "from": "doc/report.2026-W32.md",
+      "to": "docs/weekly_report/report.2026-W32.md",
+      "originalSha256": "49f1dd50467c0804392d32f49a40f3b63b1e580469ec84b88eb4367629295f24",
+      "finalSha256": "49f1dd50467c0804392d32f49a40f3b63b1e580469ec84b88eb4367629295f24"
+    },
+    {
+      "from": "doc/report.2026-W33.md",
+      "to": "docs/weekly_report/report.2026-W33.md",
+      "originalSha256": "ac51faa9d67a9ff618768094f179e1cb20cf9e9ecacb9175550aadd3943c567e",
+      "finalSha256": "ac51faa9d67a9ff618768094f179e1cb20cf9e9ecacb9175550aadd3943c567e"
+    },
+    {
+      "from": "doc/report.2026-W34.md",
+      "to": "docs/weekly_report/report.2026-W34.md",
+      "originalSha256": "a45babc0046232679262bc313d760425f4967a0a32e7825446a53bb56dd2aa44",
+      "finalSha256": "a45babc0046232679262bc313d760425f4967a0a32e7825446a53bb56dd2aa44"
+    },
+    {
+      "from": "doc/report.2026-W35.md",
+      "to": "docs/weekly_report/report.2026-W35.md",
+      "originalSha256": "af1c987e5cfe2e813b642b84aebba8deed1711906d4464229095264c82924c5d",
+      "finalSha256": "af1c987e5cfe2e813b642b84aebba8deed1711906d4464229095264c82924c5d"
+    },
+    {
+      "from": "doc/report.2026-W36.md",
+      "to": "docs/weekly_report/report.2026-W36.md",
+      "originalSha256": "4ec3eb0e0e30def7fc5cb4638526a9f11eb8f54d87f0fcd920dd6a2baf9fd5c9",
+      "finalSha256": "4ec3eb0e0e30def7fc5cb4638526a9f11eb8f54d87f0fcd920dd6a2baf9fd5c9"
+    },
+    {
+      "from": "doc/report.2026-W37.md",
+      "to": "docs/weekly_report/report.2026-W37.md",
+      "originalSha256": "4131dd4407e59ec2574763b5994b319de07b6af8792f14b99a9233ce25b88b1b",
+      "finalSha256": "4131dd4407e59ec2574763b5994b319de07b6af8792f14b99a9233ce25b88b1b"
+    },
+    {
+      "from": "doc/report.2026-W38.md",
+      "to": "docs/weekly_report/report.2026-W38.md",
+      "originalSha256": "16d099b01ba1ffb136fc4ecfa5d0e5f928ddbeecafb0e74470b5bf99305df723",
+      "finalSha256": "5d5300f3dc48158b8dbe9b18da5ecc89140a16ed889954a46724fc69dd698c62"
+    },
+    {
+      "from": "doc/report.2026-W43.md",
+      "to": "docs/weekly_report/report.2026-W43.md",
+      "originalSha256": "8f09afffb5893ff3ffa118f3045fc472757b49b4e7078e5b52cbff3121942302",
+      "finalSha256": "8c7e9cf45210ea0d85bf9b493312b40529deea1a41e8cc82844b41f99b239614"
+    },
+    {
+      "from": "doc/report.2026-W44.md",
+      "to": "docs/weekly_report/report.2026-W44.md",
+      "originalSha256": "8813a481ee7a7899326e3b1486f9b3bce83f3066429c13cdd01d0559589bf3ee",
+      "finalSha256": "86e19e8a14bf5591fb59cf0c9492259a447b6628ec4e710afa739217d404cce8"
+    },
+    {
+      "from": "doc/report.2026-W45.md",
+      "to": "docs/weekly_report/report.2026-W45.md",
+      "originalSha256": "b71cd13141e014b4533af2d130645d70b4dec6dc47726ca9b0bb94d4e36eaa12",
+      "finalSha256": "c554f879a8c0c5bf0fcf175444b7a092b506272aeac469b94a7e9090e1266392"
+    },
+    {
+      "from": "doc/report.2026-W46.md",
+      "to": "docs/weekly_report/report.2026-W46.md",
+      "originalSha256": "c3c5729a7469a135e884d1772b7e7e9301b9a687326b9b4d4c3d0762810f80ad",
+      "finalSha256": "b776b706f04da0979a3c90fffa902154fc7c7ee89ae2edc59de17c19490cf185"
+    },
+    {
+      "from": "doc/report.2026-近半月.md",
+      "to": "docs/weekly_report/report.2026-近半月.md",
+      "originalSha256": "038937f4d6da47366831d5c4f7dcbc1e5f2c2064153c37e362eb7fc178da77f6",
+      "finalSha256": "038937f4d6da47366831d5c4f7dcbc1e5f2c2064153c37e362eb7fc178da77f6"
+    },
+    {
+      "from": "doc/report.20260706-20260710-周报.md",
+      "to": "docs/weekly_report/report.20260706-20260710-周报.md",
+      "originalSha256": "d7047230c1fec6c8cfbb37406ddded4280a8648f7d91ae2bf907b97cb374ccaf",
+      "finalSha256": "b07b08af04b6945f523b38d9ce712ab89b8cbc3e3ea213743a7136fa43393e00"
+    },
+    {
+      "from": "doc/测试资产云平台-让测试资产真正流动起来.md",
+      "to": "docs/overview/测试资产云平台-让测试资产真正流动起来.md",
+      "originalSha256": "55483c4f7e7a20844adf8c4a79cba82a5f3928f2ec3a460bb84df4f7edcdc102",
+      "finalSha256": "55483c4f7e7a20844adf8c4a79cba82a5f3928f2ec3a460bb84df4f7edcdc102"
+    },
+    {
+      "from": "docs/mcp-and-ai-skill-remediation-plan-20261019.md",
+      "to": "docs/product_md/history/mcp-and-ai-skill-remediation-plan-20261019.md",
+      "originalSha256": "8cc7dc2455f3765f6326302c19c07d3b5f9f6465838573cb0f8337046917ec28",
+      "finalSha256": "f79f14b515c200b93fa01796454e2038086ec36c4d1f8ca1773753a63decc612"
+    },
+    {
+      "from": "docs/mcp-external-image-attachment-requirements-2026-10-22.md",
+      "to": "docs/product_md/history/mcp-external-image-attachment-requirements-2026-10-22.md",
+      "originalSha256": "89783d2d4c3afdf43bfa27431d8ffd81d9f3ef00b5ea63a9446a530a87594e48",
+      "finalSha256": "89783d2d4c3afdf43bfa27431d8ffd81d9f3ef00b5ea63a9446a530a87594e48"
+    },
+    {
+      "from": "docs/msp-consolidated-transformation-plan.md",
+      "to": "docs/product_md/history/msp-consolidated-transformation-plan.md",
+      "originalSha256": "ea50cc40da0cfd4c644d10b37f3865c2250f0ee190e5b22b4ff5ade37810e33d",
+      "finalSha256": "27a02aa5294b2a113c99a471be4c7d98fc7c901956912872d138a86bfd345297"
+    },
+    {
+      "from": "docs/msp-module-function-disposition-table.md",
+      "to": "docs/product_md/history/msp-module-function-disposition-table.md",
+      "originalSha256": "c7edb3ac9fdc0d383a1b54db63426326112e4044c6d49ea01db9b0a20c7a6483",
+      "finalSha256": "13115a978d457629e02cbf6088461c4e5d8738ff2eb30e363c85a6734b1eb11c"
+    },
+    {
+      "from": "docs/msp-navigation-simplification-plan.md",
+      "to": "docs/product_md/history/msp-navigation-simplification-plan.md",
+      "originalSha256": "649a7fcb8bebecdd63130b64fcb0fc294bda06f159374a7fffe374dcee8578e9",
+      "finalSha256": "26fe7194c9ad826603339748331b12edb8c63874becf5f5959c9683ac69873fb"
+    },
+    {
+      "from": "docs/msp-product-scope-baseline.md",
+      "to": "docs/product_md/history/msp-product-scope-baseline.md",
+      "originalSha256": "406eafcea014597af90981d40d4e997d020c5d5eb93309844580de05b3940946",
+      "finalSha256": "406eafcea014597af90981d40d4e997d020c5d5eb93309844580de05b3940946"
+    },
+    {
+      "from": "docs/quality-policy-permission-fix-plan.md",
+      "to": "docs/product_md/history/quality-policy-permission-fix-plan.md",
+      "originalSha256": "478bce5fee8640ac951ca5f607624da3fd89d0f0bc88d9ee6e69a97e4ccee7e0",
+      "finalSha256": "09803ab731e6ac333629b8fabf697c745e8b8a1d4d961c689c289fa6f5261db5"
+    },
+    {
+      "from": "docs/requirements-and-defects-2026-10-22.md",
+      "to": "docs/product_md/history/requirements-and-defects-2026-10-22.md",
+      "originalSha256": "6d8f1029863ce9a17a2fe9792b154aa1888b91891e64be31af25470dd35d987d",
+      "finalSha256": "85dbd37e672d237b81ac76e4ca96c27039064077818ca41ed7a30143a6b7c8ac"
+    },
+    {
+      "from": "docs/summary/bug-management-handler-filter-and-preview-implementation-plan.md",
+      "to": "docs/product_md/history/summary/bug-management-handler-filter-and-preview-implementation-plan.md",
+      "originalSha256": "9f85234cd6a9cd2c0f257043f47202a9393ec0fd289efda17109d184cc2f288a",
+      "finalSha256": "9f85234cd6a9cd2c0f257043f47202a9393ec0fd289efda17109d184cc2f288a"
+    },
+    {
+      "from": "docs/summary/MeterSphere-Agent-MCP测试用例与缺陷管理扩展方案-2026-07-31.md",
+      "to": "docs/product_md/history/summary/MeterSphere-Agent-MCP测试用例与缺陷管理扩展方案-2026-07-31.md",
+      "originalSha256": "df0c9fea3409176b78d7074854f3c65426ca82dc7c9b71397702ca0fd88753da",
+      "finalSha256": "df0c9fea3409176b78d7074854f3c65426ca82dc7c9b71397702ca0fd88753da"
+    },
+    {
+      "from": "docs/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md",
+      "to": "docs/product_md/history/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md",
+      "originalSha256": "7f9b61a2e713ecbebad508421b25e52474b602f093d778016748c0d49d7009c4",
+      "finalSha256": "212b08be4b0c35815959a943d64dfa0b54fd1a0e47d38be12dd3f63f8c67876a"
+    },
+    {
+      "from": "docs/summary/MeterSphere-Agent治理策略与审计中心-设计方案-2026-07-30.md",
+      "to": "docs/product_md/history/summary/MeterSphere-Agent治理策略与审计中心-设计方案-2026-07-30.md",
+      "originalSha256": "0ced6dcad584634a8a0735890bcc9d1e39e44929ad5b3b83083c9fe8a6aa0722",
+      "finalSha256": "0ced6dcad584634a8a0735890bcc9d1e39e44929ad5b3b83083c9fe8a6aa0722"
+    },
+    {
+      "from": "docs/summary/MeterSphere-Agent集成-个人Token与多Agent-MCP接入改造方案-2026-07-30.md",
+      "to": "docs/product_md/history/summary/MeterSphere-Agent集成-个人Token与多Agent-MCP接入改造方案-2026-07-30.md",
+      "originalSha256": "05692b42d787e0ede9424cdaa3fe32525f6bfa8ec0532bdda7ec9c71e80e0da5",
+      "finalSha256": "4be5b5fe2104b58579f7715d86f85c1838b56706e5abd448918a23161b81d591"
+    },
+    {
+      "from": "docs/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md",
+      "to": "docs/product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md",
+      "originalSha256": "a8027b71540afa6248c980b6585ded0382c2a6f65fb8b40eeb12a97ccdada31d",
+      "finalSha256": "a8027b71540afa6248c980b6585ded0382c2a6f65fb8b40eeb12a97ccdada31d"
+    },
+    {
+      "from": "docs/summary/MeterSphere-permission-control-redesign-solution.md",
+      "to": "docs/product_md/history/summary/MeterSphere-permission-control-redesign-solution.md",
+      "originalSha256": "95eb578184e142117d4a61a66bc20e6974dc72408e2349e569717ef2efce6fd9",
+      "finalSha256": "95eb578184e142117d4a61a66bc20e6974dc72408e2349e569717ef2efce6fd9"
+    },
+    {
+      "from": "docs/summary/MeterSphere-企微同步字段补齐-实现方案-2026-07-29.md",
+      "to": "docs/product_md/history/summary/MeterSphere-企微同步字段补齐-实现方案-2026-07-29.md",
+      "originalSha256": "f5d9d7a6cab110e10f1438848ef64b6cdb6ca0a60887817c6d455aa99d2c4837",
+      "finalSha256": "41462ff3b8274d018f3d8a2eb4def4ec5c4a71e7b55b5cc7d76b7ac5786f95f0"
+    },
+    {
+      "from": "docs/summary/MeterSphere-体验优化-产品方案-2026-07-17.md",
+      "to": "docs/product_md/history/summary/MeterSphere-体验优化-产品方案-2026-07-17.md",
+      "originalSha256": "31c48659977b8084e2a938f4f7806de6ddc9126a38ab55678c4cc4147a9d9961",
+      "finalSha256": "af96af88a8689aadbd9d99ac3f7a8c8d131c8d0334202f8a2b457cfdf222ad56"
+    },
+    {
+      "from": "docs/summary/MeterSphere-信息架构与权限闭环补齐方案-V1.4-2026-08-14.md",
+      "to": "docs/product_md/history/summary/MeterSphere-信息架构与权限闭环补齐方案-V1.4-2026-08-14.md",
+      "originalSha256": "627e401ec61fb6edfbde53e511692ca6458361b4b6d73a6eb543f212f62f3cd6",
+      "finalSha256": "627e401ec61fb6edfbde53e511692ca6458361b4b6d73a6eb543f212f62f3cd6"
+    },
+    {
+      "from": "docs/summary/MeterSphere-前端信息架构与权限收口偏差修订补充方案-V1.1-2026-08-13.md",
+      "to": "docs/product_md/history/summary/MeterSphere-前端信息架构与权限收口偏差修订补充方案-V1.1-2026-08-13.md",
+      "originalSha256": "1502c7eccd6092e3a4cf27992e4ec43f0abd6a56324d9a0619cfea42aec3a06f",
+      "finalSha256": "1502c7eccd6092e3a4cf27992e4ec43f0abd6a56324d9a0619cfea42aec3a06f"
+    },
+    {
+      "from": "docs/summary/MeterSphere-前端信息架构与权限收口前后端闭环补齐方案-V1.2-2026-08-14.md",
+      "to": "docs/product_md/history/summary/MeterSphere-前端信息架构与权限收口前后端闭环补齐方案-V1.2-2026-08-14.md",
+      "originalSha256": "0012298256d70f186ac89e5528e52068e34dc5d3a5a7dbea284de57af2d94eff",
+      "finalSha256": "0012298256d70f186ac89e5528e52068e34dc5d3a5a7dbea284de57af2d94eff"
+    },
+    {
+      "from": "docs/summary/MeterSphere-前端信息架构与权限收口改造方案-2026-08-13.md",
+      "to": "docs/product_md/history/summary/MeterSphere-前端信息架构与权限收口改造方案-2026-08-13.md",
+      "originalSha256": "1495c2b7d58f399011e10dfff50718ad1ece8367e3e6876fbcbb84c349a9d471",
+      "finalSha256": "1495c2b7d58f399011e10dfff50718ad1ece8367e3e6876fbcbb84c349a9d471"
+    },
+    {
+      "from": "docs/summary/MeterSphere-功能用例详情-体验优化方案-2026-07-22.md",
+      "to": "docs/product_md/history/summary/MeterSphere-功能用例详情-体验优化方案-2026-07-22.md",
+      "originalSha256": "527fee2b2b4f8ee9b1a78281aeb9c6a3dfa82bb5f30eded7cbbdbfea7865f1c0",
+      "finalSha256": "0d0637b4b44e0fd5c9e84c876442f2ca3646ee88666461558b5b9c473cd7f685"
+    },
+    {
+      "from": "docs/summary/MeterSphere-权限控制补强修复方案-V1.3-2026-08-14.md",
+      "to": "docs/product_md/history/summary/MeterSphere-权限控制补强修复方案-V1.3-2026-08-14.md",
+      "originalSha256": "42a499f8c4984a608efc820811ade21dea7b0fecaa6a1be466948043326f4605",
+      "finalSha256": "42a499f8c4984a608efc820811ade21dea7b0fecaa6a1be466948043326f4605"
+    },
+    {
+      "from": "docs/summary/MeterSphere-权限流程与用例资产统一改造方案-2026-08-14.md",
+      "to": "docs/product_md/history/summary/MeterSphere-权限流程与用例资产统一改造方案-2026-08-14.md",
+      "originalSha256": "5c86b7456b73257517953eac8e03aaf92ec4ec861a8c37dc834a94998e4db7da",
+      "finalSha256": "cb280875da6bc98f20340284ee6845d2500a246735f170fa9925911919688c5d"
+    },
+    {
+      "from": "docs/summary/MeterSphere-模块状态保持与测试用例详情聚合-改造方案-2026-07-30.md",
+      "to": "docs/product_md/history/summary/MeterSphere-模块状态保持与测试用例详情聚合-改造方案-2026-07-30.md",
+      "originalSha256": "9defae3602121b7e4214f1dd624e79cc80b191576af537e7312d2739cdffe66b",
+      "finalSha256": "9defae3602121b7e4214f1dd624e79cc80b191576af537e7312d2739cdffe66b"
+    },
+    {
+      "from": "docs/summary/MeterSphere-测试用例-体验改造方案-2026-07-21.md",
+      "to": "docs/product_md/history/summary/MeterSphere-测试用例-体验改造方案-2026-07-21.md",
+      "originalSha256": "661cc55bb42d58ad11a94810ff8d2a265751c3e0234042d6f3bbf0ed55d41719",
+      "finalSha256": "e36e66febfceabc3b2a2d9ec63b0f978b26d2c5b0bacb9705a03ad7eb1ada9e2"
+    },
+    {
+      "from": "docs/summary/MeterSphere-测试资产管理与Agent任务委派-平台改造方案-2026-08-12.md",
+      "to": "docs/product_md/history/summary/MeterSphere-测试资产管理与Agent任务委派-平台改造方案-2026-08-12.md",
+      "originalSha256": "e58eecfbeb0536ed63d9819882cbe2aeedc22f97270762a5b316b893a39e49fd",
+      "finalSha256": "e58eecfbeb0536ed63d9819882cbe2aeedc22f97270762a5b316b893a39e49fd"
+    },
+    {
+      "from": "docs/summary/MeterSphere-用例导入入口与勾选体验-优化方案-2026-07-24.md",
+      "to": "docs/product_md/history/summary/MeterSphere-用例导入入口与勾选体验-优化方案-2026-07-24.md",
+      "originalSha256": "25fbb691632711ddc4d9f17d00c460c252f9904d7f24611b2cde03e37fd58aa1",
+      "finalSha256": "2cb6198380cb409b9af9eb3fd5cf582a4615ca936b839b65f4a9771206918057"
+    },
+    {
+      "from": "docs/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md",
+      "to": "docs/product_md/history/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md",
+      "originalSha256": "d3e57c58bd175885fee0256b2953ebc4a4ab307945d86bed3749e5afde7f8ff0",
+      "finalSha256": "033be4f43187e501c3c67906ba329e42b71e363bdab547a3620333e3f31d703e"
+    },
+    {
+      "from": "docs/summary/MeterSphere-编辑自动保存与撤销-优化方案-2026-07-24.md",
+      "to": "docs/product_md/history/summary/MeterSphere-编辑自动保存与撤销-优化方案-2026-07-24.md",
+      "originalSha256": "9caa5b677f0a4024e6906de6a1eb2c6610787d285adfcf0ede646ac7ec005c92",
+      "finalSha256": "e55f461386798b86d6b30be0ef73f1d02bbb3c0ad1bc10880e863d0ada1d990c"
+    },
+    {
+      "from": "docs/summary/MeterSphere-缺陷管理详情与列表体验-优化方案-2026-07-30.md",
+      "to": "docs/product_md/history/summary/MeterSphere-缺陷管理详情与列表体验-优化方案-2026-07-30.md",
+      "originalSha256": "f10c865e2fc964baebd53c8e1e480aaccc28dc69fd23dc986e6295885beaf592",
+      "finalSha256": "f10c865e2fc964baebd53c8e1e480aaccc28dc69fd23dc986e6295885beaf592"
+    },
+    {
+      "from": "docs/summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md",
+      "to": "docs/product_md/history/summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md",
+      "originalSha256": "a4170eb1d65fefa37f9e8c5dde79dedd565ef3724f340386c283b3798c7ce8e4",
+      "finalSha256": "8d0096440120f1d835fbef9db7efc372b1f29c03d0295482be2e2289a5b8b5b2"
+    },
+    {
+      "from": "docs/summary/MeterSphere_Agent自动化执行改造方案.md",
+      "to": "docs/product_md/history/summary/MeterSphere_Agent自动化执行改造方案.md",
+      "originalSha256": "bfa46b1d3948928c013642a1d02e81a1be45c98c42675edae5dca8b906621c30",
+      "finalSha256": "bfa46b1d3948928c013642a1d02e81a1be45c98c42675edae5dca8b906621c30"
+    },
+    {
+      "from": "docs/summary/MeterSphere_AI_WebUI自动化测试执行改造方案.md",
+      "to": "docs/product_md/history/summary/MeterSphere_AI_WebUI自动化测试执行改造方案.md",
+      "originalSha256": "bcfb098e5065bc462756431abbeaa9e42189c66e1b6f9ad0eb6432d22e2b6419",
+      "finalSha256": "bcfb098e5065bc462756431abbeaa9e42189c66e1b6f9ad0eb6432d22e2b6419"
+    },
+    {
+      "from": "docs/summary/MeterSphere_AI生成用例改造方案.docx",
+      "to": "docs/product_md/history/summary/MeterSphere_AI生成用例改造方案.docx",
+      "originalSha256": "d3e47112418d23e97e71d0f85d2074fd7762419a4ba6755bb90af0d60a3d5e7d",
+      "finalSha256": "d3e47112418d23e97e71d0f85d2074fd7762419a4ba6755bb90af0d60a3d5e7d"
+    },
+    {
+      "from": "docs/summary/MeterSphere_AI生成用例改造方案.assets/image-1.png",
+      "to": "docs/product_md/history/summary/MeterSphere_AI生成用例改造方案.assets/image-1.png",
+      "originalSha256": "f8970c9b8485805b0d71f8bbbac8667b6f46ce825288e81c15260be4b2e21e81",
+      "finalSha256": "f8970c9b8485805b0d71f8bbbac8667b6f46ce825288e81c15260be4b2e21e81"
+    },
+    {
+      "from": "docs/summary/MeterSphere_AI生成用例改造方案.assets/image-2.png",
+      "to": "docs/product_md/history/summary/MeterSphere_AI生成用例改造方案.assets/image-2.png",
+      "originalSha256": "d4c5ea9149bb084b5b96aa729670752f7b8c4e994a9ecf113ffa61aa1947f0ee",
+      "finalSha256": "d4c5ea9149bb084b5b96aa729670752f7b8c4e994a9ecf113ffa61aa1947f0ee"
+    },
+    {
+      "from": "docs/summary/MeterSphere_AI生成用例改造方案.md",
+      "to": "docs/product_md/history/summary/MeterSphere_AI生成用例改造方案.md",
+      "originalSha256": "0d3cca6b5c5bd8707a75e52994a66d5f40429b9973e6cdbcf336f8f4bed65196",
+      "finalSha256": "0d3cca6b5c5bd8707a75e52994a66d5f40429b9973e6cdbcf336f8f4bed65196"
+    },
+    {
+      "from": "docs/summary/Metersphere_permission-control-refactor-plan.md",
+      "to": "docs/product_md/history/summary/Metersphere_permission-control-refactor-plan.md",
+      "originalSha256": "69e06e49a8d1b102c10637fc9b59a2540177013bf3a23aa3c79ed55f710bfdd9",
+      "finalSha256": "69e06e49a8d1b102c10637fc9b59a2540177013bf3a23aa3c79ed55f710bfdd9"
+    },
+    {
+      "from": "docs/summary/MeterSphere体验改造二次核验修复执行方案-V1.0-2026-08-14.md",
+      "to": "docs/product_md/history/summary/MeterSphere体验改造二次核验修复执行方案-V1.0-2026-08-14.md",
+      "originalSha256": "c6e345a206ec44a1980e5059b655309b7a795df00154a44106af840f69737703",
+      "finalSha256": "c6e345a206ec44a1980e5059b655309b7a795df00154a44106af840f69737703"
+    },
+    {
+      "from": "docs/summary/MeterSphere体验改造偏差详细修复方案.md",
+      "to": "docs/product_md/history/summary/MeterSphere体验改造偏差详细修复方案.md",
+      "originalSha256": "da6f9b60bf1a1c259b54d30e2512e0d11f9b1beaaa09a3c206063d3b72f5c697",
+      "finalSha256": "da6f9b60bf1a1c259b54d30e2512e0d11f9b1beaaa09a3c206063d3b72f5c697"
+    },
+    {
+      "from": "docs/summary/MeterSphere第一二阶段体验改造完整方案.md",
+      "to": "docs/product_md/history/summary/MeterSphere第一二阶段体验改造完整方案.md",
+      "originalSha256": "e6d18c5f4ea1f0d55e254060a5272a8038103cfbff72841efba7a12be57598f5",
+      "finalSha256": "e6d18c5f4ea1f0d55e254060a5272a8038103cfbff72841efba7a12be57598f5"
+    },
+    {
+      "from": "docs/summary/msp-case-detail-layout-remediation-plan-20261102.md",
+      "to": "docs/product_md/history/summary/msp-case-detail-layout-remediation-plan-20261102.md",
+      "originalSha256": "831f94395b2c6bc693ddd1d544c260362cff757695f687beba5d6d1002c94273",
+      "finalSha256": "12f8c5da258c3f83cf7a467a14877bb02adc351386368c9d82027f1d7ea6e5fd"
+    },
+    {
+      "from": "docs/summary/msp-compression-and-outstanding-remediation-plan-20261028.md",
+      "to": "docs/product_md/history/summary/msp-compression-and-outstanding-remediation-plan-20261028.md",
+      "originalSha256": "15bbdd461e7b95525a122a1e315c424ae98376c6f4783acec5aca321fb14cc93",
+      "finalSha256": "e933ad5da5668a3066e21c6b491171ed520ce49b44694f5883ad214d995986e9"
+    },
+    {
+      "from": "docs/summary/msp-live-issues-detailed-remediation-plan-20261023.md",
+      "to": "docs/product_md/history/summary/msp-live-issues-detailed-remediation-plan-20261023.md",
+      "originalSha256": "7b453a2d3460a444c014ecf934532ffdc6503ed4e30a777837b1e9e6cf448ac4",
+      "finalSha256": "0f33abaf6b829ef04bdcec9a12b34887d881bcddac798efd75b718d8329684d1"
+    },
+    {
+      "from": "docs/summary/msp-mcp-capability-and-reliability-implementation-plan-20261030.md",
+      "to": "docs/product_md/history/summary/msp-mcp-capability-and-reliability-implementation-plan-20261030.md",
+      "originalSha256": "c730c613ac23bd6b121d7c505c1879a6f29a01253b783db777753c6321f07424",
+      "finalSha256": "733a1dee3fb6aeb2a0d9e1df555ba73f2014b100466cba529a023da87f9904cf"
+    },
+    {
+      "from": "docs/summary/msp-mcp-performance-remediation-plan-20261116.md",
+      "to": "docs/product_md/history/summary/msp-mcp-performance-remediation-plan-20261116.md",
+      "originalSha256": "864da818bdb83da29bf7b736c4e074092577573b1b66dd899c8b59b8061d7b4c",
+      "finalSha256": "864da818bdb83da29bf7b736c4e074092577573b1b66dd899c8b59b8061d7b4c"
+    },
+    {
+      "from": "docs/summary/msp-sql-stability-optimization-plan-20261023.md",
+      "to": "docs/product_md/history/summary/msp-sql-stability-optimization-plan-20261023.md",
+      "originalSha256": "1a0f8c5f09bf8c14a63e434e1cdaecc3e45eaebe06699f1f19951afc0c2ceb62",
+      "finalSha256": "1ed80b7fc01670c350f56267999a2ac54e0cbe626241b834898b5bb5e45d5513"
+    },
+    {
+      "from": "docs/summary/msp-two-round-test-remediation-plan-20261027.md",
+      "to": "docs/product_md/history/summary/msp-two-round-test-remediation-plan-20261027.md",
+      "originalSha256": "763b47bea5a3f319825b1e48b592dce1d50b897f67507bfce8a4fed25acb09dd",
+      "finalSha256": "47393ad0020f5f634bf0d3b036a2b5abb957347ce5538b3982af230cefe7a563"
+    },
+    {
+      "from": "docs/summary/MSP-业务里程碑规划-2026-08-26.md",
+      "to": "docs/product_md/history/summary/MSP-业务里程碑规划-2026-08-26.md",
+      "originalSha256": "feb2d3cb24b418f21d13f7b7b5fb37b0db556f7a4f116757e31d1110dc5cdb75",
+      "finalSha256": "feb2d3cb24b418f21d13f7b7b5fb37b0db556f7a4f116757e31d1110dc5cdb75"
+    },
+    {
+      "from": "docs/summary/MSP个人Agent测试闭环简化产品方案-20261020.md",
+      "to": "docs/product_md/history/summary/MSP个人Agent测试闭环简化产品方案-20261020.md",
+      "originalSha256": "97e149061fa59c4ecf78b47ac202d84d2369aa5797025b0feaa662b3c099f4b5",
+      "finalSha256": "0c17af90496ce29ef9c04b19811865e636089546f051650c846d4c98c6a99323"
+    },
+    {
+      "from": "docs/summary/personal-execution-case-evidence-implementation-plan-20261027.md",
+      "to": "docs/product_md/history/summary/personal-execution-case-evidence-implementation-plan-20261027.md",
+      "originalSha256": "c447d84e96553faede6394e2ae6133fede6878267b12499524a9cb9e130a446c",
+      "finalSha256": "28bc33aa1898761656653c3bbe0a647d974689df77506dac96eee7275785bddd"
+    },
+    {
+      "from": "docs/summary/requirements-consolidated-2026-10-22.md",
+      "to": "docs/product_md/history/summary/requirements-consolidated-2026-10-22.md",
+      "originalSha256": "5c4bb866ed7e4a5247007a7208bfb8617b8b50c99752a3f6142be8ffb2949a2a",
+      "finalSha256": "043c0f94593095f98f346bc674b9cabc33e6e97e00d8168fc642f51c32ceb0c3"
+    },
+    {
+      "from": "docs/summary/wecom-ai-bot-integration-plan.md",
+      "to": "docs/product_md/history/summary/wecom-ai-bot-integration-plan.md",
+      "originalSha256": "80fa8ce77e0f298429bc20e272b31ba1986a24bf62a80b54fa64a9566dd86a46",
+      "finalSha256": "80fa8ce77e0f298429bc20e272b31ba1986a24bf62a80b54fa64a9566dd86a46"
+    },
+    {
+      "from": "docs/summary/wecom-intelligent-bot-notification-refactoring-plan.md",
+      "to": "docs/product_md/history/summary/wecom-intelligent-bot-notification-refactoring-plan.md",
+      "originalSha256": "2e6009e6b9f8ed67cbef697dc4b06692ec53188cc5974d7c501bf3a653418d25",
+      "finalSha256": "2e6009e6b9f8ed67cbef697dc4b06692ec53188cc5974d7c501bf3a653418d25"
+    },
+    {
+      "from": "docs/summary/完整预检内部错误分析与恢复方案-20261020.md",
+      "to": "docs/product_md/history/summary/完整预检内部错误分析与恢复方案-20261020.md",
+      "originalSha256": "a9093886bb5790a4e5a621012d6fe41ba0087c5a41ebeb0471a40471868f359d",
+      "finalSha256": "a9093886bb5790a4e5a621012d6fe41ba0087c5a41ebeb0471a40471868f359d"
+    },
+    {
+      "from": "docs/summary/质量门禁修复与完善方案-20261019.md",
+      "to": "docs/product_md/history/summary/质量门禁修复与完善方案-20261019.md",
+      "originalSha256": "3fae9b1af29a3063339708103c79eedfaaaacb3a4fdbf01e9624a01f6432b1b6",
+      "finalSha256": "173758a928f200b9611cbbe59ff2621ca066ea1ed251e016458527ee0307f712"
+    },
+    {
+      "from": "docs/develop_logs/buglist/MeterSphere-缺陷流程-Agent集成-用例资产与异常修复改造方案-2026-08-17.md",
+      "to": "docs/product_md/history/develop_logs/buglist/MeterSphere-缺陷流程-Agent集成-用例资产与异常修复改造方案-2026-08-17.md",
+      "originalSha256": "0cf5eaa94c67bd29e84ccf7fa9c7bf2bd107712236e6254cef1a074651c192bd",
+      "finalSha256": "0cf5eaa94c67bd29e84ccf7fa9c7bf2bd107712236e6254cef1a074651c192bd"
+    },
+    {
+      "from": "docs/task/agent_dual_channel_target_20260824/01-Agent双通道执行能力实现需求.md",
+      "to": "docs/product_md/history/task/agent_dual_channel_target_20260824/01-Agent双通道执行能力实现需求.md",
+      "originalSha256": "969fb1feafc2a17a7ad90ef31206d23282d1eae79cbf0cffd19be08752f5b9af",
+      "finalSha256": "969fb1feafc2a17a7ad90ef31206d23282d1eae79cbf0cffd19be08752f5b9af"
+    },
+    {
+      "from": "docs/task/agent_dual_channel_target_20260824/02-Agent旧执行通道与冗余能力下线需求.md",
+      "to": "docs/product_md/history/task/agent_dual_channel_target_20260824/02-Agent旧执行通道与冗余能力下线需求.md",
+      "originalSha256": "4ff2e15861ba654514697abe8d46bc4ed238b87f904ad464588fbf1106207700",
+      "finalSha256": "4ff2e15861ba654514697abe8d46bc4ed238b87f904ad464588fbf1106207700"
+    },
+    {
+      "from": "docs/task/ai_agent_dual_channel_20260808/AI用户自有Agent双通道改造方案.md",
+      "to": "docs/product_md/history/task/ai_agent_dual_channel_20260808/AI用户自有Agent双通道改造方案.md",
+      "originalSha256": "34a21e6860eedf8acd0fd1cf2ab086f8bd03cc3bff2a34c4e59af80bfc268942",
+      "finalSha256": "1fcc7faf02b51e794beefdeebe6d00273ea7d4615f432238e7fe42040868e33a"
+    },
+    {
+      "from": "docs/task/ai_agent_test_execution_solution_20260825/AI-Agent测试执行完整改造方案.md",
+      "to": "docs/product_md/history/task/ai_agent_test_execution_solution_20260825/AI-Agent测试执行完整改造方案.md",
+      "originalSha256": "7e500feffc1ea0e3de1af7deb16d3d93cce2d11122b0a3e3ec524a00fd2031fc",
+      "finalSha256": "7e500feffc1ea0e3de1af7deb16d3d93cce2d11122b0a3e3ec524a00fd2031fc"
+    },
+    {
+      "from": "docs/task/ai_case_agent_20260806/AI用例生成Agent改造方案.md",
+      "to": "docs/product_md/history/task/ai_case_agent_20260806/AI用例生成Agent改造方案.md",
+      "originalSha256": "2a5cc136be286ff6d4be425dc8c1852e694545e024fcacc795d41c8bb27e3d4a",
+      "finalSha256": "2a5cc136be286ff6d4be425dc8c1852e694545e024fcacc795d41c8bb27e3d4a"
+    },
+    {
+      "from": "docs/task/community_rebuild/MeterSphere社区版解除限制与组织架构模块-完整建设方案.docx",
+      "to": "docs/product_md/history/task/community_rebuild/MeterSphere社区版解除限制与组织架构模块-完整建设方案.docx",
+      "originalSha256": "86bcb16e6ce222832396bbf1b972715b5c23ef7ee8a7967fd299df8cd77be1db",
+      "finalSha256": "86bcb16e6ce222832396bbf1b972715b5c23ef7ee8a7967fd299df8cd77be1db"
+    },
+    {
+      "from": "docs/task/current_gap_fix_20260814/修复实施方案.md",
+      "to": "docs/product_md/history/task/current_gap_fix_20260814/修复实施方案.md",
+      "originalSha256": "48210f290358654842619cd86bade98d6700eac050d9f3544e8a44a925a0deaa",
+      "finalSha256": "48210f290358654842619cd86bade98d6700eac050d9f3544e8a44a925a0deaa"
+    },
+    {
+      "from": "docs/task/destination/MeterSphere-Agent集成-改造方案-2026-07-07.md",
+      "to": "docs/product_md/history/task/destination/MeterSphere-Agent集成-改造方案-2026-07-07.md",
+      "originalSha256": "a8027b71540afa6248c980b6585ded0382c2a6f65fb8b40eeb12a97ccdada31d",
+      "finalSha256": "a8027b71540afa6248c980b6585ded0382c2a6f65fb8b40eeb12a97ccdada31d"
+    },
+    {
+      "from": "docs/task/destination/MeterSphere测试数据中心与企业微信助手综合建设方案.docx",
+      "to": "docs/product_md/history/task/destination/MeterSphere测试数据中心与企业微信助手综合建设方案.docx",
+      "originalSha256": "e708be1b7b5f6ed49486befb993e68c3c5a425306c776a929023a5dd94627178",
+      "finalSha256": "e708be1b7b5f6ed49486befb993e68c3c5a425306c776a929023a5dd94627178"
+    },
+    {
+      "from": "docs/task/destination/测试数据中心与企业微信助手综合建设方案.docx",
+      "to": "docs/product_md/history/task/destination/测试数据中心与企业微信助手综合建设方案.docx",
+      "originalSha256": "826842541e51d79127f34c8a5ce80d8537973f16712dd56ddb6b29dbe483f211",
+      "finalSha256": "826842541e51d79127f34c8a5ce80d8537973f16712dd56ddb6b29dbe483f211"
+    },
+    {
+      "from": "docs/task/deviation_gap_closure_20260813/偏差补齐实施方案.md",
+      "to": "docs/product_md/history/task/deviation_gap_closure_20260813/偏差补齐实施方案.md",
+      "originalSha256": "ec6cd9b18e331066ebf46b00e6bcad4ebbcb235f61cf3614e39ff52827154e2c",
+      "finalSha256": "ec6cd9b18e331066ebf46b00e6bcad4ebbcb235f61cf3614e39ff52827154e2c"
+    },
+    {
+      "from": "docs/task/deviation_gap_supplement_20260814/偏差补充实施方案.md",
+      "to": "docs/product_md/history/task/deviation_gap_supplement_20260814/偏差补充实施方案.md",
+      "originalSha256": "7ff909c57c617e5a473145c5d8c53914de18be968ee484d5c23639f0090cf552",
+      "finalSha256": "7ff909c57c617e5a473145c5d8c53914de18be968ee484d5c23639f0090cf552"
+    },
+    {
+      "from": "docs/task/platform_model_api_scheduled_execution_20260826/平台大模型API定时测试执行需求与改造方案.md",
+      "to": "docs/product_md/history/task/platform_model_api_scheduled_execution_20260826/平台大模型API定时测试执行需求与改造方案.md",
+      "originalSha256": "c57ba97143ae736e56154ce3920ef4018c90da5a03f453033f906b1a7bd54a30",
+      "finalSha256": "c57ba97143ae736e56154ce3920ef4018c90da5a03f453033f906b1a7bd54a30"
+    },
+    {
+      "from": "docs/task/test_asset_origin_category_20260902/测试资产来源标识与分类归档需求文档.md",
+      "to": "docs/product_md/history/task/test_asset_origin_category_20260902/测试资产来源标识与分类归档需求文档.md",
+      "originalSha256": "c06a0ca383fa849a44ed52264a472859f24322049498ad02f97b4c26c9488ac1",
+      "finalSha256": "c06a0ca383fa849a44ed52264a472859f24322049498ad02f97b4c26c9488ac1"
+    },
+    {
+      "from": "docs/task/test_management_restructure_20260812/测试管理模块改造方案.md",
+      "to": "docs/product_md/history/task/test_management_restructure_20260812/测试管理模块改造方案.md",
+      "originalSha256": "424153eb5b372e8b452d64012a1c2f467cef14db0d2828858e7ba0720c0fc545",
+      "finalSha256": "424153eb5b372e8b452d64012a1c2f467cef14db0d2828858e7ba0720c0fc545"
+    }
+  ],
+  "referenceUpdatedFiles": [
+    "docs/troubleshooting/case-export-root-cause-investigation-2026-10-21.md",
+    "docs/implementation/platform-optimization-20261021/platform-optimization-implementation-plan-2026-10-21.md",
+    "docs/implementation/platform-optimization-20261021/platform-optimization-system-evidence-2026-10-21.md",
+    "docs/weekly_report/report.2026-06-15至07-06.md",
+    "docs/weekly_report/report.2026-07-11至07-26.md",
+    "docs/weekly_report/report.2026-W38.md",
+    "docs/weekly_report/report.2026-W43.md",
+    "docs/weekly_report/report.2026-W44.md",
+    "docs/weekly_report/report.2026-W45.md",
+    "docs/weekly_report/report.2026-W46.md",
+    "docs/weekly_report/report.20260706-20260710-周报.md",
+    "docs/product_md/history/mcp-and-ai-skill-remediation-plan-20261019.md",
+    "docs/mcp-case-operations-plan-20261019.md",
+    "docs/metersphere-mcp-case-library-improvement-plan-2026-10-20.md",
+    "docs/product_md/history/msp-consolidated-transformation-plan.md",
+    "docs/product_md/history/msp-module-function-disposition-table.md",
+    "docs/product_md/history/msp-navigation-simplification-plan.md",
+    "docs/msp-v3.2-implementation-progress.md",
+    "docs/quality-policy-global-implementation.md",
+    "docs/product_md/history/quality-policy-permission-fix-plan.md",
+    "docs/product_md/history/requirements-and-defects-2026-10-22.md",
+    "metersphere-mcp/README.md",
+    ".codex-tmp/personal-evidence-20261027/package-smoke/package/README.md",
+    "develop_logs/buglist/permission-control-unfinished-buglist-20260812.md",
+    "docs/SOP/SOP-MeterSphere-Agent协作平台操作规范.md",
+    "docs/SOP/SOP-MeterSphere-产品经理操作规范.md",
+    "docs/summary/defect-remediation-consolidated-2026-10-22.md",
+    "docs/summary/mcp-business-contract-audit-20261027.md",
+    "docs/summary/MCP与AI技能包实施记录-20261019.md",
+    "docs/product_md/history/summary/MeterSphere-Agent对话闭环-扩展方案-2026-07-23.md",
+    "docs/product_md/history/summary/MeterSphere-Agent集成-个人Token与多Agent-MCP接入改造方案-2026-07-30.md",
+    "docs/product_md/history/summary/MeterSphere-企微同步字段补齐-实现方案-2026-07-29.md",
+    "docs/product_md/history/summary/MeterSphere-体验优化-产品方案-2026-07-17.md",
+    "docs/product_md/history/summary/MeterSphere-功能用例详情-体验优化方案-2026-07-22.md",
+    "docs/summary/MeterSphere-数据库结构与查询指南-2026-07-29.md",
+    "docs/product_md/history/summary/MeterSphere-权限流程与用例资产统一改造方案-2026-08-14.md",
+    "docs/product_md/history/summary/MeterSphere-测试用例-体验改造方案-2026-07-21.md",
+    "docs/product_md/history/summary/MeterSphere-用例导入入口与勾选体验-优化方案-2026-07-24.md",
+    "docs/product_md/history/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md",
+    "docs/product_md/history/summary/MeterSphere-编辑自动保存与撤销-优化方案-2026-07-24.md",
+    "docs/product_md/history/summary/MeterSphere-默认项目与跨项目导入-优化方案-2026-07-23.md",
+    "docs/product_md/history/summary/msp-case-detail-layout-remediation-plan-20261102.md",
+    "docs/product_md/history/summary/msp-compression-and-outstanding-remediation-plan-20261028.md",
+    "docs/summary/msp-compression-remediation-implementation-20261028.md",
+    "docs/summary/msp-deployment-failure-retrospective-20261020.md",
+    "docs/summary/msp-integrated-delivery-plan-20261023-v1-archive.md",
+    "docs/summary/msp-integrated-delivery-plan-20261023.md",
+    "docs/product_md/history/summary/msp-live-issues-detailed-remediation-plan-20261023.md",
+    "docs/summary/msp-live-remediation-implementation-20261023.md",
+    "docs/product_md/history/summary/msp-mcp-capability-and-reliability-implementation-plan-20261030.md",
+    "docs/summary/msp-mcp-query-and-committed-code-investigation-20261023.md",
+    "docs/summary/msp-remediation-complete-plan-20261020.md",
+    "docs/summary/msp-remediation-gap-audit-20261021.md",
+    "docs/summary/msp-sql-stability-implementation-20261023.md",
+    "docs/product_md/history/summary/msp-sql-stability-optimization-plan-20261023.md",
+    "docs/summary/msp-two-round-remediation-implementation-20261027.md",
+    "docs/product_md/history/summary/msp-two-round-test-remediation-plan-20261027.md",
+    "docs/product_md/history/summary/MSP个人Agent测试闭环简化产品方案-20261020.md",
+    "docs/product_md/history/summary/personal-execution-case-evidence-implementation-plan-20261027.md",
+    "docs/product_md/history/summary/requirements-consolidated-2026-10-22.md",
+    "docs/product_md/history/summary/质量门禁修复与完善方案-20261019.md",
+    "docs/develop_logs/buglist/2026-07-31-BUG-AGENT-MCP-P0-任务未完整实现巡检.md",
+    "docs/develop_logs/buglist/2026-08-05-BUG-AGENT-AUTOMATION-需求实现偏差巡检.md",
+    "docs/develop_logs/buglist/2026-08-05-BUG-AI-CASE-GENERATION-需求实现偏差巡检.md",
+    "docs/develop_logs/metersphere_agent/2026-07-07-task000-实施总览-开发摘要.md",
+    "docs/develop_logs/metersphere_agent/README.md",
+    "docs/task/agent_automation_execution_20260805/task000-任务总览.md",
+    "docs/task/agent_conversation_loop/task000-实施总览与依赖关系.md",
+    "docs/task/agent_mcp_case_bug_extension_20260731/task000-任务总览与依赖关系.md",
+    "docs/task/agent_personal_token_mcp_20260730/task000-任务总览与依赖关系.md",
+    "docs/product_md/history/task/ai_agent_dual_channel_20260808/AI用户自有Agent双通道改造方案.md",
+    "docs/task/ai_agent_dual_channel_impl_20260808/task000-任务总览.md",
+    "docs/task/ai_case_agent_impl_20260806/task000-任务总览.md",
+    "docs/task/ai_case_generation_20260805/task000-任务总览.md",
+    "docs/task/ai_execution_detailed_tasks_20260827/AI测试执行双通道详细研发任务拆解.md",
+    "docs/task/ai_webui_execution_20260806/task000-任务总览与依赖关系.md",
+    "docs/task/auto_save_undo/task000-实施总览与依赖关系.md",
+    "docs/task/case_feature_optimize/task000-实施总览与依赖关系.md",
+    "docs/task/case_feature_optimize/task010-P0-附件粘贴热区增强.md",
+    "docs/task/case_feature_optimize/task011-P0-前置备注行式布局与位置.md",
+    "docs/task/case_feature_optimize/task012-P0-四按钮下导航条与TEXT结果按钮.md",
+    "docs/task/case_feature_optimize/task013-P0-自动下一条开关与附件门禁.md",
+    "docs/task/case_feature_optimize/task014-P1-导入智能拆分与模板批注.md",
+    "docs/task/case_feature_optimize/task015-P1-STEP与TEXT双向同步.md",
+    "docs/task/case_feature_optimize/task016-P0-用例树点击切换列表修复.md",
+    "docs/task/default_project_cross_import/task000-实施总览与依赖关系.md",
+    "docs/task/experience_optimize/task000-实施总览与依赖关系.md",
+    "docs/task/experience_optimize/task001-P0-操作列详情按钮.md",
+    "docs/task/experience_optimize/task002-P1-顶栏项目组织展示.md",
+    "docs/task/experience_optimize/task003-P0-执行用例与Xmind拆分.md",
+    "docs/task/experience_optimize/task004-P0-测试计划文档数据模型与API.md",
+    "docs/task/experience_optimize/task005-P0-测试计划文档前端替换脑图.md",
+    "docs/task/experience_optimize/task006-P0-测试报告数据模型与聚合API.md",
+    "docs/task/experience_optimize/task007-P0-测试报告Tab与一键生成前端.md",
+    "docs/task/experience_optimize/task008-P0-缺陷类型与枚举可配置.md",
+    "docs/task/metersphere_agent/cursor-onboarding.md",
+    "docs/task/metersphere_agent/task000-实施总览与依赖关系.md",
+    "docs/task/metersphere_agent/task001-P0-agent-integration模块脚手架.md",
+    "docs/task/metersphere_agent/task002-P0-数据模型与Flyway迁移.md",
+    "docs/task/metersphere_agent/task003-P0-AgentToken认证与Shiro集成.md",
+    "docs/task/metersphere_agent/task004-P0-DTO与Schema适配层.md",
+    "docs/task/metersphere_agent/task005-P0-检索条件解析器.md",
+    "docs/task/metersphere_agent/task006-P0-用例检索与导出服务.md",
+    "docs/task/metersphere_agent/task007-P0-计划内结果回写服务.md",
+    "docs/task/metersphere_agent/task008-P0-REST-Controller四层接口.md",
+    "docs/task/metersphere_agent/task009-P0-OpenAPI-Agent分组.md",
+    "docs/task/metersphere_agent/task010-P0-集成测试与MVP验收.md",
+    "docs/task/metersphere_agent/task011-P1-metersphere-mcp服务.md",
+    "docs/task/metersphere_agent/task012-P1-Cursor接入与工作流规则.md",
+    "docs/task/metersphere_agent/task013-P2-计划外回写与审计日志API.md",
+    "docs/task/metersphere_agent/task014-P2-模块别名与批量回写.md",
+    "docs/task/metersphere_agent/task015-P2-Token管理UI.md",
+    "docs/task/metersphere_agent/task016-P2-执行证据附件.md",
+    "docs/task/miduo_sso/task000-实施总览与依赖关系.md",
+    "docs/task/miduo_sso/task001-P0-接入确认单与配置项.md",
+    "docs/task/miduo_sso/task002-P0-米多开放API签名客户端.md",
+    "docs/task/miduo_sso/task003-P0-state-callback与用户匹配.md",
+    "docs/task/miduo_sso/task004-P0-sessionToken存储与logout.md",
+    "docs/task/miduo_sso/task005-P0-Shiro扩展与CDS路由.md",
+    "docs/task/miduo_sso/task006-P0-前端Callback页与白名单.md",
+    "docs/task/miduo_sso/task007-P1-refresh策略与登录桥.md",
+    "docs/task/miduo_sso/task008-P1-安全加固与status门禁.md",
+    "docs/task/miduo_sso/task009-P2-端到端验收与登录入口.md",
+    "docs/task/module_state_case_detail_aggregation_20260730/task000-任务总览与依赖关系.md",
+    "docs/task/module_state_case_detail_followups/task000-后续任务总览.md",
+    "docs/task/permission_control_refactor_20260808/task000-任务总览.md",
+    "docs/task/permission_flow_case_asset_fix_20260817/defect-fix-result.md",
+    "docs/task/permission_flow_case_asset_unification_20260814/task000-实施总览与依赖关系.md",
+    "docs/task/test_asset_agent_delegation_20260812/task000-任务总览.md",
+    "docs/task/wecom_ai_bot_notification_20260814/task000-任务总览与依赖关系.md",
+    "docs/task/wecom_sync_fields/task000-实施总览与依赖关系.md",
+    "docs/testing/msp-remediation-20261103/implementation-report.md"
+  ],
+  "verification": {
+    "allMovedBytesVerifiedBeforeReferenceUpdates": true,
+    "docRemoved": true
+  }
+}

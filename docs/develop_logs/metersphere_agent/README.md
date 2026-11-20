@@ -5,7 +5,7 @@
 | 文档 | 路径 |
 |------|------|
 | 任务规格 | [`docs/task/metersphere_agent/`](../../task/metersphere_agent/) |
-| 改造方案 v2.0 | [`docs/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md`](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) |
+| 改造方案 v2.0 | [`docs/product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md`](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) |
 | curl 联调 | [`docs/task/metersphere_agent/curl-examples.md`](../../task/metersphere_agent/curl-examples.md) |
 | Cursor 接入 | [`docs/task/metersphere_agent/cursor-onboarding.md`](../../task/metersphere_agent/cursor-onboarding.md) |
 

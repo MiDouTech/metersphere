@@ -1,6 +1,5 @@
 package io.metersphere.agent.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -14,9 +13,6 @@ public class AgentCaseDTO {
     private String contentErrorTraceId;
     private java.util.Map<String, String> executionRef;
     private java.util.Map<String, Object> executionFacts;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    @Schema(description = "与本条计划用例版本匹配的最新已发布执行契约版本")
-    private Long structuredContractVersion;
     private String projectId;
     private String moduleId;
     private String versionId;

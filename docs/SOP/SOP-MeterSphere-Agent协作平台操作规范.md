@@ -365,7 +365,7 @@ UPDATE agent_token SET enable = 0 WHERE id = 'tok-001';
 
 | 文档 | 路径 |
 |------|------|
-| 改造方案 | `docs/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md` |
+| 改造方案 | `docs/product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md` |
 | 实施总览 | `docs/task/metersphere_agent/task000-实施总览与依赖关系.md` |
 | Cursor 工作流规则 | `.cursor/rules/metersphere-agent.mdc` |
 | Cursor 接入指南 | `metersphere-mcp/docs/cursor-onboarding.md` |

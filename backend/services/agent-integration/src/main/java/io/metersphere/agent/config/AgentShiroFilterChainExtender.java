@@ -28,6 +28,10 @@ public class AgentShiroFilterChainExtender implements ShiroFilterChainExtender {
     @Override
     public void extend(Map<String, Filter> filters, Map<String, String> chain) {
         filters.put("agentToken", agentTokenFilter);
+        for (String endpoint : java.util.List.of("business-assets", "shared-configurations", "external-executors")) {
+            chain.put("/" + endpoint + "/**", "agentToken, authc");
+            chain.put("/api/" + endpoint + "/**", "agentToken, authc");
+        }
         chain.put("/ai/execution/triggers/*/webhook", "anon");
         chain.put("/api/ai/execution/triggers/*/webhook", "anon");
         // Gateway aliases share the same credential boundary.

@@ -1,0 +1,66 @@
+--- reviewed/frontend/src/router/routes/modules/execution.ts
++++ committed/frontend/src/router/routes/modules/execution.ts
+@@ -23,7 +23,12 @@
+     roles: ['BUSINESS_ASSET:READ', 'AI_EXECUTION:READ', 'AI_CREDENTIAL:READ_METADATA', 'SYSTEM_QUALITY:READ'],
+   },
+   children: [
+-    { path: 'executors', name: 'ExternalExecutorMonitor', component: () => import('@/views/execution/external-executors.vue'), meta: { locale: '执行器监控与纠正', roles: ['BUSINESS_ASSET:READ'], isTopMenu: true } },
++    {
++      path: 'executors',
++      name: 'ExternalExecutorMonitor',
++      component: () => import('@/views/execution/external-executors.vue'),
++      meta: { locale: '执行器监控与纠正', roles: ['BUSINESS_ASSET:READ'], isTopMenu: true },
++    },
+     {
+       path: 'diagnostics/:section?',
+       name: 'ExecutionDiagnostics',
+--- reviewed/frontend/src/views/test-asset/business-assets.vue
++++ committed/frontend/src/views/test-asset/business-assets.vue
+@@ -512,18 +512,18 @@
+     margin-block: 1rem 0.25rem;
+   }
+   .editor-fields {
++    padding: 0;
+     border: 0;
+-    padding: 0;
+   }
+   form input,
+   form textarea,
+   form select {
++    padding: 0.5rem;
++    width: 100%;
+     max-width: 100%;
+-    width: 100%;
+-    padding: 0.5rem;
+     border: 1px solid var(--color-border-3);
++    color: var(--color-text-1);
+     background: var(--color-bg-2);
+-    color: var(--color-text-1);
+     font: inherit;
+   }
+   form button {
+--- reviewed/frontend/src/views/test-asset/shared-configuration.vue
++++ committed/frontend/src/views/test-asset/shared-configuration.vue
+@@ -300,11 +300,11 @@
+   form input,
+   form select,
+   form textarea {
++    padding: 0.5rem;
+     width: 100%;
+-    padding: 0.5rem;
+     border: 1px solid var(--color-border-3);
++    color: var(--color-text-1);
+     background: var(--color-bg-2);
+-    color: var(--color-text-1);
+     font: inherit;
+   }
+   form button {
+@@ -313,7 +313,7 @@
+     border: 1px solid var(--color-border-3);
+   }
+   .editor-fields {
++    padding: 0;
+     border: 0;
+-    padding: 0;
+   }
+ </style>

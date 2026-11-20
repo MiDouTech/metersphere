@@ -1,0 +1,23 @@
+{
+  "database": "msp_assets_test_eb2af5e3cc69",
+  "port": 13306,
+  "migrations": [
+    "V3.7.2_150__business_understanding_assets.sql",
+    "V3.7.2_151__external_executor_sessions.sql",
+    "V3.7.2_152__shared_configurations.sql",
+    "V3.7.2_153__retire_governed_execution.sql",
+    "V3.7.2_154__external_executor_evidence.sql",
+    "V3.7.2_155__business_asset_navigation.sql",
+    "V3.7.2_156__historical_evidence_retention.sql"
+  ],
+  "checks": {
+    "allHistoricalKnowledgeRetained": true,
+    "mappedKnowledgeVersionsPreserved": true,
+    "noGuessedProjectForUnboundKnowledge": true,
+    "legacyReaderRestrictionPreserved": true,
+    "permissionGrantsHaveUniqueIds": true,
+    "noActiveProtocolTables": true,
+    "newNavigationPresent": true,
+    "historicalPersonalAndTaskEvidenceRetained": true
+  }
+}

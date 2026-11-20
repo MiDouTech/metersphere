@@ -1,7 +1,6 @@
 import { RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
 
 import { useUserStore } from '@/store';
-import useAppStore from '@/store/modules/app';
 import useAIStore from '@/store/modules/setting/ai';
 import { hasAnyPermission, hasPageVisible, hasRouteVisible, topLevelMenuHasPermission } from '@/utils/permission';
 
@@ -20,9 +19,6 @@ export default function usePermission() {
      * @returns 是否
      */
     accessRouter(route: RouteLocationNormalized | RouteRecordRaw) {
-      if (route.meta?.contextScope === 'ORGANIZATION')
-        return !!useAppStore().currentOrgId && hasAnyPermission(route.meta.roles || [], ['ORGANIZATION', 'SYSTEM']);
-      if (route.name === 'testAsset' && useAppStore().currentOrgId) return true;
       if (route.meta?.requiresLlm && !useAIStore().llmUiEnabled) return false;
       if (route.name === 'ExecutionQuality') {
         // The parent aggregates its real child grants; legacy project menu grants

@@ -1,4 +1,23 @@
 [
+  {
+    "id": "BUSINESS_ASSET_MANAGEMENT",
+    "name": "业务资产与公共配置",
+    "type": "PROJECT",
+    "children": [
+      { "id": "TEST_ASSET_VERSION", "name": "资产版本治理", "permissions": [
+        { "id": "TEST_ASSET_VERSION:MANAGE", "name": "发布和停用资产版本" }
+      ] },
+      { "id": "BUSINESS_ASSET", "name": "业务资产", "permissions": [
+        { "id": "BUSINESS_ASSET:READ", "name": "读取业务理解与版本" },
+        { "id": "BUSINESS_ASSET:WRITE", "name": "维护业务理解与切换版本" }
+      ] },
+      { "id": "SHARED_CONFIGURATION", "name": "公共配置", "permissions": [
+        { "id": "SHARED_CONFIGURATION:READ", "name": "读取配置元数据与普通值" },
+        { "id": "SHARED_CONFIGURATION:WRITE", "name": "维护配置与下载原始配置文档" },
+        { "id": "SHARED_CONFIGURATION:RESOLVE", "name": "允许执行器按会话读取配置实际值" }
+      ] }
+    ]
+  },
 {
   "id": "AGENT_PROJECT_CONFIGURATION",
   "name": "permission.agent_project_configuration.name",

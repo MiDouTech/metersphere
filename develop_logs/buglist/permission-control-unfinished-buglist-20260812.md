@@ -1,6 +1,6 @@
 # 权限控制改造未完成项缺陷清单
 
-> 来源：`docs/prototype/permission-control-prototype.html`、`docs/summary/MeterSphere-permission-control-redesign-solution.md` 与当前实现对照  
+> 来源：`docs/prototype/permission-control-prototype.html`、`docs/product_md/history/summary/MeterSphere-permission-control-redesign-solution.md` 与当前实现对照  
 > 记录日期：2026-08-12  
 > 处理要求：以下缺陷修复前，不提交本文档。
 

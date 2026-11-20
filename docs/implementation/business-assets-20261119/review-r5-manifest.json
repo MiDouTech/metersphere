@@ -1,0 +1,987 @@
+{
+  "base": "6dfba584c6b23c588a552a78fb1749b192441bfc",
+  "productDocument": "docs/product_md/MSP-业务资产重建与受控执行清理-产品文档-v1.0-20261119.md",
+  "productVersion": "v1.0",
+  "productSha256": "a252a6aa700820ac07b8fdd092f52c1e1ebc938f9f1b3938c48def341c79fe9f",
+  "approvalSource": "2026-11-19 current conversation user approval",
+  "patchSha256": "054f06a6da791189f9a975108f4bb990ac749113017517497e19ee3494b495de",
+  "sourceManifestSha256": "397738c23fccd9603622c4dd2dcfb58e578dba75cc86dab732edd63ef9f16995",
+  "files": [
+    {
+      "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_150__business_understanding_assets.sql",
+      "status": "A",
+      "sha256": "8d773e20323388646949509c4c39350ac3fec22d282b8a380dbc82d5f475b774"
+    },
+    {
+      "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_151__external_executor_sessions.sql",
+      "status": "A",
+      "sha256": "a51baa23c720794f54faf5da28f2c4b0e5cce29d1870325fb63dd1fa31062c3e"
+    },
+    {
+      "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_152__shared_configurations.sql",
+      "status": "A",
+      "sha256": "193ca2995d15ad9f295021a87cd9591c35b80c0bb2fe0cf0682df0e07b315d93"
+    },
+    {
+      "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_153__retire_governed_execution.sql",
+      "status": "A",
+      "sha256": "95b858c08c0fde393b0102191e56c25b2859bc4933c84402f1ca8b219796bc7c"
+    },
+    {
+      "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_154__external_executor_evidence.sql",
+      "status": "A",
+      "sha256": "0ab509fec7c2735aba7b4a29087aad441e98760174e2bf24304f5482214087ee"
+    },
+    {
+      "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_155__business_asset_navigation.sql",
+      "status": "A",
+      "sha256": "3af654e0494e76a833d767e1fb9f075e40863422c692a1fccbdb33581face896"
+    },
+    {
+      "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_156__historical_evidence_retention.sql",
+      "status": "A",
+      "sha256": "e5d3b179f4e41e75d1b91630054351fed7999430be5fdd3b0c8e3e179b037fd6"
+    },
+    {
+      "path": "backend/framework/sdk/src/main/java/io/metersphere/sdk/constants/PermissionConstants.java",
+      "status": "M",
+      "sha256": "2ae349cdfb23516ae26ac77e9dce23beed550dc57c7ae8716278d87f87980883"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/config/AgentShiroFilterChainExtender.java",
+      "status": "M",
+      "sha256": "8413e807fa1fd1ebe8a0a634d35c38d5a0f5bd4b7d1a6a481ffcdb15b3c2caf2"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/constants/AgentTokenScope.java",
+      "status": "M",
+      "sha256": "86103e8a258d89bb306ade86194ce4b57d5553e76852ff90682c34789f0fbd67"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentExecutionExceptionHandler.java",
+      "status": "M",
+      "sha256": "5531ddce6bef94d4504b96357b5a4e4c4a4dac2daa32d18798afde822da06731"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentGovernedExecutionController.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentKnowledgeController.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentKnowledgeMigrationController.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentProtocolAdministrationController.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentProtocolAuthorizationController.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentProtocolImageController.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentSessionProtocolController.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentTestPlanController.java",
+      "status": "M",
+      "sha256": "a5cb524130cfa2184a317719522ff7df054e6acd7b7433b005cd858644fdfef5"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/BusinessAssetController.java",
+      "status": "A",
+      "sha256": "1f709b04980a1aa59a088980669df88d32e0ddfe87ccdd1a6303dba2a092c890"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/BusinessGovernanceExceptionHandler.java",
+      "status": "A",
+      "sha256": "e4f04c129abcf46828e239df072e249b47431d176446ec41c4d8e1fcddcb4b0f"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/ExternalExecutorController.java",
+      "status": "A",
+      "sha256": "9e59a59006b0478d76fb5a832bb2e32d342ef8d057e61e366dd10d3b1538fd56"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/SharedConfigurationController.java",
+      "status": "A",
+      "sha256": "722b571719be7b12268a116ccb194c6998349dc13f4f9fd0ae6f19879a134226"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/TestAssetController.java",
+      "status": "M",
+      "sha256": "892800154c44c229e7699499b2babc397f7777f00af54c992df0398f2900c1e0"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/AgentCaseDTO.java",
+      "status": "M",
+      "sha256": "df5ddc9e751bef014f6bbbc9b8eb301f43375e388a10ad9509d7a157a38ea132"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/AgentExecutionPreflightRequest.java",
+      "status": "M",
+      "sha256": "dc2f17bdbcb5409d447a1780e8ccee5db252b30c1d1a46d583eda6772302d7f8"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/AgentExecutionStepSubmitRequest.java",
+      "status": "M",
+      "sha256": "9f4b384c1c964dc409b4cfc2804e3f1ad89bc4c144c896d283ed51e4cb97101d"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/AgentExecutionTaskDTO.java",
+      "status": "M",
+      "sha256": "36d8b8fd2e51e9e64f5c3ccc7b1a01b1f8d89419a0e439b07bd0387cfb563dd0"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/AgentExecutionTaskSearchRequest.java",
+      "status": "M",
+      "sha256": "4fc802809fe0ca2535fafb9a0cd645e4db064ffc192a98182de9af836c4ea413"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/AgentRunnerLeaseCompleteRequest.java",
+      "status": "M",
+      "sha256": "9a28ff0743d7baadba0e715e787c4d113b242e140649ef939458d52425bc0176"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/BusinessAssetSubmission.java",
+      "status": "A",
+      "sha256": "e1b94fdf6a448623ad39a56c0a1a7d3c96f55b4b2eb332f5a88d93b6c1e6aec0"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/SharedConfigurationSave.java",
+      "status": "A",
+      "sha256": "8cd2827f410ad5eb1fb914e1d1f3cf6ad17c2914eeb0468503f7f28aacea4409"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/TestAssetCaseDocumentReferenceRequest.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/TestAssetDocumentRevisionRequest.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/AgentExecutionMapper.java",
+      "status": "M",
+      "sha256": "7ff979ba90b7bc73d7a02a47367c69feb8c5670177b7e2fdf42c29d081b4a469"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/AgentExecutionMapper.xml",
+      "status": "M",
+      "sha256": "f6ba625593ee7bc60a0de1ca3ca64fad47d4d880a8e61b45a3e1250e23a3078e"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/TestAssetMapper.java",
+      "status": "M",
+      "sha256": "af3e7a3b76d1f267e8fa4ac3b8e06e8a440538d3dc00e7ee1264acaebf3b50c5"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/TestAssetMapper.xml",
+      "status": "M",
+      "sha256": "d28263eedb1589779d35ed9ef55df68bd08cf4f79342516c59e3e00f42066302"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/security/AgentFactCipher.java",
+      "status": "M",
+      "sha256": "274a526814c94e0d0d40e8e73dff1d1387d39d7ae74e407e9c8802fa3b61c35c"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/security/AgentProtocolTraceFilter.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/security/AgentSafeDiagnostics.java",
+      "status": "A",
+      "sha256": "72b7b9483207100c5d04fffcff918f29cc101083b6db3e962a72d5dc89ab99e0"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/security/AgentTokenScopeParser.java",
+      "status": "M",
+      "sha256": "8d1b2070a7d861f27d14b1a4e3aaccd62368e3c9537a11043910dba5ea928671"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/security/BusinessAssetSafety.java",
+      "status": "A",
+      "sha256": "2b15ac323965f8e758224aa3a3acdadb13a74a3984936051cc5cb126dee8c497"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/security/SharedConfigurationCipher.java",
+      "status": "A",
+      "sha256": "dd3271686424891116fddca31f31314c3cd1aa2dfd9b17094900c0a345a4140c"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentDirectExecutionService.java",
+      "status": "M",
+      "sha256": "74580e68bba42034de1d72512647ee239d2c4f5b136844a59ced5ed6522836ad"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentExecutionArchiveService.java",
+      "status": "M",
+      "sha256": "f2d5464773584b6f833bc59cea2647f15864cd2e501140bd4921bcd6ff791c50"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentExecutionArtifactService.java",
+      "status": "M",
+      "sha256": "f7b3a69f2a1facd80508e852ea36791cb640c6228607d189f7074288a92449c1"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentExecutionCaseWritebackService.java",
+      "status": "M",
+      "sha256": "229cddc6a67f33ac7ca14ef9bfda090bcc99a9dcbad2953ef9a29949d67cf342"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentExecutionFinalizationService.java",
+      "status": "M",
+      "sha256": "22159225449c14ab695bd80affcdd93fd6ffb4ae87b9268aced17e003cb6c6de"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentExecutionPreflightService.java",
+      "status": "M",
+      "sha256": "2b2897dfb1b7b37cc77e0215af98ea2460bc41572cabaa76ed2eee47a2ad68ff"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentExecutionService.java",
+      "status": "M",
+      "sha256": "190bd18b2632a542232e6afc41645e7c65eaae680b6bc5497eab9cedf45b0995"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentExecutionStepResultService.java",
+      "status": "M",
+      "sha256": "04c1c5e866e8fa139c0ffb9f1657ee630ee0d0ed1f1b9aebed6c8939dd6c6aba"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentGovernedExecutionService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentKnowledgeArchiveCandidateService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentKnowledgeMigrationService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentKnowledgeService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentMcpBundleService.java",
+      "status": "M",
+      "sha256": "8d4fa9a7d898b3b0d793f1bcf6e30167ca77bdbd9dba3048d59c332f7f1eb2fa"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentMcpStreamableService.java",
+      "status": "M",
+      "sha256": "ee89096f469377d5388ba4decf1261013ae9ffbbf588733f6059be665b989f41"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentPlanExecutionDecisions.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolAccess.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolAdministrationService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolArtifactMaterializer.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolClock.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolData.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolDiagnostics.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolEvidenceService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolImageService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolKnowledgeSafety.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolPolicyService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolPublicationService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolResultService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolStore.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolTaskLifecycleService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolToolService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentProtocolTypes.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentSafeErrorMapper.java",
+      "status": "M",
+      "sha256": "4e1b0a99ac68d8490b7816893e70e7993b69eedfc80fed1cf36ab2059bf15f2b"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentSessionProtocolConfiguration.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentSessionProtocolService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentStructuredContractService.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentTaskClaimService.java",
+      "status": "M",
+      "sha256": "5778459bf26ec4a710bb8aafc28b987d00f716dcbe57022b96f8a478c6e3de04"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentTaskExecutionApplicationService.java",
+      "status": "M",
+      "sha256": "ec2e85a8bc85c1e9317223bb22c928b8ca1ee41035398804d2b25e2a7cf6772c"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentTestPlanQueryService.java",
+      "status": "M",
+      "sha256": "ab5045f9f7a779cefc5cb92cc482661a1d3585759f6af055f97295fec7242484"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/BusinessAssetRows.java",
+      "status": "A",
+      "sha256": "bb8d88b9504829b090542c270b018e5ee07a913c7f45b335bcb123b0f92875e9"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/BusinessAssetService.java",
+      "status": "A",
+      "sha256": "e59ece7b4af15a118adde6adea72284256c3f8855bd74ee853f331baf68e6b01"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/BusinessGovernanceException.java",
+      "status": "A",
+      "sha256": "c7acdf7a645cfb9391c9f4bf78e291cf95b6f664eca46d6baa225a8fc5dd7413"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/ExternalExecutorService.java",
+      "status": "A",
+      "sha256": "3a6b15525230f3438fa3ecada6089c633593bc784c5b07780b3349a20e7c6be0"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/SharedConfigurationService.java",
+      "status": "A",
+      "sha256": "b5bd5cb767089ec7f8ca87c3985e75725822a43660ca2060350fee8b71b1017b"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetCatalogService.java",
+      "status": "M",
+      "sha256": "e28a9a1229694e04b8261870ab535748bfba257357a9998c4e4a0a72420797fb"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetPublicationListener.java",
+      "status": "M",
+      "sha256": "fc0213dc621d17430cb6fdf175cee06b7a071c511f37d03941283c330fe8c224"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/AgentMcpToolContributor.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/AgentMcpToolRegistry.java",
+      "status": "M",
+      "sha256": "8c9323120cfa2bb3125bf1dbd6cb5bc24b7a6c6fc7559fcb2e5d1eb8ced27a4f"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/BuiltinAgentMcpToolConfig.java",
+      "status": "M",
+      "sha256": "5d9e3928cd4c9aa839e7962f828824af5e769a2bd4ee1ba7558dd34f24834f78"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/functional/AgentGovernedExecutionTools.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/functional/AgentSessionProtocolTools.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/resources/permission.json",
+      "status": "M",
+      "sha256": "77e00b74c859315117f8e2e3a4f74cf3d0e99f7f3c71d3649c7d6908052d5d3a"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/controller/AgentExecutionExceptionHandlerTests.java",
+      "status": "M",
+      "sha256": "335904c0e91b7bc40497770a4969912f1602a4b79b22a0ff94347b1e16e86861"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/controller/BusinessGovernanceExceptionHandlerTests.java",
+      "status": "A",
+      "sha256": "a2f5495f505054fb054b7e69b31ebf75a9c543b89f0f82b08bb916625b254b87"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/controller/TestAssetControllerPermissionTests.java",
+      "status": "M",
+      "sha256": "148a2c62d361e405d367b255d18d01cb773af5f45aae9626289fb902b874b974"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentDirectExecutionMySqlTests.java",
+      "status": "M",
+      "sha256": "f4df52989ee0d81df048f277e85a8f75b8cb4f3322fcf2f3703b7dbd4bd99818"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentExecutionPreflightServiceTests.java",
+      "status": "M",
+      "sha256": "8c56608db1f38a26149c0179fd630d459121556df81efc636c0e521de17d968c"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentExecutionServiceTests.java",
+      "status": "M",
+      "sha256": "3588f9059169760988e9ccbdc83b1e8584dd9d46c3529bc946e3035de5efd7d1"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentGovernedExecutionMySqlStateTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentGovernedExecutionStateTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentGovernedMcpProtocolTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentGovernedTaskPublicationMySqlTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentHistoricalCompatibilityTests.java",
+      "status": "A",
+      "sha256": "31a096cc3656a5ec6c7d06e6a21ac7dd15a22b97ce96ed26b93a6dc2d44eb0fe"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentKnowledgeGovernanceTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentKnowledgeSafetyMySqlRaceTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentMcpBundleServiceTests.java",
+      "status": "M",
+      "sha256": "eba9dd01db3a05e8954d81a75234e2cde840794784397172afe0b57976e1725b"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentMcpWriteRoutingTests.java",
+      "status": "M",
+      "sha256": "415463fd32db9376d1460e9d1b832f48f6bab010261fe2c037deb618a47f0c06"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentPlanExecutionDecisionsTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentProtocolMySqlTransactionTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentProtocolTransactionTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentQualityFinalizationMySqlTests.java",
+      "status": "M",
+      "sha256": "e23063bb0f1c35be7356cdd73b8ef39c641f5fea1cd4984d1743fbdba98cd21c"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentReviewMySqlRegressionTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentReviewRegressionTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentSessionProtocolTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentStepResultFactsTests.java",
+      "status": "M",
+      "sha256": "81b83c80dacbc3b6cdfb8ec6c5e70851cb28e6c6a3efdc9b6c9fc39978c789f4"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentStructuredProtocolTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentSyncIntentTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentTaskClaimServiceTests.java",
+      "status": "M",
+      "sha256": "77314f76a2dc771877ecc58d1d4ea5e8a472466aeb8a4411ddadceac9d18df88"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/AgentTestPlanContractLookupTests.java",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/BusinessAssetMcpTests.java",
+      "status": "A",
+      "sha256": "d3d13188041e32148a05967ad83b4404b7d009573b8bbb7c7fc6b24a25b77f9c"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/BusinessAssetServiceTests.java",
+      "status": "A",
+      "sha256": "df8dc96959f89ef4154dee20ea3c6b4b8385dc8b28a077cd22dc97756b949855"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/BusinessAssetTransactionProxy.java",
+      "status": "A",
+      "sha256": "8c9bfcf62cd1836ed97511ddb579ed2ae3e16ac8e8d5e9d971828ff75c136690"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/ExternalExecutorServiceTests.java",
+      "status": "A",
+      "sha256": "fc9b40d3ec012fc6440643d2f218201d8f9396a48118124e00a7220ba9120dd4"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationServiceTests.java",
+      "status": "A",
+      "sha256": "86188efbee14cf6c264475e5fb1b73895b2fc82e67344b4a867388b0d9e4eb70"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/TestAssetCatalogServiceTests.java",
+      "status": "M",
+      "sha256": "9d2ecb414f33231ccf5413e5add1ddbe61f32160e934e8a294ebd65dbfbd2bf2"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/TestAssetPublicationListenerTests.java",
+      "status": "M",
+      "sha256": "a6e85f59cd0752a76b0cec7a4638aa57140b940114fc8a1e8fec48b8dd789b57"
+    },
+    {
+      "path": "frontend/scripts/test-business-assets.mjs",
+      "status": "A",
+      "sha256": "56fbe2d526a73c37718f8cc967ed7f93cbce5c37de3b0d9be8d1efa7c32afe55"
+    },
+    {
+      "path": "frontend/scripts/test-execution-navigation.mjs",
+      "status": "M",
+      "sha256": "19f9fb8b7d59343a617fc59fcf959319aa3c5bf6e03ab5dc3e00fc2167cbe55d"
+    },
+    {
+      "path": "frontend/scripts/test-governed-execution.mjs",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/api/modules/ai-execution.ts",
+      "status": "M",
+      "sha256": "bb3c05bc8f45b5f21111bda61513eae09b34802f9722fc009d78ee4c20fd7ce0"
+    },
+    {
+      "path": "frontend/src/api/modules/business-assets.ts",
+      "status": "A",
+      "sha256": "905831d643a47245a217ed8fd2a371ba58ebd806c7dcb16df17d00cdd1d41245"
+    },
+    {
+      "path": "frontend/src/api/modules/governed-execution.ts",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/config/pathMap.ts",
+      "status": "M",
+      "sha256": "92555c8ac55aeee879910da2c04a73465821bc913044334a5a89f421970a4bba"
+    },
+    {
+      "path": "frontend/src/enums/routeEnum.ts",
+      "status": "M",
+      "sha256": "243c0916b2f0ebb3e69b685ed90104f216040e8d116b30dd32d892eecc38cf03"
+    },
+    {
+      "path": "frontend/src/hooks/usePathMap.ts",
+      "status": "M",
+      "sha256": "e3b4effee91e928cd144c9d2c91901bca6bfd1e33abe282ac274a7c145a8f6f9"
+    },
+    {
+      "path": "frontend/src/hooks/usePermission.ts",
+      "status": "M",
+      "sha256": "c14a1e6c4468e27b713e18e8e0b78778301b2368328adc1dfdc4ff8a83ba794f"
+    },
+    {
+      "path": "frontend/src/locale/en-US/index.ts",
+      "status": "M",
+      "sha256": "08865db70a7edbca03c21281a411815badcc6ee3ebece6caaea78b2f56f672f1"
+    },
+    {
+      "path": "frontend/src/locale/zh-CN/index.ts",
+      "status": "M",
+      "sha256": "f5dc126024daa0765fd2ec187ed70aa721b7417944f4ac8fbe72eb34ef20bd66"
+    },
+    {
+      "path": "frontend/src/router/guard/index.ts",
+      "status": "M",
+      "sha256": "3d835f75bf101a263bdabba003b86b7e5d0889414d9aae94fb1998cf6e42051b"
+    },
+    {
+      "path": "frontend/src/router/routes/modules/execution.ts",
+      "status": "M",
+      "sha256": "7c6522e64ae0d389fbcb8d701b376eeca72205a37ae7daa94d2b7b734a45c9e8"
+    },
+    {
+      "path": "frontend/src/router/routes/modules/testAsset.ts",
+      "status": "M",
+      "sha256": "2c6e57ed7620d769563a927a96a25a75257f36cbe99a5ea7cfebf87119616179"
+    },
+    {
+      "path": "frontend/src/router/routes/types.ts",
+      "status": "M",
+      "sha256": "16de4a4d5d7ce8c9bbbaeaf8fd40af8beb6c03ed27362f9d13e7e00c99e5d9f4"
+    },
+    {
+      "path": "frontend/src/store/modules/app/index.ts",
+      "status": "M",
+      "sha256": "bfbe553357e9234b464c72c40cf5cb1e3aa276cd8f5c548585342daa47aed431"
+    },
+    {
+      "path": "frontend/src/store/modules/user/index.ts",
+      "status": "M",
+      "sha256": "2615eae2a2dee3834592661ef331c6ebb6c00a33d6745967370a294cbeb32137"
+    },
+    {
+      "path": "frontend/src/utils/businessAssetError.ts",
+      "status": "A",
+      "sha256": "118771e5c5653fc9447382dbafc4a50a64a3276b886a6ee1c36943f5cc20b023"
+    },
+    {
+      "path": "frontend/src/utils/businessAssetTree.ts",
+      "status": "A",
+      "sha256": "c3116aa583ff8d74290e028a771787dbeaf8007ad05c7024d3672d30cba2f18f"
+    },
+    {
+      "path": "frontend/src/utils/protocol-memory.ts",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/utils/protocol-text.ts",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/bug-management/automationExecution/index.vue",
+      "status": "M",
+      "sha256": "608f27b800208661ba766584a83a89a5f51836d43d0fa0dd7a997fe0c840bd73"
+    },
+    {
+      "path": "frontend/src/views/case-management/caseManagementFeature/components/caseDetail.vue",
+      "status": "M",
+      "sha256": "88b99f6c78f7421e3751ee9ad2105d34b8fdc940aad8002b845a3eee5c30b91d"
+    },
+    {
+      "path": "frontend/src/views/case-management/caseManagementFeature/components/caseDetailDrawer.vue",
+      "status": "M",
+      "sha256": "d4ffbb02e9bdd6020414ba2a4015bd8b0a6649cba04fe34bc49ffc79c5b0fb0b"
+    },
+    {
+      "path": "frontend/src/views/case-management/caseManagementFeature/components/caseDocumentReferenceDialog.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/execution/components/GovernedWorkForm.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/execution/components/KnowledgeSubstitutionForm.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/execution/components/ProtocolValueFields.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/execution/components/StructuredContractEditor.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/execution/external-executors.vue",
+      "status": "A",
+      "sha256": "087273c24ef016e5ba183bf2b7cb4fe1f586453b06f0aacaf585312257da1f66"
+    },
+    {
+      "path": "frontend/src/views/execution/governed-session.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/execution/protocol-administration.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/setting/system/agentIntegration/index.vue",
+      "status": "M",
+      "sha256": "9552c64ca432a9e36c24ded090cbd7aef1744065beda95e5c0cec155fcbe70c4"
+    },
+    {
+      "path": "frontend/src/views/test-asset/business-assets.vue",
+      "status": "A",
+      "sha256": "63a956cc2f68b1a60a71e3ef797f17af81f2b3a9f1cfa328e6c13b4e2f798bb2"
+    },
+    {
+      "path": "frontend/src/views/test-asset/catalog.vue",
+      "status": "M",
+      "sha256": "5b878a42b62aa363aec7d63a9567b2be38be84ea717b5037e33fa039ec781899"
+    },
+    {
+      "path": "frontend/src/views/test-asset/components/BusinessVersions.vue",
+      "status": "A",
+      "sha256": "79c50d9ea6d633c7e7fa4e47ed5613fdfa3c0b41d3adf40d12bc556a17c84715"
+    },
+    {
+      "path": "frontend/src/views/test-asset/components/SharedConfigurationVersions.vue",
+      "status": "A",
+      "sha256": "2a715fe2d309996e6e3bc83aa7c80becb5e80647c5ecc8f5c4f0a9786f4df721"
+    },
+    {
+      "path": "frontend/src/views/test-asset/components/TestAssetPage.vue",
+      "status": "M",
+      "sha256": "71f997416dfc239fd652b8255b1a1d84b725b641fac8f9f1b5de91b9835cb232"
+    },
+    {
+      "path": "frontend/src/views/test-asset/components/TestAssetTabs.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/test-asset/documents.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/test-asset/knowledge/ContentReader.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/test-asset/knowledge/index.vue",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "frontend/src/views/test-asset/relations.vue",
+      "status": "M",
+      "sha256": "b7d87b920c051b2d50969a18903363eeebeb4983d040319b9a852745730e6939"
+    },
+    {
+      "path": "frontend/src/views/test-asset/shared-configuration.vue",
+      "status": "A",
+      "sha256": "8d65e3e185a46d70442b4aa112162a3a84bfc29b1510cd088d3565b934f61618"
+    },
+    {
+      "path": "frontend/src/views/test-asset/versions.vue",
+      "status": "M",
+      "sha256": "31c6d36d1cc18aa20f06b1201fea41c066841e48539f100e3388f21847881d10"
+    },
+    {
+      "path": "frontend/src/views/test-plan/testPlan/detail/index.vue",
+      "status": "M",
+      "sha256": "c417d653bc9bf6e56c868ecb56888d9f0f8946a18e7167fef8b93302dc4449c1"
+    },
+    {
+      "path": "metersphere-mcp/README.md",
+      "status": "M",
+      "sha256": "4d6276d42811f8aa9a87dbef0e812ebf2665f94ed53fd3fa88a48465932d095d"
+    },
+    {
+      "path": "metersphere-mcp/package-lock.json",
+      "status": "M",
+      "sha256": "e5740bc7cb0e64539064b87664caf37c9d4dc050614770f90d691b795f543f0f"
+    },
+    {
+      "path": "metersphere-mcp/package.json",
+      "status": "M",
+      "sha256": "5491e8cb1eba9780ca2428cd70ea3649ddde1d83a7474367236a1483ebd29692"
+    },
+    {
+      "path": "metersphere-mcp/src/client.ts",
+      "status": "M",
+      "sha256": "4698254451940f32c329f0213ee18e1f0633f066c356e92c75bf78325885a87e"
+    },
+    {
+      "path": "metersphere-mcp/src/index.ts",
+      "status": "M",
+      "sha256": "0134c2523e40557fed3d619e99dad6c8d90167e4ff4df2b4bf83c9934b674697"
+    },
+    {
+      "path": "metersphere-mcp/src/tools/businessAssets.ts",
+      "status": "A",
+      "sha256": "51df21d758ef6d77c2895010ea6478fc112561821c3dfc1170d69e1027fae4d7"
+    },
+    {
+      "path": "metersphere-mcp/src/tools/executionBatchNext.ts",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "metersphere-mcp/src/tools/executionDecide.ts",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "metersphere-mcp/src/tools/governedExecution.ts",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "metersphere-mcp/src/tools/maintenance.ts",
+      "status": "M",
+      "sha256": "049f312eda9fc8e1b7f8b0bb07ee741a2ce01183b7eacce6c83ccfbe7dd477bd"
+    },
+    {
+      "path": "metersphere-mcp/src/tools/managedExecution.ts",
+      "status": "M",
+      "sha256": "dadab8b8ec9e9ac43c40dd0281c2e7b3ffa13d43676fa191b0aebdca51229a7f"
+    },
+    {
+      "path": "metersphere-mcp/src/tools/testPlanExecution.ts",
+      "status": "M",
+      "sha256": "cee8e62ea223ab6ff7e4c8eedf7b8087221c9912aa01ae5cc5ce35a8a62c13d5"
+    },
+    {
+      "path": "metersphere-mcp/test/businessAssets.test.mjs",
+      "status": "A",
+      "sha256": "e021ab504cf12f885e5313671b73665baaabda3bf46e0d46e12a5a1554d66fe4"
+    },
+    {
+      "path": "metersphere-mcp/test/executionBatchNext.test.mjs",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "metersphere-mcp/test/executionDecide.test.mjs",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "metersphere-mcp/test/governedExecution.test.mjs",
+      "status": "D",
+      "sha256": null
+    },
+    {
+      "path": "metersphere-mcp/test/maintenance.test.mjs",
+      "status": "M",
+      "sha256": "e5fd6392ce76c6cc2823d3acf49511e73ecf0dab54dd5bd36d90088a81d24fe7"
+    },
+    {
+      "path": "metersphere-mcp/test/stdioContract.test.mjs",
+      "status": "M",
+      "sha256": "c29d54c7d8af68deb96859ae0fd096d63442517123fb1a387650511a675fc5e4"
+    },
+    {
+      "path": "scripts/verify-business-asset-migrations.py",
+      "status": "A",
+      "sha256": "055e07243fc9a051f7bb648929798777c8e4263d2ffa7e63ee6053909e439188"
+    }
+  ],
+  "commit": "6eb020315b6750b9add9012cfe77f153ee5a5df4"
+}

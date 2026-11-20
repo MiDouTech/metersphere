@@ -38,7 +38,6 @@ import io.metersphere.agent.service.AgentBugWriteService;
 import io.metersphere.agent.service.AgentCaseReviewWriteService;
 import io.metersphere.agent.service.AgentCaseWriteService;
 import io.metersphere.agent.service.AgentExecutionService;
-import io.metersphere.agent.service.AgentPlanExecutionDecisions;
 import io.metersphere.agent.service.AgentExecutionPreflightService;
 import io.metersphere.agent.service.TestAssetCatalogService;
 import io.metersphere.agent.service.AgentEnvironmentProfileService;
@@ -74,6 +73,7 @@ import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Collection;
 import java.util.function.Function;
 import io.metersphere.system.utils.Pager;
@@ -369,24 +369,11 @@ public class BuiltinAgentMcpToolConfig {
                         "testPlanId", stringSchema(),
                         "current", Map.of("type", "integer", "minimum", 1),
                         "pageSize", Map.of("type", "integer", "minimum", 1, "maximum", 100),
-                        "includeSteps", Map.of("type", "boolean"),
-                        "includeContractVersion", Map.of("type", "boolean")
+                        "includeSteps", Map.of("type", "boolean")
                 ), List.of("projectId", "testPlanId")),
                 args -> service.cases(requiredString(args, "projectId"), requiredString(args, "testPlanId"),
                         optionalInt(args, "current", 1), optionalInt(args, "pageSize", 50),
-                        optionalBool(args, "includeSteps", true), optionalBool(args, "includeContractVersion", false)));
-    }
-
-    @Bean
-    public AgentMcpToolHandler testPlanExecutionContractTool(AgentTestPlanQueryService service) {
-        return tool("metersphere.test_plan.execution_contract",
-                "Read a published execution contract for a specific plan case relation and contract version.",
-                AgentTokenScope.FUNCTIONAL_READ, true,
-                objectSchema(Map.of("projectId", stringSchema(), "testPlanId", stringSchema(),
-                        "testPlanCaseId", stringSchema(), "contractVersion", Map.of("type", "integer", "minimum", 1)),
-                        List.of("projectId", "testPlanId", "testPlanCaseId", "contractVersion")),
-                args -> service.readExecutionContract(requiredString(args, "projectId"), requiredString(args, "testPlanId"),
-                        requiredString(args, "testPlanCaseId"), optionalLong(args, "contractVersion")));
+                        optionalBool(args, "includeSteps", true)));
     }
 
     @Bean
@@ -402,8 +389,8 @@ public class BuiltinAgentMcpToolConfig {
     public AgentMcpToolHandler executionPreflightTool(AgentExecutionPreflightService service) {
         return tool("metersphere.execution.preflight", "Validate and freeze scope, environment, credential and policy before creating a PERSONAL_MCP execution.",
                 AgentTokenScope.TASK_CLAIM, false,
-                objectSchema(Map.of("projectId", stringSchema(), "caseIds", Map.of("type","array","maxItems",200,"items",stringSchema()),
-                        "testPlanId", stringSchema(), "handoffEventId", stringSchema(), "environmentProfileId", stringSchema(), "credentialReferenceId", stringSchema(),
+                objectSchema(Map.of("projectId", stringSchema(), "caseIds", Map.of("type","array","maxItems",100,"items",stringSchema()),
+                        "testPlanId", stringSchema(), "environmentProfileId", stringSchema(), "credentialReferenceId", stringSchema(),
                         "runnerType", stringSchema(), "requiredCapabilities", Map.of("type","array","maxItems",32,"items",stringSchema()),
                         "requestId", stringSchema()), List.of("projectId","environmentProfileId","runnerType","requestId")),
                 args -> {AgentExecutionPreflightRequest request=convert(args,AgentExecutionPreflightRequest.class);request.setTaskOrigin(AgentTaskOrigin.PERSONAL_MCP);return service.preflight(request);});
@@ -483,81 +470,6 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     @Bean
-    public AgentMcpToolHandler planExecutionDecideTool(AgentPlanExecutionDecisions decisions) {
-        var shape = planExecutionShape(false);
-        var observation = new LinkedHashMap<String, Object>();
-        observation.put("kind", Map.of("type", "string", "enum", List.of("READY", "RESUMING", "STEP_VERIFIED",
-                "STEP_FAILED", "DATA_MISSING", "WRITE_UNKNOWN", "WRITE_NOT_APPLIED")));
-        for (String key : List.of("evidenceRef", "requestId", "dataKey", "businessKey", "queryEvidenceRef"))
-            observation.put(key, stringSchema());
-        for (String key : List.of("searchExhausted", "preparationAttempted", "conditionChanged"))
-            observation.put(key, Map.of("type", "boolean"));
-        observation.put("attempt", Map.of("type", "integer", "minimum", 1));
-        observation.put("recovery", objectSchema(Map.of("leaseId", stringSchema(), "leaseToken", stringSchema(),
-                        "waitingExecutionId", stringSchema(), "waitingRequestId", stringSchema(), "proof", stringSchema()),
-                List.of("leaseId", "leaseToken", "waitingExecutionId", "waitingRequestId", "proof")));
-        shape.put("observation", objectSchema(observation, List.of("kind")));
-        return tool("metersphere.execution.step.decide",
-                "Decide the next browser action from the task's frozen JSON and observed facts.",
-                AgentTokenScope.TASK_READ, false,
-                objectSchema(shape, List.of("taskId", "executionId", "testPlanCaseId", "observation")),
-                decisions::decide);
-    }
-
-    @Bean
-    public AgentMcpToolHandler planExecutionSubmitTool(AgentPlanExecutionDecisions decisions) {
-        var shape = planExecutionShape(true);
-        shape.put("status", Map.of("type", "string", "enum", List.of("SUCCESS", "FAILED")));
-        shape.put("assertionResult", stringSchema());
-        shape.put("evidenceRef", stringSchema());
-        shape.put("usedKnowledgeRefs", Map.of("type", "array", "maxItems", 32, "items", stringSchema()));
-        return tool("metersphere.execution.step.submit_and_advance",
-                "Persist observed assertion facts and a committed evidence ID, then return the next step or case outcome.",
-                AgentTokenScope.TASK_RESULT_WRITE, false, objectSchema(shape, List.of("taskId", "executionId",
-                        "testPlanCaseId", "stepId", "leaseId", "leaseToken", "requestId", "assertionResult", "evidenceRef")),
-                decisions::submit);
-    }
-
-    @Bean
-    public AgentMcpToolHandler planExecutionDeferTool(AgentPlanExecutionDecisions decisions) {
-        var shape = planExecutionShape(true);
-        shape.put("reason", Map.of("type", "string", "enum", List.of("WAITING_HUMAN", "WAITING_DATA",
-                "WAITING_EVIDENCE", "WAITING_WRITE_RECONCILIATION")));
-        shape.put("observedReason", stringSchema());
-        shape.put("evidenceRef", stringSchema());
-        shape.put("businessKey", stringSchema());
-        return tool("metersphere.execution.step.defer", "Save a single waiting step and continue the rest of the batch.",
-                AgentTokenScope.TASK_RESULT_WRITE, false, objectSchema(shape, List.of("taskId", "executionId",
-                        "testPlanCaseId", "stepId", "leaseId", "leaseToken", "requestId", "reason", "observedReason")),
-                decisions::defer);
-    }
-
-    @Bean
-    public AgentMcpToolHandler planExecutionBatchNextTool(AgentPlanExecutionDecisions decisions) {
-        return tool("metersphere.execution.batch.next", "Find the next unfinished case or report why cases are waiting.",
-                AgentTokenScope.TASK_READ, true, objectSchema(Map.of("taskId", stringSchema(), "executionId", stringSchema()),
-                        List.of("taskId", "executionId")),
-                args -> decisions.next(requiredString(args, "taskId"), requiredString(args, "executionId")));
-    }
-
-    @Bean
-    public AgentMcpToolHandler planExecutionBatchFinishTool(AgentPlanExecutionDecisions decisions) {
-        return tool("metersphere.execution.batch.finish", "Recheck the plan batch and request MSP finalization.",
-                AgentTokenScope.TASK_RESULT_WRITE, false, objectSchema(Map.of("taskId", stringSchema(),
-                        "executionId", stringSchema(), "leaseId", stringSchema(), "leaseToken", stringSchema()),
-                        List.of("taskId", "executionId", "leaseId", "leaseToken")), decisions::finish);
-    }
-
-    private static Map<String, Object> planExecutionShape(boolean write) {
-        var properties = new LinkedHashMap<String, Object>();
-        for (String key : List.of("taskId", "executionId", "testPlanCaseId", "stepId")) properties.put(key, stringSchema());
-        if (write) {
-            for (String key : List.of("leaseId", "leaseToken", "requestId")) properties.put(key, stringSchema());
-        }
-        return properties;
-    }
-
-    @Bean
     public AgentMcpToolHandler executionStepResultReadTool(AgentTaskExecutionApplicationService service){
         return tool("metersphere.execution.step.result.get","Read a persisted step result by requestId after a lost response or expired lease. Requires authorized access to the personal task; never replays a mutation.",
                 AgentTokenScope.TASK_READ,true,objectSchema(Map.of("taskId",stringSchema(),"executionId",stringSchema(),"stepId",stringSchema(),"requestId",stringSchema()),List.of("taskId","executionId","stepId","requestId")),
@@ -570,22 +482,6 @@ public class BuiltinAgentMcpToolConfig {
                 AgentTokenScope.TASK_RESULT_WRITE, false,
                 dtoSchema(AgentExecutionStepSubmitRequest.class),
                 args -> service.submitStepResult(convert(args, AgentExecutionStepSubmitRequest.class)));
-    }
-
-    @Bean
-    public AgentMcpToolHandler executionWriteRetryClaimTool(AgentTaskExecutionApplicationService service) {
-        var fields = List.of("taskId", "executionId", "leaseId", "leaseToken", "testPlanCaseId", "stepId",
-                "waitingExecutionId", "waitingRequestId", "businessKeyHash", "proof");
-        return tool("metersphere.execution.step.write_retry.claim",
-                "Consume a short-lived signed terminal no-effect receipt once for the current frozen step.",
-                AgentTokenScope.TASK_RESULT_WRITE, false,
-                objectSchema(fields.stream().collect(java.util.stream.Collectors.toMap(
-                        java.util.function.Function.identity(), field -> stringSchema())), fields),
-                args -> service.claimWriteRetry(requiredString(args, "taskId"), requiredString(args, "executionId"),
-                        requiredString(args, "leaseId"), requiredString(args, "leaseToken"),
-                        requiredString(args, "testPlanCaseId"), requiredString(args, "stepId"),
-                        requiredString(args, "waitingExecutionId"), requiredString(args, "waitingRequestId"),
-                        requiredString(args, "businessKeyHash"), requiredString(args, "proof")));
     }
 
     @Bean
@@ -673,39 +569,11 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     @Bean
-    public AgentMcpToolHandler executionDataPreparationTool(AgentTaskClaimService tasks, AgentTestPlanQueryService plans) {
-        return tool("metersphere.execution.data_preparation.get",
-                "Read the authorized, frozen preparation method declared for a task's data key.",
-                AgentTokenScope.FUNCTIONAL_READ, true,
-                objectSchema(Map.of("taskId", stringSchema(), "testPlanCaseId", stringSchema(), "dataKey", stringSchema()),
-                        List.of("taskId", "testPlanCaseId", "dataKey")),
-                args -> plans.readDataPreparationMethod(tasks.getPersonalTask(requiredString(args, "taskId")),
-                        requiredString(args, "testPlanCaseId"), requiredString(args, "dataKey")));
-    }
-
-    @Bean
-    public AgentMcpToolHandler frozenExecutionContractTool(AgentTaskClaimService tasks, AgentTestPlanQueryService plans) {
-        return tool("metersphere.execution.contract.get", "Read the structured contract pinned to a personal plan task.",
-                AgentTokenScope.FUNCTIONAL_READ, true,
-                objectSchema(Map.of("taskId", stringSchema(), "testPlanCaseId", stringSchema()),
-                        List.of("taskId", "testPlanCaseId")),
-                args -> plans.readFrozenExecutionContract(tasks.getPersonalTask(requiredString(args, "taskId")),
-                        requiredString(args, "testPlanCaseId")));
-    }
-
-    @Bean
-    public AgentMcpToolHandler executionGetTool(AgentTaskClaimService taskClaims, AgentTestPlanQueryService plans) {
+    public AgentMcpToolHandler executionGetTool(AgentExecutionService service,AgentTaskClaimService taskClaims) {
         return tool("metersphere.execution.get", "Get AI execution task detail.",
                 AgentTokenScope.AI_EXECUTION_READ, true,
-                objectSchema(Map.of("executionTaskId", stringSchema(), "includeStepProgress", Map.of("type", "boolean")),
-                        List.of("executionTaskId")),
-                args -> {
-                    var task = taskClaims.getPersonalTask(requiredString(args, "executionTaskId"));
-                    if (Boolean.TRUE.equals(args.get("includeStepProgress"))) {
-                        task.setAccountedPlanCaseIds(plans.accountedPlanCases(task));
-                    }
-                    return task;
-                });
+                objectSchema(Map.of("executionTaskId", stringSchema()), List.of("executionTaskId")),
+                args -> {String id=requiredString(args,"executionTaskId");taskClaims.getPersonalTask(id);return service.get(id);});
     }
 
     @Bean
@@ -780,8 +648,76 @@ public class BuiltinAgentMcpToolConfig {
                 args -> service.get(requiredString(args, "reviewId")));
     }
 
+    @Bean
+    public AgentMcpToolHandler businessAssetSearchTool(io.metersphere.agent.service.BusinessAssetService service) {
+        return tool("metersphere.business_asset.search", "Read current business understanding before exploration. Same module or flow operations belong to one document with branches.", AgentTokenScope.BUSINESS_ASSET_READ, true,
+                objectSchema(Map.of("projectId", stringSchema(), "keyword", stringSchema()), List.of("projectId")),
+                args -> service.list(requiredString(args,"projectId"),Objects.toString(args.get("keyword"),""),false));
+    }
+    @Bean
+    public AgentMcpToolHandler businessAssetGetTool(io.metersphere.agent.service.BusinessAssetService service) {
+        return tool("metersphere.business_asset.get", "Read immutable business understanding versions and current version pointer.", AgentTokenScope.BUSINESS_ASSET_READ, true,
+                objectSchema(Map.of("projectId",stringSchema(),"assetId",stringSchema()),List.of("projectId","assetId")),
+                args -> service.detail(requiredString(args,"projectId"),requiredString(args,"assetId")));
+    }
+    @Bean
+    public AgentMcpToolHandler businessAssetUploadTool(io.metersphere.agent.service.BusinessAssetService service,jakarta.validation.Validator validator) {
+        return tool("metersphere.business_asset.upload", "Upload full Markdown understanding plus operation branches after exploration or execution. Update existing asset with baseVersion; preserve evidence references, distinguish OBSERVED/INFERRED/UNCONFIRMED, never include secrets. CONFLICT retains uploaded content without replacing current version.", AgentTokenScope.BUSINESS_ASSET_WRITE, false,
+                dtoSchema(io.metersphere.agent.dto.BusinessAssetSubmission.class), args -> {
+                    var request=convert(args,io.metersphere.agent.dto.BusinessAssetSubmission.class);
+                    if(!validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
+                    return service.submit(request);
+                });
+    }
+    @Bean
+    public AgentMcpToolHandler externalExecutorConnectTool(io.metersphere.agent.service.ExternalExecutorService service) {
+        return tool("metersphere.executor.connect", "Connect an external executor and pin business understanding versions. Execute independently; report progress and poll correction commands. No frozen actions or legacy lease required.", AgentTokenScope.BUSINESS_ASSET_WRITE, false,
+                objectSchema(Map.of("projectId",stringSchema(),"executorId",stringSchema(),"requestKey",stringSchema()),List.of("projectId","executorId","requestKey")),
+                args -> service.connect(requiredString(args,"projectId"),requiredString(args,"executorId"),requiredString(args,"requestKey")));
+    }
+    @Bean
+    public AgentMcpToolHandler externalExecutorEventsTool(io.metersphere.agent.service.ExternalExecutorService service) {
+        return tool("metersphere.executor.event", "Report heartbeat, observation, deviation, failure or completion with stable stage and error category. Use unique requestKey and no secrets.", AgentTokenScope.BUSINESS_ASSET_WRITE, false,
+                objectSchema(Map.of("projectId",stringSchema(),"sessionId",stringSchema(),"requestKey",stringSchema(),"type",stringSchema(),"stage",stringSchema(),"errorCategory",stringSchema(),"outcome",stringSchema(),"summary",Map.of("type","string","maxLength",2000),"evidenceId",stringSchema()),List.of("projectId","sessionId","requestKey","type","stage","errorCategory","outcome")),
+                args -> { service.event(requiredString(args,"projectId"),requiredString(args,"sessionId"),requiredString(args,"requestKey"),requiredString(args,"type"),requiredString(args,"stage"),requiredString(args,"errorCategory"),requiredString(args,"outcome"),(String)args.get("summary"),(String)args.get("evidenceId"));return Map.of("recorded",true); });
+    }
+    @Bean
+    public AgentMcpToolHandler externalExecutorCommandsTool(io.metersphere.agent.service.ExternalExecutorService service) {
+        return tool("metersphere.executor.commands", "Poll corrections during execution. Apply pending instructions and report APPLIED or FAILED; never silently ignore deviations.", AgentTokenScope.BUSINESS_ASSET_READ, true,
+                objectSchema(Map.of("projectId",stringSchema(),"sessionId",stringSchema()),List.of("projectId","sessionId")),args->service.commands(requiredString(args,"projectId"),requiredString(args,"sessionId")));
+    }
+    @Bean
+    public AgentMcpToolHandler externalExecutorResponseTool(io.metersphere.agent.service.ExternalExecutorService service) {
+        return tool("metersphere.executor.respond", "Persist correction response APPLIED or FAILED with a stable category; repeated identical responses are idempotent.", AgentTokenScope.BUSINESS_ASSET_WRITE, false,
+                objectSchema(Map.of("projectId",stringSchema(),"sessionId",stringSchema(),"commandId",stringSchema(),"outcome",stringSchema(),"category",stringSchema()),List.of("projectId","sessionId","commandId","outcome","category")),
+                args->{service.acknowledge(requiredString(args,"projectId"),requiredString(args,"sessionId"),requiredString(args,"commandId"),requiredString(args,"outcome"),requiredString(args,"category"));return Map.of("recorded",true);});
+    }
+    @Bean
+    public AgentMcpToolHandler externalExecutorEvidenceTool(io.metersphere.agent.service.ExternalExecutorService service) {
+        return tool("metersphere.executor.evidence", "Upload redacted PNG/JPEG evidence as Base64. Use returned evidenceId in business understanding branches. Maximum 2 MB; never upload passwords or unmasked private data.",AgentTokenScope.BUSINESS_ASSET_WRITE,false,
+            objectSchema(Map.of("projectId",stringSchema(),"sessionId",stringSchema(),"requestKey",Map.of("type","string","minLength",1,"maxLength",128),"content",Map.of("type","string","minLength",1,"maxLength",2800000),"redacted",Map.of("type","boolean")),List.of("projectId","sessionId","requestKey","content","redacted")),
+            args->service.uploadEvidence(requiredString(args,"projectId"),requiredString(args,"sessionId"),requiredString(args,"requestKey"),requiredString(args,"content"),Boolean.TRUE.equals(args.get("redacted"))));
+    }
+    @Bean
+    public AgentMcpToolHandler externalExecutorContextTool(io.metersphere.agent.service.ExternalExecutorService service) {
+        return tool("metersphere.executor.context.get","Read the pinned business understanding for this session, including actual versionNo to use as baseVersion when uploading updates.",AgentTokenScope.BUSINESS_ASSET_READ,true,
+            objectSchema(Map.of("projectId",stringSchema(),"sessionId",stringSchema(),"assetId",stringSchema()),List.of("projectId","sessionId","assetId")),
+            args->service.readContext(requiredString(args,"projectId"),requiredString(args,"sessionId"),requiredString(args,"assetId")));
+    }
+    @Bean
+    public AgentMcpToolHandler externalExecutorContextRefreshTool(io.metersphere.agent.service.ExternalExecutorService service) {
+        return tool("metersphere.executor.context.refresh","Explicitly replace a pinned understanding version after a business change. Requires expectedVersionId and reason; creates a correction notification and an audit event. Never silently switch context.",AgentTokenScope.BUSINESS_ASSET_WRITE,false,
+            objectSchema(Map.of("projectId",stringSchema(),"sessionId",stringSchema(),"assetId",stringSchema(),"versionId",stringSchema(),"expectedVersionId",Map.of("type","string"),"reason",stringSchema()),List.of("projectId","sessionId","assetId","versionId","expectedVersionId","reason")),
+            args->{service.refreshContext(requiredString(args,"projectId"),requiredString(args,"sessionId"),requiredString(args,"assetId"),requiredString(args,"versionId"),(String)args.get("expectedVersionId"),requiredString(args,"reason"));return Map.of("updated",true);});
+    }
+
     private static AgentMcpToolHandler tool(String name, String description, String scope, boolean readOnly,
                                             Map<String, Object> inputSchema, Function<Map<String, Object>, Object> executor) {
+        final com.github.fge.jsonschema.main.JsonSchema governanceSchema;
+        if(name.startsWith("metersphere.business_asset.")||name.startsWith("metersphere.executor.")) {
+            try {governanceSchema=com.github.fge.jsonschema.main.JsonSchemaFactory.byDefault().getJsonSchema(new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(inputSchema));}
+            catch(com.github.fge.jsonschema.core.exceptions.ProcessingException invalid){throw new IllegalStateException("Business asset tool schema is invalid");}
+        } else governanceSchema=null;
         Map<String, Object> annotations = new LinkedHashMap<>();
         annotations.put("scope", scope);
         annotations.put("readOnlyHint", readOnly);
@@ -821,6 +757,7 @@ public class BuiltinAgentMcpToolConfig {
 
             @Override
             public Object execute(Map<String, Object> arguments) {
+                if(governanceSchema!=null&&!governanceSchema.validateUnchecked(new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(arguments)).isSuccess())throw new io.metersphere.agent.service.BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR","工具参数不符合协议，请检查字段类型、必填项和长度");
                 return executor.apply(arguments == null ? Map.of() : arguments);
             }
         };
@@ -829,15 +766,12 @@ public class BuiltinAgentMcpToolConfig {
     private static AgentMcpToolHandler terminalExecutionTool(String name, String outcome,
                                                               AgentTaskExecutionApplicationService service) {
         return tool(name, "Submit the terminal execution outcome.", AgentTokenScope.TASK_RESULT_WRITE, false,
-                objectSchema(Map.of("leaseId", stringSchema(), "leaseToken", stringSchema(), "reason", stringSchema(),
-                        "taskId", stringSchema(), "executionId", stringSchema()),
+                objectSchema(Map.of("leaseId", stringSchema(), "leaseToken", stringSchema(), "reason", stringSchema()),
                         List.of("leaseId", "leaseToken")),
                 args -> {
                     AgentRunnerLeaseCompleteRequest request = new AgentRunnerLeaseCompleteRequest();
                     request.setOutcome(outcome);
                     request.setReason((String) args.get("reason"));
-                    request.setTaskId((String) args.get("taskId"));
-                    request.setExecutionId((String) args.get("executionId"));
                     service.complete(requiredString(args, "leaseId"), requiredString(args, "leaseToken"), request);
                     return Map.of("ok", true);
                 });

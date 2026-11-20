@@ -5,7 +5,6 @@ import lombok.Data;
 @Data
 public class AgentExecutionTaskSearchRequest {
     private String projectId;
-    private String testPlanId;
     private String keyword;
     private String status;
     private String verdict;

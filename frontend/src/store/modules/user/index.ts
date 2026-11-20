@@ -19,7 +19,6 @@ import useLicenseStore from '@/store/modules/setting/license';
 import { getHashParameters, getQueryVariable } from '@/utils';
 import { clearToken, setToken } from '@/utils/auth';
 import { composePermissions, getFirstRouteNameByPermission } from '@/utils/permission';
-import { clearProtocolMemory } from '@/utils/protocol-memory';
 import { removeRouteListener } from '@/utils/route-listener';
 
 import type { LoginData } from '@/models/user';
@@ -119,7 +118,6 @@ const useUserStore = defineStore('user', {
     },
     // 设置用户信息
     setInfo(partial: Partial<UserState>) {
-      if (this.id && partial.id && this.id !== partial.id) clearProtocolMemory();
       this.$patch(partial);
     },
     // 重置用户信息
@@ -179,7 +177,6 @@ const useUserStore = defineStore('user', {
     },
     // 登出回调
     logoutCallBack() {
-      clearProtocolMemory();
       const appStore = useAppStore();
       const licenseStore = useLicenseStore();
       this.resetInfo();
@@ -193,7 +190,6 @@ const useUserStore = defineStore('user', {
     },
     // 登出
     async logout(silence = false) {
-      clearProtocolMemory();
       try {
         const { t } = useI18n();
         if (!silence) {
@@ -297,7 +293,6 @@ const useUserStore = defineStore('user', {
         router.currentRoute.value.path === '/execution/quality-policy';
       // System policy access is checked by its own route guard, never by current-project membership.
       if (isLogin && systemPolicyRoute) return;
-      if (isLogin && router.currentRoute.value.meta.contextScope === 'ORGANIZATION') return;
       if (
         isLogin &&
         isLoginPage() &&

@@ -3,7 +3,7 @@
 > **文档类型**：任务索引 / 里程碑规划  
 > **适用项目**：MeterSphere 外部 AI Agent 集成功能测试  
 > **编写日期**：2026-07-07  
-> **关联方案**：[MeterSphere-Agent集成-改造方案-2026-07-07.md](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) v2.0  
+> **关联方案**：[MeterSphere-Agent集成-改造方案-2026-07-07.md](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) v2.0  
 > **开发分支**：`v3.x-task-metersphere-agent`
 
 ---

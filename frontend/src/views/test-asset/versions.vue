@@ -1,6 +1,8 @@
 <template>
   <TestAssetPage>
-    <MsCard simple>
+    <BusinessVersions />
+    <SharedConfigurationVersions />
+    <MsCard v-if="canReadLegacy" simple>
       <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
       <div class="mb-4">
         <div class="text-base font-medium">资产版本</div>
@@ -59,12 +61,6 @@
         <a-checkbox v-model="query.includeDescendants" @change="search">含子分类</a-checkbox>
         <a-button :loading="loading" @click="load">刷新</a-button>
       </div>
-      <a-alert v-if="comparisonBase" class="mb-3">
-        比较基准为 {{ comparisonBase.assetName || comparisonBase.assetId }} v{{
-          comparisonBase.versionNo
-        }}。请选择同一文档的另一版本。
-        <a-button type="text" @click="comparisonBase = undefined">清除基准</a-button>
-      </a-alert>
       <a-table
         :data="versions"
         :loading="loading"
@@ -111,19 +107,15 @@
           <a-table-column title="发布时间" :width="180"
             ><template #cell="{ record }">{{ formatTime(record.publishedAt) }}</template></a-table-column
           >
-          <a-table-column title="操作" :width="250" fixed="right"
+          <a-table-column title="操作" :width="160" fixed="right"
             ><template #cell="{ record }"
               ><a-space
                 ><a-link @click="trace(record)">追溯</a-link
-                ><a-link v-if="record.assetType === 'DOCUMENT'" @click="selectComparison(record)">
-                  {{
-                    comparisonBase?.assetId === record.assetId && comparisonBase?.id !== record.id ? '对比' : '设为基准'
-                  }} </a-link
                 ><a-popconfirm
                   v-if="record.status === 'PUBLISHED'"
                   content="停用后新任务不能再选择该版本，已冻结任务不受影响。"
                   @ok="deprecate(record)"
-                  ><a-link v-permission="['AI_EXECUTION:RUN']" status="danger">停用</a-link></a-popconfirm
+                  ><a-link v-permission="['TEST_ASSET_VERSION:MANAGE']" status="danger">停用</a-link></a-popconfirm
                 ></a-space
               ></template
             ></a-table-column
@@ -131,40 +123,17 @@
         </template>
       </a-table>
     </MsCard>
-    <a-modal v-model:visible="comparisonVisible" title="文档版本对比" :width="960" :footer="false" unmount-on-close>
-      <a-alert v-if="comparisonError" type="error">{{ comparisonError }}</a-alert>
-      <a-spin v-else :loading="comparisonLoading" class="block">
-        <div v-if="markdownComparison" class="h-[55vh]">
-          <MsCodeEditor
-            :title="`v${markdownComparison[0].versionNo} → v${markdownComparison[1].versionNo}`"
-            :original-value="markdownComparison[0].body"
-            :model-value="markdownComparison[1].body"
-            language="PLAINTEXT"
-            read-only
-            diff-mode
-            :show-language-change="false"
-            :show-theme-change="false"
-            :show-full-screen="false"
-          />
-        </div>
-        <div v-else-if="comparisonContents" class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <section v-for="entry in comparisonContents" :key="entry.id" class="min-w-0">
-            <h3 class="mb-2 font-medium">v{{ entry.versionNo }}</h3>
-            <ContentReader :value="entry.content" />
-          </section>
-        </div>
-      </a-spin>
-    </a-modal>
   </TestAssetPage>
 </template>
 
 <script setup lang="ts">
-  import { computed, defineAsyncComponent, onMounted, reactive, ref, watch } from 'vue';
+  import { computed, onMounted, reactive, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import dayjs from 'dayjs';
 
+  import BusinessVersions from './components/BusinessVersions.vue';
+  import SharedConfigurationVersions from './components/SharedConfigurationVersions.vue';
   import TestAssetPage from './components/TestAssetPage.vue';
-  import ContentReader from './knowledge/ContentReader.vue';
 
   import type { TestAssetCategory, TestAssetCreationSource, TestAssetVersion } from '@/api/modules/ai-execution';
   import {
@@ -172,38 +141,26 @@
     listTestAssetCategories,
     pageTestAssetVersions,
   } from '@/api/modules/ai-execution';
-  import { previewSource } from '@/api/modules/governed-execution';
   import useAppStore from '@/store/modules/app';
+  import { hasAnyPermission } from '@/utils/permission';
 
-  const MsCodeEditor = defineAsyncComponent(() => import('@/components/pure/ms-code-editor/index.vue'));
   const appStore = useAppStore();
   const route = useRoute();
   const router = useRouter();
   const loading = ref(false);
+  const canReadLegacy = computed(() =>
+    hasAnyPermission([
+      'FUNCTIONAL_CASE:READ',
+      'FUNCTIONAL_CASE_AI:READ',
+      'PROJECT_FILE_MANAGEMENT:READ',
+      'PROJECT_ENVIRONMENT:READ',
+      'AI_EXECUTION:READ',
+    ])
+  );
   const error = ref('');
   const versions = ref<TestAssetVersion[]>([]);
   const categories = ref<TestAssetCategory[]>([]);
   const total = ref(0);
-  const comparisonBase = ref<TestAssetVersion>();
-  const comparisonVisible = ref(false);
-  const comparisonLoading = ref(false);
-  const comparisonError = ref('');
-  const comparisonContents = ref<Array<{ id: string; versionNo: number; content: unknown }>>();
-  const markdownComparison = computed(() => {
-    const entries = comparisonContents.value?.map(({ content, versionNo }) => ({
-      versionNo,
-      body: (content as { bodyMarkdown?: unknown } | undefined)?.bodyMarkdown,
-    }));
-    const left = entries?.[0];
-    const right = entries?.[1];
-    if (typeof left?.body !== 'string' || typeof right?.body !== 'string') return undefined;
-    return [
-      { versionNo: left.versionNo, body: left.body },
-      { versionNo: right.versionNo, body: right.body },
-    ] as const;
-  });
-  let comparisonRequest = 0;
-
   const catalogPaths: Record<string, string> = {
     DOCUMENT: '/test-assets/documents',
     CASE: '/test-assets/cases/project',
@@ -244,7 +201,7 @@
   const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
   const shortHash = (value?: string) => (value ? `${value.slice(0, 12)}…${value.slice(-8)}` : '-');
   async function load() {
-    if (!appStore.currentProjectId) return;
+    if (!appStore.currentProjectId || !canReadLegacy.value) return;
     loading.value = true;
     error.value = '';
     try {
@@ -275,37 +232,6 @@
     query.current = 1;
     load();
   }
-  async function selectComparison(record: TestAssetVersion) {
-    const base = comparisonBase.value;
-    if (!base || base.assetId !== record.assetId || base.id === record.id) {
-      comparisonBase.value = record;
-      return;
-    }
-    const projectId = appStore.currentProjectId;
-    const request = ++comparisonRequest;
-    comparisonContents.value = undefined;
-    comparisonError.value = '';
-    comparisonVisible.value = true;
-    comparisonLoading.value = true;
-    try {
-      const results = await Promise.all(
-        [base, record].map(async (entry) => {
-          const preview = await previewSource(projectId, entry.assetId, entry.id);
-          return { id: entry.id, versionNo: entry.versionNo, content: preview.content };
-        })
-      );
-      if (request === comparisonRequest && projectId === appStore.currentProjectId) {
-        comparisonContents.value = results;
-      }
-    } catch {
-      if (request === comparisonRequest) {
-        comparisonError.value = '无法读取所选版本，请检查访问权限后重试。';
-      }
-    } finally {
-      if (request === comparisonRequest) comparisonLoading.value = false;
-    }
-  }
-
   function trace(record: TestAssetVersion) {
     router.push({ path: '/test-assets/relations', query: { assetType: record.assetType, assetId: record.assetId } });
   }
@@ -318,25 +244,15 @@
       error.value = reason?.message || '资产版本停用失败，请稍后重试';
     }
   }
-  watch(comparisonVisible, (visible) => {
-    if (!visible) {
-      comparisonRequest++;
-      comparisonLoading.value = false;
-      comparisonContents.value = undefined;
-    }
-  });
   watch(
-    () => [appStore.currentOrgId, appStore.currentProjectId],
+    () => appStore.currentProjectId,
     () => {
-      comparisonRequest++;
-      comparisonBase.value = undefined;
-      comparisonVisible.value = false;
-      comparisonContents.value = undefined;
       query.current = 1;
       load();
     }
   );
   onMounted(async () => {
+    if (!canReadLegacy.value) return;
     categories.value = await listTestAssetCategories();
     await load();
   });

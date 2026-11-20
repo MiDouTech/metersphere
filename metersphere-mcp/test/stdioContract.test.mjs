@@ -12,18 +12,6 @@ test('built stdio server advertises package version and current execution/create
     await client.connect(transport);
     assert.equal(client.getServerVersion().version,JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version);
     const {tools}=await client.listTools();
-    const create=tools.find(t=>t.name==='metersphere.execution.create').inputSchema;
-    for(const field of ['preflightId','environmentProfileId'])assert.ok(create.required.includes(field));
-    const contract=tools.find(t=>t.name==='metersphere.execution.contract.get').inputSchema;
-    for(const field of ['taskId','testPlanCaseId'])assert.ok(contract.required.includes(field));
-    const preparation=tools.find(t=>t.name==='metersphere.execution.data_preparation.get').inputSchema;
-    for(const field of ['taskId','testPlanCaseId','dataKey'])assert.ok(preparation.required.includes(field));
-    const advance=tools.find(t=>t.name==='metersphere.execution.step.submit_and_advance').inputSchema;
-    for(const field of ['stepId','requestId','leaseId','leaseToken','assertionResult','evidenceRef']) {
-      assert.ok(advance.required.includes(field), field);
-    }
-    const checkpoint=tools.find(t=>t.name==='metersphere.execution.checkpoint.create').inputSchema;
-    for(const field of ['taskId','executionId','leaseId','leaseToken','stateSnapshot','requestId'])assert.ok(checkpoint.required.includes(field));
     const submit=tools.find(t=>t.name==='metersphere.functional.execution.submit').inputSchema;
     assert.ok(submit.properties.evidenceIds);
     assert.ok(!submit.required.includes('contentHash'));

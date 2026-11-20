@@ -6,8 +6,8 @@
 
 ## 需求基线
 
-- `docs/task/ai_agent_dual_channel_20260808/AI用户自有Agent双通道改造方案.md`
-- `docs/task/ai_case_agent_20260806/AI用例生成Agent改造方案.md`
+- `docs/product_md/history/task/ai_agent_dual_channel_20260808/AI用户自有Agent双通道改造方案.md`
+- `docs/product_md/history/task/ai_case_agent_20260806/AI用例生成Agent改造方案.md`
 
 ## 目标
 

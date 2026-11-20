@@ -1,11 +1,5 @@
 <template>
   <div class="automation-execution-page">
-    <a-alert v-if="route.query.testPlanId && !executionTaskId && !isCreating" class="mb-3">
-      当前仅显示所选测试计划的执行记录。
-      <a-link @click="router.replace({ query: { ...safeExecutionQuery(route.query), testPlanId: undefined } })">
-        查看全部任务
-      </a-link>
-    </a-alert>
     <div class="automation-execution-header">
       <div>
         <div class="text-[18px] font-medium text-[var(--color-text-1)]"> 执行任务 </div>
@@ -1142,7 +1136,6 @@
     try {
       const response = await searchAiExecutionTasks({
         projectId,
-        testPlanId: typeof route.query.testPlanId === 'string' ? route.query.testPlanId : undefined,
         keyword: taskSearch.keyword.trim() || undefined,
         status: taskSearch.status,
         verdict: taskSearch.verdict,
@@ -1608,13 +1601,6 @@
     { immediate: true }
   );
 
-  watch(
-    () => route.query.testPlanId,
-    () => {
-      taskSearch.current = 1;
-      reloadTaskList();
-    }
-  );
   watch(() => [route.query.creating, route.query.caseIds, appStore.currentProjectId], hydrateExplicitCasesFromRoute, {
     immediate: true,
   });

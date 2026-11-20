@@ -9,6 +9,7 @@ const Execution: AppRouteRecordRaw = {
   path: '/execution',
   name: 'ExecutionQuality',
   redirect: () => {
+    if (hasAnyPermission(['BUSINESS_ASSET:READ'])) return '/execution/executors';
     if (hasAnyPermission(['AI_EXECUTION:READ'])) return '/execution/tasks';
     if (hasAnyPermission(['SYSTEM_QUALITY:READ'], ['SYSTEM'])) return '/execution/quality-policy';
     return '/execution/platforms';
@@ -19,9 +20,15 @@ const Execution: AppRouteRecordRaw = {
     icon: 'icon-icon_robot',
     order: 6,
     hideChildrenInMenu: true,
-    roles: ['AI_EXECUTION:READ', 'AI_CREDENTIAL:READ_METADATA', 'SYSTEM_QUALITY:READ'],
+    roles: ['BUSINESS_ASSET:READ', 'AI_EXECUTION:READ', 'AI_CREDENTIAL:READ_METADATA', 'SYSTEM_QUALITY:READ'],
   },
   children: [
+    {
+      path: 'executors',
+      name: 'ExternalExecutorMonitor',
+      component: () => import('@/views/execution/external-executors.vue'),
+      meta: { locale: '执行器监控与纠正', roles: ['BUSINESS_ASSET:READ'], isTopMenu: true },
+    },
     {
       path: 'diagnostics/:section?',
       name: 'ExecutionDiagnostics',

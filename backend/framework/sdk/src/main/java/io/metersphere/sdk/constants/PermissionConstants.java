@@ -4,6 +4,12 @@ package io.metersphere.sdk.constants;
  * @author jianxing
  */
 public class PermissionConstants {
+    public static final String BUSINESS_ASSET_READ = "BUSINESS_ASSET:READ";
+    public static final String TEST_ASSET_VERSION_MANAGE = "TEST_ASSET_VERSION:MANAGE";
+    public static final String BUSINESS_ASSET_WRITE = "BUSINESS_ASSET:WRITE";
+    public static final String SHARED_CONFIGURATION_READ = "SHARED_CONFIGURATION:READ";
+    public static final String SHARED_CONFIGURATION_WRITE = "SHARED_CONFIGURATION:WRITE";
+    public static final String SHARED_CONFIGURATION_RESOLVE = "SHARED_CONFIGURATION:RESOLVE";
 
     /*------ start: SYSTEM_USER_ROLE ------*/
     public static final String SYSTEM_USER_ROLE_READ = "SYSTEM_USER_ROLE:READ";

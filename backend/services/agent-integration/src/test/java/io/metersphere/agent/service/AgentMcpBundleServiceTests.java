@@ -22,7 +22,7 @@ class AgentMcpBundleServiceTests {
     @Test void downloadedZipUsesRuntimeCatalogAndChecksums() throws Exception {
         var bundle=new AgentMcpBundleService();
         ReflectionTestUtils.setField(bundle,"registry",new AgentMcpToolRegistry(List.of(tool("metersphere.task.search"),tool("metersphere.functional.submit"),tool("metersphere.execution.trigger.create"))));
-        var response=bundle.download();assertEquals("1.4.2",bundle.getManifest().getVersion());
+        var response=bundle.download();assertEquals("1.5.0",bundle.getManifest().getVersion());
         Map<String,String> files=new LinkedHashMap<>();
         try(var zip=new ZipInputStream(new ByteArrayInputStream(response.getBody()),StandardCharsets.UTF_8)) {
             ZipEntry entry;while((entry=zip.getNextEntry())!=null)files.put(entry.getName(),new String(zip.readAllBytes(),StandardCharsets.UTF_8));

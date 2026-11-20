@@ -4,7 +4,7 @@
 > **预估工期**：0.5 天  
 > **前置依赖**：[task003](task003-P0-AgentToken认证与Shiro集成.md)、[task006](task006-P0-用例检索与导出服务.md)、[task007](task007-P0-计划内结果回写服务.md)  
 > **阻塞任务**：task009、task010  
-> **关联方案**：[改造方案](../../summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §4.2
+> **关联方案**：[改造方案](../../product_md/history/summary/MeterSphere-Agent集成-改造方案-2026-07-07.md) §4.2
 
 ---
 

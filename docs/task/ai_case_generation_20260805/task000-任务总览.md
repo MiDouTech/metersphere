@@ -1,6 +1,6 @@
 # task000 - AI 生成用例改造任务总览
 
-> 来源方案：`docs/summary/MeterSphere_AI生成用例改造方案.md`
+> 来源方案：`docs/product_md/history/summary/MeterSphere_AI生成用例改造方案.md`
 > 任务目录：`docs/task/ai_case_generation_20260805`
 > 当前状态：部分完成（P0/P1 核心治理与解析链路已补齐；真实部署 E2E 仍待具备 Docker 的环境执行）
 > 拆分日期：2026-08-05

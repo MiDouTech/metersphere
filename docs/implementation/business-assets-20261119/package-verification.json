@@ -1,0 +1,9 @@
+{
+  "jarSha256": "401ccf9f2ce4da2675bef46e808880c18f9ccbcbde57b62b2cace31d8117e210",
+  "checks": {
+    "newServicesPackaged": true,
+    "removedGovernedClassesAbsent": true,
+    "migration156Packaged": true,
+    "currentFrontendPackaged": true
+  }
+}

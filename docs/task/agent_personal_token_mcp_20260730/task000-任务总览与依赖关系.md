@@ -1,6 +1,6 @@
 # task000 - Agent 集成个人 Token 与多 Agent MCP 接入任务总览
 
-> 来源方案：`docs/summary/MeterSphere-Agent集成-个人Token与多Agent-MCP接入改造方案-2026-07-30.md`
+> 来源方案：`docs/product_md/history/summary/MeterSphere-Agent集成-个人Token与多Agent-MCP接入改造方案-2026-07-30.md`
 > 任务目录：`docs/task/agent_personal_token_mcp_20260730`
 > 状态：待排期 / 可按 task 独立流转
 

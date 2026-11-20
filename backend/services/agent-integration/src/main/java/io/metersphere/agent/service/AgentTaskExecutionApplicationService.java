@@ -29,7 +29,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentTaskExecutionApplicationService {
-    @jakarta.annotation.Resource private AgentTestPlanQueryService testPlanQueryService;
     private final AgentTaskClaimService personalTaskService;
     private final AgentRunnerService runnerService;
     private final AgentExecutionService executionService;
@@ -92,34 +91,6 @@ public class AgentTaskExecutionApplicationService {
             personalTaskService.assertLeaseOwner(request.getLeaseId());
         }
         return stepResultService.submit(request);
-    }
-
-    public java.util.Map<String, Object> claimWriteRetry(String taskId, String executionId, String leaseId,
-            String leaseToken, String testPlanCaseId, String stepId, String waitingExecutionId,
-            String waitingRequestId, String businessKeyHash, String proof) {
-        personalTaskService.assertLeaseOwner(leaseId);
-        var frozen = testPlanQueryService.readFrozenExecutionContract(personalTaskService.getPersonalTask(taskId), testPlanCaseId);
-        var contract = AgentProtocolData.object(frozen.get("contract"));
-        var steps = AgentProtocolData.objects(contract.get("steps"));
-        var runtimeSteps = AgentProtocolData.object(frozen.get("executionStepIds"));
-        var waitingSteps = AgentProtocolData.object(frozen.get("waitingSteps"));
-        var verified = AgentProtocolData.strings(frozen.get("verifiedStepIds"));
-        var pending = steps.stream().map(step -> step.get("id")).filter(id -> !verified.contains(id)).findFirst();
-        if (pending.filter(stepId::equals).isEmpty() || !executionId.equals(frozen.get("executionId")) || !runtimeSteps.containsKey(stepId)
-                || !"WAITING_WRITE_RECONCILIATION".equals(waitingSteps.get(stepId))
-                || steps.stream().noneMatch(step -> stepId.equals(step.get("id"))
-                && "SIGNED_TERMINAL_NO_EFFECT_ONCE".equals(step.get("writeRecovery")))) {
-            throw new io.metersphere.sdk.exception.MSException("WRITE_RECOVERY_NOT_ALLOWED");
-        }
-        var request = new AgentExecutionStepSubmitRequest();
-        request.setTaskId(taskId);
-        request.setExecutionId(executionId);
-        request.setLeaseId(leaseId);
-        request.setLeaseToken(leaseToken);
-        request.setStepId((String) runtimeSteps.get(stepId));
-        boolean granted = stepResultService.claimWriteRetry(request, waitingExecutionId,
-                waitingRequestId, businessKeyHash, proof);
-        return java.util.Map.of("granted", granted);
     }
 
     public AgentExecutionStepResultDTO submitRunnerStepResult(String authorization, String leaseId,

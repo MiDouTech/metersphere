@@ -6,7 +6,7 @@
 
 2026-10-21 持续实施状态见 [完整需求实施追踪](msp-full-remediation-progress-20261021.md)，覆盖基线见 [两日方案逐项自检](msp-two-day-requirement-selfcheck-20261021.md)。历史实施记录不能替代本轮制品、运行和需求矩阵验收。
 
-依据：[主方案](../metersphere-mcp-case-library-improvement-plan-2026-10-20.md)、[重新审计](personal-agent-reaudit-20261020.md)、[简化产品方案](MSP个人Agent测试闭环简化产品方案-20261020.md)、[全局质量门禁方案](质量门禁修复与完善方案-20261019.md)。本方案补足遗漏并明确修订；未经运行验证不得把设计项标为已实现。
+依据：[主方案](../metersphere-mcp-case-library-improvement-plan-2026-10-20.md)、[重新审计](personal-agent-reaudit-20261020.md)、[简化产品方案](../product_md/history/summary/MSP个人Agent测试闭环简化产品方案-20261020.md)、[全局质量门禁方案](../product_md/history/summary/质量门禁修复与完善方案-20261019.md)。本方案补足遗漏并明确修订；未经运行验证不得把设计项标为已实现。
 
 ## 1. 不再变更的交付边界
 
@@ -240,7 +240,7 @@ pnpm.cmd -C frontend exec playwright test e2e/personal-agent-execution.spec.ts -
 
 ## 10. 2026-10-21 联合评审补充与实施依赖
 
-本节结合 [平台优化方案第 19 节](../../doc/platform-optimization-implementation-plan-2026-10-21.md) 和 [导出排查报告](../../doc/case-export-root-cause-investigation-2026-10-21.md) 补齐实施约束。原 U01～U16、RA01～RA16 和 AC01～AC28 保持有效；新方案不是原整改的替代或完成证明。
+本节结合 [平台优化方案第 19 节](../implementation/platform-optimization-20261021/platform-optimization-implementation-plan-2026-10-21.md) 和 [导出排查报告](../troubleshooting/case-export-root-cause-investigation-2026-10-21.md) 补齐实施约束。原 U01～U16、RA01～RA16 和 AC01～AC28 保持有效；新方案不是原整改的替代或完成证明。
 
 ### 10.1 需求对应和发布边界
 

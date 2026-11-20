@@ -21,11 +21,11 @@
 
 ### 方案优先级
 
-执行事实、门禁判定、结果回写及历史证据以[质量门禁修复与完善方案](summary/质量门禁修复与完善方案-20261019.md)为准。本方案承接[MCP 与 AI 技能包整改方案](mcp-and-ai-skill-remediation-plan-20261019.md)中的授权版本、事务幂等、删除预检、导入恢复及客户端契约，不以本文简写取消已有约束。出现未明确的新冲突时，暂停对应能力开放并补充决策。
+执行事实、门禁判定、结果回写及历史证据以[质量门禁修复与完善方案](product_md/history/summary/质量门禁修复与完善方案-20261019.md)为准。本方案承接[MCP 与 AI 技能包整改方案](product_md/history/mcp-and-ai-skill-remediation-plan-20261019.md)中的授权版本、事务幂等、删除预检、导入恢复及客户端契约，不以本文简写取消已有约束。出现未明确的新冲突时，暂停对应能力开放并补充决策。
 
 ### 与个人 Token / 多 Agent 实施方案衔接
 
-[个人 Token 与多 Agent 方案](summary/MeterSphere-Agent集成-个人Token与多Agent-MCP接入改造方案-2026-07-30.md)已按质量门禁基准修订。该方案负责身份、认证隔离、治理及客户端，本方案负责用例库能力完整性；两者不得恢复直接结果回写。
+[个人 Token 与多 Agent 方案](product_md/history/summary/MeterSphere-Agent集成-个人Token与多Agent-MCP接入改造方案-2026-07-30.md)已按质量门禁基准修订。该方案负责身份、认证隔离、治理及客户端，本方案负责用例库能力完整性；两者不得恢复直接结果回写。
 
 - 本轮保留原生 MCP、Node/stdio 和技能包的能力清单及验收，不按旧版接入方案删除 metersphere-mcp 工程。退役需用户迁移、完整等价验证及明确切换决定。
 - 保持 Token ID + 固定 operationId + requestId + 规范化摘要的事务幂等，不改为用户维度。凭据轮换保留 Token ID，旧代次租约/临时凭证失效，恢复遵守质量门禁。

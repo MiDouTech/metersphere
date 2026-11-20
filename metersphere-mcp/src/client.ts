@@ -29,6 +29,16 @@ export class MsApiError extends Error {
     }
     const code = typeof value.code === "string" && /^[A-Z][A-Z0-9_]{2,80}$/.test(value.code) ? value.code : "MCP_HTTP_ERROR";
     const hints: Record<string,string>={
+      ASSET_CONTAINS_SECRET:"业务理解包含敏感值，请改用公共配置引用",
+      ASSET_IDEMPOTENCY_CONFLICT:"同一提交标识对应不同内容，请先查询原提交结果",
+      ASSET_VERSION_CONFLICT:"业务资产已变化，请读取当前版本后合并",
+      EXECUTOR_SOURCE_REQUIRED:"请先连接执行器，并在上传中提供该会话来源",
+      EXECUTOR_EVENT_CONFLICT:"同一执行事件标识对应不同内容，请核对原事件",
+      EXECUTOR_SESSION_FINISHED:"执行会话已经结束，新执行需要新的连接请求标识",
+      CONTEXT_VERSION_CONFLICT:"任务上下文已经变化，请重新读取后再更新",
+      EVIDENCE_REDACTION_REQUIRED:"请遮罩敏感区域后上传证据",
+      CONFIGURATION_KEY_UNAVAILABLE:"公共配置加密密钥未就绪，请联系管理员",
+      GOVERNANCE_VALIDATION_ERROR:"业务资产参数不符合协议，请检查必填字段、类型和长度",
       PERSONAL_EXECUTION_WRITE_DISABLED:"个人执行写入暂时关闭，请稍后使用原 requestId 查询或重试",MCP_BUSINESS_WRITE_DISABLED:"MCP 业务写入暂时关闭，请稍后使用原 requestId 查询或重试",
       EVIDENCE_EXPIRED:"图片暂存已过期，请重新上传",ATTACHMENT_EXPIRED:"附件已过期，请重新上传",
       VERSION_CONFLICT:"用例内容已变化，请重新查询并执行",IDEMPOTENCY_CONFLICT:"相同请求标识对应的参数不同，请先核对原操作",
@@ -440,33 +450,16 @@ export class MeterSphereClient {
     current?: number;
     pageSize?: number;
     includeSteps?: boolean;
-    includeContractVersion?: boolean;
   }) {
     const query = new URLSearchParams();
     query.set("projectId", payload.projectId ?? this.config.projectId);
     if (payload.current) query.set("current", String(payload.current));
     if (payload.pageSize) query.set("pageSize", String(payload.pageSize));
     if (payload.includeSteps !== undefined) query.set("includeSteps", String(payload.includeSteps));
-    if (payload.includeContractVersion) query.set("includeContractVersion", "true");
     return this.request(
       "GET",
       `/api/agent/v1/test-plan/${encodeURIComponent(payload.testPlanId)}/cases?${query.toString()}`
     );
-  }
-
-  readPlanExecutionContract(payload: {
-    projectId?: string;
-    testPlanId: string;
-    testPlanCaseId: string;
-    contractVersion: number;
-  }) {
-    const query = new URLSearchParams({
-      projectId: payload.projectId ?? this.config.projectId,
-      contractVersion: String(payload.contractVersion),
-    });
-    const plan = encodeURIComponent(payload.testPlanId);
-    const relation = encodeURIComponent(payload.testPlanCaseId);
-    return this.request("GET", `/api/agent/v1/test-plan/${plan}/cases/${relation}/execution-contract?${query}`);
   }
 
   resolveExecutionScope(payload: Record<string, unknown>) {

@@ -4,7 +4,7 @@
 > **预估工期**：1.5 天  
 > **前置依赖**：[task004](task004-P0-sessionToken存储与logout.md)  
 > **阻塞任务**：task009  
-> **关联方案**：[接入方案](../../summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §6.4
+> **关联方案**：[接入方案](../../product_md/history/summary/MeterSphere-第三方SSO单点登录接入方案-2026-07-16.md) §6.4
 
 ---
 

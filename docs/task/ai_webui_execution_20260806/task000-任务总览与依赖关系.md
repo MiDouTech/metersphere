@@ -1,6 +1,6 @@
 # task000 - AI Web UI 自动化测试执行任务总览
 
-> 来源方案：`docs/summary/MeterSphere_AI_WebUI自动化测试执行改造方案.md`
+> 来源方案：`docs/product_md/history/summary/MeterSphere_AI_WebUI自动化测试执行改造方案.md`
 > 任务目录：`docs/task/ai_webui_execution_20260806`
 > 拆分日期：2026-08-06
 > 当前状态：实施中（task001 已完成；task002～task013 已完成第一阶段代码主体；数据库、真实平台/MinIO 联调和 task014 灰度验收待完成）
