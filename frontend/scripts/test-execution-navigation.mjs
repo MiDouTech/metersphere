@@ -119,3 +119,18 @@ test('historical asset URLs retain their page implementation, never redirect to 
     assert.equal(typeof route.component, 'function');
   }
 });
+
+
+test('retired governed bookmarks use the permitted asset entry without mounting a page', () => {
+  const asset = load('router/routes/modules/testAsset.ts').default;
+  const retired = asset.children.find((route) => route.path === 'governed-execution');
+  assert.deepEqual(plain(retired.alias), ['protocol-administration']);
+  assert.equal(retired.meta.hideInMenu, true);
+  assert.equal(retired.component, null);
+  grants.clear();
+  hidden.clear();
+  grants.add('BUSINESS_ASSET:READ');
+  assert.equal(retired.redirect(), '/test-assets/business');
+  hidden.add('TEST_ASSET_DOCUMENTS_PAGE');
+  assert.equal(retired.redirect(), '/no-resource');
+});
