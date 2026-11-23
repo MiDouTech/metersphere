@@ -14,6 +14,7 @@ class AgentMcpErrorRecoveryTests {
         when(limiter.tryAcquireTool("token","metersphere.project.search")).thenReturn(false);
         when(limiter.suggestedToolRetryAfterMs()).thenReturn(120000L);
         var service=new AgentMcpStreamableService();
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "runtimeRoleAccess", org.mockito.Mockito.mock(io.metersphere.agent.service.AgentRuntimeRoleAccess.class));
         ReflectionTestUtils.setField(service,"agentTokenRateLimiter",limiter);
         ReflectionTestUtils.setField(service,"safeErrorMapper",new AgentSafeErrorMapper());
         var token=new AgentToken(); token.setId("token");

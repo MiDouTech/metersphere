@@ -127,6 +127,10 @@ export default {
     'system.agentIntegration.projectIdsHelp': '可多选；不选表示当前用户本人可访问的全部项目。',
     'system.agentIntegration.projectIdsPlaceholder': '不选 = 本人全部可访问项目',
     'system.agentIntegration.scopes': '权限范围',
+    'system.agentIntegration.authorization': '授权方式',
+    'system.agentIntegration.authorizationInherited': '继承关联用户角色权限',
+    'system.agentIntegration.authorizationHelp':
+      '全部功能继承关联用户当前角色权限，无需单独选择 Token 功能权限；仍受可访问项目、资源归属和业务规则限制。新增功能随用户权限生效，已有 Token 无需重新配置。',
     'system.agentIntegration.scopesRequired': '请选择权限范围',
     'system.agentIntegration.enable': '启用',
     'system.agentIntegration.tokenCreated': 'Token 创建成功',

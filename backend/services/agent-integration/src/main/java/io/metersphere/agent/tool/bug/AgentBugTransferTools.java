@@ -18,10 +18,10 @@ public class AgentBugTransferTools {
         return new AgentMcpToolHandler(){
             public String name(){return "metersphere.bug."+action;}
             public String description(){return switch(action){
-                case "export.columns" -> "Read bug export columns; requires current user export permission and BUG_READ.";
-                case "export" -> "Export 1..100 explicit bugIds as a ZIP containing XLSX. Returns an expiring authenticated downloadPath, size and SHA256 (max 5 MiB). Requires user export permission and BUG_READ.";
-                case "import.preview" -> "Validate rows or a base64 XLSX (exclusive). Headers: title, description, handleUser, custom:<fieldId>. No formulas; max 100 rows/5 MiB. Returns previewHash and per-row errors. Requires BUG_WRITE.";
-                default -> "Commit a previewed import using unchanged content and previewHash. Each row has its own transaction and persistent idempotency. Returns SUCCEEDED/PARTIAL/FAILED with row results; retries never duplicate successful rows. Requires BUG_WRITE.";};}
+                case "export.columns" -> "Read bug export columns; requires current user export permission.";
+                case "export" -> "Export 1..100 explicit bugIds as a ZIP containing XLSX. Returns an expiring authenticated downloadPath, size and SHA256 (max 5 MiB). Requires user export permission.";
+                case "import.preview" -> "Validate rows or a base64 XLSX (exclusive). Headers: title, description, handleUser, custom:<fieldId>. No formulas; max 100 rows/5 MiB. Returns previewHash and per-row errors. Requires current user bug creation permissions.";
+                default -> "Commit a previewed import using unchanged content and previewHash. Each row has its own transaction and persistent idempotency. Returns SUCCEEDED/PARTIAL/FAILED with row results; retries never duplicate successful rows. Requires current user bug creation permissions.";};}
             public String requiredScope(){return importing?AgentTokenScope.BUG_WRITE:AgentTokenScope.BUG_READ;}
             public Map<String,Object> annotations(){return AgentMcpToolSchemas.annotations(requiredScope(),!write,false,write);}
             public Map<String,Object> inputSchema(){

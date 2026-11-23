@@ -38,7 +38,9 @@
       <a-table-column title="用户 ID" data-index="userId" :width="180" />
       <a-table-column title="客户端" data-index="clientType" :width="110" />
       <a-table-column title="项目范围" data-index="projectScopeLabel" :width="180" ellipsis tooltip />
-      <a-table-column title="Scope" data-index="scopes" :width="220" ellipsis tooltip />
+      <a-table-column title="授权方式" :width="220">
+        <template #cell>继承关联用户角色权限</template>
+      </a-table-column>
       <a-table-column title="状态" :width="110"
         ><template #cell="{ record }"
           ><a-tag>{{ record.status || (record.enable ? 'ACTIVE' : 'DISABLED') }}</a-tag></template

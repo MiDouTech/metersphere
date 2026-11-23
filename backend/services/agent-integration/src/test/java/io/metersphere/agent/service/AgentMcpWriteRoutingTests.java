@@ -20,7 +20,11 @@ class AgentMcpWriteRoutingTests {
                 Object[] dependencies=Arrays.stream(constructor.getParameterTypes()).map(org.mockito.Mockito::mock).toArray();
                 inspect((AgentMcpToolHandler)constructor.newInstance(dependencies),writers);
             } else if(type.isAnnotationPresent(org.springframework.context.annotation.Configuration.class)) {
-                Object config=type.getDeclaredConstructor().newInstance();
+                var constructor=Arrays.stream(type.getDeclaredConstructors())
+                        .min(java.util.Comparator.comparingInt(java.lang.reflect.Constructor::getParameterCount)).orElseThrow();
+                constructor.setAccessible(true);
+                Object[] dependencies=Arrays.stream(constructor.getParameterTypes()).map(org.mockito.Mockito::mock).toArray();
+                Object config=constructor.newInstance(dependencies);
                 for(var method:type.getDeclaredMethods())if(method.isAnnotationPresent(org.springframework.context.annotation.Bean.class)&&AgentMcpToolHandler.class.isAssignableFrom(method.getReturnType())) {
                     method.setAccessible(true);
                     Object[] args=Arrays.stream(method.getParameterTypes()).map(org.mockito.Mockito::mock).toArray();

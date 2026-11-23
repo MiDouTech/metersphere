@@ -2,7 +2,6 @@ package io.metersphere.agent.service;
 
 import io.metersphere.agent.constants.AgentTokenScope;
 import io.metersphere.agent.dto.AgentBugDTO;
-import io.metersphere.agent.security.AgentTokenScopeParser;
 import io.metersphere.agent.tool.AgentMcpImageResult;
 import io.metersphere.bug.domain.*;
 import io.metersphere.bug.mapper.*;
@@ -55,8 +54,6 @@ public class AgentBugImageService {
     public void authorize(String project, String bug) {
         sessions.clearCache();
         var token = access.activeToken(AgentTokenScope.BUG_READ);
-        // BUG_WRITE's historical implication must not grant the new image/index capability.
-        if (!AgentTokenScopeParser.parse(token.getScopes()).contains(AgentTokenScope.BUG_READ)) throw AgentBusinessAccess.denied();
         if (!io.metersphere.agent.security.AgentTokenProjectAccess.allows(token, project)) throw AgentBusinessAccess.denied();
         permissions.require(token.getUserId(), project);
         Bug current = bugs.selectByPrimaryKey(bug);

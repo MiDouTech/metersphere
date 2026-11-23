@@ -21,7 +21,7 @@ public class FunctionalCommentDeleteToolHandler implements AgentMcpToolHandler {
     @Resource private FunctionalCaseCommentLifecycleService comments;
     @Resource private AgentExecLogService audit;
     public String name() { return "metersphere.functional.comment.delete"; }
-    public String description() { return "Delete a versioned comment into a tombstone while preserving replies. Author or comment moderator only; explicit CASE_COMMENT_DELETE_V2 and requestId required. AGENT_ALL does not include this grant."; }
+    public String description() { return "Delete a versioned comment into a tombstone while preserving replies. Author or comment moderator with current user permissions only; requestId and current version required. No separate Token feature grant."; }
     public String requiredScope() { return AgentTokenScope.CASE_COMMENT_DELETE_V2; }
     public Map<String, Object> inputSchema() {
         return AgentMcpToolSchemas.object(Map.of("projectId", AgentMcpToolSchemas.string(1,128),

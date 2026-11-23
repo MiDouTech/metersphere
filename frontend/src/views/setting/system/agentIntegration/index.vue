@@ -83,8 +83,8 @@
                 :before-change="(val) => toggleEnable(val, record)"
               />
             </template>
-            <template #scopes="{ record }">
-              {{ formatScopeLabel(record.scopes) }}
+            <template #scopes>
+              {{ t('system.agentIntegration.authorizationInherited') }}
             </template>
             <template #lastUsedAt="{ record }">
               {{ formatTime(record.lastUsedAt) }}
@@ -136,7 +136,12 @@
         @ok="handleCreate"
         @cancel="resetCreateForm"
       >
-        <a-form ref="createFormRef" :model="createForm" layout="vertical">
+        <a-form
+          ref="createFormRef"
+          :aria-label="t('system.agentIntegration.createToken')"
+          :model="createForm"
+          layout="vertical"
+        >
           <a-form-item
             field="name"
             :label="t('system.agentIntegration.tokenName')"
@@ -177,30 +182,7 @@
             </a-select>
           </a-form-item>
 
-          <a-form-item
-            field="scopes"
-            :label="t('system.agentIntegration.scopes')"
-            required
-            :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
-          >
-            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <button
-                v-for="scope in scopeOptions"
-                :key="scope.value"
-                type="button"
-                class="rounded border p-3 text-left"
-                :class="
-                  createForm.scopes === scope.value
-                    ? 'border-[rgb(var(--primary-6))] bg-[var(--color-primary-light-1)]'
-                    : 'border-[var(--color-border-2)]'
-                "
-                @click="createForm.scopes = scope.value"
-              >
-                <div class="font-medium">{{ scope.label }}</div>
-                <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.desc }}</div>
-              </button>
-            </div>
-          </a-form-item>
+          <a-alert class="mb-4">{{ t('system.agentIntegration.authorizationHelp') }}</a-alert>
         </a-form>
       </a-modal>
 
@@ -212,7 +194,12 @@
         @ok="handleUpdate"
         @cancel="resetEditForm"
       >
-        <a-form ref="editFormRef" :model="editForm" layout="vertical">
+        <a-form
+          ref="editFormRef"
+          :aria-label="t('system.agentIntegration.tokenSettings')"
+          :model="editForm"
+          layout="vertical"
+        >
           <a-form-item
             field="name"
             :label="t('system.agentIntegration.tokenName')"
@@ -244,30 +231,7 @@
             </a-select>
           </a-form-item>
 
-          <a-form-item
-            field="scopes"
-            :label="t('system.agentIntegration.scopes')"
-            required
-            :rules="[{ required: true, message: t('system.agentIntegration.scopesRequired') }]"
-          >
-            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <button
-                v-for="scope in scopeOptions"
-                :key="scope.value"
-                type="button"
-                class="rounded border p-3 text-left"
-                :class="
-                  editForm.scopes === scope.value
-                    ? 'border-[rgb(var(--primary-6))] bg-[var(--color-primary-light-1)]'
-                    : 'border-[var(--color-border-2)]'
-                "
-                @click="editForm.scopes = scope.value"
-              >
-                <div class="font-medium">{{ scope.label }}</div>
-                <div class="mt-1 text-xs text-[var(--color-text-3)]">{{ scope.desc }}</div>
-              </button>
-            </div>
-          </a-form-item>
+          <a-alert class="mb-4">{{ t('system.agentIntegration.authorizationHelp') }}</a-alert>
         </a-form>
       </a-modal>
 
@@ -393,7 +357,7 @@
   const tokenVisible = ref(false);
   const manifest = ref<AgentMcpManifest>();
   const mcpPlainText = `MCP 地址：${window.location.origin}/api/mcp
-创建本人 Token，选择项目及“个人 Agent 测试闭环”权限组合，再复制接入配置到 AI 客户端。
+创建本人 Token，选择可访问项目，再复制接入配置到 AI 客户端。所有功能按关联用户当前角色权限校验，无需逐项配置 Token 权限。
 个人 Agent 可直接读取用例、执行并提交步骤证据，无需创建任务或维护租约。
 门禁仅检查步骤覆盖、版本和附件结构，不比较预期文字、不核验图片语义；执行结果由提交方声明。原步骤不可遗漏，额外和重复步骤允许并保留，任一失败记录使汇总失败。
 技能包包含调用说明，不包含你的 Token。秘密只展示一次，请妥善保存。`;
@@ -403,152 +367,16 @@
   const createForm = reactive({
     name: '',
     projectIds: [] as string[],
-    scopes: 'AGENT_ALL',
     clientType: 'CHATGPT',
   });
   const editForm = reactive({
     id: '',
     name: '',
     projectIds: [] as string[],
-    scopes: 'AGENT_ALL',
   });
 
   const projectLoading = ref(false);
   const projectOptions = ref<{ id: string; name: string }[]>([]);
-
-  const scopeOptions = [
-    {
-      value: 'BUSINESS_ASSET_READ;BUSINESS_ASSET_WRITE',
-      label: '业务理解沉淀与执行器接入',
-      desc: '读取业务资产、上传业务理解、上报执行过程及响应纠正；仍校验项目权限。',
-    },
-    { value: 'SHARED_CONFIGURATION_READ', label: '公共配置读取', desc: '只读取配置元数据及普通值，密码保持脱敏。' },
-    {
-      value: 'SHARED_CONFIGURATION_READ;SHARED_CONFIGURATION_WRITE',
-      label: '公共配置维护',
-      desc: '维护配置及原始配置文档，不自动取得执行器凭据解析权限。',
-    },
-    {
-      value: 'SHARED_CONFIGURATION_RESOLVE',
-      label: '执行器读取配置实际值（敏感授权）',
-      desc: '仅允许本人已连接且运行中的执行器读取该会话固定版本，必须同时具备项目配置解析权限。',
-    },
-    {
-      value: 'PROJECT_FILE_READ;PROJECT_FILE_DOWNLOAD',
-      label: '项目原件读取（需明确授权）',
-      desc: '查询文件、精确版本及逐块下载；仍需项目文件读取和下载权限。旧全能力 Token 不自动取得权限。',
-    },
-    {
-      value: 'PROJECT_FILE_READ;PROJECT_FILE_WRITE;PROJECT_FILE_DOWNLOAD',
-      label: '项目原件上传与读取（需明确授权）',
-      desc: '分块保存 Excel/XMind 原件及显式新版本；上传不导入用例，仍需项目文件新增或更新权限。',
-    },
-    {
-      value: 'PROJECT_READ;FUNCTIONAL_READ;FUNCTIONAL_SUBMIT;CASE_ATTACHMENT',
-      label: '个人 Agent 测试闭环',
-      desc: '读取用例、上传证据，经步骤覆盖及附件结构校验后保存声明结果，无需任务、租约或模型核验。',
-    },
-    {
-      value: 'FUNCTIONAL_READ;CASE_COMMENT_EDIT_V2',
-      label: '编辑本人用例评论（需明确授权）',
-      desc: '允许修改本人评论正文，要求当前版本；保留回复及附件，不修改执行结果。',
-    },
-    {
-      value: 'FUNCTIONAL_READ;CASE_COMMENT_DELETE_V2',
-      label: '用例评论删除（需明确授权）',
-      desc: '按当前版本删除本人评论；具有用例删除和评论权限时可管理删除。保留墓碑及回复，旧全能力 Token 不自动取得该权限。',
-    },
-    {
-      value: 'FUNCTIONAL_READ;CASE_DELETE_V2;CASE_RESTORE_V2',
-      label: '用例删除与恢复（需明确授权）',
-      desc: '删除须先在平台确认具体目标和任务处理方式；恢复默认仅当前版本。旧全能力 Token 不自动取得权限。',
-    },
-    {
-      value: 'FUNCTIONAL_READ;CASE_IMPORT_V2',
-      label: '异步用例导入（需明确授权）',
-      desc: '预检固定文件、覆盖目标和模板，再提交后台导入；可查询逐项结果、停止及重试失败项。',
-    },
-    {
-      value: 'FUNCTIONAL_READ;CASE_MODULE_WRITE_V2',
-      label: '用例目录管理（需明确授权）',
-      desc: '允许目录改名和移动；旧全能力 Token 不自动包含此权限，仍受项目权限约束。',
-    },
-    {
-      value: 'AGENT_ALL',
-      label: t('system.agentIntegration.scopeAgentAll'),
-      desc: t('system.agentIntegration.scopeAgentAllDesc'),
-    },
-    {
-      value: 'FUNCTIONAL_ALL',
-      label: t('system.agentIntegration.scopeCase'),
-      desc: t('system.agentIntegration.scopeCaseDesc'),
-    },
-    {
-      value: 'CASE_UPDATE;CASE_COMMENT;CASE_ATTACHMENT',
-      label: t('system.agentIntegration.scopeCaseMaintain'),
-      desc: t('system.agentIntegration.scopeCaseMaintainDesc'),
-    },
-    {
-      value: 'CASE_DELETE',
-      label: t('system.agentIntegration.scopeCaseDelete'),
-      desc: t('system.agentIntegration.scopeCaseDeleteDesc'),
-    },
-    {
-      value: 'BUG_WRITE',
-      label: t('system.agentIntegration.scopeBug'),
-      desc: t('system.agentIntegration.scopeBugDesc'),
-    },
-    {
-      value: 'BUG_COMMENT;BUG_ATTACHMENT;BUG_RELATE',
-      label: t('system.agentIntegration.scopeBugExtend'),
-      desc: t('system.agentIntegration.scopeBugExtendDesc'),
-    },
-    {
-      value: 'BUG_DELETE',
-      label: t('system.agentIntegration.scopeBugDelete'),
-      desc: t('system.agentIntegration.scopeBugDeleteDesc'),
-    },
-    {
-      value: 'PROJECT_READ',
-      label: t('system.agentIntegration.scopeProjectRead'),
-      desc: t('system.agentIntegration.scopeProjectReadDesc'),
-    },
-    {
-      value: 'FUNCTIONAL_READ',
-      label: t('system.agentIntegration.scopeFunctionalRead'),
-      desc: t('system.agentIntegration.scopeFunctionalReadDesc'),
-    },
-    {
-      value: 'FUNCTIONAL_SUBMIT',
-      label: t('system.agentIntegration.scopeFunctionalSubmit'),
-      desc: t('system.agentIntegration.scopeFunctionalSubmitDesc'),
-    },
-    {
-      value: 'BUG_READ',
-      label: t('system.agentIntegration.scopeBugRead'),
-      desc: t('system.agentIntegration.scopeBugReadDesc'),
-    },
-  ];
-
-  const scopeLabelMap = computed<Record<string, string>>(() =>
-    scopeOptions.reduce(
-      (map, item) => ({
-        ...map,
-        [item.value]: item.label,
-      }),
-      {} as Record<string, string>
-    )
-  );
-
-  function formatScopeLabel(scopes?: string) {
-    if (!scopes) return '-';
-    return scopes
-      .split(/[;,]/)
-      .map((scope) => scope.trim())
-      .filter(Boolean)
-      .map((scope) => scopeLabelMap.value[scope] || scope)
-      .join('、');
-  }
 
   function formatTime(time?: number) {
     return time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '-';
@@ -563,7 +391,13 @@
       showTooltip: true,
     },
     { title: 'system.agentIntegration.clientType', dataIndex: 'clientType', width: 120 },
-    { title: 'system.agentIntegration.scopes', dataIndex: 'scopes', slotName: 'scopes', width: 180, showTooltip: true },
+    {
+      title: 'system.agentIntegration.authorization',
+      dataIndex: 'scopes',
+      slotName: 'scopes',
+      width: 180,
+      showTooltip: true,
+    },
     { title: 'common.createTime', dataIndex: 'createTime', width: 170 },
     {
       title: 'system.agentIntegration.lastUsedAt',
@@ -616,7 +450,6 @@
     } else {
       editForm.projectIds = [];
     }
-    editForm.scopes = record.scopes || 'AGENT_ALL';
     editVisible.value = true;
     searchProjects('');
   }
@@ -624,7 +457,6 @@
   function resetCreateForm() {
     createForm.name = '';
     createForm.projectIds = [];
-    createForm.scopes = 'AGENT_ALL';
     createForm.clientType = 'CHATGPT';
   }
 
@@ -632,7 +464,6 @@
     editForm.id = '';
     editForm.name = '';
     editForm.projectIds = [];
-    editForm.scopes = 'AGENT_ALL';
   }
 
   function getMcpUrl() {
@@ -697,7 +528,6 @@
       createdToken.value = await createAgentToken({
         name: createForm.name,
         projectIds: createForm.projectIds?.length ? createForm.projectIds : [],
-        scopes: createForm.scopes,
         clientType: createForm.clientType,
       });
       createVisible.value = false;
@@ -718,7 +548,6 @@
         id: editForm.id,
         name: editForm.name,
         projectIds: editForm.projectIds?.length ? editForm.projectIds : [],
-        scopes: editForm.scopes,
       });
       Message.success(t('common.updateSuccess'));
       editVisible.value = false;

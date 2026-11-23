@@ -35,7 +35,7 @@ public class AgentCaseDeletionTools {
         return new AgentMcpToolHandler(){
             public String name(){return "metersphere.functional."+name;}
             public String requiredScope(){return scope;}
-            public String description(){return "Versioned case lifecycle: "+name+". Deletion requires a short-lived preview and the owner's explicit decision in confirmationPath; never substitute confirm=true. CURRENT is default; ALL is explicit. Restore never restarts tasks. New delete/restore scopes are not implied by AGENT_ALL.";}
+            public String description(){return "Versioned case lifecycle: "+name+". Deletion requires a short-lived preview and the owner's explicit decision in confirmationPath; never substitute confirm=true. CURRENT is default; ALL is explicit. Restore never restarts tasks. Current linked-user roles authorize deletion/restoration without a separate Token feature grant.";}
             public Map<String,Object> inputSchema(){return AgentMcpToolSchemas.object(fields,required);}
             public Map<String,Object> annotations(){return AgentMcpToolSchemas.annotations(scope,name.equals("trash.list"),!name.endsWith("preview")&&!name.equals("trash.list"),name.equals("case.delete")||name.equals("case.batch_delete"));}
             public Object execute(Map<String,Object> args){return action.apply(args);}

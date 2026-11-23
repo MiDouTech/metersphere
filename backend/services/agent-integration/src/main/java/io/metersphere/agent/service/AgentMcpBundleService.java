@@ -113,21 +113,21 @@ public class AgentMcpBundleService {
                 Only ask the user for a base URL when they are using a non-standard private deployment.
                 Transport: Streamable HTTP
 
-                Business understanding: explicitly grant BUSINESS_ASSET_READ and BUSINESS_ASSET_WRITE.
+                Business understanding follows the linked user's current project roles; no separate Token feature grant is needed.
                 Connect with metersphere.executor.connect and follow its assetProtocol JSON. Read pinned versions with executor.context.get before exploring.
                 After exploration or execution, upload reusable understanding with business_asset.upload. Same module or related flow uses one document; operations are branches. Update the existing asset with baseVersion, preserve evidence references, distinguish observed facts, inference and unresolved questions. Never upload credentials into business documents.
                 Report progress/deviations with executor.event; poll executor.commands and respond APPLIED/FAILED. Explicit context replacement uses executor.context.refresh with reason and expectedVersionId. No frozen action plan or legacy Runner lease is required.
 
                 Search results with contentError must not be executed. CASE_BODY_INVALID means damaged historical content; CASE_CONTENT_READ_LIMIT means narrow the query and retry. Such rows have no usable steps; inspect top-level warnings instead of assuming zero steps.
-                Personal case execution (no task or lease): grant FUNCTIONAL_READ, FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.
+                Personal case execution (no task or lease) follows the linked user current case execution and evidence permissions.
                 Contract is optional. One PNG/JPEG image per case execution is sufficient. Do not require client contentHash/policyHash or per-step screenshots.
                 Upload a case PNG/JPEG with metersphere.functional.execution.evidence.upload (base64, at most 5 MiB) or import_url. Put evidenceIds at submit's top level; steps do not require images.
                 Submit with metersphere.functional.execution.submit. Cover every original position at least once; extra and repeated positions are allowed and retained. ACCEPTED/PUBLISHED means structure accepted and declared results saved, not independent execution verification. Historical NEEDS_REVIEW submissions remain unchanged.
                 Report actual observations and SUCCESS or ERROR. No comparison with expected text or content reviewer is used. Any ERROR, including extra or repeated records, makes the case ERROR. Permissions, content/policy versions and evidence rules still apply.
                 Use metersphere.functional.execution.get to inspect accepted step facts and evidence mapping. Reuse requestId only for identical retries.
-                For imports, use functional.import.precheck, inspect its report, then import.commit and import.get. Stop preserves successful writes; retry does not duplicate them. Requires explicit CASE_IMPORT_V2.
-                For deletion, use functional.case.delete_preview and let the user decide at confirmationPath before continuing the same previewId. Never forge user confirmation. CASE_DELETE_V2 and CASE_RESTORE_V2 are explicit permissions, not implied by legacy wildcard scopes.
-                Archive ended runs with functional.archive.prepare/get/retry. Archival failure never changes the execution verdict. Only submit actual reusable business data through archive.data with sourceObjectId, reuseConditions and cleanupStatus. Requires ARTIFACT_WRITE and current project permissions; no data means no empty dataset.
+                For imports, use functional.import.precheck, inspect its report, then import.commit and import.get. Stop preserves successful writes; retry does not duplicate them. Requires the linked user's current case import permission.
+                For deletion, use functional.case.delete_preview and let the user decide at confirmationPath before continuing the same previewId. Never forge user confirmation. Deletion and restoration follow current user roles and the original confirmation/version rules; no extra Token grant is required.
+                Archive ended runs with functional.archive.prepare/get/retry. Archival failure never changes the execution verdict. Only submit actual reusable business data through archive.data with sourceObjectId, reuseConditions and cleanupStatus. Requires current user project permissions; no data means no empty dataset.
                 """;
     }
 
@@ -181,10 +181,10 @@ public class AgentMcpBundleService {
     }
 
     private String toolsMd() {
-        StringBuilder out = new StringBuilder("# Server capabilities\n\nGenerated from the deployed registry. Call tools/list with your token for the authorized subset.\n\n");
+        StringBuilder out = new StringBuilder("# Server capabilities\n\nGenerated from the deployed registry. Call tools/list for the complete public catalog. Every call checks the linked user current roles and project/resource access.\n\n");
         registry.all().stream().filter(handler -> io.metersphere.agent.tool.AgentMcpToolExposure.discoverable(handler.name()))
                 .sorted(java.util.Comparator.comparing(io.metersphere.agent.tool.AgentMcpToolHandler::name))
-                .forEach(handler -> out.append("## ").append(handler.name()).append("\n\nScope: ").append(handler.requiredScope())
+                .forEach(handler -> out.append("## ").append(handler.name()).append("\n\nAuthorization: linked user current roles (USER_RBAC)")
                         .append("\n\n").append(handler.description()).append("\n\nInput schema:\n```json\n")
                         .append(JSON.toJSONString(handler.inputSchema())).append("\n```\n\n"));
         return out.toString();
@@ -197,13 +197,13 @@ public class AgentMcpBundleService {
                 Runtime permission is the intersection of:
 
                 - MeterSphere user RBAC
-                - Agent Token scopes
+                - Current linked-user identity and Token validity
                 - Project allow-list
                 - Server-side tool policy
 
-                `AGENT_ALL` covers legacy scopes and never bypasses user RBAC or project restrictions. New BUSINESS_ASSET_READ/WRITE and SHARED_CONFIGURATION_READ/WRITE/RESOLVE scopes require explicit grants; do not assume a legacy wildcard includes them.
-                `PROJECT_READ` is required for project search/list/get. During migration, `FUNCTIONAL_READ` / `FUNCTIONAL_ALL` temporarily also grant `PROJECT_READ`.
-                Empty scopes are denied. Scope matching is exact set membership (no substring match).
+                All MCP capabilities, including new tools, follow the linked user's current roles. Historical Token scopes do not impose a second feature authorization layer. Existing Tokens require no reconfiguration; project allow-lists and resource ownership still apply.
+                Project search/list/get use current user access and the Token project allow-list.
+                Token expiry, revocation, user role changes, resource ownership and business confirmations are checked independently of legacy scope metadata.
                 """;
     }
 
@@ -223,8 +223,8 @@ public class AgentMcpBundleService {
                 - Reuse the same requestId and identical payload for retries. IDEMPOTENCY_CONFLICT requires checking the existing operation; do not generate another key to bypass it.
                 - Case-library search accepts projectId and optional identityType (ID/NUMBER/NAME). Omit testPlanId to search the repository; inspect current/pageSize/total/hasMore. Live paging is not a frozen export snapshot.
                 - Read case updateTime before case.update; keep customFields as a field-ID map. A conflict requires rereading, not overwriting another writer.
-                - functional.comments.list returns {total,current,pageSize,list}: page roots with current/pageSize, or replies with parentId. Read updateTime before mutation. Edit only your own text with explicit CASE_COMMENT_EDIT_V2. Deletion requires explicit CASE_COMMENT_DELETE_V2, expectedUpdateTime and requestId, and leaves a tombstone preserving replies. Neither scope is implied by AGENT_ALL. Invalid credentials must not fall back to a browser session. Personal tokens cannot manage credentials.
-                - Use module.get to read updateTime before module.update/move. Moving to parentId=NONE means project root. CASE_MODULE_WRITE_V2 is an explicit grant; AGENT_ALL and FUNCTIONAL_ALL do not include it.
+                - functional.comments.list returns {total,current,pageSize,list}: page roots with current/pageSize, or replies with parentId. Read updateTime before mutation. Edit only your own text with the current user's comment permission. Deletion requires current user permissions, expectedUpdateTime and requestId, and leaves a tombstone preserving replies. Invalid credentials must not fall back to a browser session. Personal tokens cannot manage credentials.
+                - Use module.get to read updateTime before module.update/move. Moving to parentId=NONE means project root. Module management follows the linked user's current case permissions; no separate Token grant is needed.
                 - Never infer that deletion/import/export is available from this guide. Only invoke capabilities exposed by live tools/list. Running-case deletion must wait for the user's documented decision when that capability becomes available.
                 - Review create/associate require requestId; read the review after a response loss. Review decisions and Excel import are not promised unless the live tools/list exposes them.
                 - For bug creation, inspect the current template and required fields; use published workflow initial status rather than inventing one. Include reproduction, expected and actual results when supported by the template.

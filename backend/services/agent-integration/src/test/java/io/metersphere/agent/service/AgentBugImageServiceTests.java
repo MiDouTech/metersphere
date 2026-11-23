@@ -110,10 +110,20 @@ class AgentBugImageServiceTests {
         assertEquals(true, mapped.getDetails().get("retryable")); assertFalse(mapped.toString().contains("private storage"));
         doReturn(png).when(store).read(any()); assertNotNull(service.read("p","b",ref));
     }
-    @Test void explicitReadScopeAndProjectAuthorizationPrecedeFileDiagnosis() throws Exception {
+    @Test void currentUserAuthorizationPrecedesFileDiagnosis() throws Exception {
         token.setScopes("BUG_WRITE;BUG_ATTACHMENT");
+        doThrow(AgentBusinessAccess.denied()).when(permissions).require("u", "p");
         assertThrows(MSException.class, this::detail); assertThrows(MSException.class, () -> service.read("p","b","https://private"));
+        verify(permissions, atLeastOnce()).require("u", "p");
         verifyNoInteractions(store);
+    }
+    @Test void existingAllAndWriteTokensCanReadImagesWhenTheUserHasPermission() throws Exception {
+        String reference = ref();
+        for (String scopes : new String[]{"AGENT_ALL", "BUG_WRITE", "FUNCTIONAL_READ", ""}) {
+            token.setScopes(scopes);
+            assertNotNull(service.read("p", "b", reference));
+        }
+        verify(permissions, atLeast(4)).require("u", "p");
     }
     @Test void crossBugAndCrossProjectAreRejectedBeforeStorage() {
         assertThrows(MSException.class, () -> service.read("other","b","bi1_" + "0".repeat(129)));

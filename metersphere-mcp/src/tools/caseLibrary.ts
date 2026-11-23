@@ -16,15 +16,15 @@ const tool = (name: string, description: string, inputSchema: z.ZodRawShape) => 
 export const caseLibraryTools = [
   tool("metersphere.operation.get","Find personal execution upload/submit state after a lost response. NOT_FOUND does not prove no execution; reuse the original requestId.",{...resource,requestId,toolName:z.enum(["metersphere.functional.execution.evidence.upload","metersphere.functional.execution.submit","metersphere.functional.execution.evidence.import_url"])}),
   tool("metersphere.functional.attachment.import_url", "Download a public PNG/JPEG URL (max 5 MiB) and persist it in the case attachment area. Same requestId replays safely, even if the source expires.", { ...resource, url:z.string().url().max(8192), requestId, fileName:z.string().min(1).max(200).optional() }),
-  tool("metersphere.bug.attachment.import_url", "Download a public PNG/JPEG URL (max 5 MiB) and persist it in the bug attachment area; requires BUG_ATTACHMENT and current bug update permission.", { projectId:id, bugId:id, url:z.string().url().max(8192), requestId, fileName:z.string().min(1).max(200).optional() }),
-  tool("metersphere.functional.execution.evidence.import_url", "Stage PNG/JPEG evidence from a public URL (max 5 MiB). Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT. Visible only after execution.submit passes the existing gate.", { ...resource, url:z.string().url().max(8192), requestId, contentHash:z.string().length(64).optional(), stepNum:z.number().int().min(1).max(1000).optional(), purpose:z.enum(["BEFORE_STEP","AFTER_STEP"]).optional(), fileName:z.string().min(1).max(200).optional() }),
-  tool("metersphere.functional.archive.prepare","Archive an ended TASK or accepted personal SUBMISSION into project documents. Separate status from test success. Requires ARTIFACT_WRITE; no new task/lease for personal submissions.",{projectId:id,sourceType:z.enum(["TASK","SUBMISSION"]),sourceId:id}),
+  tool("metersphere.bug.attachment.import_url", "Download a public PNG/JPEG URL (max 5 MiB) and persist it in the bug attachment area; requires current user bug update permission.", { projectId:id, bugId:id, url:z.string().url().max(8192), requestId, fileName:z.string().min(1).max(200).optional() }),
+  tool("metersphere.functional.execution.evidence.import_url", "Stage PNG/JPEG evidence from a public URL (max 5 MiB). Requires current user case execution and evidence permissions. Visible only after execution.submit passes the existing gate.", { ...resource, url:z.string().url().max(8192), requestId, contentHash:z.string().length(64).optional(), stepNum:z.number().int().min(1).max(1000).optional(), purpose:z.enum(["BEFORE_STEP","AFTER_STEP"]).optional(), fileName:z.string().min(1).max(200).optional() }),
+  tool("metersphere.functional.archive.prepare","Archive an ended TASK or accepted personal SUBMISSION into project documents. Separate status from test success. Requires current user project permissions; no new task/lease for personal submissions.",{projectId:id,sourceType:z.enum(["TASK","SUBMISSION"]),sourceId:id}),
   tool("metersphere.functional.archive.get","Read archive status and document/dataset references. PENDING/FAILED is not a completed archive.",{projectId:id,archiveId:id}),
   tool("metersphere.functional.archive.retry","Retry failed archival without rerunning the test or changing its result.",{projectId:id,archiveId:id}),
   tool("metersphere.functional.archive.data","Archive actual reusable business data after obtaining archiveId. Do not fabricate data. Each record requires source object, reuse conditions and cleanup status; values are field-redacted. Additional project file-add permission is required. Same records replay; different records cannot overwrite the original.",{projectId:id,archiveId:id,records:z.array(z.object({sourceObjectId:z.string().min(1).max(2000),reuseConditions:z.string().min(1).max(2000),cleanupStatus:z.string().min(1).max(2000),values:z.record(z.string(),z.unknown())}).strict()).min(1).max(500)}),
   {
     name: "metersphere.functional.import.precheck",
-    description: "Freeze an Excel/XMind import before committing. Maximum 10000 logical cases/50 MiB, expires in 24h. Explicit CASE_IMPORT_V2 required; cover defaults false. Inspect per-item report, then use import.commit.",
+    description: "Freeze an Excel/XMind import before committing. Maximum 10000 logical cases/50 MiB, expires in 24h. Requires the current user role permission for case import; cover defaults false. Inspect per-item report, then use import.commit.",
     inputSchema: { projectId:id, versionId:id.optional(), moduleId:id.optional(), cover:z.boolean().optional(), requestId:z.string().regex(/^[A-Za-z0-9_.:-]{1,128}$/), fileName:z.string().min(1).max(255), filePath:z.string().min(1).optional(), base64:z.string().min(1).max(69905068).optional() },
     handler: async (client:MeterSphereClient,args:Record<string,unknown>) => {
       if(Boolean(args.filePath)===Boolean(args.base64))throw new Error("Provide exactly one of filePath or base64");
@@ -47,13 +47,13 @@ export const caseLibraryTools = [
   tool("metersphere.functional.import.followup.options","List explicitly linked plan/review groups for this import.",{jobId:id}),
   tool("metersphere.functional.import.followup.retry","Retry frozen plan/review followup without importing successful rows again.",{jobId:id}),
   ...["commit","stop","retry"].map(action=>tool(`metersphere.functional.import.${action}`,`Import ${action}: same jobId safely replays; successful items are never reimported. Stop preserves completed writes. Retry uses the frozen file and versions.`,{jobId:id,...(action==="commit"?{followup:z.object({policy:z.enum(["CREATE_NEW_PAIR","APPEND_EXISTING","IMPORT_ONLY"]),targetGroupId:id.optional(),expectedGroupRevision:z.number().int().positive().optional(),planName:z.string().min(1).max(255).optional(),reviewName:z.string().min(1).max(255).optional(),reviewers:z.array(id).min(1).max(100).optional(),reviewPassRule:z.enum(["SINGLE","MULTIPLE"]).optional()}).strict().optional()}: {})})),
-  tool("metersphere.functional.case.delete_preview", "Preview explicit case versions and active tasks. Return confirmationPath for the user to choose cancel/wait/stop/delete. Never replace the user's choice with confirm=true. Requires explicit CASE_DELETE_V2.", {
+  tool("metersphere.functional.case.delete_preview", "Preview explicit case versions and active tasks. Return confirmationPath for the user to choose cancel/wait/stop/delete. Never replace the user's choice with confirm=true. Requires the linked user's current deletion permission and the original confirmation.", {
     projectId: id, caseIds: z.array(id).min(1).max(100), versionScope: z.enum(["CURRENT","ALL"]).optional(),
   }),
   tool("metersphere.functional.case.delete", "Continue a user's approved deletion preview. Pending/waiting results are not deletion success; retry the same previewId. Does not permanently erase cases.", { previewId: id }),
   tool("metersphere.functional.case.batch_delete", "Continue the exact target set in a user-approved deletion preview; no filter expansion.", { previewId: id }),
   tool("metersphere.functional.trash.list", "Page authorized deleted case versions including updateTime for restore.", {projectId: id, current: z.number().int().positive().optional(), pageSize: z.number().int().min(1).max(100).optional()}),
-  tool("metersphere.functional.case.restore", "Restore explicit case versions; CURRENT default, ALL explicit. Supply a valid moduleId if the former directory is gone. Never restarts execution. Requires explicit CASE_RESTORE_V2.", {
+  tool("metersphere.functional.case.restore", "Restore explicit case versions; CURRENT default, ALL explicit. Supply a valid moduleId if the former directory is gone. Never restarts execution. Requires the linked user's current restoration permission.", {
     ...resource, expectedUpdateTime: version, moduleId: id.optional(), versionScope: z.enum(["CURRENT","ALL"]).optional(), requestId,
   }),
   tool("metersphere.functional.attachment.upload.prepare", "Prepare an ordinary case attachment, bound to project/purpose/SHA-256 for 15 minutes. Max 5 MiB. Does not associate it with a case.", {
@@ -92,7 +92,7 @@ export const caseLibraryTools = [
   tool("metersphere.functional.execution.get", "Read step outcomes, evidence mapping and the frozen global policy of a submitted execution.", { ...resource, submissionId: id }),
   {
     name: "metersphere.functional.execution.evidence.upload",
-    description: "Stage case evidence: one image covers all steps; legacy hash/step fields optional. from a local PNG/JPEG filePath or base64 (max 5 MiB). Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT; published only after submit passes the gate.",
+    description: "Stage case evidence: one image covers all steps; legacy hash/step fields optional. from a local PNG/JPEG filePath or base64 (max 5 MiB). Requires current user case execution and evidence permissions; published only after submit passes the gate.",
     inputSchema: { ...resource, contentHash: z.string().length(64).optional(), stepNum: z.number().int().min(1).max(1000).optional(), purpose: z.enum(["BEFORE_STEP", "AFTER_STEP"]).optional(), fileName: z.string().min(1).max(200), contentType: z.enum(["image/png", "image/jpeg"]), filePath: z.string().min(1).optional(), base64: z.string().min(1).max(6990508).optional(), requestId },
     handler: async (client: MeterSphereClient, args: Record<string, unknown>) => {
       if (Boolean(args.filePath) === Boolean(args.base64)) throw new Error("Provide exactly one of filePath or base64");
@@ -120,10 +120,10 @@ export const caseLibraryTools = [
     ...resource, contentHash: z.string().length(64).optional(), policyHash: z.string().length(64).optional(), requestId, evidenceIds: z.array(id).min(1).max(10).optional(),
     steps: z.array(z.object({ stepNum: z.number().int().min(1).max(1000), actual: z.string().min(1).max(20000), result: z.enum(["SUCCESS", "ERROR"]), evidenceIds: z.array(id).max(10).optional() }).strict()).min(1).max(1000),
   }),
-  tool("metersphere.functional.comment.update", "Edit your own comment text with version checking. Explicit CASE_COMMENT_EDIT_V2 required; preserves replies and attachments.", {
+  tool("metersphere.functional.comment.update", "Edit your own comment text with version checking. Requires the current user role permission for comment editing; preserves replies and attachments.", {
     ...resource, commentId: id, content: z.string().min(1).max(20000), expectedUpdateTime: version, requestId,
   }),
-  tool("metersphere.functional.comment.delete", "Delete a comment into a tombstone, preserving replies. Requires explicit CASE_COMMENT_DELETE_V2, author/moderator permission and the current version. AGENT_ALL does not include deletion.", {
+  tool("metersphere.functional.comment.delete", "Delete a comment into a tombstone, preserving replies. Requires current author/moderator permissions and the current version; no separate Token feature grant.", {
     ...resource, commentId: id, expectedUpdateTime: version, requestId,
   }),
   tool("metersphere.functional.overview.get", "Read case plan/review relationships and personal progress.", resource),
@@ -145,6 +145,6 @@ export const caseLibraryTools = [
     event: z.enum(["COMMENT", "AT", "REPLY"]).optional(), parentId: id.optional(), replyUser: id.optional(), notifier: z.string().max(2000).optional(), uploadFileIds: z.array(id).max(10).optional(),
   }),
   tool("metersphere.functional.module.get", "Read module metadata including updateTime.", moduleResource),
-  tool("metersphere.functional.module.update", "Rename a case module. Requires an explicit CASE_MODULE_WRITE_V2 grant.", { ...moduleResource, name: z.string().min(1).max(255), expectedUpdateTime: version, requestId }),
-  tool("metersphere.functional.module.move", "Move a module within its project. parentId=NONE is the project root. Requires CASE_MODULE_WRITE_V2.", { ...moduleResource, parentId: id, expectedUpdateTime: version, requestId }),
+  tool("metersphere.functional.module.update", "Rename a case module. Requires the linked user's current case management permission.", { ...moduleResource, name: z.string().min(1).max(255), expectedUpdateTime: version, requestId }),
+  tool("metersphere.functional.module.move", "Move a module within its project. parentId=NONE is the project root. Requires the current user role permission for module editing.", { ...moduleResource, parentId: id, expectedUpdateTime: version, requestId }),
 ];

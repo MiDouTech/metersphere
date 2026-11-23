@@ -31,7 +31,8 @@ export interface AgentTokenCreateParams {
   name: string;
   projectIds?: string[];
   projectId?: string;
-  scopes: string;
+  /** Legacy metadata accepted for compatibility; authorization follows the user's roles. */
+  scopes?: string;
   clientType?: string;
   expireTime?: number;
 }

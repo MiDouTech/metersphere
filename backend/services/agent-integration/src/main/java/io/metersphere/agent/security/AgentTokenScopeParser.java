@@ -36,7 +36,7 @@ public final class AgentTokenScopeParser {
     }
 
     /**
-     * 创建/更新 Token 时校验：非空、全部为白名单枚举。
+     * Legacy metadata utility only. Token creation/update and runtime authorization do not use it.
      */
     public static String normalizeAndValidate(String scopes) {
         Set<String> parsed = parse(scopes);
@@ -51,80 +51,13 @@ public final class AgentTokenScopeParser {
         return String.join(";", parsed);
     }
 
+    /**
+     * Compatibility for existing call sites. Token scopes are historical metadata;
+     * authenticated identity, current user roles and resource ownership authorize operations.
+     * This method does not authenticate a caller or grant a user permission.
+     */
     public static boolean hasScope(Set<String> owned, String requiredScope) {
-        if (owned == null || owned.isEmpty() || StringUtils.isBlank(requiredScope)) {
-            return false;
-        }
-        String required = requiredScope.trim().toUpperCase(Locale.ROOT);
-        // Versioned grants require explicit consent; legacy wildcard scopes never acquire them.
-        if (AgentTokenScope.BUSINESS_ASSET_READ.equals(required)
-                || AgentTokenScope.SHARED_CONFIGURATION_RESOLVE.equals(required)
-                || AgentTokenScope.SHARED_CONFIGURATION_READ.equals(required)
-                || AgentTokenScope.SHARED_CONFIGURATION_WRITE.equals(required)
-                || AgentTokenScope.BUSINESS_ASSET_WRITE.equals(required)
-                || AgentTokenScope.PROJECT_FILE_READ.equals(required)
-                || AgentTokenScope.PROJECT_FILE_WRITE.equals(required)
-                || AgentTokenScope.PROJECT_FILE_DOWNLOAD.equals(required)
-                || AgentTokenScope.CASE_MODULE_WRITE_V2.equals(required)
-                || AgentTokenScope.CASE_COMMENT_EDIT_V2.equals(required)
-                || AgentTokenScope.CASE_COMMENT_DELETE_V2.equals(required)
-                || AgentTokenScope.CASE_DELETE_V2.equals(required)
-                || AgentTokenScope.CASE_RESTORE_V2.equals(required)
-                || AgentTokenScope.CASE_IMPORT_V2.equals(required)) return owned.contains(required);
-        if (owned.contains(AgentTokenScope.AGENT_ALL)) {
-            return true;
-        }
-        if (owned.contains(required)) {
-            return true;
-        }
-        if (AgentTokenScope.isFunctionalScope(required) && owned.contains(AgentTokenScope.FUNCTIONAL_ALL)) {
-            return true;
-        }
-        // BUG_WRITE 覆盖 BUG_READ
-        if (AgentTokenScope.BUG_READ.equals(required) && owned.contains(AgentTokenScope.BUG_WRITE)) {
-            return true;
-        }
-        // 迁移期：FUNCTIONAL_READ / FUNCTIONAL_ALL 临时覆盖 PROJECT_READ
-        if (AgentTokenScope.PROJECT_READ.equals(required)
-                && (owned.contains(AgentTokenScope.FUNCTIONAL_READ)
-                || owned.contains(AgentTokenScope.FUNCTIONAL_ALL))) {
-            return true;
-        }
-        if (AgentTokenScope.PLAN_READ.equals(required) && owned.contains(AgentTokenScope.PLAN_WRITE)) {
-            return true;
-        }
-        if (AgentTokenScope.AI_EXECUTION_READ.equals(required)
-                && (owned.contains(AgentTokenScope.AI_EXECUTION_RUN)
-                || owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN))) {
-            return true;
-        }
-        if ((AgentTokenScope.AI_EXECUTION_RUN.equals(required)
-                || AgentTokenScope.AI_EXECUTION_CANCEL.equals(required)
-                || AgentTokenScope.AI_EXECUTION_LOGIN.equals(required))
-                && owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN)) {
-            return true;
-        }
-        // Compatibility window: old execution scopes grant their equivalent granular scopes.
-        if (AgentTokenScope.TASK_READ.equals(required)
-                && (owned.contains(AgentTokenScope.AI_EXECUTION_READ)
-                || owned.contains(AgentTokenScope.AI_EXECUTION_RUN)
-                || owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN))) {
-            return true;
-        }
-        if (Set.of(AgentTokenScope.TASK_CLAIM, AgentTokenScope.TASK_EVENT_WRITE,
-                        AgentTokenScope.TASK_RESULT_WRITE, AgentTokenScope.ARTIFACT_WRITE)
-                .contains(required)
-                && (owned.contains(AgentTokenScope.AI_EXECUTION_RUN)
-                || owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN))) {
-            return true;
-        }
-        if (AgentTokenScope.PLAN_EXECUTE.equals(required)
-                && (owned.contains(AgentTokenScope.PLAN_WRITE)
-                || owned.contains(AgentTokenScope.AI_EXECUTION_RUN)
-                || owned.contains(AgentTokenScope.AI_EXECUTION_ADMIN))) {
-            return true;
-        }
-        return false;
+        return StringUtils.isNotBlank(requiredScope);
     }
 
     public static boolean hasScope(String scopes, String requiredScope) {

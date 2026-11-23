@@ -24,6 +24,7 @@ class BusinessAssetMcpTests {
     var handler = new BuiltinAgentMcpToolConfig().externalExecutorConnectTool(executor);
     var registry = new AgentMcpToolRegistry(List.of(handler));
     var transport = new AgentMcpStreamableService();
+        org.springframework.test.util.ReflectionTestUtils.setField(transport, "runtimeRoleAccess", org.mockito.Mockito.mock(io.metersphere.agent.service.AgentRuntimeRoleAccess.class));
     var cache = mock(AgentIdempotencyService.class);
     var limiter = mock(AgentTokenRateLimiter.class);
     when(limiter.tryAcquireTool(anyString(), anyString())).thenReturn(true);

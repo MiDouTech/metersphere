@@ -2,14 +2,12 @@ package io.metersphere.agent.service;
 
 import io.metersphere.agent.security.AgentTokenContext;
 import io.metersphere.agent.security.AgentTokenProjectAccess;
-import io.metersphere.agent.security.AgentTokenScopeParser;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.domain.AgentToken;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import java.util.Arrays;
 import java.util.List;
 
 /** Shared, current-state authorization for Agent HTTP and MCP application services. */
@@ -28,7 +26,7 @@ public class AgentBusinessAccess {
                 || (token.getStatus()!=null && !"ACTIVE".equals(token.getStatus()))
                 || (token.getExpireTime()!=null && token.getExpireTime()<=System.currentTimeMillis())
                 || !java.util.Objects.equals(context.getUserId(),token.getUserId())) throw denied();
-        if (Arrays.stream(scopes).noneMatch(scope->AgentTokenScopeParser.hasScope(token.getScopes(),scope))) throw denied();
+        // Feature authorization belongs to current user RBAC, never historical Token scopes.
         return token;
     }
 
@@ -62,10 +60,15 @@ public class AgentBusinessAccess {
                 SELECT COUNT(*) FROM user u JOIN user_role_relation rel ON rel.user_id=u.id
                 JOIN user_role role ON role.id=rel.role_id AND role.enabled=1
                 WHERE u.id=? AND u.enable=1 AND u.deleted=0 AND (
-                  (rel.source_id='system' AND role.type='SYSTEM' AND role.id='admin') OR
-                  (rel.source_id=? AND role.type='PROJECT' AND EXISTS
-                    (SELECT 1 FROM user_role_permission perm WHERE perm.role_id=role.id AND perm.permission_id=?)))
-                """,Long.class,userId,projectId,permission);
+                  (rel.source_id='system' AND role.type='SYSTEM' AND (role.id='admin' OR EXISTS
+                    (SELECT 1 FROM user_role_permission perm WHERE perm.role_id=role.id AND perm.permission_id=?))) OR
+                  (rel.source_id=? AND role.type='PROJECT' AND (role.id='project_admin' OR EXISTS
+                    (SELECT 1 FROM user_role_permission perm WHERE perm.role_id=role.id AND perm.permission_id=?))) OR
+                  (role.type='ORGANIZATION' AND EXISTS
+                    (SELECT 1 FROM project pr WHERE pr.id=? AND pr.organization_id=rel.source_id)
+                    AND (role.id='org_admin' OR EXISTS
+                    (SELECT 1 FROM user_role_permission perm WHERE perm.role_id=role.id AND perm.permission_id=?))))
+                """,Long.class,userId,permission,projectId,permission,projectId,permission);
         return count!=null && count>0;
     }
 
@@ -78,7 +81,12 @@ public class AgentBusinessAccess {
      */
     public void lockProjectFileAuthorization(String userId, String projectId) {
         jdbc.queryForList("SELECT id FROM user WHERE id=? FOR UPDATE", userId);
-        var roles = jdbc.queryForList("SELECT role_id FROM user_role_relation WHERE user_id=? AND source_id IN ('system',?) ORDER BY role_id,source_id FOR UPDATE", String.class, userId, projectId)
+        // Organization assignments also authorize their own projects, just as in the web UI.
+        var sources = new java.util.ArrayList<String>(); sources.add("system"); sources.add(projectId);
+        sources.addAll(jdbc.queryForList("SELECT organization_id FROM project WHERE id=?",String.class,projectId));
+        String placeholders=String.join(",", java.util.Collections.nCopies(sources.size(),"?"));
+        var parameters=new java.util.ArrayList<Object>();parameters.add(userId);parameters.addAll(sources);
+        var roles = jdbc.queryForList("SELECT role_id FROM user_role_relation WHERE user_id=? AND source_id IN ("+placeholders+") ORDER BY role_id,source_id FOR UPDATE", String.class, parameters.toArray())
                 .stream().distinct().sorted().toList();
         for (String role : roles) {
             jdbc.queryForList("SELECT id FROM user_role WHERE id=? FOR UPDATE", role);

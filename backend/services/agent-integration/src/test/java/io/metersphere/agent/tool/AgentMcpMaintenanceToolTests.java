@@ -21,7 +21,8 @@ class AgentMcpMaintenanceToolTests {
         maintenance=mock(AgentMcpMaintenanceService.class);var config=new BuiltinAgentMcpToolConfig();
         handlers=List.of(config.functionalBatchSubmitTool(maintenance),config.executionHistoryTool(maintenance),config.executionCheckpointResumeTool(maintenance),
                 config.bugTransitionsTool(maintenance),config.bugTransitionTool(maintenance),config.testPlanUpdateTool(maintenance),config.testPlanDisassociateTool(maintenance),config.testPlanGetTool(maintenance));
-        transport=new AgentMcpStreamableService();var rate=mock(AgentTokenRateLimiter.class);when(rate.tryAcquireTool(anyString(),anyString())).thenReturn(true);
+        transport=new AgentMcpStreamableService();
+        org.springframework.test.util.ReflectionTestUtils.setField(transport, "runtimeRoleAccess", org.mockito.Mockito.mock(io.metersphere.agent.service.AgentRuntimeRoleAccess.class));var rate=mock(AgentTokenRateLimiter.class);when(rate.tryAcquireTool(anyString(),anyString())).thenReturn(true);
         idempotency=mock(AgentIdempotencyService.class);
         ReflectionTestUtils.setField(transport,"agentMcpToolRegistry",new AgentMcpToolRegistry(handlers));
         ReflectionTestUtils.setField(transport,"agentTokenRateLimiter",rate);ReflectionTestUtils.setField(transport,"agentIdempotencyService",idempotency);
@@ -29,13 +30,13 @@ class AgentMcpMaintenanceToolTests {
         AgentToken token=new AgentToken();token.setId("token");token.setUserId("user");token.setScopes(AgentTokenScope.AGENT_ALL);AgentTokenContext.set(token);
     }
     @AfterEach void after(){AgentTokenContext.clear();}
-    @Test void listIncludesAllNewToolsAndRespectsReadScope(){
+    @Test void listIncludesAllToolsRegardlessOfHistoricalScope(){
         var response=transport.handle(Map.of("id",1,"method","tools/list"));
         assertEquals(7,((List<?>)((Map<?,?>)response.get("result")).get("tools")).size());
         AgentTokenContext.get().setScopes(AgentTokenScope.BUG_READ);
         response=transport.handle(Map.of("id",2,"method","tools/list"));
-        var tools=(List<?>)((Map<?,?>)response.get("result")).get("tools");assertEquals(1,tools.size());
-        assertEquals("metersphere.bug.transitions",((Map<?,?>)tools.getFirst()).get("name"));
+        var tools=(List<?>)((Map<?,?>)response.get("result")).get("tools");assertEquals(7,tools.size());
+
     }
     @Test void legacyBatchWriteIsRejectedBeforeAnyBusinessOrCacheAccess(){
         var args=Map.<String,Object>of("projectId","project","requestId","request","results",List.of(Map.of("caseId","case","lastExecResult","SUCCESS")));

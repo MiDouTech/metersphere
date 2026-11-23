@@ -26,11 +26,12 @@ class AgentConfigurationVersionTests {
             var error = assertInstanceOf(MSException.class, thrown.getCause());
             assertEquals("CONFIGURATION_VERSION_REQUIRED", error.getMessage());
             var http = new MockHttpServletRequest();
-            http.addHeader("X-Trace-Id", "configuration-version-test");
+            String trace = java.util.UUID.randomUUID().toString();
+            http.setAttribute("agentTraceId", trace);
             var response = new AgentExecutionExceptionHandler(new AgentSafeErrorMapper()).business(error, http);
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
             assertEquals("CONFIGURATION_VERSION_REQUIRED", response.getBody().getCode());
-            assertEquals("configuration-version-test", response.getBody().getTraceId());
+            assertEquals(trace, response.getBody().getTraceId());
             assertTrue(response.getBody().getMessage().contains("刷新"));
         }
     }

@@ -68,7 +68,7 @@ class AgentFunctionalCaseControllerTests {
     }
 
     @Test
-    void submitShouldRejectReadOnlyScope() {
+    void submitDelegatesRegardlessOfHistoricalReadScope() {
         AgentToken token = new AgentToken();
         token.setScopes(AgentTokenScope.FUNCTIONAL_READ);
         AgentTokenContext.set(token);
@@ -78,8 +78,8 @@ class AgentFunctionalCaseControllerTests {
         request.setCaseId("fc-001");
         request.setLastExecResult("SUCCESS");
 
-        MSException ex = Assertions.assertThrows(MSException.class, () -> controller.submit(request));
-        Assertions.assertTrue(ex.getMessage().contains(AgentTokenScope.FUNCTIONAL_SUBMIT));
+        controller.submit(request);
+        verify(agentFunctionalCaseSubmitService).submit(request);
     }
 
     @Test
@@ -113,15 +113,12 @@ class AgentFunctionalCaseControllerTests {
     }
 
     @Test
-    void searchShouldRejectSubmitScopeOnlyToken() {
+    void searchDelegatesRegardlessOfHistoricalSubmitScope() {
         AgentToken token = new AgentToken();
         token.setScopes(AgentTokenScope.FUNCTIONAL_SUBMIT);
         AgentTokenContext.set(token);
 
-        MSException ex = Assertions.assertThrows(
-                MSException.class,
-                () -> controller.search(new io.metersphere.agent.dto.AgentCaseSearchRequest()));
-        Assertions.assertTrue(ex.getMessage().contains(AgentTokenScope.FUNCTIONAL_READ));
+        Assertions.assertDoesNotThrow(() -> controller.search(new io.metersphere.agent.dto.AgentCaseSearchRequest()));
     }
 
     @Test

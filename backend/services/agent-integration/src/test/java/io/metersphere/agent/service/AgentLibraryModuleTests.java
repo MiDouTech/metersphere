@@ -16,9 +16,9 @@ import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
 class AgentLibraryModuleTests {
-    @Test void versionedGrantIsNeverInheritedFromWildcard() {
-        assertFalse(AgentTokenScopeParser.hasScope(Set.of("AGENT_ALL"),AgentTokenScope.CASE_MODULE_WRITE_V2));
-        assertFalse(AgentTokenScopeParser.hasScope(Set.of("FUNCTIONAL_ALL"),AgentTokenScope.CASE_MODULE_WRITE_V2));
+    @Test void moduleAccessUsesCurrentUserRolesWithoutAdditionalTokenGrants() {
+        assertTrue(AgentTokenScopeParser.hasScope(Set.of("AGENT_ALL"),AgentTokenScope.CASE_MODULE_WRITE_V2));
+        assertTrue(AgentTokenScopeParser.hasScope(Set.of("FUNCTIONAL_ALL"),AgentTokenScope.CASE_MODULE_WRITE_V2));
         assertTrue(AgentTokenScopeParser.hasScope(Set.of("AGENT_ALL",AgentTokenScope.CASE_MODULE_WRITE_V2),AgentTokenScope.CASE_MODULE_WRITE_V2));
         assertTrue(AgentTokenScopeParser.hasScope(Set.of("AGENT_ALL"),AgentTokenScope.FUNCTIONAL_READ));
     }

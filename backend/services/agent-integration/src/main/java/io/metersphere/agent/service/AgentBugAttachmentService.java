@@ -31,6 +31,7 @@ import java.util.Map;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentBugAttachmentService {
+    @Resource private AgentBusinessAccess access;
     @Resource
     private AgentTempAttachmentService agentTempAttachmentService;
     @Resource
@@ -44,6 +45,7 @@ public class AgentBugAttachmentService {
 
     public List<AgentResourceAttachmentDTO> list(String projectId, String bugId) {
         Bug bug = requireBugInProject(projectId, bugId);
+        access.project(bug.getProjectId(),io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_READ,false);
         List<BugFileDTO> files = bugAttachmentService.getAllBugFiles(bug.getId());
         List<AgentResourceAttachmentDTO> result = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(files)) {

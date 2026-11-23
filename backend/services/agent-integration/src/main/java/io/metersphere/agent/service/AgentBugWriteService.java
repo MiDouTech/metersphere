@@ -93,6 +93,7 @@ public class AgentBugWriteService {
 
     public AgentBugSearchResponse search(AgentBugSearchRequest request) {
         String projectId = resolveAndAssertProject(request.getProjectId());
+        access.project(projectId, io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_READ, false);
         BugPageRequest pageRequest = new BugPageRequest();
         pageRequest.setProjectId(projectId);
         pageRequest.setUseTrash(false);
@@ -342,8 +343,10 @@ public class AgentBugWriteService {
     }
 
     public AgentBugDTO update(AgentBugUpdateRequest request) {
-        String userId = requireUserId();
         String projectId = resolveAndAssertProject(request.getProjectId());
+        access.project(projectId,io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_UPDATE,true);
+        assertRemovalRelations(request.getBugId(),request.getRemoveRelationIds());
+        String userId = requireUserId();
         request.setProjectId(projectId);
         Project project = requireProject(projectId);
         BugDetailDTO existing = bugService.get(request.getBugId(), userId, "zh_CN");
@@ -399,8 +402,9 @@ public class AgentBugWriteService {
     }
 
     public void relateCase(AgentBugRelateCaseRequest request) {
-        String userId = requireUserId();
         String projectId = resolveAndAssertProject(request.getProjectId());
+        access.project(projectId,io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_UPDATE,true);
+        String userId = requireUserId();
         requireBugInProject(projectId, request.getBugId());
         AssociateOtherCaseRequest associate = new AssociateOtherCaseRequest();
         associate.setProjectId(projectId);
@@ -410,6 +414,16 @@ public class AgentBugWriteService {
         associate.setSelectAll(false);
         bugRelateCaseCommonService.relateCase(associate, false, userId);
         agentExecLogService.audit("BUG_RELATE_CASE", request.getBugId(), JSON.toJSONString(request));
+    }
+
+    private void assertRemovalRelations(String bugId,List<String> relationIds) {
+        if(relationIds==null || relationIds.isEmpty())return;
+        if(relationIds.size()>100 || relationIds.stream().anyMatch(StringUtils::isBlank)
+                || relationIds.stream().distinct().count()!=relationIds.size())throw new MSException("AGENT_VALIDATION_ERROR");
+        var parameters=new ArrayList<Object>();parameters.add(bugId);parameters.addAll(relationIds);
+        String placeholders=String.join(",",java.util.Collections.nCopies(relationIds.size(),"?"));
+        Long count=jdbc.queryForObject("SELECT COUNT(*) FROM bug_relation_case WHERE bug_id=? AND id IN ("+placeholders+")",Long.class,parameters.toArray());
+        if(count==null || count!=relationIds.size())throw AgentBusinessAccess.denied();
     }
 
     public void unrelateCase(String relationId) {
