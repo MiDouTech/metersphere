@@ -8,7 +8,6 @@ import io.metersphere.agent.dto.AgentTokenListItemDTO;
 import io.metersphere.agent.dto.AgentTokenPageRequest;
 import io.metersphere.agent.dto.AgentTokenUpdateRequest;
 import io.metersphere.agent.security.AgentTokenProjectAccess;
-import io.metersphere.agent.security.AgentTokenScopeParser;
 import io.metersphere.project.domain.Project;
 import io.metersphere.project.domain.ProjectExample;
 import io.metersphere.project.mapper.ProjectMapper;
@@ -76,7 +75,7 @@ public class AgentTokenManagementService {
         token.setUserId(boundUserId);
         token.setProjectId(AgentTokenProjectAccess.primaryProjectId(projectIds));
         token.setProjectIds(AgentTokenProjectAccess.toStorageJson(projectIds));
-        token.setScopes(AgentTokenScopeParser.normalizeAndValidate(request.getScopes()));
+        token.setScopes(AgentTokenScope.AGENT_ALL);
         token.setClientType(normalizeClientType(request.getClientType()));
         token.setExpireTime(request.getExpireTime());
         token.setEnable(true);
@@ -98,7 +97,6 @@ public class AgentTokenManagementService {
     }
 
     public AgentTokenCreateResponse createPersonal(AgentTokenCreateRequest request) {
-        rejectPlatformAutomationScope(request.getScopes());
         request.setUserId(SessionUtils.getUserId());
         validatePersonalProjectAccess(normalizeProjectIds(request.getProjectIds(), request.getProjectId()));
         return create(request);
@@ -145,7 +143,7 @@ public class AgentTokenManagementService {
         AgentToken update = new AgentToken();
         update.setId(request.getId());
         update.setName(request.getName());
-        update.setScopes(AgentTokenScopeParser.normalizeAndValidate(request.getScopes()));
+        update.setScopes(AgentTokenScope.AGENT_ALL);
         update.setClientType(StringUtils.isBlank(request.getClientType()) ? null : normalizeClientType(request.getClientType()));
         update.setExpireTime(request.getExpireTime());
         update.setEnable(request.getEnable());
@@ -163,18 +161,11 @@ public class AgentTokenManagementService {
     }
 
     public void updatePersonal(AgentTokenUpdateRequest request) {
-        rejectPlatformAutomationScope(request.getScopes());
         AgentToken existing = requirePersonalToken(request.getId());
         if (request.getProjectIds() != null || request.getProjectId() != null) {
             validatePersonalProjectAccess(normalizeProjectIds(request.getProjectIds(), request.getProjectId()));
         }
         update(request);
-    }
-
-    private void rejectPlatformAutomationScope(String scopes) {
-        if (AgentTokenScopeParser.parse(scopes).contains(AgentTokenScope.PLATFORM_AUTOMATION_MANAGE)) {
-            throw new MSException("Personal Agent Token 不允许申请平台自动化管理权限");
-        }
     }
 
     public void enablePersonal(String id) {

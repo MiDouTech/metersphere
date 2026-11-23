@@ -33,7 +33,8 @@ public class AgentMcpStreamableController {
             agentMcpStreamableService.handleNotification(request);
             return ResponseEntity.accepted().build();
         }
-        return ResponseEntity.ok(agentMcpStreamableService.handle(request, httpRequest.getHeader("Idempotency-Key")));
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(agentMcpStreamableService.handle(request, httpRequest.getHeader("Idempotency-Key")));
     }
 
     /**

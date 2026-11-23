@@ -23,7 +23,7 @@ public class AgentLibraryModuleTools {
     private AgentMcpToolHandler handler(String action,boolean read,Function<Map<String,Object>,Object> execute) {
         return new AgentMcpToolHandler() {
             public String name(){return "metersphere.functional.module."+action;}
-            public String description(){return "get".equals(action)?"Read module metadata and updateTime for concurrency control.":"Modify a case module. Explicit CASE_MODULE_WRITE_V2 grant required. parentId=NONE moves to project root; root itself cannot move.";}
+            public String description(){return "get".equals(action)?"Read module metadata and updateTime for concurrency control.":"Modify a case module. Requires current user module-management permissions. parentId=NONE moves to project root; root itself cannot move.";}
             public String requiredScope(){return read?AgentTokenScope.FUNCTIONAL_READ:AgentTokenScope.CASE_MODULE_WRITE_V2;}
             public Map<String,Object> inputSchema(){
                 Map<String,Object> properties=new LinkedHashMap<>();

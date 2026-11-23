@@ -56,12 +56,15 @@ public class AgentTempAttachmentService {
             throw new MSException(AgentErrorCode.ATTACHMENT_LIMIT_EXCEEDED, "单文件大小不能超过 5MB");
         }
         AgentAttachmentPurpose attachmentPurpose = AgentAttachmentPurpose.from(purpose);
-        if (attachmentPurpose == null) {
+        if (attachmentPurpose == null || attachmentPurpose == AgentAttachmentPurpose.BUG_EXPORT) {
             throw new MSException(AgentErrorCode.ATTACHMENT_PURPOSE_MISMATCH,
                     "purpose 必须为 CASE_DETAIL/CASE_COMMENT/BUG_DETAIL/BUG_COMMENT/EXECUTION");
         }
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         assertProjectAllowed(resolvedProjectId);
+        // Staging matches the prepared-upload protocol. Linking still requires business write permission.
+        boolean bug=attachmentPurpose.isBugDetail() || attachmentPurpose.isBugComment();
+        businessAccess.project(resolvedProjectId,bug?"PROJECT_BUG:READ+UPDATE":"FUNCTIONAL_CASE:READ",true);
 
         String originalName = sanitizeFileName(file.getOriginalFilename());
         assertExtensionAllowed(originalName);
@@ -193,14 +196,11 @@ public class AgentTempAttachmentService {
         if(rows.size()!=1) throw AgentBusinessAccess.denied();
         String purpose=(String)rows.getFirst().get("purpose");
         if("BUG_EXPORT".equals(purpose)) {
-            businessAccess.project(resolved,io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_EXPORT,false,
-                    io.metersphere.agent.constants.AgentTokenScope.BUG_READ);
-        } else if(purpose.startsWith("CASE_"))
-            io.metersphere.agent.security.AgentScopeAssert.assertAnyScope(io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ,io.metersphere.agent.constants.AgentTokenScope.CASE_ATTACHMENT);
+            businessAccess.project(resolved,io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_EXPORT,false);
+        } else if(purpose.startsWith("CASE_") || "EXECUTION".equals(purpose))
+            businessAccess.project(resolved,io.metersphere.sdk.constants.PermissionConstants.FUNCTIONAL_CASE_READ,false);
         else if(purpose.startsWith("BUG_"))
-            io.metersphere.agent.security.AgentScopeAssert.assertAnyScope(io.metersphere.agent.constants.AgentTokenScope.BUG_READ,io.metersphere.agent.constants.AgentTokenScope.BUG_ATTACHMENT);
-        else if ("EXECUTION".equals(purpose))
-            io.metersphere.agent.security.AgentScopeAssert.assertAnyScope(io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_READ,io.metersphere.agent.constants.AgentTokenScope.FUNCTIONAL_SUBMIT);
+            businessAccess.project(resolved,io.metersphere.sdk.constants.PermissionConstants.PROJECT_BUG_READ,false);
         else throw AgentBusinessAccess.denied();
     }
 

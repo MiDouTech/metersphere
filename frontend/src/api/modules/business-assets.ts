@@ -53,7 +53,12 @@ export interface BusinessDetail {
   audit: { eventType: string; actorId: string; versionId: string; reason: string; createTime: number }[];
 }
 export const listBusinessAssets = (projectId: string, keyword = '', archived = false) =>
-  MSR.get<BusinessRow[]>({ url: '/business-assets', params: { projectId, keyword, archived } });
+  // Active and archived directories are independent requests to the same path.
+  // Callers guard stale responses; URL-only cancellation must not cancel either directory.
+  MSR.get<BusinessRow[]>(
+    { url: '/business-assets', params: { projectId, keyword, archived } },
+    { ignoreCancelToken: true }
+  );
 export const getBusinessAsset = (projectId: string, id: string) =>
   MSR.get<BusinessDetail>({ url: `/business-assets/${encodeURIComponent(id)}`, params: { projectId } });
 export const submitBusinessAsset = (data: BusinessSubmission) =>

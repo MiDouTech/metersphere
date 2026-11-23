@@ -55,7 +55,7 @@ public class PlanReviewLegacyImportAdopter implements PlanReviewLegacyJobAdopter
         String executing="WEB".equals(decision.executionMode())?null:credential;
         if(executing!=null){
             var token=jdbc.query("SELECT id,user_id,enable,status,revoked_at,expire_time,project_ids,project_id,scopes FROM agent_token WHERE id=?",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(io.metersphere.system.domain.AgentToken.class),executing);
-            if(token.size()!=1||!AgentPlanReviewExecutionCredential.allowed(token.getFirst(),project,decision.executingActor())||!io.metersphere.agent.security.AgentTokenScopeParser.hasScope(token.getFirst().getScopes(),io.metersphere.agent.constants.AgentTokenScope.CASE_IMPORT_V2))throw fail("原认证已失效；须显式选择经负责人批准的网页接手，不会借用其他凭据");
+            if(token.size()!=1||!AgentPlanReviewExecutionCredential.allowed(token.getFirst(),project,decision.executingActor()))throw fail("原认证已失效；须显式选择经负责人批准的网页接手，不会借用其他凭据");
         }
         var prepared=new TreeMap<String,Object>();prepared.put("operationId",uuid());prepared.put("childOperationId",uuid());prepared.put("planId",plan==null?uuid():plan);prepared.put("reviewId",review==null?uuid():review);prepared.put("stage",plan==null?"NO_PLAN":review==null?"PLAN_ONLY":"FIXED_PAIR");
         prepared.put("executingActor",decision.executingActor());prepared.put("originalCredential",credential);prepared.put("executingCredential",executing);prepared.put("request",JSON.toJSONString(request));prepared.put("source",source);prepared.put("successIds",success);prepared.put("initialMemberCount",success.size());prepared.put("executionMode",decision.executionMode());
@@ -72,7 +72,7 @@ public class PlanReviewLegacyImportAdopter implements PlanReviewLegacyJobAdopter
         if(!current.permissions().contains(PlanReviewPolicy.Permission.IMPORT)||!(create?PlanReviewPolicy.allowedCreatePair(current,count):PlanReviewPolicy.allowed(PlanReviewPolicy.Action.APPEND,current)))throw fail("执行人当前权限发生变化，移交未生效");
         if(prepared.get("executingCredential")!=null){
             var tokens=jdbc.query("SELECT id,user_id,enable,status,revoked_at,expire_time,project_ids,project_id,scopes FROM agent_token WHERE id=? FOR UPDATE",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(io.metersphere.system.domain.AgentToken.class),prepared.get("executingCredential"));
-            if(tokens.size()!=1||!AgentPlanReviewExecutionCredential.allowed(tokens.getFirst(),project,actor)||!io.metersphere.agent.security.AgentTokenScopeParser.hasScope(tokens.getFirst().getScopes(),io.metersphere.agent.constants.AgentTokenScope.CASE_IMPORT_V2))throw fail("原认证在预览后失效，移交已停止");
+            if(tokens.size()!=1||!AgentPlanReviewExecutionCredential.allowed(tokens.getFirst(),project,actor))throw fail("原认证在预览后失效，移交已停止");
         }
         if(old.get("review_id")!=null||count>0)reviewers(project,request.getReviewers());if(old.get("review_id")==null&&count>0)module(project,request.getReviewModuleId());
         if(old.get("review_id")!=null&&relation.isEmpty())throw fail("原完整目标没有明确保留的同一关联，不会重配目标");

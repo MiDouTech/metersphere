@@ -18,6 +18,7 @@ import java.util.Collections;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class AgentTestPlanQueryService {
+    @Resource private AgentBusinessAccess access;
     @Resource
     private AgentExecutionMapper agentExecutionMapper;
     @Resource
@@ -28,6 +29,7 @@ public class AgentTestPlanQueryService {
     public AgentTestPlanSearchResponse search(AgentTestPlanSearchRequest request) {
         AgentTestPlanSearchRequest actual = request == null ? new AgentTestPlanSearchRequest() : request;
         String projectId = agentProjectService.resolveProjectId(actual.getProjectId());
+        access.project(projectId,io.metersphere.sdk.constants.PermissionConstants.TEST_PLAN_READ,false);
         int page = actual.getPage() == null || actual.getPage() < 1 ? 1 : actual.getPage();
         int pageSize = actual.getPageSize() == null || actual.getPageSize() < 1 ? 20 : Math.min(actual.getPageSize(), AgentConstants.MAX_PAGE_SIZE);
         String keyword = StringUtils.trimToEmpty(actual.getKeyword());

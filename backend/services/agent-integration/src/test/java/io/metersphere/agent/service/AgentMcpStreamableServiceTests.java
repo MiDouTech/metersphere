@@ -58,10 +58,40 @@ class AgentMcpStreamableServiceTests {
 
     private AgentMcpStreamableService service;
 
+    @Test void runtimeCacheCannotReplayAfterCurrentRoleIsRevoked() {
+        var guard=org.mockito.Mockito.mock(AgentRuntimeRoleAccess.class);
+        var cache=org.mockito.Mockito.mock(AgentIdempotencyService.class);
+        var handler=org.mockito.Mockito.mock(io.metersphere.agent.tool.AgentMcpToolHandler.class);
+        org.mockito.Mockito.when(handler.name()).thenReturn("metersphere.execution.cancel");
+        org.mockito.Mockito.when(handler.requiredScope()).thenReturn("AI_EXECUTION_CANCEL");
+        org.mockito.Mockito.when(handler.execute(org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of("cancelled",true));
+        var registry=new io.metersphere.agent.tool.AgentMcpToolRegistry(java.util.List.of(handler));
+        var rate=org.mockito.Mockito.mock(io.metersphere.agent.security.AgentTokenRateLimiter.class);
+        org.mockito.Mockito.when(rate.tryAcquireTool(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+        ReflectionTestUtils.setField(service,"runtimeRoleAccess",guard);
+        ReflectionTestUtils.setField(service,"agentIdempotencyService",cache);
+        ReflectionTestUtils.setField(service,"agentMcpToolRegistry",registry);
+        ReflectionTestUtils.setField(service,"agentTokenRateLimiter",rate);
+        var token=new io.metersphere.system.domain.AgentToken();token.setId("token");token.setUserId("user");
+        io.metersphere.agent.security.AgentTokenContext.set(token);
+        var args=Map.<String,Object>of("executionTaskId","task","requestId","same-request");
+        org.mockito.Mockito.when(cache.findCachedResponse(handler.name(),"same-request",args)).thenReturn(java.util.Optional.of(Map.of("cached",true)));
+        var request=Map.<String,Object>of("id",1,"method","tools/call","params",Map.of("name",handler.name(),"arguments",args));
+        try {
+            Assertions.assertNull(service.handle(request).get("error"));
+            org.mockito.Mockito.clearInvocations(cache);
+            org.mockito.Mockito.doThrow(AgentBusinessAccess.denied()).when(guard).authorize(handler,args);
+            Assertions.assertNotNull(service.handle(request).get("error"));
+            org.mockito.Mockito.verifyNoInteractions(cache);
+            org.mockito.Mockito.verify(guard,org.mockito.Mockito.times(2)).authorize(handler,args);
+        } finally {io.metersphere.agent.security.AgentTokenContext.clear();}
+    }
+
     @BeforeEach
     void setUp() {
         // isNotification / handleNotification 不依赖注入字段
         service = new AgentMcpStreamableService();
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "runtimeRoleAccess", org.mockito.Mockito.mock(io.metersphere.agent.service.AgentRuntimeRoleAccess.class));
         ReflectionTestUtils.setField(service, "safeErrorMapper", new AgentSafeErrorMapper());
     }
 
@@ -141,12 +171,16 @@ class AgentMcpStreamableServiceTests {
             org.mockito.Mockito.when(limiter.tryAcquireTool(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
             var cache=org.mockito.Mockito.mock(AgentIdempotencyService.class);
             var calls=new java.util.concurrent.atomic.AtomicInteger();
+            var roleAllowed=new java.util.concurrent.atomic.AtomicBoolean(true);
             var handler=new io.metersphere.agent.tool.AgentMcpToolHandler() {
                 public String name(){return name;}
                 public String requiredScope(){return "CASE_ATTACHMENT";}
                 public Map<String,Object> inputSchema(){return Map.of();}
                 public Map<String,Object> annotations(){return Map.of("readOnlyHint",false);}
-                public Object execute(Map<String,Object> args){return Map.of("checked",calls.incrementAndGet());}
+                public Object execute(Map<String,Object> args){
+                    if(!roleAllowed.get())throw new io.metersphere.sdk.exception.MSException("AGENT_RESOURCE_NOT_ACCESSIBLE");
+                    return Map.of("checked",calls.incrementAndGet());
+                }
             };
             ReflectionTestUtils.setField(service,"agentTokenRateLimiter",limiter);
             ReflectionTestUtils.setField(service,"agentIdempotencyService",cache);
@@ -155,8 +189,10 @@ class AgentMcpStreamableServiceTests {
             Assertions.assertTrue(service.handle(request).containsKey("result"));
             Assertions.assertTrue(service.handle(request).containsKey("result"));
             token.setScopes("FUNCTIONAL_READ");
+            Assertions.assertTrue(service.handle(request).containsKey("result"));
+            roleAllowed.set(false);
             Assertions.assertTrue(service.handle(request).containsKey("error"));
-            Assertions.assertEquals(2,calls.get());org.mockito.Mockito.verifyNoInteractions(cache);
+            Assertions.assertEquals(3,calls.get());org.mockito.Mockito.verifyNoInteractions(cache);
         } finally {io.metersphere.agent.security.AgentTokenContext.clear();}
     }
 }

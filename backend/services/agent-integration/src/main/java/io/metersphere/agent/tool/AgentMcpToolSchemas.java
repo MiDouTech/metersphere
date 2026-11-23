@@ -61,7 +61,7 @@ public final class AgentMcpToolSchemas {
 
     public static Map<String, Object> annotations(String scope, boolean readOnly, boolean destructive, boolean idempotent) {
         Map<String, Object> annotations = new LinkedHashMap<>();
-        annotations.put("scope", scope);
+        annotations.put("authorization", "USER_RBAC");
         annotations.put("readOnlyHint", readOnly);
         annotations.put("destructiveHint", destructive);
         annotations.put("idempotentHint", idempotent);

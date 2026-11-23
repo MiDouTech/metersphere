@@ -88,7 +88,7 @@ public class AgentProjectFileTools {
             public String name() { return "metersphere.project.file." + action; }
             public String requiredScope() { return scope; }
             public String description() {
-                return "Project original files: " + action + ". Explicit PROJECT_FILE scopes and current project permissions required. "
+                return "Project original files: " + action + ". Current linked-user project permissions and resource ownership required; no separate Token feature grants. "
                         + "Prepare xls/xlsx/xmind, then upload raw chunks <=1MiB using offsets/hashes within 24h; complete verifies full SHA256. "
                         + "Query upload.get by the original requestId after a lost response. Replays never create another version. "
                         + "New versions require existingFileId, exact expectedVersion and confirmNewVersion. Candidate reuse must be explicit. "

@@ -17,17 +17,17 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 
 ### 业务资产与执行器接入（0.10.0）
 
-显式授权 `BUSINESS_ASSET_READ;BUSINESS_ASSET_WRITE`，旧 `AGENT_ALL` 不自动扩权。先调用 `metersphere.executor.connect`，按照返回的 `assetProtocol` JSON 读取固定业务理解版本；探索或执行后，用 `metersphere.business_asset.upload` 上传完整文档、操作分支、依据和本次变化。同模块或关联流程更新同一文档，携带 `baseVersion` 和原会话来源；冲突保留为待合并版本。
+所有功能继承关联用户当前角色权限，旧 Token 无需追加功能 Scope；仍校验项目范围、资源归属和业务规则。先调用 `metersphere.executor.connect`，按照返回的 `assetProtocol` JSON 读取固定业务理解版本；探索或执行后，用 `metersphere.business_asset.upload` 上传完整文档、操作分支、依据和本次变化。同模块或关联流程更新同一文档，携带 `baseVersion` 和原会话来源；冲突保留为待合并版本。
 
 执行过程中通过 `metersphere.executor.event` 上报观察，定期读取 `metersphere.executor.commands` 并响应纠正。业务变化需要替换本次上下文时，显式调用 `metersphere.executor.context.refresh`，填写原版本和原因；该操作留痕并通知执行器。新通道不依赖冻结动作或旧 Runner 租约。
 
-公共配置实际值只由具有 `SHARED_CONFIGURATION_RESOLVE` 和项目解析权限的执行器通过会话绑定接口按需读取。不要将密码写入文档、普通事件或日志。
+敏感配置的真实值仅可由具有当前项目敏感配置解析权限的执行器，通过会话绑定接口按需获取；不要将密码写入文档、普通事件或日志。
 
 ### 原生接口使用约定（2026-10-30整改）
 
 - 直接执行的projectId与创建/查询统一解析：内部ID、项目编号或精确项目名称；解析后仍检查当前项目和用例权限，重名需用ID消歧。
 - 个人直接执行优先采用contract返回的effectiveEvidencePolicy：CASE级1～10张PNG/JPEG，一张可覆盖全部原步骤。旧policy保留作历史快照，其中逐步角色不覆盖当前有效规则。
-- 本地缺陷附件使用原生bug.attachment.upload.prepare（purpose=BUG_DETAIL/BUG_COMMENT）和bug.attachment.upload.complete，获得临时attachmentId后调用bug.attachment.attach。需要BUG_ATTACHMENT；用例上传通道仍需要CASE_ATTACHMENT，两者不互相替代。
+- 普通缺陷附件使用原生 bug.attachment.upload.prepare（purpose=BUG_DETAIL/BUG_COMMENT）及 bug.attachment.upload.complete，得到临时 attachmentId 后调用 bug.attachment.attach。用例和缺陷附件均校验用户当前业务权限与资源归属，上传协议不能混用。
 - 附件删除公开参数resourceId为所属用例/缺陷ID；attachmentId为该资源下附件关联ID或接口明确支持的文件ID，并要求confirm=true。
 - bug.case.relate及bug.relate_case响应增加relations[{relationId,caseId,bugId,caseType}]；解除关联使用relationId，不使用caseId。
 - human_request.create必须提交taskId、leaseId、leaseToken及原有请求字段；execution.events.batch必须提交leaseToken。仅真实有效的个人任务租约可调用，勿记录密钥到日志。
@@ -41,17 +41,17 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 下列工具通过 `/api/mcp` 转发到原生工具，复用业务权限和幂等校验。
 写工具必须传非空 `requestId`；同一次请求重试使用相同 ID 和完全相同的参数。
 
-| Tool | 主要参数 | Scope |
-| --- | --- | --- |
-| `metersphere.functional.execution.submit` | projectId、caseId、steps、evidenceIds、requestId；单张用例级图片可覆盖全部原步骤 | FUNCTIONAL_SUBMIT + CASE_ATTACHMENT |
-| `metersphere.execution.search` | projectId；可选 keyword、status、createdAfter、createdBefore、current、pageSize | AI_EXECUTION_READ |
-| `metersphere.execution.preflight` | projectId、environmentProfileId、runnerType、requestId；取得恢复所需 preflightId | TASK_CLAIM |
-| `metersphere.execution.checkpoint.resume` | taskId、checkpointId、resumeToken、preflightId、requestId | AI_EXECUTION_RUN |
-| `metersphere.bug.transitions` | projectId、bugId | BUG_READ |
-| `metersphere.bug.transition` | projectId、bugId、transition、requestId | BUG_WRITE |
-| `metersphere.test_plan.get` | testPlanId；响应包含 updateTime | PLAN_READ |
-| `metersphere.test_plan.update` | projectId、testPlanId、expectedUpdateTime、patch、requestId | PLAN_WRITE |
-| `metersphere.test_plan.disassociate_cases` | projectId、testPlanId、associationIds、requestId | PLAN_WRITE |
+| Tool | 主要参数 |
+| --- | --- |
+| `metersphere.functional.execution.submit` | projectId、caseId、steps、evidenceIds、requestId；单张用例级图片可覆盖全部原步骤 |
+| `metersphere.execution.search` | projectId；可选 keyword、status、createdAfter、createdBefore、current、pageSize |
+| `metersphere.execution.preflight` | projectId、environmentProfileId、runnerType、requestId；取得恢复所需 preflightId |
+| `metersphere.execution.checkpoint.resume` | taskId、checkpointId、resumeToken、preflightId、requestId |
+| `metersphere.bug.transitions` | projectId、bugId |
+| `metersphere.bug.transition` | projectId、bugId、transition、requestId |
+| `metersphere.test_plan.get` | testPlanId；响应包含 updateTime |
+| `metersphere.test_plan.update` | projectId、testPlanId、expectedUpdateTime、patch、requestId |
+| `metersphere.test_plan.disassociate_cases` | projectId、testPlanId、associationIds、requestId |
 
 - 旧 `functional.submit.batch` 直写已停用，不应调用。个人直接执行先读
   `functional.execution.contract`，覆盖每条原始步骤并提交有效用例图片；
@@ -97,26 +97,26 @@ MeterSphere Agent API 的 MCP 薄封装，供 Cursor、Claude Desktop 等 MCP �
 
 ### 写闭环（一期）
 
-| Tool | Scope | 说明 |
-|------|-------|------|
-| `create_project` | PROJECT_WRITE | 创建项目并加初始成员 |
-| `add_project_members` | PROJECT_WRITE | 追加成员 |
-| `create_functional_module` | CASE_WRITE | 创建模块 |
-| `create_functional_case` | CASE_WRITE | 单条创建 |
-| `batch_create_functional_cases` | CASE_WRITE | 批量导入 Agent 生成用例 |
-| `create_test_plan` | PLAN_WRITE、REVIEW_WRITE | 创建真实计划及其关联评审，必填显式reviewSettings，可带caseIds；仍逐项校验当前业务权限 |
-| `associate_test_plan_cases` | PLAN_WRITE | 关联用例到计划 |
-| `create_case_review` | REVIEW_WRITE | 创建评审 |
-| `preview_linked_case_review` | PLAN_READ、PLAN_WRITE、REVIEW_WRITE | 为已有未关联计划预览新评审，不创建业务对象；不接收独立caseIds |
-| `confirm_linked_case_review` | PLAN_READ、PLAN_WRITE、REVIEW_WRITE | 使用原requestId、previewId并显式acknowledged=true确认；服务端重验当前权限、服务授权及预览版本 |
-| `associate_case_review_cases` | REVIEW_WRITE | 关联用例到评审 |
-| `search_bugs` | BUG_READ | 检索缺陷（关键词/状态/处理人） |
-| `get_bug` | BUG_READ | 缺陷详情（含 customFields） |
-| `create_bug` | BUG_WRITE | 创建缺陷（可关联用例） |
-| `update_bug` | BUG_WRITE | 更新标题/描述/标签/自定义字段 |
-| `relate_bug_case` | BUG_WRITE | 缺陷补关联用例 |
+| Tool | 说明 |
+|------|------|
+| `create_project` | 创建项目并加初始成员 |
+| `add_project_members` | 追加成员 |
+| `create_functional_module` | 创建模块 |
+| `create_functional_case` | 单条创建 |
+| `batch_create_functional_cases` | 批量导入 Agent 生成用例 |
+| `create_test_plan` | 创建真实计划及其关联评审，必填显式reviewSettings，可带caseIds；仍逐项校验当前业务权限 |
+| `associate_test_plan_cases` | 关联用例到计划 |
+| `create_case_review` | 创建评审 |
+| `preview_linked_case_review` | 为已有未关联计划预览新评审，不创建业务对象；不接收独立caseIds |
+| `confirm_linked_case_review` | 使用原requestId、previewId并显式acknowledged=true确认；服务端重验当前权限、服务授权及预览版本 |
+| `associate_case_review_cases` | 关联用例到评审 |
+| `search_bugs` | 检索缺陷（关键词/状态/处理人） |
+| `get_bug` | 缺陷详情（含 customFields） |
+| `create_bug` | 创建缺陷（可关联用例） |
+| `update_bug` | 更新标题/描述/标签/自定义字段 |
+| `relate_bug_case` | 缺陷补关联用例 |
 
-> `BUG_WRITE` 隐含 `BUG_READ`。缺陷读写详细说明见 [MCP 缺陷接口使用文档](../docs/task/metersphere_agent/mcp-bug-api-usage.md)。
+缺陷读写均按关联用户当前项目角色校验，详细接口见 [MCP 缺陷接口使用文档](../docs/task/metersphere_agent/mcp-bug-api-usage.md)。
 
 ## 本地开发
 
@@ -171,7 +171,7 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 | 现象 | 处理 |
 |------|------|
 | 401 Unauthorized | 检查 `MS_AGENT_TOKEN` |
-| 403 Scope 不足 | Token 需 AGENT_ALL 或对应 WRITE/SUBMIT scope |
+| 403 权限不足 | 检查关联用户当前角色、项目范围及资源归属；无需追加 Token 功能 Scope |
 | 429 Too Many Requests | Token 限流：全局 120/分钟；检索 30/分钟且间隔≥300ms；pageSize≤100 |
 | 缺少 testPlanCaseId | 先关联测试计划再 search |
 | 缺陷必填字段 | 传 `customFields` |
@@ -202,19 +202,19 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 - search_functional_cases 支持 projectId、identityType、标签 ANY/ALL、子目录范围、评审状态及版本筛选；默认读取用例库，分页响应保留 cases，并返回 current/pageSize/total/hasMore。
 - 补充原生名称适配：functional.template.get、history.list、comments.list、attachments.list、case.update、comment.create、versions.list、overview.get、module.get/update/move（均带 metersphere. 前缀）。
 - case.update 先读取 updateTime；customFields 使用字段 ID 到值的对象映射，不能提交执行结果字段。
-- module.update/move 需要明确授予 CASE_MODULE_WRITE_V2，旧 AGENT_ALL/FUNCTIONAL_ALL 不包含此权限。module.get 返回 expectedUpdateTime 的来源；parentId=NONE 表示项目根目录。
+- module.update/move 校验关联用户当前用例管理权限，不需要追加 Token Scope。module.get 返回 expectedUpdateTime 的来源；parentId=NONE 表示项目根目录。
 - 技能包版本 1.2.1；实时分页不是完整快照导出。运行中删除确认、异步导入导出、普通附件上传下载、评论删除等仍需后续实现，以实时 tools/list 为准，不应猜测工具名调用。
 
-- functional.comment.update 编辑本人评论正文，要求 CASE_COMMENT_EDIT_V2、expectedUpdateTime 和 requestId；不重新通知，不修改回复关系和附件。网页编辑使用相同版本校验。
+- functional.comment.update 编辑本人评论正文，要求当前用户评论编辑权限、expectedUpdateTime 和 requestId；不重新通知，不修改回复关系和附件。网页编辑使用相同版本校验。
 - functional.comments.list 返回 `{total,current,pageSize,list}`，根评论与回复独立分页（默认 10、最多 100）；传 `parentId` 获取指定根评论的回复页。根评论包含首 10 条回复及 `childTotal`。
-- functional.comment.delete 要求显式 `CASE_COMMENT_DELETE_V2`、`projectId/caseId/commentId/expectedUpdateTime/requestId`。`AGENT_ALL` 不包含此权限；作者还须具有当前评论权限，管理删除还须具有当前用例删除权限。删除保留墓碑和回复，清空正文；旧版无版本删除请求会明确拒绝。
+- functional.comment.delete 要求 `projectId/caseId/commentId/expectedUpdateTime/requestId`；作者须具有当前评论权限，管理删除还须具有当前用例删除权限，无需单独 Token 授权。删除保留墓碑和回复，清空正文；旧版无版本删除请求会明确拒绝。
 - 完整提取可用 `functional.snapshot.create({query})` 冻结用例库内容，再用 `snapshot.page` 续读，完成后 `snapshot.release`。有效期15分钟，最多10000条/50MiB，每Token同时5个；超限应缩小查询或使用文件导出。普通 search 仍实时查询；快照读取会重新授权，目标被删除后要求重建。
 - 普通用例附件支持 `functional.attachment.upload.prepare`（项目、用途、文件名、类型、大小、SHA-256、requestId）与 `upload.complete`（uploadId及原文件）。Node complete 接受 filePath 或 base64；原生 MCP 接受 base64，HTTP complete 接受 multipart。单文件5MiB、准备有效期15分钟、每Token有效准备额度50MiB。完成只产生临时attachmentId，仍需 attach/comment.create 关联；个人执行证据继续走独立 evidence.upload。
 ### 持久化导入、删除确认与执行归档
 
-- `functional.import.precheck` 接收项目、文件和稳定的 `requestId`，返回任务与逐项预检结果；检查后调用 `import.commit`，通过 `import.get` 分页读取实际进度。`import.stop` 保留已成功条目，`import.retry` 仅处理未成功条目。需要显式 `CASE_IMPORT_V2`，上限为 50MiB、10000 条逻辑用例，任务重试期限 24 小时。Node 支持本地 `filePath`；原生工具使用 `base64`。预检不等于导入成功。
-- `functional.case.delete_preview` 返回网页确认地址，用户本人选择取消、等待、停止或删除后，调用 `case.delete` / `case.batch_delete` 继续同一 `previewId`。需要显式 `CASE_DELETE_V2`，最多100个目标版本，默认只处理 CURRENT；ALL 必须明确指定。不要代替用户确认。恢复使用 `case.restore` 和显式 `CASE_RESTORE_V2`，不会恢复已停止任务。
-- `functional.archive.prepare` 接受已结束 TASK 或已接收 SUBMISSION 的来源 ID；`archive.get` 查看独立归档状态，失败后 `archive.retry` 不重新执行测试。需要 `ARTIFACT_WRITE` 和当前项目来源读取权限。归档仍明确保留 `AGENT_REPORTED / STRUCTURE_ONLY_V1`，不代表独立业务核验。
+- `functional.import.precheck` 接收项目、文件和稳定的 `requestId`，返回任务与逐项预检结果；检查后调用 `import.commit`，通过 `import.get` 分页读取实际进度。`import.stop` 保留已成功条目，`import.retry` 仅处理未成功条目。按关联用户当前用例导入权限校验，上限为 50MiB、10000 条逻辑用例，任务重试期限 24 小时。Node 支持本地 `filePath`；原生工具使用 `base64`。预检不等于导入成功。
+- `functional.case.delete_preview` 返回网页确认地址，用户本人选择取消、等待、停止或删除后，调用 `case.delete` / `case.batch_delete` 继续同一 `previewId`。按关联用户当前用例删除权限校验，最多100个目标版本，默认只处理 CURRENT；ALL 必须明确指定。不要代替用户确认。恢复使用 `case.restore` 并校验关联用户当前恢复权限，不会恢复已停止任务。
+- `functional.archive.prepare` 接受已结束 TASK 或已接收 SUBMISSION 的来源 ID；`archive.get` 查看独立归档状态，失败后 `archive.retry` 不重新执行测试。按关联用户当前项目来源读取及归档权限校验。归档仍明确保留 `AGENT_REPORTED / STRUCTURE_ONLY_V1`，不代表独立业务核验。
 - 有真实可复用业务数据时调用 `functional.archive.data`，每条提供 `sourceObjectId`、`reuseConditions`、`cleanupStatus` 和 `values`，另需项目文件新增权限。没有实际数据时不创建空数据资产。相同内容重放不会重复生成文档或数据集；不同内容不能覆盖同一次运行的原始归档。
 
 # 个人 Agent 直接执行用例（0.8.0）
@@ -223,7 +223,7 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 
 门禁继续检查权限、内容/策略摘要、证据角色与归属、图片有效性及容量。单次最多1000条记录、序号1..1000；额外序号不计入原步骤覆盖。重复同一步可引用同一证据 ID，正式附件只发布一次；跨步骤证据仍拒绝。ACCEPTED/PUBLISHED 表示结构被接收并保存声明结果，不代表独立证明实际执行或图片语义。无需外部内容核验服务；既有 NEEDS_REVIEW 历史不会自动发布。
 
-平台个人 Token 选择“个人 Agent 测试闭环”，包括 FUNCTIONAL_READ、FUNCTIONAL_SUBMIT 和 CASE_ATTACHMENT；仍受本人项目读取和更新权限约束。
+平台创建 Token 时保留项目范围配置；执行、用例及附件操作统一继承关联用户当前角色，无需再选择功能权限预设。
 
 1. contract 可选，用于获取步骤及支持范围；无需维护 contentHash/policyHash，stepNum 是原步骤数组从1开始的位置。
 2. 执行后保存真实观察，使用 functional.execution.evidence.upload 或 import_url 上传至少一张本次用例图片，不要求逐步配图。Node 可用 filePath，原生使用 base64；PNG/JPEG 单文件最多5MiB、最低64乘64像素、最多2000万像素。暂存24小时，单Token有效暂存额度50MiB。
@@ -236,9 +236,9 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 ### 缺陷创建、导入和导出
 
 - 创建前读取 `metersphere.bug.template.get`，按 fieldId 填写 `customFields`，包含项目合法的 `handleUser`。`status` 在新建时留空，由已发布工作流决定。`create_bug` 必须带 `requestId`。
-- `metersphere.bug.export.columns` 查询可导出列；`metersphere.bug.export` 接受 `projectId, requestId, bugIds`（1..100），默认导出 ID、标题、内容三列的 ZIP/XLSX，可传 `exportColumns: [{key, columnType}]` 选择列（以 export.columns 返回值为准），返回 `downloadPath, size, expiresAt, sha256`。下载仍需同一 Token；24 小时过期，不关联到缺陷附件。需要 BUG_READ 和当前用户的项目导出权限。
+- `metersphere.bug.export.columns` 查询可导出列；`metersphere.bug.export` 接受 `projectId, requestId, bugIds`（1..100），默认导出 ID、标题、内容三列的 ZIP/XLSX，可传 `exportColumns: [{key, columnType}]` 选择列（以 export.columns 返回值为准），返回 `downloadPath, size, expiresAt, sha256`。下载仍需同一 Token；24 小时过期，不关联到缺陷附件。需要关联用户当前项目导出权限。
 - `metersphere.bug.import.preview` 接受 `projectId`、可选 `templateId` 和互斥的 `rows` 或 `fileName + base64`。XLSX 只允许一个工作表，首行列名 `title`, `description`, `handleUser`, `custom:<fieldId>`；title 必须存在。枚举填内部值，处理人填项目成员 ID。文件不超过5MiB，最多100条，禁止公式。
-- `metersphere.bug.import.commit` 传相同导入内容、预检返回的 `previewHash` 和 `requestId`。返回每行 CREATED/FAILED 和总状态 SUCCEEDED/PARTIAL/FAILED；每行独立事务，使用同一 requestId 重试不会重复创建成功行。模板变化需重新预检；需要 BUG_WRITE 和用户项目创建权限。重试幂等保留7天。
+- `metersphere.bug.import.commit` 传相同导入内容、预检返回的 `previewHash` 和 `requestId`。返回每行 CREATED/FAILED 和总状态 SUCCEEDED/PARTIAL/FAILED；每行独立事务，使用同一 requestId 重试不会重复创建成功行。模板变化需重新预检；需要关联用户当前项目缺陷创建权限。重试幂等保留7天。
 - 网页导出文件保留原有布局，不能假定可以直接原样回导；按上述稳定列头整理后再预检导入。第一版不批量导入附件、不更新同名既有缺陷、不同步第三方平台项目。第三方项目导入将在提交前拒绝，防止远端副作用与本地回滚不一致。
 
 ## 0.8.1 写入请求标识
@@ -269,6 +269,17 @@ powershell -ExecutionPolicy Bypass -File scripts/pack-metersphere-mcp.ps1
 后端 agent.mcp.observation.slow-threshold-ms 默认 1000；超过阈值记录工具总耗时，阶段超过 1000ms 记录警告。临时启用 io.metersphere.agent.service.AgentMcpTiming 的 DEBUG 可查看阶段时间。日志不包含参数或图片。SQL 总时间不能直接解释成锁等待，数据库等待需要独立采样。
 # 缺陷图片读取（0.8.3）
 
-`get_bug` 保留文字并透传正文 `images` 与真实附件 `attachmentImages` 索引。使用 `read_bug_image`，显式传入 `projectId`、`bugId` 和索引中的 `imageRef`，按需读取单图；返回原生 MCP image content 和原始字节 metadata。需要明确 `BUG_READ`、当前项目缺陷读取权限及 Token 项目授权。旧服务器缺能力时明确提示不支持，不下载 URL、不自动重试。
+`get_bug` 保留文字并透传正文 `images` 与真实附件 `attachmentImages` 索引。使用 `read_bug_image`，显式传入 `projectId`、`bugId` 和索引中的 `imageRef`，按需读取单图；返回原生 MCP image content 和原始字节 metadata。按关联用户当前项目缺陷读取权限和 Token 项目范围校验，无需追加功能 Scope。旧服务器缺能力时明确提示不支持，不下载 URL、不自动重试。
 
 完整使用及回退说明见 [`mcp-bug-images.md`](../docs/task/metersphere_agent/mcp-bug-images.md)。新能力须经部署联测，不以本包构建通过代替实际环境或宿主验收。
+
+### 公共配置（原生 MCP 与 stdio 同步提供）
+
+Token 仅代表关联用户身份；所有新旧 Token 均按用户当前角色校验，无需重新签发或追加权限。Token 的停用、撤销、到期和项目范围继续生效。服务器工具目录提供完整功能列表，调用时按业务权限判断是否允许。
+
+- `metersphere.shared_configuration.list/read`：检索和读取配置元数据，敏感值不回传。
+- `metersphere.shared_configuration.save/batch`：保存新版本、批量导入；更新携带 `expectedVersion`，冲突须重新读取，不能盲目重试。
+- `metersphere.shared_configuration.versions/select_version/retry_parse`：历史版本、切换后续会话使用版本、重试文档解析。
+- `metersphere.shared_configuration.resolve`：仅在已获准且运行中的执行会话读取固定版本；仍校验同一用户、Token、项目与配置归属。敏感结果禁止写入日志、报告或通用重放缓存。
+
+具体字段以 `tools/list` 的输入结构为准。新增后端代码部署后刷新工具列表；stdio 使用者还需更新客户端以注册新增工具。

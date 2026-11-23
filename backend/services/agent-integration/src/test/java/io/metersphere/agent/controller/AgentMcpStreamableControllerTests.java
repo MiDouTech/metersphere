@@ -9,6 +9,15 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 class AgentMcpStreamableControllerTests {
+    @Test
+    void mcpResponsesContainingConfigurationValuesMustNotBeCached() {
+        var service = org.mockito.Mockito.mock(io.metersphere.agent.service.AgentMcpStreamableService.class);
+        var controller = new AgentMcpStreamableController();
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "agentMcpStreamableService", service);
+        var response = controller.post(Map.of("id", 1, "method", "tools/call"),
+                org.mockito.Mockito.mock(HttpServletRequest.class));
+        Assertions.assertEquals("no-store", response.getHeaders().getCacheControl());
+    }
 
     @Test
     void mcpEndpointsShouldBypassResultHolderWrapping() throws NoSuchMethodException {

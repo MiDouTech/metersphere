@@ -24,7 +24,7 @@ public class FunctionalCommentUpdateToolHandler implements AgentMcpToolHandler {
     @Resource private io.metersphere.agent.service.AgentExecLogService audit;
 
     public String name() { return "metersphere.functional.comment.update"; }
-    public String description() { return "Edit your own comment text using expectedUpdateTime. Preserves replies, recipients and attachments; does not resend notifications. Explicit CASE_COMMENT_EDIT_V2 required."; }
+    public String description() { return "Edit your own comment text using expectedUpdateTime. Preserves replies, recipients and attachments; does not resend notifications. Requires current user comment-edit permissions."; }
     public String requiredScope() { return AgentTokenScope.CASE_COMMENT_EDIT_V2; }
     public Map<String,Object> inputSchema() {
         return AgentMcpToolSchemas.object(Map.of(

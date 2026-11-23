@@ -36,10 +36,10 @@ class AgentTokenServiceTests {
     }
 
     @Test
-    void readScopeShouldNotAllowSubmit() {
+    void historicalReadScopeDoesNotOverrideCurrentUserAuthorization() {
         AgentToken token = buildToken(AgentTokenScope.FUNCTIONAL_READ, null);
 
-        Assertions.assertFalse(agentTokenService.hasScope(token, AgentTokenScope.FUNCTIONAL_SUBMIT));
+        Assertions.assertTrue(agentTokenService.hasScope(token, AgentTokenScope.FUNCTIONAL_SUBMIT));
         Assertions.assertTrue(agentTokenService.hasScope(token, AgentTokenScope.FUNCTIONAL_READ));
     }
 

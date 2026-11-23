@@ -13,6 +13,47 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AgentAttachmentDownloadTests {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"CASE_DETAIL,FUNCTIONAL_CASE:READ", "CASE_COMMENT,FUNCTIONAL_CASE:READ",
+            "EXECUTION,FUNCTIONAL_CASE:READ", "BUG_DETAIL,PROJECT_BUG:READ", "BUG_COMMENT,PROJECT_BUG:READ", "BUG_EXPORT,PROJECT_BUG:READ+EXPORT"})
+    void everyDownloadRechecksCurrentBusinessRole(String purpose,String permission) {
+        var service=new AgentTempAttachmentService();var access=mock(AgentBusinessAccess.class);
+        var projects=mock(AgentProjectService.class);var jdbc=mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        when(projects.resolveProjectId("project")).thenReturn("project");
+        when(jdbc.queryForList(anyString(),eq("file"),eq("project"),eq("token"),eq("user"),anyLong()))
+                .thenReturn(java.util.List.of(java.util.Map.of("purpose",purpose)));
+        ReflectionTestUtils.setField(service,"agentProjectService",projects);
+        ReflectionTestUtils.setField(service,"businessAccess",access);ReflectionTestUtils.setField(service,"jdbc",jdbc);
+        var token=new io.metersphere.system.domain.AgentToken();token.setId("token");token.setUserId("user");
+        token.setScopes("OLD_UNRELATED_SCOPE");io.metersphere.agent.security.AgentTokenContext.set(token);
+        try {
+            assertDoesNotThrow(()->service.requireDownload("project","file"));
+            doThrow(AgentBusinessAccess.denied()).when(access).project("project",permission,false);
+            assertThrows(MSException.class,()->service.requireDownload("project","file"));
+            verify(access,times(2)).project("project",permission,false);
+        } finally {io.metersphere.agent.security.AgentTokenContext.clear();}
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"CASE_DETAIL,FUNCTIONAL_CASE:READ", "CASE_COMMENT,FUNCTIONAL_CASE:READ",
+            "EXECUTION,FUNCTIONAL_CASE:READ", "BUG_DETAIL,PROJECT_BUG:READ+UPDATE", "BUG_COMMENT,PROJECT_BUG:READ+UPDATE"})
+    void uploadDoesNotTouchStorageWithoutCurrentProjectRole(String purpose,String permission) {
+        var service=new AgentTempAttachmentService();var access=mock(AgentBusinessAccess.class);
+        var projects=mock(AgentProjectService.class);var storage=mock(CommonFileService.class);
+        when(projects.resolveProjectId("project")).thenReturn("project");
+        doThrow(AgentBusinessAccess.denied()).when(access).project("project",permission,true);
+        ReflectionTestUtils.setField(service,"agentProjectService",projects);
+        ReflectionTestUtils.setField(service,"businessAccess",access);
+        ReflectionTestUtils.setField(service,"commonFileService",storage);
+        var token=new io.metersphere.system.domain.AgentToken();token.setId("token");token.setUserId("user");
+        io.metersphere.agent.security.AgentTokenContext.set(token);
+        try (var session=mockStatic(io.metersphere.system.utils.SessionUtils.class)) {
+            session.when(io.metersphere.system.utils.SessionUtils::getUserId).thenReturn("user");
+            var upload=new org.springframework.mock.web.MockMultipartFile("file","draft.txt","text/plain",new byte[]{1});
+            assertThrows(MSException.class,()->service.upload(upload,"project",purpose,null));
+            verify(access).project("project",permission,true);
+            verifyNoInteractions(storage);
+        } finally {io.metersphere.agent.security.AgentTokenContext.clear();}
+    }
     @Test void storageReceivesTheNormalizedUploadName() {
         var service = new AgentTempAttachmentService();
         var files = mock(CommonFileService.class);
@@ -24,6 +65,7 @@ class AgentAttachmentDownloadTests {
         ReflectionTestUtils.setField(service, "commonFileService", files);
         ReflectionTestUtils.setField(service, "agentProjectService", projects);
         ReflectionTestUtils.setField(service, "agentTempAttachmentMapper", metadata);
+        ReflectionTestUtils.setField(service,"businessAccess",mock(AgentBusinessAccess.class));
         when(projects.resolveProjectId("project")).thenReturn("project");
         when(files.uploadTempImgFile(any(),eq("file"))).thenReturn("file");
         var token = new io.metersphere.system.domain.AgentToken();
@@ -43,6 +85,19 @@ class AgentAttachmentDownloadTests {
         } finally {
             io.metersphere.agent.security.AgentTokenContext.clear();
         }
+    }
+
+    @Test void clientsCannotUploadServerGeneratedBugExports() {
+        var service=new AgentTempAttachmentService();var access=mock(AgentBusinessAccess.class);
+        var storage=mock(CommonFileService.class);ReflectionTestUtils.setField(service,"businessAccess",access);
+        ReflectionTestUtils.setField(service,"commonFileService",storage);
+        var token=new io.metersphere.system.domain.AgentToken();token.setId("token");token.setUserId("user");
+        io.metersphere.agent.security.AgentTokenContext.set(token);
+        try {
+            var file=new org.springframework.mock.web.MockMultipartFile("file","export.csv","text/csv",new byte[]{1});
+            assertThrows(MSException.class,()->service.upload(file,"project","BUG_EXPORT",null));
+            verifyNoInteractions(access,storage);
+        } finally {io.metersphere.agent.security.AgentTokenContext.clear();}
     }
 
     @Test void downloadsTheStoredFilenameInsteadOfTheFolder() throws Exception {

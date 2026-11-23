@@ -30,8 +30,8 @@ public class AgentDirectExecutionTools {
             public String description(){return switch(action) {
                 case "contract" -> "Read case steps, contentHash and policyHash for structure-only direct execution. Agent declares SUCCESS/ERROR; actual text is not compared with expected. Cover every original position; extras and repeats are allowed and retained.";
                 case "get" -> "Read an authorized direct execution report with step outcomes, evidence mapping and frozen global policy. Sensitive facts are redacted.";
-                case "evidence.upload" -> "Stage a PNG/JPEG evidence file as base64 (max 5 MiB), at case scope; one image covers all steps; hashes/stepNum/purpose optional. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT. Not visible until gate passes.";
-                default -> "Validate original-step coverage and evidence structure, then publish Agent-reported results. Extra and repeated positions are retained; any ERROR makes the case ERROR. No expected-text comparison or content reviewer. ACCEPTED/PUBLISHED means structure accepted, not independently verified execution. Requires FUNCTIONAL_SUBMIT and CASE_ATTACHMENT.";
+                case "evidence.upload" -> "Stage a PNG/JPEG evidence file as base64 (max 5 MiB), at case scope; one image covers all steps; hashes/stepNum/purpose optional. Requires current user case execution and evidence permissions. Not visible until gate passes.";
+                default -> "Validate original-step coverage and evidence structure, then publish Agent-reported results. Extra and repeated positions are retained; any ERROR makes the case ERROR. No expected-text comparison or content reviewer. ACCEPTED/PUBLISHED means structure accepted, not independently verified execution. Requires current user case execution and evidence permissions.";
             };}
             public String requiredScope(){return read?AgentTokenScope.FUNCTIONAL_READ:AgentTokenScope.FUNCTIONAL_SUBMIT;}
             public Map<String,Object> inputSchema(){

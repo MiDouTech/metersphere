@@ -260,6 +260,7 @@ class AgentProjectFileServiceTests {
     }
 
     private AgentBusinessAccess realAuthorization() {
+        jdbc.execute("ALTER TABLE project ADD organization_id VARCHAR(50) DEFAULT 'org'");
         jdbc.execute("ALTER TABLE project ADD deleted INT DEFAULT 0");
         jdbc.execute("ALTER TABLE project ADD enable BOOLEAN DEFAULT TRUE");
         jdbc.execute("ALTER TABLE agent_token ADD user_id VARCHAR(50) DEFAULT 'user'");

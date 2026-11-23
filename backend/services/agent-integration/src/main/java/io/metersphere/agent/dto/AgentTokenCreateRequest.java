@@ -15,8 +15,8 @@ public class AgentTokenCreateRequest {
     private List<String> projectIds;
     /** @deprecated 兼容旧单项目字段，优先用 projectIds */
     private String projectId;
-    @NotBlank
-    private String scopes;
+    /** Legacy compatibility metadata; functional authorization uses the user's current roles. */
+    private String scopes = "AGENT_ALL";
     private String clientType;
     private Long expireTime;
 }

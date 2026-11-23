@@ -26,6 +26,7 @@ class AgentProjectFileToolTests {
                 config.projectFileCancel(files), config.projectFileUploadGet(files), config.projectFileSearch(files),
                 config.projectFileGet(files), config.projectFileVersions(files), config.projectFileDownload(files));
         transport = new AgentMcpStreamableService();
+        org.springframework.test.util.ReflectionTestUtils.setField(transport, "runtimeRoleAccess", org.mockito.Mockito.mock(io.metersphere.agent.service.AgentRuntimeRoleAccess.class));
         var rate = mock(AgentTokenRateLimiter.class);
         when(rate.tryAcquireTool(anyString(), anyString())).thenReturn(true);
         cache = mock(AgentIdempotencyService.class);
@@ -37,11 +38,11 @@ class AgentProjectFileToolTests {
     }
     @AfterEach void cleanup() { AgentTokenContext.clear(); }
 
-    @Test void listsNineToolsOnlyForExplicitGrants() {
+    @Test void listsNineToolsWithoutSeparateFeatureGrants() {
         var tools = (List<?>) ((Map<?, ?>) transport.handle(Map.of("id", 1, "method", "tools/list")).get("result")).get("tools");
         assertEquals(9, tools.size());
         AgentTokenContext.get().setScopes("AGENT_ALL");
-        assertEquals(0, ((List<?>) ((Map<?, ?>) transport.handle(Map.of("id", 2, "method", "tools/list")).get("result")).get("tools")).size());
+        assertEquals(9, ((List<?>) ((Map<?, ?>) transport.handle(Map.of("id", 2, "method", "tools/list")).get("result")).get("tools")).size());
     }
 
     @Test void resourceOwnedUploadProtocolNeverUsesGenericResponseCache() {

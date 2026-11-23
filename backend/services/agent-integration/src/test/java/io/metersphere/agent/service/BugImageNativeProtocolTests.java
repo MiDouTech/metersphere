@@ -14,7 +14,8 @@ import static org.mockito.ArgumentMatchers.*;
 class BugImageNativeProtocolTests {
     @Test void realNativeEnvelopeReturnsImageAndMetadataWithoutAWriteCache() {
         var images=mock(AgentBugImageService.class);var tool=new BugImageReadTool(images);
-        var service=new AgentMcpStreamableService();var limiter=mock(AgentTokenRateLimiter.class);
+        var service=new AgentMcpStreamableService();
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "runtimeRoleAccess", org.mockito.Mockito.mock(io.metersphere.agent.service.AgentRuntimeRoleAccess.class));var limiter=mock(AgentTokenRateLimiter.class);
         when(limiter.tryAcquireTool(anyString(),anyString())).thenReturn(true);
         ReflectionTestUtils.setField(service,"agentMcpToolRegistry",new AgentMcpToolRegistry(List.of(tool)));
         ReflectionTestUtils.setField(service,"agentTokenRateLimiter",limiter);

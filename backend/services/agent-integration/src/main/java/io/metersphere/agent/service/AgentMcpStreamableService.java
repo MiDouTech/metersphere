@@ -29,6 +29,7 @@ public class AgentMcpStreamableService {
     @Resource
     private AgentIdempotencyService agentIdempotencyService;
     @Resource private AgentGenericMcpWriteService genericWrites;
+    @Resource private AgentRuntimeRoleAccess runtimeRoleAccess;
     @Resource
     private AgentMcpToolRegistry agentMcpToolRegistry;
     @Resource
@@ -70,6 +71,7 @@ public class AgentMcpStreamableService {
         String previousTrace=org.slf4j.MDC.get("traceId");
         if (org.apache.commons.lang3.StringUtils.isBlank(previousTrace))
             org.slf4j.MDC.put("traceId",java.util.UUID.randomUUID().toString());
+        String operationTrace = org.slf4j.MDC.get("traceId");
         String outcome="SUCCESS";
         String observedTool="UNKNOWN";
         Object rawParams=request.get("params");
@@ -91,12 +93,12 @@ public class AgentMcpStreamableService {
             };
         } catch (MSException ex) {
             outcome="ERROR";
-            var safe = safeErrorMapper.toApiError(ex, java.util.UUID.randomUUID().toString());
+            var safe = safeErrorMapper.toApiError(ex, operationTrace);
             io.metersphere.agent.security.AgentSafeDiagnostics.failure(LOG,"MCP_OPERATION_FAILED","TOOL_CALL",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32001, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         } catch (Exception ex) {
             outcome="ERROR";
-            var safe = safeErrorMapper.toApiError(ex, java.util.UUID.randomUUID().toString());
+            var safe = safeErrorMapper.toApiError(ex, operationTrace);
             io.metersphere.agent.security.AgentSafeDiagnostics.failure(LOG,"MCP_OPERATION_FAILED","TOOL_CALL",safe.getTraceId(),safe.getCode(),ex);
             return safeError(id, -32603, safe.getMessage(), safe.getCode(), safe.getTraceId(), recoveryDetails(safe));
         } finally {
@@ -125,7 +127,7 @@ public class AgentMcpStreamableService {
         AgentToken token = AgentTokenContext.get();
         for (AgentMcpToolHandler handler : agentMcpToolRegistry.all()) {
             if (!io.metersphere.agent.tool.AgentMcpToolExposure.discoverable(handler.name())) continue;
-            if (token == null || !AgentScopeAssert.hasScope(token.getScopes(), handler.requiredScope())) continue;
+            if (token == null) continue;
             tools.add(tool(handler.name(), handler.description(), handler.requiredScope(),
                     schemaWithIdempotency(handler), handler.outputSchema(), handler.annotations()));
         }
@@ -134,7 +136,8 @@ public class AgentMcpStreamableService {
 
     private static boolean bypassesGenericIdempotency(String name) {
         if (java.util.Set.of("metersphere.case_review.linked.preview", "metersphere.case_review.linked.confirm").contains(name)) return true;
-        if(name.startsWith("metersphere.business_asset.")||name.startsWith("metersphere.executor."))return true;
+        if(name.startsWith("metersphere.business_asset.")||name.startsWith("metersphere.executor.")
+                || name.startsWith("metersphere.shared_configuration."))return true;
         if (java.util.Set.of("metersphere.project.file.upload.prepare", "metersphere.project.file.upload.chunk",
                 "metersphere.project.file.upload.complete", "metersphere.project.file.upload.cancel").contains(name)) return true;
         return java.util.Set.of(
@@ -209,7 +212,12 @@ public class AgentMcpStreamableService {
         String argumentKey=(String)rawKey;
         if(StringUtils.isNotBlank(idempotencyKey) && StringUtils.isNotBlank(argumentKey) && !idempotencyKey.equals(argumentKey))throw new MSException("IDEMPOTENCY_CONFLICT");
         String effectiveIdempotencyKey = StringUtils.defaultIfBlank(idempotencyKey, argumentKey);
-        if(StringUtils.isNotBlank(effectiveIdempotencyKey)&&!name.startsWith("metersphere.business_asset.")&&!name.startsWith("metersphere.executor.")) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
+        AgentMcpToolHandler authorizedHandler=agentMcpToolRegistry.find(name)
+                .orElseThrow(() -> new MSException("MCP_TOOL_NOT_FOUND"));
+        AgentScopeAssert.assertScope(authorizedHandler.requiredScope());
+        runtimeRoleAccess.authorize(authorizedHandler,arguments);
+        if(StringUtils.isNotBlank(effectiveIdempotencyKey)&&!name.startsWith("metersphere.business_asset.")
+                &&!name.startsWith("metersphere.executor.")&&!name.startsWith("metersphere.shared_configuration.")) {arguments=new LinkedHashMap<>(arguments);arguments.put("requestId",effectiveIdempotencyKey);}
         // These protocols reauthorize their resource on every call. Upload/job/preview/run IDs
         // govern transitions and replay in their own transactions; a generic response cache
         // would bypass current ownership, expiry and state checks. Snapshot/preview creation
@@ -225,7 +233,7 @@ public class AgentMcpStreamableService {
                 "metersphere.artifact.commit").contains(name)) {
             return callToolInternal(name, arguments);
         }
-        // Recheck scope even when a previous result is cached for this token.
+        // Require an authenticated Token; business handlers recheck current user/resource access.
         agentMcpToolRegistry.find(name).ifPresent(handler -> AgentScopeAssert.assertScope(handler.requiredScope()));
         if (agentMcpToolRegistry.isWriteTool(name) && StringUtils.isBlank(effectiveIdempotencyKey)) {
             throw new MSException("IDEMPOTENCY_KEY_REQUIRED");
@@ -275,7 +283,8 @@ public class AgentMcpStreamableService {
         if (annotations != null) {
             mergedAnnotations.putAll(annotations);
         }
-        mergedAnnotations.put("scope", scope);
+        mergedAnnotations.remove("scope");
+        mergedAnnotations.put("authorization", "USER_RBAC");
 
         Map<String, Object> tool = new LinkedHashMap<>();
         tool.put("name", name);

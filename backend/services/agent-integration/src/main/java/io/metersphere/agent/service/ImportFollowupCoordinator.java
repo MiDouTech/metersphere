@@ -411,8 +411,7 @@ public class ImportFollowupCoordinator {
         if(locking)relationAuthorization.current(user,(String)job.get("project_id"),true);
         var tokens=jdbc.query("SELECT id,user_id,enable,status,revoked_at,expire_time,project_ids,project_id,scopes FROM agent_token WHERE id=? AND user_id=?"+(locking?" FOR UPDATE":""),org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(io.metersphere.system.domain.AgentToken.class),token,user);
         if(tokens.size()!=1)throw AgentBusinessAccess.denied();
-        if(!(importOnly?AgentPlanReviewExecutionCredential.identityAllowed(tokens.getFirst(),(String)job.get("project_id"),user):AgentPlanReviewExecutionCredential.allowed(tokens.getFirst(),(String)job.get("project_id"),user))
-                ||!io.metersphere.agent.security.AgentTokenScopeParser.hasScope(tokens.getFirst().getScopes(),io.metersphere.agent.constants.AgentTokenScope.CASE_IMPORT_V2))throw AgentBusinessAccess.denied();
+        if(!(importOnly?AgentPlanReviewExecutionCredential.identityAllowed(tokens.getFirst(),(String)job.get("project_id"),user):AgentPlanReviewExecutionCredential.allowed(tokens.getFirst(),(String)job.get("project_id"),user)))throw AgentBusinessAccess.denied();
         var previous=io.metersphere.agent.security.AgentTokenContext.get();
         try {
             io.metersphere.agent.security.AgentTokenContext.set(tokens.getFirst());

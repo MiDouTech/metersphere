@@ -124,6 +124,12 @@
   const contextPins = ref<{ assetId: string; versionId: string }[]>([]);
   const canWrite = computed(() => hasAnyPermission(['BUSINESS_ASSET:WRITE']));
   let generation = 0;
+  let contextGeneration = 0;
+  function activeContext(project: string, id: string, context: number) {
+    return (
+      context === contextGeneration && project === app.currentProjectId && selected.value?.id === id && visible.value
+    );
+  }
   async function load() {
     const run = ++generation;
     loading.value = true;
@@ -146,54 +152,59 @@
     if (!selected.value || !visible.value) return;
     const { id } = selected.value;
     const project = app.currentProjectId;
+    const context = contextGeneration;
     try {
       const value = await MSR.get<Detail>({ url: `/external-executors/${id}`, params: { projectId: project } });
-      if (id === selected.value?.id && project === app.currentProjectId) {
+      if (activeContext(project, id, context)) {
         detail.value = value;
         if (commandPage.value === 1) commandRows.value = value.commands;
         if (eventPage.value === 1) eventRows.value = value.events;
       }
     } catch (failure) {
-      error.value = businessAssetError(failure, '执行过程读取失败，请重试。');
+      if (activeContext(project, id, context)) error.value = businessAssetError(failure, '执行过程读取失败，请重试。');
     }
   }
   async function loadCommandHistory(page: number) {
     if (!selected.value) return;
     const { id } = selected.value;
     const project = app.currentProjectId;
+    const context = contextGeneration;
     try {
       const value = await MSR.get<{ records: Detail['commands']; total: number }>({
         url: `/external-executors/${id}/command-history`,
         params: { projectId: project, page, size: 100 },
       });
-      if (project === app.currentProjectId && id === selected.value?.id) {
+      if (activeContext(project, id, context)) {
         commandRows.value = value.records;
         commandPage.value = page;
         if (detail.value) detail.value.commandTotal = value.total;
       }
     } catch (failure) {
-      error.value = businessAssetError(failure, '纠正历史读取失败，请重试。');
+      if (activeContext(project, id, context)) error.value = businessAssetError(failure, '纠正历史读取失败，请重试。');
     }
   }
   async function loadEventHistory(page: number) {
     if (!selected.value) return;
     const { id } = selected.value;
     const project = app.currentProjectId;
+    const context = contextGeneration;
     try {
       const value = await MSR.get<{ records: Detail['events']; total: number }>({
         url: `/external-executors/${id}/event-history`,
         params: { projectId: project, page, size: 100 },
       });
-      if (project === app.currentProjectId && id === selected.value?.id) {
+      if (activeContext(project, id, context)) {
         eventRows.value = value.records;
         eventPage.value = page;
         if (detail.value) detail.value.eventTotal = value.total;
       }
     } catch (failure) {
-      error.value = businessAssetError(failure, '执行事件读取失败，请重试。');
+      if (activeContext(project, id, context)) error.value = businessAssetError(failure, '执行事件读取失败，请重试。');
     }
   }
   async function open(session: Session) {
+    const project = app.currentProjectId;
+    const context = ++contextGeneration;
     eventPage.value = 1;
     eventRows.value = [];
     commandPage.value = 1;
@@ -207,7 +218,7 @@
     detail.value = undefined;
     visible.value = true;
     await refreshDetail();
-    const project = app.currentProjectId;
+    if (!activeContext(project, session.id, context)) return;
     try {
       const [assets, pins] = await Promise.all([
         listBusinessAssets(project),
@@ -216,14 +227,15 @@
           params: { projectId: project },
         }),
       ]);
-      if (project === app.currentProjectId && selected.value?.id === session.id) {
+      if (activeContext(project, session.id, context)) {
         availableAssets.value = assets;
         contextPins.value = pins;
         contextAssetId.value = '';
         contextReason.value = '';
       }
     } catch (failure) {
-      error.value = businessAssetError(failure, '业务理解上下文加载失败。');
+      if (activeContext(project, session.id, context))
+        error.value = businessAssetError(failure, '业务理解上下文加载失败。');
     }
   }
   async function correct() {
@@ -231,16 +243,18 @@
     sending.value = true;
     const project = app.currentProjectId;
     const session = selected.value.id;
+    const context = contextGeneration;
     try {
       await MSR.post({
         url: `/external-executors/${session}/commands`,
         data: { projectId: project, instruction: instruction.value },
       });
-      if (project !== app.currentProjectId || selected.value?.id !== session) return;
+      if (!activeContext(project, session, context)) return;
       instruction.value = '';
       await refreshDetail();
     } catch (failure) {
-      error.value = businessAssetError(failure, '纠正指令下发失败，输入已保留，请刷新状态后重试。');
+      if (activeContext(project, session, context))
+        error.value = businessAssetError(failure, '纠正指令下发失败，输入已保留，请刷新状态后重试。');
     } finally {
       sending.value = false;
     }
@@ -251,6 +265,7 @@
     sending.value = true;
     const project = app.currentProjectId;
     const session = selected.value.id;
+    const context = contextGeneration;
     try {
       await MSR.post({
         url: `/external-executors/${session}/context`,
@@ -262,14 +277,15 @@
           reason: contextReason.value,
         },
       });
-      if (project !== app.currentProjectId || selected.value?.id !== session) return;
+      if (!activeContext(project, session, context)) return;
       const old = contextPins.value.find((pin) => pin.assetId === asset.id);
       if (old) old.versionId = asset.currentVersionId;
       else contextPins.value.push({ assetId: asset.id, versionId: asset.currentVersionId });
       contextReason.value = '';
       await refreshDetail();
     } catch (failure) {
-      error.value = businessAssetError(failure, '上下文更新失败，请刷新后重新选择。');
+      if (activeContext(project, session, context))
+        error.value = businessAssetError(failure, '上下文更新失败，请刷新后重新选择。');
     } finally {
       sending.value = false;
     }
@@ -281,10 +297,12 @@
   onBeforeUnmount(() => {
     window.clearInterval(timer);
     ++generation;
+    ++contextGeneration;
   });
   watch(
     () => app.currentProjectId,
     () => {
+      ++contextGeneration;
       sessions.value = [];
       selected.value = undefined;
       availableAssets.value = [];

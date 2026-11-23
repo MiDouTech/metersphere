@@ -31,12 +31,12 @@ class AgentOperationMySqlTests {
         jdbc.execute("CREATE TABLE effect(id VARCHAR(64) PRIMARY KEY)");
         jdbc.execute("CREATE TABLE agent_token(id VARCHAR(64),user_id VARCHAR(64),enable BOOLEAN,status VARCHAR(32),scopes TEXT,project_ids TEXT,revoked_at BIGINT,expire_time BIGINT)");
         jdbc.execute("CREATE TABLE user(id VARCHAR(64),enable BOOLEAN,deleted BOOLEAN)");
-        jdbc.execute("CREATE TABLE project(id VARCHAR(64),enable BOOLEAN,deleted BOOLEAN)");
+        jdbc.execute("CREATE TABLE project(id VARCHAR(64),enable BOOLEAN,deleted BOOLEAN,organization_id VARCHAR(64))");
         jdbc.execute("CREATE TABLE user_role(id VARCHAR(64),enabled BOOLEAN,type VARCHAR(32))");
         jdbc.execute("CREATE TABLE user_role_relation(user_id VARCHAR(64),role_id VARCHAR(64),source_id VARCHAR(64))");
         jdbc.execute("CREATE TABLE user_role_permission(role_id VARCHAR(64),permission_id VARCHAR(64))");
         jdbc.update("INSERT INTO agent_token VALUES ('t','u',1,'ACTIVE','REVIEW_WRITE','[\"p\"]',NULL,NULL)");
-        jdbc.update("INSERT INTO user VALUES ('u',1,0)");jdbc.update("INSERT INTO project VALUES ('p',1,0),('foreign',1,0)");
+        jdbc.update("INSERT INTO user VALUES ('u',1,0)");jdbc.update("INSERT INTO project VALUES ('p',1,0,'org'),('foreign',1,0,'org')");
         jdbc.update("INSERT INTO user_role VALUES ('writer',1,'PROJECT')");jdbc.update("INSERT INTO user_role_relation VALUES ('u','writer','p')");jdbc.update("INSERT INTO user_role_permission VALUES ('writer','review:create')");
         token=new AgentToken();token.setId("t");token.setUserId("u");AgentTokenContext.set(token);
     }
@@ -101,7 +101,7 @@ class AgentOperationMySqlTests {
 
     @Test void organizationWritesRequireCurrentOrgPermissionAndProjectScope() {
         jdbc.execute("CREATE TABLE organization(id VARCHAR(64) PRIMARY KEY)");jdbc.update("INSERT INTO organization VALUES ('org')");
-        jdbc.execute("ALTER TABLE project ADD COLUMN organization_id VARCHAR(64) DEFAULT 'org'");
+        jdbc.update("UPDATE project SET organization_id='org'");
         jdbc.update("INSERT INTO user_role(id,enabled,type) VALUES ('org-role',1,'ORGANIZATION')");
         jdbc.update("INSERT INTO user_role_relation(user_id,role_id,source_id) VALUES ('u','org-role','org')");
         token.setScopes("PROJECT_WRITE");jdbc.update("UPDATE agent_token SET scopes='PROJECT_WRITE'");
@@ -170,7 +170,7 @@ class AgentOperationMySqlTests {
         assertEquals(0,jdbc.queryForObject("SELECT linked FROM agent_temp_attachment WHERE id='attachment'",Integer.class));
     }
 
-    @Test void temporaryDownloadsRequireOwnershipPurposeScopeAndLiveReference() {
+    @Test void temporaryDownloadsRequireCurrentRoleOwnershipPurposeAndLiveReference() {
         long future = System.currentTimeMillis() + 60000;
         jdbc.update("INSERT INTO agent_temp_attachment(id,token_id,user_id,project_id,file_id,purpose,linked,expires_at) VALUES ('attachment','t','u','p','storage','CASE_COMMENT',0,?)", future);
         var service = new AgentTempAttachmentService();
@@ -178,6 +178,8 @@ class AgentOperationMySqlTests {
         org.mockito.Mockito.when(projects.resolveProjectId("p")).thenReturn("p");
         org.springframework.test.util.ReflectionTestUtils.setField(service, "jdbc", jdbc);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "agentProjectService", projects);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "businessAccess", access);
+        jdbc.update("INSERT INTO user_role_permission VALUES('writer','FUNCTIONAL_CASE:READ')");
         token.setScopes("FUNCTIONAL_READ");
         assertDoesNotThrow(() -> service.requireDownload("p", "storage"));
         assertDoesNotThrow(() -> service.requireMetadata("attachment"));
@@ -187,7 +189,10 @@ class AgentOperationMySqlTests {
         assertThrows(MSException.class, () -> service.requireMetadata("attachment"));
         token.setId("t");
         token.setScopes("BUG_READ");
+        assertDoesNotThrow(() -> service.requireDownload("p", "storage"));
+        jdbc.update("DELETE FROM user_role_permission WHERE permission_id='FUNCTIONAL_CASE:READ'");
         assertThrows(MSException.class, () -> service.requireDownload("p", "storage"));
+        jdbc.update("INSERT INTO user_role_permission VALUES('writer','FUNCTIONAL_CASE:READ')");
         token.setScopes("FUNCTIONAL_READ");
         jdbc.update("UPDATE agent_temp_attachment SET linked=1");
         assertThrows(MSException.class, () -> service.requireDownload("p", "storage"));

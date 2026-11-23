@@ -9,7 +9,7 @@ const fileOrRows = {
 };
 const forward = (name: string) => (client: MeterSphereClient, args: Record<string, unknown>) => client.callNativeTool(name, args);
 export const bugTransferTools = [
-  { name: "metersphere.bug.export.columns", description: "Read bug export columns; requires user export permission and BUG_READ.",
+  { name: "metersphere.bug.export.columns", description: "Read bug export columns; requires user export permission.",
     inputSchema: { projectId: id }, handler: forward("metersphere.bug.export.columns") },
   { name: "metersphere.bug.export", description: "Export 1..100 explicit bugIds to a ZIP/XLSX authenticated temporary download (max 5 MiB).",
     inputSchema: { projectId: id, requestId: id, bugIds: z.array(id).min(1).max(100), exportColumns: z.array(z.object({ key: id, columnType: z.enum(["system", "custom", "other"]) }).strict()).min(1).max(50).optional() }, handler: forward("metersphere.bug.export") },

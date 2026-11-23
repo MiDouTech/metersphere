@@ -50,7 +50,7 @@ export class MsApiError extends Error {
       AGENT_FACTS_INVALID:"历史执行事实暂时无法读取，请提供 traceId 排查",
       CASE_CONTENT_MISSING:"当前用例类型或步骤不满足个人执行要求，请查询 contract 的限制",
     };
-    const message = hints[code] ?? (status === 401 ? "身份已失效，请重新配置令牌" : status === 403 ? "没有此操作权限，请检查用户角色和令牌范围"
+    const message = hints[code] ?? (status === 401 ? "身份已失效，请重新配置令牌" : status === 403 ? "没有此操作权限，请检查用户角色、项目访问范围和资源归属"
       : status === 409 ? "请求与当前数据冲突，请先查询结果或刷新版本" : "请求失败，请检查参数、权限或服务状态；响应不明确时先查询结果");
     super(message);
     this.status = status; this.code = code;

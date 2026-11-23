@@ -38,8 +38,8 @@ class AgentCommentEditTests {
         assertTrue(result.getUpdateTime()>10);
         verify(fixture.comments).updateByPrimaryKeySelective(result);
     }
-    @Test void legacyWildcardCannotAcquireCommentEdit() {
-        assertFalse(AgentTokenScopeParser.hasScope(Set.of("AGENT_ALL"),"CASE_COMMENT_EDIT_V2"));
+    @Test void legacyWildcardDoesNotImposeSeparateCommentGrant() {
+        assertTrue(AgentTokenScopeParser.hasScope(Set.of("AGENT_ALL"),"CASE_COMMENT_EDIT_V2"));
         assertTrue(AgentTokenScopeParser.hasScope(Set.of("CASE_COMMENT_EDIT_V2"),"CASE_COMMENT_EDIT_V2"));
     }
     private FunctionalCaseCommentRequest request() {

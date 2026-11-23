@@ -128,6 +128,10 @@ export default {
     'system.agentIntegration.projectIdsHelp': 'Multi-select; empty means all projects accessible to you.',
     'system.agentIntegration.projectIdsPlaceholder': 'Empty = all projects accessible to me',
     'system.agentIntegration.scopes': 'Scopes',
+    'system.agentIntegration.authorization': 'Authorization',
+    'system.agentIntegration.authorizationInherited': 'Inherited from linked user roles',
+    'system.agentIntegration.authorizationHelp':
+      'All capabilities follow the linked user’s current roles. No separate Token feature grants are needed. Project access, ownership and business rules still apply. Existing Tokens inherit new capabilities through user permissions without reconfiguration.',
     'system.agentIntegration.scopesRequired': 'Scopes is required',
     'system.agentIntegration.enable': 'Enabled',
     'system.agentIntegration.tokenCreated': 'Token Created',

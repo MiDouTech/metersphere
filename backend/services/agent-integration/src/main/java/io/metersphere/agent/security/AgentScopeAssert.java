@@ -1,12 +1,11 @@
 package io.metersphere.agent.security;
 
-import io.metersphere.agent.constants.AgentErrorCode;
 import io.metersphere.sdk.exception.MSException;
 import io.metersphere.system.domain.AgentToken;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.Set;
 
+/** Legacy method names retained for callers; these only require an authenticated identity. */
 public final class AgentScopeAssert {
 
     private AgentScopeAssert() {
@@ -17,21 +16,20 @@ public final class AgentScopeAssert {
         if (hasScope(token.getScopes(), requiredScope)) {
             return;
         }
-        throw new MSException(AgentErrorCode.SCOPE_DENIED, "Agent token scope 不足: " + requiredScope);
+        throw new MSException("AGENT_VALIDATION_ERROR");
     }
 
     public static void assertAnyScope(String... requiredScopes) {
         AgentToken token = requireToken();
         if (requiredScopes == null || requiredScopes.length == 0) {
-            throw new MSException(AgentErrorCode.SCOPE_DENIED, "Agent token scope 不足: (empty required)");
+            throw new MSException("AGENT_VALIDATION_ERROR");
         }
         for (String requiredScope : requiredScopes) {
             if (hasScope(token.getScopes(), requiredScope)) {
                 return;
             }
         }
-        throw new MSException(AgentErrorCode.SCOPE_DENIED,
-                "Agent token scope 不足: " + String.join("|", requiredScopes));
+        throw new MSException("AGENT_VALIDATION_ERROR");
     }
 
     public static boolean hasScope(String scopes, String requiredScope) {
@@ -45,10 +43,7 @@ public final class AgentScopeAssert {
     private static AgentToken requireToken() {
         AgentToken token = AgentTokenContext.get();
         if (token == null) {
-            throw new MSException(AgentErrorCode.SCOPE_DENIED, "Agent token 缺失，无法校验 scope");
-        }
-        if (StringUtils.isBlank(token.getScopes())) {
-            throw new MSException(AgentErrorCode.SCOPE_DENIED, "Agent token scopes 为空");
+            throw new MSException("AUTHENTICATION_REQUIRED");
         }
         return token;
     }

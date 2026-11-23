@@ -1,7 +1,6 @@
 package io.metersphere.agent.service;
 
 import io.metersphere.agent.security.AgentTokenContext;
-import io.metersphere.agent.constants.AgentTokenScope;
 import io.metersphere.functional.planreview.PlanReviewExecutionCredential;
 import org.springframework.stereotype.Component;
 
@@ -19,19 +18,14 @@ public class AgentPlanReviewExecutionCredential implements PlanReviewExecutionCr
         if(rows.size()!=1)return false;return allowed(rows.getFirst(),project,actor);
     }
     @Override public boolean validateImport(String reference,String project,String actor){
-        if(!validate(reference,project,actor))return false;
-        String scopes=jdbc.queryForObject("SELECT scopes FROM agent_token WHERE id=? AND user_id=? FOR UPDATE",String.class,reference,actor);
-        return io.metersphere.agent.security.AgentTokenScopeParser.hasScope(scopes,AgentTokenScope.CASE_IMPORT_V2);
+        return validate(reference,project,actor);
     }
     @Override public boolean validateLinkedReview(String reference,String project,String actor){
-        if(!validate(reference,project,actor))return false;
-        String scopes=jdbc.queryForObject("SELECT scopes FROM agent_token WHERE id=? AND user_id=? FOR UPDATE",String.class,reference,actor);
-        return io.metersphere.agent.security.AgentTokenScopeParser.hasScope(scopes,AgentTokenScope.PLAN_READ);
+        return validate(reference,project,actor);
     }
     static boolean allowed(io.metersphere.system.domain.AgentToken current,String project,String actor){
-        return identityAllowed(current,project,actor)
-                &&io.metersphere.agent.security.AgentTokenScopeParser.hasScope(current.getScopes(),AgentTokenScope.PLAN_WRITE)
-                &&io.metersphere.agent.security.AgentTokenScopeParser.hasScope(current.getScopes(),AgentTokenScope.REVIEW_WRITE);
+        // Plan/review/import permissions are checked by the caller's current role authorization.
+        return identityAllowed(current,project,actor);
     }
     static boolean identityAllowed(io.metersphere.system.domain.AgentToken current,String project,String actor){
         if(!actor.equals(current.getUserId()))return false;
