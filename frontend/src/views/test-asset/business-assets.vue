@@ -1,53 +1,92 @@
 <template>
   <TestAssetPage>
-    <h2>业务资产</h2>
-    <a-alert v-if="error" type="error" role="alert">{{ error }}</a-alert>
-    <div class="mb-4 flex flex-wrap items-end gap-3">
-      <form aria-label="查询业务资产" @submit.prevent="load">
-        <label for="business-keyword">业务名称</label>
-        <input id="business-keyword" v-model="keyword" name="keyword" type="search" maxlength="255" />
-        <button type="submit">查询</button>
+    <div class="asset-heading"><h2>业务资产</h2><p>沉淀业务理解，按系统、模块与业务流程组织资产。</p></div>
+    <a-alert v-if="error" type="error" class="mb-4" role="alert"
+      >{{ error }} <a-link @click="load">重试</a-link></a-alert
+    >
+    <div class="asset-toolbar">
+      <div class="asset-actions">
+        <a-button v-if="canWrite" type="primary" @click="create">新建业务理解</a-button>
+        <a-button v-if="canWrite" @click="businessFile?.click()">上传文档</a-button>
+        <input
+          v-if="canWrite"
+          ref="businessFile"
+          class="asset-file-input"
+          type="file"
+          accept=".md,.json"
+          aria-label="上传 Markdown 或 JSON 文档"
+          @change="upload"
+        />
+        <a-button :loading="loading" @click="load">刷新</a-button>
+      </div>
+      <form class="asset-search" aria-label="查询业务资产" @submit.prevent="load">
+        <a-checkbox v-model="archived" @change="load">查看已归档</a-checkbox>
+        <a-input-search v-model="keyword" allow-clear placeholder="搜索业务名称" aria-label="业务名称" @search="load" />
       </form>
-      <a-checkbox v-model="archived" @change="load">查看已归档</a-checkbox>
-      <a-button v-if="canWrite" type="primary" @click="create">新建业务理解</a-button>
-      <label v-if="canWrite" for="business-file">上传 Markdown 或 JSON 文档</label>
-      <input v-if="canWrite" id="business-file" type="file" accept=".md,.json" @change="upload" />
     </div>
-    <p role="status">{{ rows.length }} 份文档，{{ branchCount }} 个操作分支</p>
-    <div class="flex gap-4">
-      <aside class="w-[240px] shrink-0" aria-label="业务分类">
-        <a-button @click="category = ''">全部业务（{{ rows.length }}）</a-button>
+    <div class="asset-statistics" role="status"
+      ><span
+        ><strong>{{ rows.length }}</strong
+        >份业务文档</span
+      ><span
+        ><strong>{{ branchCount }}</strong
+        >个操作分支</span
+      ></div
+    >
+    <div class="business-layout">
+      <aside class="asset-panel business-tree" aria-label="业务分类">
+        <h3>业务分类</h3>
+        <a-button long :type="category ? 'text' : 'secondary'" @click="category = ''"
+          >全部业务（{{ rows.length }}）</a-button
+        >
         <a-tree :data="tree" @select="selectCategory" />
       </aside>
-      <a-table class="min-w-0 flex-1" :data="filtered" :loading="loading" row-key="id">
-        <template #empty><a-empty description="暂无业务资产，可新建或由 AI 探索后上传" /></template>
-        <template #columns>
-          <a-table-column title="业务理解"
-            ><template #cell="{ record }"
-              >{{ record.title }} <a-tag v-if="record.restricted">历史私有</a-tag></template
-            ></a-table-column
-          >
-          <a-table-column title="系统" data-index="systemKey" />
-          <a-table-column title="模块" data-index="moduleKey" />
-          <a-table-column title="流程" data-index="flowKey" />
-          <a-table-column title="操作分支" data-index="branchCount" />
-          <a-table-column title="当前版本" data-index="versionNo" />
-          <a-table-column title="状态"
-            ><template #cell="{ record }">{{ statusLabel(record.status) }}</template></a-table-column
-          >
-          <a-table-column title="操作"
-            ><template #cell="{ record }">
-              <a-space>
-                <a-link @click="open(record)">查看</a-link>
-                <a-link v-if="canWrite && !archived" @click="edit(record)">编辑与归类</a-link>
-                <a-link v-if="canWrite && !archived" @click="prepareMerge(record)">合并</a-link>
-                <a-link @click="versions(record)">资产版本</a-link>
-                <a-link v-if="canWrite" @click="archive(record)">{{ archived ? '恢复' : '归档' }}</a-link>
-              </a-space>
-            </template></a-table-column
-          >
-        </template>
-      </a-table>
+      <section class="asset-panel business-list">
+        <a-table :scroll="{ x: 1100 }" :data="filtered" :loading="loading" row-key="id">
+          <template #empty
+            ><a-empty :description="error ? '业务资产加载失败，请重试' : '暂无业务资产，可新建或由 AI 探索后上传'"
+          /></template>
+          <template #columns>
+            <a-table-column title="业务理解"
+              ><template #cell="{ record }"
+                >{{ record.title }} <a-tag v-if="record.restricted">历史私有</a-tag></template
+              ></a-table-column
+            >
+            <a-table-column title="系统" data-index="systemKey" />
+            <a-table-column title="模块" data-index="moduleKey" />
+            <a-table-column title="流程" data-index="flowKey" />
+            <a-table-column title="操作分支" data-index="branchCount" />
+            <a-table-column title="当前版本"
+              ><template #cell="{ record }"
+                ><a-tag>V{{ record.versionNo }}</a-tag></template
+              ></a-table-column
+            >
+            <a-table-column title="状态"
+              ><template #cell="{ record }"
+                ><a-tag :color="record.status === 'CURRENT' ? 'green' : 'gray'">{{
+                  statusLabel(record.status)
+                }}</a-tag></template
+              ></a-table-column
+            >
+            <a-table-column title="操作" :width="260"
+              ><template #cell="{ record }">
+                <a-space>
+                  <a-link @click="open(record)">查看</a-link>
+                  <a-link v-if="canWrite && !archived" @click="edit(record)">编辑与归类</a-link>
+                  <a-link @click="versions(record)">资产版本</a-link>
+                  <a-dropdown v-if="canWrite">
+                    <a-link>更多</a-link>
+                    <template #content>
+                      <a-doption v-if="!archived" @click="prepareMerge(record)">合并</a-doption>
+                      <a-doption @click="archive(record)">{{ archived ? '恢复' : '归档' }}</a-doption>
+                    </template>
+                  </a-dropdown>
+                </a-space>
+              </template></a-table-column
+            >
+          </template>
+        </a-table>
+      </section>
     </div>
     <a-drawer v-model:visible="detailVisible" title="业务理解" :width="800" unmount-on-close>
       <a-spin v-if="detailLoading" />
@@ -91,7 +130,7 @@
     <a-modal v-model:visible="evidenceVisible" title="业务理解来源证据" :footer="false" @close="clearEvidence">
       <img v-if="evidenceUrl" :src="evidenceUrl" alt="执行器上传的业务理解来源证据" class="max-w-full" />
     </a-modal>
-    <a-drawer v-model:visible="editorVisible" title="维护业务理解" :width="800" unmount-on-close>
+    <a-drawer v-model:visible="editorVisible" title="维护业务理解" :width="800" :footer="false" unmount-on-close>
       <form aria-label="业务理解编辑" @submit.prevent="save">
         <fieldset :disabled="saving" class="editor-fields"
           ><legend>业务理解内容</legend>
@@ -150,13 +189,18 @@
                 ><option value="INFERRED">推断</option
                 ><option value="UNCONFIRMED">待确认</option></select
               >
-              <button type="button" @click="form.branches.splice(index, 1)">移除此分支</button>
+              <a-button type="text" status="danger" :disabled="saving" @click="form.branches.splice(index, 1)"
+                >移除此分支</a-button
+              >
             </div>
-            <button type="button" @click="addBranch">增加操作分支</button>
+            <a-button type="outline" :disabled="saving" @click="addBranch">增加操作分支</a-button>
           </fieldset>
           <label for="business-change">本次变化（必填）</label
           ><textarea id="business-change" v-model="form.changeSummary" name="change" required maxlength="1000" />
-          <button type="submit" :disabled="saving">{{ saving ? '正在保存' : '保存新版本' }}</button>
+          <div class="business-editor-footer"
+            ><a-button :disabled="saving" @click="editorVisible = false">取消</a-button
+            ><a-button type="primary" html-type="submit" :loading="saving">保存新版本</a-button></div
+          >
         </fieldset>
       </form>
     </a-drawer>
@@ -183,6 +227,7 @@
   import { businessAssetTree, matchesBusinessCategory } from '@/utils/businessAssetTree';
   import { hasAnyPermission } from '@/utils/permission';
 
+  const businessFile = ref<HTMLInputElement>();
   const app = useAppStore();
   const router = useRouter();
   const route = useRoute();
@@ -507,7 +552,27 @@
 </script>
 
 <style scoped>
-  form label {
+  .business-layout {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 20px;
+  }
+  .business-tree {
+    overflow: auto;
+  }
+  .business-tree h3 {
+    margin-block: 0 16px;
+    font-size: 14px;
+  }
+  .business-list {
+    min-inline-size: 0;
+  }
+  @media (max-width: 900px) {
+    .business-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .editor-fields label {
     display: block;
     margin-block: 1rem 0.25rem;
   }
@@ -515,20 +580,37 @@
     padding: 0;
     border: 0;
   }
-  form input,
-  form textarea,
-  form select {
+  .editor-fields input,
+  .editor-fields textarea,
+  .editor-fields select {
     padding: 0.5rem;
     width: 100%;
     max-width: 100%;
     border: 1px solid var(--color-border-3);
+    border-radius: 4px;
     color: var(--color-text-1);
-    background: var(--color-bg-2);
+    background: var(--color-fill-2);
+    transition: border-color 0.15s;
     font: inherit;
   }
-  form button {
-    margin-block: 0.75rem;
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--color-border-3);
+  .editor-fields input:focus-visible,
+  .editor-fields textarea:focus-visible,
+  .editor-fields select:focus-visible {
+    border-color: rgb(var(--primary-6));
+    outline: 2px solid rgb(var(--primary-2));
+  }
+  .editor-fields > fieldset {
+    padding: 16px;
+    margin-block: 20px;
+    border: 1px solid var(--color-border-2);
+    border-radius: 6px;
+  }
+  .business-editor-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-block-start: 20px;
+    margin-block-start: 20px;
+    border-block-start: 1px solid var(--color-border-2);
   }
 </style>

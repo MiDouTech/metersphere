@@ -1,128 +1,156 @@
 <template>
   <TestAssetPage>
-    <BusinessVersions />
-    <SharedConfigurationVersions />
-    <MsCard v-if="canReadLegacy" simple>
-      <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
-      <div class="mb-4">
-        <div class="text-base font-medium">资产版本</div>
-        <div class="mt-1 text-sm text-[var(--color-text-3)]"
-          >每一行都是不可变内容快照；任务引用固定版本，不随正式资产后续更新漂移。</div
-        >
-      </div>
-      <div class="mb-4 flex flex-wrap items-center gap-3">
-        <a-link
-          v-if="query.assetType && catalogPaths[query.assetType]"
-          @click="router.push(catalogPaths[query.assetType])"
-        >
-          查看此类资产目录
-        </a-link>
-        <a-input-search
-          v-model="query.keyword"
-          class="w-[260px]"
-          allow-clear
-          placeholder="搜索资产名称或 ID"
-          @search="search"
-        />
-        <a-select v-model="query.assetType" class="w-[160px]" allow-clear placeholder="资产类型" @change="search">
-          <a-option value="DOCUMENT">业务文档</a-option><a-option value="CASE">功能用例</a-option>
-          <a-option value="DATASET">测试数据</a-option><a-option value="ENVIRONMENT">测试环境</a-option>
-          <a-option value="COMMON_STEP">公共步骤</a-option><a-option value="API_DEFINITION">接口资产</a-option>
-          <a-option value="EVIDENCE">执行证据</a-option><a-option value="BUG">缺陷资产</a-option>
-          <a-option value="TASK">测试任务</a-option><a-option value="STEP">执行步骤</a-option>
-        </a-select>
-        <a-input
-          v-model="query.assetId"
-          class="w-[260px]"
-          allow-clear
-          placeholder="精确资产 ID"
-          @press-enter="search"
-        />
-        <a-select
-          v-model="query.creationSources"
-          multiple
-          allow-clear
-          class="w-[190px]"
-          placeholder="建立方式"
-          @change="search"
-        >
-          <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{ item.label }}</a-option>
-        </a-select>
-        <a-tree-select
-          v-model="query.categoryId"
-          allow-clear
-          allow-search
-          class="w-[190px]"
-          :data="categories"
-          :field-names="{ key: 'id', title: 'name', children: 'children' }"
-          placeholder="资产分类"
-          @change="search"
-        />
-        <a-checkbox v-model="query.includeDescendants" @change="search">含子分类</a-checkbox>
-        <a-button :loading="loading" @click="load">刷新</a-button>
-      </div>
-      <a-table
-        :data="versions"
-        :loading="loading"
-        row-key="id"
-        :pagination="pagination"
-        @page-change="changePage"
-        @page-size-change="changePageSize"
-      >
-        <template #empty><a-empty description="暂无符合条件的资产版本。" /></template>
-        <template #columns>
-          <a-table-column title="类型" :width="120"
-            ><template #cell="{ record }"
-              ><a-tag>{{ record.assetType }}</a-tag></template
-            ></a-table-column
-          >
-          <a-table-column title="资产" :width="330"
-            ><template #cell="{ record }"
-              ><div class="font-medium">{{ record.assetName || record.assetId }}</div
-              ><div class="mt-1 text-xs text-[var(--color-text-3)]">{{ record.assetId }}</div></template
-            ></a-table-column
-          >
-          <a-table-column title="版本" :width="100"
-            ><template #cell="{ record }">v{{ record.versionNo }}</template></a-table-column
-          >
-          <a-table-column title="建立方式" :width="120"
-            ><template #cell="{ record }">
-              <a-tag :color="sourceMeta(record.creationSource).color">{{
-                sourceMeta(record.creationSource).label
-              }}</a-tag>
-            </template></a-table-column
-          >
-          <a-table-column title="资产分类" data-index="categoryPath" :width="210" ellipsis tooltip />
-          <a-table-column title="来源版本" data-index="sourceVersion" :width="180" />
-          <a-table-column title="状态" :width="120"
-            ><template #cell="{ record }"
-              ><a-tag color="green">{{ record.status }}</a-tag></template
-            ></a-table-column
-          >
-          <a-table-column title="内容摘要" :width="230"
-            ><template #cell="{ record }"
-              ><span class="font-mono text-xs">{{ shortHash(record.contentHash) }}</span></template
-            ></a-table-column
-          >
-          <a-table-column title="发布时间" :width="180"
-            ><template #cell="{ record }">{{ formatTime(record.publishedAt) }}</template></a-table-column
-          >
-          <a-table-column title="操作" :width="160" fixed="right"
-            ><template #cell="{ record }"
-              ><a-space
-                ><a-link @click="trace(record)">追溯</a-link
-                ><a-popconfirm
-                  v-if="record.status === 'PUBLISHED'"
-                  content="停用后新任务不能再选择该版本，已冻结任务不受影响。"
-                  @ok="deprecate(record)"
-                  ><a-link v-permission="['TEST_ASSET_VERSION:MANAGE']" status="danger">停用</a-link></a-popconfirm
-                ></a-space
-              ></template
-            ></a-table-column
-          >
-        </template>
-      </a-table>
-    </MsCard>
+    <div class="asset-heading"><h2>资产版本</h2><p>统一查看历史快照、比较变化与切换当前版本。</p></div>
+    <section class="asset-panel">
+      <a-tabs v-model:active-key="versionTab">
+        <a-tab-pane v-if="canReadBusiness" key="business" title="业务资产" :destroy-on-hide="false"
+          ><BusinessVersions
+        /></a-tab-pane>
+        <a-tab-pane v-if="canReadConfiguration" key="configuration" title="公共配置" :destroy-on-hide="false"
+          ><SharedConfigurationVersions
+        /></a-tab-pane>
+        <a-tab-pane v-if="canReadLegacy" key="other" title="其他资产" :destroy-on-hide="false">
+          <MsCard v-if="canReadLegacy" simple>
+            <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
+            <div class="mb-4">
+              <div class="text-base font-medium">资产版本</div>
+              <div class="mt-1 text-sm text-[var(--color-text-3)]"
+                >每一行都是不可变内容快照；任务引用固定版本，不随正式资产后续更新漂移。</div
+              >
+            </div>
+            <div class="asset-toolbar"
+              ><div class="asset-actions"
+                ><a-button :loading="loading" @click="load">刷新</a-button>
+                <a-link
+                  v-if="query.assetType && catalogPaths[query.assetType]"
+                  @click="router.push(catalogPaths[query.assetType])"
+                >
+                  查看此类资产目录
+                </a-link></div
+              ><div class="asset-search">
+                <a-input-search
+                  v-model="query.keyword"
+                  class="w-[260px]"
+                  allow-clear
+                  placeholder="搜索资产名称或 ID"
+                  @search="search"
+                />
+                <a-select
+                  v-model="query.assetType"
+                  class="w-[160px]"
+                  allow-clear
+                  placeholder="资产类型"
+                  @change="search"
+                >
+                  <a-option value="DOCUMENT">业务文档</a-option><a-option value="CASE">功能用例</a-option>
+                  <a-option value="DATASET">测试数据</a-option><a-option value="ENVIRONMENT">测试环境</a-option>
+                  <a-option value="COMMON_STEP">公共步骤</a-option><a-option value="API_DEFINITION">接口资产</a-option>
+                  <a-option value="EVIDENCE">执行证据</a-option><a-option value="BUG">缺陷资产</a-option>
+                  <a-option value="TASK">测试任务</a-option><a-option value="STEP">执行步骤</a-option>
+                </a-select>
+                <a-input
+                  v-model="query.assetId"
+                  class="w-[260px]"
+                  allow-clear
+                  placeholder="精确资产 ID"
+                  @press-enter="search"
+                />
+                <a-select
+                  v-model="query.creationSources"
+                  multiple
+                  allow-clear
+                  class="w-[190px]"
+                  placeholder="建立方式"
+                  @change="search"
+                >
+                  <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{
+                    item.label
+                  }}</a-option>
+                </a-select>
+                <a-tree-select
+                  v-model="query.categoryId"
+                  allow-clear
+                  allow-search
+                  class="w-[190px]"
+                  :data="categories"
+                  :field-names="{ key: 'id', title: 'name', children: 'children' }"
+                  placeholder="资产分类"
+                  @change="search"
+                />
+                <a-checkbox v-model="query.includeDescendants" @change="search">含子分类</a-checkbox>
+              </div>
+            </div>
+            <a-table
+              :data="versions"
+              :loading="loading"
+              row-key="id"
+              :pagination="pagination"
+              @page-change="changePage"
+              @page-size-change="changePageSize"
+            >
+              <template #empty><a-empty description="暂无符合条件的资产版本。" /></template>
+              <template #columns>
+                <a-table-column title="类型" :width="120"
+                  ><template #cell="{ record }"
+                    ><a-tag>{{ record.assetType }}</a-tag></template
+                  ></a-table-column
+                >
+                <a-table-column title="资产" :width="330"
+                  ><template #cell="{ record }"
+                    ><div class="font-medium">{{ record.assetName || record.assetId }}</div
+                    ><div class="mt-1 text-xs text-[var(--color-text-3)]">{{ record.assetId }}</div></template
+                  ></a-table-column
+                >
+                <a-table-column title="版本" :width="100"
+                  ><template #cell="{ record }">v{{ record.versionNo }}</template></a-table-column
+                >
+                <a-table-column title="建立方式" :width="120"
+                  ><template #cell="{ record }">
+                    <a-tag :color="sourceMeta(record.creationSource).color">{{
+                      sourceMeta(record.creationSource).label
+                    }}</a-tag>
+                  </template></a-table-column
+                >
+                <a-table-column title="资产分类" data-index="categoryPath" :width="210" ellipsis tooltip />
+                <a-table-column title="来源版本" data-index="sourceVersion" :width="180" />
+                <a-table-column title="状态" :width="120"
+                  ><template #cell="{ record }"
+                    ><a-tag color="green">{{ record.status }}</a-tag></template
+                  ></a-table-column
+                >
+                <a-table-column title="内容摘要" :width="230"
+                  ><template #cell="{ record }"
+                    ><span class="font-mono text-xs">{{ shortHash(record.contentHash) }}</span></template
+                  ></a-table-column
+                >
+                <a-table-column title="发布时间" :width="180"
+                  ><template #cell="{ record }">{{ formatTime(record.publishedAt) }}</template></a-table-column
+                >
+                <a-table-column title="操作" :width="160" fixed="right"
+                  ><template #cell="{ record }"
+                    ><a-space
+                      ><a-link @click="trace(record)">追溯</a-link
+                      ><a-popconfirm
+                        v-if="record.status === 'PUBLISHED'"
+                        content="停用后新任务不能再选择该版本，已冻结任务不受影响。"
+                        @ok="deprecate(record)"
+                        ><a-link v-permission="['TEST_ASSET_VERSION:MANAGE']" status="danger"
+                          >停用</a-link
+                        ></a-popconfirm
+                      ></a-space
+                    ></template
+                  ></a-table-column
+                >
+              </template>
+            </a-table>
+          </MsCard>
+        </a-tab-pane>
+      </a-tabs>
+      <a-empty
+        v-if="!canReadBusiness && !canReadConfiguration && !canReadLegacy"
+        description="暂无可访问的资产版本，请联系管理员授权"
+      />
+    </section>
   </TestAssetPage>
 </template>
 
@@ -142,12 +170,15 @@
     pageTestAssetVersions,
   } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
+  import businessAssetError from '@/utils/businessAssetError';
   import { hasAnyPermission } from '@/utils/permission';
 
   const appStore = useAppStore();
   const route = useRoute();
   const router = useRouter();
   const loading = ref(false);
+  const canReadBusiness = computed(() => hasAnyPermission(['BUSINESS_ASSET:READ']));
+  const canReadConfiguration = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:READ']));
   const canReadLegacy = computed(() =>
     hasAnyPermission([
       'FUNCTIONAL_CASE:READ',
@@ -157,6 +188,37 @@
       'AI_EXECUTION:READ',
     ])
   );
+
+  function initialVersionTab() {
+    if (route.query.configurationId && canReadConfiguration.value) return 'configuration';
+    if (route.query.businessAssetId && canReadBusiness.value) return 'business';
+    if ((route.query.assetType || route.query.assetId) && canReadLegacy.value) return 'other';
+    if (canReadBusiness.value) return 'business';
+    if (canReadConfiguration.value) return 'configuration';
+    return 'other';
+  }
+  const versionTab = ref(initialVersionTab());
+  watch(
+    () => route.query.configurationId,
+    (id) => {
+      if (id && canReadConfiguration.value) versionTab.value = 'configuration';
+    }
+  );
+  watch(
+    () => route.query.businessAssetId,
+    (id) => {
+      if (id && canReadBusiness.value) versionTab.value = 'business';
+    }
+  );
+
+  watch([canReadBusiness, canReadConfiguration, canReadLegacy], () => {
+    const available = {
+      business: canReadBusiness.value,
+      configuration: canReadConfiguration.value,
+      other: canReadLegacy.value,
+    };
+    if (!available[versionTab.value as keyof typeof available]) versionTab.value = initialVersionTab();
+  });
   const error = ref('');
   const versions = ref<TestAssetVersion[]>([]);
   const categories = ref<TestAssetCategory[]>([]);
@@ -200,23 +262,34 @@
   }));
   const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
   const shortHash = (value?: string) => (value ? `${value.slice(0, 12)}…${value.slice(-8)}` : '-');
+  let legacyGeneration = 0;
   async function load() {
-    if (!appStore.currentProjectId || !canReadLegacy.value) return;
+    const run = ++legacyGeneration;
+    const project = appStore.currentProjectId;
+    versions.value = [];
+    total.value = 0;
+    error.value = '';
+    if (!project || !canReadLegacy.value) {
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     error.value = '';
     try {
       const result = await pageTestAssetVersions({
-        projectId: appStore.currentProjectId,
+        projectId: project,
         ...query,
         keyword: query.keyword.trim() || undefined,
         assetId: query.assetId.trim() || undefined,
       });
+      if (run !== legacyGeneration || project !== appStore.currentProjectId || !canReadLegacy.value) return;
       versions.value = result.list || [];
       total.value = result.total || 0;
-    } catch (reason: any) {
-      error.value = reason?.message || '资产版本加载失败，请稍后重试';
+    } catch (reason) {
+      if (run === legacyGeneration && project === appStore.currentProjectId && canReadLegacy.value)
+        error.value = businessAssetError(reason, '资产版本加载失败，请稍后重试');
     } finally {
-      loading.value = false;
+      if (run === legacyGeneration && project === appStore.currentProjectId) loading.value = false;
     }
   }
   function search() {
@@ -240,20 +313,33 @@
     try {
       await deprecateTestAssetVersion(appStore.currentProjectId, record);
       await load();
-    } catch (reason: any) {
-      error.value = reason?.message || '资产版本停用失败，请稍后重试';
+    } catch (reason) {
+      error.value = businessAssetError(reason, '资产版本停用失败，请稍后重试');
     }
   }
-  watch(
-    () => appStore.currentProjectId,
-    () => {
-      query.current = 1;
-      load();
-    }
-  );
+  watch([() => route.query.assetType, () => route.query.assetId], () => {
+    query.assetType = String(route.query.assetType || '') || undefined;
+    query.assetId = String(route.query.assetId || '');
+    if ((query.assetType || query.assetId) && canReadLegacy.value) versionTab.value = 'other';
+    query.current = 1;
+    load();
+  });
+  watch([() => appStore.currentProjectId, canReadLegacy], () => {
+    ++legacyGeneration;
+    versions.value = [];
+    total.value = 0;
+    error.value = '';
+    loading.value = false;
+    query.current = 1;
+    load();
+  });
   onMounted(async () => {
     if (!canReadLegacy.value) return;
-    categories.value = await listTestAssetCategories();
-    await load();
+    try {
+      categories.value = await listTestAssetCategories();
+      await load();
+    } catch (failure) {
+      error.value = businessAssetError(failure, '资产分类加载失败，请重试');
+    }
   });
 </script>

@@ -1,0 +1,12 @@
+{
+  "artifact": "C:\\SoftWare\\JetBrains\\metersphere\\backend\\app\\target\\app-3.x.jar",
+  "artifactSha256": "2b4f8ead1427e92f8b068b1ecedf4a71540a7a231ec75b6f4c6b9f9697f3f99d",
+  "checks": {
+    "latestFrontendManifest": true,
+    "latestFrontendIndex": true,
+    "structuredSecretValidationPackaged": true,
+    "latestMigrationPackaged": true,
+    "entryAssetsPackaged": true
+  },
+  "scope": "Shared workspace compile/package evidence only; unrelated dirty task sources are also present in this workspace. Not an isolated release artifact. HEAD build manifest revision is the baseline; this change is bound by R3 patch/source hashes."
+}

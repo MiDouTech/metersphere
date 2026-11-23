@@ -1,0 +1,88 @@
+{
+  "base": "dc75210a070cb6250d38c89b99abd62d465f0786",
+  "patchSha256": "536390e95a5900457f632d0585e0d917a24c96431463e5eee819662abcc5a31a",
+  "files": [
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/SharedConfigurationController.java",
+      "sha256": "d457c0f45164655a52f7cdcc5ba92a467e0a573ce17675ddf4f670250bfdbc20"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/SharedConfigurationSave.java",
+      "sha256": "1ba52a0934266c9327e30b7c32fd90a9d202c8aba0dc8e81b7990aa2c2bd39ae"
+    },
+    {
+      "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/SharedConfigurationService.java",
+      "sha256": "778e07cd44dd61f7ad446865b68f410f4b532a4b2d1f00714a6bde411cffc950"
+    },
+    {
+      "path": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationServiceTests.java",
+      "sha256": "d31c38985a0d0a29dcfd69f043e841c5fca54da70bbe87a1d602bbcc827b27df"
+    },
+    {
+      "path": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_157__shared_configuration_secret_type.sql",
+      "sha256": "bd4646ffb01b205a3ae7b06009df61f490a5804f618580c175bb5f1e3c999dbe"
+    },
+    {
+      "path": "frontend/src/views/test-asset/shared-configuration.vue",
+      "sha256": "7f98452784117779ffe4b6990004119eb65232dbd7812125f7178b729dc5c8d7"
+    },
+    {
+      "path": "frontend/src/views/test-asset/business-assets.vue",
+      "sha256": "0aeb352c32e91e52f1719ab7d9b82e02e0346624d46f0870e70e547ecc9821db"
+    },
+    {
+      "path": "frontend/src/views/test-asset/versions.vue",
+      "sha256": "5946373c129e8ccd4639e852f9a1c6dad043d21e876097ec689529a4a026df1e"
+    },
+    {
+      "path": "frontend/src/views/test-asset/components/TestAssetPage.vue",
+      "sha256": "e8f5199331e64c8de3526cc4fa59ea6b2a528325cdbf9ce401e612ca0a8f3fff"
+    },
+    {
+      "path": "frontend/src/views/test-asset/components/BusinessVersions.vue",
+      "sha256": "6c8fc3617136ebc9fc357aee11731990ecb3718b4fcf5f8d24ce23fe823e348d"
+    },
+    {
+      "path": "frontend/src/views/test-asset/components/SharedConfigurationVersions.vue",
+      "sha256": "6c2f7f6ec4999ea0002cb6980ce4d01c8857f0ca658afda68dcc86b29a01e400"
+    },
+    {
+      "path": "frontend/src/utils/sharedConfigurationFields.ts",
+      "sha256": "450c173e82f3b9524dd01b2b31a8b9c0baf3ba2d4168c125d5770b7ae0c3327c"
+    },
+    {
+      "path": "frontend/scripts/test-business-assets.mjs",
+      "sha256": "70cc310c53612c2d2963d17878de70eb1e9d0607bb62a9dbb73ee68c6267e780"
+    },
+    {
+      "path": "frontend/scripts/test-shared-configuration-fields.mjs",
+      "sha256": "1b169521cfb60098d96f5e115cf53c7f55e8bfe70bd4495464404ff71b954cbf"
+    },
+    {
+      "path": "frontend/scripts/test-asset-version-loading.mjs",
+      "sha256": "d223f08fa401f0e381ae0852061ebedad29dd2f50efb8fa30195044cd95bfeb0"
+    },
+    {
+      "path": "frontend/scripts/asset-ui-preview.mjs",
+      "sha256": "96f878d1b9d7a4bdff531eedd007f008f1fd3ed128a8a955df56bcbf72d916cc"
+    },
+    {
+      "path": "scripts/verify-shared-configuration-migration.py",
+      "sha256": "ce844e5633b1560f2105c0f92130dbb19b70cc3972c20561c7e4c8a655c749c7"
+    }
+  ],
+  "requirements": [
+    {
+      "path": "docs/design/asset-ui-demo/proposal-v0.1.md",
+      "sha256": "cc9f3ddfde8cef0f55c57e488e3715d0b36ea0c28e43760dfba1c5b7114b4d66"
+    },
+    {
+      "path": "docs/implementation/asset-ui-20261123/plan.md",
+      "sha256": "a456aaf41bab5395f917ac5e327e8b12d8b4973a0983b26e0a439b4a1e935bc0"
+    },
+    {
+      "path": "docs/implementation/asset-ui-20261123/configuration-protocol.md",
+      "sha256": "e582093b8a8558fda99bd44889725d46df103806a7bb2fae61d3686564929002"
+    }
+  ]
+}

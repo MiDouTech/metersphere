@@ -1,0 +1,61 @@
+{
+  "suites": [
+    {
+      "name": "io.metersphere.agent.service.SharedConfigurationServiceTests",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "backend/services/agent-integration/target/surefire-reports/TEST-io.metersphere.agent.service.SharedConfigurationServiceTests.xml",
+      "sha256": "06a25537fd78234a663554973ff71ed0a97fd463075e194cae212c15cf854e5b"
+    },
+    {
+      "name": "io.metersphere.agent.service.BusinessAssetServiceTests",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "backend/services/agent-integration/target/surefire-reports/TEST-io.metersphere.agent.service.BusinessAssetServiceTests.xml",
+      "sha256": "4e347d16c63545393fbfbdf646b77b1bed756ba0c5d3f4826076a4591ed3a008"
+    },
+    {
+      "name": "io.metersphere.agent.service.ExternalExecutorServiceTests",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "backend/services/agent-integration/target/surefire-reports/TEST-io.metersphere.agent.service.ExternalExecutorServiceTests.xml",
+      "sha256": "463e6fa30202a935cf9c9d6b83e6038883e19ac1ed2df323a95a28d02bfe3ba0"
+    },
+    {
+      "name": "io.metersphere.agent.controller.BusinessGovernanceExceptionHandlerTests",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "backend/services/agent-integration/target/surefire-reports/TEST-io.metersphere.agent.controller.BusinessGovernanceExceptionHandlerTests.xml",
+      "sha256": "9f2dfed4c07b557c2cecbf1b4d070a7a1e100d188cb5a95e989169570046fa88"
+    },
+    {
+      "name": "io.metersphere.agent.service.BusinessAssetMcpTests",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "backend/services/agent-integration/target/surefire-reports/TEST-io.metersphere.agent.service.BusinessAssetMcpTests.xml",
+      "sha256": "4dce3b6f4d44cf01587f8635d635b2f991a53171c84d5c0e1c6d180e33f33a34"
+    },
+    {
+      "name": "io.metersphere.agent.service.AgentHistoricalCompatibilityTests",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "report": "backend/services/agent-integration/target/surefire-reports/TEST-io.metersphere.agent.service.AgentHistoricalCompatibilityTests.xml",
+      "sha256": "81b8793ded5919ec0b79d925a5677ea433cfb7115e280f1eff11100d4aab424d"
+    }
+  ],
+  "tests": 41,
+  "failures": 0,
+  "skipped": 0
+}

@@ -25,7 +25,10 @@ public class SharedConfigurationController {
   }
 
   public record Select(
-      @NotBlank String projectId, @Min(1) int version, @Min(1) int expectedVersion) {}
+      @NotBlank String projectId,
+      @Min(1) int version,
+      @Min(1) int expectedVersion,
+      @Size(max = 500) String reason) {}
 
   public record Retry(@NotBlank String projectId, @Min(1) int version) {}
 
@@ -46,7 +49,7 @@ public class SharedConfigurationController {
 
   @PostMapping
   public Map<String, Object> save(@RequestBody @Valid SharedConfigurationSave r) {
-    return service.save(
+    return service.saveStructured(
         r.projectId(),
         r.id(),
         r.systemKey(),
@@ -55,7 +58,9 @@ public class SharedConfigurationController {
         r.kind(),
         r.value(),
         r.fileName(),
-        r.expectedVersion());
+        r.expectedVersion(),
+        r.secretType(),
+        r.keepSecret());
   }
 
   @GetMapping("/{id}/versions")
@@ -77,7 +82,7 @@ public class SharedConfigurationController {
 
   @PostMapping("/{id}/current-version")
   public void select(@PathVariable String id, @Valid @RequestBody Select r) {
-    service.select(r.projectId(), id, r.version(), r.expectedVersion());
+    service.select(r.projectId(), id, r.version(), r.expectedVersion(), r.reason());
   }
 
   @PostMapping("/{id}/retry-parse")

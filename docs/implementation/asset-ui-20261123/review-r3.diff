@@ -1,0 +1,2982 @@
+diff --git a/backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/SharedConfigurationController.java b/backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/SharedConfigurationController.java
+index afdbbb5d59..6c117edc7f 100644
+--- a/backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/SharedConfigurationController.java
++++ b/backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/SharedConfigurationController.java
+@@ -25,7 +25,10 @@ public class SharedConfigurationController {
+   }
+ 
+   public record Select(
+-      @NotBlank String projectId, @Min(1) int version, @Min(1) int expectedVersion) {}
++      @NotBlank String projectId,
++      @Min(1) int version,
++      @Min(1) int expectedVersion,
++      @Size(max = 500) String reason) {}
+ 
+   public record Retry(@NotBlank String projectId, @Min(1) int version) {}
+ 
+@@ -46,7 +49,7 @@ public class SharedConfigurationController {
+ 
+   @PostMapping
+   public Map<String, Object> save(@RequestBody @Valid SharedConfigurationSave r) {
+-    return service.save(
++    return service.saveStructured(
+         r.projectId(),
+         r.id(),
+         r.systemKey(),
+@@ -55,7 +58,9 @@ public class SharedConfigurationController {
+         r.kind(),
+         r.value(),
+         r.fileName(),
+-        r.expectedVersion());
++        r.expectedVersion(),
++        r.secretType(),
++        r.keepSecret());
+   }
+ 
+   @GetMapping("/{id}/versions")
+@@ -77,7 +82,7 @@ public class SharedConfigurationController {
+ 
+   @PostMapping("/{id}/current-version")
+   public void select(@PathVariable String id, @Valid @RequestBody Select r) {
+-    service.select(r.projectId(), id, r.version(), r.expectedVersion());
++    service.select(r.projectId(), id, r.version(), r.expectedVersion(), r.reason());
+   }
+ 
+   @PostMapping("/{id}/retry-parse")
+diff --git a/backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/SharedConfigurationSave.java b/backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/SharedConfigurationSave.java
+index b737e458da..1e34f5ed0b 100644
+--- a/backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/SharedConfigurationSave.java
++++ b/backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/SharedConfigurationSave.java
+@@ -9,6 +9,37 @@ public record SharedConfigurationSave(
+     @NotBlank @Size(max = 128) String environmentKey,
+     @NotBlank @Size(max = 128) String name,
+     @NotBlank String kind,
+-    @NotBlank @Size(max = 2800000) String value,
++    @Size(max = 2800000) String value,
+     @Size(max = 255) String fileName,
+-    @Min(0) int expectedVersion) {}
++    @Min(0) int expectedVersion,
++    @Size(max = 24) String secretType,
++    boolean keepSecret) {
++  @Override
++  public String toString() {
++    return "SharedConfigurationSave[redacted]";
++  }
++
++  public SharedConfigurationSave(
++      String projectId,
++      String id,
++      String systemKey,
++      String environmentKey,
++      String name,
++      String kind,
++      String value,
++      String fileName,
++      int expectedVersion) {
++    this(
++        projectId,
++        id,
++        systemKey,
++        environmentKey,
++        name,
++        kind,
++        value,
++        fileName,
++        expectedVersion,
++        null,
++        false);
++  }
++}
+diff --git a/backend/services/agent-integration/src/main/java/io/metersphere/agent/service/SharedConfigurationService.java b/backend/services/agent-integration/src/main/java/io/metersphere/agent/service/SharedConfigurationService.java
+index f06852aa01..5dfa508234 100644
+--- a/backend/services/agent-integration/src/main/java/io/metersphere/agent/service/SharedConfigurationService.java
++++ b/backend/services/agent-integration/src/main/java/io/metersphere/agent/service/SharedConfigurationService.java
+@@ -37,10 +37,10 @@ public class SharedConfigurationService {
+         jdbc.queryForList(
+             "SELECT c.id,c.system_key AS systemKey,c.environment_key AS"
+                 + " environmentKey,c.name,c.current_version AS currentVersion,v.kind,v.file_name AS"
+-                + " fileName,v.parse_status AS parseStatus FROM shared_configuration c JOIN"
+-                + " shared_configuration_version v ON v.configuration_id=c.id AND"
+-                + " v.version_no=c.current_version WHERE c.project_id=? ORDER BY"
+-                + " c.system_key,c.environment_key,c.name",
++                + " fileName,v.parse_status AS parseStatus,v.secret_type AS secretType FROM"
++                + " shared_configuration c JOIN shared_configuration_version v ON"
++                + " v.configuration_id=c.id AND v.version_no=c.current_version WHERE c.project_id=?"
++                + " ORDER BY c.system_key,c.environment_key,c.name",
+             project),
+         "id",
+         "systemKey",
+@@ -49,7 +49,8 @@ public class SharedConfigurationService {
+         "currentVersion",
+         "kind",
+         "fileName",
+-        "parseStatus");
++        "parseStatus",
++        "secretType");
+   }
+ 
+   public List<Map<String, Object>> batch(
+@@ -61,13 +62,14 @@ public class SharedConfigurationService {
+                 .distinct()
+                 .count()
+             != 1
+-        || entries.stream().mapToLong(r -> r.value().length()).sum() > 2800000)
++        || entries.stream().mapToLong(r -> Objects.toString(r.value(), "").length()).sum()
++            > 2800000)
+       throw new BusinessGovernanceException(
+           "CONFIGURATION_BATCH_INVALID", "每批最多 100 条且只允许同一项目，配置内容总量不能超过 2 MB");
+     var result = new ArrayList<Map<String, Object>>();
+     for (var r : entries)
+       result.add(
+-          save(
++          saveStructured(
+               r.projectId(),
+               r.id(),
+               r.systemKey(),
+@@ -76,7 +78,9 @@ public class SharedConfigurationService {
+               r.kind(),
+               r.value(),
+               r.fileName(),
+-              r.expectedVersion()));
++              r.expectedVersion(),
++              r.secretType(),
++              r.keepSecret()));
+     return result;
+   }
+ 
+@@ -90,9 +94,69 @@ public class SharedConfigurationService {
+       String value,
+       String filename,
+       int expectedVersion) {
++    return saveStructured(
++        project,
++        id,
++        system,
++        environment,
++        name,
++        kind,
++        value,
++        filename,
++        expectedVersion,
++        null,
++        false);
++  }
++
++  public Map<String, Object> saveStructured(
++      String project,
++      String id,
++      String system,
++      String environment,
++      String name,
++      String kind,
++      String value,
++      String filename,
++      int expectedVersion,
++      String secretType,
++      boolean keepSecret) {
+     String actor = authorize(project, true);
+     if (!Set.of("PLAIN", "SECRET", "DOCUMENT").contains(kind))
+       throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "配置类型无效");
++    jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", project);
++    if (keepSecret) {
++      if (!"SECRET".equals(kind)
++          || id == null
++          || id.isBlank()
++          || (value != null && !value.isEmpty()))
++        throw new BusinessGovernanceException(
++            "GOVERNANCE_VALIDATION_ERROR", "仅已有敏感配置允许保留原值，且不能同时提交替换值");
++      var existing = configuration(project, id, true);
++      if (((Number) existing.get("current_version")).intValue() != expectedVersion)
++        throw new BusinessGovernanceException("CONFIGURATION_VERSION_CONFLICT", "配置已变化，请刷新后重新编辑");
++      var stored =
++          jdbc.queryForMap(
++              "SELECT kind,secret_type,encrypted_value FROM shared_configuration_version WHERE"
++                  + " configuration_id=? AND version_no=?",
++              id,
++              expectedVersion);
++      if (!"SECRET".equals(stored.get("kind")))
++        throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "原配置不是敏感配置，请输入新内容");
++      secretType = (String) stored.get("secret_type");
++      value =
++          new String(
++              cipher.decrypt(
++                  (String) stored.get("encrypted_value"),
++                  project + ":" + id + ":" + expectedVersion),
++              StandardCharsets.UTF_8);
++    }
++    if (value == null || value.isBlank())
++      throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "配置内容不能为空");
++    if (secretType != null && !secretType.isEmpty()) {
++      if (!"SECRET".equals(kind))
++        throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "仅敏感配置可指定敏感分类");
++      validateSecret(secretType, value);
++    }
+     byte[] bytes;
+     try {
+       bytes =
+@@ -109,7 +173,6 @@ public class SharedConfigurationService {
+             || name.matches(
+                 "(?i).*(password|passwd|token|secret|api.?key|authorization|cookie|username|account|账号|账户|密码|口令|密钥).*")))
+       throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "检测到敏感内容，请使用敏感配置类型");
+-    jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", project);
+     int next;
+     if (id == null || id.isBlank()) {
+       if (expectedVersion != 0)
+@@ -142,6 +205,19 @@ public class SharedConfigurationService {
+       var old = configuration(project, id, true);
+       if (((Number) old.get("current_version")).intValue() != expectedVersion)
+         throw new BusinessGovernanceException("CONFIGURATION_VERSION_CONFLICT", "配置已变化，请刷新后重新编辑");
++      Long duplicate =
++          jdbc.queryForObject(
++              "SELECT COUNT(*) FROM shared_configuration WHERE project_id=? AND system_key=? AND"
++                  + " environment_key=? AND name=? AND id<>?",
++              Long.class,
++              project,
++              system,
++              environment,
++              name,
++              id);
++      if (duplicate != null && duplicate > 0)
++        throw new BusinessGovernanceException(
++            "GOVERNANCE_VALIDATION_ERROR", "同一系统和环境下配置名称不能重复，请编辑已有配置");
+       next =
+           jdbc.queryForObject(
+               "SELECT MAX(version_no)+1 FROM shared_configuration_version WHERE configuration_id=?",
+@@ -160,16 +236,17 @@ public class SharedConfigurationService {
+         "DOCUMENT".equals(kind) ? parse(bytes, filename, id + ":" + next) : "NOT_APPLICABLE";
+     jdbc.update(
+         "INSERT INTO"
+-            + " shared_configuration_version(configuration_id,version_no,kind,encrypted_value,file_name,parse_status,actor_id,create_time)"
+-            + " VALUES(?,?,?,?,?,?,?,?)",
++            + " shared_configuration_version(configuration_id,version_no,kind,encrypted_value,file_name,parse_status,actor_id,create_time,secret_type)"
++            + " VALUES(?,?,?,?,?,?,?,?,?)",
+         id,
+         next,
+         kind,
+         cipher.encrypt(bytes, project + ":" + id + ":" + next),
+-        Objects.toString(filename, ""),
++        "DOCUMENT".equals(kind) ? Objects.toString(filename, "") : "",
+         parse,
+         actor,
+-        System.currentTimeMillis());
++        System.currentTimeMillis(),
++        Objects.toString(secretType, ""));
+     audit(id, next, actor, "SAVE");
+     return Map.of("id", id, "version", next, "parseStatus", parse);
+   }
+@@ -180,15 +257,17 @@ public class SharedConfigurationService {
+     return BusinessAssetRows.canonical(
+         jdbc.queryForList(
+             "SELECT version_no AS versionNo,kind,file_name AS fileName,parse_status AS"
+-                + " parseStatus,actor_id AS actorId,create_time AS createTime FROM"
+-                + " shared_configuration_version WHERE configuration_id=? ORDER BY version_no DESC",
++                + " parseStatus,actor_id AS actorId,create_time AS createTime,secret_type AS"
++                + " secretType FROM shared_configuration_version WHERE configuration_id=? ORDER BY"
++                + " version_no DESC",
+             id),
+         "versionNo",
+         "kind",
+         "fileName",
+         "parseStatus",
+         "actorId",
+-        "createTime");
++        "createTime",
++        "secretType");
+   }
+ 
+   public Map<String, Object> read(String project, String id, int version, boolean document) {
+@@ -223,10 +302,15 @@ public class SharedConfigurationService {
+   }
+ 
+   public void select(String project, String id, int version, int expected) {
++    select(project, id, version, expected, null);
++  }
++
++  public void select(String project, String id, int version, int expected, String reason) {
+     String actor = authorize(project, true);
+     var row = configuration(project, id, true);
+     if (((Number) row.get("current_version")).intValue() != expected)
+       throw new BusinessGovernanceException("CONFIGURATION_VERSION_CONFLICT", "配置已变化，请刷新后重试");
++    if (((Number) row.get("current_version")).intValue() == version) return;
+     Long count =
+         jdbc.queryForObject(
+             "SELECT COUNT(*) FROM shared_configuration_version WHERE configuration_id=? AND"
+@@ -236,8 +320,10 @@ public class SharedConfigurationService {
+             version);
+     if (count == null || count != 1)
+       throw new BusinessGovernanceException("CONFIGURATION_VERSION_NOT_FOUND", "配置版本不存在");
++    if (reason != null && (reason.isBlank() || reason.length() > 500))
++      throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "切换原因需为1至500字符");
+     jdbc.update("UPDATE shared_configuration SET current_version=? WHERE id=?", version, id);
+-    audit(id, version, actor, "SELECT_VERSION");
++    audit(id, version, actor, "SELECT_VERSION", reason == null ? "历史客户端切换版本" : reason.trim());
+   }
+ 
+   public Map<String, Object> resolveForExecutor(String project, String session, String id) {
+@@ -249,7 +335,7 @@ public class SharedConfigurationService {
+     var rows =
+         jdbc.queryForList(
+             """
+-SELECT v.version_no,v.kind,v.encrypted_value,v.file_name
++SELECT v.version_no,v.kind,v.encrypted_value,v.file_name,v.secret_type
+ FROM external_executor_session s JOIN external_executor_configuration pin ON pin.session_id=s.id
+ JOIN shared_configuration c ON c.id=pin.configuration_id AND c.project_id=s.project_id
+ JOIN shared_configuration_version v ON v.configuration_id=c.id AND v.version_no=pin.version_no
+@@ -273,6 +359,8 @@ WHERE s.id=? AND s.project_id=? AND s.token_id=? AND s.actor_id=? AND c.id=? AND
+         row.get("kind"),
+         "fileName",
+         row.get("file_name"),
++        "secretType",
++        Objects.toString(row.get("secret_type"), ""),
+         "value",
+         "DOCUMENT".equals(row.get("kind"))
+             ? Base64.getEncoder().encodeToString(bytes)
+@@ -306,6 +394,53 @@ WHERE s.id=? AND s.project_id=? AND s.token_id=? AND s.actor_id=? AND c.id=? AND
+     return status;
+   }
+ 
++  private void validateSecret(String type, String value) {
++    if (!Set.of("ACCOUNT_PASSWORD", "OTHER").contains(type))
++      throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "敏感配置分类无效");
++    try {
++      var payload =
++          new com.fasterxml.jackson.databind.ObjectMapper()
++              .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
++              .enable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
++              .readTree(value);
++      var fields = payload.get("fields");
++      if (!payload.isObject()
++          || payload.size() != 1
++          || fields == null
++          || !fields.isArray()
++          || fields.isEmpty()
++          || fields.size() > 20) throw new IllegalArgumentException();
++      Set<String> names = new HashSet<>();
++      for (var field : fields) {
++        if (!field.isObject()
++            || field.size() != 2
++            || !field.path("name").isTextual()
++            || !field.path("value").isTextual()) throw new IllegalArgumentException();
++        String name = field.get("name").asText();
++        String content = field.get("value").asText();
++        if (name.isBlank()
++            || name.length() > 64
++            || !name.equals(name.trim())
++            || !names.add(name)
++            || content.isBlank()
++            || content.length() > 100000) throw new IllegalArgumentException();
++      }
++      if ("ACCOUNT_PASSWORD".equals(type) && !names.containsAll(Set.of("username", "password")))
++        throw new IllegalArgumentException();
++    } catch (Exception invalid) {
++      io.metersphere.agent.security.AgentSafeDiagnostics.failure(
++          org.slf4j.LoggerFactory.getLogger(SharedConfigurationService.class),
++          "CONFIGURATION_FIELDS_INVALID",
++          "VALIDATE",
++          "structured-secret",
++          "GOVERNANCE_VALIDATION_ERROR",
++          invalid);
++      throw new BusinessGovernanceException(
++          "GOVERNANCE_VALIDATION_ERROR",
++          "敏感字段需为1至20行，名称不可重复且最多64字符，值不能为空且最多100000字符；账号密码类必须包含账号和密码");
++    }
++  }
++
+   private String parse(byte[] bytes, String filename, String reference) {
+     if (filename == null || !filename.toLowerCase(Locale.ROOT).matches(".*\\.(md|txt|json)$"))
+       return "UNSUPPORTED";
+@@ -344,15 +479,20 @@ WHERE s.id=? AND s.project_id=? AND s.token_id=? AND s.actor_id=? AND c.id=? AND
+   }
+ 
+   private void audit(String id, int version, String actor, String event) {
++    audit(id, version, actor, event, "");
++  }
++
++  private void audit(String id, int version, String actor, String event, String reason) {
+     jdbc.update(
+         "INSERT INTO"
+-            + " shared_configuration_audit(id,configuration_id,version_no,actor_id,event_type,create_time)"
+-            + " VALUES(?,?,?,?,?,?)",
++            + " shared_configuration_audit(id,configuration_id,version_no,actor_id,event_type,create_time,reason)"
++            + " VALUES(?,?,?,?,?,?,?)",
+         UUID.randomUUID().toString(),
+         id,
+         version,
+         actor,
+         event,
+-        System.currentTimeMillis());
++        System.currentTimeMillis(),
++        reason);
+   }
+ }
+diff --git a/backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationServiceTests.java b/backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationServiceTests.java
+index 212c0c2411..0b2a93a0a1 100644
+--- a/backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationServiceTests.java
++++ b/backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationServiceTests.java
+@@ -37,6 +37,10 @@ class SharedConfigurationServiceTests {
+                 "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_152__shared_configurations.sql"));
+     for (var statement : sql.substring(0, sql.indexOf("INSERT IGNORE")).split(";"))
+       if (!statement.isBlank()) jdbc.execute(statement);
++    jdbc.execute(
++        Files.readString(
++            root.resolve(
++                "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_157__shared_configuration_secret_type.sql")));
+     var auth = mock(BusinessAssetService.class);
+     when(auth.authorize(eq("p"), anyBoolean(), anyString(), anyString())).thenReturn("actor");
+     cipher = new SharedConfigurationCipher(Base64.getEncoder().encodeToString(new byte[32]));
+@@ -61,6 +65,20 @@ class SharedConfigurationServiceTests {
+             String.class,
+             id);
+     assertFalse(stored.contains("unique-private-value"));
++    service.saveStructured(
++        "p", id, "system", "test", "password", "SECRET", null, "", 1, null, true);
++    assertEquals("", service.list("p").getFirst().get("secretType"));
++    assertEquals(
++        "unique-private-value",
++        new String(
++            cipher.decrypt(
++                jdbc.queryForObject(
++                    "SELECT encrypted_value FROM shared_configuration_version WHERE"
++                        + " configuration_id=? AND version_no=2",
++                    String.class,
++                    id),
++                "p:" + id + ":2"),
++            StandardCharsets.UTF_8));
+   }
+ 
+   @Test
+@@ -148,6 +166,289 @@ class SharedConfigurationServiceTests {
+     }
+   }
+ 
++  @Test
++  void structuredSecretsValidateEncryptAndKeepWithoutReturningValues() {
++    String payload =
++        "{\"fields\":[{\"name\":\"username\",\"value\":\"demo-user\"},{\"name\":\"password\",\"value\":\"private-password\"},{\"name\":\"tenant\",\"value\":\"private-tenant\"}]}";
++    var saved =
++        service.saveStructured(
++            "p",
++            null,
++            "system",
++            "test",
++            "login",
++            "SECRET",
++            payload,
++            "",
++            0,
++            "ACCOUNT_PASSWORD",
++            false);
++    String id = (String) saved.get("id");
++    assertEquals("ACCOUNT_PASSWORD", service.list("p").getFirst().get("secretType"));
++    assertFalse(service.list("p").toString().contains("private"));
++    assertFalse(service.versions("p", id).toString().contains("private"));
++    assertEquals("******", service.read("p", id, 1, true).get("value"));
++    var kept =
++        service.saveStructured(
++            "p", id, "system", "test", "renamed", "SECRET", "", "", 1, null, true);
++    assertEquals(2, kept.get("version"));
++    String encrypted =
++        jdbc.queryForObject(
++            "SELECT encrypted_value FROM shared_configuration_version WHERE configuration_id=? AND"
++                + " version_no=2",
++            String.class,
++            id);
++    assertFalse(encrypted.contains("private"));
++    assertEquals(
++        payload, new String(cipher.decrypt(encrypted, "p:" + id + ":2"), StandardCharsets.UTF_8));
++    assertThrows(
++        MSException.class,
++        () ->
++            service.saveStructured(
++                "p", id, "system", "test", "stale", "SECRET", "", "", 1, null, true));
++    assertThrows(
++        MSException.class,
++        () ->
++            service.saveStructured(
++                "other", id, "system", "test", "foreign", "SECRET", "", "", 2, null, true));
++  }
++
++  @Test
++  void structuredSecretsRejectMissingDuplicateBlankAndExcessiveFields() {
++    for (String payload :
++        List.of(
++            "{}",
++            "{\"fields\": []}",
++            "{\"fields\": [{\"name\": \"x\", \"value\": \"a\"}, {\"name\": \" x \", \"value\":"
++                + " \"b\"}]}",
++            "{\"fields\": [{\"name\": \"x\", \"value\": \" \"}]}",
++            "{\"fields\": [{\"name\": \"0\", \"value\": \"v\"}, {\"name\": \"1\", \"value\":"
++                + " \"v\"}, {\"name\": \"2\", \"value\": \"v\"}, {\"name\": \"3\", \"value\":"
++                + " \"v\"}, {\"name\": \"4\", \"value\": \"v\"}, {\"name\": \"5\", \"value\":"
++                + " \"v\"}, {\"name\": \"6\", \"value\": \"v\"}, {\"name\": \"7\", \"value\":"
++                + " \"v\"}, {\"name\": \"8\", \"value\": \"v\"}, {\"name\": \"9\", \"value\":"
++                + " \"v\"}, {\"name\": \"10\", \"value\": \"v\"}, {\"name\": \"11\", \"value\":"
++                + " \"v\"}, {\"name\": \"12\", \"value\": \"v\"}, {\"name\": \"13\", \"value\":"
++                + " \"v\"}, {\"name\": \"14\", \"value\": \"v\"}, {\"name\": \"15\", \"value\":"
++                + " \"v\"}, {\"name\": \"16\", \"value\": \"v\"}, {\"name\": \"17\", \"value\":"
++                + " \"v\"}, {\"name\": \"18\", \"value\": \"v\"}, {\"name\": \"19\", \"value\":"
++                + " \"v\"}, {\"name\": \"20\", \"value\": \"v\"}]}")) {
++      assertThrows(
++          MSException.class,
++          () ->
++              service.saveStructured(
++                  "p", null, "s", "e", "bad", "SECRET", payload, "", 0, "OTHER", false));
++    }
++    assertThrows(
++        MSException.class,
++        () ->
++            service.saveStructured(
++                "p", null, "s", "e", "bad", "PLAIN", "v", "", 0, "OTHER", false));
++    assertThrows(
++        MSException.class,
++        () -> service.saveStructured("p", null, "s", "e", "bad", "SECRET", "v", "", 0, null, true));
++    assertEquals(0, service.list("p").size());
++  }
++
++  @Test
++  void structuredExecutorReceivesPinnedFieldsAndType() {
++    String payload = "{\"fields\":[{\"name\":\"Token\",\"value\":\"fixture-private\"}]}";
++    var saved =
++        service.saveStructured(
++            "p", null, "system", "test", "service", "SECRET", payload, "", 0, "OTHER", false);
++    String id = (String) saved.get("id");
++    jdbc.execute(
++        "CREATE TABLE external_executor_session(id VARCHAR(64),project_id VARCHAR(64),token_id"
++            + " VARCHAR(64),actor_id VARCHAR(64),status VARCHAR(24))");
++    jdbc.update(
++        "INSERT INTO external_executor_session VALUES('session','p','token','actor','RUNNING')");
++    jdbc.update("INSERT INTO external_executor_configuration VALUES('session',?,1)", id);
++    service.save("p", id, "system", "test", "service", "SECRET", "new-legacy-value", "", 1);
++    var token = new io.metersphere.system.domain.AgentToken();
++    token.setId("token");
++    token.setUserId("actor");
++    io.metersphere.agent.security.AgentTokenContext.set(token);
++    try {
++      var resolved = service.resolveForExecutor("p", "session", id);
++      assertEquals("OTHER", resolved.get("secretType"));
++      assertEquals(payload, resolved.get("value"));
++      jdbc.update("UPDATE external_executor_session SET status='PASSED'");
++      assertThrows(MSException.class, () -> service.resolveForExecutor("p", "session", id));
++    } finally {
++      io.metersphere.agent.security.AgentTokenContext.clear();
++    }
++  }
++
++  @Test
++  void httpSaveAcceptsStructuredAndKeepSecretRequests() throws Exception {
++    var mvc =
++        org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
++                new io.metersphere.agent.controller.SharedConfigurationController(service))
++            .build();
++    String payload =
++        "{\"fields\":[{\"name\":\"username\",\"value\":\"u\"},{\"name\":\"password\",\"value\":\"private\"}]}";
++    String body =
++        new com.fasterxml.jackson.databind.ObjectMapper()
++            .writeValueAsString(
++                Map.of(
++                    "projectId",
++                    "p",
++                    "systemKey",
++                    "system",
++                    "environmentKey",
++                    "test",
++                    "name",
++                    "http-login",
++                    "kind",
++                    "SECRET",
++                    "secretType",
++                    "ACCOUNT_PASSWORD",
++                    "value",
++                    payload,
++                    "expectedVersion",
++                    0));
++    mvc.perform(
++            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
++                    "/shared-configurations")
++                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
++                .content(body))
++        .andExpect(
++            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
++    String id = (String) service.list("p").getFirst().get("id");
++    String keep =
++        """
++{"projectId":"p","id":"%s","systemKey":"system","environmentKey":"test","name":"http-login",
++"kind":"SECRET","keepSecret":true,"expectedVersion":1}
++"""
++            .formatted(id);
++    mvc.perform(
++            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
++                    "/shared-configurations")
++                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
++                .content(keep))
++        .andExpect(
++            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
++    assertEquals(2, service.versions("p", id).size());
++  }
++
++  @Test
++  void invalidStructuredSecretDiagnosticsDoNotLogPayload() {
++    var logger =
++        (ch.qos.logback.classic.Logger)
++            org.slf4j.LoggerFactory.getLogger(SharedConfigurationService.class);
++    var appender =
++        new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
++    appender.start();
++    logger.addAppender(appender);
++    try {
++      assertThrows(
++          MSException.class,
++          () ->
++              service.saveStructured(
++                  "p",
++                  null,
++                  "s",
++                  "e",
++                  "bad",
++                  "SECRET",
++                  "{fixture-private-parser-content",
++                  "",
++                  0,
++                  "OTHER",
++                  false));
++      String logs =
++          appender.list.stream()
++              .map(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
++              .reduce("", String::concat);
++      assertTrue(logs.contains("CONFIGURATION_FIELDS_INVALID"));
++      assertTrue(logs.contains("rootType="));
++      assertFalse(logs.contains("fixture-private-parser-content"));
++      assertTrue(appender.list.stream().allMatch(event -> event.getThrowableProxy() == null));
++    } finally {
++      logger.detachAppender(appender);
++      appender.stop();
++    }
++  }
++
++  @Test
++  void versionSwitchReasonIsAuditedAndInvalidReasonRollsBack() {
++    String id =
++        (String)
++            service
++                .save("p", null, "s", "e", "url", "PLAIN", "https://example.invalid", "", 0)
++                .get("id");
++    service.save("p", id, "s", "e", "url", "PLAIN", "https://other.invalid", "", 1);
++    service.select("p", id, 1, 2, "验证回退");
++    assertEquals(
++        "验证回退",
++        jdbc.queryForObject(
++            "SELECT reason FROM shared_configuration_audit WHERE configuration_id=? AND"
++                + " event_type='SELECT_VERSION'",
++            String.class,
++            id));
++    assertThrows(MSException.class, () -> service.select("p", id, 2, 1, " "));
++    assertEquals(1, service.list("p").getFirst().get("currentVersion"));
++  }
++
++  @Test
++  void accountPasswordRequiresBothFieldsAndDuplicateRenameIsSafe() {
++    assertThrows(
++        MSException.class,
++        () ->
++            service.saveStructured(
++                "p",
++                null,
++                "s",
++                "e",
++                "bad",
++                "SECRET",
++                "{\"fields\":[{\"name\":\"username\",\"value\":\"u\"}]}",
++                "",
++                0,
++                "ACCOUNT_PASSWORD",
++                false));
++    String one =
++        (String) service.save("p", null, "s", "e", "one", "PLAIN", "first", "", 0).get("id");
++    service.save("p", null, "s", "e", "two", "PLAIN", "second", "", 0);
++    var conflict =
++        assertThrows(
++            BusinessGovernanceException.class,
++            () -> service.save("p", one, "s", "e", "two", "PLAIN", "changed", "", 1));
++    assertEquals("GOVERNANCE_VALIDATION_ERROR", conflict.code());
++    assertEquals(1, service.versions("p", one).size());
++  }
++
++  @Test
++  void structuredSecretsRejectTrailingTokensAndDuplicateMembers() {
++    String valid = "{\"fields\":[{\"name\":\"Token\",\"value\":\"fixture\"}]}";
++    for (String payload :
++        List.of(
++            valid + " {}",
++            valid + " garbage",
++            "{\"fields\":[{\"name\":\"Token\",\"name\":\"other\",\"value\":\"fixture\"}]}")) {
++      assertThrows(
++          MSException.class,
++          () ->
++              service.saveStructured(
++                  "p", null, "s", "e", "bad", "SECRET", payload, "", 0, "OTHER", false));
++    }
++  }
++
++  @Test
++  void selectingCurrentVersionDoesNotRecordAChange() {
++    String id =
++        (String)
++            service
++                .save("p", null, "s", "e", "url", "PLAIN", "https://example.invalid", "", 0)
++                .get("id");
++    service.select("p", id, 1, 1, "无需改变");
++    assertEquals(
++        0,
++        jdbc.queryForObject(
++            "SELECT COUNT(*) FROM shared_configuration_audit WHERE event_type='SELECT_VERSION'",
++            Integer.class));
++  }
++
+   @Test
+   void failedBatchRollsBackEarlierEntries() {
+     var one =
+diff --git a/frontend/scripts/test-business-assets.mjs b/frontend/scripts/test-business-assets.mjs
+index c5acf8e51a..edc0a69145 100644
+--- a/frontend/scripts/test-business-assets.mjs
++++ b/frontend/scripts/test-business-assets.mjs
+@@ -59,6 +59,13 @@ const editJavascript = ts.transpileModule(editNode.getText(ast), {
+ function configurationEditor() {
+   const state = {
+     editorGeneration: 0,
++    contentLoading: { value: false },
++    originalKind: { value: '' },
++    previousKind: { value: 'PLAIN' },
++    previousSecretType: { value: 'ACCOUNT_PASSWORD' },
++    keepSecret: { value: false },
++    secretType: { value: 'OTHER' },
++    resetFields: () => undefined,
+     app: { currentProjectId: 'project-a' },
+     form: { value: {} },
+     editor: { value: true },
+@@ -112,3 +119,12 @@ test('configuration response is discarded after project switch or editor close',
+   await closed;
+   assert.equal(state.form.value.value, '');
+ });
++
++test('plain content loading blocks editing until the current response completes', async () => {
++  const { state, pending, edit } = configurationEditor();
++  const reading = edit({ id: 'a', kind: 'PLAIN', currentVersion: 1 });
++  assert.equal(state.contentLoading.value, true);
++  pending[0].resolve({ value: 'original' });
++  await reading;
++  assert.equal(state.contentLoading.value, false);
++});
+diff --git a/frontend/src/views/test-asset/business-assets.vue b/frontend/src/views/test-asset/business-assets.vue
+index 1b85da8d9a..f04ec38c92 100644
+--- a/frontend/src/views/test-asset/business-assets.vue
++++ b/frontend/src/views/test-asset/business-assets.vue
+@@ -1,53 +1,92 @@
+ <template>
+   <TestAssetPage>
+-    <h2>业务资产</h2>
+-    <a-alert v-if="error" type="error" role="alert">{{ error }}</a-alert>
+-    <div class="mb-4 flex flex-wrap items-end gap-3">
+-      <form aria-label="查询业务资产" @submit.prevent="load">
+-        <label for="business-keyword">业务名称</label>
+-        <input id="business-keyword" v-model="keyword" name="keyword" type="search" maxlength="255" />
+-        <button type="submit">查询</button>
++    <div class="asset-heading"><h2>业务资产</h2><p>沉淀业务理解，按系统、模块与业务流程组织资产。</p></div>
++    <a-alert v-if="error" type="error" class="mb-4" role="alert"
++      >{{ error }} <a-link @click="load">重试</a-link></a-alert
++    >
++    <div class="asset-toolbar">
++      <div class="asset-actions">
++        <a-button v-if="canWrite" type="primary" @click="create">新建业务理解</a-button>
++        <a-button v-if="canWrite" @click="businessFile?.click()">上传文档</a-button>
++        <input
++          v-if="canWrite"
++          ref="businessFile"
++          class="asset-file-input"
++          type="file"
++          accept=".md,.json"
++          aria-label="上传 Markdown 或 JSON 文档"
++          @change="upload"
++        />
++        <a-button :loading="loading" @click="load">刷新</a-button>
++      </div>
++      <form class="asset-search" aria-label="查询业务资产" @submit.prevent="load">
++        <a-checkbox v-model="archived" @change="load">查看已归档</a-checkbox>
++        <a-input-search v-model="keyword" allow-clear placeholder="搜索业务名称" aria-label="业务名称" @search="load" />
+       </form>
+-      <a-checkbox v-model="archived" @change="load">查看已归档</a-checkbox>
+-      <a-button v-if="canWrite" type="primary" @click="create">新建业务理解</a-button>
+-      <label v-if="canWrite" for="business-file">上传 Markdown 或 JSON 文档</label>
+-      <input v-if="canWrite" id="business-file" type="file" accept=".md,.json" @change="upload" />
+     </div>
+-    <p role="status">{{ rows.length }} 份文档，{{ branchCount }} 个操作分支</p>
+-    <div class="flex gap-4">
+-      <aside class="w-[240px] shrink-0" aria-label="业务分类">
+-        <a-button @click="category = ''">全部业务（{{ rows.length }}）</a-button>
++    <div class="asset-statistics" role="status"
++      ><span
++        ><strong>{{ rows.length }}</strong
++        >份业务文档</span
++      ><span
++        ><strong>{{ branchCount }}</strong
++        >个操作分支</span
++      ></div
++    >
++    <div class="business-layout">
++      <aside class="asset-panel business-tree" aria-label="业务分类">
++        <h3>业务分类</h3>
++        <a-button long :type="category ? 'text' : 'secondary'" @click="category = ''"
++          >全部业务（{{ rows.length }}）</a-button
++        >
+         <a-tree :data="tree" @select="selectCategory" />
+       </aside>
+-      <a-table class="min-w-0 flex-1" :data="filtered" :loading="loading" row-key="id">
+-        <template #empty><a-empty description="暂无业务资产，可新建或由 AI 探索后上传" /></template>
+-        <template #columns>
+-          <a-table-column title="业务理解"
+-            ><template #cell="{ record }"
+-              >{{ record.title }} <a-tag v-if="record.restricted">历史私有</a-tag></template
+-            ></a-table-column
+-          >
+-          <a-table-column title="系统" data-index="systemKey" />
+-          <a-table-column title="模块" data-index="moduleKey" />
+-          <a-table-column title="流程" data-index="flowKey" />
+-          <a-table-column title="操作分支" data-index="branchCount" />
+-          <a-table-column title="当前版本" data-index="versionNo" />
+-          <a-table-column title="状态"
+-            ><template #cell="{ record }">{{ statusLabel(record.status) }}</template></a-table-column
+-          >
+-          <a-table-column title="操作"
+-            ><template #cell="{ record }">
+-              <a-space>
+-                <a-link @click="open(record)">查看</a-link>
+-                <a-link v-if="canWrite && !archived" @click="edit(record)">编辑与归类</a-link>
+-                <a-link v-if="canWrite && !archived" @click="prepareMerge(record)">合并</a-link>
+-                <a-link @click="versions(record)">资产版本</a-link>
+-                <a-link v-if="canWrite" @click="archive(record)">{{ archived ? '恢复' : '归档' }}</a-link>
+-              </a-space>
+-            </template></a-table-column
+-          >
+-        </template>
+-      </a-table>
++      <section class="asset-panel business-list">
++        <a-table :scroll="{ x: 1100 }" :data="filtered" :loading="loading" row-key="id">
++          <template #empty
++            ><a-empty :description="error ? '业务资产加载失败，请重试' : '暂无业务资产，可新建或由 AI 探索后上传'"
++          /></template>
++          <template #columns>
++            <a-table-column title="业务理解"
++              ><template #cell="{ record }"
++                >{{ record.title }} <a-tag v-if="record.restricted">历史私有</a-tag></template
++              ></a-table-column
++            >
++            <a-table-column title="系统" data-index="systemKey" />
++            <a-table-column title="模块" data-index="moduleKey" />
++            <a-table-column title="流程" data-index="flowKey" />
++            <a-table-column title="操作分支" data-index="branchCount" />
++            <a-table-column title="当前版本"
++              ><template #cell="{ record }"
++                ><a-tag>V{{ record.versionNo }}</a-tag></template
++              ></a-table-column
++            >
++            <a-table-column title="状态"
++              ><template #cell="{ record }"
++                ><a-tag :color="record.status === 'CURRENT' ? 'green' : 'gray'">{{
++                  statusLabel(record.status)
++                }}</a-tag></template
++              ></a-table-column
++            >
++            <a-table-column title="操作" :width="260"
++              ><template #cell="{ record }">
++                <a-space>
++                  <a-link @click="open(record)">查看</a-link>
++                  <a-link v-if="canWrite && !archived" @click="edit(record)">编辑与归类</a-link>
++                  <a-link @click="versions(record)">资产版本</a-link>
++                  <a-dropdown v-if="canWrite">
++                    <a-link>更多</a-link>
++                    <template #content>
++                      <a-doption v-if="!archived" @click="prepareMerge(record)">合并</a-doption>
++                      <a-doption @click="archive(record)">{{ archived ? '恢复' : '归档' }}</a-doption>
++                    </template>
++                  </a-dropdown>
++                </a-space>
++              </template></a-table-column
++            >
++          </template>
++        </a-table>
++      </section>
+     </div>
+     <a-drawer v-model:visible="detailVisible" title="业务理解" :width="800" unmount-on-close>
+       <a-spin v-if="detailLoading" />
+@@ -91,7 +130,7 @@
+     <a-modal v-model:visible="evidenceVisible" title="业务理解来源证据" :footer="false" @close="clearEvidence">
+       <img v-if="evidenceUrl" :src="evidenceUrl" alt="执行器上传的业务理解来源证据" class="max-w-full" />
+     </a-modal>
+-    <a-drawer v-model:visible="editorVisible" title="维护业务理解" :width="800" unmount-on-close>
++    <a-drawer v-model:visible="editorVisible" title="维护业务理解" :width="800" :footer="false" unmount-on-close>
+       <form aria-label="业务理解编辑" @submit.prevent="save">
+         <fieldset :disabled="saving" class="editor-fields"
+           ><legend>业务理解内容</legend>
+@@ -150,13 +189,18 @@
+                 ><option value="INFERRED">推断</option
+                 ><option value="UNCONFIRMED">待确认</option></select
+               >
+-              <button type="button" @click="form.branches.splice(index, 1)">移除此分支</button>
++              <a-button type="text" status="danger" :disabled="saving" @click="form.branches.splice(index, 1)"
++                >移除此分支</a-button
++              >
+             </div>
+-            <button type="button" @click="addBranch">增加操作分支</button>
++            <a-button type="outline" :disabled="saving" @click="addBranch">增加操作分支</a-button>
+           </fieldset>
+           <label for="business-change">本次变化（必填）</label
+           ><textarea id="business-change" v-model="form.changeSummary" name="change" required maxlength="1000" />
+-          <button type="submit" :disabled="saving">{{ saving ? '正在保存' : '保存新版本' }}</button>
++          <div class="business-editor-footer"
++            ><a-button :disabled="saving" @click="editorVisible = false">取消</a-button
++            ><a-button type="primary" html-type="submit" :loading="saving">保存新版本</a-button></div
++          >
+         </fieldset>
+       </form>
+     </a-drawer>
+@@ -183,6 +227,7 @@
+   import { businessAssetTree, matchesBusinessCategory } from '@/utils/businessAssetTree';
+   import { hasAnyPermission } from '@/utils/permission';
+ 
++  const businessFile = ref<HTMLInputElement>();
+   const app = useAppStore();
+   const router = useRouter();
+   const route = useRoute();
+@@ -507,7 +552,27 @@
+ </script>
+ 
+ <style scoped>
+-  form label {
++  .business-layout {
++    display: grid;
++    grid-template-columns: 240px minmax(0, 1fr);
++    gap: 20px;
++  }
++  .business-tree {
++    overflow: auto;
++  }
++  .business-tree h3 {
++    margin-block: 0 16px;
++    font-size: 14px;
++  }
++  .business-list {
++    min-inline-size: 0;
++  }
++  @media (max-width: 900px) {
++    .business-layout {
++      grid-template-columns: minmax(0, 1fr);
++    }
++  }
++  .editor-fields label {
+     display: block;
+     margin-block: 1rem 0.25rem;
+   }
+@@ -515,20 +580,37 @@
+     padding: 0;
+     border: 0;
+   }
+-  form input,
+-  form textarea,
+-  form select {
++  .editor-fields input,
++  .editor-fields textarea,
++  .editor-fields select {
+     padding: 0.5rem;
+     width: 100%;
+     max-width: 100%;
+     border: 1px solid var(--color-border-3);
++    border-radius: 4px;
+     color: var(--color-text-1);
+-    background: var(--color-bg-2);
++    background: var(--color-fill-2);
++    transition: border-color 0.15s;
+     font: inherit;
+   }
+-  form button {
+-    margin-block: 0.75rem;
+-    padding: 0.5rem 1rem;
+-    border: 1px solid var(--color-border-3);
++  .editor-fields input:focus-visible,
++  .editor-fields textarea:focus-visible,
++  .editor-fields select:focus-visible {
++    border-color: rgb(var(--primary-6));
++    outline: 2px solid rgb(var(--primary-2));
++  }
++  .editor-fields > fieldset {
++    padding: 16px;
++    margin-block: 20px;
++    border: 1px solid var(--color-border-2);
++    border-radius: 6px;
++  }
++  .business-editor-footer {
++    display: flex;
++    justify-content: flex-end;
++    gap: 12px;
++    padding-block-start: 20px;
++    margin-block-start: 20px;
++    border-block-start: 1px solid var(--color-border-2);
+   }
+ </style>
+diff --git a/frontend/src/views/test-asset/components/BusinessVersions.vue b/frontend/src/views/test-asset/components/BusinessVersions.vue
+index f4420e33db..67b830e36e 100644
+--- a/frontend/src/views/test-asset/components/BusinessVersions.vue
++++ b/frontend/src/views/test-asset/components/BusinessVersions.vue
+@@ -1,6 +1,24 @@
+ <template>
+-  <section aria-labelledby="business-versions-title" class="mb-6">
+-    <h2 id="business-versions-title">业务资产版本</h2>
++  <section aria-label="业务资产版本" class="mb-6">
++    <div class="asset-toolbar">
++      <div class="asset-actions"><a-button :loading="loading" @click="reload">刷新</a-button></div>
++      <div class="asset-search"
++        ><a-select
++          v-model="assetId"
++          allow-search
++          allow-clear
++          placeholder="请选择业务资产"
++          aria-label="业务资产"
++          style="width: 360px"
++          @change="loadDetail"
++          ><a-option v-for="asset in assets" :key="asset.id" :value="asset.id">{{ asset.title }}</a-option></a-select
++        ></div
++      >
++    </div>
++    <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
++    <a-alert v-if="legacyError" type="warning" class="mb-4"
++      >{{ legacyError }} <a-link @click="loadLegacy">重试历史目录</a-link></a-alert
++    >
+     <section v-if="legacy.length" aria-label="待确认归属的历史业务理解">
+       <h3>待确认归属的历史业务理解</h3
+       ><p>仅显示本人创建、没有项目来源的历史文档。确认归属后，全部版本进入当前项目的资产版本。</p>
+@@ -16,12 +34,11 @@
+         </a-list-item></a-list
+       >
+     </section>
+-    <p v-if="error" role="alert">{{ error }}</p>
+-    <label for="version-asset">业务资产</label>
+-    <select id="version-asset" v-model="assetId" @change="loadDetail">
+-      <option value="">请选择业务资产</option>
+-      <option v-for="asset in assets" :key="asset.id" :value="asset.id">{{ asset.title }}</option>
+-    </select>
++    <a-alert class="mb-4">历史快照不可修改；版本切换仅影响后续任务，执行中的任务保持原版本。</a-alert>
++    <a-empty
++      v-if="!detail && !loading && !error"
++      :description="assets.length ? '请选择资产查看版本' : '暂无业务资产版本'"
++    />
+     <a-table v-if="detail" :data="detail.versions" row-key="id" :loading="loading">
+       <template #columns>
+         <a-table-column title="版本" data-index="versionNo" />
+@@ -99,14 +116,20 @@
+   const loading = ref(false);
+   const saving = ref(false);
+   const error = ref('');
++  const legacyError = ref('');
+   const canWrite = computed(() => hasAnyPermission(['BUSINESS_ASSET:WRITE']));
+   const current = computed(() => detail.value?.versions.find((v) => v.id === detail.value?.currentVersionId));
+   let generation = 0;
++  let catalogGeneration = 0;
++  let legacyGeneration = 0;
+   async function loadDetail() {
+     const run = ++generation;
+     detail.value = undefined;
+     error.value = '';
+-    if (!assetId.value) return;
++    if (!assetId.value) {
++      loading.value = false;
++      return;
++    }
+     loading.value = true;
+     try {
+       const value = await getBusinessAsset(app.currentProjectId, assetId.value);
+@@ -123,18 +146,23 @@
+     switchVisible.value = true;
+   }
+   async function importLegacy(id: string) {
++    const project = app.currentProjectId;
++    const run = ++generation;
+     try {
+       const result = await MSR.post<{ assetId: string }>({
+         url: `/business-assets/legacy/${encodeURIComponent(id)}/import`,
+-        data: { projectId: app.currentProjectId },
++        data: { projectId: project },
+       });
+-      const active = await listBusinessAssets(app.currentProjectId);
++      if (project !== app.currentProjectId || run !== generation) return;
++      const active = await listBusinessAssets(project);
++      if (project !== app.currentProjectId || run !== generation) return;
+       assets.value = active;
+       assetId.value = result.assetId;
+       legacy.value = legacy.value.filter((item) => item.id !== id);
+       await loadDetail();
+     } catch (failure) {
+-      error.value = businessAssetError(failure, '历史业务理解导入失败，请检查项目权限后重试。');
++      if (project === app.currentProjectId && run === generation)
++        error.value = businessAssetError(failure, '历史业务理解导入失败，请检查项目权限后重试。');
+     }
+   }
+   function mergeVersion(version: BusinessVersion) {
+@@ -173,35 +201,56 @@
+     link.click();
+     setTimeout(() => URL.revokeObjectURL(url), 1000);
+   }
++  async function loadLegacy() {
++    const project = app.currentProjectId;
++    const run = ++legacyGeneration;
++    legacyError.value = '';
++    try {
++      const value = await MSR.get<{ id: string; title: string; versionCount: number }[]>({
++        url: '/business-assets/legacy-unassigned',
++        params: { projectId: project },
++      });
++      if (run === legacyGeneration && project === app.currentProjectId) legacy.value = value;
++    } catch (failure) {
++      if (run === legacyGeneration && project === app.currentProjectId)
++        legacyError.value = businessAssetError(failure, '历史归属目录加载失败，不影响当前业务资产版本查看。');
++    }
++  }
++  async function reload() {
++    const run = ++catalogGeneration;
++    const project = app.currentProjectId;
++    error.value = '';
++    loading.value = true;
++    try {
++      const [active, archived] = await Promise.all([
++        listBusinessAssets(project),
++        listBusinessAssets(project, '', true),
++      ]);
++      if (run !== catalogGeneration || project !== app.currentProjectId) return;
++      assets.value = [...active, ...archived];
++      if (!assets.value.some((asset) => asset.id === assetId.value)) assetId.value = '';
++      await loadDetail();
++    } catch (failure) {
++      if (run === catalogGeneration) error.value = businessAssetError(failure, '业务资产版本目录加载失败，请重试。');
++    } finally {
++      if (run === catalogGeneration && project === app.currentProjectId) loading.value = false;
++    }
++  }
+   watch(
+     [() => app.currentProjectId, () => route.query.businessAssetId],
+     async () => {
+       ++generation;
++      ++catalogGeneration;
++      ++legacyGeneration;
+       detail.value = undefined;
+       selected.value = undefined;
+       switchVisible.value = false;
+       assets.value = [];
+       legacy.value = [];
++      legacyError.value = '';
++      assetId.value = String(route.query.businessAssetId || '');
+       if (!app.currentProjectId || !hasAnyPermission(['BUSINESS_ASSET:READ'])) return;
+-      const project = app.currentProjectId;
+-      try {
+-        const [active, archived] = await Promise.all([
+-          listBusinessAssets(project),
+-          listBusinessAssets(project, '', true),
+-        ]);
+-        if (project !== app.currentProjectId) return;
+-        assets.value = [...active, ...archived];
+-        const unassigned = await MSR.get<{ id: string; title: string; versionCount: number }[]>({
+-          url: '/business-assets/legacy-unassigned',
+-          params: { projectId: project },
+-        });
+-        if (project !== app.currentProjectId) return;
+-        legacy.value = unassigned;
+-        assetId.value = String(route.query.businessAssetId || '');
+-        await loadDetail();
+-      } catch (failure) {
+-        error.value = businessAssetError(failure, '业务资产版本目录加载失败。');
+-      }
++      await Promise.all([reload(), loadLegacy()]);
+     },
+     { immediate: true }
+   );
+diff --git a/frontend/src/views/test-asset/components/SharedConfigurationVersions.vue b/frontend/src/views/test-asset/components/SharedConfigurationVersions.vue
+index 66841b5c13..4dd6790773 100644
+--- a/frontend/src/views/test-asset/components/SharedConfigurationVersions.vue
++++ b/frontend/src/views/test-asset/components/SharedConfigurationVersions.vue
+@@ -1,23 +1,46 @@
+ <template>
+-  <section class="mb-6" aria-labelledby="configuration-versions-title">
+-    <h2 id="configuration-versions-title">公共配置版本</h2>
+-    <p v-if="error" role="alert">{{ error }}</p>
+-    <label for="configuration-version-id">配置</label>
+-    <select id="configuration-version-id" v-model="id" @change="loadVersions"
+-      ><option value="">请选择公共配置</option
+-      ><option v-for="item in configurations" :key="item.id" :value="item.id"
+-        >{{ item.systemKey }} / {{ item.environmentKey }} / {{ item.name }}</option
+-      ></select
+-    >
+-    <a-table :data="versions" row-key="versionNo" :loading="loading"
++  <section class="mb-6" aria-label="公共配置版本">
++    <div class="asset-toolbar">
++      <div class="asset-actions"><a-button :loading="loading" @click="reload">刷新</a-button></div>
++      <div class="asset-search"
++        ><a-select
++          v-model="id"
++          allow-search
++          allow-clear
++          placeholder="请选择公共配置"
++          aria-label="公共配置"
++          style="width: 400px"
++          @change="loadVersions"
++          ><a-option v-for="item in configurations" :key="item.id" :value="item.id"
++            >{{ item.systemKey }} / {{ item.environmentKey }} / {{ item.name }}</a-option
++          ></a-select
++        ></div
++      >
++    </div>
++    <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
++    <a-alert class="mb-4">历史敏感值保持脱敏。切换仅影响后续会话，已有执行器继续使用已固定版本。</a-alert>
++    <a-table :data="versions" row-key="versionNo" :loading="loading" :scroll="{ x: 950 }"
++      ><template #empty><a-empty :description="id ? '暂无配置版本' : '请选择公共配置查看版本'" /></template
+       ><template #columns>
+-        <a-table-column title="版本" data-index="versionNo" /><a-table-column
+-          title="类型"
+-          data-index="kind"
+-        /><a-table-column title="原始文档" data-index="fileName" /><a-table-column
+-          title="解析状态"
+-          data-index="parseStatus"
+-        />
++        <a-table-column title="版本" data-index="versionNo" /><a-table-column title="类型"
++          ><template #cell="{ record }">{{
++            record.kind === 'SECRET'
++              ? record.secretType === 'ACCOUNT_PASSWORD'
++                ? '账号密码'
++                : '其他敏感配置'
++              : record.kind === 'DOCUMENT'
++              ? '配置文档'
++              : '普通配置'
++          }}</template></a-table-column
++        ><a-table-column title="原始文档" data-index="fileName" /><a-table-column title="解析状态"
++          ><template #cell="{ record }">{{ parseLabel(record.parseStatus) }}</template></a-table-column
++        >
++        <a-table-column title="更新人" data-index="actorId" />
++        <a-table-column title="更新时间"
++          ><template #cell="{ record }">{{
++            dayjs(record.createTime).format('YYYY-MM-DD HH:mm')
++          }}</template></a-table-column
++        >
+         <a-table-column title="操作"
+           ><template #cell="{ record }"
+             ><a-link v-if="canWrite && record.versionNo !== current?.currentVersion" @click="choose(record.versionNo)"
+@@ -27,13 +50,26 @@
+         >
+       </template></a-table
+     >
+-    <p>历史敏感值保持脱敏。切换仅影响后续会话，已有执行器继续使用已固定版本。</p>
++    <a-modal
++      v-model:visible="switchVisible"
++      title="切换公共配置版本"
++      :ok-loading="switching"
++      @before-ok="confirmSwitch"
++    >
++      <a-alert>新会话使用所选版本，执行中的会话保持原版本。</a-alert>
++      <p>确认将当前配置切换至 V{{ targetVersion }}？</p>
++      <a-form-item label="切换原因" required
++        ><a-textarea v-model="switchReason" :max-length="500" placeholder="请输入切换原因"
++      /></a-form-item>
++      <a-alert v-if="switchError" type="error">{{ switchError }}</a-alert>
++    </a-modal>
+   </section>
+ </template>
+ 
+ <script setup lang="ts">
+   import { computed, ref, watch } from 'vue';
+   import { useRoute } from 'vue-router';
++  import dayjs from 'dayjs';
+ 
+   import MSR from '@/api/http/index';
+   import useAppStore from '@/store/modules/app';
+@@ -50,8 +86,11 @@
+   interface Version {
+     versionNo: number;
+     kind: string;
++    secretType?: string;
+     fileName: string;
+     parseStatus: string;
++    actorId: string;
++    createTime: number;
+   }
+   const app = useAppStore();
+   const route = useRoute();
+@@ -60,13 +99,26 @@
+   const versions = ref<Version[]>([]);
+   const error = ref('');
+   const loading = ref(false);
++  const switching = ref(false);
++  const switchVisible = ref(false);
++  const targetVersion = ref(0);
++  const switchReason = ref('');
++  const switchError = ref('');
+   const current = computed(() => configurations.value.find((item) => item.id === id.value));
+   const canWrite = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:WRITE']));
++  const parseLabel = (status: string) =>
++    ({ PARSED: '解析成功', FAILED: '解析失败', UNSUPPORTED: '暂不支持解析', NOT_APPLICABLE: '无需解析' }[status] ||
++    status);
+   let generation = 0;
++  let catalogGeneration = 0;
+   async function loadVersions() {
+     const run = ++generation;
+     versions.value = [];
+-    if (!id.value) return;
++    error.value = '';
++    if (!id.value) {
++      loading.value = false;
++      return;
++    }
+     loading.value = true;
+     try {
+       const value = await MSR.get<Version[]>({
+@@ -80,39 +132,74 @@
+       if (run === generation) loading.value = false;
+     }
+   }
+-  async function choose(version: number) {
+-    if (!current.value) return;
++  function choose(version: number) {
++    targetVersion.value = version;
++    switchReason.value = '';
++    switchError.value = '';
++    switchVisible.value = true;
++  }
++  async function confirmSwitch() {
++    if (!current.value || switching.value) return false;
++    if (!switchReason.value.trim()) {
++      switchError.value = '请输入切换原因';
++      return false;
++    }
++    const project = app.currentProjectId;
++    const configurationId = id.value;
++    const version = targetVersion.value;
++    switching.value = true;
+     try {
+       await MSR.post({
+         url: `/shared-configurations/${id.value}/current-version`,
+-        data: { projectId: app.currentProjectId, version, expectedVersion: current.value.currentVersion },
++        data: {
++          projectId: app.currentProjectId,
++          version,
++          expectedVersion: current.value.currentVersion,
++          reason: switchReason.value.trim(),
++        },
+       });
++      if (project !== app.currentProjectId || configurationId !== id.value) return true;
+       current.value.currentVersion = version;
+       error.value = '';
+       await loadVersions();
++      return true;
+     } catch (failure) {
+-      error.value = businessAssetError(failure, '配置版本切换失败，请刷新后重试。');
++      switchError.value = businessAssetError(failure, '配置版本切换失败，请刷新后重试。');
++      return false;
++    } finally {
++      switching.value = false;
++    }
++  }
++  async function reload() {
++    const run = ++catalogGeneration;
++    error.value = '';
++    loading.value = true;
++    try {
++      const value = await MSR.get<Configuration[]>({
++        url: '/shared-configurations',
++        params: { projectId: app.currentProjectId },
++      });
++      if (run !== catalogGeneration) return;
++      configurations.value = value;
++      if (!value.some((item) => item.id === id.value)) id.value = '';
++      await loadVersions();
++    } catch (failure) {
++      if (run === catalogGeneration) error.value = businessAssetError(failure, '配置目录读取失败，请重试。');
++    } finally {
++      if (run === catalogGeneration) loading.value = false;
+     }
+   }
+   watch(
+     [() => app.currentProjectId, () => route.query.configurationId],
+     async () => {
+-      const run = ++generation;
++      ++generation;
++      ++catalogGeneration;
+       configurations.value = [];
+       versions.value = [];
++      switchVisible.value = false;
++      id.value = String(route.query.configurationId || '');
+       if (!app.currentProjectId || !hasAnyPermission(['SHARED_CONFIGURATION:READ'])) return;
+-      try {
+-        const value = await MSR.get<Configuration[]>({
+-          url: '/shared-configurations',
+-          params: { projectId: app.currentProjectId },
+-        });
+-        if (run !== generation) return;
+-        configurations.value = value;
+-        id.value = String(route.query.configurationId || '');
+-        await loadVersions();
+-      } catch (failure) {
+-        error.value = businessAssetError(failure, '配置目录读取失败。');
+-      }
++      await reload();
+     },
+     { immediate: true }
+   );
+diff --git a/frontend/src/views/test-asset/components/TestAssetPage.vue b/frontend/src/views/test-asset/components/TestAssetPage.vue
+index 480fccc702..200b910d9b 100644
+--- a/frontend/src/views/test-asset/components/TestAssetPage.vue
++++ b/frontend/src/views/test-asset/components/TestAssetPage.vue
+@@ -1,5 +1,77 @@
+-<template>
+-  <div class="p-4">
+-    <slot />
+-  </div>
+-</template>
++<template
++  ><div class="test-asset-page"><slot /></div
++></template>
++
++<style scoped>
++  .test-asset-page {
++    padding: 24px;
++    min-inline-size: 0;
++  }
++  .test-asset-page :deep(.asset-heading) {
++    margin-block-end: 24px;
++  }
++  .test-asset-page :deep(.asset-heading h2) {
++    margin: 0 0 8px;
++    font-size: 20px;
++    font-weight: 600;
++    color: var(--color-text-1);
++  }
++  .test-asset-page :deep(.asset-heading p),
++  .test-asset-page :deep(.asset-description) {
++    font-size: 13px;
++    color: var(--color-text-3);
++    margin-block: 8px 16px;
++  }
++  .test-asset-page :deep(.asset-panel) {
++    padding: 20px;
++    border: 1px solid var(--color-border-2);
++    border-radius: 8px;
++    background: var(--color-bg-2);
++    min-inline-size: 0;
++  }
++  .test-asset-page :deep(.asset-toolbar),
++  .test-asset-page :deep(.asset-actions),
++  .test-asset-page :deep(.asset-search) {
++    display: flex;
++    flex-wrap: wrap;
++    align-items: center;
++    gap: 12px;
++  }
++  .test-asset-page :deep(.asset-panel .arco-link) {
++    white-space: nowrap;
++  }
++  .test-asset-page :deep(.asset-toolbar) {
++    margin-block-end: 20px;
++  }
++  .test-asset-page :deep(.asset-search) {
++    margin-inline-start: auto;
++    justify-content: flex-end;
++  }
++  .test-asset-page :deep(.asset-search .arco-input-wrapper),
++  .test-asset-page :deep(.asset-search .arco-select-view) {
++    inline-size: 180px;
++  }
++  .test-asset-page :deep(.asset-file-input) {
++    display: none;
++  }
++  .test-asset-page :deep(.asset-statistics) {
++    display: flex;
++    flex-wrap: wrap;
++    gap: 24px;
++    padding-block: 4px 20px;
++    color: var(--color-text-3);
++  }
++  .test-asset-page :deep(.asset-statistics strong) {
++    font-size: 22px;
++    color: var(--color-text-1);
++    margin-inline-end: 6px;
++  }
++  @media (max-width: 1000px) {
++    .test-asset-page {
++      padding: 16px;
++    }
++    .test-asset-page :deep(.asset-search) {
++      inline-size: 100%;
++    }
++  }
++</style>
+diff --git a/frontend/src/views/test-asset/shared-configuration.vue b/frontend/src/views/test-asset/shared-configuration.vue
+index 5bf4e6021e..47bfba2b5a 100644
+--- a/frontend/src/views/test-asset/shared-configuration.vue
++++ b/frontend/src/views/test-asset/shared-configuration.vue
+@@ -1,83 +1,198 @@
+ <template>
+   <TestAssetPage>
+-    <h2>公共配置</h2>
+-    <p>按系统和环境管理平台地址、账号密码及配置文档。密码不在列表和历史版本中显示。</p>
+-    <p v-if="error" role="alert">{{ error }}</p>
+-    <a-button v-if="canWrite" type="primary" @click="create">新增配置</a-button>
+-    <label v-if="canWrite" for="configuration-batch">批量导入 JSON（最多 100 条）</label>
+-    <input v-if="canWrite" id="configuration-batch" type="file" accept=".json" @change="batchImport" />
+-    <a-button :loading="loading" @click="load">刷新</a-button>
+-    <a-table :data="rows" :loading="loading" row-key="id">
+-      <template #columns>
+-        <a-table-column title="名称" data-index="name" /><a-table-column
+-          title="系统"
+-          data-index="systemKey"
+-        /><a-table-column title="环境" data-index="environmentKey" />
+-        <a-table-column title="类型"
+-          ><template #cell="{ record }">{{ kindLabel(record.kind) }}</template></a-table-column
+-        >
+-        <a-table-column title="版本" data-index="currentVersion" />
+-        <a-table-column title="文档状态"
+-          ><template #cell="{ record }">{{ parseLabel(record.parseStatus) }}</template></a-table-column
+-        >
+-        <a-table-column title="操作"
+-          ><template #cell="{ record }"
+-            ><a-space>
+-              <a-link v-if="canWrite" @click="edit(record)">编辑</a-link><a-link @click="history(record)">版本</a-link>
+-              <a-link v-if="canWrite && record.kind === 'DOCUMENT'" @click="download(record)">下载原文档</a-link>
+-              <a-link v-if="canWrite && record.kind === 'DOCUMENT'" @click="retry(record)">重新解析</a-link>
+-            </a-space></template
+-          ></a-table-column
++    <div class="asset-heading"><h2>公共配置</h2><p>按系统和环境统一管理配置，敏感值不在列表与历史版本中展示。</p></div>
++    <a-alert v-if="error" type="error" class="mb-4">{{ error }} <a-link @click="load">重试</a-link></a-alert>
++    <section class="asset-panel">
++      <div class="asset-toolbar">
++        <div class="asset-actions">
++          <a-button v-if="canWrite" type="primary" @click="create">新增配置</a-button>
++          <a-button v-if="canWrite" @click="batchInput?.click()">批量导入 JSON</a-button>
++          <input
++            ref="batchInput"
++            class="asset-file-input"
++            type="file"
++            accept=".json"
++            aria-label="批量导入配置"
++            @change="batchImport"
++          />
++          <a-button :loading="loading" @click="load">刷新</a-button>
++        </div>
++        <div class="asset-search">
++          <a-input-search v-model="keyword" allow-clear placeholder="搜索配置名称" aria-label="搜索配置名称" />
++          <a-select v-model="systemFilter" allow-clear placeholder="全部系统" aria-label="系统筛选"
++            ><a-option v-for="item in systems" :key="item" :value="item">{{ item }}</a-option></a-select
++          >
++          <a-select v-model="environmentFilter" allow-clear placeholder="全部环境" aria-label="环境筛选"
++            ><a-option v-for="item in environments" :key="item" :value="item">{{ item }}</a-option></a-select
++          >
++          <a-select v-model="kindFilter" allow-clear placeholder="全部类型" aria-label="类型筛选"
++            ><a-option value="PLAIN">普通配置</a-option><a-option value="ACCOUNT_PASSWORD">账号密码</a-option
++            ><a-option value="OTHER">其他敏感配置</a-option><a-option value="DOCUMENT">配置文档</a-option></a-select
++          >
++        </div>
++      </div>
++      <a-table :data="filteredRows" :loading="loading" row-key="id" :scroll="{ x: 1000 }">
++        <template #empty
++          ><a-empty
++            :description="
++              error
++                ? '配置加载失败，请重试'
++                : rows.length
++                ? '没有匹配配置，请调整检索条件'
++                : '暂无公共配置，可新增或批量导入'
++            "
++        /></template>
++        <template #columns>
++          <a-table-column title="配置名称" data-index="name" />
++          <a-table-column title="系统" data-index="systemKey" />
++          <a-table-column title="环境" data-index="environmentKey" />
++          <a-table-column title="类型"
++            ><template #cell="{ record }"
++              ><a-tag :color="record.kind === 'SECRET' ? 'purple' : 'gray'">{{
++                configurationLabel(record)
++              }}</a-tag></template
++            ></a-table-column
++          >
++          <a-table-column title="当前版本"
++            ><template #cell="{ record }">V{{ record.currentVersion }}</template></a-table-column
++          >
++          <a-table-column title="文档状态"
++            ><template #cell="{ record }">{{ parseLabel(record.parseStatus) }}</template></a-table-column
++          >
++          <a-table-column title="操作" :width="260"
++            ><template #cell="{ record }"
++              ><a-space>
++                <a-link v-if="canWrite" @click="edit(record)">编辑</a-link
++                ><a-link @click="history(record)">版本</a-link>
++                <a-link v-if="canWrite && record.kind === 'DOCUMENT'" @click="download(record)">下载原文档</a-link>
++                <a-link v-if="canWrite && record.kind === 'DOCUMENT'" @click="retry(record)">重新解析</a-link>
++              </a-space></template
++            ></a-table-column
++          >
++        </template>
++      </a-table>
++    </section>
++    <a-modal
++      v-model:visible="editor"
++      :title="form.id ? '编辑公共配置' : '新增公共配置'"
++      :width="760"
++      :modal-style="{ maxWidth: 'calc(100vw - 32px)' }"
++      :footer="false"
++      :mask-closable="false"
++      :esc-to-close="!saving"
++      :closable="!saving"
++      unmount-on-close
++      @close="closeEditor"
++    >
++      <a-form :model="form" layout="vertical" @submit-success="save">
++        <a-alert v-if="saveError" type="error" class="mb-4">{{ saveError }}</a-alert>
++        <a-form-item field="name" label="配置名称" :rules="[{ required: true, message: '请输入配置名称' }]"
++          ><a-input v-model="form.name" :max-length="128" :disabled="saving" placeholder="例如：测试环境品牌商登录账号"
++        /></a-form-item>
++        <div class="configuration-grid">
++          <a-form-item field="systemKey" label="系统名称" :rules="[{ required: true, message: '请输入系统名称' }]"
++            ><a-input v-model="form.systemKey" :max-length="128" :disabled="saving"
++          /></a-form-item>
++          <a-form-item field="environmentKey" label="环境名称" :rules="[{ required: true, message: '请输入环境名称' }]"
++            ><a-input v-model="form.environmentKey" :max-length="128" :disabled="saving"
++          /></a-form-item>
++        </div>
++        <a-form-item field="kind" label="配置类型"
++          ><a-select v-model="form.kind" :disabled="saving" @change="changeKind"
++            ><a-option value="PLAIN">普通配置</a-option><a-option value="SECRET">敏感配置</a-option
++            ><a-option value="DOCUMENT">配置文档</a-option></a-select
++          ></a-form-item
+         >
+-      </template>
+-    </a-table>
+-    <a-drawer v-model:visible="editor" title="维护公共配置" :width="650" unmount-on-close @cancel="clearSecret">
+-      <form aria-label="公共配置" @submit.prevent="save">
+-        <fieldset :disabled="saving" class="editor-fields"
+-          ><legend>公共配置内容</legend>
+-          <p v-if="saveError" role="alert">{{ saveError }}</p>
+-          <label for="config-name">名称（必填）</label
+-          ><input id="config-name" v-model="form.name" name="name" required maxlength="128" />
+-          <label for="config-system">系统名称（必填）</label
+-          ><input id="config-system" v-model="form.systemKey" name="system" required maxlength="128" />
+-          <label for="config-env">环境名称（必填）</label
+-          ><input id="config-env" v-model="form.environmentKey" name="environment" required maxlength="128" />
+-          <label for="config-kind">类型</label
+-          ><select id="config-kind" v-model="form.kind" name="kind" @change="clearSecret"
+-            ><option value="PLAIN">普通配置</option
+-            ><option value="SECRET">敏感配置（账号、密码）</option
+-            ><option value="DOCUMENT">配置文档</option></select
++        <template v-if="form.kind === 'SECRET'">
++          <a-radio-group
++            v-if="form.id && originalKind === 'SECRET'"
++            v-model="keepSecret"
++            :disabled="saving"
++            @change="resetFields"
++            ><a-radio :value="true">保留原敏感内容</a-radio
++            ><a-radio :value="false">替换全部敏感内容</a-radio></a-radio-group
+           >
+-          <template v-if="form.kind === 'DOCUMENT'"
+-            ><label for="config-file">原始文档（不超过 2 MB）</label
+-            ><input id="config-file" type="file" required @change="upload" /><p>{{ form.fileName }}</p></template
++          <a-alert v-if="keepSecret" class="mt-4">保存仅更新名称与归属，原敏感内容保持不变；无需重新输入。</a-alert>
++          <section v-else class="secret-section">
++            <a-form-item label="敏感配置分类"
++              ><a-radio-group v-model="secretType" :disabled="saving" @change="changeSecretType"
++                ><a-radio value="ACCOUNT_PASSWORD">账号密码</a-radio
++                ><a-radio value="OTHER">其他</a-radio></a-radio-group
++              ></a-form-item
++            >
++            <div v-if="secretType === 'ACCOUNT_PASSWORD'" class="configuration-grid">
++              <a-form-item label="账号" required
++                ><a-input
++                  v-model="username"
++                  :disabled="saving"
++                  :max-length="100000"
++                  :input-attrs="{ 'aria-label': '账号', 'autocomplete': 'off' }"
++                  placeholder="请输入账号"
++              /></a-form-item>
++              <a-form-item label="密码" required
++                ><a-input-password
++                  v-model="password"
++                  :disabled="saving"
++                  :max-length="100000"
++                  :input-attrs="{ 'aria-label': '密码', 'autocomplete': 'new-password' }"
++                  placeholder="请输入密码"
++              /></a-form-item>
++            </div>
++            <div v-for="(field, index) in extraFields" :key="index" class="secret-field-row">
++              <a-input
++                v-model="field.name"
++                :disabled="saving"
++                :max-length="64"
++                :input-attrs="{ 'aria-label': '字段名称' + (index + 1), 'autocomplete': 'off' }"
++                placeholder="字段名称，如 Token"
++              />
++              <a-input-password
++                v-model="field.value"
++                :disabled="saving"
++                :max-length="100000"
++                :input-attrs="{ 'aria-label': '敏感值' + (index + 1), 'autocomplete': 'new-password' }"
++                placeholder="请输入敏感值"
++              />
++              <a-button :disabled="saving" @click="extraFields.splice(index, 1)">移除</a-button>
++            </div>
++            <a-button
++              type="text"
++              :disabled="saving || extraFields.length >= (secretType === 'ACCOUNT_PASSWORD' ? 18 : 20)"
++              @click="extraFields.push({ name: '', value: '' })"
++              >＋ 添加自定义字段</a-button
++            >
++          </section>
++          <p class="asset-description"
++            >敏感值加密保存，不回填明文。替换时需填写完整内容，账号密码类最多追加18个字段。</p
+           >
+-          <template v-else-if="form.kind === 'SECRET'"
+-            ><label for="config-secret">敏感值（必填，编辑时重新输入）</label
+-            ><input
+-              id="config-secret"
+-              v-model="form.value"
+-              type="password"
+-              name="secret"
+-              autocomplete="new-password"
+-              required
+-              maxlength="100000"
+-          /></template>
+-          <template v-else
+-            ><label for="config-value">配置内容（必填）</label
+-            ><textarea id="config-value" v-model="form.value" name="value" required rows="6" maxlength="100000" />
+-          </template>
+-          <button type="submit" :disabled="saving">{{ saving ? '正在保存' : '保存新版本' }}</button>
+-        </fieldset>
+-      </form>
+-    </a-drawer>
++        </template>
++        <a-form-item v-else-if="form.kind === 'DOCUMENT'" label="原始文档（不超过 2 MB）"
++          ><input type="file" :disabled="saving" aria-label="上传配置文档" @change="upload" /><span>{{
++            form.fileName
++          }}</span></a-form-item
++        >
++        <a-form-item v-else field="value" label="配置内容" :rules="[{ required: true, message: '请输入配置内容' }]"
++          ><a-textarea
++            v-model="form.value"
++            :disabled="saving || contentLoading"
++            :auto-size="{ minRows: 4, maxRows: 10 }"
++            :max-length="100000"
++        /></a-form-item>
++        <div class="configuration-footer"
++          ><a-button :disabled="saving" @click="editor = false">取消</a-button
++          ><a-button type="primary" html-type="submit" :loading="saving" :disabled="contentLoading || fileLoading"
++            >保存新版本</a-button
++          ></div
++        >
++      </a-form>
++    </a-modal>
+   </TestAssetPage>
+ </template>
+ 
+ <script setup lang="ts">
+   import { computed, ref, watch } from 'vue';
+   import { useRouter } from 'vue-router';
+-  import { Message } from '@arco-design/web-vue';
++  import { Message, Modal } from '@arco-design/web-vue';
+ 
+   import TestAssetPage from './components/TestAssetPage.vue';
+ 
+@@ -85,6 +200,7 @@
+   import useAppStore from '@/store/modules/app';
+   import businessAssetError from '@/utils/businessAssetError';
+   import { hasAnyPermission } from '@/utils/permission';
++  import { encodeSecretFields, type SecretField } from '@/utils/sharedConfigurationFields';
+ 
+   interface Row {
+     id: string;
+@@ -95,15 +211,43 @@
+     fileName: string;
+     parseStatus: string;
+     currentVersion: number;
++    secretType?: string;
+   }
+ 
++  const batchInput = ref<HTMLInputElement>();
++  const keyword = ref('');
++  const systemFilter = ref('');
++  const environmentFilter = ref('');
++  const kindFilter = ref('');
++  const secretType = ref('ACCOUNT_PASSWORD');
++  const originalKind = ref('');
++  const previousKind = ref('PLAIN');
++  const previousSecretType = ref('ACCOUNT_PASSWORD');
++  const keepSecret = ref(false);
++  const username = ref('');
++  const password = ref('');
++  const extraFields = ref<SecretField[]>([]);
+   const app = useAppStore();
+   const router = useRouter();
+   const rows = ref<Row[]>([]);
++  const systems = computed(() => [...new Set(rows.value.map((row) => row.systemKey))]);
++  const environments = computed(() => [...new Set(rows.value.map((row) => row.environmentKey))]);
++  const filteredRows = computed(() =>
++    rows.value.filter(
++      (row) =>
++        row.name.toLowerCase().includes(keyword.value.trim().toLowerCase()) &&
++        (!systemFilter.value || row.systemKey === systemFilter.value) &&
++        (!environmentFilter.value || row.environmentKey === environmentFilter.value) &&
++        (!kindFilter.value || (row.kind === 'SECRET' ? row.secretType || 'OTHER' : row.kind) === kindFilter.value)
++    )
++  );
+   const error = ref('');
+   const saveError = ref('');
+   const loading = ref(false);
+   const saving = ref(false);
++  const contentLoading = ref(false);
++  const fileLoading = ref(false);
++  let fileGeneration = 0;
+   const editor = ref(false);
+   let editorGeneration = 0;
+   const empty = () => ({
+@@ -120,6 +264,10 @@
+   const form = ref(empty());
+   const canWrite = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:WRITE']));
+   const kindLabel = (kind: string) => ({ PLAIN: '普通配置', SECRET: '敏感配置', DOCUMENT: '配置文档' }[kind] || kind);
++  function configurationLabel(row: Row) {
++    if (row.kind !== 'SECRET') return kindLabel(row.kind);
++    return row.secretType === 'ACCOUNT_PASSWORD' ? '账号密码' : '其他敏感配置';
++  }
+   const parseLabel = (status: string) =>
+     ({
+       PARSED: '解析成功',
+@@ -143,23 +291,102 @@
+       if (run === generation) loading.value = false;
+     }
+   }
++  function resetFields() {
++    username.value = '';
++    password.value = '';
++    extraFields.value = secretType.value === 'OTHER' && !keepSecret.value ? [{ name: '', value: '' }] : [];
++  }
+   function create() {
+     ++editorGeneration;
++    keepSecret.value = false;
++    originalKind.value = '';
++    previousKind.value = 'PLAIN';
++    contentLoading.value = false;
++    previousSecretType.value = 'ACCOUNT_PASSWORD';
++    secretType.value = 'ACCOUNT_PASSWORD';
++    resetFields();
+     form.value = empty();
+     saveError.value = '';
+     editor.value = true;
+   }
+   function clearSecret() {
++    ++fileGeneration;
++    fileLoading.value = false;
++    contentLoading.value = false;
+     form.value.value = '';
+     form.value.fileName = '';
++    username.value = '';
++    password.value = '';
++    extraFields.value = [];
++  }
++  function hasSensitiveInput() {
++    return !!(
++      form.value.value ||
++      username.value ||
++      password.value ||
++      extraFields.value.some((field) => field.name || field.value)
++    );
++  }
++  function changeKind() {
++    const next = form.value.kind;
++    const apply = () => {
++      ++editorGeneration;
++      clearSecret();
++      previousKind.value = next;
++      keepSecret.value = next === 'SECRET' && originalKind.value === 'SECRET';
++      resetFields();
++    };
++    if (!hasSensitiveInput()) {
++      apply();
++      return;
++    }
++    Modal.confirm({
++      title: '切换配置类型',
++      content: '切换后将清空当前尚未保存的内容，是否继续？',
++      onOk: apply,
++      onCancel: () => {
++        form.value.kind = previousKind.value;
++      },
++    });
++  }
++  function changeSecretType() {
++    const next = secretType.value;
++    const apply = () => {
++      previousSecretType.value = next;
++      resetFields();
++    };
++    if (!hasSensitiveInput()) {
++      apply();
++      return;
++    }
++    Modal.confirm({
++      title: '切换敏感分类',
++      content: '切换后将清空当前尚未保存的敏感字段，是否继续？',
++      onOk: apply,
++      onCancel: () => {
++        secretType.value = previousSecretType.value;
++      },
++    });
++  }
++  function closeEditor() {
++    ++editorGeneration;
++    clearSecret();
++    saveError.value = '';
+   }
+   async function edit(row: Row) {
+     create();
+     form.value = { ...empty(), ...row, expectedVersion: row.currentVersion, value: '' };
++    originalKind.value = row.kind;
++    previousKind.value = row.kind;
++    keepSecret.value = row.kind === 'SECRET';
++    secretType.value = row.secretType === 'ACCOUNT_PASSWORD' ? 'ACCOUNT_PASSWORD' : 'OTHER';
++    previousSecretType.value = secretType.value;
++    resetFields();
+     const run = editorGeneration;
+     const project = app.currentProjectId;
+     const { id } = row;
+     if (row.kind === 'PLAIN') {
++      contentLoading.value = true;
+       try {
+         const value = await MSR.get<{ value: string }>({
+           url: `/shared-configurations/${row.id}/versions/${row.currentVersion}`,
+@@ -171,38 +398,75 @@
+       } catch (failure) {
+         if (run === editorGeneration && project === app.currentProjectId && form.value.id === id && editor.value)
+           saveError.value = businessAssetError(failure, '配置内容读取失败，请关闭后重试。');
++      } finally {
++        if (run === editorGeneration && project === app.currentProjectId && form.value.id === id && editor.value)
++          contentLoading.value = false;
+       }
+     }
+   }
+   async function upload(event: Event) {
+     const run = editorGeneration;
+     const project = app.currentProjectId;
++    const fileRun = ++fileGeneration;
++    form.value.value = '';
++    form.value.fileName = '';
++    fileLoading.value = false;
+     const file = (event.target as HTMLInputElement).files?.[0];
+     if (!file) return;
+     if (file.size > 2 * 1024 * 1024) {
+       saveError.value = '文件不能超过 2 MB。';
+       return;
+     }
++    fileLoading.value = true;
+     try {
+       const bytes = new Uint8Array(await file.arrayBuffer());
+-      if (run !== editorGeneration || project !== app.currentProjectId) return;
++      if (
++        fileRun !== fileGeneration ||
++        run !== editorGeneration ||
++        project !== app.currentProjectId ||
++        !editor.value ||
++        form.value.kind !== 'DOCUMENT'
++      )
++        return;
+       let binary = '';
+       for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+       form.value.value = btoa(binary);
+       form.value.fileName = file.name;
+       saveError.value = '';
+     } catch (failure) {
+-      saveError.value = businessAssetError(failure, '文件读取失败，请重新选择。');
++      if (fileRun === fileGeneration && run === editorGeneration && project === app.currentProjectId && editor.value)
++        saveError.value = businessAssetError(failure, '文件读取失败，请重新选择。');
++    } finally {
++      if (fileRun === fileGeneration) fileLoading.value = false;
+     }
+   }
+   async function save() {
+-    if (saving.value) return;
++    if (saving.value || contentLoading.value || fileLoading.value) return;
+     saving.value = true;
+     saveError.value = '';
+     const run = editorGeneration;
+     const project = app.currentProjectId;
+-    const submission = { ...form.value };
+     try {
++      const submission = { ...form.value, secretType: undefined as string | undefined, keepSecret: false };
++      if (form.value.kind === 'SECRET') {
++        submission.keepSecret = keepSecret.value;
++        if (!keepSecret.value) {
++          submission.secretType = secretType.value;
++          submission.value = encodeSecretFields(secretType.value, [
++            ...(secretType.value === 'ACCOUNT_PASSWORD'
++              ? [
++                  { name: 'username', value: username.value },
++                  { name: 'password', value: password.value },
++                ]
++              : []),
++            ...extraFields.value,
++          ]);
++        }
++      }
++      if (!submission.keepSecret && !submission.value.trim()) {
++        saveError.value = '请填写配置内容或上传文档。';
++        return;
++      }
+       await MSR.post({ url: '/shared-configurations', data: submission });
+       if (run !== editorGeneration || project !== app.currentProjectId) return;
+       clearSecret();
+@@ -211,7 +475,10 @@
+       await load();
+     } catch (failure) {
+       if (run === editorGeneration && project === app.currentProjectId)
+-        saveError.value = businessAssetError(failure, '保存失败，请检查权限、内容及加密密钥配置；可重试。');
++        saveError.value =
++          failure instanceof Error && failure.message.startsWith('请填写1至20')
++            ? failure.message
++            : businessAssetError(failure, '保存失败，请检查权限、内容及加密密钥配置；可重试。');
+     } finally {
+       saving.value = false;
+     }
+@@ -286,6 +553,10 @@
+       clearSecret();
+       editor.value = false;
+       rows.value = [];
++      keyword.value = '';
++      systemFilter.value = '';
++      environmentFilter.value = '';
++      kindFilter.value = '';
+       load();
+     },
+     { immediate: true }
+@@ -293,27 +564,42 @@
+ </script>
+ 
+ <style scoped>
+-  form label {
+-    display: block;
+-    margin-block: 1rem 0.25rem;
++  .configuration-grid {
++    display: grid;
++    grid-template-columns: repeat(2, minmax(0, 1fr));
++    gap: 20px;
+   }
+-  form input,
+-  form select,
+-  form textarea {
+-    padding: 0.5rem;
+-    width: 100%;
+-    border: 1px solid var(--color-border-3);
+-    color: var(--color-text-1);
+-    background: var(--color-bg-2);
+-    font: inherit;
++  .secret-section {
++    margin-block-start: 16px;
++    padding: 20px;
++    border: 1px solid var(--color-border-2);
++    border-radius: 6px;
++    background: var(--color-fill-1);
+   }
+-  form button {
+-    margin-block: 1rem;
+-    padding: 0.5rem 1rem;
+-    border: 1px solid var(--color-border-3);
++  .secret-field-row {
++    display: flex;
++    gap: 12px;
++    margin-block-end: 12px;
+   }
+-  .editor-fields {
+-    padding: 0;
+-    border: 0;
++  .secret-field-row > :not(button) {
++    flex: 1;
++    min-inline-size: 0;
++  }
++  .configuration-footer {
++    display: flex;
++    justify-content: flex-end;
++    gap: 12px;
++    margin-block-start: 24px;
++    padding-block-start: 20px;
++    border-block-start: 1px solid var(--color-border-2);
++  }
++  @media (max-width: 720px) {
++    .configuration-grid {
++      grid-template-columns: minmax(0, 1fr);
++      gap: 0;
++    }
++    .secret-field-row {
++      flex-wrap: wrap;
++    }
+   }
+ </style>
+diff --git a/frontend/src/views/test-asset/versions.vue b/frontend/src/views/test-asset/versions.vue
+index 9b0bd5bd38..0e8d7b875b 100644
+--- a/frontend/src/views/test-asset/versions.vue
++++ b/frontend/src/views/test-asset/versions.vue
+@@ -1,128 +1,156 @@
+ <template>
+   <TestAssetPage>
+-    <BusinessVersions />
+-    <SharedConfigurationVersions />
+-    <MsCard v-if="canReadLegacy" simple>
+-      <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
+-      <div class="mb-4">
+-        <div class="text-base font-medium">资产版本</div>
+-        <div class="mt-1 text-sm text-[var(--color-text-3)]"
+-          >每一行都是不可变内容快照；任务引用固定版本，不随正式资产后续更新漂移。</div
+-        >
+-      </div>
+-      <div class="mb-4 flex flex-wrap items-center gap-3">
+-        <a-link
+-          v-if="query.assetType && catalogPaths[query.assetType]"
+-          @click="router.push(catalogPaths[query.assetType])"
+-        >
+-          查看此类资产目录
+-        </a-link>
+-        <a-input-search
+-          v-model="query.keyword"
+-          class="w-[260px]"
+-          allow-clear
+-          placeholder="搜索资产名称或 ID"
+-          @search="search"
+-        />
+-        <a-select v-model="query.assetType" class="w-[160px]" allow-clear placeholder="资产类型" @change="search">
+-          <a-option value="DOCUMENT">业务文档</a-option><a-option value="CASE">功能用例</a-option>
+-          <a-option value="DATASET">测试数据</a-option><a-option value="ENVIRONMENT">测试环境</a-option>
+-          <a-option value="COMMON_STEP">公共步骤</a-option><a-option value="API_DEFINITION">接口资产</a-option>
+-          <a-option value="EVIDENCE">执行证据</a-option><a-option value="BUG">缺陷资产</a-option>
+-          <a-option value="TASK">测试任务</a-option><a-option value="STEP">执行步骤</a-option>
+-        </a-select>
+-        <a-input
+-          v-model="query.assetId"
+-          class="w-[260px]"
+-          allow-clear
+-          placeholder="精确资产 ID"
+-          @press-enter="search"
+-        />
+-        <a-select
+-          v-model="query.creationSources"
+-          multiple
+-          allow-clear
+-          class="w-[190px]"
+-          placeholder="建立方式"
+-          @change="search"
+-        >
+-          <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{ item.label }}</a-option>
+-        </a-select>
+-        <a-tree-select
+-          v-model="query.categoryId"
+-          allow-clear
+-          allow-search
+-          class="w-[190px]"
+-          :data="categories"
+-          :field-names="{ key: 'id', title: 'name', children: 'children' }"
+-          placeholder="资产分类"
+-          @change="search"
+-        />
+-        <a-checkbox v-model="query.includeDescendants" @change="search">含子分类</a-checkbox>
+-        <a-button :loading="loading" @click="load">刷新</a-button>
+-      </div>
+-      <a-table
+-        :data="versions"
+-        :loading="loading"
+-        row-key="id"
+-        :pagination="pagination"
+-        @page-change="changePage"
+-        @page-size-change="changePageSize"
+-      >
+-        <template #empty><a-empty description="暂无符合条件的资产版本。" /></template>
+-        <template #columns>
+-          <a-table-column title="类型" :width="120"
+-            ><template #cell="{ record }"
+-              ><a-tag>{{ record.assetType }}</a-tag></template
+-            ></a-table-column
+-          >
+-          <a-table-column title="资产" :width="330"
+-            ><template #cell="{ record }"
+-              ><div class="font-medium">{{ record.assetName || record.assetId }}</div
+-              ><div class="mt-1 text-xs text-[var(--color-text-3)]">{{ record.assetId }}</div></template
+-            ></a-table-column
+-          >
+-          <a-table-column title="版本" :width="100"
+-            ><template #cell="{ record }">v{{ record.versionNo }}</template></a-table-column
+-          >
+-          <a-table-column title="建立方式" :width="120"
+-            ><template #cell="{ record }">
+-              <a-tag :color="sourceMeta(record.creationSource).color">{{
+-                sourceMeta(record.creationSource).label
+-              }}</a-tag>
+-            </template></a-table-column
+-          >
+-          <a-table-column title="资产分类" data-index="categoryPath" :width="210" ellipsis tooltip />
+-          <a-table-column title="来源版本" data-index="sourceVersion" :width="180" />
+-          <a-table-column title="状态" :width="120"
+-            ><template #cell="{ record }"
+-              ><a-tag color="green">{{ record.status }}</a-tag></template
+-            ></a-table-column
+-          >
+-          <a-table-column title="内容摘要" :width="230"
+-            ><template #cell="{ record }"
+-              ><span class="font-mono text-xs">{{ shortHash(record.contentHash) }}</span></template
+-            ></a-table-column
+-          >
+-          <a-table-column title="发布时间" :width="180"
+-            ><template #cell="{ record }">{{ formatTime(record.publishedAt) }}</template></a-table-column
+-          >
+-          <a-table-column title="操作" :width="160" fixed="right"
+-            ><template #cell="{ record }"
+-              ><a-space
+-                ><a-link @click="trace(record)">追溯</a-link
+-                ><a-popconfirm
+-                  v-if="record.status === 'PUBLISHED'"
+-                  content="停用后新任务不能再选择该版本，已冻结任务不受影响。"
+-                  @ok="deprecate(record)"
+-                  ><a-link v-permission="['TEST_ASSET_VERSION:MANAGE']" status="danger">停用</a-link></a-popconfirm
+-                ></a-space
+-              ></template
+-            ></a-table-column
+-          >
+-        </template>
+-      </a-table>
+-    </MsCard>
++    <div class="asset-heading"><h2>资产版本</h2><p>统一查看历史快照、比较变化与切换当前版本。</p></div>
++    <section class="asset-panel">
++      <a-tabs v-model:active-key="versionTab">
++        <a-tab-pane v-if="canReadBusiness" key="business" title="业务资产" :destroy-on-hide="false"
++          ><BusinessVersions
++        /></a-tab-pane>
++        <a-tab-pane v-if="canReadConfiguration" key="configuration" title="公共配置" :destroy-on-hide="false"
++          ><SharedConfigurationVersions
++        /></a-tab-pane>
++        <a-tab-pane v-if="canReadLegacy" key="other" title="其他资产" :destroy-on-hide="false">
++          <MsCard v-if="canReadLegacy" simple>
++            <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
++            <div class="mb-4">
++              <div class="text-base font-medium">资产版本</div>
++              <div class="mt-1 text-sm text-[var(--color-text-3)]"
++                >每一行都是不可变内容快照；任务引用固定版本，不随正式资产后续更新漂移。</div
++              >
++            </div>
++            <div class="asset-toolbar"
++              ><div class="asset-actions"
++                ><a-button :loading="loading" @click="load">刷新</a-button>
++                <a-link
++                  v-if="query.assetType && catalogPaths[query.assetType]"
++                  @click="router.push(catalogPaths[query.assetType])"
++                >
++                  查看此类资产目录
++                </a-link></div
++              ><div class="asset-search">
++                <a-input-search
++                  v-model="query.keyword"
++                  class="w-[260px]"
++                  allow-clear
++                  placeholder="搜索资产名称或 ID"
++                  @search="search"
++                />
++                <a-select
++                  v-model="query.assetType"
++                  class="w-[160px]"
++                  allow-clear
++                  placeholder="资产类型"
++                  @change="search"
++                >
++                  <a-option value="DOCUMENT">业务文档</a-option><a-option value="CASE">功能用例</a-option>
++                  <a-option value="DATASET">测试数据</a-option><a-option value="ENVIRONMENT">测试环境</a-option>
++                  <a-option value="COMMON_STEP">公共步骤</a-option><a-option value="API_DEFINITION">接口资产</a-option>
++                  <a-option value="EVIDENCE">执行证据</a-option><a-option value="BUG">缺陷资产</a-option>
++                  <a-option value="TASK">测试任务</a-option><a-option value="STEP">执行步骤</a-option>
++                </a-select>
++                <a-input
++                  v-model="query.assetId"
++                  class="w-[260px]"
++                  allow-clear
++                  placeholder="精确资产 ID"
++                  @press-enter="search"
++                />
++                <a-select
++                  v-model="query.creationSources"
++                  multiple
++                  allow-clear
++                  class="w-[190px]"
++                  placeholder="建立方式"
++                  @change="search"
++                >
++                  <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{
++                    item.label
++                  }}</a-option>
++                </a-select>
++                <a-tree-select
++                  v-model="query.categoryId"
++                  allow-clear
++                  allow-search
++                  class="w-[190px]"
++                  :data="categories"
++                  :field-names="{ key: 'id', title: 'name', children: 'children' }"
++                  placeholder="资产分类"
++                  @change="search"
++                />
++                <a-checkbox v-model="query.includeDescendants" @change="search">含子分类</a-checkbox>
++              </div>
++            </div>
++            <a-table
++              :data="versions"
++              :loading="loading"
++              row-key="id"
++              :pagination="pagination"
++              @page-change="changePage"
++              @page-size-change="changePageSize"
++            >
++              <template #empty><a-empty description="暂无符合条件的资产版本。" /></template>
++              <template #columns>
++                <a-table-column title="类型" :width="120"
++                  ><template #cell="{ record }"
++                    ><a-tag>{{ record.assetType }}</a-tag></template
++                  ></a-table-column
++                >
++                <a-table-column title="资产" :width="330"
++                  ><template #cell="{ record }"
++                    ><div class="font-medium">{{ record.assetName || record.assetId }}</div
++                    ><div class="mt-1 text-xs text-[var(--color-text-3)]">{{ record.assetId }}</div></template
++                  ></a-table-column
++                >
++                <a-table-column title="版本" :width="100"
++                  ><template #cell="{ record }">v{{ record.versionNo }}</template></a-table-column
++                >
++                <a-table-column title="建立方式" :width="120"
++                  ><template #cell="{ record }">
++                    <a-tag :color="sourceMeta(record.creationSource).color">{{
++                      sourceMeta(record.creationSource).label
++                    }}</a-tag>
++                  </template></a-table-column
++                >
++                <a-table-column title="资产分类" data-index="categoryPath" :width="210" ellipsis tooltip />
++                <a-table-column title="来源版本" data-index="sourceVersion" :width="180" />
++                <a-table-column title="状态" :width="120"
++                  ><template #cell="{ record }"
++                    ><a-tag color="green">{{ record.status }}</a-tag></template
++                  ></a-table-column
++                >
++                <a-table-column title="内容摘要" :width="230"
++                  ><template #cell="{ record }"
++                    ><span class="font-mono text-xs">{{ shortHash(record.contentHash) }}</span></template
++                  ></a-table-column
++                >
++                <a-table-column title="发布时间" :width="180"
++                  ><template #cell="{ record }">{{ formatTime(record.publishedAt) }}</template></a-table-column
++                >
++                <a-table-column title="操作" :width="160" fixed="right"
++                  ><template #cell="{ record }"
++                    ><a-space
++                      ><a-link @click="trace(record)">追溯</a-link
++                      ><a-popconfirm
++                        v-if="record.status === 'PUBLISHED'"
++                        content="停用后新任务不能再选择该版本，已冻结任务不受影响。"
++                        @ok="deprecate(record)"
++                        ><a-link v-permission="['TEST_ASSET_VERSION:MANAGE']" status="danger"
++                          >停用</a-link
++                        ></a-popconfirm
++                      ></a-space
++                    ></template
++                  ></a-table-column
++                >
++              </template>
++            </a-table>
++          </MsCard>
++        </a-tab-pane>
++      </a-tabs>
++      <a-empty
++        v-if="!canReadBusiness && !canReadConfiguration && !canReadLegacy"
++        description="暂无可访问的资产版本，请联系管理员授权"
++      />
++    </section>
+   </TestAssetPage>
+ </template>
+ 
+@@ -142,12 +170,15 @@
+     pageTestAssetVersions,
+   } from '@/api/modules/ai-execution';
+   import useAppStore from '@/store/modules/app';
++  import businessAssetError from '@/utils/businessAssetError';
+   import { hasAnyPermission } from '@/utils/permission';
+ 
+   const appStore = useAppStore();
+   const route = useRoute();
+   const router = useRouter();
+   const loading = ref(false);
++  const canReadBusiness = computed(() => hasAnyPermission(['BUSINESS_ASSET:READ']));
++  const canReadConfiguration = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:READ']));
+   const canReadLegacy = computed(() =>
+     hasAnyPermission([
+       'FUNCTIONAL_CASE:READ',
+@@ -157,6 +188,37 @@
+       'AI_EXECUTION:READ',
+     ])
+   );
++
++  function initialVersionTab() {
++    if (route.query.configurationId && canReadConfiguration.value) return 'configuration';
++    if (route.query.businessAssetId && canReadBusiness.value) return 'business';
++    if ((route.query.assetType || route.query.assetId) && canReadLegacy.value) return 'other';
++    if (canReadBusiness.value) return 'business';
++    if (canReadConfiguration.value) return 'configuration';
++    return 'other';
++  }
++  const versionTab = ref(initialVersionTab());
++  watch(
++    () => route.query.configurationId,
++    (id) => {
++      if (id && canReadConfiguration.value) versionTab.value = 'configuration';
++    }
++  );
++  watch(
++    () => route.query.businessAssetId,
++    (id) => {
++      if (id && canReadBusiness.value) versionTab.value = 'business';
++    }
++  );
++
++  watch([canReadBusiness, canReadConfiguration, canReadLegacy], () => {
++    const available = {
++      business: canReadBusiness.value,
++      configuration: canReadConfiguration.value,
++      other: canReadLegacy.value,
++    };
++    if (!available[versionTab.value as keyof typeof available]) versionTab.value = initialVersionTab();
++  });
+   const error = ref('');
+   const versions = ref<TestAssetVersion[]>([]);
+   const categories = ref<TestAssetCategory[]>([]);
+@@ -200,23 +262,34 @@
+   }));
+   const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
+   const shortHash = (value?: string) => (value ? `${value.slice(0, 12)}…${value.slice(-8)}` : '-');
++  let legacyGeneration = 0;
+   async function load() {
+-    if (!appStore.currentProjectId || !canReadLegacy.value) return;
++    const run = ++legacyGeneration;
++    const project = appStore.currentProjectId;
++    versions.value = [];
++    total.value = 0;
++    error.value = '';
++    if (!project || !canReadLegacy.value) {
++      loading.value = false;
++      return;
++    }
+     loading.value = true;
+     error.value = '';
+     try {
+       const result = await pageTestAssetVersions({
+-        projectId: appStore.currentProjectId,
++        projectId: project,
+         ...query,
+         keyword: query.keyword.trim() || undefined,
+         assetId: query.assetId.trim() || undefined,
+       });
++      if (run !== legacyGeneration || project !== appStore.currentProjectId || !canReadLegacy.value) return;
+       versions.value = result.list || [];
+       total.value = result.total || 0;
+-    } catch (reason: any) {
+-      error.value = reason?.message || '资产版本加载失败，请稍后重试';
++    } catch (reason) {
++      if (run === legacyGeneration && project === appStore.currentProjectId && canReadLegacy.value)
++        error.value = businessAssetError(reason, '资产版本加载失败，请稍后重试');
+     } finally {
+-      loading.value = false;
++      if (run === legacyGeneration && project === appStore.currentProjectId) loading.value = false;
+     }
+   }
+   function search() {
+@@ -240,20 +313,33 @@
+     try {
+       await deprecateTestAssetVersion(appStore.currentProjectId, record);
+       await load();
+-    } catch (reason: any) {
+-      error.value = reason?.message || '资产版本停用失败，请稍后重试';
++    } catch (reason) {
++      error.value = businessAssetError(reason, '资产版本停用失败，请稍后重试');
+     }
+   }
+-  watch(
+-    () => appStore.currentProjectId,
+-    () => {
+-      query.current = 1;
+-      load();
+-    }
+-  );
++  watch([() => route.query.assetType, () => route.query.assetId], () => {
++    query.assetType = String(route.query.assetType || '') || undefined;
++    query.assetId = String(route.query.assetId || '');
++    if ((query.assetType || query.assetId) && canReadLegacy.value) versionTab.value = 'other';
++    query.current = 1;
++    load();
++  });
++  watch([() => appStore.currentProjectId, canReadLegacy], () => {
++    ++legacyGeneration;
++    versions.value = [];
++    total.value = 0;
++    error.value = '';
++    loading.value = false;
++    query.current = 1;
++    load();
++  });
+   onMounted(async () => {
+     if (!canReadLegacy.value) return;
+-    categories.value = await listTestAssetCategories();
+-    await load();
++    try {
++      categories.value = await listTestAssetCategories();
++      await load();
++    } catch (failure) {
++      error.value = businessAssetError(failure, '资产分类加载失败，请重试');
++    }
+   });
+ </script>
+diff --git a/backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_157__shared_configuration_secret_type.sql b/backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_157__shared_configuration_secret_type.sql
+new file mode 100644
+--- /dev/null
++++ b/backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_157__shared_configuration_secret_type.sql
+@@ -0,0 +1,3 @@
++-- Empty secret_type preserves the legacy opaque SECRET string contract.
++ALTER TABLE shared_configuration_version ADD COLUMN secret_type VARCHAR(24) NOT NULL DEFAULT '';
++ALTER TABLE shared_configuration_audit ADD COLUMN reason VARCHAR(500) NOT NULL DEFAULT '';
+diff --git a/frontend/src/utils/sharedConfigurationFields.ts b/frontend/src/utils/sharedConfigurationFields.ts
+new file mode 100644
+--- /dev/null
++++ b/frontend/src/utils/sharedConfigurationFields.ts
+@@ -0,0 +1,21 @@
++export interface SecretField {
++  name: string;
++  value: string;
++}
++export function encodeSecretFields(type: string, fields: SecretField[]): string {
++  const normalized = fields.map((field) => ({ name: field.name.trim(), value: field.value }));
++  const names = new Set(normalized.map((field) => field.name));
++  if (
++    !['ACCOUNT_PASSWORD', 'OTHER'].includes(type) ||
++    !normalized.length ||
++    normalized.length > 20 ||
++    names.size !== normalized.length ||
++    normalized.some(
++      (field) => !field.name || field.name.length > 64 || !field.value.trim() || field.value.length > 100000
++    ) ||
++    (type === 'ACCOUNT_PASSWORD' && (!names.has('username') || !names.has('password')))
++  ) {
++    throw new Error('请填写1至20个有效字段，字段名不能重复；账号和密码为必填。');
++  }
++  return JSON.stringify({ fields: normalized });
++}
+diff --git a/frontend/scripts/test-shared-configuration-fields.mjs b/frontend/scripts/test-shared-configuration-fields.mjs
+new file mode 100644
+--- /dev/null
++++ b/frontend/scripts/test-shared-configuration-fields.mjs
+@@ -0,0 +1,162 @@
++import ts from 'typescript';
++
++import assert from 'node:assert/strict';
++import { readFile } from 'node:fs/promises';
++import test from 'node:test';
++import { runInNewContext } from 'node:vm';
++
++const s = await readFile(new URL('../src/utils/sharedConfigurationFields.ts', import.meta.url), 'utf8').catch(() => '');
++const js = ts.transpileModule(s, {
++  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
++}).outputText;
++const api = await import(`data:text/javascript;base64,${Buffer.from(js).toString('base64')}`);
++test('account password plus extra fields serialize without trimming sensitive values', () => {
++  assert.equal(typeof api.encodeSecretFields, 'function');
++  const value = api.encodeSecretFields('ACCOUNT_PASSWORD', [
++    { name: 'username', value: 'user' },
++    { name: 'password', value: ' secret ' },
++    { name: ' tenant ', value: 't' },
++  ]);
++  assert.equal(JSON.parse(value).fields[1].value, ' secret ');
++  assert.equal(JSON.parse(value).fields[2].name, 'tenant');
++});
++test('invalid fields cannot be submitted', () => {
++  assert.equal(typeof api.encodeSecretFields, 'function');
++  [
++    [],
++    [{ name: '', value: 'x' }],
++    [{ name: 'x', value: ' ' }],
++    [
++      { name: 'x', value: 'a' },
++      { name: ' x ', value: 'b' },
++    ],
++    Array.from({ length: 21 }, (_, i) => ({ name: String(i), value: 'v' })),
++  ].forEach((fields) => {
++    assert.throws(() => api.encodeSecretFields('OTHER', fields));
++  });
++  assert.throws(() => api.encodeSecretFields('ACCOUNT_PASSWORD', [{ name: 'username', value: 'u' }]));
++});
++const configuration = await readFile(
++  new URL('../src/views/test-asset/shared-configuration.vue', import.meta.url),
++  'utf8'
++);
++const script = configuration.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1];
++const ast = ts.createSourceFile('configuration.ts', script, ts.ScriptTarget.Latest, true);
++const body = ast.statements
++  .filter((node) => !ts.isImportDeclaration(node))
++  .map((node) => node.getText(ast))
++  .join('\n');
++function editorHarness() {
++  const submissions = [];
++  const confirmations = [];
++  const context = {
++    btoa: (value) => Buffer.from(value, 'binary').toString('base64'),
++    ref: (value) => ({ value }),
++    computed: (getter) => ({
++      get value() {
++        return getter();
++      },
++    }),
++    watch: () => undefined,
++    useAppStore: () => ({ currentProjectId: 'fixture-project' }),
++    useRouter: () => ({ push: () => undefined }),
++    hasAnyPermission: () => true,
++    encodeSecretFields: api.encodeSecretFields,
++    businessAssetError: () => 'safe error',
++    Message: { success: () => undefined },
++    Modal: { confirm: (options) => confirmations.push(options) },
++    MSR: {
++      post: async (request) => {
++        submissions.push(request.data);
++      },
++      get: async () => [],
++    },
++  };
++  const state = runInNewContext(
++    `${
++      ts.transpileModule(body, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
++    }\n;({ create, edit, save, form, username, password, extraFields, secretType, keepSecret, closeEditor, changeKind, changeSecretType, saveError, upload });`,
++    context
++  );
++  return { state, submissions, confirmations };
++}
++test('actual editor submits structured fields and clears sensitive state after save', async () => {
++  const { state, submissions } = editorHarness();
++  state.create();
++  state.form.value.kind = 'SECRET';
++  state.changeKind();
++  state.username.value = 'fixture-user';
++  state.password.value = 'fixture-password';
++  state.extraFields.value = [{ name: 'tenant', value: 'fixture-tenant' }];
++  await state.save();
++  assert.equal(submissions.length, 1);
++  assert.equal(submissions[0].secretType, 'ACCOUNT_PASSWORD');
++  assert.equal(JSON.parse(submissions[0].value).fields.length, 3);
++  assert.equal(state.password.value, '');
++  assert.equal(state.extraFields.value.length, 0);
++});
++test('actual editor retains old secrets without reading plaintext and rejects duplicate fields', async () => {
++  const { state, submissions } = editorHarness();
++  await state.edit({ id: 'fixture', kind: 'SECRET', secretType: 'OTHER', currentVersion: 1 });
++  await state.save();
++  assert.equal(submissions[0].keepSecret, true);
++  assert.equal(submissions[0].value, '');
++  state.create();
++  state.form.value.kind = 'SECRET';
++  state.changeKind();
++  state.username.value = 'u';
++  state.password.value = 'p';
++  state.extraFields.value = [{ name: ' username ', value: 'duplicate' }];
++  await state.save();
++  assert.equal(submissions.length, 1);
++  assert.ok(state.saveError.value);
++  state.closeEditor();
++  assert.equal(state.username.value, '');
++});
++test('canceling sensitive category switch preserves unsaved contents', () => {
++  const { state, confirmations } = editorHarness();
++  state.create();
++  state.form.value.kind = 'SECRET';
++  state.changeKind();
++  state.username.value = 'fixture-user';
++  state.secretType.value = 'OTHER';
++  state.changeSecretType();
++  assert.equal(confirmations.length, 1);
++  confirmations[0].onCancel();
++  assert.equal(state.secretType.value, 'ACCOUNT_PASSWORD');
++  assert.equal(state.username.value, 'fixture-user');
++});
++
++test('latest file selection wins and an invalid selection cancels earlier bytes', async () => {
++  const { state } = editorHarness();
++  state.create();
++  state.form.value.kind = 'DOCUMENT';
++  const pending = [];
++  const file = (name) => ({
++    target: {
++      files: [
++        {
++          name,
++          size: 10,
++          arrayBuffer: () =>
++            new Promise((resolve) => {
++              pending.push(resolve);
++            }),
++        },
++      ],
++    },
++  });
++  const first = state.upload(file('first.txt'));
++  const second = state.upload(file('second.txt'));
++  pending[1](new TextEncoder().encode('second').buffer);
++  await second;
++  pending[0](new TextEncoder().encode('first').buffer);
++  await first;
++  assert.equal(state.form.value.fileName, 'second.txt');
++  const third = state.upload(file('third.txt'));
++  await state.upload({ target: { files: [{ name: 'oversized.txt', size: 3000000 }] } });
++  pending[2](new TextEncoder().encode('third').buffer);
++  await third;
++  assert.equal(state.form.value.value, '');
++  assert.equal(state.form.value.fileName, '');
++});
+diff --git a/frontend/scripts/test-asset-version-loading.mjs b/frontend/scripts/test-asset-version-loading.mjs
+new file mode 100644
+--- /dev/null
++++ b/frontend/scripts/test-asset-version-loading.mjs
+@@ -0,0 +1,143 @@
++import ts from 'typescript';
++
++import assert from 'node:assert/strict';
++import { readFile } from 'node:fs/promises';
++import test from 'node:test';
++import { runInNewContext } from 'node:vm';
++
++const sfc = await readFile(new URL('../src/views/test-asset/components/BusinessVersions.vue', import.meta.url), 'utf8');
++const source = sfc.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1];
++const ast = ts.createSourceFile('versions.ts', source, ts.ScriptTarget.Latest, true);
++const body = ast.statements
++  .filter((node) => !ts.isImportDeclaration(node))
++  .map((node) => node.getText(ast))
++  .join('\n');
++function harness(get) {
++  const app = { currentProjectId: 'fixture-project' };
++  const context = {
++    ref: (value) => ({ value }),
++    computed: (getter) => ({
++      get value() {
++        return getter();
++      },
++    }),
++    watch: () => undefined,
++    useAppStore: () => app,
++    useRoute: () => ({ query: {} }),
++    useRouter: () => ({ push: () => undefined }),
++    hasAnyPermission: () => true,
++    MSR: { get },
++    listBusinessAssets: async () => [{ id: 'asset', title: 'business' }],
++    getBusinessAsset: async () => ({ versions: [] }),
++    businessAssetError: () => 'safe error',
++  };
++  const state = runInNewContext(
++    `${
++      ts.transpileModule(body, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
++    }\n;({ reload, loadLegacy, assets, error, legacyError, loading, legacy });`,
++    context
++  );
++  return { state, app };
++}
++test('legacy directory failure cannot hide the normal business version directory', async () => {
++  const { state } = harness(async () => {
++    throw new Error('legacy failure');
++  });
++  await Promise.all([state.reload(), state.loadLegacy()]);
++  assert.equal(state.assets.value.length, 2);
++  assert.equal(state.error.value, '');
++  assert.equal(state.legacyError.value, 'safe error');
++  assert.equal(state.loading.value, false);
++});
++test('a previous legacy response cannot overwrite a newer query', async () => {
++  const pending = [];
++  const { state } = harness(
++    () =>
++      new Promise((resolve) => {
++        pending.push(resolve);
++      })
++  );
++  const first = state.loadLegacy();
++  const second = state.loadLegacy();
++  pending[1]([{ id: 'new' }]);
++  await second;
++  pending[0]([{ id: 'old' }]);
++  await first;
++  assert.equal(state.legacy.value[0].id, 'new');
++});
++
++const versionPage = await readFile(new URL('../src/views/test-asset/versions.vue', import.meta.url), 'utf8');
++const versionScript = versionPage.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1];
++const versionAst = ts.createSourceFile('page.ts', versionScript, ts.ScriptTarget.Latest, true);
++const initialTab = versionAst.statements.find(
++  (node) => ts.isFunctionDeclaration(node) && node.name?.text === 'initialVersionTab'
++);
++test('legacy asset deep links open their own version directory', () => {
++  const pick = runInNewContext(
++    `${
++      ts.transpileModule(initialTab.getText(versionAst), { compilerOptions: { target: ts.ScriptTarget.ES2022 } })
++        .outputText
++    };initialVersionTab;`,
++    {
++      route: { query: { assetType: 'CASE', assetId: 'fixture-case' } },
++      canReadBusiness: { value: true },
++      canReadConfiguration: { value: true },
++      canReadLegacy: { value: true },
++    }
++  );
++  assert.equal(pick(), 'other');
++});
++const legacyLoadNode = versionAst.statements.find(
++  (node) => ts.isFunctionDeclaration(node) && node.name?.text === 'load'
++);
++const legacyLoadJs = ts.transpileModule(legacyLoadNode.getText(versionAst), {
++  compilerOptions: { target: ts.ScriptTarget.ES2022 },
++}).outputText;
++function legacyVersionHarness() {
++  const state = {
++    legacyGeneration: 0,
++    appStore: { currentProjectId: 'project-a' },
++    canReadLegacy: { value: true },
++    query: { assetId: 'asset-a', keyword: '', current: 1 },
++    versions: { value: [] },
++    total: { value: 0 },
++    error: { value: '' },
++    loading: { value: false },
++    businessAssetError: () => 'safe error',
++  };
++  const pending = [];
++  state.pageTestAssetVersions = () =>
++    new Promise((resolve, reject) => {
++      pending.push({ resolve, reject });
++    });
++  const load = runInNewContext(`with (state) { ${legacyLoadJs};load; }`, { state });
++  return { state, pending, load };
++}
++test('legacy version rows follow latest asset query even when responses are reversed', async () => {
++  const { state, pending, load } = legacyVersionHarness();
++  const first = load();
++  state.query.assetId = 'asset-b';
++  const second = load();
++  pending[1].resolve({ list: [{ assetId: 'asset-b' }], total: 1 });
++  await second;
++  pending[0].resolve({ list: [{ assetId: 'asset-a' }], total: 3 });
++  await first;
++  assert.equal(state.versions.value[0].assetId, 'asset-b');
++  assert.equal(state.total.value, 1);
++});
++test('project and permission changes discard legacy rows and stale failures', async () => {
++  const { state, pending, load } = legacyVersionHarness();
++  const first = load();
++  state.appStore.currentProjectId = 'project-b';
++  const second = load();
++  pending[0].reject(new Error('old project failure'));
++  await first;
++  assert.equal(state.error.value, '');
++  assert.equal(state.loading.value, true);
++  pending[1].resolve({ list: [{ assetId: 'b' }], total: 1 });
++  await second;
++  state.canReadLegacy.value = false;
++  await load();
++  assert.equal(state.versions.value.length, 0);
++  assert.equal(state.total.value, 0);
++});
+diff --git a/frontend/scripts/asset-ui-preview.mjs b/frontend/scripts/asset-ui-preview.mjs
+new file mode 100644
+--- /dev/null
++++ b/frontend/scripts/asset-ui-preview.mjs
+@@ -0,0 +1,51 @@
++import vue from '@vitejs/plugin-vue';
++import { mkdtemp, writeFile } from 'node:fs/promises';
++import { tmpdir } from 'node:os';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++import { createServer } from 'vite';
++
++const frontend = fileURLToPath(new URL('../', import.meta.url));
++const root = await mkdtemp(path.join(tmpdir(), 'msp-asset-ui-'));
++const unix = (p) => p.replaceAll('\\', '/');
++const files = {
++  'index.html':
++    '<html lang="zh-CN"><meta charset="utf-8"><title>资产组件隔离验证</title><div id="app"></div><script type="module" src="/entry.js"></script></html>',
++  'store.js': 'export default () => ({ currentProjectId: "fixture-project" });',
++  'permission.js':
++    'export const hasAnyPermission = (keys) => keys.some(k => /^(BUSINESS_ASSET|SHARED_CONFIGURATION):/.test(k));',
++  'router.js':
++    'import { reactive } from "vue"; const route = reactive({ query: {} }); export const useRoute = () => route; export const useRouter = () => ({ push: ({query}) => { route.query = query || {}; } });',
++  'http.js': `const rows = [{id:'fixture-config',name:'测试品牌商登录账号',systemKey:'米多大数据引擎',environmentKey:'测试环境',kind:'SECRET',secretType:'ACCOUNT_PASSWORD',currentVersion:2,parseStatus:'NOT_APPLICABLE'}];
++const assets = [{id:'fixture-asset',title:'订单创建与提交业务理解',systemKey:'米多大数据引擎',moduleKey:'订单管理',flowKey:'创建订单',pageKeys:['order-create'],branchCount:12,versionNo:3,status:'CURRENT',revision:1,currentVersionId:'v3'}];
++const versions = [{id:'v3',versionNo:3,status:'CURRENT',snapshot:{changeSummary:'补充库存不足校验',document:{content:'业务理解示例'},branches:[]}}];
++export default {get:async({url})=>{if(url==='/shared-configurations')return rows;if(url.includes('/shared-configurations/')&&url.endsWith('/versions'))return [{versionNo:2,kind:'SECRET',secretType:'ACCOUNT_PASSWORD',parseStatus:'NOT_APPLICABLE',fileName:''}];if(url.includes('legacy-unassigned'))return [];if(url==='/business-assets')return assets;if(url.includes('/business-assets/'))return {id:'fixture-asset',versions,currentVersionId:'v3',audit:[],relations:[],revision:1};return [];},post:async({data})=>{window.__lastSubmission=data;return {id:'fixture-saved'};}};
++`,
++  'entry.js': `import {createApp,h,ref} from 'vue'; import Arco from '@arco-design/web-vue';import '@arco-design/web-vue/dist/arco.css';
++import Business from '/@fs/${unix(path.join(frontend, 'src/views/test-asset/business-assets.vue'))}';
++import Configuration from '/@fs/${unix(path.join(frontend, 'src/views/test-asset/shared-configuration.vue'))}';
++import Versions from '/@fs/${unix(path.join(frontend, 'src/views/test-asset/versions.vue'))}';
++import { setCustomTheme } from '/@fs/${unix(path.join(frontend, 'src/utils/theme.ts'))}'; setCustomTheme('#811fa3');
++const app=createApp({setup(){const current=ref('配置');return()=>h('div',[h('header',{style:'padding:16px 24px;background:white;border-bottom:1px solid #eee'},[h('strong','组件隔离验证 · 虚构数据 '),...['业务','配置','版本'].map(n=>h('button',{onClick:()=>current.value=n,style:'margin-left:12px;padding:8px 16px'},n))]),h(current.value==='配置'?Configuration:current.value==='业务'?Business:Versions)]);}});
++app.use(Arco);app.component('MsCard',{setup(_,ctx){return()=>h('section',ctx.slots.default?.());}});app.mount('#app');
++`,
++};
++await Promise.all(Object.entries(files).map(([name, body]) => writeFile(path.join(root, name), body)));
++const aliases = [
++  { find: '@/api/http/index', replacement: path.join(root, 'http.js') },
++  { find: '@/store/modules/app', replacement: path.join(root, 'store.js') },
++  { find: '@/utils/permission', replacement: path.join(root, 'permission.js') },
++  { find: 'vue-router', replacement: path.join(root, 'router.js') },
++  { find: '@', replacement: path.join(frontend, 'src') },
++  { find: 'vue', replacement: path.join(frontend, 'node_modules/vue/dist/vue.esm-bundler.js') },
++  { find: '@arco-design/web-vue', replacement: path.join(frontend, 'node_modules/@arco-design/web-vue') },
++];
++const server = await createServer({
++  configFile: false,
++  root,
++  plugins: [vue()],
++  resolve: { alias: aliases, dedupe: ['vue'] },
++  server: { host: '127.0.0.1', port: 5188, strictPort: true, fs: { allow: [root, frontend] } },
++});
++await server.listen();
++process.stdout.write('Component fixture only: http://127.0.0.1:5188\n');
+diff --git a/scripts/verify-shared-configuration-migration.py b/scripts/verify-shared-configuration-migration.py
+new file mode 100644
+--- /dev/null
++++ b/scripts/verify-shared-configuration-migration.py
+@@ -0,0 +1,33 @@
++"""Validate configuration migration on a new database in an isolated loopback MySQL."""
++from pathlib import Path
++import json
++import subprocess
++import uuid
++
++root = Path(__file__).resolve().parents[1]
++database = "msp_config_ui_test_" + uuid.uuid4().hex[:12]
++mysql = r"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
++command = [mysql, "--no-defaults", "--host=127.0.0.1", "--port=13306", "--user=root",
++           "--default-character-set=utf8mb4", "--batch", "--skip-column-names"]
++def execute(sql, selected=True):
++    result = subprocess.run(command + (["--database=" + database] if selected else []),
++                            input=sql, encoding="utf-8", capture_output=True)
++    if result.returncode:
++        raise RuntimeError(result.stderr)
++    return result.stdout.strip()
++execute("CREATE DATABASE " + database + " CHARACTER SET utf8mb4;", False)
++ddl = root / "backend/framework/domain/src/main/resources/migration/3.7.2/ddl"
++execute((ddl / "V3.7.2_152__shared_configurations.sql").read_text(encoding="utf-8").split("INSERT IGNORE")[0])
++execute("INSERT INTO shared_configuration_version VALUES('legacy',1,'SECRET','fixture-cipher','','NOT_APPLICABLE','actor',1);")
++execute((ddl / "V3.7.2_157__shared_configuration_secret_type.sql").read_text(encoding="utf-8"))
++checks = {
++    "legacyContentPreserved": execute("SELECT encrypted_value FROM shared_configuration_version WHERE configuration_id='legacy';") == "fixture-cipher",
++    "legacyFormatPreserved": execute("SELECT COUNT(*) FROM shared_configuration_version WHERE secret_type='';") == "1",
++    "subtypeColumnPresent": execute("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='shared_configuration_version' AND column_name='secret_type';") == "1",
++    "auditReasonPresent": execute("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='shared_configuration_audit' AND column_name='reason';") == "1"
++}
++report = {"database": database, "port": 13306, "checks": checks}
++(root / "docs/implementation/asset-ui-20261123/mysql-verification.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
++print(json.dumps(report))
++if not all(checks.values()):
++    raise SystemExit(1)
