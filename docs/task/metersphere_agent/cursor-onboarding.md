@@ -11,13 +11,13 @@
 |----|------|
 | MeterSphere 后端 | 已启动，如 `http://localhost:8081` 或 `https://msp.ebcone.cn` |
 | Flyway | `agent_token`、`agent_exec_log` 表已迁移 |
-| Agent Token | 闭环全能力建议 `AGENT_ALL`，或按需组合 READ/SUBMIT + 各 WRITE scope |
+| Agent Token | 有效的个人 Agent Token，功能继承关联用户当前角色，并遵守项目范围 |
 | 专用测试计划 | 可用对话 `create_test_plan` 创建并关联，或预先创建 |
 | Node.js | >= 18（运行 MCP Server） |
 
 ### 创建 Agent Token
 
-参考 `docs/task/fixtures/agent_integration_test_data.sql`，向 `agent_token` 表插入记录（明文 Token 仅保存一次）。scopes 示例：`AGENT_ALL`。
+在平台「个人中心 → Agent 接入」创建 Token，选择项目范围；明文仅显示一次。已有有效 Token 继续使用，无需重新签发或追加功能权限。
 
 ---
 
@@ -114,7 +114,7 @@ npm start
 
 > 搜索当前项目标题含「登录」的缺陷，打开第一条详情，并把状态更新为处理中（按模板 customFields）
 
-期望：`search_bugs` → `get_bug` → `update_bug`。Scope 需 `BUG_READ`/`BUG_WRITE` 或 `AGENT_ALL`。详见 [mcp-bug-api-usage.md](./mcp-bug-api-usage.md)。
+期望：`search_bugs` → `get_bug` → `update_bug`。按关联用户当前缺陷读取、更新权限校验。详见 [mcp-bug-api-usage.md](./mcp-bug-api-usage.md)。
 
 ---
 
@@ -140,7 +140,7 @@ npm start
 |------|------|------|
 | MCP 服务未连接 | 路径或 Node 错误 | 检查 `mcp.json` 中 `args` 路径、`node -v` |
 | 401 | Token 无效 | 重新生成 Token，更新 `MS_AGENT_TOKEN` |
-| 403 submit/write | Scope 不足 | 增加对应 WRITE / SUBMIT 或 `AGENT_ALL` |
+| 403 submit/write | 当前用户角色或资源范围不允许 | 检查用户当前业务权限、项目范围及资源归属，无需追加 Token Scope |
 | 缺 testPlanCaseId | 未传 testPlanId 或用例未关联计划 | 先 `create_test_plan` 关联或配置 `MS_TEST_PLAN_ID` |
 | 模块未命中 | 模块名不匹配 | 先 `list_modules`，用 `filters.moduleIds` |
 | 缺陷必填字段 | 模板自定义字段 | 传 `customFields` |

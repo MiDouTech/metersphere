@@ -172,7 +172,7 @@ curl -X POST "$MS_BASE_URL/api/agent/v1/case-review/create" \
 
 ---
 
-## 10. 缺陷检索 / 详情（需 BUG_READ）
+## 10. 缺陷检索 / 详情（需用户当前缺陷读取权限）
 
 ```bash
 curl -X POST "$MS_BASE_URL/api/agent/v1/bug/search" \
@@ -191,7 +191,7 @@ curl "$MS_BASE_URL/api/agent/v1/bug/$BUG_ID" \
 
 ---
 
-## 11. 创建缺陷（需 BUG_WRITE）
+## 11. 创建缺陷（需用户当前缺陷创建权限）
 
 ```bash
 curl -X POST "$MS_BASE_URL/api/agent/v1/bug/create" \
@@ -209,7 +209,7 @@ curl -X POST "$MS_BASE_URL/api/agent/v1/bug/create" \
 
 ---
 
-## 12. 更新缺陷（需 BUG_WRITE）
+## 12. 更新缺陷（需用户当前缺陷更新权限）
 
 ```bash
 curl -X POST "$MS_BASE_URL/api/agent/v1/bug/update" \
@@ -238,7 +238,7 @@ curl "$MS_BASE_URL/v3/api-docs/agent"
 | HTTP | 原因 | 处理 |
 |------|------|------|
 | 401 | Token 无效/过期 | 检查 Authorization |
-| 403 | Scope 不足 | 对应 WRITE/SUBMIT 或 AGENT_ALL |
+| 403 | 用户当前角色或资源范围不允许 | 检查用户业务权限、项目范围及资源归属；不需要额外 Token 功能授权 |
 | 400 | 缺 X-MS-PROJECT | 添加 Header 或 Token 绑定默认项目 |
 | 400 | testPlanCaseId 错误 | 先 search 获取正确 ID |
 | 400 | 缺陷必填字段 | 传 customFields |

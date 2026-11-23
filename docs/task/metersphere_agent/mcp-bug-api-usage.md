@@ -1,6 +1,6 @@
 # MeterSphere MCP — 缺陷读写接口使用文档（供 AI / Agent 自配置）
 
-> 【AI生成】已人工审核确认（工程落地后请复核 Token Scope 与环境地址）  
+> 本文随 2026-11-23 用户角色授权整改同步；部署与验收状态以对应 PR 和测试记录为准。  
 > 日期：2026-07-29  
 > 适用包：`@midoo/metersphere-mcp`（仓库内 `metersphere-mcp/`）  
 > 后端：`/api/agent/v1/bug/*`
@@ -21,7 +21,7 @@ AI Client (Cursor/Claude)  --stdio MCP-->  metersphere-mcp (Node)
 ```
 
 - MCP **无业务逻辑**，只做 Tool → REST 转发。
-- 鉴权依赖 **Agent Token**（`msat_` 前缀），Scope 控制读/写。
+- 鉴权依赖 **Agent Token**（`msat_` 前缀），功能读写统一按关联用户当前角色校验，Token 不再单独分配功能 Scope。
 
 ---
 
@@ -34,15 +34,16 @@ AI Client (Cursor/Claude)  --stdio MCP-->  metersphere-mcp (Node)
 | `MS_PROJECT_ID` | 是 | 默认项目 ID；Tool 可覆盖 `projectId` |
 | `MS_TEST_PLAN_ID` | 否 | 用例检索默认计划；缺陷工具不依赖 |
 
-Token Scope 要求：
+当前用户角色要求（不需要追加 Token 功能权限）：
 
-| 能力 | 所需 Scope |
-|------|------------|
-| 检索 / 历史文字读取 | `BUG_READ` 或 `BUG_WRITE` 或 `AGENT_ALL` |
-| 含图片索引的详情 / 单图读取 | 明确包含 `BUG_READ`，同时具有当前项目 `PROJECT_BUG_READ`，且 Token 项目范围允许 |
-| 创建 / 更新 / 关联用例 | `BUG_WRITE` 或 `AGENT_ALL` |
+| 能力 | 当前用户业务权限 |
+|---|---|
+| 检索 / 详情 / 图片索引与单图读取 | 当前项目缺陷读取权限 `PROJECT_BUG:READ` |
+| 创建缺陷 | 当前项目缺陷创建权限 `PROJECT_BUG:READ+ADD` |
+| 更新 / 关联用例 | 当前项目缺陷更新权限 `PROJECT_BUG:READ+UPDATE` |
 
-说明：历史接口的 `BUG_WRITE` 隐含读取不授予新增图片索引/读图能力。启用图片索引后，详情请求缺少上述读取授权时整体安全拒绝；写操作自身返回的旧详情字段不附带索引。
+Token 的有效性、项目范围和资源归属继续检查；已有有效 Token 无需重新签发，用户角色撤销会影响后续调用。
+
 
 ---
 
@@ -90,13 +91,13 @@ Token Scope 要求：
 
 ## 4. 缺陷相关 MCP Tools
 
-| Tool | HTTP | Scope | 用途 |
+| Tool | HTTP | 当前用户业务权限 | 用途 |
 |------|------|-------|------|
-| `search_bugs` | `POST /api/agent/v1/bug/search` | BUG_READ | 按关键词/状态/处理人分页检索 |
-| `get_bug` | `GET /api/agent/v1/bug/{bugId}` | BUG_READ | 详情（含 description、tags、customFields） |
-| `create_bug` | `POST /api/agent/v1/bug/create` | BUG_WRITE | 创建；可带 caseId 关联用例 |
-| `update_bug` | `POST /api/agent/v1/bug/update` | BUG_WRITE | 更新标题/描述/标签/自定义字段 |
-| `relate_bug_case` | `POST /api/agent/v1/bug/relate-case` | BUG_WRITE | 已有缺陷补关联用例 |
+| `search_bugs` | `POST /api/agent/v1/bug/search` | 缺陷读取 | 按关键词/状态/处理人分页检索 |
+| `get_bug` | `GET /api/agent/v1/bug/{bugId}` | 缺陷读取 | 详情（含 description、tags、customFields） |
+| `create_bug` | `POST /api/agent/v1/bug/create` | 缺陷创建 | 创建；可带 caseId 关联用例 |
+| `update_bug` | `POST /api/agent/v1/bug/update` | 缺陷更新 | 更新标题/描述/标签/自定义字段 |
+| `relate_bug_case` | `POST /api/agent/v1/bug/relate-case` | 缺陷更新 | 已有缺陷补关联用例 |
 
 ### 4.1 `search_bugs`
 
@@ -205,7 +206,7 @@ POST {MS_BASE_URL}/api/agent/v1/bug/relate-case
 | 现象 | 原因 | 处理 |
 |------|------|------|
 | 401 | Token 无效/过期 | 换发 Agent Token |
-| 403 | Scope 不足 | 加 `BUG_READ`/`BUG_WRITE` 或 `AGENT_ALL` |
+| 403 | 用户当前角色或资源范围不允许 | 检查用户业务权限、项目范围及资源归属，无需追加 Token Scope |
 | 429 | Token 限流 | 全局约 120 次/分钟；检索约 30 次/分钟且间隔≥300ms；勿大页轮询 |
 | 「缺陷必填自定义字段缺失」 | 模板必填未传 | `get_bug` 或查模板后补 `customFields` |
 | 「缺陷不属于指定项目」 | projectId 与 bug 不一致 | 用缺陷真实 projectId |
@@ -242,7 +243,7 @@ POST {MS_BASE_URL}/api/agent/v1/bug/relate-case
 | 阶段 | 建议 | 理由 |
 |------|------|------|
 | **现在（P0）** | **保持独立 MCP 包 + 文档/示例配置** | 已满足 AI 自配置；改动面小；与 Cursor/Claude 生态一致 |
-| **短期（P1）✅** | 平台「Agent 集成」页：一键复制 `mcp.json`、展示 Scope、**下载 zip**（classpath 托管） | 已落地：`GET /api/agent/mcp/manifest|download` + 前端 MCP 面板 |
+| **短期（P1）✅** | 平台「Agent 集成」页：一键复制 `mcp.json`、展示继承用户角色的说明、**下载 zip**（classpath 托管） | 已落地：`GET /api/personal/agent-package/manifest`、`GET /api/personal/agent-package/skill/download` + 前端 MCP 面板 |
 | **中期（P2）** | 「插件化」凭证下发：用户授权 → 签发**短时 Agent Token** + 项目绑定 → 客户端拉取 bundle（含审计） | 安全可控；版本可灰度 |
 | **不建议（过早）** | 把 MCP Server **嵌进** MeterSphere Java 进程用 SSE/WebSocket 直出 | 与现有 stdio MCP 客户端不兼容；运维/多租户隔离复杂；Node 与 Java 生命周期耦合 |
 
@@ -250,7 +251,7 @@ POST {MS_BASE_URL}/api/agent/v1/bug/relate-case
 
 1. **插件职责**：凭证与配置下发、版本清单、审计（谁下载了 bundle）；**不**在浏览器里跑 MCP。
 2. **运行时仍在 Agent 侧**：Cursor/本地 Agent 下载后用 `node dist/index.js` 或 `npx` 启动。
-3. **授权模型**：OAuth/会话用户确认 → 生成 `msat_`（可设过期、Scope、项目白名单）→ 写入一次性下载包或仅返回 env 片段。
+3. **授权模型**：OAuth/会话用户确认 → 生成 `msat_`（可设过期与项目范围，功能继承用户当前角色）→ 写入一次性下载包或仅返回 env 片段。
 4. **安全**：Token 仅展示一次；bundle 签名校验；禁止把长期 Token 写进可公开 CDN。
 
 ### 9.5 决策摘要（给产品/研发）
