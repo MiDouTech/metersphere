@@ -1,0 +1,10 @@
+{
+  "database": "msp_config_ui_test_44385d7ad814",
+  "port": 13306,
+  "checks": {
+    "legacyContentPreserved": true,
+    "legacyFormatPreserved": true,
+    "subtypeColumnPresent": true,
+    "auditReasonPresent": true
+  }
+}

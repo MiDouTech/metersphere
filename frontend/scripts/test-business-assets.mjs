@@ -59,6 +59,13 @@ const editJavascript = ts.transpileModule(editNode.getText(ast), {
 function configurationEditor() {
   const state = {
     editorGeneration: 0,
+    contentLoading: { value: false },
+    originalKind: { value: '' },
+    previousKind: { value: 'PLAIN' },
+    previousSecretType: { value: 'ACCOUNT_PASSWORD' },
+    keepSecret: { value: false },
+    secretType: { value: 'OTHER' },
+    resetFields: () => undefined,
     app: { currentProjectId: 'project-a' },
     form: { value: {} },
     editor: { value: true },
@@ -111,4 +118,13 @@ test('configuration response is discarded after project switch or editor close',
   pending[1].resolve({ value: 'closed content' });
   await closed;
   assert.equal(state.form.value.value, '');
+});
+
+test('plain content loading blocks editing until the current response completes', async () => {
+  const { state, pending, edit } = configurationEditor();
+  const reading = edit({ id: 'a', kind: 'PLAIN', currentVersion: 1 });
+  assert.equal(state.contentLoading.value, true);
+  pending[0].resolve({ value: 'original' });
+  await reading;
+  assert.equal(state.contentLoading.value, false);
 });

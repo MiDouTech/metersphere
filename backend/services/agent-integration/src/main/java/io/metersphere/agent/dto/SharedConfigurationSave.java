@@ -9,6 +9,37 @@ public record SharedConfigurationSave(
     @NotBlank @Size(max = 128) String environmentKey,
     @NotBlank @Size(max = 128) String name,
     @NotBlank String kind,
-    @NotBlank @Size(max = 2800000) String value,
+    @Size(max = 2800000) String value,
     @Size(max = 255) String fileName,
-    @Min(0) int expectedVersion) {}
+    @Min(0) int expectedVersion,
+    @Size(max = 24) String secretType,
+    boolean keepSecret) {
+  @Override
+  public String toString() {
+    return "SharedConfigurationSave[redacted]";
+  }
+
+  public SharedConfigurationSave(
+      String projectId,
+      String id,
+      String systemKey,
+      String environmentKey,
+      String name,
+      String kind,
+      String value,
+      String fileName,
+      int expectedVersion) {
+    this(
+        projectId,
+        id,
+        systemKey,
+        environmentKey,
+        name,
+        kind,
+        value,
+        fileName,
+        expectedVersion,
+        null,
+        false);
+  }
+}

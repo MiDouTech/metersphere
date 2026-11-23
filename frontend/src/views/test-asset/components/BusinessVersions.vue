@@ -1,6 +1,24 @@
 <template>
-  <section aria-labelledby="business-versions-title" class="mb-6">
-    <h2 id="business-versions-title">业务资产版本</h2>
+  <section aria-label="业务资产版本" class="mb-6">
+    <div class="asset-toolbar">
+      <div class="asset-actions"><a-button :loading="loading" @click="reload">刷新</a-button></div>
+      <div class="asset-search"
+        ><a-select
+          v-model="assetId"
+          allow-search
+          allow-clear
+          placeholder="请选择业务资产"
+          aria-label="业务资产"
+          style="width: 360px"
+          @change="loadDetail"
+          ><a-option v-for="asset in assets" :key="asset.id" :value="asset.id">{{ asset.title }}</a-option></a-select
+        ></div
+      >
+    </div>
+    <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
+    <a-alert v-if="legacyError" type="warning" class="mb-4"
+      >{{ legacyError }} <a-link @click="loadLegacy">重试历史目录</a-link></a-alert
+    >
     <section v-if="legacy.length" aria-label="待确认归属的历史业务理解">
       <h3>待确认归属的历史业务理解</h3
       ><p>仅显示本人创建、没有项目来源的历史文档。确认归属后，全部版本进入当前项目的资产版本。</p>
@@ -16,12 +34,11 @@
         </a-list-item></a-list
       >
     </section>
-    <p v-if="error" role="alert">{{ error }}</p>
-    <label for="version-asset">业务资产</label>
-    <select id="version-asset" v-model="assetId" @change="loadDetail">
-      <option value="">请选择业务资产</option>
-      <option v-for="asset in assets" :key="asset.id" :value="asset.id">{{ asset.title }}</option>
-    </select>
+    <a-alert class="mb-4">历史快照不可修改；版本切换仅影响后续任务，执行中的任务保持原版本。</a-alert>
+    <a-empty
+      v-if="!detail && !loading && !error"
+      :description="assets.length ? '请选择资产查看版本' : '暂无业务资产版本'"
+    />
     <a-table v-if="detail" :data="detail.versions" row-key="id" :loading="loading">
       <template #columns>
         <a-table-column title="版本" data-index="versionNo" />
@@ -99,14 +116,20 @@
   const loading = ref(false);
   const saving = ref(false);
   const error = ref('');
+  const legacyError = ref('');
   const canWrite = computed(() => hasAnyPermission(['BUSINESS_ASSET:WRITE']));
   const current = computed(() => detail.value?.versions.find((v) => v.id === detail.value?.currentVersionId));
   let generation = 0;
+  let catalogGeneration = 0;
+  let legacyGeneration = 0;
   async function loadDetail() {
     const run = ++generation;
     detail.value = undefined;
     error.value = '';
-    if (!assetId.value) return;
+    if (!assetId.value) {
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     try {
       const value = await getBusinessAsset(app.currentProjectId, assetId.value);
@@ -123,18 +146,23 @@
     switchVisible.value = true;
   }
   async function importLegacy(id: string) {
+    const project = app.currentProjectId;
+    const run = ++generation;
     try {
       const result = await MSR.post<{ assetId: string }>({
         url: `/business-assets/legacy/${encodeURIComponent(id)}/import`,
-        data: { projectId: app.currentProjectId },
+        data: { projectId: project },
       });
-      const active = await listBusinessAssets(app.currentProjectId);
+      if (project !== app.currentProjectId || run !== generation) return;
+      const active = await listBusinessAssets(project);
+      if (project !== app.currentProjectId || run !== generation) return;
       assets.value = active;
       assetId.value = result.assetId;
       legacy.value = legacy.value.filter((item) => item.id !== id);
       await loadDetail();
     } catch (failure) {
-      error.value = businessAssetError(failure, '历史业务理解导入失败，请检查项目权限后重试。');
+      if (project === app.currentProjectId && run === generation)
+        error.value = businessAssetError(failure, '历史业务理解导入失败，请检查项目权限后重试。');
     }
   }
   function mergeVersion(version: BusinessVersion) {
@@ -173,35 +201,56 @@
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+  async function loadLegacy() {
+    const project = app.currentProjectId;
+    const run = ++legacyGeneration;
+    legacyError.value = '';
+    try {
+      const value = await MSR.get<{ id: string; title: string; versionCount: number }[]>({
+        url: '/business-assets/legacy-unassigned',
+        params: { projectId: project },
+      });
+      if (run === legacyGeneration && project === app.currentProjectId) legacy.value = value;
+    } catch (failure) {
+      if (run === legacyGeneration && project === app.currentProjectId)
+        legacyError.value = businessAssetError(failure, '历史归属目录加载失败，不影响当前业务资产版本查看。');
+    }
+  }
+  async function reload() {
+    const run = ++catalogGeneration;
+    const project = app.currentProjectId;
+    error.value = '';
+    loading.value = true;
+    try {
+      const [active, archived] = await Promise.all([
+        listBusinessAssets(project),
+        listBusinessAssets(project, '', true),
+      ]);
+      if (run !== catalogGeneration || project !== app.currentProjectId) return;
+      assets.value = [...active, ...archived];
+      if (!assets.value.some((asset) => asset.id === assetId.value)) assetId.value = '';
+      await loadDetail();
+    } catch (failure) {
+      if (run === catalogGeneration) error.value = businessAssetError(failure, '业务资产版本目录加载失败，请重试。');
+    } finally {
+      if (run === catalogGeneration && project === app.currentProjectId) loading.value = false;
+    }
+  }
   watch(
     [() => app.currentProjectId, () => route.query.businessAssetId],
     async () => {
       ++generation;
+      ++catalogGeneration;
+      ++legacyGeneration;
       detail.value = undefined;
       selected.value = undefined;
       switchVisible.value = false;
       assets.value = [];
       legacy.value = [];
+      legacyError.value = '';
+      assetId.value = String(route.query.businessAssetId || '');
       if (!app.currentProjectId || !hasAnyPermission(['BUSINESS_ASSET:READ'])) return;
-      const project = app.currentProjectId;
-      try {
-        const [active, archived] = await Promise.all([
-          listBusinessAssets(project),
-          listBusinessAssets(project, '', true),
-        ]);
-        if (project !== app.currentProjectId) return;
-        assets.value = [...active, ...archived];
-        const unassigned = await MSR.get<{ id: string; title: string; versionCount: number }[]>({
-          url: '/business-assets/legacy-unassigned',
-          params: { projectId: project },
-        });
-        if (project !== app.currentProjectId) return;
-        legacy.value = unassigned;
-        assetId.value = String(route.query.businessAssetId || '');
-        await loadDetail();
-      } catch (failure) {
-        error.value = businessAssetError(failure, '业务资产版本目录加载失败。');
-      }
+      await Promise.all([reload(), loadLegacy()]);
     },
     { immediate: true }
   );
