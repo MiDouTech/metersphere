@@ -37,7 +37,7 @@ import java.util.Map;
  * 米多 SSO 应用服务：status / state / callback / logout / bridge。
  * <p>
  * 流程：浏览器中转 exchange token → 后端 validate → 按 wework_userid 匹配本地用户
- * → 建立 Shiro Session，sessionToken 仅存 Redis → refresh / revoke / 登录桥。
+ * → 建立独立 MSP Shiro Session。后续有效期由 MSP 管理，不依赖上游 sessionToken。
  * SSO 不自动建号；成员须先经企微通讯录同步。
  */
 @Service
@@ -119,7 +119,6 @@ public class MiduoSsoApplicationService {
         MiduoValidateResult validate = miduoSsoClient.validateLoginToken(token);
         User user = matchUser(validate.getWeworkUserid());
         SessionUser sessionUser = establishSession(user);
-        miduoSsoSessionStore.save(user.getId(), validate.getSessionToken(), validate.getExpiresAt());
         userLoginService.saveLog(user.getId(), HttpMethodConstants.POST.name(),
                 "/auth/miduo/callback", "米多 SSO 登录成功", OperationLogType.LOGIN.name());
         log.info("miduo sso login ok userId={} wework={}", user.getId(),
@@ -138,20 +137,20 @@ public class MiduoSsoApplicationService {
             // may revoke another browser's authorization and is not part of this operation.
             miduoSsoSessionStore.delete(userId);
         } catch (Exception e) {
-            log.warn("miduo revoke failed userId={} err={}", userId, e.getMessage());
+            log.warn("msp session logout failure phase=LEGACY_CLEANUP userId={} fields={}", userId, MiduoSsoLogUtils.failureFields(e));
         } finally {
             try {
                 userLoginService.saveLog(userId, HttpMethodConstants.POST.name(),
                         "/auth/miduo/logout", "米多 SSO 登出", OperationLogType.LOGOUT.name());
-            } catch (Exception ignored) {
-                // ignore audit failure
+            } catch (Exception e) {
+                log.warn("msp session logout failure phase=AUDIT userId={} fields={}", userId, MiduoSsoLogUtils.failureFields(e));
             }
             SecurityUtils.getSubject().logout();
         }
     }
 
     /**
-     * 生成 state 并返回登录桥 URL（refresh 失败或默认登录入口使用）。
+     * 生成 state 并返回登录桥 URL（新登录入口使用）。
      */
     public Map<String, String> bridgeUrl() {
         ensureEnabled();
@@ -165,7 +164,7 @@ public class MiduoSsoApplicationService {
     public Map<String, Object> enrichLoginPayload(SessionUser sessionUser) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("user", sessionUser);
-        payload.put("needMiduoReauth", miduoSsoSessionStore.isNeedReauth(sessionUser.getId()));
+        payload.put("needMiduoReauth", false);
         String authenticate = (String) SecurityUtils.getSubject().getSession().getAttribute("authenticate");
         payload.put("authenticate", authenticate);
         return payload;
@@ -191,10 +190,13 @@ public class MiduoSsoApplicationService {
     }
 
     private SessionUser establishSession(User user) {
-        SecurityUtils.getSubject().getSession().setAttribute("authenticate", UserSource.MIDUO.name());
-        UsernamePasswordToken token = new UsernamePasswordToken(user.getId(), "");
         Subject subject = SecurityUtils.getSubject();
+        // Replace only the current browser's session; do not reuse anonymous/expired credentials.
+        subject.logout();
+        subject.getSession().setAttribute("authenticate", UserSource.MIDUO.name());
+        UsernamePasswordToken token = new UsernamePasswordToken(user.getId(), "");
         subject.login(token);
+        io.metersphere.system.security.SessionLifetime.initialize(subject.getSession(), true, System.currentTimeMillis());
         UserDTO userDTO = userLoginService.getUserDTO(user.getId());
         userLoginService.autoSwitch(userDTO);
         SessionUser sessionUser = SessionUser.fromUser(userDTO, SessionUtils.getSessionId());

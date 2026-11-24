@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-24",
+  "environment": "https://msp.ebcone.net/",
+  "method": "Ego browser real UI",
+  "results": [
+    {"step": "SSO mobile verification login", "result": "PASS", "evidence": "Submitted existing user-provided credentials on Miduo SSO, returned to MSP authenticated workspace with project overview."},
+    {"step": "MSP account menu logout", "result": "PASS", "evidence": "Clicked 退出系统; MSP displayed 已退出当前平台登录 and 重新登录; authenticated navigation disappeared."},
+    {"step": "MSP login again", "result": "FAIL_REQUIREMENT", "evidence": "Clicked 重新登录; existing SSO session returned to authenticated MSP workspace without fresh scan or SMS verification. Earlier flow-only PASS classification is superseded by user's explicit logout acceptance requirement."}
+  ],
+  "observations": ["Active logout additionally displayed a session-expired dialog with untranslated title api.errorTip; dismissed via 确定 before login again."],
+  "scope": "Original observation retained. Acceptance corrected: explicit MSP logout must require fresh authentication for this source grant, revoke other MSP sessions sharing that grant, and preserve independent grants and other Miduo business applications.",
+  "credentialsRecorded": false
+}

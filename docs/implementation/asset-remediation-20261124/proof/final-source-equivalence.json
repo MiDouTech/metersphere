@@ -1,0 +1,17 @@
+{
+  "validatedBackendTree": "e84a4bab6cf5a69c29abaf6387496625650aa7c8",
+  "backendProductionDifferencesAfterValidation": [],
+  "nodeFinalSourceSha256": "383d38af6793a248ad782a048d11b97099c1f1a1b0942913e4eb3b7626d4e313",
+  "nodeFinalTests": {
+    "passed": 49,
+    "failed": 0,
+    "skipped": 0
+  },
+  "additionalNativeMappingTests": {
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0,
+    "log": ".build/mysql-selftest/30aa7f86/native-suite.log"
+  },
+  "postValidationChanges": "Only Node formatting (reviewed AST-equivalent), new native mapping test, and documentation/evidence updates."
+}

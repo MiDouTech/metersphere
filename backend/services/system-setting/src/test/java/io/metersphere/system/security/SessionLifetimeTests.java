@@ -23,4 +23,16 @@ class SessionLifetimeTests {
         assertTrue(SessionLifetime.expired(session, now));
         assertEquals(100000L, session.getAttribute(SessionLifetime.LOGIN_AT));
     }
+
+    @Test
+    void shorterIdleTimeoutIsRepairedWithoutExtendingExistingDeadline() {
+        var session = new SimpleSession();
+        long login = 100000;
+        SessionLifetime.initialize(session, true, login);
+        assertEquals(SessionLifetime.MAX_AGE_MS, session.getTimeout());
+        session.setTimeout(60000);
+        SessionLifetime.initialize(session, false, login + 3600000);
+        assertEquals(login + SessionLifetime.MAX_AGE_MS, session.getAttribute(SessionLifetime.EXPIRES_AT));
+        assertEquals(SessionLifetime.MAX_AGE_MS - 3600000, session.getTimeout());
+    }
 }

@@ -1,0 +1,198 @@
+{
+  "scope": "case-management import/history repair 100013/100014/100016/100020",
+  "red": {
+    "log": ".tmp/asset-remediation-20261124/import-red.log",
+    "tests": 2,
+    "failures": 2
+  },
+  "green": [
+    {
+      "name": "io.metersphere.functional.asset.service.CaseAssetFailureDiagnosticsTests",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "io.metersphere.functional.asset.service.CaseAssetHistoryCaseSyncServiceTests",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "io.metersphere.functional.asset.service.CaseAssetHistoryFailureIntegrationTests",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "io.metersphere.functional.asset.service.CaseAssetImportIdentityResolverTests",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "io.metersphere.functional.asset.service.CaseAssetImportJobServiceTests",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "io.metersphere.functional.asset.service.CaseAssetServiceTests",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "io.metersphere.functional.hub.service.CaseAssetSourceMappingRepairTests",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "io.metersphere.functional.service.CaseAssetExcelRoundTripTests",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "io.metersphere.functional.service.FunctionalLegacyImportValidationTests",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "greenTotal": 22,
+  "greenLog": ".tmp/asset-remediation-20261124/import-review-final2.log",
+  "files": [
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/asset/service/CaseAssetHistorySyncWorker.java",
+      "sha256": "5b234d30130c34befc409af91ce07e86e0e1f99f916556d64c2eda8afd6b6ef0"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/asset/service/CaseAssetImportJobService.java",
+      "sha256": "c633dae5984d9f9ced463f2d14c1cd8a894d2ea50f5d822b75bcc7c6a8e90e89"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/asset/service/CaseAssetImportWorker.java",
+      "sha256": "a2826834b17e80b3f87f2b09f0ce6370ab60ce3d83f4eea5f93cade7907fec30"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/asset/service/CaseAssetService.java",
+      "sha256": "fb4c0f4ca6139d56218de86ae97e0f80ecc679da6d9e2d998f604b8d3b4c8b18"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/dto/response/FunctionalCaseImportResponse.java",
+      "sha256": "6f62ab58addf3deca70589fd0b1232aba52dbd359842b52ddc11e8979741b456"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/listener/FunctionalCaseImportEventListener.java",
+      "sha256": "d34cc599d784f7147745dc2d71a8846ff29049aa71effebbae5dd802f9d9bec8"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/hub/service/DefaultHubCaseSyncService.java",
+      "sha256": "f027a60980676239680668583c7d1fb67562b52e1b12cbf2249ae962444871c0"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/request/FunctionalCaseImportRequest.java",
+      "sha256": "a0e6c26814bb3c6060acc842131b5cf79f30184cb5b2d8924764d6357cdbd29d"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseFileService.java",
+      "sha256": "6a1f3944e8cc5f1a8d48194ab0451f71a183f101692cd7af9483b66cb8150638"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/xmind/parser/XMindCaseParser.java",
+      "sha256": "e8d48f1c7333507394b06c8bc36e05ff6312a3b2872816e63d47967dd97c344f"
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/asset/service/CaseAssetServiceTests.java",
+      "sha256": "3552d5231edab16b3abd12e066e5b566d4d3a4fc235309bb9e99a5632a57cc06"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/asset/service/CaseAssetFailureDiagnostics.java",
+      "sha256": "fb7f725e46575386ee572015b38967fa53c1165d89392e295c101025ae114dd9"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/asset/service/CaseAssetImportIdentityResolver.java",
+      "sha256": "3fe451272b94876d233aa9335ec5e282a47753208dbe8aa63f51ec5bc580e67d"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/hub/service/CaseAssetLockedMirrorSnapshot.java",
+      "sha256": "2ef89806ba3b6b867e273bbcba24b9faf6c9c4b6b644748c930170b73072a999"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/hub/service/CaseAssetMappingConflictException.java",
+      "sha256": "7705568dc438d4924f0bcff73734cb6961104bc033b7a1b0b7b0248333283eae"
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/hub/service/CaseAssetSourceMappingRepair.java",
+      "sha256": "79f58fac25604dac7f63e1df683ed77c7e2386f29ccdf71e0c5bc69f0f8e004e"
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/asset/service/CaseAssetFailureDiagnosticsTests.java",
+      "sha256": "9df3f52e299b35d67a30dddba388353360dae5d1db7c0cdd48d835fc71566528"
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/asset/service/CaseAssetHistoryFailureIntegrationTests.java",
+      "sha256": "f43263eaedb2000b7c4c7e1d462c130acb3fc3f39f9a2b167faba19a5f662790"
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/asset/service/CaseAssetImportIdentityResolverTests.java",
+      "sha256": "17ca9009a17bca42c631a60d0f57cf7c88b58e55a5cd5a742f9fc38d614d36f4"
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/asset/service/CaseAssetImportJobServiceTests.java",
+      "sha256": "9ce9522dddce37c7ba92120c70d6ab180db9d2ecae60374d91a1445e6a923cc2"
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/hub/service/CaseAssetSourceMappingRepairTests.java",
+      "sha256": "521f912ef8ceab6a686d0edfa4e2040d9b5e0a6d8e724d3f9c35298a37b0390a"
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/CaseAssetExcelRoundTripTests.java",
+      "sha256": "60a64446cbf3c847f9f1aede071b78f8931f7db9e1c702b1b64b8a80d2904072"
+    }
+  ],
+  "migration": "none; uses existing source-edit audit table; no DB edits",
+  "limits": [
+    "No deployed-site reacceptance before deployment",
+    "No MySQL integration executed in this subtask; H2 real SQL/MyBatis used",
+    "Actual MSP old-case exception remains unconfirmed without server logs; diagnostics enables lookup by item:case",
+    "Conflicting history/reference/independent content remains explicit rejected governance item, not silently merged"
+  ],
+  "reviewRed": [
+    {
+      "log": "import-review-red.log",
+      "tests": 8,
+      "failures": 2,
+      "cases": [
+        "stale canonical blob",
+        "XMind skip-only"
+      ]
+    },
+    {
+      "log": "import-version-red.log",
+      "tests": 3,
+      "failures": 1,
+      "case": "foreign version survives prepareImport"
+    }
+  ],
+  "pendingValidation": [
+    "Final root-requested diagnostic phase/reference/rootType allowlist patch and malicious-reference test were added after the 22-test green run; root centralized regression must compile/run them."
+  ],
+  "reviewFixes": [
+    "Repair accepts no pre-lock hashes; stable ordered current locking reads of case/blob/custom fields/attachments/file associations and reference/history predicates; current canonical change rejects",
+    "True concurrent blob writer test blocks until commit then rejects; dependency edits reject",
+    "XMind success and skipped separate; skip-only no empty-content failure",
+    "prepareImport clears caller version to force file service hub default; no expanded project lock"
+  ]
+}

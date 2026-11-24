@@ -1,0 +1,14 @@
+{
+  "file": "backend/services/case-management/src/test/java/io/metersphere/functional/hub/service/CaseAssetSourceMappingRepairMySqlTests.java",
+  "sha256": "dcec5e20d8fc4fa686e664725d9069ee866eb8e1d086206a6bc34eba4a1c69dc",
+  "status": "verified real MySQL: 7 passed, 0 failed/error/skipped",
+  "scenarios": "inherits seven reviewed mapping tests unmodified, including current source/blob/custom/attachment/association queries and real bounded two-thread wait-for-commit rejection",
+  "nativeIsolation": "every connection set REPEATABLE_READ; explicit SELECT @@transaction_isolation (fallback @@tx_isolation) must equal REPEATABLE-READ; TransactionTemplate also explicitly RR",
+  "safety": "127.0.0.1:13326 quality_verify only with existing synthetic test credential; fresh UUID-regex schema, no shared-connection concurrency, connect/socket/lock/transaction timeouts, own-schema-only cleanup",
+  "fixture": "copy fresh per-test H2 fixture metadata/data to native InnoDB; quote validated identifiers; primary VARCHAR128/nonprimary255 and MEDIUMTEXT source_snapshot avoid max-row issues; binary bytes copied with getBytes into LONGBLOB; no simulated SQL/JSON/locks",
+  "frozenProductionManifestUnchanged": true,
+  "log": ".build/mysql-selftest/30aa7f86/native-suite.log",
+  "compiledOverrideConfirmedByJavap": true,
+  "executedSourceSha256": "e3dbb06023acefed235b5305401000965634f2189191e479e7e0f072f1b7d8d5",
+  "normalization": "Only trailing whitespace normalized after native execution; independent review preserves original executed hash."
+}

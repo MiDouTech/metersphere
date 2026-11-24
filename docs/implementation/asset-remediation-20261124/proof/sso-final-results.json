@@ -1,0 +1,1195 @@
+{
+  "backend": {
+    "totals": {
+      "tests": 609,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 60
+    },
+    "executedPassed": 549,
+    "suites": [
+      {
+        "suite": "io.metersphere.app.PermissionManifestCoverageTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.constants.AgentAttachmentPurposeTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.constants.AgentDualChannelContractTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.constants.AgentExecutionModeTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.controller.AgentCaseImportActionValidationTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.controller.AgentExecutionExceptionHandlerTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.controller.AgentFunctionalCaseControllerTests",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.controller.AgentMcpStreamableControllerTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.controller.EvidenceCatalogControllerTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.controller.TestAssetControllerPermissionTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.mapper.AgentCaseSchemaMapperTests",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.mapper.AgentPersonalHistorySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.quality.AgentEvidenceContentReviewerTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.resolver.AgentExecutionNaturalLanguageResolverTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.resolver.AgentQueryResolverTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.secret.AgentSecretProviderTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentIdentityAuthorizationTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentScopeAssertTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentSensitiveDataSanitizerTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentTokenFilterTests",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentTokenProjectAccessTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentTokenRateLimiterRedisTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentTokenRateLimiterTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentTokenScopeParserTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.security.AgentTokenServiceTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentAssetExecutionViewTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentAttachmentDeleteContractTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentAttachmentDownloadTests",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentAttachmentIntentPermissionTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBatchBodyFailureTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBatchCaseAccessTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBatchReadTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugCreateContractTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugExportDownloadTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugImageFinalCheckMySqlTests",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 6
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugImagePermissionTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugImageServiceTests",
+        "tests": 27,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugImageStoreTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugSearchRoleTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugTransferTests",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBugWriteRelationTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentBusinessFlowServiceTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCaseBatchValidationTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCaseContentMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCaseContentReaderTests",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCaseImportMySqlTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCaseImportStageTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCaseInputValidationTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCaseScopeMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCheckpointResumeTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCommentEditTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentConfigurationVersionTests",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentCredentialReferenceServiceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentDirectExecutionMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentDirectExecutionTests",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentEnvironmentAssetBindingTests",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentEnvironmentBindingMigrationMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentEnvironmentProfileServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentEvaluationServiceTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentEvidenceRedactionServiceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecLogServiceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionArtifactRelationTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionChannelPolicyTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionCheckpointServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionContextServiceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionHealingPolicyTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionMcpBoundaryValidationTests",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionPlanningServiceTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionPreflightResourceContractTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionPreflightServiceTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionServiceAssetNormalizationTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionServiceTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExecutionStateMachineTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExternalImageDownloaderTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExternalImageNetworkTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentExternalImageServiceTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentFactCipherConfigurationTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentFactCipherTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentFailureClassifierTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentFrozenCaseContentTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentFrozenWritebackTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentFunctionalCaseSearchServiceTests",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentFunctionalCaseSubmitServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentHistoricalCompatibilityTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentHumanRequestConcurrencyTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentIdempotencyCanonicalTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentLegacyImportMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentLibraryLifecycleMySqlTests",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 6
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentLibraryModuleTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentLibrarySearchMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentLoginProfileServiceTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentMcpBatchTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentMcpBundleServiceTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentMcpErrorRecoveryTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentMcpMaintenanceServiceTests",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentMcpStartupTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentMcpStreamableServiceTests",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentMcpWriteRoutingTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentModelFeatureBoundaryTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentOperationMySqlTests",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 10
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentPersonalOperationMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentPlanDefectSyncMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentPlanDetailCountTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentPreflightTransactionMySqlTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 4
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentProjectFileServiceTests",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentProjectServiceResourceContractTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentProjectServiceTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentQualityFinalizationMySqlTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentRecoveryScanHealthTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentRecoveryScanMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentRunnerLeaseAuthorizationServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentRunnerServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentRuntimeRoleAccessTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentSafeErrorMapperTests",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentSecretProviderValidationTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentServiceDependencyCycleTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentStepFactsTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentStepResultFactsTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentTaskClaimServiceTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentTaskExecutionApplicationServiceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentTaskTriggerServiceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentTempAttachmentCleanupTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentTestDataLeaseServiceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentTestPlanQueryRoleTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentTokenManagementServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentWebExecutionContractValidatorResourceContractTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.AgentWebExecutionContractValidatorTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.CaseAssetBatchServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.EvidenceCatalogMySqlTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 5
+      },
+      {
+        "suite": "io.metersphere.agent.service.EvidenceCatalogServiceTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.ExternalExecutorServiceTests",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.SharedConfigurationAuditMySqlTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "io.metersphere.agent.service.SharedConfigurationMcpToolsTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.SharedConfigurationServiceTests",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.TestAssetCatalogServiceTests",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.TestAssetGovernanceServiceTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.TestAssetPublicationListenerTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.service.TestAssetVersionServiceTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.tool.AgentBugAttachmentUploadContractTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.tool.AgentMcpCreateSchemaTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.tool.AgentMcpLeaseContractTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.tool.AgentMcpMaintenanceToolTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.tool.AgentMcpToolContractTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.tool.AgentMcpToolRegistryTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.agent.tool.AgentProjectFileToolTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.asset.service.CaseAssetCatalogIdentityMySqlTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      {
+        "suite": "io.metersphere.functional.asset.service.CaseAssetExportAccessTests",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.asset.service.CaseAssetFailureDiagnosticsTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.asset.service.CaseAssetHistoryCaseSyncServiceTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.asset.service.CaseAssetHistoryFailureIntegrationTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.asset.service.CaseAssetImportIdentityResolverTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.asset.service.CaseAssetImportJobServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.asset.service.CaseAssetServiceTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.hub.service.CaseAssetSourceMappingRepairMySqlTests",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 7
+      },
+      {
+        "suite": "io.metersphere.functional.hub.service.CaseAssetSourceMappingRepairTests",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.functional.service.CaseAssetExcelRoundTripTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.system.controller.MspIndependentSessionTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.system.security.SessionLifetimeTests",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.system.service.ai.agent.bridge.AgentBridgeHandshakeInterceptorTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.system.service.ai.agent.bridge.AgentBridgeSessionRegistryTests",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.system.sso.miduo.MiduoSsoClientTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.system.sso.miduo.MiduoSsoDiagnosticsTests",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.system.sso.miduo.MiduoSsoSessionIsolationTests",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "io.metersphere.system.sso.miduo.MspSessionHttpIntegrationTests",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "packageLogSha256": "8eebc3599d421cc45388d0c4ded52a98de060d655357ff66f8f379b3a0405142",
+    "systemModuleSha256": "c01c4f1f814a17ca8d5ad8cd6c9f98beaaa03521aa16fef4930ec99c480eae30",
+    "appContainsExactVerifiedSystemModule": true,
+    "retiredRefreshClassAbsent": true
+  },
+  "frontend": {
+    "behaviorTestsPassed": 3,
+    "lint": "PASS",
+    "typeCheck": "PASS (npm run build vue-tsc)",
+    "productionBuild": "PASS",
+    "manifest": {
+      "schemaVersion": 1,
+      "revision": "e1fd443ec737968c6e20eba29171c5d4a3038346",
+      "builtAt": "2026-11-24T04:30:50.692Z",
+      "indexSha256": "1115cd70d89d642713de775d25be30adf58f1242f5cb854498b646fe2e03be6a",
+      "assets": [
+        "/assets/index-DOI-8UZ9.js",
+        "/assets/vue-DZlbQ0G5.js",
+        "/assets/arco-eHjX_V9O.js",
+        "/assets/codeEditor-dtPc1o1E.js",
+        "/assets/codeEditor-1KD5iQ87.css",
+        "/assets/index-BV2frM8G.css"
+      ]
+    }
+  },
+  "independentReview": {
+    "decision": "STATIC_APPROVED",
+    "reportSha256": "80b31425c3fbf061d2624a224382ee0b8eb86f3ceed08f521a3391dbabb0f93c"
+  },
+  "limits": [
+    "No deployment or live two-browser acceptance of the new code yet",
+    "HTTP integration uses MapSessionRepository and synthetic upstream/user services, not production Redis or the full CSRF/APIKey chain",
+    "Docker build omitted per user instruction",
+    "Database-dependent conditional suites are skipped in this reactor; prior native database evidence is separate"
+  ]
+}

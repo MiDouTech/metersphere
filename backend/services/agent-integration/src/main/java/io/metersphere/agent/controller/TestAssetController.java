@@ -91,7 +91,9 @@ public class TestAssetController {
             PermissionConstants.PROJECT_API_SCENARIO_READ,
             PermissionConstants.PROJECT_API_DEFINITION_READ,
             PermissionConstants.AI_EXECUTION_READ,
-            PermissionConstants.PROJECT_BUG_READ
+            PermissionConstants.PROJECT_BUG_READ,
+            PermissionConstants.FUNCTIONAL_CASE_READ,
+            "BUSINESS_ASSET:READ"
     }, logical = Logical.OR)
     public Pager<List<TestAssetCatalogItemDTO>> catalog(@RequestParam String projectId,
                                                         @RequestParam String assetType,
@@ -114,7 +116,9 @@ public class TestAssetController {
             PermissionConstants.PROJECT_API_SCENARIO_READ,
             PermissionConstants.PROJECT_API_DEFINITION_READ,
             PermissionConstants.AI_EXECUTION_READ,
-            PermissionConstants.PROJECT_BUG_READ
+            PermissionConstants.PROJECT_BUG_READ,
+            PermissionConstants.FUNCTIONAL_CASE_READ,
+            "BUSINESS_ASSET:READ"
     }, logical = Logical.OR)
     public TestAssetCatalogItemDTO catalogDetail(@RequestParam String projectId,
                                                   @PathVariable String assetType,
@@ -157,7 +161,9 @@ public class TestAssetController {
             PermissionConstants.PROJECT_API_SCENARIO_READ,
             PermissionConstants.PROJECT_API_DEFINITION_READ,
             PermissionConstants.AI_EXECUTION_READ,
-            PermissionConstants.PROJECT_BUG_READ
+            PermissionConstants.PROJECT_BUG_READ,
+            PermissionConstants.FUNCTIONAL_CASE_READ,
+            "BUSINESS_ASSET:READ"
     }, logical = Logical.OR)
     public Pager<List<TestAssetVersionDTO>> versions(@RequestParam String projectId,
                                                       @RequestParam(required = false) String assetType,
@@ -180,7 +186,9 @@ public class TestAssetController {
             PermissionConstants.PROJECT_API_SCENARIO_READ,
             PermissionConstants.PROJECT_API_DEFINITION_READ,
             PermissionConstants.AI_EXECUTION_READ,
-            PermissionConstants.PROJECT_BUG_READ
+            PermissionConstants.PROJECT_BUG_READ,
+            PermissionConstants.FUNCTIONAL_CASE_READ,
+            "BUSINESS_ASSET:READ"
     }, logical = Logical.OR)
     public Pager<List<TestAssetRelationDTO>> relations(@RequestParam String projectId,
                                                         @RequestParam(required = false) String assetType,

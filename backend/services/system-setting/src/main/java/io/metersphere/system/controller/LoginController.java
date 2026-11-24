@@ -17,7 +17,7 @@ import io.metersphere.system.dto.user.UserDTO;
 import io.metersphere.system.log.constants.OperationLogType;
 import io.metersphere.system.service.UserLoginService;
 import io.metersphere.system.sso.miduo.MiduoSsoApplicationService;
-import io.metersphere.system.sso.miduo.MiduoSsoRefreshService;
+import io.metersphere.system.security.SessionLifetime;
 import io.metersphere.system.utils.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping
 @Tag(name = "登录")
 public class LoginController {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LoginController.class);
 
     @Resource
     private UserLoginService userLoginService;
@@ -42,8 +43,6 @@ public class LoginController {
     private ProjectMapper projectMapper;
     @Resource
     private MiduoSsoApplicationService miduoSsoApplicationService;
-    @Resource
-    private MiduoSsoRefreshService miduoSsoRefreshService;
     @Value("${spring.messages.default-locale}")
     private String defaultLocale;
 
@@ -52,8 +51,24 @@ public class LoginController {
     @Operation(summary = "是否登录")
     public ResultHolder isLogin(HttpServletResponse response) throws Exception {
         SessionUser user = SessionUtils.getUser();
+        if (user != null && SessionLifetime.expired(SecurityUtils.getSubject().getSession(false), System.currentTimeMillis())) {
+            log.info("msp session rejected phase=SESSION_CHECK reason=ABSOLUTE_EXPIRED");
+            SecurityUtils.getSubject().logout();
+            user = null;
+        }
         if (user != null) {
-            UserDTO userDTO = userLoginService.getUserDTO(user.getId());
+            UserDTO userDTO;
+            try {
+                userDTO = userLoginService.getUserDTO(user.getId());
+            } catch (org.apache.shiro.authc.DisabledAccountException e) {
+                userDTO = null;
+            }
+            if (userDTO == null || BooleanUtils.isTrue(userDTO.getDeleted()) || BooleanUtils.isFalse(userDTO.getEnable())) {
+                log.info("msp session rejected phase=ACCOUNT_CHECK reason=ACCOUNT_UNAVAILABLE");
+                SecurityUtils.getSubject().logout();
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                return ResultHolder.error(MsHttpResultCode.UNAUTHORIZED.getCode(), null);
+            }
             if (StringUtils.isBlank(userDTO.getLanguage())) {
                 userDTO.setLanguage(defaultLocale.replace("_", "-"));
             }
@@ -66,15 +81,9 @@ public class LoginController {
             if (StringUtils.isBlank(sessionUser.getLastProjectId()) || lastProject == null || !lastProject.getEnable()) {
                 sessionUser.setLastProjectId("no_such_project");
             }
-            if (miduoSsoApplicationService.isMiduoSession()) {
-                boolean needReauth = miduoSsoRefreshService.refreshIfNeeded(sessionUser.getId());
-                sessionUser.setNeedMiduoReauth(needReauth);
-                SecurityUtils.getSubject().getSession().setAttribute("needMiduoReauth", needReauth);
-                ResultHolder holder = ResultHolder.success(sessionUser);
-                // message 兼容联调脚本；前端以 data.needMiduoReauth 为准（transform 会丢弃 message）
-                holder.setMessage(needReauth ? "NEED_MIDUO_REAUTH" : null);
-                return holder;
-            }
+            // SSO verifies identity only at login. MSP owns the resulting session lifetime.
+            sessionUser.setNeedMiduoReauth(false); // compatibility with older clients
+            SecurityUtils.getSubject().getSession().removeAttribute("needMiduoReauth");
             return ResultHolder.success(sessionUser);
         }
         response.setStatus(HttpStatus.UNAUTHORIZED.value());

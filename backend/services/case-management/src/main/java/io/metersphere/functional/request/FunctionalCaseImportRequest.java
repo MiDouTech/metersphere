@@ -37,6 +37,9 @@ public class FunctionalCaseImportRequest implements Serializable {
     @Schema(description = "目标模块ID（左树选中文件夹；all/root/空则导入到项目根）")
     private String moduleId;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private boolean assetCatalogImport;
+
     /** Server-captured language of the frozen import template. */
     private String importLocale;
 }

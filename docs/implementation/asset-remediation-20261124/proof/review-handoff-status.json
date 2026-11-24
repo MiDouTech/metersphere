@@ -1,0 +1,16 @@
+{
+  "requiredBy": "AGENTS.md: 审查通过后提交",
+  "reviewerId": "0538c5c8-3cb8-4047-a0c6-73d2b1d63eb0",
+  "attempted": true,
+  "tool": "Codex app send_message_to_thread",
+  "result": "No Codex thread found for threadId. Hosts without a readable match: local",
+  "delivered": false,
+  "reviewerApprovalReceived": false,
+  "submittedTree": "850450dcc0b969074d0c9a31cc611299ef0bd46c",
+  "submittedPatchSha256": "5f0bd4c1b9d3186cbd056dc8dcc804730ff6008ffb860a3c360b3c84f650f5d3",
+  "recordType": "Historical handoff attempt before submission",
+  "subsequentUserInstruction": "提交代码，提交PR",
+  "submissionAction": "Proceed with the user's subsequent direct commit and PR instruction; do not claim approval from the unavailable named reviewer.",
+  "namedReviewStillUnavailable": true,
+  "independentLocalReview": "Separate local domain reviews passed; these are not impersonated approval by the specified reviewer."
+}

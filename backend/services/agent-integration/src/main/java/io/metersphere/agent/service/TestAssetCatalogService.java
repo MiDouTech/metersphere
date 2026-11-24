@@ -44,6 +44,7 @@ public class TestAssetCatalogService {
 
     @Resource
     private TestAssetMapper mapper;
+    @Resource private EvidenceCatalogService evidenceCatalog;
     @Resource
     private AgentProjectService agentProjectService;
     @Resource
@@ -59,7 +60,8 @@ public class TestAssetCatalogService {
             Map.entry("ENVIRONMENT", List.of(PermissionConstants.PROJECT_ENVIRONMENT_READ)),
             Map.entry("COMMON_STEP", List.of(PermissionConstants.PROJECT_API_SCENARIO_READ)),
             Map.entry("API_DEFINITION", List.of(PermissionConstants.PROJECT_API_DEFINITION_READ)),
-            Map.entry("EVIDENCE", List.of(PermissionConstants.AI_EXECUTION_READ)),
+            Map.entry("EVIDENCE", List.of(PermissionConstants.AI_EXECUTION_READ,
+                    PermissionConstants.FUNCTIONAL_CASE_READ, PermissionConstants.PROJECT_BUG_READ, "BUSINESS_ASSET:READ")),
             Map.entry("BUG", List.of(PermissionConstants.PROJECT_BUG_READ))
             ,Map.entry("BUSINESS_FLOW", List.of(PermissionConstants.AI_EXECUTION_READ))
             ,Map.entry("PAGE_OBJECT", List.of(PermissionConstants.AI_EXECUTION_READ))
@@ -84,6 +86,11 @@ public class TestAssetCatalogService {
                                                          Integer current, Integer pageSize) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         String type = requireCatalogType(assetType);
+        if ("EVIDENCE".equals(type)) {
+            var result=evidenceCatalog.search(resolvedProjectId, keyword, status, updatedAfter,
+                    creationSources, categoryId, includeDescendants, normalizePage(current), normalizePageSize(pageSize));
+            result.getList().forEach(this::attachLatestPublishedVersion);return result;
+        }
         assertPermission(type);
         int page = normalizePage(current);
         int size = normalizePageSize(pageSize);
@@ -105,6 +112,7 @@ public class TestAssetCatalogService {
     public TestAssetCatalogItemDTO detail(String projectId, String assetType, String assetId) {
         String resolvedProjectId = agentProjectService.resolveProjectId(projectId);
         String type = requireCatalogType(assetType);
+        if ("EVIDENCE".equals(type)) {var result=evidenceCatalog.detail(resolvedProjectId, StringUtils.trim(assetId));attachLatestPublishedVersion(result);return result;}
         assertPermission(type);
         TestAssetCatalogItemDTO item = mapper.selectCatalogItem(resolvedProjectId, type, StringUtils.trim(assetId));
         if (item == null) {
@@ -117,7 +125,8 @@ public class TestAssetCatalogService {
     @Transactional(rollbackFor = Exception.class)
     public TestAssetCatalogItemDTO publishAsset(String projectId,String assetType,String assetId){
         String resolvedProjectId=agentProjectService.resolveProjectId(projectId);String type=requireCatalogType(assetType);assertPermission(type);
-        TestAssetCatalogItemDTO item=mapper.selectCatalogItem(resolvedProjectId,type,StringUtils.trim(assetId));
+        TestAssetCatalogItemDTO item="EVIDENCE".equals(type)?evidenceCatalog.detail(resolvedProjectId,StringUtils.trim(assetId))
+                :mapper.selectCatalogItem(resolvedProjectId,type,StringUtils.trim(assetId));
         if(item==null)throw new MSException("ASSET_NOT_FOUND");
         TestAssetVersionDTO version=publish(item,StringUtils.defaultIfBlank(SessionUtils.getUserId(),AgentExecutionActorContext.get()));
         if(StringUtils.isBlank(version.getPublishedBy()))throw new MSException("ASSET_PUBLICATION_ACTOR_REQUIRED");
@@ -127,6 +136,7 @@ public class TestAssetCatalogService {
     @Transactional(rollbackFor = Exception.class)
     public TestAssetVersionDTO deprecateVersion(String projectId,String versionId,String assetType,String assetId){
         String resolvedProjectId=agentProjectService.resolveProjectId(projectId);String type=requireCatalogType(assetType);assertPermission(type);
+        if("EVIDENCE".equals(type))evidenceCatalog.detail(resolvedProjectId,StringUtils.trim(assetId));
         return versionService.deprecate(StringUtils.trim(versionId),resolvedProjectId,type,StringUtils.trim(assetId));
     }
 
@@ -149,7 +159,9 @@ public class TestAssetCatalogService {
             if (assetId == null || !seen.add(type + ":" + assetId)) {
                 throw new MSException("测试资产引用为空或重复：" + type + "/" + ref.getAssetId());
             }
-            TestAssetCatalogItemDTO item = mapper.selectCatalogItem(resolvedProjectId, type, assetId);
+            TestAssetCatalogItemDTO item = "EVIDENCE".equals(type)
+                    ? evidenceCatalog.detail(resolvedProjectId, assetId)
+                    : mapper.selectCatalogItem(resolvedProjectId, type, assetId);
             if (item == null) {
                 throw new MSException("测试资产不存在或不属于当前项目：" + type + "/" + assetId);
             }
@@ -208,6 +220,18 @@ public class TestAssetCatalogService {
         String id = StringUtils.trimToNull(assetId);
         String query = StringUtils.trimToNull(keyword);
         List<String> sources = normalizeSources(creationSources); String category = StringUtils.trimToNull(categoryId);
+        if ("EVIDENCE".equals(type)) return evidenceCatalog.versions(resolvedProjectId,id,query,sources,category,includeDescendants,page,size);
+        if (type==null && allowedTypes.contains("EVIDENCE")) {
+            var normal=allowedTypes.stream().filter(t->!"EVIDENCE".equals(t)).toList();
+            int fetch=Math.multiplyExact(page,size);
+            long normalTotal=normal.isEmpty()?0:mapper.countVersions(resolvedProjectId,normal,null,id,query,sources,category,includeDescendants);
+            var merged=new ArrayList<TestAssetVersionDTO>();
+            if(normalTotal>0)merged.addAll(mapper.selectVersions(resolvedProjectId,normal,null,id,query,sources,category,includeDescendants,0,fetch));
+            long evidenceTotal=0;
+            if(evidenceCatalog.canRead(resolvedProjectId)){var e=evidenceCatalog.versions(resolvedProjectId,id,query,sources,category,includeDescendants,1,fetch);evidenceTotal=e.getTotal();merged.addAll(e.getList());}
+            merged.sort(Comparator.comparing(TestAssetVersionDTO::getCreatedAt,Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(TestAssetVersionDTO::getId,Comparator.reverseOrder()));
+            int start=Math.min((page-1)*size,merged.size());return new Pager<>(new ArrayList<>(merged.subList(start,Math.min(start+size,merged.size()))),normalTotal+evidenceTotal,size,page);
+        }
         long total = mapper.countVersions(resolvedProjectId, allowedTypes, type, id, query, sources, category, includeDescendants);
         List<TestAssetVersionDTO> list = total == 0 ? List.of()
                 : mapper.selectVersions(resolvedProjectId, allowedTypes, type, id, query, sources, category, includeDescendants,
@@ -233,6 +257,11 @@ public class TestAssetCatalogService {
         String normalizedStatus = StringUtils.defaultIfBlank(StringUtils.upperCase(StringUtils.trimToNull(status)), "PUBLISHED");
         long total = 0;List<TestAssetCatalogItemDTO> merged = new ArrayList<>();
         for (String type : types) {
+            if ("EVIDENCE".equals(type)) {
+                var evidence = evidenceCatalog.search(resolvedProjectId, query, normalizedStatus, updatedAfter,
+                        List.of(), null, false, 1, fetch);
+                total += evidence.getTotal(); merged.addAll(evidence.getList()); continue;
+            }
             total += mapper.countCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter, List.of(), null, false);
             merged.addAll(mapper.selectCatalog(resolvedProjectId, type, query, normalizedStatus, updatedAfter,
                     List.of(), null, false, 0, fetch));
@@ -245,9 +274,9 @@ public class TestAssetCatalogService {
         return new Pager<>(result, total, size, page);
     }
 
-    public TestAssetVersionDTO version(String projectId,String versionId){String resolved=agentProjectService.resolveProjectId(projectId);TestAssetVersionDTO version=mapper.selectVersionById(versionId);if(version==null||!resolved.equals(version.getProjectId()))throw new MSException("ASSET_VERSION_NOT_FOUND");assertPermission(version.getAssetType());return version;}
+    public TestAssetVersionDTO version(String projectId,String versionId){String resolved=agentProjectService.resolveProjectId(projectId);TestAssetVersionDTO version=mapper.selectVersionById(versionId);if(version==null||!resolved.equals(version.getProjectId()))throw new MSException("ASSET_VERSION_NOT_FOUND");if("EVIDENCE".equals(version.getAssetType()))evidenceCatalog.detail(resolved,version.getAssetId());else assertPermission(version.getAssetType());return version;}
 
-    public TestAssetVersionDTO latestPublishedVersion(String projectId,String assetType,String assetId){String resolved=agentProjectService.resolveProjectId(projectId);String type=normalizeType(assetType);assertPermission(type);return versionService.latestPublished(resolved,type,StringUtils.trim(assetId));}
+    public TestAssetVersionDTO latestPublishedVersion(String projectId,String assetType,String assetId){String resolved=agentProjectService.resolveProjectId(projectId);String type=normalizeType(assetType);if("EVIDENCE".equals(type))evidenceCatalog.detail(resolved,StringUtils.trim(assetId));else assertPermission(type);return versionService.latestPublished(resolved,type,StringUtils.trim(assetId));}
 
     public Pager<List<TestAssetRelationDTO>> relations(String projectId, String assetType, String assetId,
                                                         String relationType, String keyword,
@@ -268,6 +297,12 @@ public class TestAssetCatalogService {
         String relation = StringUtils.upperCase(StringUtils.trimToNull(relationType));
         String query = StringUtils.trimToNull(keyword);
         List<String> sources = normalizeSources(creationSources); String category = StringUtils.trimToNull(categoryId);
+        if(allowedTypes.contains("EVIDENCE")){
+            var authorization=evidenceCatalog.authorization(resolvedProjectId);
+            long total=mapper.countAuthorizedRelations(resolvedProjectId,allowedTypes,type,id,relation,query,sources,category,includeDescendants,authorization);
+            var list=total==0?List.<TestAssetRelationDTO>of():mapper.selectAuthorizedRelations(resolvedProjectId,allowedTypes,type,id,relation,query,sources,category,includeDescendants,(long)(page-1)*size,size,authorization);
+            return new Pager<>(list,total,size,page);
+        }
         long total = mapper.countRelations(resolvedProjectId, allowedTypes, type, id, relation, query,
                 sources, category, includeDescendants);
         List<TestAssetRelationDTO> list = total == 0 ? List.of()
@@ -363,6 +398,15 @@ public class TestAssetCatalogService {
         snapshot.put("summary", item.getSummary());
         snapshot.put("owner", item.getOwner());
         snapshot.put("updateTime", item.getUpdateTime());
+        if ("EVIDENCE".equals(item.getAssetType()) && item.getSourceKind() != null) {
+            snapshot.put("sourceKind", item.getSourceKind());
+            snapshot.put("sourceId", item.getRelatedId());
+            snapshot.put("contentType", item.getContentType());
+            snapshot.put("contentAccess", Map.of("mode", "AUTHORIZED_DOWNLOAD", "endpoint",
+                    "/test-assets/evidence/" + item.getId() + "/content?projectId=" + item.getProjectId()));
+            return versionService.publish(item.getProjectId(), item.getAssetType(), item.getId(),
+                    item.getSourceVersion(), JSON.toJSONString(snapshot), userId);
+        }
         TestAssetExecutableSnapshotDTO executable = mapper.selectExecutableSnapshot(
                 item.getProjectId(), item.getAssetType(), item.getId());
         if (executable == null) {

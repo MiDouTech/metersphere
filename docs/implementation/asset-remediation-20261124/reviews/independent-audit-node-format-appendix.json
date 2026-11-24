@@ -1,0 +1,12 @@
+{
+  "status": "PASS_FORMAT_ONLY_APPENDIX",
+  "priorReviewFile": ".tmp/asset-remediation-20261124/independent-audit-evidence-review-r2.json",
+  "priorReviewSha256": "51397de8a1a8819e56da3d1a6b4e1569abcb1e5fca1c3dcc4d99eb2fa1ac4c5e",
+  "file": "metersphere-mcp/src/tools/sharedConfigurations.ts",
+  "stagedPreFormatBlobSha256": "a65b52265a497f9b2374ed1565900cfb049c255ca369772d8fcc121bb45f1686",
+  "newFileSha256": "383d38af6793a248ad782a048d11b97099c1f1a1b0942913e4eb3b7626d4e313",
+  "proof": "Read full staged-to-working-tree diff and verified with installed TypeScript compiler that both parse without syntax diagnostics and have identical recursive semantic AST fingerprints (node kinds, identifier/literal text, child order); only layout/trailing commas differ. Names, descriptions, schemas, handlers and USER_RBAC proxy unchanged. No tests/Maven rerun.",
+  "all21PriorBindingsUnchanged": true,
+  "bindingCorrection": "Prior 21-file report inspected Node contract in prose but omitted its file hash. This appendix adds the exact Node file binding without changing or overstating the prior immutable report.",
+  "openFindings": []
+}

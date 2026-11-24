@@ -67,4 +67,19 @@ class SharedConfigurationMcpToolsTests {
                 .execute(Map.of("projectId", "project", "id", "config", "sessionId", "session", "unknown", true)));
         verifyNoInteractions(configurations);
     }
+
+    @Test void auditToolUsesCurrentRoleAndForwardsBoundedFilters() {
+        var tool = tools.get("metersphere.shared_configuration.audits");
+        assertNotNull(tool);
+        assertEquals("USER_RBAC", tool.requiredScope());
+        assertEquals(true, tool.annotations().get("readOnlyHint"));
+        when(configurations.audits("project", "config", 1, 20, null, null))
+                .thenReturn(Map.of("items", List.of(), "total", 0L, "page", 1, "pageSize", 20));
+        assertEquals(0L, ((Map<?, ?>) tool.execute(Map.of("projectId", "project", "id", "config"))).get("total"));
+        tool.execute(Map.of("projectId", "project", "id", "config", "page", 2, "pageSize", 5,
+                "eventType", "SELECT_VERSION", "version", 2));
+        verify(configurations).audits("project", "config", 2, 5, "SELECT_VERSION", 2);
+        assertThrows(io.metersphere.sdk.exception.MSException.class, () -> tool.execute(Map.of("projectId", "project", "id", "config", "pageSize", 101)));
+        assertThrows(io.metersphere.sdk.exception.MSException.class, () -> tool.execute(Map.of("projectId", "project", "id", "config", "eventType", "UNKNOWN")));
+    }
 }

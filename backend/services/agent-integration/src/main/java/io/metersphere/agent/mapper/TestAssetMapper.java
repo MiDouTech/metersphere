@@ -111,6 +111,19 @@ public interface TestAssetMapper {
                                                @Param("offset") long offset,
                                                @Param("pageSize") int pageSize);
 
+    List<TestAssetRelationDTO> selectAuthorizedRelations(@Param("projectId") String projectId,
+                                               @Param("allowedTypes") List<String> allowedTypes,
+                                               @Param("assetType") String assetType,
+                                               @Param("assetId") String assetId,
+                                               @Param("relationType") String relationType,
+                                               @Param("keyword") String keyword,
+                                               @Param("creationSources") List<String> creationSources,
+                                               @Param("categoryId") String categoryId,
+                                               @Param("includeDescendants") boolean includeDescendants,
+                                               @Param("offset") long offset,
+                                               @Param("pageSize") int pageSize,
+                        @Param("evidenceAuthorization") io.metersphere.agent.service.EvidenceCatalogService.AuthorizationSql evidenceAuthorization);
+
     long countRelations(@Param("projectId") String projectId,
                         @Param("allowedTypes") List<String> allowedTypes,
                         @Param("assetType") String assetType,
@@ -120,6 +133,17 @@ public interface TestAssetMapper {
                         @Param("creationSources") List<String> creationSources,
                         @Param("categoryId") String categoryId,
                         @Param("includeDescendants") boolean includeDescendants);
+
+    long countAuthorizedRelations(@Param("projectId") String projectId,
+                        @Param("allowedTypes") List<String> allowedTypes,
+                        @Param("assetType") String assetType,
+                        @Param("assetId") String assetId,
+                        @Param("relationType") String relationType,
+                        @Param("keyword") String keyword,
+                        @Param("creationSources") List<String> creationSources,
+                        @Param("categoryId") String categoryId,
+                        @Param("includeDescendants") boolean includeDescendants,
+                        @Param("evidenceAuthorization") io.metersphere.agent.service.EvidenceCatalogService.AuthorizationSql evidenceAuthorization);
 
     List<TestAssetContextDocumentDTO> selectDocumentContextForCases(@Param("projectId") String projectId,
                                                                     @Param("caseAssetIds") List<String> caseAssetIds);

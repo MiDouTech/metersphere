@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
 
 import { getProjectInfo } from '@/api/modules/project-management/project';
-import { getMiduoBridgeUrl } from '@/api/modules/sso/miduo';
 import { getUserHasProjectPermission } from '@/api/modules/system';
 import {
   getAuthenticationList,
@@ -211,27 +210,8 @@ const useUserStore = defineStore('user', {
         if (!res) {
           return false;
         }
-        if (res.needMiduoReauth) {
-          try {
-            // 防止并发 is-login / 路由守卫重复跳桥形成闪退循环
-            const redirectKey = 'miduo_reauth_redirecting';
-            if (sessionStorage.getItem(redirectKey) === '1') {
-              return false;
-            }
-            const bridge = await getMiduoBridgeUrl();
-            if (bridge?.url) {
-              sessionStorage.setItem(redirectKey, '1');
-              clearToken();
-              window.location.href = bridge.url;
-              return false;
-            }
-          } catch (e) {
-            // eslint-disable-next-line no-console
-            console.log(e);
-          }
-        } else {
-          sessionStorage.removeItem('miduo_reauth_redirecting');
-        }
+        // The server validates the independent MSP session, not the upstream SSO token.
+        sessionStorage.removeItem('miduo_reauth_redirecting');
         const appStore = useAppStore();
         setToken(res.sessionId, res.csrfToken);
         this.setInfo(res);

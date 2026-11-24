@@ -15,6 +15,8 @@ public class TestAssetCatalogItemDTO {
     private Long updateTime;
     private String sourceVersion;
     private String relatedId;
+    private String sourceKind;
+    private String contentType;
     private String assetVersionId;
     private Integer assetVersionNo;
     private String contentHash;

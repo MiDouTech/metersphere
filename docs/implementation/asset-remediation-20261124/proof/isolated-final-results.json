@@ -1,0 +1,25 @@
+{
+  "tree": "e84a4bab6cf5a69c29abaf6387496625650aa7c8",
+  "buildSuccess": true,
+  "totals": {
+    "tests": 581,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 53
+  },
+  "executed": 528,
+  "permissionManifest": {
+    "name": "io.metersphere.app.PermissionManifestCoverageTests",
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "nodeSuite": {
+    "pass": 49,
+    "fail": 0,
+    "skipped": 0
+  },
+  "source": "isolated staged tree without preexisting unrelated changes",
+  "log": "C:/Users/midoo/AppData/Local/Temp/asset-remediation-verified-20261124-uzwsm_6o/backend-isolated.log"
+}

@@ -82,6 +82,8 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
     private FunctionalCaseService functionalCaseService;
     private SessionUser user;
     private int successCount = 0;
+    private int skippedCount = 0;
+    public int getSkippedCount() { return skippedCount; }
     private int logicalCount = 0;
     private Map<String, String> pathMap = new HashMap<>();
     protected static final int TAGS_COUNT = 10;
@@ -90,6 +92,7 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
     private AtomicLong lastPos;
     private java.util.function.BiConsumer<String,FunctionalCaseExcelData> preparedItem;
     private boolean deferWrites;
+    private final Set<String> assetImportNames = new HashSet<>();
     private final List<List<FunctionalCaseExcelData>> preparedCreates = new ArrayList<>();
     private final List<List<FunctionalCaseExcelData>> preparedUpdates = new ArrayList<>();
 
@@ -98,7 +101,24 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
 
     /** Caller supplies the atomic business transaction; preserve original batch ordering. */
     public void writePrepared() {
-        for (int i = 0; i < preparedCreates.size(); i++) {
+        if (request.isAssetCatalogImport()) {
+            var resolver = CommonBeanFactory.getBean(io.metersphere.functional.asset.service.CaseAssetImportIdentityResolver.class);
+            resolver.lockCatalog(request);
+            successCount = 0;
+            for (int i = 0; i < preparedCreates.size(); i++) {
+                var rows = new ArrayList<>(preparedCreates.get(i)); rows.addAll(preparedUpdates.get(i));
+                var creates = new ArrayList<FunctionalCaseExcelData>();
+                var updates = new ArrayList<FunctionalCaseExcelData>();
+                for (var row : rows) {
+                    String target = resolver.resolve(request, row.getName());
+                    if (target == null) creates.add(row);
+                    else if (request.isCover()) { row.setNum(target); updates.add(row); }
+                    else skippedCount++;
+                }
+                writeBatch(creates, updates);
+                successCount += creates.size() + updates.size();
+            }
+        } else for (int i = 0; i < preparedCreates.size(); i++) {
             writeBatch(preparedCreates.get(i), preparedUpdates.get(i));
         }
         preparedCreates.clear();
@@ -432,6 +452,16 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
      * @param functionalCaseExcelData
      */
     private void handleId(FunctionalCaseExcelData functionalCaseExcelData) {
+        if (request.isAssetCatalogImport()) {
+            if (!assetImportNames.add(StringUtils.trim(functionalCaseExcelData.getName()).toLowerCase(Locale.ROOT)))
+                throw new MSException("文件内存在重复用例名称，请去重后导入");
+            String target = CommonBeanFactory.getBean(io.metersphere.functional.asset.service.CaseAssetImportIdentityResolver.class)
+                    .resolve(request, functionalCaseExcelData.getName());
+            if (target == null) list.add(functionalCaseExcelData);
+            else if (request.isCover()) { functionalCaseExcelData.setNum(target); updateList.add(functionalCaseExcelData); }
+            else { skippedCount++; if (preparedItem != null) preparedItem.accept("SKIPPED", functionalCaseExcelData); }
+            return;
+        }
         if (StringUtils.isNotEmpty(functionalCaseExcelData.getNum())) {
             String checkResult = functionalCaseService.checkNumExist(functionalCaseExcelData.getNum(), request.getProjectId());
             if (StringUtils.isNotEmpty(checkResult)) {
@@ -439,8 +469,9 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
                     //如果是覆盖，那么有id的需要更新
                     functionalCaseExcelData.setNum(checkResult);
                     updateList.add(functionalCaseExcelData);
-                } else if(preparedItem!=null) {
-                    preparedItem.accept("SKIPPED",functionalCaseExcelData);
+                } else {
+                    skippedCount++;
+                    if(preparedItem!=null) preparedItem.accept("SKIPPED",functionalCaseExcelData);
                 }
             } else {
                 list.add(functionalCaseExcelData);
@@ -810,7 +841,12 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
 
     private void formatHeadMap() {
         for (Integer key : headMap.keySet()) {
-            String name = headMap.get(key);
+            String name = StringUtils.trim(headMap.get(key));
+            var priority = FunctionalCaseExcelData.findPriorityField(new ArrayList<>(customFieldsMap.values()));
+            if (priority != null && StringUtils.equalsAny(name, "用例等级", "用例等級", "Priority", "functional_priority")) {
+                headMap.put(key, priority.getFieldName());
+                continue;
+            }
             if (excelHeadToFieldNameDic.containsKey(name)) {
                 headMap.put(key, excelHeadToFieldNameDic.get(name));
             }

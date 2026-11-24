@@ -35,7 +35,7 @@ public class CaseAssetHistorySyncWorker {
                 refresh(jobId, true);
             }
         } catch (Exception e) {
-            LogUtils.error("Recover interrupted case asset history jobs failed", e);
+            CaseAssetFailureDiagnostics.record("HISTORY_RECOVERY", "startup", e);
         }
     }
 
@@ -71,8 +71,6 @@ public class CaseAssetHistorySyncWorker {
                             else skipped++;
                         } catch (Exception caseError) {
                             String reference = itemId + ":" + caseId;
-                            LogUtils.error("Historical case asset sync failed, reference=" + reference
-                                    + ", project=" + projectId + ", case=" + caseId, caseError);
                             failures.add("用例 " + caseId + "：" + safeFailureMessage(caseError, reference));
                         }
                     }
@@ -85,8 +83,6 @@ public class CaseAssetHistorySyncWorker {
                             status, created, updated, skipped, failureReason, System.currentTimeMillis(), itemId);
                 }
             } catch (Exception e) {
-                LogUtils.error("Historical case asset project preparation failed, item=" + itemId
-                        + ", project=" + projectId, e);
                 jdbcTemplate.update("UPDATE case_asset_history_sync_item SET status='FAILED',failure_reason=?,update_time=? WHERE id=?",
                         safeFailureMessage(e, itemId),
                         System.currentTimeMillis(), itemId);
@@ -112,16 +108,7 @@ public class CaseAssetHistorySyncWorker {
     }
 
     private String safeFailureMessage(Exception error, String reference) {
-        Throwable cause = error;
-        while (cause.getCause() != null && cause.getCause() != cause) cause = cause.getCause();
-        if (error instanceof org.springframework.dao.DuplicateKeyException || cause instanceof java.sql.SQLIntegrityConstraintViolationException) {
-            return "目录或用例映射冲突，请核对历史目录来源后重试。错误编号：" + reference;
-        }
-        if (error instanceof TransientDataAccessException) return "数据暂时不可用，自动重试后仍未成功，请稍后重试。错误编号：" + reference;
-        if (error instanceof MSException && StringUtils.isNotBlank(error.getMessage())) {
-            return StringUtils.left(error.getMessage(), 1500);
-        }
-        return "同步未完成，请重试失败项；如仍失败，请联系管理员核对项目、模板和存储配置。错误编号：" + reference;
+        return CaseAssetFailureDiagnostics.record("HISTORY_SYNC", reference, error);
     }
 
     private void refresh(String jobId, boolean finish) {

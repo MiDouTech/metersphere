@@ -1,30 +1,12 @@
 <template>
   <div class="asset-page min-w-0 max-w-full p-4">
     <MsCard simple :min-width="0">
-      <div class="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <div class="text-base font-medium">用例资产</div>
-          <div class="mt-1 text-sm text-[var(--color-text-3)]"
-            >用例项目仅是资产分类目录，不会创建可进入的业务项目。</div
-          >
-        </div>
+      <div class="mb-4">
+        <div class="text-base font-medium">用例资产</div>
+        <div class="mt-1 text-sm text-[var(--color-text-3)]">用例项目仅是资产分类目录，不会创建可进入的业务项目。</div>
+      </div>
+      <div class="case-toolbar mb-4">
         <a-space class="asset-toolbar-actions">
-          <a-button
-            v-if="canAdd"
-            v-visible-permission="{
-              code: 'CASE_ASSET_ADD_BUTTON',
-              permissions: ['CASE_ASSET:READ+ADD'],
-              typeList: ['ORGANIZATION'],
-            }"
-            v-operable-permission="{
-              code: 'CASE_ASSET_ADD_BUTTON',
-              permissions: ['CASE_ASSET:READ+ADD'],
-              typeList: ['ORGANIZATION'],
-            }"
-            :loading="backfillLoading"
-            @click="backfillCatalogs"
-            >同步历史项目及用例</a-button
-          >
           <a-button
             v-if="canAdd"
             v-visible-permission="{
@@ -41,7 +23,31 @@
             @click="openCatalogCreate"
             >新建用例项目</a-button
           >
+          <a-button
+            v-if="canAdd"
+            v-visible-permission="{
+              code: 'CASE_ASSET_ADD_BUTTON',
+              permissions: ['CASE_ASSET:READ+ADD'],
+              typeList: ['ORGANIZATION'],
+            }"
+            v-operable-permission="{
+              code: 'CASE_ASSET_ADD_BUTTON',
+              permissions: ['CASE_ASSET:READ+ADD'],
+              typeList: ['ORGANIZATION'],
+            }"
+            :loading="backfillLoading"
+            @click="backfillCatalogs"
+            >同步历史项目及用例</a-button
+          >
         </a-space>
+        <a-input-search
+          v-model="catalogQuery.keyword"
+          class="catalog-search"
+          allow-clear
+          placeholder="搜索目录名称或 ID"
+          @search="searchCatalogs"
+          @clear="searchCatalogs"
+        />
       </div>
       <a-alert v-if="historySyncJob" class="mt-3" :type="historySyncJob.failed ? 'warning' : 'info'">
         <div>
@@ -74,13 +80,6 @@
 
       <div class="asset-layout">
         <aside class="catalog-panel">
-          <a-input-search
-            v-model="catalogQuery.keyword"
-            allow-clear
-            placeholder="搜索目录名称或 ID"
-            @search="searchCatalogs"
-            @clear="searchCatalogs"
-          />
           <a-spin :loading="catalogLoading" class="mt-3 block">
             <a-empty v-if="!catalogs.length" description="暂无用例项目" />
             <div
@@ -136,38 +135,9 @@
         </aside>
 
         <main class="min-w-0 flex-1">
-          <div class="mb-4 flex flex-wrap items-center gap-3">
-            <span class="font-medium">{{ selectedCatalog?.name || '请选择用例项目' }}</span>
-            <a-input-search
-              v-model="caseQuery.keyword"
-              class="w-[260px]"
-              allow-clear
-              placeholder="搜索用例 ID 或名称"
-              @search="searchCases"
-              @clear="searchCases"
-            />
-            <a-select
-              v-model="caseQuery.creationSources"
-              multiple
-              allow-clear
-              class="w-[200px]"
-              placeholder="建立方式"
-              @change="searchCases"
-            >
-              <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{ item.label }}</a-option>
-            </a-select>
-            <a-tree-select
-              v-model="caseQuery.assetCategoryId"
-              allow-clear
-              allow-search
-              class="w-[200px]"
-              :data="assetCategories"
-              :field-names="{ key: 'id', title: 'name', children: 'children' }"
-              placeholder="资产分类"
-              @change="searchCases"
-            />
-            <a-checkbox v-model="caseQuery.includeAssetCategoryDescendants" @change="searchCases">含子分类</a-checkbox>
-            <div class="asset-toolbar-actions ml-auto flex gap-2">
+          <div class="mb-3 font-medium">{{ selectedCatalog?.name || '请选择用例项目' }}</div>
+          <div class="case-toolbar mb-4">
+            <div class="asset-toolbar-actions flex gap-2">
               <a-button
                 v-if="canAdd"
                 v-operable-permission="{
@@ -175,6 +145,7 @@
                   permissions: ['CASE_ASSET:READ+ADD'],
                   typeList: ['ORGANIZATION'],
                 }"
+                type="primary"
                 :disabled="!selectedCatalogId"
                 @click="caseModalVisible = true"
                 >新建用例</a-button
@@ -198,6 +169,41 @@
               <a-button :loading="caseLoading" :disabled="!selectedCatalogId" @click="loadCases">刷新</a-button>
               <a-button v-permission="['TEST_ASSET_CATEGORY:MANAGE']" @click="categoryDrawerVisible = true"
                 >分类管理</a-button
+              >
+            </div>
+            <div class="case-toolbar-search">
+              <a-input-search
+                v-model="caseQuery.keyword"
+                class="w-[260px]"
+                allow-clear
+                placeholder="搜索用例 ID 或名称"
+                @search="searchCases"
+                @clear="searchCases"
+              />
+              <a-select
+                v-model="caseQuery.creationSources"
+                multiple
+                allow-clear
+                class="w-[200px]"
+                placeholder="建立方式"
+                @change="searchCases"
+              >
+                <a-option v-for="item in sourceOptions" :key="item.value" :value="item.value">{{
+                  item.label
+                }}</a-option>
+              </a-select>
+              <a-tree-select
+                v-model="caseQuery.assetCategoryId"
+                allow-clear
+                allow-search
+                class="w-[200px]"
+                :data="assetCategories"
+                :field-names="{ key: 'id', title: 'name', children: 'children' }"
+                placeholder="资产分类"
+                @change="searchCases"
+              />
+              <a-checkbox v-model="caseQuery.includeAssetCategoryDescendants" @change="searchCases"
+                >含子分类</a-checkbox
               >
             </div>
           </div>
@@ -373,7 +379,8 @@
     <a-modal
       v-model:visible="catalogModalVisible"
       :title="editingCatalog ? '重命名用例项目' : '新建用例项目'"
-      @ok="saveCatalog"
+      @before-ok="saveCatalog"
+      @ok="loadCatalogs"
     >
       <a-form :model="{ catalogName }" layout="vertical"
         ><a-form-item label="目录名称" required
@@ -467,13 +474,10 @@
     startAssetExport,
     updateCaseAssetCatalog,
   } from '@/api/modules/case-management/featureCase';
-  import { useUserStore } from '@/store';
   import { hasAnyPermission } from '@/utils/permission';
 
   import type { CaseManagementTable } from '@/models/caseManagement/featureCase';
   import { TestAssetRouteEnum } from '@/enums/routeEnum';
-
-  const userStore = useUserStore();
 
   const router = useRouter();
   const canAdd = hasAnyPermission(['CASE_ASSET:READ+ADD']);
@@ -789,7 +793,6 @@
     if (editingCatalog.value) await updateCaseAssetCatalog(editingCatalog.value.id, catalogName.value.trim());
     else await createCaseAssetCatalog(catalogName.value.trim());
     Message.success('保存成功');
-    await loadCatalogs();
     return true;
   }
   function confirmDeleteCatalog(item: CaseAssetCatalog) {
@@ -886,6 +889,23 @@
     display: flex;
     gap: 16px;
   }
+  .case-toolbar,
+  .case-toolbar-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  .case-toolbar-search,
+  .catalog-search {
+    margin-inline-start: auto;
+  }
+  .case-toolbar-search {
+    justify-content: flex-end;
+  }
+  .catalog-search {
+    width: min(100%, 280px);
+  }
   .asset-toolbar-actions {
     flex-wrap: wrap;
   }
@@ -900,9 +920,9 @@
       flex-direction: column;
     }
     .asset-layout .catalog-panel {
+      overflow: auto;
       width: 100%;
       max-height: 280px;
-      overflow: auto;
       border-right: none;
     }
   }

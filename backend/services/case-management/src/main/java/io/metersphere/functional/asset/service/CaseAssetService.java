@@ -769,8 +769,11 @@ public class CaseAssetService {
     private void prepareImport(String catalogId, FunctionalCaseImportRequest request) {
         Map<String, Object> catalog = requireCatalog(catalogId);
         request.setProjectId(requireHubProjectId());
+        // Asset imports have no caller-selectable business-project version. File service resolves the hub default.
+        request.setVersionId(null);
         request.setWorkspaceId(requireOrganization());
         request.setModuleId(String.valueOf(catalog.get("hubModuleId")));
+        request.setAssetCatalogImport(true);
     }
 
     private Map<String, Object> requireCatalog(String id) {

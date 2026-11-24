@@ -515,6 +515,50 @@
         LIMIT #{offset}, #{pageSize}
     </select>
 
+    <select id="selectAuthorizedRelations" resultType="io.metersphere.agent.dto.TestAssetRelationDTO">
+        SELECT r.id, r.project_id AS projectId, r.relation_type AS relationType,
+               r.source_asset_type AS sourceAssetType, r.source_asset_id AS sourceAssetId,
+               COALESCE(sd.original_name, sfc.name, st.name,
+                        CONCAT('Step ', ss.pos, ': ', LEFT(ss.instruction, 120)),
+                        CASE WHEN JSON_VALID(sv.content_snapshot) THEN JSON_UNQUOTE(JSON_EXTRACT(sv.content_snapshot, '$.name')) END,
+                        r.source_asset_id) AS sourceAssetName,
+               r.source_version_id AS sourceVersionId, sv.version_no AS sourceVersionNo,
+               r.target_asset_type AS targetAssetType, r.target_asset_id AS targetAssetId,
+               COALESCE(td.original_name, tfc.name, tt.name,
+                        CONCAT('Step ', ts.pos, ': ', LEFT(ts.instruction, 120)),
+                        CASE WHEN JSON_VALID(tv.content_snapshot) THEN JSON_UNQUOTE(JSON_EXTRACT(tv.content_snapshot, '$.name')) END,
+                        r.target_asset_id) AS targetAssetName,
+               r.target_version_id AS targetVersionId, tv.version_no AS targetVersionNo,
+               r.metadata, r.created_by AS createdBy, r.created_at AS createdAt,
+               COALESCE(sm.creation_source,'UNKNOWN') AS sourceCreationSource,sc.path AS sourceCategoryPath,
+               COALESCE(tm.creation_source,'UNKNOWN') AS targetCreationSource,tc.path AS targetCategoryPath
+        FROM test_asset_relation r
+        LEFT JOIN test_asset_metadata sm ON sm.project_id=r.project_id AND sm.asset_type=r.source_asset_type AND sm.asset_id=r.source_asset_id
+        LEFT JOIN test_asset_category sc ON sc.id=sm.category_id AND sc.deleted=b'0'
+        LEFT JOIN test_asset_metadata tm ON tm.project_id=r.project_id AND tm.asset_type=r.target_asset_type AND tm.asset_id=r.target_asset_id
+        LEFT JOIN test_asset_category tc ON tc.id=tm.category_id AND tc.deleted=b'0'
+        LEFT JOIN test_asset_version sv ON sv.id = r.source_version_id
+        LEFT JOIN test_asset_version tv ON tv.id = r.target_version_id
+        LEFT JOIN ai_source_document sd ON r.source_asset_type = 'DOCUMENT' AND sd.id = r.source_asset_id
+        LEFT JOIN functional_case sfc ON r.source_asset_type = 'CASE' AND sfc.ref_id = r.source_asset_id AND sfc.latest = 1 AND sfc.deleted = 0
+        LEFT JOIN ai_execution_task st ON r.source_asset_type = 'TASK' AND st.id = r.source_asset_id
+        LEFT JOIN ai_execution_step ss ON r.source_asset_type = 'STEP' AND ss.id = r.source_asset_id
+        LEFT JOIN ai_source_document td ON r.target_asset_type = 'DOCUMENT' AND td.id = r.target_asset_id
+        LEFT JOIN functional_case tfc ON r.target_asset_type = 'CASE' AND tfc.ref_id = r.target_asset_id AND tfc.latest = 1 AND tfc.deleted = 0
+        LEFT JOIN ai_execution_task tt ON r.target_asset_type = 'TASK' AND tt.id = r.target_asset_id
+        LEFT JOIN ai_execution_step ts ON r.target_asset_type = 'STEP' AND ts.id = r.target_asset_id
+        <include refid="RelationWhere"/>
+        AND (r.source_asset_type != 'EVIDENCE' OR r.source_asset_id IN (${evidenceAuthorization.sql}))
+        AND (r.target_asset_type != 'EVIDENCE' OR r.target_asset_id IN (${evidenceAuthorization.sql}))
+        <if test="assetType != null and assetType != '' and assetId != null and assetId != ''">
+            AND ((r.source_asset_type=#{assetType} AND r.source_asset_id=#{assetId})
+              OR (r.target_asset_type=#{assetType} AND r.target_asset_id=#{assetId}))
+        </if>
+
+        ORDER BY r.created_at DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
     <select id="countRelations" resultType="long">
         SELECT COUNT(DISTINCT r.id)
         FROM test_asset_relation r
@@ -533,6 +577,33 @@
         LEFT JOIN ai_execution_task tt ON r.target_asset_type = 'TASK' AND tt.id = r.target_asset_id
         LEFT JOIN ai_execution_step ts ON r.target_asset_type = 'STEP' AND ts.id = r.target_asset_id
         <include refid="RelationWhere"/>
+    </select>
+
+    <select id="countAuthorizedRelations" resultType="long">
+        SELECT COUNT(DISTINCT r.id)
+        FROM test_asset_relation r
+        LEFT JOIN test_asset_metadata sm ON sm.project_id=r.project_id AND sm.asset_type=r.source_asset_type AND sm.asset_id=r.source_asset_id
+        LEFT JOIN test_asset_category sc ON sc.id=sm.category_id AND sc.deleted=b'0'
+        LEFT JOIN test_asset_metadata tm ON tm.project_id=r.project_id AND tm.asset_type=r.target_asset_type AND tm.asset_id=r.target_asset_id
+        LEFT JOIN test_asset_category tc ON tc.id=tm.category_id AND tc.deleted=b'0'
+        LEFT JOIN test_asset_version sv ON sv.id = r.source_version_id
+        LEFT JOIN test_asset_version tv ON tv.id = r.target_version_id
+        LEFT JOIN ai_source_document sd ON r.source_asset_type = 'DOCUMENT' AND sd.id = r.source_asset_id
+        LEFT JOIN functional_case sfc ON r.source_asset_type = 'CASE' AND sfc.ref_id = r.source_asset_id AND sfc.latest = 1 AND sfc.deleted = 0
+        LEFT JOIN ai_execution_task st ON r.source_asset_type = 'TASK' AND st.id = r.source_asset_id
+        LEFT JOIN ai_execution_step ss ON r.source_asset_type = 'STEP' AND ss.id = r.source_asset_id
+        LEFT JOIN ai_source_document td ON r.target_asset_type = 'DOCUMENT' AND td.id = r.target_asset_id
+        LEFT JOIN functional_case tfc ON r.target_asset_type = 'CASE' AND tfc.ref_id = r.target_asset_id AND tfc.latest = 1 AND tfc.deleted = 0
+        LEFT JOIN ai_execution_task tt ON r.target_asset_type = 'TASK' AND tt.id = r.target_asset_id
+        LEFT JOIN ai_execution_step ts ON r.target_asset_type = 'STEP' AND ts.id = r.target_asset_id
+        <include refid="RelationWhere"/>
+        AND (r.source_asset_type != 'EVIDENCE' OR r.source_asset_id IN (${evidenceAuthorization.sql}))
+        AND (r.target_asset_type != 'EVIDENCE' OR r.target_asset_id IN (${evidenceAuthorization.sql}))
+        <if test="assetType != null and assetType != '' and assetId != null and assetId != ''">
+            AND ((r.source_asset_type=#{assetType} AND r.source_asset_id=#{assetId})
+              OR (r.target_asset_type=#{assetType} AND r.target_asset_id=#{assetId}))
+        </if>
+
     </select>
 
     <select id="selectDocumentContextForCases" resultType="io.metersphere.agent.dto.TestAssetContextDocumentDTO">
