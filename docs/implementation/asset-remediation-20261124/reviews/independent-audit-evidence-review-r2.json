@@ -1,0 +1,122 @@
+{
+  "base": "e1fd443ec737968c6e20eba29171c5d4a3038346",
+  "status": "PASS_FOR_REVIEWED_SCOPE",
+  "openFindings": [],
+  "bindings": [
+    {
+      "file": "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_158__shared_configuration_audit_paging.sql",
+      "sha256": "775183d2002adec2667e7864f07607e9134de94b2af7f9b3811694acae87fce0"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/EvidenceCatalogController.java",
+      "sha256": "1a4620debd044266291507b3cec89d24999bd76c65b41de40343dbb2975802f6"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/TestAssetController.java",
+      "sha256": "a398c39804abbc8f017f4323e8ce61a6864865c19e16b7aad6844cb22568e14b"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/TestAssetCatalogItemDTO.java",
+      "sha256": "b2e05995d86eb8b6f229e5680d962635e532ad4f8174b568a064d80519d4fae3"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/TestAssetMapper.java",
+      "sha256": "e1ac29fe90d7acb12ad4d8afc8318ffe4776b97d547fa4ae7b430c258b5d7b6b"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/TestAssetMapper.xml",
+      "sha256": "b34421a15557627822191f09358b431ea50c9dcad4a21c97b8b9773524160d7d"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/EvidenceCatalogService.java",
+      "sha256": "dddedbddf8cfa865a5653c010ba42b432ff16bd9e960bed11d02d7422f1a3fa4"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/SharedConfigurationService.java",
+      "sha256": "d1e5c0f13c92792880473705a462812f690a87e8c55fe66d6feeb16dd77d5b6f"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetCatalogService.java",
+      "sha256": "52e21e6544eeca79438fff590e48ca7fa64c64d1ed041879d624e80555dd942d"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/configuration/SharedConfigurationMcpTools.java",
+      "sha256": "e43a26db0c912cfd6739a5afbdc261504bfe33705126459c68720a4e88ac1157"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/controller/EvidenceCatalogControllerTests.java",
+      "sha256": "d5e9ee534746f52acfb481389b686d3f047ff0c75772efa30ae73dcc6f92afb1"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/EvidenceCatalogMySqlTests.java",
+      "sha256": "60fbbceef8689ff8f79ac998645704f0afec9d8c30300a1443896b32f62729bd"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/EvidenceCatalogServiceTests.java",
+      "sha256": "0a7f948637a148255d96bddae5cff60fe7ad6f9472c8de20651a265ea3310ff8"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationAuditMySqlTests.java",
+      "sha256": "9232373339e8abe569db1004378cd45f308152afd123d621019bd3d1994786bc"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationMcpToolsTests.java",
+      "sha256": "29a812cfcb6e8cd94161a52b24fb12bf55fbfd3ddd5f5ff17df243d3b5fef7cd"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/SharedConfigurationServiceTests.java",
+      "sha256": "7603abf87b45c3a91945a9bd8ed79248220483658723127357f54b1b729e96a0"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/TestAssetCatalogServiceTests.java",
+      "sha256": "08b227cd7fb6d05c598bfa6ad10c156e249470f0f46a23969cf5ad7e7f246475"
+    },
+    {
+      "file": "docs/implementation/asset-remediation-20261124/evidence-trace.md",
+      "sha256": "318d097334b045f237eff7dcde1fa508a0a0dd56e644a785f5257a0caddffd17"
+    },
+    {
+      "file": "frontend/scripts/test-evidence-preview-boundary.mjs",
+      "sha256": "fb045f95d0ee22183cd35c7976ed52853eaa63164629d3caf8e9993a48c81d3a"
+    },
+    {
+      "file": "frontend/src/api/modules/ai-execution.ts",
+      "sha256": "6dabb3a7d4f5013358f4b75e64a9f79b4217a376baaf239bcf5fda2bdf29958d"
+    },
+    {
+      "file": "frontend/src/views/test-asset/catalog.vue",
+      "sha256": "9d004258f6465f9b14a87b13a224e57d175151c84279d490939c7d376edc8998"
+    }
+  ],
+  "evidenceAuthorManifest": {
+    "file": ".tmp/asset-remediation-20261124/evidence-domain-verification.json",
+    "sha256": "537a01d302ecf790304e9285b29592911fd067acffae0131abe18217e33db899",
+    "all15FilesMatch": true
+  },
+  "closedFindings": [
+    {
+      "id": "EVIDENCE-detail-metadata",
+      "proof": "rows/detail/search share CATALOG_FIELDS+METADATA_JOINS; source/category/ref fields projected in common row mapper"
+    },
+    {
+      "id": "EVIDENCE-task-frozen-context",
+      "proof": "resolveContext authorizes new source via evidenceCatalog.detail then verifies getPublished fixed project/type/id/version"
+    },
+    {
+      "id": "EVIDENCE-relations-source-RBAC",
+      "proof": "relations delegates countAuthorizedRelations/selectAuthorizedRelations whenever EVIDENCE is allowed. Both SQL paths require each EVIDENCE endpoint in current source-specific authorization projection; filters before count and pagination; typed known ID predicate present. Private final AuthorizationSql constructor accepts only service-created fixed SQL; project/user/token values remain #{arguments[n]} binds, no request text interpolation. Actual MyBatis/native MySQL restricted-role, known-ID, cross-token and readerACL regression executed in EvidenceCatalogMySqlTests."
+    }
+  ],
+  "auditConclusion": "Current-role read authorization; project ownership join; bounded deterministic pagination; event/version filters; content/ciphertext excluded; no query audit side effect; native/Node schemas and added README audits documentation align. V158 paging index migration and latest project fixture inspected.",
+  "validationEvidence": {
+    "file": ".build/mysql-selftest/1bd974bd/native-suite.log",
+    "sha256": "d1414ad588cdb8cbaf11a92144d56af94622e7399a1fc2585429ceda5451df50",
+    "observed": "BUILD SUCCESS; EvidenceCatalogMySqlTests 5 PASS; SharedConfigurationAuditMySqlTests 1 PASS; CaseAssetCatalogIdentityMySqlTests 3 PASS; no errors/failures/skips. Reviewer read results, did not rerun Maven."
+  },
+  "scopeLimits": [
+    "Excluded preexisting DirectExecutionService/McpBundle and their unrelated changes",
+    "README review limited to added audits paragraph; frontend review limited to EVIDENCE API/preview changes",
+    "Root final full-app packaging remains independent completion evidence; deployed acceptance of new code requires deployment",
+    "No source changes performed in this readonly review"
+  ]
+}

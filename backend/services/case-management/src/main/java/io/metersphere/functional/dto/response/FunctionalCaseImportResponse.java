@@ -25,6 +25,8 @@ public class FunctionalCaseImportResponse implements Serializable {
     private int successCount;
     @Schema(description = "失败数量")
     private int failCount;
+    @Schema(description = "按策略跳过数量")
+    private int skippedCount;
     @Schema(description = "报错信息")
     private List<ExcelErrData<FunctionalCaseExcelData>> errorMessages;
 

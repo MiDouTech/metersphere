@@ -1,0 +1,75 @@
+{
+  "base": "e1fd443ec737968c6e20eba29171c5d4a3038346",
+  "role": "independent read-only UI review; reviewer did not implement these files",
+  "status": "PASS_FOR_REVIEWED_SCOPE",
+  "openFindings": [],
+  "bindings": [
+    {
+      "file": "frontend/src/api/modules/ai-execution.ts",
+      "sha256": "6dabb3a7d4f5013358f4b75e64a9f79b4217a376baaf239bcf5fda2bdf29958d"
+    },
+    {
+      "file": "frontend/src/views/test-asset/asset-case-detail.vue",
+      "sha256": "958c8ba01221de7c5d617aa131b356878a4dd1c282b30b4bc05884ed64637c14"
+    },
+    {
+      "file": "frontend/src/views/test-asset/cases.vue",
+      "sha256": "12123871c2cff619f0b3def6a356d92131031676f208c647bf0816d01aaa2cff"
+    },
+    {
+      "file": "frontend/src/views/test-asset/catalog.vue",
+      "sha256": "9d004258f6465f9b14a87b13a224e57d175151c84279d490939c7d376edc8998"
+    },
+    {
+      "file": "frontend/src/views/test-asset/shared-configuration.vue",
+      "sha256": "c28cef0893962ba5a70620e6ce6b1a06ffd613fdb7a7701a89ba5e8eb43d381f"
+    },
+    {
+      "file": "frontend/e2e/asset-remediation.spec.ts",
+      "sha256": "9fcd3b0f7dd6798fd6ac75d4b3796719dd14e356005e2d453d3a63baa1e5507b"
+    },
+    {
+      "file": "frontend/scripts/test-evidence-preview-boundary.mjs",
+      "sha256": "fb045f95d0ee22183cd35c7976ed52853eaa63164629d3caf8e9993a48c81d3a"
+    }
+  ],
+  "checks": [
+    {
+      "requirement": "100012 + source governance same pattern",
+      "result": "before-ok async handlers return false for invalid input; return true only after awaited real write. Promise rejection is caught by installed Arco modal handleOk and resolved false; ok refresh occurs after success. Cancel creates no request; openCatalogCreate resets prior text. Local browser tests cover blank, cancel zero writes, 503 input retention and retry."
+    },
+    {
+      "requirement": "100015 actual save click",
+      "result": "Save remains gated by canUpdate/nondeleted/saving; moved into MsCard headerRight outside body scroll track, hideFooter removes default duplicate footer controls; real pointer-center request body checked in production-browser fixture at 1920, narrow center checked at720."
+    },
+    {
+      "requirement": "100019 left actions/right search",
+      "result": "Operations are earlier in DOM; search uses logical margin-inline-start:auto and flex-wrap/justify-end. Existing permission directives and action handlers preserved. Browser fixtures check desktop order and narrow wrap/viewport boundaries."
+    },
+    {
+      "requirement": "100018 native accessible labels",
+      "result": "labelAttrs.for matches inputAttrs.id/textareaAttrs.id on the four changed native controls. Installed Arco prop path checked; actual label-click focus assertions cover each control. No visually-only aria alias used."
+    },
+    {
+      "requirement": "100017 backend request contract",
+      "result": "deprecateTestAssetVersion remains POST; joinParamsToUrl true matches HTTP beforeRequestHook and backend @RequestParam projectId/assetType/assetId. Real browser fixture inspects emitted POST URL, not just helper source."
+    },
+    {
+      "requirement": "late evidence Blob isolation and HAR",
+      "result": "Project and monotonic request generation checked after network await and blob.text await; clearPreview invalidates pending work, closes preview and revokes current ObjectURL; project/segment watcher, modal close and unmount call it. HAR treated as escaped pre text, images use a-image/img; no HTML/HAR script execution path. Response blob is returned as res.data by isTransformResponse:false."
+    }
+  ],
+  "evidence": {
+    "documentation": "docs/implementation/asset-remediation-20261124/ui-verification.md",
+    "productionSmokeLog": ".tmp/asset-remediation-20261124/ui-production-smoke-final.log",
+    "observed": "6 passed, 36.8s; local 127.0.0.1 API responses are synthetic UI integration fixtures, not deployed backend acceptance",
+    "buildLog": ".tmp/asset-remediation-20261124/ui-production-build-final.log",
+    "actualDistIndexSha256": "1858d46a0fe11c727c9303f8d24338dec2348b61a88906ee9fcff1ad45c626de",
+    "guidance": "Read modern-web-guidance forms to cross-check explicit label for/id and DOM/keyboard order; no source change or newly applied guide in this readonly review"
+  },
+  "limits": [
+    "No tests rerun or source edits",
+    "Browser fixtures deliberately intercept APIs and forbid non-loopback writes; they do not replace deployed authorization/persistence acceptance",
+    "Root performs final full backend packaging; updated deployment acceptance remains separate"
+  ]
+}

@@ -300,7 +300,7 @@ public class FunctionalCaseFileService {
             response.setSuccessCount(eventListener.getList().size());
             response.setFailCount(eventListener.getErrList().size());
         } catch (Exception e) {
-            LogUtils.error("checkImportExcel error", e);
+            io.metersphere.functional.asset.service.CaseAssetFailureDiagnostics.record("FILE_PARSE", java.util.UUID.randomUUID().toString(), e);
             throw new MSException(Translator.get("check_import_excel_error"), e);
         }
     }
@@ -337,7 +337,7 @@ public class FunctionalCaseFileService {
             xMindParser.clear();
             return response;
         } catch (Exception e) {
-            LogUtils.error("checkImportExcel error", e);
+            io.metersphere.functional.asset.service.CaseAssetFailureDiagnostics.record("FILE_PARSE", java.util.UUID.randomUUID().toString(), e);
             throw new MSException(Translator.get("check_import_excel_error"), e);
         }
     }
@@ -355,7 +355,9 @@ public class FunctionalCaseFileService {
         if (file == null) {
             throw new MSException(Translator.get("file_cannot_be_null"));
         }
+        String importPhase = "VALIDATING_FILE";
         try {
+            validateWorkbook(file);
             FunctionalCaseImportResponse response = new FunctionalCaseImportResponse();
             //设置默认版本
             if (StringUtils.isEmpty(request.getVersionId())) {
@@ -368,24 +370,28 @@ public class FunctionalCaseFileService {
             //获取当前项目默认模板的自定义字段
             List<TemplateCustomFieldDTO> customFields = getCustomFields(request.getProjectId());
             Set<ExcelMergeInfo> mergeInfoSet = new TreeSet<>();
+            importPhase = "PREPROCESSING";
             FunctionalLegacyImportService.stage("PREPROCESSING", 0);
             // 预处理，查询合并单元格信息
             EasyExcel.read(file.getInputStream(), null, new FunctionalCasePretreatmentListener(mergeInfoSet))
                     .extraRead(CellExtraTypeEnum.MERGE).sheet().doRead();
             FunctionalCaseImportEventListener eventListener = new FunctionalCaseImportEventListener(request, clazz, customFields, mergeInfoSet, user, lasePos);
             eventListener.deferWrites();
+            importPhase = "PARSING";
             FunctionalLegacyImportService.stage("PARSING", 0);
             EasyExcelFactory.read(file.getInputStream(), eventListener).sheet().doRead();
+            importPhase = "WRITING";
             FunctionalLegacyImportService.stage("WRITING", eventListener.getSuccessCount());
             var writeTransaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
             writeTransaction.setTimeout(importWriteTimeoutSeconds);
             writeTransaction.executeWithoutResult(status -> eventListener.writePrepared());
             response.setErrorMessages(eventListener.getErrList());
             response.setSuccessCount(eventListener.getSuccessCount());
+            response.setSkippedCount(eventListener.getSkippedCount());
             response.setFailCount(eventListener.getErrList().size());
             return response;
         } catch (Exception e) {
-            LogUtils.error("checkImportExcel error", e);
+            io.metersphere.functional.asset.service.CaseAssetFailureDiagnostics.record(importPhase, java.util.UUID.randomUUID().toString(), e);
             throw new MSException(Translator.get("check_import_excel_error"), e);
         }
     }
@@ -395,6 +401,7 @@ public class FunctionalCaseFileService {
             throw new MSException(Translator.get("file_cannot_be_null"));
         }
         try {
+            if (request.isAssetCatalogImport()) io.metersphere.sdk.util.CommonBeanFactory.getBean(io.metersphere.functional.asset.service.CaseAssetImportIdentityResolver.class).lockCatalog(request);
             List<ExcelErrData<FunctionalCaseExcelData>> errList;
             FunctionalCaseImportResponse response = new FunctionalCaseImportResponse();
             //设置默认版本
@@ -408,7 +415,8 @@ public class FunctionalCaseFileService {
             XMindCaseParser xmindParser = new XMindCaseParser(request, customFields, user, lasePos);
             errList = xmindParser.parse(multipartFile);
             if (CollectionUtils.isEmpty(xmindParser.getList())
-                    && CollectionUtils.isEmpty(xmindParser.getUpdateList())) {
+                    && CollectionUtils.isEmpty(xmindParser.getUpdateList())
+                    && CollectionUtils.isEmpty(xmindParser.getCheckSuccessList())) {
                 if (errList == null) {
                     errList = new ArrayList<>();
                 }
@@ -417,13 +425,22 @@ public class FunctionalCaseFileService {
             }
             xmindParser.saveData();
             response.setErrorMessages(errList);
-            response.setSuccessCount(xmindParser.getList().size() + xmindParser.getUpdateList().size() + xmindParser.getCheckSuccessList().size());
+            response.setSuccessCount(xmindParser.getList().size() + xmindParser.getUpdateList().size());
             response.setFailCount(errList.size());
+            response.setSkippedCount(xmindParser.getCheckSuccessList().size());
             xmindParser.clear();
             return response;
         } catch (Exception e) {
-            LogUtils.error("checkImportExcel error", e);
+            io.metersphere.functional.asset.service.CaseAssetFailureDiagnostics.record("FILE_PARSE", java.util.UUID.randomUUID().toString(), e);
             throw new MSException(Translator.get("check_import_excel_error"), e);
+        }
+    }
+
+    static void validateWorkbook(MultipartFile file) throws java.io.IOException {
+        FunctionalLegacyImportService.validateArchive(file);
+        // EasyExcel auto-detects text as CSV even when the uploaded suffix is xlsx.
+        try (var stream = file.getInputStream(); var workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(stream)) {
+            if (workbook.getNumberOfSheets() == 0) throw new MSException("文件中没有可导入的工作表");
         }
     }
 

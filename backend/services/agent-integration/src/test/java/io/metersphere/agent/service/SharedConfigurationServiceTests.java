@@ -41,6 +41,8 @@ class SharedConfigurationServiceTests {
         Files.readString(
             root.resolve(
                 "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_157__shared_configuration_secret_type.sql")));
+    jdbc.execute(Files.readString(root.resolve(
+        "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_158__shared_configuration_audit_paging.sql")));
     var auth = mock(BusinessAssetService.class);
     when(auth.authorize(eq("p"), anyBoolean(), anyString(), anyString())).thenReturn("actor");
     cipher = new SharedConfigurationCipher(Base64.getEncoder().encodeToString(new byte[32]));
@@ -462,5 +464,51 @@ class SharedConfigurationServiceTests {
         0, jdbc.queryForObject("SELECT COUNT(*) FROM shared_configuration", Integer.class));
     assertEquals(
         0, jdbc.queryForObject("SELECT COUNT(*) FROM shared_configuration_version", Integer.class));
+  }
+
+  @Test
+  void auditQueryReturnsOnlyMetadataWithStablePaginationAndEventVersionFilters() {
+    String id = (String) service.save("p", null, "s", "test", "audit", "SECRET", "private-audit-fixture", "", 0).get("id");
+    service.save("p", id, "s", "test", "audit", "SECRET", "changed-private-fixture", "", 1);
+    service.select("p", id, 1, 2, "synthetic rollback reason");
+    var page = service.audits("p", id, 1, 2, null, null);
+    assertEquals(3L, ((Number) page.get("total")).longValue());
+    assertEquals(2, ((List<?>) page.get("items")).size());
+    var second = service.audits("p", id, 2, 2, null, null);
+    assertEquals(1, ((List<?>) second.get("items")).size());
+    var firstIds = ((List<?>) page.get("items")).stream().map(r -> ((Map<?, ?>) r).get("id")).toList();
+    var secondIds = ((List<?>) second.get("items")).stream().map(r -> ((Map<?, ?>) r).get("id")).toList();
+    assertTrue(Collections.disjoint(firstIds, secondIds));
+    assertEquals(page.get("items"), service.audits("p", id, 1, 2, null, null).get("items"));
+    assertFalse(page.toString().contains("private-audit-fixture"));
+    assertFalse(page.toString().contains("encrypted_value"));
+    var selected = service.audits("p", id, 1, 100, "SELECT_VERSION", 1);
+    assertEquals(1L, ((Number) selected.get("total")).longValue());
+    var row = (Map<?, ?>) ((List<?>) selected.get("items")).getFirst();
+    assertEquals("synthetic rollback reason", row.get("reason"));
+    assertEquals("actor", row.get("actorId"));
+    assertEquals("SELECT_VERSION", row.get("eventType"));
+    assertEquals(id, row.get("configurationId"));
+    assertEquals(Set.of("id", "configurationId", "versionNo", "actorId", "eventType", "createTime", "reason"), row.keySet());
+    service.select("p", id, 1, 1, "same version must not create audit");
+    assertEquals(1L, ((Number) service.audits("p", id, 1, 100, "SELECT_VERSION", 1).get("total")).longValue());
+    assertTrue(((List<?>) service.audits("p", id, 10, 100, null, null).get("items")).isEmpty());
+  }
+
+  @Test
+  void auditQueryRejectsInvalidPaginationFiltersAndCrossProjectResources() {
+    String id = (String) service.save("p", null, "s", "test", "audit", "PLAIN", "fixture", "", 0).get("id");
+    assertThrows(MSException.class, () -> service.audits("p", id, 0, 20, null, null));
+    assertThrows(MSException.class, () -> service.audits("p", id, 1, 101, null, null));
+    assertThrows(MSException.class, () -> service.audits("p", id, 1000001, 20, null, null));
+    assertThrows(MSException.class, () -> service.audits("p", id, 1, 20, "UNKNOWN", null));
+    assertThrows(MSException.class, () -> service.audits("p", id, 1, 20, null, 0));
+    assertThrows(MSException.class, () -> service.audits("p", "missing", 1, 20, null, null));
+    assertThrows(MSException.class, () -> service.audits("other-project", id, 1, 20, null, null));
+    var denied = mock(BusinessAssetService.class);
+    when(denied.authorize(eq("p"), eq(false), anyString(), anyString()))
+        .thenThrow(new BusinessGovernanceException("AGENT_PERMISSION_DENIED", "permission denied"));
+    var restricted = new SharedConfigurationService(jdbc, denied, cipher);
+    assertThrows(MSException.class, () -> restricted.audits("p", id, 1, 20, null, null));
   }
 }

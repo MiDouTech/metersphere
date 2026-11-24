@@ -1,15 +1,17 @@
 <template>
   <div class="p-4">
-    <MsCard simple>
-      <div class="mb-5 flex items-center justify-between">
+    <MsCard auto-width :min-width="0" hide-footer>
+      <template #headerLeft>
         <a-page-header title="资产用例详情" subtitle="此用例属于测试资产，无业务项目执行上下文" @back="goBack" />
+      </template>
+      <template #headerRight>
         <a-space
           ><a-button @click="goBack">返回</a-button
           ><a-button v-if="canUpdate && !deleted" type="primary" :loading="saving" @click="save"
             >保存</a-button
           ></a-space
         >
-      </div>
+      </template>
       <a-spin :loading="loading" class="block">
         <a-alert v-if="deleted" class="mb-4" type="warning"
           >该资产用例已被删除，仅保留历史查看；不能编辑或再次导入。</a-alert

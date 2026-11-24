@@ -56,6 +56,7 @@ public class DefaultHubCaseSyncService {
     private ExtBaseProjectVersionMapper extBaseProjectVersionMapper;
     @Resource
     private JdbcTemplate jdbcTemplate;
+    @Resource private CaseAssetSourceMappingRepair mappingRepair;
 
     @Lazy
     @Resource
@@ -82,7 +83,19 @@ public class DefaultHubCaseSyncService {
         DefaultHubCaseMapRow map = defaultHubCaseMapDao.findByBizCaseId(bizCaseId);
         String sourceRefId=StringUtils.defaultIfBlank(bizCase.getRefId(),bizCaseId);
         List<String> historical=jdbcTemplate.queryForList("SELECT asset_case_id FROM case_asset_source_relation WHERE source_project_id=? AND source_case_id=?",String.class,bizProjectId,sourceRefId);
-        if(map!=null && !historical.isEmpty() && !map.getHubCaseId().equals(historical.getFirst()))throw new io.metersphere.sdk.exception.MSException("同一源用例存在重复资产映射，请先核对引用并修复映射");
+        if(map!=null && !historical.isEmpty() && !map.getHubCaseId().equals(historical.getFirst())) {
+            FunctionalCase duplicate = functionalCaseMapper.selectByPrimaryKey(map.getHubCaseId());
+            FunctionalCase canonical = functionalCaseMapper.selectByPrimaryKey(historical.getFirst());
+            if (duplicate == null || canonical == null || !defaultHubProjectService.isDefaultProject(duplicate.getProjectId())
+                    || !defaultHubProjectService.isDefaultProject(canonical.getProjectId()))
+                throw new io.metersphere.sdk.exception.MSException("CASE_SOURCE_MAPPING_CONFLICT：目标不属于资产存储项目");
+            String expectedModule = defaultHubModuleResolver.resolveHubModuleId(bizProjectId, bizCase.getModuleId(),
+                    defaultHubProjectService.getDefaultProjectId(), operator);
+            if (!StringUtils.equals(expectedModule, duplicate.getModuleId()) || !StringUtils.equals(expectedModule, canonical.getModuleId()))
+                throw new CaseAssetMappingConflictException(bizCaseId, duplicate.getId(), canonical.getId());
+            mappingRepair.repair(map, canonical.getId(), sourceRefId, operator, expectedModule);
+            map.setHubCaseId(canonical.getId());
+        }
         if(map==null && !historical.isEmpty()) {
             var target=functionalCaseMapper.selectByPrimaryKey(historical.getFirst());
             if(target==null || !defaultHubProjectService.isDefaultProject(target.getProjectId()))throw new io.metersphere.sdk.exception.MSException("历史资产映射已失效，请核对来源");
@@ -258,13 +271,23 @@ public class DefaultHubCaseSyncService {
     }
 
     String computeHash(FunctionalCase c, FunctionalCaseBlob blob) {
+        return hashSnapshot(c, blob,
+                jdbcTemplate.queryForList("SELECT field_id,value FROM functional_case_custom_field WHERE case_id=? ORDER BY field_id", c.getId()),
+                jdbcTemplate.queryForList("SELECT file_id,file_name FROM functional_case_attachment WHERE case_id=? ORDER BY id", c.getId()),
+                jdbcTemplate.queryForList("SELECT file_id,deleted FROM file_association WHERE source_id=? ORDER BY id", c.getId()));
+    }
+
+    static String hashSnapshot(FunctionalCase c, FunctionalCaseBlob blob,
+            java.util.List<java.util.Map<String,Object>> customFields,
+            java.util.List<java.util.Map<String,Object>> attachments,
+            java.util.List<java.util.Map<String,Object>> fileAssociations) {
         StringBuilder sb = new StringBuilder();
         sb.append(c.getName()).append('|').append(c.getModuleId()).append('|').append(c.getCaseEditType()).append('|').append(c.getTags());
         sb.append('|').append(c.getReviewStatus()).append('|').append(c.getLastExecuteResult())
                 .append('|').append(c.getExecuteUser()).append('|').append(c.getLastExecuteUser()).append('|').append(c.getLastExecuteTime());
-        sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT field_id,value FROM functional_case_custom_field WHERE case_id=? ORDER BY field_id",c.getId())));
-        sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT file_id,file_name FROM functional_case_attachment WHERE case_id=? ORDER BY id",c.getId())));
-        sb.append(io.metersphere.sdk.util.JSON.toJSONString(jdbcTemplate.queryForList("SELECT file_id,deleted FROM file_association WHERE source_id=? ORDER BY id",c.getId())));
+        sb.append(io.metersphere.sdk.util.JSON.toJSONString(customFields));
+        sb.append(io.metersphere.sdk.util.JSON.toJSONString(attachments));
+        sb.append(io.metersphere.sdk.util.JSON.toJSONString(fileAssociations));
         if (blob != null) {
             sb.append('|').append(bytes(blob.getSteps())).append(bytes(blob.getTextDescription()))
                     .append(bytes(blob.getExpectedResult())).append(bytes(blob.getPrerequisite()))
@@ -274,11 +297,11 @@ public class DefaultHubCaseSyncService {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             return HexFormat.of().formatHex(md.digest(sb.toString().getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
-            return sb.toString();
+            throw new io.metersphere.sdk.exception.MSException("资产内容摘要计算失败，请联系管理员", e);
         }
     }
 
-    private String bytes(byte[] data) {
+    private static String bytes(byte[] data) {
         return data == null ? "" : new String(data, StandardCharsets.UTF_8);
     }
 

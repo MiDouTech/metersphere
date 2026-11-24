@@ -12,7 +12,7 @@ export interface LoginRes extends UserState {
   csrfToken: string;
   sessionId: string;
   token: string;
-  /** 米多 SSO：需跳转登录桥重认证 */
+  /** Legacy response compatibility; MSP session validity is determined by the server. */
   needMiduoReauth?: boolean;
 }
 // 企业微信对接信息

@@ -53,6 +53,7 @@ public class XMindCaseParser {
     private FunctionalCaseService functionalCaseService;
 
     private FunctionalCaseImportRequest request;
+    private final Set<String> assetImportNames = new HashSet<>();
     /**
      * 所有的模块集合
      */
@@ -288,6 +289,16 @@ public class XMindCaseParser {
      * @param functionalCaseExcelData
      */
     private void handleId(FunctionalCaseExcelData functionalCaseExcelData) {
+        if (request.isAssetCatalogImport()) {
+            if (!assetImportNames.add(StringUtils.trim(functionalCaseExcelData.getName()).toLowerCase(Locale.ROOT)))
+                throw new io.metersphere.sdk.exception.MSException("文件内存在重复用例名称，请去重后导入");
+            String target = CommonBeanFactory.getBean(io.metersphere.functional.asset.service.CaseAssetImportIdentityResolver.class)
+                    .resolve(request, functionalCaseExcelData.getName());
+            if (target == null) list.add(functionalCaseExcelData);
+            else if (request.isCover()) { functionalCaseExcelData.setNum(target); updateList.add(functionalCaseExcelData); }
+            else checkSuccessList.add(functionalCaseExcelData);
+            return;
+        }
         if (StringUtils.isNotEmpty(functionalCaseExcelData.getNum())) {
             String checkResult = functionalCaseService.checkNumExist(functionalCaseExcelData.getNum(), request.getProjectId());
             if (StringUtils.isNotEmpty(checkResult)) {
@@ -507,8 +518,8 @@ public class XMindCaseParser {
                 }
             }
         } catch (Exception ex) {
-            LogUtils.info(ex.getMessage());
-            return process.parse(ex.getMessage());
+            String safeError = io.metersphere.functional.asset.service.CaseAssetFailureDiagnostics.record("XMIND_PARSE", UUID.randomUUID().toString(), ex);
+            return process.parse(safeError);
         }
         return process.parse();
     }

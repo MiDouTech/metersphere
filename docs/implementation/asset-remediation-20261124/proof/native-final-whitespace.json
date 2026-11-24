@@ -1,0 +1,7 @@
+{
+  "file": "backend/services/case-management/src/test/java/io/metersphere/functional/hub/service/CaseAssetSourceMappingRepairMySqlTests.java",
+  "reviewedAndExecutedSha256": "e3dbb06023acefed235b5305401000965634f2189191e479e7e0f072f1b7d8d5",
+  "finalSha256": "dcec5e20d8fc4fa686e664725d9069ee866eb8e1d086206a6bc34eba4a1c69dc",
+  "onlyTrailingBlankLineRemoved": true,
+  "bodyBytesUnchanged": true
+}

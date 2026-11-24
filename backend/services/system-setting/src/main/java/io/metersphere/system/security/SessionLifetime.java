@@ -10,11 +10,19 @@ public final class SessionLifetime {
     private SessionLifetime() { }
 
     public static void initialize(Session session, boolean firstAuthentication, long now) {
-        if (session.getAttribute(EXPIRES_AT) != null) return;
-        // Older authenticated sessions retain their actual creation time, never a fabricated new login.
-        long loginAt = firstAuthentication ? now : session.getStartTimestamp().getTime();
-        session.setAttribute(LOGIN_AT, loginAt);
-        session.setAttribute(EXPIRES_AT, loginAt + MAX_AGE_MS);
+        if (session.getAttribute(EXPIRES_AT) == null) {
+            // Older authenticated sessions retain their actual creation time, never a fabricated new login.
+            long loginAt = firstAuthentication ? now : session.getStartTimestamp().getTime();
+            session.setAttribute(LOGIN_AT, loginAt);
+            session.setAttribute(EXPIRES_AT, loginAt + MAX_AGE_MS);
+        }
+        // Repair a shorter legacy idle timeout while preserving the original absolute deadline.
+        Object expiry = session.getAttribute(EXPIRES_AT);
+        if (expiry instanceof Number && ((Number) expiry).longValue() > now) {
+            long remaining = Math.min(MAX_AGE_MS, ((Number) expiry).longValue() - now);
+            // Servlet sessions store seconds; rounding down would end retention before the deadline.
+            session.setTimeout(((remaining + 999L) / 1000L) * 1000L);
+        }
     }
 
     public static boolean expired(Session session, long now) {

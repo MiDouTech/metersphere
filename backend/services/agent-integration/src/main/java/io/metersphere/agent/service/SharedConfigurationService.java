@@ -270,6 +270,43 @@ public class SharedConfigurationService {
         "secretType");
   }
 
+  /** Read-only audit metadata. Configuration contents and ciphertext are never selected. */
+  @Transactional(readOnly = true)
+  public Map<String, Object> audits(
+      String project, String id, int page, int pageSize, String eventType, Integer version) {
+    authorize(project, false);
+    if (project == null || project.isBlank() || project.length() > 64
+        || id == null || id.isBlank() || id.length() > 64
+        || page < 1 || page > 1000000 || pageSize < 1 || pageSize > 100
+        || (version != null && version < 1)
+        || (eventType != null && !Set.of("SAVE", "SELECT_VERSION", "EXECUTOR_RESOLVE", "RETRY_PARSE").contains(eventType))) {
+      throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "审计查询参数无效，请检查页码、每页条数、事件类型和版本");
+    }
+    configuration(project, id, false);
+    var params = new ArrayList<Object>();
+    params.add(id);
+    params.add(project);
+    String where = " FROM shared_configuration_audit a JOIN shared_configuration c ON c.id=a.configuration_id"
+        + " WHERE a.configuration_id=? AND c.project_id=?";
+    if (eventType != null) {
+      where += " AND a.event_type=?";
+      params.add(eventType);
+    }
+    if (version != null) {
+      where += " AND a.version_no=?";
+      params.add(version);
+    }
+    Long total = jdbc.queryForObject("SELECT COUNT(*)" + where, Long.class, params.toArray());
+    params.add(pageSize);
+    params.add(((long) page - 1) * pageSize);
+    var items = BusinessAssetRows.canonical(jdbc.queryForList(
+        "SELECT a.id,a.configuration_id AS configurationId,a.version_no AS versionNo,"
+            + "a.actor_id AS actorId,a.event_type AS eventType,a.create_time AS createTime,a.reason"
+            + where + " ORDER BY a.create_time DESC,a.id DESC LIMIT ? OFFSET ?", params.toArray()),
+        "id", "configurationId", "versionNo", "actorId", "eventType", "createTime", "reason");
+    return Map.of("items", items, "total", total == null ? 0L : total, "page", page, "pageSize", pageSize);
+  }
+
   public Map<String, Object> read(String project, String id, int version, boolean document) {
     authorize(project, false);
     configuration(project, id, false);

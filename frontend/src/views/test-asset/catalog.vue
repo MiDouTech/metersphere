@@ -227,7 +227,8 @@
       v-model:visible="sourceGovernanceVisible"
       title="治理历史来源"
       :ok-loading="sourceGovernanceLoading"
-      @ok="applySourceGovernance"
+      @before-ok="applySourceGovernance"
+      @ok="load"
     >
       <a-form :model="sourceGovernanceForm" layout="vertical">
         <a-form-item label="确认建立方式" required>
@@ -271,7 +272,7 @@
   import {
     assignTestAssetCategory,
     batchAssignTestAssetCategory,
-    downloadAiExecutionArtifact,
+    downloadTestAssetEvidence,
     getTestAssetCatalogDetail,
     getTestAssetMetadata,
     governTestAssetSource,
@@ -318,8 +319,8 @@
     'evidence': {
       type: 'EVIDENCE',
       title: '执行证据',
-      description: 'Agent/Runner 回传的截图、HAR 和附件证据。',
-      source: '/execution/tasks',
+      description: '已发布用例执行、执行器引用和缺陷图片证据；暂存文件不计入。',
+      source: '/test-assets/business',
     },
     'bugs': {
       type: 'BUG',
@@ -465,7 +466,7 @@
     const record = governingAsset.value;
     if (!record || !sourceGovernanceForm.evidence.trim()) {
       Message.warning('请填写可审计的来源依据');
-      return;
+      return false;
     }
     sourceGovernanceLoading.value = true;
     try {
@@ -479,8 +480,7 @@
         sourceReferenceId: sourceGovernanceForm.sourceReferenceId.trim() || undefined,
       });
       Message.success('来源治理已记录');
-      sourceGovernanceVisible.value = false;
-      await load();
+      return true;
     } finally {
       sourceGovernanceLoading.value = false;
     }
@@ -536,30 +536,40 @@
     await load();
   }
   async function downloadEvidence(record: TestAssetCatalogItem) {
-    if (!record.relatedId) return;
-    const bytes = await downloadAiExecutionArtifact(record.relatedId, record.id);
+    const project = appStore.currentProjectId;
+    const bytes = await downloadTestAssetEvidence(project, record.id);
+    if (project !== appStore.currentProjectId) return;
     downloadByteFile(bytes, record.name || `evidence-${record.id}`);
   }
+  let evidenceRequest = 0;
   function clearPreview() {
+    ++evidenceRequest;
+    previewVisible.value = false;
     if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
     previewUrl.value = '';
     previewText.value = '';
   }
   async function previewEvidence(record: TestAssetCatalogItem) {
-    if (!record.relatedId) return;
     clearPreview();
-    const bytes = await downloadAiExecutionArtifact(record.relatedId, record.id);
+    const request = evidenceRequest;
+    const project = appStore.currentProjectId;
+    const bytes = await downloadTestAssetEvidence(project, record.id);
+    if (request !== evidenceRequest || project !== appStore.currentProjectId) return;
     const blob = bytes instanceof Blob ? bytes : new Blob([bytes]);
     const textEvidence =
-      /\.(txt|log|json|xml|csv)$/i.test(record.name || '') ||
+      /\.(txt|log|json|xml|csv|har)$/i.test(record.name || '') ||
       ['text/plain', 'text/csv', 'application/json', 'application/xml', 'text/xml'].includes(blob.type);
-    if (textEvidence) previewText.value = (await blob.text()).slice(0, 1_000_000);
-    else previewUrl.value = URL.createObjectURL(blob);
+    if (textEvidence) {
+      const text = (await blob.text()).slice(0, 1_000_000);
+      if (request !== evidenceRequest || project !== appStore.currentProjectId) return;
+      previewText.value = text;
+    } else previewUrl.value = URL.createObjectURL(blob);
     previewVisible.value = true;
   }
   watch(
     () => [segment.value, appStore.currentProjectId],
     () => {
+      clearPreview();
       query.current = 1;
       load();
     }

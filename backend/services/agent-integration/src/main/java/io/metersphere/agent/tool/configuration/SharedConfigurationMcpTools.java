@@ -31,6 +31,18 @@ public class SharedConfigurationMcpTools {
         return tool("versions", true, fields(true), List.of("projectId", "id"),
                 args -> service.versions(text(args, "projectId"), text(args, "id")));
     }
+    @Bean public AgentMcpToolHandler configurationAudits() {
+        var fields = fields(true);
+        fields.put("page", Map.of("type", "integer", "minimum", 1, "maximum", 1000000));
+        fields.put("pageSize", Map.of("type", "integer", "minimum", 1, "maximum", 100));
+        fields.put("version", version(1));
+        fields.put("eventType", AgentMcpToolSchemas.enumString(List.of("SAVE", "SELECT_VERSION", "EXECUTOR_RESOLVE", "RETRY_PARSE")));
+        return tool("audits", true, fields, List.of("projectId", "id"), args -> service.audits(
+                text(args, "projectId"), text(args, "id"),
+                args.containsKey("page") ? number(args, "page") : 1,
+                args.containsKey("pageSize") ? number(args, "pageSize") : 20,
+                text(args, "eventType"), args.containsKey("version") ? number(args, "version") : null));
+    }
     @Bean public AgentMcpToolHandler configurationRead() {
         var fields = fields(true); fields.put("version", version(1)); fields.put("document", Map.of("type", "boolean"));
         return tool("read", true, fields, List.of("projectId", "id", "version"), args -> service.read(

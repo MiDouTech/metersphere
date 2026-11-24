@@ -1,0 +1,73 @@
+{
+  "revision": "evidence-r3-relations",
+  "frozenAt": "2026-11-24T10:24:26.4167848+08:00",
+  "files": [
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/EvidenceCatalogService.java",
+      "sha256": "dddedbddf8cfa865a5653c010ba42b432ff16bd9e960bed11d02d7422f1a3fa4"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/EvidenceCatalogController.java",
+      "sha256": "1a4620debd044266291507b3cec89d24999bd76c65b41de40343dbb2975802f6"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/TestAssetCatalogItemDTO.java",
+      "sha256": "b2e05995d86eb8b6f229e5680d962635e532ad4f8174b568a064d80519d4fae3"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetCatalogService.java",
+      "sha256": "52e21e6544eeca79438fff590e48ca7fa64c64d1ed041879d624e80555dd942d"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/TestAssetController.java",
+      "sha256": "a398c39804abbc8f017f4323e8ce61a6864865c19e16b7aad6844cb22568e14b"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/TestAssetMapper.java",
+      "sha256": "e1ac29fe90d7acb12ad4d8afc8318ffe4776b97d547fa4ae7b430c258b5d7b6b"
+    },
+    {
+      "file": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/TestAssetMapper.xml",
+      "sha256": "b34421a15557627822191f09358b431ea50c9dcad4a21c97b8b9773524160d7d"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/EvidenceCatalogServiceTests.java",
+      "sha256": "0a7f948637a148255d96bddae5cff60fe7ad6f9472c8de20651a265ea3310ff8"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/EvidenceCatalogMySqlTests.java",
+      "sha256": "60fbbceef8689ff8f79ac998645704f0afec9d8c30300a1443896b32f62729bd"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/controller/EvidenceCatalogControllerTests.java",
+      "sha256": "d5e9ee534746f52acfb481389b686d3f047ff0c75772efa30ae73dcc6f92afb1"
+    },
+    {
+      "file": "backend/services/agent-integration/src/test/java/io/metersphere/agent/service/TestAssetCatalogServiceTests.java",
+      "sha256": "08b227cd7fb6d05c598bfa6ad10c156e249470f0f46a23969cf5ad7e7f246475"
+    },
+    {
+      "file": "frontend/src/api/modules/ai-execution.ts",
+      "sha256": "6dabb3a7d4f5013358f4b75e64a9f79b4217a376baaf239bcf5fda2bdf29958d"
+    },
+    {
+      "file": "frontend/src/views/test-asset/catalog.vue",
+      "sha256": "9d004258f6465f9b14a87b13a224e57d175151c84279d490939c7d376edc8998"
+    },
+    {
+      "file": "frontend/scripts/test-evidence-preview-boundary.mjs",
+      "sha256": "fb045f95d0ee22183cd35c7976ed52853eaa63164629d3caf8e9993a48c81d3a"
+    },
+    {
+      "file": "docs/implementation/asset-remediation-20261124/evidence-trace.md",
+      "sha256": "318d097334b045f237eff7dcde1fa508a0a0dd56e644a785f5257a0caddffd17"
+    }
+  ],
+  "validation": {
+    "mysql": "pending parent",
+    "fullReactor": "pending parent",
+    "notes": "Shared catalog.vue includes UI Agent changes; no index mutations",
+    "isolatedH2": "5 PASS",
+    "frontend": "UI Agent reports final build/type/lint GREEN"
+  }
+}

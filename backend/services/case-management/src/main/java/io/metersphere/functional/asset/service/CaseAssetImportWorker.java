@@ -29,7 +29,7 @@ public class CaseAssetImportWorker {
             jobService.complete(jobId, response);
         } catch (Exception e) {
             RuntimeException failure = e instanceof RuntimeException runtime ? runtime
-                    : new io.metersphere.sdk.exception.MSException("资产用例导入失败: " + e.getMessage(), e);
+                    : new io.metersphere.sdk.exception.MSException("资产用例导入失败", e);
             jobService.fail(jobId, failure);
         }
     }

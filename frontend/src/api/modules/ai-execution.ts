@@ -718,6 +718,8 @@ export interface TestAssetDocument {
 }
 
 export interface TestAssetCatalogItem {
+  sourceKind?: 'PERSONAL_SUBMISSION' | 'EXECUTOR' | 'BUG_ATTACHMENT' | 'LEGACY_ARTIFACT';
+  contentType?: string;
   id: string;
   projectId: string;
   assetType: TestAssetCatalogType;
@@ -1377,10 +1379,13 @@ export function pageTestAssetVersions(params: {
 }
 
 export function deprecateTestAssetVersion(projectId: string, version: TestAssetVersion) {
-  return MSR.post<TestAssetVersion>({
-    url: TestAssetVersionDeprecateUrl(version.id),
-    params: { projectId, assetType: version.assetType, assetId: version.assetId },
-  });
+  return MSR.post<TestAssetVersion>(
+    {
+      url: TestAssetVersionDeprecateUrl(version.id),
+      params: { projectId, assetType: version.assetType, assetId: version.assetId },
+    },
+    { joinParamsToUrl: true }
+  );
 }
 
 export function pageTestAssetRelations(params: {
@@ -1400,4 +1405,15 @@ export function pageTestAssetRelations(params: {
 
 export function retryAiExecutionSync(taskId: string) {
   return MSR.post({ url: `/ai/execution/task/${encodeURIComponent(taskId)}/retry-sync` });
+}
+
+export function downloadTestAssetEvidence(projectId: string, evidenceId: string) {
+  return MSR.get<BlobPart>(
+    {
+      url: `/test-assets/evidence/${encodeURIComponent(evidenceId)}/content`,
+      params: { projectId },
+      responseType: 'blob',
+    },
+    { isTransformResponse: false }
+  );
 }

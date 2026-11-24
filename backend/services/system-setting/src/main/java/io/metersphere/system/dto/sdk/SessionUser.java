@@ -21,7 +21,7 @@ public class SessionUser extends UserDTO implements Serializable {
     private static final long serialVersionUID = -7149638440406959033L;
     private String csrfToken;
     private String sessionId;
-    /** 米多 SSO：sessionToken refresh 失败时为 true，前端应跳转登录桥 */
+    /** Legacy client compatibility; established MSP sessions do not depend on SSO token expiry. */
     private Boolean needMiduoReauth;
 
     private SessionUser() {

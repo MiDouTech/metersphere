@@ -280,6 +280,7 @@ Token 仅代表关联用户身份；所有新旧 Token 均按用户当前角色�
 - `metersphere.shared_configuration.list/read`：检索和读取配置元数据，敏感值不回传。
 - `metersphere.shared_configuration.save/batch`：保存新版本、批量导入；更新携带 `expectedVersion`，冲突须重新读取，不能盲目重试。
 - `metersphere.shared_configuration.versions/select_version/retry_parse`：历史版本、切换后续会话使用版本、重试文档解析。
+- `metersphere.shared_configuration.audits`：按 `projectId`、配置 `id` 查询审计元数据；可选 `page`（默认1，最多1000000）、`pageSize`（默认20，最多100）、`eventType`（SAVE / SELECT_VERSION / EXECUTOR_RESOLVE / RETRY_PARSE）、`version`。返回 `items/total/page/pageSize`，条目仅含记录ID、配置ID、版本、操作人、事件、时间及原因，不含配置内容。继承用户当前公共配置读取权限，不需要新增Token授权。查询本身不写审计，可用于比较重复选择当前版本前后的SELECT_VERSION总数。
 - `metersphere.shared_configuration.resolve`：仅在已获准且运行中的执行会话读取固定版本；仍校验同一用户、Token、项目与配置归属。敏感结果禁止写入日志、报告或通用重放缓存。
 
 具体字段以 `tools/list` 的输入结构为准。新增后端代码部署后刷新工具列表；stdio 使用者还需更新客户端以注册新增工具。

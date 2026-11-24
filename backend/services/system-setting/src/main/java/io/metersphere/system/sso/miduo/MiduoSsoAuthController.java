@@ -22,7 +22,7 @@ import java.util.Map;
  * <ul>
  *   <li>POST /auth/miduo/callback — 浏览器提交 {token, state}</li>
  *   <li>GET  /auth/miduo/bridge-url — 登录桥（含新 state）</li>
- *   <li>POST /auth/miduo/logout — revoke + 销毁本地会话</li>
+ *   <li>POST /auth/miduo/logout — 销毁当前 MSP 会话</li>
  * </ul>
  */
 @RestController
@@ -57,7 +57,7 @@ public class MiduoSsoAuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "米多 SSO 登出并 revoke sessionToken")
+    @Operation(summary = "退出当前 MSP 会话（不退出米多 SSO）")
     public ResultHolder logout() {
         miduoSsoApplicationService.logout();
         return ResultHolder.success("logout success");

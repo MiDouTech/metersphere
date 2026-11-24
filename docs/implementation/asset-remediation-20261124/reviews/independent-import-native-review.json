@@ -1,0 +1,34 @@
+{
+  "review": "independent-import-native-appendix",
+  "decision": "APPROVED",
+  "file": "backend/services/case-management/src/test/java/io/metersphere/functional/hub/service/CaseAssetSourceMappingRepairMySqlTests.java",
+  "sha256": "e3dbb06023acefed235b5305401000965634f2189191e479e7e0f072f1b7d8d5",
+  "findings": [],
+  "checks": [
+    "Only fixed 127.0.0.1:13326 endpoint and synthetic quality test credential",
+    "UUID schema requires asset_mapping_[a-f0-9]{32}; all schema create/use/drop use same generated field; cleanup cannot name business schema",
+    "Source is super.setup fresh isolated H2 fixture; metadata PUBLIC only; validated SQL identifiers, bound row values, real binary getBytes, native InnoDB tables",
+    "DriverManager creates separate worker connections; RR set on every transaction-manager connection and TransactionTemplate; server isolation asserted",
+    "repairNow creates actual prior consistent-read view before production current locking reads; inherited two-thread test waits for writer commit and requires rejection without mapping/audit mutation",
+    "connect3000/socket5000ms, innodb lock2s, transaction5s, inherited bounded futures/latches; no unbounded external wait"
+  ],
+  "runtime": {
+    "logSha256": "3bd5e7608190fc634b85762f320870b1ce3471facadf18c8bc79d1c32eed8566",
+    "log": ".build/mysql-selftest/30aa7f86/native-suite.log",
+    "observed": "7 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS",
+    "independentRerun": "not run; inspected current source, parent-run log and seven-test surefire report"
+  },
+  "production": "22 previously approved production/relevant files unchanged; no additional production behavior reviewed",
+  "documentationNote": "import-native-test-manifest.json still has pre-import-fix hash 7a511... and added-not-run status; this appendix binds final e3dbb... and actual run",
+  "finalWhitespaceBinding": {
+    "sha256": "dcec5e20d8fc4fa686e664725d9069ee866eb8e1d086206a6bc34eba4a1c69dc",
+    "indexSha256": "faed4c3ca467fee38344110c172f5c7257e422f3a34bdf63b3595733e45dab2a",
+    "exactIndexWorkspaceEqual": false,
+    "normalizationProof": ".tmp/asset-remediation-20261124/native-final-whitespace.json",
+    "previousExecutedHashRetained": "e3dbb06023acefed235b5305401000965634f2189191e479e7e0f072f1b7d8d5",
+    "decision": "APPROVED; trailing whitespace normalization only; no database rerun required",
+    "indexBodyEqualsWorkspaceAfterCRLFNormalization": true,
+    "oldHashReconstructedByTrailingWhitespaceOnly": true,
+    "lineEndingNote": "Git index LF normalization differs from workspace CRLF; normalized body identical"
+  }
+}

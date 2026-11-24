@@ -45,6 +45,7 @@ class TestAssetCatalogServiceTests {
     private AgentProjectService agentProjectService;
     @Mock
     private TestAssetVersionService versionService;
+    @Mock private EvidenceCatalogService evidenceCatalog;
     @Mock
     private Subject subject;
     @Mock
@@ -104,11 +105,18 @@ class TestAssetCatalogServiceTests {
             item.setAssetType(type);
             item.setName(type + " asset");
             item.setSourceVersion("1");
-            when(mapper.countCatalog("project-1", type, null, null, null, List.of(), null, false)).thenReturn(1L);
-            when(mapper.selectCatalog("project-1", type, null, null, null, List.of(), null, false, 0L, 20)).thenReturn(List.of(item));
+            if("EVIDENCE".equals(type)){
+                item.setSourceKind("PERSONAL_SUBMISSION");
+                when(evidenceCatalog.search("project-1",null,null,null,null,null,false,1,20))
+                        .thenReturn(new Pager<>(List.of(item),1,20,1));
+            } else {
+                when(mapper.countCatalog("project-1", type, null, null, null, List.of(), null, false)).thenReturn(1L);
+                when(mapper.selectCatalog("project-1", type, null, null, null, List.of(), null, false, 0L, 20)).thenReturn(List.of(item));
+            }
 
             service.catalog("project-1", type, null, null, 1, 20);
         }
+        verify(evidenceCatalog).search("project-1",null,null,null,null,null,false,1,20);
         org.mockito.Mockito.verifyNoInteractions(versionService);
     }
 

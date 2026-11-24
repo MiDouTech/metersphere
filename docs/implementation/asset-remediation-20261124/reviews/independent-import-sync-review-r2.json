@@ -1,0 +1,30 @@
+{
+  "review": "independent-import-sync-r2",
+  "baseline": "e1fd443",
+  "manifest": ".tmp/asset-remediation-20261124/import-sync-verification.json",
+  "manifestSha256": "8d1f66e480e3ccc697365907b83f4a823941349bc4d9e529a90d5f45e31e81f9",
+  "fileCount": 22,
+  "hashMismatches": 0,
+  "decision": "STATIC_APPROVED",
+  "findings": [],
+  "resolved": [
+    "P1 canonical/dependent-content stale hash: repair accepts no external hash and uses ordered current FOR UPDATE on header/blob/customfields/attachments/associations, plus current reference/history predicates",
+    "P2 XMind skip-only: not empty failure; success and skipped separate",
+    "P2 imported foreign version: prepareImport resets version before hub default resolution"
+  ],
+  "coverage": [
+    "all 22 manifest files inspected against e1fd443 or complete added file; existing unrelated FunctionalCaseService four-state diff excluded",
+    "Excel name identity and priority aliases, locked write transaction and re-resolution; XMind same catalog authorization and transaction",
+    "corrupt/empty/skip job states, failure diagnostics SQLState/vendor code and bounded reference/phase/rootType; no raw exception logging in changed paths",
+    "target/source project and directory checks, no deletion/merge of physical historical assets, MAPPING_REPAIR audit"
+  ],
+  "validation": {
+    "container": "Docker build not run per user policy",
+    "pending": "parent centralized Maven/MySQL/package; deployed acceptance only after deployment",
+    "observedReports": "manifest records 22 tests green before final diagnostic whitelist test; checked test source/log and all hashes, did not independently rerun Maven"
+  },
+  "limitations": [
+    "H2 locking test is not proof of MySQL isolation behavior; new native MySQL suite must validate current SQL syntax/locking",
+    "organization-wide governance schema/reference policy remains existing behavior; no new scope grants"
+  ]
+}

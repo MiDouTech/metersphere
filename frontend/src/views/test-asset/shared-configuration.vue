@@ -86,15 +86,40 @@
     >
       <a-form :model="form" layout="vertical" @submit-success="save">
         <a-alert v-if="saveError" type="error" class="mb-4">{{ saveError }}</a-alert>
-        <a-form-item field="name" label="配置名称" :rules="[{ required: true, message: '请输入配置名称' }]"
-          ><a-input v-model="form.name" :max-length="128" :disabled="saving" placeholder="例如：测试环境品牌商登录账号"
+        <a-form-item
+          field="name"
+          :label-attrs="{ for: 'configuration-editor-name' }"
+          label="配置名称"
+          :rules="[{ required: true, message: '请输入配置名称' }]"
+          ><a-input
+            v-model="form.name"
+            :input-attrs="{ id: 'configuration-editor-name' }"
+            :max-length="128"
+            :disabled="saving"
+            placeholder="例如：测试环境品牌商登录账号"
         /></a-form-item>
         <div class="configuration-grid">
-          <a-form-item field="systemKey" label="系统名称" :rules="[{ required: true, message: '请输入系统名称' }]"
-            ><a-input v-model="form.systemKey" :max-length="128" :disabled="saving"
+          <a-form-item
+            field="systemKey"
+            :label-attrs="{ for: 'configuration-editor-system' }"
+            label="系统名称"
+            :rules="[{ required: true, message: '请输入系统名称' }]"
+            ><a-input
+              v-model="form.systemKey"
+              :input-attrs="{ id: 'configuration-editor-system' }"
+              :max-length="128"
+              :disabled="saving"
           /></a-form-item>
-          <a-form-item field="environmentKey" label="环境名称" :rules="[{ required: true, message: '请输入环境名称' }]"
-            ><a-input v-model="form.environmentKey" :max-length="128" :disabled="saving"
+          <a-form-item
+            field="environmentKey"
+            :label-attrs="{ for: 'configuration-editor-environment' }"
+            label="环境名称"
+            :rules="[{ required: true, message: '请输入环境名称' }]"
+            ><a-input
+              v-model="form.environmentKey"
+              :input-attrs="{ id: 'configuration-editor-environment' }"
+              :max-length="128"
+              :disabled="saving"
           /></a-form-item>
         </div>
         <a-form-item field="kind" label="配置类型"
@@ -171,9 +196,15 @@
             form.fileName
           }}</span></a-form-item
         >
-        <a-form-item v-else field="value" label="配置内容" :rules="[{ required: true, message: '请输入配置内容' }]"
+        <a-form-item
+          v-else
+          field="value"
+          :label-attrs="{ for: 'configuration-editor-content' }"
+          label="配置内容"
+          :rules="[{ required: true, message: '请输入配置内容' }]"
           ><a-textarea
             v-model="form.value"
+            :textarea-attrs="{ id: 'configuration-editor-content' }"
             :disabled="saving || contentLoading"
             :auto-size="{ minRows: 4, maxRows: 10 }"
             :max-length="100000"

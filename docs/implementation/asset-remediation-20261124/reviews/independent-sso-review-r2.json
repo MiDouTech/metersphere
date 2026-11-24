@@ -1,0 +1,91 @@
+{
+  "review": "sso-independent-r2",
+  "decision": "STATIC_APPROVED",
+  "findings": [],
+  "files": [
+    {
+      "file": "docs/implementation/asset-remediation-20261124/sso-independent-session-plan.md",
+      "sha256": "0ac2960ab9eb98205e8994349d69a70da2b80b834d8188c5c1d6fcebb2e0d558"
+    },
+    {
+      "file": "backend/services/system-setting/src/main/java/io/metersphere/system/controller/LoginController.java",
+      "sha256": "1a77c1f39bd05786a32b172b6d4b8d2e64eaf6d83a16ab99810969eba89d86d0"
+    },
+    {
+      "file": "backend/services/system-setting/src/main/java/io/metersphere/system/sso/miduo/MiduoSsoApplicationService.java",
+      "sha256": "6622d7ce6a02730644b8df50f6fbb05a9a5dac0cc0e3608224ceb1610cb65356"
+    },
+    {
+      "file": "backend/services/system-setting/src/main/java/io/metersphere/system/sso/miduo/MiduoSsoAuthController.java",
+      "sha256": "02e031c76980a30e8a57f71436433b866cb82eaecbd2c5585c5d2660afabd2e9"
+    },
+    {
+      "file": "backend/services/system-setting/src/main/java/io/metersphere/system/sso/miduo/MiduoSsoLogUtils.java",
+      "sha256": "fd235c261cc2e6b043d4311db854a764b547d4c9942d5681eb1b714ea9f245a6"
+    },
+    {
+      "file": "backend/services/system-setting/src/main/java/io/metersphere/system/dto/sdk/SessionUser.java",
+      "sha256": "c8eed6bed8a38d8896e72a1db99145b9c725ee9d22d4416c0d825f1da4d23799"
+    },
+    {
+      "file": "backend/services/system-setting/src/main/java/io/metersphere/system/security/SessionLifetime.java",
+      "sha256": "ac701c8bf3af6ffbc46af8303daf7167edee072b9d71925986242efadbf00804"
+    },
+    {
+      "file": "backend/services/system-setting/src/main/java/io/metersphere/system/security/MsAuthenticationFilter.java",
+      "sha256": "6d84b1a1bbc57551bb617be712ffe06ccecf196005ead6de27b9491de0ac3172"
+    },
+    {
+      "file": "backend/services/system-setting/src/main/java/io/metersphere/system/utils/SessionUtils.java",
+      "sha256": "e4a7e441cf809414239617a7b6dcf62dc892c33a65b28201eb44aea35fe8e6f6"
+    },
+    {
+      "file": "backend/services/system-setting/src/test/java/io/metersphere/system/controller/MspIndependentSessionTests.java",
+      "sha256": "2c98120328a9ec6addb5c5aabdc254e478161e1e4236522a184c11e2ec0e8386"
+    },
+    {
+      "file": "backend/services/system-setting/src/test/java/io/metersphere/system/sso/miduo/MspSessionHttpIntegrationTests.java",
+      "sha256": "ca1539a556334a8f5d484b14117fdc05793198df9af571be27c088916a88dddd"
+    },
+    {
+      "file": "backend/services/system-setting/src/test/java/io/metersphere/system/sso/miduo/MiduoSsoDiagnosticsTests.java",
+      "sha256": "efdd7e96957a8eb09123323c3d7611d040ebb3c82d8355f9a492855f0b6f705f"
+    },
+    {
+      "file": "backend/services/system-setting/src/test/java/io/metersphere/system/security/SessionLifetimeTests.java",
+      "sha256": "1fdcc192eb2d8ef5067c29435cac200c9c4923501c09e6cbab19a71de1b8d673"
+    },
+    {
+      "file": "frontend/src/store/modules/user/index.ts",
+      "sha256": "b180086e952c9742f29d4997454e665b8259084253bdbc2fe459a4bcc126fc54"
+    },
+    {
+      "file": "frontend/scripts/test-independent-session.mjs",
+      "sha256": "3c32c38610043455232523f5527453f06a2ca1ae78d006c0728f9e152b3ff501"
+    }
+  ],
+  "deleted": [
+    "backend/services/system-setting/src/main/java/io/metersphere/system/sso/miduo/MiduoSsoRefreshService.java",
+    "backend/services/system-setting/src/test/java/io/metersphere/system/sso/miduo/MiduoSsoRefreshServiceTest.java"
+  ],
+  "resolved": [
+    "HTTP role reload now changes actual permission snapshot and asserts LocalRealm permit then deny without deadline extension",
+    "Standalone Translator messages registered and prior static state restored",
+    "Logout API description matches current MSP-only semantics"
+  ],
+  "checks": [
+    "callback consumes state/validates upstream identity/matches enabled local user before creating independent current-browser session; no upstream token stored",
+    "new/current-live session idle uses remaining absolute deadline ceil to servlet seconds, absolute expiration unchanged; expired sessions cannot be revived by this helper",
+    "subject.logout affects only current Spring session; ordinary logout does not call upstream global revoke; administrative kickout/permission-session-refresh retained",
+    "is-login reloads current enabled/deleted account and role DTO then writes SessionUser, no upstream refresh or stale reauth bridge",
+    "fault diagnostics retain bounded cause metadata/sqlstate/code only and do not log exception messages/stack/private URLs; tests inject cleanup/audit failures and require destroyed session"
+  ],
+  "runtime": {
+    "observedEarlier": "HTTP4 previously GREEN according parent; earlier unit5/lifetime2 reports observed by reviewer",
+    "reviewerCommands": "read-only source/diff/hash/rg; no concurrent Maven",
+    "final": "parent sso-final-package-r2.log running; newer HTTP6/lifetime3/diagnostic2 and frontend3 final results pending parent",
+    "limits": "MockMvc with actual Shiro LocalRealm and Spring Session Map repository; synthetic identity/user data; no production Redis/CSRF chain or deployed two-browser E2E"
+  },
+  "frontend": "actual store transpilation behavior tests cover legacy needReauth=true, normal session and server rejection; parent reports build/type/lint/3 tests passed",
+  "policy": "Docker image build omitted per user instruction; deployed acceptance after user deployment"
+}

@@ -31,7 +31,7 @@ public class CaseAssetImportJobService {
                             + "error_detail=COALESCE(NULLIF(error_detail,''),?),update_time=? WHERE status='RUNNING'",
                     "服务重启导致导入中断，请重新选择文件导入", System.currentTimeMillis());
         } catch (Exception e) {
-            LogUtils.error("Recover interrupted case asset import jobs failed", e);
+            CaseAssetFailureDiagnostics.record("IMPORT_RECOVERY", "startup", e);
         }
     }
 
@@ -50,17 +50,21 @@ public class CaseAssetImportJobService {
     public void complete(String id, FunctionalCaseImportResponse response) {
         int success = response == null ? 0 : response.getSuccessCount();
         int fail = response == null ? 0 : response.getFailCount();
+        int skipped = response == null ? 0 : response.getSkippedCount();
+        boolean empty = success + fail + skipped == 0;
+        if (empty) fail = 1;
         String detail = response == null || response.getErrorMessages() == null
                 ? null : StringUtils.left(JSON.toJSONString(response.getErrorMessages()), 65535);
+        if (empty) detail = "文件中没有可导入的用例，请检查文件格式和内容";
         jdbcTemplate.update("UPDATE case_asset_import_job SET status = ?, total_count = ?, success_count = ?, "
                         + "fail_count = ?, error_detail = ?, update_time = ? WHERE id = ?",
-                fail > 0 ? "PARTIAL_SUCCESS" : "SUCCESS", success + fail, success, fail, detail,
+                fail > 0 ? (success > 0 ? "PARTIAL_SUCCESS" : "FAILED") : "SUCCESS", success + fail + skipped, success, fail, detail,
                 System.currentTimeMillis(), id);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void fail(String id, RuntimeException exception) {
-        String errorMessage = StringUtils.defaultIfBlank(exception.getMessage(), exception.getClass().getSimpleName());
+        String errorMessage = CaseAssetFailureDiagnostics.record("IMPORT", id, exception);
         jdbcTemplate.update("UPDATE case_asset_import_job SET status = 'FAILED', fail_count = 1, "
                         + "error_detail = ?, update_time = ? WHERE id = ?",
                 StringUtils.left(errorMessage, 65535), System.currentTimeMillis(), id);

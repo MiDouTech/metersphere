@@ -1,0 +1,42 @@
+{
+  "review": "independent-sso-r2-runtime-appendix",
+  "decision": "WORKSPACE_VALIDATION_CONFIRMED",
+  "staticReview": ".tmp\\asset-remediation-20261124\\independent-sso-review-r2.json",
+  "staticReviewSha256": "80b31425c3fbf061d2624a224382ee0b8eb86f3ceed08f521a3391dbabb0f93c",
+  "sourceHashMismatches": [],
+  "backend": {
+    "log": ".tmp\\asset-remediation-20261124\\sso-final-verified.log",
+    "logSha256": "8eebc3599d421cc45388d0c4ded52a98de060d655357ff66f8f379b3a0405142",
+    "buildSuccess": true,
+    "suiteCount": 164,
+    "tests": 609,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 60,
+    "executedPassed": 549,
+    "systemSetting": "27 tests; HTTP6, diagnostics2, independent5, lifetime3 all 0 skipped"
+  },
+  "packaging": {
+    "systemModuleSha256": "c01c4f1f814a17ca8d5ad8cd6c9f98beaaa03521aa16fef4930ec99c480eae30",
+    "embeddedModuleByteEqual": true,
+    "retiredRefreshClassAbsent": true
+  },
+  "frontend": {
+    "behaviorLog": ".tmp\\asset-remediation-20261124\\sso-frontend-tests-final.log",
+    "observed": "3 PASS /0 skipped",
+    "lintLog": ".tmp\\asset-remediation-20261124\\sso-frontend-lint-final.log",
+    "lintOutputBytes": 0,
+    "buildLog": ".tmp\\asset-remediation-20261124\\sso-frontend-build.log",
+    "observedBuild": "vue-tsc/Vite/postbuild output inspected; parent reports exit0"
+  },
+  "proof": {
+    "file": "docs\\implementation\\asset-remediation-20261124\\proof\\sso-final-results.json",
+    "sha256": "d5af806c0cceea8bdd07463576d8e6bfc5855a9d2a1c0b59934d13bb338efd78"
+  },
+  "limits": [
+    "Reviewer read logs/hashes/zip entries; did not independently rerun builds",
+    "Workspace artifacts only; exact staged tree isolated clean package still pending parent",
+    "No deployed acceptance, real multi-browser environment, production Redis or full CSRF/APIKey-chain validation claimed",
+    "Docker build omitted per user policy"
+  ]
+}
