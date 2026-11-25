@@ -22,14 +22,15 @@ public final class CaseAssetFailureDiagnostics {
         String state = sql == null ? "NONE" : sql.getSQLState();
         if (state == null || !state.matches("[A-Z0-9]{5}")) state = "UNKNOWN";
         var conflict = root instanceof io.metersphere.functional.hub.service.CaseAssetMappingConflictException value ? value : null;
-        String category = conflict != null ? "CASE_SOURCE_MAPPING_CONFLICT" : sql != null ? "DATABASE_ERROR" : "PROCESSING_ERROR";
+        boolean bindingChanged = root instanceof io.metersphere.functional.hub.service.CaseAssetBindingChangedException;
+        String category = conflict != null ? "CASE_SOURCE_MAPPING_CONFLICT" : bindingChanged ? "CASE_SOURCE_BINDING_CHANGED" : sql != null ? "DATABASE_ERROR" : "PROCESSING_ERROR";
         String rootType = root == null ? "Unknown" : root.getClass().getSimpleName();
         if (!rootType.matches("[A-Za-z0-9_$]{1,100}")) rootType = "UNKNOWN";
         LogUtils.error("case_asset_failure phase=" + phase + " reference=" + reference + " time="
                 + System.currentTimeMillis() + " category=" + category + " rootType=" + rootType
                 + " sqlState=" + state + " vendorCode=" + (sql == null ? 0 : sql.getErrorCode())
                 + (conflict == null ? "" : conflict.diagnosticIds()));
-        return (conflict == null ? "处理未完成，请根据错误编号联系管理员定位。" :
+        return (bindingChanged ? "CASE_SOURCE_BINDING_CHANGED：来源绑定已变化，请重试同步。" : conflict == null ? "处理未完成，请根据错误编号联系管理员定位。" :
                 "CASE_SOURCE_MAPPING_CONFLICT：来源映射需人工核对，未合并资产。" + conflict.diagnosticIds()) + "错误编号：" + reference;
     }
 }

@@ -57,6 +57,7 @@ public class DefaultHubCaseSyncService {
     @Resource
     private JdbcTemplate jdbcTemplate;
     @Resource private CaseAssetSourceMappingRepair mappingRepair;
+    @Resource private CaseAssetSourceBindingGuard bindingGuard;
 
     @Lazy
     @Resource
@@ -83,6 +84,7 @@ public class DefaultHubCaseSyncService {
         DefaultHubCaseMapRow map = defaultHubCaseMapDao.findByBizCaseId(bizCaseId);
         String sourceRefId=StringUtils.defaultIfBlank(bizCase.getRefId(),bizCaseId);
         List<String> historical=jdbcTemplate.queryForList("SELECT asset_case_id FROM case_asset_source_relation WHERE source_project_id=? AND source_case_id=?",String.class,bizProjectId,sourceRefId);
+        bindingGuard.lockAndValidate(bizProjectId, bizCaseId, sourceRefId, map, historical);
         if(map!=null && !historical.isEmpty() && !map.getHubCaseId().equals(historical.getFirst())) {
             FunctionalCase duplicate = functionalCaseMapper.selectByPrimaryKey(map.getHubCaseId());
             FunctionalCase canonical = functionalCaseMapper.selectByPrimaryKey(historical.getFirst());
@@ -151,6 +153,7 @@ public class DefaultHubCaseSyncService {
         List<String> latest=jdbcTemplate.queryForList("SELECT f.id FROM case_asset_source_relation r JOIN functional_case f ON f.project_id=r.source_project_id AND COALESCE(NULLIF(f.ref_id,''),f.id)=r.source_case_id WHERE r.asset_case_id=? AND r.source_project_id=? AND f.deleted=0 AND f.latest=1 ORDER BY f.id LIMIT 2",String.class,map.getHubCaseId(),map.getBizProjectId());
         if(latest.size()>1)throw new io.metersphere.sdk.exception.MSException("来源存在多个最新版本，请先修复版本状态");
         if(!latest.isEmpty()&&!latest.getFirst().equals(bizCaseId)){syncCaseUpsert(map.getBizProjectId(),latest.getFirst(),operator);return;}
+        bindingGuard.lockAndValidateMapping(map);
         FunctionalCase hubCase = new FunctionalCase();
         hubCase.setId(map.getHubCaseId());
         hubCase.setDeleted(true);
