@@ -122,6 +122,9 @@ public class FunctionalImportEffectOutbox {
     }
 
     private String safeSyncFailure(Exception failure,String reference) {
+        if (failure instanceof io.metersphere.functional.hub.service.CaseAssetBindingChangedException) {
+            return io.metersphere.functional.asset.service.CaseAssetFailureDiagnostics.record("CASE_SYNC", reference, failure);
+        }
         String message=failure.getMessage();
         if(failure instanceof io.metersphere.sdk.exception.MSException && message!=null &&
                 (message.startsWith("同一源用例存在重复资产映射") || message.startsWith("历史资产映射已失效") ||
