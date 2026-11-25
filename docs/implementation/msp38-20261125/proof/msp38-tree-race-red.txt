@@ -1,0 +1,4 @@
+ℹ pass 2
+ℹ fail 1
+✖ failing tests:
+  false !== true

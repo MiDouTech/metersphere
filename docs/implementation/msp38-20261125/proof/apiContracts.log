@@ -1,0 +1,5 @@
+
+> meter-sphere@3.1.0 test:api-contracts
+> node ./scripts/verify-api-contracts.mjs
+
+API contract verification passed.

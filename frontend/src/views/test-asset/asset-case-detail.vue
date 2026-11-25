@@ -206,16 +206,25 @@
       saving.value = false;
     }
   }
+  async function refreshAttachments() {
+    const detail = await getCaseAssetDetail(catalogId, caseId);
+    attachments.value = detail.attachments || [];
+  }
   async function uploadAttachments(event: Event) {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files || []);
-    await Promise.all(files.map((file) => uploadCaseAssetAttachment(catalogId, caseId, file)));
-    input.value = '';
-    await load();
+    try {
+      const results = await Promise.allSettled(files.map((file) => uploadCaseAssetAttachment(catalogId, caseId, file)));
+      await refreshAttachments();
+      const failed = results.find((result) => result.status === 'rejected');
+      if (failed?.status === 'rejected') throw failed.reason;
+    } finally {
+      input.value = '';
+    }
   }
   async function removeAttachment(item: any) {
     await deleteCaseAssetAttachment(catalogId, caseId, item.id, item.local !== false);
-    await load();
+    await refreshAttachments();
   }
   async function downloadAttachment(item: any) {
     const blob = await downloadCaseAssetAttachment(catalogId, caseId, item.id, item.local !== false);
@@ -227,7 +236,13 @@
     URL.revokeObjectURL(url);
   }
   function goBack() {
-    router.push({ name: TestAssetRouteEnum.TEST_ASSET_CASES_PROJECT, query: route.query });
+    router.push({
+      name:
+        route.query.directory === 'system'
+          ? TestAssetRouteEnum.TEST_ASSET_CASES_SYSTEM
+          : TestAssetRouteEnum.TEST_ASSET_CASES_PROJECT,
+      query: route.query,
+    });
   }
   onMounted(load);
 </script>

@@ -1,0 +1,7 @@
+
+C:\SoftWare\JetBrains\metersphere\frontend\scripts\verify-route-tabs.mjs
+  328:3   warning  Unexpected console statement  no-console
+  329:33  warning  Unexpected console statement  no-console
+  332:1   warning  Unexpected console statement  no-console
+
+✖ 3 problems (0 errors, 3 warnings)

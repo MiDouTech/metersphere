@@ -150,12 +150,15 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
         try {
             genExcelHeadToFieldNameDicAndGetNotRequiredFields();
         } catch (NoSuchFieldException e) {
-            LogUtils.error(e);
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_HEADER", java.util.UUID.randomUUID().toString(), e);
         }
         formatHeadMap();
         super.invokeHeadMap(headMap, context);
     }
 
+
+    private Map<Integer, Map<Integer, io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.CellValue>> stepMetadata = Map.of();
+    public void setStepMetadata(Map<Integer, Map<Integer, io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.CellValue>> metadata) { this.stepMetadata = metadata; }
 
     @Override
     public void invoke(Map<Integer, String> data, AnalysisContext analysisContext) {
@@ -165,6 +168,7 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
 
         Integer rowIndex = analysisContext.readRowHolder().getRowIndex();
         if (rowIndex > 100000) throw new MSException("导入表格行数超过限制，请拆分文件");
+        io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.restore(data, rowIndex, stepMetadata);
         //处理合并单元格
         handleMergeData(data, rowIndex);
 
@@ -296,7 +300,7 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
             }
         } catch (NoSuchFieldException e) {
             errMsg = new StringBuilder(Translator.get("parse_data_error"));
-            LogUtils.error(e.getMessage(), e);
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_VALIDATION", java.util.UUID.randomUUID().toString(), e);
         }
 
         if (StringUtils.isEmpty(errMsg)) {
@@ -335,9 +339,13 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
     }
 
     /**
-     * 处理步骤描述和预期结果：始终按规则拆分双写 steps + TEXT 全文
+     * Preserve explicit TEXT content; otherwise split numbered STEP cells.
      */
     private void handleSteps(FunctionalCaseExcelData functionalCaseExcelData) {
+        if (FunctionalCaseTypeConstants.CaseEditType.TEXT.name().equals(functionalCaseExcelData.getCaseEditType())) {
+            functionalCaseExcelData.setSteps("[]");
+            return;
+        }
         String stepsJson = getSteps(functionalCaseExcelData);
         functionalCaseExcelData.setSteps(stepsJson);
 

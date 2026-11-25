@@ -1,0 +1,158 @@
+{
+  "app": {
+    "log": "C:\\SoftWare\\JetBrains\\metersphere\\.tmp\\msp38-app-v15.log",
+    "sha256": "5c799dd671c734052c3c6f8a27c788d10e2dd28bda5205bffc8653ce85b0d969"
+  },
+  "native": {
+    "log": "C:\\SoftWare\\JetBrains\\metersphere\\.build\\mysql-selftest\\f80549e9\\native-suite.log",
+    "sha256": "daa287918695520e6405babcca70b6c8ce3d6913a2b7116faf9b9175b26d7961"
+  },
+  "frontendBuild": {
+    "log": "C:\\SoftWare\\JetBrains\\metersphere\\.tmp\\msp38-frontend-v14.log",
+    "sha256": "80c97d5984aac5f65eac3f5cd1bfae797d8b42632cf19190911bf4d70fe2b4cc"
+  },
+  "typecheck": {
+    "log": "C:\\SoftWare\\JetBrains\\metersphere\\.tmp\\msp38-type-v14.log",
+    "sha256": "fb5e4c74eacb848765d299b41ebafe14baaf920c278960eead95e6f25f9eb3b3"
+  },
+  "node": {
+    "log": "C:\\SoftWare\\JetBrains\\metersphere\\.tmp\\msp38-node-v14.log",
+    "sha256": "1695911b420bc649d1adb27da5299edc17406404daa390e3ca83c65f06f22172"
+  },
+  "productionBrowser": {
+    "log": "C:\\SoftWare\\JetBrains\\metersphere\\.tmp\\msp38-browser-v14.log",
+    "sha256": "8f1624157f214860fdf17ec7135eb1d5084369689898b72a18877124f5723ac4"
+  },
+  "developmentBrowser": {
+    "log": ".tmp/msp38-e2e-3.log",
+    "sha256": "71384df6ca290e725f224a23151b85ea607e72f7740c8ce412d8733e5218018c"
+  },
+  "apiContracts": {
+    "log": ".tmp/msp38-api-contracts.log",
+    "sha256": "b8d7c4bdde57302de1f4334758132608b5add60b8901771e624990f3a5fa8c9a"
+  },
+  "routes": {
+    "log": ".tmp/msp38-route-tabs-final.log",
+    "sha256": "124994cdd92035fd2ada68cb6e83e155096e6831e6bc50b285e35ff5dd9b9a76"
+  },
+  "permissions": {
+    "log": ".tmp/msp38-permission-resources.log",
+    "sha256": "6b27209f29f2d69ae272e6fa25531bfb7924ac6a65a14e762c75c14210f336c8"
+  },
+  "eslint": {
+    "log": ".tmp/msp38-final-lint.log",
+    "sha256": "c7fae50325d7efc6a008667f84f8e352a3eba648c9eb75d1284939c5bb449d9c"
+  },
+  "stylelint": {
+    "log": ".tmp/msp38-stylelint-final.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "results": {
+    "app": {
+      "tests": 116,
+      "executedPassed": 83,
+      "skipped": 33,
+      "failures": 0,
+      "errors": 0
+    },
+    "native": {
+      "tests": 51,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    "nodePassed": 7,
+    "productionBrowserPassed": 3,
+    "eslintErrors": 0,
+    "eslintExistingConsoleWarnings": 3
+  },
+  "reviewV11Results": {
+    "app": {
+      "total": 102,
+      "passed": 71,
+      "skipped": 31,
+      "failed": 0
+    },
+    "native": {
+      "total": 38,
+      "passed": 38,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "historicalV10Results": {
+    "app": {
+      "tests": 101,
+      "executedPassed": 70,
+      "skipped": 31,
+      "failures": 0,
+      "errors": 0
+    },
+    "native": {
+      "tests": 35,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    "nodePassed": 6,
+    "productionBrowserPassed": 3,
+    "eslintErrors": 0,
+    "eslintExistingConsoleWarnings": 3
+  },
+  "reviewV12Results": {
+    "app": {
+      "total": 102,
+      "passed": 71,
+      "skipped": 31,
+      "failed": 0
+    },
+    "native": {
+      "total": 38,
+      "passed": 38,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "reviewV13Results": {
+    "app": {
+      "tests": 113,
+      "executedPassed": 80,
+      "skipped": 33,
+      "failures": 0,
+      "errors": 0
+    },
+    "native": {
+      "tests": 49,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    "nodePassed": 6,
+    "productionBrowserPassed": 3,
+    "eslintErrors": 0,
+    "eslintExistingConsoleWarnings": 3
+  },
+  "treeLint": {
+    "log": "C:\\SoftWare\\JetBrains\\metersphere\\.tmp\\msp38-tree-lint-final.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "reviewV14Results": {
+    "app": {
+      "tests": 116,
+      "executedPassed": 83,
+      "skipped": 33,
+      "failures": 0,
+      "errors": 0
+    },
+    "native": {
+      "tests": 51,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    "nodePassed": 7,
+    "productionBrowserPassed": 3,
+    "eslintErrors": 0,
+    "eslintExistingConsoleWarnings": 3
+  }
+}

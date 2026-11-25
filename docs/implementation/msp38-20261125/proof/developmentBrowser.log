@@ -1,0 +1,12 @@
+
+Running 3 tests using 1 worker
+
+(node:205532) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:205532) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [chromium] › e2e\asset-remediation.spec.ts:263:1 › MSP38 attachment upload/delete preserves draft and save survives reload (7.8s)
+  ok 2 [chromium] › e2e\asset-remediation.spec.ts:342:1 › MSP38 project/system navigation and classification keep the same case identity (5.1s)
+  ok 3 [chromium] › e2e\asset-remediation.spec.ts:438:1 › MSP38 directory editor retains failed draft and creates real system/module requests (5.6s)
+
+  3 passed (21.0s)

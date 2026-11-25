@@ -1,0 +1,5 @@
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 3.778 s <<< FAILURE! -- in io.metersphere.functional.service.Msp38AssetExportTests
+expected: <<p>literal<br>and <b>rich</b></p>> but was: <MSP-TEXT/1
+[ERROR]   Msp38AssetExportTests.mergedAssetTextWorkbookShowsOriginalInsteadOfTransport:46 expected: <<p>literal<br>and <b>rich</b></p>> but was: <MSP-TEXT/1
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE

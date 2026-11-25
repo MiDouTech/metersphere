@@ -150,8 +150,18 @@ excludesAll(
 );
 
 check(
-  (testAssetRoutes.match(/isTopMenu: true/g) || []).length === 3,
-  'asset primary navigation must contain exactly three object types'
+  (testAssetRoutes.match(/isTopMenu: true/g) || []).length === 5,
+  'approved 2026-11-19 asset navigation must contain exactly five primary entries'
+);
+includesAll(
+  testAssetRoutes,
+  ["path: 'business'", "path: 'cases'", "path: 'datasets'", "path: 'configuration'", "path: 'versions'"],
+  'approved asset primary entries'
+);
+includesAll(
+  caseAssets,
+  ['项目目录', '系统目录', 'SystemCaseAssets', 'projectDirectoryVisible', 'systemDirectoryVisible'],
+  'restored asset directory navigation'
 );
 const testAssetPage = readFrontend('src/views/test-asset/components/TestAssetPage.vue');
 check(!testAssetPage.includes('TestAssetTabs'), 'test asset pages must not render a second same-name tab row');

@@ -1,6 +1,21 @@
 <template>
   <div class="asset-page min-w-0 max-w-full p-4">
-    <MsCard simple :min-width="0">
+    <nav aria-label="用例资产目录视角" class="directory-navigation">
+      <router-link
+        v-if="projectDirectoryVisible"
+        :to="{ name: TestAssetRouteEnum.TEST_ASSET_CASES_PROJECT, query: route.query }"
+        :aria-current="!systemView ? 'page' : undefined"
+        >项目目录</router-link
+      >
+      <router-link
+        v-if="systemDirectoryVisible"
+        :to="{ name: TestAssetRouteEnum.TEST_ASSET_CASES_SYSTEM, query: route.query }"
+        :aria-current="systemView ? 'page' : undefined"
+        >系统目录</router-link
+      >
+    </nav>
+    <SystemCaseAssets v-if="systemView" />
+    <MsCard v-else simple :min-width="0">
       <div class="mb-4">
         <div class="text-base font-medium">用例资产</div>
         <div class="mt-1 text-sm text-[var(--color-text-3)]">用例项目仅是资产分类目录，不会创建可进入的业务项目。</div>
@@ -431,13 +446,14 @@
 
 <script setup lang="ts">
   import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { useRoute, useRouter } from 'vue-router';
   import { Message, Modal } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
 
   import MsCard from '@/components/pure/ms-card/index.vue';
   import CaseAssetBatchActions from './components/CaseAssetBatchActions.vue';
   import CaseAssetFileImport from './components/CaseAssetFileImport.vue';
+  import SystemCaseAssets from './components/SystemCaseAssets.vue';
   import TestAssetCategoryDrawer from './components/TestAssetCategoryDrawer.vue';
 
   import {
@@ -474,12 +490,20 @@
     startAssetExport,
     updateCaseAssetCatalog,
   } from '@/api/modules/case-management/featureCase';
-  import { hasAnyPermission } from '@/utils/permission';
+  import { hasAnyPermission, hasPageVisible, hasRouteVisible } from '@/utils/permission';
 
   import type { CaseManagementTable } from '@/models/caseManagement/featureCase';
   import { TestAssetRouteEnum } from '@/enums/routeEnum';
 
   const router = useRouter();
+  const route = useRoute();
+  const systemView = computed(() => route.name === TestAssetRouteEnum.TEST_ASSET_CASES_SYSTEM);
+  const projectDirectoryVisible = computed(
+    () => hasPageVisible('TEST_ASSET_CASE_PROJECT_TAB') && hasRouteVisible('testAssetCasesProject')
+  );
+  const systemDirectoryVisible = computed(
+    () => hasPageVisible('TEST_ASSET_CASE_SYSTEM_TAB') && hasRouteVisible('testAssetCasesSystem')
+  );
   const canAdd = hasAnyPermission(['CASE_ASSET:READ+ADD']);
   const canExport = hasAnyPermission(['CASE_ASSET:READ+EXPORT']);
   const selectedAssetIds = ref<string[]>([]);
@@ -879,6 +903,31 @@
 </script>
 
 <style scoped lang="less">
+  .directory-navigation {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--color-neutral-3);
+  }
+  .directory-navigation a {
+    position: relative;
+    padding: 12px 4px;
+    text-decoration: none;
+    color: var(--color-text-2);
+  }
+  .directory-navigation a[aria-current='page'] {
+    color: rgb(var(--primary-6));
+  }
+  .directory-navigation a[aria-current='page']::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    border-bottom: 3px solid currentcolor;
+  }
+  .directory-navigation a:focus-visible {
+    outline: 2px solid rgb(var(--primary-6));
+    outline-offset: 2px;
+  }
   .asset-page :deep(.ms-card-container),
   .asset-page :deep(.arco-spin),
   .asset-page :deep(.arco-scrollbar) {

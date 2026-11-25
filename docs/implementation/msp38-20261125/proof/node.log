@@ -1,0 +1,15 @@
+✔ attachment upload and deletion preserve unsaved fields (4.0015ms)
+✔ complete SFC setup preserves every draft field through upload/delete, save and reload (6.629ms)
+✔ failed upload keeps draft and concurrent refresh cannot bypass save conflict (1.9784ms)
+✔ mixed upload result refreshes successful files and resets input without discarding draft (1.2044ms)
+✔ system and module selection sends real scope and preserves asset identity (6.0247ms)
+✔ failed directory save retains edited name and dialog for retry (1.8094ms)
+✔ directory refresh ignores stale responses and keeps latest loading state (4.0377ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 757.0212

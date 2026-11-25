@@ -1,0 +1,5 @@
+
+> meter-sphere@3.1.0 test:permission-resources
+> node ./scripts/verify-permission-resource-coverage.mjs
+
+Permission resource coverage passed: 83 exact code bindings, 60 audited compatibility bindings, 0 unbound resources.
