@@ -159,15 +159,46 @@ public class CaseAssetService {
     @Transactional(readOnly = true)
     public Pager<List<FunctionalCasePageDTO>> pageCases(CaseAssetPageRequest request) {
         validateSelectorContext(request.getTargetProjectId(), request.getScene());
-        Map<String, Object> catalog = requireCatalog(request.getCatalogId());
         String hubProjectId = requireHubProjectId();
-        List<String> modules = defaultHubModuleResolver.listDescendantModuleIds(hubProjectId,
-                List.of(String.valueOf(catalog.get("hubModuleId"))));
+        Map<String, Map<String,Object>> moduleCatalogs = new LinkedHashMap<>();
+        List<String> modules;
+        if ("SYSTEM".equals(request.getDimension())) {
+            moduleCatalogs = assetCatalogModuleIndex();
+            modules = moduleCatalogs.isEmpty() ? List.of("__NO_ASSET_CATALOG_MODULE__") : new ArrayList<>(moduleCatalogs.keySet());
+            String systemId = request.getSystemId(), moduleId = request.getSystemModuleId();
+            if (Boolean.TRUE.equals(request.getUnclassifiedSystem()) && (StringUtils.isNotBlank(systemId) || StringUtils.isNotBlank(moduleId)))
+                throw new MSException("待人工分类不能同时指定系统或模块");
+            if (StringUtils.isNotBlank(systemId)) {
+                Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM functional_business_system WHERE id=? AND workspace_id=? AND enabled=1",Integer.class,systemId,requireOrganization());
+                if (!Integer.valueOf(1).equals(count)) throw new MSException("系统不存在或不可用");
+            }
+            if (StringUtils.isNotBlank(moduleId)) {
+                if (StringUtils.isBlank(systemId)) throw new MSException("请选择模块所属系统");
+                Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM functional_system_module WHERE id=? AND system_id=? AND workspace_id=?",Integer.class,moduleId,systemId,requireOrganization());
+                if (!Integer.valueOf(1).equals(count)) throw new MSException("模块不存在或不属于当前系统");
+            }
+        } else {
+            if (!"PROJECT".equals(request.getDimension())) throw new MSException("目录视角无效");
+            Map<String,Object> catalog = requireCatalog(request.getCatalogId());
+            modules = defaultHubModuleResolver.listDescendantModuleIds(hubProjectId,List.of(String.valueOf(catalog.get("hubModuleId"))));
+            if (modules.isEmpty()) throw new MSException("资产目录存储节点不存在");
+            for (String module : modules) moduleCatalogs.put(module,catalog);
+        }
         request.setProjectId(hubProjectId);
+        request.setWorkspaceId(requireOrganization());
+        request.setProjectIds(null);
+        request.setUnassignedProject(false);
         request.setModuleIds(modules);
         Page<Object> page = PageHelper.startPage(request.getCurrent(), request.getPageSize(),
                 StringUtils.defaultIfBlank(request.getSortString(), "functional_case.update_time desc"));
         List<FunctionalCasePageDTO> rows = functionalCaseService.getFunctionalCasePage(request, false, true);
+        for (var row : rows) {
+            var catalog = moduleCatalogs.get(row.getModuleId());
+            if (catalog != null) {
+                row.setAssetCatalogId((String)catalog.get("id"));
+                row.setAssetCatalogName((String)catalog.get("name"));
+            }
+        }
         attachReferencedProjects(rows);
         return PageUtils.setPageInfo(page, rows);
     }
@@ -774,6 +805,17 @@ public class CaseAssetService {
         request.setWorkspaceId(requireOrganization());
         request.setModuleId(String.valueOf(catalog.get("hubModuleId")));
         request.setAssetCatalogImport(true);
+    }
+
+    Map<String, Map<String,Object>> assetCatalogModuleIndex() {
+        var catalogs = jdbcTemplate.queryForList("SELECT c.id,c.name,c.hub_module_id hubModuleId FROM case_asset_catalog c JOIN functional_case_module m ON m.id=c.hub_module_id JOIN project p ON p.id=m.project_id WHERE c.organization_id=? AND c.deleted=0 AND m.project_id=? AND p.organization_id=? AND p.deleted=0 AND p.enable=1",requireOrganization(),requireHubProjectId(),requireOrganization());
+        Map<String,Map<String,Object>> index = new LinkedHashMap<>();
+        for (var catalog : catalogs) {
+            for (String module : defaultHubModuleResolver.listDescendantModuleIds(requireHubProjectId(),List.of((String)catalog.get("hubModuleId")))) {
+                if (index.putIfAbsent(module,catalog) != null) throw new MSException("资产目录范围重叠，请核对目录来源");
+            }
+        }
+        return index;
     }
 
     private Map<String, Object> requireCatalog(String id) {

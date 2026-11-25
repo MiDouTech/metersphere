@@ -172,9 +172,10 @@ public class FunctionalCaseExportTaskService {
             snapshot = freeze.apply(id);
             checkActive(id);
         } catch (Exception exception) {
-            fail(id, exception instanceof EmptyExportException ? "EXPORT_EMPTY" : "EXPORT_FAILED");
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("EXPORT_SNAPSHOT", id, exception);
+            fail(id, exception instanceof EmptyExportException ? "EXPORT_EMPTY" : exception instanceof FunctionalCaseFileService.AssetExportSizeException ? "EXPORT_TOO_LARGE" : "EXPORT_FAILED");
             notifyLegacy(fileId, id, 0, false);
-            LogUtils.error("Case export snapshot failed, taskId=" + id, exception);
+
             return id;
         }
         FutureTask<Void> future = new FutureTask<>(() -> {
@@ -193,16 +194,21 @@ public class FunctionalCaseExportTaskService {
                 if (published == 0) removeFile(fileId, result.fileType());
                 else notifyLegacy(fileId, id, result.count(), true);
             } catch (Exception exception) {
-                fail(id, exception instanceof EmptyExportException ? "EXPORT_EMPTY" : "EXPORT_FAILED");
+                if (!(exception instanceof FunctionalCaseFileService.AssetExportSizeException))
+                    io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("EXPORT_GENERATE", id, exception);
+                fail(id, exception instanceof EmptyExportException ? "EXPORT_EMPTY" : exception instanceof FunctionalCaseFileService.AssetExportSizeException ? "EXPORT_TOO_LARGE" : "EXPORT_FAILED");
                 notifyLegacy(fileId, id, 0, false);
-                LogUtils.error("Case export failed, taskId=" + id, exception);
+                if (exception instanceof FunctionalCaseFileService.AssetExportSizeException) {
+                    LogUtils.error("case_export_failure stage=GENERATE category=EXPORT_TOO_LARGE taskId=" + id
+                            + " time=" + System.currentTimeMillis() + " rootType=AssetExportSizeException");
+                }
             } finally {
                 // A non-interruptible upload can finish after the lease sweeper has already cleaned this task.
                 // Re-register cleanup even when publishing lost the terminal-state race or generation threw.
                 try {
                     jdbc.update("UPDATE export_task SET cleanup_done=0 WHERE id=? AND state IN ('STOP','ERROR')", id);
                 } catch (Exception cleanupRegistrationFailure) {
-                    LogUtils.error("Late export cleanup registration failed, taskId=" + id, cleanupRegistrationFailure);
+                    io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("EXPORT_CLEANUP_REGISTER", id, cleanupRegistrationFailure);
                 }
                 running.remove(id);
             }
@@ -224,7 +230,7 @@ public class FunctionalCaseExportTaskService {
             io.metersphere.system.socket.ExportWebSocketHandler.sendMessageSingle(new io.metersphere.sdk.dto.ExportMsgDTO(
                     fileId, taskId, count, success, io.metersphere.sdk.constants.MsgType.EXEC_RESULT.name()));
         } catch (Exception notificationFailure) {
-            LogUtils.error("Export notification failed, taskId=" + taskId, notificationFailure);
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("EXPORT_NOTIFICATION", taskId, notificationFailure);
         }
     }
 
@@ -319,6 +325,7 @@ public class FunctionalCaseExportTaskService {
         });
         dto.setErrorCode((String) row.get("safe_error_code"));
         dto.setMessage(switch (StringUtils.defaultString(dto.getErrorCode())) {
+            case "EXPORT_TOO_LARGE" -> "导出文件超过 15 MB，请缩小范围分批导出";
             case "EXPORT_EMPTY" -> "没有可导出的用例，请调整选择范围";
             case "EXPORT_BUSY" -> "导出任务较多，请稍后重新导出";
             case "EXPORT_TIMEOUT" -> "导出超时或服务已重启，请重新导出";
@@ -373,11 +380,12 @@ public class FunctionalCaseExportTaskService {
         request.setFolder(io.metersphere.sdk.constants.DefaultRepositoryDir.getExportExcelTempDir());
         request.setStorage(io.metersphere.sdk.constants.StorageType.MINIO.name());
         try { fileService.deleteFile(request); return true; }
-        catch (Exception error) { LogUtils.error("Export file cleanup will be retried: " + fileId, error); return false; }
+        catch (Exception error) { io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("EXPORT_CLEANUP", fileId, error); return false; }
     }
 
     @Scheduled(fixedDelay = 10000)
     public void recover() {
+        try {
         jdbc.update("UPDATE export_task SET state='ERROR',safe_error_code='EXPORT_TIMEOUT',finished_at=?,state_version=state_version+1 WHERE type='CASE' AND state='PREPARED' AND lease_until IS NOT NULL AND lease_until<=?",
                 System.currentTimeMillis(), System.currentTimeMillis());
         jdbc.update("UPDATE export_task SET state='ERROR',safe_error_code='EXPORT_TIMEOUT',finished_at=?,state_version=state_version+1 WHERE type='CASE' AND state='PREPARED' AND lease_until IS NULL AND create_time<?",
@@ -385,16 +393,25 @@ public class FunctionalCaseExportTaskService {
         running.forEach((id, future) -> {
             if (!active(id)) { future.cancel(true); running.remove(id, future); }
         });
+
+        } catch (Exception failure) {
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("EXPORT_RECOVERY", workerId, failure);
+        }
     }
 
     @Scheduled(fixedDelay = 60000)
     public void cleanupFiles() {
+        try {
         // Never clean a still-running cancelled writer until its execution deadline has elapsed.
         long now = System.currentTimeMillis();
         for (var row : jdbc.queryForList("SELECT id,file_id,file_type FROM export_task WHERE type='CASE' AND request_key IS NOT NULL AND cleanup_done=0 AND ((state='SUCCESS' AND expires_at<=?) OR (state IN ('STOP','ERROR') AND lease_until<=?)) LIMIT 50", now, now)) {
             if (removeFile((String) row.get("file_id"), (String) row.get("file_type"))) {
                 jdbc.update("UPDATE export_task SET cleanup_done=1,content_snapshot=NULL WHERE id=?", row.get("id"));
             }
+        }
+
+        } catch (Exception failure) {
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("EXPORT_CLEANUP_SCAN", workerId, failure);
         }
     }
 

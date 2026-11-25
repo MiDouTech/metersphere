@@ -1,0 +1,35 @@
+[WARNING] Tests run: 3, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 0.005 s -- in io.metersphere.functional.asset.service.CaseAssetCatalogIdentityMySqlTests
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.321 s -- in io.metersphere.functional.asset.service.CaseAssetExportAccessTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.081 s -- in io.metersphere.functional.asset.service.CaseAssetFailureDiagnosticsTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in io.metersphere.functional.asset.service.CaseAssetHistoryCaseSyncServiceTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.670 s -- in io.metersphere.functional.asset.service.CaseAssetHistoryFailureIntegrationTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in io.metersphere.functional.asset.service.CaseAssetImportIdentityResolverTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in io.metersphere.functional.asset.service.CaseAssetImportJobServiceTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.444 s -- in io.metersphere.functional.asset.service.CaseAssetOperationDiagnosticsTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.057 s -- in io.metersphere.functional.asset.service.CaseAssetServiceTests
+[WARNING] Tests run: 2, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.001 s -- in io.metersphere.functional.asset.service.CaseAssetSystemMySqlTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.114 s -- in io.metersphere.functional.asset.service.CaseAssetSystemPageTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.260 s -- in io.metersphere.functional.asset.service.CaseAssetSystemServiceTests
+[WARNING] Tests run: 7, Failures: 0, Errors: 0, Skipped: 7, Time elapsed: 0 s -- in io.metersphere.functional.hub.service.CaseAssetSourceMappingRepairMySqlTests
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.410 s -- in io.metersphere.functional.hub.service.CaseAssetSourceMappingRepairTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.642 s -- in io.metersphere.functional.service.CaseAssetExcelRoundTripTests
+[WARNING] Tests run: 17, Failures: 0, Errors: 0, Skipped: 17, Time elapsed: 0.001 s -- in io.metersphere.functional.service.FunctionalCaseExportMySqlTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in io.metersphere.functional.service.FunctionalCaseExportNullFieldTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in io.metersphere.functional.service.FunctionalCaseExportRowMapperTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.086 s -- in io.metersphere.functional.service.FunctionalCaseExportTempFilesTests
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.240 s -- in io.metersphere.functional.service.FunctionalCaseExportValidationTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.198 s -- in io.metersphere.functional.service.Msp38AssetExportTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.046 s -- in io.metersphere.functional.service.Msp38ExportSafetyTests
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.405 s -- in io.metersphere.functional.service.Msp38StepMetadataTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in io.metersphere.functional.service.Msp38StepRoundTripTests
+[WARNING] Tests run: 95, Failures: 0, Errors: 0, Skipped: 29
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.979 s -- in io.metersphere.agent.controller.AgentCaseImportActionValidationTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.518 s -- in io.metersphere.agent.service.AgentCaseImportDiagnosticsTests
+[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 4, Time elapsed: 0 s -- in io.metersphere.agent.service.AgentCaseImportMySqlTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.031 s -- in io.metersphere.agent.service.AgentCaseImportStageTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.171 s -- in io.metersphere.agent.service.CaseAssetBatchServiceTests
+[WARNING] Tests run: 19, Failures: 0, Errors: 0, Skipped: 4
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.701 s -- in io.metersphere.app.PermissionManifestCoverageTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+[INFO] Total time:  02:29 min

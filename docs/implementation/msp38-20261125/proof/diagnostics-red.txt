@@ -1,0 +1,6 @@
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.237 s -- in io.metersphere.functional.asset.service.CaseAssetOperationDiagnosticsTests
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 6.235 s <<< FAILURE! -- in io.metersphere.functional.service.CaseAssetExcelRoundTripTests
+[ERROR] Tests run: 18, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 2.688 s <<< FAILURE! -- in io.metersphere.functional.service.FunctionalCaseExportMySqlTests
+[ERROR] Tests run: 23, Failures: 2, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[INFO] Total time:  01:14 min

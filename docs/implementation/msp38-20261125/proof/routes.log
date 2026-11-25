@@ -1,0 +1,5 @@
+
+> meter-sphere@3.1.0 test:route-tabs
+> node ./scripts/verify-route-tabs.mjs
+
+Information architecture acceptance passed: routes, entries, permission intersections, scope validation and button gates are aligned.
