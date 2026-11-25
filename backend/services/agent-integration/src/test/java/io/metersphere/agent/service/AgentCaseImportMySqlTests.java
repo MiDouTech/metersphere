@@ -31,7 +31,7 @@ class AgentCaseImportMySqlTests {
         var source=new DriverManagerDataSource(server+schema+options,"root","quality-test-only");jdbc=new JdbcTemplate(source);
         var manager=new DataSourceTransactionManager(source);tx=new TransactionTemplate(manager);
         try(var connection=source.getConnection()) {
-            for(String migration:List.of("112__functional_import_job", "123__functional_import_followup", "130__asset_import_followup_adapter", "135__import_commit_stage"))
+            for(String migration:List.of("112__functional_import_job", "123__functional_import_followup", "130__asset_import_followup_adapter", "135__import_commit_stage", "138__plan_review_followup_v2"))
                 ScriptUtils.executeSqlScript(connection,new ClassPathResource("migration/3.7.2/ddl/V3.7.2_"+migration+".sql"));
         }
         jdbc.execute("CREATE TABLE project(id VARCHAR(50),deleted BOOLEAN,enable BOOLEAN,organization_id VARCHAR(50))");jdbc.update("INSERT INTO project VALUES ('project',0,1,'org')");
@@ -53,6 +53,23 @@ class AgentCaseImportMySqlTests {
         jdbc.update("INSERT INTO functional_import_job(id,project_id,user_id,token_id,request_id,request_hash,request_json,template_hash,source_hash,source_name,source_bytes,create_time,update_time,expires_at) VALUES (?,'project','user','WEB',?,'hash',?,?,'source','cases.xlsx',?,?,?,?)",id,id,JSON.toJSONString(request),org.apache.commons.codec.digest.DigestUtils.sha256Hex("[]"),new byte[]{1},now,now,now+86400000);
         jdbc.update("INSERT INTO functional_import_followup(job_id,project_id,user_id,policy,request_json,group_id,state,create_time,update_time,source_kind) VALUES (?,'project','user','IMPORT_ONLY','{}','NONE','SKIPPED',?,?,'FILE')",id,now,now);
         for(int i=1;i<=count;i++){var item=new FunctionalCaseExcelData();item.setName("case"+i);jdbc.update("INSERT INTO functional_import_item(job_id,position,action,payload,state) VALUES (?,?,'CREATE',?,'PENDING')",id,i,JSON.toJSONString(item));}
+    }
+    @Test void failedItemDiagnosticsNeverLogSensitiveExceptionMessageOrStack() {
+        job("diagnostic-job",1);service.action("diagnostic-job","commit","user","WEB");
+        String sentinel="SECRET_IMPORT_BODY_TOKEN_94721";
+        doThrow(new IllegalStateException(sentinel,new java.sql.SQLException(sentinel,"42000",1064)))
+            .when(cases).saveImportData(anyList(),any(),anyList(),anyMap(),anyMap(),any(),any());
+        var logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        var capture=new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        capture.start();logger.addAppender(capture);
+        try {
+            service.drain();
+            assertTrue(capture.list.stream().anyMatch(e->e.getFormattedMessage().contains("IMPORT_ITEM_WRITE") && e.getFormattedMessage().contains("diagnostic-job")));
+            assertTrue(capture.list.stream().noneMatch(e->e.getFormattedMessage().contains(sentinel)));
+            assertTrue(capture.list.stream().noneMatch(e->e.getThrowableProxy()!=null));
+            assertEquals("FAILED",jdbc.queryForObject("SELECT state FROM functional_import_item WHERE job_id='diagnostic-job'",String.class));
+            assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM import_business_write",Integer.class));
+        } finally {logger.detachAppender(capture);capture.stop();}
     }
     @Test void stopResumeAndReplayNeverDuplicateCommittedItems(){
         job("job",2);service.action("job","commit","user","WEB");

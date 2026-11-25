@@ -18,9 +18,46 @@ import java.util.regex.Pattern;
  */
 public final class CaseStepSplitUtils {
 
+    private static final String FRAMED_PREFIX = "MSP-STEPS/1\n";
+    private static final Pattern FRAME = Pattern.compile("\\[(\\d+):(\\d+)]");
+
+    /** Length framing is used only when legacy numbering cannot preserve body whitespace/newlines. */
+    public static String encodeExportSteps(List<String> parts) {
+        StringBuilder encoded = new StringBuilder(FRAMED_PREFIX);
+        for (int i = 0; i < parts.size(); i++) {
+            String body = StringUtils.defaultString(parts.get(i));
+            encoded.append('[').append(i + 1).append(':').append(body.length()).append(']').append(body).append('\n');
+        }
+        return encoded.append("MSP-STEPS-END").toString();
+    }
+
+    private static List<String> decodeExportSteps(String content) {
+        List<String> parts = new ArrayList<>();
+        int offset = FRAMED_PREFIX.length();
+        while (offset < content.length() && !content.substring(offset).equals("MSP-STEPS-END")) {
+            Matcher frame = FRAME.matcher(content);
+            frame.region(offset, content.length());
+            if (!frame.lookingAt() || !frame.group(1).equals(String.valueOf(parts.size() + 1)))
+                throw new IllegalArgumentException("步骤编码无效，请重新导出或改为普通编号步骤");
+            long length;
+            try { length = Long.parseLong(frame.group(2)); }
+            catch (NumberFormatException invalid) { throw new IllegalArgumentException("步骤长度无效，请重新导出"); }
+            if (length > content.length() - frame.end() - 1L)
+                throw new IllegalArgumentException("步骤内容长度无效，请重新导出");
+            int end = frame.end() + (int) length;
+            if (content.charAt(end) != '\n')
+                throw new IllegalArgumentException("步骤内容已改变，请重新导出或改为普通编号步骤");
+            parts.add(content.substring(frame.end(), (int) end));
+            offset = (int) end + 1;
+        }
+        if (!content.substring(offset).equals("MSP-STEPS-END"))
+            throw new IllegalArgumentException("步骤编码结尾无效，请重新导出");
+        return parts.isEmpty() ? List.of("") : parts;
+    }
+
     /** 顶层：【1】 [1] 1. 1、 */
     private static final Pattern TOP_MARKER = Pattern.compile(
-            "(【\\d+】|\\[\\d+]|\\d+[.、])"
+            "(【\\d+】|\\[\\d+]|(?<![\\d.])\\d+[.、](?!\\d))"
     );
     /** 次级：①②… 或 (1)（1） */
     private static final Pattern SUB_MARKER = Pattern.compile(
@@ -28,6 +65,11 @@ public final class CaseStepSplitUtils {
     );
 
     private CaseStepSplitUtils() {
+    }
+
+    public static boolean requiresExportFraming(List<String> parts) {
+        return parts.stream().anyMatch(part -> part != null && (part.contains("\n") || part.contains("\r")
+                || !part.equals(normalizeHtmlBreaks(part)) || !part.equals(part.strip()) || TOP_MARKER.matcher(part).find() || part.startsWith("MSP-STEPS/1")));
     }
 
     /**
@@ -39,7 +81,32 @@ public final class CaseStepSplitUtils {
             result.add(StringUtils.EMPTY);
             return result;
         }
+        if (cellContent.startsWith(FRAMED_PREFIX)) return decodeExportSteps(cellContent);
         String content = normalizeHtmlBreaks(cellContent).trim();
+        // Our single-row export uses consecutive [n] markers at line starts.
+        // Decode those before the permissive legacy importer so decimal values,
+        // multiline bodies and empty step positions survive a round trip.
+        Matcher exported = Pattern.compile("(?m)^\\[(\\d+)]").matcher(content);
+        List<Integer> bodyStarts = new ArrayList<>();
+        List<Integer> markerStarts = new ArrayList<>();
+        int expected = 1;
+        boolean consecutive = true;
+        while (exported.find()) {
+            if (!exported.group(1).equals(String.valueOf(expected++))) consecutive = false;
+            markerStarts.add(exported.start());
+            bodyStarts.add(exported.end());
+        }
+        if (consecutive && !markerStarts.isEmpty() && markerStarts.getFirst() == 0
+                && TOP_MARKER.matcher(content).results().count() == markerStarts.size()) {
+            List<String> decoded = new ArrayList<>();
+            for (int i = 0; i < bodyStarts.size(); i++) {
+                int end = i + 1 < markerStarts.size() ? markerStarts.get(i + 1) : content.length();
+                String body = content.substring(bodyStarts.get(i), end);
+                if (i + 1 < markerStarts.size() && body.endsWith("\n")) body = body.substring(0, body.length() - 1);
+                decoded.add(body);
+            }
+            return decoded;
+        }
         if (!TOP_MARKER.matcher(content).find()) {
             // 无顶层序号：按换行拆
             return splitByNewLine(content);

@@ -1,0 +1,5 @@
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 5.489 s <<< FAILURE! -- in io.metersphere.functional.service.CaseAssetExcelRoundTripTests
+expected: <input<br>then submit> but was: <input
+[ERROR]   CaseAssetExcelRoundTripTests.realExcelRetainsP1AndUpdatesSameAssetIdentity:76 expected: <input<br>then submit> but was: <input
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE

@@ -1,0 +1,12 @@
+[ERROR] Tests run: 3, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 3.718 s <<< FAILURE! -- in io.metersphere.functional.asset.service.CaseAssetOperationDiagnosticsTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.199 s -- in io.metersphere.functional.asset.service.CaseAssetSystemMySqlTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.575 s -- in io.metersphere.functional.service.CaseAssetExcelRoundTripTests
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.270 s -- in io.metersphere.functional.service.FunctionalCaseExportMySqlTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.260 s -- in io.metersphere.functional.service.Msp38AssetExportTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.168 s -- in io.metersphere.functional.service.Msp38ExportSafetyTests
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.612 s -- in io.metersphere.functional.service.Msp38StepMetadataTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in io.metersphere.functional.service.Msp38StepRoundTripTests
+[ERROR]   CaseAssetOperationDiagnosticsTests.assetDatabaseAdviceWinsOverGlobalHandlerInMvc:36 » JsonParse Unexpected character ('<' (code 60)): expected a valid value (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+[ERROR] Tests run: 41, Failures: 0, Errors: 1, Skipped: 0
+[INFO] BUILD FAILURE
+[INFO] Total time:  01:18 min

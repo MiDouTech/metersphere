@@ -46,8 +46,25 @@ public class AgentCaseImportService {
     private final java.util.concurrent.Semaphore precheckCapacity=new java.util.concurrent.Semaphore(4);
     public Map<String,Object> precheck(FunctionalCaseImportRequest request,MultipartFile file,String requestId,String user,String tokenId) {
         if(!precheckCapacity.tryAcquire())throw new MSException("IMPORT_RATE_LIMIT");
-        try{return precheckInternal(request,file,requestId,user,tokenId);}
+        try{return safeOperation("IMPORT_PRECHECK",()->precheckInternal(request,file,requestId,user,tokenId));}
         finally{precheckCapacity.release();}
+    }
+    private <T> T safeOperation(String phase,java.util.function.Supplier<T> operation) {
+        try {return operation.get();}
+        catch(org.springframework.dao.DataAccessException failure) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FAILED,
+                io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record(phase,UUID.randomUUID().toString(),failure));
+        } catch(MSException failure) {
+            if(failure.getCause()==null)throw failure;
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FAILED,
+                io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record(phase,UUID.randomUUID().toString(),failure));
+        } catch(org.apache.shiro.lang.ShiroException refusal) {
+            // Existing Shiro handlers retain their original 401/403 refusal protocol.
+            throw refusal;
+        } catch(RuntimeException failure) {
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FAILED,
+                io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record(phase,UUID.randomUUID().toString(),failure));
+        }
     }
     private Map<String,Object> precheckInternal(FunctionalCaseImportRequest request,MultipartFile file,String requestId,String user,String tokenId) {
         authorize(request.getProjectId(),user,tokenId);
@@ -56,7 +73,7 @@ public class AgentCaseImportService {
         String name=Objects.toString(file.getOriginalFilename(),"");
         if(name.length()>255||!name.toLowerCase(Locale.ROOT).matches(".*\\.(xlsx|xls|xmind)"))throw new MSException("仅支持Excel或XMind文件");
         byte[] bytes;
-        try { bytes=file.getBytes(); }catch(Exception failure){throw new MSException("IMPORT_FILE_READ_FAILED");}
+        try { bytes=file.getBytes(); }catch(Exception failure){io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_FILE_READ",UUID.randomUUID().toString(),failure);throw new MSException("IMPORT_FILE_READ_FAILED");}
         if(bytes.length>50*1024*1024)throw new MSException("导入文件不能超过50MiB");
         String sourceHash=DigestUtils.sha256Hex(bytes);
         String requestHash=DigestUtils.sha256Hex(JSON.toJSONString(request)+":"+sourceHash+":"+name);
@@ -101,14 +118,19 @@ public class AgentCaseImportService {
                     Set<ExcelMergeInfo> merges=new TreeSet<>();
                     EasyExcel.read(file.getInputStream(),null,new FunctionalCasePretreatmentListener(merges)).extraRead(CellExtraTypeEnum.MERGE).sheet(sheet).doRead();
                     var parser=new FunctionalCaseImportEventListener(request,new FunctionalCaseExcelDataFactory().getExcelDataByLocal(),custom,merges,session,0L);
+                    parser.setStepMetadata(io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.read(file.getInputStream(),sheet));
                     parser.collectPreparedItems(collect);
                     EasyExcel.read(file.getInputStream(),parser).sheet(sheet).doRead();
                     for(var error:parser.getErrList())prepared.add(new Item("INVALID",null,null,null,safeValidation(error.getErrMsg())));
                     if(System.nanoTime()>deadline||prepared.size()>MAX_ITEMS)throw new MSException("导入超过10000条或解析时间限制，请拆分文件");
                 }
             }
-        } catch(MSException failure){throw failure;}
-        catch(Exception failure){org.slf4j.LoggerFactory.getLogger(getClass()).warn("Import precheck failed",failure);throw new MSException("IMPORT_FILE_PARSE_FAILED");}
+        } catch(MSException failure){
+            if(failure.getCause()==null)throw failure;
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_PRECHECK_PARSE",UUID.randomUUID().toString(),failure);
+            throw new MSException("IMPORT_FILE_PARSE_FAILED");
+        }
+        catch(Exception failure){io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_PRECHECK_PARSE",UUID.randomUUID().toString(),failure);throw new MSException("IMPORT_FILE_PARSE_FAILED");}
         if(prepared.isEmpty()||prepared.size()>MAX_ITEMS)throw new MSException("未找到可处理的用例，或超过10000条限制");
         if(prepared.stream().filter(item->item.target()!=null).map(Item::target).distinct().count()!=prepared.stream().filter(item->item.target()!=null).count())throw new MSException("文件多次覆盖同一用例，请合并后重新预检");
         String id=UUID.randomUUID().toString();long now=System.currentTimeMillis();
@@ -132,6 +154,9 @@ public class AgentCaseImportService {
     }
 
     public Map<String,Object> get(String id,String user,String token,int current,int size) {
+        return safeOperation("IMPORT_STATUS",()->getInternal(id,user,token,current,size));
+    }
+    private Map<String,Object> getInternal(String id,String user,String token,int current,int size) {
         var row=owned(id,user,token,false);
         if(current<1||size<1||size>100)throw new MSException("分页参数无效");
         var counts=jdbc.queryForList("SELECT state,COUNT(*) AS total FROM functional_import_item WHERE job_id=? GROUP BY state",id);
@@ -141,6 +166,9 @@ public class AgentCaseImportService {
     }
 
     public Map<String,Object> action(String id,String action,String user,String token) {
+        return safeOperation("IMPORT_ACTION",()->actionInternal(id,action,user,token));
+    }
+    private Map<String,Object> actionInternal(String id,String action,String user,String token) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status->{
             var row=owned(id,user,token,true);String state=(String)row.get("state");
             if("stop".equals(action)) {
@@ -177,20 +205,27 @@ public class AgentCaseImportService {
 
     @Scheduled(fixedDelay=1000,initialDelay=30000)
     public void drain() {
-        var jobs=jdbc.queryForList("SELECT id FROM functional_import_job WHERE state IN ('QUEUED','RUNNING') ORDER BY update_time LIMIT 2",String.class);
+        List<String> jobs;
+        try { jobs=jdbc.queryForList("SELECT id FROM functional_import_job WHERE state IN ('QUEUED','RUNNING') ORDER BY update_time LIMIT 2",String.class); }
+        catch(Exception failure) {
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_WORKER_SCAN",UUID.randomUUID().toString(),failure);
+            return;
+        }
         for(String id:jobs)for(int i=0;i<20;i++) {
             java.util.concurrent.atomic.AtomicInteger attempted=new java.util.concurrent.atomic.AtomicInteger(-1);
             try {
                 Integer position=new TransactionTemplate(transactionManager).execute(status->processOne(id,attempted::set));
                 if(position==null)break;
             } catch(Exception failure) {
-                org.slf4j.LoggerFactory.getLogger(getClass()).warn("Import item failed for job {}",id,failure);
+                io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_ITEM_WRITE",id,failure);
                 // Business writes rolled back with the item transaction. Preserve a safe report and continue other items.
-                new TransactionTemplate(transactionManager).executeWithoutResult(status->{
+                try { new TransactionTemplate(transactionManager).executeWithoutResult(status->{
                     jdbc.queryForList("SELECT id FROM functional_import_job WHERE id=? FOR UPDATE",id);
                     if(attempted.get()>=0)jdbc.update("UPDATE functional_import_item SET state='FAILED',message='写入失败或授权、模板、目标版本已变化，请核对后重试' WHERE job_id=? AND position=? AND state='PENDING'",id,attempted.get());
                     else jdbc.update("UPDATE functional_import_job SET state='FAILED',update_time=? WHERE id=? AND state IN ('QUEUED','RUNNING')",System.currentTimeMillis(),id);
-                });
+                }); } catch(Exception recoveryFailure) {
+                    io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_ITEM_RECOVERY",id,recoveryFailure);
+                }
                 break;
             } finally { AgentTokenContext.clear(); }
         }
@@ -264,9 +299,13 @@ public class AgentCaseImportService {
     }
     @Scheduled(fixedDelay=60000,initialDelay=60000)
     public void expire() {
+        try {
         long now=System.currentTimeMillis();
         jdbc.update("UPDATE functional_import_job SET state='EXPIRED',update_time=? WHERE expires_at<=? AND state IN ('PRECHECKED','QUEUED','RUNNING')",now,now);
         jdbc.update("UPDATE functional_import_job SET source_bytes=X'' WHERE expires_at<=? AND OCTET_LENGTH(source_bytes)>0",now);
+        } catch(Exception failure) {
+            io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("IMPORT_EXPIRY",UUID.randomUUID().toString(),failure);
+        }
     }
     private void validateDestination(FunctionalCaseImportRequest request) {
         String module=request.getModuleId();
