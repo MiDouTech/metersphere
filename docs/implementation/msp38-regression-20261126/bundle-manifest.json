@@ -1,0 +1,186 @@
+{
+  "base": "76645e478a3b06206a8fd055a5a03db2351bd209",
+  "patchSha256": "2dc4960489399bf796295301f69fa8789f597ff9ee4a2e2bf489935f9eeefdba",
+  "files": [
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/domain/FunctionalCaseExcelData.java",
+      "sha256": "b35b516b5b3ed84452f50e15990226666f3c5e107b8cad8160230c2444e6b57b",
+      "bytes": 4579
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/listener/FunctionalCaseImportEventListener.java",
+      "sha256": "840c459ec61e36b73e64cbdb6acf027ac3c47ae9ff042d2ef6e76d3ff1532f6a",
+      "bytes": 39727
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/AssetStepSnapshot.java",
+      "sha256": "c378c7e8d78bd12c290e6bfad44600c8917da5f1c1427b544dda3bc9fba074ba",
+      "bytes": 2332
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/CaseAssetExcelStepMetadata.java",
+      "sha256": "c7f61bb6ef288a36c44b98053e170f46bfb0e428006a2a6fc4cc776b635abe1e",
+      "bytes": 7810
+    },
+    {
+      "path": "backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseFileService.java",
+      "sha256": "933ea0bc275d186642ffaf70895713b0fe13d196a63c36a3e8cbb973dd61d964",
+      "bytes": 61282
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/CaseAssetExcelRoundTripTests.java",
+      "sha256": "d3d6fcef9ecd8774ee8f81c343b5d041897b3a8851574c3586436d246f6b1a50",
+      "bytes": 23326
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepMetadataTests.java",
+      "sha256": "9acb8709a2bdfefc9ad49346d2c60ec484e12fa3aa05bcb10f75516479cb920d",
+      "bytes": 6156
+    },
+    {
+      "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepRoundTripTests.java",
+      "sha256": "bf777df73ee74bde9ffc87dbb86c1de7d8ca7946f88eebacc18419d90c78ae42",
+      "bytes": 3183
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/api-contracts.log",
+      "sha256": "b8d7c4bdde57302de1f4334758132608b5add60b8901771e624990f3a5fa8c9a",
+      "bytes": 123
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/backend-green-v2.log",
+      "sha256": "66d52c0484726aa4082c2e7e146691d5c4d79875f3c6b9d4bab434b3781b710b",
+      "bytes": 47121
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/backend-green.log",
+      "sha256": "6435bbc5e5f01ef14da5d53819d7db456fc7ebb1ce75e6b5b8f954f72707bad9",
+      "bytes": 49076
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/backend-package.log",
+      "sha256": "763b5a7dea24824b6eacddafe6a52e0b9629571d247e0c1c2c3b54ff092282d7",
+      "bytes": 138378
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/backend-red.txt",
+      "sha256": "0e3febcf15a40613c3cc6dd7de55e1d50dafe4e5b3b1d8a4378fac31d13df5f3",
+      "bytes": 1469
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/browser-production-v2.log",
+      "sha256": "ad79a16262ae4735fe46e56c8cb8dd580e67abeb96fd978a706018bfd60e5e28",
+      "bytes": 835
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/browser-production.log",
+      "sha256": "f4b7c3d6833c694283dc7164ab6b6466f28d3cde1b84b80a3830d7bbfcd88f7c",
+      "bytes": 11268
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/changes.patch",
+      "sha256": "2dc4960489399bf796295301f69fa8789f597ff9ee4a2e2bf489935f9eeefdba",
+      "bytes": 36404
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/check-package.py",
+      "sha256": "1209756569810e11dec81de4b50304db08124590d3e97401d4cbb982667b14bf",
+      "bytes": 963
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/freeze-review.py",
+      "sha256": "19e32ae268f186e59d666639f8e51065ab3569c0759301d215a9435d5e8e3b21",
+      "bytes": 1925
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/frontend-build.log",
+      "sha256": "cbfbc1ef6478d55ae57cfa05d736fcc0ccc80146978823854b95bae6040b8d0d",
+      "bytes": 209930
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/frontend-lint-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/frontend-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/frontend-tests-final.log",
+      "sha256": "74a9094f6f5a3014f9a2c692b40ea592a5965847f25f8d4bf6dfc28e6d473725",
+      "bytes": 1037
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/frontend-tests-v2.log",
+      "sha256": "fecbc6afbadd3b55536d78b34d9681787edcc22e83852fcbcdf6d05b5da8e7d0",
+      "bytes": 944
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/frontend-tests.log",
+      "sha256": "bedf2433e8836cb7670b9f557eebe2c62107e4f2b12394e4fc4c75d80d1e8a60",
+      "bytes": 1665
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/frontend-type.log",
+      "sha256": "fb5e4c74eacb848765d299b41ebafe14baaf920c278960eead95e6f25f9eb3b3",
+      "bytes": 72
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/native-run.log",
+      "sha256": "19819b3cb762edc5a8a83f54a6a3497d052480243cde9a95f7824f6a6595b616",
+      "bytes": 313
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/native-suite.log",
+      "sha256": "ddf7e9a456023dd044926a713644fe137d21278405e695cb5f5b2f3ac6234e80",
+      "bytes": 90759
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/package-class-check.json",
+      "sha256": "0dd2a413135aa400003a7f3a67726ab76c4fb79fb526e12df61cb8a7d59dd43f",
+      "bytes": 465
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/plan.md",
+      "sha256": "8815acf26bdac28c4978e330c1f9e8a3e7bba2abd4ea8a7112f4109212a64188",
+      "bytes": 1412
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/prepare-native.py",
+      "sha256": "fe254f58f93532e8897d747eddf217665c51f92461766a8d4bfcfa81b2b01fdf",
+      "bytes": 432
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/review-source-sha256.json",
+      "sha256": "57f34162a3d4d751a4aa3a24e43907151eba35051839e93f1a96357441b5f572",
+      "bytes": 2257
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/route-tabs.log",
+      "sha256": "124994cdd92035fd2ada68cb6e83e155096e6831e6bc50b285e35ff5dd9b9a76",
+      "bytes": 217
+    },
+    {
+      "path": "docs/implementation/msp38-regression-20261126/verification.md",
+      "sha256": "3e9aca30f736006dbd631c389cc511498a7e93ee5becf7fad299fa8263c2a6e3",
+      "bytes": 6201
+    },
+    {
+      "path": "frontend/src/views/test-asset/asset-case-detail.vue",
+      "sha256": "d0a071732963905b66be2d9be9a9b1865d00ea32a75a9bfd5d7a853b605b1a78",
+      "bytes": 12973
+    },
+    {
+      "path": "frontend/tests/asset-attachment-draft.test.mjs",
+      "sha256": "99470195c544ebc6f8259d8a7d3dc43ca165b1b7e75c390ec26d52020fa7d5c5",
+      "bytes": 1632
+    },
+    {
+      "path": "frontend/tests/asset-attachment-sfc.test.mjs",
+      "sha256": "a4e7d71d5fcaaa26c1c8a92d083d85a332a34dac7cf1ca301179f5ed0b2081f7",
+      "bytes": 7475
+    }
+  ]
+}

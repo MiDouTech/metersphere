@@ -23,6 +23,7 @@ function setup() {
   let uploadFails = false;
   const mounted = [];
   const writes = [];
+  const route = vue.reactive({ params: { catalogId: 'catalog', caseId: 'case' } });
   const api = {
     getCaseAssetDetail: async () => JSON.parse(JSON.stringify(stored)),
     uploadCaseAssetAttachment: async (catalogId, caseId, file) => {
@@ -40,10 +41,17 @@ function setup() {
   };
   const exports = {};
   const require = (name) => {
-    if (name === 'vue') return { ...vue, onMounted: (f) => mounted.push(f) };
+    if (name === 'vue')
+      return {
+        ...vue,
+        onMounted: (f) => mounted.push(f),
+        onBeforeUnmount() {
+          return undefined;
+        },
+      };
     if (name === 'vue-router')
       return {
-        useRoute: () => ({ params: { catalogId: 'catalog', caseId: 'case' } }),
+        useRoute: () => route,
         useRouter: () => ({
           push() {
             return undefined;
@@ -77,6 +85,8 @@ function setup() {
   return {
     state,
     writes,
+    route,
+    api,
     init: async () => {
       await Promise.all(mounted.map((f) => f()));
     },
@@ -114,6 +124,81 @@ test('complete SFC setup preserves every draft field through upload/delete, save
   await s.load();
   assert.equal(s.form.name, 'draft');
 });
+
+test('same component route navigation reloads target and ignores a late previous read', async () => {
+  const h = setup();
+  await h.init();
+  const late = Promise.withResolvers();
+  h.api.getCaseAssetDetail = async (_catalog, id) =>
+    id === 'old' ? late.promise : { name: id, caseEditType: 'TEXT', textDescription: id, attachments: [] };
+  h.route.params.caseId = 'old';
+  await vue.nextTick();
+  h.route.params.caseId = 'new';
+  await vue.nextTick();
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.equal(h.state.form.name, 'new');
+  late.resolve({ name: 'stale', steps: '[]' });
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.equal(h.state.form.name, 'new');
+  assert.equal(h.state.form.body, 'new');
+});
+
+test('late attachment refresh cannot replace next route state; failed load cannot save', async () => {
+  const h = setup();
+  await h.init();
+  const gate = Promise.withResolvers();
+  h.api.getCaseAssetDetail = async (_catalog, id) =>
+    id === 'case' ? gate.promise : { name: id, attachments: [{ id: 'new-file' }] };
+  const pending = h.state.refreshAttachments();
+  h.route.params.caseId = 'next';
+  await vue.nextTick();
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  gate.resolve({ name: 'old', attachments: [{ id: 'old-file' }] });
+  await pending;
+  assert.equal(h.state.attachments.value[0].id, 'new-file');
+  h.api.getCaseAssetDetail = async () => {
+    throw new Error('private failure');
+  };
+  h.route.params.caseId = 'failed';
+  await vue.nextTick();
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  assert.equal(h.state.form.name, '');
+  assert.equal(h.state.ready.value, false);
+  await h.state.save();
+  assert.equal(h.writes.length, 0);
+});
+test('save completion from previous catalog cannot reload or clear current editor', async () => {
+  const h = setup();
+  await h.init();
+  const gate = Promise.withResolvers();
+  const writes = [];
+  h.api.updateCaseAsset = async (request) => {
+    writes.push(request);
+    await gate.promise;
+  };
+  const pending = h.state.save();
+  h.api.getCaseAssetDetail = async (catalog) => ({ name: catalog, attachments: [], updateTime: 9 });
+  h.route.params.catalogId = 'next-catalog';
+  await vue.nextTick();
+  await new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+  gate.resolve();
+  await pending;
+  assert.equal(writes[0].catalogId, 'catalog');
+  assert.equal(writes[0].id, 'case');
+  assert.equal(h.state.form.name, 'next-catalog');
+  assert.equal(h.state.saving.value, false);
+});
+
 test('failed upload keeps draft and concurrent refresh cannot bypass save conflict', async () => {
   const h = setup();
   await h.init();

@@ -342,6 +342,8 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
      * Preserve explicit TEXT content; otherwise split numbered STEP cells.
      */
     private void handleSteps(FunctionalCaseExcelData functionalCaseExcelData) {
+        String assetSnapshot = functionalCaseExcelData.getTextDescription();
+        if (CollectionUtils.isNotEmpty(functionalCaseExcelData.getMergeTextDescription())) assetSnapshot=functionalCaseExcelData.getMergeTextDescription().getFirst();
         if (FunctionalCaseTypeConstants.CaseEditType.TEXT.name().equals(functionalCaseExcelData.getCaseEditType())) {
             functionalCaseExcelData.setSteps("[]");
             return;
@@ -376,6 +378,9 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
         String expected = CaseStepSplitUtils.joinAsText(resParts).replace("\n", "<br/>");
         functionalCaseExcelData.setTextDescription(textDesc);
         functionalCaseExcelData.setExpectedResult(expected);
+        if (io.metersphere.functional.excel.util.AssetStepSnapshot.encoded(assetSnapshot)) {
+            functionalCaseExcelData.setExpectedResult((String)io.metersphere.functional.excel.util.AssetStepSnapshot.decode(assetSnapshot).get("expected"));
+        }
 
         // 默认可拆则 STEP，否则 TEXT（仅展示默认；数据已双写）
         if (StringUtils.isBlank(functionalCaseExcelData.getCaseEditType())) {
@@ -416,6 +421,15 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
     private List<Map<String, Object>> getSingleRowSteps(String cellDesc, String cellResult, Integer startStepIndex) {
         List<Map<String, Object>> steps = new ArrayList<>();
 
+        if (io.metersphere.functional.excel.util.AssetStepSnapshot.encoded(cellDesc)) {
+            var snapshot=io.metersphere.functional.excel.util.AssetStepSnapshot.decode(cellDesc);
+            var descriptions=(List<?>)snapshot.get("descriptions");var results=(List<?>)snapshot.get("results");var numbers=(List<?>)snapshot.get("numbers");
+            for(int i=0;i<descriptions.size();i++) {
+                Map<String,Object> step=new LinkedHashMap<>();step.put("id",UUID.randomUUID().toString());step.put("num",numbers.get(i));step.put("desc",descriptions.get(i));step.put("result",results.get(i));steps.add(step);
+            }
+            return steps;
+        }
+
         List<String> stepDescList = parseStepCell(cellDesc);
         List<String> stepResList = parseStepCell(cellResult);
 
@@ -450,6 +464,7 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
      * @return 解析后的字符文本
      */
     private List<String> parseStepCell(String cellContent) {
+        if (io.metersphere.functional.excel.util.AssetStepSnapshot.encoded(cellContent)) return io.metersphere.functional.excel.util.AssetStepSnapshot.parts(cellContent,"descriptions");
         return CaseStepSplitUtils.splitCell(cellContent);
     }
 

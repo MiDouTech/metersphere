@@ -684,6 +684,10 @@ public class FunctionalCaseFileService {
                     data.setTextDescription(StringUtils.isNotBlank(request.getAssetCatalogId()) ? parseAssetStepData(textDescriptionList) : parseData(textDescriptionList));
                     data.setExpectedResult(StringUtils.isNotBlank(request.getAssetCatalogId()) ? parseAssetStepData(expectedResultList) : parseData(expectedResultList));
                 }
+                if (data.getAssetStepNumbers() != null) {
+                    data.setTextDescription(io.metersphere.functional.excel.util.AssetStepSnapshot.encode(textDescriptionList, expectedResultList, data.getAssetStepNumbers(), data.getAssetExpectedResult()));
+                    data.setExpectedResult(parseAssetStepData(expectedResultList));
+                }
                 list.add(data);
             }
         });
@@ -773,6 +777,7 @@ public class FunctionalCaseFileService {
             }
             excelData.setTextDescription(assetExport ? io.metersphere.functional.excel.util.CaseStepSplitUtils.encodeExportSteps(List.of(textDescriptionList.get(i))) : textDescriptionList.get(i));
             excelData.setExpectedResult(assetExport ? io.metersphere.functional.excel.util.CaseStepSplitUtils.encodeExportSteps(List.of(expectedResultList.get(i))) : expectedResultList.get(i));
+            if (assetExport && data.getAssetStepNumbers()!=null) excelData.setTextDescription(io.metersphere.functional.excel.util.AssetStepSnapshot.encode(List.of(textDescriptionList.get(i)), List.of(expectedResultList.get(i)), data.getAssetStepNumbers().subList(i,i+1), data.getAssetExpectedResult()));
             list.add(excelData);
         }
     }
@@ -959,6 +964,11 @@ public class FunctionalCaseFileService {
             data.setExpectedResult(assetExport ? io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.encodeText(rawExpectedResult) : parseHtml(rawExpectedResult));
         } else {
             String steps = new String(functionalCaseBlob.getSteps() == null ? new byte[0] : functionalCaseBlob.getSteps(), StandardCharsets.UTF_8);
+            if (assetExport) {
+                data.setAssetStepNumbers(new ArrayList<>());
+                data.setAssetExpectedResult(new String(functionalCaseBlob.getExpectedResult()==null?new byte[0]:functionalCaseBlob.getExpectedResult(),StandardCharsets.UTF_8));
+                data.setExpectedResult(data.getAssetExpectedResult());
+            }
             List jsonArray = new ArrayList();
             try {
                 jsonArray = JSON.parseArray(steps);
@@ -971,6 +981,7 @@ public class FunctionalCaseFileService {
             for (int j = 0; j < jsonArray.size(); j++) {
                 // 将步骤存储起来，之后生成多条数据，再合并单元格
                 Map item = (Map) jsonArray.get(j);
+                if (assetExport) data.getAssetStepNumbers().add(item.get("num"));
                 String textDescription = Optional.ofNullable(item.get("desc")).orElse(StringUtils.EMPTY).toString();
                 String expectedResult = Optional.ofNullable(item.get("result")).orElse(StringUtils.EMPTY).toString();
                 // Empty steps still occupy a position and must keep their paired result.

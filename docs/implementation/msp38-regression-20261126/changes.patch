@@ -1,0 +1,588 @@
+diff --git a/backend/services/case-management/src/main/java/io/metersphere/functional/excel/domain/FunctionalCaseExcelData.java b/backend/services/case-management/src/main/java/io/metersphere/functional/excel/domain/FunctionalCaseExcelData.java
+index ef1adcc41d..37711046d8 100644
+--- a/backend/services/case-management/src/main/java/io/metersphere/functional/excel/domain/FunctionalCaseExcelData.java
++++ b/backend/services/case-management/src/main/java/io/metersphere/functional/excel/domain/FunctionalCaseExcelData.java
+@@ -50,6 +50,10 @@ public class FunctionalCaseExcelData {
+     @ExcelIgnore
+     private String steps;
+     @ExcelIgnore
++    private List<Object> assetStepNumbers;
++    @ExcelIgnore
++    private String assetExpectedResult;
++    @ExcelIgnore
+     Map<String, Object> customData = new LinkedHashMap<>();
+     @ExcelIgnore
+     Map<String, String> otherFields;
+diff --git a/backend/services/case-management/src/main/java/io/metersphere/functional/excel/listener/FunctionalCaseImportEventListener.java b/backend/services/case-management/src/main/java/io/metersphere/functional/excel/listener/FunctionalCaseImportEventListener.java
+index 975c9f60f5..54780b9b52 100644
+--- a/backend/services/case-management/src/main/java/io/metersphere/functional/excel/listener/FunctionalCaseImportEventListener.java
++++ b/backend/services/case-management/src/main/java/io/metersphere/functional/excel/listener/FunctionalCaseImportEventListener.java
+@@ -342,6 +342,8 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
+      * Preserve explicit TEXT content; otherwise split numbered STEP cells.
+      */
+     private void handleSteps(FunctionalCaseExcelData functionalCaseExcelData) {
++        String assetSnapshot = functionalCaseExcelData.getTextDescription();
++        if (CollectionUtils.isNotEmpty(functionalCaseExcelData.getMergeTextDescription())) assetSnapshot=functionalCaseExcelData.getMergeTextDescription().getFirst();
+         if (FunctionalCaseTypeConstants.CaseEditType.TEXT.name().equals(functionalCaseExcelData.getCaseEditType())) {
+             functionalCaseExcelData.setSteps("[]");
+             return;
+@@ -376,6 +378,9 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
+         String expected = CaseStepSplitUtils.joinAsText(resParts).replace("\n", "<br/>");
+         functionalCaseExcelData.setTextDescription(textDesc);
+         functionalCaseExcelData.setExpectedResult(expected);
++        if (io.metersphere.functional.excel.util.AssetStepSnapshot.encoded(assetSnapshot)) {
++            functionalCaseExcelData.setExpectedResult((String)io.metersphere.functional.excel.util.AssetStepSnapshot.decode(assetSnapshot).get("expected"));
++        }
+ 
+         // 默认可拆则 STEP，否则 TEXT（仅展示默认；数据已双写）
+         if (StringUtils.isBlank(functionalCaseExcelData.getCaseEditType())) {
+@@ -416,6 +421,15 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
+     private List<Map<String, Object>> getSingleRowSteps(String cellDesc, String cellResult, Integer startStepIndex) {
+         List<Map<String, Object>> steps = new ArrayList<>();
+ 
++        if (io.metersphere.functional.excel.util.AssetStepSnapshot.encoded(cellDesc)) {
++            var snapshot=io.metersphere.functional.excel.util.AssetStepSnapshot.decode(cellDesc);
++            var descriptions=(List<?>)snapshot.get("descriptions");var results=(List<?>)snapshot.get("results");var numbers=(List<?>)snapshot.get("numbers");
++            for(int i=0;i<descriptions.size();i++) {
++                Map<String,Object> step=new LinkedHashMap<>();step.put("id",UUID.randomUUID().toString());step.put("num",numbers.get(i));step.put("desc",descriptions.get(i));step.put("result",results.get(i));steps.add(step);
++            }
++            return steps;
++        }
++
+         List<String> stepDescList = parseStepCell(cellDesc);
+         List<String> stepResList = parseStepCell(cellResult);
+ 
+@@ -450,6 +464,7 @@ public class FunctionalCaseImportEventListener extends AnalysisEventListener<Map
+      * @return 解析后的字符文本
+      */
+     private List<String> parseStepCell(String cellContent) {
++        if (io.metersphere.functional.excel.util.AssetStepSnapshot.encoded(cellContent)) return io.metersphere.functional.excel.util.AssetStepSnapshot.parts(cellContent,"descriptions");
+         return CaseStepSplitUtils.splitCell(cellContent);
+     }
+ 
+diff --git a/backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/CaseAssetExcelStepMetadata.java b/backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/CaseAssetExcelStepMetadata.java
+index 7cdf4b3cd9..4900f8d521 100644
+--- a/backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/CaseAssetExcelStepMetadata.java
++++ b/backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/CaseAssetExcelStepMetadata.java
+@@ -22,8 +22,8 @@ public final class CaseAssetExcelStepMetadata {
+         if (parts.size() != 1) throw new MSException("文本元数据无效，请重新导出后重试");
+         return parts.getFirst();
+     }
+-    private static boolean isTransport(String text) { return text.startsWith(TEXT_PREFIX) || text.startsWith("MSP-STEPS/1\n"); }
+-    private static String transportVisible(String encoded) { return encoded.startsWith(TEXT_PREFIX) ? decodeText(encoded) : visible(CaseStepSplitUtils.splitCell(encoded)); }
++    private static boolean isTransport(String text) { return AssetStepSnapshot.encoded(text) || text.startsWith(TEXT_PREFIX) || text.startsWith("MSP-STEPS/1\n"); }
++    private static String transportVisible(String encoded) { return AssetStepSnapshot.encoded(encoded) ? AssetStepSnapshot.visible(encoded,"descriptions") : encoded.startsWith(TEXT_PREFIX) ? decodeText(encoded) : visible(CaseStepSplitUtils.splitCell(encoded)); }
+     public record CellValue(String visibleHash, String encoded) { }
+     private CaseAssetExcelStepMetadata() { }
+ 
+@@ -86,6 +86,12 @@ public final class CaseAssetExcelStepMetadata {
+                 try {
+                     if (!transportVisible(encoded).equals(cell.getStringCellValue()))
+                         throw new MSException("步骤元数据与单元格内容不一致，请重新导出后重试");
++                    if (AssetStepSnapshot.encoded(encoded)) {
++                        Cell expectedCell=null;
++                        for (Cell heading:header) if (heading.getCellType()==CellType.STRING && FunctionalCaseImportFiled.EXPECTED_RESULT.getFiledLangMap().containsValue(heading.getStringCellValue())) expectedCell=sourceRow.getCell(heading.getColumnIndex());
++                        String visibleExpected=expectedCell==null || expectedCell.getCellType()==CellType.BLANK ? "" : expectedCell.getCellType()==CellType.STRING ? expectedCell.getStringCellValue() : null;
++                        if (!Objects.equals(visibleExpected,AssetStepSnapshot.visible(encoded,"results"))) continue;
++                    }
+                 } catch (MSException invalid) { throw invalid; }
+                 catch (RuntimeException invalid) { throw new MSException("步骤元数据已损坏，请重新导出后重试"); }
+                 result.computeIfAbsent(address.getRow(), ignored -> new HashMap<>()).put(address.getColumn(), new CellValue(hash(cell.getStringCellValue().trim()), encoded));
+diff --git a/backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseFileService.java b/backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseFileService.java
+index 35d95b1857..6da51396f2 100644
+--- a/backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseFileService.java
++++ b/backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseFileService.java
+@@ -684,6 +684,10 @@ public class FunctionalCaseFileService {
+                     data.setTextDescription(StringUtils.isNotBlank(request.getAssetCatalogId()) ? parseAssetStepData(textDescriptionList) : parseData(textDescriptionList));
+                     data.setExpectedResult(StringUtils.isNotBlank(request.getAssetCatalogId()) ? parseAssetStepData(expectedResultList) : parseData(expectedResultList));
+                 }
++                if (data.getAssetStepNumbers() != null) {
++                    data.setTextDescription(io.metersphere.functional.excel.util.AssetStepSnapshot.encode(textDescriptionList, expectedResultList, data.getAssetStepNumbers(), data.getAssetExpectedResult()));
++                    data.setExpectedResult(parseAssetStepData(expectedResultList));
++                }
+                 list.add(data);
+             }
+         });
+@@ -773,6 +777,7 @@ public class FunctionalCaseFileService {
+             }
+             excelData.setTextDescription(assetExport ? io.metersphere.functional.excel.util.CaseStepSplitUtils.encodeExportSteps(List.of(textDescriptionList.get(i))) : textDescriptionList.get(i));
+             excelData.setExpectedResult(assetExport ? io.metersphere.functional.excel.util.CaseStepSplitUtils.encodeExportSteps(List.of(expectedResultList.get(i))) : expectedResultList.get(i));
++            if (assetExport && data.getAssetStepNumbers()!=null) excelData.setTextDescription(io.metersphere.functional.excel.util.AssetStepSnapshot.encode(List.of(textDescriptionList.get(i)), List.of(expectedResultList.get(i)), data.getAssetStepNumbers().subList(i,i+1), data.getAssetExpectedResult()));
+             list.add(excelData);
+         }
+     }
+@@ -959,6 +964,11 @@ public class FunctionalCaseFileService {
+             data.setExpectedResult(assetExport ? io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.encodeText(rawExpectedResult) : parseHtml(rawExpectedResult));
+         } else {
+             String steps = new String(functionalCaseBlob.getSteps() == null ? new byte[0] : functionalCaseBlob.getSteps(), StandardCharsets.UTF_8);
++            if (assetExport) {
++                data.setAssetStepNumbers(new ArrayList<>());
++                data.setAssetExpectedResult(new String(functionalCaseBlob.getExpectedResult()==null?new byte[0]:functionalCaseBlob.getExpectedResult(),StandardCharsets.UTF_8));
++                data.setExpectedResult(data.getAssetExpectedResult());
++            }
+             List jsonArray = new ArrayList();
+             try {
+                 jsonArray = JSON.parseArray(steps);
+@@ -971,6 +981,7 @@ public class FunctionalCaseFileService {
+             for (int j = 0; j < jsonArray.size(); j++) {
+                 // 将步骤存储起来，之后生成多条数据，再合并单元格
+                 Map item = (Map) jsonArray.get(j);
++                if (assetExport) data.getAssetStepNumbers().add(item.get("num"));
+                 String textDescription = Optional.ofNullable(item.get("desc")).orElse(StringUtils.EMPTY).toString();
+                 String expectedResult = Optional.ofNullable(item.get("result")).orElse(StringUtils.EMPTY).toString();
+                 // Empty steps still occupy a position and must keep their paired result.
+diff --git a/backend/services/case-management/src/test/java/io/metersphere/functional/service/CaseAssetExcelRoundTripTests.java b/backend/services/case-management/src/test/java/io/metersphere/functional/service/CaseAssetExcelRoundTripTests.java
+index 375febc644..6498815ff6 100644
+--- a/backend/services/case-management/src/test/java/io/metersphere/functional/service/CaseAssetExcelRoundTripTests.java
++++ b/backend/services/case-management/src/test/java/io/metersphere/functional/service/CaseAssetExcelRoundTripTests.java
+@@ -52,6 +52,27 @@ class CaseAssetExcelRoundTripTests {
+    var complexDescriptions=List.of("first line\n[2]literal marker", " ", " trailing whitespace \n", "input<br>then submit", "<p>check result</p>", "<P class=\"x\">rich<br/>text</P>");
+    var complexExpected=List.of("amount20.50", "", "[1]result marker\nnext line", "<br>literal", "<p>expected</p>", "<P>rich<br />expected</P>");
+    var exporter=new FunctionalCaseFileService();
++   for (int count:List.of(0,1,3)) {
++    var descriptions=new ArrayList<String>();var results=new ArrayList<String>();var numbers=new ArrayList<Object>();
++    for(int i=0;i<count;i++){descriptions.add(i==1?"":"amount20.50\ninput<br>"+i);results.add("expected"+i);numbers.add(i+7);}
++    String independent="independent<br>\nresult";
++    String payload=io.metersphere.functional.excel.util.AssetStepSnapshot.encode(descriptions,results,numbers,independent);
++    var file=new ByteArrayOutputStream();EasyExcel.write(file).head(List.of(List.of("用例名称"),List.of("用例等级"),List.of("步骤描述"),List.of("预期结果"),List.of("编辑模式"))).sheet().doWrite(List.of(List.of("snapshot case","P1",payload,io.metersphere.functional.excel.util.AssetStepSnapshot.visible(payload,"results"),"STEP")));
++    try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new ByteArrayInputStream(file.toByteArray()))){io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.hideTransportCells(workbook);file.reset();workbook.write(file);}
++    var snapshotListener=new FunctionalCaseImportEventListener(request,FunctionalCaseExcelDataCn.class,List.of(priority),new TreeSet<>(),user,1L);
++    snapshotListener.setStepMetadata(io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(file.toByteArray()),0));var snapshotRows=new ArrayList<FunctionalCaseExcelData>();snapshotListener.collectPreparedItems((action,row)->snapshotRows.add(row));EasyExcel.read(new ByteArrayInputStream(file.toByteArray()),snapshotListener).sheet().doRead();
++    assertEquals(1,snapshotRows.size(),()->snapshotListener.getErrList().toString());assertEquals(independent,snapshotRows.getFirst().getExpectedResult());
++    var savedSteps=io.metersphere.sdk.util.JSON.parseArray(snapshotRows.getFirst().getSteps(),java.util.Map.class);assertEquals(count,savedSteps.size());
++    for(int i=0;i<count;i++){assertEquals(numbers.get(i),savedSteps.get(i).get("num"));assertEquals(descriptions.get(i),savedSteps.get(i).get("desc"));assertEquals(results.get(i),savedSteps.get(i).get("result"));}
++    if(count>0) {
++     var mergedData=new FunctionalCaseExcelData();mergedData.setName("merged snapshot");mergedData.setAssetStepNumbers(numbers);mergedData.setAssetExpectedResult(independent);
++     var mergeInfo=new HashMap<Integer,Integer>();var rows=new ArrayList<FunctionalCaseExcelData>();org.springframework.test.util.ReflectionTestUtils.invokeMethod(exporter,"buildExportMergeData",mergeInfo,rows,descriptions,results,mergedData,true);
++     var values=new ArrayList<List<Object>>();for(int i=0;i<rows.size();i++)values.add(List.of(i==0?"merged snapshot":"",i==0?"P1":"",rows.get(i).getTextDescription(),rows.get(i).getExpectedResult(),i==0?"STEP":""));
++     var heads=List.of(List.of("用例名称"),List.of("用例等级"),List.of("步骤描述"),List.of("预期结果"),List.of("编辑模式"));byte[] merged=Msp38AssetExportTests.exportRows(values,mergeInfo,heads,directory);
++     var regions=new TreeSet<ExcelMergeInfo>();EasyExcel.read(new ByteArrayInputStream(merged),null,new io.metersphere.functional.excel.listener.FunctionalCasePretreatmentListener(regions)).extraRead(com.alibaba.excel.enums.CellExtraTypeEnum.MERGE).sheet().doRead();
++     var mergedListener=new FunctionalCaseImportEventListener(request,FunctionalCaseExcelDataCn.class,List.of(priority),regions,user,1L);mergedListener.setStepMetadata(io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(merged),0));var imported=new ArrayList<FunctionalCaseExcelData>();mergedListener.collectPreparedItems((action,row)->imported.add(row));EasyExcel.read(new ByteArrayInputStream(merged),mergedListener).sheet().doRead();assertEquals(1,imported.size(),()->mergedListener.getErrList().toString());assertEquals(independent,imported.getFirst().getExpectedResult());var actual=io.metersphere.sdk.util.JSON.parseArray(imported.getFirst().getSteps(),java.util.Map.class);assertEquals(count,actual.size());for(int i=0;i<count;i++)assertEquals(numbers.get(i),actual.get(i).get("num"));
++    }
++   }
+    var complexBlob=new io.metersphere.functional.domain.FunctionalCaseBlob();
+    var rawSteps=new ArrayList<Map<String,String>>();for(int step=0;step<complexDescriptions.size();step++)rawSteps.add(Map.of("desc",complexDescriptions.get(step),"result",complexExpected.get(step)));
+    complexBlob.setSteps(io.metersphere.sdk.util.JSON.toJSONString(rawSteps).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+diff --git a/backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepMetadataTests.java b/backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepMetadataTests.java
+index 66f569a52d..23e8275f0f 100644
+--- a/backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepMetadataTests.java
++++ b/backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepMetadataTests.java
+@@ -6,6 +6,15 @@ import java.io.*;
+ import java.util.*;
+ import static org.junit.jupiter.api.Assertions.*;
+ class Msp38StepMetadataTests {
++ @Test void assetSnapshotIsBoundToBothVisibleColumnsAndNeverOverridesUserEdits() throws Exception {
++  var payload=io.metersphere.functional.excel.util.AssetStepSnapshot.encode(List.of("action<br>"),List.of("step result"),List.of(7),"independent\nexpected");
++  try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
++   var sheet=workbook.createSheet();var header=sheet.createRow(0);header.createCell(0).setCellValue("步骤描述");header.createCell(1).setCellValue("预期结果");var row=sheet.createRow(1);row.createCell(0).setCellValue(payload);row.createCell(1).setCellValue(io.metersphere.functional.excel.util.AssetStepSnapshot.visible(payload,"results"));
++   CaseAssetExcelStepMetadata.hideTransportCells(workbook);var bytes=new ByteArrayOutputStream();workbook.write(bytes);assertFalse(CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(bytes.toByteArray()),0).isEmpty());
++   row.getCell(1).setCellValue("user edited expected");bytes.reset();workbook.write(bytes);assertTrue(CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(bytes.toByteArray()),0).isEmpty());
++   row.getCell(1).setCellValue(io.metersphere.functional.excel.util.AssetStepSnapshot.visible(payload,"results"));row.getCell(0).setCellValue("user edited action");bytes.reset();workbook.write(bytes);assertTrue(CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(bytes.toByteArray()),0).isEmpty());
++  }
++ }
+  @Test void hiddenMetadataRetainsExactStepsAndNeverOverridesEditedVisibleCell() throws Exception {
+   var parts=List.of("first\n[2]literal", " ", "last\n");
+   try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+diff --git a/backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepRoundTripTests.java b/backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepRoundTripTests.java
+index ab2d7b95dd..fabf063189 100644
+--- a/backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepRoundTripTests.java
++++ b/backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepRoundTripTests.java
+@@ -4,6 +4,15 @@ import org.junit.jupiter.api.Test;
+ import java.util.List;
+ import static org.junit.jupiter.api.Assertions.*;
+ class Msp38StepRoundTripTests {
++ @Test void assetStepExportRetainsIndependentExpectedAndOriginalNumbers() {
++  var blob=new io.metersphere.functional.domain.FunctionalCaseBlob();
++  blob.setSteps("[{\"num\":7,\"desc\":\"amount20.50\",\"result\":\"step expected\"}]".getBytes(java.nio.charset.StandardCharsets.UTF_8));
++  blob.setExpectedResult("independent<br>\nresult".getBytes(java.nio.charset.StandardCharsets.UTF_8));
++  var data=new io.metersphere.functional.excel.domain.FunctionalCaseExcelData();
++  var descriptions=new java.util.ArrayList<String>();var results=new java.util.ArrayList<String>();
++  org.springframework.test.util.ReflectionTestUtils.invokeMethod(new FunctionalCaseFileService(),"buildExportStep",data,blob,"STEP",descriptions,results,true);
++  assertEquals("independent<br>\nresult",data.getExpectedResult());
++ }
+  @Test void exportedNumberedStepsRetainDecimalAndRemoveTransportNumbering() {
+   assertEquals(List.of("打开订单并输入2"),CaseStepSplitUtils.splitCell("[1]打开订单并输入2\n"));
+   assertEquals(List.of("金额为20.50，状态未提交"),CaseStepSplitUtils.splitCell("[1]金额为20.50，状态未提交\n"));
+diff --git a/frontend/src/views/test-asset/asset-case-detail.vue b/frontend/src/views/test-asset/asset-case-detail.vue
+index 24a1c5f81d..fc51d023e8 100644
+--- a/frontend/src/views/test-asset/asset-case-detail.vue
++++ b/frontend/src/views/test-asset/asset-case-detail.vue
+@@ -7,12 +7,18 @@
+       <template #headerRight>
+         <a-space
+           ><a-button @click="goBack">返回</a-button
+-          ><a-button v-if="canUpdate && !deleted" type="primary" :loading="saving" @click="save"
++          ><a-button
++            v-if="canUpdate && !deleted"
++            type="primary"
++            :disabled="loading || !ready"
++            :loading="saving"
++            @click="save"
+             >保存</a-button
+           ></a-space
+         >
+       </template>
+       <a-spin :loading="loading" class="block">
++        <a-alert v-if="loadError" type="error" class="mb-4">读取用例失败，请刷新页面后重试。</a-alert>
+         <a-alert v-if="deleted" class="mb-4" type="warning"
+           >该资产用例已被删除，仅保留历史查看；不能编辑或再次导入。</a-alert
+         >
+@@ -71,7 +77,7 @@
+           <div class="mb-3 flex items-center gap-2">
+             <a-button
+               v-if="canUpdate && !deleted"
+-              :disabled="sourceBindings.length > 0"
++              :disabled="sourceBindings.length > 0 || loading || !ready"
+               @click="attachmentInput?.click()"
+               >上传附件</a-button
+             >
+@@ -84,7 +90,7 @@
+                 <template #actions
+                   ><a-link
+                     v-if="canUpdate && !deleted"
+-                    :disabled="sourceBindings.length > 0"
++                    :disabled="sourceBindings.length > 0 || loading || !ready"
+                     status="danger"
+                     @click="removeAttachment(item)"
+                     >删除</a-link
+@@ -100,7 +106,7 @@
+ </template>
+ 
+ <script setup lang="ts">
+-  import { onMounted, reactive, ref } from 'vue';
++  import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+   import { useRoute, useRouter } from 'vue-router';
+   import { Message } from '@arco-design/web-vue';
+ 
+@@ -119,8 +125,14 @@
+ 
+   const route = useRoute();
+   const router = useRouter();
+-  const catalogId = String(route.params.catalogId);
+-  const caseId = String(route.params.caseId);
++  const catalogId = computed(() => String(route.params.catalogId));
++  const caseId = computed(() => String(route.params.caseId));
++  const ready = ref(false);
++  const loadError = ref(false);
++  let revision = 0;
++  const context = () => ({ catalogId: catalogId.value, caseId: caseId.value, revision });
++  const current = (target: ReturnType<typeof context>) =>
++    target.revision === revision && target.caseId === caseId.value && target.catalogId === catalogId.value;
+   const loading = ref(false);
+   const saving = ref(false);
+   const sourceBindings = ref<{ caseId: string; projectId: string; updateTime: number }[]>([]);
+@@ -142,9 +154,13 @@
+     customFields: [] as Array<{ fieldId: string; name?: string; value?: string }>,
+   });
+   async function load() {
++    const target = context();
++    ready.value = false;
++    loadError.value = false;
+     loading.value = true;
+     try {
+-      const detail: any = await getCaseAssetDetail(catalogId, caseId);
++      const detail: any = await getCaseAssetDetail(target.catalogId, target.caseId);
++      if (!current(target)) return;
+       form.name = detail.name || '';
+       sourceBindings.value = detail.sourceBindings || [];
+       sourceEditMode.value = undefined;
+@@ -163,11 +179,16 @@
+       }));
+       attachments.value = detail.attachments || [];
+       deleted.value = Boolean(detail.deleted);
++      ready.value = true;
++    } catch {
++      if (current(target)) loadError.value = true;
+     } finally {
+-      loading.value = false;
++      if (current(target)) loading.value = false;
+     }
+   }
+   async function save() {
++    if (!ready.value || loading.value || saving.value) return;
++    const target = context();
+     if (
+       sourceBindings.value.length &&
+       (!sourceEditMode.value || (sourceEditMode.value === 'WRITE_BACK' && !sourceCaseId.value))
+@@ -182,8 +203,8 @@
+     saving.value = true;
+     try {
+       await updateCaseAsset({
+-        id: caseId,
+-        catalogId,
++        id: target.caseId,
++        catalogId: target.catalogId,
+         sourceEditMode: sourceEditMode.value,
+         sourceCaseId: sourceCaseId.value,
+         expectedUpdateTime: expectedUpdateTime.value,
+@@ -200,22 +221,29 @@
+         expectedResult: form.expectedResult,
+         description: form.description,
+       });
++      if (!current(target)) return;
+       Message.success(sourceEditMode.value === 'WRITE_BACK' ? '源用例已保存，资产同步正在处理' : '保存成功');
+       await load();
+     } finally {
+-      saving.value = false;
++      if (current(target)) saving.value = false;
+     }
+   }
+-  async function refreshAttachments() {
+-    const detail = await getCaseAssetDetail(catalogId, caseId);
++  async function refreshAttachments(target = context()) {
++    const detail = await getCaseAssetDetail(target.catalogId, target.caseId);
++    if (!current(target)) return;
+     attachments.value = detail.attachments || [];
+   }
+   async function uploadAttachments(event: Event) {
++    if (!ready.value || loading.value) return;
++    const target = context();
+     const input = event.target as HTMLInputElement;
+     const files = Array.from(input.files || []);
+     try {
+-      const results = await Promise.allSettled(files.map((file) => uploadCaseAssetAttachment(catalogId, caseId, file)));
+-      await refreshAttachments();
++      const results = await Promise.allSettled(
++        files.map((file) => uploadCaseAssetAttachment(target.catalogId, target.caseId, file))
++      );
++      if (!current(target)) return;
++      await refreshAttachments(target);
+       const failed = results.find((result) => result.status === 'rejected');
+       if (failed?.status === 'rejected') throw failed.reason;
+     } finally {
+@@ -223,11 +251,15 @@
+     }
+   }
+   async function removeAttachment(item: any) {
+-    await deleteCaseAssetAttachment(catalogId, caseId, item.id, item.local !== false);
+-    await refreshAttachments();
++    if (!ready.value || loading.value) return;
++    const target = context();
++    await deleteCaseAssetAttachment(target.catalogId, target.caseId, item.id, item.local !== false);
++    if (current(target)) await refreshAttachments(target);
+   }
+   async function downloadAttachment(item: any) {
+-    const blob = await downloadCaseAssetAttachment(catalogId, caseId, item.id, item.local !== false);
++    const target = context();
++    const blob = await downloadCaseAssetAttachment(target.catalogId, target.caseId, item.id, item.local !== false);
++    if (!current(target)) return;
+     const url = URL.createObjectURL(blob as Blob);
+     const link = document.createElement('a');
+     link.href = url;
+@@ -245,4 +277,37 @@
+     });
+   }
+   onMounted(load);
++  watch(
++    [catalogId, caseId],
++    () => {
++      revision++;
++      ready.value = false;
++      saving.value = false;
++      Object.assign(form, {
++        name: '',
++        tags: [],
++        caseEditType: 'STEP',
++        prerequisite: '',
++        body: '',
++        expectedResult: '',
++        description: '',
++        customFields: [],
++      });
++      attachments.value = [];
++      sourceBindings.value = [];
++      sourceEditMode.value = undefined;
++      sourceCaseId.value = '';
++      expectedUpdateTime.value = undefined;
++      deleted.value = false;
++      if (!route.params.catalogId || !route.params.caseId) {
++        loading.value = false;
++        return;
++      }
++      load();
++    },
++    { flush: 'sync' }
++  );
++  onBeforeUnmount(() => {
++    revision++;
++  });
+ </script>
+diff --git a/frontend/tests/asset-attachment-draft.test.mjs b/frontend/tests/asset-attachment-draft.test.mjs
+index e5af0e7443..8b0580ed92 100644
+--- a/frontend/tests/asset-attachment-draft.test.mjs
++++ b/frontend/tests/asset-attachment-draft.test.mjs
+@@ -15,6 +15,10 @@ test('attachment upload and deletion preserve unsaved fields', async () => {
+   const context = vm.createContext({
+     form,
+     attachments,
++    ready: { value: true },
++    loading: { value: false },
++    context: () => ({ catalogId: 'catalog', caseId: 'case', revision: 0 }),
++    current: () => true,
+     catalogId: 'catalog',
+     caseId: 'case',
+     uploadCaseAssetAttachment: async () => undefined,
+diff --git a/frontend/tests/asset-attachment-sfc.test.mjs b/frontend/tests/asset-attachment-sfc.test.mjs
+index cb7937b396..efec67dc2b 100644
+--- a/frontend/tests/asset-attachment-sfc.test.mjs
++++ b/frontend/tests/asset-attachment-sfc.test.mjs
+@@ -23,6 +23,7 @@ function setup() {
+   let uploadFails = false;
+   const mounted = [];
+   const writes = [];
++  const route = vue.reactive({ params: { catalogId: 'catalog', caseId: 'case' } });
+   const api = {
+     getCaseAssetDetail: async () => JSON.parse(JSON.stringify(stored)),
+     uploadCaseAssetAttachment: async (catalogId, caseId, file) => {
+@@ -40,10 +41,17 @@ function setup() {
+   };
+   const exports = {};
+   const require = (name) => {
+-    if (name === 'vue') return { ...vue, onMounted: (f) => mounted.push(f) };
++    if (name === 'vue')
++      return {
++        ...vue,
++        onMounted: (f) => mounted.push(f),
++        onBeforeUnmount() {
++          return undefined;
++        },
++      };
+     if (name === 'vue-router')
+       return {
+-        useRoute: () => ({ params: { catalogId: 'catalog', caseId: 'case' } }),
++        useRoute: () => route,
+         useRouter: () => ({
+           push() {
+             return undefined;
+@@ -77,6 +85,8 @@ function setup() {
+   return {
+     state,
+     writes,
++    route,
++    api,
+     init: async () => {
+       await Promise.all(mounted.map((f) => f()));
+     },
+@@ -114,6 +124,81 @@ test('complete SFC setup preserves every draft field through upload/delete, save
+   await s.load();
+   assert.equal(s.form.name, 'draft');
+ });
++
++test('same component route navigation reloads target and ignores a late previous read', async () => {
++  const h = setup();
++  await h.init();
++  const late = Promise.withResolvers();
++  h.api.getCaseAssetDetail = async (_catalog, id) =>
++    id === 'old' ? late.promise : { name: id, caseEditType: 'TEXT', textDescription: id, attachments: [] };
++  h.route.params.caseId = 'old';
++  await vue.nextTick();
++  h.route.params.caseId = 'new';
++  await vue.nextTick();
++  await new Promise((resolve) => {
++    setImmediate(resolve);
++  });
++  assert.equal(h.state.form.name, 'new');
++  late.resolve({ name: 'stale', steps: '[]' });
++  await new Promise((resolve) => {
++    setImmediate(resolve);
++  });
++  assert.equal(h.state.form.name, 'new');
++  assert.equal(h.state.form.body, 'new');
++});
++
++test('late attachment refresh cannot replace next route state; failed load cannot save', async () => {
++  const h = setup();
++  await h.init();
++  const gate = Promise.withResolvers();
++  h.api.getCaseAssetDetail = async (_catalog, id) =>
++    id === 'case' ? gate.promise : { name: id, attachments: [{ id: 'new-file' }] };
++  const pending = h.state.refreshAttachments();
++  h.route.params.caseId = 'next';
++  await vue.nextTick();
++  await new Promise((resolve) => {
++    setImmediate(resolve);
++  });
++  gate.resolve({ name: 'old', attachments: [{ id: 'old-file' }] });
++  await pending;
++  assert.equal(h.state.attachments.value[0].id, 'new-file');
++  h.api.getCaseAssetDetail = async () => {
++    throw new Error('private failure');
++  };
++  h.route.params.caseId = 'failed';
++  await vue.nextTick();
++  await new Promise((resolve) => {
++    setImmediate(resolve);
++  });
++  assert.equal(h.state.form.name, '');
++  assert.equal(h.state.ready.value, false);
++  await h.state.save();
++  assert.equal(h.writes.length, 0);
++});
++test('save completion from previous catalog cannot reload or clear current editor', async () => {
++  const h = setup();
++  await h.init();
++  const gate = Promise.withResolvers();
++  const writes = [];
++  h.api.updateCaseAsset = async (request) => {
++    writes.push(request);
++    await gate.promise;
++  };
++  const pending = h.state.save();
++  h.api.getCaseAssetDetail = async (catalog) => ({ name: catalog, attachments: [], updateTime: 9 });
++  h.route.params.catalogId = 'next-catalog';
++  await vue.nextTick();
++  await new Promise((resolve) => {
++    setImmediate(resolve);
++  });
++  gate.resolve();
++  await pending;
++  assert.equal(writes[0].catalogId, 'catalog');
++  assert.equal(writes[0].id, 'case');
++  assert.equal(h.state.form.name, 'next-catalog');
++  assert.equal(h.state.saving.value, false);
++});
++
+ test('failed upload keeps draft and concurrent refresh cannot bypass save conflict', async () => {
+   const h = setup();
+   await h.init();
+diff --git a/backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/AssetStepSnapshot.java b/backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/AssetStepSnapshot.java
+new file mode 100644
+--- /dev/null
++++ b/backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/AssetStepSnapshot.java
+@@ -0,0 +1,36 @@
++package io.metersphere.functional.excel.util;
++
++import io.metersphere.sdk.exception.MSException;
++import io.metersphere.sdk.util.JSON;
++import java.util.*;
++
++/** Content-only transport in Excel notes. Never supplies case identity or permissions. */
++public final class AssetStepSnapshot {
++    public static final String PREFIX = "MSP-ASSET-STEPS/1\n";
++    private AssetStepSnapshot() {}
++    public static boolean encoded(String value) { return value != null && value.startsWith(PREFIX); }
++    public static String encode(List<String> descriptions, List<String> results, List<Object> numbers, String expected) {
++        return PREFIX + CaseStepSplitUtils.encodeExportSteps(List.of(JSON.toJSONString(
++                Map.of("descriptions", descriptions, "results", results, "numbers", numbers, "expected", expected))));
++    }
++    public static Map<String,Object> decode(String value) {
++        try {
++            var parts = CaseStepSplitUtils.splitCell(value.substring(PREFIX.length()));
++            if (parts.size()!=1) throw new IllegalArgumentException();
++            Map<String,Object> data=JSON.parseObject(parts.getFirst(), Map.class);
++            var descriptions=(List<?>)data.get("descriptions");var results=(List<?>)data.get("results");var numbers=(List<?>)data.get("numbers");
++            if (descriptions.size()>10000 || descriptions.size()!=results.size() || descriptions.size()!=numbers.size()
++                    || !(data.get("expected") instanceof String)
++                    || descriptions.stream().anyMatch(x->!(x instanceof String)) || results.stream().anyMatch(x->!(x instanceof String))
++                    || numbers.stream().anyMatch(x->x!=null && !(x instanceof Number))) throw new IllegalArgumentException();
++            return data;
++        } catch (RuntimeException invalid) { throw new MSException("资产步骤元数据无效，请重新导出后重试"); }
++    }
++    @SuppressWarnings("unchecked")
++    public static List<String> parts(String value, String key) { return (List<String>)decode(value).get(key); }
++    public static String visible(String value, String key) {
++        var parts=parts(value,key);StringBuilder result=new StringBuilder();
++        for(int i=0;i<parts.size();i++)result.append('[').append(i+1).append(']').append(parts.get(i)).append('\n');
++        return result.toString();
++    }
++}
