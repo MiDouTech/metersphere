@@ -376,6 +376,7 @@ public class FunctionalCaseFileService {
             EasyExcel.read(file.getInputStream(), null, new FunctionalCasePretreatmentListener(mergeInfoSet))
                     .extraRead(CellExtraTypeEnum.MERGE).sheet().doRead();
             FunctionalCaseImportEventListener eventListener = new FunctionalCaseImportEventListener(request, clazz, customFields, mergeInfoSet, user, lasePos);
+            eventListener.setStepMetadata(io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.read(file.getInputStream(), 0));
             eventListener.deferWrites();
             importPhase = "PARSING";
             FunctionalLegacyImportService.stage("PARSING", 0);
@@ -391,6 +392,7 @@ public class FunctionalCaseFileService {
             response.setFailCount(eventListener.getErrList().size());
             return response;
         } catch (Exception e) {
+            if (request.isAssetCatalogImport()) throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FAILED, io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record(importPhase, java.util.UUID.randomUUID().toString(), e));
             io.metersphere.functional.asset.service.CaseAssetFailureDiagnostics.record(importPhase, java.util.UUID.randomUUID().toString(), e);
             throw new MSException(Translator.get("check_import_excel_error"), e);
         }
@@ -518,17 +520,19 @@ public class FunctionalCaseFileService {
             if (batchExcels.size() > 1) {
                 File zipFile = CompressUtils.zipFilesToPath(tmpDir.getPath() + File.separatorChar + request.getFileId() + ".zip", batchExcels);
                 fileType = ZIP;
+                if (StringUtils.isNotBlank(request.getAssetCatalogId())) validateAssetExportSize(zipFile);
                 exportTaskService.registerFile(taskId, fileType);
                 uploadFileToMinio(fileType, zipFile, request.getFileId());
             } else {
                 fileType = XLSX;
+                if (StringUtils.isNotBlank(request.getAssetCatalogId())) validateAssetExportSize(batchExcels.getFirst());
                 exportTaskService.registerFile(taskId, fileType);
                 uploadFileToMinio(fileType, batchExcels.getFirst(), request.getFileId());
             }
             LogDTO logDTO = functionalCaseLogService.exportExcelLog(request, "excel", userId, orgId);
             operationLogService.add(logDTO);
             return new FunctionalCaseExportTaskService.Result(fileType, ids.size());
-        } catch (FunctionalCaseExportTaskService.EmptyExportException e) {
+        } catch (FunctionalCaseExportTaskService.EmptyExportException | AssetExportSizeException e) {
             throw e;
         } catch (Exception e) {
             throw new MSException("用例导出失败", e);
@@ -551,6 +555,14 @@ public class FunctionalCaseFileService {
         exportTask.setFileType(fileType);
         exportTask.setId(taskId);
         exportTaskMapper.updateByPrimaryKeySelective(exportTask);
+    }
+
+    static void validateAssetExportSize(File file) {
+        if (file.length() > 15_000_000L) throw new AssetExportSizeException();
+    }
+
+    static final class AssetExportSizeException extends MSException {
+        AssetExportSizeException() { super("导出文件超过 15 MB，请缩小范围分批导出"); }
     }
 
     public void uploadFileToMinio(String fileType, File file, String fileId) throws Exception {
@@ -591,10 +603,11 @@ public class FunctionalCaseFileService {
         Map<String, String> modules = getModuleMap(request.getProjectId());
         List<ExcelBatch> batches = new ArrayList<>();
         int[] bytes = {0};
+        Map<String, String> assetAuthors = new HashMap<>();
         SubListUtils.dealForSubList(ids, EXPORT_CASE_MAX_COUNT, batch -> {
             Map<Integer, Integer> merges = new HashMap<>();
             List<FunctionalCaseExcelData> data = parseCaseData2ExcelData(batch, merges, request, customFields, modules,
-                    parameter == null ? "" : parameter.getParamValue());
+                    parameter == null ? "" : parameter.getParamValue(), assetAuthors);
             List<List<Object>> rows = data.stream().map(item -> FunctionalCaseExportRowMapper.row(request, item)).toList();
             bytes[0] += JSON.toJSONString(rows).getBytes(StandardCharsets.UTF_8).length;
             if (bytes[0] > 8 * 1024 * 1024) throw new MSException("导出内容过大，请缩小范围分批导出");
@@ -603,7 +616,7 @@ public class FunctionalCaseFileService {
         return new ExcelSnapshot(ids, exportRevisions(ids), heads, options, fields, batches);
     }
 
-    private List<File> generateCaseExportExcel(ExcelSnapshot snapshot, String directory, FunctionalCaseExportRequest request, String taskId) {
+    private List<File> generateCaseExportExcel(ExcelSnapshot snapshot, String directory, FunctionalCaseExportRequest request, String taskId) throws java.io.IOException {
         List<File> files = new ArrayList<>();
         for (ExcelBatch batch : snapshot.batches()) {
             exportTaskService.checkActive(taskId);
@@ -613,12 +626,19 @@ public class FunctionalCaseFileService {
                     .registerWriteHandler(new FunctionCaseMergeWriteHandler(batch.merges(), snapshot.heads()))
                     .registerWriteHandler(FunctionCaseTemplateWriteHandler.getHorizontalWrapStrategy())
                     .excelType(ExcelTypeEnum.XLSX).sheet(Translator.get("test_case_import_template_sheet")).doWrite(batch.rows());
+            if (StringUtils.isNotBlank(request.getAssetCatalogId())) {
+                try (var input = new java.io.FileInputStream(file); var workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(input)) {
+                    io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.hideTransportCells(workbook);
+                    input.close();
+                    try (var output = new java.io.FileOutputStream(file)) { workbook.write(output); }
+                }
+            }
             files.add(file);
         }
         return files;
     }
 
-    private List<FunctionalCaseExcelData> parseCaseData2ExcelData(List<String> ids, Map<Integer, Integer> rowMergeInfo, FunctionalCaseExportRequest request, List<TemplateCustomFieldDTO> customFields, Map<String, String> moduleMap, String url) {
+    private List<FunctionalCaseExcelData> parseCaseData2ExcelData(List<String> ids, Map<Integer, Integer> rowMergeInfo, FunctionalCaseExportRequest request, List<TemplateCustomFieldDTO> customFields, Map<String, String> moduleMap, String url, Map<String, String> assetAuthors) {
         List<FunctionalCaseExcelData> list = new ArrayList<>();
         //基础信息
         Map<String, FunctionalCase> functionalCaseMap = functionalCaseService.copyBaseInfo(request.getProjectId(), ids);
@@ -648,21 +668,21 @@ public class FunctionalCaseFileService {
             FunctionalCase functionalCase = functionalCaseMap.get(id);
             FunctionalCaseBlob functionalCaseBlob = functionalCaseBlobMap.get(id);
             //构建基本参数
-            buildBaseField(data, functionalCase, functionalCaseBlob, moduleMap, textDescriptionList, expectedResultList, url, project);
+            buildBaseField(data, functionalCase, functionalCaseBlob, moduleMap, textDescriptionList, expectedResultList, url, project, StringUtils.isNotBlank(request.getAssetCatalogId()));
             //构建自定义字段
             buildExportCustomField(customFields, customFieldMap.getOrDefault(id, List.of()), data, request);
             // Mirrors retain their source template's field identities, not the hub default template's IDs.
             applyAssetPriority(customFields,assetPriorities.getOrDefault(id,List.of()),data);
             //构建其他字段
-            buildExportOtherField(functionalCase, data, caseCommentMap, executeCommentMap, reviewCommentMap, request);
+            buildExportOtherField(functionalCase, data, caseCommentMap, executeCommentMap, reviewCommentMap, request, assetAuthors);
             validateExportTextField(data);
             if (CollectionUtils.isNotEmpty(textDescriptionList) && request.getIsMerge()) {
                 // 如果有多条步骤则添加多条数据，之后合并单元格
-                buildExportMergeData(rowMergeInfo, list, textDescriptionList, expectedResultList, data);
+                buildExportMergeData(rowMergeInfo, list, textDescriptionList, expectedResultList, data, StringUtils.isNotBlank(request.getAssetCatalogId()));
             } else {
                 if (CollectionUtils.isNotEmpty(textDescriptionList)) {
-                    data.setTextDescription(parseData(textDescriptionList));
-                    data.setExpectedResult(parseData(expectedResultList));
+                    data.setTextDescription(StringUtils.isNotBlank(request.getAssetCatalogId()) ? parseAssetStepData(textDescriptionList) : parseData(textDescriptionList));
+                    data.setExpectedResult(StringUtils.isNotBlank(request.getAssetCatalogId()) ? parseAssetStepData(expectedResultList) : parseData(expectedResultList));
                 }
                 list.add(data);
             }
@@ -677,6 +697,11 @@ public class FunctionalCaseFileService {
      * @param list
      * @return
      */
+    private String parseAssetStepData(List<String> parts) {
+        boolean ambiguous = io.metersphere.functional.excel.util.CaseStepSplitUtils.requiresExportFraming(parts);
+        return ambiguous ? io.metersphere.functional.excel.util.CaseStepSplitUtils.encodeExportSteps(parts) : parseData(parts);
+    }
+
     private String parseData(List<String> list) {
         String result = "";
         for (int i = 0; i < list.size(); i++) {
@@ -693,11 +718,11 @@ public class FunctionalCaseFileService {
      * @param functionalCaseBlob
      */
     private void buildBaseField(FunctionalCaseExcelData data, FunctionalCase functionalCase, FunctionalCaseBlob functionalCaseBlob, Map<String, String> moduleMap,
-                                List<String> textDescriptionList, List<String> expectedResultList, String url, Project project) {
+                                List<String> textDescriptionList, List<String> expectedResultList, String url, Project project, boolean assetExport) {
         data.setNum(functionalCase.getNum().toString());
         data.setModule(moduleMap.get(functionalCase.getModuleId()));
         //构建步骤
-        buildExportStep(data, functionalCaseBlob, functionalCase.getCaseEditType(), textDescriptionList, expectedResultList);
+        buildExportStep(data, functionalCaseBlob, functionalCase.getCaseEditType(), textDescriptionList, expectedResultList, assetExport);
         data.setPrerequisite(parseHtml(new String(functionalCaseBlob.getPrerequisite() == null ? new byte[0] : functionalCaseBlob.getPrerequisite(), StandardCharsets.UTF_8)));
         //备注
         data.setDescription(parseHtml(new String(functionalCaseBlob.getDescription() == null ? new byte[0] : functionalCaseBlob.getDescription(), StandardCharsets.UTF_8)));
@@ -732,7 +757,7 @@ public class FunctionalCaseFileService {
      * @param data
      */
     @NotNull
-    private void buildExportMergeData(Map<Integer, Integer> rowMergeInfo, List<FunctionalCaseExcelData> list, List<String> textDescriptionList, List<String> expectedResultList, FunctionalCaseExcelData data) {
+    private void buildExportMergeData(Map<Integer, Integer> rowMergeInfo, List<FunctionalCaseExcelData> list, List<String> textDescriptionList, List<String> expectedResultList, FunctionalCaseExcelData data, boolean assetExport) {
         for (int i = 0; i < textDescriptionList.size(); i++) {
             FunctionalCaseExcelData excelData;
             if (i == 0) {
@@ -746,8 +771,8 @@ public class FunctionalCaseFileService {
                 // 之后的行只存步骤
                 excelData = new FunctionalCaseExcelData();
             }
-            excelData.setTextDescription(textDescriptionList.get(i));
-            excelData.setExpectedResult(expectedResultList.get(i));
+            excelData.setTextDescription(assetExport ? io.metersphere.functional.excel.util.CaseStepSplitUtils.encodeExportSteps(List.of(textDescriptionList.get(i))) : textDescriptionList.get(i));
+            excelData.setExpectedResult(assetExport ? io.metersphere.functional.excel.util.CaseStepSplitUtils.encodeExportSteps(List.of(expectedResultList.get(i))) : expectedResultList.get(i));
             list.add(excelData);
         }
     }
@@ -770,17 +795,30 @@ public class FunctionalCaseFileService {
      * @param reviewCommentMap
      * @param request
      */
-    private void buildExportOtherField(FunctionalCase functionalCase, FunctionalCaseExcelData data, Map<String, List<FunctionalCaseComment>> caseCommentMap, Map<String, List<TestPlanCaseExecuteHistory>> executeCommentMap, Map<String, List<CaseReviewHistory>> reviewCommentMap, FunctionalCaseExportRequest request) {
+    private void buildExportOtherField(FunctionalCase functionalCase, FunctionalCaseExcelData data, Map<String, List<FunctionalCaseComment>> caseCommentMap, Map<String, List<TestPlanCaseExecuteHistory>> executeCommentMap, Map<String, List<CaseReviewHistory>> reviewCommentMap, FunctionalCaseExportRequest request, Map<String, String> assetAuthors) {
         if (CollectionUtils.isEmpty(request.getOtherFields())) {
             return;
         }
         List<FunctionalCaseHeader> otherFields = request.getOtherFields();
-        List<String> keys = otherFields.stream().map(FunctionalCaseHeader::getId).toList();
+        List<String> keys = otherFields.stream().map(FunctionalCaseHeader::getId)
+                .filter(key -> StringUtils.isBlank(request.getAssetCatalogId())
+                        || !("create_user".equals(key) || "update_user".equals(key))).toList();
         Map<String, FunctionalCaseExportConverter> converterMaps = FunctionalCaseExportConverterFactory.getConverters(keys, request.getProjectId());
         HashMap<String, String> other = new HashMap<>();
         otherFields.forEach(header -> {
             FunctionalCaseExportConverter converter = converterMaps.get(header.getId());
-            if (converter != null) {
+            if (StringUtils.isNotBlank(request.getAssetCatalogId())
+                    && ("create_user".equals(header.getId()) || "update_user".equals(header.getId()))) {
+                // Asset access was authorized before snapshotting. Resolve only the
+                // author referenced by this asset, just as its detail page does;
+                // hub membership is not the visibility boundary for asset authors.
+                String authorId = "create_user".equals(header.getId()) ? functionalCase.getCreateUser() : functionalCase.getUpdateUser();
+                String authorName = StringUtils.isBlank(authorId) ? StringUtils.EMPTY : assetAuthors.computeIfAbsent(authorId, key -> {
+                    User author = userMapper.selectByPrimaryKey(key);
+                    return author == null ? StringUtils.EMPTY : StringUtils.defaultString(author.getName());
+                });
+                other.put(header.getId(), authorName);
+            } else if (converter != null) {
                 other.put(header.getId(), converter.parse(functionalCase, caseCommentMap, executeCommentMap, reviewCommentMap));
             } else {
                 other.put(header.getId(), StringUtils.EMPTY);
@@ -910,9 +948,15 @@ public class FunctionalCaseFileService {
      * @param expectedResultList
      */
     private void buildExportStep(FunctionalCaseExcelData data, FunctionalCaseBlob functionalCaseBlob, String caseEditType, List<String> textDescriptionList, List<String> expectedResultList) {
+        buildExportStep(data, functionalCaseBlob, caseEditType, textDescriptionList, expectedResultList, false);
+    }
+
+    private void buildExportStep(FunctionalCaseExcelData data, FunctionalCaseBlob functionalCaseBlob, String caseEditType, List<String> textDescriptionList, List<String> expectedResultList, boolean assetExport) {
         if (StringUtils.equals(caseEditType, FunctionalCaseTypeConstants.CaseEditType.TEXT.name())) {
-            data.setTextDescription(parseHtml(new String(functionalCaseBlob.getTextDescription() == null ? new byte[0] : functionalCaseBlob.getTextDescription(), StandardCharsets.UTF_8)));
-            data.setExpectedResult(parseHtml(new String(functionalCaseBlob.getExpectedResult() == null ? new byte[0] : functionalCaseBlob.getExpectedResult(), StandardCharsets.UTF_8)));
+            String rawTextDescription = new String(functionalCaseBlob.getTextDescription() == null ? new byte[0] : functionalCaseBlob.getTextDescription(), StandardCharsets.UTF_8);
+            data.setTextDescription(assetExport ? io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.encodeText(rawTextDescription) : parseHtml(rawTextDescription));
+            String rawExpectedResult = new String(functionalCaseBlob.getExpectedResult() == null ? new byte[0] : functionalCaseBlob.getExpectedResult(), StandardCharsets.UTF_8);
+            data.setExpectedResult(assetExport ? io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.encodeText(rawExpectedResult) : parseHtml(rawExpectedResult));
         } else {
             String steps = new String(functionalCaseBlob.getSteps() == null ? new byte[0] : functionalCaseBlob.getSteps(), StandardCharsets.UTF_8);
             List jsonArray = new ArrayList();
@@ -929,10 +973,9 @@ public class FunctionalCaseFileService {
                 Map item = (Map) jsonArray.get(j);
                 String textDescription = Optional.ofNullable(item.get("desc")).orElse(StringUtils.EMPTY).toString();
                 String expectedResult = Optional.ofNullable(item.get("result")).orElse(StringUtils.EMPTY).toString();
-                if (StringUtils.isNotBlank(textDescription) || StringUtils.isNotBlank(expectedResult)) {
-                    textDescriptionList.add(textDescription);
-                    expectedResultList.add(expectedResult);
-                }
+                // Empty steps still occupy a position and must keep their paired result.
+                textDescriptionList.add(textDescription);
+                expectedResultList.add(expectedResult);
             }
         }
     }
@@ -1025,8 +1068,7 @@ public class FunctionalCaseFileService {
                             .filename(name, StandardCharsets.UTF_8).build().toString())
                     .body(new org.springframework.core.io.InputStreamResource(stream));
         } catch (Exception exception) {
-            LogUtils.error("Export download failed, taskId=" + task.getTaskId(), exception);
-            throw new MSException("导出文件暂时无法下载，请稍后重试");
+            throw new MSException(io.metersphere.system.controller.handler.result.MsHttpResultCode.FAILED, io.metersphere.functional.asset.service.CaseAssetOperationDiagnostics.record("EXPORT_DOWNLOAD", task.getTaskId(), exception));
         }
     }
 

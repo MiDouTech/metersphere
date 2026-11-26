@@ -1,0 +1,6 @@
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.230 s -- in io.metersphere.functional.service.CaseAssetExcelRoundTripTests
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.303 s -- in io.metersphere.functional.service.Msp38AssetExportTests
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.542 s -- in io.metersphere.functional.service.Msp38StepMetadataTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.020 s -- in io.metersphere.functional.service.Msp38StepRoundTripTests
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS

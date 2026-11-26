@@ -12,6 +12,8 @@ import java.util.Map;
  */
 @Data
 public class FunctionalCasePageDTO extends FunctionalCase {
+    private String assetCatalogId;
+    private String assetCatalogName;
 
     @Schema(description = "自定义字段集合")
     private List<FunctionalCaseCustomFieldDTO> customFields;

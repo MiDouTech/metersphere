@@ -75,6 +75,38 @@ class FunctionalCaseExportMySqlTests {
         assertEquals(expected, service.get(id, "u1").getState());
     }
 
+    @Test void failuresRetainSafeDiagnosticsWithoutExceptionTextOrStack() throws Exception {
+        String secret="msp38-secret-sentinel-https://private.invalid/path?token=private";
+        var logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+        var logs=new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();logs.list=new java.util.concurrent.CopyOnWriteArrayList<>();logs.start();logger.addAppender(logs);
+        try {
+            for(boolean snapshot:List.of(true,false)) {
+                var failure=new IllegalStateException(secret,new java.sql.SQLException(secret,"42000",1064));
+                String id=service.start(request("safe-"+snapshot),"u1","xlsx",task->{if(snapshot)throw failure;return "snapshot";},(task,value)->{throw failure;});
+                awaitState(id,"FAILED");assertEquals("EXPORT_FAILED",service.get(id,"u1").getErrorCode());
+            }
+            var storage=mock(io.metersphere.system.service.FileService.class);doThrow(new IllegalStateException(secret)).when(storage).deleteFile(any());ReflectionTestUtils.setField(service,"fileService",storage);
+            assertEquals(false,ReflectionTestUtils.invokeMethod(service,"removeFile","safe-file","xlsx"));
+            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);while(logs.list.size()<3&&System.nanoTime()<deadline)Thread.sleep(10);
+            String messages=logs.list.stream().map(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage).collect(java.util.stream.Collectors.joining("\n"));
+            assertFalse(messages.contains(secret));assertTrue(logs.list.stream().allMatch(event->event.getThrowableProxy()==null));
+            for(String phase:List.of("EXPORT_SNAPSHOT","EXPORT_GENERATE","EXPORT_CLEANUP"))assertTrue(messages.contains("phase="+phase),messages);
+            assertTrue(messages.contains("sqlState=42000"));assertTrue(messages.contains("vendorCode=1064"));
+        } finally {logger.detachAppender(logs);logs.stop();}
+    }
+
+    @Test void assetSizeFailureIsDurableAndReturnsSafeActionableMessage() throws Exception {
+        String id = service.start(request("msp38-size"), "u1", "xlsx", task -> {
+            throw new FunctionalCaseFileService.AssetExportSizeException();
+        });
+        awaitState(id, "FAILED");
+        var result = service.get(id, "u1");
+        assertEquals("EXPORT_TOO_LARGE", result.getErrorCode());
+        assertEquals("导出文件超过 15 MB，请缩小范围分批导出", result.getMessage());
+        assertEquals("EXPORT_TOO_LARGE", jdbc.queryForObject("SELECT safe_error_code FROM export_task WHERE id=?", String.class, id));
+        assertThrows(Exception.class, () -> service.get(id, "another-user"));
+    }
+
     @Test void successIsDurableAndReplayDoesNotGenerateAgain() throws Exception {
         String id = service.start(request("audit:export."+"x".repeat(115)), "u1", "xlsx", task -> new FunctionalCaseExportTaskService.Result("xlsx", 2));
         awaitState(id, "SUCCEEDED");

@@ -1,0 +1,5 @@
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.535 s -- in io.metersphere.functional.asset.service.CaseAssetSystemPageTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.542 s -- in io.metersphere.functional.asset.service.CaseAssetSystemServiceTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+[INFO] Total time:  46.463 s

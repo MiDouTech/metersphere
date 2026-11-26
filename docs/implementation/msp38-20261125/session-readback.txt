@@ -1,0 +1,173 @@
+[p3 "MeterSphere" | space "MSP-38 development evidence"(14): 4 managed, 0 untracked — p1 "HiFox", p2 "HiFox", p3* "MeterSphere", p4 "about:blank"]
+root
+  container
+    container
+      container
+        image
+        text "测试资产云平台"
+      container
+        text "执行器监控与纠正"
+        text "测试平台配置"
+        text "执行任务"
+        text "平台质量门禁"
+      unordered_list
+        list_item
+          text "MSP需求验收-20261023"
+          svg_root
+        list_item
+          text "当前组织：米多公司"
+        list_item
+          button [ref=1]
+            svg_root
+        list_item
+          button [ref=2]
+            svg_root
+        list_item
+          button [ref=3]
+            svg_root
+        list_item
+          switch [ref=4]
+            svg_root
+        list_item
+          button [ref=5]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "测试计划"
+          container
+            svg_root
+            text "测试用例"
+          container
+            svg_root
+            text "接口测试"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "缺陷管理"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "陈启芬"
+          svg_root
+      container
+        heading
+          text "执行器监控与纠正"
+        paragraph
+          text "执行器独立探索和测试；MSP 记录过程、固定业务理解版本并下发纠正指令。"
+        button [ref=10]
+          text "刷新执行器"
+        container
+          table
+            table_row
+              table_cell
+                text "执行器"
+              table_cell
+                text "会话"
+              table_cell
+                text "状态"
+              table_cell
+                text "操作"
+            table_row
+              table_cell
+                text "R1125-retry-local"
+              table_cell
+                text "b6f64333-54b1-4dd2-b36b-09ea7c7bed30"
+              table_cell
+                text "PASSED"
+              table_cell
+                anchor [ref=11]
+                  text "执行过程与纠正"
+            table_row
+              table_cell
+                text "ASSET-AUDIT-20261123-03-ui-v3"
+              table_cell
+                text "e22c0caa-2c19-4e31-b55f-2ae81e2c5cba"
+              table_cell
+                text "PASSED"
+              table_cell
+                anchor [ref=12]
+                  text "执行过程与纠正"
+            table_row
+              table_cell
+                text "ASSET-AUDIT-20261123-03-ui-v2"
+              table_cell
+                text "126728a2-5dc2-4cb6-9010-e68840fc9346"
+              table_cell
+                text "PASSED"
+              table_cell
+                anchor [ref=13]
+                  text "执行过程与纠正"
+            table_row
+              table_cell
+                text "ASSET-AUDIT-20261123-03-MCP-BIZ"
+              table_cell
+                text "5ca184f9-29b3-4f92-ad9f-4b933e1d77ee"
+              table_cell
+                text "PASSED"
+              table_cell
+                anchor [ref=14]
+                  text "执行过程与纠正"
+            table_row
+              table_cell
+                text "ASSET-AUDIT-20261123-03-ui-roundtrip"
+              table_cell
+                text "8b61ec3d-4c8d-44cf-aa68-6d777374a25a"
+              table_cell
+                text "PASSED"
+              table_cell
+                anchor [ref=15]
+                  text "执行过程与纠正"
+            table_row
+              table_cell
+                text "ASSET-AUDIT-20261123-03-MCP-2"
+              table_cell
+                text "cd91cf28-c18d-4efc-9aa3-640c6c4d57c7"
+              table_cell
+                text "PASSED"
+              table_cell
+                anchor [ref=16]
+                  text "执行过程与纠正"
+            table_row
+              table_cell
+                text "ASSET-AUDIT-20261123-03-MCP"
+              table_cell
+                text "e22abe94-f14d-4684-84e8-532b96a773c9"
+              table_cell
+                text "PASSED"
+              table_cell
+                anchor [ref=17]
+                  text "执行过程与纠正"
+            table_row
+              table_cell
+                text "ASSET-AUDIT-20261123-03-bde"
+              table_cell
+                text "b98e9166-787a-4060-9ad9-b902f8fa7f93"
+              table_cell
+                text "PASSED"
+              table_cell
+                anchor [ref=18]
+                  text "执行过程与纠正"
+          unordered_list
+            svg_root
+            list_item
+              text "1"
+            svg_root
+  svg_root

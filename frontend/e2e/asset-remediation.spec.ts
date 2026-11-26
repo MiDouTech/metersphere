@@ -167,3 +167,166 @@ test('deprecate sends the project and asset identity as request parameters', asy
   const url = new URL((await req).url());
   expect(Object.fromEntries(url.searchParams)).toMatchObject({ projectId, assetType: 'DATASET', assetId: dataset.id });
 });
+
+test('MSP38 attachment upload/delete preserves draft and save survives reload', async ({ page }) => {
+  let detail: Record<string, unknown> = {
+    name: 'MSP38 saved',
+    description: 'saved note',
+    updateTime: 1,
+    caseEditType: 'STEP',
+    steps: '[]',
+    attachments: [],
+  };
+  const writes: Record<string, unknown>[] = [];
+  await page.route('**/case-asset/**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (path.endsWith('/attachment') && request.method() === 'POST')
+      detail.attachments = [{ id: 'attachment', fileName: 'draft.txt', local: true }];
+    else if (path.endsWith('/attachment/attachment') && request.method() === 'DELETE') detail.attachments = [];
+    else if (request.method() === 'PUT') {
+      const body = request.postDataJSON();
+      writes.push(body);
+      detail = { ...detail, ...body, updateTime: 2 };
+    }
+    await route.fulfill({ json: { code: 100200, data: detail } });
+  });
+  await open(page, 'cases/ui-catalog/detail-fixture');
+  const title = page
+    .locator('.arco-form-item')
+    .filter({ has: page.getByText('用例名称', { exact: true }) })
+    .locator('input');
+  const note = page
+    .locator('.arco-form-item')
+    .filter({ has: page.getByText('备注', { exact: true }) })
+    .locator('textarea');
+  await title.fill('MSP38 draft');
+  await note.fill('draft note');
+  await page
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'draft.txt', mimeType: 'text/plain', buffer: Buffer.from('MSP38') });
+  await expect(page.getByText('draft.txt', { exact: true })).toBeVisible();
+  await expect(title).toHaveValue('MSP38 draft');
+  await expect(note).toHaveValue('draft note');
+  await page.getByText('删除', { exact: true }).click();
+  await expect(page.getByText('draft.txt', { exact: true })).toBeHidden();
+  await expect(title).toHaveValue('MSP38 draft');
+  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await expect.poll(() => writes.length).toBe(1);
+  expect(writes[0]).toMatchObject({ name: 'MSP38 draft', description: 'draft note', expectedUpdateTime: 1 });
+  await page.reload();
+  await expect(title).toHaveValue('MSP38 draft');
+  await expect(note).toHaveValue('draft note');
+});
+
+test('MSP38 project/system navigation and classification keep the same case identity', async ({ page }) => {
+  let assigned = false;
+  const assignments: unknown[] = [];
+  await page.route('**/case-asset/**', async (route) => {
+    const request = route.request();
+    const endpoint = new URL(request.url()).pathname;
+    let data: unknown = [];
+    if (endpoint.endsWith('/systems'))
+      data = {
+        systems: [
+          {
+            id: 's',
+            name: '订单系统',
+            caseCount: assigned ? 1 : 0,
+            modules: [{ id: 'm', name: '订单模块', parentId: 'NONE', caseCount: assigned ? 1 : 0 }],
+          },
+        ],
+        unclassifiedCount: assigned ? 0 : 1,
+      };
+    else if (endpoint.endsWith('/system-classification')) {
+      assignments.push(request.postDataJSON());
+      assigned = Boolean(request.postDataJSON().systemId);
+      data = { count: 1 };
+    } else if (endpoint.endsWith('/case/page')) {
+      const query = request.postDataJSON();
+      data = {
+        list:
+          query.unclassifiedSystem && assigned
+            ? []
+            : [
+                {
+                  id: 'same-asset',
+                  num: 1125,
+                  name: '同一用例',
+                  assetCatalogId: 'ui-catalog',
+                  assetCatalogName: '验收目录',
+                },
+              ],
+        total: query.unclassifiedSystem && assigned ? 0 : 1,
+      };
+    } else if (endpoint.endsWith('/catalog/page')) data = { list: [catalog], total: 1 };
+    await route.fulfill({ json: { code: 100200, data } });
+  });
+  await open(page, 'cases/project');
+  await page.getByRole('link', { name: '系统目录', exact: true }).click();
+  await expect(page).toHaveURL(/cases\/system/);
+  await expect(page.getByText('同一用例', { exact: true })).toBeVisible();
+  await page.getByText('分类 / 移动', { exact: true }).click();
+  const dialog = page.locator('.arco-modal:visible');
+  await dialog.getByLabel('业务系统', { exact: true }).selectOption('s');
+  await dialog.getByLabel('系统模块', { exact: true }).selectOption('m');
+  await dialog.getByRole('button', { name: '确定', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(assignments).toEqual([{ ids: ['same-asset'], systemId: 's', moduleId: 'm' }]);
+  await page.getByText('待人工分类 (0)', { exact: true }).click();
+  await expect(page.getByText('同一用例', { exact: true })).toBeHidden();
+  await page.getByRole('link', { name: '项目目录', exact: true }).click();
+  await expect(page).toHaveURL(/cases\/project/);
+  await expect(page.getByRole('button', { name: '新建用例项目', exact: true })).toBeVisible();
+});
+
+test('MSP38 directory editor retains failed draft and creates real system/module requests', async ({ page }) => {
+  const systems: Array<{
+    id: string;
+    name: string;
+    caseCount: number;
+    modules: Array<{ id: string; name: string; parentId: string; caseCount: number }>;
+  }> = [];
+  let failFirst = true;
+  const writes: unknown[] = [];
+  await page.route('**/case-asset/**', async (route) => {
+    const req = route.request();
+    const path = new URL(req.url()).pathname;
+    let data: unknown = [];
+    if (path.endsWith('/systems') && req.method() === 'GET') data = { systems, unclassifiedCount: 0 };
+    else if (path.endsWith('/systems') && req.method() === 'POST') {
+      if (failFirst) {
+        failFirst = false;
+        await route.fulfill({ status: 503, json: { message: '稍后重试' } });
+        return;
+      }
+      const body = req.postDataJSON();
+      writes.push(body);
+      const system = { id: 'created-system', name: body.name, caseCount: 0, modules: [] };
+      systems.push(system);
+      data = system;
+    } else if (path.endsWith('/modules') && req.method() === 'POST') {
+      const body = req.postDataJSON();
+      writes.push(body);
+      const module = { id: 'created-module', name: body.name, parentId: body.parentId, caseCount: 0 };
+      systems[0].modules.push(module);
+      data = module;
+    } else if (path.endsWith('/case/page') || path.endsWith('/catalog/page')) data = { list: [], total: 0 };
+    await route.fulfill({ json: { code: 100200, data } });
+  });
+  await open(page, 'cases/system');
+  await page.getByRole('button', { name: '新建系统', exact: true }).click();
+  const dialog = page.locator('.arco-modal:visible');
+  await dialog.getByLabel('名称', { exact: true }).fill('MSP38系统');
+  await dialog.getByRole('button', { name: '确定', exact: true }).click();
+  await expect(dialog.getByLabel('名称', { exact: true })).toHaveValue('MSP38系统');
+  await expect(dialog.getByRole('button', { name: '确定', exact: true })).toBeEnabled();
+  await dialog.getByRole('button', { name: '确定', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await page.getByText('MSP38系统 (0)', { exact: true }).click();
+  await page.getByRole('button', { name: '新建模块', exact: true }).click();
+  await dialog.getByLabel('名称', { exact: true }).fill('MSP38模块');
+  await dialog.getByRole('button', { name: '确定', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(writes).toEqual([{ name: 'MSP38系统' }, { name: 'MSP38模块', parentId: 'NONE' }]);
+});
