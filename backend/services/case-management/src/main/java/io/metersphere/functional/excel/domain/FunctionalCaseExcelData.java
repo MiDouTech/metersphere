@@ -50,6 +50,10 @@ public class FunctionalCaseExcelData {
     @ExcelIgnore
     private String steps;
     @ExcelIgnore
+    private List<Object> assetStepNumbers;
+    @ExcelIgnore
+    private String assetExpectedResult;
+    @ExcelIgnore
     Map<String, Object> customData = new LinkedHashMap<>();
     @ExcelIgnore
     Map<String, String> otherFields;

@@ -1,0 +1,18 @@
+[
+  {
+    "path": "io/metersphere/functional/service/FunctionalCaseFileService.class",
+    "match": true
+  },
+  {
+    "path": "io/metersphere/functional/excel/util/AssetStepSnapshot.class",
+    "match": true
+  },
+  {
+    "path": "io/metersphere/functional/excel/listener/FunctionalCaseImportEventListener.class",
+    "match": true
+  },
+  {
+    "path": "io/metersphere/functional/excel/util/CaseAssetExcelStepMetadata.class",
+    "match": true
+  }
+]
