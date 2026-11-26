@@ -7,12 +7,18 @@
       <template #headerRight>
         <a-space
           ><a-button @click="goBack">返回</a-button
-          ><a-button v-if="canUpdate && !deleted" type="primary" :loading="saving" @click="save"
+          ><a-button
+            v-if="canUpdate && !deleted"
+            type="primary"
+            :disabled="loading || !ready"
+            :loading="saving"
+            @click="save"
             >保存</a-button
           ></a-space
         >
       </template>
       <a-spin :loading="loading" class="block">
+        <a-alert v-if="loadError" type="error" class="mb-4">读取用例失败，请刷新页面后重试。</a-alert>
         <a-alert v-if="deleted" class="mb-4" type="warning"
           >该资产用例已被删除，仅保留历史查看；不能编辑或再次导入。</a-alert
         >
@@ -71,7 +77,7 @@
           <div class="mb-3 flex items-center gap-2">
             <a-button
               v-if="canUpdate && !deleted"
-              :disabled="sourceBindings.length > 0"
+              :disabled="sourceBindings.length > 0 || loading || !ready"
               @click="attachmentInput?.click()"
               >上传附件</a-button
             >
@@ -84,7 +90,7 @@
                 <template #actions
                   ><a-link
                     v-if="canUpdate && !deleted"
-                    :disabled="sourceBindings.length > 0"
+                    :disabled="sourceBindings.length > 0 || loading || !ready"
                     status="danger"
                     @click="removeAttachment(item)"
                     >删除</a-link
@@ -100,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, reactive, ref } from 'vue';
+  import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { Message } from '@arco-design/web-vue';
 
@@ -119,8 +125,14 @@
 
   const route = useRoute();
   const router = useRouter();
-  const catalogId = String(route.params.catalogId);
-  const caseId = String(route.params.caseId);
+  const catalogId = computed(() => String(route.params.catalogId));
+  const caseId = computed(() => String(route.params.caseId));
+  const ready = ref(false);
+  const loadError = ref(false);
+  let revision = 0;
+  const context = () => ({ catalogId: catalogId.value, caseId: caseId.value, revision });
+  const current = (target: ReturnType<typeof context>) =>
+    target.revision === revision && target.caseId === caseId.value && target.catalogId === catalogId.value;
   const loading = ref(false);
   const saving = ref(false);
   const sourceBindings = ref<{ caseId: string; projectId: string; updateTime: number }[]>([]);
@@ -142,9 +154,13 @@
     customFields: [] as Array<{ fieldId: string; name?: string; value?: string }>,
   });
   async function load() {
+    const target = context();
+    ready.value = false;
+    loadError.value = false;
     loading.value = true;
     try {
-      const detail: any = await getCaseAssetDetail(catalogId, caseId);
+      const detail: any = await getCaseAssetDetail(target.catalogId, target.caseId);
+      if (!current(target)) return;
       form.name = detail.name || '';
       sourceBindings.value = detail.sourceBindings || [];
       sourceEditMode.value = undefined;
@@ -163,11 +179,16 @@
       }));
       attachments.value = detail.attachments || [];
       deleted.value = Boolean(detail.deleted);
+      ready.value = true;
+    } catch {
+      if (current(target)) loadError.value = true;
     } finally {
-      loading.value = false;
+      if (current(target)) loading.value = false;
     }
   }
   async function save() {
+    if (!ready.value || loading.value || saving.value) return;
+    const target = context();
     if (
       sourceBindings.value.length &&
       (!sourceEditMode.value || (sourceEditMode.value === 'WRITE_BACK' && !sourceCaseId.value))
@@ -182,8 +203,8 @@
     saving.value = true;
     try {
       await updateCaseAsset({
-        id: caseId,
-        catalogId,
+        id: target.caseId,
+        catalogId: target.catalogId,
         sourceEditMode: sourceEditMode.value,
         sourceCaseId: sourceCaseId.value,
         expectedUpdateTime: expectedUpdateTime.value,
@@ -200,22 +221,29 @@
         expectedResult: form.expectedResult,
         description: form.description,
       });
+      if (!current(target)) return;
       Message.success(sourceEditMode.value === 'WRITE_BACK' ? '源用例已保存，资产同步正在处理' : '保存成功');
       await load();
     } finally {
-      saving.value = false;
+      if (current(target)) saving.value = false;
     }
   }
-  async function refreshAttachments() {
-    const detail = await getCaseAssetDetail(catalogId, caseId);
+  async function refreshAttachments(target = context()) {
+    const detail = await getCaseAssetDetail(target.catalogId, target.caseId);
+    if (!current(target)) return;
     attachments.value = detail.attachments || [];
   }
   async function uploadAttachments(event: Event) {
+    if (!ready.value || loading.value) return;
+    const target = context();
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files || []);
     try {
-      const results = await Promise.allSettled(files.map((file) => uploadCaseAssetAttachment(catalogId, caseId, file)));
-      await refreshAttachments();
+      const results = await Promise.allSettled(
+        files.map((file) => uploadCaseAssetAttachment(target.catalogId, target.caseId, file))
+      );
+      if (!current(target)) return;
+      await refreshAttachments(target);
       const failed = results.find((result) => result.status === 'rejected');
       if (failed?.status === 'rejected') throw failed.reason;
     } finally {
@@ -223,11 +251,15 @@
     }
   }
   async function removeAttachment(item: any) {
-    await deleteCaseAssetAttachment(catalogId, caseId, item.id, item.local !== false);
-    await refreshAttachments();
+    if (!ready.value || loading.value) return;
+    const target = context();
+    await deleteCaseAssetAttachment(target.catalogId, target.caseId, item.id, item.local !== false);
+    if (current(target)) await refreshAttachments(target);
   }
   async function downloadAttachment(item: any) {
-    const blob = await downloadCaseAssetAttachment(catalogId, caseId, item.id, item.local !== false);
+    const target = context();
+    const blob = await downloadCaseAssetAttachment(target.catalogId, target.caseId, item.id, item.local !== false);
+    if (!current(target)) return;
     const url = URL.createObjectURL(blob as Blob);
     const link = document.createElement('a');
     link.href = url;
@@ -245,4 +277,37 @@
     });
   }
   onMounted(load);
+  watch(
+    [catalogId, caseId],
+    () => {
+      revision++;
+      ready.value = false;
+      saving.value = false;
+      Object.assign(form, {
+        name: '',
+        tags: [],
+        caseEditType: 'STEP',
+        prerequisite: '',
+        body: '',
+        expectedResult: '',
+        description: '',
+        customFields: [],
+      });
+      attachments.value = [];
+      sourceBindings.value = [];
+      sourceEditMode.value = undefined;
+      sourceCaseId.value = '';
+      expectedUpdateTime.value = undefined;
+      deleted.value = false;
+      if (!route.params.catalogId || !route.params.caseId) {
+        loading.value = false;
+        return;
+      }
+      load();
+    },
+    { flush: 'sync' }
+  );
+  onBeforeUnmount(() => {
+    revision++;
+  });
 </script>

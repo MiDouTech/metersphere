@@ -4,6 +4,15 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 class Msp38StepRoundTripTests {
+ @Test void assetStepExportRetainsIndependentExpectedAndOriginalNumbers() {
+  var blob=new io.metersphere.functional.domain.FunctionalCaseBlob();
+  blob.setSteps("[{\"num\":7,\"desc\":\"amount20.50\",\"result\":\"step expected\"}]".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  blob.setExpectedResult("independent<br>\nresult".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  var data=new io.metersphere.functional.excel.domain.FunctionalCaseExcelData();
+  var descriptions=new java.util.ArrayList<String>();var results=new java.util.ArrayList<String>();
+  org.springframework.test.util.ReflectionTestUtils.invokeMethod(new FunctionalCaseFileService(),"buildExportStep",data,blob,"STEP",descriptions,results,true);
+  assertEquals("independent<br>\nresult",data.getExpectedResult());
+ }
  @Test void exportedNumberedStepsRetainDecimalAndRemoveTransportNumbering() {
   assertEquals(List.of("打开订单并输入2"),CaseStepSplitUtils.splitCell("[1]打开订单并输入2\n"));
   assertEquals(List.of("金额为20.50，状态未提交"),CaseStepSplitUtils.splitCell("[1]金额为20.50，状态未提交\n"));

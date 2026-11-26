@@ -1,0 +1,46 @@
+[
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/domain/FunctionalCaseExcelData.java",
+    "sha256": "b35b516b5b3ed84452f50e15990226666f3c5e107b8cad8160230c2444e6b57b"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/listener/FunctionalCaseImportEventListener.java",
+    "sha256": "840c459ec61e36b73e64cbdb6acf027ac3c47ae9ff042d2ef6e76d3ff1532f6a"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/AssetStepSnapshot.java",
+    "sha256": "c378c7e8d78bd12c290e6bfad44600c8917da5f1c1427b544dda3bc9fba074ba"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/excel/util/CaseAssetExcelStepMetadata.java",
+    "sha256": "c7f61bb6ef288a36c44b98053e170f46bfb0e428006a2a6fc4cc776b635abe1e"
+  },
+  {
+    "path": "backend/services/case-management/src/main/java/io/metersphere/functional/service/FunctionalCaseFileService.java",
+    "sha256": "933ea0bc275d186642ffaf70895713b0fe13d196a63c36a3e8cbb973dd61d964"
+  },
+  {
+    "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/CaseAssetExcelRoundTripTests.java",
+    "sha256": "d3d6fcef9ecd8774ee8f81c343b5d041897b3a8851574c3586436d246f6b1a50"
+  },
+  {
+    "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepMetadataTests.java",
+    "sha256": "9acb8709a2bdfefc9ad49346d2c60ec484e12fa3aa05bcb10f75516479cb920d"
+  },
+  {
+    "path": "backend/services/case-management/src/test/java/io/metersphere/functional/service/Msp38StepRoundTripTests.java",
+    "sha256": "bf777df73ee74bde9ffc87dbb86c1de7d8ca7946f88eebacc18419d90c78ae42"
+  },
+  {
+    "path": "frontend/src/views/test-asset/asset-case-detail.vue",
+    "sha256": "d0a071732963905b66be2d9be9a9b1865d00ea32a75a9bfd5d7a853b605b1a78"
+  },
+  {
+    "path": "frontend/tests/asset-attachment-draft.test.mjs",
+    "sha256": "99470195c544ebc6f8259d8a7d3dc43ca165b1b7e75c390ec26d52020fa7d5c5"
+  },
+  {
+    "path": "frontend/tests/asset-attachment-sfc.test.mjs",
+    "sha256": "a4e7d71d5fcaaa26c1c8a92d083d85a332a34dac7cf1ca301179f5ed0b2081f7"
+  }
+]

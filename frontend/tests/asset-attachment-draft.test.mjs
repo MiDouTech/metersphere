@@ -15,6 +15,10 @@ test('attachment upload and deletion preserve unsaved fields', async () => {
   const context = vm.createContext({
     form,
     attachments,
+    ready: { value: true },
+    loading: { value: false },
+    context: () => ({ catalogId: 'catalog', caseId: 'case', revision: 0 }),
+    current: () => true,
     catalogId: 'catalog',
     caseId: 'case',
     uploadCaseAssetAttachment: async () => undefined,

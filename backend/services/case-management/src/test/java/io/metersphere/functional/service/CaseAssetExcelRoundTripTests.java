@@ -52,6 +52,27 @@ class CaseAssetExcelRoundTripTests {
    var complexDescriptions=List.of("first line\n[2]literal marker", " ", " trailing whitespace \n", "input<br>then submit", "<p>check result</p>", "<P class=\"x\">rich<br/>text</P>");
    var complexExpected=List.of("amount20.50", "", "[1]result marker\nnext line", "<br>literal", "<p>expected</p>", "<P>rich<br />expected</P>");
    var exporter=new FunctionalCaseFileService();
+   for (int count:List.of(0,1,3)) {
+    var descriptions=new ArrayList<String>();var results=new ArrayList<String>();var numbers=new ArrayList<Object>();
+    for(int i=0;i<count;i++){descriptions.add(i==1?"":"amount20.50\ninput<br>"+i);results.add("expected"+i);numbers.add(i+7);}
+    String independent="independent<br>\nresult";
+    String payload=io.metersphere.functional.excel.util.AssetStepSnapshot.encode(descriptions,results,numbers,independent);
+    var file=new ByteArrayOutputStream();EasyExcel.write(file).head(List.of(List.of("用例名称"),List.of("用例等级"),List.of("步骤描述"),List.of("预期结果"),List.of("编辑模式"))).sheet().doWrite(List.of(List.of("snapshot case","P1",payload,io.metersphere.functional.excel.util.AssetStepSnapshot.visible(payload,"results"),"STEP")));
+    try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new ByteArrayInputStream(file.toByteArray()))){io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.hideTransportCells(workbook);file.reset();workbook.write(file);}
+    var snapshotListener=new FunctionalCaseImportEventListener(request,FunctionalCaseExcelDataCn.class,List.of(priority),new TreeSet<>(),user,1L);
+    snapshotListener.setStepMetadata(io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(file.toByteArray()),0));var snapshotRows=new ArrayList<FunctionalCaseExcelData>();snapshotListener.collectPreparedItems((action,row)->snapshotRows.add(row));EasyExcel.read(new ByteArrayInputStream(file.toByteArray()),snapshotListener).sheet().doRead();
+    assertEquals(1,snapshotRows.size(),()->snapshotListener.getErrList().toString());assertEquals(independent,snapshotRows.getFirst().getExpectedResult());
+    var savedSteps=io.metersphere.sdk.util.JSON.parseArray(snapshotRows.getFirst().getSteps(),java.util.Map.class);assertEquals(count,savedSteps.size());
+    for(int i=0;i<count;i++){assertEquals(numbers.get(i),savedSteps.get(i).get("num"));assertEquals(descriptions.get(i),savedSteps.get(i).get("desc"));assertEquals(results.get(i),savedSteps.get(i).get("result"));}
+    if(count>0) {
+     var mergedData=new FunctionalCaseExcelData();mergedData.setName("merged snapshot");mergedData.setAssetStepNumbers(numbers);mergedData.setAssetExpectedResult(independent);
+     var mergeInfo=new HashMap<Integer,Integer>();var rows=new ArrayList<FunctionalCaseExcelData>();org.springframework.test.util.ReflectionTestUtils.invokeMethod(exporter,"buildExportMergeData",mergeInfo,rows,descriptions,results,mergedData,true);
+     var values=new ArrayList<List<Object>>();for(int i=0;i<rows.size();i++)values.add(List.of(i==0?"merged snapshot":"",i==0?"P1":"",rows.get(i).getTextDescription(),rows.get(i).getExpectedResult(),i==0?"STEP":""));
+     var heads=List.of(List.of("用例名称"),List.of("用例等级"),List.of("步骤描述"),List.of("预期结果"),List.of("编辑模式"));byte[] merged=Msp38AssetExportTests.exportRows(values,mergeInfo,heads,directory);
+     var regions=new TreeSet<ExcelMergeInfo>();EasyExcel.read(new ByteArrayInputStream(merged),null,new io.metersphere.functional.excel.listener.FunctionalCasePretreatmentListener(regions)).extraRead(com.alibaba.excel.enums.CellExtraTypeEnum.MERGE).sheet().doRead();
+     var mergedListener=new FunctionalCaseImportEventListener(request,FunctionalCaseExcelDataCn.class,List.of(priority),regions,user,1L);mergedListener.setStepMetadata(io.metersphere.functional.excel.util.CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(merged),0));var imported=new ArrayList<FunctionalCaseExcelData>();mergedListener.collectPreparedItems((action,row)->imported.add(row));EasyExcel.read(new ByteArrayInputStream(merged),mergedListener).sheet().doRead();assertEquals(1,imported.size(),()->mergedListener.getErrList().toString());assertEquals(independent,imported.getFirst().getExpectedResult());var actual=io.metersphere.sdk.util.JSON.parseArray(imported.getFirst().getSteps(),java.util.Map.class);assertEquals(count,actual.size());for(int i=0;i<count;i++)assertEquals(numbers.get(i),actual.get(i).get("num"));
+    }
+   }
    var complexBlob=new io.metersphere.functional.domain.FunctionalCaseBlob();
    var rawSteps=new ArrayList<Map<String,String>>();for(int step=0;step<complexDescriptions.size();step++)rawSteps.add(Map.of("desc",complexDescriptions.get(step),"result",complexExpected.get(step)));
    complexBlob.setSteps(io.metersphere.sdk.util.JSON.toJSONString(rawSteps).getBytes(java.nio.charset.StandardCharsets.UTF_8));

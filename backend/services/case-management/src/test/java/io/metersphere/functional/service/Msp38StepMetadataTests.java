@@ -6,6 +6,15 @@ import java.io.*;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 class Msp38StepMetadataTests {
+ @Test void assetSnapshotIsBoundToBothVisibleColumnsAndNeverOverridesUserEdits() throws Exception {
+  var payload=io.metersphere.functional.excel.util.AssetStepSnapshot.encode(List.of("action<br>"),List.of("step result"),List.of(7),"independent\nexpected");
+  try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+   var sheet=workbook.createSheet();var header=sheet.createRow(0);header.createCell(0).setCellValue("步骤描述");header.createCell(1).setCellValue("预期结果");var row=sheet.createRow(1);row.createCell(0).setCellValue(payload);row.createCell(1).setCellValue(io.metersphere.functional.excel.util.AssetStepSnapshot.visible(payload,"results"));
+   CaseAssetExcelStepMetadata.hideTransportCells(workbook);var bytes=new ByteArrayOutputStream();workbook.write(bytes);assertFalse(CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(bytes.toByteArray()),0).isEmpty());
+   row.getCell(1).setCellValue("user edited expected");bytes.reset();workbook.write(bytes);assertTrue(CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(bytes.toByteArray()),0).isEmpty());
+   row.getCell(1).setCellValue(io.metersphere.functional.excel.util.AssetStepSnapshot.visible(payload,"results"));row.getCell(0).setCellValue("user edited action");bytes.reset();workbook.write(bytes);assertTrue(CaseAssetExcelStepMetadata.read(new ByteArrayInputStream(bytes.toByteArray()),0).isEmpty());
+  }
+ }
  @Test void hiddenMetadataRetainsExactStepsAndNeverOverridesEditedVisibleCell() throws Exception {
   var parts=List.of("first\n[2]literal", " ", "last\n");
   try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {

@@ -22,8 +22,8 @@ public final class CaseAssetExcelStepMetadata {
         if (parts.size() != 1) throw new MSException("文本元数据无效，请重新导出后重试");
         return parts.getFirst();
     }
-    private static boolean isTransport(String text) { return text.startsWith(TEXT_PREFIX) || text.startsWith("MSP-STEPS/1\n"); }
-    private static String transportVisible(String encoded) { return encoded.startsWith(TEXT_PREFIX) ? decodeText(encoded) : visible(CaseStepSplitUtils.splitCell(encoded)); }
+    private static boolean isTransport(String text) { return AssetStepSnapshot.encoded(text) || text.startsWith(TEXT_PREFIX) || text.startsWith("MSP-STEPS/1\n"); }
+    private static String transportVisible(String encoded) { return AssetStepSnapshot.encoded(encoded) ? AssetStepSnapshot.visible(encoded,"descriptions") : encoded.startsWith(TEXT_PREFIX) ? decodeText(encoded) : visible(CaseStepSplitUtils.splitCell(encoded)); }
     public record CellValue(String visibleHash, String encoded) { }
     private CaseAssetExcelStepMetadata() { }
 
@@ -86,6 +86,12 @@ public final class CaseAssetExcelStepMetadata {
                 try {
                     if (!transportVisible(encoded).equals(cell.getStringCellValue()))
                         throw new MSException("步骤元数据与单元格内容不一致，请重新导出后重试");
+                    if (AssetStepSnapshot.encoded(encoded)) {
+                        Cell expectedCell=null;
+                        for (Cell heading:header) if (heading.getCellType()==CellType.STRING && FunctionalCaseImportFiled.EXPECTED_RESULT.getFiledLangMap().containsValue(heading.getStringCellValue())) expectedCell=sourceRow.getCell(heading.getColumnIndex());
+                        String visibleExpected=expectedCell==null || expectedCell.getCellType()==CellType.BLANK ? "" : expectedCell.getCellType()==CellType.STRING ? expectedCell.getStringCellValue() : null;
+                        if (!Objects.equals(visibleExpected,AssetStepSnapshot.visible(encoded,"results"))) continue;
+                    }
                 } catch (MSException invalid) { throw invalid; }
                 catch (RuntimeException invalid) { throw new MSException("步骤元数据已损坏，请重新导出后重试"); }
                 result.computeIfAbsent(address.getRow(), ignored -> new HashMap<>()).put(address.getColumn(), new CellValue(hash(cell.getStringCellValue().trim()), encoded));
