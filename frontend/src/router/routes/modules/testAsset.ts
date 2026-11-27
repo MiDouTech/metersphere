@@ -6,6 +6,7 @@ import { DEFAULT_LAYOUT } from '../base';
 import type { AppRouteRecordRaw } from '../types';
 
 const readRoles = [
+  'TEST_DATA_ASSET:READ',
   'BUSINESS_ASSET:READ',
   'SHARED_CONFIGURATION:READ',
   'CASE_ASSET:READ',
@@ -34,7 +35,7 @@ function resolveDefaultTestAssetPath() {
   )
     return '/test-assets/cases/project';
   if (
-    hasAnyPermission(['PROJECT_FILE_MANAGEMENT:READ']) &&
+    hasAnyPermission(['TEST_DATA_ASSET:READ']) &&
     hasPageVisible('TEST_ASSET_DATASETS_PAGE') &&
     hasRouteVisible('testAssetDatasets')
   )
@@ -101,10 +102,21 @@ const TestAsset: AppRouteRecordRaw = {
       component: () => import('@/views/test-asset/datasets.vue'),
       meta: {
         locale: 'menu.testAsset.datasets',
-        roles: ['PROJECT_FILE_MANAGEMENT:READ'],
+        roles: ['TEST_DATA_ASSET:READ'],
         resourceCode: 'TEST_ASSET_DATASETS_PAGE',
         isTopMenu: true,
         keepModuleAlive: true,
+      },
+    },
+    {
+      path: 'datasets/:dataId',
+      name: 'testAssetDataDetail',
+      component: () => import('@/views/test-asset/data-detail.vue'),
+      meta: {
+        locale: 'menu.testAsset.datasets',
+        roles: ['TEST_DATA_ASSET:READ'],
+        hideInMenu: true,
+        activeMenu: TestAssetRouteEnum.TEST_ASSET_DATASETS,
       },
     },
     {

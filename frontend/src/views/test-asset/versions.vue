@@ -2,7 +2,10 @@
   <TestAssetPage>
     <div class="asset-heading"><h2>资产版本</h2><p>统一查看历史快照、比较变化与切换当前版本。</p></div>
     <section class="asset-panel">
-      <a-tabs v-model:active-key="versionTab">
+      <a-tabs v-model:active-key="versionTab"
+        ><a-tab-pane v-if="canReadData" key="data" title="测试数据" :destroy-on-hide="false"
+          ><DataVersions
+        /></a-tab-pane>
         <a-tab-pane v-if="canReadBusiness" key="business" title="业务资产" :destroy-on-hide="false"
           ><BusinessVersions
         /></a-tab-pane>
@@ -160,6 +163,7 @@
   import dayjs from 'dayjs';
 
   import BusinessVersions from './components/BusinessVersions.vue';
+  import DataVersions from './components/DataVersions.vue';
   import SharedConfigurationVersions from './components/SharedConfigurationVersions.vue';
   import TestAssetPage from './components/TestAssetPage.vue';
 
@@ -167,20 +171,26 @@
   import {
     deprecateTestAssetVersion,
     listTestAssetCategories,
-    pageTestAssetVersions,
+    pageGlobalAssetVersions,
   } from '@/api/modules/ai-execution';
   import useAppStore from '@/store/modules/app';
   import businessAssetError from '@/utils/businessAssetError';
   import { hasAnyPermission } from '@/utils/permission';
 
-  const appStore = useAppStore();
+  const globalScope = '';
+  const app = useAppStore();
   const route = useRoute();
   const router = useRouter();
   const loading = ref(false);
+  const canReadData = computed(() => hasAnyPermission(['TEST_DATA_ASSET:READ'], ['ORGANIZATION', 'SYSTEM']));
   const canReadBusiness = computed(() => hasAnyPermission(['BUSINESS_ASSET:READ']));
   const canReadConfiguration = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:READ']));
   const canReadLegacy = computed(() =>
     hasAnyPermission([
+      'CASE_ASSET:READ',
+      'PROJECT_API_SCENARIO:READ',
+      'PROJECT_API_DEFINITION:READ',
+      'PROJECT_BUG:READ',
       'FUNCTIONAL_CASE:READ',
       'FUNCTIONAL_CASE_AI:READ',
       'PROJECT_FILE_MANAGEMENT:READ',
@@ -193,8 +203,10 @@
     if (route.query.configurationId && canReadConfiguration.value) return 'configuration';
     if (route.query.businessAssetId && canReadBusiness.value) return 'business';
     if ((route.query.assetType || route.query.assetId) && canReadLegacy.value) return 'other';
+    if (canReadData.value && route.query.dataId) return 'data';
     if (canReadBusiness.value) return 'business';
     if (canReadConfiguration.value) return 'configuration';
+    if (canReadData.value) return 'data';
     return 'other';
   }
   const versionTab = ref(initialVersionTab());
@@ -211,8 +223,9 @@
     }
   );
 
-  watch([canReadBusiness, canReadConfiguration, canReadLegacy], () => {
+  watch([canReadData, canReadBusiness, canReadConfiguration, canReadLegacy], () => {
     const available = {
+      data: canReadData.value,
       business: canReadBusiness.value,
       configuration: canReadConfiguration.value,
       other: canReadLegacy.value,
@@ -265,31 +278,31 @@
   let legacyGeneration = 0;
   async function load() {
     const run = ++legacyGeneration;
-    const project = appStore.currentProjectId;
+    const project = app.currentOrgId;
     versions.value = [];
     total.value = 0;
     error.value = '';
-    if (!project || !canReadLegacy.value) {
+    if (!canReadLegacy.value) {
       loading.value = false;
       return;
     }
     loading.value = true;
     error.value = '';
     try {
-      const result = await pageTestAssetVersions({
-        projectId: project,
+      const result = await pageGlobalAssetVersions({
+        projectId: globalScope,
         ...query,
         keyword: query.keyword.trim() || undefined,
         assetId: query.assetId.trim() || undefined,
       });
-      if (run !== legacyGeneration || project !== appStore.currentProjectId || !canReadLegacy.value) return;
+      if (run !== legacyGeneration || project !== app.currentOrgId || !canReadLegacy.value) return;
       versions.value = result.list || [];
       total.value = result.total || 0;
     } catch (reason) {
-      if (run === legacyGeneration && project === appStore.currentProjectId && canReadLegacy.value)
+      if (run === legacyGeneration && project === app.currentOrgId && canReadLegacy.value)
         error.value = businessAssetError(reason, '资产版本加载失败，请稍后重试');
     } finally {
-      if (run === legacyGeneration && project === appStore.currentProjectId) loading.value = false;
+      if (run === legacyGeneration && project === app.currentOrgId) loading.value = false;
     }
   }
   function search() {
@@ -306,12 +319,14 @@
     load();
   }
   function trace(record: TestAssetVersion) {
-    router.push({ path: '/test-assets/relations', query: { assetType: record.assetType, assetId: record.assetId } });
+    router.push({
+      path: '/test-assets/relations',
+      query: { assetType: record.assetType, assetId: record.assetId, projectId: record.projectId },
+    });
   }
   async function deprecate(record: TestAssetVersion) {
-    if (!appStore.currentProjectId) return;
     try {
-      await deprecateTestAssetVersion(appStore.currentProjectId, record);
+      await deprecateTestAssetVersion(record.projectId || '', record);
       await load();
     } catch (reason) {
       error.value = businessAssetError(reason, '资产版本停用失败，请稍后重试');
@@ -324,7 +339,7 @@
     query.current = 1;
     load();
   });
-  watch([() => appStore.currentProjectId, canReadLegacy], () => {
+  watch([() => app.currentOrgId, canReadLegacy], () => {
     ++legacyGeneration;
     versions.value = [];
     total.value = 0;

@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "status": 200,
+  "statusText": "OK",
+  "url": "http://127.0.0.1:18762/api/test-data-assets?page=1&pageSize=20",
+  "headers": {
+    "connection": "keep-alive",
+    "content-length": "810",
+    "content-type": "application/json",
+    "date": "Fri, 27 Nov 2026 05:20:16 GMT",
+    "keep-alive": "timeout=5"
+  },
+  "body": "{\"code\":100200,\"data\":{\"total\":2,\"items\":[{\"id\":\"a92e6293-bc3f-4d88-bcd9-7154f01a5dfa\",\"name\":\"upload.csv\",\"format\":\"CSV\",\"parseJobId\":null,\"parseStatus\":\"READY\",\"parseError\":null,\"hasFile\":1,\"description\":\"已核验金额样本\",\"owner\":\"user\",\"createTime\":1795756563306,\"updateTime\":1795756815984,\"categoryId\":\"5beb8fc8-5d1d-447f-9210-47da69207827\",\"revision\":2,\"currentVersionId\":\"6237f9a5-97d3-4909-b859-78aae3c374d9\"},{\"id\":\"ba5f4d33-c589-44eb-8215-7c12e39f0655\",\"name\":\"订单-待审\",\"format\":\"JSON\",\"parseJobId\":null,\"parseStatus\":\"READY\",\"parseError\":null,\"hasFile\":0,\"description\":\"已核验金额样本\",\"owner\":\"user\",\"createTime\":1795756589086,\"updateTime\":1795756815903,\"categoryId\":\"5beb8fc8-5d1d-447f-9210-47da69207827\",\"revision\":2,\"currentVersionId\":\"6068372a-9c96-403b-94c5-07630425fe0c\"}]}}"
+}

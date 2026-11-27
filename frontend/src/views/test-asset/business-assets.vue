@@ -228,6 +228,7 @@
   import { hasAnyPermission } from '@/utils/permission';
 
   const businessFile = ref<HTMLInputElement>();
+  const globalScope = '';
   const app = useAppStore();
   const router = useRouter();
   const route = useRoute();
@@ -253,9 +254,9 @@
   const pages = ref('');
   const mergeSource = ref<BusinessRow>();
   const mergeTarget = ref('');
-  const canWrite = computed(() => hasAnyPermission(['BUSINESS_ASSET:WRITE']));
+  const canWrite = computed(() => hasAnyPermission(['BUSINESS_ASSET:WRITE'], ['ORGANIZATION', 'SYSTEM']));
   const empty = (): BusinessSubmission => ({
-    projectId: app.currentProjectId,
+    projectId: globalScope,
     schemaVersion: '1.0',
     operation: 'CREATE',
     baseVersion: 0,
@@ -314,9 +315,7 @@
     error.value = '';
     loading.value = true;
     try {
-      const value = app.currentProjectId
-        ? await listBusinessAssets(app.currentProjectId, keyword.value, archived.value)
-        : [];
+      const value = await listBusinessAssets(globalScope, keyword.value, archived.value);
       if (run === generation) rows.value = value;
     } catch (failure) {
       if (run === generation) error.value = businessAssetError(failure, '业务资产加载失败，请检查权限或网络后重试。');
@@ -336,16 +335,16 @@
   }
   async function open(row: BusinessRow) {
     const run = ++detailGeneration;
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     detail.value = undefined;
     detailError.value = '';
     detailVisible.value = true;
     detailLoading.value = true;
     try {
-      const value = await getBusinessAsset(project, row.id);
-      if (run === detailGeneration && project === app.currentProjectId) detail.value = value;
+      const value = await getBusinessAsset(globalScope, row.id);
+      if (run === detailGeneration && project === app.currentOrgId) detail.value = value;
     } catch (failure) {
-      if (run === detailGeneration && project === app.currentProjectId)
+      if (run === detailGeneration && project === app.currentOrgId)
         detailError.value = businessAssetError(failure, '无法读取业务理解，请刷新后重试。');
     } finally {
       if (run === detailGeneration) detailLoading.value = false;
@@ -353,16 +352,16 @@
   }
   async function edit(row: BusinessRow) {
     const run = ++editorRequest;
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     mergeSource.value = undefined;
     comparisonContent.value = '';
     try {
-      const value = await getBusinessAsset(app.currentProjectId, row.id);
-      if (run !== editorRequest || project !== app.currentProjectId) return;
+      const value = await getBusinessAsset(globalScope, row.id);
+      if (run !== editorRequest || project !== app.currentOrgId) return;
       const version = value.versions.find((v) => v.id === value.currentVersionId) || value.versions[0];
       form.value = {
         ...structuredClone(version.snapshot),
-        projectId: app.currentProjectId,
+        projectId: globalScope,
         operation: 'UPDATE',
         assetId: row.id,
         baseVersion: value.versions.find((v) => v.id === value.currentVersionId)?.versionNo || 0,
@@ -381,17 +380,17 @@
     const run = ++editorRequest;
     const assetId = String(route.query.assetId || '');
     const versionId = String(route.query.versionId || '');
-    if (!assetId || !versionId || !canWrite.value || !app.currentProjectId) return;
-    const project = app.currentProjectId;
+    if (!assetId || !versionId || !canWrite.value) return;
+    const project = app.currentOrgId;
     try {
-      const value = await getBusinessAsset(project, assetId);
-      if (project !== app.currentProjectId || run !== editorRequest) return;
+      const value = await getBusinessAsset(globalScope, assetId);
+      if (project !== app.currentOrgId || run !== editorRequest) return;
       const candidate = value.versions.find((v) => v.id === versionId);
       const active = value.versions.find((v) => v.id === value.currentVersionId);
       if (!candidate) throw new Error('version');
       form.value = {
         ...structuredClone(candidate.snapshot),
-        projectId: project,
+        projectId: globalScope,
         assetId,
         operation: 'UPDATE',
         baseVersion: active?.versionNo || 0,
@@ -421,16 +420,16 @@
     mergeSource.value = row;
   }
   async function loadMergeTarget() {
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     const source = mergeSource.value;
     const target = rows.value.find((r) => r.id === mergeTarget.value);
     if (!source || !target) return;
     try {
-      const sourceDetail = await getBusinessAsset(app.currentProjectId, source.id);
+      const sourceDetail = await getBusinessAsset(globalScope, source.id);
       const sourceVersion =
         sourceDetail.versions.find((v) => v.id === sourceDetail.currentVersionId) || sourceDetail.versions[0];
       await edit(target);
-      if (project !== app.currentProjectId || form.value.assetId !== target.id) return;
+      if (project !== app.currentOrgId || form.value.assetId !== target.id) return;
       mergeSource.value = source;
       form.value.document.content += `\n\n## 合并业务理解：${sourceVersion.snapshot.title}\n\n${sourceVersion.snapshot.document.content}`;
       form.value.branches.push(
@@ -456,7 +455,7 @@
     if (lastSubmittedContent && fingerprint !== lastSubmittedContent) form.value.idempotencyKey = crypto.randomUUID();
     lastSubmittedContent = fingerprint;
     const submission = JSON.parse(JSON.stringify(form.value)) as BusinessSubmission;
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     try {
       const result = mergeSource.value
         ? await MSR.post<{ status: string }>({
@@ -464,7 +463,7 @@
             data: { sourceRevision: mergeSource.value.revision, target: submission },
           })
         : await submitBusinessAsset(submission);
-      if (project !== app.currentProjectId || submission.idempotencyKey !== form.value.idempotencyKey) return;
+      if (project !== app.currentOrgId || submission.idempotencyKey !== form.value.idempotencyKey) return;
       const messages: Record<string, string> = {
         CONFLICT: '内容已保留为冲突版本，请到资产版本比较并合并。',
         UNCLASSIFIED: '文档已保留，请补充业务范围完成归类。',
@@ -474,14 +473,14 @@
       editorVisible.value = false;
       await load();
     } catch (failure) {
-      if (project === app.currentProjectId && submission.idempotencyKey === form.value.idempotencyKey)
+      if (project === app.currentOrgId && submission.idempotencyKey === form.value.idempotencyKey)
         saveError.value = businessAssetError(failure, '保存失败，请检查权限、字段和网络后重试；原输入已保留。');
     } finally {
       saving.value = false;
     }
   }
   async function upload(event: Event) {
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     const editorKey = form.value.idempotencyKey;
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -489,7 +488,7 @@
     try {
       if (file.size > 1500000) throw new Error('size');
       const content = await file.text();
-      if (project !== app.currentProjectId || editorKey !== form.value.idempotencyKey) return;
+      if (project !== app.currentOrgId || editorKey !== form.value.idempotencyKey) return;
       create();
       if (file.name.endsWith('.json')) {
         const parsed = JSON.parse(content) as BusinessSubmission;
@@ -497,7 +496,7 @@
           throw new Error('format');
         form.value = {
           ...parsed,
-          projectId: app.currentProjectId,
+          projectId: globalScope,
           idempotencyKey: crypto.randomUUID(),
           source: undefined,
         };
@@ -521,7 +520,7 @@
     try {
       await archiveBusinessAsset(
         row.id,
-        app.currentProjectId,
+        globalScope,
         !archived.value,
         row.revision,
         archived.value ? '人工恢复业务资产' : '人工归档业务资产'
@@ -532,11 +531,13 @@
     }
   }
   watch(
-    () => app.currentProjectId,
+    () => app.currentOrgId,
     () => {
       rows.value = [];
       ++editorRequest;
       ++detailGeneration;
+      form.value = empty();
+      detail.value = undefined;
       clearEvidence();
       evidenceVisible.value = false;
       detailVisible.value = false;
@@ -546,7 +547,7 @@
     },
     { immediate: true }
   );
-  watch([() => app.currentProjectId, () => route.query.assetId, () => route.query.versionId], editSelectedVersion, {
+  watch([() => app.currentOrgId, () => route.query.assetId, () => route.query.versionId], editSelectedVersion, {
     immediate: true,
   });
 </script>

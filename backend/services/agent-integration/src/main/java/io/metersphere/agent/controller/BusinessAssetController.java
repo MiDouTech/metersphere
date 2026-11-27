@@ -22,7 +22,7 @@ public class BusinessAssetController {
 
   @GetMapping
   public List<Map<String, Object>> list(
-      @RequestParam String projectId,
+      @RequestParam(required = false) String projectId,
       @RequestParam(defaultValue = "") String keyword,
       @RequestParam(defaultValue = "false") boolean archived) {
     return service.list(projectId, keyword, archived);
@@ -42,13 +42,14 @@ public class BusinessAssetController {
   }
 
   @GetMapping("/{id}")
-  public Map<String, Object> detail(@RequestParam String projectId, @PathVariable String id) {
+  public Map<String, Object> detail(
+      @RequestParam(required = false) String projectId, @PathVariable String id) {
     return service.detail(projectId, id);
   }
 
   @GetMapping("/{id}/versions")
   public List<Map<String, Object>> versions(
-      @RequestParam String projectId, @PathVariable String id) {
+      @RequestParam(required = false) String projectId, @PathVariable String id) {
     return service.versions(projectId, id);
   }
 
@@ -67,7 +68,7 @@ public class BusinessAssetController {
   }
 
   public record Selection(
-      @NotBlank String projectId,
+      String projectId,
       @NotBlank String versionId,
       @Min(0) int revision,
       @NotBlank @Size(max = 500) String reason) {}
@@ -79,7 +80,7 @@ public class BusinessAssetController {
   }
 
   public record Archive(
-      @NotBlank String projectId,
+      String projectId,
       boolean archived,
       @Min(0) int revision,
       @NotBlank @Size(max = 500) String reason) {}

@@ -70,6 +70,102 @@ class PermissionUiServiceTests {
         assertTrue(result.getProject().getOperable().contains("TEST_PLAN_DELETE_BUTTON"));
     }
 
+    @Test
+    void globalAssetProjectionSeparatesOrganizationPagesFromProjectRelationsAndExposesOnlyMenuShell() {
+        var menu = resource("TEST_ASSET_MENU", "MENU", null, "testAsset", null);
+        menu.setScopeType("ORGANIZATION");
+        var data = resource("TEST_ASSET_DATASETS_PAGE", "PAGE", menu.getCode(), "testAssetDatasets", "TEST_DATA_ASSET:READ");
+        data.setScopeType("ORGANIZATION");
+        var relation = resource("TEST_ASSET_RELATIONS_PAGE", "PAGE", menu.getCode(), "testAssetRelations", "PROJECT_FILE_MANAGEMENT:READ");
+        when(permissionResourceMapper.selectEnabled()).thenReturn(List.of(menu,data,relation));
+        var orgUser = projectUser("custom-org", "TEST_DATA_ASSET:READ");
+        orgUser.setLastProjectId(null);
+        orgUser.getUserRoles().getFirst().setType("ORGANIZATION");
+        orgUser.getUserRoleRelations().getFirst().setSourceId("org-1");
+        var result = service.aggregate(orgUser);
+        assertTrue(result.getOrganization().getVisibleRoutes().contains("testAssetDatasets"));
+        assertTrue(result.getOrganization().getVisibleRoutes().contains("testAsset"));
+        assertFalse(result.getProject().getVisibleRoutes().contains("testAssetRelations"));
+        var project = service.aggregate(projectUser("custom-project", "PROJECT_FILE_MANAGEMENT:READ"));
+        assertTrue(project.getProject().getVisibleRoutes().contains("testAssetRelations"));
+        assertTrue(project.getOrganization().getVisibleRoutes().contains("testAsset"));
+        assertFalse(project.getOrganization().getVisibleRoutes().contains("testAssetDatasets"));
+        var denied = service.aggregate(projectUser("custom-project", null));
+        assertFalse(denied.getOrganization().getVisibleRoutes().contains("testAsset"));
+    }
+
+    @Test
+    void eachGlobalPageUsesItsOwnOrganizationBusinessPermission() {
+        var definitions = java.util.Map.of(
+                "testAssetDocuments", "BUSINESS_ASSET:READ",
+                "testAssetSharedConfiguration", "SHARED_CONFIGURATION:READ");
+        var pages = definitions.entrySet().stream().map(entry -> {
+            var page = resource(entry.getKey(), "PAGE", null, entry.getKey(), entry.getValue());
+            page.setScopeType("ORGANIZATION");
+            return page;
+        }).toList();
+        when(permissionResourceMapper.selectEnabled()).thenReturn(pages);
+        for (var grant : definitions.entrySet()) {
+            var user = projectUser("custom-org", grant.getValue());
+            user.setLastProjectId(null);
+            user.getUserRoles().getFirst().setType("ORGANIZATION");
+            user.getUserRoleRelations().getFirst().setSourceId("org-1");
+            var projection = service.aggregate(user);
+            assertTrue(projection.getOrganization().getVisibleRoutes().contains(grant.getKey()));
+            assertTrue(projection.getOrganization().getVisibleRoutes().size() == 1);
+            assertTrue(projection.getProject().getVisibleRoutes().isEmpty());
+        }
+    }
+
+    @Test
+    void versionsReadProjectionAcceptsReadButNeverWriteOnlyOrProjectRolePromotion() {
+        var versions = resource("TEST_ASSET_VERSIONS_PAGE", "PAGE", null, "testAssetVersions", null);
+        versions.setScopeType("ORGANIZATION");
+        when(permissionResourceMapper.selectEnabled()).thenReturn(List.of(versions));
+        for (String permission : List.of("BUSINESS_ASSET:READ", "SHARED_CONFIGURATION:READ", "TEST_DATA_ASSET:READ", "FUNCTIONAL_CASE:READ")) {
+            var user = projectUser("org-reader", permission);
+            user.setLastProjectId(null);
+            user.getUserRoles().getFirst().setType("ORGANIZATION");
+            user.getUserRoleRelations().getFirst().setSourceId("org-1");
+            assertTrue(service.aggregate(user).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+        }
+        for (String permission : List.of("BUSINESS_ASSET:WRITE", "SHARED_CONFIGURATION:WRITE", "TEST_ASSET_VERSION:MANAGE")) {
+            var user = projectUser("org-writer", permission);
+            user.setLastProjectId(null);
+            user.getUserRoles().getFirst().setType("ORGANIZATION");
+            user.getUserRoleRelations().getFirst().setSourceId("org-1");
+            assertFalse(service.aggregate(user).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+        }
+        assertFalse(service.aggregate(projectUser("project-writer", "BUSINESS_ASSET:WRITE")).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+    }
+
+    @Test
+    void projectSourceReaderCanOpenCompatibilityVersionsWithoutGlobalAssetGrants() {
+        var versions = resource("TEST_ASSET_VERSIONS_PAGE", "PAGE", "TEST_ASSET_MENU", "testAssetVersions", null);
+        versions.setScopeType("ORGANIZATION");
+        var menu = resource("TEST_ASSET_MENU", "MENU", null, "testAsset", null);
+        menu.setScopeType("ORGANIZATION");
+        var data = resource("TEST_ASSET_DATASETS_PAGE", "PAGE", menu.getCode(), "testAssetDatasets", "TEST_DATA_ASSET:READ");
+        data.setScopeType("ORGANIZATION");
+        when(permissionResourceMapper.selectEnabled()).thenReturn(List.of(menu, versions, data));
+        var projects = org.mockito.Mockito.mock(io.metersphere.project.mapper.ProjectMapper.class);
+        ReflectionTestUtils.setField(service, "projectMapper", projects);
+        var source = new io.metersphere.project.domain.Project();
+        source.setOrganizationId("org-1"); source.setDeleted(false);
+        when(projects.selectByPrimaryKey("project-1")).thenReturn(source);
+        var result = service.aggregate(projectUser("source-reader", "FUNCTIONAL_CASE:READ"));
+        assertTrue(result.getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+        assertTrue(result.getOrganization().getVisibleRoutes().contains("testAsset"));
+        assertFalse(result.getOrganization().getVisibleRoutes().contains("testAssetDatasets"));
+        for (String permission : List.of("FUNCTIONAL_CASE:READ+UPDATE", "TEST_ASSET_VERSION:MANAGE"))
+            assertFalse(service.aggregate(projectUser("source-writer", permission)).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+        var switched = projectUser("source-reader", "FUNCTIONAL_CASE:READ");
+        switched.setLastProjectId("unrelated-current-project");
+        assertTrue(service.aggregate(switched).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+        source.setOrganizationId("other-org");
+        assertFalse(service.aggregate(projectUser("source-reader", "FUNCTIONAL_CASE:READ")).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+    }
+
     private UserDTO projectUser(String roleId, String permissionId) {
         UserRole role = new UserRole();
         role.setId(roleId);

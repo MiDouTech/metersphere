@@ -1417,3 +1417,11 @@ export function downloadTestAssetEvidence(projectId: string, evidenceId: string)
     { isTransformResponse: false }
   );
 }
+
+// Organization-wide compatibility index; source project IDs remain on returned rows.
+export function pageGlobalAssetCatalog(params: Parameters<typeof pageTestAssetCatalog>[0]) {
+  return MSR.get<TestAssetPage<TestAssetCatalogItem>>({ url: '/test-assets/global/catalog', params });
+}
+export function pageGlobalAssetVersions(params: Parameters<typeof pageTestAssetVersions>[0]) {
+  return MSR.get<TestAssetPage<TestAssetVersion>>({ url: '/test-assets/global/versions', params });
+}

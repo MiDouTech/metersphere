@@ -1,0 +1,4 @@
+{
+  "url": "http://127.0.0.1:18762/#/test-assets/datasets/957b49e3-4d17-403d-9c91-3d838e4a59ed",
+  "text": "\n  MeterSphere...业务资产用例资产测试数据公共配置资产版本工作台项目管理测试资产执行中心系统设置系统组织Fixture返回列表upload.csv全局资产替换文件生成新版本格式：CSV 修订：1解析状态：READY说明：无负责人：user；分类：未分类当前版本：ff3e1b10-5473-47b9-bb8b-e61eaee93a8c选择项目查看引用追溯授权可见来源无可见来源记录授权可见项目引用无可见引用记录数据内容数据内容123编号金额说明CSV-0120.50含,逗号CSV-0330.50空行保留\n\n  \n    //解决 firefox 拖拽会自动打开新标签\n    document.body.ondrop = function (event) {\n      event.preventDefault()\n      event.stopPropagation()\n    }\n  #icon-login-logo .st0{fill:#783887}#icon-login-logo .st3{fill:#fff}\n\n\n个人中心退出系统v1"
+}

@@ -92,6 +92,7 @@
     actorId: string;
     createTime: number;
   }
+  const globalScope = '';
   const app = useAppStore();
   const route = useRoute();
   const configurations = ref<Configuration[]>([]);
@@ -105,7 +106,7 @@
   const switchReason = ref('');
   const switchError = ref('');
   const current = computed(() => configurations.value.find((item) => item.id === id.value));
-  const canWrite = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:WRITE']));
+  const canWrite = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:WRITE'], ['ORGANIZATION', 'SYSTEM']));
   const parseLabel = (status: string) =>
     ({ PARSED: '解析成功', FAILED: '解析失败', UNSUPPORTED: '暂不支持解析', NOT_APPLICABLE: '无需解析' }[status] ||
     status);
@@ -123,7 +124,7 @@
     try {
       const value = await MSR.get<Version[]>({
         url: `/shared-configurations/${id.value}/versions`,
-        params: { projectId: app.currentProjectId },
+        params: { projectId: globalScope },
       });
       if (run === generation) versions.value = value;
     } catch (failure) {
@@ -144,7 +145,7 @@
       switchError.value = '请输入切换原因';
       return false;
     }
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     const configurationId = id.value;
     const version = targetVersion.value;
     switching.value = true;
@@ -152,13 +153,13 @@
       await MSR.post({
         url: `/shared-configurations/${id.value}/current-version`,
         data: {
-          projectId: app.currentProjectId,
+          projectId: globalScope,
           version,
           expectedVersion: current.value.currentVersion,
           reason: switchReason.value.trim(),
         },
       });
-      if (project !== app.currentProjectId || configurationId !== id.value) return true;
+      if (project !== app.currentOrgId || configurationId !== id.value) return true;
       current.value.currentVersion = version;
       error.value = '';
       await loadVersions();
@@ -177,7 +178,7 @@
     try {
       const value = await MSR.get<Configuration[]>({
         url: '/shared-configurations',
-        params: { projectId: app.currentProjectId },
+        params: { projectId: globalScope },
       });
       if (run !== catalogGeneration) return;
       configurations.value = value;
@@ -190,7 +191,7 @@
     }
   }
   watch(
-    [() => app.currentProjectId, () => route.query.configurationId],
+    [() => app.currentOrgId, () => route.query.configurationId],
     async () => {
       ++generation;
       ++catalogGeneration;
@@ -198,7 +199,7 @@
       versions.value = [];
       switchVisible.value = false;
       id.value = String(route.query.configurationId || '');
-      if (!app.currentProjectId || !hasAnyPermission(['SHARED_CONFIGURATION:READ'])) return;
+      if (!hasAnyPermission(['SHARED_CONFIGURATION:READ'], ['ORGANIZATION', 'SYSTEM'])) return;
       await reload();
     },
     { immediate: true }

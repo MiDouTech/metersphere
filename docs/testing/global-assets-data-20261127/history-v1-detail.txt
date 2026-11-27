@@ -1,0 +1,132 @@
+[p1 "MeterSphere" | space "全局资产与测试数据开发验收20261127"(8): 2 managed, 0 untracked — p1* "MeterSphere", p2 "HiFox"]
+root
+  svg_root
+  container
+    container
+      container
+        image
+        text "MeterSphere"
+      container
+        text "业务资产"
+        text "用例资产"
+        text "测试数据"
+        text "公共配置"
+        text "资产版本"
+      unordered_list
+        list_item
+        list_item
+          button [ref=82]
+            svg_root
+        list_item
+          button [ref=83]
+            svg_root
+        list_item
+          button [ref=84]
+            svg_root
+        list_item
+          switch [ref=85]
+            svg_root
+        list_item
+          button [ref=86]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "Fixture"
+          svg_root
+      container
+        container
+          button [ref=104]
+            text "返回列表"
+          heading
+            text "upload.csv"
+          text "全局资产"
+        button [ref=105]
+          text "替换文件生成新版本"
+        container
+          paragraph
+            text "格式：CSV 修订：2"
+          paragraph
+            text "解析状态：READY"
+          paragraph
+            text "说明：无"
+          paragraph
+            text "负责人：user；分类：未分类"
+          paragraph
+            text "当前版本：eadd75ed-372b-4c02-928f-4c398d6c15a8"
+          container
+            textbox [ref=106, loc=css:input[placeholder="当前版本"]]
+              text "当前版本"
+            text "v1"
+            svg_root
+          button [ref=107]
+            text "选择项目查看引用追溯"
+          heading
+            text "授权可见来源"
+          paragraph
+            text "无可见来源记录"
+          heading
+            text "授权可见项目引用"
+          paragraph
+            text "无可见引用记录"
+          container
+            heading
+              text "数据内容"
+            region "数据内容" [ref=110, loc=role:region[name="数据内容"]]
+              table
+                text "数据内容"
+                table_row
+                  table_cell
+                    text "1"
+                  table_cell
+                    text "2"
+                  table_cell
+                    text "3"
+                table_row
+                  table_cell
+                    text "编号"
+                  table_cell
+                    text "金额"
+                  table_cell
+                    text "说明"
+                table_row
+                  table_cell
+                    text "CSV-01"
+                  table_cell
+                    text "20.50"
+                  table_cell
+                    text "含,逗号"
+                table_row
+                  table_cell
+                table_row
+                  table_cell
+                    text "CSV-03"
+                  table_cell
+                    text "30.50"
+                  table_cell
+                    text "空行保留"
+  svg_root
+  unordered_list
+    list_item
+      text "v2"
+    list_item
+      text "v1"

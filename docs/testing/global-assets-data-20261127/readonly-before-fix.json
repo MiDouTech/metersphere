@@ -1,0 +1,17 @@
+[
+  {
+    "tag": "INPUT",
+    "value": "E2E-订单金额样本",
+    "readOnly": false
+  },
+  {
+    "tag": "INPUT",
+    "value": "",
+    "readOnly": true
+  },
+  {
+    "tag": "TEXTAREA",
+    "value": "{}",
+    "readOnly": true
+  }
+]

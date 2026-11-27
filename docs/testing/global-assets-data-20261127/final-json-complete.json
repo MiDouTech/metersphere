@@ -1,0 +1,5 @@
+{
+  "url": "#/test-assets/datasets/42fac81f-abe9-40c4-a2a7-853a52b6ac0b",
+  "content": "{\n  \"订单号\": \"FINAL-01\",\n  \"金额\": 55.5,\n  \"rows\": [\n    [\n      1\n    ]\n  ],\n  \"totals\": 100,\n  \"type\": \"DATE\",\n  \"value\": \"2026-11-27\",\n  \"other\": \"完整保留\"\n}",
+  "formatTables": 0
+}

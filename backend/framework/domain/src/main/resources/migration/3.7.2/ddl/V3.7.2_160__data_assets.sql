@@ -1,0 +1,22 @@
+CREATE TABLE data_asset (id varchar(64) PRIMARY KEY, organization_id varchar(64) NOT NULL, name varchar(255) NOT NULL, format varchar(16) NOT NULL, category_id varchar(64), revision int NOT NULL, current_version_id varchar(64) NOT NULL, deleted boolean NOT NULL DEFAULT false, update_time bigint NOT NULL, INDEX data_asset_org(organization_id,deleted));
+CREATE TABLE data_asset_version (id varchar(64) PRIMARY KEY, asset_id varchar(64) NOT NULL, version_no int NOT NULL, content_json longtext NOT NULL, create_time bigint NOT NULL, actor_id varchar(64) NOT NULL, UNIQUE KEY data_asset_revision(asset_id,version_no));
+CREATE TABLE data_asset_file (version_id varchar(64) PRIMARY KEY, storage_path varchar(255) NOT NULL, file_name varchar(255) NOT NULL);
+CREATE TABLE data_asset_source (source_file_id varchar(64) PRIMARY KEY, source_project_id varchar(64) NOT NULL, asset_id varchar(64) NOT NULL, source_version_id varchar(64) NOT NULL);
+CREATE TABLE data_asset_request (organization_id varchar(64) NOT NULL, actor_id varchar(64) NOT NULL, request_id varchar(128) NOT NULL, request_hash varchar(64) NOT NULL, asset_id varchar(64) NOT NULL, PRIMARY KEY(organization_id,actor_id,request_id));
+ALTER TABLE data_asset ADD description varchar(2000) NOT NULL DEFAULT '';
+ALTER TABLE data_asset ADD create_user varchar(64) NOT NULL DEFAULT '';
+ALTER TABLE data_asset ADD create_time bigint NOT NULL DEFAULT 0;
+CREATE TABLE data_asset_batch_job(id varchar(64) PRIMARY KEY,organization_id varchar(64) NOT NULL,actor_id varchar(64) NOT NULL,status varchar(16) NOT NULL,request_json longtext NOT NULL,result_json longtext,create_time bigint NOT NULL);
+ALTER TABLE data_asset_version ADD parse_status varchar(16) NOT NULL DEFAULT 'READY';
+ALTER TABLE data_asset_version ADD parse_error varchar(255) NULL;
+CREATE TABLE data_asset_parse_job(id varchar(64) PRIMARY KEY,organization_id varchar(64) NOT NULL,actor_id varchar(64) NOT NULL,asset_id varchar(64) NOT NULL,version_id varchar(64) NOT NULL,status varchar(16) NOT NULL,attempt int NOT NULL DEFAULT 0,update_time bigint NOT NULL,error varchar(255));
+CREATE TABLE data_asset_audit(id varchar(64) PRIMARY KEY,organization_id varchar(64) NOT NULL,asset_id varchar(64) NOT NULL,version_id varchar(64),actor_id varchar(64) NOT NULL,action varchar(32) NOT NULL,create_time bigint NOT NULL);
+ALTER TABLE data_asset_batch_job ADD update_time bigint NOT NULL DEFAULT 0;
+ALTER TABLE data_asset_batch_job ADD retry_job_id varchar(64) NULL;
+
+CREATE INDEX data_asset_parse_queue ON data_asset_parse_job(status,update_time);
+CREATE INDEX data_asset_parse_owner ON data_asset_parse_job(organization_id,actor_id);
+CREATE INDEX data_asset_batch_queue ON data_asset_batch_job(status,update_time);
+CREATE INDEX data_asset_batch_owner ON data_asset_batch_job(organization_id,actor_id);
+ALTER TABLE data_asset_version ADD metadata_json longtext NULL;
+ALTER TABLE data_asset_version ADD metadata_source varchar(32) NOT NULL DEFAULT 'ASSET_VERSION';

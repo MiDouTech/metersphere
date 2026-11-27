@@ -72,6 +72,7 @@ import java.lang.reflect.Type;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Collection;
@@ -154,20 +155,20 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     @Bean
-    public AgentMcpToolHandler assetCatalogSearchTool(TestAssetCatalogService service) {
-        return tool("metersphere.asset.catalog.search","Search published test-asset catalog metadata.",AgentTokenScope.AI_ASSET_READ,true,
-                objectSchema(Map.of("projectId",stringSchema(),"assetTypes",Map.of("type","array","minItems",1,"maxItems",11,"uniqueItems",true,"items",Map.of("type","string","enum",List.of("CASE","DOCUMENT","PLAN","DATASET","ENVIRONMENT","PAGE_OBJECT","BUSINESS_FLOW","COMMON_STEP","API_DEFINITION","EVIDENCE","BUG"))),"keyword",stringSchema(),"status",Map.of("type","string","enum",List.of("PUBLISHED")),"updatedAfter",Map.of("type","integer","minimum",0),"cursor",stringSchema(),"limit",Map.of("type","integer","minimum",1,"maximum",100)),List.of("projectId","assetTypes")),
-                args->pageResponse(service.searchByTypes(requiredString(args,"projectId"),stringList(args,"assetTypes"),(String)args.get("keyword"),(String)args.get("status"),optionalLong(args,"updatedAfter"),cursorPage(args),optionalInt(args,"limit",20))));
+    public AgentMcpToolHandler assetCatalogSearchTool(io.metersphere.agent.service.GlobalAssetCatalogService service) {
+        return tool("metersphere.asset.catalog.search","Search organization-global published asset metadata over authorized sources. sourceProjectId (legacy projectId) selects organization context and Token whitelist only.",AgentTokenScope.AI_ASSET_READ,true,
+                globalAssetSchema(objectSchema(Map.of("projectId",stringSchema(),"assetTypes",Map.of("type","array","minItems",1,"maxItems",11,"uniqueItems",true,"items",Map.of("type","string","enum",List.of("CASE","DOCUMENT","PLAN","DATASET","ENVIRONMENT","PAGE_OBJECT","BUSINESS_FLOW","COMMON_STEP","API_DEFINITION","EVIDENCE","BUG"))),"keyword",stringSchema(),"status",Map.of("type","string","enum",List.of("PUBLISHED")),"updatedAfter",Map.of("type","integer","minimum",0),"cursor",stringSchema(),"limit",Map.of("type","integer","minimum",1,"maximum",100)),List.of("projectId","assetTypes"))),
+                args->pageResponse(service.searchByTypes(requiredString(globalAssetContext(args),"projectId"),stringList(args,"assetTypes"),(String)args.get("keyword"),(String)args.get("status"),optionalLong(args,"updatedAfter"),cursorPage(args),optionalInt(args,"limit",20))));
     }
-    @Bean public AgentMcpToolHandler assetGetTool(TestAssetCatalogService service){return tool("metersphere.asset.get","Get test-asset metadata or one immutable version.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"assetType",stringSchema(),"assetId",stringSchema(),"versionId",stringSchema()),List.of("projectId","assetType","assetId")),args->{String projectId=requiredString(args,"projectId"),assetType=requiredString(args,"assetType"),assetId=requiredString(args,"assetId"),versionId=(String)args.get("versionId");if(StringUtils.isBlank(versionId))return service.detail(projectId,assetType,assetId);var version=service.version(projectId,versionId);if(!assetType.equalsIgnoreCase(version.getAssetType())||!assetId.equals(version.getAssetId()))throw new MSException("ASSET_VERSION_MISMATCH");return version;});}
-    @Bean public AgentMcpToolHandler assetVersionGetTool(TestAssetCatalogService service){return tool("metersphere.asset.version.get","Get one immutable asset version.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"versionId",stringSchema()),List.of("projectId","versionId")),args->service.version(requiredString(args,"projectId"),requiredString(args,"versionId")));}
+    @Bean public AgentMcpToolHandler assetGetTool(io.metersphere.agent.service.GlobalAssetCatalogService service){return tool("metersphere.asset.get","Get test-asset metadata or one immutable version.",AgentTokenScope.AI_ASSET_READ,true,globalAssetSchema(objectSchema(Map.of("projectId",stringSchema(),"assetType",stringSchema(),"assetId",stringSchema(),"versionId",stringSchema()),List.of("projectId","assetType","assetId"))),args->{String projectId=requiredString(globalAssetContext(args),"projectId"),assetType=requiredString(args,"assetType"),assetId=requiredString(args,"assetId"),versionId=(String)args.get("versionId");if(StringUtils.isBlank(versionId))return service.detail(projectId,assetType,assetId);var version=service.version(projectId,versionId);if(!assetType.equalsIgnoreCase(version.getAssetType())||!assetId.equals(version.getAssetId()))throw new MSException("ASSET_VERSION_MISMATCH");return version;});}
+    @Bean public AgentMcpToolHandler assetVersionGetTool(io.metersphere.agent.service.GlobalAssetCatalogService service){return tool("metersphere.asset.version.get","Get one immutable asset version.",AgentTokenScope.AI_ASSET_READ,true,globalAssetSchema(objectSchema(Map.of("projectId",stringSchema(),"versionId",stringSchema()),List.of("projectId","versionId"))),args->service.version(requiredString(globalAssetContext(args),"projectId"),requiredString(args,"versionId")));}
     @Bean public AgentMcpToolHandler assetRelationListTool(TestAssetCatalogService service){return tool("metersphere.asset.relation.list","List asset relations.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"assetType",stringSchema(),"assetId",stringSchema(),"relationType",stringSchema(),"keyword",stringSchema(),"cursor",stringSchema(),"limit",Map.of("type","integer","minimum",1,"maximum",100)),List.of("projectId")),args->pageResponse(service.relations(requiredString(args,"projectId"),(String)args.get("assetType"),(String)args.get("assetId"),(String)args.get("relationType"),(String)args.get("keyword"),cursorPage(args),optionalInt(args,"limit",20))));}
     @Bean public AgentMcpToolHandler environmentProfileListTool(AgentEnvironmentProfileService service){return tool("metersphere.environment.profile.list","List executable environment profiles.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema()),List.of("projectId")),args->service.list(requiredString(args,"projectId")));}
     @Bean public AgentMcpToolHandler environmentProfileGetTool(AgentEnvironmentProfileService service){return tool("metersphere.environment.profile.get","Get an executable environment profile in the authorized project.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"environmentProfileId",stringSchema()),List.of("projectId","environmentProfileId")),args->service.get(requiredString(args,"projectId"),requiredString(args,"environmentProfileId")));}
     @Bean public AgentMcpToolHandler credentialMetadataListTool(AgentCredentialReferenceService service){return tool("metersphere.credential.metadata.list","List credential metadata for an environment profile without secretRef or secret value.",AgentTokenScope.AI_CREDENTIAL_READ_METADATA,true,objectSchema(Map.of("projectId",stringSchema(),"environmentProfileId",stringSchema(),"businessRole",stringSchema()),List.of("projectId","environmentProfileId")),args->service.listByEnvironmentProfile(requiredString(args,"projectId"),requiredString(args,"environmentProfileId"),(String)args.get("businessRole")));}
     @Bean public AgentMcpToolHandler pageObjectGetTool(AgentPageObjectService service){return tool("metersphere.page_object.get","Get a published governed page object and its semantic locators in the authorized project.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"pageObjectId",stringSchema()),List.of("projectId","pageObjectId")),args->{var page=service.get(requiredString(args,"projectId"),requiredString(args,"pageObjectId"));if(!"PUBLISHED".equals(page.getStatus()))throw new MSException("PUBLISHED_PAGE_OBJECT_REQUIRED");return page;});}
     @Bean public AgentMcpToolHandler businessFlowGetTool(AgentBusinessFlowService service){return tool("metersphere.business_flow.get","Get a published governed business flow in the authorized project.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"businessFlowId",stringSchema()),List.of("projectId","businessFlowId")),args->{var flow=service.get(requiredString(args,"projectId"),requiredString(args,"businessFlowId"));if(!"PUBLISHED".equals(flow.getStatus()))throw new MSException("PUBLISHED_BUSINESS_FLOW_REQUIRED");return flow;});}
-    @Bean public AgentMcpToolHandler datasetMetadataGetTool(TestAssetCatalogService service){return tool("metersphere.dataset.metadata.get","Get published dataset metadata without secret data values.",AgentTokenScope.AI_ASSET_READ,true,objectSchema(Map.of("projectId",stringSchema(),"datasetId",stringSchema()),List.of("projectId","datasetId")),args->service.detail(requiredString(args,"projectId"),"DATASET",requiredString(args,"datasetId")));}
+    @Bean public AgentMcpToolHandler datasetMetadataGetTool(io.metersphere.agent.service.GlobalAssetCatalogService service){return tool("metersphere.dataset.metadata.get","Get published dataset metadata without secret data values.",AgentTokenScope.AI_ASSET_READ,true,globalAssetSchema(objectSchema(Map.of("projectId",stringSchema(),"datasetId",stringSchema()),List.of("projectId","datasetId"))),args->service.detail(requiredString(globalAssetContext(args),"projectId"),"DATASET",requiredString(args,"datasetId")));}
 
     @Bean
     public AgentMcpToolHandler functionalSearchTool(AgentFunctionalCaseSearchService service) {
@@ -649,27 +650,69 @@ public class BuiltinAgentMcpToolConfig {
     }
 
     @Bean
-    public AgentMcpToolHandler businessAssetSearchTool(io.metersphere.agent.service.BusinessAssetService service) {
-        return tool("metersphere.business_asset.search", "Read current business understanding before exploration. Same module or flow operations belong to one document with branches.", AgentTokenScope.BUSINESS_ASSET_READ, true,
-                objectSchema(Map.of("projectId", stringSchema(), "keyword", stringSchema()), List.of("projectId")),
-                args -> service.list(requiredString(args,"projectId"),Objects.toString(args.get("keyword"),""),false));
-    }
-    @Bean
-    public AgentMcpToolHandler businessAssetGetTool(io.metersphere.agent.service.BusinessAssetService service) {
-        return tool("metersphere.business_asset.get", "Read immutable business understanding versions and current version pointer.", AgentTokenScope.BUSINESS_ASSET_READ, true,
-                objectSchema(Map.of("projectId",stringSchema(),"assetId",stringSchema()),List.of("projectId","assetId")),
-                args -> service.detail(requiredString(args,"projectId"),requiredString(args,"assetId")));
-    }
-    @Bean
-    public AgentMcpToolHandler businessAssetUploadTool(io.metersphere.agent.service.BusinessAssetService service,jakarta.validation.Validator validator) {
-        return tool("metersphere.business_asset.upload", "Upload full Markdown understanding plus operation branches after exploration or execution. Update existing asset with baseVersion; preserve evidence references, distinguish OBSERVED/INFERRED/UNCONFIRMED, never include secrets. CONFLICT retains uploaded content without replacing current version.", AgentTokenScope.BUSINESS_ASSET_WRITE, false,
-                dtoSchema(io.metersphere.agent.dto.BusinessAssetSubmission.class), args -> {
-                    var request=convert(args,io.metersphere.agent.dto.BusinessAssetSubmission.class);
-                    if(!validator.validate(request).isEmpty())throw new MSException("AGENT_VALIDATION_ERROR");
-                    return service.submit(request);
-                });
-    }
-    @Bean
+  public AgentMcpToolHandler businessAssetSearchTool(
+      io.metersphere.agent.service.BusinessAssetService service) {
+    return tool(
+        "metersphere.business_asset.search",
+        "Read organization-global business understanding before exploration. sourceProjectId"
+            + " (legacy projectId) is an authorized organization context and Token whitelist hint;"
+            + " it does not filter contents. Same module or flow operations belong to one document"
+            + " with branches.",
+        AgentTokenScope.BUSINESS_ASSET_READ,
+        true,
+        globalAssetSchema(
+            objectSchema(
+                Map.of("projectId", stringSchema(), "keyword", stringSchema()),
+                List.of("projectId"))),
+        args ->
+            service.list(
+                requiredString(globalAssetContext(args), "projectId"),
+                Objects.toString(args.get("keyword"), ""),
+                false));
+  }
+
+  @Bean
+  public AgentMcpToolHandler businessAssetGetTool(
+      io.metersphere.agent.service.BusinessAssetService service) {
+    return tool(
+        "metersphere.business_asset.get",
+        "Read immutable business understanding versions and current version pointer.",
+        AgentTokenScope.BUSINESS_ASSET_READ,
+        true,
+        globalAssetSchema(
+            objectSchema(
+                Map.of("projectId", stringSchema(), "assetId", stringSchema()),
+                List.of("projectId", "assetId"))),
+        args ->
+            service.detail(
+                requiredString(globalAssetContext(args), "projectId"),
+                requiredString(args, "assetId")));
+  }
+
+  @Bean
+  public AgentMcpToolHandler businessAssetUploadTool(
+      io.metersphere.agent.service.BusinessAssetService service,
+      jakarta.validation.Validator validator) {
+    return tool(
+        "metersphere.business_asset.upload",
+        "Upload full Markdown understanding plus operation branches after exploration or execution."
+            + " Update existing asset with baseVersion; preserve evidence references, distinguish"
+            + " OBSERVED/INFERRED/UNCONFIRMED, never include secrets. CONFLICT retains uploaded"
+            + " content without replacing current version.",
+        AgentTokenScope.BUSINESS_ASSET_WRITE,
+        false,
+        globalAssetSchema(dtoSchema(io.metersphere.agent.dto.BusinessAssetSubmission.class)),
+        args -> {
+          var request =
+              convert(
+                  globalAssetContext(args), io.metersphere.agent.dto.BusinessAssetSubmission.class);
+          if (!validator.validate(request).isEmpty())
+            throw new MSException("AGENT_VALIDATION_ERROR");
+          return service.submit(request);
+        });
+  }
+
+  @Bean
     public AgentMcpToolHandler externalExecutorConnectTool(io.metersphere.agent.service.ExternalExecutorService service) {
         return tool("metersphere.executor.connect", "Connect an external executor and pin business understanding versions. Execute independently; report progress and poll correction commands. No frozen actions or legacy lease required.", AgentTokenScope.BUSINESS_ASSET_WRITE, false,
                 objectSchema(Map.of("projectId",stringSchema(),"executorId",stringSchema(),"requestKey",stringSchema()),List.of("projectId","executorId","requestKey")),
@@ -710,6 +753,34 @@ public class BuiltinAgentMcpToolConfig {
             objectSchema(Map.of("projectId",stringSchema(),"sessionId",stringSchema(),"assetId",stringSchema(),"versionId",stringSchema(),"expectedVersionId",Map.of("type","string"),"reason",stringSchema()),List.of("projectId","sessionId","assetId","versionId","expectedVersionId","reason")),
             args->{service.refreshContext(requiredString(args,"projectId"),requiredString(args,"sessionId"),requiredString(args,"assetId"),requiredString(args,"versionId"),(String)args.get("expectedVersionId"),requiredString(args,"reason"));return Map.of("updated",true);});
     }
+
+  private static Map<String, Object> globalAssetContext(Map<String, Object> args) {
+    var copy = new LinkedHashMap<>(args);
+    Object source = copy.remove("sourceProjectId");
+    if (source != null) {
+      if (copy.containsKey("projectId") && !source.equals(copy.get("projectId")))
+        throw new MSException("AGENT_VALIDATION_ERROR");
+      copy.put("projectId", source);
+    }
+    return copy;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> globalAssetSchema(Map<String, Object> original) {
+    var schema = new LinkedHashMap<>(original);
+    var properties = new LinkedHashMap<>((Map<String, Object>) original.get("properties"));
+    properties.put("sourceProjectId", stringSchema());
+    schema.put("properties", properties);
+    var required = new ArrayList<>((List<String>) original.getOrDefault("required", List.of()));
+    required.remove("projectId");
+    if (required.isEmpty()) schema.remove("required"); else schema.put("required", required);
+    schema.put(
+        "anyOf",
+        List.of(
+            Map.of("required", List.of("sourceProjectId")),
+            Map.of("required", List.of("projectId"))));
+    return schema;
+  }
 
     private static AgentMcpToolHandler tool(String name, String description, String scope, boolean readOnly,
                                             Map<String, Object> inputSchema, Function<Map<String, Object>, Object> executor) {

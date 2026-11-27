@@ -27,8 +27,10 @@ class BusinessAssetServiceTests {
                     + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1",
                 "sa",
                 ""));
-    jdbc.execute("CREATE TABLE project(id VARCHAR(64) PRIMARY KEY)");
-    jdbc.update("INSERT INTO project VALUES('p')");
+    jdbc.execute(
+        "CREATE TABLE project(id VARCHAR(64) PRIMARY KEY, organization_id VARCHAR(64) DEFAULT"
+            + " 'org', deleted BOOLEAN DEFAULT FALSE, enable BOOLEAN DEFAULT TRUE)");
+    jdbc.update("INSERT INTO project(id) VALUES('p')");
     Path root = Path.of("").toAbsolutePath();
     while (!Files.exists(root.resolve("backend/framework/domain"))) root = root.getParent();
     String sql =
@@ -37,9 +39,21 @@ class BusinessAssetServiceTests {
                 "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_150__business_understanding_assets.sql"));
     for (String statement : sql.substring(0, sql.indexOf("-- Independent")).split(";"))
       if (!statement.isBlank()) jdbc.execute(statement);
-    target = spy(new BusinessAssetService(jdbc, mock(AgentBusinessAccess.class)));
+    jdbc.execute("CREATE TABLE organization(id VARCHAR(64) PRIMARY KEY)");
+    jdbc.update("INSERT INTO organization VALUES('org')");
+    jdbc.execute("ALTER TABLE business_asset ADD COLUMN organization_id VARCHAR(64) DEFAULT 'org'");
+    var access = mock(AgentBusinessAccess.class);
+    when(access.userHasPermission(anyString(), anyString(), anyString())).thenReturn(true);
+    target = spy(new BusinessAssetService(jdbc, access));
     doReturn("actor").when(target).authorize("p", true);
     doReturn("actor").when(target).authorize("p", false);
+    var global = mock(GlobalAssetAccess.class);
+    when(global.authorize(any(), anyString()))
+        .thenAnswer(
+            invocation ->
+                new GlobalAssetAccess.Scope(
+                    "other".equals(invocation.getArgument(0)) ? "other-org" : "org", "actor"));
+    doReturn(global).when(target).globalAccess();
     service = BusinessAssetTransactionProxy.wrap(target, jdbc);
   }
 
@@ -57,6 +71,95 @@ class BusinessAssetServiceTests {
         List.of(new BusinessAssetSubmission.Branch("submit", "提交", "OBSERVED", List.of())),
         "完善理解",
         null);
+  }
+
+  @Test
+  void globalWebEditAuthorizesEachPersistedEvidenceSourceAcrossMergedProjects() {
+    jdbc.update(
+        "INSERT INTO project(id,organization_id) VALUES('p2','org'),('outside','other-org')");
+    jdbc.execute("CREATE TABLE external_executor_session(id VARCHAR(64),project_id VARCHAR(64))");
+    jdbc.execute("CREATE TABLE external_executor_evidence(id VARCHAR(64),session_id VARCHAR(64))");
+    jdbc.update(
+        "INSERT INTO external_executor_session VALUES('s1','p'),('s2','p2'),('s3','outside')");
+    jdbc.update("INSERT INTO external_executor_evidence VALUES('e1','s1'),('e2','s2'),('e3','s3')");
+    var original = request("evidence-create", null, 0, "content");
+    var global =
+        new BusinessAssetSubmission(
+            null,
+            original.schemaVersion(),
+            original.operation(),
+            null,
+            0,
+            "evidence-create",
+            original.scope(),
+            original.title(),
+            original.document(),
+            List.of(
+                new BusinessAssetSubmission.Branch(
+                    "step", "step", "OBSERVED", List.of("e1", "e2"))),
+            "create",
+            null);
+    var created = service.submit(global);
+    String id = (String) created.get("assetId");
+    var edit =
+        new BusinessAssetSubmission(
+            null,
+            "1.0",
+            "UPDATE",
+            id,
+            1,
+            "evidence-edit",
+            original.scope(),
+            original.title(),
+            original.document(),
+            global.branches(),
+            "unchanged merged evidence",
+            null);
+    assertEquals("CURRENT", service.submit(edit).get("status"));
+    var forbidden =
+        new BusinessAssetSubmission(
+            null,
+            "1.0",
+            "UPDATE",
+            id,
+            2,
+            "evidence-other-org",
+            original.scope(),
+            original.title(),
+            original.document(),
+            List.of(new BusinessAssetSubmission.Branch("step", "step", "OBSERVED", List.of("e3"))),
+            "invalid source",
+            null);
+    assertThrows(RuntimeException.class, () -> service.submit(forbidden));
+    assertEquals(2, service.versions(null, id).size());
+  }
+
+  @Test
+  void duplicateHistoricalOrganizationIdentitiesNeverChooseAnArbitraryAsset() {
+    var initial = service.submit(request("first", null, 0, "content"));
+    jdbc.update(
+        "INSERT INTO"
+            + " business_asset(id,project_id,organization_id,identity_key,current_version_id,revision,archived,create_time,update_time)"
+            + " SELECT"
+            + " 'duplicate','old-project',organization_id,identity_key,current_version_id,revision,archived,create_time,update_time"
+            + " FROM business_asset WHERE id=?",
+        initial.get("assetId"));
+    Long before = jdbc.queryForObject("SELECT COUNT(*) FROM business_asset_version", Long.class);
+    assertThrows(
+        BusinessGovernanceException.class,
+        () -> service.submit(request("ambiguous", null, 0, "changed")));
+    assertEquals(
+        before, jdbc.queryForObject("SELECT COUNT(*) FROM business_asset_version", Long.class));
+  }
+
+  @Test
+  void globalReadAndVersionHistoryUseOrganizationRatherThanSourceProject() {
+    var created = service.submit(request("global-create", null, 0, "content"));
+    String id = (String) created.get("assetId");
+    assertEquals(1, service.list("p2", "", false).size());
+    assertEquals(1, service.versions("p2", id).size());
+    assertTrue(service.list("other", "", false).isEmpty());
+    assertThrows(RuntimeException.class, () -> service.versions("other", id));
   }
 
   @Test

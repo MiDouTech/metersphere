@@ -39,6 +39,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TestAssetCatalogServiceTests {
+    @Mock private DataAssetService dataAssets;
     @Mock
     private TestAssetMapper mapper;
     @Mock
@@ -64,6 +65,23 @@ class TestAssetCatalogServiceTests {
     void clearSubject() {
         ThreadContext.unbindSubject();
         ThreadContext.remove();
+    }
+
+    @Test
+    void globalDatasetContextFreezesSelectedContentWithoutProjectFileLookup() {
+        when(agentProjectService.resolveProjectId("p")).thenReturn("p");
+        when(dataAssets.hasExisting("p","data")).thenReturn(true);
+        var published=new TestAssetVersionDTO();published.setId("v1");published.setVersionNo(1);published.setSourceVersion("raw1");
+        published.setContentSnapshot("{\"amount\":20}");published.setContentHash(org.apache.commons.codec.digest.DigestUtils.sha256Hex(published.getContentSnapshot()));
+        when(versionService.getPublished("v1","p","DATASET","data")).thenReturn(published);
+        when(dataAssets.resolveForProject("p","data","raw1")).thenReturn(Map.of(
+                "name","global data","versionId","v1","format","JSON","content",Map.of("amount",20)));
+        var ref=new TestAssetRefDTO();ref.setAssetType("DATASET");ref.setAssetId("data");ref.setVersionId("v1");
+        var result=service.resolveContext("p",List.of(ref)).getFirst();
+        Assertions.assertEquals("v1",result.getVersionId());
+        Assertions.assertTrue(result.getContentSnapshot().contains("20"));
+        Assertions.assertEquals(org.apache.commons.codec.digest.DigestUtils.sha256Hex(result.getContentSnapshot()),result.getContentHash());
+        org.mockito.Mockito.verifyNoInteractions(mapper);
     }
 
     @Test

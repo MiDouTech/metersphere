@@ -258,6 +258,7 @@
   const username = ref('');
   const password = ref('');
   const extraFields = ref<SecretField[]>([]);
+  const globalScope = '';
   const app = useAppStore();
   const router = useRouter();
   const rows = ref<Row[]>([]);
@@ -283,7 +284,7 @@
   let editorGeneration = 0;
   const empty = () => ({
     id: undefined as string | undefined,
-    projectId: app.currentProjectId,
+    projectId: globalScope,
     systemKey: '',
     environmentKey: '',
     name: '',
@@ -293,7 +294,7 @@
     expectedVersion: 0,
   });
   const form = ref(empty());
-  const canWrite = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:WRITE']));
+  const canWrite = computed(() => hasAnyPermission(['SHARED_CONFIGURATION:WRITE'], ['ORGANIZATION', 'SYSTEM']));
   const kindLabel = (kind: string) => ({ PLAIN: '普通配置', SECRET: '敏感配置', DOCUMENT: '配置文档' }[kind] || kind);
   function configurationLabel(row: Row) {
     if (row.kind !== 'SECRET') return kindLabel(row.kind);
@@ -312,9 +313,7 @@
     error.value = '';
     loading.value = true;
     try {
-      const value = app.currentProjectId
-        ? await MSR.get<Row[]>({ url: '/shared-configurations', params: { projectId: app.currentProjectId } })
-        : [];
+      const value = await MSR.get<Row[]>({ url: '/shared-configurations' });
       if (run === generation) rows.value = value;
     } catch (failure) {
       if (run === generation) error.value = businessAssetError(failure, '公共配置加载失败，请检查权限或网络。');
@@ -414,30 +413,29 @@
     previousSecretType.value = secretType.value;
     resetFields();
     const run = editorGeneration;
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     const { id } = row;
     if (row.kind === 'PLAIN') {
       contentLoading.value = true;
       try {
         const value = await MSR.get<{ value: string }>({
           url: `/shared-configurations/${row.id}/versions/${row.currentVersion}`,
-          params: { projectId: project },
+          params: { projectId: globalScope },
         });
-        if (run !== editorGeneration || project !== app.currentProjectId || form.value.id !== id || !editor.value)
-          return;
+        if (run !== editorGeneration || project !== app.currentOrgId || form.value.id !== id || !editor.value) return;
         form.value.value = value.value;
       } catch (failure) {
-        if (run === editorGeneration && project === app.currentProjectId && form.value.id === id && editor.value)
+        if (run === editorGeneration && project === app.currentOrgId && form.value.id === id && editor.value)
           saveError.value = businessAssetError(failure, '配置内容读取失败，请关闭后重试。');
       } finally {
-        if (run === editorGeneration && project === app.currentProjectId && form.value.id === id && editor.value)
+        if (run === editorGeneration && project === app.currentOrgId && form.value.id === id && editor.value)
           contentLoading.value = false;
       }
     }
   }
   async function upload(event: Event) {
     const run = editorGeneration;
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     const fileRun = ++fileGeneration;
     form.value.value = '';
     form.value.fileName = '';
@@ -454,7 +452,7 @@
       if (
         fileRun !== fileGeneration ||
         run !== editorGeneration ||
-        project !== app.currentProjectId ||
+        project !== app.currentOrgId ||
         !editor.value ||
         form.value.kind !== 'DOCUMENT'
       )
@@ -465,7 +463,7 @@
       form.value.fileName = file.name;
       saveError.value = '';
     } catch (failure) {
-      if (fileRun === fileGeneration && run === editorGeneration && project === app.currentProjectId && editor.value)
+      if (fileRun === fileGeneration && run === editorGeneration && project === app.currentOrgId && editor.value)
         saveError.value = businessAssetError(failure, '文件读取失败，请重新选择。');
     } finally {
       if (fileRun === fileGeneration) fileLoading.value = false;
@@ -476,7 +474,7 @@
     saving.value = true;
     saveError.value = '';
     const run = editorGeneration;
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     try {
       const submission = { ...form.value, secretType: undefined as string | undefined, keepSecret: false };
       if (form.value.kind === 'SECRET') {
@@ -499,13 +497,13 @@
         return;
       }
       await MSR.post({ url: '/shared-configurations', data: submission });
-      if (run !== editorGeneration || project !== app.currentProjectId) return;
+      if (run !== editorGeneration || project !== app.currentOrgId) return;
       clearSecret();
       editor.value = false;
       Message.success('配置已保存为新版本');
       await load();
     } catch (failure) {
-      if (run === editorGeneration && project === app.currentProjectId)
+      if (run === editorGeneration && project === app.currentOrgId)
         saveError.value =
           failure instanceof Error && failure.message.startsWith('请填写1至20')
             ? failure.message
@@ -515,21 +513,21 @@
     }
   }
   async function batchImport(event: Event) {
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
     try {
       if (file.size > 2 * 1024 * 1024) throw new Error('size');
       const entries = JSON.parse(await file.text());
-      if (project !== app.currentProjectId) return;
+      if (project !== app.currentOrgId) return;
       if (!Array.isArray(entries) || !entries.length || entries.length > 100) throw new Error('format');
       await MSR.post({
         url: '/shared-configurations/batch',
         data: {
           entries: entries.map((entry) => ({
             ...entry,
-            projectId: project,
+            projectId: globalScope,
             expectedVersion: entry.expectedVersion || 0,
           })),
         },
@@ -552,7 +550,7 @@
     try {
       const result = await MSR.post<{ parseStatus: string }>({
         url: `/shared-configurations/${row.id}/retry-parse`,
-        data: { projectId: app.currentProjectId, version: row.currentVersion },
+        data: { projectId: globalScope, version: row.currentVersion },
       });
       Message.info(parseLabel(result.parseStatus));
       await load();
@@ -564,7 +562,7 @@
     try {
       const result = await MSR.get<{ value: string; fileName: string }>({
         url: `/shared-configurations/${row.id}/versions/${row.currentVersion}`,
-        params: { projectId: app.currentProjectId, document: true },
+        params: { projectId: globalScope, document: true },
       });
       const bytes = Uint8Array.from(atob(result.value), (c) => c.charCodeAt(0));
       const url = URL.createObjectURL(new Blob([bytes]));
@@ -578,10 +576,11 @@
     }
   }
   watch(
-    () => app.currentProjectId,
+    () => app.currentOrgId,
     () => {
       ++editorGeneration;
       clearSecret();
+      form.value = empty();
       editor.value = false;
       rows.value = [];
       keyword.value = '';

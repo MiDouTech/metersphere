@@ -27,18 +27,18 @@ class ExternalExecutorServiceTests {
                     + ";MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1",
                 "sa",
                 ""));
-    jdbc.execute("CREATE TABLE project(id VARCHAR(64) PRIMARY KEY)");
-    jdbc.update("INSERT INTO project VALUES('p')");
+    jdbc.execute("CREATE TABLE project(id VARCHAR(64) PRIMARY KEY,organization_id VARCHAR(64))");
+    jdbc.update("INSERT INTO project VALUES('p','org')");
     jdbc.execute(
         "CREATE TABLE business_asset(id VARCHAR(64),project_id VARCHAR(64),current_version_id"
-            + " VARCHAR(64),archived BOOLEAN)");
+            + " VARCHAR(64),archived BOOLEAN,organization_id VARCHAR(64) DEFAULT 'org')");
     jdbc.execute(
         "CREATE TABLE business_asset_version(id VARCHAR(64),snapshot_json TEXT,version_no INT"
             + " DEFAULT 1)");
     jdbc.execute("CREATE TABLE business_asset_reader(asset_id VARCHAR(64),user_id VARCHAR(64))");
     jdbc.execute(
         "CREATE TABLE shared_configuration(id VARCHAR(64),project_id VARCHAR(64),current_version"
-            + " INT)");
+            + " INT,organization_id VARCHAR(64) DEFAULT 'org')");
     jdbc.execute(
         "CREATE TABLE external_executor_configuration(session_id VARCHAR(64),configuration_id"
             + " VARCHAR(64),version_no INT)");
@@ -115,7 +115,9 @@ class ExternalExecutorServiceTests {
 
   @Test
   void contextRemainsPinnedAfterAssetChanges() {
-    jdbc.update("INSERT INTO business_asset VALUES('asset','p','v1',FALSE)");
+    jdbc.update(
+        "INSERT INTO business_asset(id,project_id,current_version_id,archived)"
+            + " VALUES('asset','p','v1',FALSE)");
     jdbc.update("INSERT INTO business_asset_version(id,snapshot_json) VALUES('v1','first')");
     String id = connect();
     jdbc.update("UPDATE business_asset SET current_version_id='v2'");
@@ -153,7 +155,9 @@ class ExternalExecutorServiceTests {
 
   @Test
   void deliberateContextReplacementNotifiesAndRecordsItsExactVersion() {
-    jdbc.update("INSERT INTO business_asset VALUES('asset','p','v1',FALSE)");
+    jdbc.update(
+        "INSERT INTO business_asset(id,project_id,current_version_id,archived)"
+            + " VALUES('asset','p','v1',FALSE)");
     jdbc.update("INSERT INTO business_asset_version VALUES('v1','{}',1),('v2','{}',2)");
     String session = connect();
     service.refreshContext("p", session, "asset", "v2", "v1", "审批规则更新");

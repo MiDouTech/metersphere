@@ -4,7 +4,7 @@ import type { MeterSphereClient } from "../client.js";
 const id = z.string().min(1).max(64);
 const version = z.number().int().min(1).max(2147483647);
 const save = {
-  projectId: id,
+  projectId: id.optional(), sourceProjectId: id.optional(),
   id: id.optional(),
   systemKey: z.string().min(1).max(128),
   environmentKey: z.string().min(1).max(128),
@@ -30,18 +30,18 @@ const tool = (
 
 export const sharedConfigurationTools = [
   tool("list", "List configuration metadata without sensitive values.", {
-    projectId: id,
+    projectId: id.optional(), sourceProjectId: id.optional(),
   }),
   tool(
     "versions",
     "List immutable version metadata without sensitive values.",
-    { projectId: id, id }
+    { projectId: id.optional(), sourceProjectId: id.optional(), id }
   ),
   tool(
     "audits",
     "Query configuration audit metadata and version-switch reasons with bounded pagination. Read-only; does not resolve values or add audit records.",
     {
-      projectId: id,
+      projectId: id.optional(), sourceProjectId: id.optional(),
       id,
       page: z.number().int().min(1).max(1000000).optional(),
       pageSize: z.number().int().min(1).max(100).optional(),
@@ -54,12 +54,12 @@ export const sharedConfigurationTools = [
   tool(
     "read",
     "Read a fixed ordinary value or original document. Sensitive content remains masked; use resolve for an authorized executor.",
-    { projectId: id, id, version, document: z.boolean().optional() }
+    { projectId: id.optional(), sourceProjectId: id.optional(), id, version, document: z.boolean().optional() }
   ),
   tool(
     "resolve",
     "Read the version pinned to this Token's RUNNING executor session, including sensitive values for the authorized task. Keep the response only in memory.",
-    { projectId: id, id, sessionId: id }
+    { projectId: id.optional(), sourceProjectId: id.optional(), id, sessionId: id }
   ),
   tool(
     "save",
@@ -75,7 +75,7 @@ export const sharedConfigurationTools = [
     "select_version",
     "Select a historical version for future sessions, with a reason and optimistic version check. Existing sessions stay pinned.",
     {
-      projectId: id,
+      projectId: id.optional(), sourceProjectId: id.optional(),
       id,
       version,
       expectedVersion: version,
@@ -85,6 +85,6 @@ export const sharedConfigurationTools = [
   tool(
     "retry_parse",
     "Retry parsing an existing document version without replacing its original bytes.",
-    { projectId: id, id, version }
+    { projectId: id.optional(), sourceProjectId: id.optional(), id, version }
   ),
 ];

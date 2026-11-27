@@ -21,11 +21,17 @@ public class ExternalExecutorService {
     this.assets = assets;
   }
 
+  private String authorize(String project, boolean write) {
+    String actor = assets.authorize(project, write);
+    assets.requireProjectAccess(actor, project, write);
+    return actor;
+  }
+
   public Map<String, Object> connect(String project, String executor, String requestKey) {
     boundary(project, 64);
     boundary(executor, 64);
     boundary(requestKey, 128);
-    String actor = assets.authorize(project, true);
+    String actor = authorize(project, true);
     var token = AgentTokenContext.get();
     if (token == null)
       throw new BusinessGovernanceException(
@@ -60,16 +66,18 @@ public class ExternalExecutorService {
           now);
       jdbc.update(
           "INSERT INTO external_executor_context(session_id,asset_id,version_id) SELECT"
-              + " ?,a.id,a.current_version_id FROM business_asset a WHERE a.project_id=? AND"
-              + " a.archived=FALSE AND a.current_version_id IS NOT NULL AND (NOT EXISTS(SELECT 1"
-              + " FROM business_asset_reader r WHERE r.asset_id=a.id) OR EXISTS(SELECT 1 FROM"
+              + " ?,a.id,a.current_version_id FROM business_asset a WHERE a.organization_id=(SELECT"
+              + " organization_id FROM project WHERE id=?) AND a.archived=FALSE AND"
+              + " a.current_version_id IS NOT NULL AND (NOT EXISTS(SELECT 1 FROM"
+              + " business_asset_reader r WHERE r.asset_id=a.id) OR EXISTS(SELECT 1 FROM"
               + " business_asset_reader r WHERE r.asset_id=a.id AND r.user_id=?))",
           id,
           project,
           actor);
       jdbc.update(
           "INSERT INTO external_executor_configuration(session_id,configuration_id,version_no)"
-              + " SELECT ?,id,current_version FROM shared_configuration WHERE project_id=?",
+              + " SELECT ?,id,current_version FROM shared_configuration WHERE"
+              + " organization_id=(SELECT organization_id FROM project WHERE id=?)",
           id,
           project);
     }
@@ -100,7 +108,7 @@ public class ExternalExecutorService {
   }
 
   public List<Map<String, Object>> sessions(String project) {
-    assets.authorize(project, false);
+    authorize(project, false);
     return BusinessAssetRows.canonical(
         jdbc.queryForList(
             "SELECT id,executor_id AS executorId,status,heartbeat_at AS heartbeatAt,CASE WHEN"
@@ -118,7 +126,7 @@ public class ExternalExecutorService {
 
   public List<Map<String, Object>> context(String project, String session) {
     owned(project, session, false);
-    String actor = assets.authorize(project, false);
+    String actor = authorize(project, false);
     return BusinessAssetRows.canonical(
         jdbc.queryForList(
             "SELECT c.asset_id AS assetId,c.version_id AS versionId FROM external_executor_context"
@@ -168,7 +176,7 @@ public class ExternalExecutorService {
     boundary(version, 64);
     if (expected != null && expected.length() > 64)
       throw new BusinessGovernanceException("CONTEXT_VERSION_INVALID", "原上下文版本格式无效");
-    assets.authorize(project, true);
+    authorize(project, true);
     owned(project, session, false);
     if (reason == null
         || reason.isBlank()
@@ -424,7 +432,7 @@ public class ExternalExecutorService {
   }
 
   public Map<String, String> evidence(String project, String id) {
-    assets.authorize(project, false);
+    authorize(project, false);
     var rows =
         jdbc.queryForList(
             "SELECT e.session_id,e.content_type,e.encrypted_content FROM external_executor_evidence"
@@ -450,7 +458,7 @@ public class ExternalExecutorService {
     if (io.metersphere.agent.security.BusinessAssetSafety.containsSecret(instruction))
       throw new BusinessGovernanceException(
           "CORRECTION_CONTAINS_SECRET", "纠正指令不能包含密码或 Token，请使用公共配置引用");
-    String actor = assets.authorize(project, true);
+    String actor = authorize(project, true);
     owned(project, session, false);
     String status =
         jdbc.queryForObject(
@@ -549,7 +557,7 @@ public class ExternalExecutorService {
   private void owned(String project, String session, boolean executorOnly) {
     boundary(project, 64);
     boundary(session, 64);
-    assets.authorize(project, executorOnly);
+    authorize(project, executorOnly);
     var rows =
         jdbc.queryForList(
             "SELECT actor_id,token_id FROM external_executor_session WHERE id=? AND project_id=?"
