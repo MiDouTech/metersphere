@@ -109,3 +109,53 @@ export const replaceDataFile = (id: string, file: File, expectedRevision: number
     { url: `${base}/${encodeURIComponent(id)}/uploads`, method: 'PUT', params: { expectedRevision, requestId } },
     { fileList: [file] }
   );
+
+export interface DataRecord {
+  recordKey: string;
+  recordIndex: number;
+  content: unknown;
+  used: boolean;
+  usedTime?: number;
+}
+export interface DataRecordPage {
+  versionId: string;
+  items: DataRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+export const getDataRecords = (id: string, versionId: string, page: number) =>
+  MSR.get<DataRecordPage>({
+    url: `${base}/${encodeURIComponent(id)}/records`,
+    params: { versionId, page, pageSize: 100 },
+  });
+export const copyDataRecords = (id: string, versionId: string, recordKeys: string[]) =>
+  MSR.post<{ content: string }>({
+    url: `${base}/${encodeURIComponent(id)}/records/copy`,
+    data: { versionId, recordKeys },
+  });
+export const markDataRecordsUsed = (id: string, versionId: string, recordKeys: string[], requestId: string) =>
+  MSR.post<{ used: boolean }>({
+    url: `${base}/${encodeURIComponent(id)}/records/used`,
+    data: { versionId, recordKeys, requestId },
+  });
+
+export interface LegacyMigrationStatus {
+  counts: { pending: number; running: number; failed: number; done: number };
+  canRun: boolean;
+  hasMore: boolean;
+  items: { projectId: string; familyId: string; status: string; errorCode?: string }[];
+}
+export const getLegacyMigrationStatus = () => MSR.get<LegacyMigrationStatus>({ url: `${base}/legacy/auto/status` });
+const migrationRuns = new Map<string, Promise<LegacyMigrationStatus>>();
+export function runLegacyMigration(organization: string, retryFailed = false) {
+  const existing = migrationRuns.get(organization);
+  if (existing) return existing;
+  const request = MSR.post<LegacyMigrationStatus>({ url: `${base}/legacy/auto/run`, data: { retryFailed } }).finally(
+    () => {
+      migrationRuns.delete(organization);
+    }
+  );
+  migrationRuns.set(organization, request);
+  return request;
+}

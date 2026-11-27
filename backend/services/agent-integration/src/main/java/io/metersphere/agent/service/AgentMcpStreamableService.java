@@ -183,7 +183,7 @@ public class AgentMcpStreamableService {
     }
 
     private Map<String, Object> schemaWithIdempotency(AgentMcpToolHandler handler) {
-        if (!agentMcpToolRegistry.isWriteTool(handler.name()) || bypassesGenericIdempotency(handler.name())) return handler.inputSchema();
+        if (handler.name().equals("metersphere.data_asset.manage") || !agentMcpToolRegistry.isWriteTool(handler.name()) || bypassesGenericIdempotency(handler.name())) return handler.inputSchema();
         Map<String, Object> schema = new LinkedHashMap<>(handler.inputSchema());
         Map<String, Object> properties = new LinkedHashMap<>((Map<String, Object>) schema.getOrDefault("properties", Map.of()));
         properties.putIfAbsent("requestId", io.metersphere.agent.tool.AgentMcpToolSchemas.requestId());
@@ -222,6 +222,10 @@ public class AgentMcpStreamableService {
         // govern transitions and replay in their own transactions; a generic response cache
         // would bypass current ownership, expiry and state checks. Snapshot/preview creation
         // intentionally creates a new bounded temporary read/confirmation resource.
+        if (name.equals("metersphere.data_asset.manage")) {
+            Map<String,Object> original=arguments;
+            return genericWrites.execute(name,original,()->callToolInternal(name,original));
+        }
         if (bypassesGenericIdempotency(name)) return callToolInternal(name, arguments);
         // Runtime protocols validate current lease/state on every request. Never persist lease
         // credentials or replay an expired capability through the generic response cache.

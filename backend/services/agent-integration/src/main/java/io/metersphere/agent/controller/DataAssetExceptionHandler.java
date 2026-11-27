@@ -14,11 +14,14 @@ import org.springframework.web.bind.annotation.*;
 @RestControllerAdvice(
     assignableTypes = {
       DataAssetController.class,
+      DataAssetRecordController.class,
+      DataAssetLegacyAutoController.class,
       DataAssetPublicationController.class,
       GlobalAssetCatalogController.class,
       TestAssetController.class
     })
 public class DataAssetExceptionHandler {
+  @io.metersphere.system.controller.handler.annotation.NoResultHolder
   @ExceptionHandler(Exception.class)
   public ResponseEntity<AgentApiErrorDTO> handle(Exception error, HttpServletRequest request) {
     Object previous = request.getAttribute("agentTraceId");

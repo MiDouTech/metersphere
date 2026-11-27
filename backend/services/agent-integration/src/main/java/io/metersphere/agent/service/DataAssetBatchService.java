@@ -10,7 +10,7 @@ public class DataAssetBatchService {
   private final org.springframework.jdbc.core.JdbcTemplate jdbc;
   private final GlobalAssetAccess access;
   private final com.fasterxml.jackson.databind.ObjectMapper json =
-      new com.fasterxml.jackson.databind.ObjectMapper();
+      DataAssetJson.mapper();
 
   public DataAssetBatchService(
       DataAssetService service,
@@ -142,6 +142,10 @@ public class DataAssetBatchService {
   }
 
   public Map<String, Object> submit(String project, List<Map<String, Object>> items) {
+    return submit(project,items,null);
+  }
+
+  public Map<String,Object> submit(String project,List<Map<String,Object>> items,String requestId) {
     if (items == null || items.isEmpty() || items.size() > 100)
       throw new io.metersphere.sdk.exception.MSException("每批需要1至100项数据");
     List<Map<String, Object>> result = new ArrayList<>();
@@ -152,10 +156,14 @@ public class DataAssetBatchService {
         throw new io.metersphere.sdk.exception.MSException("批次资产及版本参数无效");
     }
     var scope = access.authorize(project, "TEST_DATA_ASSET:READ+UPDATE");
-    String job = UUID.randomUUID().toString();
-    jdbc.update(
-        "INSERT INTO"
-            + " data_asset_batch_job(id,organization_id,actor_id,status,request_json,result_json,create_time,update_time)"
+    if(requestId!=null && !requestId.matches("[A-Za-z0-9_.:-]{1,128}"))
+      throw new io.metersphere.sdk.exception.MSException("IDEMPOTENCY_KEY_REQUIRED");
+    String job = requestId==null?UUID.randomUUID().toString():UUID.nameUUIDFromBytes(
+      encode(List.of("mcp-batch-v1",scope.organizationId(),scope.actorId(),requestId)).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+    int inserted=jdbc.update(
+        "INSERT"
+            + (requestId==null?"":" IGNORE")
+            + " INTO data_asset_batch_job(id,organization_id,actor_id,status,request_json,result_json,create_time,update_time)"
             + " VALUES(?,?,?,?,?,?,?,?)",
         job,
         scope.organizationId(),
@@ -165,6 +173,16 @@ public class DataAssetBatchService {
         "[]",
         System.currentTimeMillis(),
         System.currentTimeMillis());
+    if(inserted==0) {
+      String previous=jdbc.queryForObject("SELECT request_json FROM data_asset_batch_job WHERE id=? AND organization_id=? AND actor_id=?",String.class,job,scope.organizationId(),scope.actorId());
+      try {
+        if(!AgentRequestFingerprint.hash(items).equals(AgentRequestFingerprint.hash(json.readValue(previous,Object.class))))
+          throw new io.metersphere.sdk.exception.MSException("IDEMPOTENCY_CONFLICT");
+      } catch(com.fasterxml.jackson.core.JsonProcessingException malformed) {
+        throw new io.metersphere.sdk.exception.MSException("IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED");
+      }
+      return get(project,job);
+    }
     var tx =
         new org.springframework.transaction.support.TransactionTemplate(
             new org.springframework.jdbc.datasource.DataSourceTransactionManager(

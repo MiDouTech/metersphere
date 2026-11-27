@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class DataAssetParser {
   public Object parse(byte[] bytes, String format) {
     if (bytes.length > io.metersphere.agent.service.DataAssetLimits.MAX_BYTES)
-      throw new MSException("文件超过2MB限制");
+      throw new MSException("文件超过30MB限制");
     try {
       if (format.equals("XLS") || format.equals("XLSX")) {
         boolean ole =
@@ -42,7 +42,7 @@ public class DataAssetParser {
             for (int rowIndex = 0;
                 rowIndex <= sheet.getLastRowNum() && sheet.getPhysicalNumberOfRows() > 0;
                 rowIndex++) {
-              if (++count > DataAssetLimits.MAX_ROWS) throw new MSException("工作表超过10000行限制");
+              if (++count > DataAssetLimits.MAX_ROWS) throw new MSException("工作表超过100000行限制");
               Row row = sheet.getRow(rowIndex);
               if (row == null) {
                 rows.add(List.of());
@@ -93,24 +93,29 @@ public class DataAssetParser {
               .decode(java.nio.ByteBuffer.wrap(bytes))
               .toString();
       if (text.startsWith("\uFEFF")) text = text.substring(1);
-      if (format.equals("JSON"))
-        return new ObjectMapper()
+      if (format.equals("JSON")) {
+        Object content = DataAssetJson.mapper()
             .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .readValue(text, Object.class);
-      if (format.equals("TXT")) return text;
+        DataAssetLimits.checkRecords(content, format);
+        return content;
+      }
+      if (format.equals("TXT")) {DataAssetLimits.checkRecords(text, format);return text;}
       if (format.equals("CSV")) {
         List<Object> rows = new ArrayList<>();
         List<String> row = new ArrayList<>();
         StringBuilder cell = new StringBuilder();
         boolean quote = false;
+        boolean recordStarted = false;
         for (int i = 0; i < text.length(); i++) {
           char c = text.charAt(i);
+          recordStarted = true;
           if (c == '"') {
             if (quote && i + 1 < text.length() && text.charAt(i + 1) == '"') {
               cell.append('"');
               i++;
             } else quote = !quote;
-          } else if (c == ',' && !quote) {
+          } else if ((c == ',' || c == '\uFF0C') && !quote) {
             row.add(cell.toString());
             if (row.size() > 16384) throw new MSException("CSV超过16384列限制");
             cell.setLength(0);
@@ -120,17 +125,18 @@ public class DataAssetParser {
             if (row.size() > 16384) throw new MSException("CSV超过16384列限制");
             cell.setLength(0);
             if (row.size() > 16384 || rows.size() >= DataAssetLimits.MAX_ROWS)
-              throw new MSException("CSV超过10000行或16384列限制");
+              throw new MSException("CSV超过100000行或16384列限制");
             rows.add(row);
             row = new ArrayList<>();
+            recordStarted = false;
           } else cell.append(c);
         }
         if (quote) throw new MSException("CSV引号未闭合");
-        if (cell.length() > 0 || !row.isEmpty()) {
+        if (recordStarted) {
           row.add(cell.toString());
           if (row.size() > 16384) throw new MSException("CSV超过16384列限制");
           if (row.size() > 16384 || rows.size() >= DataAssetLimits.MAX_ROWS)
-            throw new MSException("CSV超过10000行或16384列限制");
+            throw new MSException("CSV超过100000行或16384列限制");
           rows.add(row);
         }
         return Map.of("rows", rows);

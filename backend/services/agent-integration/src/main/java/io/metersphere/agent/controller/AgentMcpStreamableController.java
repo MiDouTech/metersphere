@@ -28,7 +28,10 @@ public class AgentMcpStreamableController {
     @PostMapping
     @NoResultHolder
     @Operation(summary = "Streamable HTTP MCP JSON-RPC endpoint")
-    public ResponseEntity<?> post(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+    public ResponseEntity<?> postBody(@RequestBody LargeAssetRequest request, HttpServletRequest httpRequest) { return post(request,httpRequest); }
+
+    @NoResultHolder
+    public ResponseEntity<?> post(Map<String,Object> request,HttpServletRequest httpRequest) {
         if (agentMcpStreamableService.isNotification(request)) {
             agentMcpStreamableService.handleNotification(request);
             return ResponseEntity.accepted().build();

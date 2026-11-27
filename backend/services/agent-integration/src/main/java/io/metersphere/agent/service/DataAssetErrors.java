@@ -137,6 +137,16 @@ public final class DataAssetErrors {
     register(values, "ASSET_VALIDATION_ERROR", 400, "单个任务最多引用 50 个扩展测试资产");
     register(values, "ASSET_VALIDATION_ERROR", 400, "缺少测试资产读取权限");
     register(values, "ASSET_NOT_FOUND", 404, "证据不存在或已超过保留期限");
+    register(values, "DATA_ASSET_VALIDATION_ERROR", 400,
+        "文件超过30MB限制", "解析后内容超过30MB限制", "数据内容无效或超过30MB限制",
+        "来源文件超过30MB限制", "工作表超过100000行限制", "CSV超过100000行或16384列限制",
+        "单次迁移最多50个版本且总量不超过150MB", "来源实际总量超过150MB限制",
+        "数据记录超过100000行限制", "记录分页参数无效", "请选择1至100000条记录", "记录不存在或不属于该版本", "操作请求标识无效",
+        "数据内容无效或展开后超过63MB限制", "解析后内容超过63MB限制", "复制内容超过30MB限制", "复制内容超出安全容量，请减少选择条目", "数据内容无效");
+    register(values, "ASSET_CATEGORY_VALIDATION_ERROR", 400,
+        "默认分类名称保留，不能创建或重命名", "默认分类不可修改、删除或作为父分类");
+    register(values, "DATA_ASSET_READ_FAILED", 500, "记录暂时无法读取");
+    register(values, "DATA_ASSET_IDEMPOTENCY_CONFLICT", 409, "操作请求标识已用于其他内容");
     KNOWN = Map.copyOf(values);
   }
 
@@ -145,6 +155,9 @@ public final class DataAssetErrors {
           "AGENT_RESOURCE_NOT_ACCESSIBLE",
           "AGENT_TASK_LEASE_TOKEN_REQUIRED",
           "AGENT_VALIDATION_ERROR",
+          "IDEMPOTENCY_CONFLICT",
+          "IDEMPOTENCY_KEY_REQUIRED",
+          "IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED",
           "ARTIFACT_CASE_MISMATCH",
           "ARTIFACT_COMMIT_CONFLICT",
           "ARTIFACT_COMMIT_REQUEST_INVALID",
@@ -249,7 +262,7 @@ public final class DataAssetErrors {
         || code.endsWith("NOT_ACCESSIBLE")
         || Set.of("SCOPE_DENIED", "RBAC_DENIED", "PROJECT_NOT_ALLOWED").contains(code)) return 403;
     if (code.contains("NOT_FOUND") || code.endsWith("NOT_EXIST")) return 404;
-    if (code.contains("CONFLICT") || code.startsWith("ALREADY_")) return 409;
+    if (code.contains("CONFLICT") || code.startsWith("ALREADY_") || code.equals("IDEMPOTENCY_LEGACY_RECONCILIATION_REQUIRED")) return 409;
     if (code.contains("NOT_AVAILABLE") || code.contains("NOT_CONFIGURED")) return 503;
     return 400;
   }

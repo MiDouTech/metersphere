@@ -54,7 +54,9 @@ public class DataAssetLegacyService {
         scope.organizationId());
   }
 
-  @Transactional(rollbackFor = Exception.class)
+  @Transactional(
+      rollbackFor = Exception.class,
+      isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
   public Map<String, Object> importFile(String project, String id) {
     var scope = authorize(project);
     var source =
@@ -72,9 +74,9 @@ public class DataAssetLegacyService {
                 + " COALESCE(NULLIF(ref_id,''),id)=? ORDER BY create_time,id FOR UPDATE",
             project,
             family);
-    if (versions.size() > 50
+    if (versions.size() > DataAssetLimits.LEGACY_MAX_VERSIONS
         || versions.stream().mapToLong(v -> ((Number) v.get("size")).longValue()).sum()
-            > 20_000_000) throw new MSException("单次迁移最多50个版本且总量不超过20MB");
+            > DataAssetLimits.LEGACY_MAX_BYTES) throw new MSException("单次迁移最多50个版本且总量不超过150MB");
     var mapped =
         jdbc.queryForList(
             "SELECT DISTINCT s.asset_id FROM data_asset_source s JOIN file_metadata f ON CAST(f.id"
@@ -85,7 +87,17 @@ public class DataAssetLegacyService {
     if (mapped.size() > 1) throw new MSException("来源版本已映射多个资产，需要先处理映射冲突");
     String target = mapped.isEmpty() ? null : mapped.getFirst().get("asset_id").toString();
     String preserved = null;
+    String preservedFormat = null;
     if (target != null) {
+      // Serialize current-version selection with manual optimistic writes through final restoration.
+      // The local READ_COMMITTED transaction also avoids an earlier discovery snapshot masking
+      // a manual version committed before this lock (HTTP defaults may be REPEATABLE_READ).
+      var owned =
+          jdbc.queryForList(
+              "SELECT id FROM data_asset WHERE id=? AND organization_id=? AND deleted=0 FOR UPDATE",
+              target,
+              scope.organizationId());
+      if (owned.size() != 1) throw new MSException("数据资产不存在或无访问权限");
       var current = assets.detail(project, target);
       var last =
           jdbc.queryForList(
@@ -95,7 +107,7 @@ public class DataAssetLegacyService {
               target);
       if (!last.isEmpty()
           && !current.get("currentVersionId").equals(last.getFirst().get("source_version_id")))
-        preserved = current.get("currentVersionId").toString();
+        {preserved = current.get("currentVersionId").toString();preservedFormat=current.get("format").toString();}
     }
     long[] budget = {0};
     Map<String, Object> result = null;
@@ -104,7 +116,7 @@ public class DataAssetLegacyService {
       target = result.get("id").toString();
     }
     if (preserved != null)
-      jdbc.update("UPDATE data_asset SET current_version_id=? WHERE id=?", preserved, target);
+      jdbc.update("UPDATE data_asset SET current_version_id=?,format=? WHERE id=?", preserved, preservedFormat, target);
     return assets.detail(project, target);
   }
 
@@ -130,7 +142,7 @@ public class DataAssetLegacyService {
     var file = source.getFirst();
     if (file.getSize() == null
         || file.getSize() > io.metersphere.agent.service.DataAssetLimits.MAX_BYTES)
-      throw new MSException("来源文件超过2MB限制");
+      throw new MSException("来源文件超过30MB限制");
     String format = Objects.toString(file.getType(), "").toUpperCase(Locale.ROOT).replace(".", "");
     try {
       byte[] bytes;
@@ -140,7 +152,7 @@ public class DataAssetLegacyService {
         bytes = stream.readNBytes((io.metersphere.agent.service.DataAssetLimits.MAX_BYTES + 1));
       }
       budget[0] += bytes.length;
-      if (budget[0] > 20_000_000) throw new MSException("来源实际总量超过20MB限制");
+      if (budget[0] > DataAssetLimits.LEGACY_MAX_BYTES) throw new MSException("来源实际总量超过150MB限制");
       var request = new HashMap<String, Object>();
       if (target != null) {
         var current = assets.detail(project, target);
@@ -163,7 +175,7 @@ public class DataAssetLegacyService {
       request.put("format", format);
       request.put("content", parser.parse(bytes, format));
       var d =
-          assets.uploadVersion(
+          assets.importLegacyVersion(
               project,
               target,
               bytes,

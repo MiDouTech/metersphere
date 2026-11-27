@@ -8,6 +8,27 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 
 class DataAssetMcpToolsTests {
+ @Test void uploadCapacitySchemaAndPreDecodeGuardUseThirtyMiB() {
+ assertEquals(41943040,DataAssetMcpTools.MAX_BASE64);
+ var tool=new DataAssetMcpTools().dataAssetManage(mock(DataAssetService.class),mock(DataAssetBatchService.class),mock(DataAssetParseJobService.class),mock(DataAssetLegacyService.class));
+ var properties=(Map<?,?>)tool.inputSchema().get("properties");
+ assertEquals(41943040,((Number)((Map<?,?>)properties.get("base64")).get("maxLength")).intValue());
+ assertEquals(2000007,DataAssetMcpTools.decodeUpload(Base64.getEncoder().encodeToString(new byte[2000007])).length);
+ assertThrows(io.metersphere.sdk.exception.MSException.class,()->DataAssetMcpTools.decodeUpload("A".repeat(41943041)));
+ }
+
+ @Test void recordActionsForwardIdentityVersionAndKeysWithoutExtraScope() throws Exception {
+ var configuration=new DataAssetMcpTools();var records=mock(DataAssetRecordService.class);
+ var field=DataAssetMcpTools.class.getDeclaredField("records");field.setAccessible(true);field.set(configuration,records);
+ var tool=configuration.dataAssetManage(mock(DataAssetService.class),mock(DataAssetBatchService.class),mock(DataAssetParseJobService.class),mock(DataAssetLegacyService.class));
+ assertEquals("USER_RBAC",tool.requiredScope());
+ var keys=List.of("hash:1","hash:2");
+ for(String action:List.of("records","copy_records","mark_records_used"))tool.execute(Map.of("sourceProjectId","context","action",action,"id","asset","versionId","version","recordKeys",keys,"requestId","stable"));
+ verify(records).page("context","asset","version",1,100);
+ verify(records).copy("context","asset","version",keys);
+ verify(records).used("context","asset","version",keys,"stable");
+ }
+
   @Test
   void outerRevisionAndIdempotencyAreForwardedWithoutMutatingData() {
     var service = mock(DataAssetService.class);

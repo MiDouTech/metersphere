@@ -164,7 +164,7 @@ class DataAssetServiceTests {
 
   @Test
   void manualLimitCountsUtf8BytesRatherThanCharacters() {
-    String value = "汉".repeat(DataAssetLimits.MAX_BYTES / 3 + 1);
+    String value = "汉".repeat(DataAssetLimits.MAX_CONTENT_BYTES / 3 + 1);
     assertThrows(
         io.metersphere.sdk.exception.MSException.class,
         () -> service.save(null, Map.of("name", "too big", "format", "TXT", "content", value)));

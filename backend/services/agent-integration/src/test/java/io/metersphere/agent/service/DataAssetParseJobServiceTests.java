@@ -9,6 +9,28 @@ import org.junit.jupiter.api.Test;
 
 class DataAssetParseJobServiceTests {
   @Test
+  void virtualDefaultCategoryNormalizesBeforeValidationAndIdempotency() throws Exception {
+    var fixture=new DataAssetServiceTests();fixture.setup();
+    var access=mock(GlobalAssetAccess.class);
+    when(access.authorize(isNull(),anyString())).thenReturn(new GlobalAssetAccess.Scope("org","user"));
+    var worker=new DataAssetParseJobService(fixture.jdbc,access,new DataAssetParser());
+    var tx=new org.springframework.transaction.support.TransactionTemplate(new org.springframework.jdbc.datasource.DataSourceTransactionManager(fixture.jdbc.getDataSource()));
+    var repository=mock(FileRepository.class);byte[] bytes="a,b\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    when(repository.getFileAsStream(any())).thenAnswer(invocation->new java.io.ByteArrayInputStream(bytes));
+    try(var center=mockStatic(FileCenter.class)) {
+      center.when(()->FileCenter.getRepository("MINIO")).thenReturn(repository);
+      var result=tx.execute(status->worker.upload(bytes,"default.csv","default","__uncategorized__","same-default"));
+      assertEquals(result.get("id"),tx.execute(status->worker.upload(bytes,"default.csv","default",null,"same-default")).get("id"));
+      assertEquals(result.get("id"),tx.execute(status->worker.upload(bytes,"default.csv","default","","same-default")).get("id"));
+      worker.drain();
+      assertEquals("READY",fixture.service.detail(result.get("id").toString()).get("parseStatus"));
+      fixture.jdbc.execute("CREATE TABLE test_asset_category(id varchar(64),organization_id varchar(64),parent_id varchar(64),name varchar(100),path varchar(1024),level int,sort bigint,deleted boolean)");
+      var category=fixture.service.categories().getFirst();
+      assertEquals("__uncategorized__",category.get("id"));assertEquals(true,category.get("protected"));assertEquals(1L,category.get("assetCount"));
+    }
+  }
+
+  @Test
   void organizationReadersCanReadSharedParseStatusAndWritersRetryWithOwnAudit() throws Exception {
     var fixture = new DataAssetServiceTests();
     fixture.setup();
@@ -148,8 +170,9 @@ class DataAssetParseJobServiceTests {
     try (var book = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
         var output = new java.io.ByteArrayOutputStream()) {
       var sheet = book.createSheet("data");
-      for (int row = 0; row < 1000; row++)
-        sheet.createRow(row).createCell(0).setCellValue("汉".repeat(800));
+      String cellValue = "a".repeat(32700);
+      for (int row = 0; row < 2200; row++)
+        sheet.createRow(row).createCell(0).setCellValue(cellValue);
       book.write(output);
       workbook = output.toByteArray();
     }
@@ -175,7 +198,7 @@ class DataAssetParseJobServiceTests {
     doReturn(workbook).when(worker).readOriginal(anyMap());
     worker.drain();
     assertEquals("FAILED", worker.get("job").get("status"));
-    assertEquals("解析后内容超过2MB限制", worker.get("job").get("error"));
+    assertEquals("解析后内容超过63MB限制", worker.get("job").get("error"));
   }
 
   @Test

@@ -118,7 +118,7 @@ class PermissionUiServiceTests {
     }
 
     @Test
-    void versionsReadProjectionAcceptsReadButNeverWriteOnlyOrProjectRolePromotion() {
+    void versionsPageIsNavigationWithoutAdditionalBusinessPermission() {
         var versions = resource("TEST_ASSET_VERSIONS_PAGE", "PAGE", null, "testAssetVersions", null);
         versions.setScopeType("ORGANIZATION");
         when(permissionResourceMapper.selectEnabled()).thenReturn(List.of(versions));
@@ -134,9 +134,9 @@ class PermissionUiServiceTests {
             user.setLastProjectId(null);
             user.getUserRoles().getFirst().setType("ORGANIZATION");
             user.getUserRoleRelations().getFirst().setSourceId("org-1");
-            assertFalse(service.aggregate(user).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+            assertTrue(service.aggregate(user).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
         }
-        assertFalse(service.aggregate(projectUser("project-writer", "BUSINESS_ASSET:WRITE")).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+        assertTrue(service.aggregate(projectUser("project-writer", "BUSINESS_ASSET:WRITE")).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
     }
 
     @Test
@@ -158,12 +158,30 @@ class PermissionUiServiceTests {
         assertTrue(result.getOrganization().getVisibleRoutes().contains("testAsset"));
         assertFalse(result.getOrganization().getVisibleRoutes().contains("testAssetDatasets"));
         for (String permission : List.of("FUNCTIONAL_CASE:READ+UPDATE", "TEST_ASSET_VERSION:MANAGE"))
-            assertFalse(service.aggregate(projectUser("source-writer", permission)).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+            assertTrue(service.aggregate(projectUser("source-writer", permission)).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
         var switched = projectUser("source-reader", "FUNCTIONAL_CASE:READ");
         switched.setLastProjectId("unrelated-current-project");
         assertTrue(service.aggregate(switched).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
         source.setOrganizationId("other-org");
-        assertFalse(service.aggregate(projectUser("source-reader", "FUNCTIONAL_CASE:READ")).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+        assertTrue(service.aggregate(projectUser("source-reader", "FUNCTIONAL_CASE:READ")).getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+    }
+
+    @Test
+    void authenticatedUserWithoutRoleGrantsCanOpenVersionsButNotOtherAssets() {
+        var menu = resource("TEST_ASSET_MENU", "MENU", null, "testAsset", null);
+        menu.setScopeType("ORGANIZATION");
+        var versions = resource("TEST_ASSET_VERSIONS_PAGE", "PAGE", menu.getCode(), "testAssetVersions", null);
+        versions.setScopeType("ORGANIZATION");
+        var data = resource("TEST_ASSET_DATASETS_PAGE", "PAGE", menu.getCode(), "testAssetDatasets", "TEST_DATA_ASSET:READ");
+        data.setScopeType("ORGANIZATION");
+        when(permissionResourceMapper.selectEnabled()).thenReturn(List.of(menu, versions, data));
+        var user = new UserDTO(); user.setLastOrganizationId("org-1");
+        var result = service.aggregate(user);
+        assertTrue(result.getOrganization().getVisibleRoutes().contains("testAssetVersions"));
+        assertTrue(result.getOrganization().getVisibleRoutes().contains("testAsset"));
+        assertFalse(result.getOrganization().getVisibleRoutes().contains("testAssetDatasets"));
+        assertTrue(result.getOrganization().getOperable().isEmpty());
+        assertTrue(service.aggregate(null).getOrganization().getVisibleRoutes().isEmpty());
     }
 
     private UserDTO projectUser(String roleId, String permissionId) {

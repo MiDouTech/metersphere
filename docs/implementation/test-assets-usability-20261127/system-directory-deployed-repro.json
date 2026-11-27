@@ -1,0 +1,85 @@
+{
+  "initial": [
+    {
+      "url": "/api/case-asset/systems",
+      "scope": {
+        "ORGANIZATION": "100001",
+        "PROJECT": "1606852595212337152"
+      },
+      "status": 200,
+      "code": 100200,
+      "dataNull": false,
+      "message": null
+    },
+    {
+      "url": "/api/case-asset/catalog/page",
+      "scope": {
+        "ORGANIZATION": "100001",
+        "PROJECT": "1606852595212337152"
+      },
+      "status": 200,
+      "code": 100200,
+      "dataNull": false,
+      "total": 23,
+      "listLength": 12,
+      "message": null
+    },
+    {
+      "url": "/api/case-asset/case/page",
+      "scope": {
+        "ORGANIZATION": "100001",
+        "PROJECT": "1606852595212337152"
+      },
+      "status": 0,
+      "dataNull": false
+    },
+    {
+      "url": "/api/case-asset/case/page",
+      "scope": {
+        "ORGANIZATION": "100001",
+        "PROJECT": "1606852595212337152"
+      },
+      "status": 200,
+      "code": 100200,
+      "dataNull": false,
+      "total": 2,
+      "listLength": 2,
+      "message": null
+    },
+    {
+      "url": "/api/case-asset/catalog/1755081039108595713/sync-failures",
+      "scope": {
+        "ORGANIZATION": "100001",
+        "PROJECT": "1606852595212337152"
+      },
+      "status": 200,
+      "code": 100200,
+      "dataNull": false,
+      "message": null
+    },
+    {
+      "url": "/api/case-asset/catalog/1755081039108595713/sync-status",
+      "scope": {
+        "ORGANIZATION": "100001",
+        "PROJECT": "1606852595212337152"
+      },
+      "status": 200,
+      "code": 100200,
+      "dataNull": false,
+      "message": null
+    },
+    {
+      "url": "/api/case-asset/catalog/backfill/latest",
+      "scope": {
+        "ORGANIZATION": "100001",
+        "PROJECT": "1606852595212337152"
+      },
+      "status": 200,
+      "code": 100200,
+      "dataNull": false,
+      "total": 17,
+      "message": null
+    }
+  ],
+  "visibleReadFailure": true
+}
