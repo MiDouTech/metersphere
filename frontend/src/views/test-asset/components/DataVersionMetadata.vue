@@ -21,7 +21,7 @@
     const { snapshot } = props;
     if (snapshot?.metadata?.categoryId) return snapshot.metadata.categoryId;
     if (snapshot?.metadataSource === 'LEGACY_SOURCE_VERSION') return '历史分类未知';
-    if (snapshot?.metadata && 'categoryId' in snapshot.metadata) return '未分类';
+    if (snapshot?.metadata && 'categoryId' in snapshot.metadata) return '默认分类';
     return '未知';
   });
 </script>

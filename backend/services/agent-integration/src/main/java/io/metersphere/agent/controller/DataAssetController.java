@@ -63,7 +63,14 @@ public class DataAssetController {
   }
 
   @PostMapping("/batches")
-  public Map<String, Object> batch(@RequestBody Map<String, List<Map<String, Object>>> request) {
+  public Map<String, Object> batchBody(@RequestBody LargeAssetRequest request) {
+    Object items=request.get("items");
+    if (!(items instanceof List<?> list) || list.stream().anyMatch(item -> !(item instanceof Map<?,?>)))
+      throw new io.metersphere.sdk.exception.MSException("批次内容无效");
+    return batch.submit((List<Map<String,Object>>) items);
+  }
+
+  public Map<String, Object> batch(Map<String, List<Map<String, Object>>> request) {
     return batch.submit(request.get("items"));
   }
 
@@ -76,7 +83,7 @@ public class DataAssetController {
       throws java.io.IOException {
     String filename = Objects.toString(file.getOriginalFilename(), "");
     if (file.getSize() > io.metersphere.agent.service.DataAssetLimits.MAX_BYTES)
-      throw new io.metersphere.sdk.exception.MSException("文件超过2MB限制");
+      throw new io.metersphere.sdk.exception.MSException("文件超过30MB限制");
     return parseJobs.upload(file.getBytes(), filename, name, categoryId, requestId);
   }
 
@@ -88,7 +95,7 @@ public class DataAssetController {
       @RequestParam org.springframework.web.multipart.MultipartFile file)
       throws java.io.IOException {
     if (file.getSize() > io.metersphere.agent.service.DataAssetLimits.MAX_BYTES)
-      throw new io.metersphere.sdk.exception.MSException("文件超过2MB限制");
+      throw new io.metersphere.sdk.exception.MSException("文件超过30MB限制");
     return parseJobs.replace(
         null,
         id,
@@ -144,13 +151,17 @@ public class DataAssetController {
   }
 
   @PostMapping
-  public Map<String, Object> create(@RequestBody Map<String, Object> request) {
+  public Map<String, Object> createBody(@RequestBody LargeAssetRequest request) { return create(request); }
+
+  public Map<String,Object> create(Map<String,Object> request) {
     return service.save(null, request);
   }
 
   @PutMapping("/{id}")
   public Map<String, Object> update(
-      @PathVariable String id, @RequestBody Map<String, Object> request) {
+      @PathVariable String id, @RequestBody LargeAssetRequest request) { return update(id, (Map<String,Object>)request); }
+
+  public Map<String,Object> update(String id, Map<String,Object> request) {
     return service.save(id, request);
   }
 

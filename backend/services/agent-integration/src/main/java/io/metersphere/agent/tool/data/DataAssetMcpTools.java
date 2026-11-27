@@ -7,6 +7,12 @@ import org.springframework.context.annotation.*;
 
 @Configuration
 public class DataAssetMcpTools {
+  static final int MAX_BASE64 = 4 * ((DataAssetLimits.MAX_BYTES + 2) / 3);
+  static byte[] decodeUpload(String encoded) {
+    if(encoded.length()>MAX_BASE64)throw new io.metersphere.sdk.exception.MSException("测试数据工具参数无效");
+    return Base64.getDecoder().decode(encoded);
+  }
+  @jakarta.annotation.Resource private DataAssetRecordService records;
   @Bean
   public AgentMcpToolHandler dataAssetManage(
       DataAssetService service,
@@ -33,11 +39,11 @@ public class DataAssetMcpTools {
                 "replace_upload",
                 "download",
                 "legacy_import",
-                "legacy_inventory")));
+                "legacy_inventory", "records", "copy_records", "mark_records_used")));
     fields.put("fileName", AgentMcpToolSchemas.string(1, 255));
     fields.put("name", AgentMcpToolSchemas.string(1, 255));
     fields.put("requestId", AgentMcpToolSchemas.string(1, 128));
-    fields.put("base64", AgentMcpToolSchemas.string(0, 2666672));
+    fields.put("base64", AgentMcpToolSchemas.string(0, MAX_BASE64));
     fields.put(
         "offset", Map.of("type", "integer", "minimum", 0, "maximum", DataAssetLimits.MAX_BYTES));
     fields.put("chunkSize", Map.of("type", "integer", "minimum", 1, "maximum", 65536));
@@ -47,6 +53,7 @@ public class DataAssetMcpTools {
     fields.put("categoryId", AgentMcpToolSchemas.string(0, 64));
     fields.put("page", Map.of("type", "integer", "minimum", 1));
     fields.put("pageSize", Map.of("type", "integer", "minimum", 1, "maximum", 100));
+    fields.put("recordKeys", Map.of("type", "array", "minItems", 1, "maxItems", 100000, "items", AgentMcpToolSchemas.string(1, 80)));
     fields.put("data", Map.of("type", "object"));
     fields.put(
         "items",
@@ -66,8 +73,8 @@ public class DataAssetMcpTools {
         return "Manage organization-global test data using linked user organization role"
             + " permissions. sourceProjectId selects Token-whitelisted organization context,"
             + " never filters global contents. update/delete require expectedRevision."
-            + " create supports requestId idempotency. Full content editing is bounded to"
-            + " 2MB; use immutable versionId when reading historical data. No additional"
+            + " All mutation actions require a stable requestId (or HTTP Idempotency-Key); read actions do not. Full content editing is bounded to"
+            + " 30MiB source files / 100000 rows (63MiB safe expanded content); use immutable versionId when reading historical data. No additional"
             + " Token scopes.";
       }
 
@@ -118,7 +125,7 @@ public class DataAssetMcpTools {
                   Objects.toString(args.get("categoryId"), ""),
                   ((Number) args.getOrDefault("page", 1)).intValue(),
                   ((Number) args.getOrDefault("pageSize", 20)).intValue());
-          case "batch" -> batches.submit(project, (List<Map<String, Object>>) args.get("items"));
+          case "batch" -> batches.submit(project, (List<Map<String, Object>>) args.get("items"), (String) args.get("requestId"));
           case "job" ->
               parseJobs.exists(id) ? parseJobs.get(project, id) : batches.get(project, id);
           case "retry_job" ->
@@ -130,7 +137,7 @@ public class DataAssetMcpTools {
               throw new io.metersphere.sdk.exception.MSException("上传需要文件名、幂等标识及Base64内容");
             byte[] bytes;
             try {
-              bytes = Base64.getDecoder().decode(encoded);
+              bytes = decodeUpload(encoded);
             } catch (IllegalArgumentException e) {
               throw new io.metersphere.sdk.exception.MSException("文件编码无效");
             }
@@ -171,6 +178,9 @@ public class DataAssetMcpTools {
           case "legacy_import" -> legacy.importFile(project, id);
           case "legacy_inventory" -> legacy.inventory(project);
           case "detail" -> service.detail(project, id);
+          case "records" -> records.page(project,id,(String)args.get("versionId"), ((Number)args.getOrDefault("page",1)).intValue(),((Number)args.getOrDefault("pageSize",100)).intValue());
+          case "copy_records" -> records.copy(project,id,(String)args.get("versionId"),(List<String>)args.get("recordKeys"));
+          case "mark_records_used" -> records.used(project,id,(String)args.get("versionId"),(List<String>)args.get("recordKeys"),(String)args.get("requestId"));
           case "content" -> service.content(project, id, (String) args.get("versionId"));
           case "versions" -> service.versions(project, id);
           case "create", "update" -> {

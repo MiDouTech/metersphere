@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DataAssetService {
   private final JdbcTemplate jdbc;
   private final GlobalAssetAccess access;
-  private final ObjectMapper json = new ObjectMapper();
+  private final ObjectMapper json = DataAssetJson.mapper();
   @jakarta.annotation.Resource private AgentBusinessAccess projectAccess;
 
   /** Caller must keep this transaction open through creating the project reference. */
@@ -79,26 +79,30 @@ public class DataAssetService {
     try {
       String s = json.writeValueAsString(value);
       if (s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
-          > io.metersphere.agent.service.DataAssetLimits.MAX_BYTES)
+          > io.metersphere.agent.service.DataAssetLimits.MAX_CONTENT_BYTES)
         throw new IllegalArgumentException();
       return s;
     } catch (Exception e) {
-      throw new MSException("数据内容无效或超过2MB限制");
+      throw new MSException("数据内容无效或展开后超过63MB限制");
     }
   }
 
   public List<Map<String, Object>> categories() {
     var scope = scope(null, false);
-    return jdbc.queryForList(
+    var categories = new ArrayList<Map<String, Object>>();
+    categories.add(Map.of("id", "__uncategorized__", "name", "默认分类", "protected", true, "assetCount", jdbc.queryForObject("SELECT COUNT(*) FROM data_asset WHERE organization_id=? AND deleted=0 AND (category_id IS NULL OR category_id='')", Long.class, scope.organizationId())));
+    categories.addAll(jdbc.queryForList(
         "SELECT c.id,c.parent_id AS parentId,c.name,c.path,c.level,c.sort,(SELECT COUNT(*) FROM"
             + " data_asset d WHERE CAST(d.organization_id AS BINARY(256))=CAST(c.organization_id AS"
             + " BINARY(256)) AND CAST(d.category_id AS BINARY(256))=CAST(c.id AS BINARY(256)) AND"
             + " d.deleted=0) AS assetCount FROM test_asset_category c WHERE c.organization_id=? AND"
             + " c.deleted=0 ORDER BY c.level,c.sort,c.id",
-        scope.organizationId());
+        scope.organizationId()));
+    return categories;
   }
 
   private void validateContent(String format, Object value) {
+    DataAssetLimits.checkRecords(value, format);
     if ("TXT".equals(format) && !(value instanceof String)) throw new MSException("文本格式的数据内容必须是文本");
     if ("CSV".equals(format)) {
       if (!(value instanceof Map<?, ?> map)
@@ -115,9 +119,12 @@ public class DataAssetService {
                           || !(entry.get("name") instanceof String)
                           || !(entry.get("rows") instanceof List<?>)))
         throw new MSException("工作簿数据需要包含名称和行数据的完整工作表");
+      long totalRows=0;
       Set<String> names = new HashSet<>();
       for (var sheet : sheets) {
         var entry = (Map<?, ?>) sheet;
+        totalRows += ((List<?>) entry.get("rows")).size();
+        if(totalRows>DataAssetLimits.MAX_ROWS) throw new MSException("数据记录超过100000行限制");
         String name = entry.get("name").toString();
         if (name.isBlank()
             || name.length() > 31
@@ -424,6 +431,12 @@ public class DataAssetService {
   }
 
   public Map<String, Object> save(String project, String id, Map<String, Object> r) {
+    return saveInternal(project,id,r,false);
+  }
+
+  private Map<String, Object> saveInternal(String project, String id, Map<String,Object> r, boolean legacyImport) {
+    r = new HashMap<>(r);
+    if ("__uncategorized__".equals(r.get("categoryId"))) r.put("categoryId", null);
     if (Boolean.FALSE.equals(r.get("complete"))) throw new MSException("分页预览不能直接保存，请加载完整内容后编辑");
     var s = scope(project, true);
     boolean create = id == null;
@@ -458,10 +471,10 @@ public class DataAssetService {
     Map<String, Object> old = create ? Map.of() : detail(project, id);
     if (!create) {
       if (!"READY".equals(old.get("parseStatus"))) throw new MSException("数据解析完成后才能编辑");
-      if (r.containsKey("format")
+      if (!legacyImport && r.containsKey("format")
           && !old.get("format").toString().equalsIgnoreCase(r.get("format").toString()))
         throw new MSException("编辑不能改变原数据格式");
-      format = old.get("format").toString();
+      if (!legacyImport) format = old.get("format").toString();
     }
     if (r.containsKey("content")) validateContent(format, r.get("content"));
     int revision = create ? 0 : ((Number) old.get("revision")).intValue();
@@ -516,6 +529,7 @@ public class DataAssetService {
               revision);
       if (n != 1) throw new MSException("数据已更新，请刷新后重试");
     }
+    if (legacyImport) jdbc.update("UPDATE data_asset SET format=? WHERE id=?",format,id);
     String description =
         Objects.toString(
             r.get("description"), create ? "" : Objects.toString(old.get("description"), ""));
@@ -619,8 +633,16 @@ public class DataAssetService {
 
   public Map<String, Object> uploadVersion(
       String project, String assetId, byte[] bytes, String filename, Map<String, Object> request) {
+    return uploadVersionInternal(project,assetId,bytes,filename,request,false);
+  }
+
+  Map<String,Object> importLegacyVersion(String project,String assetId,byte[] bytes,String filename,Map<String,Object> request) {
+    return uploadVersionInternal(project,assetId,bytes,filename,request,true);
+  }
+
+  private Map<String,Object> uploadVersionInternal(String project,String assetId,byte[] bytes,String filename,Map<String,Object> request,boolean legacyImport) {
     var s = scope(project, true);
-    String path = "data-assets/" + s.organizationId() + "/" + UUID.randomUUID();
+    String path = "organization/" + s.organizationId() + "/data-assets" + "/" + UUID.randomUUID();
     var file = new io.metersphere.sdk.file.FileRequest(path, "MINIO", "source");
     String diagnosticAsset = assetId,
         diagnosticVersion = null,
@@ -628,7 +650,7 @@ public class DataAssetService {
     try {
       io.metersphere.sdk.file.FileCenter.getRepository("MINIO").saveFile(bytes, file);
       storageStage = "version-save";
-      var d = save(project, assetId, request);
+      var d = saveInternal(project, assetId, request, legacyImport);
       diagnosticAsset = d.get("id").toString();
       diagnosticVersion = d.get("currentVersionId").toString();
       if (jdbc.queryForObject(

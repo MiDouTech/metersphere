@@ -1,0 +1,281 @@
+{
+  "baseline": "61864540c17b1255604338cfcc8ab12379231f6b",
+  "scope": "development validation before designated independent review; deployment acceptance follows user deployment",
+  "backendUniqueTests": 327,
+  "conditionalMysqlTestsActuallyExecuted": 30,
+  "repeatedRecordH2Tests": 6,
+  "frontendComponentTests": 62,
+  "frontendApiTests": 5,
+  "nodeSdkTests": 54,
+  "logs": [
+    {
+      "kind": "backend-compile-tests",
+      "path": ".build/usability-backend-v11-test.log",
+      "sha256": "87b6a9d22bdc1f1a3b43eebd5eaf0c0ba2e3569245d06ed9ab3af85a5a58f244",
+      "bytes": 157711,
+      "exitCode": 0,
+      "moduleTestTotals": [
+        [
+          "8",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "59",
+          "0",
+          "0",
+          "18"
+        ],
+        [
+          "258",
+          "0",
+          "0",
+          "12"
+        ],
+        [
+          "2",
+          "0",
+          "0",
+          "0"
+        ]
+      ],
+      "buildSuccess": true
+    },
+    {
+      "kind": "mysql-data-and-replay",
+      "path": ".build/mysql-selftest/623bda28/native-suite.log",
+      "sha256": "1501f1273b131968255fc801d3abd11416d97ae0e96d8cca28dde11b5dddbd68",
+      "bytes": 45977,
+      "exitCode": 0,
+      "moduleTestTotals": [
+        [
+          "18",
+          "0",
+          "0",
+          "0"
+        ]
+      ],
+      "buildSuccess": true
+    },
+    {
+      "kind": "mysql-case-assets",
+      "path": ".build/mysql-selftest/9c752db0/native-suite.log",
+      "sha256": "9a1382ad11cf089223576904d8a1b811c87a9736914ff03ac08e6522e1029e69",
+      "bytes": 44445,
+      "exitCode": 0,
+      "moduleTestTotals": [
+        [
+          "18",
+          "0",
+          "0",
+          "0"
+        ]
+      ],
+      "buildSuccess": true
+    },
+    {
+      "kind": "package",
+      "path": ".build/usability-package-final.log",
+      "sha256": "ee4137ad3523f148d460dfaf4a5fb9f1c54fb1a674fed307be3f85119d5a37ee",
+      "bytes": 80119,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": true
+    },
+    {
+      "kind": "full-types",
+      "path": ".build/usability-u01-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "components",
+      "path": ".build/usability-u01-components.log",
+      "sha256": "d90efc37b8d61152bbd15fe2c7543273fb578b1ffd2e471019288c409891d769",
+      "bytes": 19727,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "frontend-api",
+      "path": ".build/usability-final-api.log",
+      "sha256": "5f5ed8d017eef1f7d19c7940e006ba1ef6e0971ae47812eea4c03ef5e3915001",
+      "bytes": 539,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "eslint",
+      "path": ".build/usability-u01-eslint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "stylelint",
+      "path": ".build/usability-u01-stylelint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "vite",
+      "path": ".build/usability-build-staged-v4.log",
+      "sha256": "39088b12e1bd17881550b1bb0fa331f8c24371f89df0a7a53bab638b2e810793",
+      "bytes": 240796,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "node-sdk",
+      "path": ".build/usability-node-frozen.log",
+      "sha256": "c173319e08cb753ac8602698c588e62fd6cb4ddbfd86d00fa3733809c62a3e8d",
+      "bytes": 5329,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "api-contract",
+      "path": ".build/usability-api-contract-final.log",
+      "sha256": "8bd86f4a32a3409ec51628a20968b28128a2a205db5d662aaa0bae1e524f3e2c",
+      "bytes": 34,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "route-contract",
+      "path": ".build/usability-route-contract-final.log",
+      "sha256": "48217de4f138fd0fdaec744057172ef0cb6b48f81de941fdb543c71f02595485",
+      "bytes": 134,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    },
+    {
+      "kind": "permission-coverage",
+      "path": ".build/usability-permission-final.log",
+      "sha256": "a3ec7e39376429e9edc292440129e97ccc4f327b537b03e29f0c9d084163d017",
+      "bytes": 117,
+      "exitCode": 0,
+      "moduleTestTotals": [],
+      "buildSuccess": null
+    }
+  ],
+  "frontendInput": {
+    "files": 1702,
+    "sourceHashesStillMatch": true,
+    "manifestSha256": "2df10b47cf89a8b36176a46e16a4a21520575ccfb3e56255a73c525855bdc955"
+  },
+  "backendPackage": {
+    "artifact": "backend\\app\\target\\app-3.x.jar",
+    "sha256": "ce75dce2d268d2a23b57d8ba131719e2915bb8c111eec7d6a93abe8037b81e26",
+    "matchingCompiledClassesAndMigrations": [
+      "io/metersphere/agent/service/DataAssetJson.class",
+      "io/metersphere/agent/service/AgentDataAssetMcpWriteService.class",
+      "io/metersphere/agent/service/AgentGenericMcpWriteService.class",
+      "io/metersphere/agent/service/AgentMcpStreamableService.class",
+      "io/metersphere/agent/service/DataAssetRecordService.class",
+      "io/metersphere/agent/service/DataAssetLegacyAutoService.class",
+      "io/metersphere/agent/service/DataAssetService.class",
+      "io/metersphere/agent/service/DataAssetMetadata.class",
+      "io/metersphere/agent/service/DataAssetParser.class",
+      "io/metersphere/agent/service/DataAssetParseJobService.class",
+      "io/metersphere/agent/service/DataAssetBatchService.class",
+      "io/metersphere/agent/service/DataAssetLegacyService.class",
+      "io/metersphere/agent/service/DataAssetErrors.class",
+      "io/metersphere/agent/service/DataAssetFailure.class",
+      "io/metersphere/agent/service/AgentSafeErrorMapper.class",
+      "io/metersphere/agent/service/TestAssetCatalogService.class",
+      "io/metersphere/agent/service/GlobalAssetAccess.class",
+      "io/metersphere/agent/service/GlobalAssetCatalogService.class",
+      "io/metersphere/agent/service/SharedConfigurationService.class",
+      "io/metersphere/agent/service/BusinessAssetService.class",
+      "io/metersphere/agent/service/AgentTestDataLeaseService.class",
+      "io/metersphere/system/service/PermissionUiService.class",
+      "migration/3.7.2/ddl/V3.7.2_160__data_assets.sql",
+      "migration/3.7.2/ddl/V3.7.2_162__organization_global_business_configuration.sql",
+      "migration/3.7.2/dml/V3.7.2_163__data_asset_permissions.sql",
+      "migration/3.7.2/dml/V3.7.2_164__global_asset_role_permissions.sql",
+      "migration/3.7.2/dml/V3.7.2_165__global_asset_page_permissions.sql",
+      "migration/3.7.2/ddl/V3.7.2_166__data_asset_legacy_auto.sql",
+      "migration/3.7.2/ddl/V3.7.2_167__data_asset_record_usage.sql"
+    ],
+    "frontendIncludedClaim": false
+  },
+  "freshCompiledSources": {
+    "freshMainSources": [
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/AgentMcpStreamableController.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/DataAssetController.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/DataAssetExceptionHandler.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/DataAssetLegacyAutoController.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/DataAssetRecordController.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/LargeAssetRequest.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/LargeAssetRequestConfig.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/McpBodyExceptionHandler.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentDataAssetMcpWriteService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentGenericMcpWriteService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/AgentMcpStreamableService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetBatchService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetErrors.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetJson.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetLegacyAutoService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetLegacyService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetLimits.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetParseJobService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetParser.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetRecordService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/DataAssetService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetGovernanceService.java",
+      "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/data/DataAssetMcpTools.java",
+      "backend/services/system-setting/src/main/java/io/metersphere/system/service/PermissionUiService.java"
+    ],
+    "controllerClassesMatchPackagedJar": true
+  },
+  "containerImageBuild": "not executed per explicit user waiver",
+  "containerStartupHealthAndRealSso": "pending user deployment of this patch; fixture is not a full application container",
+  "lowPrivilegeLiveAccount": "excluded by user",
+  "twoHistoricalSyncProjectFailures": "excluded by user",
+  "legacyConcurrency": {
+    "testClass": "DataAssetLegacyConcurrencyMySqlTests",
+    "scenarios": 12,
+    "transactionPaths": [
+      "HTTP-local-READ_COMMITTED",
+      "real-MCP-operation-receipt",
+      "outer-REPEATABLE_READ-conflict-rollback",
+      "web-auto-import"
+    ],
+    "proofs": [
+      {
+        "path": ".build/mysql-selftest/25eb7fdf/native-suite.log",
+        "sha256": "546ee1b67a11b5041ae6334d5ba2738a6a2dd9005d3855c3c267ed915f010bd0",
+        "exitCode": 1,
+        "expectedRed": true,
+        "testCount": 3,
+        "failureCount": 3
+      },
+      {
+        "path": ".build/mysql-selftest/f7dc53f2/native-suite.log",
+        "sha256": "c55f4c0c9369cc9cd2ce63a285a93b2bb2997eff39fd774a13c2ec08968270c1",
+        "exitCode": 0,
+        "expectedRed": false,
+        "testCount": 3,
+        "failureCount": 0
+      }
+    ],
+    "fileRepository": "explicit mock; SQL, service and operation receipt real",
+    "finalCompiledNativeSuite": ".build/mysql-selftest/623bda28/native-suite.log"
+  }
+}

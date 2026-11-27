@@ -62,9 +62,10 @@ public class DataAssetParseJobService {
       String name,
       String category,
       String requestId) {
+    if (category == null || category.isBlank() || "__uncategorized__".equals(category)) category = null;
     var scope = access.authorize(project, "TEST_DATA_ASSET:READ+UPDATE");
     if (bytes.length > io.metersphere.agent.service.DataAssetLimits.MAX_BYTES)
-      throw new MSException("文件超过2MB限制");
+      throw new MSException("文件超过30MB限制");
     int dot = filename.lastIndexOf('.');
     String format = dot < 0 ? "" : filename.substring(dot + 1).toUpperCase(Locale.ROOT);
     if (!Set.of("CSV", "JSON", "TXT", "XLS", "XLSX").contains(format))
@@ -130,7 +131,7 @@ public class DataAssetParseJobService {
     String asset = assetId == null ? UUID.randomUUID().toString() : assetId,
         version = UUID.randomUUID().toString(),
         job = UUID.randomUUID().toString(),
-        path = "data-assets/" + scope.organizationId() + "/" + UUID.randomUUID();
+        path = "organization/" + scope.organizationId() + "/data-assets" + "/" + UUID.randomUUID();
     long now = System.currentTimeMillis();
     var file = new FileRequest(path, "MINIO", "source");
     try {
@@ -242,8 +243,8 @@ public class DataAssetParseJobService {
         byte[] bytes = readOriginal(job);
         String body = json.writeValueAsString(parser.parse(bytes, job.get("format").toString()));
         if (body.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
-            > io.metersphere.agent.service.DataAssetLimits.MAX_BYTES)
-          throw new MSException("解析后内容超过2MB限制");
+            > io.metersphere.agent.service.DataAssetLimits.MAX_CONTENT_BYTES)
+          throw new MSException("解析后内容超过63MB限制");
         finish(job, attempt, body, null);
       } catch (Exception e) {
         String message = e instanceof MSException ? e.getMessage() : "原文件暂时无法解析，请稍后重试";

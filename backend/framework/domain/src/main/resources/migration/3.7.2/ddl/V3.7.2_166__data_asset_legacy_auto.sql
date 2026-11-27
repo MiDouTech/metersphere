@@ -1,0 +1,1 @@
+CREATE TABLE data_asset_legacy_job (project_id varchar(64) NOT NULL, family_id varchar(64) NOT NULL, status varchar(16) NOT NULL, update_time bigint NOT NULL, error_code varchar(64), trace_id varchar(64), PRIMARY KEY(project_id,family_id), INDEX data_asset_legacy_status(status,update_time));

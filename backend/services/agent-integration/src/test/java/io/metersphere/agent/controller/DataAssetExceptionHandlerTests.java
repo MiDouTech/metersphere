@@ -72,7 +72,8 @@ class DataAssetExceptionHandlerTests {
             .defaultRequest(get("/").accept(org.springframework.http.MediaType.APPLICATION_JSON))
             .setControllerAdvice(
                 new AgentExecutionExceptionHandler(new AgentSafeErrorMapper()),
-                new DataAssetExceptionHandler())
+                new DataAssetExceptionHandler(),
+                new io.metersphere.system.controller.handler.ResultResponseBodyAdvice())
             .build();
   }
 

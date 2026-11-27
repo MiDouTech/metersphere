@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 @Service
 public class AgentGenericMcpWriteService {
     private static final Set<String> TOOLS=Set.of(
-        "metersphere.functional.module.create","metersphere.functional.case.create","metersphere.functional.case.batch_create",
+        "metersphere.data_asset.manage","metersphere.functional.module.create","metersphere.functional.case.create","metersphere.functional.case.batch_create",
         "metersphere.functional.attachment.attach","metersphere.functional.attachment.delete",
         "metersphere.bug.update","metersphere.bug.transition","metersphere.bug.comment.create",
         "metersphere.bug.case.relate","metersphere.bug.relate_case","metersphere.bug.case.unrelate",
@@ -22,6 +22,7 @@ public class AgentGenericMcpWriteService {
         "metersphere.project.create","metersphere.project.members.add");
     @org.springframework.beans.factory.annotation.Value("${agent.mcp.business-writes-enabled:true}")
     private boolean writesEnabled=true;
+    @jakarta.annotation.Resource private AgentDataAssetMcpWriteService dataAssetWrites;
     private final AgentOperationExecutor operations;
     private final AgentBusinessAccess access;
     private final AgentProjectService projects;
@@ -30,6 +31,11 @@ public class AgentGenericMcpWriteService {
     public static boolean handles(String name){return TOOLS.contains(name);}
     public Map<String,Object> execute(String name,Map<String,Object> raw,Supplier<Map<String,Object>> action){
         if(!handles(name))throw new MSException("MCP_TOOL_NOT_FOUND");
+        if(name.equals("metersphere.data_asset.manage"))return dataAssetWrites.execute(raw,()->{
+            if(!writesEnabled && !AgentDataAssetMcpWriteService.isReadAction(raw.get("action")))
+                throw new MSException("MCP_BUSINESS_WRITE_DISABLED");
+            return action.get();
+        });
         var args=new LinkedHashMap<>(raw);
         if(!name.equals("metersphere.project.create")) {
             String project;

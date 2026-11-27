@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "schemaVersion": 1,
+    "revision": "61864540c1+test-assets-usability-working-tree",
+    "builtAt": "2026-11-27T13:37:24.105Z",
+    "indexSha256": "27584677c55e1040bed4b44d6a6043827d1da86c350dccc2ae0a74e3fbafa43a",
+    "assets": [
+      "/assets/index-BOC2vChl.js",
+      "/assets/vue-DZlbQ0G5.js",
+      "/assets/arco-D7Hh4WHF.js",
+      "/assets/codeEditor-dtPc1o1E.js",
+      "/assets/codeEditor-1KD5iQ87.css",
+      "/assets/index-BV2frM8G.css"
+    ],
+    "validationBuild": "usability-v4",
+    "note": "Development production bundle. Source bound separately by review patch SHA256; not a deployed acceptance claim."
+  },
+  "indexSha256": "27584677c55e1040bed4b44d6a6043827d1da86c350dccc2ae0a74e3fbafa43a",
+  "manifestSha256": "f6767bbfa3b4236b77e273e13de8c62267c227197cd524070a301272e392881c"
+}

@@ -1,0 +1,250 @@
+{
+  "fixtureBoundary": "Synthetic identity/shell; production bundle, real MVC services, MySQL and MinIO",
+  "detail": {
+    "url": "#/test-assets/datasets/430b6ad0-af9c-4754-a386-29fb7d9c37c0",
+    "defaultContent": "数据内容",
+    "usedAfterReload": true,
+    "noGlobal": true,
+    "noReplace": true
+  },
+  "repeatedCopy": {
+    "message": "已复制，使用状态已保存",
+    "used": true
+  },
+  "history": {
+    "oldVersionAmount": true,
+    "noCurrentAmount": true
+  },
+  "csvUpload": {
+    "rows": 4,
+    "records": [
+      [
+        "name",
+        "code"
+      ],
+      [
+        "Alice",
+        "001"
+      ],
+      [
+        "Bob",
+        "002"
+      ],
+      [
+        "comma,name",
+        "003"
+      ]
+    ],
+    "message": "已复制，使用状态已保存",
+    "allUsed": true
+  },
+  "markFailureRecovery": {
+    "before": {
+      "pendingKeys": [
+        "data-record-outbox:ui-fixture::eb82c625-2175-42b1-9355-5547c3df7200"
+      ],
+      "safeOutbox": [
+        [
+          "actor",
+          "assetId",
+          "keys",
+          "organization",
+          "requestId",
+          "versionId"
+        ]
+      ],
+      "message": "已复制，正在保存使用状态"
+    },
+    "reloadedPending": true,
+    "retryClearedOutbox": true
+  },
+  "batchDeleteModal": {
+    "viewport": {
+      "width": 1908,
+      "height": 918
+    },
+    "visibleModal": {
+      "x": 694,
+      "y": 311.109375,
+      "width": 520,
+      "height": 204
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 45.890625
+    },
+    "text": "批量删除测试数据\n确认删除所选数据？引用中的数据将被拒绝。\n取消确定",
+    "position": "absolute",
+    "cancelVerified": true
+  },
+  "metadataEdit": {
+    "renamed": true,
+    "rowsUnchanged": 4,
+    "allUsed": true
+  },
+  "storageAndCapacity": {
+    "large": {
+      "bytes": 31457280,
+      "sha256": "fd9b580a0e26e23e4abd71a7d17d703e4a1122688d41b297d44deaf1729537a9",
+      "ready": true,
+      "customCategory": true,
+      "sourceSha256": "fd9b580a0e26e23e4abd71a7d17d703e4a1122688d41b297d44deaf1729537a9",
+      "bytesEqual": true
+    },
+    "many": {
+      "total": 100000,
+      "tailCount": 100,
+      "lastIndex": 99999,
+      "lastContent": [
+        "item99999",
+        "value99999"
+      ]
+    },
+    "legacySources": [
+      {
+        "versionNo": 2,
+        "equalsExpected": true
+      },
+      {
+        "versionNo": 1,
+        "equalsExpected": true
+      }
+    ]
+  },
+  "narrowGeometry": {
+    "width": 1004,
+    "documentWidth": 1004,
+    "regionWidth": 611,
+    "tableWidth": 1476,
+    "noError": true
+  },
+  "moreActions": [
+    "发布到项目",
+    "用于任务",
+    "项目引用追溯",
+    "历史版本",
+    "下载源上传文件（不含在线修改）"
+  ],
+  "batchDeleteConfirmed": true,
+  "manual": {
+    "values": [
+      "123",
+      "345",
+      "456"
+    ],
+    "states": [
+      "已使用",
+      "未使用",
+      "未使用"
+    ]
+  },
+  "finalBundle": "usability-v4",
+  "caseNarrowLayout": {
+    "layoutOnly": true,
+    "width": 1004,
+    "documentWidth": 1004,
+    "cardRight": 952,
+    "contentRight": 947,
+    "searchRight": 797
+  },
+  "categoryManager": {
+    "customVisible": true,
+    "protectedDefaultExcludedFromEditTree": true
+  },
+  "narrowHorizontalWheel": {
+    "scrollable": [
+      {
+        "class": "arco-scrollbar-container arco-table-content arco-table-content-scroll-x",
+        "left": 865
+      }
+    ],
+    "documentWidth": 1004,
+    "viewport": 1004
+  },
+  "largeSingleField": {
+    "id": "90697acb-5779-407c-9194-e9ac312a0c8f",
+    "versionId": "a1795692-48cc-426a-ba9f-d143dbb90337",
+    "content": {
+      "status": 200,
+      "code": 100200,
+      "length": 31457280
+    },
+    "record": {
+      "status": 200,
+      "total": 1,
+      "length": 31457280
+    },
+    "recordKey": "d7da1a2e47d8d571703a5d5dc2522ab1754bc4a4e7fc8829b76a119213b5628a:1",
+    "copy": {
+      "status": 200,
+      "length": 31457280,
+      "sha256": "fd9b580a0e26e23e4abd71a7d17d703e4a1122688d41b297d44deaf1729537a9"
+    },
+    "update": {
+      "status": 200,
+      "revision": 2,
+      "versionId": "7e631bbc-b539-435d-a4c9-b748572192b8"
+    },
+    "ui": {
+      "render": {
+        "rows": 1,
+        "characters": 31457288,
+        "cellHeight": 570960
+      },
+      "message": "已复制，使用状态已保存",
+      "used": "已使用"
+    },
+    "usedAcrossVersions": [
+      {
+        "versionId": "a1795692-48cc-426a-ba9f-d143dbb90337",
+        "status": 200,
+        "total": 1,
+        "used": true
+      },
+      {
+        "versionId": "7e631bbc-b539-435d-a4c9-b748572192b8",
+        "status": 200,
+        "total": 1,
+        "used": true
+      }
+    ]
+  },
+  "independentReviewRevision": "v1.1",
+  "lateClipboardSuccess": {
+    "calls": 1,
+    "marks": 0,
+    "text": "\"\"",
+    "lateSuccess": true,
+    "url": "#/test-assets/datasets/a1ef0632-02d2-4a0d-9411-2d3bb1757b6f",
+    "outbox": [
+      {
+        "key": "data-record-outbox:ui-fixture::a1ef0632-02d2-4a0d-9411-2d3bb1757b6f:3f3f0534-3337-45ee-95c6-e89eb3f6b2a0",
+        "job": {
+          "actor": "ui-fixture",
+          "organization": "",
+          "assetId": "a1ef0632-02d2-4a0d-9411-2d3bb1757b6f",
+          "versionId": "e8bd581e-11f7-48ea-812f-7c482e18831f",
+          "keys": [
+            "055539df4a0b804c58caf46c0cd2941af10d64c1395ddd8e50b5f55d945841e6:1"
+          ],
+          "requestId": "3f3f0534-3337-45ee-95c6-e89eb3f6b2a0"
+        }
+      }
+    ],
+    "restored": {
+      "calls": 1,
+      "marks": 1,
+      "text": "\"\"",
+      "outbox": [],
+      "used": "\t\n1\n\t\n[\n  \"\"\n]\n\t\n已使用"
+    }
+  },
+  "quotedEmptyEofRoundtrip": {
+    "url": "#/test-assets/datasets/77d9db88-dd26-4f82-bea7-e02e17944511",
+    "records": [
+      "[\n  \"\"\n]"
+    ],
+    "rowCount": 1,
+    "unused": true
+  }
+}

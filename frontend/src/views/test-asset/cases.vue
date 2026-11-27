@@ -15,7 +15,7 @@
       >
     </nav>
     <SystemCaseAssets v-if="systemView" />
-    <MsCard v-else simple :min-width="0">
+    <MsCard v-else auto-width simple :min-width="0">
       <div class="mb-4">
         <div class="text-base font-medium">用例资产</div>
         <div class="mt-1 text-sm text-[var(--color-text-3)]">用例项目仅是资产分类目录，不会创建可进入的业务项目。</div>
@@ -445,7 +445,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+  import { computed, onUnmounted, reactive, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { Message, Modal } from '@arco-design/web-vue';
   import dayjs from 'dayjs';
@@ -598,8 +598,10 @@
       syncRetryBusy.value = false;
     }
   }
+  let projectActive = true;
   let caseLoadSequence = 0;
   async function loadCases() {
+    if (systemView.value || !projectActive) return;
     const sequence = ++caseLoadSequence;
     const catalogId = selectedCatalogId.value;
     syncStatus.value = undefined;
@@ -617,12 +619,14 @@
         ...caseQuery,
         keyword: caseQuery.keyword.trim() || undefined,
       } as any);
-      if (sequence !== caseLoadSequence || catalogId !== selectedCatalogId.value) return;
+      if (!projectActive || systemView.value || sequence !== caseLoadSequence || catalogId !== selectedCatalogId.value)
+        return;
       cases.value = result.list || [];
       caseTotal.value = result.total || 0;
       const failures = await getAssetSyncFailures(catalogId);
       const status = await getAssetSyncStatus(catalogId);
-      if (sequence !== caseLoadSequence || catalogId !== selectedCatalogId.value) return;
+      if (!projectActive || systemView.value || sequence !== caseLoadSequence || catalogId !== selectedCatalogId.value)
+        return;
       syncFailures.value = failures;
       syncStatus.value = status;
     } finally {
@@ -696,20 +700,24 @@
     }
   }
   const pinLoading = ref(false);
+  let catalogSequence = 0;
   async function loadCatalogs() {
+    if (systemView.value || !projectActive) return;
+    const token = ++catalogSequence;
     catalogLoading.value = true;
     try {
       const result = await pageCaseAssetCatalogs({
         ...catalogQuery,
         keyword: catalogQuery.keyword.trim() || undefined,
       });
+      if (!projectActive || systemView.value || token !== catalogSequence) return;
       catalogs.value = result.list || [];
       catalogTotal.value = result.total || 0;
       if (!catalogs.value.some((item) => item.id === selectedCatalogId.value))
         selectedCatalogId.value = catalogs.value[0]?.id || '';
       await loadCases();
     } finally {
-      catalogLoading.value = false;
+      if (token === catalogSequence) catalogLoading.value = false;
     }
   }
   async function toggleCatalogPin(item: CaseAssetCatalog) {
@@ -895,10 +903,30 @@
     referencedQuery.current = current;
     loadReferencedProjects();
   }
-  onMounted(async () => {
-    assetCategories.value = await listTestAssetCategories();
-    await loadCatalogs();
-    await restoreLatestHistorySync();
+  let projectGeneration = 0;
+  watch(
+    systemView,
+    async (isSystem) => {
+      const token = ++projectGeneration;
+      ++catalogSequence;
+      ++caseLoadSequence;
+      catalogLoading.value = false;
+      caseLoading.value = false;
+      if (isSystem) return;
+      const categories = await listTestAssetCategories();
+      if (!projectActive || token !== projectGeneration || systemView.value) return;
+      assetCategories.value = categories;
+      await loadCatalogs();
+      if (!projectActive || token !== projectGeneration || systemView.value) return;
+      await restoreLatestHistorySync();
+    },
+    { immediate: true }
+  );
+  onUnmounted(() => {
+    projectActive = false;
+    ++projectGeneration;
+    ++catalogSequence;
+    ++caseLoadSequence;
   });
 </script>
 

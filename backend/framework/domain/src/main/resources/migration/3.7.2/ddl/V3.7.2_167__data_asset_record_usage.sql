@@ -1,0 +1,3 @@
+CREATE TABLE data_asset_record_projection(version_id varchar(64) NOT NULL,record_index int NOT NULL,record_key varchar(80) NOT NULL,content_json longtext NOT NULL,PRIMARY KEY(version_id,record_index),UNIQUE KEY data_asset_record_key(version_id,record_key));
+CREATE TABLE data_asset_record_usage(asset_id varchar(64) NOT NULL,record_key varchar(80) NOT NULL,used_time bigint NOT NULL,actor_id varchar(64) NOT NULL,PRIMARY KEY(asset_id,record_key));
+CREATE TABLE data_asset_record_request(organization_id varchar(64) NOT NULL,actor_id varchar(64) NOT NULL,request_id varchar(128) NOT NULL,request_hash varchar(64) NOT NULL,PRIMARY KEY(organization_id,actor_id,request_id));

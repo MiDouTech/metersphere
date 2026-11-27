@@ -53,14 +53,19 @@ public class PermissionUiService {
 
     public UserUiPermissionsDTO aggregate(UserDTO userDTO) {
         UserUiPermissionsDTO result = new UserUiPermissionsDTO();
-        if (userDTO == null || CollectionUtils.isEmpty(userDTO.getUserRoleRelations())) {
-            return result;
-        }
-        if (CollectionUtils.isEmpty(userDTO.getUserRoles())) {
-            return result;
-        }
-
+        if (userDTO == null) return result;
         List<PermissionResource> resources = permissionResourceMapper.selectEnabled();
+        // Version navigation has no additional business grant; its data APIs retain source authorization.
+        resources.stream().filter(resource -> "TEST_ASSET_VERSIONS_PAGE".equals(resource.getCode()))
+                .findFirst().ifPresent(resource -> {
+                    registerManagedRoute(result.getOrganization(), resource);
+                    result.getOrganization().getVisible().add(resource.getCode());
+                    addVisibleRoute(result.getOrganization(), resource);
+                });
+        if (CollectionUtils.isEmpty(userDTO.getUserRoleRelations()) || CollectionUtils.isEmpty(userDTO.getUserRoles())) {
+            exposeMenuAncestors(result, resources);
+            return result;
+        }
         Map<String, List<PermissionResource>> resourcesByScope = resources.stream()
                 .collect(Collectors.groupingBy(PermissionResource::getScopeType, LinkedHashMap::new, Collectors.toList()));
         Map<String, UserRole> rolesById = userDTO.getUserRoles().stream()

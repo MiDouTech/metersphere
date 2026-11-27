@@ -1,45 +1,56 @@
 <template>
   <section class="datasets">
-    <a-space
+    <a-space class="dataset-toolbar" wrap
       ><a-button
         type="primary"
         :loading="busy"
         :disabled="!canWrite || parseStatus === 'PENDING' || parseStatus === 'RUNNING'"
         @click="fileInput?.click()"
         >上传测试数据</a-button
-      ><a-button :disabled="!canWrite" @click="create">人工新建</a-button><a-tag>全局资产</a-tag
-      ><a-button @click="legacyVisible = !legacyVisible">历史项目数据</a-button></a-space
-    >
-    <a-button
-      :disabled="!canWrite"
-      @click="
-        error = '';
-        importVisible = true;
-      "
-      >导入历史项目文件</a-button
+      ><a-button :disabled="!canWrite" @click="create">人工新建</a-button></a-space
     >
     <p v-if="limits"
-      >支持 {{ limits.formats.join('、') }}，最大 {{ limits.maxBytes }} 字节、{{ limits.maxRows }} 行。</p
+      >支持 {{ limits.formats.join('、') }}，最大 {{ Math.round(limits.maxBytes / 1024 / 1024) }} MB、{{
+        limits.maxRows
+      }}
+      行。</p
+    >
+    <a-alert v-if="migration" :type="migration.counts.failed ? 'warning' : 'info'"
+      >历史数据自动迁移：已完成 {{ migration.counts.done }}，待处理 {{ migration.counts.pending }}，进行中
+      {{ migration.counts.running }}，失败 {{ migration.counts.failed }}。<a-button
+        v-if="canWrite && migration.counts.failed"
+        :loading="migrationBusy"
+        @click="migrate(true)"
+        >重试一个失败项</a-button
+      ></a-alert
+    ><a-alert v-if="migrationError" type="error"
+      >{{ migrationError }}<a-button :loading="migrationBusy" @click="migrate()">刷新迁移状态</a-button></a-alert
     >
     <input ref="fileInput" type="file" hidden accept=".json,.txt,.csv,.xlsx,.xls" @change="upload" />
     <a-alert v-if="parseStatus" :type="parseStatus === 'FAILED' ? 'error' : 'info'"
       >上传解析：{{ parseLabel(parseStatus)
       }}<a-button v-if="parseStatus === 'FAILED'" @click="retryParse">重试解析</a-button></a-alert
-    ><a-alert v-if="error" type="error">{{ error }}</a-alert> <Catalog v-if="legacyVisible" /><div
-      v-else
-      class="data-layout"
-    >
+    ><a-alert v-if="error" type="error">{{ error }}</a-alert>
+    <div class="data-layout">
       <aside aria-label="数据分类"
-        ><a-button long @click="filterCategory('')">全部分类</a-button
-        ><a-button long @click="filterCategory('__uncategorized__')">未分类</a-button
+        ><div class="category-header"
+          ><a-link @click="filterCategory('')">全部分类</a-link
+          ><a-space
+            ><a-button
+              type="text"
+              aria-label="管理分类"
+              :disabled="!canManageCategories"
+              @click="categoryVisible = true"
+              ><icon-settings /></a-button
+            ><a-button type="text" aria-label="新增分类" :disabled="!canManageCategories" @click="openCreateCategory"
+              ><icon-plus /></a-button></a-space></div
         ><a-tree
           :data="categories"
           :field-names="{ key: 'id', title: 'name' }"
           @select="(keys) => filterCategory(String(keys[0] || ''))"
-        /><a-button @click="categoryVisible = true">管理分类</a-button></aside
-      >
+      /></aside>
       <main>
-        <a-space
+        <a-space wrap class="list-toolbar"
           ><a-input-search v-model="keyword" placeholder="搜索测试数据" @search="search" /><a-button
             :disabled="!canWrite || !selected.length"
             @click="
@@ -48,8 +59,8 @@
             "
             >批量修改</a-button
           ><a-button :disabled="!canWrite || !selected.length" @click="startQueue">逐项修改内容</a-button
-          ><a-popconfirm content="确认删除所选数据？引用中的数据将被拒绝。" @ok="batchDelete"
-            ><a-button status="danger" :disabled="!canWrite || !selected.length">批量删除</a-button></a-popconfirm
+          ><a-button status="danger" :disabled="!canWrite || !selected.length" @click="deleteVisible = true"
+            >批量删除</a-button
           ></a-space
         >
         <div class="table-region" role="region" aria-label="测试数据列表" tabindex="0">
@@ -57,26 +68,40 @@
             v-model:selected-keys="selected"
             :data="rows"
             row-key="id"
+            :scroll="{ x: 1400 }"
             :loading="loading"
             :row-selection="{ type: 'checkbox', showCheckedAll: true }"
             :pagination="{ current: page, pageSize: 20, total }"
             @page-change="changePage"
           >
             <template #columns
-              ><a-table-column title="名称"
+              ><a-table-column title="名称" :width="220" ellipsis tooltip
                 ><template #cell="{ record }"
                   ><a-link @click="open(record, false)">{{ record.name }}</a-link></template
                 ></a-table-column
-              ><a-table-column title="说明" data-index="description" :width="180" /><a-table-column title="分类"
+              ><a-table-column title="说明" data-index="description" :width="180" /><a-table-column
+                title="分类"
+                :width="160"
+                ellipsis
+                tooltip
                 ><template #cell="{ record }">{{ categoryLabel(record.categoryId) }}</template></a-table-column
-              ><a-table-column title="负责人" data-index="owner" /><a-table-column title="更新时间"
+              ><a-table-column title="负责人" :width="120" ellipsis tooltip data-index="owner" /><a-table-column
+                title="更新时间"
+                :width="190"
+                ellipsis
+                tooltip
                 ><template #cell="{ record }">{{
                   record.updateTime ? new Date(record.updateTime).toLocaleString() : '未记录'
                 }}</template></a-table-column
-              ><a-table-column title="格式" data-index="format" /><a-table-column
+              ><a-table-column title="格式" :width="90" ellipsis tooltip data-index="format" /><a-table-column
                 title="解析状态"
+                :width="110"
+                ellipsis
+                tooltip
                 data-index="parseStatus"
-              /><a-table-column title="修订" data-index="revision" /><a-table-column title="操作" :width="270"
+              /><a-table-column title="修订" :width="80" ellipsis tooltip data-index="revision" /><a-table-column
+                title="操作"
+                :width="270"
                 ><template #cell="{ record }"
                   ><a-space
                     ><a-link @click="open(record, false)">详情</a-link
@@ -84,10 +109,10 @@
                     ><a-popconfirm content="确认删除？" @ok="remove(record)"
                       ><a-link status="danger" :disabled="!canWrite">删除</a-link></a-popconfirm
                     ><a-dropdown @select="(key) => moreAction(String(key), record)"
-                      ><a-button aria-label="更多操作">…</a-button
+                      ><a-button aria-label="更多操作">更多操作</a-button
                       ><template #content
                         ><a-doption value="publish">发布到项目</a-doption><a-doption value="task">用于任务</a-doption
-                        ><a-doption value="trace">项目引用追溯</a-doption><a-doption value="source">来源治理</a-doption
+                        ><a-doption value="trace">项目引用追溯</a-doption
                         ><a-doption value="versions">历史版本</a-doption
                         ><a-doption value="file" :disabled="!record.hasFile"
                           >下载源上传文件（不含在线修改）</a-doption
@@ -108,6 +133,15 @@
         >
       </main>
     </div>
+    <a-modal v-model:visible="quickCategoryVisible" title="新增分类" :on-before-ok="createCategory"
+      ><a-alert v-if="error" type="error">{{ error }}</a-alert
+      ><a-form :model="{ name: quickCategoryName }" layout="vertical"
+        ><a-form-item label="分类名称" required
+          ><a-input v-model="quickCategoryName" :max-length="100" placeholder="请输入分类名称" /></a-form-item></a-form
+    ></a-modal>
+    <a-modal v-model:visible="deleteVisible" title="批量删除测试数据" :on-before-ok="batchDelete"
+      >确认删除所选数据？引用中的数据将被拒绝。<a-alert v-if="error" type="error">{{ error }}</a-alert></a-modal
+    >
     <a-modal
       v-model:visible="editorVisible"
       :title="editing ? (draft.id ? '修改测试数据' : '新建测试数据') : '测试数据详情'"
@@ -194,14 +228,7 @@
         ></a-list
       ></a-modal
     >
-    <a-modal v-model:visible="importVisible" title="导入历史项目文件" :on-before-ok="importLegacy"
-      ><a-alert v-if="error" data-testid="data-import-error" class="dialog-error" type="error">{{ error }}</a-alert
-      ><a-form :model="{}" layout="vertical"
-        ><a-form-item label="来源项目 ID"><a-input v-model="importProject" /></a-form-item
-        ><a-form-item label="来源文件 ID"><a-input v-model="importFileId" /></a-form-item
-        ><p>请从历史项目数据中确认来源项目及文件；将校验该项目权限并保留来源映射。</p></a-form
-      ></a-modal
-    ><a-modal
+    <a-modal
       v-model:visible="publishVisible"
       :title="categoryTrace ? '选择追溯项目' : '选择执行项目并发布固定版本'"
       :on-before-ok="publishSelected"
@@ -219,10 +246,10 @@
   import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
 
-  import Catalog from './catalog.vue';
   import DataTableEditor from './components/DataTableEditor.vue';
   import TestAssetCategoryDrawer from './components/TestAssetCategoryDrawer.vue';
 
+  import { createTestAssetCategory } from '@/api/modules/ai-execution';
   import {
     batchDataAssets,
     type DataAsset,
@@ -235,11 +262,13 @@
     getDataContent,
     getDataJob,
     getDataLimits,
-    importLegacyData,
+    getLegacyMigrationStatus,
+    type LegacyMigrationStatus,
     listDataAssets,
     listDataCategories,
     publishDataAsset,
     retryDataJob,
+    runLegacyMigration,
     saveDataAsset,
     uploadDataAsset,
   } from '@/api/modules/test-data-assets';
@@ -248,15 +277,19 @@
   import businessAssetError from '@/utils/businessAssetError';
   import { hasAnyPermission } from '@/utils/permission';
 
+  import { IconPlus, IconSettings } from '@arco-design/web-vue/es/icon';
+
+  const migration = ref<LegacyMigrationStatus>();
+  const migrationError = ref('');
+  const migrationBusy = ref(false);
+  let migrationGeneration = 0;
+  let migrationTimer: ReturnType<typeof setTimeout> | undefined;
+  const canManageCategories = computed(() => hasAnyPermission(['TEST_ASSET_CATEGORY:MANAGE']));
   const canWrite = computed(() => hasAnyPermission(['TEST_DATA_ASSET:READ+UPDATE'], ['ORGANIZATION', 'SYSTEM']));
   const publishVisible = ref(false);
   const executionProject = ref('');
   const publishTarget = ref<DataAsset>();
   const taskAfterPublish = ref(false);
-  const importVisible = ref(false);
-  const importProject = ref('');
-  const importFileId = ref('');
-  const legacyVisible = ref(false);
   const app = useAppStore();
   const route = useRoute();
   const router = useRouter();
@@ -279,7 +312,16 @@
   const queue = ref<DataAsset[]>([]);
   const fileInput = ref<HTMLInputElement>();
   const categoryVisible = ref(false);
+  const quickCategoryVisible = ref(false);
+  const quickCategoryName = ref('');
+  function openCreateCategory() {
+    if (!canManageCategories.value) return;
+    error.value = '';
+    quickCategoryName.value = '';
+    quickCategoryVisible.value = true;
+  }
   const batchVisible = ref(false);
+  const deleteVisible = ref(false);
   const categoryMode = ref('keep');
   const descriptionMode = ref('keep');
   const categoryTrace = ref(false);
@@ -291,15 +333,25 @@
   const parseJob = ref('');
   const parseStatus = ref('');
   let parseTimer: ReturnType<typeof setTimeout> | undefined;
-  onBeforeUnmount(() => clearTimeout(parseTimer));
+  let detailRequest = 0;
+  let active = true;
+  let categoryRequest = 0;
+  let request = 0;
+  onBeforeUnmount(() => {
+    clearTimeout(parseTimer);
+    clearTimeout(migrationTimer);
+    ++migrationGeneration;
+    ++detailRequest;
+    active = false;
+    ++request;
+    ++categoryRequest;
+  });
   const results = ref<{ id: string; status: string; error?: string }[]>([]);
   const versionsVisible = ref(false);
   const versions = ref<{ id: string; versionNo?: number }[]>([]);
   const versionAsset = ref<DataAsset>();
-  let request = 0;
-  let detailRequest = 0;
   function categoryLabel(id?: string): string {
-    if (!id) return '未分类';
+    if (!id || id === '__uncategorized__') return '默认分类';
     const find = (items: DataCategory[]): string | undefined =>
       items.map((item) => (item.id === id ? item.name : find(item.children || []))).find(Boolean);
     return find(categories.value) || '分类不可见';
@@ -318,10 +370,13 @@
     );
   }
   function fail(reason?: unknown) {
+    if (!active) return;
     error.value = businessAssetError(reason, '操作失败，请检查权限、网络和数据版本；并发修改时请重新打开详情。');
   }
   async function load() {
+    if (!active) return;
     const token = ++request;
+    const organization = app.currentOrgId;
     loading.value = true;
     try {
       const data = await listDataAssets({
@@ -330,22 +385,24 @@
         page: page.value,
         pageSize: 20,
       });
-      if (token === request) {
+      if (active && token === request && organization === app.currentOrgId) {
         rows.value = data.items;
         total.value = data.total;
         selected.value = [];
       }
     } catch (reason) {
-      fail(reason);
+      if (active && token === request && organization === app.currentOrgId) fail(reason);
     } finally {
-      if (token === request) loading.value = false;
+      if (active && token === request && organization === app.currentOrgId) loading.value = false;
     }
   }
   async function loadCategories() {
+    if (!active) return;
+    const token = ++categoryRequest;
     const organization = app.currentOrgId;
     try {
       const flat = await listDataCategories();
-      if (organization !== app.currentOrgId) return;
+      if (!active || token !== categoryRequest || organization !== app.currentOrgId) return;
       const nodes = new Map(
         flat.map((item) => [
           item.id,
@@ -360,24 +417,63 @@
       });
       categories.value = roots;
     } catch (reason) {
-      fail(reason);
+      if (active && token === categoryRequest && organization === app.currentOrgId) fail(reason);
     }
   }
-  async function importLegacy() {
-    if (!importProject.value.trim() || !importFileId.value.trim()) {
-      error.value = '请填写来源项目和文件 ID';
+  async function createCategory() {
+    if (!active) return;
+    if (!canManageCategories.value) {
+      error.value = '暂无分类管理权限';
+      return false;
+    }
+    const organization = app.currentOrgId;
+    const name = quickCategoryName.value.trim();
+    if (!name) {
+      error.value = '请输入分类名称';
       return false;
     }
     try {
-      await importLegacyData(importProject.value.trim(), importFileId.value.trim());
-      await Promise.all([load(), loadCategories()]);
+      await createTestAssetCategory({ name });
+      if (!active || organization !== app.currentOrgId) return false;
+      await loadCategories();
       return true;
     } catch (reason) {
-      fail(reason);
+      if (organization === app.currentOrgId) fail(reason);
       return false;
     }
   }
+  async function migrate(retryMigrationFailures = false) {
+    if (!active) return;
+    if (migrationBusy.value || !app.currentOrgId) return;
+    const token = migrationGeneration;
+    const organization = app.currentOrgId;
+    migrationBusy.value = true;
+    migrationError.value = '';
+    try {
+      let status = await getLegacyMigrationStatus();
+      if (token !== migrationGeneration || organization !== app.currentOrgId) return;
+      if (
+        canWrite.value &&
+        status.canRun &&
+        (status.counts.pending > 0 || status.counts.running > 0 || retryMigrationFailures)
+      )
+        status = await runLegacyMigration(organization, retryMigrationFailures);
+      if (token !== migrationGeneration || organization !== app.currentOrgId) return;
+      migration.value = status;
+      if (status.hasMore) migrationTimer = setTimeout(() => migrate(), status.canRun ? 1000 : 10000);
+      else {
+        load();
+        loadCategories();
+      }
+    } catch (reason) {
+      if (token === migrationGeneration)
+        migrationError.value = businessAssetError(reason, '历史数据迁移暂时失败，请刷新状态后重试。');
+    } finally {
+      if (token === migrationGeneration) migrationBusy.value = false;
+    }
+  }
   async function download(row: DataAsset) {
+    if (!active) return;
     if (!row.hasFile) return;
     try {
       const blob = await downloadDataFile(row.id);
@@ -427,6 +523,7 @@
     editorVisible.value = true;
   }
   async function open(row: DataAsset, edit: boolean, versionId?: string) {
+    if (!active) return;
     error.value = '';
     const token = ++detailRequest;
     editorVisible.value = true;
@@ -436,13 +533,13 @@
     contentText.value = '';
     try {
       const asset = await getDataAsset(row.id);
-      if (token !== detailRequest) return;
+      if (!active || token !== detailRequest) return;
       if (edit && versionId && versionId !== asset.currentVersionId)
         throw new Error('Historical editing is not supported');
       const fixedVersionId = edit ? asset.currentVersionId : versionId || asset.currentVersionId;
       if (!fixedVersionId) throw new Error('Immutable version is missing');
       const content = await getDataContent(row.id, fixedVersionId);
-      if (token !== detailRequest) return;
+      if (!active || token !== detailRequest) return;
       resetDraft();
       Object.assign(draft, asset, { expectedRevision: asset.revision });
       contentText.value =
@@ -462,6 +559,7 @@
     }
   }
   async function save() {
+    if (!active) return;
     const organization = app.currentOrgId;
     const editorToken = detailRequest;
     if (!complete.value || detailLoading.value || busy.value) return;
@@ -473,7 +571,7 @@
     try {
       const content = draft.format === 'TXT' ? contentText.value : JSON.parse(contentText.value);
       await saveDataAsset({ ...draft, content });
-      if (organization !== app.currentOrgId || editorToken !== detailRequest) return;
+      if (!active || organization !== app.currentOrgId || editorToken !== detailRequest) return;
       const next = queue.value.shift();
       if (next) await open(next, true);
       else editorVisible.value = false;
@@ -485,12 +583,13 @@
     }
   }
   async function pollParse() {
+    if (!active) return;
     const organization = app.currentOrgId;
     const id = parseJob.value;
     if (!id) return;
     try {
       const job = await getDataJob(id);
-      if (organization !== app.currentOrgId || id !== parseJob.value) return;
+      if (!active || organization !== app.currentOrgId || id !== parseJob.value) return;
       parseStatus.value = job.status;
       if (['READY', 'SUCCESS', 'CANCELLED'].includes(job.status)) sessionStorage.removeItem('dataAssetParseJobId');
       if (job.status === 'PENDING' || job.status === 'RUNNING') parseTimer = setTimeout(pollParse, 2000);
@@ -498,7 +597,7 @@
         await Promise.all([load(), loadCategories()]);
       }
     } catch (reason) {
-      if (organization !== app.currentOrgId || id !== parseJob.value) return;
+      if (!active || organization !== app.currentOrgId || id !== parseJob.value) return;
       if (reason instanceof AppError && (reason.status === 404 || reason.category === 'not-found')) {
         parseJob.value = '';
         parseStatus.value = '';
@@ -509,6 +608,7 @@
     }
   }
   async function retryParse() {
+    if (!active) return;
     try {
       await retryDataJob(parseJob.value);
       await pollParse();
@@ -517,6 +617,7 @@
     }
   }
   async function upload(event: Event) {
+    if (!active) return;
     const organization = app.currentOrgId;
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -536,7 +637,7 @@
         categoryId.value.startsWith('__') ? undefined : categoryId.value,
         requestId
       );
-      if (organization !== app.currentOrgId) return;
+      if (!active || organization !== app.currentOrgId) return;
       if (result.jobId) {
         parseJob.value = result.jobId;
         sessionStorage.setItem('dataAssetParseJobId', result.jobId);
@@ -551,6 +652,7 @@
     }
   }
   async function remove(row: DataAsset) {
+    if (!active) return;
     try {
       await deleteDataAsset(row);
       await Promise.all([load(), loadCategories()]);
@@ -567,10 +669,11 @@
     if (first) open(first, true);
   }
   async function batch(items: DataEdit[]) {
+    if (!active) return;
     const organization = app.currentOrgId;
     try {
       const result = await batchDataAssets(items);
-      if (organization !== app.currentOrgId) return false;
+      if (!active || organization !== app.currentOrgId) return false;
       results.value = result.items;
       if (result.id) {
         jobId.value = result.id;
@@ -584,6 +687,7 @@
     }
   }
   async function retryFailed() {
+    if (!active) return;
     try {
       results.value = (await retryDataJob(jobId.value)).items || [];
       await Promise.all([load(), loadCategories()]);
@@ -614,10 +718,11 @@
     return batch(chosen().map((row) => ({ id: row.id, expectedRevision: row.revision, ...changes })));
   }
   async function showVersions(row: DataAsset) {
+    if (!active) return;
     const organization = app.currentOrgId;
     try {
       const value = await dataVersions(row.id);
-      if (organization !== app.currentOrgId) return;
+      if (!active || organization !== app.currentOrgId) return;
       versions.value = value;
       versionAsset.value = row;
       versionsVisible.value = true;
@@ -632,6 +737,7 @@
     }
   }
   async function publishSelected() {
+    if (!active) return;
     const row = publishTarget.value;
     if (categoryTrace.value) {
       if (!row || !executionProject.value.trim()) {
@@ -651,7 +757,7 @@
     const organization = app.currentOrgId;
     try {
       const published = await publishDataAsset(row.id, executionProject.value.trim(), row.currentVersionId);
-      if (organization !== app.currentOrgId) return false;
+      if (!active || organization !== app.currentOrgId) return false;
       if (taskAfterPublish.value)
         await router.push({
           name: 'executionTasks',
@@ -683,24 +789,27 @@
       executionProject.value = '';
       taskAfterPublish.value = key === 'task';
       publishVisible.value = true;
-    } else if (key === 'source') {
-      legacyVisible.value = true;
     } else if (key === 'file') download(row);
     else showVersions(row);
   }
   watch(
     () => app.currentOrgId,
     () => {
+      ++migrationGeneration;
+      clearTimeout(migrationTimer);
+      migrationBusy.value = false;
+      migration.value = undefined;
+      migrationError.value = '';
+      migrate();
       categoryVisible.value = false;
+      quickCategoryVisible.value = false;
+      quickCategoryName.value = '';
+      deleteVisible.value = false;
       batchVisible.value = false;
-      importVisible.value = false;
-      legacyVisible.value = false;
       batchCategory.value = '';
       batchDescription.value = '';
       categoryMode.value = 'keep';
       descriptionMode.value = 'keep';
-      importProject.value = '';
-      importFileId.value = '';
       clearTimeout(parseTimer);
       parseJob.value = '';
       parseStatus.value = '';
@@ -727,24 +836,32 @@
     }
   );
   onMounted(async () => {
+    migrate();
     try {
-      limits.value = await getDataLimits();
+      const dataLimits = await getDataLimits();
+      if (!active) return;
+      limits.value = dataLimits;
     } catch (reason) {
       fail(reason);
     }
+    if (!active) return;
     await Promise.all([load(), loadCategories()]);
+    if (!active) return;
     const previousParse = sessionStorage.getItem('dataAssetParseJobId');
     if (previousParse) {
       parseJob.value = previousParse;
       await pollParse();
+      if (!active) return;
     }
     const previousJob = sessionStorage.getItem('dataAssetBatchId');
     if (previousJob) {
       try {
         const job = await getDataJob(previousJob);
+        if (!active) return;
         jobId.value = job.id;
         results.value = job.items || [];
       } catch {
+        if (!active) return;
         sessionStorage.removeItem('dataAssetBatchId');
       }
     }
@@ -761,6 +878,18 @@
   }
   .datasets {
     padding: 20px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-2);
+  }
+  .dataset-toolbar {
+    margin-bottom: 12px;
   }
   .data-layout {
     display: flex;
@@ -768,11 +897,22 @@
     margin-top: 16px;
   }
   aside {
-    flex: 0 0 230px;
+    flex: 0 1 230px;
+    min-width: 150px;
   }
   main {
     flex: 1;
     min-width: 0;
+  }
+  .list-toolbar {
+    max-inline-size: 100%;
+  }
+  .table-region :deep(.arco-table-element) {
+    min-width: 1400px;
+  }
+  .table-region :deep(.arco-table-th),
+  .table-region :deep(.arco-table-td) {
+    white-space: nowrap;
   }
   .table-region {
     overflow: auto;
