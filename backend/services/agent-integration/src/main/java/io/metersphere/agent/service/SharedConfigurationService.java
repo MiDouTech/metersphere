@@ -15,20 +15,20 @@ public class SharedConfigurationService {
   private final JdbcTemplate jdbc;
   private final BusinessAssetService authorization;
   private final SharedConfigurationCipher cipher;
+  private final GlobalAssetAccess global;
 
   public SharedConfigurationService(
       JdbcTemplate jdbc, BusinessAssetService authorization, SharedConfigurationCipher cipher) {
     this.jdbc = jdbc;
     this.authorization = authorization;
     this.cipher = cipher;
+    this.global = authorization.globalAccess();
   }
 
   private String authorize(String project, boolean write) {
-    return authorization.authorize(
-        project,
-        write,
-        write ? "SHARED_CONFIGURATION:WRITE" : "SHARED_CONFIGURATION:READ",
-        write ? "SHARED_CONFIGURATION_WRITE" : "SHARED_CONFIGURATION_READ");
+    return global
+        .authorize(project, write ? "SHARED_CONFIGURATION:WRITE" : "SHARED_CONFIGURATION:READ")
+        .actorId();
   }
 
   public List<Map<String, Object>> list(String project) {
@@ -39,9 +39,9 @@ public class SharedConfigurationService {
                 + " environmentKey,c.name,c.current_version AS currentVersion,v.kind,v.file_name AS"
                 + " fileName,v.parse_status AS parseStatus,v.secret_type AS secretType FROM"
                 + " shared_configuration c JOIN shared_configuration_version v ON"
-                + " v.configuration_id=c.id AND v.version_no=c.current_version WHERE c.project_id=?"
-                + " ORDER BY c.system_key,c.environment_key,c.name",
-            project),
+                + " v.configuration_id=c.id AND v.version_no=c.current_version WHERE"
+                + " c.organization_id=? ORDER BY c.system_key,c.environment_key,c.name",
+            organization(project)),
         "id",
         "systemKey",
         "environmentKey",
@@ -57,15 +57,11 @@ public class SharedConfigurationService {
       List<io.metersphere.agent.dto.SharedConfigurationSave> entries) {
     if (entries.isEmpty()
         || entries.size() > 100
-        || entries.stream()
-                .map(io.metersphere.agent.dto.SharedConfigurationSave::projectId)
-                .distinct()
-                .count()
-            != 1
+        || entries.stream().map(entry -> organization(entry.projectId())).distinct().count() != 1
         || entries.stream().mapToLong(r -> Objects.toString(r.value(), "").length()).sum()
             > 2800000)
       throw new BusinessGovernanceException(
-          "CONFIGURATION_BATCH_INVALID", "每批最多 100 条且只允许同一项目，配置内容总量不能超过 2 MB");
+          "CONFIGURATION_BATCH_INVALID", "每批最多 100 条且只允许同一组织，配置内容总量不能超过 2 MB");
     var result = new ArrayList<Map<String, Object>>();
     for (var r : entries)
       result.add(
@@ -123,7 +119,7 @@ public class SharedConfigurationService {
     String actor = authorize(project, true);
     if (!Set.of("PLAIN", "SECRET", "DOCUMENT").contains(kind))
       throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "配置类型无效");
-    jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", project);
+    jdbc.queryForList("SELECT id FROM organization WHERE id=? FOR UPDATE", organization(project));
     if (keepSecret) {
       if (!"SECRET".equals(kind)
           || id == null
@@ -147,7 +143,7 @@ public class SharedConfigurationService {
           new String(
               cipher.decrypt(
                   (String) stored.get("encrypted_value"),
-                  project + ":" + id + ":" + expectedVersion),
+                  aadProject(project, id) + ":" + id + ":" + expectedVersion),
               StandardCharsets.UTF_8);
     }
     if (value == null || value.isBlank())
@@ -179,10 +175,10 @@ public class SharedConfigurationService {
         throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "新配置版本必须为零");
       Long duplicate =
           jdbc.queryForObject(
-              "SELECT COUNT(*) FROM shared_configuration WHERE project_id=? AND system_key=? AND"
-                  + " environment_key=? AND name=?",
+              "SELECT COUNT(*) FROM shared_configuration WHERE organization_id=? AND system_key=?"
+                  + " AND environment_key=? AND name=?",
               Long.class,
-              project,
+              organization(project),
               system,
               environment,
               name);
@@ -193,10 +189,11 @@ public class SharedConfigurationService {
       next = 1;
       jdbc.update(
           "INSERT INTO"
-              + " shared_configuration(id,project_id,system_key,environment_key,name,current_version)"
-              + " VALUES(?,?,?,?,?,?)",
+              + " shared_configuration(id,project_id,organization_id,system_key,environment_key,name,current_version)"
+              + " VALUES(?,?,?,?,?,?,?)",
           id,
-          project,
+          Objects.toString(project, ""),
+          organization(project),
           system,
           environment,
           name,
@@ -207,10 +204,10 @@ public class SharedConfigurationService {
         throw new BusinessGovernanceException("CONFIGURATION_VERSION_CONFLICT", "配置已变化，请刷新后重新编辑");
       Long duplicate =
           jdbc.queryForObject(
-              "SELECT COUNT(*) FROM shared_configuration WHERE project_id=? AND system_key=? AND"
-                  + " environment_key=? AND name=? AND id<>?",
+              "SELECT COUNT(*) FROM shared_configuration WHERE organization_id=? AND system_key=?"
+                  + " AND environment_key=? AND name=? AND id<>?",
               Long.class,
-              project,
+              organization(project),
               system,
               environment,
               name,
@@ -241,7 +238,7 @@ public class SharedConfigurationService {
         id,
         next,
         kind,
-        cipher.encrypt(bytes, project + ":" + id + ":" + next),
+        cipher.encrypt(bytes, aadProject(project, id) + ":" + id + ":" + next),
         "DOCUMENT".equals(kind) ? Objects.toString(filename, "") : "",
         parse,
         actor,
@@ -275,19 +272,28 @@ public class SharedConfigurationService {
   public Map<String, Object> audits(
       String project, String id, int page, int pageSize, String eventType, Integer version) {
     authorize(project, false);
-    if (project == null || project.isBlank() || project.length() > 64
-        || id == null || id.isBlank() || id.length() > 64
-        || page < 1 || page > 1000000 || pageSize < 1 || pageSize > 100
+    if ((project != null && project.length() > 64)
+        || id == null
+        || id.isBlank()
+        || id.length() > 64
+        || page < 1
+        || page > 1000000
+        || pageSize < 1
+        || pageSize > 100
         || (version != null && version < 1)
-        || (eventType != null && !Set.of("SAVE", "SELECT_VERSION", "EXECUTOR_RESOLVE", "RETRY_PARSE").contains(eventType))) {
-      throw new BusinessGovernanceException("GOVERNANCE_VALIDATION_ERROR", "审计查询参数无效，请检查页码、每页条数、事件类型和版本");
+        || (eventType != null
+            && !Set.of("SAVE", "SELECT_VERSION", "EXECUTOR_RESOLVE", "RETRY_PARSE")
+                .contains(eventType))) {
+      throw new BusinessGovernanceException(
+          "GOVERNANCE_VALIDATION_ERROR", "审计查询参数无效，请检查页码、每页条数、事件类型和版本");
     }
     configuration(project, id, false);
     var params = new ArrayList<Object>();
     params.add(id);
-    params.add(project);
-    String where = " FROM shared_configuration_audit a JOIN shared_configuration c ON c.id=a.configuration_id"
-        + " WHERE a.configuration_id=? AND c.project_id=?";
+    params.add(organization(project));
+    String where =
+        " FROM shared_configuration_audit a JOIN shared_configuration c ON c.id=a.configuration_id"
+            + " WHERE a.configuration_id=? AND c.organization_id=?";
     if (eventType != null) {
       where += " AND a.event_type=?";
       params.add(eventType);
@@ -299,12 +305,24 @@ public class SharedConfigurationService {
     Long total = jdbc.queryForObject("SELECT COUNT(*)" + where, Long.class, params.toArray());
     params.add(pageSize);
     params.add(((long) page - 1) * pageSize);
-    var items = BusinessAssetRows.canonical(jdbc.queryForList(
-        "SELECT a.id,a.configuration_id AS configurationId,a.version_no AS versionNo,"
-            + "a.actor_id AS actorId,a.event_type AS eventType,a.create_time AS createTime,a.reason"
-            + where + " ORDER BY a.create_time DESC,a.id DESC LIMIT ? OFFSET ?", params.toArray()),
-        "id", "configurationId", "versionNo", "actorId", "eventType", "createTime", "reason");
-    return Map.of("items", items, "total", total == null ? 0L : total, "page", page, "pageSize", pageSize);
+    var items =
+        BusinessAssetRows.canonical(
+            jdbc.queryForList(
+                "SELECT a.id,a.configuration_id AS configurationId,a.version_no AS"
+                    + " versionNo,a.actor_id AS actorId,a.event_type AS eventType,a.create_time AS"
+                    + " createTime,a.reason"
+                    + where
+                    + " ORDER BY a.create_time DESC,a.id DESC LIMIT ? OFFSET ?",
+                params.toArray()),
+            "id",
+            "configurationId",
+            "versionNo",
+            "actorId",
+            "eventType",
+            "createTime",
+            "reason");
+    return Map.of(
+        "items", items, "total", total == null ? 0L : total, "page", page, "pageSize", pageSize);
   }
 
   public Map<String, Object> read(String project, String id, int version, boolean document) {
@@ -326,7 +344,9 @@ public class SharedConfigurationService {
     // list/version JSON.
     if (document) authorize(project, true);
     byte[] value =
-        cipher.decrypt((String) row.get("encrypted_value"), project + ":" + id + ":" + version);
+        cipher.decrypt(
+            (String) row.get("encrypted_value"),
+            aadProject(project, id) + ":" + id + ":" + version);
     return Map.of(
         "kind",
         kind,
@@ -367,6 +387,7 @@ public class SharedConfigurationService {
     String actor =
         authorization.authorize(
             project, true, "SHARED_CONFIGURATION:RESOLVE", "SHARED_CONFIGURATION_RESOLVE");
+    authorization.requireProjectAccess(actor, project, true);
     var token = io.metersphere.agent.security.AgentTokenContext.get();
     if (token == null) throw AgentBusinessAccess.denied();
     var rows =
@@ -374,7 +395,7 @@ public class SharedConfigurationService {
             """
 SELECT v.version_no,v.kind,v.encrypted_value,v.file_name,v.secret_type
 FROM external_executor_session s JOIN external_executor_configuration pin ON pin.session_id=s.id
-JOIN shared_configuration c ON c.id=pin.configuration_id AND c.project_id=s.project_id
+JOIN shared_configuration c ON c.id=pin.configuration_id AND c.organization_id=(SELECT organization_id FROM project WHERE id=s.project_id)
 JOIN shared_configuration_version v ON v.configuration_id=c.id AND v.version_no=pin.version_no
 WHERE s.id=? AND s.project_id=? AND s.token_id=? AND s.actor_id=? AND c.id=? AND s.status='RUNNING'
 """,
@@ -387,7 +408,9 @@ WHERE s.id=? AND s.project_id=? AND s.token_id=? AND s.actor_id=? AND c.id=? AND
     var row = rows.getFirst();
     int version = ((Number) row.get("version_no")).intValue();
     byte[] bytes =
-        cipher.decrypt((String) row.get("encrypted_value"), project + ":" + id + ":" + version);
+        cipher.decrypt(
+            (String) row.get("encrypted_value"),
+            aadProject(project, id) + ":" + id + ":" + version);
     audit(id, version, actor, "EXECUTOR_RESOLVE");
     return Map.of(
         "version",
@@ -418,7 +441,9 @@ WHERE s.id=? AND s.project_id=? AND s.token_id=? AND s.actor_id=? AND c.id=? AND
     var row = rows.getFirst();
     String status =
         parse(
-            cipher.decrypt((String) row.get("encrypted_value"), project + ":" + id + ":" + version),
+            cipher.decrypt(
+                (String) row.get("encrypted_value"),
+                aadProject(project, id) + ":" + id + ":" + version),
             (String) row.get("file_name"),
             id + ":" + version);
     jdbc.update(
@@ -503,13 +528,22 @@ WHERE s.id=? AND s.project_id=? AND s.token_id=? AND s.actor_id=? AND c.id=? AND
     }
   }
 
+  private String organization(String project) {
+    return global.authorize(project, "SHARED_CONFIGURATION:READ").organizationId();
+  }
+
+  private String aadProject(String project, String id) {
+    return Objects.toString(configuration(project, id, false).get("project_id"), "");
+  }
+
   private Map<String, Object> configuration(String project, String id, boolean lock) {
     var rows =
         jdbc.queryForList(
-            "SELECT current_version FROM shared_configuration WHERE id=? AND project_id=?"
+            "SELECT current_version,project_id FROM shared_configuration WHERE id=? AND"
+                + " organization_id=?"
                 + (lock ? " FOR UPDATE" : ""),
             id,
-            project);
+            organization(project));
     if (rows.isEmpty())
       throw new BusinessGovernanceException("CONFIGURATION_NOT_ACCESSIBLE", "公共配置不存在或无权访问");
     return rows.getFirst();

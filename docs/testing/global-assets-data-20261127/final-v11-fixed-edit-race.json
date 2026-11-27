@@ -1,0 +1,20 @@
+{
+  "response": {
+    "status": 409,
+    "body": {
+      "code": "DATA_ASSET_VERSION_CONFLICT",
+      "message": "数据已更新，请刷新后重试",
+      "details": {},
+      "traceId": "d427de35-0818-4698-bca0-9bf11f93a916"
+    }
+  },
+  "contentRequest": "http://127.0.0.1:18762/api/test-data-assets/60510ef7-d18d-4262-8f32-38e07a9d07b2/content?versionId=5a7d08e9-51ef-4991-9e11-e1e14a29ffd1&_t=1795765892213",
+  "inlineVisible": true,
+  "draft": [
+    "只改说明，不应覆盖并发内容",
+    "{\n  \"amount\": 55.5\n}"
+  ],
+  "serverContent": {
+    "amount": 66.6
+  }
+}

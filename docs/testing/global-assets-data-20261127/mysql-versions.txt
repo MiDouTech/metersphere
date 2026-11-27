@@ -1,0 +1,240 @@
+[p1 "MeterSphere" | space "全局资产与测试数据开发验收20261127"(8): 2 managed, 0 untracked — p1* "MeterSphere", p2 "HiFox"]
+root
+  svg_root
+  container
+    container
+      container
+        image
+        text "MeterSphere"
+      container
+        text "业务资产"
+        text "用例资产"
+        text "测试数据"
+        text "公共配置"
+        text "资产版本"
+      unordered_list
+        list_item
+        list_item
+          button [ref=147]
+            svg_root
+        list_item
+          button [ref=148]
+            svg_root
+        list_item
+          button [ref=149]
+            svg_root
+        list_item
+          switch [ref=150]
+            svg_root
+        list_item
+          button [ref=151]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "Fixture"
+          svg_root
+      container [ref=220]
+        container
+          container
+            heading
+              text "资产版本"
+            paragraph
+              text "统一查看历史快照、比较变化与切换当前版本。"
+          container
+            container
+              container [ref=214]
+                text "测试数据"
+              container [ref=215]
+                text "业务资产"
+              container [ref=216]
+                text "公共配置"
+              container [ref=217]
+                text "其他资产"
+            container
+              container "测试数据版本"
+                container
+                  textbox [ref=221, loc=css:input[placeholder="搜索测试数据"]]
+                    text "搜索测试数据"
+                  svg_root
+                unordered_list
+                  list_item
+                    button [ref=222]
+                      text "upload.csv"
+                  list_item
+                    button [ref=223]
+                      text "订单-待审"
+                unordered_list
+                  container
+                    svg_root
+                    text "."
+                  list_item
+                    text "1"
+                  container
+                    svg_root
+                    text "."
+                container
+                  container
+                    heading
+                      text "v2"
+                    container "所选内容版本元信息"
+                      heading
+                        text "所选内容版本元信息"
+                      unordered_list
+                        list_item
+                          text "当时名称"
+                        list_item
+                          text "订单-待审"
+                        list_item
+                          text "当时说明"
+                        list_item
+                          text "已核验金额样本"
+                        list_item
+                          text "当时分类"
+                        list_item
+                          text "5beb8fc8-5d1d-447f-9210-47da69207827"
+                        list_item
+                          text "当时格式"
+                        list_item
+                          text "JSON"
+                    button [ref=224]
+                      text "查看固定版本内容"
+                  container
+                    heading
+                      text "v1"
+                    container "所选内容版本元信息"
+                      heading
+                        text "所选内容版本元信息"
+                      unordered_list
+                        list_item
+                          text "当时名称"
+                        list_item
+                          text "订单-待审"
+                        list_item
+                          text "当时说明"
+                        list_item
+                          text "批量治理验证"
+                        list_item
+                          text "当时分类"
+                        list_item
+                          text "未分类"
+                        list_item
+                          text "当时格式"
+                        list_item
+                          text "JSON"
+                    button [ref=225]
+                      text "查看固定版本内容"
+              container "业务资产版本"
+                button [ref=218]
+                  text "刷新"
+                container "业务资产"
+                  textbox [ref=219, loc=css:input[placeholder="请选择业务资产"]]
+                    text "请选择业务资产"
+                  svg_root
+                svg_root
+                text "历史快照不可修改；版本切换仅影响后续任务，执行中的任务保持原版本。"
+                svg_root
+                text "暂无业务资产版本"
+              container "公共配置版本"
+                button [ref=226]
+                  text "刷新"
+                container "公共配置"
+                  textbox [ref=227, loc=css:input[placeholder="请选择公共配置"]]
+                    text "请选择公共配置"
+                  svg_root
+                svg_root
+                text "历史敏感值保持脱敏。切换仅影响后续会话，已有执行器继续使用已固定版本。"
+                table
+                  table_row
+                    table_cell
+                      text "版本"
+                    table_cell
+                      text "类型"
+                    table_cell
+                      text "原始文档"
+                    table_cell
+                      text "解析状态"
+                    table_cell
+                      text "更新人"
+                    table_cell
+                      text "更新时间"
+                    table_cell
+                      text "操作"
+                table
+                  table_row
+                    table_cell
+                      svg_root
+                      text "请选择公共配置查看版本"
+              container
+                text "资产版本"
+                text "每一行都是不可变内容快照；任务引用固定版本，不随正式资产后续更新漂移。"
+                button [ref=228]
+                  text "刷新"
+                container
+                  textbox [ref=229, loc=css:input[placeholder="搜索资产名称或 ID"]]
+                    text "搜索资产名称或 ID"
+                  svg_root
+                container
+                  textbox [ref=230, loc=css:input[placeholder="资产类型"]]
+                    text "资产类型"
+                  svg_root
+                textbox [ref=231, loc=css:input[placeholder="精确资产 ID"]]
+                  text "精确资产 ID"
+                container
+                  textbox [ref=232, loc=css:input[placeholder="建立方式"]]
+                    text "建立方式"
+                  svg_root
+                container
+                  textbox [ref=233, loc=css:input[placeholder="资产分类"]]
+                    text "资产分类"
+                  svg_root
+                container
+                  checkbox [ref=234]
+                  svg_root
+                  text "含子分类"
+                table
+                  table_row
+                    table_cell
+                      text "类型"
+                    table_cell
+                      text "资产"
+                    table_cell
+                      text "版本"
+                    table_cell
+                      text "建立方式"
+                    table_cell
+                      text "资产分类"
+                    table_cell
+                      text "来源版本"
+                    table_cell
+                      text "状态"
+                    table_cell
+                      text "内容摘要"
+                    table_cell
+                      text "发布时间"
+                    table_cell
+                      text "操作"
+                  table_row
+                    table_cell
+                      svg_root
+                      text "暂无符合条件的资产版本。"
+  svg_root

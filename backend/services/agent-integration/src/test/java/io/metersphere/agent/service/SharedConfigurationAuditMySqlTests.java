@@ -30,7 +30,13 @@ class SharedConfigurationAuditMySqlTests {
       for (String file : List.of("V3.7.2_157__shared_configuration_secret_type.sql", "V3.7.2_158__shared_configuration_audit_paging.sql"))
         for (String statement : Files.readString(ddl.resolve(file)).split(";"))
           if (!statement.isBlank()) jdbc.execute(statement);
+      jdbc.execute("CREATE TABLE organization(id VARCHAR(64) PRIMARY KEY)");
+      jdbc.update("INSERT INTO organization VALUES('org')");
+      jdbc.execute("ALTER TABLE shared_configuration ADD organization_id VARCHAR(64)");
+      var global = mock(GlobalAssetAccess.class);
+      when(global.authorize(any(), anyString())).thenAnswer(call -> new GlobalAssetAccess.Scope("project".equals(call.getArgument(0)) ? "org" : "outside", "actor"));
       var auth = mock(BusinessAssetService.class);
+      when(auth.globalAccess()).thenReturn(global);
       when(auth.authorize(eq("project"), anyBoolean(), anyString(), anyString())).thenReturn("actor");
       var service = BusinessAssetTransactionProxy.wrap(new SharedConfigurationService(jdbc, auth,
           new SharedConfigurationCipher(Base64.getEncoder().encodeToString(new byte[32]))), jdbc);

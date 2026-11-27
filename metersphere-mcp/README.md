@@ -284,3 +284,9 @@ Token 仅代表关联用户身份；所有新旧 Token 均按用户当前角色�
 - `metersphere.shared_configuration.resolve`：仅在已获准且运行中的执行会话读取固定版本；仍校验同一用户、Token、项目与配置归属。敏感结果禁止写入日志、报告或通用重放缓存。
 
 具体字段以 `tools/list` 的输入结构为准。新增后端代码部署后刷新工具列表；stdio 使用者还需更新客户端以注册新增工具。
+
+### Organization-global assets
+
+`metersphere.data_asset.manage` exposes list/detail/content/versions, create/update/delete, batch/job/retry_job, upload/replace_upload, bounded download, and legacy inventory/import through the native MCP service. Pass `sourceProjectId` as an authorized organization context; it preserves Token project whitelist checks and does not filter global contents. Mutations use `expectedRevision`; uploads use stable `requestId`. Downloads use offset/chunkSize and return bounded Base64 chunks.
+
+Business asset and shared configuration tools accept `sourceProjectId` or legacy `projectId`. Do not supply conflicting aliases. Execution sessions and relations still require their actual project. Existing valid Tokens use current linked user roles without additional feature scopes. The organization role must grant the relevant global asset permissions; source files and evidence keep their source project permissions. Native service validation, version conflicts, reference checks and safe errors remain authoritative.

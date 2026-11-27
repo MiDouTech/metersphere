@@ -6,7 +6,7 @@ import java.util.List;
 
 /** Versioned JSON upload contract shared by human editors and external AI executors. */
 public record BusinessAssetSubmission(
-    @NotBlank @Size(max = 64) String projectId,
+    @Size(max = 64) String projectId,
     @Pattern(regexp = "1\\.0") @NotNull String schemaVersion,
     @Pattern(regexp = "CREATE|UPDATE") @NotNull String operation,
     @Size(max = 64) String assetId,
@@ -18,6 +18,10 @@ public record BusinessAssetSubmission(
     @NotNull @Size(max = 200) List<@Valid Branch> branches,
     @NotBlank @Size(max = 1000) String changeSummary,
     @Valid Source source) {
+  public BusinessAssetSubmission {
+    projectId = projectId == null ? "" : projectId;
+  }
+
   public record Scope(
       @NotNull @Size(max = 128) String systemKey,
       @NotNull @Size(max = 128) String moduleKey,

@@ -1,0 +1,46 @@
+{
+  "id": "957b49e3-4d17-403d-9c91-3d838e4a59ed",
+  "url": "http://127.0.0.1:18762/#/test-assets/datasets/957b49e3-4d17-403d-9c91-3d838e4a59ed",
+  "before": {
+    "ok": true,
+    "status": 200,
+    "statusText": "OK",
+    "url": "http://127.0.0.1:18762/api/test-data-assets/957b49e3-4d17-403d-9c91-3d838e4a59ed/content",
+    "headers": {
+      "connection": "keep-alive",
+      "content-length": "300",
+      "content-type": "application/json",
+      "date": "Fri, 27 Nov 2026 04:53:23 GMT",
+      "keep-alive": "timeout=5"
+    },
+    "body": "{\"code\":100200,\"data\":{\"metadata\":{\"name\":\"upload.csv\",\"description\":\"\",\"categoryId\":\"\",\"format\":\"CSV\"},\"metadataSource\":\"ASSET_VERSION\",\"metadataAvailable\":true,\"complete\":true,\"content\":{\"rows\":[[\"编号\",\"金额\",\"说明\"],[\"CSV-01\",\"20.50\",\"含,逗号\"],[\"\"],[\"CSV-03\",\"30.50\",\"空行保留\"]]}}}"
+  },
+  "after": {
+    "ok": true,
+    "status": 200,
+    "statusText": "OK",
+    "url": "http://127.0.0.1:18762/api/test-data-assets/957b49e3-4d17-403d-9c91-3d838e4a59ed/content",
+    "headers": {
+      "connection": "keep-alive",
+      "content-length": "272",
+      "content-type": "application/json",
+      "date": "Fri, 27 Nov 2026 04:53:24 GMT",
+      "keep-alive": "timeout=5"
+    },
+    "body": "{\"code\":100200,\"data\":{\"metadata\":{\"name\":\"upload.csv\",\"description\":\"\",\"categoryId\":\"\",\"format\":\"CSV\"},\"metadataSource\":\"ASSET_VERSION\",\"metadataAvailable\":true,\"complete\":true,\"content\":{\"rows\":[[\"编号\",\"金额\",\"说明\"],[\"CSV-REPLACED\",\"88.80\",\"替换后内容\"]]}}}"
+  },
+  "versions": {
+    "ok": true,
+    "status": 200,
+    "statusText": "OK",
+    "url": "http://127.0.0.1:18762/api/test-data-assets/957b49e3-4d17-403d-9c91-3d838e4a59ed/versions",
+    "headers": {
+      "connection": "keep-alive",
+      "content-length": "506",
+      "content-type": "application/json",
+      "date": "Fri, 27 Nov 2026 04:53:24 GMT",
+      "keep-alive": "timeout=5"
+    },
+    "body": "{\"code\":100200,\"data\":[{\"id\":\"eadd75ed-372b-4c02-928f-4c398d6c15a8\",\"metadataSource\":\"ASSET_VERSION\",\"versionNo\":2,\"createTime\":1795755204065,\"hasFile\":true,\"metadata\":{\"name\":\"upload.csv\",\"description\":\"\",\"categoryId\":\"\",\"format\":\"CSV\"},\"metadataAvailable\":true},{\"id\":\"ff3e1b10-5473-47b9-bb8b-e61eaee93a8c\",\"metadataSource\":\"ASSET_VERSION\",\"versionNo\":1,\"createTime\":1795755122939,\"hasFile\":true,\"metadata\":{\"name\":\"upload.csv\",\"description\":\"\",\"categoryId\":\"\",\"format\":\"CSV\"},\"metadataAvailable\":true}]}"
+  }
+}

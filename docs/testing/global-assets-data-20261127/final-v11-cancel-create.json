@@ -1,0 +1,20 @@
+{
+  "deferredMetadata": "/api/test-data-assets/60510ef7-d18d-4262-8f32-38e07a9d07b2",
+  "created": {
+    "id": "30c2bcf5-bc0f-4fdf-9643-9652eb44be39",
+    "name": "复审-取消后新建",
+    "format": "JSON",
+    "parseJobId": null,
+    "parseStatus": "READY",
+    "parseError": null,
+    "hasFile": 0,
+    "description": "",
+    "owner": "user",
+    "createTime": 1795765981039,
+    "updateTime": 1795765981039,
+    "categoryId": "",
+    "revision": 1,
+    "currentVersionId": "d6f74b56-a167-483b-bf74-95033c80a31c"
+  },
+  "recordCount": 2
+}

@@ -1,0 +1,17 @@
+{
+  "id": "957b49e3-4d17-403d-9c91-3d838e4a59ed",
+  "content": {
+    "ok": true,
+    "status": 200,
+    "statusText": "OK",
+    "url": "http://127.0.0.1:18762/api/test-data-assets/957b49e3-4d17-403d-9c91-3d838e4a59ed/content",
+    "headers": {
+      "connection": "keep-alive",
+      "content-length": "272",
+      "content-type": "application/json",
+      "date": "Fri, 27 Nov 2026 04:54:16 GMT",
+      "keep-alive": "timeout=5"
+    },
+    "body": "{\"code\":100200,\"data\":{\"metadata\":{\"name\":\"upload.csv\",\"description\":\"\",\"categoryId\":\"\",\"format\":\"CSV\"},\"metadataSource\":\"ASSET_VERSION\",\"metadataAvailable\":true,\"complete\":true,\"content\":{\"rows\":[[\"编号\",\"金额\",\"说明\"],[\"CSV-REPLACED\",\"99.90\",\"替换后内容\"]]}}}"
+  }
+}

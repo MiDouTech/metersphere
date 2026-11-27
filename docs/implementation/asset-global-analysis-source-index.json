@@ -1,0 +1,242 @@
+[
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/TestAssetController.java",
+    "sha256": "a398c39804abbc8f017f4323e8ce61a6864865c19e16b7aad6844cb22568e14b",
+    "symbols": 33
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/BusinessAssetController.java",
+    "sha256": "1f709b04980a1aa59a088980669df88d32e0ddfe87ccdd1a6303dba2a092c890",
+    "symbols": 24
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/SharedConfigurationController.java",
+    "sha256": "d457c0f45164655a52f7cdcc5ba92a467e0a573ce17675ddf4f670250bfdbc20",
+    "symbols": 22
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/ExternalExecutorController.java",
+    "sha256": "9e59a59006b0478d76fb5a832bb2e32d342ef8d057e61e366dd10d3b1538fd56",
+    "symbols": 36
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/controller/EvidenceCatalogController.java",
+    "sha256": "be786064a03dc56e952423b006b366d32bce7033441d20891f4420bf38000b49",
+    "symbols": 4
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetCatalogService.java",
+    "sha256": "52e21e6544eeca79438fff590e48ca7fa64c64d1ed041879d624e80555dd942d",
+    "symbols": 36
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetGovernanceService.java",
+    "sha256": "c034a9e100bf78e29b435008ac6b36d87d1f1f383db7bc03a6cfe7a69433b57d",
+    "symbols": 27
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetVersionService.java",
+    "sha256": "97cdc30eb33ec74bea923c08b02b32aa108a257174805bc2b57275ca2464160b",
+    "symbols": 7
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/TestAssetPublicationListener.java",
+    "sha256": "a8e0a8049a8bd94347103327cb94777c5d98efa7a734ad079567bc88f1fe63be",
+    "symbols": 7
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/BusinessAssetService.java",
+    "sha256": "e59ece7b4af15a118adde6adea72284256c3f8855bd74ee853f331baf68e6b01",
+    "symbols": 17
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/SharedConfigurationService.java",
+    "sha256": "d1e5c0f13c92792880473705a462812f690a87e8c55fe66d6feeb16dd77d5b6f",
+    "symbols": 18
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/ExternalExecutorService.java",
+    "sha256": "3a6b15525230f3438fa3ecada6089c633593bc784c5b07780b3349a20e7c6be0",
+    "symbols": 18
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/service/EvidenceCatalogService.java",
+    "sha256": "dddedbddf8cfa865a5653c010ba42b432ff16bd9e960bed11d02d7422f1a3fa4",
+    "symbols": 19
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/BusinessAssetSubmission.java",
+    "sha256": "e1b94fdf6a448623ad39a56c0a1a7d3c96f55b4b2eb332f5a88d93b6c1e6aec0",
+    "symbols": 5
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/dto/SharedConfigurationSave.java",
+    "sha256": "1ba52a0934266c9327e30b7c32fd90a9d202c8aba0dc8e81b7990aa2c2bd39ae",
+    "symbols": 3
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/AgentMcpToolSchemas.java",
+    "sha256": "e135cd32ae75d5956d6fd162b749fe7cb42f2776a978a3b0ffe2ae9bca44dd86",
+    "symbols": 9
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/AgentMcpToolRegistry.java",
+    "sha256": "6a3ee7d2d1e8202c9b952900cac6afc6277cc0af28320c215cea13c8da6ab464",
+    "symbols": 9
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/AgentMcpToolHandler.java",
+    "sha256": "63cf1833cbe396632c92ab6b24b8f742a8212f474f3819e6d6cb270c5e9ae1c2",
+    "symbols": 0
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/BuiltinAgentMcpToolConfig.java",
+    "sha256": "5d9e3928cd4c9aa839e7962f828824af5e769a2bd4ee1ba7558dd34f24834f78",
+    "symbols": 94
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/AgentMcpToolExposure.java",
+    "sha256": "665dfb80585a0ea9298fbebe337872c2a59bc95c0b2485aa52e53f724c445af3",
+    "symbols": 3
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/tool/configuration/SharedConfigurationMcpTools.java",
+    "sha256": "e43a26db0c912cfd6739a5afbdc261504bfe33705126459c68720a4e88ac1157",
+    "symbols": 18
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/TestAssetMapper.xml",
+    "sha256": "b34421a15557627822191f09358b431ea50c9dcad4a21c97b8b9773524160d7d",
+    "symbols": 28
+  },
+  {
+    "path": "backend/services/agent-integration/src/main/java/io/metersphere/agent/mapper/TestAssetMapper.java",
+    "sha256": "e1ac29fe90d7acb12ad4d8afc8318ffe4776b97d547fa4ae7b430c258b5d7b6b",
+    "symbols": 0
+  },
+  {
+    "path": "frontend/src/views/test-asset/apis.vue",
+    "sha256": "2777faa464fa411ba1caebaf25f5f321fbe25517c7e07b916d11523266102b8c",
+    "symbols": 0
+  },
+  {
+    "path": "frontend/src/views/test-asset/asset-case-detail.vue",
+    "sha256": "d0a071732963905b66be2d9be9a9b1865d00ea32a75a9bfd5d7a853b605b1a78",
+    "symbols": 7
+  },
+  {
+    "path": "frontend/src/views/test-asset/bugs.vue",
+    "sha256": "2777faa464fa411ba1caebaf25f5f321fbe25517c7e07b916d11523266102b8c",
+    "symbols": 0
+  },
+  {
+    "path": "frontend/src/views/test-asset/business-assets.vue",
+    "sha256": "0aeb352c32e91e52f1719ab7d9b82e02e0346624d46f0870e70e547ecc9821db",
+    "symbols": 17
+  },
+  {
+    "path": "frontend/src/views/test-asset/cases.vue",
+    "sha256": "82ef52f2ff52b220e4c00a74f4caacfe2a033cb4ea94ca53200dd9616635805f",
+    "symbols": 28
+  },
+  {
+    "path": "frontend/src/views/test-asset/catalog.vue",
+    "sha256": "9d004258f6465f9b14a87b13a224e57d175151c84279d490939c7d376edc8998",
+    "symbols": 19
+  },
+  {
+    "path": "frontend/src/views/test-asset/common-steps.vue",
+    "sha256": "2777faa464fa411ba1caebaf25f5f321fbe25517c7e07b916d11523266102b8c",
+    "symbols": 0
+  },
+  {
+    "path": "frontend/src/views/test-asset/datasets.vue",
+    "sha256": "2777faa464fa411ba1caebaf25f5f321fbe25517c7e07b916d11523266102b8c",
+    "symbols": 0
+  },
+  {
+    "path": "frontend/src/views/test-asset/environments.vue",
+    "sha256": "2777faa464fa411ba1caebaf25f5f321fbe25517c7e07b916d11523266102b8c",
+    "symbols": 0
+  },
+  {
+    "path": "frontend/src/views/test-asset/evidence.vue",
+    "sha256": "2777faa464fa411ba1caebaf25f5f321fbe25517c7e07b916d11523266102b8c",
+    "symbols": 0
+  },
+  {
+    "path": "frontend/src/views/test-asset/relations.vue",
+    "sha256": "70e9dfc27a923642e9aa1c5ce0a1def72b4f51bc057c2d37f21060c5a88c149d",
+    "symbols": 5
+  },
+  {
+    "path": "frontend/src/views/test-asset/shared-configuration.vue",
+    "sha256": "c28cef0893962ba5a70620e6ce6b1a06ffd613fdb7a7701a89ba5e8eb43d381f",
+    "symbols": 16
+  },
+  {
+    "path": "frontend/src/views/test-asset/versions.vue",
+    "sha256": "3c0d5bab650ce9ad46a114a3b0600764daed9b9aeb67ab997bde75dd046dd1fb",
+    "symbols": 7
+  },
+  {
+    "path": "frontend/src/views/test-asset/components/BusinessVersions.vue",
+    "sha256": "6c8fc3617136ebc9fc357aee11731990ecb3718b4fcf5f8d24ce23fe823e348d",
+    "symbols": 8
+  },
+  {
+    "path": "frontend/src/views/test-asset/components/SharedConfigurationVersions.vue",
+    "sha256": "6c2f7f6ec4999ea0002cb6980ce4d01c8857f0ca658afda68dcc86b29a01e400",
+    "symbols": 4
+  },
+  {
+    "path": "frontend/src/router/routes/modules/testAsset.ts",
+    "sha256": "2c6e57ed7620d769563a927a96a25a75257f36cbe99a5ea7cfebf87119616179",
+    "symbols": 1
+  },
+  {
+    "path": "frontend/src/api/modules/business-assets.ts",
+    "sha256": "0202e3150c0491f9da6ead748e1295292e8c3c41f098407f011d0d2231722bc8",
+    "symbols": 0
+  },
+  {
+    "path": "backend/services/project-management/src/main/java/io/metersphere/project/service/FileAssociationLogService.java",
+    "sha256": "ae87808161c0d9aad8dd839c8bd2e4243311d0197c750fec689b9c09d0a74920",
+    "symbols": 6
+  },
+  {
+    "path": "backend/services/project-management/src/main/java/io/metersphere/project/service/FileAssociationService.java",
+    "sha256": "91eaad5fd66fdc87ce4583cebc040d3a91abc0aac5910ef04dc5d5cac5375645",
+    "symbols": 20
+  },
+  {
+    "path": "backend/services/project-management/src/main/java/io/metersphere/project/service/FileManagementService.java",
+    "sha256": "12eaa3e9b1f41a301c5495bf148d50405b7197b9401db5fca52a1c0ddf53ffff",
+    "symbols": 13
+  },
+  {
+    "path": "backend/services/project-management/src/main/java/io/metersphere/project/service/FileMetadataLogService.java",
+    "sha256": "025a1376ebacf896f11398ff629aebf2efd200781563750bb16ceeadf62023cf",
+    "symbols": 8
+  },
+  {
+    "path": "backend/services/project-management/src/main/java/io/metersphere/project/service/FileMetadataService.java",
+    "sha256": "72cdb3526644795863ee3c1f8bc34594d1d28b7bf683444c623da12e451aa027",
+    "symbols": 36
+  },
+  {
+    "path": "backend/services/project-management/src/main/java/io/metersphere/project/service/FileModuleLogService.java",
+    "sha256": "bc372008b4dc3a6a36070ee4691cb2571ef02ddb2dfd357029c563848830026f",
+    "symbols": 6
+  },
+  {
+    "path": "backend/services/project-management/src/main/java/io/metersphere/project/service/FileModuleService.java",
+    "sha256": "ffd9cba905f944b7570ab8befe166f0eb852cf54eba5b7a46d19be252631dab6",
+    "symbols": 16
+  },
+  {
+    "path": "backend/services/project-management/src/main/java/io/metersphere/project/service/FileRepositoryService.java",
+    "sha256": "e0d5275d97fef796caf408ae7b37b42b897a06e888b3a573a712f0bd9e7cc6d3",
+    "symbols": 6
+  }
+]

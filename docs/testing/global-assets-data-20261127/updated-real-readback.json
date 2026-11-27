@@ -1,0 +1,31 @@
+{
+  "id": "464d79db-5ffd-4024-b13b-3621360fc50d",
+  "versions": {
+    "ok": true,
+    "status": 200,
+    "statusText": "OK",
+    "url": "http://127.0.0.1:18762/api/test-data-assets/464d79db-5ffd-4024-b13b-3621360fc50d/versions",
+    "headers": {
+      "connection": "keep-alive",
+      "content-length": "230",
+      "content-type": "application/json",
+      "date": "Fri, 27 Nov 2026 04:22:53 GMT",
+      "keep-alive": "timeout=5"
+    },
+    "body": "{\"code\":100200,\"data\":[{\"id\":\"fae440f5-aa98-4bed-b76a-79ee944d25cb\",\"versionNo\":2,\"createTime\":1795753372643,\"hasFile\":false},{\"id\":\"045151c1-cb88-4d78-bb8b-78313094fa67\",\"versionNo\":1,\"createTime\":1795753259659,\"hasFile\":false}]}"
+  },
+  "content": {
+    "ok": true,
+    "status": 200,
+    "statusText": "OK",
+    "url": "http://127.0.0.1:18762/api/test-data-assets/464d79db-5ffd-4024-b13b-3621360fc50d/content",
+    "headers": {
+      "connection": "keep-alive",
+      "content-length": "146",
+      "content-type": "application/json",
+      "date": "Fri, 27 Nov 2026 04:22:53 GMT",
+      "keep-alive": "timeout=5"
+    },
+    "body": "{\"code\":100200,\"data\":{\"complete\":true,\"content\":{\"订单\":[{\"编号\":\"E2E-01\",\"金额\":30.5,\"状态\":\"待审批\"}],\"备注\":\"<b>字面量</b>\"}}}"
+  }
+}

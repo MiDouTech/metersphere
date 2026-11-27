@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "status": 200,
+  "statusText": "OK",
+  "url": "http://127.0.0.1:18762/build-manifest.json",
+  "headers": {
+    "cache-control": "no-store",
+    "connection": "keep-alive",
+    "content-type": "application/json",
+    "date": "Fri, 27 Nov 2026 07:52:26 GMT",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "body": "{\n  \"schemaVersion\": 1,\n  \"revision\": \"188d47397c1d15c89ebb8268e38c342a2f77babc+global-assets-working-tree\",\n  \"builtAt\": \"2026-11-27T07:49:50.044Z\",\n  \"indexSha256\": \"a24b9ba757259230099a5464b7eb0d2be5735009778cd26bc482330f3d076464\",\n  \"assets\": [\n    \"/assets/index-7L82-w5I.js\",\n    \"/assets/vue-DZlbQ0G5.js\",\n    \"/assets/arco-eHjX_V9O.js\",\n    \"/assets/codeEditor-dtPc1o1E.js\",\n    \"/assets/codeEditor-1KD5iQ87.css\",\n    \"/assets/index-BV2frM8G.css\"\n  ],\n  \"validationBuild\": \"v11\",\n  \"note\": \"Development verification artifact; source changes are bound separately by the review patch SHA256.\"\n}\n"
+}

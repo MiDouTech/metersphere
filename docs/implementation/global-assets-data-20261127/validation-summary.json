@@ -1,0 +1,105 @@
+{
+  "backend": {
+    "command": "mvn.cmd -o -Dmaven.repo.local=C:/Users/midoo/.m2/repository -Dfile.encoding=UTF-8 -DskipAntRunForJenkins=true -Dtest=DataAsset*,GlobalAsset*,GlobalData*,BusinessAssetServiceTests,SharedConfiguration*Tests,ExternalExecutorServiceTests,TestAsset*Tests,AgentMcpToolContractTests,AgentExecutionPreflight*Tests,AgentTestDataLeaseServiceTests,AgentSafeErrorMapperTests,AgentExecutionExceptionHandlerTests,BusinessGovernanceExceptionHandlerTests,AgentRunnerLeaseAuthorizationServiceTests,PermissionUiServiceTests,PermissionManifestCoverageTests -Dsurefire.failIfNoSpecifiedTests=false -pl backend/app -am package",
+    "result": "BUILD SUCCESS",
+    "passed": 168,
+    "conditionalSkippedThenExecutedNatively": 6,
+    "log": ".build/global-assets-package-v13.log"
+  },
+  "mysql": {
+    "command": "python .build/global-assets-native-final.py --native-only --native-test-filter GlobalAssetMigrationMySqlTests,DataAssetMigrationMySqlTests,SharedConfigurationAuditMySqlTests,GlobalDataCategoryMySqlTests,GlobalDataExecutionMySqlTests",
+    "passed": 6,
+    "skipped": 0,
+    "run": "9857f1e0",
+    "mainCompilation": "skipMain uses already compiled and verified V13 classes; testCompile runs"
+  },
+  "frontend": {
+    "typeCommand": "npx vue-tsc --noEmit --incremental --tsBuildInfoFile ../.build/global-assets-final.tsbuildinfo",
+    "buildCommand": "npx vite build --config ./config/vite.config.prod.ts --outDir ../.build/global-assets-final-dist-v11",
+    "result": "V11 production BUILD SUCCESS,16m45; V11 serial vue-tsc exit0",
+    "testsCommand": "node --test scripts/test-data-assets.mjs scripts/test-data-assets-components.mjs",
+    "passed": 32,
+    "integrity": {
+      "indexSha256": "a24b9ba757259230099a5464b7eb0d2be5735009778cd26bc482330f3d076464",
+      "manifestSha256": "24e93dab7eaa9a50b0c1dea2128840a882941386844d4438dd89b16fb0926234"
+    },
+    "additionalChecks": {
+      "npm run test:api-contracts": "passed",
+      "npm run test:route-tabs": "passed",
+      "npm run test:permission-resources": "passed: 83 exact,60 compatibility,0 unbound"
+    },
+    "lint": {
+      "command": "python .build/lint-global-freeze.py (scoped npx eslint and npx stylelint; no --fix)",
+      "eslintExit": 0,
+      "stylelintExit": 0
+    },
+    "typeRerunReason": "parallel V11 vue-tsc manually stopped after observed memory pressure, not reported passed; same command rerun alone",
+    "typeLog": ".build/global-assets-type-v11-serial.log"
+  },
+  "node": {
+    "cwd": "metersphere-mcp",
+    "command": "npm test",
+    "passed": 52
+  },
+  "backendIntegrity": {
+    "artifact": "backend\\app\\target\\app-3.x.jar",
+    "sha256": "86ba354d7c16d82781d2fad51506168824566e268f3dd47437f7cc66284aa99d",
+    "matchingCompiledClassesAndMigrations": [
+      "io/metersphere/agent/service/DataAssetService.class",
+      "io/metersphere/agent/service/DataAssetMetadata.class",
+      "io/metersphere/agent/service/DataAssetParser.class",
+      "io/metersphere/agent/service/DataAssetParseJobService.class",
+      "io/metersphere/agent/service/DataAssetBatchService.class",
+      "io/metersphere/agent/service/DataAssetLegacyService.class",
+      "io/metersphere/agent/service/DataAssetErrors.class",
+      "io/metersphere/agent/service/DataAssetFailure.class",
+      "io/metersphere/agent/service/AgentSafeErrorMapper.class",
+      "io/metersphere/agent/service/TestAssetCatalogService.class",
+      "io/metersphere/agent/service/GlobalAssetAccess.class",
+      "io/metersphere/agent/service/GlobalAssetCatalogService.class",
+      "io/metersphere/agent/service/SharedConfigurationService.class",
+      "io/metersphere/agent/service/BusinessAssetService.class",
+      "io/metersphere/agent/service/AgentTestDataLeaseService.class",
+      "io/metersphere/system/service/PermissionUiService.class",
+      "migration/3.7.2/ddl/V3.7.2_160__data_assets.sql",
+      "migration/3.7.2/ddl/V3.7.2_162__organization_global_business_configuration.sql",
+      "migration/3.7.2/dml/V3.7.2_163__data_asset_permissions.sql",
+      "migration/3.7.2/dml/V3.7.2_164__global_asset_role_permissions.sql",
+      "migration/3.7.2/dml/V3.7.2_165__global_asset_page_permissions.sql"
+    ],
+    "frontendIncludedClaim": false
+  },
+  "browser": [
+    "real MySQL isolated fixture; synthetic identity and local storage adapter",
+    "final-json-complete.json",
+    "final-cas-conflict-visible.json",
+    "final-batch-delete-refresh.json",
+    "final-v11-fixed-edit-race.json",
+    "final-v11-cancel-create.json"
+  ],
+  "notExecuted": [
+    "Docker image build waived by user",
+    "real SSO/MinIO/host executor/container health and deployment acceptance pending user deployment",
+    "real low privilege account tests excluded by user"
+  ],
+  "failuresRetained": [
+    "V8/V9 first Vite runs Windows UNKNOWN generated eslintrc-auto-import file; standalone reruns and V10 passed",
+    "initial CAS DOM trace existed but banner visually covered; final sticky production bundle corrected and proved"
+  ],
+  "formatOnlyRepackage": {
+    "reason": "remove extra EOF blank lines in migrations162/164 and Node test; no semantic production changes",
+    "command": "mvn.cmd -o -Dmaven.repo.local=C:/Users/midoo/.m2/repository -Dfile.encoding=UTF-8 -DskipAntRunForJenkins=true -Dmaven.main.skip=true -DskipTests -pl backend/app -am package",
+    "tests": "not re-run by this packaging command; V13 and native results above remain explicit",
+    "result": "BUILD SUCCESS; 3m58; package class and migration integrity verified"
+  },
+  "reviewCorrections": {
+    "initialPatch": "518f4fe2d729861131c32242a5836e1b004e1d0cce5ba782a9bf83212e10d523",
+    "reviewDocumentId": "8e305a4d-eba4-49c5-b882-d5508d64c0e8",
+    "initialConclusion": "changes required",
+    "fixes": [
+      "R1 metadata revision and immutable currentVersion content bound sequentially",
+      "R2 cancel/create loading ownership and late success/failure fencing"
+    ],
+    "regression": "32 tests passed, deterministic red before correction; full SFC behavior tests"
+  }
+}

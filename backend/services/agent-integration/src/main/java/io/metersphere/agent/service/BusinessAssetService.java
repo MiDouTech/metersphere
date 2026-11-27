@@ -4,10 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.metersphere.agent.dto.BusinessAssetSubmission;
 import io.metersphere.agent.security.AgentTokenContext;
 import io.metersphere.sdk.util.JSON;
-import io.metersphere.system.utils.SessionUtils;
 import java.util.*;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.shiro.SecurityUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +23,10 @@ public class BusinessAssetService {
     this.access = access;
   }
 
+  GlobalAssetAccess globalAccess() {
+    return new GlobalAssetAccess(jdbc, access);
+  }
+
   String authorize(String project, boolean write) {
     return authorize(
         project,
@@ -34,40 +36,33 @@ public class BusinessAssetService {
   }
 
   String authorize(String project, boolean write, String permission, String scope) {
-    String user;
-    if (AgentTokenContext.get() != null) {
-      var token = access.activeToken(scope);
-      if (!io.metersphere.agent.security.AgentTokenProjectAccess.allows(token, project))
-        throw AgentBusinessAccess.denied();
-      user = token.getUserId();
-    } else {
-      user = SessionUtils.getUserId();
-      if (user == null || !SecurityUtils.getSubject().isAuthenticated())
-        throw AgentBusinessAccess.denied();
-    }
-    if (!access.userHasPermission(user, project, permission)) {
-      Long scopedAdmin =
-          jdbc.queryForObject(
-              """
-SELECT COUNT(*) FROM user u JOIN user_role_relation r ON r.user_id=u.id
-JOIN user_role role ON role.id=r.role_id AND role.enabled=1
-JOIN project p ON p.id=? WHERE u.id=? AND u.enable=1 AND u.deleted=0 AND
-((role.id='project_admin' AND role.type='PROJECT' AND r.source_id=p.id)
-OR (role.id='org_admin' AND role.type='ORGANIZATION' AND r.source_id=p.organization_id))
-""",
-              Long.class,
-              project,
-              user);
-      if (scopedAdmin == null || scopedAdmin < 1) throw AgentBusinessAccess.denied();
-    }
-    Long active =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM project WHERE id=? AND deleted=0"
-                + (write ? " AND enable=1" : ""),
-            Long.class,
-            project);
-    if (active == null || active != 1) throw AgentBusinessAccess.denied();
-    return user;
+    return globalAccess().authorize(project, permission).actorId();
+  }
+
+  void requireProjectAccess(String actor, String project, boolean write) {
+    requireSourceProject(actor, project, write ? "AI_EXECUTION:RUN" : "AI_EXECUTION:READ");
+  }
+
+  private void requireSourceProject(String actor, String project, String permission) {
+    if (project == null
+        || project.isBlank()
+        || !access.userHasPermission(actor, project, permission))
+      throw AgentBusinessAccess.denied();
+    var organizations =
+        jdbc.queryForList(
+            "SELECT organization_id FROM project WHERE id=? AND deleted=0", String.class, project);
+    if (organizations.size() != 1 || !organization(project).equals(organizations.getFirst()))
+      throw AgentBusinessAccess.denied();
+  }
+
+  private String submissionNamespace(String project) {
+    return project == null || project.isBlank()
+        ? "org:" + DigestUtils.sha256Hex(organization(project)).substring(0, 60)
+        : project;
+  }
+
+  private String organization(String project) {
+    return globalAccess().authorize(project, READ).organizationId();
   }
 
   public List<Map<String, Object>> list(String project, String keyword, boolean archived) {
@@ -81,12 +76,12 @@ SELECT a.id,a.revision,a.archived,a.current_version_id AS currentVersionId,
        (SELECT COUNT(*) FROM business_asset_reader restriction WHERE restriction.asset_id=a.id) AS restrictedCount
 FROM business_asset a LEFT JOIN business_asset_version v ON v.id=COALESCE(a.current_version_id,
     (SELECT x.id FROM business_asset_version x WHERE x.asset_id=a.id ORDER BY x.version_no DESC LIMIT 1))
-WHERE a.project_id=? AND a.archived=? AND (?='' OR LOWER(v.title) LIKE ?)
+WHERE a.organization_id=? AND a.archived=? AND (?='' OR LOWER(v.title) LIKE ?)
   AND (NOT EXISTS(SELECT 1 FROM business_asset_reader r WHERE r.asset_id=a.id)
        OR EXISTS(SELECT 1 FROM business_asset_reader r WHERE r.asset_id=a.id AND r.user_id=?))
 ORDER BY a.update_time DESC,a.id
 """,
-                project,
+                organization(project),
                 archived,
                 safeKeyword(keyword),
                 "%" + safeKeyword(keyword).toLowerCase(Locale.ROOT) + "%",
@@ -124,6 +119,7 @@ ORDER BY a.update_time DESC,a.id
 
   public List<Map<String, Object>> unassignedLegacy(String project) {
     String actor = authorize(project, false);
+    requireSourceProject(actor, project, READ);
     return BusinessAssetRows.canonical(
         jdbc.queryForList(
             """
@@ -145,11 +141,15 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
 
   public Map<String, String> importUnassignedLegacy(String project, String legacyId) {
     String actor = authorize(project, true);
-    jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", project);
+    requireSourceProject(actor, project, WRITE);
+    jdbc.queryForList("SELECT id FROM organization WHERE id=? FOR UPDATE", organization(project));
     String id = DigestUtils.sha256Hex(legacyId + ":" + project);
     var existing =
         jdbc.queryForList(
-            "SELECT id FROM business_asset WHERE project_id=? AND id=?", String.class, project, id);
+            "SELECT id FROM business_asset WHERE organization_id=? AND id=?",
+            String.class,
+            organization(project),
+            id);
     if (!existing.isEmpty()) {
       asset(project, id, false);
       return Map.of("assetId", id);
@@ -167,10 +167,11 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
     long now = System.currentTimeMillis();
     jdbc.update(
         "INSERT INTO"
-            + " business_asset(id,project_id,identity_key,current_version_id,revision,archived,create_time,update_time)"
-            + " VALUES(?,?,?,NULL,0,FALSE,?,?)",
+            + " business_asset(id,project_id,organization_id,identity_key,current_version_id,revision,archived,create_time,update_time)"
+            + " VALUES(?,?,?,?,NULL,0,FALSE,?,?)",
         id,
-        project,
+        Objects.toString(project, ""),
+        organization(project),
         DigestUtils.sha256Hex("legacy:" + legacyId + ":" + project),
         now,
         now);
@@ -231,14 +232,17 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
             jdbc.queryForList(
                 "SELECT event_type AS eventType,actor_id AS actorId,version_id AS"
                     + " versionId,reason,create_time AS createTime FROM business_asset_audit WHERE"
-                    + " project_id=? AND asset_id=? ORDER BY create_time DESC,id",
-                project,
+                    + " asset_id IN (SELECT id FROM business_asset WHERE organization_id=?) AND"
+                    + " asset_id=? ORDER BY create_time DESC,id",
+                organization(project),
                 id),
             "eventType",
             "actorId",
             "versionId",
             "reason",
             "createTime"));
+    if (project != null && !project.isBlank())
+      requireSourceProject(authorize(project, false), project, READ);
     result.put(
         "relations",
         BusinessAssetRows.canonical(
@@ -269,10 +273,11 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
     asset(project, assetId, false);
     Long count =
         jdbc.queryForObject(
-            "SELECT COUNT(*) FROM business_asset_version WHERE project_id=? AND asset_id=? AND id=?"
-                + " AND status IN ('CURRENT','HISTORY')",
+            "SELECT COUNT(*) FROM business_asset_version WHERE asset_id IN (SELECT id FROM"
+                + " business_asset WHERE organization_id=?) AND asset_id=? AND id=? AND status IN"
+                + " ('CURRENT','HISTORY')",
             Long.class,
-            project,
+            organization(project),
             assetId,
             versionId);
     if (count == null || count != 1) throw AgentBusinessAccess.denied();
@@ -280,8 +285,8 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
 
   private List<Map<String, Object>> versionsInternal(String project, String id) {
     return jdbc.query(
-        "SELECT * FROM business_asset_version WHERE project_id=? AND asset_id=? ORDER BY version_no"
-            + " DESC",
+        "SELECT * FROM business_asset_version WHERE asset_id IN (SELECT id FROM business_asset"
+            + " WHERE organization_id=?) AND asset_id=? ORDER BY version_no DESC",
         (rs, row) -> {
           Map<String, Object> version = new LinkedHashMap<>();
           version.put("id", rs.getString("id"));
@@ -296,22 +301,24 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
                   rs.getString("snapshot_json"), new TypeReference<Map<String, Object>>() {}));
           return version;
         },
-        project,
+        organization(project),
         id);
   }
 
   public Map<String, Object> submit(BusinessAssetSubmission request) {
     String user = authorize(request.projectId(), true);
+    if (!request.projectId().isBlank()) requireSourceProject(user, request.projectId(), WRITE);
     validate(request);
     // Serialize submissions per project, including first creation, to prevent duplicate identity
     // races.
-    jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", request.projectId());
+    jdbc.queryForList(
+        "SELECT id FROM organization WHERE id=? FOR UPDATE", organization(request.projectId()));
     String snapshot = JSON.toJSONString(request), hash = DigestUtils.sha256Hex(snapshot);
     var prior =
         jdbc.queryForList(
             "SELECT request_hash,result_json FROM business_asset_submission WHERE project_id=? AND"
                 + " actor_id=? AND request_key=?",
-            request.projectId(),
+            submissionNamespace(request.projectId()),
             user,
             request.idempotencyKey());
     if (!prior.isEmpty()) {
@@ -328,10 +335,13 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
     if (id == null || id.isBlank()) {
       var matches =
           jdbc.queryForList(
-              "SELECT id FROM business_asset WHERE project_id=? AND identity_key=?",
+              "SELECT id FROM business_asset WHERE organization_id=? AND identity_key=?",
               String.class,
-              request.projectId(),
+              organization(request.projectId()),
               identity);
+      if (matches.size() > 1)
+        throw new BusinessGovernanceException(
+            "ASSET_IDENTITY_CONFLICT", "该组织存在多份相同业务范围的历史资产，请明确选择资产并整理合并后提交");
       if (!matches.isEmpty()) id = matches.getFirst();
       else {
         if ("UPDATE".equals(request.operation()))
@@ -339,10 +349,11 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
         id = UUID.randomUUID().toString();
         jdbc.update(
             "INSERT INTO"
-                + " business_asset(id,project_id,identity_key,current_version_id,revision,archived,create_time,update_time)"
-                + " VALUES(?,?,?,NULL,0,FALSE,?,?)",
+                + " business_asset(id,project_id,organization_id,identity_key,current_version_id,revision,archived,create_time,update_time)"
+                + " VALUES(?,?,?,?,NULL,0,FALSE,?,?)",
             id,
-            request.projectId(),
+            Objects.toString(request.projectId(), ""),
+            organization(request.projectId()),
             identity,
             System.currentTimeMillis(),
             System.currentTimeMillis());
@@ -363,9 +374,10 @@ ORDER BY k.update_time DESC,k.id LIMIT 1000
     if (!unclassified) {
       Long sameScope =
           jdbc.queryForObject(
-              "SELECT COUNT(*) FROM business_asset WHERE project_id=? AND identity_key=? AND id<>?",
+              "SELECT COUNT(*) FROM business_asset WHERE organization_id=? AND identity_key=? AND"
+                  + " id<>?",
               Long.class,
-              request.projectId(),
+              organization(request.projectId()),
               identity,
               id);
       if (sameScope != null && sameScope > 0) conflict = true;
@@ -426,7 +438,7 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         "INSERT INTO"
             + " business_asset_submission(project_id,actor_id,request_key,request_hash,result_json)"
             + " VALUES(?,?,?,?,?)",
-        request.projectId(),
+        submissionNamespace(request.projectId()),
         user,
         request.idempotencyKey(),
         hash,
@@ -439,13 +451,14 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     String actor = authorize(target.projectId(), true);
     if (sourceId.equals(target.assetId()) || target.assetId() == null)
       throw new BusinessGovernanceException("MERGE_TARGET_INVALID", "请选择另一份已有业务资产作为合并目标");
-    jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", target.projectId());
+    jdbc.queryForList(
+        "SELECT id FROM organization WHERE id=? FOR UPDATE", organization(target.projectId()));
     var source = asset(target.projectId(), sourceId, true);
     var prior =
         jdbc.queryForList(
             "SELECT result_json,request_hash FROM business_asset_submission WHERE project_id=? AND"
                 + " actor_id=? AND request_key=?",
-            target.projectId(),
+            submissionNamespace(target.projectId()),
             actor,
             target.idempotencyKey());
     if (!prior.isEmpty()) {
@@ -459,12 +472,12 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       if ("CURRENT".equals(replay.get("status"))) {
         Long relation =
             jdbc.queryForObject(
-                "SELECT COUNT(*) FROM business_asset_relation WHERE project_id=? AND source_id=?"
-                    + " AND target_id=? AND relation_type='MERGED_INTO'",
+                "SELECT COUNT(*) FROM business_asset_audit WHERE asset_id=? AND version_id=?"
+                    + " AND event_type='MERGE' AND reason=?",
                 Long.class,
-                target.projectId(),
                 sourceId,
-                target.assetId());
+                replay.get("versionId"),
+                "合并至 " + target.assetId());
         if (relation == null || relation != 1)
           throw new BusinessGovernanceException("MERGE_REQUEST_CONFLICT", "该提交标识已用于其他操作，请重新发起合并");
       }
@@ -478,14 +491,17 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
           "UPDATE business_asset SET archived=TRUE,revision=revision+1,update_time=? WHERE id=?",
           System.currentTimeMillis(),
           sourceId);
-      jdbc.update(
-          "INSERT INTO"
-              + " business_asset_relation(project_id,source_id,target_id,relation_type,create_time)"
-              + " VALUES(?,?,?,'MERGED_INTO',?)",
-          target.projectId(),
-          sourceId,
-          target.assetId(),
-          System.currentTimeMillis());
+      if (!target.projectId().isBlank()) {
+        requireSourceProject(actor, target.projectId(), WRITE);
+        jdbc.update(
+            "INSERT INTO"
+                + " business_asset_relation(project_id,source_id,target_id,relation_type,create_time)"
+                + " VALUES(?,?,?,'MERGED_INTO',?)",
+            target.projectId(),
+            sourceId,
+            target.assetId(),
+            System.currentTimeMillis());
+      }
       audit(
           target.projectId(),
           sourceId,
@@ -524,16 +540,20 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
               token.getUserId());
       if (executor == null || executor < 1) throw AgentBusinessAccess.denied();
     }
+    String actor = authorize(request.projectId(), false);
+    String organizationId = organization(request.projectId());
     for (var branch : request.branches())
       for (String evidence : branch.evidenceRefs()) {
-        Long count =
-            jdbc.queryForObject(
-                "SELECT COUNT(*) FROM external_executor_evidence e JOIN external_executor_session s"
-                    + " ON s.id=e.session_id WHERE e.id=? AND s.project_id=?",
-                Long.class,
+        var sources =
+            jdbc.queryForList(
+                "SELECT s.project_id FROM external_executor_evidence e JOIN"
+                    + " external_executor_session s ON s.id=e.session_id JOIN project p ON"
+                    + " p.id=s.project_id WHERE e.id=? AND p.organization_id=? AND p.deleted=0",
+                String.class,
                 evidence,
-                request.projectId());
-        if (count == null || count != 1) throw AgentBusinessAccess.denied();
+                organizationId);
+        if (sources.size() != 1) throw AgentBusinessAccess.denied();
+        requireSourceProject(actor, sources.getFirst(), "AI_EVIDENCE:READ");
         if (AgentTokenContext.get() != null) {
           Long own =
               jdbc.queryForObject(
@@ -562,15 +582,15 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   public void select(String project, String id, String version, int revision, String reason) {
     String actor = authorize(project, true);
     requireReason(reason);
-    jdbc.queryForList("SELECT id FROM project WHERE id=? FOR UPDATE", project);
+    jdbc.queryForList("SELECT id FROM organization WHERE id=? FOR UPDATE", organization(project));
     var current = asset(project, id, true);
     if (((Number) current.get("revision")).intValue() != revision)
       throw new BusinessGovernanceException("ASSET_VERSION_CONFLICT", "资产已变化，请刷新后再切换版本");
     var rows =
         jdbc.queryForList(
-            "SELECT status,snapshot_json FROM business_asset_version WHERE project_id=? AND"
-                + " asset_id=? AND id=?",
-            project,
+            "SELECT status,snapshot_json FROM business_asset_version WHERE asset_id IN (SELECT id"
+                + " FROM business_asset WHERE organization_id=?) AND asset_id=? AND id=?",
+            organization(project),
             id,
             version);
     if (rows.isEmpty() || !Set.of("CURRENT", "HISTORY").contains(rows.getFirst().get("status")))
@@ -585,9 +605,10 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     String restoredIdentity = identity(scope);
     Long duplicate =
         jdbc.queryForObject(
-            "SELECT COUNT(*) FROM business_asset WHERE project_id=? AND identity_key=? AND id<>?",
+            "SELECT COUNT(*) FROM business_asset WHERE organization_id=? AND identity_key=? AND"
+                + " id<>?",
             Long.class,
-            project,
+            organization(project),
             restoredIdentity,
             id);
     if (duplicate != null && duplicate > 0)
@@ -638,9 +659,9 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     var rows =
         jdbc.queryForList(
             "SELECT id,revision,archived,current_version_id AS currentVersionId FROM business_asset"
-                + " WHERE project_id=? AND id=?"
+                + " WHERE organization_id=? AND id=?"
                 + (lock ? " FOR UPDATE" : ""),
-            project,
+            organization(project),
             id);
     if (rows.isEmpty()) throw AgentBusinessAccess.denied();
     rows.getFirst().put("restricted", restricted != null && restricted > 0);
@@ -670,7 +691,7 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             + " business_asset_audit(id,project_id,asset_id,event_type,actor_id,version_id,reason,create_time)"
             + " VALUES(?,?,?,?,?,?,?,?)",
         UUID.randomUUID().toString(),
-        project,
+        Objects.toString(project, ""),
         id,
         event,
         actor,

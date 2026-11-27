@@ -1,0 +1,14 @@
+{
+  "id": "ba5f4d33-c589-44eb-8215-7c12e39f0655",
+  "response": {
+    "status": 409,
+    "body": {
+      "code": "DATA_ASSET_VERSION_CONFLICT",
+      "message": "数据已更新，请刷新后重试",
+      "details": {},
+      "traceId": "38d4c96b-0ca9-4082-99be-21ac45bbeb47"
+    }
+  },
+  "retainedAmount": 55.5,
+  "uiShowsTrace": true
+}

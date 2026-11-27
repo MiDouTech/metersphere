@@ -25,12 +25,12 @@ public class SharedConfigurationController {
   }
 
   public record Select(
-      @NotBlank String projectId,
+      String projectId,
       @Min(1) int version,
       @Min(1) int expectedVersion,
       @Size(max = 500) String reason) {}
 
-  public record Retry(@NotBlank String projectId, @Min(1) int version) {}
+  public record Retry(String projectId, @Min(1) int version) {}
 
   public record Resolve(@NotBlank String projectId, @NotBlank String sessionId) {}
 
@@ -43,7 +43,7 @@ public class SharedConfigurationController {
   }
 
   @GetMapping
-  public List<Map<String, Object>> list(@RequestParam String projectId) {
+  public List<Map<String, Object>> list(@RequestParam(required = false) String projectId) {
     return service.list(projectId);
   }
 
@@ -65,7 +65,7 @@ public class SharedConfigurationController {
 
   @GetMapping("/{id}/versions")
   public List<Map<String, Object>> versions(
-      @PathVariable String id, @RequestParam String projectId) {
+      @PathVariable String id, @RequestParam(required = false) String projectId) {
     return service.versions(projectId, id);
   }
 
@@ -73,7 +73,7 @@ public class SharedConfigurationController {
   public org.springframework.http.ResponseEntity<Map<String, Object>> read(
       @PathVariable String id,
       @PathVariable int version,
-      @RequestParam String projectId,
+      @RequestParam(required = false) String projectId,
       @RequestParam(defaultValue = "false") boolean document) {
     return org.springframework.http.ResponseEntity.ok()
         .cacheControl(org.springframework.http.CacheControl.noStore())
