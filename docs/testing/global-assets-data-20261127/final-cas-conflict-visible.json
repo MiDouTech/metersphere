@@ -1,0 +1,18 @@
+{
+  "id": "42fac81f-abe9-40c4-a2a7-853a52b6ac0b",
+  "response": {
+    "status": 409,
+    "body": {
+      "code": "DATA_ASSET_VERSION_CONFLICT",
+      "message": "数据已更新，请刷新后重试",
+      "details": {},
+      "traceId": "0dd6a23d-3815-4dab-b10f-62c2834e4be3"
+    }
+  },
+  "message": "数据已更新，请刷新后重试 (0dd6a23d-3815-4dab-b10f-62c2834e4be3)",
+  "insideModal": true,
+  "width": 806,
+  "height": 40,
+  "notCovered": true,
+  "retainedAmount": 55.5
+}

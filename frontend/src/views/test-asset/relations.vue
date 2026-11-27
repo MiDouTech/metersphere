@@ -4,7 +4,9 @@
       <div class="mb-4"
         ><div class="text-base font-medium">关联追溯</div
         ><div class="mt-1 text-sm text-[var(--color-text-3)]"
-          >从业务文档、用例或任务任一端检索，查看来源与执行关系。</div
+          >从业务文档、用例或任务任一端检索，查看来源与执行关系。当前追溯项目：{{
+            route.query.projectId || appStore.currentProjectId || '未选择'
+          }}</div
         ></div
       >
       <div class="mb-4 flex flex-wrap items-center gap-3">
@@ -178,20 +180,30 @@
     showPageSize: true,
   }));
   const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
+  let generation = 0;
   async function load() {
-    if (!appStore.currentProjectId) return;
+    const run = ++generation;
+    const organization = appStore.currentOrgId;
+    const project = String(route.query.projectId || appStore.currentProjectId || '');
+    if (!project) {
+      relations.value = [];
+      total.value = 0;
+      loading.value = false;
+      return;
+    }
     loading.value = true;
     try {
       const result = await pageTestAssetRelations({
-        projectId: appStore.currentProjectId,
+        projectId: project,
         ...query,
         keyword: query.keyword.trim() || undefined,
         assetId: query.assetId.trim() || undefined,
       });
+      if (run !== generation || organization !== appStore.currentOrgId) return;
       relations.value = result.list || [];
       total.value = result.total || 0;
     } finally {
-      loading.value = false;
+      if (run === generation && organization === appStore.currentOrgId) loading.value = false;
     }
   }
   function search() {
@@ -208,9 +220,19 @@
     load();
   }
   watch(
-    () => appStore.currentProjectId,
+    () => [
+      appStore.currentOrgId,
+      String(route.query.projectId || appStore.currentProjectId || ''),
+      route.query.assetType,
+      route.query.assetId,
+    ],
     () => {
       query.current = 1;
+      ++generation;
+      relations.value = [];
+      total.value = 0;
+      query.assetType = String(route.query.assetType || '') || undefined;
+      query.assetId = String(route.query.assetId || '');
       load();
     }
   );

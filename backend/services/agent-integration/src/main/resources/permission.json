@@ -1,8 +1,8 @@
 [
   {
     "id": "BUSINESS_ASSET_MANAGEMENT",
-    "name": "业务资产与公共配置",
-    "type": "PROJECT",
+    "name": "全局测试资产与公共配置",
+    "type": "ORGANIZATION",
     "children": [
       { "id": "TEST_ASSET_VERSION", "name": "资产版本治理", "permissions": [
         { "id": "TEST_ASSET_VERSION:MANAGE", "name": "发布和停用资产版本" }
@@ -10,6 +10,10 @@
       { "id": "BUSINESS_ASSET", "name": "业务资产", "permissions": [
         { "id": "BUSINESS_ASSET:READ", "name": "读取业务理解与版本" },
         { "id": "BUSINESS_ASSET:WRITE", "name": "维护业务理解与切换版本" }
+      ] },
+      { "id": "TEST_DATA_ASSET", "name": "测试数据", "permissions": [
+        { "id": "TEST_DATA_ASSET:READ", "name": "读取测试数据内容与版本" },
+        { "id": "TEST_DATA_ASSET:READ+UPDATE", "name": "维护测试数据与下载原文件" }
       ] },
       { "id": "SHARED_CONFIGURATION", "name": "公共配置", "permissions": [
         { "id": "SHARED_CONFIGURATION:READ", "name": "读取配置元数据与普通值" },

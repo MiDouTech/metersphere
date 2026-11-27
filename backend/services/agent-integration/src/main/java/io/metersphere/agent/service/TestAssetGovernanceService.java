@@ -29,7 +29,7 @@ public class TestAssetGovernanceService {
         String organizationId = requireOrganization();
         List<TestAssetCategoryDTO> rows = jdbc.query("""
                 SELECT c.id,c.parent_id,c.name,c.path,c.level,c.sort,
-                       (SELECT COUNT(1) FROM test_asset_metadata m WHERE m.category_id=c.id) asset_count
+                       ((SELECT COUNT(1) FROM test_asset_metadata m WHERE m.category_id=c.id)+(SELECT COUNT(1) FROM data_asset d WHERE CAST(d.organization_id AS BINARY(256))=CAST(c.organization_id AS BINARY(256)) AND CAST(d.category_id AS BINARY(256))=CAST(c.id AS BINARY(256)) AND d.deleted=0)) asset_count
                 FROM test_asset_category c WHERE c.organization_id=? AND c.deleted=b'0' ORDER BY c.sort,c.name
                 """, (rs, n) -> {
             TestAssetCategoryDTO dto = new TestAssetCategoryDTO();
@@ -120,6 +120,7 @@ public class TestAssetGovernanceService {
         String organizationId = requireOrganization(); Category current = category(id, organizationId, true);
         long children = jdbc.queryForObject("SELECT COUNT(1) FROM test_asset_category WHERE organization_id=? AND parent_id=? AND deleted=b'0'", Long.class, organizationId, id);
         long assets = jdbc.queryForObject("SELECT COUNT(1) FROM test_asset_metadata WHERE organization_id=? AND category_id=?", Long.class, organizationId, id);
+        assets += jdbc.queryForObject("SELECT COUNT(1) FROM data_asset WHERE organization_id=? AND category_id=? AND deleted=0",Long.class,organizationId,id);
         String strategy = StringUtils.upperCase(StringUtils.trimToEmpty(request.getStrategy()));
         if ((children > 0 || assets > 0) && !StringUtils.equalsAny(strategy, "MIGRATE", "UNCLASSIFY")) {
             throw new MSException("分类包含资产或子分类，请选择迁移或转为未分类");
@@ -130,6 +131,7 @@ public class TestAssetGovernanceService {
         String targetId = target == null ? null : target.id;
         jdbc.update("UPDATE test_asset_metadata SET category_id=?,update_user=?,update_time=? WHERE organization_id=? AND category_id=?",
                 targetId, SessionUtils.getUserId(), System.currentTimeMillis(), organizationId, id);
+        jdbc.update("UPDATE data_asset SET category_id=?,revision=revision+1,update_time=? WHERE organization_id=? AND category_id=? AND deleted=0",targetId,System.currentTimeMillis(),organizationId,id);
         String newParentId = "MIGRATE".equals(strategy) ? target.id : current.parentId;
         Category newParent = category(newParentId, organizationId, false);
         List<Category> directChildren = jdbc.query("SELECT id,parent_id,name,path,level FROM test_asset_category WHERE organization_id=? AND parent_id=? AND deleted=b'0'",
@@ -332,7 +334,7 @@ public class TestAssetGovernanceService {
     private Category category(String id, String organizationId, boolean required) {
         if (StringUtils.isBlank(id)) return null;
         List<Category> rows = jdbc.query("SELECT id,parent_id,name,path,level FROM test_asset_category WHERE id=? AND organization_id=? AND deleted=b'0'", this::mapCategory, id, organizationId);
-        if (rows.isEmpty() && required) throw new MSException("资产分类不存在或已被删除");
+        if (rows.isEmpty()) throw new MSException("资产分类不存在或已被删除");
         return rows.isEmpty() ? null : rows.getFirst();
     }
 

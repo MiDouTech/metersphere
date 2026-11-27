@@ -1,0 +1,186 @@
+[p1 "MeterSphere" | space "全局资产与测试数据开发验收20261127"(8): 2 managed, 0 untracked — p1* "MeterSphere", p2 "HiFox"]
+root
+  svg_root
+  container
+    container
+      container
+        image
+        text "MeterSphere"
+      container
+        text "业务资产"
+        text "用例资产"
+        text "测试数据"
+        text "公共配置"
+        text "资产版本"
+      unordered_list
+        list_item
+        list_item
+          button [ref=147]
+            svg_root
+        list_item
+          button [ref=148]
+            svg_root
+        list_item
+          button [ref=149]
+            svg_root
+        list_item
+          switch [ref=150]
+            svg_root
+        list_item
+          button [ref=151]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "Fixture"
+          svg_root
+      container
+        container
+          button [ref=152]
+            text "上传测试数据"
+          button [ref=153]
+            text "人工新建"
+          text "全局资产"
+          button [ref=154]
+            text "历史项目数据"
+        button [ref=155]
+          text "导入历史项目文件"
+        paragraph
+          text "支持 CSV、JSON、TXT、XLS、XLSX，最大 2000000 字节、10000 行。"
+        container
+          container "数据分类"
+            button [ref=156]
+              text "全部分类"
+            button [ref=157]
+              text "未分类"
+            text "订单样本 (2)"
+            button [ref=158]
+              text "管理分类"
+          container
+            container
+              container
+                textbox [ref=159, loc=css:input[placeholder="搜索测试数据"]]
+                  text "搜索测试数据"
+                svg_root
+              button [ref=160]
+                text "批量修改"
+              button [ref=161]
+                text "逐项修改内容"
+              button [ref=162]
+                text "批量删除"
+            region "测试数据列表" [ref=163, loc=role:region[name="测试数据列表"]]
+              table
+                table_row
+                  table_cell
+                    checkbox [ref=194]
+                  table_cell
+                    text "名称"
+                  table_cell
+                    text "说明"
+                  table_cell
+                    text "分类"
+                  table_cell
+                    text "负责人"
+                  table_cell
+                    text "更新时间"
+                  table_cell
+                    text "格式"
+                  table_cell
+                    text "解析状态"
+                  table_cell
+                    text "修订"
+                  table_cell
+                    text "操作"
+                table_row
+                  table_cell
+                    checkbox [ref=202]
+                  table_cell
+                    anchor [ref=203]
+                      text "upload.csv"
+                  table_cell
+                    text "已核验金额样本"
+                  table_cell
+                    text "订单样本 (2)"
+                  table_cell
+                    text "user"
+                  table_cell
+                    text "11/27/2026, 1:20:15 PM"
+                  table_cell
+                    text "CSV"
+                  table_cell
+                    text "READY"
+                  table_cell
+                    text "2"
+                  table_cell
+                    anchor [ref=204]
+                      text "详情"
+                    anchor [ref=205]
+                      text "修改"
+                    anchor [ref=206]
+                      text "删除"
+                    button "更多操作" [ref=207]
+                      text "…"
+                table_row
+                  table_cell
+                    checkbox [ref=208]
+                  table_cell
+                    anchor [ref=209]
+                      text "订单-待审"
+                  table_cell
+                    text "已核验金额样本"
+                  table_cell
+                    text "订单样本 (2)"
+                  table_cell
+                    text "user"
+                  table_cell
+                    text "11/27/2026, 1:20:15 PM"
+                  table_cell
+                    text "JSON"
+                  table_cell
+                    text "READY"
+                  table_cell
+                    text "2"
+                  table_cell
+                    anchor [ref=210]
+                      text "详情"
+                    anchor [ref=211]
+                      text "修改"
+                    anchor [ref=212]
+                      text "删除"
+                    button "更多操作" [ref=213]
+                      text "…"
+              unordered_list
+                container
+                  svg_root
+                  text "."
+                list_item
+                  text "1"
+                container
+                  svg_root
+                  text "."
+            alert
+              svg_root
+              text "ba5f4d33-c589-44eb-8215-7c12e39f0655：SUCCESS"
+            alert
+              svg_root
+              text "a92e6293-bc3f-4d88-bcd9-7154f01a5dfa：SUCCESS"
+  svg_root

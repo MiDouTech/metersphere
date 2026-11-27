@@ -5,6 +5,7 @@ import { bugTransferTools } from "./tools/bugTransfer.js";
 import { caseLibraryTools } from "./tools/caseLibrary.js";
 import { managedExecutionTools } from "./tools/managedExecution.js";
 import { businessAssetTools } from "./tools/businessAssets.js";
+import { dataAssetTools } from "./tools/dataAssets.js";
 import { sharedConfigurationTools } from "./tools/sharedConfigurations.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -57,6 +58,7 @@ type ToolDef = {
 };
 
 const tools: ToolDef[] = [
+  ...dataAssetTools,
   ...sharedConfigurationTools,
   ...businessAssetTools,
   ...managedExecutionTools,

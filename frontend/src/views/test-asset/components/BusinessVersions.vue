@@ -102,6 +102,7 @@
   import businessAssetError from '@/utils/businessAssetError';
   import { hasAnyPermission } from '@/utils/permission';
 
+  const globalScope = '';
   const app = useAppStore();
   const route = useRoute();
   const router = useRouter();
@@ -117,7 +118,7 @@
   const saving = ref(false);
   const error = ref('');
   const legacyError = ref('');
-  const canWrite = computed(() => hasAnyPermission(['BUSINESS_ASSET:WRITE']));
+  const canWrite = computed(() => hasAnyPermission(['BUSINESS_ASSET:WRITE'], ['ORGANIZATION', 'SYSTEM']));
   const current = computed(() => detail.value?.versions.find((v) => v.id === detail.value?.currentVersionId));
   let generation = 0;
   let catalogGeneration = 0;
@@ -132,7 +133,7 @@
     }
     loading.value = true;
     try {
-      const value = await getBusinessAsset(app.currentProjectId, assetId.value);
+      const value = await getBusinessAsset(globalScope, assetId.value);
       if (run === generation) detail.value = value;
     } catch (failure) {
       if (run === generation) error.value = businessAssetError(failure, '版本读取失败，请检查权限或网络。');
@@ -146,22 +147,22 @@
     switchVisible.value = true;
   }
   async function importLegacy(id: string) {
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     const run = ++generation;
     try {
       const result = await MSR.post<{ assetId: string }>({
         url: `/business-assets/legacy/${encodeURIComponent(id)}/import`,
-        data: { projectId: project },
+        data: { projectId: globalScope },
       });
-      if (project !== app.currentProjectId || run !== generation) return;
-      const active = await listBusinessAssets(project);
-      if (project !== app.currentProjectId || run !== generation) return;
+      if (project !== app.currentOrgId || run !== generation) return;
+      const active = await listBusinessAssets(globalScope);
+      if (project !== app.currentOrgId || run !== generation) return;
       assets.value = active;
       assetId.value = result.assetId;
       legacy.value = legacy.value.filter((item) => item.id !== id);
       await loadDetail();
     } catch (failure) {
-      if (project === app.currentProjectId && run === generation)
+      if (project === app.currentOrgId && run === generation)
         error.value = businessAssetError(failure, '历史业务理解导入失败，请检查项目权限后重试。');
     }
   }
@@ -175,13 +176,7 @@
     }
     saving.value = true;
     try {
-      await selectBusinessVersion(
-        assetId.value,
-        app.currentProjectId,
-        target.value.id,
-        detail.value.revision,
-        reason.value
-      );
+      await selectBusinessVersion(assetId.value, globalScope, target.value.id, detail.value.revision, reason.value);
       await loadDetail();
       return true;
     } catch (failure) {
@@ -202,42 +197,42 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   async function loadLegacy() {
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     const run = ++legacyGeneration;
     legacyError.value = '';
     try {
       const value = await MSR.get<{ id: string; title: string; versionCount: number }[]>({
         url: '/business-assets/legacy-unassigned',
-        params: { projectId: project },
+        params: { projectId: globalScope },
       });
-      if (run === legacyGeneration && project === app.currentProjectId) legacy.value = value;
+      if (run === legacyGeneration && project === app.currentOrgId) legacy.value = value;
     } catch (failure) {
-      if (run === legacyGeneration && project === app.currentProjectId)
+      if (run === legacyGeneration && project === app.currentOrgId)
         legacyError.value = businessAssetError(failure, '历史归属目录加载失败，不影响当前业务资产版本查看。');
     }
   }
   async function reload() {
     const run = ++catalogGeneration;
-    const project = app.currentProjectId;
+    const project = app.currentOrgId;
     error.value = '';
     loading.value = true;
     try {
       const [active, archived] = await Promise.all([
-        listBusinessAssets(project),
-        listBusinessAssets(project, '', true),
+        listBusinessAssets(globalScope),
+        listBusinessAssets(globalScope, '', true),
       ]);
-      if (run !== catalogGeneration || project !== app.currentProjectId) return;
+      if (run !== catalogGeneration || project !== app.currentOrgId) return;
       assets.value = [...active, ...archived];
       if (!assets.value.some((asset) => asset.id === assetId.value)) assetId.value = '';
       await loadDetail();
     } catch (failure) {
       if (run === catalogGeneration) error.value = businessAssetError(failure, '业务资产版本目录加载失败，请重试。');
     } finally {
-      if (run === catalogGeneration && project === app.currentProjectId) loading.value = false;
+      if (run === catalogGeneration && project === app.currentOrgId) loading.value = false;
     }
   }
   watch(
-    [() => app.currentProjectId, () => route.query.businessAssetId],
+    [() => app.currentOrgId, () => route.query.businessAssetId],
     async () => {
       ++generation;
       ++catalogGeneration;
@@ -249,7 +244,7 @@
       legacy.value = [];
       legacyError.value = '';
       assetId.value = String(route.query.businessAssetId || '');
-      if (!app.currentProjectId || !hasAnyPermission(['BUSINESS_ASSET:READ'])) return;
+      if (!hasAnyPermission(['BUSINESS_ASSET:READ'], ['ORGANIZATION', 'SYSTEM'])) return;
       await Promise.all([reload(), loadLegacy()]);
     },
     { immediate: true }

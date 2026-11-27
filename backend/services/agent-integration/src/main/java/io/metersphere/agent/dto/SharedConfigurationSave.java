@@ -3,7 +3,7 @@ package io.metersphere.agent.dto;
 import jakarta.validation.constraints.*;
 
 public record SharedConfigurationSave(
-    @NotBlank String projectId,
+    String projectId,
     @Size(max = 64) String id,
     @NotBlank @Size(max = 128) String systemKey,
     @NotBlank @Size(max = 128) String environmentKey,

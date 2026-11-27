@@ -1,0 +1,135 @@
+[p1 "MeterSphere" | space "全局资产与测试数据开发验收20261127"(8): 1 managed, 0 untracked — p1* "MeterSphere"]
+root
+  svg_root
+  container
+    container
+      container
+        image
+        text "MeterSphere"
+      container
+        text "业务资产"
+        text "用例资产"
+        text "测试数据"
+        text "公共配置"
+        text "资产版本"
+      unordered_list
+        list_item
+        list_item
+          button [ref=23]
+            svg_root
+        list_item
+          button [ref=24]
+            svg_root
+        list_item
+          button [ref=25]
+            svg_root
+        list_item
+          switch [ref=26]
+            svg_root
+        list_item
+          button [ref=27]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "Fixture"
+          svg_root
+      container
+        container
+          button [ref=28]
+            text "上传测试数据"
+          button [ref=29]
+            text "人工新建"
+          text "全局资产"
+          button [ref=30]
+            text "历史项目数据"
+        button [ref=31]
+          text "导入历史项目文件"
+        alert
+          svg_root
+          text "操作失败，请检查权限、网络和数据版本；并发修改时请重新打开详情。"
+        container
+          container "数据分类"
+            button [ref=32]
+              text "全部分类"
+            button [ref=33]
+              text "未分类"
+            button [ref=34]
+              text "管理分类"
+          container
+            container
+              container
+                textbox [ref=35, loc=css:input[placeholder="搜索测试数据"]]
+                  text "搜索测试数据"
+                svg_root
+              button [ref=36]
+                text "批量修改分类"
+              button [ref=37]
+                text "逐项修改内容"
+              button [ref=38]
+                text "批量删除"
+            region "测试数据列表" [ref=39, loc=role:region[name="测试数据列表"]]
+              table
+                table_row
+                  table_cell
+                    checkbox [ref=45]
+                  table_cell
+                    text "名称"
+                  table_cell
+                    text "格式"
+                  table_cell
+                    text "解析状态"
+                  table_cell
+                    text "修订"
+                  table_cell
+                    text "操作"
+                table_row
+                  table_cell
+                    checkbox [ref=47]
+                  table_cell
+                    anchor [ref=48]
+                      text "E2E-订单金额样本"
+                  table_cell
+                    text "JSON"
+                  table_cell
+                    text "READY"
+                  table_cell
+                    text "1"
+                  table_cell
+                    anchor [ref=49]
+                      text "详情"
+                    anchor [ref=50]
+                      text "修改"
+                    anchor [ref=51]
+                      text "删除"
+                    button "更多操作" [ref=52, loc=css:button[aria-label="更多操作"]]
+                      text "…"
+              unordered_list
+                container
+                  svg_root
+                  text "."
+                list_item
+                  text "1"
+                container
+                  svg_root
+                  text "."
+  svg_root

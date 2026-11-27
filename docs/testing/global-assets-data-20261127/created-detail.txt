@@ -1,0 +1,91 @@
+[p1 "MeterSphere" | space "全局资产与测试数据开发验收20261127"(8): 1 managed, 0 untracked — p1* "MeterSphere"]
+root
+  svg_root
+  container
+    container
+      container
+        image
+        text "MeterSphere"
+      container
+        text "业务资产"
+        text "用例资产"
+        text "测试数据"
+        text "公共配置"
+        text "资产版本"
+      unordered_list
+        list_item
+        list_item
+          button [ref=23]
+            svg_root
+        list_item
+          button [ref=24]
+            svg_root
+        list_item
+          button [ref=25]
+            svg_root
+        list_item
+          switch [ref=26]
+            svg_root
+        list_item
+          button [ref=27]
+            svg_root
+    container
+      container
+        container
+          container
+            svg_root
+            text "工作台"
+          container
+            svg_root
+            text "项目管理"
+          container
+            svg_root
+            text "测试资产"
+          container
+            svg_root
+            text "执行中心"
+          container
+            svg_root
+            text "系统设置"
+            svg_root
+        container
+          container
+            svg_root
+            text "Fixture"
+          svg_root
+      container
+        container
+          button [ref=53]
+            text "返回列表"
+          heading
+            text "E2E-订单金额样本"
+          text "全局资产"
+        button [ref=54]
+          text "替换文件生成新版本"
+        container
+          paragraph
+            text "格式：JSON 修订：1"
+          paragraph
+            text "解析状态：READY"
+          paragraph
+            text "说明：无"
+          paragraph
+            text "负责人：user；分类：未分类"
+          paragraph
+            text "当前版本：045151c1-cb88-4d78-bb8b-78313094fa67"
+          container
+            textbox [ref=55, loc=css:input[placeholder="当前版本"]]
+              text "当前版本"
+            svg_root
+          button [ref=56]
+            text "选择项目查看引用追溯"
+          heading
+            text "授权可见来源"
+          paragraph
+            text "无可见来源记录"
+          heading
+            text "授权可见项目引用"
+          paragraph
+            text "无可见引用记录"
+          text "{ "订单": [ { "编号": "E2E-01", "金额": 20.5, "状态": "待审批" } ], "备注": "<b>字面量</b>" }"
+  svg_root

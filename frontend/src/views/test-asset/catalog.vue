@@ -52,7 +52,7 @@
         v-model:selected-keys="selectedAssetIds"
         :data="records"
         :loading="loading"
-        row-key="id"
+        :row-key="(record: TestAssetCatalogItem) => `${record.projectId}:${record.assetType}:${record.id}`"
         :pagination="pagination"
         :row-selection="canAssignCategory ? { type: 'checkbox', showCheckedAll: true } : undefined"
         @page-change="changePage"
@@ -120,6 +120,12 @@
             <template #cell="{ record }">
               <a-space>
                 <a-link @click="openDetail(record)">详情</a-link>
+                <a-link
+                  v-if="assetType === 'DATASET' && canImportData"
+                  :disabled="Boolean(importingData)"
+                  @click="importData(record)"
+                  >导入全局数据</a-link
+                >
                 <a-link @click="openRelations(record)">追溯</a-link>
                 <a-link v-if="assetType === 'EVIDENCE'" @click="previewEvidence(record)">预览</a-link>
                 <a-link v-if="assetType === 'EVIDENCE'" @click="downloadEvidence(record)">下载</a-link>
@@ -202,7 +208,11 @@
       >
       <a-empty v-else description="该证据无法安全预览，请下载后查看" />
     </a-modal>
-    <TestAssetCategoryDrawer v-model:visible="categoryDrawerVisible" @changed="handleCategoryChanged" />
+    <TestAssetCategoryDrawer
+      :key="appStore.currentOrgId"
+      v-model:visible="categoryDrawerVisible"
+      @changed="handleCategoryChanged"
+    />
     <a-modal
       v-model:visible="batchCategoryVisible"
       title="批量归类"
@@ -277,9 +287,10 @@
     getTestAssetMetadata,
     governTestAssetSource,
     listTestAssetCategories,
-    pageTestAssetCatalog,
+    pageGlobalAssetCatalog,
     publishTestAssetCatalog,
   } from '@/api/modules/ai-execution';
+  import { importLegacyData } from '@/api/modules/test-data-assets';
   import useAppStore from '@/store/modules/app';
   import { downloadByteFile } from '@/utils';
   import { hasAnyPermission } from '@/utils/permission';
@@ -287,10 +298,12 @@
   import { CaseManagementRouteEnum } from '@/enums/routeEnum';
 
   const route = useRoute();
-  const router = useRouter();
   const appStore = useAppStore();
+  const router = useRouter();
   const canAssignCategory = hasAnyPermission(['TEST_ASSET_CATEGORY:ASSIGN']);
   const canGovernSource = hasAnyPermission(['TEST_ASSET_SOURCE:GOVERN']);
+  const canImportData = computed(() => hasAnyPermission(['TEST_DATA_ASSET:READ+UPDATE'], ['ORGANIZATION', 'SYSTEM']));
+  const importingData = ref('');
   const configs: Record<string, { type: TestAssetCatalogType; title: string; description: string; source: string }> = {
     'datasets': {
       type: 'DATASET',
@@ -385,13 +398,16 @@
   }));
   const formatTime = (value?: number) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-');
 
+  let listGeneration = 0;
+  let detailGeneration = 0;
   async function load() {
-    if (!appStore.currentProjectId) return;
+    const generation = ++listGeneration;
+    const organization = appStore.currentOrgId;
     loading.value = true;
     error.value = '';
     try {
-      const result = await pageTestAssetCatalog({
-        projectId: appStore.currentProjectId,
+      const result = await pageGlobalAssetCatalog({
+        projectId: '',
         assetType: assetType.value,
         keyword: query.keyword.trim() || undefined,
         status: query.status.trim() || undefined,
@@ -401,16 +417,20 @@
         current: query.current,
         pageSize: query.pageSize,
       });
+      if (organization !== appStore.currentOrgId || generation !== listGeneration) return;
       records.value = result.list || [];
       total.value = result.total || 0;
-    } catch (reason: any) {
-      error.value = reason?.message || `${config.value.title}加载失败，请稍后重试`;
+    } catch {
+      if (generation === listGeneration && organization === appStore.currentOrgId)
+        error.value = `${config.value.title}加载失败，请检查权限或网络后重试`;
     } finally {
-      loading.value = false;
+      if (generation === listGeneration && organization === appStore.currentOrgId) loading.value = false;
     }
   }
   async function loadCategories() {
-    categories.value = await listTestAssetCategories();
+    const organization = appStore.currentOrgId;
+    const result = await listTestAssetCategories();
+    if (organization === appStore.currentOrgId) categories.value = result;
   }
   async function handleCategoryChanged() {
     await loadCategories();
@@ -419,12 +439,7 @@
   async function changeCategory(record: TestAssetCatalogItem, categoryId?: string) {
     const previous = record.categoryId;
     try {
-      const metadata = await assignTestAssetCategory(
-        appStore.currentProjectId,
-        record.assetType,
-        record.id,
-        categoryId
-      );
+      const metadata = await assignTestAssetCategory(record.projectId, record.assetType, record.id, categoryId);
       record.categoryId = metadata.categoryId;
       record.categoryName = metadata.categoryName;
       record.categoryPath = metadata.categoryPath;
@@ -435,11 +450,13 @@
   async function applyBatchCategory() {
     batchCategoryLoading.value = true;
     try {
-      const selected = records.value.filter((record) => selectedAssetIds.value.includes(record.id));
+      const selected = records.value.filter((record) =>
+        selectedAssetIds.value.includes(`${record.projectId}:${record.assetType}:${record.id}`)
+      );
       const results = await batchAssignTestAssetCategory({
         categoryId: batchCategoryId.value,
         items: selected.map((record) => ({
-          projectId: appStore.currentProjectId,
+          projectId: record.projectId,
           assetType: record.assetType,
           assetId: record.id,
         })),
@@ -471,7 +488,7 @@
     sourceGovernanceLoading.value = true;
     try {
       await governTestAssetSource({
-        projectId: appStore.currentProjectId,
+        projectId: record.projectId,
         assetType: record.assetType,
         assetId: record.id,
         creationSource: sourceGovernanceForm.creationSource,
@@ -499,20 +516,51 @@
     load();
   }
   async function openDetail(record: TestAssetCatalogItem) {
-    if (!appStore.currentProjectId) return;
+    const generation = ++detailGeneration;
+    const organization = appStore.currentOrgId;
+    detail.value = undefined;
+    detailMetadata.value = undefined;
     detailVisible.value = true;
-    const [asset, metadata] = await Promise.all([
-      getTestAssetCatalogDetail(appStore.currentProjectId, record.assetType, record.id),
-      getTestAssetMetadata(appStore.currentProjectId, record.assetType, record.id),
-    ]);
-    detail.value = asset;
-    detailMetadata.value = metadata;
+    try {
+      const [asset, metadata] = await Promise.all([
+        getTestAssetCatalogDetail(record.projectId, record.assetType, record.id),
+        getTestAssetMetadata(record.projectId, record.assetType, record.id),
+      ]);
+      if (generation !== detailGeneration || organization !== appStore.currentOrgId || !detailVisible.value) return;
+      detail.value = asset;
+      detailMetadata.value = metadata;
+    } catch {
+      if (generation === detailGeneration && organization === appStore.currentOrgId)
+        error.value = '资产详情读取失败，请检查权限或网络后重试';
+    }
+  }
+  async function importData(record: TestAssetCatalogItem) {
+    if (importingData.value) return;
+    const organization = appStore.currentOrgId;
+    importingData.value = record.id;
+    try {
+      const asset = await importLegacyData(record.projectId, record.id);
+      if (organization !== appStore.currentOrgId) return;
+      Message.success('已导入全局数据，原项目文件保持不变');
+      await router.push({ name: 'testAssetDataDetail', params: { dataId: asset.id } });
+    } catch {
+      if (organization === appStore.currentOrgId)
+        Message.error('导入未完成，请核对源文件权限、格式和大小后重试，原文件保持不变。');
+    } finally {
+      importingData.value = '';
+    }
   }
   function openVersions(record: TestAssetCatalogItem) {
-    router.push({ path: '/test-assets/versions', query: { assetType: record.assetType, assetId: record.id } });
+    router.push({
+      path: '/test-assets/versions',
+      query: { projectId: record.projectId, assetType: record.assetType, assetId: record.id },
+    });
   }
   function openRelations(record: TestAssetCatalogItem) {
-    router.push({ path: '/test-assets/relations', query: { assetType: record.assetType, assetId: record.id } });
+    router.push({
+      path: '/test-assets/relations',
+      query: { projectId: record.projectId, assetType: record.assetType, assetId: record.id },
+    });
   }
   function openSource() {
     router.push(config.value.source);
@@ -531,14 +579,13 @@
     });
   }
   async function publishAsset(record: TestAssetCatalogItem) {
-    if (!appStore.currentProjectId) return;
-    await publishTestAssetCatalog(appStore.currentProjectId, record.assetType, record.id);
+    await publishTestAssetCatalog(record.projectId, record.assetType, record.id);
     await load();
   }
   async function downloadEvidence(record: TestAssetCatalogItem) {
-    const project = appStore.currentProjectId;
+    const project = record.projectId;
     const bytes = await downloadTestAssetEvidence(project, record.id);
-    if (project !== appStore.currentProjectId) return;
+
     downloadByteFile(bytes, record.name || `evidence-${record.id}`);
   }
   let evidenceRequest = 0;
@@ -552,25 +599,34 @@
   async function previewEvidence(record: TestAssetCatalogItem) {
     clearPreview();
     const request = evidenceRequest;
-    const project = appStore.currentProjectId;
+    const project = record.projectId;
     const bytes = await downloadTestAssetEvidence(project, record.id);
-    if (request !== evidenceRequest || project !== appStore.currentProjectId) return;
+    if (request !== evidenceRequest) return;
     const blob = bytes instanceof Blob ? bytes : new Blob([bytes]);
     const textEvidence =
       /\.(txt|log|json|xml|csv|har)$/i.test(record.name || '') ||
       ['text/plain', 'text/csv', 'application/json', 'application/xml', 'text/xml'].includes(blob.type);
     if (textEvidence) {
       const text = (await blob.text()).slice(0, 1_000_000);
-      if (request !== evidenceRequest || project !== appStore.currentProjectId) return;
+      if (request !== evidenceRequest) return;
       previewText.value = text;
     } else previewUrl.value = URL.createObjectURL(blob);
     previewVisible.value = true;
   }
   watch(
-    () => [segment.value, appStore.currentProjectId],
+    () => [segment.value, appStore.currentOrgId],
     () => {
+      ++listGeneration;
+      ++detailGeneration;
+      records.value = [];
+      categories.value = [];
+      selectedAssetIds.value = [];
+      detail.value = undefined;
+      detailMetadata.value = undefined;
+      detailVisible.value = false;
       clearPreview();
       query.current = 1;
+      loadCategories();
       load();
     }
   );

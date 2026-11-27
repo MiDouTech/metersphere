@@ -11,6 +11,7 @@ import java.util.UUID;
 @Component
 public class AgentSafeErrorMapper {
     public AgentApiErrorDTO toApiError(Throwable error, String suppliedTraceId) {
+        if(error instanceof DataAssetFailure safe)return new AgentApiErrorDTO(safe.code(),safe.getMessage(),Map.of(),safe.traceId());
         if(error instanceof BusinessGovernanceException safe) {
             return new AgentApiErrorDTO(safe.code(),safe.getMessage(),Map.of(),UUID.randomUUID().toString());
         }

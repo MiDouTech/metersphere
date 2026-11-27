@@ -70,12 +70,23 @@ class AgentMcpToolContractTests {
 
     @Test
     void assetCatalogContractIncludesIncrementalCursorAndStrictPageResult(){
-        AgentMcpToolHandler handler=new BuiltinAgentMcpToolConfig().assetCatalogSearchTool(Mockito.mock(TestAssetCatalogService.class));
+        AgentMcpToolHandler handler=new BuiltinAgentMcpToolConfig().assetCatalogSearchTool(Mockito.mock(io.metersphere.agent.service.GlobalAssetCatalogService.class));
         Map<?,?> properties=(Map<?,?>)handler.inputSchema().get("properties");
         Assertions.assertTrue(properties.containsKey("updatedAfter"));
         Map<?,?> outputProperties=(Map<?,?>)handler.outputSchema().get("properties");
         Map<?,?> result=(Map<?,?>)outputProperties.get("result");
         Assertions.assertEquals(false,result.get("additionalProperties"));
         Assertions.assertEquals(List.of("items","nextCursor","hasMore","traceId"),result.get("required"));
+    }
+
+    @Test void catalogSourceHintSelectsGlobalOrganizationIndex() {
+        var service = Mockito.mock(io.metersphere.agent.service.GlobalAssetCatalogService.class);
+        Mockito.when(service.searchByTypes("p", List.of("CASE"), null, null, null, 1, 20))
+            .thenReturn(new io.metersphere.system.utils.Pager<>(List.of(), 0, 20, 1));
+        var tool = new BuiltinAgentMcpToolConfig().assetCatalogSearchTool(service);
+        tool.execute(Map.of("sourceProjectId", "p", "assetTypes", List.of("CASE")));
+        Mockito.verify(service).searchByTypes("p", List.of("CASE"), null, null, null, 1, 20);
+        Assertions.assertThrows(RuntimeException.class, () -> tool.execute(Map.of(
+            "sourceProjectId", "p", "projectId", "other", "assetTypes", List.of("CASE"))));
     }
 }

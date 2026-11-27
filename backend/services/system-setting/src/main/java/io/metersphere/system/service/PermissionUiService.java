@@ -91,7 +91,56 @@ public class PermissionUiService {
                             && projectBelongsToOrganization(userDTO.getLastProjectId(), userDTO.getLastOrganizationId()))
                             || isGlobalSystemRole(relation, role));
                 });
+        projectSourceVersionReader(result, resources, userDTO, rolesById, oldPermissionsByRole);
+        exposeMenuAncestors(result, resources);
         return result;
+    }
+
+    private static final Set<String> VERSION_READ_PERMISSIONS = Set.of(
+            "TEST_DATA_ASSET:READ", "BUSINESS_ASSET:READ", "SHARED_CONFIGURATION:READ",
+            "CASE_ASSET:READ", "FUNCTIONAL_CASE:READ", "FUNCTIONAL_CASE_AI:READ",
+            "PROJECT_FILE_MANAGEMENT:READ", "PROJECT_ENVIRONMENT:READ", "PROJECT_API_SCENARIO:READ",
+            "PROJECT_API_DEFINITION:READ", "AI_EXECUTION:READ", "PROJECT_BUG:READ");
+
+    /** Compatibility versions remain readable through an authorized source project, without global grants. */
+    private void projectSourceVersionReader(UserUiPermissionsDTO result, List<PermissionResource> resources,
+            UserDTO user, Map<String, UserRole> roles, Map<String, Set<String>> permissions) {
+        PermissionResource versions = resources.stream().filter(resource -> "TEST_ASSET_VERSIONS_PAGE".equals(resource.getCode()))
+                .findFirst().orElse(null);
+        if (versions == null) return;
+        registerManagedRoute(result.getOrganization(), versions);
+        for (UserRoleRelation relation : user.getUserRoleRelations()) {
+            UserRole role = roles.get(relation.getRoleId());
+            if (role == null || !"PROJECT".equals(role.getType())) continue;
+            boolean readable = "project_admin".equals(role.getId()) || VERSION_READ_PERMISSIONS.stream()
+                    .anyMatch(permissions.getOrDefault(role.getId(), Set.of())::contains);
+            if (!readable || !projectBelongsToOrganization(relation.getSourceId(), user.getLastOrganizationId())) continue;
+            result.getOrganization().getVisible().add(versions.getCode());
+            addVisibleRoute(result.getOrganization(), versions);
+            return;
+        }
+    }
+
+    /** A readable child exposes navigation shells across scopes, never sibling pages or APIs. */
+    private void exposeMenuAncestors(UserUiPermissionsDTO result, List<PermissionResource> resources) {
+        Map<String, PermissionResource> byCode = resources.stream().collect(Collectors.toMap(
+                PermissionResource::getCode, item -> item, (a,b) -> a));
+        Map<String, UiPermissionSetDTO> scopes = Map.of("SYSTEM", result.getSystem(),
+                "ORGANIZATION", result.getOrganization(), "PROJECT", result.getProject());
+        Set<String> visible = scopes.values().stream().flatMap(set -> set.getVisible().stream()).collect(Collectors.toSet());
+        for (PermissionResource child : resources) {
+            if (!visible.contains(child.getCode())) continue;
+            Set<String> visited = new LinkedHashSet<>();
+            PermissionResource parent = byCode.get(child.getParentCode());
+            while (parent != null && visited.add(parent.getCode())) {
+                if ("MENU".equals(parent.getType()) && scopes.containsKey(parent.getScopeType())) {
+                    UiPermissionSetDTO target = scopes.get(parent.getScopeType());
+                    target.getVisible().add(parent.getCode());
+                    addVisibleRoute(target, parent);
+                }
+                parent = byCode.get(parent.getParentCode());
+            }
+        }
     }
 
     private boolean isGlobalSystemRole(UserRoleRelation relation, UserRole role) {
@@ -170,7 +219,10 @@ public class PermissionUiService {
                                         PermissionResource resource,
                                         Set<String> permissions) {
         String permissionId = resolvePermissionId(resourceMap, resource);
-        if (StringUtils.isBlank(permissionId) || !permissions.contains(permissionId)) {
+        boolean versionsRead = "TEST_ASSET_VERSIONS_PAGE".equals(resource.getCode())
+                && VERSION_READ_PERMISSIONS.stream().anyMatch(permissions::contains);
+        if ("TEST_ASSET_VERSIONS_PAGE".equals(resource.getCode()) ? !versionsRead
+                : StringUtils.isBlank(permissionId) || !permissions.contains(permissionId)) {
             return;
         }
         target.getVisible().add(resource.getCode());

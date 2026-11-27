@@ -12,6 +12,15 @@ test('built stdio server advertises package version and current execution/create
     await client.connect(transport);
     assert.equal(client.getServerVersion().version,JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version);
     const {tools}=await client.listTools();
+    const data=tools.find(t=>t.name==='metersphere.data_asset.manage');
+    assert.ok(data);
+    assert.ok(data.inputSchema.required.includes('sourceProjectId'));
+    for(const action of ['create','update','delete','upload','replace_upload','batch','download']) assert.ok(data.inputSchema.properties.action.enum.includes(action));
+    for(const name of ['metersphere.business_asset.search','metersphere.shared_configuration.list']) {
+      const schema=tools.find(t=>t.name===name).inputSchema;
+      assert.ok(schema.properties.sourceProjectId);
+      assert.ok(!(schema.required??[]).includes('projectId'));
+    }
     const submit=tools.find(t=>t.name==='metersphere.functional.execution.submit').inputSchema;
     assert.ok(submit.properties.evidenceIds);
     assert.ok(!submit.required.includes('contentHash'));

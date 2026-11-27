@@ -41,14 +41,64 @@ class SharedConfigurationServiceTests {
         Files.readString(
             root.resolve(
                 "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_157__shared_configuration_secret_type.sql")));
-    jdbc.execute(Files.readString(root.resolve(
-        "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_158__shared_configuration_audit_paging.sql")));
+    jdbc.execute(
+        Files.readString(
+            root.resolve(
+                "backend/framework/domain/src/main/resources/migration/3.7.2/ddl/V3.7.2_158__shared_configuration_audit_paging.sql")));
+    jdbc.execute("CREATE TABLE organization(id VARCHAR(64) PRIMARY KEY)");
+    jdbc.update("INSERT INTO organization VALUES('org')");
+    jdbc.execute("ALTER TABLE shared_configuration ADD COLUMN organization_id VARCHAR(64)");
+    var global = mock(GlobalAssetAccess.class);
+    when(global.authorize(any(), anyString()))
+        .thenAnswer(
+            invocation ->
+                new GlobalAssetAccess.Scope(
+                    "other".equals(invocation.getArgument(0)) ? "other-org" : "org", "actor"));
     var auth = mock(BusinessAssetService.class);
+    when(auth.globalAccess()).thenReturn(global);
     when(auth.authorize(eq("p"), anyBoolean(), anyString(), anyString())).thenReturn("actor");
     cipher = new SharedConfigurationCipher(Base64.getEncoder().encodeToString(new byte[32]));
     service =
         BusinessAssetTransactionProxy.wrap(
             new SharedConfigurationService(jdbc, auth, cipher), jdbc);
+  }
+
+  @Test
+  void newGlobalConfigurationNeedsNoProjectAndCanBeReadFromAnyProjectInOrganization() {
+    var created =
+        service.save(
+            null, null, "system", "test", "endpoint", "PLAIN", "https://example.invalid", "", 0);
+    String id = (String) created.get("id");
+    assertEquals(
+        "",
+        jdbc.queryForObject(
+            "SELECT project_id FROM shared_configuration WHERE id=?", String.class, id));
+    assertEquals(
+        "org",
+        jdbc.queryForObject(
+            "SELECT organization_id FROM shared_configuration WHERE id=?", String.class, id));
+    assertEquals("https://example.invalid", service.read("p2", id, 1, false).get("value"));
+  }
+
+  @Test
+  void organizationSharedEditsPreserveOriginalEncryptionIdentityAndRejectOtherOrganization() {
+    var created =
+        service.save(
+            "p", null, "system", "test", "baseUrl", "PLAIN", "https://example.invalid", "", 0);
+    String id = (String) created.get("id");
+    assertEquals(1, service.list("p2").size());
+    assertEquals("https://example.invalid", service.read("p2", id, 1, false).get("value"));
+    service.save("p2", id, "system", "test", "baseUrl", "PLAIN", "https://changed.invalid", "", 1);
+    assertEquals("https://changed.invalid", service.read("p", id, 2, false).get("value"));
+    assertEquals(
+        "p",
+        jdbc.queryForObject(
+            "SELECT project_id FROM shared_configuration WHERE id=?", String.class, id));
+    assertTrue(service.list("other").isEmpty());
+    assertThrows(RuntimeException.class, () -> service.read("other", id, 1, false));
+    assertThrows(
+        RuntimeException.class,
+        () -> service.save("p2", null, "system", "test", "baseUrl", "PLAIN", "duplicate", "", 0));
   }
 
   @Test
@@ -468,7 +518,11 @@ class SharedConfigurationServiceTests {
 
   @Test
   void auditQueryReturnsOnlyMetadataWithStablePaginationAndEventVersionFilters() {
-    String id = (String) service.save("p", null, "s", "test", "audit", "SECRET", "private-audit-fixture", "", 0).get("id");
+    String id =
+        (String)
+            service
+                .save("p", null, "s", "test", "audit", "SECRET", "private-audit-fixture", "", 0)
+                .get("id");
     service.save("p", id, "s", "test", "audit", "SECRET", "changed-private-fixture", "", 1);
     service.select("p", id, 1, 2, "synthetic rollback reason");
     var page = service.audits("p", id, 1, 2, null, null);
@@ -476,8 +530,10 @@ class SharedConfigurationServiceTests {
     assertEquals(2, ((List<?>) page.get("items")).size());
     var second = service.audits("p", id, 2, 2, null, null);
     assertEquals(1, ((List<?>) second.get("items")).size());
-    var firstIds = ((List<?>) page.get("items")).stream().map(r -> ((Map<?, ?>) r).get("id")).toList();
-    var secondIds = ((List<?>) second.get("items")).stream().map(r -> ((Map<?, ?>) r).get("id")).toList();
+    var firstIds =
+        ((List<?>) page.get("items")).stream().map(r -> ((Map<?, ?>) r).get("id")).toList();
+    var secondIds =
+        ((List<?>) second.get("items")).stream().map(r -> ((Map<?, ?>) r).get("id")).toList();
     assertTrue(Collections.disjoint(firstIds, secondIds));
     assertEquals(page.get("items"), service.audits("p", id, 1, 2, null, null).get("items"));
     assertFalse(page.toString().contains("private-audit-fixture"));
@@ -489,24 +545,34 @@ class SharedConfigurationServiceTests {
     assertEquals("actor", row.get("actorId"));
     assertEquals("SELECT_VERSION", row.get("eventType"));
     assertEquals(id, row.get("configurationId"));
-    assertEquals(Set.of("id", "configurationId", "versionNo", "actorId", "eventType", "createTime", "reason"), row.keySet());
+    assertEquals(
+        Set.of(
+            "id", "configurationId", "versionNo", "actorId", "eventType", "createTime", "reason"),
+        row.keySet());
     service.select("p", id, 1, 1, "same version must not create audit");
-    assertEquals(1L, ((Number) service.audits("p", id, 1, 100, "SELECT_VERSION", 1).get("total")).longValue());
+    assertEquals(
+        1L,
+        ((Number) service.audits("p", id, 1, 100, "SELECT_VERSION", 1).get("total")).longValue());
     assertTrue(((List<?>) service.audits("p", id, 10, 100, null, null).get("items")).isEmpty());
   }
 
   @Test
-  void auditQueryRejectsInvalidPaginationFiltersAndCrossProjectResources() {
-    String id = (String) service.save("p", null, "s", "test", "audit", "PLAIN", "fixture", "", 0).get("id");
+  void auditQueryRejectsInvalidFiltersAndOtherOrganizationsButSharesWithinOrganization() {
+    String id =
+        (String) service.save("p", null, "s", "test", "audit", "PLAIN", "fixture", "", 0).get("id");
     assertThrows(MSException.class, () -> service.audits("p", id, 0, 20, null, null));
     assertThrows(MSException.class, () -> service.audits("p", id, 1, 101, null, null));
     assertThrows(MSException.class, () -> service.audits("p", id, 1000001, 20, null, null));
     assertThrows(MSException.class, () -> service.audits("p", id, 1, 20, "UNKNOWN", null));
     assertThrows(MSException.class, () -> service.audits("p", id, 1, 20, null, 0));
     assertThrows(MSException.class, () -> service.audits("p", "missing", 1, 20, null, null));
-    assertThrows(MSException.class, () -> service.audits("other-project", id, 1, 20, null, null));
+    assertEquals(
+        service.audits("p", id, 1, 20, null, null), service.audits("p2", id, 1, 20, null, null));
+    assertThrows(MSException.class, () -> service.audits("other", id, 1, 20, null, null));
     var denied = mock(BusinessAssetService.class);
-    when(denied.authorize(eq("p"), eq(false), anyString(), anyString()))
+    var deniedGlobal = mock(GlobalAssetAccess.class);
+    when(denied.globalAccess()).thenReturn(deniedGlobal);
+    when(deniedGlobal.authorize(any(), anyString()))
         .thenThrow(new BusinessGovernanceException("AGENT_PERMISSION_DENIED", "permission denied"));
     var restricted = new SharedConfigurationService(jdbc, denied, cipher);
     assertThrows(MSException.class, () -> restricted.audits("p", id, 1, 20, null, null));
