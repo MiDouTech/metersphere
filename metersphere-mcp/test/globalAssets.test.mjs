@@ -44,3 +44,19 @@ test('data CRUD upload replacement batch and download use authenticated native H
  }
  assert.equal(calls.length,8);
 });
+
+test('record actions forward immutable version keys and idempotency using the existing token contract', async()=>{
+ const tool=dataAssetTools[0];
+ for(const action of ['records','copy_records','mark_records_used']){
+  const args={sourceProjectId:'org-context',action,id:'asset',versionId:'version',recordKeys:['hash:1','hash:2'],requestId:'stable',page:1,pageSize:100};
+  z.object(tool.inputSchema).parse(args);
+  await tool.handler({callNativeTool:async(name,body)=>{assert.equal(name,'metersphere.data_asset.manage');assert.deepEqual(body,args);assert.equal(body.scope,undefined);return {content:[]};}},args);
+ }
+});
+
+test('data upload schema accepts 30MiB base64 boundary and rejects overflow',()=>{
+ const schema=z.object(dataAssetTools[0].inputSchema);const args={sourceProjectId:'context',action:'upload',fileName:'data.txt',requestId:'same'};
+ assert.doesNotThrow(()=>schema.parse({...args,base64:'A'.repeat(2666676)}));
+ assert.doesNotThrow(()=>schema.parse({...args,base64:'A'.repeat(41943040)}));
+ assert.throws(()=>schema.parse({...args,base64:'A'.repeat(41943041)}));
+});

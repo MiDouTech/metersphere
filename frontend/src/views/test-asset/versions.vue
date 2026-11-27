@@ -2,7 +2,10 @@
   <TestAssetPage>
     <div class="asset-heading"><h2>资产版本</h2><p>统一查看历史快照、比较变化与切换当前版本。</p></div>
     <section class="asset-panel">
-      <a-tabs v-model:active-key="versionTab"
+      <a-empty
+        v-if="!canReadData && !canReadBusiness && !canReadConfiguration && !canReadLegacy"
+        description="暂无可查看的资产版本"
+      /><a-tabs v-else v-model:active-key="versionTab"
         ><a-tab-pane v-if="canReadData" key="data" title="测试数据" :destroy-on-hide="false"
           ><DataVersions
         /></a-tab-pane>
@@ -149,10 +152,6 @@
           </MsCard>
         </a-tab-pane>
       </a-tabs>
-      <a-empty
-        v-if="!canReadBusiness && !canReadConfiguration && !canReadLegacy"
-        description="暂无可访问的资产版本，请联系管理员授权"
-      />
     </section>
   </TestAssetPage>
 </template>

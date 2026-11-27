@@ -148,8 +148,7 @@ const TestAsset: AppRouteRecordRaw = {
       component: () => import('@/views/test-asset/versions.vue'),
       meta: {
         locale: 'menu.testAsset.versions',
-        roles: readRoles,
-        resourceCode: 'TEST_ASSET_VERSIONS_PAGE',
+        roles: ['*'],
         isTopMenu: true,
         hideInMenu: true,
         keepModuleAlive: true,

@@ -60,7 +60,7 @@ class DataAssetLegacyServiceTests {
             inv -> {
               String file = ((FileRequest) inv.getArgument(0)).getFileName();
               return new java.io.ByteArrayInputStream(
-                  ("{\"version\":" + file.substring(4) + "}")
+                  ("file3".equals(file) ? "a,b\n" : "{\"version\":" + file.substring(4) + "}")
                       .getBytes(java.nio.charset.StandardCharsets.UTF_8));
             });
     var tx = new TransactionTemplate(new DataSourceTransactionManager(jdbc.getDataSource()));
@@ -88,11 +88,13 @@ class DataAssetLegacyServiceTests {
                       Map.of("expectedRevision", 2, "content", Map.of("manual", true))));
       jdbc.update(
           "INSERT INTO file_metadata"
-              + " VALUES('file3','source','JSON',20,'project','MINIO',3,'family','source.json')");
+              + " VALUES('file3','source','CSV',20,'project','MINIO',3,'family','source.csv')");
       tx.execute(status -> legacy.importFile("project", "family"));
       assertEquals(
           manual.get("currentVersionId"), assets.detail("project", id).get("currentVersionId"));
       assertEquals(Map.of("manual", true), assets.content("project", id, null).get("content"));
+      assertEquals("JSON",assets.detail("project",id).get("format"));
+      assertThrows(io.metersphere.sdk.exception.MSException.class,()->assets.save("project",id,Map.of("expectedRevision",4,"format","CSV","content",Map.of("rows",List.of(List.of("public"))))));
       assertEquals(4, assets.versions("project", id).size());
       assertEquals(
           3L,

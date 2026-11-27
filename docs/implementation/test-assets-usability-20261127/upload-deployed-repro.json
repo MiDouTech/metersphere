@@ -1,0 +1,10 @@
+{
+  "response": {
+    "http": 503,
+    "envelopeCode": 100200,
+    "code": "DATA_ASSET_STORAGE_UNAVAILABLE",
+    "message": "原文件存储失败，请稍后重试",
+    "traceId": "d698bfef-f301-49d0-9e8e-c4ccd1f1942f"
+  },
+  "visibleError": true
+}

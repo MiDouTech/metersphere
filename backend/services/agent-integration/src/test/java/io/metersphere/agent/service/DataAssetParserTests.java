@@ -7,6 +7,17 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 
 class DataAssetParserTests {
+ @Test void csvQuotedEmptyTailPreservesRecordsAndEnforcesLimit() {
+  var parser=new DataAssetParser();
+  assertEquals(Map.of("rows",List.of()),parser.parse(new byte[0],"CSV"));
+  assertEquals(Map.of("rows",List.of(List.of(""))),parser.parse("\"\"".getBytes(StandardCharsets.UTF_8),"CSV"));
+  assertEquals(Map.of("rows",List.of(List.of(""),List.of(""))),parser.parse("\n\"\"".getBytes(StandardCharsets.UTF_8),"CSV"));
+  assertEquals(Map.of("rows",List.of(List.of("","",""))),parser.parse(",，".getBytes(StandardCharsets.UTF_8),"CSV"));
+  assertEquals(Map.of("rows",List.of(List.of("a\"b",""))),parser.parse("\"a\"\"b\",\"\"".getBytes(StandardCharsets.UTF_8),"CSV"));
+  assertEquals(100000,((List<?>)((Map<?,?>)parser.parse(("x\n".repeat(99999)+"\"\"").getBytes(StandardCharsets.UTF_8),"CSV")).get("rows")).size());
+  assertThrows(io.metersphere.sdk.exception.MSException.class,()->parser.parse(("x\n".repeat(100000)+"\"\"").getBytes(StandardCharsets.UTF_8),"CSV"));
+ }
+
   @Test
   void excelDateRetainsSerialWindowAndOriginalFormat() throws Exception {
     byte[] bytes;
@@ -98,7 +109,7 @@ class DataAssetParserTests {
   void refusesOversizedInput() {
     assertThrows(
         io.metersphere.sdk.exception.MSException.class,
-        () -> parser.parse(new byte[2000001], "TXT"));
+        () -> parser.parse(new byte[DataAssetLimits.MAX_BYTES + 1], "TXT"));
   }
 
   @Test

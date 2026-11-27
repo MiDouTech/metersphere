@@ -1,6 +1,6 @@
 <template>
-  <TestAssetPage>
-    <MsCard simple>
+  <TestAssetPage class="asset-page-bounded">
+    <MsCard auto-width simple>
       <a-alert v-if="error" type="error" class="mb-4">{{ error }}</a-alert>
       <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -638,6 +638,22 @@
 </script>
 
 <style scoped lang="less">
+  .asset-page-bounded {
+    overflow-x: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  :deep(.arco-card-body) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  :deep(.arco-space) {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  :deep(.arco-table) {
+    max-width: 100%;
+  }
   :deep(.asset-category-select .arco-select-view-single) {
     border-color: transparent;
     background: transparent;

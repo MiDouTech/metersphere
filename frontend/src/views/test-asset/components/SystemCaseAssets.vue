@@ -1,5 +1,5 @@
 <template>
-  <MsCard simple :min-width="0">
+  <MsCard auto-width simple :min-width="0">
     <div class="mb-4">
       <h2 class="text-base font-medium">系统目录</h2>
       <p class="mt-1 text-sm text-[var(--color-text-3)]"
@@ -126,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+  import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { Message, Modal } from '@arco-design/web-vue';
 
@@ -143,6 +143,7 @@
     saveAssetSystem,
     saveAssetSystemModule,
   } from '@/api/modules/case-management/assetSystems';
+  import useAppStore from '@/store/modules/app';
   import { hasAnyPermission } from '@/utils/permission';
 
   import { TestAssetRouteEnum } from '@/enums/routeEnum';
@@ -159,6 +160,7 @@
     title: string;
     children?: DirectoryNode[];
   }
+  const app = useAppStore();
   const router = useRouter();
   const route = useRoute();
   const canAdd = hasAnyPermission(['CASE_ASSET:READ+ADD']);
@@ -242,6 +244,7 @@
     return parts.join(' / ');
   }
   async function loadRows() {
+    if (!app.currentOrgId) return;
     const request = ++sequence;
     loading.value = true;
     selectedIds.value = [];
@@ -273,6 +276,7 @@
     }
   }
   async function refresh() {
+    if (!app.currentOrgId) return;
     const request = ++treeSequence;
     treeLoading.value = true;
     try {
@@ -374,7 +378,27 @@
       return false;
     }
   }
-  onMounted(refresh);
+  watch(
+    () => app.currentOrgId,
+    () => {
+      sequence++;
+      treeSequence++;
+      systems.value = [];
+      rows.value = [];
+      total.value = 0;
+      unclassifiedCount.value = 0;
+      selectedIds.value = [];
+      selectedKey.value = '__all__';
+      current.value = 1;
+      failed.value = false;
+      loading.value = false;
+      treeLoading.value = false;
+      editorVisible.value = false;
+      classificationVisible.value = false;
+      if (app.currentOrgId) refresh();
+    },
+    { immediate: true }
+  );
   onBeforeUnmount(() => {
     active = false;
     sequence++;
@@ -399,11 +423,16 @@
   }
   .system-assets-layout {
     display: flex;
+    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
     gap: 24px;
   }
   .system-directory {
     padding-right: 16px;
-    width: 310px;
+    width: 260px;
+    min-width: 0;
+    overflow-wrap: anywhere;
     border-right: 1px solid var(--color-neutral-3);
     flex: none;
   }

@@ -325,6 +325,7 @@ public class TestAssetGovernanceService {
 
     private String validName(String value) {
         String name = StringUtils.trimToEmpty(value);
+        if ("默认分类".equals(name)) throw new MSException("默认分类名称保留，不能创建或重命名");
         if (name.isEmpty() || name.length() > 100) throw new MSException("分类名称长度必须为 1～100 个字符");
         return name;
     }
@@ -332,6 +333,7 @@ public class TestAssetGovernanceService {
     private String normalizeName(String name) { return name.toLowerCase(Locale.ROOT); }
 
     private Category category(String id, String organizationId, boolean required) {
+        if ("__uncategorized__".equals(id)) throw new MSException("默认分类不可修改、删除或作为父分类");
         if (StringUtils.isBlank(id)) return null;
         List<Category> rows = jdbc.query("SELECT id,parent_id,name,path,level FROM test_asset_category WHERE id=? AND organization_id=? AND deleted=b'0'", this::mapCategory, id, organizationId);
         if (rows.isEmpty()) throw new MSException("资产分类不存在或已被删除");

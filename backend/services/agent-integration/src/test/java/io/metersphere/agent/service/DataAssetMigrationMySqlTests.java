@@ -75,7 +75,7 @@ class DataAssetMigrationMySqlTests {
           id,
           first.get("currentVersionId"));
       jdbc.update("INSERT INTO test_asset_relation VALUES('project',?,'historic-task')", id);
-      assertEquals(1L, ((Number) assets.categories().getFirst().get("assetCount")).longValue());
+      assertEquals(1L, ((Number) assets.categories().stream().filter(c -> "category".equals(c.get("id"))).findFirst().orElseThrow().get("assetCount")).longValue());
       var detail = assets.detail(id);
       assertEquals(1, ((List<?>) detail.get("sources")).size());
       assertEquals(1, ((List<?>) detail.get("projectReferences")).size());

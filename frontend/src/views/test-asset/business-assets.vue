@@ -1,5 +1,5 @@
 <template>
-  <TestAssetPage>
+  <TestAssetPage class="asset-page-bounded">
     <div class="asset-heading"><h2>业务资产</h2><p>沉淀业务理解，按系统、模块与业务流程组织资产。</p></div>
     <a-alert v-if="error" type="error" class="mb-4" role="alert"
       >{{ error }} <a-link @click="load">重试</a-link></a-alert
@@ -553,6 +553,22 @@
 </script>
 
 <style scoped>
+  .asset-page-bounded {
+    overflow-x: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  :deep(.arco-card-body) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  :deep(.arco-space) {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  :deep(.arco-table) {
+    max-width: 100%;
+  }
   .business-layout {
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr);
